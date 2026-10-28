@@ -276,7 +276,7 @@
       },
       "bucketUsage": {
         "title": "Nyttjandegrad för timpottstimmar",
-        "description": "Följ förbrukningen av timpottstimmar och identifiera överskridanden",
+        "description": "Följ förbrukningen av timpottstimmar och identifiera överskridanden. Förbetalda timblock (avtalsutfärdade och ad hoc) visas med sin förbrukning.",
         "empty": "Inga avtal med timpotter hittades"
       },
       "profitability": {
@@ -305,13 +305,21 @@
       "profit": "Vinst",
       "margin": "Marginal",
       "plusVariableUsage": "+ rörlig förbrukning",
-      "variableUsage": "Rörlig förbrukning"
+      "variableUsage": "Rörlig förbrukning",
+      "service": "Tjänst",
+      "hourlyRate": "Timpris",
+      "expirationDate": "Går ut",
+      "neverExpires": "Aldrig",
+      "adhocBlock": "Ad hoc"
     },
     "statusValues": {
       "active": "Aktivt",
       "upcoming": "Kommande",
       "yes": "Ja",
-      "no": "Nej"
+      "no": "Nej",
+      "expired": "Utgånget",
+      "voided": "Makulerat",
+      "all": "Alla statusar"
     },
     "profitability": {
       "formats": {
@@ -414,6 +422,11 @@
       "fallbacks": {
         "untitledTicket": "Ärende utan titel"
       }
+    },
+    "columnsMenu": {
+      "label": "Kolumner",
+      "title": "Kolumner",
+      "reset": "Återställ standardkolumner"
     }
   },
   "contractPerformance": {

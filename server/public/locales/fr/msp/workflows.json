@@ -534,7 +534,8 @@
         "anniversary": "le prochain anniversaire du client",
         "renewal": "la date de décision de renouvellement du contrat",
         "contractEnd": "la date de fin du contrat",
-        "warrantyEnd": "la date de fin de garantie de l’actif"
+        "warrantyEnd": "la date de fin de garantie de l’actif",
+        "ticketStatusAge": "le jour où le ticket atteint le nombre de jours dans le statut"
       }
     }
   },
@@ -564,7 +565,8 @@
       "exportCsv": "Exporter en CSV",
       "exportJson": "Exporter en JSON",
       "close": "Fermer",
-      "viewRunDetails": "Voir les détails de l’exécution"
+      "viewRunDetails": "Voir les détails de l’exécution",
+      "backToEvents": "Retour aux événements"
     },
     "table": {
       "schemaConflict": "catalogue ≠ soumission",
@@ -602,7 +604,12 @@
       "waitStepLine": "Étape : {{value}}",
       "matchedRunLabel": "Exécution associée",
       "runStatusLine": "Statut : {{status}}",
-      "payloadLabel": "Charge utile"
+      "payloadLabel": "Charge utile",
+      "launchSkips": {
+        "title": "Workflows non lancés",
+        "unknownWorkflow": "Workflow supprimé",
+        "intentional": "Intentionnel"
+      }
     },
     "toasts": {
       "loadEventsFailed": "Échec du chargement des événements",
@@ -621,7 +628,8 @@
     },
     "actions": {
       "refresh": "Actualiser",
-      "loadMore": "Charger plus"
+      "loadMore": "Charger plus",
+      "backToList": "Retour aux messages en échec"
     },
     "table": {
       "columns": {
@@ -808,7 +816,20 @@
       "notPublishedNextVersion": "Pas encore publié. La publication crée la v{{next}}.",
       "tenantTimezoneOption": "Fuseau horaire du locataire (par défaut)",
       "searchTimezones": "Rechercher des fuseaux horaires",
-      "inputDataEventPending": "Choisissez l’événement ci-dessus ; vos étapes liront les données que cet événement envoie."
+      "inputDataEventPending": "Choisissez l’événement ci-dessus ; vos étapes liront les données que cet événement envoie.",
+      "dateSourceTicketStatusAge": "Ticket dans un statut depuis N jours",
+      "statusAgeStatus": "Statut",
+      "statusAgeStatusPlaceholder": "Sélectionner un statut",
+      "statusAgeStatusMissing": "Aucun statut portant ce nom n'existe sur le tableau sélectionné.",
+      "statusAgeOptionsFailed": "Impossible de charger les statuts et les tableaux.",
+      "statusAgeMatchByName": "Les statuts sont comparés par nom. Renommer un statut empêche ce déclencheur de correspondre.",
+      "statusAgeBoard": "Tableau (facultatif)",
+      "statusAgeAnyBoard": "N'importe quel tableau",
+      "statusAgeDays": "Jours dans le statut",
+      "statusAgeRepeat": "Répéter tant que le ticket reste dans le statut",
+      "statusAgeRepeatEvery": "Répéter tous les (jours)",
+      "statusAgeNoActivity": "Uniquement s'il n'y a eu aucune activité (commentaires ou modifications par des personnes) pendant cette durée",
+      "statusAgeSummary": "S'exécute chaque jour à {{time}} ({{timezone}}) pour chaque ticket resté dans le statut choisi pendant le nombre de jours défini"
     },
     "stepPanel": {
       "readOnly": "Accès en lecture seule : l’édition des étapes est désactivée.",
@@ -860,6 +881,7 @@
       "add": "Ajouter",
       "remove": "Supprimer",
       "empty": "Aucun mappage pour l’instant.",
+      "nameRequired": "Saisissez un nom pour ce mappage.",
       "expressionLabel": "Expression"
     },
     "schemaForm": {
@@ -1492,6 +1514,41 @@
       "unsaved": "Modifications non enregistrées",
       "savedAgo": "Enregistré · {{ago}}",
       "saved": "Enregistré"
+    },
+    "launchSkips": {
+      "banner": {
+        "summary_one": "{{count}} événement ignoré au cours des {{days}} derniers jours — {{reasons}}",
+        "summary_other": "{{count}} événements ignorés au cours des {{days}} derniers jours — {{reasons}}",
+        "lastSkipped": "Dernier ignoré {{when}}",
+        "view": "Voir les événements ignorés",
+        "summary_few": "{{count}} événements ignorés au cours des {{days}} derniers jours — {{reasons}}",
+        "summary_many": "{{count}} événements ignorés au cours des {{days}} derniers jours — {{reasons}}"
+      },
+      "drawer": {
+        "title": "Événements ignorés",
+        "windowLabel": "Période",
+        "window": {
+          "24h": "Dernières 24 heures",
+          "7d": "7 derniers jours",
+          "30d": "30 derniers jours"
+        },
+        "allReasons": "Tous les motifs",
+        "reasonLabel": "Motif",
+        "groupAttention": "Nécessite une attention",
+        "groupGuarded": "Protégé / en pause (intentionnel)",
+        "lastSeen": "Dernière occurrence {{when}}",
+        "columns": {
+          "received": "Reçu",
+          "event": "Événement",
+          "reason": "Motif",
+          "message": "Message"
+        },
+        "issuesTitle": "Problèmes de validation",
+        "issueRoot": "(charge utile)",
+        "openEvent": "Ouvrir l'événement",
+        "loadError": "Impossible de charger les événements ignorés.",
+        "empty": "Aucun événement ignoré sur cette période."
+      }
     }
   },
   "actionInputFieldInfo": {
@@ -1808,7 +1865,9 @@
     "insertionPointLabel": "Les nouvelles étapes vont ici",
     "emptyBranchPrompt": "Ajoutez une étape à cette branche",
     "emptyActivePrompt": "Les nouvelles étapes vont ici. Choisissez-en une dans la palette.",
-    "stepCount": "({{count}} étapes)"
+    "stepCount": "({{count}} étapes)",
+    "stepCount_few": "({{count}} étapes)",
+    "stepCount_many": "({{count}} étapes)"
   },
   "expressionEditor": {
     "ariaLabel": "Éditeur d’expression",
@@ -2095,7 +2154,8 @@
     "dateTiming": {
       "before": "{{count}} jours avant",
       "after": "{{count}} jours après",
-      "onTheDay": "le jour même"
+      "onTheDay": "le jour même",
+      "daysInStatus": "{{count}} jours dans le statut"
     },
     "dateWithTiming": "{{source}}, {{timing}}"
   },
@@ -2320,7 +2380,12 @@
       "currentRun": "Exécution {{id}}",
       "backToWorkflow": "Retour au workflow"
     },
-    "title": "Studio d'exécution de workflow"
+    "title": "Studio d'exécution de workflow",
+    "communityEdition": {
+      "title": "Fonctionnalité Pro",
+      "description": "Le studio d’exécution des workflows est disponible uniquement dans Pro.",
+      "runId": "ID d’exécution : {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -2786,6 +2851,10 @@
       },
       "deleteDialog": {
         "fallbackEntityName": "ce workflow"
+      },
+      "launchSkips": {
+        "badge": "{{count}} ignorés",
+        "badgeTitle": "Événements pour lesquels ce workflow n'a pas été lancé au cours des 7 derniers jours"
       }
     },
     "eventsCatalog": {
@@ -3089,6 +3158,10 @@
         "selectBoard": "Sélectionnez ou saisissez un tableau",
         "selectPriority": "Sélectionnez ou saisissez une priorité"
       }
+    },
+    "proFeature": {
+      "title": "Fonctionnalité Pro",
+      "description": "Le système de workflows est uniquement disponible dans Pro. Veuillez mettre à niveau votre installation pour accéder à cette fonctionnalité."
     }
   },
   "toggle": {
@@ -3181,5 +3254,75 @@
   "fieldPicker": {
     "searchPlaceholder": "Rechercher des champs",
     "noMatches": "Aucun champ correspondant"
+  },
+  "launchSkipReasons": {
+    "missing_schema_ref": {
+      "label": "Référence du schéma de charge utile manquante",
+      "hint": "Le workflow n'a pas de référence de schéma de charge utile, la charge utile de l'événement ne peut donc pas être validée."
+    },
+    "unknown_schema_ref": {
+      "label": "Référence du schéma de charge utile inconnue",
+      "hint": "La référence de schéma de charge utile du workflow n'existe pas dans le registre des schémas."
+    },
+    "missing_source_schema": {
+      "label": "Schéma source manquant",
+      "hint": "L'événement n'a pas de schéma source à comparer au schéma du workflow."
+    },
+    "schema_mismatch": {
+      "label": "La charge utile de l'événement ne correspond pas au schéma",
+      "hint": "La charge utile de l'événement ne correspond pas au schéma du workflow et aucun mappage n'est configuré."
+    },
+    "payload_mapping_failed": {
+      "label": "Échec du mappage de la charge utile",
+      "hint": "Le mappage de charge utile du déclencheur n'a pas pu être appliqué à l'événement."
+    },
+    "payload_validation_failed": {
+      "label": "Échec de la validation de la charge utile",
+      "hint": "La charge utile mappée n'a pas passé le schéma de charge utile du workflow."
+    },
+    "launch_failed": {
+      "label": "Échec du lancement",
+      "hint": "Le worker a accepté l'événement, mais le démarrage de l'exécution du workflow a échoué."
+    },
+    "paused": {
+      "label": "Workflow en pause",
+      "hint": "Le workflow est en pause : les événements ne sont volontairement pas lancés."
+    },
+    "lineage_loop_guard": {
+      "label": "Garde anti-boucle (lignée)",
+      "hint": "L'événement provient de la propre lignée de ce workflow ; ignoré pour éviter une boucle."
+    },
+    "self_trigger_guard": {
+      "label": "Garde anti-auto-déclenchement",
+      "hint": "L'événement a été émis par ce workflow lui-même ; ignoré pour éviter l'auto-déclenchement."
+    },
+    "causation_depth_exceeded": {
+      "label": "Profondeur de causalité dépassée",
+      "hint": "La chaîne d'événements provoqués a dépassé la profondeur maximale ; ignoré pour éviter les boucles incontrôlées."
+    }
+  },
+  "createFromTicket": {
+    "title": "Créer un workflow à partir du ticket",
+    "description": "Crée un workflow brouillon dont la première étape crée un ticket comme #{{number}}. Rien n’est publié.",
+    "cancel": "Annuler",
+    "creating": "Création…",
+    "submit": "Créer le brouillon et ouvrir le concepteur",
+    "nameLabel": "Nom du workflow",
+    "triggerLabel": "Déclencheur",
+    "triggerManual": "Manuel (exécuter à la demande)",
+    "ticketCreatedWarning": "Ce workflow crée un ticket, et un nouveau ticket déclenche à nouveau ce déclencheur. Ajoutez une condition avant la publication pour éviter une boucle.",
+    "includeLegend": "Inclure depuis le ticket",
+    "propertiesAlways": "Le titre, la description, le client, le contact, le tableau, la catégorie et la priorité sont toujours inclus.",
+    "includeAssignment": "Affectation",
+    "includeTags": "Étiquettes",
+    "includeCustomFields": "Champs personnalisés",
+    "includeChecklist": "Liste de contrôle",
+    "errors": {
+      "nameRequired": "Le nom du workflow est obligatoire",
+      "generic": "Échec de la création du brouillon du workflow"
+    },
+    "includeCustomFieldsCount": "Champs personnalisés ({{n}})",
+    "includeChecklistCount": "Liste de contrôle ({{total}} éléments : {{templates}} issus de modèles / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Les éléments issus de modèles sont réappliqués depuis le modèle actuel ; les modifications faites sur ce ticket ne sont donc pas reprises."
   }
 }

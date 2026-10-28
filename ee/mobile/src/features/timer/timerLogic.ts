@@ -2,16 +2,15 @@ export const TIMER_REMINDER_THRESHOLDS_MINUTES = [60, 120, 240, 480];
 
 const REMINDER_IDENTIFIER_PREFIX = "timer-reminder:";
 
-/**
- * Below this, treat device and server clocks as in sync: elapsed_minutes is
- * rounded server-side, so small offsets are measurement noise, and the local
- * clock gives a smoother elapsed display than the rounded server value.
- */
-const OFFSET_NOISE_FLOOR_MS = 90_000;
-
 export type RunningTimerSnapshot = {
   sessionId: string;
+  /**
+   * Virtual start on the server clock: serverNow - activeMs. Reminder thresholds
+   * measure active time, so pauses shift this forward. Use firstStartMs for display.
+   */
   startTimeMs: number;
+  /** Server-clock time of the first segment start (for "started at" text). */
+  firstStartMs?: number;
   offsetMs: number;
   workItemId: string | null;
   workItemType: string;
@@ -23,26 +22,6 @@ export type PlannedTimerReminder = {
   thresholdMinutes: number;
   fireAt: Date;
 };
-
-export function computeServerClockOffsetMs(
-  startTimeIso: string,
-  elapsedMinutes: number,
-  localNowMs: number,
-): number {
-  const startMs = Date.parse(startTimeIso);
-  if (!Number.isFinite(startMs)) return 0;
-  const serverNowApproxMs = startMs + elapsedMinutes * 60_000;
-  const offsetMs = serverNowApproxMs - localNowMs;
-  return Math.abs(offsetMs) <= OFFSET_NOISE_FLOOR_MS ? 0 : offsetMs;
-}
-
-export function elapsedMsAt(
-  localNowMs: number,
-  startTimeMs: number,
-  offsetMs: number,
-): number {
-  return Math.max(0, localNowMs + offsetMs - startTimeMs);
-}
 
 export function formatElapsedClock(elapsedMs: number): string {
   const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000));

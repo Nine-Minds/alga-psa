@@ -2,6 +2,7 @@
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- onboarding actions consult QBO customers and connection state */
 import { withAuth } from '@alga-psa/auth';
+import { fromMinorUnits } from '@alga-psa/core';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { auditLog, createTenantKnex, lockInvoiceForExternalSync, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
@@ -521,7 +522,7 @@ async function fetchQboInvoicesPaged(
     const dateFilter = options?.windowStart
       ? ` WHERE TxnDate >= '${options.windowStart}'`
       : '';
-    const query = `SELECT Id, DocNumber, TotalAmt, SyncToken, CustomerRef FROM Invoice${dateFilter} STARTPOSITION ${startPosition} MAXRESULTS ${PAGE_SIZE}`;
+    const query = `SELECT Id, DocNumber, TotalAmt, SyncToken, CustomerRef, CurrencyRef FROM Invoice${dateFilter} STARTPOSITION ${startPosition} MAXRESULTS ${PAGE_SIZE}`;
 
     const page = await qboClient.query<QboInvoiceRow>(query);
     results.push(...page);
@@ -563,7 +564,7 @@ export const getHistoricalInvoiceMatches = withAuth(async (
   const candidateQuery = (status: string) => {
     const query = db.table('invoices')
       .where({ status })
-      .select('invoice_id', 'invoice_number', 'total_amount', 'client_id');
+      .select('invoice_id', 'invoice_number', 'total_amount', 'client_id', 'currency_code');
     if (mappedIds.length > 0) {
       query.whereNotIn('invoice_id', mappedIds);
     }
@@ -700,9 +701,9 @@ export const bulkLinkHistoricalInvoices = withAuth(async (
         syncStatus: 'synced',
         metadata: {
           sync_token: match.externalSyncToken ?? remoteInvoice.SyncToken ?? null,
-          // Snapshot convention is QBO dollars (adapter stores response.TotalAmt);
-          // the matcher carries cents internally.
-          exported_total: match.externalTotal / 100,
+          // Snapshot convention is QBO major units (adapter stores response.TotalAmt);
+          // the matcher carries minor units internally.
+          exported_total: fromMinorUnits(match.externalTotal, 'en-US', remoteInvoice.CurrencyRef?.value ?? 'USD'),
           doc_number: match.externalDocNumber,
           linked_via: 'onboarding'
         }

@@ -297,7 +297,7 @@
         "description": "Skonfiguruj zaawansowane opcje przetwarzania poczty e-mail",
         "folderFiltersLabel": "Filtry folderów",
         "folderFiltersPlaceholder": "Skrzynka odbiorcza, pomoc techniczna, folder niestandardowy",
-        "folderFiltersHelp": "Rozdzielana przecinkami lista folderów do monitorowania (domyślnie: Skrzynka odbiorcza)",
+        "folderFiltersHelp": "Rozdzielana przecinkami lista folderów do monitorowania (domyślnie: Skrzynka odbiorcza). Użyj dokładnej nazwy folderu widocznej w programie Outlook, a foldery zagnieżdżone zapisuj jako Skrzynka odbiorcza/Podfolder.",
         "maxEmailsPerSync": "Maksymalna liczba e-maili na synchronizację"
       },
       "readiness": {
@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Funkcja Pro",
+      "domainsDescription": "Zarządzane domeny wymagają Pro.",
+      "settingsDescription": "Ustawienia zarządzanej poczty e-mail wymagają Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Nie udało się załadować zarządzanych domen",
       "loadOutboundSettingsFailed": "Nie udało się załadować ustawień poczty wychodzącej",
@@ -930,6 +935,12 @@
       "copyHostAriaLabel": "Kopiuj host",
       "copyFqdnAriaLabel": "Kopiuj pełną nazwę",
       "hostHint": "Wskazówka: u swojego dostawcy DNS wpisz tylko Host pokazany powyżej. Większość dostawców (Namecheap, GoDaddy, Cloudflare i inni) automatycznie dodaje „{{domain}}”. Jeśli wkleisz pełną nazwę, domena zostanie powtórzona (…{{domain}}.{{domain}}) i rekord nigdy nie zostanie zweryfikowany."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Funkcja Pro",
+        "description": "Instrukcje dotyczące rekordów DNS wymagają Pro."
+      }
     }
   },
   "inboundRules": {
@@ -1131,7 +1142,10 @@
       "duplicateShortName": "Konfiguracja o tej krótkiej nazwie już istnieje",
       "createFailed": "Nie udało się utworzyć ustawień domyślnych zgłoszeń przychodzących. Spróbuj ponownie.",
       "notFound": "Nie znaleziono konfiguracji ustawień domyślnych",
-      "updateFailed": "Nie udało się zaktualizować ustawień domyślnych zgłoszeń przychodzących. Spróbuj ponownie."
+      "updateFailed": "Nie udało się zaktualizować ustawień domyślnych zgłoszeń przychodzących. Spróbuj ponownie.",
+      "locationRequiresClient": "Wybierz firmę, zanim wybierzesz lokalizację",
+      "locationClientMismatch": "Wybrana lokalizacja nie należy do wybranej firmy",
+      "referencedByProviders": "Ta konfiguracja jest nadal używana przez następujących dostawców poczty e-mail: {{providers}}. Wybierz inne domyślne ustawienia zgłoszeń przychodzących dla tych dostawców, zanim ją usuniesz."
     },
     "ticketFieldOptions": {
       "permissionDenied": "Odmowa uprawnień: nie można odczytać opcji pól zgłoszenia",

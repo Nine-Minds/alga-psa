@@ -402,6 +402,8 @@ export async function enqueueExternalPaymentPush(
       return;
     }
 
+    const currencyCode = await invoiceCurrencyCode(knex, tenantId, params.invoiceId);
+
     await new SyncOperationsRepository(knex).enqueue({
       tenant: tenantId,
       adapterType: integration.adapterType,
@@ -413,7 +415,8 @@ export async function enqueueExternalPaymentPush(
         invoiceId: params.invoiceId,
         amountCents: params.amountCents,
         referenceNumber: params.referenceNumber,
-        provider: params.provider
+        provider: params.provider,
+        currencyCode
       }
     });
 
@@ -431,6 +434,18 @@ export async function enqueueExternalPaymentPush(
       error: error instanceof Error ? error.message : error
     });
   }
+}
+
+/**
+ * The invoice's own currency, carried on money-moving ops so the applier scales
+ * minor units with the right exponent (JPY has none; USD has two).
+ */
+async function invoiceCurrencyCode(knex: Knex, tenantId: string, invoiceId: string): Promise<string> {
+  const row = await tenantDb(knex, tenantId).table('invoices')
+    .where({ invoice_id: invoiceId })
+    .first('currency_code');
+  const code = row?.currency_code;
+  return typeof code === 'string' && code.length > 0 ? code : 'USD';
 }
 
 /**
@@ -462,6 +477,8 @@ export async function enqueueCreditApplication(
       return;
     }
 
+    const currencyCode = await invoiceCurrencyCode(knex, tenantId, params.targetInvoiceId);
+
     await new SyncOperationsRepository(knex).enqueue({
       tenant: tenantId,
       adapterType: decision.adapterType ?? QBO_ADAPTER_TYPE,
@@ -472,7 +489,8 @@ export async function enqueueCreditApplication(
       payload: {
         creditNoteInvoiceId: params.creditNoteInvoiceId,
         targetInvoiceId: params.targetInvoiceId,
-        amountCents: params.amountCents
+        amountCents: params.amountCents,
+        currencyCode
       }
     });
 

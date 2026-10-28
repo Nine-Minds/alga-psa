@@ -384,4 +384,22 @@ describe('Microsoft same-app Update Provider webhook persistence (DB-backed)', (
     );
     expect(columns.rows).toHaveLength(0);
   });
+
+  it('packages createProvider rolls back the email_providers row when the vendor config insert fails', async () => {
+    const mailbox = `rollback-${uuidv4().slice(0, 8)}@client.com`;
+
+    await expect(
+      new EmailProviderService().createProvider({
+        tenant: testTenant,
+        providerType: 'microsoft',
+        providerName: 'Rollback Mailbox',
+        mailbox,
+        isActive: true,
+        vendorConfig: { client_id: PROFILE_CLIENT_ID, not_a_column: 'x' },
+      })
+    ).rejects.toThrow(/Failed to create email provider/);
+
+    const rows = await tenantTable('email_providers').where({ mailbox });
+    expect(rows).toHaveLength(0);
+  });
 });

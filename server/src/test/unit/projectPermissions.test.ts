@@ -111,6 +111,11 @@ vi.mock('@shared/services/numberingService', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn().mockResolvedValue(undefined),
   publishWorkflowEvent: vi.fn().mockResolvedValue(undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/core', () => ({
@@ -124,7 +129,8 @@ vi.mock('@alga-psa/core', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/db', () => {
+vi.mock('@alga-psa/db', async () => {
+  const { createAfterCommitDouble } = await import('../../../../packages/db/test-utils/afterCommitDouble');
   // Generic chainable, awaitable query-builder fake: every chained call
   // returns the builder, awaiting it resolves to an empty result set. The
   // authorization kernel path issues real-looking queries (team_members,
@@ -162,6 +168,8 @@ vi.mock('@alga-psa/db', () => {
   fakeKnex.raw = () => Promise.resolve({ rows: [] });
   fakeKnex.fn = { now: () => new Date() };
   fakeKnex.transaction = (callback: any) => callback(fakeKnex);
+  // Faithful after-commit contract (queue, flush after the callback resolves).
+  const afterCommit = createAfterCommitDouble(() => fakeKnex);
 
   return {
     createTenantKnex: vi.fn().mockResolvedValue({
@@ -169,7 +177,8 @@ vi.mock('@alga-psa/db', () => {
       tenant: '550e8400-e29b-41d4-a716-446655440000'
     }),
     requireTenantId: vi.fn().mockResolvedValue('550e8400-e29b-41d4-a716-446655440000'),
-    withTransaction: vi.fn().mockImplementation(async (_knex, callback) => callback(fakeKnex)),
+    withTransaction: vi.fn().mockImplementation(afterCommit.withTransaction),
+    registerAfterCommit: afterCommit.registerAfterCommit,
     tenantDb: (conn: any, _tenant: string) => ({
       table: (t: string) => conn(t),
       unscoped: (t: string) => conn(t),

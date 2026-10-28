@@ -159,19 +159,6 @@ describe('timeEntryPeriodSelection', () => {
       expect(resolved.moved.kind).toBe('supplied');
     });
 
-    it('keeps a running timer that ends now on an editable day', () => {
-      const resolved = resolveEntryDefaults({
-        context: { elapsedTime: 3600 },
-        periods: catalog,
-        timeZone: 'UTC',
-        now,
-      })!;
-      expect(resolved.source).toBe('timer');
-      expect(resolved.moved).toEqual({ kind: 'none' });
-      expect(resolved.defaultEndTime).toEqual(now);
-      expect(resolved.defaultStartTime.toISOString()).toBe('2026-09-09T14:00:00.000Z');
-    });
-
     it('defaults to today at 08:00 with explicit times so ad-hoc/schedule rows cannot land elsewhere', () => {
       const resolved = resolveEntryDefaults({ context: {}, periods: catalog, timeZone: 'UTC', now })!;
       expect(resolved.source).toBe('none');

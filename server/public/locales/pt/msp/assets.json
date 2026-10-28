@@ -25,7 +25,9 @@
       "inactive": "Inativo",
       "loading": "Carregando...",
       "na": "N / D",
-      "none": "Nenhum"
+      "none": "Nenhum",
+      "yes": "Sim",
+      "no": "Não"
     },
     "no": "Não",
     "yes": "Sim"
@@ -36,6 +38,20 @@
       "offline": "Off-line",
       "overdue": "Atrasado",
       "unknown": "Desconhecido"
+    },
+    "rmaStatus": {
+      "open": "Aberto",
+      "awaiting_return": "Aguardando devolução",
+      "returned": "Devolvido",
+      "sent_to_vendor": "Enviado ao fornecedor",
+      "replacement_received": "Substituição recebida",
+      "replacement_deployed": "Substituição implantada",
+      "dead_unit_owed": "Unidade com defeito pendente",
+      "dead_unit_returned": "Unidade com defeito devolvida",
+      "replaced": "Substituído",
+      "credited": "Creditado",
+      "charged": "Cobrado",
+      "closed": "Fechado"
     }
   },
   "assetAlertsSection": {
@@ -127,7 +143,10 @@
       "actions": "Ações",
       "patching": "Patches",
       "coverage": "Cobertura",
-      "assignedTo": "Atribuído a"
+      "assignedTo": "Atribuído a",
+      "manufacturer": "Fabricante",
+      "model": "Modelo",
+      "group": "Grupo"
     },
     "metrics": {
       "totalAssets": {
@@ -172,6 +191,17 @@
       "rmmManaged": {
         "managed": "RMM gerenciado",
         "unmanaged": "Não gerenciado"
+      },
+      "allGroups": "Todos os grupos",
+      "ownership": {
+        "any": "Qualquer propriedade",
+        "client": "Propriedade do cliente",
+        "msp": "Propriedade do MSP"
+      },
+      "custody": {
+        "any": "Qualquer custódia",
+        "inCustody": "Sob custódia do MSP",
+        "notInCustody": "Fora da custódia do MSP"
       }
     },
     "activeFilters": {
@@ -179,11 +209,6 @@
       "type": "Tipo: {{value}}",
       "client": "Cliente: {{value}}",
       "agent": "Agente: {{value}}"
-    },
-    "statuses": {
-      "active": "Ativo",
-      "inactive": "Inativo",
-      "maintenance": "Manutenção"
     },
     "types": {
       "workstation": "Estação de trabalho",
@@ -229,7 +254,11 @@
         "delete": "Excluir",
         "selectedCount": "{{count}} selecionado",
         "setLocation": "Definir localização",
-        "setStatus": "Definir status"
+        "setStatus": "Definir status",
+        "assignContact": "Atribuir a contato",
+        "addToGroup": "Adicionar ao grupo",
+        "printLabels": "Imprimir etiquetas",
+        "printLabelsLimit": "Você pode imprimir no máximo {{max}} etiquetas por vez"
       },
       "actions": {
         "apply": "Aplicar",
@@ -237,7 +266,8 @@
         "deleteAssets": "Excluir",
         "deleting": "Excluindo...",
         "updateLocation": "Atualização de localização",
-        "updateStatus": "Atualização de status"
+        "updateStatus": "Atualização de status",
+        "assignContact": "Atribuição"
       },
       "deleteDialog": {
         "description": "Exclua o(s) ativo(s) selecionado(s) {{count}}. Os ativos com dependências podem ser ignorados.",
@@ -246,7 +276,8 @@
       "errors": {
         "deleteFailed": "Não foi possível excluir os ativos selecionados.",
         "updateLocationFailed": "Não foi possível atualizar os locais dos ativos selecionados.",
-        "updateStatusFailed": "Não foi possível atualizar os recursos selecionados."
+        "updateStatusFailed": "Não foi possível atualizar os recursos selecionados.",
+        "assignFailed": "Não foi possível atribuir os ativos selecionados."
       },
       "locationDialog": {
         "clearLocation": "Limpar localização",
@@ -264,7 +295,16 @@
         "description": "Atualize o(s) ativo(s) selecionado(s) {{count}}.",
         "title": "Definir status do ativo"
       },
-      "success": "{{action}} concluído para ativo(s) {{count}}."
+      "success": "{{action}} concluído para ativo(s) {{count}}.",
+      "assignDialog": {
+        "title": "Atribuir a contato",
+        "description": "Atribuir {{count}} ativo(s) selecionado(s) a um contato deste cliente."
+      },
+      "groupDialog": {
+        "title": "Adicionar ao grupo",
+        "description": "Adicionar {{count}} ativo(s) selecionado(s) a um grupo deste cliente ou criar um novo.",
+        "newGroup": "Criar um novo grupo"
+      }
     }
   },
   "assetDashboardGrid": {
@@ -289,11 +329,6 @@
     "helper": {
       "awaitingSelection": "Aguardando seleção de ativos",
       "selectedAsset": "{{name}} • {{tab}}"
-    },
-    "statuses": {
-      "active": "Ativo",
-      "inactive": "Inativo",
-      "maintenance": "Manutenção"
     },
     "empty": {
       "selectAsset": "Selecione um ativo para ver detalhes",
@@ -349,7 +384,13 @@
       "status": "Status",
       "created": "Criado",
       "updated": "Atualizado",
-      "tenant": "Inquilino"
+      "tenant": "Inquilino",
+      "manufacturer": "Fabricante",
+      "model": "Modelo",
+      "assignedTo": "Atribuído a",
+      "group": "Grupo",
+      "groupSharedWorkspace": "{{name}} · espaço de trabalho compartilhado",
+      "groupBundle": "{{name}} · pacote"
     },
     "typeDetails": {
       "workstation": "Detalhes da estação de trabalho",
@@ -417,7 +458,9 @@
       "rebootDevice": "Reinicializar dispositivo",
       "rebooting": "Reiniciando...",
       "editAsset": "Editar recurso",
-      "deleteAsset": "Excluir recurso"
+      "deleteAsset": "Excluir recurso",
+      "printLabel": "Imprimir etiqueta do recurso",
+      "printPage": "Imprimir página"
     },
     "values": {
       "unknownClient": "Cliente desconhecido"
@@ -578,7 +621,8 @@
     "actions": {
       "viewClient": "Ver cliente",
       "manageClientLocations": "Gerenciar locais de clientes",
-      "saveChanges": "Salvar alterações"
+      "saveChanges": "Salvar alterações",
+      "createVendor": "Criar fornecedor"
     },
     "alerts": {
       "noLocationsSaved": "Este cliente ainda não tem locais salvos. Use a entrada personalizada ou crie uma a partir do registro do cliente."
@@ -586,7 +630,8 @@
     "sections": {
       "basicInformation": "Informações Básicas",
       "clientAndLocation": "Cliente e Localização",
-      "assetBasics": "Noções básicas de ativos"
+      "assetBasics": "Noções básicas de ativos",
+      "procurement": "Fabricante e compra"
     },
     "fields": {
       "customLocationOption": "Localização personalizada",
@@ -627,7 +672,13 @@
       "purchaseDate": "Data de compra",
       "warrantyEndDate": "Data de término da garantia",
       "assetType": "Tipo",
-      "assignedTo": "Atribuído a"
+      "assignedTo": "Atribuído a",
+      "manufacturer": "Fabricante",
+      "vendor": "Fornecedor",
+      "purchaseCost": "Custo de compra",
+      "orderNumber": "N.º do pedido",
+      "billingProfile": "Perfil de faturamento",
+      "ownership": "Propriedade"
     },
     "placeholders": {
       "loadingClients": "Carregando clientes…",
@@ -639,7 +690,11 @@
       "selectPurchaseDate": "Selecione a data de compra",
       "selectWarrantyEndDate": "Selecione a data de término da garantia",
       "loadingContacts": "Carregando contatos…",
-      "selectContact": "Selecione um contato"
+      "selectContact": "Selecione um contato",
+      "noVendor": "Sem fornecedor",
+      "selectVendor": "Selecione um fornecedor",
+      "purchaseCost": "0,00",
+      "clientDefaultProfile": "Padrão do cliente"
     },
     "statusOptions": {
       "active": "Ativo",
@@ -678,6 +733,10 @@
     "additionalFields": "Campos adicionais",
     "help": {
       "assignedTo": "No portal do cliente, as pessoas com visibilidade limitada só veem este dispositivo se estiver atribuído a elas ou a alguém que se reporta a elas."
+    },
+    "ownership": {
+      "client": "Propriedade do cliente",
+      "msp": "Propriedade do MSP"
     }
   },
   "assetFormClient": {
@@ -809,7 +868,8 @@
       "save": "Salvar",
       "label": "Rótulo do botão",
       "template": "Modelo de URL",
-      "tokens": "Use {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} e {field.<key>} com as chaves de campos personalizados definidas em Configurações → Ativos → Tipos de ativo.",
+      "ninjaExample": "Exemplo do painel de dispositivo do NinjaOne: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Substitua o host pela sua região do NinjaOne: app, eu, ca, oc ou us2 .ninjarmm.com.",
+      "tokens": "Use {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} e {field.<key>} com as chaves de campos personalizados definidas em Configurações → Ativos → Tipos de ativo.",
       "loading": "Carregando opções de acesso remoto…",
       "unavailable": "Indisponível para este ativo",
       "actions": "Ações",
@@ -889,11 +949,6 @@
       "type": "Tipo",
       "status": "Status"
     },
-    "assetStatuses": {
-      "active": "Ativo",
-      "inactive": "Inativo",
-      "maintenance": "Manutenção"
-    },
     "assetTypes": {
       "workstation": "Estação de trabalho",
       "server": "Servidor",
@@ -924,7 +979,9 @@
       "description": "Descrição",
       "board": "Quadro",
       "status": "Status",
-      "priority": "Prioridade"
+      "priority": "Prioridade",
+      "contact": "Contato",
+      "unnamedContact": "Contato sem nome"
     },
     "placeholders": {
       "title": "Insira o título do ticket",
@@ -935,7 +992,8 @@
       "loadingStatuses": "Carregando status...",
       "selectStatus": "Selecione o estado...",
       "loadingPriorities": "Carregando prioridades...",
-      "selectPriority": "Selecione prioridade..."
+      "selectPriority": "Selecione prioridade...",
+      "selectContact": "Selecionar contato..."
     },
     "errors": {
       "loadPriorities": "Falha ao carregar prioridades",
@@ -993,7 +1051,12 @@
       "serialNumber": "Número de série",
       "customLocationOption": "Localização personalizada",
       "location": "Localização",
-      "assignedTo": "Atribuído a"
+      "assignedTo": "Atribuído a",
+      "manufacturer": "Fabricante",
+      "vendor": "Fornecedor",
+      "purchaseCost": "Custo de compra",
+      "orderNumber": "N.º do pedido",
+      "ownership": "Propriedade"
     },
     "placeholders": {
       "workstationOsType": "por exemplo, Windows, macOS, Linux",
@@ -1015,7 +1078,13 @@
       "selectClientFirst": "Selecione um cliente primeiro",
       "selectLocation": "Selecione o local",
       "loadingContacts": "Carregando contatos...",
-      "selectContact": "Selecionar contato"
+      "selectContact": "Selecionar contato",
+      "manufacturer": "ex.: Lenovo",
+      "modelName": "ex.: ThinkPad T14",
+      "noVendor": "Sem fornecedor",
+      "selectVendor": "Selecione o fornecedor",
+      "purchaseCost": "0,00",
+      "orderNumber": "Informe o número do pedido"
     },
     "sections": {
       "typeSpecificDetails": "Detalhes específicos do tipo"
@@ -1110,7 +1179,8 @@
       "unknown": "Desconhecido",
       "unifiedMemory": "Memória unificada {{size}}GB",
       "memoryUsed": "({{size}}GB usado)",
-      "freeStorage": "{{size}} GB grátis"
+      "freeStorage": "{{size}} GB grátis",
+      "totalStorage": "{{size}} GB"
     },
     "empty": "Nenhum dado de hardware disponível",
     "emptyStorage": "Nenhuma unidade de armazenamento detectada"
@@ -1221,7 +1291,10 @@
       "frequency": "Frequência *",
       "interval": "Intervalo *",
       "nextMaintenanceDate": "Próxima data de manutenção *",
-      "active": "Ativo"
+      "active": "Ativo",
+      "recurrenceUnit": "Unidade *",
+      "onWeekdays": "Nos dias da semana (opcional)",
+      "onDayOfMonth": "No dia do mês (opcional)"
     },
     "placeholders": {
       "scheduleName": "por exemplo, manutenção mensal do servidor",
@@ -1236,7 +1309,8 @@
       "weekly": "Semanalmente",
       "monthly": "Mensal",
       "quarterly": "Trimestral",
-      "yearly": "Anual"
+      "yearly": "Anual",
+      "custom": "Personalizada"
     },
     "errors": {
       "scheduleNameRequired": "O nome do agendamento é obrigatório",
@@ -1245,6 +1319,18 @@
       "nextMaintenanceRequired": "A próxima data de manutenção é obrigatória",
       "frequencyIntervalMin": "O intervalo de frequência deve ser de pelo menos 1",
       "saveFailed": "Falha ao criar cronograma de manutenção"
+    },
+    "recurrenceUnits": {
+      "days": "Dias",
+      "weeks": "Semanas",
+      "months": "Meses",
+      "years": "Anos"
+    },
+    "dayOfMonthOptions": {
+      "any": "Qualquer dia"
+    },
+    "hints": {
+      "selectors": "Sem seleção, a repetição parte da data de conclusão."
     }
   },
   "maintenanceSchedulesTab": {
@@ -1296,6 +1382,36 @@
         "yearly_other": "anos",
         "yearly_few": "anos",
         "yearly_many": "anos"
+      },
+      "customUnconfigured": "Personalizada (não configurada)",
+      "onWeekdays": "{{cadence}} em {{days}}",
+      "onDaysOfMonth": "{{cadence}} no dia {{days}}",
+      "weekdays": {
+        "sun": "dom",
+        "mon": "seg",
+        "tue": "ter",
+        "wed": "qua",
+        "thu": "qui",
+        "fri": "sex",
+        "sat": "sáb"
+      },
+      "customUnits": {
+        "days_one": "dia",
+        "days_other": "dias",
+        "days_few": "dias",
+        "days_many": "dias",
+        "weeks_one": "semana",
+        "weeks_other": "semanas",
+        "weeks_few": "semanas",
+        "weeks_many": "semanas",
+        "months_one": "mês",
+        "months_other": "meses",
+        "months_few": "meses",
+        "months_many": "meses",
+        "years_one": "ano",
+        "years_other": "anos",
+        "years_few": "anos",
+        "years_many": "anos"
       }
     },
     "status": {
@@ -1428,6 +1544,8 @@
       "installDate": "Data de instalação"
     },
     "empty": "Nenhum software encontrado que corresponda à sua pesquisa.",
+    "noInventory": "Ainda não foi coletado inventário de software para este dispositivo.",
+    "loadError": "Não foi possível carregar o inventário de software.",
     "totalItems": "Total de itens: {{count}}",
     "values": {
       "unknown": "Desconhecido"
@@ -1512,7 +1630,28 @@
     "compliance": "Conformidade",
     "lastDone": "Última realizada",
     "noMaintenance": "Nada agendado.",
-    "docsHint": "Anexos e credenciais deste ativo."
+    "docsHint": "Anexos e credenciais deste ativo.",
+    "rmmUser": {
+      "looksLike": "· Parece ser {{contact}}",
+      "mapDialogDescription": "“{{user}}” será lembrado para esta organização RMM.",
+      "mapDialogTitle": "Associar usuário conectado a um contato",
+      "mapFailed": "Não foi possível salvar a associação.",
+      "mapToContact": "Associar a um contato…"
+    },
+    "manufacturer": "Fabricante",
+    "model": "Modelo",
+    "vendor": "Fornecedor",
+    "purchaseCost": "Custo de compra",
+    "orderNumber": "N.º do pedido",
+    "assignedTo": "Atribuído a",
+    "unassigned": "Não atribuído",
+    "assign": "Atribuir",
+    "unassign": "Remover atribuição",
+    "aContact": "Contato",
+    "assignDialogTitle": "Atribuir este ativo",
+    "sharedWorkspace": "Espaço compartilhado",
+    "sharedWorkspaceValue": "{{name}} · {{count}} pessoas",
+    "billingProfile": "Perfil de faturamento"
   },
   "assetTimeline": {
     "title": "Linha do tempo",
@@ -1531,7 +1670,18 @@
       "lastReboot": "Última reinicialização",
       "patchScan": "Verificação de patches",
       "patchScanDetail": "{{pending}} pendentes, {{failed}} com falha",
-      "purchased": "Comprado"
+      "purchased": "Comprado",
+      "assignedTo": "Atribuído a {{contact}}",
+      "unassigned": "Atribuição removida",
+      "autoAssigned": "Atribuído automaticamente a {{contact}} a partir do usuário conectado",
+      "assignedViaBundle": "Atribuído a {{contact}} pelo pacote {{group}}",
+      "aContact": "um contato",
+      "groupAdded": "Adicionado a {{group}}",
+      "groupRemoved": "Removido de {{group}}",
+      "aGroup": "um grupo",
+      "autoAssignedFrom": "Atribuído automaticamente a {{contact}} a partir de {{provider}}",
+      "groupLocationMoved": "Movido para {{location}} com {{group}}",
+      "groupLocationCleared": "Localização removida com {{group}}"
     },
     "changeTypes": {
       "created": "Criado",
@@ -1541,6 +1691,30 @@
       "rmm_linked": "RMM vinculado",
       "hardware_upgrade": "Hardware atualizado",
       "warranty_updated": "Garantia atualizada"
+    },
+    "custody": {
+      "unknownPlace": "uma localização desconhecida",
+      "ticket": "Ticket {{ticket}}",
+      "receivedBack": "Recebido de volta em {{place}}",
+      "received": "Recebido sob custódia em {{place}}",
+      "moved": "Movido de {{from}} para {{to}}",
+      "movedTo": "Movido para {{to}}",
+      "handedOff": "Passado de {{from}} para {{to}}",
+      "handedOffTo": "Passado para {{to}}",
+      "aColleague": "um colega",
+      "shipped": "Enviado para {{counterparty}}",
+      "shippedVendor": "Enviado ao fornecedor",
+      "returnedTo": "Devolvido ao cliente ({{counterparty}})",
+      "returned": "Devolvido ao cliente",
+      "updated": "Detalhes da custódia atualizados",
+      "fields": {
+        "purpose": "finalidade",
+        "next_action_party": "próxima ação",
+        "next_action_note": "nota da próxima ação",
+        "follow_up_on": "data de acompanhamento",
+        "condition_note": "condição",
+        "accessories": "acessórios"
+      }
     }
   },
   "assetSignals": {
@@ -1585,11 +1759,6 @@
     },
     "coverage": {
       "noWarrantyDate": "sem data de garantia"
-    },
-    "status": {
-      "active": "ativo",
-      "inactive": "inativo",
-      "maintenance": "manutenção"
     }
   },
   "errors": {
@@ -1599,7 +1768,10 @@
       "manageAssetTypes": "Permissão negada: não é possível gerenciar os tipos de ativo",
       "readDocuments": "Permissão negada: não é possível ler os documentos do ativo",
       "associateDocuments": "Permissão negada: não é possível associar documentos aos ativos",
-      "removeDocuments": "Permissão negada: não é possível remover documentos dos ativos"
+      "removeDocuments": "Permissão negada: não é possível remover documentos dos ativos",
+      "readAssetStatuses": "Permissão negada: não é possível ler os status de ativos",
+      "manageAssetStatuses": "Permissão negada: não é possível gerenciar os status de ativos",
+      "updateAssets": "Permissão negada: não é possível atualizar os ativos"
     },
     "asset": {
       "notFoundRefresh": "Ativo não encontrado. Ele pode ter sido excluído. Atualize a página e tente novamente.",
@@ -1619,7 +1791,21 @@
       "notAllowed": "Um dos valores do ativo não é permitido. Revise o formulário e tente novamente.",
       "missingField": "Falta um campo obrigatório do ativo.",
       "missingFieldNamed": "Falta um campo obrigatório do ativo: {{field}}.",
-      "contactUnavailable": "O contato selecionado não está disponível para este cliente."
+      "contactUnavailable": "O contato selecionado não está disponível para este cliente.",
+      "vendorUnavailable": "O fornecedor selecionado não está disponível.",
+      "workspaceMember": "Este ativo pertence a um espaço de trabalho compartilhado, portanto não pode ser atribuído a uma única pessoa.",
+      "billingProfileUnavailable": "O perfil de faturamento selecionado não está disponível para este cliente."
+    },
+    "assetGroup": {
+      "not_found": "Grupo de ativos não encontrado.",
+      "invalid_kind": "Esse tipo de grupo não está disponível.",
+      "invalid_name": "O nome do grupo é obrigatório.",
+      "client_mismatch": "Esse ativo ou contato pertence a outro cliente.",
+      "already_grouped": "Esse ativo já está em outro grupo.",
+      "users_on_bundle": "Um pacote tem um proprietário, não uma lista de usuários.",
+      "owner_on_workspace": "Um espaço compartilhado tem usuários, não um proprietário.",
+      "users_present": "Remova os usuários do espaço antes de transformá-lo em um pacote.",
+      "invalid_location": "Essa localização não está disponível para este cliente."
     }
   },
   "clientAssetMultiSelect": {
@@ -1631,5 +1817,309 @@
     "empty": "Nenhum ativo correspondente para este cliente",
     "loading": "Carregando...",
     "remove": "Remover ativo"
+  },
+  "inventoryProvenance": {
+    "title": "Origem no inventário",
+    "fields": {
+      "product": {
+        "label": "Produto"
+      },
+      "serial": {
+        "label": "Número de série"
+      },
+      "mac": {
+        "label": "MAC"
+      },
+      "originSalesOrder": {
+        "label": "Pedido de venda de origem"
+      },
+      "delivered": {
+        "label": "Entregue"
+      }
+    },
+    "rmaHistory": {
+      "title": "Histórico de RMA"
+    },
+    "emptyValue": "—",
+    "rmaLabel": "RMA"
+  },
+  "skeletons": {
+    "assetForm": {
+      "loading": "Carregando formulário de ativo..."
+    }
+  },
+  "assetStatuses": {
+    "active": "Ativo",
+    "in_stock": "Em estoque",
+    "maintenance": "Em manutenção",
+    "inactive": "Inativo",
+    "retired": "Desativado",
+    "held_by_msp": "Em posse do MSP"
+  },
+  "assetStatusKinds": {
+    "deployable": "Implantável",
+    "pending": "Pendente",
+    "undeployable": "Não implantável",
+    "archived": "Arquivado"
+  },
+  "assetStatusSettings": {
+    "title": "Status de ativos",
+    "description": "Os estados do ciclo de vida dos ativos. A sincronização RMM nunca os sobrescreve depois de criar um dispositivo.",
+    "empty": "Ainda não há status de ativos.",
+    "addTitle": "Adicionar status",
+    "editTitle": "Editar status",
+    "columns": {
+      "label": "Status",
+      "kind": "Ciclo de vida",
+      "builtin": "Integrado",
+      "inUse": "Em uso",
+      "actions": "Ações"
+    },
+    "fields": {
+      "label": "Rótulo",
+      "kind": "Ciclo de vida"
+    },
+    "actions": {
+      "add": "Adicionar status",
+      "rename": "Renomear",
+      "archive": "Arquivar",
+      "openMenu": "Abrir menu",
+      "restore": "Restaurar",
+      "archiveBlocked": "Arquivar · {{count}} ativo(s) ainda o usam",
+      "reorder": "Reordenar {{label}} — arraste ou use as teclas de seta para cima e para baixo",
+      "dragToReorder": "Arraste para reordenar"
+    },
+    "confirmArchiveTitle": "Arquivar este status?",
+    "confirmArchiveMessage": "Arquivar \"{{label}}\"? Ele deixa de ser oferecido nos formulários de ativos. Você pode restaurá-lo depois.",
+    "errors": {
+      "load": "Não foi possível carregar os status de ativos",
+      "inUse": "Ainda usado por {{count}} ativo(s). Mova-os para outro status primeiro.",
+      "duplicate": "Já existe um status com esse nome.",
+      "invalidKind": "Escolha um ciclo de vida para este status.",
+      "invalidLabel": "Informe um nome com pelo menos uma letra ou um dígito.",
+      "notFound": "Esse status não existe mais. Atualize a página e tente novamente.",
+      "save": "Não foi possível salvar o status."
+    }
+  },
+  "contactAssets": {
+    "title": "Ativos",
+    "empty": "Nenhum ativo atribuído a este contato.",
+    "sharedWorkspaces": "Espaços compartilhados",
+    "memberCount_one": "{{count}} ativo",
+    "memberCount_other": "{{count}} ativos"
+  },
+  "assetGroups": {
+    "kinds": {
+      "bundle": "Pacote",
+      "shared_workspace": "Espaço compartilhado"
+    },
+    "drawerTitle": "Grupo",
+    "fields": {
+      "name": "Nome",
+      "kind": "Tipo",
+      "location": "Localização",
+      "owner": "Proprietário",
+      "users": "Usuários",
+      "members": "Membros"
+    },
+    "sections": {
+      "people": "Pessoas",
+      "members": "Membros"
+    },
+    "addAssets": "Adicionar ativos",
+    "addUser": "Adicionar uma pessoa",
+    "noLocation": "Sem localização",
+    "locationHelp": "Alterar a localização move todos os membros do grupo.",
+    "deleteHelp": "Os membros mantêm a atribuição e a localização atuais.",
+    "actions": {
+      "manage": "Gerenciar",
+      "delete": "Excluir grupo",
+      "addToGroup": "Adicionar ao grupo"
+    },
+    "confirmUnassignTitle": "Remover a atribuição destes ativos?",
+    "confirmUnassignMessage": "Um espaço compartilhado tem usuários em vez de um único responsável, portanto {{count}} ativo(s) ficarão sem atribuição.",
+    "confirmKindTitle": "Transformar em espaço compartilhado?",
+    "confirmKindMessage": "Um espaço compartilhado tem usuários em vez de um proprietário, portanto todos os membros ficarão sem atribuição.",
+    "confirmDeleteTitle": "Excluir este grupo?",
+    "confirmDeleteMessage": "Excluir \"{{name}}\"? Os membros mantêm a atribuição e a localização atuais.",
+    "errors": {
+      "createFailed": "Não foi possível criar o grupo.",
+      "addFailed": "Não foi possível adicionar os ativos selecionados."
+    }
+  },
+  "custody": {
+    "purpose": {
+      "repair": "Reparo",
+      "warranty_evaluation": "Avaliação de garantia",
+      "loaner_prep": "Preparação de equipamento de empréstimo",
+      "staging": "Preparação (staging)"
+    },
+    "party": {
+      "msp": "Nós (MSP)",
+      "client": "Cliente",
+      "vendor": "Fornecedor"
+    },
+    "fields": {
+      "location": "Localização",
+      "keepLocation": "Manter localização atual",
+      "selectLocation": "Selecione uma localização",
+      "bin": "Caixa ou prateleira",
+      "binPlaceholder": "ex.: Prateleira B3",
+      "purpose": "Finalidade",
+      "nextActionParty": "A próxima ação cabe a",
+      "followUpOn": "Acompanhar em",
+      "followUpPlaceholder": "Selecione uma data",
+      "nextActionNote": "Nota da próxima ação",
+      "internalNote": "Interno. Nunca é impresso numa etiqueta nem mostrado ao cliente.",
+      "conditionNote": "Condição",
+      "conditionPlaceholder": "Riscos, parafusos em falta, danos na chegada",
+      "accessories": "Acessórios recebidos",
+      "accessoryPlaceholder": "ex.: Adaptador de corrente",
+      "accessoryQuantity": "Quantidade",
+      "removeAccessory": "Remover acessório",
+      "addAccessory": "Adicionar acessório",
+      "note": "Nota (opcional)"
+    },
+    "errors": {
+      "generic": "Ocorreu um erro."
+    },
+    "actions": {
+      "cancel": "Cancelar",
+      "saving": "A guardar...",
+      "move": "Mover",
+      "handOff": "Passar",
+      "ship": "Enviar ao fornecedor",
+      "receiveBack": "Receber de volta",
+      "returnToClient": "Devolver ao cliente",
+      "edit": "Editar detalhes",
+      "receiveIntoCustody": "Receber sob custódia"
+    },
+    "move": {
+      "title": "Mover equipamento",
+      "submit": "Mover",
+      "toLocation": "Mover para"
+    },
+    "handOff": {
+      "title": "Passar a um colega",
+      "submit": "Passar",
+      "newHolder": "Novo responsável",
+      "selectHolder": "Selecione uma pessoa"
+    },
+    "ship": {
+      "title": "Enviar ao fornecedor",
+      "description": "O item sai do escritório. Continua sob custódia e aparece como estando no fornecedor.",
+      "submit": "Enviar",
+      "counterparty": "Fornecedor ou transportadora",
+      "counterpartyPlaceholder": "ex.: Depósito RMA da Dell"
+    },
+    "receiveBack": {
+      "title": "Receber de volta do fornecedor",
+      "submit": "Receber de volta",
+      "holder": "Responsável (por padrão, você)",
+      "me": "Eu"
+    },
+    "return": {
+      "title": "Devolver ao cliente",
+      "description": "Isto encerra o período de custódia. O item deixa de constar como sob custódia.",
+      "submit": "Devolver ao cliente",
+      "collectedBy": "Levantado por (opcional)"
+    },
+    "edit": {
+      "title": "Editar detalhes da custódia",
+      "submit": "Guardar"
+    },
+    "open": {
+      "title": "Receber sob custódia",
+      "description": "Registe que o MSP passou a deter este equipamento. Isto não cria stock nem afeta a faturação.",
+      "submit": "Receber",
+      "holder": "Responsável (por padrão, você)"
+    },
+    "card": {
+      "withVendor": "No fornecedor",
+      "title": "Custódia",
+      "location": "Localização",
+      "holder": "Responsável",
+      "purpose": "Finalidade",
+      "nextAction": "Próxima ação",
+      "followUp": "Acompanhamento",
+      "overdue": "em atraso",
+      "daysHeld": "Dias em custódia",
+      "ticket": "Ticket",
+      "openTicket": "Abrir ticket",
+      "condition": "Condição",
+      "accessories": "Acessórios",
+      "notInCustody": "Atualmente não está sob custódia do MSP.",
+      "hideHistory": "Ocultar histórico de custódia",
+      "showHistoryWithPast": "Histórico de custódia ({{count}} períodos anteriores)",
+      "showHistory": "Histórico de custódia",
+      "noEvents": "Nenhum evento de custódia registado."
+    },
+    "state": {
+      "with_vendor": "No fornecedor",
+      "in_office": "No escritório"
+    },
+    "badge": {
+      "withVendor": "No fornecedor",
+      "inOfficeAt": "No escritório - {{location}}",
+      "inOffice": "No escritório"
+    },
+    "queue": {
+      "columns": {
+        "asset": "Ativo",
+        "client": "Cliente",
+        "location": "Localização",
+        "holder": "Responsável",
+        "purpose": "Finalidade",
+        "nextAction": "Próxima ação",
+        "followUp": "Acompanhamento",
+        "daysHeld": "Dias em custódia",
+        "ticket": "Ticket",
+        "actions": "Ações"
+      },
+      "openMenu": "Abrir menu",
+      "tabs": {
+        "all_open": "Todos os abertos",
+        "in_office": "No escritório",
+        "waiting_on_vendor": "Aguardando fornecedor",
+        "waiting_on_client": "Aguardando cliente",
+        "overdue": "Em atraso"
+      },
+      "title": "Equipamento sob custódia",
+      "filters": {
+        "client": "Cliente",
+        "allLocations": "Todas as localizações",
+        "holder": "Responsável",
+        "allPurposes": "Todas as finalidades",
+        "mine": "Meus"
+      },
+      "empty": "Não há equipamento sob custódia nesta vista."
+    },
+    "receiveEquipment": {
+      "button": "Receber equipamento",
+      "title": "Receber equipamento",
+      "description": "Registe o equipamento do cliente entregue para este ticket. Isto não cria stock nem afeta a faturação ou o tempo.",
+      "submit": "Receber",
+      "modeExisting": "Ativo existente",
+      "modeNew": "Novo item",
+      "search": "Pesquisar ativos do cliente",
+      "asset": "Ativo",
+      "assetPlaceholder": "Selecione um ativo",
+      "fields": {
+        "name": "Nome",
+        "type": "Tipo",
+        "manufacturer": "Fabricante",
+        "model": "Modelo",
+        "serial": "Número de série",
+        "assetTag": "Etiqueta do ativo (opcional)"
+      },
+      "photos": "Fotos (opcional)",
+      "photosHint": "As fotos são anexadas a este ticket e não são visíveis para o cliente.",
+      "doneTitle": "Equipamento recebido",
+      "doneBody": "{{name}} ({{tag}}) está agora sob custódia do MSP.",
+      "printLabel": "Imprimir etiqueta do ativo",
+      "openAsset": "Abrir ativo",
+      "close": "Fechar",
+      "inCustodyOption": "{{asset}} — Sob custódia: {{location}}"
+    }
   }
 }

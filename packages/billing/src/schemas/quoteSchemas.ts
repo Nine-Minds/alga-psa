@@ -1,6 +1,6 @@
+import { canTransitionQuoteStatus } from '@alga-psa/shared/lib/quotes/quoteStatusTransitions';
 import { z } from 'zod';
 import { isUnitOfMeasureCode } from '@alga-psa/core/unitOfMeasure';
-import type { QuoteStatus } from '@alga-psa/types';
 
 export const quoteStatusSchema = z.enum([
   'draft',
@@ -27,6 +27,8 @@ const createQuoteBaseSchema = z.object({
   quote_date: z.coerce.date(),
   valid_until: z.coerce.date(),
   po_number: z.string().trim().max(255).optional().nullable(),
+  recurring_section_title: z.string().trim().max(255).optional().nullable().transform((value) => value || null),
+  onetime_section_title: z.string().trim().max(255).optional().nullable().transform((value) => value || null),
   opportunity_id: z.string().uuid().optional().nullable(),
   internal_notes: z.string().optional().nullable(),
   client_notes: z.string().optional().nullable(),
@@ -144,27 +146,8 @@ export const updateQuoteItemSchema = createQuoteItemBaseSchema.partial().extend(
   updated_by: z.string().uuid().optional().nullable()
 });
 
-export const QUOTE_ALLOWED_STATUS_TRANSITIONS: Record<QuoteStatus, QuoteStatus[]> = {
-  draft: ['pending_approval', 'sent', 'cancelled'],
-  pending_approval: ['approved', 'draft', 'cancelled'],
-  approved: ['sent', 'cancelled'],
-  sent: ['accepted', 'rejected', 'expired', 'cancelled'],
-  accepted: ['converted', 'cancelled'],
-  rejected: ['cancelled'],
-  expired: ['cancelled'],
-  converted: [],
-  cancelled: [],
-  superseded: [],
-  archived: []
-};
+export { QUOTE_ALLOWED_STATUS_TRANSITIONS, canTransitionQuoteStatus } from '@alga-psa/shared/lib/quotes/quoteStatusTransitions';
 
-export function canTransitionQuoteStatus(currentStatus: QuoteStatus, nextStatus: QuoteStatus): boolean {
-  if (currentStatus === nextStatus) {
-    return true;
-  }
-
-  return QUOTE_ALLOWED_STATUS_TRANSITIONS[currentStatus]?.includes(nextStatus) ?? false;
-}
 
 export const quoteStatusTransitionSchema = z.object({
   currentStatus: quoteStatusSchema,

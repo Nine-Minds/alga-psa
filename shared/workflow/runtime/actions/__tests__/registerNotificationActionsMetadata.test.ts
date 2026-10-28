@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { zodToWorkflowJsonSchema } from '../../jsonSchemaMetadata';
+import { zodToWorkflowJsonSchema } from '@alga-psa/event-schemas';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { registerNotificationActions } from '../businessOperations/notifications';
 

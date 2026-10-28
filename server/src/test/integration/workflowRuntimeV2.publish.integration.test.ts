@@ -605,6 +605,44 @@ describe('workflow runtime v2 publish + registry + run integration tests', () =>
     expect((record?.definition_json as any)?.trigger).toEqual(trigger);
   });
 
+  it('Publish accepts a ticket.status_age date trigger and keeps its params. Mocks: non-target dependencies.', async () => {
+    const trigger = {
+      type: 'date',
+      source: 'ticket.status_age',
+      offsetDays: 0,
+      localTime: '08:00',
+      params: { statusName: 'Waiting', boardId: uuidv4(), days: 7, repeatEveryDays: 3, requireNoActivity: true },
+    };
+    const definition = (workflowId: string, payloadSchemaRef: string) => ({
+      id: workflowId,
+      version: 1,
+      name: 'Status age',
+      payloadSchemaRef,
+      trigger,
+      steps: [stateSetStep('state-1', 'READY')],
+    });
+    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
+    const result = await publishWorkflow(workflowId, 1, definition(workflowId, 'payload.TicketStatusAge.v1'));
+    expect(result.ok).toBe(true);
+    const record = await WorkflowDefinitionVersionModelV2.getByWorkflowAndVersion(db, workflowId, 1);
+    expect(record?.version).toBe(1);
+    expect((record?.definition_json as any)?.trigger).toEqual(trigger);
+  });
+
+  it('Publish rejects a ticket.status_age date trigger whose payload schema does not match. Mocks: non-target dependencies.', async () => {
+    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
+    const result = await publishWorkflow(workflowId, 1, {
+      id: workflowId,
+      version: 1,
+      name: 'Status age mismatch',
+      payloadSchemaRef: 'payload.ContractEndDate.v1',
+      trigger: { type: 'date', source: 'ticket.status_age', offsetDays: 0, localTime: '08:00', params: { statusName: 'Waiting', days: 7 } },
+      steps: [stateSetStep('state-1', 'READY')],
+    });
+    expect(result.ok).toBe(false);
+    expect((result as any).errors).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'DATE_TRIGGER_SCHEMA_MISMATCH' })]));
+  });
+
   it('Node registry server action returns node definitions with JSON config schemas (API delegates to server action). Mocks: non-target dependencies.', async () => {
     const nodes = await listWorkflowRegistryNodesAction();
     const stateNode = nodes.find((node) => node.id === 'state.set');

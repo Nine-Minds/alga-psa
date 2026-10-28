@@ -1,3 +1,4 @@
+import { createContactSchema, updateContactSchema } from '../../schemas/contact';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import {
   clientLocationResponseSchema,
@@ -42,7 +43,9 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       email: zOpenApi.string().optional(),
       client_type: zOpenApi.enum(['company', 'individual']).optional(),
       billing_cycle: zOpenApi.enum(['weekly', 'bi-weekly', 'monthly', 'quarterly', 'semi-annually', 'annually']).optional(),
-      is_inactive: zOpenApi.enum(['true', 'false']).optional(),
+      is_inactive: zOpenApi.enum(['true', 'false']).optional().describe(
+        'Filters to inactive clients when true and active clients when false; omit to include all clients.',
+      ),
       is_tax_exempt: zOpenApi.enum(['true', 'false']).optional(),
       account_manager_id: zOpenApi.string().uuid().optional(),
       region_code: zOpenApi.string().optional(),
@@ -87,6 +90,9 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       billing_email: zOpenApi.string().email().optional(),
       account_manager_id: zOpenApi.string().uuid().optional(),
       is_inactive: zOpenApi.boolean().optional(),
+      lifecycle_status: zOpenApi.enum(['prospect', 'active', 'former']).optional().describe(
+        'Relationship lifecycle (default active on create). The Clients list shows only active clients by default, so prospect and former clients are hidden there until the user changes the Lifecycle filter. Only send prospect or former when the user explicitly asks for that status.',
+      ),
       tags: zOpenApi.array(zOpenApi.string()).optional(),
     }),
   );
@@ -144,23 +150,9 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
-  const ContactBody = registry.registerSchema(
-    'ContactBody',
-    zOpenApi.object({
-      full_name: zOpenApi.string().min(1).max(255),
-      client_id: zOpenApi.string().uuid().optional(),
-      phone_numbers: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).optional(),
-      email: zOpenApi.string().email(),
-      primary_email_canonical_type: zOpenApi.string().optional().nullable(),
-      primary_email_custom_type: zOpenApi.string().optional().nullable(),
-      primary_email_custom_type_id: zOpenApi.string().uuid().optional().nullable(),
-      additional_email_addresses: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).optional(),
-      role: zOpenApi.string().optional(),
-      notes: zOpenApi.string().optional(),
-      is_inactive: zOpenApi.boolean().optional(),
-      tags: zOpenApi.array(zOpenApi.string()).optional(),
-    }),
-  );
+  // Registered from the real validator schemas so the docs cannot drift from them.
+  const ContactBody = registry.registerSchema('ContactBody', createContactSchema);
+  const ContactUpdateBody = registry.registerSchema('ContactUpdateBody', updateContactSchema);
 
   const ContactSearchQuery = registry.registerSchema(
     'ContactSearchQuery',
@@ -570,6 +562,23 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
         suggestedChoice: zOpenApi.enum(['original', 'cutover']),
         suggestedCutoverDate: zOpenApi.string(),
       })),
+      assets: zOpenApi.object({
+        total: zOpenApi.number().describe('Assets that would move to the destination client.'),
+        byRmmOrganization: zOpenApi.array(zOpenApi.object({
+          provider: zOpenApi.string(),
+          integrationId: zOpenApi.string().uuid(),
+          externalOrganizationId: zOpenApi.string(),
+          externalOrganizationName: zOpenApi.string().nullable(),
+          deviceCount: zOpenApi.number(),
+        })),
+        groups: zOpenApi.number().describe('Asset groups (bundles and shared workspaces) that would move.'),
+      }),
+      billingChoice: zOpenApi.object({
+        unstampedTickets: zOpenApi.number(),
+        unstampedProjects: zOpenApi.number(),
+        unstampedAssets: zOpenApi.number(),
+        unstampedRmmMappings: zOpenApi.number(),
+      }).describe('Rows with no billing profile — what `billing_strategy` decides the fate of.'),
       visibilityGroupRenames: zOpenApi.array(zOpenApi.object({
         groupId: zOpenApi.string().uuid(),
         from: zOpenApi.string(),
@@ -609,6 +618,8 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
         mapping_id: zOpenApi.string(),
         apply: zOpenApi.boolean(),
       })).optional(),
+      billing_strategy: zOpenApi.enum(['source_profile', 'target_default']).optional()
+        .describe("F099: what happens to tickets, projects, assets and RMM mappings that carry no billing profile. `source_profile` (the default) stamps them with the moved default profile; `target_default` leaves them unattributed so they fall through to the destination client's default. Billing history (invoices, cycles, payments, credits, tax settings) is stamped either way."),
     }),
   );
 
@@ -623,6 +634,8 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       counts: zOpenApi.record(zOpenApi.number()),
       remapped_external_mapping_ids: zOpenApi.array(zOpenApi.string()),
       skipped_external_mapping_ids: zOpenApi.array(zOpenApi.string()),
+      billing_strategy: zOpenApi.enum(['source_profile', 'target_default'])
+        .describe('The strategy actually applied, as recorded on client_merges.'),
     }),
   );
 
@@ -930,7 +943,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     description: 'Inherited ApiBaseController update route for one contact_name_id.',
     tags: [contactTag],
     security: [{ ApiKeyAuth: [] }],
-    request: { params: ContactIdParam, body: { schema: ContactBody.partial() } },
+    request: { params: ContactIdParam, body: { schema: ContactUpdateBody } },
     responses: {
       200: { description: 'Contact updated.', schema: ContactEnvelope },
       400: { description: 'Invalid contact id or request payload.', schema: ApiError },

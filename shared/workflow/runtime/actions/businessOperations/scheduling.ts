@@ -1,10 +1,12 @@
 import type { Knex } from 'knex';
 import { z } from 'zod';
+import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import ScheduleEntry from '../../../../models/scheduleEntry';
+import { assertHumanWorkAssignee } from '../../../../lib/humanWork/assertHumanWorkAssignee';
 import { IEditScope } from '@alga-psa/types';
-import { withWorkflowPicker } from '../../jsonSchemaMetadata';
+import { withWorkflowPicker } from '@alga-psa/event-schemas';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import {
   buildAppointmentAssignedPayload,
@@ -335,30 +337,21 @@ async function ensureTechnicianEligibility(
 const maybeWorkflowActor = (userId: string): { actorType: 'USER'; actorUserId: string } =>
   ({ actorType: 'USER', actorUserId: userId });
 
-async function publishWorkflowDomainEvent(params: {
-  eventType: 'APPOINTMENT_RESCHEDULED' | 'APPOINTMENT_ASSIGNED' | 'APPOINTMENT_CANCELED' | 'APPOINTMENT_COMPLETED';
-  payload: Record<string, unknown>;
+async function publishWorkflowDomainEvent<
+  T extends 'APPOINTMENT_RESCHEDULED' | 'APPOINTMENT_ASSIGNED' | 'APPOINTMENT_CANCELED' | 'APPOINTMENT_COMPLETED',
+>(params: {
+  eventType: T;
+  payload: BuiltWorkflowPayload<T>;
   tenantId: string;
   occurredAt: string;
   actorUserId: string;
   idempotencyKey: string;
 }): Promise<void> {
   try {
-    const publishers = (await import('@alga-psa/event-bus/publishers')) as unknown as {
-      publishWorkflowEvent?: (value: {
-        eventType: string;
-        payload: Record<string, unknown>;
-        ctx: {
-          tenantId: string;
-          occurredAt: string;
-          actor: { actorType: 'USER'; actorUserId: string };
-        };
-        idempotencyKey: string;
-      }) => Promise<unknown>;
-    };
-    if (!publishers.publishWorkflowEvent) return;
+    // Dynamic import keeps the runtime free of a static event-bus dependency; the binding stays fully typed.
+    const { publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
 
-    await publishers.publishWorkflowEvent({
+    await publishWorkflowEvent({
       eventType: params.eventType,
       payload: params.payload,
       ctx: {
@@ -411,6 +404,9 @@ export function registerSchedulingActions(): void {
 
       const user = await tenantScopedTable(tx, 'users').where({ user_id: input.user_id }).first();
       if (!user) throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'User not found' });
+
+      // Human-work guard (R5.3): schedule assignees must be active internal users.
+      await assertHumanWorkAssignee(tx.trx, tx.tenantId, [input.user_id]);
 
       const db = tenantDb(tx.trx, tx.tenantId);
       const technicianRoleQuery = db.table('user_roles as ur');
@@ -610,6 +606,9 @@ export function registerSchedulingActions(): void {
           throwActionError(ctx, { category: 'ActionError', code: 'CONFLICT', message: 'Unable to shift schedule entry to a non-conflicting window' });
         }
       }
+
+      // Human-work guard (R5.3): schedule assignees must be active internal users.
+      await assertHumanWorkAssignee(tx.trx, tx.tenantId, assignedUserIds);
 
       const nowIso = new Date().toISOString();
       await tenantScopedTable(tx, 'schedule_entries').insert({

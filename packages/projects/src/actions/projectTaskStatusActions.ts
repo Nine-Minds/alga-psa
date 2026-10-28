@@ -6,7 +6,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { DeletionValidationResult, IProjectStatusMapping, IStatus } from '@alga-psa/types';
 import type { IUserWithRoles } from '@alga-psa/types';
-import ProjectModel from '@alga-psa/projects/models/project';
+import ProjectModel, { statusMappingSemanticKey } from '@alga-psa/projects/models/project';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -24,6 +24,11 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 import { getScopedProjectStatusMappings, ProjectStatusMappingDetails } from '../lib/projectStatusMappingUtils';
+import {
+  bucketProjectStatusRenameImpact,
+  type ProjectStatusRenameImpact,
+  type ProjectStatusRenameImpactRow,
+} from '../lib/projectStatusRenameImpact';
 
 export type ProjectTaskStatusActionError = ActionMessageError | ActionPermissionError;
 
@@ -31,6 +36,7 @@ const EXPECTED_PROJECT_TASK_STATUS_ERROR_PREFIXES = [
   'Cannot delete the last status in a project',
   'Cannot delete status with',
   'Cannot delete status',
+  'Cannot reorder project task statuses',
   'Cannot remove phase statuses without project default statuses',
   'Phase task status removal could not resolve a replacement status mapping',
   'Project not found',
@@ -81,12 +87,24 @@ type ProjectStatusUsage = {
   projectNames: string[];
 };
 
-function tenantScopedTable(
+// LEVERAGE: pattern tenant-scoped-table -- this generic wrapper over tenantDb().table()
+// is now hand-written in at least five modules (packages/db/src/models/userPreferences.ts,
+// packages/db/src/lib/reassignTicketResources.ts, packages/documents, packages/projects x2).
+// It belongs in @alga-psa/db next to tenantDb.
+function tenantScopedTable<Row extends {} = any>(
   conn: Knex | Knex.Transaction,
   table: string,
   tenant: string,
-): Knex.QueryBuilder {
-  return tenantDb(conn, tenant).table(table);
+): Knex.QueryBuilder<Row, Row[]> {
+  return tenantDb(conn, tenant).table<Row>(table);
+}
+
+/** Serialize library creation and reordering with the same tenant/type lock. */
+async function lockProjectTaskStatusLibrary(trx: Knex.Transaction, tenant: string): Promise<void> {
+  const key = `${tenant}:project_task:project_task`;
+  let hash = 0;
+  for (let index = 0; index < key.length; index++) hash = ((hash << 5) - hash + key.charCodeAt(index)) | 0;
+  await trx.raw('SELECT pg_advisory_xact_lock(?)', [Math.abs(hash) % 2147483647]);
 }
 
 function formatProjectUsageDescription(projectNames: string[], count: number): string {
@@ -323,6 +341,17 @@ function resolveReplacementStatusMapping(
   sourceMapping: ProjectStatusMappingDetails,
   targetMappings: ProjectStatusMappingDetails[]
 ): ProjectStatusMappingDetails | null {
+  const sourceKey = statusMappingSemanticKey(sourceMapping);
+  if (sourceKey) {
+    const matches = targetMappings.filter(mapping => statusMappingSemanticKey(mapping) === sourceKey);
+    const original = matches.find(mapping => mapping.display_order === sourceMapping.display_order && mapping.custom_name === sourceMapping.custom_name)
+      ?? matches.find(mapping => mapping.display_order === sourceMapping.display_order)
+      ?? matches.find(mapping => mapping.custom_name === sourceMapping.custom_name)
+      ?? matches[0];
+    if (original) return original;
+  }
+  // A phase-only status has no corresponding default; retain the established
+  // name/closed-state fallback for that case.
   const sourceName = sourceMapping.name ?? sourceMapping.status_name ?? null;
 
   if (sourceName) {
@@ -438,6 +467,110 @@ export const getProjectStatusMappings = withAuth(async (
     await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
     return await getScopedProjectStatusMappings(trx, tenant, projectId, phaseId);
   });
+});
+
+/**
+ * How many phase-scoped status columns each phase of a project owns, resolved
+ * in one query. A phase with zero rows is inheriting the project defaults; any
+ * other count means it has forked. Boards and phase lists use this to show
+ * which phases are forked instead of making the user open every Configure
+ * dialog one by one.
+ */
+export const getPhaseCustomStatusCounts = withAuth(async (
+  user,
+  { tenant },
+  projectId: string
+): Promise<Record<string, number> | ProjectTaskStatusActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    return await withTransaction(knex, async (trx) => {
+      if (!await hasPermission(user, 'project', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read project');
+      }
+      await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+
+      const rows = (await tenantScopedTable(trx, 'project_status_mappings', tenant)
+        .where({ project_id: projectId })
+        .whereNotNull('phase_id')
+        .groupBy('phase_id')
+        .select('phase_id')
+        .count('* as count')) as unknown as Array<{ phase_id: string; count: string | number }>;
+
+      const counts: Record<string, number> = {};
+      for (const row of rows) {
+        counts[row.phase_id] = Number(row.count) || 0;
+      }
+      return counts;
+    });
+  } catch (error) {
+    const expected = projectTaskStatusActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
+});
+
+/**
+ * Read-only: where a rename of one library status actually lands. The match set
+ * is every column linked to the status plus every column that renders the same
+ * label today; `bucketProjectStatusRenameImpact` splits it into the columns
+ * that follow the rename and the ones that silently keep the old name, so the
+ * Edit Status dialog can name the projects that will diverge before the rename
+ * is committed. No data is changed.
+ */
+export const getProjectStatusRenameImpact = withAuth(async (
+  user,
+  { tenant },
+  statusId: string
+): Promise<ProjectStatusRenameImpact | ProjectTaskStatusActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    return await withTransaction(knex, async (trx) => {
+      if (!await hasPermission(user, 'project', 'read', trx)) {
+        throw new Error('Permission denied: Cannot read project');
+      }
+
+      const status = await tenantScopedTable(trx, 'statuses', tenant)
+        .where({ status_id: statusId })
+        .first<IStatus | undefined>();
+
+      if (!status) {
+        throw new Error('Project task status not found');
+      }
+
+      const query = tenantScopedTable(trx, 'project_status_mappings as psm', tenant);
+      const scoped = tenantDb(trx, tenant);
+      scoped.tenantJoin(query, 'projects as p', 'psm.project_id', 'p.project_id', { type: 'left' });
+      scoped.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+      scoped.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
+
+      const rows = await query
+        .where((builder) => {
+          builder
+            .where('psm.status_id', statusId)
+            .orWhereRaw('lower(trim(COALESCE(psm.custom_name, s.name, ss.name))) = ?', [
+              status.name.trim().toLowerCase(),
+            ]);
+        })
+        .select<ProjectStatusRenameImpactRow[]>(
+          'psm.status_id as status_id',
+          'psm.custom_name as custom_name',
+          'psm.project_id as project_id',
+          'p.project_name as project_name'
+        );
+
+      return bucketProjectStatusRenameImpact(rows, statusId, status.name);
+    });
+  } catch (error) {
+    const expected = projectTaskStatusActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -655,6 +788,13 @@ export const deleteProjectStatusMapping = withAuth(async (
 
     // Move tasks if a target mapping is provided
     if (moveTasksToMappingId) {
+      const replacement = await tenantScopedTable(trx, 'project_status_mappings', tenant)
+        .where({ project_status_mapping_id: moveTasksToMappingId }).first();
+      if (!replacement || replacement.project_id !== mapping.project_id ||
+          (replacement.phase_id ?? null) !== (mapping.phase_id ?? null)) {
+        throw new Error('Project task status not found in the same project and phase scope');
+      }
+      if (moveTasksToMappingId === mappingId) throw new Error('Cannot delete status by moving tasks to itself');
       await tenantScopedTable(trx, 'project_tasks', tenant)
         .where({ project_status_mapping_id: mappingId })
         .update({ project_status_mapping_id: moveTasksToMappingId });
@@ -823,25 +963,7 @@ export const createTenantProjectStatus = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
-      // Use advisory lock to serialize status creation for this tenant/type combination
-    // Create a hash from tenant + item_type + status_type for the lock key
-    const lockKey = `${tenant}:project_task:project_task`;
-
-    // Create a stable 32-bit integer hash
-    let hash = 0;
-    for (let i = 0; i < lockKey.length; i++) {
-      const char = lockKey.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    const lockHash = Math.abs(hash) % 2147483647; // Ensure it fits in PostgreSQL integer range
-
-    console.log(`[DEBUG] Acquiring advisory lock ${lockHash} for ${lockKey}`);
-
-    // Acquire advisory lock
-    await trx.raw('SELECT pg_advisory_xact_lock(?)', [lockHash]);
-
-    console.log(`[DEBUG] Lock acquired, calculating order_number`);
+      await lockProjectTaskStatusLibrary(trx, tenant);
 
     // Get next order number - filter by status_type since that's what the constraint uses
     const maxOrder = await tenantScopedTable(trx, 'statuses', tenant)
@@ -987,6 +1109,30 @@ export const reorderTenantProjectStatuses = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
+      await lockProjectTaskStatusLibrary(trx, tenant);
+      if (statusOrder.length === 0) return;
+      const ids = new Set(statusOrder.map(row => row.status_id));
+      const positions = new Set(statusOrder.map(row => row.order_number));
+      if (ids.size !== statusOrder.length || positions.size !== statusOrder.length ||
+          statusOrder.some(row => !Number.isInteger(row.order_number) || row.order_number < 0 || row.order_number > 2147483647)) {
+        throw new Error('Cannot reorder project task statuses with duplicate or invalid positions');
+      }
+      const existing = await tenantScopedTable(trx, 'statuses', tenant)
+        .where({ status_type: 'project_task' }).select('status_id', 'order_number').forUpdate();
+      const existingIds = new Set(existing.map(row => row.status_id));
+      if (statusOrder.some(row => !existingIds.has(row.status_id))) throw new Error('Project task status not found');
+      if (existing.some(row => !ids.has(row.status_id) && positions.has(row.order_number))) {
+        throw new Error('Cannot reorder project task statuses into an occupied position');
+      }
+      const maximum = Math.max(0, ...existing.map(row => Number(row.order_number)), ...positions);
+      if (maximum + statusOrder.length > 2147483647) throw new Error('Cannot reorder project task statuses beyond the supported position range');
+      // The order index is immediate, so release every affected position before
+      // assigning final values. Temporary values are invisible outside this transaction.
+      for (let index = 0; index < statusOrder.length; index++) {
+        await tenantScopedTable(trx, 'statuses', tenant)
+          .where({ status_id: statusOrder[index].status_id, status_type: 'project_task' })
+          .update({ order_number: maximum + index + 1 });
+      }
       for (const { status_id, order_number } of statusOrder) {
         await tenantScopedTable(trx, 'statuses', tenant)
           .where({

@@ -25,7 +25,6 @@ function makeRecord(input: {
     sourceObligation: {
       tenant: 'tenant-1',
       obligationId: 'line-1',
-      obligationType: 'contract_line',
       chargeFamily: 'fixed',
     },
     cadenceOwner: 'contract',
@@ -58,7 +57,7 @@ describe('regenerateRecurringServicePeriods', () => {
   it('rekeys regenerated records when schedule identity changes', () => {
     const existingArrears = makeRecord({
       recordId: 'record-arrears-r1',
-      scheduleKey: 'schedule:tenant-1:contract_line:line-1:contract:arrears',
+      scheduleKey: 'schedule:tenant-1:line-1:contract:arrears',
       periodKey: 'period:2026-03-01:2026-04-01',
       revision: 1,
       duePosition: 'arrears',
@@ -66,7 +65,7 @@ describe('regenerateRecurringServicePeriods', () => {
 
     const candidateAdvance = makeRecord({
       recordId: 'record-advance-r1',
-      scheduleKey: 'schedule:tenant-1:contract_line:line-1:contract:advance',
+      scheduleKey: 'schedule:tenant-1:line-1:contract:advance',
       periodKey: 'period:2026-03-01:2026-04-01',
       revision: 1,
       duePosition: 'advance',
@@ -85,14 +84,14 @@ describe('regenerateRecurringServicePeriods', () => {
     expect(plan.regeneratedRecords[0]?.scheduleKey).toBe(candidateAdvance.scheduleKey);
     expect(plan.regeneratedRecords[0]?.duePosition).toBe('advance');
     expect(plan.regeneratedRecords[0]?.recordId).toBe(
-      'schedule:tenant-1:contract_line:line-1:contract:advance:period:2026-03-01:2026-04-01:r2',
+      'schedule:tenant-1:line-1:contract:advance:period:2026-03-01:2026-04-01:r2',
     );
   });
 
   it('preserves existing records that start at or beyond the generated coverage end', () => {
     const existingInsideCoverage = makeRecord({
       recordId: 'record-june-r1',
-      scheduleKey: 'schedule:tenant-1:contract_line:line-1:contract:advance',
+      scheduleKey: 'schedule:tenant-1:line-1:contract:advance',
       periodKey: 'period:2026-06-01:2026-07-01',
       revision: 1,
       duePosition: 'advance',
@@ -109,7 +108,7 @@ describe('regenerateRecurringServicePeriods', () => {
     });
     const existingOutsideCoverage = makeRecord({
       recordId: 'record-august-r1',
-      scheduleKey: 'schedule:tenant-1:contract_line:line-1:contract:advance',
+      scheduleKey: 'schedule:tenant-1:line-1:contract:advance',
       periodKey: 'period:2026-08-01:2026-09-01',
       revision: 1,
       duePosition: 'advance',
@@ -142,7 +141,7 @@ describe('regenerateRecurringServicePeriods', () => {
   it('treats persisted UTC-midnight date ranges as equivalent to fresh date-only candidates', () => {
     const existing = makeRecord({
       recordId: 'record-june-r1',
-      scheduleKey: 'schedule:tenant-1:contract_line:line-1:client:arrears',
+      scheduleKey: 'schedule:tenant-1:line-1:client:arrears',
       periodKey: 'period:2026-06-01:2026-07-01',
       revision: 1,
       duePosition: 'arrears',
@@ -192,7 +191,7 @@ describe('regenerateRecurringServicePeriods', () => {
   it('fills a gap before a preserved record without duplicating the preserved slot', () => {
     const skipped = makeRecord({
       recordId: 'record-oct-skipped',
-      scheduleKey: 'schedule:tenant-1:contract_line:line-1:contract:arrears',
+      scheduleKey: 'schedule:tenant-1:line-1:contract:arrears',
       periodKey: 'period:2026-10-08:2026-11-08',
       revision: 2,
       duePosition: 'arrears',
@@ -261,7 +260,7 @@ describe('regenerateRecurringServicePeriods', () => {
     // sit inside the first quarter; the next quarter (Apr–Jul) is unrelated and
     // must still be generated. The old positional walk consumed one candidate
     // per preserved record and silently swallowed it.
-    const scheduleKey = 'schedule:tenant-1:contract_line:line-1:contract:arrears';
+    const scheduleKey = 'schedule:tenant-1:line-1:contract:arrears';
     const janLock = makeRecord({
       recordId: 'lock-jan',
       scheduleKey,
@@ -337,7 +336,7 @@ describe('regenerateRecurringServicePeriods', () => {
     // candidate and Q3 is present, but Q2 (Apr 8–Jul 8) is neither held nor
     // protected, so it must be reported even though the ledger extends beyond
     // the horizon.
-    const scheduleKey = 'schedule:tenant-1:contract_line:line-1:contract:arrears';
+    const scheduleKey = 'schedule:tenant-1:line-1:contract:arrears';
     const janLock = makeRecord({
       recordId: 'lock-jan',
       scheduleKey,
@@ -409,7 +408,7 @@ describe('regenerateRecurringServicePeriods', () => {
   it('assigns new records a revision above superseded ledger history', () => {
     const superseded = makeRecord({
       recordId: 'record-june-r1',
-      scheduleKey: 'schedule:tenant-1:contract_line:line-1:client:arrears',
+      scheduleKey: 'schedule:tenant-1:line-1:client:arrears',
       periodKey: 'period:2026-06-01:2026-07-01',
       revision: 1,
       duePosition: 'arrears',

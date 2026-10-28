@@ -158,6 +158,8 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       const result = await deleteContract(contractToDelete.contractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         handleError(getErrorMessage(result));
+        // The delete may have been refused after the list went stale; show current state.
+        await fetchClientContracts();
         setContractToDelete(null);
         return;
       }
@@ -169,6 +171,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
         ? err.message
         : t('clientContracts.toasts.failedToDelete', { defaultValue: 'Failed to delete contract' });
       toast.error(message);
+      await fetchClientContracts();
     } finally {
       setIsDeletingContract(false);
     }
@@ -226,6 +229,8 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
       const result = await activateClientContractForBilling(clientContractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));
+        await fetchClientContracts();
+        onRefreshNeeded?.();
         return;
       }
       toast.success(t('contractsList.toasts.contractActivated', { defaultValue: 'Contract activated' }));
@@ -284,6 +289,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
     const normalized = (status || 'draft').toLowerCase();
     const statusConfig: Record<string, { variant: 'success' | 'default-muted' | 'warning' | 'error' | 'info'; label: string }> = {
       active: { variant: 'success', label: t('status.active', { defaultValue: 'Active' }) },
+      scheduled: { variant: 'info', label: t('status.scheduled', { defaultValue: 'Scheduled' }) },
       draft: { variant: 'default-muted', label: t('status.draft', { defaultValue: 'Draft' }) },
       terminated: { variant: 'warning', label: t('status.terminated', { defaultValue: 'Terminated' }) },
       expired: { variant: 'error', label: t('status.expired', { defaultValue: 'Expired' }) },
@@ -444,7 +450,8 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                     ? t('contractsList.actions.resume', { defaultValue: 'Resume' })
                     : t('clientContracts.actions.viewDetails', { defaultValue: 'View details' })}
                 </DropdownMenuItem>
-                {!isSystemManagedDefault && (record.assignment_status ?? record.status) === 'active' && (
+                {/* A scheduled contract is confirmed and can be terminated before it starts. */}
+                {!isSystemManagedDefault && ['active', 'scheduled'].includes(record.assignment_status ?? record.status) && (
                   <DropdownMenuItem
                     id="terminate-contract-menu-item"
                     className="text-orange-600 focus:text-orange-600"
@@ -472,6 +479,15 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                     }}
                   >
                     {t('contractsList.actions.restore', { defaultValue: 'Restore' })}
+                  </DropdownMenuItem>
+                )}
+                {!isSystemManagedDefault && (record.assignment_status ?? record.status) === 'scheduled' && (
+                  // Already active: "Set to Active" would be a no-op, so explain the start date instead.
+                  <DropdownMenuItem id="scheduled-start-menu-item" disabled>
+                    {t('status.startsOn', {
+                      defaultValue: 'Starts {{date}}',
+                      date: formatDateValue(record.start_date),
+                    })}
                   </DropdownMenuItem>
                 )}
                 {!isSystemManagedDefault && (record.assignment_status ?? record.status) === 'draft' && (

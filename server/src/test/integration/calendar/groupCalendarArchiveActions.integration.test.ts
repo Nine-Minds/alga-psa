@@ -31,6 +31,8 @@ vi.mock('@alga-psa/auth', async (importOriginal) => ({
 vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => ({
   ...await importOriginal<typeof import('@alga-psa/event-bus/publishers')>(),
   publishEvent: fixture.publishEvent,
+  // SCHEDULE_ENTRY_UPDATED is catalogued and goes through publishWorkflowEvent; capture it on the same spy.
+  publishWorkflowEvent: fixture.publishEvent,
 }));
 
 import { archiveGroupCalendar, restoreGroupCalendar } from '@alga-psa/scheduling/actions/calendarSharingActions';

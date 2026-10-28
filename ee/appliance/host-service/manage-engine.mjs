@@ -157,6 +157,55 @@ export async function readLicenseStatus(deps) {
   return { ...licenseStatusFromClaims(claims, edition), source: 'seed-fallback', liveError };
 }
 
+// The live license read execs a fresh Node process inside the app pod (module
+// load + a new database connection), and it used to run twice per Manage poll
+// (once for the license panel, once for Support Mode eligibility) — every 60s
+// on the Overview alone. The license only changes through apply/redeem (which
+// invalidate) and a daily check-in, so share one read per TTL. Degraded reads
+// (app unreachable, seed fallback) expire quickly so recovery shows promptly.
+export const LICENSE_STATUS_TTL_MS = 5 * 60 * 1000;
+export const LICENSE_STATUS_DEGRADED_TTL_MS = 30 * 1000;
+
+export function createLicenseStatusCache({
+  read,
+  ttlMs = LICENSE_STATUS_TTL_MS,
+  degradedTtlMs = LICENSE_STATUS_DEGRADED_TTL_MS,
+  now = () => Date.now()
+}) {
+  let cached = null;
+  let inFlight = null;
+  let generation = 0;
+
+  return {
+    get() {
+      if (cached && now() < cached.expiresAt) return Promise.resolve(cached.value);
+      if (inFlight) return inFlight;
+      const startedGeneration = generation;
+      const flight = Promise.resolve()
+        .then(read)
+        .then((value) => {
+          // An invalidate() during the read means this value may predate the
+          // change; hand it to the waiting caller but do not keep it.
+          if (startedGeneration === generation) {
+            const degraded = !value || value.source !== 'live' || Boolean(value.liveError);
+            cached = { value, expiresAt: now() + (degraded ? degradedTtlMs : ttlMs) };
+          }
+          return value;
+        })
+        .finally(() => { if (inFlight === flight) inFlight = null; });
+      inFlight = flight;
+      return flight;
+    },
+    // Callers after an invalidate() start a fresh read rather than joining one
+    // that began before the change.
+    invalidate() {
+      generation += 1;
+      cached = null;
+      inFlight = null;
+    }
+  };
+}
+
 function parseWorkflowResult(execResult) {
   // The in-pod scripts print a structured JSON result to stdout AND exit
   // nonzero on failure, so stdout wins whenever it parses — a nonzero exit
@@ -470,7 +519,12 @@ export async function collectManageStatus(deps) {
     licenseNamespace = 'msp',
     licenseSecretName = 'appliance-license-seed',
     licenseAppDeployment = 'alga-core-sebastian',
-    licenseAppNamespace = 'msp'
+    licenseAppNamespace = 'msp',
+    // Optional cached reader (createLicenseStatusCache().get). Omitted, the
+    // license is read live; includeLicense=false skips it entirely (the
+    // Overview's update banner needs no license).
+    readLicense = null,
+    includeLicense = true
   } = deps;
 
   const selection = readJsonFile(releaseSelectionFile) || {};
@@ -532,15 +586,21 @@ export async function collectManageStatus(deps) {
   // License. readLicenseStatus records its own live-read diagnostic; the default
   // here only applies if the read itself throws unexpectedly.
   let license = { edition: null, expiresAt: null, perpetual: false, status: 'unknown', source: 'seed-fallback', liveError: 'status_unavailable' };
-  try {
-    license = await readLicenseStatus({
-      kube,
-      namespace: licenseNamespace,
-      secretName: licenseSecretName,
-      appDeployment: licenseAppDeployment,
-      appNamespace: licenseAppNamespace
-    });
-  } catch { /* best effort — keep the diagnosable default above */ }
+  if (includeLicense) {
+    try {
+      license = readLicense
+        ? await readLicense()
+        : await readLicenseStatus({
+          kube,
+          namespace: licenseNamespace,
+          secretName: licenseSecretName,
+          appDeployment: licenseAppDeployment,
+          appNamespace: licenseAppNamespace
+        });
+    } catch { /* best effort — keep the diagnosable default above */ }
+  } else {
+    license = null;
+  }
 
   // App-update status, reconciled against live reality. install-state persists the
   // *last* update attempt's outcome, which goes stale: a block that has since

@@ -52,6 +52,7 @@ import { analytics } from '@alga-psa/analytics/client';
 import WorkflowRunList from './WorkflowRunList';
 import WorkflowDeadLetterQueue from './WorkflowDeadLetterQueue';
 import WorkflowEventList from './WorkflowEventList';
+import WorkflowLaunchSkipBanner from './WorkflowLaunchSkipBanner';
 import WorkflowRunDialog from './WorkflowRunDialog';
 import WorkflowDesignerAuditPanel from './WorkflowDesignerAuditPanel';
 import WorkflowGraph from '../workflow-graph/WorkflowGraph';
@@ -97,6 +98,9 @@ import {
   WORKFLOW_CAUGHT_ERROR_FIELDS,
   WORKFLOW_CAUGHT_ERROR_SCHEMA,
   buildWorkflowDesignerActionCatalog,
+  dateTriggerSourceDefinitions,
+  getDateTriggerSourceByCatalogEvent,
+  getDateTriggerSourceDefinition,
   getWorkflowDesignerCatalogRecordForAction,
   type WorkflowDesignerCatalogRecord
 } from '@alga-psa/workflows/authoring';
@@ -209,8 +213,11 @@ import type {
   InputMapping
 } from '@alga-psa/workflows/runtime/client';
 import { WORKFLOW_CLOCK_PAYLOAD_SCHEMA_REF } from '@alga-psa/workflows/authoring';
-import { EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF } from '@alga-psa/shared/workflow/runtime/schemas/emptyWorkflowPayloadSchema';
+import { EMPTY_WORKFLOW_PAYLOAD_SCHEMA_REF } from '@alga-psa/event-schemas';
 import { DATE_TRIGGER_PAYLOAD_SCHEMA_REFS } from './dateTriggerPayloadSchemas';
+import { DateTriggerStatusAgeFields } from './DateTriggerStatusAgeFields';
+import { type StatusAgeParamsDraft } from './dateTriggerStatusAge';
+
 
 import {
   isWorkflowAiInferAction,
@@ -218,6 +225,7 @@ import {
   resolveComposeTextOutputSchemaFromConfig,
   resolveWorkflowAiSchemaFromConfig,
 } from '@alga-psa/workflows/authoring';
+import { buildDateTriggerForSource } from '@alga-psa/workflows/authoring';
 import { describeExpressionError, validateExpressionSource } from '@alga-psa/workflows/authoring';
 import { partitionStepExpressionValidations, validateStepExpressions } from './expressionValidation';
 import {
@@ -1466,6 +1474,8 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     setDesignerSidebarWidth(readStoredWorkflowDesignerSidebarWidth());
   }, []);
   const designerFloatAnchorRef = useRef<HTMLDivElement | null>(null);
+  // Page header (title, toolbar, async launch-skip banner). Its height moves the float anchor without resizing it.
+  const designerHeaderRef = useRef<HTMLDivElement | null>(null);
   const designerFloatAnchorRectRef = useRef<{
     top: number;
     left: number;
@@ -1565,6 +1575,11 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
     if (resizeObserver && el) {
       resizeObserver.observe(el);
+      // Anything above the anchor (e.g. the async launch-skip banner) shifts it without
+      // resizing it, so the header's own size changes must re-anchor the floating panels too.
+      if (designerHeaderRef.current) {
+        resizeObserver.observe(designerHeaderRef.current);
+      }
     }
 
     update();
@@ -2119,6 +2134,10 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
     } else {
       params.set('section', section);
     }
+    // A selected event only makes sense on the events section.
+    if (section !== 'events') {
+      params.delete('eventId');
+    }
     const nextParamsString = params.toString();
     const nextUrl = nextParamsString ? `/msp/workflow-control?${nextParamsString}` : '/msp/workflow-control';
     if (nextParamsString !== searchParamsString) {
@@ -2133,13 +2152,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const triggerSchemaPolicy = useMemo(() => {
     const dateTrigger = activeDefinition?.trigger?.type === 'date' ? activeDefinition.trigger : null;
     if (dateTrigger) {
-      // LEVERAGE: pattern date-trigger-source-list — third copy of the source-to-schema map; use the shared one.
-      const expectedRefs: Record<string, string> = {
-        'client.anniversary': 'payload.ClientAnniversary.v1',
-        'contract.renewal_decision': 'payload.ContractRenewalDate.v1',
-        'contract.end': 'payload.ContractEndDate.v1',
-        'asset.warranty_end': 'payload.AssetWarrantyEnd.v1',
-      };
+      const expectedRefs: Record<string, string> = DATE_TRIGGER_PAYLOAD_SCHEMA_REFS;
       if (activeDefinition?.payloadSchemaRef !== expectedRefs[dateTrigger.source]) {
         return { ok: false, level: 'error' as const, message: 'Date trigger payload schema must match its selected source.' };
       }
@@ -3144,18 +3157,27 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
   // Active/Paused for a published workflow, toggled from the header. Only the pause flag changes;
   // the other settings are sent with their saved values.
-  const [optimisticPaused, setOptimisticPaused] = useState<boolean | null>(null);
+  // The optimistic flip holds only while the same workflow still reports the saved state it was
+  // clicked against. Derived during render rather than cleared by an effect, so a click landing in
+  // the same frame the record first renders is not wiped by that render's pending effect.
+  const [optimisticPaused, setOptimisticPaused] = useState<{
+    workflowId: string;
+    savedIsPaused: boolean;
+    isPaused: boolean;
+  } | null>(null);
   const [isTogglingPaused, setIsTogglingPaused] = useState(false);
   const savedIsPaused = activeWorkflowRecord?.is_paused ?? false;
-  useEffect(() => {
-    setOptimisticPaused(null);
-  }, [savedIsPaused, activeWorkflowId]);
-  const workflowIsPaused = optimisticPaused ?? savedIsPaused;
+  const workflowIsPaused =
+    optimisticPaused
+    && optimisticPaused.workflowId === activeWorkflowId
+    && optimisticPaused.savedIsPaused === savedIsPaused
+      ? optimisticPaused.isPaused
+      : savedIsPaused;
   const handleTogglePaused = async () => {
     if (!activeWorkflowId || !activeWorkflowRecord) return;
     const nextPaused = !workflowIsPaused;
     setIsTogglingPaused(true);
-    setOptimisticPaused(nextPaused);
+    setOptimisticPaused({ workflowId: activeWorkflowId, savedIsPaused, isPaused: nextPaused });
     try {
       await updateWorkflowDefinitionMetadataAction(buildWorkflowMetadataUpdate(activeWorkflowId, {
         ...buildWorkflowMetadataDraft(activeWorkflowRecord),
@@ -4535,6 +4557,20 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                           handleDefinitionChange({ trigger: undefined });
                                           return;
                                         }
+                                        // A date source's catalog row is not a real event: choosing it builds the date trigger.
+                                        const dateSource = getDateTriggerSourceByCatalogEvent(next);
+                                        if (dateSource) {
+                                          setShowUseEventSchemaSuggestion(false);
+                                          setPendingEventSchemaPrompt(null);
+                                          setSelectedTriggerEventCategory('');
+                                          setDateOffsetDirection('on');
+                                          setTriggerTypeSelection('date');
+                                          handleDefinitionChange({
+                                            trigger: buildDateTriggerForSource(dateSource, activeDefinition?.trigger?.type === 'date' ? (activeDefinition.trigger as Record<string, unknown>) : undefined),
+                                            payloadSchemaRef: dateSource.payloadSchemaRef,
+                                          });
+                                          return;
+                                        }
                                         const chosen = eventCatalogOptions.find((e) => e.event_type === next) ?? null;
                                         if (chosen?.source === 'system' && (chosen.payload_schema_ref_status !== 'known' || !chosen.payload_schema_ref)) {
                                           toast.error(t('designer.toasts.systemEventMissingSchema', {
@@ -4695,19 +4731,27 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     value={dateTrigger.source}
                                     disabled={!canManage}
                                     showPlaceholderInDropdown={false}
-                                    // LEVERAGE: pattern date-trigger-source-list — build from the shared source definitions (id + labelKey).
-                                    options={[
-                                      { value: 'client.anniversary', label: t('designer.form.dateSourceAnniversary', { defaultValue: 'Client anniversary' }) },
-                                      { value: 'contract.renewal_decision', label: t('designer.form.dateSourceRenewal', { defaultValue: 'Contract renewal decision date' }) },
-                                      { value: 'contract.end', label: t('designer.form.dateSourceContractEnd', { defaultValue: 'Contract end date' }) },
-                                      { value: 'asset.warranty_end', label: t('designer.form.dateSourceWarranty', { defaultValue: 'Asset warranty end' }) },
-                                    ]}
+                                    options={dateTriggerSourceDefinitions.map((definition) => ({
+                                      value: definition.id,
+                                      label: t(definition.labelKey, { defaultValue: definition.defaultLabel }),
+                                    }))}
                                     onValueChange={(value) => {
-                                      handleDefinitionChange({ trigger: { ...dateTrigger, source: value as typeof dateTrigger.source }, payloadSchemaRef: DATE_TRIGGER_PAYLOAD_SCHEMA_REFS[value] });
+                                      const nextDefinition = getDateTriggerSourceDefinition(value);
+                                      const nextTrigger = buildDateTriggerForSource(nextDefinition!, dateTrigger as Record<string, unknown>);
+                                      if (!nextDefinition?.usesOffset) setDateOffsetDirection('on');
+                                      handleDefinitionChange({ trigger: nextTrigger, payloadSchemaRef: DATE_TRIGGER_PAYLOAD_SCHEMA_REFS[value as keyof typeof DATE_TRIGGER_PAYLOAD_SCHEMA_REFS] });
                                     }}
                                   />
                                 </div>
+                                {dateTrigger.source === 'ticket.status_age' && (
+                                  <DateTriggerStatusAgeFields
+                                    params={dateTrigger.params as StatusAgeParamsDraft | undefined}
+                                    disabled={!canManage}
+                                    onChange={(params) => handleDefinitionChange({ trigger: { ...dateTrigger, params } })}
+                                  />
+                                )}
                                 <div className="grid grid-cols-2 gap-3">
+                                  {getDateTriggerSourceDefinition(dateTrigger.source)?.usesOffset !== false && (<>
                                   <div>
                                     <label htmlFor="workflow-date-offset" className="mb-1 block text-sm font-medium">{t('designer.form.dateOffset', { defaultValue: 'Days' })}</label>
                                     <Input id="workflow-date-offset" type="number" min={0} max={365} value={Math.abs(dateTrigger.offsetDays)} disabled={!canManage} onChange={(event) => {
@@ -4727,6 +4771,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                       handleDefinitionChange({ trigger: { ...dateTrigger, offsetDays: direction === 'before' ? -days : direction === 'after' ? days : 0 } });
                                     }} />
                                   </div>
+                                  </>)}
                                   <div>
                                     <label htmlFor="workflow-date-local-time" className="mb-1 block text-sm font-medium">{t('designer.form.localTime', { defaultValue: 'Local time' })}</label>
                                     <Input id="workflow-date-local-time" type="time" value={dateTrigger.localTime} disabled={!canManage} onChange={(event) => handleDefinitionChange({ trigger: { ...dateTrigger, localTime: event.target.value } })} />
@@ -4748,7 +4793,9 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
                                     />
                                   </div>
                                 </div>
-                                <p className="text-xs text-[rgb(var(--color-text-500))]">{t('designer.form.dateTriggerSummary', { defaultValue: 'Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})', days: Math.abs(dateTrigger.offsetDays), direction: t(dateOffsetDirection === 'before' ? 'designer.form.daysBefore' : dateOffsetDirection === 'after' ? 'designer.form.daysAfter' : 'designer.form.onDate', { defaultValue: dateOffsetDirection === 'before' ? 'days before' : dateOffsetDirection === 'after' ? 'days after' : 'on' }), source: t(({ 'client.anniversary': 'designer.form.dateSourceAnniversary', 'contract.renewal_decision': 'designer.form.dateSourceRenewal', 'contract.end': 'designer.form.dateSourceContractEnd', 'asset.warranty_end': 'designer.form.dateSourceWarranty' } as Record<string, string>)[dateTrigger.source], { defaultValue: dateTrigger.source }), time: dateTrigger.localTime, timezone: dateTrigger.timezone || t('designer.form.tenantTimezoneDefault', { defaultValue: 'tenant timezone' }) })}</p>
+                                <p className="text-xs text-[rgb(var(--color-text-500))]">{dateTrigger.source === 'ticket.status_age'
+                                  ? t('designer.form.statusAgeSummary', { defaultValue: 'Runs daily at {{time}} ({{timezone}}) for each ticket that has been in the chosen status for the set number of days', time: dateTrigger.localTime, timezone: dateTrigger.timezone || t('designer.form.tenantTimezoneDefault', { defaultValue: 'tenant timezone' }) })
+                                  : t('designer.form.dateTriggerSummary', { defaultValue: 'Runs {{days}} {{direction}} {{source}} at {{time}} ({{timezone}})', days: Math.abs(dateTrigger.offsetDays), direction: t(dateOffsetDirection === 'before' ? 'designer.form.daysBefore' : dateOffsetDirection === 'after' ? 'designer.form.daysAfter' : 'designer.form.onDate', { defaultValue: dateOffsetDirection === 'before' ? 'days before' : dateOffsetDirection === 'after' ? 'days after' : 'on' }), source: t(getDateTriggerSourceDefinition(dateTrigger.source)?.labelKey ?? '', { defaultValue: dateTrigger.source }), time: dateTrigger.localTime, timezone: dateTrigger.timezone || t('designer.form.tenantTimezoneDefault', { defaultValue: 'tenant timezone' }) })}</p>
                               </div>
                             )}
 
@@ -5829,7 +5876,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
 
   return (
     <div className="h-full min-h-0 flex flex-col">
-      <div className="border-b bg-white dark:bg-[rgb(var(--color-card))] px-6 py-4">
+      <div ref={designerHeaderRef} className="border-b bg-white dark:bg-[rgb(var(--color-card))] px-6 py-4">
         <div className="flex items-start justify-between gap-4">
           <div>
             {isEditorDesignerMode && (
@@ -5990,6 +6037,12 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
             workflowStepQuotaCard
           ) : null}
         </div>
+        {isEditorDesignerMode && activeWorkflowId && (
+          <WorkflowLaunchSkipBanner
+            workflowId={activeWorkflowId}
+            isPublished={hasPublishedVersion}
+          />
+        )}
       </div>
 
       <WorkflowRunDialog
@@ -8398,7 +8451,61 @@ const ExpressionField: React.FC<{
   );
 };
 
-const MappingExprEditor: React.FC<{
+type MappingRow = { id: string; key: string; expr: Expr };
+
+let mappingRowSequence = 0;
+
+const createMappingRowId = (): string => {
+  const webCrypto = typeof globalThis !== 'undefined' ? globalThis.crypto : undefined;
+  if (webCrypto && typeof webCrypto.randomUUID === 'function') {
+    return webCrypto.randomUUID();
+  }
+  mappingRowSequence += 1;
+  return `mapping-row-${mappingRowSequence}`;
+};
+
+// Rows keep their identity while the user renames them; empty names are kept on screen
+// (flagged invalid) but omitted from the emitted record.
+const mappingRowsToRecord = (rows: MappingRow[]): Record<string, Expr> => {
+  const next: Record<string, Expr> = {};
+  rows.forEach((row) => {
+    const key = row.key.trim();
+    if (!key) return;
+    next[key] = row.expr;
+  });
+  return next;
+};
+
+// Re-materializes rows from an externally changed record, reusing the existing row id for
+// each name so nothing remounts when the parent merely echoes our own emit back.
+const syncMappingRows = (previous: MappingRow[], value: Record<string, Expr>): MappingRow[] => {
+  const reusableIds = new Map<string, string[]>();
+  previous.forEach((row) => {
+    const existing = reusableIds.get(row.key);
+    if (existing) {
+      existing.push(row.id);
+    } else {
+      reusableIds.set(row.key, [row.id]);
+    }
+  });
+
+  return Object.entries(value).map(([key, expr]) => {
+    const candidates = reusableIds.get(key);
+    const id = candidates && candidates.length > 0 ? candidates.shift()! : createMappingRowId();
+    return { id, key, expr };
+  });
+};
+
+const nextMappingFieldName = (rows: MappingRow[]): string => {
+  const used = new Set(rows.map((row) => row.key.trim()));
+  let index = 1;
+  while (used.has(`field_${index}`)) {
+    index += 1;
+  }
+  return `field_${index}`;
+};
+
+export const MappingExprEditor: React.FC<{
   idPrefix: string;
   label: string;
   value: Record<string, Expr>;
@@ -8408,30 +8515,37 @@ const MappingExprEditor: React.FC<{
   disabled?: boolean;
 }> = ({ idPrefix, label, value, onChange, fieldOptions, context, disabled = false }) => {
   const { t } = useTranslation('msp/workflows');
-  const entries = Object.entries(value);
+  const [rows, setRows] = useState<MappingRow[]>(() => syncMappingRows([], value));
+  const emittedRef = useRef<string>(JSON.stringify(mappingRowsToRecord(rows)));
 
-  const handleUpdate = (key: string, expr: Expr) => {
-    onChange({ ...value, [key]: expr });
+  useEffect(() => {
+    const incoming = JSON.stringify(value);
+    if (incoming === emittedRef.current) return;
+    emittedRef.current = incoming;
+    setRows((previous) => syncMappingRows(previous, value));
+  }, [value]);
+
+  const commit = useCallback((nextRows: MappingRow[]) => {
+    setRows(nextRows);
+    const record = mappingRowsToRecord(nextRows);
+    emittedRef.current = JSON.stringify(record);
+    onChange(record);
+  }, [onChange]);
+
+  const handleUpdate = (id: string, expr: Expr) => {
+    commit(rows.map((row) => (row.id === id ? { ...row, expr } : row)));
   };
 
-  const handleKeyChange = (oldKey: string, newKey: string) => {
-    if (!newKey.trim()) return;
-    const next = { ...value };
-    const expr = next[oldKey];
-    delete next[oldKey];
-    next[newKey] = expr;
-    onChange(next);
+  const handleKeyChange = (id: string, nextKey: string) => {
+    commit(rows.map((row) => (row.id === id ? { ...row, key: nextKey } : row)));
   };
 
-  const handleRemove = (key: string) => {
-    const next = { ...value };
-    delete next[key];
-    onChange(next);
+  const handleRemove = (id: string) => {
+    commit(rows.filter((row) => row.id !== id));
   };
 
   const handleAdd = () => {
-    const nextKey = `field_${entries.length + 1}`;
-    onChange({ ...value, [nextKey]: { $expr: '' } });
+    commit([...rows, { id: createMappingRowId(), key: nextMappingFieldName(rows), expr: { $expr: '' } }]);
   };
 
   return (
@@ -8442,26 +8556,30 @@ const MappingExprEditor: React.FC<{
           {t('designer.mappingExpr.add', { defaultValue: 'Add' })}
         </Button>
       </div>
-      {entries.length === 0 && (
+      {rows.length === 0 && (
         <div className="text-xs text-gray-400">
           {t('designer.mappingExpr.empty', { defaultValue: 'No mappings yet.' })}
         </div>
       )}
       <div className="space-y-3">
-        {entries.map(([key, expr], index) => (
-          <Card key={key} className="p-3 space-y-2">
+        {rows.map((row, index) => (
+          <Card key={row.id} className="p-3 space-y-2">
             <div className="flex items-center gap-2">
               <Input
                 id={`${idPrefix}-key-${index}`}
-                value={key}
+                value={row.key}
                 disabled={disabled}
-                onChange={(event) => handleKeyChange(key, event.target.value)}
+                containerClassName="flex-1"
+                error={row.key.trim()
+                  ? undefined
+                  : t('designer.mappingExpr.nameRequired', { defaultValue: 'Enter a name for this mapping.' })}
+                onChange={(event) => handleKeyChange(row.id, event.target.value)}
               />
               <Button
                 id={`${idPrefix}-remove-${index}`}
                 variant="ghost"
                 size="sm"
-                onClick={() => handleRemove(key)}
+                onClick={() => handleRemove(row.id)}
                 disabled={disabled}
               >
                 {t('designer.mappingExpr.remove', { defaultValue: 'Remove' })}
@@ -8470,8 +8588,8 @@ const MappingExprEditor: React.FC<{
             <ExpressionField
               idPrefix={`${idPrefix}-expr-${index}`}
               label={t('designer.mappingExpr.expressionLabel', { defaultValue: 'Expression' })}
-              value={expr}
-              onChange={(nextExpr) => handleUpdate(key, nextExpr)}
+              value={row.expr}
+              onChange={(nextExpr) => handleUpdate(row.id, nextExpr)}
               fieldOptions={fieldOptions}
               context={context}
               disabled={disabled}

@@ -60,14 +60,20 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: hasPermissionMock }));
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async () => {
+  const { createAfterCommitDouble } = await import('../../../db/test-utils/afterCommitDouble');
+  const afterCommit = createAfterCommitDouble(() => trxStub);
+  return {
   createTenantKnex: createTenantKnexMock,
   tenantDb: () => ({
     table: (table: string) => stubTable(table),
     tenantJoin: (query: any) => query,
   }),
-  withTransaction: async (_db: unknown, work: (trx: any) => Promise<unknown>) => work(trxStub),
-}));
+  // Faithful after-commit contract: hooks queue, flush after the callback resolves.
+  withTransaction: afterCommit.withTransaction,
+  registerAfterCommit: afterCommit.registerAfterCommit,
+  };
+});
 
 vi.mock('../models/projectTask', () => ({
   default: {
@@ -115,8 +121,14 @@ vi.mock('../models/taskDependency', () => ({ default: {} }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(),
   publishWorkflowEvent: vi.fn(),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...((await importOriginal()) as any),
   buildProjectTaskAssignedPayload: vi.fn(() => ({})),
   buildProjectTaskCompletedPayload: vi.fn(() => ({})),
   buildProjectTaskCreatedPayload: vi.fn(() => ({})),

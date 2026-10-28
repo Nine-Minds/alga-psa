@@ -58,7 +58,7 @@ describe('Ticket comment scheduling contract', () => {
     expect(body).toContain('scheduleBackgroundJobAt(\n            SCHEDULED_COMMENT_JOB,');
     expect(body).toContain('singletonKey: `publish-comment:${comment.comment_id}`');
     expect(body).toContain(".update({ schedule_job_id: scheduled.jobId });");
-    expect(body).toContain("} else {\n        await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishEvent);");
+    expect(body).toContain("} else {\n        await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishStoredWorkflowEvent);");
 
     const service = readSource('../../../lib/api/services/TicketService.ts');
     expect(service).toContain("const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';");

@@ -67,6 +67,14 @@ function contractLineServiceConfigActionErrorFrom(error: unknown): ContractLineS
   return null;
 }
 
+async function isTemplateLine(knex: any, tenant: string, contractLineId: string): Promise<boolean> {
+  const row = await tenantDb(knex, tenant)
+    .table('contract_template_lines')
+    .where({ template_line_id: contractLineId })
+    .first();
+  return Boolean(row);
+}
+
 async function assertContractLineIsAuthorableByLineId(
   knex: any,
   tenant: string,
@@ -320,6 +328,18 @@ export const upsertPlanServiceBucketConfigurationAction = withAuth(async (
     if (totalMinutes == null || overageRate == null) {
       return actionError('Missing required bucket overlay fields.', 'msp/contract-lines:errors.configuration.bucketOverlayFieldsMissing');
     }
+    // LEVERAGE: pattern template-vs-live-branch — template lines have no bucket pools; they
+    // store the overlay in contract_template_line_service_bucket_config.
+    if (await isTemplateLine(knex, tenant, contractLineId)) {
+      const templateService = new ContractLineServiceConfigurationService(knex, tenant);
+      const configId = await templateService.upsertPlanServiceBucketConfiguration(contractLineId, serviceId, {
+        total_minutes: totalMinutes,
+        overage_rate: overageRate,
+        allow_rollover: bucketConfigData.allow_rollover ?? false,
+        billing_period: bucketConfigData.billing_period ?? 'monthly',
+      });
+      return { configId };
+    }
     let configId = '';
     await withTransaction(knex, async (trx) => {
       configId = await upsertBucketOverlayInTransaction(
@@ -391,6 +411,19 @@ export const upsertPlanServiceConfiguration = withAuth(async (
     await assertContractLineIsAuthorableByLineId(knex, tenant, payload.contractLineId);
     const service = new ContractLineServiceConfigurationService(knex, tenant);
     const existing = await service.getConfigurationForService(payload.contractLineId, payload.serviceId);
+
+    // LEVERAGE: pattern template-vs-live-branch — template usage config is a plain upsert (no tiers/measurement mode).
+    if (await isTemplateLine(knex, tenant, payload.contractLineId)) {
+      if (payload.enable_tiered_pricing || (payload.tiers && payload.tiers.length > 0)) {
+        return actionError('Rate tiers are not supported on contract template lines; remove the tiers or configure them on a live contract line.');
+      }
+      return service.upsertPlanServiceUsageConfiguration(payload.contractLineId, payload.serviceId, {
+        unit_rate: payload.base_rate,
+        unit_of_measure: payload.unit_of_measure,
+        enable_tiered_pricing: payload.enable_tiered_pricing,
+        minimum_usage: payload.minimum_usage,
+      });
+    }
 
     const usageConfig: Partial<IContractLineServiceUsageConfig> = {
       unit_of_measure: payload.unit_of_measure ?? resolveUnitOfMeasure({ fallback: 'C62' }).label,

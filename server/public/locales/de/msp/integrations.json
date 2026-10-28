@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Pro-Funktion"
+    },
     "accounting": {
       "bulk": {
         "button": "Sammelzuordnung",
@@ -27,7 +30,8 @@
           "mapped": "Zugeordnet",
           "noResult": "Für diese Zeile wurde kein Ergebnis zurückgegeben.",
           "pending": "Ausstehend",
-          "saved": "Gespeichert"
+          "saved": "Gespeichert",
+          "missingField": "{{field}} fehlt"
         },
         "suggested": "Vorgeschlagen",
         "toSave": "{{total}} zu speichern"
@@ -79,7 +83,8 @@
           "instant": "Sofort",
           "live": "Produktiv",
           "manual": "Manuell",
-          "twoWay": "Bidirektional"
+          "twoWay": "Bidirektional",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Übertragung",
@@ -99,6 +104,9 @@
           },
           "xeroCsv": {
             "description": "Exportieren Sie Rechnungen als CSV für den manuellen Import in Xero und importieren Sie Steuerdaten aus Xero-Berichten."
+          },
+          "qbd": {
+            "description": "Rechnungen als IIF-Datei für den Import in QuickBooks Desktop exportieren."
           }
         },
         "selected": "{{title}} ausgewählt",
@@ -124,6 +132,24 @@
           "paymentTerms": "Zahlungsbedingungen",
           "discounts": "Rabatte"
         }
+      },
+      "adjustmentMappings": {
+        "desktopAccount": "Name des Desktop-Ertragskontos",
+        "description": "Ordnen Sie Rechnungsrabatte und Gutschriften vor dem Export zu. Die Zuordnung gilt für dieses Buchhaltungsunternehmen.",
+        "add": "Zuordnung hinzufügen",
+        "remove": "Zuordnung entfernen",
+        "removeConfirm": "Diese Buchhaltungszuordnung entfernen?",
+        "desktopTaxAccount": "Name des Desktop-Umsatzsteuerkontos",
+        "desktopCustomer": "Name des Desktop-Kunden",
+        "desktopTerms": "Name der Desktop-Zahlungsbedingung",
+        "descriptionTaxCodes": "Jede Steuerregion gibt den Umsatzsteuerartikel bzw. die -gruppe an, die QuickBooks Desktop berechnet, sowie das Verbindlichkeitskonto, auf das gebucht wird.",
+        "descriptionServices": "Jede Dienstleistung gibt den QuickBooks Desktop-Artikel an, den ihre Rechnungszeilen verwenden, sowie das Erlöskonto, auf das sie gebucht werden.",
+        "descriptionClients": "Der QuickBooks Desktop-Kunde, als der jeder Kunde fakturiert wird. Nicht zugeordnete Kunden blockieren den Export.",
+        "descriptionPaymentTerms": "Die QuickBooks Desktop-Zahlungsbedingungen, die auf jeder Rechnung gedruckt werden. Nicht zugeordnete Bedingungen bleiben leer.",
+        "desktopItem": "Name des Desktop-Artikels",
+        "desktopItemHelp": "Der Artikel genau so, wie er in Ihrer QuickBooks Desktop-Artikelliste steht. Jede Rechnungszeile nennt einen Artikel, daher werden Exporte blockiert, bis er festgelegt ist.",
+        "desktopSalesTaxItem": "Umsatzsteuerartikel oder -gruppe",
+        "desktopSalesTaxItemHelp": "Leer lassen, um den Standard-Umsatzsteuerartikel aus den QuickBooks Desktop-Einstellungen zu verwenden."
       }
     },
     "calendar": {
@@ -399,26 +425,75 @@
           "test": "Verbindung testen",
           "testing": "Wird getestet…"
         },
-        "description": "Geben Sie Ihre CIPP-Instanz-URL und ein API-Token ein, damit Alga Entra-Daten erkennen und synchronisieren kann.",
-        "encryptionNote": "Der API-Schlüssel wird verschlüsselt gespeichert und nach dem Speichern nie wieder angezeigt.",
+        "description": "Geben Sie die Daten eines CIPP-API-Clients ein, damit Alga Entra-Daten erkennen und synchronisieren kann.",
+        "encryptionNote": "Der geheime Clientschlüssel wird verschlüsselt gespeichert und nach dem Speichern nie wieder angezeigt.",
         "errors": {
           "missingFields": "Sowohl Basis-URL als auch API-Token sind erforderlich.",
           "testFirst": "Testen Sie die Verbindung vor dem Speichern.",
-          "unknown": "Ein unbekannter Fehler ist aufgetreten."
+          "unknown": "Ein unbekannter Fehler ist aufgetreten.",
+          "missingApiClientFields": "API-URL, Anwendungs-ID (Client), geheimer Clientschlüssel und Mandanten-ID sind alle erforderlich."
         },
         "fields": {
           "apiToken": "API-Token",
-          "apiTokenHelp": "In CIPP: Einstellungen → CIPP → API-Zugriff. Kopieren Sie den API-Schlüssel, nicht ein Azure-Client-Geheimnis.",
+          "apiTokenHelp": "Der statische API-Schlüssel aus einer älteren CIPP-Version. CIPP stellt diese nicht mehr aus; bevorzugen Sie einen API-Client.",
           "apiTokenPlaceholder": "Token eingeben...",
-          "baseUrl": "CIPP-Basis-URL",
-          "baseUrlHelp": "Dies ist der CIPP-API-Function-App-Host (z. B. my-cipp-api.azurewebsites.net), nicht das CIPP-Frontend, bei dem Sie sich anmelden.",
-          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+          "baseUrl": "CIPP-API-URL",
+          "baseUrlHelp": "Die CIPP-API-URL, mit oder ohne abschließendes /api.",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com",
+          "apiUrl": "API-URL",
+          "apiUrlPlaceholder": "https://your-cipp-api.azurewebsites.net/api",
+          "apiUrlHelp": "Fügen Sie die in CIPP angezeigte API-URL ein. Sie endet auf /api; sie funktioniert mit oder ohne dieses Suffix.",
+          "clientId": "Anwendungs-ID (Client)",
+          "clientIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "clientSecret": "Geheimer Clientschlüssel",
+          "clientSecretPlaceholder": "Geheimen Clientschlüssel eingeben...",
+          "clientSecretHelp": "CIPP zeigt das Geheimnis nur einmal an, nämlich wenn Sie den Client mit Save to Azure speichern. Falls Sie es nicht mehr haben, erstellen Sie ein neues Geheimnis und geben Sie es hier ein.",
+          "tenantId": "Mandanten-ID",
+          "tenantIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "tenantIdHelp": "Die Mandanten-ID, die auf der Seite CIPP-API neben dem Client angezeigt wird."
         },
         "test": {
           "passed": "CIPP hat geantwortet. {{count}} Mandanten sichtbar.",
           "required": "Testen Sie die Verbindung vor dem Speichern."
         },
-        "title": "CIPP verbinden"
+        "title": "CIPP verbinden",
+        "reconnectTitle": "CIPP erneut verbinden",
+        "legacyDescription": "Geben Sie Ihre CIPP-API-URL und einen älteren statischen API-Schlüssel ein. CIPP stellt diese Schlüssel nicht mehr aus, verwenden Sie daher nach Möglichkeit einen API-Client.",
+        "reconnectNote": "API-URL, Anwendungs-ID (Client) und Mandanten-ID werden aus der aktuellen Verbindung übernommen. Geben Sie den geheimen Clientschlüssel erneut ein. Die aktuelle Verbindung funktioniert weiter, bis die neuen Daten einen Test bestehen und Sie speichern.",
+        "reconnectNoteLegacy": "Die API-URL wird aus der aktuellen Verbindung übernommen. Geben Sie Anwendungs-ID (Client), geheimen Clientschlüssel und Mandanten-ID aus CIPP > Integrations > CIPP-API ein. Die aktuelle Verbindung funktioniert weiter, bis die neuen Daten einen Test bestehen und Sie speichern.",
+        "legacyNote": "Ältere API-Schlüssel sind nur für Verbindungen gedacht, die erstellt wurden, bevor CIPP API-Clients eingeführt hat. Bestehende Verbindungen funktionieren weiterhin.",
+        "legacyEncryptionNote": "Der API-Schlüssel wird verschlüsselt gespeichert und nach dem Speichern nie wieder angezeigt.",
+        "help": {
+          "title": "Wo Sie diese Angaben in CIPP finden",
+          "steps": {
+            "openIntegration": "Gehen Sie in CIPP zu Integrations > CIPP-API.",
+            "createClient": "Wählen Sie Create New Client.",
+            "enable": "Aktivieren Sie den Client.",
+            "saveToAzure": "Wählen Sie Save to Azure.",
+            "copySecret": "Kopieren Sie den geheimen Clientschlüssel. CIPP zeigt ihn nur einmal an.",
+            "copyDetails": "Kopieren Sie von derselben Seite die Mandanten-ID und die API-URL sowie die Anwendungs-ID (Client)."
+          },
+          "tenantIdDelay": "Die Mandanten-ID kann nach dem ersten Speichern 5 bis 15 Minuten brauchen, bis sie erscheint. Falls sie noch fehlt, warten Sie und aktualisieren Sie die CIPP-Seite.",
+          "restrictions": "Wenn der Client Allowed IP Ranges verwendet, tragen Sie dort die Egress-IPs von Alga ein. Wenn er eine Custom Role verwendet, muss die Rolle listtenants, listusers, listgroups, listusergroups und ListMailboxes zulassen."
+        },
+        "shape": {
+          "useLegacy": "Stattdessen einen älteren API-Schlüssel verwenden",
+          "useApiClient": "Stattdessen einen CIPP-API-Client verwenden (empfohlen)"
+        },
+        "failure": {
+          "unreachable": "CIPP ist unter dieser URL nicht erreichbar",
+          "tokenRejected": "Microsoft hat die Anmeldung des API-Clients abgelehnt",
+          "apiRefused": "CIPP hat das Zugriffstoken abgelehnt",
+          "legacyRejected": "CIPP hat den API-Schlüssel abgelehnt",
+          "roleBlocked": "Die benutzerdefinierte CIPP-Rolle blockiert eine für die Synchronisierung nötige Berechtigung",
+          "transport": {
+            "dns": "{{host}} ist nicht erreichbar: Der Hostname lässt sich nicht auflösen. Prüfen Sie die API-URL auf Tippfehler; kopieren Sie sie aus CIPP > Integrations > CIPP-API.",
+            "refused": "{{host}} ist nicht erreichbar: Die Verbindung wurde abgelehnt. Der Host existiert, nimmt aber keine Verbindungen an. Prüfen Sie die API-URL und ob die CIPP-API-Function-App läuft.",
+            "timeout": "{{host}} ist nicht erreichbar: Zeitüberschreitung der Anfrage. Der Host ist eventuell nicht verfügbar, oder eine Firewall verwirft unseren Datenverkehr. Prüfen Sie die API-URL und versuchen Sie es erneut.",
+            "tls": "{{host}} ist nicht erreichbar: Das TLS-Zertifikat wurde nicht akzeptiert. Verwenden Sie die https-API-URL aus CIPP > Integrations > CIPP-API.",
+            "network": "{{host}} ist nicht erreichbar: Die Netzwerkanfrage ist fehlgeschlagen, bevor CIPP geantwortet hat. Prüfen Sie die API-URL und versuchen Sie es erneut."
+          }
+        }
       },
       "console": {
         "actions": {
@@ -771,7 +846,6 @@
             "validationFailed": "Microsoft hat Sie angemeldet, aber die verwaltete Mandantenliste konnte nicht gelesen werden; es wurde nichts gespeichert. Ihre Berechtigungen wurden akzeptiert — meist ist der Partner-Mandant nicht in Microsoft 365 Lighthouse eingebunden oder es bestehen keine aktiven GDAP-Beziehungen.",
             "tokenRejected": "Microsoft hat das Zugriffstoken der Verbindung abgelehnt; es wurde nichts gespeichert. Starten Sie die Verbindung erneut."
           },
-          "cippServerLabel": "CIPP-Server",
           "connectingSuffix": " (Verbindung wird hergestellt...)",
           "details": "Verbindungsdetails",
           "directCredentialSourceLabel": "Anmeldedatenquelle:",
@@ -784,7 +858,17 @@
           "types": {
             "cipp": "CIPP",
             "direct": "Microsoft Entra Direkt"
-          }
+          },
+          "authTypeLabel": "Authentifizierung",
+          "authTypes": {
+            "api_client": "API-Client",
+            "legacy_api_token": "Älterer API-Schlüssel"
+          },
+          "apiUrlLabel": "API-URL",
+          "clientIdLabel": "Anwendungs-ID (Client)",
+          "cippTenantIdLabel": "Mandanten-ID",
+          "legacyNotice": "Diese Verbindung verwendet einen älteren CIPP-API-Schlüssel. Sie wird unverändert weiter synchronisiert. Verbinden Sie erneut, um zu einem CIPP-API-Client zu wechseln.",
+          "reconnectCipp": "Erneut verbinden"
         },
         "currentStep": {
           "connect": {
@@ -983,8 +1067,8 @@
             "description": "Alga liest Mandanten über die von Ihnen betriebene CIPP-Instanz.",
             "label": "CIPP (CyberDrain Improved Partner Portal)",
             "prerequisites": {
-              "apiHost": "Den CIPP-API-Function-App-Host, nicht das CIPP-Frontend.",
-              "apiKey": "Einen CIPP-API-Schlüssel mit Zugriff auf die Mandantenliste.",
+              "apiHost": "Die API-URL, Anwendungs-ID (Client) und Mandanten-ID aus CIPP > Integrations > CIPP-API.",
+              "apiKey": "Das Geheimnis des API-Clients, das CIPP nur einmal anzeigt.",
               "instance": "Eine laufende CIPP-Instanz."
             }
           },
@@ -1223,7 +1307,12 @@
         "recommendedUnsaved": "Empfohlen – nicht gespeichert",
         "unsavedChange": "Ungespeicherte Änderung",
         "unsavedNotice": "Diese Filtereinstellungen gelten erst, wenn Sie sie speichern."
-      }
+      },
+      "proFeature": {
+        "description": "Die Microsoft Entra-Integration ist in AlgaPSA Pro verfügbar.",
+        "notice": "Die Microsoft Entra-Identitätsintegration ist eine Pro-Funktion."
+      },
+      "loading": "Microsoft Entra-Integration wird geladen…"
     },
     "google": {
       "settings": {
@@ -1294,6 +1383,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "Die Integration der IT-Dokumentation von Hudu ist in AlgaPSA Pro verfügbar."
+      },
       "clientTab": {
         "source": "Quelle: Hudu",
         "openInHudu": "In Hudu öffnen",
@@ -1669,10 +1761,15 @@
           "consentNotGranted": "Microsoft hat die Einwilligung des Administrators nicht bestätigt.",
           "consentPersistFailed": "Die Microsoft-Administratoreinwilligung konnte nicht gespeichert werden.",
           "invalidState": "Diese Microsoft-Einrichtungsanfrage ist ungültig oder abgelaufen. Starten Sie den Vorgang in den Anbietereinstellungen erneut.",
-          "microsoftError": "Microsoft konnte die Einrichtungsanfrage nicht abschließen. Versuchen Sie es erneut oder verwenden Sie die manuelle Einrichtung.",
+          "microsoftError": "Microsoft konnte die Einrichtungsanfrage nicht abschließen.",
           "missingCode": "Microsoft hat keinen Autorisierungscode zurückgegeben. Starten Sie die Einrichtung erneut.",
-          "sessionMismatch": "Ihre Sitzung in AlgaPSA stimmt nicht mit dem Administrator überein, der diese Einrichtung gestartet hat. Melden Sie sich an und versuchen Sie es erneut.",
-          "optionsLoadFailed": "Die Optionen für die Einrichtung von Microsoft-E-Mail konnten nicht geladen werden."
+          "sessionMismatch": "Diese Einrichtung wurde in einem anderen Browser oder in einem privaten Fenster gestartet. Schließen Sie sie im selben Fenster ab, in dem Sie begonnen haben, oder verwenden Sie den Genehmigungslink.",
+          "optionsLoadFailed": "Die Optionen für die Einrichtung von Microsoft-E-Mail konnten nicht geladen werden.",
+          "policyBlocked": "Eine Conditional-Access- oder Geräterichtlinie in Ihrem Microsoft-Mandanten hat die Anmeldung blockiert. Bitten Sie Ihren Microsoft-Administrator, diese App auszunehmen, oder genehmigen Sie von einem Gerät aus, das Ihre Richtlinie zulässt.",
+          "adminRequired": "Die App muss von einem globalen Microsoft-Administrator genehmigt werden. Kopieren Sie den Genehmigungslink und senden Sie ihn an diese Person.",
+          "wrongTenant": "Das verwendete Microsoft-Konto gehört zu einem anderen Microsoft-Mandanten als dem, der konfiguriert wird.",
+          "appNotFound": "Die Microsoft-App wurde in diesem Microsoft-Mandanten nicht gefunden. Sie wurde möglicherweise gelöscht, oder der Microsoft-Mandant ist falsch. Sie können stattdessen manuell eine andere App einrichten.",
+          "quoteDiagnostics": "Geben Sie dies an, wenn Sie die Entra-Anmeldeprotokolle prüfen: {{diagnostics}}"
         },
         "fields": {
           "clientId": "Client ID",
@@ -2314,6 +2411,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "Die NinjaOne-RMM-Integration ist in AlgaPSA Pro verfügbar."
+        },
         "loading": "NinjaOne-Integrationseinstellungen werden geladen...",
         "card": {
           "title": "NinjaOne RMM-Integration",
@@ -2590,7 +2690,206 @@
           "select": "Kontakt auswählen"
         }
       },
+      "datto": {
+        "errors": {
+          "loadSettings": "Datto-RMM-Einstellungen konnten nicht geladen werden",
+          "loadSiteMappings": "Standortzuordnungen konnten nicht geladen werden",
+          "saveConfig": "Datto-RMM-Konfiguration konnte nicht gespeichert werden",
+          "connectionTest": "Verbindungstest fehlgeschlagen",
+          "disconnect": "Trennen fehlgeschlagen",
+          "syncSites": "Standortsynchronisation fehlgeschlagen",
+          "someSitesFailed": "Einige Standorte konnten nicht synchronisiert werden: {{errors}}",
+          "syncDevices": "Gerätesynchronisation fehlgeschlagen",
+          "someDevicesFailed": "Einige Geräte konnten nicht synchronisiert werden: {{errors}}",
+          "updateMapping": "Zuordnung konnte nicht aktualisiert werden",
+          "backfillAlerts": "Alarm-Backfill fehlgeschlagen",
+          "someAlertsFailed": "Einige Alarme konnten nicht aktualisiert werden: {{errors}}",
+          "ingestSoftware": "Software-Erfassung fehlgeschlagen",
+          "someSoftwareFailed": "Bei einigen Geräten konnte die Software nicht erfasst werden: {{errors}}",
+          "createClients": "Kunden für Datto-Standorte konnten nicht angelegt werden",
+          "someClientsFailed": "Einige Standorte wurden nicht zugeordnet: {{errors}}",
+          "regenerateWebhookSecret": "Webhook-Secret konnte nicht neu generiert werden"
+        },
+        "toasts": {
+          "saveFailedTitle": "Speichern fehlgeschlagen",
+          "savedTitle": "Gespeichert",
+          "savedDescription": "Datto-RMM-Konfiguration aktualisiert.",
+          "connectionFailedTitle": "Verbindung fehlgeschlagen",
+          "connectedTitle": "Verbunden",
+          "connectedDescription": "Datto-RMM-Verbindung verifiziert.",
+          "disconnectFailedTitle": "Trennen fehlgeschlagen",
+          "disconnectedTitle": "Getrennt",
+          "disconnectedDescription": "Datto-RMM-Anmeldedaten wurden gelöscht. Standortzuordnungen wurden beibehalten.",
+          "syncFailedTitle": "Synchronisation fehlgeschlagen",
+          "sitesSyncedTitle": "Standorte synchronisiert",
+          "sitesSyncedDescription": "Datto-Standorte wurden in Standortzuordnungen synchronisiert.",
+          "devicesSyncedTitle": "Geräte synchronisiert",
+          "devicesSyncedDescription": "Datto-Geräte wurden in Assets synchronisiert.",
+          "updateFailedTitle": "Aktualisierung fehlgeschlagen",
+          "backfillFailedTitle": "Backfill fehlgeschlagen",
+          "alertsSyncedTitle": "Alarme synchronisiert",
+          "alertsSyncedDescription": "Offene Datto-Alarme wurden nachgeladen.",
+          "ingestionFailedTitle": "Erfassung fehlgeschlagen",
+          "softwareIngestedTitle": "Software erfasst",
+          "softwareIngestedDescription": "Das Datto-Software-Inventar wurde erfasst.",
+          "optionsSavedDescription": "Datto-RMM-Optionen aktualisiert.",
+          "createClientsFailedTitle": "Kundenanlage fehlgeschlagen",
+          "sitesSyncedWithClients": "Datto-Standorte wurden synchronisiert. Neue Standorte: {{created}} Kunden angelegt, {{linked}} verknüpft, {{failed}} fehlgeschlagen.",
+          "webhookSecretRegeneratedTitle": "Webhook-Secret neu generiert",
+          "webhookSecretRegeneratedDescription": "Aktualisieren Sie den Header-Wert in Ihren Datto-Webhook-Antworten."
+        },
+        "success": {
+          "saved": "Datto-RMM-Konfiguration gespeichert. Führen Sie „Verbindung testen“ aus, um sie zu aktivieren.",
+          "unnamedAccount": "Ihr Konto",
+          "connection": "Verbindung erfolgreich. Konto: {{account}}. Standorte: {{sites}}, Geräte: {{devices}}.",
+          "disconnected": "Getrennt.",
+          "siteSyncCompleted": "Standortsynchronisation abgeschlossen. Verarbeitet: {{processed}}, Erstellt: {{created}}, Aktualisiert: {{updated}}, Fehlgeschlagen: {{failed}}",
+          "deviceSyncCompleted": "Gerätesynchronisation abgeschlossen. Verarbeitet: {{processed}}, Erstellt: {{created}}, Aktualisiert: {{updated}}, Fehlgeschlagen: {{failed}}",
+          "alertBackfillCompleted": "Alarm-Backfill abgeschlossen. Verarbeitet: {{processed}}, Erstellt: {{created}}, Aktualisiert: {{updated}}, Fehlgeschlagen: {{failed}}",
+          "softwareIngestionCompleted": "Software-Erfassung abgeschlossen. Verarbeitet: {{processed}}, Installiert/Aktualisiert: {{created}}, Assets aktualisiert: {{updated}}, Fehlgeschlagen: {{failed}}",
+          "clientsCreated": "{{created}} Kunden angelegt und {{linked}} vorhandene Kunden verknüpft. Übersprungen: {{skipped}}, Fehlgeschlagen: {{failed}}"
+        },
+        "mappings": {
+          "site": "Datto-Standort",
+          "client": "Alga-Kunde",
+          "defaultContact": "Standardkontakt",
+          "missingBadge": "Nicht in Datto",
+          "onDemandBadge": "On-Demand",
+          "signedInUsersSite": "Angemeldete Benutzer für Standort",
+          "signedInUsersSelect": "Zugeordneten Standort wählen"
+        },
+        "dattoIdLabel": "Datto-ID: {{id}}",
+        "client": {
+          "loading": "Kunden werden geladen…",
+          "select": "Kunde auswählen",
+          "suggested": "Vorschlag: {{client}}",
+          "create": "Kunde „{{name}}“ anlegen",
+          "creating": "Wird angelegt…"
+        },
+        "contact": {
+          "select": "Kontakt auswählen"
+        },
+        "autoSync": "Automatische Synchronisation",
+        "platform": {
+          "custom": "Benutzerdefinierte URL"
+        },
+        "webhook": {
+          "copiedTitle": "Kopiert",
+          "url": "Webhook-URL",
+          "urlCopied": "Webhook-URL in die Zwischenablage kopiert.",
+          "copy": "Kopieren",
+          "headerName": "Benutzerdefinierter Header-Name",
+          "headerNameCopied": "Webhook-Header-Name in die Zwischenablage kopiert.",
+          "secret": "Header-Secret",
+          "secretCopied": "Webhook-Secret in die Zwischenablage kopiert.",
+          "bodyTemplate": "Body-Vorlage (Alarm ausgelöst)",
+          "bodyTemplateCopied": "Body-Vorlage in die Zwischenablage kopiert.",
+          "resolveBodyTemplate": "Body-Vorlage (Alarm behoben)",
+          "resolveBodyTemplateCopied": "Body-Vorlage für „behoben“ in die Zwischenablage kopiert.",
+          "unavailable": "Webhook-Informationen nicht verfügbar. (Benötigt Schreibberechtigung für Einstellungen.)"
+        },
+        "disconnectConfirm": {
+          "title": "Datto RMM trennen?",
+          "message": "Der gespeicherte API-Schlüssel und das Secret werden entfernt, das Webhook-Secret wird zurückgesetzt und geplante Synchronisationen werden gestoppt. Standortzuordnungen und synchronisierte Assets bleiben erhalten."
+        },
+        "actions": {
+          "disconnect": "Trennen",
+          "refresh": "Aktualisieren",
+          "saving": "Speichern...",
+          "save": "Speichern",
+          "testing": "Wird getestet...",
+          "testConnection": "Verbindung testen",
+          "disconnecting": "Wird getrennt...",
+          "syncing": "Wird synchronisiert...",
+          "syncSites": "Standorte synchronisieren",
+          "syncDevices": "Geräte synchronisieren",
+          "ingesting": "Wird erfasst...",
+          "ingestSoftware": "Software erfassen",
+          "syncAlerts": "Alarme synchronisieren",
+          "createClients": "Kunden anlegen",
+          "createClientsForUnmapped": "Kunden für nicht zugeordnete anlegen ({{count}})",
+          "regenerateSecret": "Secret neu generieren"
+        },
+        "title": "Datto RMM",
+        "description": "Verbinden Sie Datto RMM, um Standorte und Geräte zu synchronisieren, Alarme zu erfassen und Web Remote über Assets zu öffnen.",
+        "status": {
+          "connected": "Verbunden",
+          "disconnected": "Getrennt",
+          "instanceUrlNotSet": "API-URL nicht festgelegt"
+        },
+        "counts": {
+          "mappedSites": "Zugeordnete Standorte",
+          "syncedDevices": "Synchronisierte Geräte",
+          "activeAlerts": "Aktive Alarme",
+          "lastSync": "Letzte Synchronisation",
+          "never": "Nie"
+        },
+        "lastError": "Letzter Fehler: {{error}}",
+        "fields": {
+          "platform": "Plattform",
+          "platformHelp": "Wählen Sie die Region aus der Adresse, über die Sie sich bei Datto RMM anmelden (zum Beispiel ist https://merlot.rmm.datto.com die Region Merlot).",
+          "instanceUrl": "API-URL",
+          "instanceUrlHelp": "Der Datto-API-Host, z. B. https://merlot-api.centrastage.net. Ein abschließendes /api wird automatisch ergänzt.",
+          "apiUserNote": "Erstellen Sie einen dedizierten Datto-API-Benutzer für Alga. Öffnen Sie diesen Benutzer in Datto RMM, um API-Schlüssel und Secret zu generieren, und gewähren Sie seiner Sicherheitsstufe Lesezugriff auf Konto-, Standort-, Geräte-, Alarm- und Audit-Daten.",
+          "softwareOnSync": "Software während der Gerätesynchronisation erfassen",
+          "softwareOnSyncHelp": "Liest bei der Synchronisation das Software-Audit jedes geänderten Geräts. Das erfordert einen zusätzlichen API-Aufruf pro geändertem Gerät und kann bei großen Konten langsam sein.",
+          "resolveOnClose": "Datto-Alarm beheben, wenn das zugehörige Ticket geschlossen wird",
+          "resolveOnCloseHelp": "Erfordert einen Datto-API-Benutzer mit Schreibzugriff auf Alarme. Für einen API-Benutzer mit reinem Lesezugriff deaktiviert lassen.",
+          "rebootComponent": "Neustart-Komponente",
+          "rebootComponentSelect": "Komponente auswählen",
+          "rebootComponentUid": "Komponenten-UID",
+          "rebootComponentFallback": "Die Komponentenliste ist nicht verfügbar ({{reason}}). Fügen Sie stattdessen die Komponenten-UID ein.",
+          "rebootComponentUnknownReason": "unbekannter Fehler",
+          "rebootComponentHelp": "Leer lassen, um die Neustart-Aktion zu deaktivieren. Es können nur Komponenten ausgeführt werden, die sich bereits in Ihrem Datto-Konto befinden.",
+          "hostChangedHint": "Plattform oder API-URL wurden geändert. Geben Sie zum Speichern API-Schlüssel und API-Secret erneut ein.",
+          "optionsNeedCredentials": "Speichern Sie zuerst API-Schlüssel und API-Secret. Diese Optionen sind gesperrt, solange keine Zugangsdaten gespeichert sind.",
+          "autoCreateClients": "Kunden für neue Standorte automatisch anlegen",
+          "autoCreateClientsHelp": "Standorte werden vor jeder geplanten Gerätesynchronisierung aktualisiert. Ist dies aktiviert, erhält ein erstmals gesehener Standort einen gleichnamigen Alga-Kunden oder wird mit dem Kunden verknüpft, der diesen Namen bereits trägt. Bereits vorhandene nicht zugeordnete Standorte und On-Demand-Standorte bleiben unverändert."
+        },
+        "auth": {
+          "apiKey": "API-Schlüssel",
+          "enterApiKey": "API-Schlüssel eingeben",
+          "saved": "Gespeichert: {{value}}",
+          "apiSecret": "API-Secret",
+          "savedEnterToUpdate": "Gespeichert (zum Aktualisieren eingeben)",
+          "enterApiSecret": "API-Secret eingeben"
+        },
+        "statusLine": {
+          "configured": "Status: Konfiguriert",
+          "notConfigured": "Status: Nicht konfiguriert"
+        },
+        "loadingSettings": "Datto-RMM-Einstellungen werden geladen...",
+        "sections": {
+          "sites": "Standorte",
+          "sitesDescription": "Datto-Standorte in Alga-Standortzuordnungen synchronisieren und anschließend Alga-Kunden zuordnen.",
+          "siteMapping": "Standortzuordnung",
+          "siteMappingDescription": "Weisen Sie jeden Datto-Standort einem Alga-Kunden zu und steuern Sie die automatische Synchronisation pro Standort. Vorschläge basieren auf dem Standortnamen oder dem Autotask-Firmennamen und werden nie automatisch angewendet.",
+          "siteMappingEmpty": "Keine Standorte gefunden. Führen Sie zunächst „Standorte synchronisieren“ aus.",
+          "devices": "Geräte",
+          "devicesDescription": "Datto-Geräte in Alga-Assets für Standorte mit aktivierter automatischer Synchronisation synchronisieren.",
+          "alerts": "Alarme",
+          "alertsDescription": "Alarme werden gemäß dem unten unter Alarmautomatisierung konfigurierten Zeitplan abgerufen. Mit „Alarme synchronisieren“ rufen Sie offene Alarme sofort ab.",
+          "webhooks": "Webhook (optionaler Schnellpfad)",
+          "webhooksDescription": "Das Abrufen per Polling ist der garantierte Weg. Damit Alarme innerhalb von Sekunden ankommen, fügen Sie Ihren Datto-Monitor-Richtlinien eine Webhook-Antwortaktion mit der URL, dem benutzerdefinierten Header und der Body-Vorlage unten hinzu.",
+          "assetActions": "Asset-Aktionen",
+          "assetActionsDescription": "Wählen Sie die Datto-Komponente, die ein Gerät neu startet, wenn ein Techniker bei einem Asset auf „Gerät neu starten“ klickt. Sie wird als Quick Job ausgeführt und erfordert einen API-Benutzer mit Schreibzugriff."
+        },
+        "createClientsConfirm": {
+          "title": "Kunden für nicht zugeordnete Standorte anlegen?",
+          "message": "Jeder der {{count}} nicht zugeordneten Standorte erhält einen gleichnamigen Alga-Kunden und wird ihm zugeordnet. Ein Standort, dessen Name einem vorhandenen Kunden entspricht, wird stattdessen mit diesem verknüpft. On-Demand-Standorte und Standorte, die es in Datto nicht mehr gibt, bleiben unverändert."
+        },
+        "proFeature": {
+          "description": "Die Datto-RMM-Integration ist in AlgaPSA Pro verfügbar."
+        },
+        "regenerateSecretConfirm": {
+          "title": "Webhook-Secret neu generieren?",
+          "message": "Das aktuelle Secret funktioniert ab sofort nicht mehr. Webhook-Alarme werden abgelehnt, bis jede Datto-Webhook-Antwort den neuen Header-Wert sendet. Das Polling ist nicht betroffen."
+        }
+      },
       "tanium": {
+        "proFeature": {
+          "description": "Die Tanium-RMM-Integration ist in AlgaPSA Pro verfügbar."
+        },
         "loading": "Tanium-Integrationseinstellungen werden geladen...",
         "actions": {
           "discoverScopes": "Scopes erkennen",
@@ -2661,6 +2960,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "Die Level.io-RMM-Integration ist in AlgaPSA Pro verfügbar."
+        },
         "actions": {
           "backfillAlerts": "Warnungen nacherfassen",
           "disconnect": "Trennen",
@@ -2733,16 +3035,35 @@
           "copied": "Kopiert",
           "copy": "Kopieren",
           "description": "Level kann Webhooks nicht über seine API registrieren. Erstellen Sie in Level eine Automatisierung mit einer HTTP-POST-Aktion und verwenden Sie die folgende URL, den Header und die Payload, um Warnungen in Echtzeit an Alga zu senden.",
+          "fallbackDescription": "Verwenden Sie diese Alternative nur, wenn die nativen Webhooks unter Einstellungen → Webhooks in Level nicht genutzt werden können. Erstellen Sie eine Automatisierung mit einer HTTP-POST-Aktion mit der folgenden URL, dem Header und der Payload, um Warnungen an Alga zu senden.",
+          "fallbackNameHint": "Bearbeiten Sie den Wert \"name\" in jeder Automatisierung. Zusammen mit dem Gerät identifiziert er die Warnung; Wiederholungen mit gleichem Namen auf demselben Gerät gelten als eine Warnung.",
+          "fallbackTitle": "Alternative: HTTP-Anfrage per Automatisierung",
           "header": "Header: {{name}}",
           "hideSecret": "Secret ausblenden",
           "loading": "Webhook-Details werden geladen, nachdem die Integration konfiguriert wurde.",
+          "nativeDescription": "Öffnen Sie in Level Einstellungen → Webhooks, fügen Sie einen Webhook mit der URL und dem Signaturschlüssel unten hinzu und aktivieren Sie die aufgeführten Ereignisse. Level signiert jede Zustellung und Alga prüft die Signatur.",
+          "nativeEvents": "Zu aktivierende Ereignisse",
+          "nativeEventsHelp": "Aktivieren Sie alert_active und alert_resolved. Andere Ereignisse werden bestätigt und ignoriert.",
+          "nativeSigningSecret": "Signaturschlüssel",
+          "nativeTitle": "Nativer Webhook (empfohlen)",
           "payload": "Payload-Vorlage",
+          "regenerateCancel": "Abbrechen",
+          "regenerateConfirmLabel": "Neu generieren",
+          "regenerateConfirmMessage": "Bestehende Level-Webhooks schlagen mit 401 fehl, bis Sie den neuen Signaturschlüssel in den Webhook-Einstellungen von Level eintragen. Level wiederholt Zustellungen, sie können aber verloren gehen, wenn der Schlüssel nicht aktualisiert wird.",
+          "regenerateConfirmTitle": "Signaturschlüssel neu generieren?",
+          "regenerateConfirmed": "Signaturschlüssel neu generiert. Aktualisieren Sie ihn in den Webhook-Einstellungen von Level.",
+          "regenerateFailed": "Signaturschlüssel konnte nicht neu generiert werden",
+          "regenerateSecret": "Schlüssel neu generieren",
           "showSecret": "Secret anzeigen",
           "title": "Warnungs-Webhook",
           "url": "Webhook-URL"
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Huntress-Integration",
+          "description": "Die Huntress-Sicherheitsintegration ist eine Pro-Funktion."
+        },
         "columns": {
           "organization": "Huntress-Organisation",
           "client": "Alga-Kunde",
@@ -2783,7 +3104,7 @@
         },
         "connection": {
           "title": "Mit {{account}} verbunden",
-          "summary": "{{organizations}} Organisationen ({{unmapped}} nicht zugeordnet) · {{openIncidents}} offene Vorfälle · letzte Abfrage: {{lastPoll}}",
+          "summary": "{{organizations}} Organisationen ({{unmapped}} nicht zugeordnet) · {{openAlerts}} offene Warnungen · letzte Abfrage: {{lastPoll}}",
           "neverPolled": "nie",
           "lastPollFailed": "Letzte Abfrage fehlgeschlagen: {{error}}",
           "routingIncompleteWarning": "Die Vorfallabfrage ist pausiert, bis die Routing-Konfiguration unten vollständig ist (Board, Fallback-Kunde/-Board und Prioritäten für alle drei Schweregrade).",
@@ -2806,6 +3127,8 @@
           "selectPriority": "Priorität",
           "pollInterval": "Abfrageintervall (Minuten)",
           "autoClose": "Tickets schließen, wenn Huntress den Vorfall schließt",
+          "ingestEscalations": "Tickets aus Huntress-Eskalationen erstellen",
+          "ingestEscalationsHelp": "Eskalationen verwenden dieselben Board-, Kategorie-, Prioritätszuordnungs- und Auto-Schließen-Einstellungen wie Vorfälle. Eine Eskalation, die mehrere Organisationen betrifft, erstellt ein Ticket pro Organisation.",
           "closedStatus": "Status für geschlossene Tickets",
           "selectStatus": "Status auswählen",
           "save": "Routing-Konfiguration speichern",
@@ -2884,6 +3207,56 @@
         "errors": {
           "saveFailed": "Der Zeitplan für die Gerätesynchronisierung konnte nicht gespeichert werden."
         }
+      },
+      "peopleMode": {
+        "label": "Personen",
+        "options": {
+          "off": "Aus",
+          "suggest": "Vorschlagen",
+          "auto": "Automatisch zuweisen"
+        },
+        "updateFailed": "Der Personen-Modus konnte nicht aktualisiert werden"
+      },
+      "signedInUsers": {
+        "title": "Angemeldete Benutzer",
+        "description": "Die Benutzernamen, die die Geräte dieser Organisation melden, und der jeweils zugeordnete Kontakt.",
+        "empty": "Noch keine angemeldeten Benutzer gemeldet.",
+        "noClient": "Ordnen Sie diese Organisation einem Kunden zu, bevor Sie ihre angemeldeten Benutzer zuordnen.",
+        "refresh": "Aktualisieren",
+        "selectContact": "Kontakt auswählen",
+        "loadFailed": "Angemeldete Benutzer konnten nicht geladen werden.",
+        "saveFailed": "Die Zuordnung konnte nicht gespeichert werden.",
+        "columns": {
+          "user": "Angemeldeter Benutzer",
+          "devices": "Geräte",
+          "method": "Zugeordnet über",
+          "contact": "Kontakt"
+        },
+        "methods": {
+          "mapped": "Gespeicherte Zuordnung",
+          "email": "E-Mail",
+          "username": "Benutzername",
+          "name": "Vollständiger Name",
+          "none": "Keine Übereinstimmung"
+        }
+      },
+      "clientChange": {
+        "title": "Geräte dieser Organisation verschieben?",
+        "message": "{{count}} Asset(s) werden zu {{client}} verschoben. Zuweisungen, Gruppen und Abrechnungsprofile des vorherigen Kunden werden entfernt.",
+        "confirm": "Geräte verschieben"
+      },
+      "billingProfile": {
+        "label": "Abrechnungsprofil",
+        "clientDefault": "Kundenstandard",
+        "updateFailed": "Abrechnungsprofil konnte nicht aktualisiert werden"
+      },
+      "errors": {
+        "invalidPeopleMode": "Das ist kein gültiger Personen-Modus.",
+        "billingProfileUnavailable": "Dieses Abrechnungsprofil ist für diesen Kunden nicht verfügbar.",
+        "mappingNotFound": "Diese Zuordnung existiert nicht mehr. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+        "forbidden": "Sie haben keine Berechtigung, dies zu ändern.",
+        "clientNotFound": "Dieser Kunde existiert nicht mehr. Aktualisieren Sie die Seite und versuchen Sie es erneut.",
+        "contactNotForClient": "Dieser Kontakt gehört nicht zu dem Kunden, dem dieser Standort zugeordnet ist."
       }
     },
     "sso": {
@@ -3454,6 +3827,11 @@
           "regenerate": "Paket neu erstellen",
           "regenerating": "Wird neu erstellt..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Teams-Anmeldung nicht verfügbar",
+        "tabTitle": "Teams-Registerkarte nicht verfügbar",
+        "description": "Die Microsoft Teams-Integration ist nur in Pro verfügbar."
       }
     },
     "xero": {
@@ -3847,13 +4225,16 @@
             "callControl": "Anrufsteuerung",
             "xapi": "Konfigurations-API",
             "lastChecked": "Zuletzt geprüft",
-            "notConnectedHint": "Verbinden Sie oben die PBX-API, um diese Funktion zu nutzen."
+            "notConnectedHint": "Verbinden Sie oben die PBX-API, um diese Funktion zu nutzen.",
+            "usersBlocked": "Die Rolle der 3CX-API-App darf keine Benutzer lesen. Vergeben Sie die nötigen Rechte unter 3CX Admin Console > Integrations > API > (app) > Role.",
+            "contactsBlocked": "Die Rolle der 3CX-API-App darf keine Kontakte verwalten. Vergeben Sie die nötigen Rechte unter 3CX Admin Console > Integrations > API > (app) > Role."
           },
           "extensions": {
             "title": "Nebenstellen",
             "sync": "Von PBX abgleichen",
             "lastSync": "Letzter Abgleich",
             "empty": "Noch keine Nebenstellen abgeglichen.",
+            "emptyAfterSync": "3CX hat keine aktivierten Benutzer zurückgegeben; prüfen Sie die Berechtigungen der API-App",
             "dn": "Nebenstelle",
             "pbxUser": "PBX-Benutzer",
             "algaUser": "AlgaPSA-Benutzer",
@@ -3953,6 +4334,59 @@
           "providers": "Heute Teams Phone; derselbe Anrufkern trägt künftige Anbieter."
         }
       }
+    },
+    "qbd": {
+      "settings": {
+        "title": "QuickBooks Desktop (IIF)-Integration",
+        "description": "Rechnungen als IIF-Datei für Datei → Dienstprogramme → Importieren → IIF-Dateien in QuickBooks Desktop exportieren.",
+        "loading": "QuickBooks Desktop-Einstellungen werden geladen...",
+        "savedMessage": "Einstellungen erfolgreich gespeichert",
+        "save": "Einstellungen speichern",
+        "connectionsPermissionNotice": "Sie können die QuickBooks Desktop-Einstellungen ansehen, zum Ändern ist jedoch die Berechtigung zum Verwalten von Verbindungen erforderlich. Bitten Sie einen Administrator, sie zu erteilen.",
+        "errors": {
+          "load": "QuickBooks Desktop-Einstellungen konnten nicht geladen werden",
+          "save": "QuickBooks Desktop-Einstellungen konnten nicht gespeichert werden"
+        },
+        "warning": {
+          "title": "Sichern Sie zuerst Ihre Firmendatei",
+          "description": "QuickBooks Desktop legt beim Import einer IIF-Datei jeden unbekannten Kunden-, Artikel-, Konto- oder Zahlungsbedingungsnamen neu an, und IIF-Importe können nicht rückgängig gemacht werden. Stellen Sie sicher, dass alle Namen hier und in den Zuordnungen exakt mit Ihrer Firmendatei übereinstimmen, und testen Sie den ersten Import mit einer Sicherungskopie."
+        },
+        "exportSettings": {
+          "title": "IIF-Exporteinstellungen",
+          "description": "Geben Sie die Konto- und Artikelnamen von QuickBooks Desktop genau so ein, wie sie in Ihrem Kontenplan und Ihrer Artikelliste erscheinen."
+        },
+        "fields": {
+          "arAccount": "Debitorenkonto",
+          "arAccountHelp": "Das Debitorenkonto, auf das jede Rechnung gebucht wird.",
+          "defaultIncomeAccount": "Standard-Erlöskonto",
+          "defaultIncomeAccountHelp": "Das Erlöskonto für Artikel, die aus einem Export zugeordnet werden, und für jede Dienstleistungs- oder Rabattzuordnung ohne Konto.",
+          "salesTaxPayableAccount": "Umsatzsteuer-Verbindlichkeitskonto",
+          "salesTaxPayableAccountHelp": "Das Konto, auf das die Umsatzsteuerzeile gebucht wird, sofern die Steuercode-Zuordnung der Steuerregion kein anderes angibt.",
+          "defaultSalesTaxItem": "Standard-Umsatzsteuerartikel",
+          "defaultSalesTaxItemHelp": "Umsatzsteuerartikel oder -gruppe für besteuerte Rechnungen, deren Steuercode-Zuordnung keinen angibt.",
+          "newProductItemType": "Artikeltyp für neue Produkte",
+          "inventoryWarning": "Wareneingänge aus Alga werden nicht exportiert, daher werden die Bestände in QuickBooks negativ, sofern Sie den Bestand nicht auch in QuickBooks erfassen.",
+          "nonInventoryHelp": "Empfohlen: Alga bleibt das führende System für den Lagerbestand, und QuickBooks erfasst nur den Verkauf.",
+          "inventoryAssetAccount": "Lagerbestandskonto",
+          "cogsAccount": "Wareneinsatzkonto"
+        },
+        "mappings": {
+          "title": "QuickBooks-Zuordnungen",
+          "description": "Ordnen Sie Alga-Kunden, Dienstleistungen, Rabatte, Steuercodes und Zahlungsbedingungen den Namen in Ihrer QuickBooks Desktop-Firmendatei zu. Jede Dienstleistung und jeder Rabatt benötigt einen Desktop-Artikel; nicht zugeordnete Zahlungsbedingungen bleiben leer.",
+          "permissionNotice": "Zum Bearbeiten von QuickBooks Desktop-Zuordnungen ist die Berechtigung zum Verwalten von Zuordnungen erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
+        },
+        "exports": {
+          "description": "Erstellen Sie einen QuickBooks Desktop-Exportstapel, führen Sie ihn aus und laden Sie dann die IIF-Datei in den Stapeldetails herunter."
+        },
+        "newItems": {
+          "title": "Durch Exporte angelegte Artikel",
+          "description": "Wenn ein Export für ein Alga-Produkt einen neuen QuickBooks-Artikel anlegt, wird dieser Artikeltyp verwendet. Leistungen werden immer als Dienstleistungsartikel angelegt."
+        },
+        "itemTypes": {
+          "nonInventory": "Nicht-Lagerartikel",
+          "inventory": "Lagerartikel"
+        }
+      }
     }
   },
   "errors": {
@@ -3980,6 +4414,8 @@
       "managePermission": "Berechtigung verweigert: Sie haben keine Berechtigung, Buchhaltungszuordnungen zu verwalten.",
       "loadFailed": "Zuordnungsdaten können nicht geladen werden. Bitte versuchen Sie es erneut.",
       "duplicate": "Für dieses Objekt existiert bereits eine Zuordnung. Bearbeiten Sie stattdessen die vorhandene Zuordnung.",
+      "duplicateTarget": "Dieses Ziel ist in dieser Organisation bereits einer anderen Entität zugeordnet. Wählen Sie ein anderes Ziel.",
+      "duplicateXeroItem": "Dieser Xero-Artikel ist bereits einer anderen Dienstleistung zugeordnet. Ein Artikel kann nur einer Dienstleistung zugeordnet werden; um mehrere Dienstleistungen unter demselben Code abzurechnen, ordnen Sie sie stattdessen einem Erlöskonto zu.",
       "saveFailed": "Die Zuordnung kann nicht gespeichert werden. Bitte versuchen Sie es erneut.",
       "idRequiredForUpdate": "Für die Aktualisierung ist die Zuordnungs-ID erforderlich.",
       "noUpdateData": "Es wurden keine Aktualisierungsdaten übermittelt.",
@@ -4070,6 +4506,10 @@
       "contactWithoutClient": "Ein Kontakt mit dieser E-Mail-Adresse existiert bereits im System ohne Kundenzuordnung",
       "emailOnAnotherClient": "Diese E-Mail-Adresse ist bereits einem anderen Kunden zugeordnet",
       "emailOnAnotherClientNamed": "Diese E-Mail-Adresse ist bereits {{clientName}} zugeordnet"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "Benutzer hat keine Berechtigung, Integrationseinstellungen anzuzeigen",
+      "manageIntegrationsPermission": "Benutzer hat keine Berechtigung, Integrationseinstellungen zu verwalten"
     }
   },
   "telephony": {

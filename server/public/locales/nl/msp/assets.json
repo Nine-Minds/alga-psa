@@ -25,7 +25,9 @@
       "inactive": "Inactief",
       "loading": "Laden...",
       "na": "n.v.t.",
-      "none": "Geen"
+      "none": "Geen",
+      "yes": "Ja",
+      "no": "Nee"
     },
     "no": "Nee",
     "yes": "Ja"
@@ -36,6 +38,20 @@
       "offline": "Offline",
       "overdue": "Verlopen",
       "unknown": "Onbekend"
+    },
+    "rmaStatus": {
+      "open": "Open",
+      "awaiting_return": "Wacht op retour",
+      "returned": "Geretourneerd",
+      "sent_to_vendor": "Naar leverancier verzonden",
+      "replacement_received": "Vervanging ontvangen",
+      "replacement_deployed": "Vervanging uitgerold",
+      "dead_unit_owed": "Defect apparaat nog te retourneren",
+      "dead_unit_returned": "Defect apparaat geretourneerd",
+      "replaced": "Vervangen",
+      "credited": "Gecrediteerd",
+      "charged": "In rekening gebracht",
+      "closed": "Gesloten"
     }
   },
   "assetAlertsSection": {
@@ -127,7 +143,10 @@
       "actions": "Acties",
       "patching": "Patches",
       "coverage": "Dekking",
-      "assignedTo": "Toegewezen aan"
+      "assignedTo": "Toegewezen aan",
+      "manufacturer": "Fabrikant",
+      "model": "Model",
+      "group": "Groep"
     },
     "metrics": {
       "totalAssets": {
@@ -172,6 +191,17 @@
       "rmmManaged": {
         "managed": "RMM beheerd",
         "unmanaged": "Niet beheerd"
+      },
+      "allGroups": "Alle groepen",
+      "ownership": {
+        "any": "Elk eigendom",
+        "client": "Eigendom van klant",
+        "msp": "Eigendom van MSP"
+      },
+      "custody": {
+        "any": "Elke bewaring",
+        "inCustody": "In bewaring bij MSP",
+        "notInCustody": "Niet in bewaring bij MSP"
       }
     },
     "activeFilters": {
@@ -179,11 +209,6 @@
       "type": "Type: {{value}}",
       "client": "Klant: {{value}}",
       "agent": "Medewerker: {{value}}"
-    },
-    "statuses": {
-      "active": "Actief",
-      "inactive": "Inactief",
-      "maintenance": "Onderhoud"
     },
     "types": {
       "workstation": "Werkstation",
@@ -229,7 +254,11 @@
         "delete": "Verwijderen",
         "selectedCount": "{{count}} geselecteerd",
         "setLocation": "Locatie instellen",
-        "setStatus": "Status instellen"
+        "setStatus": "Status instellen",
+        "assignContact": "Aan contact toewijzen",
+        "addToGroup": "Aan groep toevoegen",
+        "printLabels": "Labels afdrukken",
+        "printLabelsLimit": "U kunt maximaal {{max}} labels tegelijk afdrukken"
       },
       "actions": {
         "apply": "Toepassen",
@@ -237,7 +266,8 @@
         "deleteAssets": "Verwijderen",
         "deleting": "Verwijderen...",
         "updateLocation": "Locatie-update",
-        "updateStatus": "Statusupdate"
+        "updateStatus": "Statusupdate",
+        "assignContact": "Toewijzing"
       },
       "deleteDialog": {
         "description": "Verwijder {{count}} geselecteerde asset(s). Assets met afhankelijkheden worden mogelijk overgeslagen.",
@@ -246,7 +276,8 @@
       "errors": {
         "deleteFailed": "Kan geselecteerde assets niet verwijderen.",
         "updateLocationFailed": "Kan locaties van geselecteerde assets niet bijwerken.",
-        "updateStatusFailed": "Kan geselecteerde assets niet bijwerken."
+        "updateStatusFailed": "Kan geselecteerde assets niet bijwerken.",
+        "assignFailed": "Kan de geselecteerde assets niet toewijzen."
       },
       "locationDialog": {
         "clearLocation": "Locatie wissen",
@@ -264,7 +295,16 @@
         "description": "Werk {{count}} geselecteerde asset(s) bij.",
         "title": "Assetstatus instellen"
       },
-      "success": "{{action}} voltooid voor {{count}} asset(s)."
+      "success": "{{action}} voltooid voor {{count}} asset(s).",
+      "assignDialog": {
+        "title": "Aan contact toewijzen",
+        "description": "{{count}} geselecteerde asset(s) toewijzen aan een contact van deze klant."
+      },
+      "groupDialog": {
+        "title": "Aan groep toevoegen",
+        "description": "{{count}} geselecteerde asset(s) aan een groep van deze klant toevoegen, of een nieuwe maken.",
+        "newGroup": "Een nieuwe groep maken"
+      }
     }
   },
   "assetDashboardGrid": {
@@ -289,11 +329,6 @@
     "helper": {
       "awaitingSelection": "In afwachting van activaselectie",
       "selectedAsset": "{{name}} • {{tab}}"
-    },
-    "statuses": {
-      "active": "Actief",
-      "inactive": "Inactief",
-      "maintenance": "Onderhoud"
     },
     "empty": {
       "selectAsset": "Selecteer een item om details te bekijken",
@@ -349,7 +384,13 @@
       "status": "Status",
       "created": "Gemaakt",
       "updated": "Bijgewerkt",
-      "tenant": "Tenant"
+      "tenant": "Tenant",
+      "manufacturer": "Fabrikant",
+      "model": "Model",
+      "assignedTo": "Toegewezen aan",
+      "group": "Groep",
+      "groupSharedWorkspace": "{{name}} · gedeelde werkplek",
+      "groupBundle": "{{name}} · bundel"
     },
     "typeDetails": {
       "workstation": "Details van het werkstation",
@@ -417,7 +458,9 @@
       "rebootDevice": "Apparaat opnieuw opstarten",
       "rebooting": "Opnieuw opstarten...",
       "editAsset": "Asset bewerken",
-      "deleteAsset": "Asset verwijderen"
+      "deleteAsset": "Asset verwijderen",
+      "printLabel": "Assetlabel afdrukken",
+      "printPage": "Pagina afdrukken"
     },
     "values": {
       "unknownClient": "Onbekende klant"
@@ -578,7 +621,8 @@
     "actions": {
       "viewClient": "Klant bekijken",
       "manageClientLocations": "Beheer klantlocaties",
-      "saveChanges": "Wijzigingen opslaan"
+      "saveChanges": "Wijzigingen opslaan",
+      "createVendor": "Leverancier aanmaken"
     },
     "alerts": {
       "noLocationsSaved": "Deze klant heeft nog geen opgeslagen locaties. Gebruik aangepaste invoer of maak er een vanuit het klantrecord."
@@ -586,7 +630,8 @@
     "sections": {
       "basicInformation": "Basisinformatie",
       "clientAndLocation": "Klant & Locatie",
-      "assetBasics": "Basisgegevens van de asset"
+      "assetBasics": "Basisgegevens van de asset",
+      "procurement": "Fabrikant en aankoop"
     },
     "fields": {
       "customLocationOption": "Aangepaste locatie",
@@ -627,7 +672,13 @@
       "purchaseDate": "Aankoopdatum",
       "warrantyEndDate": "Einddatum garantie",
       "assetType": "Type",
-      "assignedTo": "Toegewezen aan"
+      "assignedTo": "Toegewezen aan",
+      "manufacturer": "Fabrikant",
+      "vendor": "Leverancier",
+      "purchaseCost": "Aanschafkosten",
+      "orderNumber": "Ordernr.",
+      "billingProfile": "Factureringsprofiel",
+      "ownership": "Eigendom"
     },
     "placeholders": {
       "loadingClients": "Klanten laden…",
@@ -639,7 +690,11 @@
       "selectPurchaseDate": "Selecteer aankoopdatum",
       "selectWarrantyEndDate": "Selecteer de einddatum van de garantie",
       "loadingContacts": "Contacten laden…",
-      "selectContact": "Selecteer een contact"
+      "selectContact": "Selecteer een contact",
+      "noVendor": "Geen leverancier",
+      "selectVendor": "Selecteer een leverancier",
+      "purchaseCost": "0,00",
+      "clientDefaultProfile": "Standaard van de klant"
     },
     "statusOptions": {
       "active": "Actief",
@@ -678,6 +733,10 @@
     "additionalFields": "Extra velden",
     "help": {
       "assignedTo": "In het klantportaal zien personen met beperkte zichtbaarheid dit apparaat alleen als het aan hen of aan iemand die aan hen rapporteert is toegewezen."
+    },
+    "ownership": {
+      "client": "Eigendom van klant",
+      "msp": "Eigendom van MSP"
     }
   },
   "assetFormClient": {
@@ -809,7 +868,8 @@
       "save": "Opslaan",
       "label": "Knoptekst",
       "template": "URL-sjabloon",
-      "tokens": "Gebruik {asset.name}, {asset.asset_tag}, {asset.serial_number}, {client.name} en {field.<key>} met aangepaste veldsleutels uit Instellingen → Assets → Assettypen.",
+      "ninjaExample": "Voorbeeld van het NinjaOne-apparaatdashboard: https://app.ninjarmm.com/#/deviceDashboard/{asset.rmm_device_id}/overview. Vervang de host door uw NinjaOne-regio: app, eu, ca, oc of us2 .ninjarmm.com.",
+      "tokens": "Gebruik {asset.name}, {asset.asset_tag}, {asset.serial_number}, {asset.rmm_device_id}, {asset.rmm_provider}, {asset.rmm_organization_id}, {client.name} en {field.<key>} met aangepaste veldsleutels uit Instellingen → Assets → Assettypen.",
       "loading": "Opties voor toegang op afstand laden…",
       "unavailable": "Niet beschikbaar voor dit asset",
       "actions": "Acties",
@@ -889,11 +949,6 @@
       "type": "Type",
       "status": "Status"
     },
-    "assetStatuses": {
-      "active": "Actief",
-      "inactive": "Inactief",
-      "maintenance": "Onderhoud"
-    },
     "assetTypes": {
       "workstation": "Werkstation",
       "server": "Server",
@@ -924,7 +979,9 @@
       "description": "Beschrijving",
       "board": "Bord",
       "status": "Status",
-      "priority": "Prioriteit"
+      "priority": "Prioriteit",
+      "contact": "Contact",
+      "unnamedContact": "Naamloos contact"
     },
     "placeholders": {
       "title": "Voer de tickettitel in",
@@ -935,7 +992,8 @@
       "loadingStatuses": "Statussen laden...",
       "selectStatus": "Status selecteren...",
       "loadingPriorities": "Prioriteiten laden...",
-      "selectPriority": "Prioriteit selecteren..."
+      "selectPriority": "Prioriteit selecteren...",
+      "selectContact": "Contact selecteren..."
     },
     "errors": {
       "loadPriorities": "Kan prioriteiten niet laden",
@@ -993,7 +1051,12 @@
       "serialNumber": "Serienummer",
       "customLocationOption": "Aangepaste locatie",
       "location": "Locatie",
-      "assignedTo": "Toegewezen aan"
+      "assignedTo": "Toegewezen aan",
+      "manufacturer": "Fabrikant",
+      "vendor": "Leverancier",
+      "purchaseCost": "Aanschafkosten",
+      "orderNumber": "Ordernr.",
+      "ownership": "Eigendom"
     },
     "placeholders": {
       "workstationOsType": "bijvoorbeeld Windows, macOS, Linux",
@@ -1015,7 +1078,13 @@
       "selectClientFirst": "Selecteer eerst een klant",
       "selectLocation": "Selecteer locatie",
       "loadingContacts": "Contacten laden...",
-      "selectContact": "Contact selecteren"
+      "selectContact": "Contact selecteren",
+      "manufacturer": "bijv. Lenovo",
+      "modelName": "bijv. ThinkPad T14",
+      "noVendor": "Geen leverancier",
+      "selectVendor": "Selecteer leverancier",
+      "purchaseCost": "0,00",
+      "orderNumber": "Voer ordernummer in"
     },
     "sections": {
       "typeSpecificDetails": "Typespecifieke details"
@@ -1110,7 +1179,8 @@
       "unknown": "Onbekend",
       "unifiedMemory": "{{size}}GB Uniform geheugen",
       "memoryUsed": "({{size}}GB gebruikt)",
-      "freeStorage": "{{size}} GB Gratis"
+      "freeStorage": "{{size}} GB Gratis",
+      "totalStorage": "{{size}} GB"
     },
     "empty": "Geen hardwaregegevens beschikbaar",
     "emptyStorage": "Geen opslagstations gedetecteerd"
@@ -1221,7 +1291,10 @@
       "frequency": "Frequentie *",
       "interval": "Interval *",
       "nextMaintenanceDate": "Volgende onderhoudsdatum *",
-      "active": "Actief"
+      "active": "Actief",
+      "recurrenceUnit": "Eenheid *",
+      "onWeekdays": "Op weekdagen (optioneel)",
+      "onDayOfMonth": "Op dag van de maand (optioneel)"
     },
     "placeholders": {
       "scheduleName": "bijvoorbeeld maandelijks serveronderhoud",
@@ -1236,7 +1309,8 @@
       "weekly": "Wekelijks",
       "monthly": "Maandelijks",
       "quarterly": "Driemaandelijks",
-      "yearly": "Jaarlijks"
+      "yearly": "Jaarlijks",
+      "custom": "Aangepast"
     },
     "errors": {
       "scheduleNameRequired": "Schemanaam is vereist",
@@ -1245,6 +1319,18 @@
       "nextMaintenanceRequired": "Volgende onderhoudsdatum is vereist",
       "frequencyIntervalMin": "Het frequentie-interval moet minimaal 1 zijn",
       "saveFailed": "Kan onderhoudsschema niet maken"
+    },
+    "recurrenceUnits": {
+      "days": "Dagen",
+      "weeks": "Weken",
+      "months": "Maanden",
+      "years": "Jaren"
+    },
+    "dayOfMonthOptions": {
+      "any": "Elke dag"
+    },
+    "hints": {
+      "selectors": "Zonder selectie wordt herhaald vanaf de voltooiingsdatum."
     }
   },
   "maintenanceSchedulesTab": {
@@ -1296,6 +1382,36 @@
         "yearly_other": "jaren",
         "yearly_few": "jaren",
         "yearly_many": "jaren"
+      },
+      "customUnconfigured": "Aangepast (niet geconfigureerd)",
+      "onWeekdays": "{{cadence}} op {{days}}",
+      "onDaysOfMonth": "{{cadence}} op dag {{days}}",
+      "weekdays": {
+        "sun": "zo",
+        "mon": "ma",
+        "tue": "di",
+        "wed": "wo",
+        "thu": "do",
+        "fri": "vr",
+        "sat": "za"
+      },
+      "customUnits": {
+        "days_one": "dag",
+        "days_other": "dagen",
+        "days_few": "dagen",
+        "days_many": "dagen",
+        "weeks_one": "week",
+        "weeks_other": "weken",
+        "weeks_few": "weken",
+        "weeks_many": "weken",
+        "months_one": "maand",
+        "months_other": "maanden",
+        "months_few": "maanden",
+        "months_many": "maanden",
+        "years_one": "jaar",
+        "years_other": "jaren",
+        "years_few": "jaren",
+        "years_many": "jaren"
       }
     },
     "status": {
@@ -1428,6 +1544,8 @@
       "installDate": "Installatiedatum"
     },
     "empty": "Er is geen software gevonden die voldoet aan uw zoekopdracht.",
+    "noInventory": "Voor dit apparaat is nog geen software-inventaris verzameld.",
+    "loadError": "De software-inventaris kon niet worden geladen.",
     "totalItems": "Totaal aantal artikelen: {{count}}",
     "values": {
       "unknown": "Onbekend"
@@ -1512,7 +1630,28 @@
     "compliance": "Naleving",
     "lastDone": "Laatst uitgevoerd",
     "noMaintenance": "Niets gepland.",
-    "docsHint": "Bijlagen en inloggegevens voor dit asset."
+    "docsHint": "Bijlagen en inloggegevens voor dit asset.",
+    "rmmUser": {
+      "looksLike": "· Waarschijnlijk {{contact}}",
+      "mapDialogDescription": "‘{{user}}’ wordt onthouden voor deze RMM-organisatie.",
+      "mapDialogTitle": "Ingelogde gebruiker aan een contact koppelen",
+      "mapFailed": "De koppeling kon niet worden opgeslagen.",
+      "mapToContact": "Aan contact koppelen…"
+    },
+    "manufacturer": "Fabrikant",
+    "model": "Model",
+    "vendor": "Leverancier",
+    "purchaseCost": "Aanschafkosten",
+    "orderNumber": "Ordernr.",
+    "assignedTo": "Toegewezen aan",
+    "unassigned": "Niet toegewezen",
+    "assign": "Toewijzen",
+    "unassign": "Toewijzing opheffen",
+    "aContact": "Contact",
+    "assignDialogTitle": "Dit asset toewijzen",
+    "sharedWorkspace": "Gedeelde werkplek",
+    "sharedWorkspaceValue": "{{name}} · {{count}} personen",
+    "billingProfile": "Factureringsprofiel"
   },
   "assetTimeline": {
     "title": "Tijdlijn",
@@ -1531,7 +1670,18 @@
       "lastReboot": "Laatste herstart",
       "patchScan": "Patchscan",
       "patchScanDetail": "{{pending}} openstaand, {{failed}} mislukt",
-      "purchased": "Gekocht"
+      "purchased": "Gekocht",
+      "assignedTo": "Toegewezen aan {{contact}}",
+      "unassigned": "Toewijzing opgeheven",
+      "autoAssigned": "Automatisch toegewezen aan {{contact}} op basis van de aangemelde gebruiker",
+      "assignedViaBundle": "Toegewezen aan {{contact}} via bundel {{group}}",
+      "aContact": "een contact",
+      "groupAdded": "Toegevoegd aan {{group}}",
+      "groupRemoved": "Verwijderd uit {{group}}",
+      "aGroup": "een groep",
+      "autoAssignedFrom": "Automatisch toegewezen aan {{contact}} via {{provider}}",
+      "groupLocationMoved": "Met {{group}} verplaatst naar {{location}}",
+      "groupLocationCleared": "Locatie gewist met {{group}}"
     },
     "changeTypes": {
       "created": "Aangemaakt",
@@ -1541,6 +1691,30 @@
       "rmm_linked": "RMM gekoppeld",
       "hardware_upgrade": "Hardware geüpgraded",
       "warranty_updated": "Garantie bijgewerkt"
+    },
+    "custody": {
+      "unknownPlace": "een onbekende locatie",
+      "ticket": "Ticket {{ticket}}",
+      "receivedBack": "Terugontvangen op {{place}}",
+      "received": "In bewaring genomen op {{place}}",
+      "moved": "Verplaatst van {{from}} naar {{to}}",
+      "movedTo": "Verplaatst naar {{to}}",
+      "handedOff": "Overgedragen van {{from}} aan {{to}}",
+      "handedOffTo": "Overgedragen aan {{to}}",
+      "aColleague": "een collega",
+      "shipped": "Verzonden naar {{counterparty}}",
+      "shippedVendor": "Verzonden naar leverancier",
+      "returnedTo": "Geretourneerd aan klant ({{counterparty}})",
+      "returned": "Geretourneerd aan klant",
+      "updated": "Bewaringsgegevens bijgewerkt",
+      "fields": {
+        "purpose": "doel",
+        "next_action_party": "volgende actie",
+        "next_action_note": "notitie bij volgende actie",
+        "follow_up_on": "opvolgdatum",
+        "condition_note": "staat",
+        "accessories": "accessoires"
+      }
     }
   },
   "assetSignals": {
@@ -1585,11 +1759,6 @@
     },
     "coverage": {
       "noWarrantyDate": "geen garantiedatum"
-    },
-    "status": {
-      "active": "actief",
-      "inactive": "inactief",
-      "maintenance": "onderhoud"
     }
   },
   "errors": {
@@ -1599,7 +1768,10 @@
       "manageAssetTypes": "Toestemming geweigerd: assettypen kunnen niet worden beheerd",
       "readDocuments": "Toestemming geweigerd: assetdocumenten kunnen niet worden gelezen",
       "associateDocuments": "Toestemming geweigerd: documenten kunnen niet aan assets worden gekoppeld",
-      "removeDocuments": "Toestemming geweigerd: documenten kunnen niet van assets worden verwijderd"
+      "removeDocuments": "Toestemming geweigerd: documenten kunnen niet van assets worden verwijderd",
+      "readAssetStatuses": "Toegang geweigerd: assetstatussen kunnen niet worden gelezen",
+      "manageAssetStatuses": "Toegang geweigerd: assetstatussen kunnen niet worden beheerd",
+      "updateAssets": "Toegang geweigerd: assets kunnen niet worden bijgewerkt"
     },
     "asset": {
       "notFoundRefresh": "Asset niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
@@ -1619,7 +1791,21 @@
       "notAllowed": "Een van de assetwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht assetveld.",
       "missingFieldNamed": "Er ontbreekt een verplicht assetveld: {{field}}.",
-      "contactUnavailable": "Het geselecteerde contact is niet beschikbaar voor deze klant."
+      "contactUnavailable": "Het geselecteerde contact is niet beschikbaar voor deze klant.",
+      "vendorUnavailable": "De geselecteerde leverancier is niet beschikbaar.",
+      "workspaceMember": "Dit asset hoort bij een gedeelde werkplek en kan daarom niet aan één persoon worden toegewezen.",
+      "billingProfileUnavailable": "Het geselecteerde factureringsprofiel is niet beschikbaar voor deze klant."
+    },
+    "assetGroup": {
+      "not_found": "Assetgroep niet gevonden.",
+      "invalid_kind": "Dat groepstype is niet beschikbaar.",
+      "invalid_name": "Een groepsnaam is verplicht.",
+      "client_mismatch": "Dat asset of contact hoort bij een andere klant.",
+      "already_grouped": "Dat asset zit al in een andere groep.",
+      "users_on_bundle": "Een bundel heeft één eigenaar, geen lijst met gebruikers.",
+      "owner_on_workspace": "Een gedeelde werkplek heeft gebruikers, geen eigenaar.",
+      "users_present": "Verwijder de gebruikers van de werkplek voordat u er een bundel van maakt.",
+      "invalid_location": "Die locatie is niet beschikbaar voor deze klant."
     }
   },
   "clientAssetMultiSelect": {
@@ -1631,5 +1817,309 @@
     "empty": "Geen overeenkomende assets voor deze klant",
     "loading": "Laden...",
     "remove": "Asset verwijderen"
+  },
+  "inventoryProvenance": {
+    "title": "Voorraadherkomst",
+    "fields": {
+      "product": {
+        "label": "Product"
+      },
+      "serial": {
+        "label": "Serienummer"
+      },
+      "mac": {
+        "label": "MAC"
+      },
+      "originSalesOrder": {
+        "label": "Oorspronkelijke verkooporder"
+      },
+      "delivered": {
+        "label": "Geleverd"
+      }
+    },
+    "rmaHistory": {
+      "title": "RMA-geschiedenis"
+    },
+    "emptyValue": "—",
+    "rmaLabel": "RMA"
+  },
+  "skeletons": {
+    "assetForm": {
+      "loading": "Assetformulier laden..."
+    }
+  },
+  "assetStatuses": {
+    "active": "Actief",
+    "in_stock": "Op voorraad",
+    "maintenance": "In onderhoud",
+    "inactive": "Inactief",
+    "retired": "Afgevoerd",
+    "held_by_msp": "In bewaring bij MSP"
+  },
+  "assetStatusKinds": {
+    "deployable": "Inzetbaar",
+    "pending": "In afwachting",
+    "undeployable": "Niet inzetbaar",
+    "archived": "Gearchiveerd"
+  },
+  "assetStatusSettings": {
+    "title": "Assetstatussen",
+    "description": "De levenscyclusstatussen van assets. RMM-synchronisatie overschrijft ze nooit nadat een apparaat is aangemaakt.",
+    "empty": "Nog geen assetstatussen.",
+    "addTitle": "Status toevoegen",
+    "editTitle": "Status bewerken",
+    "columns": {
+      "label": "Status",
+      "kind": "Levenscyclus",
+      "builtin": "Ingebouwd",
+      "inUse": "In gebruik",
+      "actions": "Acties"
+    },
+    "fields": {
+      "label": "Label",
+      "kind": "Levenscyclus"
+    },
+    "actions": {
+      "add": "Status toevoegen",
+      "rename": "Naam wijzigen",
+      "archive": "Archiveren",
+      "openMenu": "Menu openen",
+      "restore": "Herstellen",
+      "archiveBlocked": "Archiveren · {{count}} asset(s) gebruiken hem nog",
+      "reorder": "{{label}} herschikken — sleep of gebruik de pijltjestoetsen omhoog en omlaag",
+      "dragToReorder": "Sleep om te herschikken"
+    },
+    "confirmArchiveTitle": "Deze status archiveren?",
+    "confirmArchiveMessage": "'{{label}}' archiveren? Hij wordt niet meer aangeboden in assetformulieren. U kunt hem later herstellen.",
+    "errors": {
+      "load": "Assetstatussen konden niet worden geladen",
+      "inUse": "Nog gebruikt door {{count}} asset(s). Verplaats die eerst naar een andere status.",
+      "duplicate": "Er bestaat al een status met die naam.",
+      "invalidKind": "Kies een levenscyclus voor deze status.",
+      "invalidLabel": "Voer een naam in met minstens één letter of cijfer.",
+      "notFound": "Die status bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "save": "De status kon niet worden opgeslagen."
+    }
+  },
+  "contactAssets": {
+    "title": "Assets",
+    "empty": "Er zijn geen assets aan dit contact toegewezen.",
+    "sharedWorkspaces": "Gedeelde werkplekken",
+    "memberCount_one": "{{count}} asset",
+    "memberCount_other": "{{count}} assets"
+  },
+  "assetGroups": {
+    "kinds": {
+      "bundle": "Bundel",
+      "shared_workspace": "Gedeelde werkplek"
+    },
+    "drawerTitle": "Groep",
+    "fields": {
+      "name": "Naam",
+      "kind": "Soort",
+      "location": "Locatie",
+      "owner": "Eigenaar",
+      "users": "Gebruikers",
+      "members": "Leden"
+    },
+    "sections": {
+      "people": "Personen",
+      "members": "Leden"
+    },
+    "addAssets": "Assets toevoegen",
+    "addUser": "Persoon toevoegen",
+    "noLocation": "Geen locatie",
+    "locationHelp": "Als u de locatie wijzigt, verhuizen alle leden van de groep.",
+    "deleteHelp": "Leden houden hun huidige toewijzing en locatie.",
+    "actions": {
+      "manage": "Beheren",
+      "delete": "Groep verwijderen",
+      "addToGroup": "Aan groep toevoegen"
+    },
+    "confirmUnassignTitle": "Toewijzing van deze assets opheffen?",
+    "confirmUnassignMessage": "Een gedeelde werkplek heeft gebruikers in plaats van één toegewezen persoon, dus {{count}} asset(s) worden niet meer toegewezen.",
+    "confirmKindTitle": "Omzetten naar gedeelde werkplek?",
+    "confirmKindMessage": "Een gedeelde werkplek heeft gebruikers in plaats van een eigenaar, dus de toewijzing van alle leden wordt opgeheven.",
+    "confirmDeleteTitle": "Deze groep verwijderen?",
+    "confirmDeleteMessage": "'{{name}}' verwijderen? Leden houden hun huidige toewijzing en locatie.",
+    "errors": {
+      "createFailed": "Kan de groep niet aanmaken.",
+      "addFailed": "Kan de geselecteerde assets niet toevoegen."
+    }
+  },
+  "custody": {
+    "purpose": {
+      "repair": "Reparatie",
+      "warranty_evaluation": "Garantiebeoordeling",
+      "loaner_prep": "Voorbereiding leenapparaat",
+      "staging": "Klaarmaken voor gebruik"
+    },
+    "party": {
+      "msp": "Wij (MSP)",
+      "client": "Klant",
+      "vendor": "Leverancier"
+    },
+    "fields": {
+      "location": "Locatie",
+      "keepLocation": "Huidige locatie behouden",
+      "selectLocation": "Selecteer een locatie",
+      "bin": "Bak of plank",
+      "binPlaceholder": "bijv. Plank B3",
+      "purpose": "Doel",
+      "nextActionParty": "Volgende actie ligt bij",
+      "followUpOn": "Opvolgen op",
+      "followUpPlaceholder": "Selecteer een datum",
+      "nextActionNote": "Notitie bij volgende actie",
+      "internalNote": "Intern. Wordt nooit op een label afgedrukt of aan de klant getoond.",
+      "conditionNote": "Staat",
+      "conditionPlaceholder": "Krassen, ontbrekende schroeven, schade bij aankomst",
+      "accessories": "Ontvangen accessoires",
+      "accessoryPlaceholder": "bijv. Voedingsadapter",
+      "accessoryQuantity": "Aantal",
+      "removeAccessory": "Accessoire verwijderen",
+      "addAccessory": "Accessoire toevoegen",
+      "note": "Notitie (optioneel)"
+    },
+    "errors": {
+      "generic": "Er is iets misgegaan."
+    },
+    "actions": {
+      "cancel": "Annuleren",
+      "saving": "Opslaan...",
+      "move": "Verplaatsen",
+      "handOff": "Overdragen",
+      "ship": "Verzenden naar leverancier",
+      "receiveBack": "Terugontvangen",
+      "returnToClient": "Retourneren aan klant",
+      "edit": "Gegevens bewerken",
+      "receiveIntoCustody": "In bewaring nemen"
+    },
+    "move": {
+      "title": "Apparatuur verplaatsen",
+      "submit": "Verplaatsen",
+      "toLocation": "Verplaatsen naar"
+    },
+    "handOff": {
+      "title": "Overdragen aan een collega",
+      "submit": "Overdragen",
+      "newHolder": "Nieuwe houder",
+      "selectHolder": "Selecteer een persoon"
+    },
+    "ship": {
+      "title": "Verzenden naar leverancier",
+      "description": "Het item verlaat het kantoor. Het blijft in bewaring en wordt getoond als bij de leverancier.",
+      "submit": "Verzenden",
+      "counterparty": "Leverancier of vervoerder",
+      "counterpartyPlaceholder": "bijv. Dell RMA-depot"
+    },
+    "receiveBack": {
+      "title": "Terugontvangen van leverancier",
+      "submit": "Terugontvangen",
+      "holder": "Houder (standaard u)",
+      "me": "Ik"
+    },
+    "return": {
+      "title": "Retourneren aan klant",
+      "description": "Hiermee eindigt de bewaring. Het item staat niet langer vermeld als in bewaring.",
+      "submit": "Retourneren aan klant",
+      "collectedBy": "Opgehaald door (optioneel)"
+    },
+    "edit": {
+      "title": "Bewaringsgegevens bewerken",
+      "submit": "Opslaan"
+    },
+    "open": {
+      "title": "In bewaring nemen",
+      "description": "Leg vast dat de MSP deze apparatuur nu in bezit heeft. Dit maakt geen voorraad aan en raakt de facturatie niet.",
+      "submit": "Ontvangen",
+      "holder": "Houder (standaard u)"
+    },
+    "card": {
+      "withVendor": "Bij leverancier",
+      "title": "Bewaring",
+      "location": "Locatie",
+      "holder": "Houder",
+      "purpose": "Doel",
+      "nextAction": "Volgende actie",
+      "followUp": "Opvolging",
+      "overdue": "achterstallig",
+      "daysHeld": "Dagen in bewaring",
+      "ticket": "Ticket",
+      "openTicket": "Ticket openen",
+      "condition": "Staat",
+      "accessories": "Accessoires",
+      "notInCustody": "Momenteel niet in bewaring van de MSP.",
+      "hideHistory": "Bewaringsgeschiedenis verbergen",
+      "showHistoryWithPast": "Bewaringsgeschiedenis ({{count}} eerdere periodes)",
+      "showHistory": "Bewaringsgeschiedenis",
+      "noEvents": "Geen bewaringsgebeurtenissen vastgelegd."
+    },
+    "state": {
+      "with_vendor": "Bij leverancier",
+      "in_office": "Op kantoor"
+    },
+    "badge": {
+      "withVendor": "Bij leverancier",
+      "inOfficeAt": "Op kantoor - {{location}}",
+      "inOffice": "Op kantoor"
+    },
+    "queue": {
+      "columns": {
+        "asset": "Asset",
+        "client": "Klant",
+        "location": "Locatie",
+        "holder": "Houder",
+        "purpose": "Doel",
+        "nextAction": "Volgende actie",
+        "followUp": "Opvolging",
+        "daysHeld": "Dagen in bewaring",
+        "ticket": "Ticket",
+        "actions": "Acties"
+      },
+      "openMenu": "Menu openen",
+      "tabs": {
+        "all_open": "Alle open",
+        "in_office": "Op kantoor",
+        "waiting_on_vendor": "Wacht op leverancier",
+        "waiting_on_client": "Wacht op klant",
+        "overdue": "Achterstallig"
+      },
+      "title": "Apparatuur in bewaring",
+      "filters": {
+        "client": "Klant",
+        "allLocations": "Alle locaties",
+        "holder": "Houder",
+        "allPurposes": "Alle doelen",
+        "mine": "Van mij"
+      },
+      "empty": "Er is geen apparatuur in bewaring voor deze weergave."
+    },
+    "receiveEquipment": {
+      "button": "Apparatuur ontvangen",
+      "title": "Apparatuur ontvangen",
+      "description": "Leg klantapparatuur vast die voor dit ticket is afgegeven. Dit maakt geen voorraad aan en raakt facturatie of tijd niet.",
+      "submit": "Ontvangen",
+      "modeExisting": "Bestaande asset",
+      "modeNew": "Nieuw item",
+      "search": "Klantassets zoeken",
+      "asset": "Asset",
+      "assetPlaceholder": "Selecteer een asset",
+      "fields": {
+        "name": "Naam",
+        "type": "Type",
+        "manufacturer": "Fabrikant",
+        "model": "Model",
+        "serial": "Serienummer",
+        "assetTag": "Assettag (optioneel)"
+      },
+      "photos": "Foto's (optioneel)",
+      "photosHint": "Foto's worden aan dit ticket gekoppeld en zijn niet zichtbaar voor de klant.",
+      "doneTitle": "Apparatuur ontvangen",
+      "doneBody": "{{name}} ({{tag}}) is nu in bewaring bij de MSP.",
+      "printLabel": "Assetlabel afdrukken",
+      "openAsset": "Asset openen",
+      "close": "Sluiten",
+      "inCustodyOption": "{{asset}} — In bewaring: {{location}}"
+    }
   }
 }

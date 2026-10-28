@@ -203,3 +203,41 @@ export async function recoverAppRelease({ runKubectl, sleep, releases = APPLIANC
   if (!forced.ok) return { ok: false, step: 'force-reconcile', error: forced.error };
   return { ok: true, at, clearedBootstrapJob: job.deleted };
 }
+
+// Re-run every hard-failed (Stalled / *Failed / RetriesExceeded) appliance
+// release, in dependency order, and nothing else. With install/upgrade
+// remediation retries at 0 (Helm remediation could uninstall PVC-backed
+// releases), one failed upgrade leaves a release stuck until someone resets
+// it — e.g. a slow box where Deployments missed their progress deadline
+// mid-upgrade and then came up healthy. Unlike recoverAppRelease this does not
+// force alga-core (and so re-run bootstrap) unless alga-core itself is stuck.
+export async function recoverStalledReleases({ runKubectl, sleep, releases = APPLIANCE_HELM_RELEASES, namespace = APPLIANCE_HELM_RELEASE_NAMESPACE, waitForActiveMs = 0, at = new Date().toISOString() }) {
+  const resumed = await setHelmReleasesSuspended({ runKubectl, names: releases.map((r) => r.name), namespace, suspended: false });
+  if (!resumed.ok) {
+    return { ok: false, step: 'resume-helmreleases', recovered: [], error: resumed.failures.map((f) => `${f.name}: ${f.error}`).join('; ') };
+  }
+
+  const stalled = [];
+  for (const release of releases) {
+    const summary = await readHelmRelease({ runKubectl, name: release.name, namespace });
+    if (summary.readable && summary.hardFailed) stalled.push(release.name);
+  }
+  if (stalled.length === 0) return { ok: true, at, recovered: [] };
+
+  // alga-core's upgrade re-applies its bootstrap Job; a leftover one makes
+  // that apply fail on the Job's immutable template (see header).
+  if (stalled.includes(releases[0].name)) {
+    const job = await clearBootstrapJob({ runKubectl, sleep, waitForActiveMs });
+    if (!job.ok) return { ok: false, step: 'clear-bootstrap-job', recovered: [], error: job.error };
+  }
+
+  const recovered = [];
+  const failures = [];
+  for (const name of stalled) {
+    const forced = await forceHelmReleaseReconcile({ runKubectl, name, namespace, at });
+    if (forced.ok) recovered.push(name);
+    else failures.push(`${name}: ${forced.error}`);
+  }
+  if (failures.length) return { ok: false, step: 'force-reconcile', recovered, error: failures.join('; ') };
+  return { ok: true, at, recovered };
+}

@@ -111,6 +111,7 @@ Ticket webhooks support these event types in v1:
 - `ticket.assigned`
 - `ticket.closed`
 - `ticket.comment.added`
+- `ticket.response_state_changed` (payload adds `previous_response_state` / `new_response_state`, and `response_state` always reflects the current state — equal to `new_response_state` on this event; `comment` and `comments[]` entries now also carry `author_type`, and `contact_id` / `contact_name` when a contact wrote them)
 
 ### Notification Suppression
 
@@ -310,6 +311,8 @@ Every outbound webhook is delivered as JSON:
 ```
 
 `author_type` identifies whether the comment was posted by an MSP agent or by a client through the client portal. Possible values are `"internal"` (an MSP team member wrote the comment), `"client"` (a contact replied via the client portal), or `null` (the author type is unknown, for example on comments created before this field was tracked). Use `author_type` to distinguish client-initiated replies from agent replies without a separate user-record lookup.
+
+The `author` field is always populated. For comments from an internal user or contact, `author` carries their display name. For inbound-email comments whose sender does not match any contact or user record, `author` is resolved from the message's sender name and email address. If no sender identity is available, `author` falls back to `"System"`.
 
 Comment payloads never include attachments.
 
@@ -594,9 +597,156 @@ See the project-task [Delivery Envelope](#delivery-envelope-1) example above.
 }
 ```
 
+## Client, Contact, and Client Location Webhooks
+
+Twelve events cover the lifecycle of clients, contacts, and client locations. They use the same delivery envelope, signature, retry, auto-disable, event allowlist, and `entity_ids` filter as ticket and project events.
+
+### Supported Events
+
+| Entity | Events |
+| --- | --- |
+| Client | `client.created`, `client.updated`, `client.deactivated`, `client.deleted` |
+| Contact | `contact.created`, `contact.updated`, `contact.deactivated`, `contact.deleted` |
+| Client location | `client_location.created`, `client_location.updated`, `client_location.deactivated`, `client_location.deleted` |
+| Quote | `quote.sent`, `quote.viewed`, `quote.approved`, `quote.accepted`, `quote.rejected`, `quote.expired`, `quote.converted`, `quote.conversion_reverted`, `quote.superseded`, `quote.cancelled` |
+
+### What Triggers Each Event
+
+An event fires for the same change no matter where it was made.
+
+| Event | Fires when | Made from |
+| --- | --- | --- |
+| `client.created` | A client is created. | Web UI, REST API, workflow actions (`clients.create`, `clients.duplicate`), CSV import, Xero client import, onboarding, Entra sync, client lookup, inbound email |
+| `client.updated` | A client's fields change, its lifecycle status changes (prospect, active, former), or its primary contact changes. | Web UI, REST API, workflow actions, CSV import |
+| `client.deactivated` | `is_inactive` goes from `false` to `true`. | Web UI, REST API, workflow actions |
+| `client.deleted` | A client is deleted, or a client is merged into another one. For a merge, `client_id` is the **source** (merged-away) client. | Web UI, REST API, workflow actions, client merge |
+| `contact.created` | A contact is created. | Web UI (including the client and contact dialog), REST API, workflow actions, contact CSV import, onboarding, inbound email and inbound webhooks, Entra sync, migration import, portal invitations, ticket import, marketing capture, 3CX |
+| `contact.updated` | A contact's fields change. This includes a contact moved to another client (`client_id` in `changed_fields`) and a contact re-parented by a client merge. | Web UI, REST API, workflow actions, contact CSV import, bulk contact moves, inbound webhooks, Entra sync, client merge, portal and onboarding flows, marketing capture, 3CX |
+| `contact.deactivated` | `is_inactive` goes from `false` to `true`. This includes each contact deactivated when you deactivate a client with "deactivate contacts": one `contact.deactivated` is sent per contact. | Web UI, REST API, workflow actions, Entra sync |
+| `contact.deleted` | A contact is deleted. | Web UI, REST API, workflow actions |
+| `client_location.created` | A location is created. | Web UI, REST API, CSV import, onboarding, Xero client import, workflow actions |
+| `client_location.updated` | A location's fields change. This includes the implicit change when another location becomes the default (the previous default gets `is_default` in `changed_fields`, and a promoted location does too) and a location re-parented by a client merge. | Web UI, REST API, onboarding, Xero client import, workflow actions, client merge |
+| `client_location.deactivated` | `is_active` goes from `true` to `false`. | Web UI, REST API |
+| `client_location.deleted` | A location is deleted on its own. | Web UI, REST API |
+
+Not every internal write is delivered. These do not produce events:
+
+- Un-archiving is not a separate event. Reactivating a client or contact (including with the "reactivate contacts" choice) arrives as `client.updated` or `contact.updated` with `is_inactive` in `changed_fields`.
+- Child records removed because their client was deleted, and the records seeded when a tenant is created or deleted. See [Delete and merge semantics](#delete-and-merge-semantics).
+
+### Payload
+
+Every delivery carries the standard envelope and a small `data` object:
+
+- The entity id: `client_id`, `contact_id`, or `location_id`.
+- `client_id` on contact and client location events, when the record belongs to a client. A contact with no client has no `client_id`.
+- `changed_fields` on `*.updated` events, only when the change reported which fields changed. Names are snake_case.
+
+Payloads never contain the record itself. Fetch the record from the REST API when you need its current values.
+
+`client.created`:
+
+```json
+{
+  "event_id": "0f5c2d8e-6a4b-4e0a-9d52-1c7b7f1e2a10",
+  "event_type": "client.created",
+  "occurred_at": "2026-10-20T14:10:00.000Z",
+  "tenant_id": "11111111-1111-1111-1111-111111111111",
+  "data": {
+    "client_id": "55555555-5555-5555-5555-555555555555"
+  }
+}
+```
+
+`contact.updated`:
+
+```json
+{
+  "event_id": "7a1d4c52-93f0-4c1e-8a37-5d2f8b6e0c44",
+  "event_type": "contact.updated",
+  "occurred_at": "2026-10-20T14:12:30.000Z",
+  "tenant_id": "11111111-1111-1111-1111-111111111111",
+  "data": {
+    "contact_id": "66666666-6666-6666-6666-666666666666",
+    "client_id": "55555555-5555-5555-5555-555555555555",
+    "changed_fields": ["email", "phone_number"]
+  }
+}
+```
+
+`client_location.deleted`:
+
+```json
+{
+  "event_id": "c3e90b17-2d6a-47f9-b1c8-0a9e4d7f3b21",
+  "event_type": "client_location.deleted",
+  "occurred_at": "2026-10-20T14:15:00.000Z",
+  "tenant_id": "11111111-1111-1111-1111-111111111111",
+  "data": {
+    "location_id": "88888888-8888-8888-8888-888888888888",
+    "client_id": "55555555-5555-5555-5555-555555555555"
+  }
+}
+```
+
+Use `payload_fields` to drop the optional keys (`client_id` on contacts and locations, `changed_fields`). The entity id is always sent.
+
+### Entity ID Filter
+
+For contact and client location events, an `entity_ids` filter matches either the record's own id or its parent `client_id`. Filter on a client id to receive every contact and location event for that client.
+
+### Deactivated, Deleted, and Merge Semantics
+
+- **Deactivated.** The record still exists and is marked inactive. Deactivating a client with "deactivate contacts" cascades: every previously active contact sends its own `contact.deactivated`. Only the `false` to `true` change fires `*.deactivated`. Turning the flag back off fires no `*.deactivated` and no separate event; look for `is_inactive` or `is_active` in `changed_fields` on the matching `*.updated` event.
+- **Deleted.** The record is gone. Deleting a client does **not** send `contact.deleted` or `client_location.deleted` for its children. Treat a `client.deleted` as covering everything under that client.
+- **Merge.** Merging client A into client B sends one `client.deleted` with A's id. B receives no event. Each contact and location that moved from A to B sends its own `contact.updated` or `client_location.updated` with the new `client_id` (B) and `changed_fields` of `["client_id"]`, published after the merge commits. A location that stops being the default in the process also sends `client_location.updated` with `is_default` in `changed_fields`.
+- **Follow-up fetches.** If you fetch a record after a `*.deleted` event, a `404` is the expected answer. Treat it as success.
+
+## Quote Lifecycle Webhooks
+
+Quote events publish after the transaction commits. Ordinary edits and repeated writes of the same status do not emit lifecycle events. Linking an existing quote to an opportunity does not emit them either.
+
+| Event | Fires when | Sources |
+| --- | --- | --- |
+| `quote.sent` | A quote becomes sent. Resending or sending a reminder does not fire it again. | MSP actions, REST, workflow actions |
+| `quote.viewed` | The first client-portal view sets `viewed_at`. Later views do not fire it. | Client portal |
+| `quote.approved` | Internal approval changes pending approval to approved. | MSP actions, REST, workflow updates |
+| `quote.accepted` | A sent quote is accepted. | Client portal, MSP on behalf of the client, REST, workflow updates |
+| `quote.rejected` | A quote becomes rejected. | Client portal, REST, workflow updates |
+| `quote.expired` | A sent quote expires. Competing expiry paths produce one transition. | Scheduled expiry job, expiry on access in the application or workflow worker |
+| `quote.converted` | Conversion creates draft destination records and changes the quote to converted. Combined conversion emits one event with both targets. | MSP actions, REST, workflow actions |
+| `quote.conversion_reverted` | Deleting the only converted draft invoice returns the quote to accepted. A quote also linked to a contract keeps its status. | Invoice deletion |
+| `quote.superseded` | A revision replaces an existing quote version. | MSP actions, REST |
+| `quote.cancelled` | A quote becomes cancelled. | MSP actions, REST, workflow updates |
+
+Use `event_filter.entity_ids` to match either the quote ID or its client ID. Use `payload_fields.quote` to select fields; `quote_id` is always included. The default payload carries quote number and version, client/contact/opportunity references, previous and new status, currency, total amount in minor units, actor type/ID, and the event timestamp. Legacy quotes may have a null quote number or client reference.
+
+Acceptance includes `accepted_by_name`, `accepted_on_behalf`, and `selected_optional_item_ids`. Optional selections contain IDs only. Rejection includes `rejection_reason`. Conversion includes `conversion_targets` and destination IDs; a converted contract may still be a draft. Fetch `GET /api/v1/quotes/{id}` for line items, prices, and terms.
+
+Treat `quote.conversion_reverted` and `quote.superseded` as retractions of earlier facts. The former includes `released_invoice_id`; the latter identifies `superseded_by_quote_id` and `next_version`. A later conversion has a new event ID. There is no generic `quote.status_changed` event, and submitting a quote for internal approval or requesting approval changes emits no event in this version.
+
+```json
+{
+  "event_id": "43146901-a180-5d98-896c-3c8c550179ae",
+  "event_type": "quote.accepted",
+  "occurred_at": "2026-10-28T12:00:00.000Z",
+  "tenant_id": "96228f61-4ec1-4ec4-84dc-91ed82977765",
+  "data": {
+    "quote_id": "b1ff62e5-f93c-4b5f-a04d-2bf9f740dcba",
+    "quote_number": "Q-0042",
+    "previous_status": "sent",
+    "new_status": "accepted",
+    "accepted_on_behalf": false,
+    "selected_optional_item_ids": []
+  }
+}
+```
+
+Event IDs are stable for the tenant and recorded transition. Successful outbound deliveries retain a database receipt, so replay after Redis cache expiry does not create another successful delivery. Network failures still require idempotent consumers: a receiver can process a request before its response is lost.
+
 ## Shared Webhook Mechanics
 
-Signature, verification, delivery semantics, retry, and outbound rate limits apply to all webhook events regardless of family (ticket, project, …).
+Signature, verification, delivery semantics, retry, and outbound rate limits apply to all webhook events regardless of family (ticket, project, client, contact, client location).
 
 ### Signature Headers
 
@@ -679,6 +829,65 @@ Failed non-test deliveries are retried with this schedule:
 
 After the fifth failed attempt, the delivery is abandoned.
 
+### Retrying Failed Deliveries
+
+#### Per-delivery retry
+
+Retry a single delivery attempt:
+
+```http
+POST /api/v1/webhooks/{id}/deliveries/{delivery_id}/retry
+```
+
+Returns `202` with a queued result:
+
+```json
+{
+  "queued": true,
+  "webhook_id": "...",
+  "delivery_id": "...",
+  "event_id": "..."
+}
+```
+
+The delivery is re-queued through the normal delivery queue, preserving
+rate limiting, backoff, and auto-disable behavior.
+
+#### Bulk retry
+
+Re-queue all failed or abandoned non-test deliveries for a webhook in one
+call:
+
+```http
+POST /api/v1/webhooks/{id}/retry-failed
+Content-Type: application/json
+
+{
+  "since": "2026-10-01T00:00:00Z",  // optional ISO-8601; defaults to all time
+  "limit": 200                        // optional; max 1000, default 500
+}
+```
+
+Returns `202`:
+
+```json
+{
+  "queued": 200,
+  "skipped": 12,
+  "total_candidates": 212,
+  "truncated": false
+}
+```
+
+- `queued` — deliveries re-queued in this call.
+- `skipped` — candidates already in a pending retry attempt.
+- `total_candidates` — total matching failed/abandoned deliveries found.
+- `truncated` — `true` when `total_candidates` exceeded `limit`; call again
+  with a later `since` to page through the remainder.
+
+`retry-failed` is also surfaced as a HATEOAS `links.retry-failed` action on
+the webhook resource returned by `GET /api/v1/webhooks/{id}`.
+
 ### Per-Webhook Outbound Rate Limit
 
 Webhook delivery also has an outbound cap per webhook. The default is
@@ -686,3 +895,18 @@ Webhook delivery also has an outbound cap per webhook. The default is
 
 Test deliveries sent through `POST /api/v1/webhooks/{id}/test` do not consume
 that outbound bucket.
+
+### Subscriptions with Retired Event Names
+
+The webhook API no longer offers `time.entry.*`, `invoice.*`, `asset.*`, `system.*`, `workflow.*`, or `custom.event`. Alga never delivered these events.
+
+Webhooks that already store one of these names keep working:
+
+- The row is kept as it is. Nothing is migrated or deleted.
+- Reading or listing the webhook never fails because of the name.
+- The name never receives a delivery, so it never causes a failed delivery or counts toward auto-disable.
+- On update, a retired name that is already stored can stay in `event_types`. Adding a retired name that is not already stored is rejected with `400`.
+- Creating a webhook with any unknown event name is rejected with `400`.
+- The admin UI lists retired names in a separate "no longer supported" group. Remove them when you are ready; they do nothing.
+
+Call `GET /api/v1/webhooks/events` for the current list of names you can subscribe to.

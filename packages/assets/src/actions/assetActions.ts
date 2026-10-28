@@ -21,6 +21,8 @@ import {
     AssetMaintenanceReport,
     ClientMaintenanceSummary,
     AssetRelationship,
+    AssetAssignment,
+    AssetAssignmentSource,
     WorkstationAsset,
     NetworkDeviceAsset,
     ServerAsset,
@@ -59,14 +61,15 @@ import {
     createAssetRelationshipSchema
 } from '../lib/schemas/asset.schema';
 import { formatClientLocation, type ClientLocationLike } from '../lib/formatClientLocation';
-import { advanceMaintenanceDate } from '../lib/maintenanceRecurrence';
+import { advanceMaintenanceDate, parseCustomRecurrence } from '../lib/maintenanceRecurrence';
+import { orderEntityAssetIds, type EntityAssociationRow } from '../lib/entityAssetOrder';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { toCalendarDateString, toISOTimestamp, toPlainDate } from '@alga-psa/core';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { resolveEffectiveTimeZone } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/db';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent, publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { emitDateDomainEventOnce, toTenantLocalDate } from '@alga-psa/event-bus/workflow/dateDomainEvents';
 import {
     buildAssetAssignedPayload,
@@ -93,8 +96,22 @@ import {
   isTypedAssetWriteError,
 } from '../lib/assetTypeAttributes';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '../lib/assetAttributeWrites';
+import { validateAssetStatusSlug } from '../lib/assetStatusRegistry';
+import {
+    resolveAuthorizationSubjectForUser as resolveSharedAuthorizationSubject,
+    resolveAssetAuthorizationRecords as resolveSharedAssetAuthorizationRecords,
+    type AssetAuthUser as SharedAssetAuthUser,
+} from '../lib/assetReadAuthorization';
+import { isAssetAssigneeError, setAssetAssignee } from '../lib/assetAssignment';
+import { getAssetGroupSummariesForAssets, getAssetGroupSummary, removeAssetFromAnyGroup } from '../lib/assetGroups';
+import {
+    ASSET_BILLING_PROFILE_UNAVAILABLE,
+    assertBillingProfileForClient,
+} from '@alga-psa/shared/models/assetBillingProfileModel';
 import {
     ASSET_CONTACT_UNAVAILABLE_MESSAGE,
+    ASSET_VENDOR_UNAVAILABLE_MESSAGE,
+    ASSET_WORKSPACE_MEMBER_MESSAGE,
     assetActionErrorFrom,
     type AssetActionError,
 } from './assetActionErrors';
@@ -191,6 +208,9 @@ async function assetActionErrorMessage(error: unknown, fallback: string): Promis
         message === 'Asset not found' ||
         message === 'Selected location is not available for this client' ||
         message === ASSET_CONTACT_UNAVAILABLE_MESSAGE ||
+        message === ASSET_VENDOR_UNAVAILABLE_MESSAGE ||
+        message === ASSET_WORKSPACE_MEMBER_MESSAGE ||
+        message === ASSET_BILLING_PROFILE_UNAVAILABLE ||
         message.startsWith('Invalid input data:') ||
         message.startsWith('Asset validation failed:') ||
         message.startsWith('Permission denied:')
@@ -294,6 +314,12 @@ function sanitizeUpdatePayload(data: UpdateAssetRequest): UpdateAssetRequest {
     if (data.contact_name_id === null) {
         cleaned.contact_name_id = null;
     }
+    // Same for the procurement fields: null means "clear", not "keep".
+    for (const key of ['vendor_id', 'purchase_cost', 'purchase_cost_currency', 'manufacturer', 'model', 'order_number', 'billing_profile_id'] as const) {
+        if (data[key] === null) {
+            (cleaned as Record<string, unknown>)[key] = null;
+        }
+    }
     // pruneNullishValues deletes null, which would turn "clear this field" into
     // "keep the stored value". An explicit null on a nullable extension number
     // column means clear it (alga0002283), like location_id above.
@@ -378,60 +404,104 @@ async function resolveValidatedAssetContact(
     return { contact_name_id: contact.contact_name_id };
 }
 
-type AssetAuthUser = {
-    user_id: string;
-    user_type: 'internal' | 'client';
-    clientId?: string | null;
-    roles?: Array<{ role_id?: string } | string>;
-};
+/**
+ * FR-B3: `assets.status` must hold the slug of an active tenant status. An
+ * archived status is accepted only when it is the value the asset already
+ * carries, so a device left on a retired status stays editable.
+ */
+async function assertValidAssetStatus(
+    trx: Knex.Transaction,
+    tenant: string,
+    slug: string,
+    storedSlug?: string | null
+): Promise<void> {
+    const result = await validateAssetStatusSlug(trx, tenant, slug, storedSlug);
+    if (!result.ok) {
+        const { error } = result as Extract<typeof result, { ok: false }>;
+        throw new Error(JSON.stringify({
+            kind: 'validation',
+            issues: [{ code: error.code, path: ['status'], message: error.message }],
+        }));
+    }
+}
 
-function extractRoleIdsFromUser(user: AssetAuthUser): string[] {
-    if (!Array.isArray(user.roles)) {
-        return [];
+/** Free-text asset field: blank means "cleared", not "empty string". */
+function trimToNull(value: unknown): string | null {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    return trimmed === '' ? null : trimmed;
+}
+
+/**
+ * Validates the supplier an asset was bought from. Suppliers are the inventory
+ * `vendors` rows, so the id must exist in the tenant. `undefined` means "not
+ * provided" and `null` clears.
+ */
+async function resolveValidatedAssetVendor(
+    trx: Knex.Transaction,
+    tenant: string,
+    vendorId: string | null | undefined
+): Promise<{ vendor_id: string | null } | undefined> {
+    if (vendorId === undefined) {
+        return undefined;
     }
 
-    return user.roles
-        .map((role) => {
-            if (typeof role === 'string') {
-                return role;
-            }
-            return typeof role?.role_id === 'string' ? role.role_id : null;
-        })
-        .filter((value): value is string => Boolean(value));
+    if (vendorId === null) {
+        return { vendor_id: null };
+    }
+
+    const vendor = await tenantScopedTable(trx, 'vendors', tenant)
+        .where({ vendor_id: vendorId })
+        .first<{ vendor_id: string }>('vendor_id');
+
+    if (!vendor) {
+        throw new Error(ASSET_VENDOR_UNAVAILABLE_MESSAGE);
+    }
+
+    return { vendor_id: vendor.vendor_id };
 }
+
+/** Tenant default currency for a purchase cost written without one. */
+async function resolveTenantDefaultCurrency(trx: Knex.Transaction, tenant: string): Promise<string> {
+    const settings = await tenantScopedTable(trx, 'default_billing_settings', tenant)
+        .first<{ default_currency_code?: string | null }>('default_currency_code');
+    return settings?.default_currency_code || 'USD';
+}
+
+/**
+ * Purchase cost and its currency travel together: a cost written without a
+ * currency falls back to the tenant default, and clearing the cost clears the
+ * currency with it.
+ */
+async function applyPurchaseCostCurrency(
+    trx: Knex.Transaction,
+    tenant: string,
+    candidate: Record<string, unknown>,
+    storedCurrency?: string | null
+): Promise<void> {
+    const costProvided = Object.prototype.hasOwnProperty.call(candidate, 'purchase_cost');
+    if (!costProvided) return;
+
+    if (candidate.purchase_cost === null) {
+        candidate.purchase_cost_currency = null;
+        return;
+    }
+
+    const currency = candidate.purchase_cost_currency ?? storedCurrency ?? null;
+    candidate.purchase_cost_currency = currency || (await resolveTenantDefaultCurrency(trx, tenant));
+}
+
+// Subject and record resolution live in ../lib/assetReadAuthorization (shared with the label code
+// paths). The thin wrappers and the kernel/decision text below stay here because
+// assetAuthorization.contract.test.ts pins them in this file's source.
+type AssetAuthUser = SharedAssetAuthUser;
 
 async function resolveAuthorizationSubjectForUser(
     trx: Knex.Transaction,
     tenant: string,
     user: AssetAuthUser
 ): Promise<AuthorizationSubject> {
-    let roleIds = extractRoleIdsFromUser(user);
-    if (roleIds.length === 0) {
-        try {
-            const roleRows = await tenantScopedTable(trx, 'user_roles', tenant)
-                .where({ user_id: user.user_id })
-                .select<{ role_id: string }[]>('role_id');
-            roleIds = roleRows.map((row) => row.role_id);
-        } catch {
-            roleIds = [];
-        }
-    }
-
-    const [teamRows, managedRows] = await Promise.all([
-        tenantScopedTable(trx, 'team_members', tenant).where({ user_id: user.user_id }).select<{ team_id: string }[]>('team_id').catch(() => []),
-        tenantScopedTable(trx, 'users', tenant).where({ reports_to: user.user_id }).select<{ user_id: string }[]>('user_id').catch(() => []),
-    ]);
-
-    return {
-        tenant,
-        userId: user.user_id,
-        userType: user.user_type,
-        roleIds,
-        teamIds: teamRows.map((row) => row.team_id),
-        managedUserIds: managedRows.map((row) => row.user_id),
-        clientId: user.clientId ?? null,
-        portfolioClientIds: user.clientId ? [user.clientId] : [],
-    };
+    return resolveSharedAuthorizationSubject(trx, tenant, user);
 }
 
 async function resolveAssetAuthorizationRecords(
@@ -439,42 +509,7 @@ async function resolveAssetAuthorizationRecords(
     tenant: string,
     assets: Array<Pick<Asset, 'asset_id' | 'client_id'>>
 ): Promise<Map<string, AuthorizationRecord>> {
-    const assetIds = assets.map((asset) => asset.asset_id);
-    if (assetIds.length === 0) {
-        return new Map();
-    }
-
-    const associationRows = await tenantScopedTable(trx, 'asset_associations', tenant)
-        .whereIn('asset_id', assetIds)
-        .select<Array<{ asset_id: string; entity_type: string; entity_id: string }>>('asset_id', 'entity_type', 'entity_id');
-
-    const associationsByAsset = new Map<string, Array<{ entity_type: string; entity_id: string }>>();
-    for (const row of associationRows) {
-        const existing = associationsByAsset.get(row.asset_id) ?? [];
-        existing.push({ entity_type: row.entity_type, entity_id: row.entity_id });
-        associationsByAsset.set(row.asset_id, existing);
-    }
-
-    const records = new Map<string, AuthorizationRecord>();
-    for (const asset of assets) {
-        const associations = associationsByAsset.get(asset.asset_id) ?? [];
-        const assignedUserIds = associations
-            .filter((association) => association.entity_type === 'user')
-            .map((association) => association.entity_id);
-        const teamIds = associations
-            .filter((association) => association.entity_type === 'team')
-            .map((association) => association.entity_id);
-
-        records.set(asset.asset_id, {
-            id: asset.asset_id,
-            ownerUserId: assignedUserIds[0] ?? null,
-            assignedUserIds,
-            clientId: asset.client_id ?? null,
-            teamIds,
-        });
-    }
-
-    return records;
+    return resolveSharedAssetAuthorizationRecords(trx, tenant, assets);
 }
 
 type AssetAuthorizationInput = Pick<Asset, 'asset_id' | 'client_id'>;
@@ -492,6 +527,7 @@ function createAssetReadAuthorizationKernel(trx: Knex.Transaction) {
             resolveRules: async (input) => {
                 try {
                     return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+                // write-admission: exempt — authorization-rule read, never a write
                 } catch {
                     return [];
                 }
@@ -657,6 +693,22 @@ async function getExtensionData(knex: Knex, tenant: string, asset_id: string, as
     }
 }
 
+/**
+ * Every array-shaped column on the extension tables is `jsonb` (there are no
+ * native Postgres array columns), but node-pg renders a bare JS array as an
+ * array literal — `{"{\"name\":...}"}` — which Postgres then rejects for a json
+ * column with 22P02 "invalid input syntax for type json". Stringifying here is
+ * what makes a non-empty `installed_software` / `disk_usage` saveable; an empty
+ * array slipped through before only because `{}` happens to parse as JSON.
+ */
+function encodeExtensionJsonArrays(fields: Record<string, unknown>): Record<string, unknown> {
+    const encoded: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(fields)) {
+        encoded[key] = Array.isArray(value) ? JSON.stringify(value) : value;
+    }
+    return encoded;
+}
+
 // Helper function to insert/update extension table data.
 // Trusts upstream Zod validation (createAssetSchema / updateAssetSchema in the action layer).
 async function upsertExtensionData(
@@ -671,7 +723,8 @@ async function upsertExtensionData(
     const table = EXTENSION_TABLE_BY_ASSET_TYPE[asset_type.toLowerCase()];
     if (!table) return;
     // Strip tenant/asset_id — they're the Citus partition key + PK and cannot appear in an UPDATE SET clause.
-    const { tenant: _t, asset_id: _a, ...extensionFields } = data as Record<string, unknown>;
+    const { tenant: _t, asset_id: _a, ...rest } = data as Record<string, unknown>;
+    const extensionFields = encodeExtensionJsonArrays(rest);
 
     // Check if record exists
     const exists = await tenantScopedTable(knex, table, tenant)
@@ -833,6 +886,16 @@ function formatAssetForOutput(asset: any): Asset {
         location_id: asset.location_id ?? null,
         contact_name_id: asset.contact_name_id ?? null,
         contact_name: asset.contact_name ?? null,
+        manufacturer: asset.manufacturer ?? null,
+        model: asset.model ?? null,
+        vendor_id: asset.vendor_id ?? null,
+        vendor_name: asset.vendor_name ?? null,
+        // pg returns bigint as a string; the UI formats a number.
+        purchase_cost: nullableNumber(asset.purchase_cost),
+        purchase_cost_currency: asset.purchase_cost_currency ?? null,
+        order_number: asset.order_number ?? null,
+        billing_profile_id: asset.billing_profile_id ?? null,
+        billing_profile_name: asset.billing_profile_name ?? null,
         // Ensure client data is properly structured
         // The SQL JOIN returns client_name as a flat field; build the nested object from it
         client: asset.client_id ? {
@@ -974,7 +1037,7 @@ export async function createAssetInTransaction(
     tenant: string,
     actorUserId: string,
     data: CreateAssetRequest,
-    options?: { requireCustomAttributes?: boolean }
+    options?: { requireCustomAttributes?: boolean; assignmentSource?: AssetAssignmentSource }
 ): Promise<Asset> {
             // Validate the input data
             const validatedData = validateData(createAssetSchema, data);
@@ -1002,6 +1065,30 @@ export async function createAssetInTransaction(
                 validatedData.contact_name_id
             );
 
+            await assertValidAssetStatus(trx, tenant, validatedData.status);
+
+            const selectedVendor = await resolveValidatedAssetVendor(trx, tenant, validatedData.vendor_id);
+            // FR-F1: the profile must belong to this client and be active.
+            const billingProfileId = await assertBillingProfileForClient(
+                trx,
+                tenant,
+                validatedData.client_id,
+                validatedData.billing_profile_id ?? null
+            );
+
+            const procurement: Record<string, unknown> = {
+                manufacturer: trimToNull(validatedData.manufacturer),
+                model: trimToNull(validatedData.model),
+                vendor_id: selectedVendor?.vendor_id ?? null,
+                order_number: trimToNull(validatedData.order_number),
+                billing_profile_id: billingProfileId,
+            };
+            if (validatedData.purchase_cost !== undefined) {
+                procurement.purchase_cost = validatedData.purchase_cost;
+                procurement.purchase_cost_currency = validatedData.purchase_cost_currency ?? null;
+                await applyPurchaseCostCurrency(trx, tenant, procurement);
+            }
+
             // Extract only the base asset fields and ensure dates are only included if they exist
             const baseAssetData = {
                 tenant,
@@ -1010,12 +1097,16 @@ export async function createAssetInTransaction(
                 asset_tag: validatedData.asset_tag,
                 name: validatedData.name,
                 status: validatedData.status,
+                ownership: validatedData.ownership ?? 'client',
                 location_id: selectedLocation?.location_id ?? null,
                 location: validatedData.location !== undefined && validatedData.location !== ''
                     ? validatedData.location
                     : (selectedLocation?.location ?? ''),
-                contact_name_id: selectedContact?.contact_name_id ?? null,
+                // FR-C3: the assignee is written by setAssetAssignee below so
+                // the open asset_assignments row is created with it.
+                contact_name_id: null,
                 serial_number: validatedData.serial_number || '',
+                ...procurement,
                 created_at: now,
                 updated_at: now,
                 // Only include dates if they exist
@@ -1034,6 +1125,13 @@ export async function createAssetInTransaction(
             const [asset] = await tenantScopedTable(trx, 'assets', tenant)
                 .insert(baseAssetData)
                 .returning('*');
+
+            if (selectedContact?.contact_name_id) {
+                await setAssetAssignee(trx, tenant, asset.asset_id, selectedContact.contact_name_id, {
+                    actorUserId,
+                    source: options?.assignmentSource ?? 'manual',
+                });
+            }
 
             // Handle extension table data based on asset type
             const extensionData = data[data.asset_type as keyof CreateAssetRequest];
@@ -1076,7 +1174,7 @@ export async function createAssetRecord(
     data: CreateAssetRequest,
     // Importers (e.g. Hudu) project best-effort attributes and must never fail
     // on a required custom field the source didn't supply; they pass false.
-    options?: { requireCustomAttributes?: boolean }
+    options?: { requireCustomAttributes?: boolean; assignmentSource?: AssetAssignmentSource }
 ): Promise<Asset> {
     try {
         // Validate input data first
@@ -1197,7 +1295,7 @@ export async function updateAssetRecord(
     actorUserId: string,
     asset_id: string,
     data: UpdateAssetRequest,
-    opts?: { suppressRevalidate?: boolean },
+    opts?: { suppressRevalidate?: boolean; assignmentSource?: AssetAssignmentSource },
     hooks?: AssetWriteHooks
 ): Promise<Asset> {
     try {
@@ -1279,6 +1377,10 @@ export async function updateAssetRecord(
                 }
             }
 
+            // FR-C3: the assignee never travels in the column patch — it is
+            // applied through setAssetAssignee after the rest of the write so
+            // the assignment row, the column and the history entry agree.
+            let pendingAssignee: { contactId: string | null; source: AssetAssignmentSource } | undefined;
             if (Object.prototype.hasOwnProperty.call(baseCandidate, 'contact_name_id')) {
                 const selectedContact = await resolveValidatedAssetContact(
                     trx,
@@ -1287,11 +1389,67 @@ export async function updateAssetRecord(
                     baseCandidate.contact_name_id as string | null | undefined
                 );
                 if (selectedContact) {
-                    baseCandidate.contact_name_id = selectedContact.contact_name_id;
+                    pendingAssignee = {
+                        contactId: selectedContact.contact_name_id,
+                        source: opts?.assignmentSource ?? 'manual',
+                    };
                 }
+                delete baseCandidate.contact_name_id;
             } else if (baseCandidate.client_id && baseCandidate.client_id !== asset.client_id && asset.contact_name_id) {
-                // The assignee belongs to the previous client; moving the asset clears it.
-                baseCandidate.contact_name_id = null;
+                // The assignee belongs to the previous client; moving the asset
+                // clears it, and that clear is a `system` assignment event.
+                pendingAssignee = { contactId: null, source: 'system' };
+            }
+
+            if (typeof baseCandidate.status === 'string') {
+                await assertValidAssetStatus(trx, tenant, baseCandidate.status, asset.status);
+            }
+
+            if (baseCandidate.client_id && baseCandidate.client_id !== asset.client_id) {
+                const openEpisode = await tenantScopedTable(trx, 'asset_custody', tenant)
+                    .where({ asset_id })
+                    .whereNull('closed_at')
+                    .first('custody_id');
+                if (openEpisode) {
+                    throw new Error('This asset is currently in custody and cannot move to another client. Return it first.');
+                }
+            }
+
+            if (Object.prototype.hasOwnProperty.call(baseCandidate, 'vendor_id')) {
+                const selectedVendor = await resolveValidatedAssetVendor(
+                    trx,
+                    tenant,
+                    baseCandidate.vendor_id as string | null | undefined
+                );
+                if (selectedVendor) {
+                    baseCandidate.vendor_id = selectedVendor.vendor_id;
+                }
+            }
+
+            for (const key of ['manufacturer', 'model', 'order_number'] as const) {
+                if (Object.prototype.hasOwnProperty.call(baseCandidate, key)) {
+                    (baseCandidate as Record<string, unknown>)[key] = trimToNull(baseCandidate[key]);
+                }
+            }
+
+            await applyPurchaseCostCurrency(
+                trx,
+                tenant,
+                baseCandidate as Record<string, unknown>,
+                asset.purchase_cost_currency
+            );
+
+            const clientChanged = Boolean(baseCandidate.client_id && baseCandidate.client_id !== asset.client_id);
+            if (Object.prototype.hasOwnProperty.call(baseCandidate, 'billing_profile_id')) {
+                baseCandidate.billing_profile_id = await assertBillingProfileForClient(
+                    trx,
+                    tenant,
+                    (baseCandidate.client_id as string | undefined) ?? asset.client_id,
+                    (baseCandidate.billing_profile_id as string | null | undefined) ?? null
+                );
+            } else if (clientChanged && asset.billing_profile_id) {
+                // FR-F1: a profile belongs to one client, so the move clears it.
+                baseCandidate.billing_profile_id = null;
             }
 
             // Update base asset fields (excluding extension payloads)
@@ -1317,6 +1475,22 @@ export async function updateAssetRecord(
                 await tenantScopedTable(trx, 'assets', tenant)
                     .where({ asset_id })
                     .update({ updated_at: trx.fn.now() });
+            }
+
+            if (baseCandidate.client_id && baseCandidate.client_id !== asset.client_id) {
+                // FR-E5: the group belongs to the old client, so the asset
+                // leaves it. Client merge is exempt — the groups move too.
+                await removeAssetFromAnyGroup(trx, tenant, asset_id, { actorUserId });
+            }
+
+            if (pendingAssignee) {
+                await setAssetAssignee(trx, tenant, asset_id, pendingAssignee.contactId, {
+                    actorUserId,
+                    source: pendingAssignee.source,
+                    // A client move clears the assignee no matter what the
+                    // group model says; the group membership goes with it.
+                    allowWorkspaceMember: pendingAssignee.contactId === null,
+                });
             }
 
             const nextAssetType = (baseCandidate.asset_type as string | undefined) ?? asset.asset_type;
@@ -1453,6 +1627,9 @@ export async function updateAssetRecord(
             // without losing the user's in-progress form data.
             throw serializedAssetValidationError(error);
         }
+        if (isAssetAssigneeError(error)) {
+            throw error;
+        }
         if (isTypedAssetWriteError(error)) {
             // invalid_asset_type / attribute-schema issues already carry a
             // structured message the client knows how to render.
@@ -1473,7 +1650,7 @@ export const updateAsset = withAuth(async (
     { tenant },
     asset_id: string,
     data: UpdateAssetRequest,
-    opts?: { suppressRevalidate?: boolean }
+    opts?: { suppressRevalidate?: boolean; assignmentSource?: AssetAssignmentSource }
 ): Promise<Asset | AssetActionError> => {
     try {
     const { knex } = await createTenantKnex();
@@ -1527,6 +1704,18 @@ export async function deleteAssetRecord(
                 throw new Error('Asset not found');
             }
 
+            // C4: custody is a chain of custody, so an asset that is physically here cannot be deleted, and
+            // closed episodes (append-only events with FKs to the asset) keep the row alive as history.
+            const custodyRows = await tenantScopedTable(trx as Knex.Transaction, 'asset_custody', tenantId)
+                .where({ asset_id })
+                .select('closed_at');
+            if (custodyRows.some((row: { closed_at: unknown }) => row.closed_at === null)) {
+                throw new Error('This asset is currently in custody. Return it to the client before deleting it.');
+            }
+            if (custodyRows.length > 0) {
+                throw new Error('This asset has custody history that must be kept. Set its status to retired instead of deleting it.');
+            }
+
             // Citus does not enforce ON DELETE CASCADE across distributed
             // tables, so every FK pointing at assets must be cleared
             // explicitly here regardless of the migration's onDelete clause.
@@ -1544,6 +1733,10 @@ export async function deleteAssetRecord(
                 await tenantScopedTable(trx as Knex.Transaction, subtypeTable, tenantId).where({ asset_id }).delete();
             }
 
+            // FR-C1 / FR-E6: the assignment history and group membership point
+            // at the asset row, so both go before it.
+            await tenantScopedTable(trx as Knex.Transaction, 'asset_assignments', tenantId).where({ asset_id }).delete();
+            await tenantScopedTable(trx as Knex.Transaction, 'asset_group_members', tenantId).where({ asset_id }).delete();
             await tenantScopedTable(trx as Knex.Transaction, 'asset_history', tenantId).where({ asset_id }).delete();
             await tenantScopedTable(trx as Knex.Transaction, 'asset_maintenance_history', tenantId).where({ asset_id }).delete();
             await tenantScopedTable(trx as Knex.Transaction, 'asset_maintenance_schedules', tenantId).where({ asset_id }).delete();
@@ -1595,7 +1788,7 @@ export async function deleteAssetRecord(
             }
 
             const occurredAt = new Date().toISOString();
-            await publishWorkflowEvent({
+            await publishNonCatalogWorkflowEvent({
                 eventType: 'ASSET_DELETED',
                 payload: {
                     assetId: asset_id,
@@ -1665,7 +1858,21 @@ export const bulkUpdateAssets = withAuth(async (
     user,
     _ctx,
     assetIds: string[],
-    data: Pick<UpdateAssetRequest, 'status' | 'location' | 'location_id' | 'contact_name_id'>
+    // FR-A4: the procurement fields are bulk-editable too — a delivery of
+    // thirty identical laptops shares one supplier, model and order number.
+    data: Pick<
+        UpdateAssetRequest,
+        | 'status'
+        | 'location'
+        | 'location_id'
+        | 'contact_name_id'
+        | 'manufacturer'
+        | 'model'
+        | 'vendor_id'
+        | 'purchase_cost'
+        | 'purchase_cost_currency'
+        | 'order_number'
+    >
 ): Promise<BulkAssetActionResponse | AssetActionError> => {
     try {
     if (!await hasPermission(user, 'asset', 'update')) {
@@ -1774,10 +1981,14 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
         .select(
             'assets.*',
             'clients.client_name',
-            'contacts.full_name as contact_name'
+            'contacts.full_name as contact_name',
+            'vendors.vendor_name',
+            'client_billing_profiles.name as billing_profile_name'
         );
     db.tenantJoin(assetQuery, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
     db.tenantJoin(assetQuery, 'contacts', 'contacts.contact_name_id', 'assets.contact_name_id', { type: 'left' });
+    db.tenantJoin(assetQuery, 'vendors', 'vendors.vendor_id', 'assets.vendor_id', { type: 'left' });
+    db.tenantJoin(assetQuery, 'client_billing_profiles', 'client_billing_profiles.billing_profile_id', 'assets.billing_profile_id', { type: 'left' });
     const asset = await assetQuery
         .where({ 'assets.asset_id': asset_id })
         .first();
@@ -1785,6 +1996,10 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
     if (!asset) {
         throw new Error('Asset not found');
     }
+
+    // FR-E12: the group summary travels with the asset so the details page,
+    // the drawer and mobile all render it without a second round trip.
+    const group = await getAssetGroupSummary(knex, tenant, asset_id);
 
     // Get extension table data if applicable
     const extensionData = await getExtensionData(knex, tenant, asset_id, asset.asset_type);
@@ -1828,6 +2043,7 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
             client_name: asset.client_name || ''
         },
         relationships: relationships || [],  // Ensure relationships is always an array
+        group,
         // Add extension data under the appropriate key
         ...(extensionData ? {
             [asset.asset_type]: extensionData
@@ -2049,6 +2265,37 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 if (validatedParams.status) {
                     query.where('assets.status', validatedParams.status);
                 }
+                if (validatedParams.ownership) {
+                    query.where('assets.ownership', validatedParams.ownership);
+                }
+                if (validatedParams.in_custody !== undefined) {
+                    // Keyed off the open custody episode, never off assets.status.
+                    const openCustody = tenantScopedTable(trx, 'asset_custody', tenant)
+                        .whereNull('closed_at')
+                        .select('asset_id');
+                    if (validatedParams.in_custody) {
+                        query.whereIn('assets.asset_id', openCustody);
+                    } else {
+                        query.whereNotIn('assets.asset_id', openCustody);
+                    }
+                }
+                if (validatedParams.vendor_id) {
+                    query.where('assets.vendor_id', validatedParams.vendor_id);
+                }
+                if (validatedParams.group_id) {
+                    query.whereIn(
+                        'assets.asset_id',
+                        tenantScopedTable(trx, 'asset_group_members', tenant)
+                            .where({ group_id: validatedParams.group_id })
+                            .select('asset_id')
+                    );
+                }
+                if (validatedParams.ungrouped_only) {
+                    query.whereNotIn(
+                        'assets.asset_id',
+                        tenantScopedTable(trx, 'asset_group_members', tenant).select('asset_id')
+                    );
+                }
                 if (validatedParams.search) {
                     const searchTerm = `%${validatedParams.search}%`;
                     query.where(function () {
@@ -2056,6 +2303,8 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                             .orWhereILike('assets.asset_tag', searchTerm)
                             .orWhereILike('assets.serial_number', searchTerm)
                             .orWhereILike('assets.location', searchTerm)
+                            .orWhereILike('assets.manufacturer', searchTerm)
+                            .orWhereILike('assets.model', searchTerm)
                             .orWhereILike('clients.client_name', searchTerm);
                     });
                 }
@@ -2093,6 +2342,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 const query = tenantScopedTable(trx, 'assets', tenant);
                 tenantDb(trx, tenant).tenantJoin(query, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
                 tenantDb(trx, tenant).tenantJoin(query, 'contacts', 'contacts.contact_name_id', 'assets.contact_name_id', { type: 'left' });
+                tenantDb(trx, tenant).tenantJoin(query, 'vendors', 'vendors.vendor_id', 'assets.vendor_id', { type: 'left' });
 
                 applyFilters(query);
                 return query;
@@ -2104,7 +2354,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                     .count<{ count: string }>('assets.asset_id as count')
                     .first();
                 const rows = await buildAssetListQuery()
-                    .select('assets.*', 'clients.client_name', 'contacts.full_name as contact_name')
+                    .select('assets.*', 'clients.client_name', 'contacts.full_name as contact_name', 'vendors.vendor_name')
                     .modify(applySort)
                     .limit(sourceLimit)
                     .offset(offset);
@@ -2134,6 +2384,14 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 scanLimit: Math.max(limit, 100),
             });
 
+        // F075: the Group column reads `asset.group`, so the page's summaries
+        // are fetched in one batch rather than per row.
+        const groupSummaries = await getAssetGroupSummariesForAssets(
+            trx,
+            tenant,
+            authorizedPage.data.map((asset: any) => asset.asset_id)
+        );
+
         // Get extension data for each asset if requested
         const assetsWithExtensions = await Promise.all(
             authorizedPage.data.map(async (asset: any): Promise<Asset> => {
@@ -2147,6 +2405,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                         client_id: asset.client_id,
                         client_name: asset.client_name || ''
                     },
+                    group: groupSummaries.get(asset.asset_id) ?? null,
                     relationships: [],  // Initialize empty array for relationships
                     ...(extensionData ? {
                         [asset.asset_type]: extensionData
@@ -2289,6 +2548,10 @@ export const updateMaintenanceSchedule = withAuth(async (
             }
 
             await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, existingSchedule.asset_id);
+
+            if ((validatedData.frequency ?? existingSchedule.frequency) === 'custom') {
+                parseCustomRecurrence(validatedData.schedule_config ?? existingSchedule.schedule_config);
+            }
 
             // Update the schedule
             const [updatedSchedule] = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant)
@@ -2610,7 +2873,7 @@ export const completeOccurrence = withAuth(async (user, { tenant }, input: { occ
             const performedDate = toCalendarDateString(input.performed_at || new Date());
             if (!performedDate) throw new Error('A performed date is required');
             const performedAt = toISOTimestamp(toPlainDate(performedDate));
-            const nextDue = advanceMaintenanceDate(performedAt, schedule.frequency, schedule.frequency_interval);
+            const nextDue = advanceMaintenanceDate(performedAt, schedule.frequency, schedule.frequency_interval, schedule.schedule_config);
             const [history] = await tenantScopedTable(trx, 'asset_maintenance_history', tenant).insert({ tenant, schedule_id: schedule.schedule_id, asset_id: schedule.asset_id, maintenance_type: schedule.maintenance_type, description: input.notes || `${schedule.maintenance_type} maintenance completed`, maintenance_data: input.maintenance_data || {}, performed_at: performedAt, performed_by: user.user_id }).returning('*');
             await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ occurrence_id: occurrence.occurrence_id, status: 'open' }).update({ status: 'completed', history_id: history.history_id, closed_at: trx.fn.now(), closed_by: user.user_id, updated_at: trx.fn.now() });
             await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id: schedule.schedule_id }).update({ last_maintenance: performedAt, next_maintenance: nextDue, updated_at: trx.fn.now() });
@@ -2632,7 +2895,7 @@ export const skipOccurrence = withAuth(async (user, { tenant }, occurrence_id: s
             if (occurrence.status !== 'open') throw new Error('Maintenance occurrence has already been closed');
             const schedule = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id: occurrence.schedule_id, asset_id: occurrence.asset_id, is_active: true }).forUpdate().first();
             if (!schedule || schedule.archived_at) throw new Error('Maintenance schedule is inactive');
-            const nextDue = advanceMaintenanceDate(new Date(), schedule.frequency, schedule.frequency_interval);
+            const nextDue = advanceMaintenanceDate(new Date(), schedule.frequency, schedule.frequency_interval, schedule.schedule_config);
             await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ occurrence_id }).update({ status: 'skipped', skip_reason: reason.trim(), closed_at: trx.fn.now(), closed_by: user.user_id, updated_at: trx.fn.now() });
             await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id: schedule.schedule_id }).update({ next_maintenance: nextDue, updated_at: trx.fn.now() });
             return openNextOccurrence(trx, tenant, schedule, nextDue);
@@ -2701,7 +2964,7 @@ export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: 
                 .where({
                     schedule_id: validatedData.schedule_id
                 })
-                .select('schedule_id', 'asset_id', 'frequency', 'frequency_interval', 'schedule_name', 'maintenance_type')
+                .select('schedule_id', 'asset_id', 'frequency', 'frequency_interval', 'schedule_config', 'schedule_name', 'maintenance_type')
                 .first();
 
             if (!schedule) {
@@ -2730,16 +2993,9 @@ export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: 
                 })
                 .update({
                     last_maintenance: validatedData.performed_at,
-                    next_maintenance: trx.raw(`
-                        CASE frequency
-                            WHEN 'daily' THEN ? + INTERVAL '1 day' * frequency_interval
-                            WHEN 'weekly' THEN ? + INTERVAL '1 week' * frequency_interval
-                            WHEN 'monthly' THEN ? + INTERVAL '1 month' * frequency_interval
-                            WHEN 'quarterly' THEN ? + INTERVAL '3 months' * frequency_interval
-                            WHEN 'yearly' THEN ? + INTERVAL '1 year' * frequency_interval
-                            ELSE ? + INTERVAL '1 day' * frequency_interval
-                        END
-                    `, Array(6).fill(validatedData.performed_at))
+                    next_maintenance: advanceMaintenanceDate(
+                        validatedData.performed_at, schedule.frequency, schedule.frequency_interval, schedule.schedule_config
+                    )
                 })
                 .returning('*');
 
@@ -3401,7 +3657,8 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
                     entity_id,
                     entity_type
                 })
-                .select('asset_id');
+                .select('asset_id', 'created_at')
+                .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'asset_id', order: 'asc' }]);
 
             const candidateAssetIds = associations.map((association: { asset_id: string }) => association.asset_id);
             const uniqueAssetIds: string[] = Array.from(new Set<string>(candidateAssetIds));
@@ -3417,9 +3674,13 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
                 candidateAssets.map((asset) => authorizeAssetReadDecision(trx, tenant, context, asset))
             );
 
-            const authorizedAssetIds = candidateAssets
-                .filter((_, index) => decisions[index]?.allowed)
-                .map((asset) => asset.asset_id);
+            // Newest association first, so the panel's collapsed rows include a just-received item.
+            const authorizedAssetIds = orderEntityAssetIds(
+                associations as EntityAssociationRow[],
+                candidateAssets
+                    .filter((_, index) => decisions[index]?.allowed)
+                    .map((asset) => asset.asset_id)
+            );
 
             if (authorizedAssetIds.length === 0) {
                 return [];

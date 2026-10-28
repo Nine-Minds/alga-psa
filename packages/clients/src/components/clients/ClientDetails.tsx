@@ -15,7 +15,6 @@ import ClientContactsList from '../contacts/ClientContactsList';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { Text, Heading } from '@radix-ui/themes';
 import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
-import { Switch } from '@alga-psa/ui/components/Switch';
 import BillingConfiguration from './BillingConfiguration';
 import { getClientById } from '@alga-psa/clients/actions';
 import {
@@ -41,6 +40,7 @@ import {
 } from '@alga-psa/clients/actions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
+import ClientChecklistsTab from './ClientChecklistsTab';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -98,6 +98,7 @@ function isClientActionError(value: unknown): value is ActionMessageError | Acti
 }
 import { ClientDetailsTabContent } from './ClientDetailsTabContent';
 import ClientCommandCenter from './command-center/ClientCommandCenter';
+import ClientSoftwareView from './command-center/ClientSoftwareView';
 import HuduClientTab from './HuduClientTab';
 import HuduClientPasswordsTab from './HuduClientPasswordsTab';
 import HuduClientDocumentsSection from './HuduClientDocumentsSection';
@@ -110,45 +111,6 @@ import { ClientEquipmentTab } from './ClientEquipmentTab';
 const EMPTY_CONTACTS: IContact[] = [];
 const EMPTY_DOCUMENTS: IDocument[] = [];
 
-
-const SwitchDetailItem: React.FC<{
-  value: boolean;
-  onEdit: (value: boolean) => void;
-  automationId?: string;
-  statusLabel: string;
-  helperLabel: string;
-  activeLabel: string;
-  inactiveLabel: string;
-}> = ({ value, onEdit, automationId, statusLabel, helperLabel, activeLabel, inactiveLabel }) => {
-  // Register for UI automation with meaningful label
-  const { automationIdProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: automationId,
-    type: 'formField',
-    fieldType: 'checkbox',
-    label: statusLabel,
-    value: value ? activeLabel : inactiveLabel,
-    helperText: helperLabel
-  });
-
-  return (
-    <div className="flex items-center justify-between py-3" {...automationIdProps}>
-      <div>
-        <div className="text-gray-900 font-medium">{statusLabel}</div>
-        <div className="text-sm text-gray-500">{helperLabel}</div>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="text-sm text-gray-700">
-          {value ? activeLabel : inactiveLabel}
-        </span>
-        <Switch
-          checked={value}
-          onCheckedChange={onEdit}
-          className="data-[state=checked]:bg-primary-500"
-        />
-      </div>
-    </div>
-  );
-};
 
 const TextDetailItem: React.FC<{
   label: string;
@@ -243,7 +205,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const { t } = useTranslation('msp/clients');
   // Field messages live under common:clients.validation.*, not this page's namespace.
   const { t: tValidation } = useTranslation('common');
-  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, renderClientRecurringTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, getClientSoftwareSummary, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, renderClientRecurringTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   // `client` is a prop and does not advance after this component saves. Keep
@@ -1471,6 +1433,20 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       label: t('clientDetails.assets', { defaultValue: 'Assets' }),
       content: shouldRenderPsaOnlyClientSurfaces ? renderClientAssets({ clientId: client.client_id }) : null,
     },
+    // Software focus view: aggregate of the client's asset software — PSA-only,
+    // and only when the composition layer provides the (assets-owned) read action.
+    ...((shouldRenderPsaOnlyClientSurfaces && getClientSoftwareSummary) ? [{
+      id: 'software',
+      label: t('clientDetails.software', { defaultValue: 'Software' }),
+      content: (
+        <ClientSoftwareView
+          id={`${id}-software`}
+          clientId={client.client_id}
+          getSummary={getClientSoftwareSummary}
+          t={t}
+        />
+      ),
+    }] : []),
     // F022/F023: inventory Equipment tab — PSA-only, and only when inventory:read.
     ...((shouldRenderPsaOnlyClientSurfaces && clientEquipmentTab.visible) ? [{
       id: 'equipment',
@@ -1486,6 +1462,11 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           {renderClientOpportunities({ clientId: client.client_id, clientName: client.client_name, clientLifecycleStatus: client.lifecycle_status ?? null })}
         </div>
       ),
+    }] : []),
+    ...(shouldRenderPsaOnlyClientSurfaces ? [{
+      id: 'checklists',
+      label: t('clientDetails.checklistsTab', { defaultValue: 'Checklists' }),
+      content: <ClientChecklistsTab clientId={client.client_id} />,
     }] : []),
     {
       id: 'billing',
@@ -1788,6 +1769,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     handleAddClientNameAlias,
     handleRemoveClientNameAlias,
     renderSurveySummaryCard,
+    getClientSoftwareSummary,
     currentUser,
     documents,
     memoizedRouter,
@@ -1983,6 +1965,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
             idPrefix={`${id}-cc`}
             clientId={client.client_id}
             tabs={tabContent}
+            getSoftwareSummary={shouldRenderPsaOnlyClientSurfaces ? getClientSoftwareSummary ?? null : null}
             initialTabId={searchParams?.get('tab')?.toLowerCase() || null}
             onTabUrlChange={handleFocusTabUrlChange}
             hasUnsavedRecordChanges={hasUnsavedChanges}

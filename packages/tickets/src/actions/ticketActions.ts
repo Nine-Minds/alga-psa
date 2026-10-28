@@ -1,5 +1,8 @@
 'use server';
 
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { isMspPrincipalUserType } from '@alga-psa/types';
+import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
@@ -19,8 +22,11 @@ import type {
   IUserWithRoles,
   PendingTag,
   TicketResponseState,
+  TicketTemplateDraftFromTicket,
 } from '@alga-psa/types';
 import { TICKET_ORIGINS } from '@alga-psa/types';
+import { parseTicketCreateExtras } from '../lib/ticketCreateExtras';
+import { mergeTicketWatchListRecipients, type TicketWatchListRecipientInput } from '@alga-psa/shared/lib/tickets/watchList';
 import Ticket from '../models/ticket';
 import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
 import { getTicketAttributes } from '@alga-psa/auth/actions/policyActions';
@@ -41,10 +47,10 @@ import {
   ticketListItemSchema,
   ticketListFiltersSchema
 } from '../schemas/ticket.schema';
+import { resolveTicketTagIdsByText, compileTicketTagIdsFilter } from '../lib/ticketTagFilter';
 import { z } from 'zod';
 import { validateData } from '@alga-psa/validation';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { getEventBus } from '@alga-psa/event-bus';
+import { publishEvent, publishWorkflowEvent, publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   TicketCreatedEvent,
   TicketUpdatedEvent,
@@ -52,7 +58,9 @@ import {
   TicketResponseStateChangedEvent
 } from '@alga-psa/event-bus/events';
 
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
+import { resolveAssetBillingProfileIdForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -65,7 +73,7 @@ import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalytic
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { enforceTicketCloseRules, TicketCloseValidationError, type CloseRuleFailure } from '../lib/validateTicketClosure';
 import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
-import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
+import { applyMatchingChecklistTemplates, ticketDescriptionFromAttributes } from '@alga-psa/shared/lib/ticketChecklists';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
 import {
   BuiltinAuthorizationKernelProvider,
@@ -77,18 +85,36 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
-import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
+import {
+  buildTicketAssignedPayload,
+  buildTicketClosedPayload,
+  buildTicketResponseStateChangedPayload,
+  buildTicketUpdatedPayload,
+} from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
+import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '../lib/workflowTicketCommunicationEvents';
+import { applyCreatedFromTemplateEffects } from '@alga-psa/shared/services/tickets/createTicketWithSideEffects';
 import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
+import type { TicketWorkflowBlueprint } from '@alga-psa/shared/workflow/runtime/designer/draftFromTicket';
 import {
   copyChecklistFromSource,
   countDuplicableCustomFields,
   pickDuplicableAttributes,
   type TicketDuplicateSource,
 } from '../lib/ticketDuplicate';
+import {
+  descriptionHasInlineImages,
+  ticketToTemplateDraft,
+} from '../lib/ticketTemplates';
+import {
+  loadTemplateForInstantiation,
+  templateTicketProvenance,
+  type TemplateForInstantiation,
+} from '../lib/instantiateTicketTemplate';
+import { asJsonColumn } from '../lib/recurring/jsonColumn';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
 import {
-  addTicketCommentWithCache,
+  addTicketCommentInTransaction,
   updateTicketWithCache,
   updateTicketInTransaction,
   type UpdateTicketInTransactionOptions,
@@ -98,6 +124,7 @@ import { revertBundlePropagationForChild } from './ticketBundleUtils';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
+  publishWorkflowTicketSlaStageEvent,
 } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
 import {
   parseTicketStatusFilterValue,
@@ -143,13 +170,6 @@ function isTicketActionError(value: unknown): value is TicketActionError {
 
 function ticketBulkFailuresForAll(ticketIds: string[], message: string): Array<{ ticketId: string; message: string }> {
   return ticketIds.map((ticketId) => ({ ticketId, message }));
-}
-
-// Email event channel constant - inlined to avoid circular dependency with notifications
-// Must match the value in @alga-psa/notifications/emailChannel
-const EMAIL_EVENT_CHANNEL = 'emailservice::v7';
-function getEmailEventChannel(): string {
-  return EMAIL_EVENT_CHANNEL;
 }
 
 export type TicketNotificationSuppressionOptions = Pick<
@@ -278,7 +298,7 @@ async function resolveClientVisibility(
   tenant: string,
   user: IUserWithRoles
 ): Promise<ContactVisibilityContext | null | undefined> {
-  if (user.user_type !== 'client') return undefined;
+  if (isMspPrincipalUserType(user.user_type)) return undefined;
   if (!user.contact_id) return null;
   try {
     return await getClientContactVisibilityContext(trx, tenant, user.contact_id);
@@ -371,6 +391,23 @@ async function loadAuthorizedDuplicateSourceRow(
   return source as ITicket & { ticket_id: string };
 }
 
+/**
+ * The tag and checklist loads shared by the "copy from a ticket" readers
+ * (`loadTicketCloneSource` and `getTicketTemplateDraftFromTicket`). Callers have already
+ * authorized the source row.
+ */
+async function loadTicketCopySources(trx: Knex.Transaction, tenant: string, ticketId: string) {
+  const [tagRows, checklistRows] = await Promise.all([
+    TagMapping.getByEntity(trx, tenant, ticketId, 'ticket'),
+    tenantScopedTable(trx, 'ticket_checklist_items', tenant)
+      .where({ ticket_id: ticketId })
+      .orderBy('order_number', 'asc')
+      .orderBy('created_at', 'asc')
+      .select('item_name', 'description', 'is_required', 'template_id'),
+  ]);
+  return { tagRows, checklistRows };
+}
+
 // Helper function to safely convert dates
 function convertDates<T extends { entered_at?: Date | string | null, updated_at?: Date | string | null, closed_at?: Date | string | null, due_date?: Date | string | null }>(record: T): T {
   return {
@@ -380,18 +417,6 @@ function convertDates<T extends { entered_at?: Date | string | null, updated_at?
     closed_at: record.closed_at instanceof Date ? record.closed_at.toISOString() : record.closed_at,
     due_date: record.due_date instanceof Date ? record.due_date.toISOString() : record.due_date,
   };
-}
-
-// Helper function to safely publish events
-async function safePublishEvent(eventType: string, payload: any) {
-  try {
-    const event = { eventType, payload };
-
-    await getEventBus().publish(event);
-    await getEventBus().publish(event, { channel: getEmailEventChannel() });
-  } catch (error) {
-    console.error(`Failed to publish ${eventType} event:`, error);
-  }
 }
 
 // Helper function to publish response state change events
@@ -409,19 +434,20 @@ async function publishResponseStateChangedEvent(
   }
 
   try {
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-      payload: {
-        tenantId,
-        occurredAt: new Date().toISOString(),
+      payload: buildTicketResponseStateChangedPayload({
         ticketId,
         userId,
-        previousResponseState: previousState,
-        newResponseState: newState,
         previousState,
         newState,
-        trigger
-      }
+        trigger,
+      }),
+      ctx: {
+        tenantId,
+        occurredAt: new Date().toISOString(),
+        actor: userId ? { actorType: 'USER', actorUserId: userId } : { actorType: 'SYSTEM' },
+      },
     });
     console.log(`[publishResponseStateChangedEvent] Published event: ${previousState} -> ${newState} (trigger: ${trigger})`);
   } catch (error) {
@@ -429,6 +455,48 @@ async function publishResponseStateChangedEvent(
     // Don't throw - allow the operation to succeed even if event publishing fails
   }
 }
+/**
+ * Links assets to a freshly created ticket, one `asset_associations` row each, inside the caller's
+ * transaction. Ids are deduplicated; every asset must exist in the tenant (and, when `clientId` is
+ * given, belong to that client), otherwise this throws and the caller's create rolls back.
+ * LEVERAGE: pattern ticket-asset-association-insert — assetActions.createAssetAssociation inserts the same row for an existing ticket
+ */
+async function linkAssetsToNewTicket(
+  trx: Knex.Transaction,
+  tenant: string,
+  params: { ticketId: string; assetIds: string[]; userId: string; clientId?: string }
+): Promise<void> {
+  const assetIds = Array.from(new Set(params.assetIds.filter(Boolean)));
+  if (assetIds.length === 0) return;
+
+  const rows = await tenantScopedTable(trx, 'assets', tenant)
+    .whereIn('asset_id', assetIds)
+    .select('asset_id', 'client_id');
+  const byId = new Map<string, { client_id: string | null }>(rows.map((row: any) => [row.asset_id, row]));
+  for (const assetId of assetIds) {
+    const row = byId.get(assetId);
+    if (!row) {
+      throw new Error(`Invalid asset: ${assetId} was not found`);
+    }
+    if (params.clientId && row.client_id !== params.clientId) {
+      throw new Error(`Invalid asset: ${assetId} does not belong to the selected client`);
+    }
+  }
+
+  const createdAt = new Date().toISOString();
+  await tenantScopedTable(trx, 'asset_associations', tenant).insert(
+    assetIds.map((assetId) => ({
+      tenant,
+      asset_id: assetId,
+      entity_id: params.ticketId,
+      entity_type: 'ticket',
+      relationship_type: 'affected',
+      created_by: params.userId,
+      created_at: createdAt,
+    }))
+  );
+}
+
 interface CreateTicketFromAssetData {
     title: string;
     description: string;
@@ -465,14 +533,10 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
             );
 
             // Server-specific: Create the asset association
-            await tenantScopedTable(trx, 'asset_associations', tenant).insert({
-              tenant,
-              asset_id: data.asset_id,
-              entity_id: ticketResult.ticket_id,
-              entity_type: 'ticket',
-              relationship_type: 'affected',
-              created_by: user.user_id,
-              created_at: new Date().toISOString(),
+            await linkAssetsToNewTicket(trx, tenant, {
+              ticketId: ticketResult.ticket_id,
+              assetIds: [data.asset_id],
+              userId: user.user_id,
             });
 
             // Server-specific: Get full ticket data for return
@@ -547,11 +611,36 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       const asset_id = data.get('asset_id');
       const due_date = data.get('due_date');
 
+      // Optional create extras (linked assets, watchers). Parsed and validated before anything is
+      // written; both are optional so callers that send none behave as before.
+      const extras = parseTicketCreateExtras(data);
+      const hasCreateExtras = extras.assetIds.length > 0 || extras.watcherIds.length > 0;
+      if (hasCreateExtras) {
+        if (user.user_type !== 'internal') {
+          throw new Error('Permission denied: operation not available in client portal');
+        }
+        if (extras.assetIds.length > 0 && !await hasPermission(user, 'asset', 'update', trx)) {
+          throw new Error('Permission denied: Cannot link assets to tickets');
+        }
+      }
+      const linkedAssetIds = Array.from(
+        new Set([...(asset_id ? [asset_id as string] : []), ...extras.assetIds])
+      );
+
       // Duplicate-ticket fields. The client only names the source; the hidden
       // carry-over (custom fields, checklist) is copied below from the source
       // row inside this transaction, never round-tripped through the client.
       const duplicateOfTicketId = (data.get('duplicate_of_ticket_id') as string | null) || null;
       const copyChecklistFromDuplicate = data.get('duplicate_copy_checklist') !== 'false';
+
+      // Create-from-template fields. Same shape as duplicate: the client names the template (and
+      // whether to copy its checklist); the checklist and custom fields are copied from the
+      // template row below, inside this transaction. The client never supplies `attributes`.
+      const ticketTemplateId = (data.get('ticket_template_id') as string | null) || null;
+      const copyChecklistFromTemplate = data.get('template_copy_checklist') !== 'false';
+      if (duplicateOfTicketId && ticketTemplateId) {
+        throw new Error('A ticket cannot be created from a template and a duplicate at once');
+      }
 
       // ITIL-specific fields
       const itil_impact = data.get('itil_impact');
@@ -604,6 +693,21 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         ticket_origin: TICKET_ORIGINS.INTERNAL,
       };
 
+      // FR-F3: a ticket raised against an asset inherits the asset's billing
+      // profile (or its location's default) when the caller picked none. This
+      // is the QuickAddTicket path used by the asset header, the asset list,
+      // service history and maintenance — `createTicketFromAsset` does the
+      // same for its own dialog.
+      if (linkedAssetIds.length > 0 && createTicketInput.client_id && !createTicketInput.billing_profile_id) {
+        createTicketInput.billing_profile_id =
+          (await resolveAssetBillingProfileIdForClient(
+            trx,
+            tenant,
+            linkedAssetIds[0],
+            createTicketInput.client_id
+          )) ?? undefined;
+      }
+
       // Duplicate path: authorize and load the source before creating anything,
       // so a refused duplicate rolls back with nothing written.
       let duplicateSourceTicket: (ITicket & { ticket_id: string }) | null = null;
@@ -622,13 +726,68 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         createTicketInput.attributes = pickDuplicableAttributes(duplicateSourceTicket.attributes);
       }
 
+      // Template path: authorize and load the template before creating anything, so a refused
+      // request rolls back with nothing written.
+      let sourceTemplate: TemplateForInstantiation | null = null;
+      if (ticketTemplateId) {
+        if (user.user_type !== 'internal') {
+          throw new Error('Permission denied: operation not available in client portal');
+        }
+        if (!await hasPermission(user, 'ticket_template', 'read', trx)) {
+          throw new Error('Permission denied: Cannot use ticket templates');
+        }
+        // Manual use needs an active template that is offered for it (R4/R5); schedules ignore both.
+        const offered = UUID_PATTERN.test(ticketTemplateId)
+          ? await tenantScopedTable(trx, 'ticket_templates', tenant)
+              .where({ template_id: ticketTemplateId, is_active: true, offer_for_manual_use: true })
+              .first('template_id')
+          : undefined;
+        sourceTemplate = offered ? await loadTemplateForInstantiation(trx, tenant, ticketTemplateId) : null;
+        if (!sourceTemplate) {
+          throw new Error('Ticket template not found');
+        }
+        const provenance = templateTicketProvenance(sourceTemplate);
+        createTicketInput.created_from_template_id = provenance.created_from_template_id;
+        createTicketInput.attributes = provenance.attributes;
+      }
+
+      // Watchers go into `attributes.watch_list`, so they are written by the same insert as the ticket.
+      if (extras.watcherIds.length > 0) {
+        const attributes: Record<string, unknown> = { ...(createTicketInput.attributes ?? {}) };
+        const watcherRows = await tenantScopedTable(trx, 'users', tenant)
+          .whereIn('user_id', extras.watcherIds)
+          .where({ user_type: 'internal' })
+          .select('user_id', 'email', 'first_name', 'last_name');
+        const watchersById = new Map<string, any>(watcherRows.map((row: any) => [row.user_id, row]));
+        const recipients: TicketWatchListRecipientInput[] = [];
+        for (const watcherId of extras.watcherIds) {
+          const watcher = watchersById.get(watcherId);
+          if (!watcher) {
+            throw new Error(`Invalid watcher: user ${watcherId} was not found`);
+          }
+          if (!watcher.email) {
+            throw new Error(`Invalid watcher: user ${watcherId} has no email address`);
+          }
+          recipients.push({
+            email: watcher.email,
+            source: 'manual',
+            name: `${watcher.first_name || ''} ${watcher.last_name || ''}`.trim() || undefined,
+            entity_type: 'user',
+            entity_id: watcher.user_id,
+          });
+        }
+        const watchList = mergeTicketWatchListRecipients(attributes.watch_list, recipients);
+        if (watchList.length > 0) attributes.watch_list = watchList;
+        createTicketInput.attributes = Object.keys(attributes).length > 0 ? attributes : undefined;
+      }
+
       // Server-specific: Create adapters for dependency injection.
       // Passing trx defers event publishing until the commit.
       const eventPublisher = new TicketModelEventPublisher(trx);
       const analyticsTracker = new TicketModelAnalyticsTracker();
 
       // Use shared TicketModel with retry logic
-      // LEVERAGE: pattern ticket-create-composition — creates a ticket then composes assets/agents/team/tags/checklist/activity/events by hand; see createTicketWithSideEffects (shared/services/tickets/createTicketWithSideEffects.ts)
+      // LEVERAGE: friction ticket-create-composition — template provenance and owned checklist items already go through the shared applyCreatedFromTemplateEffects; what still diverges from createTicketWithSideEffects is the form-driven create: single asset, ITIL priority mapping from form values, the analytics tracker and the UI-specific activity/event wiring
       const ticketResult = await TicketModel.createTicketWithRetry(
         createTicketInput,
         tenant,
@@ -640,30 +799,33 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         3 // max retries
       );
 
-      // Server-specific: Create asset association if asset_id is provided
-      if (asset_id) {
-        await tenantScopedTable(trx, 'asset_associations', tenant).insert({
-          tenant,
-          asset_id: asset_id as string,
-          entity_id: ticketResult.ticket_id,
-          entity_type: 'ticket',
-          relationship_type: 'affected',
-          created_by: user.user_id,
-          created_at: new Date().toISOString(),
+      // Asset associations, in the same transaction as the insert: the single `asset_id` ("opened from
+      // an asset") merged with the optional `asset_ids` list. Any failure rolls the whole create back.
+      if (linkedAssetIds.length > 0) {
+        await linkAssetsToNewTicket(trx, tenant, {
+          ticketId: ticketResult.ticket_id,
+          assetIds: linkedAssetIds,
+          userId: user.user_id,
+          // The picker is client-scoped, so a supplied list must match the ticket's client. The legacy
+          // single `asset_id` on its own keeps its old behaviour (existence only).
+          clientId: extras.assetIds.length > 0 ? createTicketInput.client_id : undefined,
         });
       }
 
       // Server-specific: Handle assigned ticket event
       if (createTicketInput.assigned_to) {
         registerAfterCommit(trx, () =>
-          publishEvent({
+          publishWorkflowEvent({
             eventType: 'TICKET_ASSIGNED',
-            payload: {
-              tenantId: tenant,
+            payload: buildTicketAssignedPayload({
               ticketId: ticketResult.ticket_id,
               userId: createTicketInput.assigned_to,  // The user being assigned to the ticket
               assignedByUserId: user.user_id  // The user who created and assigned the ticket
-            }
+            }),
+            ctx: {
+              tenantId: tenant,
+              actor: { actorType: 'USER', actorUserId: user.user_id },
+            },
           }),
           `TICKET_ASSIGNED ticket=${ticketResult.ticket_id}`
         );
@@ -755,6 +917,26 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         });
       }
 
+      if (sourceTemplate) {
+        await applyCreatedFromTemplateEffects(trx, tenant, {
+          ticketId: ticketResult.ticket_id,
+          actor: { type: 'user', userId: user.user_id },
+          checklistItems: copyChecklistFromTemplate
+            ? sourceTemplate.checklist.map((item) => ({
+                item_name: item.item_name,
+                description: item.description,
+                is_required: item.is_required,
+                checklist_template_id: item.checklist_template_id,
+              }))
+            : [],
+          fromTemplate: {
+            template_id: sourceTemplate.template_id,
+            template_name: sourceTemplate.name,
+            custom_fields_copied: countDuplicableCustomFields(createTicketInput.attributes),
+          },
+        });
+      }
+
       const enteredSlaEvent = buildTicketResolutionSlaStageEnteredEvent({
         tenantId: tenant,
         ticketId: ticketResult.ticket_id,
@@ -794,6 +976,91 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
   }
 });
 
+interface CloneSourceChecklistRow {
+  item_name: string;
+  description: string | null;
+  is_required: boolean;
+  template_id: string | null;
+}
+
+/**
+ * The one query block both "Duplicate ticket" and "Create workflow from ticket" read a source
+ * ticket with. Callers must already have authorized the row (loadAuthorizedDuplicateSourceRow).
+ * Returns the duplicate-form shape plus the raw checklist rows (with description and
+ * template_id) for the workflow blueprint.
+ */
+async function loadTicketCloneSource(
+  trx: Knex.Transaction,
+  tenant: string,
+  source: ITicket & { ticket_id: string }
+): Promise<{ duplicate: TicketDuplicateSource; checklistRows: CloneSourceChecklistRow[] }> {
+  const [client, contact, additionalAgentRows, { tagRows, checklistRows }] = await Promise.all([
+    tenantScopedTable(trx, 'clients', tenant)
+      .where({ client_id: source.client_id })
+      .select('client_id', 'client_name', 'client_type')
+      .first(),
+    source.contact_name_id
+      ? tenantScopedTable(trx, 'contacts', tenant)
+          .where({ contact_name_id: source.contact_name_id })
+          .select('contact_name_id', 'full_name')
+          .first()
+      : Promise.resolve(undefined),
+    (() => {
+      const query = tenantScopedTable(trx, 'ticket_resources as tr', tenant);
+      tenantDb(trx, tenant).tenantJoin(query, 'users as u', 'tr.additional_user_id', 'u.user_id', { type: 'left' });
+      return query
+        .where('tr.ticket_id', source.ticket_id)
+        .orderBy('tr.assigned_at', 'asc')
+        .select('tr.additional_user_id as user_id', 'u.first_name', 'u.last_name');
+    })(),
+    loadTicketCopySources(trx, tenant, source.ticket_id),
+  ]);
+
+  const attributes = (source.attributes ?? {}) as Record<string, unknown>;
+
+  const duplicate = {
+    ticket_id: source.ticket_id,
+    ticket_number: source.ticket_number,
+    title: source.title,
+    description: typeof attributes.description === 'string' ? attributes.description : '',
+    client: {
+      id: source.client_id as string,
+      name: client?.client_name ?? '',
+      type: client?.client_type ?? null,
+    },
+    contact: source.contact_name_id
+      ? { id: source.contact_name_id, name: contact?.full_name ?? '' }
+      : null,
+    location_id: source.location_id ?? null,
+    board_id: source.board_id ?? null,
+    category_id: source.category_id ?? null,
+    subcategory_id: source.subcategory_id ?? null,
+    priority_id: source.priority_id ?? null,
+    itil_impact: source.itil_impact ?? null,
+    itil_urgency: source.itil_urgency ?? null,
+    assigned_to: source.assigned_to ?? null,
+    assigned_team_id: source.assigned_team_id ?? null,
+    additional_agents: additionalAgentRows.map((row: { user_id: string; first_name: string | null; last_name: string | null }) => ({
+      user_id: row.user_id,
+      first_name: row.first_name ?? null,
+      last_name: row.last_name ?? null,
+    })),
+    tags: tagRows.map((tag) => ({
+      tag_id: tag.tag_id,
+      tag_text: tag.tag_text,
+      background_color: tag.background_color ?? null,
+      text_color: tag.text_color ?? null,
+    })),
+    checklist: checklistRows.map((row: CloneSourceChecklistRow) => ({
+      item_name: row.item_name,
+      is_required: row.is_required,
+    })),
+    custom_field_count: countDuplicableCustomFields(source.attributes),
+  } satisfies TicketDuplicateSource;
+
+  return { duplicate, checklistRows };
+}
+
 /**
  * Everything the create-ticket form needs to prefill a duplicate of an existing
  * ticket. MSP (internal) users only, and the caller must be able both to read the
@@ -821,73 +1088,7 @@ export const getTicketDuplicateSource = withAuth(async (
 
       const source = await loadAuthorizedDuplicateSourceRow(trx, tenant, user as IUserWithRoles, ticketId);
 
-      const [client, contact, additionalAgentRows, tagRows, checklistRows] = await Promise.all([
-        tenantScopedTable(trx, 'clients', tenant)
-          .where({ client_id: source.client_id })
-          .select('client_id', 'client_name', 'client_type')
-          .first(),
-        source.contact_name_id
-          ? tenantScopedTable(trx, 'contacts', tenant)
-              .where({ contact_name_id: source.contact_name_id })
-              .select('contact_name_id', 'full_name')
-              .first()
-          : Promise.resolve(undefined),
-        (() => {
-          const query = tenantScopedTable(trx, 'ticket_resources as tr', tenant);
-          tenantDb(trx, tenant).tenantJoin(query, 'users as u', 'tr.additional_user_id', 'u.user_id', { type: 'left' });
-          return query
-            .where('tr.ticket_id', source.ticket_id)
-            .orderBy('tr.assigned_at', 'asc')
-            .select('tr.additional_user_id as user_id', 'u.first_name', 'u.last_name');
-        })(),
-        TagMapping.getByEntity(trx, tenant, source.ticket_id, 'ticket'),
-        tenantScopedTable(trx, 'ticket_checklist_items', tenant)
-          .where({ ticket_id: source.ticket_id })
-          .orderBy('order_number', 'asc')
-          .select('item_name', 'is_required'),
-      ]);
-
-      const attributes = (source.attributes ?? {}) as Record<string, unknown>;
-
-      return {
-        ticket_id: source.ticket_id,
-        ticket_number: source.ticket_number,
-        title: source.title,
-        description: typeof attributes.description === 'string' ? attributes.description : '',
-        client: {
-          id: source.client_id as string,
-          name: client?.client_name ?? '',
-          type: client?.client_type ?? null,
-        },
-        contact: source.contact_name_id
-          ? { id: source.contact_name_id, name: contact?.full_name ?? '' }
-          : null,
-        location_id: source.location_id ?? null,
-        board_id: source.board_id ?? null,
-        category_id: source.category_id ?? null,
-        subcategory_id: source.subcategory_id ?? null,
-        priority_id: source.priority_id ?? null,
-        itil_impact: source.itil_impact ?? null,
-        itil_urgency: source.itil_urgency ?? null,
-        assigned_to: source.assigned_to ?? null,
-        assigned_team_id: source.assigned_team_id ?? null,
-        additional_agents: additionalAgentRows.map((row: { user_id: string; first_name: string | null; last_name: string | null }) => ({
-          user_id: row.user_id,
-          first_name: row.first_name ?? null,
-          last_name: row.last_name ?? null,
-        })),
-        tags: tagRows.map((tag) => ({
-          tag_id: tag.tag_id,
-          tag_text: tag.tag_text,
-          background_color: tag.background_color ?? null,
-          text_color: tag.text_color ?? null,
-        })),
-        checklist: checklistRows.map((row: { item_name: string; is_required: boolean }) => ({
-          item_name: row.item_name,
-          is_required: row.is_required,
-        })),
-        custom_field_count: countDuplicableCustomFields(source.attributes),
-      } satisfies TicketDuplicateSource;
+      return (await loadTicketCloneSource(trx, tenant, source)).duplicate;
     });
   } catch (error) {
     const expected = ticketActionErrorFrom(error);
@@ -895,6 +1096,135 @@ export const getTicketDuplicateSource = withAuth(async (
       return expected;
     }
     console.error('Error in getTicketDuplicateSource:', error);
+    throw error;
+  }
+});
+
+/**
+ * Everything the ticket template editor needs to start from an existing ticket ("Create template
+ * from ticket"). MSP users only; the caller needs `ticket_template:create` and `ticket:read`, plus
+ * row-level read of the source. Nothing is saved: the admin edits the draft and presses Save.
+ *
+ * Lives in this module (not ticketTemplateActions.ts) because it reuses the private row-level
+ * authorization helper, and a 'use server' module may not export that helper.
+ */
+export const getTicketTemplateDraftFromTicket = withAuth(async (
+  user,
+  { tenant },
+  ticketId: string
+): Promise<TicketTemplateDraftFromTicket | TicketActionError> => {
+  try {
+    if (user.user_type !== 'internal') {
+      return permissionError('Permission denied: operation not available in client portal');
+    }
+
+    const { knex: db } = await createTenantKnex();
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'ticket_template', 'create', trx)) {
+        throw new Error('Permission denied: Cannot create ticket templates');
+      }
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view ticket');
+      }
+
+      const source = await loadAuthorizedDuplicateSourceRow(trx, tenant, user as IUserWithRoles, ticketId);
+      const { tagRows, checklistRows } = await loadTicketCopySources(trx, tenant, source.ticket_id);
+
+      const draft = ticketToTemplateDraft(source, {
+        tags: tagRows.map((tag) => tag.tag_text),
+        checklist: checklistRows,
+      });
+
+      return {
+        draft,
+        source_ticket_id: source.ticket_id,
+        source_ticket_number: source.ticket_number,
+        has_inline_images: descriptionHasInlineImages(draft.description),
+      } satisfies TicketTemplateDraftFromTicket;
+    });
+  } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error in getTicketTemplateDraftFromTicket:', error);
+    throw error;
+  }
+});
+
+/**
+ * Everything "Create workflow from ticket" needs about a source ticket (alga-2026-0002502):
+ * the duplicate-source fields plus allowlisted custom-field values and checklist provenance
+ * (description, template id/name/active). MSP users only; ticket:read plus row-level read
+ * authorization. ticket:create is deliberately not required: the draft is authored here and
+ * the created workflow checks it at run time. Whether the caller may author workflows is
+ * enforced by the composing EE action, not by this package.
+ */
+export const getTicketWorkflowBlueprint = withAuth(async (
+  user,
+  { tenant },
+  ticketId: string
+): Promise<TicketWorkflowBlueprint | TicketActionError> => {
+  try {
+    if (user.user_type !== 'internal') {
+      return permissionError('Permission denied: operation not available in client portal');
+    }
+
+    const { knex: db } = await createTenantKnex();
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view ticket');
+      }
+
+      const source = await loadAuthorizedDuplicateSourceRow(trx, tenant, user as IUserWithRoles, ticketId);
+      const { duplicate, checklistRows } = await loadTicketCloneSource(trx, tenant, source);
+
+      const templateIds = Array.from(
+        new Set(checklistRows.map((row) => row.template_id).filter((id): id is string => Boolean(id)))
+      );
+      const templateRows: { template_id: string; name: string; is_active: boolean }[] = templateIds.length
+        ? await tenantScopedTable(trx, 'checklist_templates', tenant)
+            .whereIn('template_id', templateIds)
+            .select('template_id', 'name', 'is_active')
+        : [];
+      const templatesById = new Map(templateRows.map((row) => [row.template_id, row]));
+
+      return {
+        ticket_id: duplicate.ticket_id,
+        ticket_number: duplicate.ticket_number,
+        title: duplicate.title,
+        description: duplicate.description,
+        client: duplicate.client,
+        contact: duplicate.contact,
+        location_id: duplicate.location_id,
+        board_id: duplicate.board_id,
+        category_id: duplicate.category_id,
+        subcategory_id: duplicate.subcategory_id,
+        priority_id: duplicate.priority_id,
+        assigned_to: duplicate.assigned_to,
+        assigned_team_id: duplicate.assigned_team_id,
+        additional_agents: duplicate.additional_agents,
+        tags: duplicate.tags.map((tag) => ({ tag_id: tag.tag_id, tag_text: tag.tag_text })),
+        custom_fields: (pickDuplicableAttributes(source.attributes).custom_fields ?? {}) as Record<string, unknown>,
+        checklist: checklistRows.map((row) => {
+          const template = row.template_id ? templatesById.get(row.template_id) : undefined;
+          return {
+            item_name: row.item_name,
+            description: row.description ?? null,
+            is_required: row.is_required,
+            template_id: row.template_id ?? null,
+            template_name: template?.name ?? null,
+            template_is_active: template ? Boolean(template.is_active) : null,
+          };
+        }),
+      } satisfies TicketWorkflowBlueprint;
+    });
+  } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error in getTicketWorkflowBlueprint:', error);
     throw error;
   }
 });
@@ -1161,6 +1491,11 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         }
       }
 
+      // Human-work guard: only when this write changes assigned_to (legacy references untouched).
+      if (isChangingAssignment && updateData.assigned_to) {
+        await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to]);
+      }
+
       // Changing assigned_to needs the ticket_resources rows keyed to the old
       // assignee cleared first, then re-keyed to the new one.
       const finalizeResourceReassignment = isChangingAssignment
@@ -1173,9 +1508,10 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         )
         : null;
 
+      // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
       const [updatedTicket] = await tenantScopedTable(trx, 'tickets', tenant)
         .where({ ticket_id: id })
-        .update({ ...updateData, ...ticketUpdateStamp(trx, user.user_id) })
+        .update({ ...updateData, ...ticketStatusClockPatch(trx, updateData.status_id), ...ticketUpdateStamp(trx, user.user_id) })
         .returning('*');
 
       if (finalizeResourceReassignment) {
@@ -1339,6 +1675,10 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
             category_id: updatedTicket.category_id,
             subcategory_id: updatedTicket.subcategory_id,
             priority_id: updatedTicket.priority_id,
+            client_id: updatedTicket.client_id,
+            ticket_origin: updatedTicket.ticket_origin,
+            title: updatedTicket.title,
+            description: ticketDescriptionFromAttributes(updatedTicket.attributes),
           }, {
             actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: user.user_id },
             source: TICKET_ACTIVITY_SOURCE.UI,
@@ -1388,7 +1728,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         // Ticket was closed
         await publishWorkflowEvent({
           eventType: 'TICKET_CLOSED',
-          payload: {
+          payload: buildTicketClosedPayload({
             ticketId: id,
             userId: user.user_id,
             closedByUserId: user.user_id,
@@ -1396,7 +1736,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
             changes: structuredChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
-          },
+          }),
           ctx: workflowCtx,
           eventName: 'Ticket Closed',
           fromState: currentTicket.status_id,
@@ -1411,12 +1751,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           closedAt: occurredAt,
         });
         if (slaCompletionEvent) {
-          await publishWorkflowEvent({
-            eventType: slaCompletionEvent.eventType,
-            payload: slaCompletionEvent.payload,
-            ctx: workflowCtx,
-            idempotencyKey: slaCompletionEvent.idempotencyKey,
-          });
+          await publishWorkflowTicketSlaStageEvent(slaCompletionEvent, workflowCtx);
         }
 
         // Track ticket resolved analytics
@@ -1431,7 +1766,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         // Ticket was assigned - userId should be the user being assigned, not the one making the update
         await publishWorkflowEvent({
           eventType: 'TICKET_ASSIGNED',
-          payload: {
+          payload: buildTicketAssignedPayload({
             ticketId: id,
             userId: updateData.assigned_to, // Legacy: assigned user
             assignedByUserId: user.user_id,
@@ -1443,7 +1778,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
             changes: structuredChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
-          },
+          }),
           ctx: workflowCtx,
           eventName: 'Ticket Assigned',
         });
@@ -1458,14 +1793,14 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         // Regular update
         await publishWorkflowEvent({
           eventType: 'TICKET_UPDATED',
-          payload: {
+          payload: buildTicketUpdatedPayload({
             ticketId: id,
             userId: user.user_id,
             updatedByUserId: user.user_id,
             changes: structuredChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
-          },
+          }),
           ctx: workflowCtx,
           eventName: 'Ticket Updated',
         });
@@ -1602,6 +1937,7 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
       tenantFacade.tenantJoin(query, 'users as au', 't.assigned_to', 'au.user_id', { type: 'left' });
       tenantFacade.tenantJoin(query, 'clients as co', 't.client_id', 'co.client_id', { type: 'left' });
 
+    // LEVERAGE: pattern ticket-filter-tag-text — the remaining legacy-key filters here (board, status, priority, category, client, search) are hand-built SQL; optimizedTicketActions compiles all of them through ticketFiltersToPredicates. Fold this list onto buildTicketListBaseQuery.
     // Apply filters
     if (validatedFilters.boardId) {
       query = query.where('t.board_id', validatedFilters.boardId);
@@ -1617,7 +1953,9 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
       query = query.whereExists(
         tenantScopedTable(trx, 'statuses', tenant)
           .select('*')
-          .whereRaw('statuses.status_id = t.status_id')
+          // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
+          .whereRaw('statuses.tenant = t.tenant')
+          .andWhereRaw('statuses.status_id = t.status_id')
           .andWhere('statuses.is_closed', false)
       );
     } else if (parsedStatusFilter.kind === 'name') {
@@ -1654,13 +1992,14 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
       });
     }
 
+    // Tag filtering goes through the predicate compiler on tag definition ids (path `tags`), the same
+    // grammar the optimized list uses. Unknown texts resolve to nothing and match no tickets.
     if (validatedFilters.tags && validatedFilters.tags.length > 0) {
-      const tagSubquery = tenantScopedTable(trx, 'tag_mappings as tm', tenant)
-        .select('tm.tagged_id')
-        .where('tm.tagged_type', 'ticket')
-        .whereIn('td.tag_text', validatedFilters.tags as string[]);
-      tenantFacade.tenantJoin(tagSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
-      query = query.whereIn('t.ticket_id', tagSubquery);
+      const idsByText = await resolveTicketTagIdsByText(trx, tenant, validatedFilters.tags);
+      const compiledTags = compileTicketTagIdsFilter(
+        (validatedFilters.tags as string[]).map((text) => idsByText[text]).filter((id): id is string => !!id)
+      );
+      query = query.whereRaw(compiledTags.sql, compiledTags.bindings as Knex.RawBinding[]);
     }
 
     if (validatedFilters.assignedToMe) {
@@ -1862,20 +2201,19 @@ export const addTicketComment = withAuth(async (
       // Publish comment added event
       await persistCommentPublication(trx, {
         eventType: 'TICKET_COMMENT_ADDED',
-        payload: {
+        payload: buildTicketCommentAddedPayload({
           tenantId: tenant,
           occurredAt: (newComment as any).created_at ?? new Date().toISOString(),
           ticketId: ticketId,
           commentId: (newComment as any).comment_id ?? (newComment as any).id,
           userId: user.user_id,
           comment: {
-            id: (newComment as any).comment_id ?? (newComment as any).id,
             content: comment,
             author: `${user.first_name} ${user.last_name}`,
             isInternal
           }
-        }
-      }, publishEvent);
+        })
+      }, publishStoredWorkflowEvent);
 
       // Publish workflow v2 ticket message events (additive).
       try {
@@ -1900,7 +2238,7 @@ export const addTicketComment = withAuth(async (
         });
 
         for (const ev of events) {
-          await publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx });
+          await publishTicketCommunicationWorkflowEvent(ev, workflowCtx);
         }
       } catch (eventError) {
         console.error('[addTicketComment] Failed to publish workflow ticket message events:', eventError);
@@ -2403,40 +2741,41 @@ export const bulkUpdateTicketStatus = withAuth(async (
   }
 
   // Per-ticket transactions preserve partial success: one bad ticket fails alone.
+  // The resolution comment and the status change share that one transaction, so a
+  // failed close rolls the comment (and its after-commit notifications/events) back
+  // and a retry does not stack a second resolution comment.
   for (const ticketId of uniqueIds) {
+    let phase = 'status' as 'resolution' | 'status';
     try {
-      if (resolutionContent) {
-        const commentResult = await addTicketCommentWithCache(
-          ticketId,
-          resolutionContent,
-          resolutionComment?.isInternal === true,
-          true,
-          true,
-          {
-            suppressContactNotifications: statusOptions.suppressContactNotifications,
-            suppressInternalNotifications: statusOptions.suppressInternalNotifications,
-          },
-        );
-        if (isTicketActionError(commentResult)) {
-          const payload = commentResult as { actionError?: string; permissionError?: string };
-          failed.push({
+      await withTransaction(knex, async (trx: Knex.Transaction) => {
+        if (resolutionContent) {
+          phase = 'resolution';
+          await addTicketCommentInTransaction(trx, user as IUserWithRoles, tenant, {
             ticketId,
-            message: payload.actionError ?? payload.permissionError ?? 'Failed to add resolution comment',
+            content: resolutionContent,
+            isInternal: resolutionComment?.isInternal === true,
+            isResolution: true,
+            closesTicket: true,
+            notificationSuppression: {
+              suppressContactNotifications: statusOptions.suppressContactNotifications,
+              suppressInternalNotifications: statusOptions.suppressInternalNotifications,
+            },
           });
-          continue;
+          phase = 'status';
         }
-      }
 
-      await withTransaction(knex, (trx: Knex.Transaction) =>
-        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { status_id: statusId }, statusOptions),
-      );
+        await updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { status_id: statusId }, statusOptions);
+      });
       updatedIds.push(ticketId);
     } catch (error: unknown) {
       failed.push({
         ticketId,
         message: error instanceof TicketCloseValidationError
           ? error.message
-          : await ticketBulkFailureMessage(error, 'Failed to update status'),
+          : await ticketBulkFailureMessage(
+              error,
+              phase === 'resolution' ? 'Failed to add resolution comment' : 'Failed to update status',
+            ),
         closeRuleFailures: error instanceof TicketCloseValidationError ? error.failures : undefined,
       });
     }
@@ -2617,7 +2956,8 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
         'u_creator.user_type as entered_by_user_type',
         'ct.full_name as contact_name',
         'co.client_name',
-        'src.ticket_number as duplicated_from_ticket_number'
+        'src.ticket_number as duplicated_from_ticket_number',
+        'tt.name as created_from_template_name'
       );
       tenantFacade.tenantJoin(ticketQuery, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
       tenantFacade.tenantJoin(ticketQuery, 'boards as ch', 't.board_id', 'ch.board_id', { type: 'left' });
@@ -2626,6 +2966,7 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
       tenantFacade.tenantJoin(ticketQuery, 'contacts as ct', 't.contact_name_id', 'ct.contact_name_id', { type: 'left' });
       tenantFacade.tenantJoin(ticketQuery, 'clients as co', 't.client_id', 'co.client_id', { type: 'left' });
       tenantFacade.tenantJoin(ticketQuery, 'tickets as src', 't.duplicated_from_ticket_id', 'src.ticket_id', { type: 'left' });
+      tenantFacade.tenantJoin(ticketQuery, 'ticket_templates as tt', 't.created_from_template_id', 'tt.template_id', { type: 'left' });
       const ticket: TicketQueryResult | undefined = await ticketQuery
       .where('t.ticket_id', id)
       .first();

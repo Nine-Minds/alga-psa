@@ -445,8 +445,19 @@ const i18nMocks = vi.hoisted(() => {
     };
   };
 
+  // Imperative translate(namespace, key, options) outside a React tree
+  // (SchedulingContext's provider-less fallbacks, MentionNode.renderHTML,
+  // ResponseStateBadge's default `t`). Namespace is irrelevant here — same
+  // defaultValue/interpolation contract as mockT.
+  const mockTranslate = (
+    _namespace: string,
+    key: string,
+    options?: { defaultValue?: string; [key: string]: unknown },
+  ) => mockT(key, options);
+
   return {
     mockT,
+    mockTranslate,
     mockI18n,
     mockUseTranslation: () => ({ t: mockT, i18n: mockI18n }),
     mockFormatters,
@@ -466,6 +477,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => ({
   // test that mounts a page through the wrapper throws on the missing export.
   getBootstrapLoadingText: () => 'Loading...',
   I18nProvider: ({ children }: { children: React.ReactNode }) => children,
+  translate: i18nMocks.mockTranslate,
 }));
 
 vi.mock('next/server', async () => {
@@ -544,11 +556,21 @@ vi.mock('@alga-psa/auth', async () => {
     };
   };
 
+  // Real class, not a stub: callers narrow with `instanceof` to turn an
+  // authentication rejection into a serializable action result.
+  class AuthenticationError extends Error {
+    constructor(message: string = 'User not authenticated') {
+      super(message);
+      this.name = 'AuthenticationError';
+    }
+  }
+
   // Every name that production code value-imports from '@alga-psa/auth' must
   // exist here — a missing one makes vitest throw at the import binding and
   // every API test 500s (see the runWithApiKeyUser nightly break). The
   // authGlobalMock contract test enumerates prod imports and enforces this.
   return {
+    AuthenticationError,
     getSession: vi.fn().mockResolvedValue(null),
     getSessionWithRevocationCheck: vi.fn().mockResolvedValue(null),
     getCurrentUser,
@@ -562,6 +584,7 @@ vi.mock('@alga-psa/auth', async () => {
     localizeActionError: vi.fn(async (result: any) => result),
     runWithApiKeyUser,
     getApiKeyUserOverride,
+    assertActiveInternalUser: vi.fn(async () => true),
     getSessionCookieName: vi.fn(() => 'authjs.session-token'),
     getNextAuthSecret: vi.fn(async () => 'test-nextauth-secret'),
     formatRateLimitError: vi.fn(async () => 'Too many attempts. Please try again later.'),

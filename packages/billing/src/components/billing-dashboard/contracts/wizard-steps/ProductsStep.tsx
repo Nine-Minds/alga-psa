@@ -58,6 +58,9 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
       service_id: item.service_id,
       service_name: item.service_name,
       custom_rate: undefined,
+      // Carried so the review total prices the product with the same chain the engine uses.
+      currency_rate: item.currency_rate ?? null,
+      default_rate: item.default_rate ?? null,
     };
     updateData({ product_services: next });
 

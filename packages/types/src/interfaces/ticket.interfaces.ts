@@ -1,6 +1,7 @@
 // server/src/interfaces/ticket.interfaces.tsx
 import { TenantEntity } from ".";
-import { ITaggable } from './tag.interfaces';
+import type { PredicateGroup } from '@alga-psa/predicates';
+import { ITaggable, type IDisplayTag } from './tag.interfaces';
 import { IClientLocation } from "./client.interfaces";
 import { IComment } from './comment.interface';
 import { IDocument } from './document.interface';
@@ -57,6 +58,8 @@ export interface ITicket extends TenantEntity, ITaggable {
   assigned_to: string | null;
   assigned_team_id?: string | null;
   entered_at: string | null; // Changed from Date to string
+  /** When the ticket entered its current status (maintained on every status change). */
+  status_changed_at?: string | null;
   updated_at: string | null; // Changed from Date to string
   closed_at: string | null;  // Changed from Date to string
   /** Denormalized close flag kept in sync with the selected status. */
@@ -66,6 +69,10 @@ export interface ITicket extends TenantEntity, ITaggable {
   duplicated_from_ticket_id?: string | null;
   /** Display-only: number of the source ticket, joined on read. */
   duplicated_from_ticket_number?: string | null;
+  /** Ticket template this one was created from (create-only provenance, no FK). */
+  created_from_template_id?: string | null;
+  /** Display-only: name of the source template, joined on read. */
+  created_from_template_name?: string | null;
   attributes: Record<string, unknown> | null; // Changed from any to unknown
   priority_id?: string; // Used for both custom and ITIL priorities (unified system)
   estimated_hours?: number;
@@ -93,7 +100,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   external_links?: IExternalEntityLink[];
 }
 
-export type TicketLatestActivityActorKind = 'user' | 'client_user' | 'contact' | 'email_sender' | 'system';
+export type TicketLatestActivityActorKind = 'user' | 'client_user' | 'service' | 'contact' | 'email_sender' | 'system';
 
 export interface ITicketLatestActivityActor {
   kind: TicketLatestActivityActorKind;
@@ -116,6 +123,10 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   client_logo_url?: string | null;
   contact_name: string | null;
   contact_avatar_url?: string | null;
+  /** Chip tags for the requester, already filtered to the caller's audience by the display rules. */
+  contact_tags?: IDisplayTag[];
+  /** Chip tags for the client, already filtered to the caller's audience by the display rules. */
+  client_tags?: IDisplayTag[];
   entered_by_name: string;
   assigned_to_name: string | null;
   additional_agent_count?: number;
@@ -159,6 +170,11 @@ export interface ITicketListFilters {
   responseState?: 'awaiting_client' | 'awaiting_internal' | 'none' | 'all';
   slaStatusFilter?: 'all' | 'has_sla' | 'no_sla' | 'on_track' | 'breached' | 'paused';
   bundleView?: 'bundled' | 'individual';
+  /**
+   * Predicate filters over the ticket query schema (packages/tickets/src/lib/ticketQuerySchema.ts):
+   * one flat `and` group. New filter dimensions are expressed here, not as new keys on this interface.
+   */
+  where?: PredicateGroup;
 }
 
 export interface IPriority extends TenantEntity {

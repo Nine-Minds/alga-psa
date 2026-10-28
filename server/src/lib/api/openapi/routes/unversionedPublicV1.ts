@@ -133,11 +133,13 @@ export function registerUnversionedPublicV1Routes(
   registry.registerRoute({
     method: 'post', path: '/api/workflow-definitions/simulate',
     summary: 'Simulate a workflow definition draft',
-    description: 'Executes an inline draft definition in a zero-side-effect simulator: expressions and transforms run for real, action.call steps are stubbed (fixture > schema-shaped placeholder > empty object) with their evaluated inputs recorded, and waits pause the run unless a fixture resumes them. Omit payload to have one synthesized from the trigger event schema or the workflow payload schema. Returns status, a per-step trace, final vars/payload, the stubbed action invocations, and any errors or warnings.',
+    description: 'Executes an inline draft definition in a zero-side-effect simulator: expressions and transforms run for real, action.call steps are stubbed (fixture > schema-shaped placeholder > empty object) with their evaluated inputs recorded, and waits pause the run unless a fixture resumes them. For event-triggered workflows, pass useLatestEvent: true (or eventId) to replay a stored workflow runtime event through the trigger payload mapping; the simulation fails with "Production would skip this event" when production would not launch the workflow for it. Omit payload and replay to have one synthesized from the trigger event schema or the workflow payload schema (the trigger contract is then not checked). Returns status, a per-step trace, final vars/payload, the stubbed action invocations, and any errors or warnings.',
     tags: [wfTag], security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: registry.registerSchema('WorkflowDefinitionSimulateBody', zOpenApi.object({
       definition: WorkflowDefinitionDoc,
       payload: zOpenApi.record(zOpenApi.unknown()).optional().describe('Workflow payload used as-is (wins over eventPayload and synthesis).'),
+      eventId: zOpenApi.string().uuid().optional().describe('Replay this stored workflow runtime event (must match the trigger event type). Cannot be combined with payload.'),
+      useLatestEvent: zOpenApi.boolean().optional().describe('Replay the latest stored event of the trigger event type for this tenant. Cannot be combined with payload.'),
       eventPayload: zOpenApi.record(zOpenApi.unknown()).optional().describe('Source event payload, run through the trigger payloadMapping.'),
       eventType: zOpenApi.string().optional().describe('Event to synthesize a payload for when payload/eventPayload are omitted.'),
       fixtures: zOpenApi.record(zOpenApi.unknown()).optional().describe('Stub outputs keyed by step id or actionId. { "$error": { message } } makes a stubbed action fail; wait steps resume from their fixture.'),

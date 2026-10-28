@@ -3,7 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import type { DateTriggerSource } from '../types';
 
 export const contractEndSource: DateTriggerSource = {
-  id: 'contract.end', payloadSchemaRef: 'payload.ContractEndDate.v1',
+  id: 'contract.end',
   async findOccurrences(knex: Knex, tenant: string, fromDate: string, toDate: string) {
     // LEVERAGE: pattern contract-date-source-query — same active client_contracts ⋈ clients join as contractRenewalDecision.ts; the next contract date should share one query builder.
     const rows = await tenantDb(knex, tenant).table('client_contracts as cc').join('clients as c', function joinClient() { this.on('c.client_id', '=', 'cc.client_id').andOn('c.tenant', '=', 'cc.tenant'); })

@@ -28,6 +28,8 @@ import { toISODate, toPlainDate } from '@alga-psa/core';
 import { materializeClientCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods';
 import { materializeContractCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeContractCadenceServicePeriods';
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
+import { resolveEffectiveBillingTiming } from '@alga-psa/shared/billingClients/contractLineTimingRule';
+import { simulationRefusal } from './simulationRefusal';
 import {
   getBillingPeriodForDate,
   getNextBillingBoundaryAfter,
@@ -111,12 +113,16 @@ export function buildInvoicePeriods(
   schedule: ScenarioBillingSchedule,
 ): SimulatedInvoicePeriodWindow[] {
   if (!Number.isInteger(horizon.period_count) || horizon.period_count < 1) {
-    throw new Error(
-      `Simulation horizon requires a positive integer period_count; got ${horizon.period_count}`,
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_SCENARIO_INVALID",
+      `Simulation horizon requires a positive integer period_count; got ${horizon.period_count}. Choose a number of billing periods to simulate.`,
     );
   }
   if (!horizon.start_date) {
-    throw new Error('Simulation horizon requires a start_date');
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_SCENARIO_INVALID",
+      "Simulation horizon requires a start_date. Choose a start date for the simulation.",
+    );
   }
 
   const anchor = normalizeAnchorSettingsForCycle(schedule.billing_cycle, {
@@ -178,7 +184,7 @@ export function generateLineServicePeriods(
     input;
 
   const lineCycle = normalizeBillingCycle(line.billing_frequency);
-  const duePosition = line.billing_timing === 'advance' ? 'advance' : 'arrears';
+  const duePosition = resolveEffectiveBillingTiming(line.contract_line_type, line.billing_timing);
   const cadenceOwner = resolveCadenceOwner(line.cadence_owner);
   const asOf = toUtcMidnight(horizon.start_date);
   const anchorDate = toUtcMidnight(contractStartDate ?? horizon.start_date);
@@ -186,7 +192,6 @@ export function generateLineServicePeriods(
   const sourceObligation: IPersistedRecurringObligationRef = {
     tenant: 'contract-simulator',
     obligationId: line.key,
-    obligationType: 'contract_line',
     chargeFamily: 'fixed',
   };
 

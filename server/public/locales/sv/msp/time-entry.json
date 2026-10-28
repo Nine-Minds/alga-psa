@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Lägg till tidpost"
+    }
+  },
   "common": {
     "actions": {
       "view": "Visa",
@@ -127,12 +132,14 @@
       "billable": "Debiterbar",
       "notes": "Anteckningar",
       "deleteTimeEntry": "Radera tidpost",
-      "unsavedChanges": "Osparade ändringar"
+      "unsavedChanges": "Osparade ändringar",
+      "contractLine": "Avtalsrad"
     },
     "placeholders": {
       "selectService": "Välj en tjänst",
       "selectDate": "Välj datum",
-      "addNotes": "Lägg till anteckningar"
+      "addNotes": "Lägg till anteckningar",
+      "selectContractLine": "Välj en avtalsrad"
     },
     "validation": {
       "startBeforeEnd": "Starttiden måste vara före sluttiden",
@@ -150,6 +157,9 @@
       "task": "Standard från uppgift",
       "phase": "Standard från fas",
       "project": "Standard från projekt"
+    },
+    "options": {
+      "resolveContractLineLater": "Ingen rad - lös senare"
     }
   },
   "workItemPicker": {
@@ -213,9 +223,9 @@
     },
     "labels": {
       "status": "Status:",
-      "showIntervals": "Visa intervall",
       "grid": "Rutnät",
-      "list": "Lista"
+      "list": "Lista",
+      "showSuggestions": "Förslag"
     }
   },
   "approval": {
@@ -396,57 +406,11 @@
     "noContract": "Ingen avtalsrad hittades för den här tjänsten. Tiden kommer att kopplas till standardavtalet som hanteras av systemet.",
     "contract": "Avtal: {{name}}",
     "defaultContract": "Standardavtal som hanteras av systemet",
-    "multipleLines": "Flera avtalsrader är tillgängliga – standardvalet används"
+    "multipleEligible": "Flera avtalsrader är giltiga för detta datum. Välj en avtalsrad för att spara tilldelningen."
   },
   "billableLegend": {
     "title": "Färgförklaring för debiterbar tid",
     "description": "Färgindikatorer för andelen debiterbar tid"
-  },
-  "intervalItem": {
-    "now": "Nu",
-    "autoClosed": "Automatiskt avslutat",
-    "active": "Aktivt"
-  },
-  "intervals": {
-    "createdFromNote_one": "Skapad från {{count}} intervall",
-    "createdFromNote_other": "Skapad från {{count}} intervall",
-    "selectedCount_one": "{{count}} intervall markerat",
-    "selectedCount_other": "{{count}} intervall markerade",
-    "title": "Tidsintervall för ärenden",
-    "hideShortIntervals": "Dölj intervall under 1 minut",
-    "totalTime": "Total tid: {{value}}",
-    "selectedOne": "{{count}} intervall markerat",
-    "selectedOther": "{{count}} intervall markerade",
-    "tooltips": {
-      "createTimeEntry": "Skapa tidpost från markerade intervall",
-      "deleteSelected": "Radera markerade intervall",
-      "mergeSelected": "Slå ihop markerade intervall"
-    },
-    "actions": {
-      "selectAll": "Markera alla",
-      "deselectAll": "Avmarkera alla",
-      "merge": "Slå ihop"
-    },
-    "states": {
-      "loading": "Läser in intervall…",
-      "noIntervalsThisPeriod": "Inga intervall hittades för den här tidsperioden",
-      "noIntervalsThisTicket": "Inga intervall hittades för det här ärendet",
-      "noIntervalsLongerThanMinute": "Inga intervall längre än 1 minut hittades"
-    },
-    "entryName": "Tidpost för ärende",
-    "messages": {
-      "cannotFindTimeSheet": "Det går inte att skapa tidposten – det gick inte att hitta eller skapa en tidrapport",
-      "mergeFirst": "Slå ihop intervallen innan du skapar en tidpost",
-      "sameTicketOnly": "Tidposter kan bara skapas från intervall för samma ärende",
-      "mergeSameTicketOnly": "Endast intervall från samma ärende kan slås ihop",
-      "mergeSuccess": "Intervallen har slagits ihop",
-      "failedMerge": "Det gick inte att slå ihop intervallen",
-      "noActivePeriod": "Ingen aktiv tidsperiod hittades",
-      "failedFetchTimeSheet": "Det gick inte att skapa eller hämta tidrapporten",
-      "failedPrepareTimeEntry": "Det gick inte att förbereda tidposten",
-      "savedSuccess": "Tidposten har sparats",
-      "failedSave": "Det gick inte att spara tidposten"
-    }
   },
   "addWorkItemDialog": {
     "title": "Lägg till arbetspost",
@@ -503,14 +467,34 @@
       "missingFieldNamed": "Ett obligatoriskt fält för tidrapport eller tidpost saknas: {{field}}."
     },
     "timePeriod": {
-      "datesRequired": "Ange giltiga start- och slutdatum."
+      "datesRequired": "Ange giltiga start- och slutdatum.",
+      "closed": "Den här tidsperioden är stängd. Öppna den igen innan du gör ändringar.",
+      "permissions": {
+        "read": "Åtkomst nekad: kan inte visa tidsperioder.",
+        "create": "Åtkomst nekad: kan inte skapa tidsperioder.",
+        "update": "Åtkomst nekad: kan inte uppdatera tidsperioder.",
+        "delete": "Åtkomst nekad: kan inte radera tidsperioder."
+      }
     },
     "timePeriodSettings": {
       "invalidValue": "Ett värde i tidsperiodens inställningar är ogiltigt. Ladda om sidan och försök igen.",
       "referenceMissing": "Den valda tidsperiodsinställningen är inte längre giltig. Ladda om sidan och försök igen.",
       "duplicate": "Det finns redan en tidsperiodsinställning som står i konflikt med den här.",
       "missingField": "Ett obligatoriskt fält för tidsperiodsinställningen saknas.",
-      "missingFieldNamed": "Ett obligatoriskt fält för tidsperiodsinställningen saknas: {{field}}."
+      "missingFieldNamed": "Ett obligatoriskt fält för tidsperiodsinställningen saknas: {{field}}.",
+      "permissions": {
+        "read": "Åtkomst nekad: kan inte visa inställningar för tidsperioder.",
+        "manage": "Åtkomst nekad: kan inte hantera inställningar för tidsperioder."
+      }
+    },
+    "stopwatch": {
+      "notFound": "Stoppurssessionen hittades inte. Den kan redan ha loggats eller förkastats. Uppdatera sidan.",
+      "notOpen": "Den här stoppurssessionen är redan stängd.",
+      "workItemNotFound": "Arbetsobjektet för det här stoppuret hittades inte.",
+      "unsupportedWorkItem": "Stoppuret kan bara startas på ärenden och projektuppgifter.",
+      "boardDisabled": "Stoppuret är avstängt för det här ärendets tavla.",
+      "alreadyOpen": "Du har redan ett stoppur igång. Stoppa eller förkasta det först.",
+      "serviceRequired": "Välj en tjänst innan du loggar den här stoppursessionen."
     }
   },
   "workItemEntry": {
@@ -539,6 +523,55 @@
     "entryMissingPeriod": "Tidrapporten för den här posten saknar sin tidsperiod och kan inte öppnas.",
     "noPeriods": "Inga tidsperioder har skapats ännu, så tid kan inte registreras. Be en administratör skapa tidsperioder under Inställningar → Tidregistrering.",
     "noEditablePeriods": "Alla tidrapporter är inskickade eller godkända, så det finns ingen dag att lägga till tid på. Be en godkännare öppna en tidrapport igen, eller en administratör att lägga till en tidsperiod.",
-    "prepareFailed": "Ett fel uppstod när tidposten förbereddes. Försök igen."
+    "prepareFailed": "Ett fel uppstod när tidposten förbereddes. Försök igen.",
+    "periodRange": "{{start}} – {{end}}"
+  },
+  "suggestions": {
+    "title": "Förslag",
+    "description": "Ärenden du arbetat med under perioden som ännu saknar loggad tid. Ingenting loggas förrän du väljer Logga tid.",
+    "loading": "Läser in förslag...",
+    "empty": "Inga förslag för den här perioden",
+    "dismissAllForDay": "Avfärda alla för den här dagen",
+    "logTime": "Logga tid",
+    "dismiss": "Avfärda",
+    "estimatedNotice": "Dessa tider är uppskattade utifrån din aktivitet på ärendet. Justera dem så att de stämmer med tiden du faktiskt arbetade.",
+    "dismissFailed": "Det gick inte att avfärda förslaget",
+    "activitySummary_one": "första aktivitet {{first}} · senaste {{last}} · {{count}} åtgärd ({{kinds}})",
+    "activitySummary_other": "första aktivitet {{first}} · senaste {{last}} · {{count}} åtgärder ({{kinds}})",
+    "kinds": {
+      "created": "skapat",
+      "commented": "kommenterat",
+      "internalNote": "intern anteckning",
+      "statusChanged": "status ändrad",
+      "priorityChanged": "prioritet ändrad",
+      "assignmentChanged": "tilldelning ändrad",
+      "documentsChanged": "dokument ändrade",
+      "checklistChanged": "checklista ändrad",
+      "linksChanged": "länkar ändrade",
+      "updated": "uppdaterat"
+    },
+    "activitySummary_few": "första aktivitet {{first}} · senaste {{last}} · {{count}} åtgärder ({{kinds}})",
+    "activitySummary_many": "första aktivitet {{first}} · senaste {{last}} · {{count}} åtgärder ({{kinds}})"
+  },
+  "stopwatch": {
+    "pausedNotice_one": "{{active}} spårat i {{count}} segment (pausat {{paused}})",
+    "pausedNotice_other": "{{active}} spårat i {{count}} segment (pausat {{paused}})",
+    "discardDialog": {
+      "title": "Kassera det här stoppuret?",
+      "message": "De {{duration}} som spårats på {{workItem}} raderas och ingen tidpost skapas. Det går inte att ångra.",
+      "confirm": "Kassera",
+      "cancel": "Behåll stoppur"
+    },
+    "conflictDialog": {
+      "title": "Ett stoppur är redan öppet",
+      "message": "Du spårar redan {{duration}} på {{workItem}}. Bara ett stoppur kan vara öppet åt gången.",
+      "stopAndLog": "Stoppa och logga nuvarande, starta sedan",
+      "discard": "Kassera nuvarande, starta sedan (den spårade tiden raderas)",
+      "confirm": "Fortsätt",
+      "cancel": "Avbryt"
+    },
+    "ticketFallbackName": "Ärende {{number}}",
+    "pausedNotice_few": "{{active}} spårat i {{count}} segment (pausat {{paused}})",
+    "pausedNotice_many": "{{active}} spårat i {{count}} segment (pausat {{paused}})"
   }
 }

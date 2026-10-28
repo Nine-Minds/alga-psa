@@ -54,7 +54,10 @@ vi.mock('@alga-psa/workflows/actions', () => ({
   createEventCatalogEntry: vi.fn()
 }));
 
+import { createWorkflowDefinitionAction } from '@alga-psa/workflows/actions/workflow-runtime-v2-actions';
 import {
+  buildTriggerForCatalogEvent,
+  createWorkflowFromEventAction,
   listEventCatalogCategoriesV2Action,
   listEventCatalogOptionsV2Action
 } from '@alga-psa/workflows/actions/workflow-event-catalog-v2-actions';
@@ -140,5 +143,81 @@ describe('workflow event catalog actions', () => {
     const result = await listEventCatalogCategoriesV2Action();
 
     expect(result.categories).toEqual(['Automation', 'Surveys', 'Tickets']);
+  });
+});
+
+describe('createWorkflowFromEventAction', () => {
+  beforeEach(() => {
+    createTenantKnexMock.mockReset();
+    hasPermissionMock.mockReset();
+    hasPermissionMock.mockResolvedValue(true);
+    createTenantKnexMock.mockResolvedValue({ knex: vi.fn(), tenant: 'tenant-1' });
+    vi.mocked(createWorkflowDefinitionAction).mockReset();
+    vi.mocked(createWorkflowDefinitionAction).mockResolvedValue({ workflowId: 'wf-1' } as any);
+  });
+
+  it('creates a date trigger for the status-age catalog row, ignoring the caller payload schema ref', async () => {
+    await createWorkflowFromEventAction({
+      eventType: 'TICKET_STATUS_AGE',
+      payloadSchemaRef: 'payload.Wrong.v1',
+      sourcePayloadSchemaRef: 'payload.Wrong.v1'
+    });
+    const { definition } = vi.mocked(createWorkflowDefinitionAction).mock.calls[0][0] as any;
+    expect(definition.payloadSchemaRef).toBe('payload.TicketStatusAge.v1');
+    expect(definition.trigger).toEqual({
+      type: 'date',
+      source: 'ticket.status_age',
+      offsetDays: 0,
+      localTime: '08:00',
+      params: { statusName: '', boardId: null, days: 7, repeatEveryDays: null, requireNoActivity: false }
+    });
+  });
+
+  it('still creates an event trigger for an ordinary event', async () => {
+    await createWorkflowFromEventAction({ eventType: 'TICKET_CREATED', payloadSchemaRef: 'payload.Ticket.v1' });
+    const { definition } = vi.mocked(createWorkflowDefinitionAction).mock.calls[0][0] as any;
+    expect(definition.payloadSchemaRef).toBe('payload.Ticket.v1');
+    expect(definition.trigger).toMatchObject({ type: 'event', eventName: 'TICKET_CREATED' });
+  });
+});
+
+describe('buildTriggerForCatalogEvent', () => {
+  beforeEach(() => {
+    createTenantKnexMock.mockReset();
+    hasPermissionMock.mockReset();
+    hasPermissionMock.mockResolvedValue(true);
+    createTenantKnexMock.mockResolvedValue({ knex: vi.fn(), tenant: 'tenant-1' });
+  });
+
+  it('resolves the payload schema ref from the catalog, never from the caller', async () => {
+    vi.spyOn(EventCatalogModel, 'getByEventType').mockResolvedValue({
+      event_type: 'TICKET_CREATED',
+      payload_schema_ref: 'payload.TicketCreated.v1'
+    } as any);
+    const result = await buildTriggerForCatalogEvent({ eventName: 'TICKET_CREATED', payloadSchemaRef: 'payload.Wrong.v1' });
+    expect(result.payloadSchemaRef).toBe('payload.TicketCreated.v1');
+    expect(result.trigger).toEqual({ type: 'event', eventName: 'TICKET_CREATED' });
+    expect(result.dateSourceId).toBeNull();
+  });
+
+  it('throws on an unknown event instead of falling back to an empty schema ref', async () => {
+    vi.spyOn(EventCatalogModel, 'getByEventType').mockResolvedValue(null);
+    await expect(buildTriggerForCatalogEvent({ eventName: 'NOPE' })).rejects.toThrow('Unknown workflow event: NOPE');
+  });
+
+  it('throws when the catalog row has no payload schema', async () => {
+    vi.spyOn(EventCatalogModel, 'getByEventType').mockResolvedValue({ event_type: 'X_EVENT', payload_schema_ref: null } as any);
+    await expect(buildTriggerForCatalogEvent({ eventName: 'X_EVENT' })).rejects.toThrow('no payload schema');
+  });
+
+  it('builds a date trigger for a date-source catalog row', async () => {
+    vi.spyOn(EventCatalogModel, 'getByEventType').mockResolvedValue({
+      event_type: 'TICKET_STATUS_AGE',
+      payload_schema_ref: 'payload.Wrong.v1'
+    } as any);
+    const result = await buildTriggerForCatalogEvent({ eventName: 'TICKET_STATUS_AGE' });
+    expect(result.payloadSchemaRef).toBe('payload.TicketStatusAge.v1');
+    expect(result.trigger).toMatchObject({ type: 'date', source: 'ticket.status_age' });
+    expect(result.dateSourceId).toBe('ticket.status_age');
   });
 });

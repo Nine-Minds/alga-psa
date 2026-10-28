@@ -13,7 +13,6 @@ export const buildRecurringObligationRef = (
   overrides: Partial<IRecurringObligationRef> = {},
 ): IRecurringObligationRef => ({
   obligationId: 'line-1',
-  obligationType: 'contract_line',
   chargeFamily: 'fixed',
   ...overrides,
 });

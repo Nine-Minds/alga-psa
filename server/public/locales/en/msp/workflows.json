@@ -534,7 +534,8 @@
         "anniversary": "the client's next anniversary",
         "renewal": "the contract's renewal decision date",
         "contractEnd": "the contract's end date",
-        "warrantyEnd": "the asset's warranty end date"
+        "warrantyEnd": "the asset's warranty end date",
+        "ticketStatusAge": "the day the ticket reaches the number of days in status"
       }
     }
   },
@@ -564,7 +565,8 @@
       "exportCsv": "Export CSV",
       "exportJson": "Export JSON",
       "close": "Close",
-      "viewRunDetails": "View run details"
+      "viewRunDetails": "View run details",
+      "backToEvents": "Back to events"
     },
     "table": {
       "schemaConflict": "catalog ≠ submission",
@@ -602,7 +604,12 @@
       "waitStepLine": "Step: {{value}}",
       "matchedRunLabel": "Matched run",
       "runStatusLine": "Status: {{status}}",
-      "payloadLabel": "Payload"
+      "payloadLabel": "Payload",
+      "launchSkips": {
+        "title": "Workflows not launched",
+        "unknownWorkflow": "Deleted workflow",
+        "intentional": "Intentional"
+      }
     },
     "toasts": {
       "loadEventsFailed": "Failed to load workflow events",
@@ -621,7 +628,8 @@
     },
     "actions": {
       "refresh": "Refresh",
-      "loadMore": "Load more"
+      "loadMore": "Load more",
+      "backToList": "Back to dead letter"
     },
     "table": {
       "columns": {
@@ -808,7 +816,20 @@
       "notPublishedNextVersion": "Not published yet. Publishing creates v{{next}}.",
       "tenantTimezoneOption": "Tenant timezone (default)",
       "searchTimezones": "Search timezones",
-      "inputDataEventPending": "Choose the event above; your steps will read the data that event sends."
+      "inputDataEventPending": "Choose the event above; your steps will read the data that event sends.",
+      "dateSourceTicketStatusAge": "Ticket in status for N days",
+      "statusAgeStatus": "Status",
+      "statusAgeStatusPlaceholder": "Select a status",
+      "statusAgeStatusMissing": "No status with this name exists on the selected board.",
+      "statusAgeOptionsFailed": "Could not load statuses and boards.",
+      "statusAgeMatchByName": "Statuses are matched by name. Renaming a status stops this trigger from matching.",
+      "statusAgeBoard": "Board (optional)",
+      "statusAgeAnyBoard": "Any board",
+      "statusAgeDays": "Days in status",
+      "statusAgeRepeat": "Repeat while in status",
+      "statusAgeRepeatEvery": "Repeat every (days)",
+      "statusAgeNoActivity": "Only if there has been no activity (comments or changes by people) for that long",
+      "statusAgeSummary": "Runs daily at {{time}} ({{timezone}}) for each ticket that has been in the chosen status for the set number of days"
     },
     "stepPanel": {
       "readOnly": "Read-only access: step editing is disabled.",
@@ -860,6 +881,7 @@
       "add": "Add",
       "remove": "Remove",
       "empty": "No mappings yet.",
+      "nameRequired": "Enter a name for this mapping.",
       "expressionLabel": "Expression"
     },
     "schemaForm": {
@@ -1370,6 +1392,41 @@
       "unsaved": "Unsaved changes",
       "savedAgo": "Saved · {{ago}}",
       "saved": "Saved"
+    },
+    "launchSkips": {
+      "banner": {
+        "summary_one": "Skipped {{count}} event in the last {{days}} days — {{reasons}}",
+        "summary_other": "Skipped {{count}} events in the last {{days}} days — {{reasons}}",
+        "lastSkipped": "Last skipped {{when}}",
+        "view": "View skipped events",
+        "summary_few": "Skipped {{count}} events in the last {{days}} days — {{reasons}}",
+        "summary_many": "Skipped {{count}} events in the last {{days}} days — {{reasons}}"
+      },
+      "drawer": {
+        "title": "Skipped events",
+        "windowLabel": "Time window",
+        "window": {
+          "24h": "Last 24 hours",
+          "7d": "Last 7 days",
+          "30d": "Last 30 days"
+        },
+        "allReasons": "All reasons",
+        "reasonLabel": "Reason",
+        "groupAttention": "Needs attention",
+        "groupGuarded": "Guarded / paused (intentional)",
+        "lastSeen": "Last seen {{when}}",
+        "columns": {
+          "received": "Received",
+          "event": "Event",
+          "reason": "Reason",
+          "message": "Message"
+        },
+        "issuesTitle": "Validation issues",
+        "issueRoot": "(payload)",
+        "openEvent": "Open event",
+        "loadError": "Failed to load skipped events.",
+        "empty": "No skipped events in this window."
+      }
     }
   },
   "actionInputFieldInfo": {
@@ -1686,7 +1743,9 @@
     "insertionPointLabel": "New steps go here",
     "emptyBranchPrompt": "Add a step to this branch",
     "emptyActivePrompt": "New steps go here. Pick one from the palette.",
-    "stepCount": "({{count}} steps)"
+    "stepCount": "({{count}} steps)",
+    "stepCount_few": "({{count}} steps)",
+    "stepCount_many": "({{count}} steps)"
   },
   "expressionEditor": {
     "ariaLabel": "Expression editor",
@@ -1973,7 +2032,8 @@
     "dateTiming": {
       "before": "{{count}} days before",
       "after": "{{count}} days after",
-      "onTheDay": "on the day"
+      "onTheDay": "on the day",
+      "daysInStatus": "{{count}} days in the status"
     },
     "dateWithTiming": "{{source}}, {{timing}}"
   },
@@ -2198,7 +2258,12 @@
       "currentRun": "Run {{id}}",
       "backToWorkflow": "Back to workflow"
     },
-    "title": "Workflow Run Studio"
+    "title": "Workflow Run Studio",
+    "communityEdition": {
+      "title": "Pro Feature",
+      "description": "Workflow run studio is only available in Pro.",
+      "runId": "Run id: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -2664,6 +2729,10 @@
       },
       "deleteDialog": {
         "fallbackEntityName": "this workflow"
+      },
+      "launchSkips": {
+        "badge": "{{count}} skipped",
+        "badgeTitle": "Events this workflow did not launch for in the last 7 days"
       }
     },
     "eventsCatalog": {
@@ -2967,6 +3036,10 @@
         "selectBoard": "Select or enter a board",
         "selectPriority": "Select or enter a priority"
       }
+    },
+    "proFeature": {
+      "title": "Pro Feature",
+      "description": "The workflow system is only available in Pro. Please upgrade your installation to access this feature."
     }
   },
   "toggle": {
@@ -3059,5 +3132,75 @@
   "fieldPicker": {
     "searchPlaceholder": "Search fields",
     "noMatches": "No matching fields"
+  },
+  "launchSkipReasons": {
+    "missing_schema_ref": {
+      "label": "Missing payload schema reference",
+      "hint": "The workflow has no payload schema reference, so the event payload cannot be validated."
+    },
+    "unknown_schema_ref": {
+      "label": "Unknown payload schema reference",
+      "hint": "The workflow's payload schema reference does not exist in the schema registry."
+    },
+    "missing_source_schema": {
+      "label": "Missing source schema",
+      "hint": "The event has no source schema to compare against the workflow's payload schema."
+    },
+    "schema_mismatch": {
+      "label": "Event payload does not match schema",
+      "hint": "The event payload does not match the workflow's payload schema and no mapping was configured."
+    },
+    "payload_mapping_failed": {
+      "label": "Payload mapping failed",
+      "hint": "The trigger's payload mapping could not be applied to the event."
+    },
+    "payload_validation_failed": {
+      "label": "Payload validation failed",
+      "hint": "The mapped payload did not pass the workflow's payload schema."
+    },
+    "launch_failed": {
+      "label": "Launch failed",
+      "hint": "The worker accepted the event but starting the workflow run failed."
+    },
+    "paused": {
+      "label": "Workflow paused",
+      "hint": "The workflow is paused, so events are intentionally not launched."
+    },
+    "lineage_loop_guard": {
+      "label": "Loop guard (lineage)",
+      "hint": "The event originated from this workflow's own lineage; skipped to prevent a loop."
+    },
+    "self_trigger_guard": {
+      "label": "Self-trigger guard",
+      "hint": "The event was emitted by this workflow itself; skipped to prevent self-triggering."
+    },
+    "causation_depth_exceeded": {
+      "label": "Causation depth exceeded",
+      "hint": "The chain of events caused by events exceeded the maximum depth; skipped to prevent runaway loops."
+    }
+  },
+  "createFromTicket": {
+    "title": "Create workflow from ticket",
+    "description": "Creates a draft workflow whose first step creates a ticket like #{{number}}. Nothing is published.",
+    "cancel": "Cancel",
+    "creating": "Creating…",
+    "submit": "Create draft & open designer",
+    "nameLabel": "Workflow name",
+    "triggerLabel": "Trigger",
+    "triggerManual": "Manual (run on demand)",
+    "ticketCreatedWarning": "This workflow creates a ticket, and a new ticket fires this trigger again. Add a condition before publishing to avoid a loop.",
+    "includeLegend": "Include from the ticket",
+    "propertiesAlways": "Title, description, client, contact, board, category and priority are always included.",
+    "includeAssignment": "Assignment",
+    "includeTags": "Tags",
+    "includeCustomFields": "Custom fields",
+    "includeChecklist": "Checklist",
+    "errors": {
+      "nameRequired": "Workflow name is required",
+      "generic": "Failed to create the workflow draft"
+    },
+    "includeCustomFieldsCount": "Custom fields ({{n}})",
+    "includeChecklistCount": "Checklist ({{total}} items: {{templates}} from templates / {{adHoc}} ad-hoc)",
+    "checklistTemplateNote": "Items from templates are re-applied from the current template, so edits made on this ticket are not carried over."
   }
 }

@@ -100,6 +100,8 @@ const clientBodySchema = z.object({
   billing_email: clientEmailField,
   account_manager_id: uuidSchema.optional(),
   is_inactive: z.boolean().optional().default(false),
+  // Relationship lifecycle; mirrors the clients.lifecycle_status CHECK constraint.
+  lifecycle_status: z.enum(['prospect', 'active', 'former']).optional(),
   // Calendar date the relationship began; null keeps the created_at fallback.
   client_since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'client_since must be a YYYY-MM-DD date').nullable().optional(),
   tags: z.array(z.string()).optional()
@@ -174,6 +176,7 @@ export const clientResponseSchema = z.object({
   account_manager_id: uuidSchema.nullable(),
   account_manager_full_name: z.string().nullable().optional(),
   client_since: z.string().nullable().optional(),
+  lifecycle_status: z.enum(['prospect', 'active', 'former']).optional(),
   logoUrl: z.string().nullable().optional(),
   tenant: uuidSchema,
   tags: z.array(z.string()).optional()
@@ -181,18 +184,18 @@ export const clientResponseSchema = z.object({
 
 // Client location schemas
 export const createClientLocationSchema = z.object({
-  location_name: z.string().optional(),
+  location_name: z.string().nullable().optional(),
   // A location may carry only a phone or email (a field tech logging a client
   // from a call); the shared writer and the web quick-add allow an empty street.
   address_line1: z.string().optional().default(''),
-  address_line2: z.string().optional(),
-  address_line3: z.string().optional(),
+  address_line2: z.string().nullable().optional(),
+  address_line3: z.string().nullable().optional(),
   city: z.string().optional().default(''),
-  state_province: z.string().optional(),
-  postal_code: z.string().optional(),
+  state_province: z.string().nullable().optional(),
+  postal_code: z.string().nullable().optional(),
   country_code: z.string().min(2).max(3),
   country_name: z.string().min(1, 'Country name is required'),
-  region_code: z.string().optional(),
+  region_code: z.string().nullable().optional(),
   is_billing_address: z.boolean().optional().default(false),
   is_shipping_address: z.boolean().optional().default(false),
   is_default: z.boolean().optional().default(false),
@@ -201,7 +204,7 @@ export const createClientLocationSchema = z.object({
   fax: locationFaxField,
   fax_extension: locationFaxExtensionField,
   email: locationEmailField,
-  notes: z.string().optional(),
+  notes: z.string().nullable().optional(),
   is_active: z.boolean().optional().default(true)
 });
 
@@ -313,7 +316,15 @@ export const clientMergeRequestSchema = z.object({
   // Defaults to true in the engine: absence of a portal grant means "every
   // profile", which after a merge would be the whole destination client.
   pin_portal_grants: z.boolean().optional(),
-  external_remap_choices: z.array(clientMergeExternalRemapChoiceSchema).optional()
+  external_remap_choices: z.array(clientMergeExternalRemapChoiceSchema).optional(),
+  /**
+   * FR-G2: what happens to moving tickets, projects, assets and RMM
+   * organization mappings that have no billing profile of their own.
+   * `source_profile` (the default, and the pre-existing behaviour) stamps them
+   * with the moved default; `target_default` leaves them to inherit the
+   * target's.
+   */
+  billing_strategy: z.enum(['source_profile', 'target_default']).optional()
 });
 
 export const clientMergeResponseSchema = z.object({
@@ -324,7 +335,8 @@ export const clientMergeResponseSchema = z.object({
   moved_default_profile_id: uuidSchema.nullable(),
   counts: z.record(z.number()),
   remapped_external_mapping_ids: z.array(z.string()),
-  skipped_external_mapping_ids: z.array(z.string())
+  skipped_external_mapping_ids: z.array(z.string()),
+  billing_strategy: z.enum(['source_profile', 'target_default']).optional()
 });
 
 // ---------------------------------------------------------------------------

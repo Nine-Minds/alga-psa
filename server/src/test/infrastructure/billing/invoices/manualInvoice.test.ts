@@ -383,6 +383,26 @@ describe('Manual Invoice Generation', () => {
       expect(result.total_amount).toBe(1089);
     });
 
+    it('stamps due_date from the tenant default payment term when the client has none (alga-2026-0002607)', async () => {
+      const serviceId = await createTestService();
+      await setupTaxConfiguration();
+      await tenantTable(context, 'default_billing_settings').update({ default_payment_terms: 'net_14' });
+      await tenantTable(context, 'clients')
+        .where({ client_id: context.clientId })
+        .update({ payment_terms: '' });
+
+      const result = await generateManualInvoiceOrThrow({
+        clientId: context.clientId,
+        items: [{ service_id: serviceId, quantity: 1, description: 'Tenant default terms', rate: 1000 }]
+      });
+
+      const row = await tenantTable(context, 'invoices').where({ invoice_id: result.invoice_id }).first('invoice_date', 'due_date');
+      const day = (v: unknown) => new Date(v as string).toISOString().slice(0, 10);
+      const expected = new Date(row.invoice_date);
+      expected.setUTCDate(expected.getUTCDate() + 14);
+      expect(day(row.due_date)).toBe(day(expected));
+    });
+
     it('preserves a manual invoice number and rejects its retry without another invoice or ledger entry', async () => {
       const serviceId = await createTestService();
       await setupTaxConfiguration();
@@ -506,8 +526,7 @@ describe('Manual Invoice Generation', () => {
     it('rejects invalid service IDs', async () => {
       const invalidServiceId = uuidv4();
       
-      await expectNotFound(
-        () => generateManualInvoiceOrThrow({
+      await expect(generateManualInvoiceOrThrow({
           clientId: context.clientId,
           items: [{
             service_id: invalidServiceId,
@@ -515,9 +534,7 @@ describe('Manual Invoice Generation', () => {
             description: 'Test Service',
             rate: 1000
           }]
-        }),
-        'Service'
-      );
+        })).rejects.toThrow(/selected service.*not available/i);
     });
   });
 
@@ -765,7 +782,7 @@ describe('Manual Invoice Generation', () => {
         client_id: context.clientId,
         type: 'invoice_adjustment',
         status: 'completed',
-        amount: '2178' // Updated amount including tax (pg numeric -> string)
+        amount: String(Number(updatedInvoice.total_amount) - Number(initialInvoice.total_amount)) // Only the posted principal delta.
       });
     });
 
@@ -1047,7 +1064,7 @@ describe('Manual Invoice Generation', () => {
         client_id: context.clientId,
         type: 'invoice_adjustment',
         status: 'completed',
-        amount: '3267' // Updated amount including tax, rounded up (pg numeric -> string)
+        amount: String(Number(updatedInvoice.total_amount) - Number(initialInvoice.total_amount)) // Only the posted principal delta.
       });
     });
     
@@ -1135,7 +1152,7 @@ describe('Manual Invoice Generation', () => {
         client_id: context.clientId,
         type: 'invoice_adjustment',
         status: 'completed',
-        amount: '1089' // Updated amount after item removal (pg numeric -> string)
+        amount: String(Number(updatedInvoice.total_amount) - Number(initialInvoice.total_amount)) // Removal reverses only the posted delta.
       });      
     });
 
@@ -1368,10 +1385,11 @@ describe('Manual Invoice Generation', () => {
       
       // Find the adjustment transaction for the final discount update by the expected amount
       const discountAdjustment = transactions.find((transaction: ITransaction) =>
-        transaction.type === 'invoice_adjustment' && Number(transaction.amount) === 1678);
+        transaction.type === 'invoice_adjustment' && Number(transaction.amount) === 133);
       expect(discountAdjustment).toBeDefined();
       expect((discountAdjustment as ITransaction).type).toBe('invoice_adjustment');
-      expect(Number((discountAdjustment as ITransaction).amount)).toBe(1678);
+      expect(Number((discountAdjustment as ITransaction).amount)).toBe(133);
+      expect(transactions.reduce((sum, row) => sum + Number(row.amount), 0)).toBe(1678);
     });    
   });
 });

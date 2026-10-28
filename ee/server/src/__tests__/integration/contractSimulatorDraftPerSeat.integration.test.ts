@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { ContractDraftSimulationInput } from "@alga-psa/types";
+import type { ContractDraftSimulationInput, ContractWizardFixedService } from "@alga-psa/types";
 import { TestContext } from "@main-test-utils/testContext";
 import { createTestService } from "@main-test-utils/billingTestHelpers";
 import {
@@ -11,7 +11,7 @@ import { fixedServicesRecurringTotalCents } from "@alga-psa/billing/lib/fixedSer
 process.env.DB_PORT =
   process.env.DB_PORT === "6432" ? "5432" : process.env.DB_PORT;
 
-type FixedItem = ContractDraftSimulationInput["fixed_services"][number];
+type FixedItem = ContractWizardFixedService;
 
 describe("Draft contract simulation – per-seat fixed services", () => {
   const helpers = TestContext.createHelpers();
@@ -43,7 +43,9 @@ describe("Draft contract simulation – per-seat fixed services", () => {
 
   const draft = (
     fixed_services: FixedItem[],
-    overrides: Partial<ContractDraftSimulationInput> = {},
+    { fixed_base_rate, ...overrides }: Partial<ContractDraftSimulationInput> & {
+      fixed_base_rate?: number;
+    } = {},
   ): ContractDraftSimulationInput => ({
     client_id: context.clientId,
     contract_name: "Per-seat draft",
@@ -51,7 +53,14 @@ describe("Draft contract simulation – per-seat fixed services", () => {
     billing_frequency: "monthly",
     currency_code: "USD",
     enable_proration: false,
-    fixed_services,
+    fixed_lines: [
+      {
+        line_key: "draft-line-1",
+        enable_proration: false,
+        base_rate: fixed_base_rate ?? null,
+        services: fixed_services,
+      },
+    ],
     product_services: [],
     hourly_services: [],
     usage_services: [],
@@ -144,5 +153,66 @@ describe("Draft contract simulation – per-seat fixed services", () => {
       draft([unit(user, 10, null), unit(endpoint, 10, null)], { currency_code: "EUR" }),
     );
     expect(total).toBe(10 * 8_000 + 10 * 4_000);
+  });
+
+  it("simulates two fixed lines as two lines, each with its own bundle rate", async () => {
+    const input: ContractDraftSimulationInput = {
+      ...draft([]),
+      fixed_lines: [
+        {
+          line_key: "a",
+          enable_proration: false,
+          base_rate: 300_000,
+          services: [{ service_id: flat, quantity: 1, pricing_basis: "bundle" }],
+        },
+        {
+          line_key: "b",
+          enable_proration: false,
+          base_rate: 105_000,
+          services: [{ service_id: endpoint, quantity: 1, pricing_basis: "bundle" }],
+        },
+      ],
+    };
+    const scenario = await draftContractToScenario(context.db, context.tenantId, input);
+    expect(scenario.lines.filter((l) => l.contract_line_type === "Fixed")).toHaveLength(2);
+    const { total, byService } = await simulatedFixedTotal(input);
+    expect(total).toBe(405_000);
+    expect(byService.get(flat)).toBe(300_000);
+    expect(byService.get(endpoint)).toBe(105_000);
+  });
+
+  it("simulates a Prepaid Block draft line: a 40 h / $4,400 block is issued in the start period (alga-2026-0002695)", async () => {
+    const remote = await createTestService(context, { service_name: "Remote Support", default_rate: 11_000 });
+    const input = draft([], {
+      start_date: "2026-10-01T00:00:00Z",
+      fixed_lines: [],
+      prepaid_block_lines: [
+        {
+          name: "Remote Support block",
+          services: [{ service_id: remote, hourly_rate: 11_000 }],
+          block: {
+            block_minutes: 2_400,
+            block_price: 440_000,
+            sold_as_service_id: remote,
+            expiry_months: 12,
+            trigger_on_exhaustion: true,
+            trigger_on_expiry: true,
+          },
+        },
+      ],
+    });
+    const scenario = await draftContractToScenario(context.db, context.tenantId, input);
+    const blockLine = scenario.lines.find((l) => l.prepaid_block);
+    expect(blockLine).toMatchObject({
+      contract_line_type: "Hourly",
+      prepaid_block: { block_minutes: 2_400, block_price: 440_000, expiry_months: 12, trigger_on_expiry: true },
+    });
+
+    const result = await simulateContractScenario(context.db, context.tenantId, scenario);
+    const issues = result.periods.flatMap((p) => p.lines.filter((l) => l.charge_type === "prepaid_block"));
+    expect(issues.length).toBeGreaterThan(0);
+    expect(issues[0].net_amount).toBe(440_000);
+    const october = result.periods.find((p) => p.lines.some((l) => l.charge_type === "prepaid_block"));
+    expect(JSON.stringify(october)).toContain("2026-10");
   });
 });

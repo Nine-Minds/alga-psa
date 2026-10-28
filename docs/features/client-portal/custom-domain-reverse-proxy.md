@@ -127,7 +127,11 @@ Expected — internal users can't use the client portal; they're redirected to t
 ## How it works (for the curious)
 
 The server keeps serving on its primary host (`NEXTAUTH_URL`, e.g. `https://alga.acme.com`).
-When a request arrives on a different host, edge middleware redirects to the canonical sign-in
-page, the user authenticates there, and a short-lived one-time token hands the session back to
-the custom domain (cookies can't cross domains). The only thing that makes this work end-to-end
-is your proxy preserving the `Host` header.
+When a request arrives on a registered vanity domain (one that has an active `portal_domains`
+row), the sign-in page resolves the tenant from the host server-side and pre-scopes
+authentication to that tenant. Edge middleware then redirects to the canonical sign-in page,
+the user authenticates there scoped to the correct tenant, and a short-lived one-time token
+hands the session back to the custom domain (cookies can't cross domains). If a request arrives
+on a host that has no active `portal_domains` row, the server falls through to the
+tenant-discovery form rather than signing in unscoped. The only thing that makes this work
+end-to-end is your proxy preserving the `Host` header.

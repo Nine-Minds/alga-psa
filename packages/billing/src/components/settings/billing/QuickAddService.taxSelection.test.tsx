@@ -24,7 +24,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/billing/actions/serviceActions', () => ({
-  createService: (...args: unknown[]) => mocks.createService(...args),
+  createServiceWithPricing: (...args: unknown[]) => mocks.createService(...args),
   setServicePrices: (...args: unknown[]) => mocks.setServicePrices(...args),
   createServiceTypeInline: (...args: unknown[]) => mocks.createServiceTypeInline(...args),
   updateServiceTypeInline: (...args: unknown[]) => mocks.updateServiceTypeInline(...args),
@@ -45,7 +45,10 @@ vi.mock('@alga-psa/billing/actions/categoryActions', () => ({
 vi.mock('@alga-psa/ui/components/providers/TenantProvider', () => ({
   useTenant: () => ({ tenant: 'tenant-1' }),
 }));
-vi.mock('@alga-psa/core', () => ({
+// Partial: the price rows now convert through lib/currency/rateInput, which
+// needs core's real currency-exponent helpers.
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/core')>()),
   CURRENCY_OPTIONS: [{ value: 'USD', label: 'USD' }],
   getCurrencySymbol: () => '$',
 }));

@@ -193,7 +193,18 @@ incomplete journey identities cannot satisfy export completeness.
 
 For an already collected JSON snapshot, run
 `node scripts/reconcile-browser-metric-executions.mjs input.json report.json`.
-Non-green results retain their report and exit unsuccessfully. The automatic
+Non-green results retain their report. The exit code follows the overall status:
+`passed` and `not-required` exit 0; `lane-unsuccessful` also exits 0, since it
+means the browser job itself failed, was skipped or was cancelled, which the
+regression gate and the `gate_runs` tab already report, and its missing export
+is expected rather than a reporting gap; `incomplete` exits 1. Each record
+carries `blocking`: a record on an unsuccessful lane blocks only for export
+anomalies (`export-attempted-but-missing`, `recorder-unsuccessful`,
+`recorder-not-completed`, `duplicate-run-export`, `conflicting-export-identity`,
+`invalid-row-kind`). A green lane with an unknown tested revision still blocks.
+Before this policy (2026-10-09) every red browser lane also produced a failed
+reconcile and a `workflow_health` row, which was 109 rows in nine days, nearly
+all `tested-revision-unknown, artifact-missing, export-not-attempted`. The automatic
 trigger requires this workflow and its scripts on the default branch; its live
 credentialed execution has not yet been verified. Scorecard publication and
 detection of workflows that were never created remain rollout work. This
@@ -361,7 +372,9 @@ step): `timestamp_utc`, `workflow`, `conclusion`, `run_url`, `run_attempt`,
 `phase` and `code` from `browser-metric-collection.json`, `status` and the
 distinct per-record `issues` from `browser-metric-reconciliation.json`. A green
 run writes nothing, so the most recent row is the last failure and a gap after it
-means the workflow recovered.
+means the workflow recovered. A reconcile of a run whose browser lane failed or
+was cancelled is `lane-unsuccessful`, which is green here; those failures belong
+to `gate_runs`.
 
 `flaky_tests` gets the weekly `Flaky test report` (`scripts/record-flaky-tests.mjs`):
 one row per test per report with `reported_at_utc`, the ISO `week`, `window_days`,
@@ -375,6 +388,39 @@ Owners, status and fix PRs are tracked by hand in a tab of your own (for example
 `flaky_test_owners`, keyed by `test_id`) and joined with a lookup; no script writes
 to it, so nothing typed there is overwritten. Both tabs are created with their
 header on first append, like every other tab here.
+
+## Gate runs
+
+The suite rows above describe one lane each, and a lane that stopped short
+blanks its pass rate (see "Partial runs"). Neither says whether the candidate
+passed the production regression gate, so a red `main` can hide behind suite
+charts that read 100%.
+
+`gate_runs` records that verdict: one row per `production-regression.yml` run,
+appended by `scripts/record-gate-metrics.mjs` from the last step of the
+`readiness` job (`if: always()`, `continue-on-error`), on every event. Columns:
+
+| column | meaning |
+|---|---|
+| `timestamp_utc`, `run_kind`, `event_name`, `branch`, `commit`, `run_url`, `run_attempt` | as in `metrics`; `branch` is the PR head branch on pull requests |
+| `gate_status` | `passed` or `failed` from `test-results/production-readiness/aggregate.json`; `missing` when the readiness step wrote no aggregate |
+| `failed_lanes` | orchestrator jobs whose result was neither `success` nor `skipped`, as `lane:result` (for example `unit:failure, browser:cancelled`) |
+| `failed_requirements` | aggregate `results` entries with status `failed` (artifact ids such as `server-unit-aggregate`) |
+| `quarantined_requirements` | entries whose status starts with `quarantined` |
+| `failure_count`, `failures` | the aggregate's failure list; `failures` is cut at 2,000 characters |
+| `schema_version` | 1 |
+
+`failed_lanes` comes from `toJSON(needs)`, so it is filled even when the
+aggregate is missing. A cancelled run never reaches this step and writes no row,
+the same as every other recorder here.
+
+The `charts` tab carries a "Main gate" block (rows 8-14) with the weekly main
+push count, red count and distinct red lanes for the last six ISO weeks. The
+timestamps are ISO text, which `COUNTIFS` will not compare with `>=`, so the
+counters use `SUMPRODUCT` with `TEXT(week,"yyyy-mm-dd")` bounds, for example
+`=SUMPRODUCT((gate_runs!$B$2:$B="main")*(gate_runs!$A$2:$A>=TEXT(B9,"yyyy-mm-dd"))*(gate_runs!$A$2:$A<TEXT(B9+7,"yyyy-mm-dd"))*(gate_runs!$H$2:$H<>"passed"))`.
+Formulas live only in the sheet; scripts never write them. The step also writes a one-line table to the run's job summary, so the
+verdict and red lanes are visible without the sheet.
 
 ## One-time setup
 

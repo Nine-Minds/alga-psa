@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react';
 import {
   useReactTable,
@@ -9,6 +11,7 @@ import {
   SortingState,
   PaginationState,
 } from '@tanstack/react-table';
+import { useTranslation } from 'react-i18next';
 import { Text } from './Text';
 import { CustomSelect } from './CustomSelect';
 import { Alert } from './Alert';
@@ -76,6 +79,8 @@ export function DataTable<Row extends Record<string, any>>({
   minColumnWidth = 120,
   onVisibleColumnsChange,
 }: DataTableProps<Row>) {
+  const { t } = useTranslation('common');
+
   // Responsive column hiding
   const containerRef = useRef<HTMLDivElement>(null);
   const [visibleColumnKeys, setVisibleColumnKeys] = useState<Set<string>>(
@@ -434,7 +439,10 @@ export function DataTable<Row extends Record<string, any>>({
             </svg>
             {hiddenColumnsMessage
               ? hiddenColumnsMessage(hiddenColumnCount)
-              : `${hiddenColumnCount} column${hiddenColumnCount > 1 ? 's' : ''} hidden due to limited space. Resize to see more.`}
+              : t('dataTable.responsiveColumnsHidden', {
+                  count: hiddenColumnCount,
+                  defaultValue: `${hiddenColumnCount} column${hiddenColumnCount > 1 ? 's' : ''} hidden due to limited space. Resize to see more.`,
+                })}
           </div>
         </Alert>
       )}
@@ -514,7 +522,7 @@ export function DataTable<Row extends Record<string, any>>({
             {rows.length === 0 && (
               <tr>
                 <td colSpan={visibleColumns.length} style={{ ...tdStyle, textAlign: 'center', color: 'var(--alga-muted-fg)' }}>
-                  No results
+                  {t('dataTable.empty', { defaultValue: 'No results' })}
                 </td>
               </tr>
             )}
@@ -525,7 +533,14 @@ export function DataTable<Row extends Record<string, any>>({
       {paginate && (totalPages > 1 || totalRows > 0) && (
         <div style={paginationStyle}>
           <Text tone="muted" style={{ fontSize: '14px' }}>
-            {totalRows === 0 ? '0 items' : `${firstItem}\u2013${lastItem} of ${totalRows} items`}
+            {totalRows === 0
+              ? t('dataTable.pagination.empty', { defaultValue: '0 items' })
+              : t('dataTable.pagination.range', {
+                  first: firstItem,
+                  last: lastItem,
+                  count: totalRows,
+                  defaultValue: `${firstItem}–${lastItem} of ${totalRows} item${totalRows === 1 ? '' : 's'}`,
+                })}
           </Text>
 
           {totalPages > 1 && (
@@ -549,7 +564,7 @@ export function DataTable<Row extends Record<string, any>>({
           )}
 
           <CustomSelect
-            options={pageSizeOptions.map(n => ({ value: String(n), label: `${n} per page` }))}
+            options={pageSizeOptions.map(n => ({ value: String(n), label: t('dataTable.pagination.perPage', { count: n, defaultValue: `${n} per page` }) }))}
             value={String(pageSize)}
             onValueChange={(value) => setPageSize(Number(value))}
             style={{ width: 'auto', minWidth: '120px' }}

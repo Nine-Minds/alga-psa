@@ -58,6 +58,7 @@ describe('AlgaDesk route/API boundary smoke', () => {
       '/api/v1/projects',
       '/api/v1/assets',
       '/api/v1/time-entries',
+      '/api/v1/stopwatch/active',
       '/api/v1/workflow-runs',
       '/api/v1/extensions',
       '/api/chat/v1/completions',

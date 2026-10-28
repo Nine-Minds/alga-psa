@@ -2218,6 +2218,9 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Stopwatch",
+      "{{from}} → {{to}}",
+      "RMA {{id}}",
       "({{count}} ticket)",
       "({{count}} tickets)",
       ",",
@@ -2276,6 +2279,7 @@
       "Contract.pdf",
       "Contract:",
       "Contract: {{name}}",
+      "Contract: {{contract}}",
       "Control",
       "CPU",
       "Cron",
@@ -2285,6 +2289,7 @@
       "Dashboard | AlgaPSA",
       "date",
       "Datto",
+      "Datto RMM",
       "Deadline",
       "Debug",
       "December",
@@ -2304,6 +2309,7 @@
       "file-upload",
       "Filters",
       "Firewall",
+      "{{size}} GB",
       "Gmail",
       "Google",
       "Google Calendar",
@@ -2446,6 +2452,7 @@
       "Shift",
       "short-text",
       "Simulator",
+      "Sites",
       "SKU",
       "SLA",
       "Slug",
@@ -2556,7 +2563,9 @@
       "is",
       "Cc",
       "Bcc",
-      "Cc/Bcc"
+      "Cc/Bcc",
+      "Training",
+      "Code 128"
     ],
     "caseInsensitive": [
       "account",

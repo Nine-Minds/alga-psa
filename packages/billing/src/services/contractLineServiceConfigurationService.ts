@@ -1,5 +1,5 @@
 
-import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
+import { resolveUnitOfMeasure, withUnitCode } from '@alga-psa/core/unitOfMeasure';
 import { resolveUsageMeasurementRevision, setUsageMeasurementModeInTransaction } from '../lib/billing/usageMeasurementTransitions';
 import { lockTenantBilling } from '../lib/billing/billingMutationLock';
 import {
@@ -10,6 +10,7 @@ import {
 } from '../lib/billing/seatRevisions';
 import { resolveRecurringUnitKind, type RecurringUnitKind } from '@alga-psa/shared/billingClients/recurringUnitPricing';
 import { Knex } from 'knex';
+import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import {
   IContractLineServiceConfiguration,
@@ -21,7 +22,7 @@ import {
   IUserTypeRate
 } from '@alga-psa/types';
 import ContractLineServiceConfiguration from '../models/contractLineServiceConfiguration';
-import ContractLineServiceFixedConfig from '../models/contractLineServiceFixedConfig';
+import ContractLineServiceFixedConfig, { resolveFixedMemberRateWrite } from '../models/contractLineServiceFixedConfig';
 import ContractLineServiceHourlyConfig from '../models/contractLineServiceHourlyConfig';
 import ContractLineServiceUsageConfig from '../models/contractLineServiceUsageConfig';
 import ContractLineServiceBucketConfig from '../models/contractLineServiceBucketConfig';
@@ -214,7 +215,12 @@ export class ContractLineServiceConfigurationService {
         case 'Fixed':
           await fixedConfigModel.create({
             config_id: configId,
-            base_rate: (typeConfig as IContractLineServiceFixedConfig)?.base_rate ?? null,
+            // A stored base_rate must state its meaning; seats are per_unit.
+            ...resolveFixedMemberRateWrite({
+              base_rate: (typeConfig as IContractLineServiceFixedConfig)?.base_rate ?? null,
+              base_rate_basis: (typeConfig as IContractLineServiceFixedConfig)?.base_rate_basis,
+              pricing_basis: (typeConfig as IContractLineServiceFixedConfig)?.pricing_basis ?? 'bundle',
+            }),
             rate_provenance: (typeConfig as IContractLineServiceFixedConfig)?.rate_provenance ?? undefined,
             pricing_basis: (typeConfig as IContractLineServiceFixedConfig)?.pricing_basis ?? 'bundle',
             // enable_proration: (typeConfig as IContractLineServiceFixedConfig)?.enable_proration ?? false, // Removed: Handled in contract_line_fixed_config
@@ -421,7 +427,9 @@ export class ContractLineServiceConfigurationService {
             // delete fixedUpdateData.billing_cycle_alignment; // Removed as property no longer exists
             // Only update if there are other fields left (e.g., base_rate)
             if (Object.keys(fixedUpdateData).length > 0) {
-              await fixedConfigModel.update(configId, fixedUpdateData);
+              // Model.update recomputes basis + provenance with the rate and
+              // keeps the stored basis when the patch does not state one.
+              await fixedConfigModel.update(configId, fixedUpdateData as Parameters<typeof fixedConfigModel.update>[1]);
             }
             break;
             
@@ -549,8 +557,225 @@ export class ContractLineServiceConfigurationService {
    */
   async getConfigurationForService(contractLineId: string, serviceId: string): Promise<IContractLineServiceConfiguration | null> {
     await this.initKnex();
-    
+
+    // LEVERAGE: pattern template-vs-live-branch — template lines live in separate tables keyed by template_line_id
+    if (await this.findTemplateLine(this.knex, contractLineId)) {
+      const row = await this.templateTable(this.knex, 'contract_template_line_service_configuration')
+        .where({ template_line_id: contractLineId, service_id: serviceId })
+        .orderByRaw(`CASE WHEN configuration_type = 'Bucket' THEN 1 ELSE 0 END`)
+        .first();
+      return row ? this.mapTemplateConfigRow(row) : null;
+    }
+
     return await this.planServiceConfigModel.getByContractLineIdAndServiceId(contractLineId, serviceId);
+  }
+
+  private templateTable(conn: Knex | Knex.Transaction, table: string): Knex.QueryBuilder {
+    return tenantDb(conn as Knex, this.tenant).table(table);
+  }
+
+  private async findTemplateLine(conn: Knex | Knex.Transaction, contractLineId: string) {
+    return this.templateTable(conn, 'contract_template_lines')
+      .where({ template_line_id: contractLineId })
+      .first();
+  }
+
+  private mapTemplateConfigRow(row: any): IContractLineServiceConfiguration {
+    const { template_line_id, ...rest } = row;
+    return { ...rest, contract_line_id: template_line_id } as IContractLineServiceConfiguration;
+  }
+
+  /**
+   * Writes the type-specific template config row (hourly/usage/bucket) for a template
+   * service configuration, updating when it exists and inserting otherwise. Fixed
+   * configurations have no template type-specific row and are ignored here.
+   * Template schema has no rate-tier storage, so tiers are intentionally not handled.
+   */
+  async upsertTemplateTypeConfig(
+    trx: Knex | Knex.Transaction,
+    configId: string,
+    configurationType: string,
+    data: Record<string, any> | undefined,
+  ): Promise<void> {
+    await this.initKnex();
+    const now = trx.fn.now();
+    const pick = (keys: string[]) => {
+      const out: Record<string, any> = {};
+      for (const key of keys) {
+        if (data && data[key] !== undefined) out[key] = data[key];
+      }
+      return out;
+    };
+
+    let table: string;
+    let values: Record<string, any>;
+    let createDefaults: Record<string, any>;
+    if (configurationType === 'Hourly') {
+      table = 'contract_template_line_service_hourly_config';
+      values = pick([
+        'hourly_rate', 'minimum_billable_time', 'round_up_to_nearest', 'enable_overtime',
+        'overtime_rate', 'overtime_threshold', 'enable_after_hours_rate', 'after_hours_multiplier',
+      ]);
+      createDefaults = { minimum_billable_time: 15, round_up_to_nearest: 15 };
+    } else if (configurationType === 'Usage') {
+      table = 'contract_template_line_service_usage_config';
+      values = pick(['unit_of_measure', 'enable_tiered_pricing', 'minimum_usage', 'base_rate']);
+      if (values.unit_of_measure !== undefined) {
+        values = withUnitCode(values as { unit_of_measure: string }) as Record<string, any>;
+      }
+      createDefaults = {
+        ...withUnitCode({ unit_of_measure: resolveUnitOfMeasure({ fallback: 'C62' }).label }),
+        enable_tiered_pricing: false,
+      };
+    } else if (configurationType === 'Bucket') {
+      table = 'contract_template_line_service_bucket_config';
+      values = pick(['total_minutes', 'billing_period', 'overage_rate', 'allow_rollover']);
+      createDefaults = { total_minutes: 0, billing_period: 'monthly', overage_rate: 0, allow_rollover: false };
+    } else {
+      return;
+    }
+
+    const existing = await this.templateTable(trx, table).where({ config_id: configId }).first();
+    if (existing) {
+      if (Object.keys(values).length > 0) {
+        await this.templateTable(trx, table)
+          .where({ config_id: configId })
+          .update({ ...values, updated_at: now });
+      }
+      return;
+    }
+    if (configurationType === 'Hourly' && values.hourly_rate === undefined) {
+      throw new Error('Hourly rate is required when creating hourly configuration.');
+    }
+    await this.templateTable(trx, table).insert({
+      tenant: this.tenant,
+      config_id: configId,
+      ...createDefaults,
+      ...values,
+      created_at: now,
+      updated_at: now,
+    });
+  }
+
+  /**
+   * Deletes type-specific template rows that no longer apply once a configuration's type
+   * changes (e.g. Hourly -> Fixed), so stale rows cannot be picked up by readers.
+   * The bucket overlay is kept for Hourly/Usage/Bucket and dropped for Fixed.
+   */
+  async clearStaleTemplateTypeRows(
+    trx: Knex | Knex.Transaction,
+    configId: string,
+    configurationType: string,
+  ): Promise<void> {
+    await this.initKnex();
+    if (configurationType !== 'Hourly') {
+      await this.templateTable(trx, 'contract_template_line_service_hourly_config').where({ config_id: configId }).delete();
+    }
+    if (configurationType !== 'Usage') {
+      await this.templateTable(trx, 'contract_template_line_service_usage_config').where({ config_id: configId }).delete();
+    }
+    if (!['Hourly', 'Usage', 'Bucket'].includes(configurationType)) {
+      await this.templateTable(trx, 'contract_template_line_service_bucket_config').where({ config_id: configId }).delete();
+    }
+  }
+
+  /**
+   * Template counterpart of updateConfiguration: updates the base template config row
+   * (and the mirrored contract_template_line_services row) plus the type-specific row.
+   */
+  async updateTemplateConfiguration(
+    configId: string,
+    baseUpdates?: Partial<IContractLineServiceConfiguration>,
+    typeConfig?: Record<string, any>,
+  ): Promise<void> {
+    await this.initKnex();
+    await this.knex.transaction(async (trx) => {
+      const base = await this.templateTable(trx, 'contract_template_line_service_configuration')
+        .where({ config_id: configId })
+        .first();
+      if (!base) {
+        throw new Error(`Configuration with ID ${configId} not found.`);
+      }
+      const previousType = base.configuration_type;
+      const patch: Record<string, any> = {};
+      if (baseUpdates?.quantity !== undefined) patch.quantity = baseUpdates.quantity;
+      if (baseUpdates?.custom_rate !== undefined) patch.custom_rate = baseUpdates.custom_rate;
+      if (baseUpdates?.configuration_type !== undefined) patch.configuration_type = baseUpdates.configuration_type;
+      if (Object.keys(patch).length > 0) {
+        patch.updated_at = trx.fn.now();
+        await this.templateTable(trx, 'contract_template_line_service_configuration')
+          .where({ config_id: configId })
+          .update(patch);
+        const membershipPatch: Record<string, any> = { updated_at: trx.fn.now() };
+        if (patch.quantity !== undefined) membershipPatch.quantity = patch.quantity;
+        if (patch.custom_rate !== undefined) membershipPatch.custom_rate = patch.custom_rate;
+        await this.templateTable(trx, 'contract_template_line_services')
+          .where({ template_line_id: base.template_line_id, service_id: base.service_id })
+          .update(membershipPatch);
+      }
+      const effectiveType = patch.configuration_type ?? previousType;
+      if (effectiveType !== previousType) {
+        await this.clearStaleTemplateTypeRows(trx, configId, effectiveType);
+      }
+      await this.upsertTemplateTypeConfig(trx, configId, effectiveType, typeConfig);
+    });
+  }
+
+  /**
+   * Finds or creates the base template config row for (template line, service), forcing
+   * its configuration_type. Returns the config id.
+   */
+  private async ensureTemplateBaseConfig(
+    trx: Knex.Transaction,
+    templateLineId: string,
+    serviceId: string,
+    configurationType: string,
+    customRate?: number | null,
+  ): Promise<string> {
+    const existing = await this.templateTable(trx, 'contract_template_line_service_configuration')
+      .where({ template_line_id: templateLineId, service_id: serviceId })
+      .first();
+    if (existing) {
+      const patch: Record<string, any> = {};
+      if (existing.configuration_type !== configurationType) {
+        patch.configuration_type = configurationType;
+        await this.clearStaleTemplateTypeRows(trx, existing.config_id, configurationType);
+      }
+      if (customRate !== undefined) patch.custom_rate = customRate;
+      if (Object.keys(patch).length > 0) {
+        await this.templateTable(trx, 'contract_template_line_service_configuration')
+          .where({ config_id: existing.config_id })
+          .update({ ...patch, updated_at: trx.fn.now() });
+      }
+      return existing.config_id;
+    }
+    const membership = await this.templateTable(trx, 'contract_template_line_services')
+      .where({ template_line_id: templateLineId, service_id: serviceId })
+      .first();
+    if (!membership) {
+      await this.templateTable(trx, 'contract_template_line_services').insert({
+        tenant: this.tenant,
+        template_line_id: templateLineId,
+        service_id: serviceId,
+        quantity: null,
+        custom_rate: customRate ?? null,
+        created_at: trx.fn.now(),
+        updated_at: trx.fn.now(),
+      });
+    }
+    const configId = uuidv4();
+    await this.templateTable(trx, 'contract_template_line_service_configuration').insert({
+      tenant: this.tenant,
+      config_id: configId,
+      template_line_id: templateLineId,
+      service_id: serviceId,
+      configuration_type: configurationType,
+      custom_rate: customRate ?? null,
+      quantity: null,
+      created_at: trx.fn.now(),
+      updated_at: trx.fn.now(),
+    });
+    return configId;
   }
 
   /**
@@ -565,6 +790,25 @@ export class ContractLineServiceConfigurationService {
     await this.initKnex();
 
     return await this.knex.transaction(async (trx) => {
+      // LEVERAGE: pattern template-vs-live-branch — see getConfigurationForService
+      const templateLine = await this.findTemplateLine(trx, contractLineId);
+      if (templateLine) {
+        // Template bucket rows are keyed by the config_id of the service's primary
+        // (Hourly/Usage) configuration, matching the contract wizard. Only create a
+        // standalone Bucket-typed base row when the service has no configuration yet.
+        const primary = await this.templateTable(trx, 'contract_template_line_service_configuration')
+          .where({ template_line_id: contractLineId, service_id: serviceId })
+          .first();
+        const configId = primary
+          ? primary.config_id
+          : await this.ensureTemplateBaseConfig(trx, contractLineId, serviceId, 'Bucket');
+        await this.upsertTemplateTypeConfig(trx, configId, 'Bucket', {
+          ...bucketConfigData,
+          billing_period: bucketConfigData.billing_period ?? templateLine.billing_frequency ?? 'monthly',
+        });
+        return configId;
+      }
+
       // Create models with transaction
       const planServiceConfigModel = new ContractLineServiceConfiguration(trx, this.tenant);
       const bucketConfigModel = new ContractLineServiceBucketConfig(trx, this.tenant);
@@ -657,6 +901,13 @@ export class ContractLineServiceConfigurationService {
     await this.initKnex();
 
     return await this.knex.transaction(async (trx) => {
+      // LEVERAGE: pattern template-vs-live-branch — see getConfigurationForService
+      if (await this.findTemplateLine(trx, contractLineId)) {
+        const configId = await this.ensureTemplateBaseConfig(trx, contractLineId, serviceId, 'Hourly');
+        await this.upsertTemplateTypeConfig(trx, configId, 'Hourly', hourlyConfigData);
+        return configId;
+      }
+
       // Create models with transaction
       const planServiceConfigModel = new ContractLineServiceConfiguration(trx, this.tenant);
       const hourlyConfigModel = new ContractLineServiceHourlyConfig(trx);
@@ -735,10 +986,27 @@ export class ContractLineServiceConfigurationService {
     await this.initKnex();
 
     return await this.knex.transaction(async (trx) => {
+      const normalizedUnitRate = Math.max(0, Math.round(usageConfigData.unit_rate ?? 0));
+
+      // LEVERAGE: pattern template-vs-live-branch — see getConfigurationForService
+      if (await this.findTemplateLine(trx, contractLineId)) {
+        // Only touch the rate when the caller supplied one, so partial edits don't zero it.
+        const rateProvided = usageConfigData.unit_rate !== undefined;
+        const configId = await this.ensureTemplateBaseConfig(
+          trx, contractLineId, serviceId, 'Usage', rateProvided ? normalizedUnitRate : undefined,
+        );
+        await this.upsertTemplateTypeConfig(trx, configId, 'Usage', {
+          unit_of_measure: usageConfigData.unit_of_measure,
+          enable_tiered_pricing: usageConfigData.enable_tiered_pricing,
+          minimum_usage: usageConfigData.minimum_usage ?? undefined,
+          base_rate: rateProvided ? normalizedUnitRate : undefined,
+        });
+        return configId;
+      }
+
       const planServiceConfigModel = new ContractLineServiceConfiguration(trx, this.tenant);
       const usageConfigModel = new ContractLineServiceUsageConfig(trx);
 
-      const normalizedUnitRate = Math.max(0, Math.round(usageConfigData.unit_rate ?? 0));
       let baseConfig = await planServiceConfigModel.getByContractLineIdAndServiceId(contractLineId, serviceId);
       let configId: string;
 

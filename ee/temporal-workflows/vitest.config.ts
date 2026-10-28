@@ -1,10 +1,26 @@
 import { configDefaults, defineConfig } from 'vitest/config';
+import fs from 'fs';
 import path from 'path';
 import { createMatchPath, loadConfig } from 'tsconfig-paths';
 
 const workerPaths = loadConfig(path.join(__dirname, 'tsconfig.json'));
 if (workerPaths.resultType !== 'success') throw new Error(`Cannot load worker source paths: ${workerPaths.message}`);
 const matchWorkspacePath = createMatchPath(workerPaths.absoluteBaseUrl, workerPaths.paths, ['main'], false);
+
+// @alga-psa/db publishes subpaths that do not mirror its source tree
+// (./tenantDb -> src/lib/tenantDb.ts), so derive each subpath's source from the
+// package's own exports map. The `.js` specifier form used by runtime code is
+// accepted too. Anything not exported falls through to the src/ mirror below.
+const dbPackageRoot = path.resolve(__dirname, '../../packages/db');
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export const dbSubpathSourceAliases = Object.entries(
+  JSON.parse(fs.readFileSync(path.join(dbPackageRoot, 'package.json'), 'utf8')).exports as Record<string, { types?: string }>,
+)
+  .filter(([subpath, target]) => subpath.startsWith('./') && !subpath.includes('*') && target.types?.endsWith('.ts'))
+  .map(([subpath, target]) => ({
+    find: new RegExp(`^@alga-psa/db/${escapeRegExp(subpath.slice(2))}(\\.js)?$`),
+    replacement: path.join(dbPackageRoot, target.types as string),
+  }));
 
 export default defineConfig({
   // Keep the worker's workspace source mappings in sync with its build. Explicit
@@ -69,6 +85,9 @@ export default defineConfig({
       // runtime) resolves its formatting dependency here. The package.json
       // exports point at dist/, which is not built in test environments, so map
       // it to source like the other workspace packages below.
+      { find: /^@alga-psa\/predicates$/, replacement: path.resolve(__dirname, '../../packages/predicates/src/index.ts') },
+      { find: /^@alga-psa\/predicates\/sql$/, replacement: path.resolve(__dirname, '../../packages/predicates/src/sql/index.ts') },
+      { find: /^@alga-psa\/predicates\/(.*)$/, replacement: path.resolve(__dirname, '../../packages/predicates/src/$1') },
       { find: /^@alga-psa\/formatting$/, replacement: path.resolve(__dirname, '../../packages/formatting/src/index.ts') },
       { find: /^@alga-psa\/formatting\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/formatting/src')}/$1` },
       // Workspace packages resolved from source — their package.json entries
@@ -89,10 +108,7 @@ export default defineConfig({
       { find: /^@alga-psa\/workflows\/persistence$/, replacement: path.resolve(__dirname, '../packages/workflows/src/persistence/index.ts') },
       { find: /^@alga-psa\/workflows\/(.*)$/, replacement: `${path.resolve(__dirname, '../packages/workflows/src')}/$1` },
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../../packages/db/src/index.ts') },
-      { find: '@alga-psa/db/workDate', replacement: path.resolve(__dirname, '../../packages/db/src/lib/workDate.ts') },
-      // Accept the ESM .js specifier form used by runtime code (package exports map it to dist/).
-      { find: /^@alga-psa\/db\/admin(\.js)?$/, replacement: path.resolve(__dirname, '../../packages/db/src/lib/admin.ts') },
-      { find: /^@alga-psa\/db\/tenant(\.js)?$/, replacement: path.resolve(__dirname, '../../packages/db/src/lib/tenant.ts') },
+      ...dbSubpathSourceAliases,
       { find: /^@alga-psa\/db\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/db/src')}/$1` },
       { find: /^@alga-psa\/event-bus$/, replacement: path.resolve(__dirname, '../../packages/event-bus/src/index.ts') },
       { find: /^@alga-psa\/event-bus\/publishers$/, replacement: path.resolve(__dirname, '../../packages/event-bus/src/publishers/index.ts') },

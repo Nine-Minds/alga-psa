@@ -159,3 +159,14 @@ serviceAccount:
   name: ""
   annotations: {}
   automountServiceAccountToken: true
+
+# Prometheus metrics (GET /metrics on the service http port).
+# The ServiceMonitor is off by default so appliance/CE installs are unaffected;
+# hosted environments enable it and set the label their Prometheus selects on
+# (e.g. release: prometheus).
+metrics:
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    path: /metrics
+    labels: {}

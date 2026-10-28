@@ -33,6 +33,12 @@ export interface AmpExportResult {
  * ids on re-import — the identity ledger treats them as opaque source keys),
  * reference data travels as names, and the output validates against the same
  * SDK validator every other producer uses.
+ *
+ * `products` and `vendor_products` are deliberately NOT exported: they are
+ * import-only entities (distributor price lists, catalog seeds). An export
+ * would have to choose between catalog rows and per-currency price rows, and
+ * round-tripping them through the SKU-match semantics would be lossy. Exclusion
+ * is explicit here so a reader does not mistake the omission for an oversight.
  */
 export class AmpExportService {
   constructor(
@@ -319,6 +325,10 @@ export class AmpExportService {
         'serial_number',
         'client_id',
         'location_id',
+        'status',
+        'contact_name_id',
+        'manufacturer',
+        'model',
         'purchase_date',
         'attributes',
         'created_at',
@@ -326,6 +336,7 @@ export class AmpExportService {
       )
       .orderBy('asset_id');
     return rows.map((row) => {
+      // Pre-20261009 rows kept make/model in attributes; the columns win.
       const attributes = (row.attributes ?? {}) as { manufacturer?: string; model?: string };
       return {
         package_record_id: `asset-${row.asset_id}`,
@@ -336,8 +347,10 @@ export class AmpExportService {
         name: row.name,
         asset_type_name: row.asset_type || null,
         serial_number: row.serial_number || null,
-        manufacturer: attributes.manufacturer ?? null,
-        model: attributes.model ?? null,
+        manufacturer: row.manufacturer ?? attributes.manufacturer ?? null,
+        model: row.model ?? attributes.model ?? null,
+        status: row.status || null,
+        assignee_external_identifier: row.contact_name_id ? `contact-${row.contact_name_id}` : null,
         purchase_date: toDateOnly(row.purchase_date),
         created_at: toRfc3339(row.created_at),
         updated_at: toRfc3339(row.updated_at),

@@ -52,12 +52,23 @@ vi.mock('@alga-psa/auth/actions', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: publishEventMock,
   publishWorkflowEvent: publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 // TicketService uses the server-local publisher. Capture delivery at that
 // boundary so the service still exercises its workflow-event behavior.
 vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishWorkflowEvent: publishWorkflowEventMock,
+  publishEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/event-bus', () => ({

@@ -14,7 +14,7 @@ describe('recurring billing run diagnostic contracts', () => {
     const eventSchemasSource = readFileSync(
       resolve(
         __dirname,
-        '../../../../../shared/workflow/runtime/schemas/billingEventSchemas.ts',
+        '../../../../../packages/event-schemas/src/schemas/domain/billingEventSchemas.ts',
       ),
       'utf8',
     );

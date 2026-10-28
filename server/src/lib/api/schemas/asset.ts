@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import { parseCustomRecurrence } from '@alga-psa/assets/lib/maintenanceRecurrence';
 import { 
   uuidSchema, 
   createListQuerySchema, 
@@ -31,11 +32,24 @@ export const createAssetSchema = z.object({
   serial_number: z.string().optional(),
   purchase_date: dateSchema.optional(),
   warranty_end_date: dateSchema.optional(),
+  manufacturer: z.string().max(255).nullable().optional(),
+  model: z.string().max(255).nullable().optional(),
+  vendor_id: uuidSchema.nullable().optional(),
+  /** Minor units (cents). */
+  purchase_cost: z.coerce.number().int().nullable().optional(),
+  purchase_cost_currency: z.string().length(3).nullable().optional(),
+  order_number: z.string().max(255).nullable().optional(),
+  billing_profile_id: uuidSchema.nullable().optional(),
   attributes: z.record(z.unknown()).optional()
 });
 
+// Checked per asset type in AssetService: an untagged union matched workstation first and stripped other types' fields.
+const assetExtensionDataInputSchema = z.record(z.unknown());
+
 // Update asset schema (all fields optional)
-export const updateAssetSchema = createUpdateSchema(createAssetSchema);
+export const updateAssetSchema = createAssetSchema.partial().extend({
+  extension_data: assetExtensionDataInputSchema.optional()
+});
 
 // Asset extension schemas for different types
 export const workstationAssetSchema = z.object({
@@ -101,15 +115,23 @@ export const printerAssetSchema = z.object({
   supply_levels: z.record(z.number()).optional()
 });
 
+const assetExtensionSchemas: Record<string, z.AnyZodObject> = {
+  workstation: workstationAssetSchema,
+  network_device: networkDeviceAssetSchema,
+  server: serverAssetSchema,
+  mobile_device: mobileDeviceAssetSchema,
+  printer: printerAssetSchema
+};
+
+/** Validates extension_data against the schema of the asset type; null when the type has no extension table. */
+export function parseAssetExtensionData(assetType: string, data: unknown) {
+  const schema = assetExtensionSchemas[assetType];
+  return schema ? schema.safeParse(data) : null;
+}
+
 // Combined asset creation schema with extension data
 export const createAssetWithExtensionSchema = createAssetSchema.extend({
-  extension_data: z.union([
-    workstationAssetSchema,
-    networkDeviceAssetSchema,
-    serverAssetSchema,
-    mobileDeviceAssetSchema,
-    printerAssetSchema
-  ]).optional()
+  extension_data: assetExtensionDataInputSchema.optional()
 });
 
 // Asset filter schema
@@ -122,6 +144,10 @@ export const assetFilterSchema = baseFilterSchema.extend({
   asset_type: assetTypeSchema.optional(),
   status: z.string().optional(),
   location: z.string().optional(),
+  manufacturer: z.string().optional(),
+  model: z.string().optional(),
+  vendor_id: uuidSchema.optional(),
+  billing_profile_id: uuidSchema.optional(),
   client_name: z.string().optional(),
   has_warranty: booleanTransform.optional(),
   warranty_expired: booleanTransform.optional(),
@@ -149,13 +175,33 @@ export const assetResponseSchema = z.object({
   serial_number: z.string().nullable(),
   purchase_date: dateSchema.nullable(),
   warranty_end_date: dateSchema.nullable(),
+  manufacturer: z.string().nullable().optional(),
+  model: z.string().nullable().optional(),
+  vendor_id: uuidSchema.nullable().optional(),
+  vendor_name: z.string().nullable().optional(),
+  purchase_cost: z.coerce.number().int().nullable().optional(),
+  purchase_cost_currency: z.string().nullable().optional(),
+  order_number: z.string().nullable().optional(),
+  billing_profile_id: uuidSchema.nullable().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,
   attributes: z.record(z.unknown()).nullable().optional(),
-  
+
   // Computed/joined fields
   client_name: z.string().optional(),
+  // FR-C6: the assignee's display name, joined from contacts.
+  contact_name: z.string().nullable().optional(),
+  // FR-E3: the group this asset belongs to, if any.
+  group: z.object({
+    group_id: uuidSchema,
+    name: z.string(),
+    kind: z.enum(['bundle', 'shared_workspace']),
+    location_id: uuidSchema.nullable(),
+    location_name: z.string().nullable(),
+    member_count: z.number().int(),
+    user_count: z.number().int()
+  }).nullable().optional(),
   warranty_status: z.string().optional(),
   maintenance_status: z.string().optional()
 });
@@ -196,7 +242,8 @@ export const assetWithDetailsResponseSchema = assetResponseSchema.extend({
   
   maintenance_schedules: z.array(z.object({
     schedule_id: uuidSchema,
-    schedule_type: z.string(),
+    schedule_name: z.string(),
+    maintenance_type: z.string(),
     frequency: z.string(),
     next_maintenance: dateSchema.nullable(),
     is_active: z.boolean()
@@ -259,45 +306,72 @@ export const assetDocumentResponseSchema = z.object({
 });
 
 // Asset maintenance schemas
-export const createMaintenanceScheduleSchema = z.object({
-  schedule_type: z.enum(['preventive', 'inspection', 'calibration', 'replacement']),
+const maintenanceScheduleWriteSchema = z.object({
+  schedule_name: z.string().trim().min(1).max(255),
+  description: z.string().nullable().optional(),
+  maintenance_type: z.enum(['preventive', 'corrective', 'inspection', 'calibration', 'replacement']),
+  // `custom` reads its rule from schedule_config.recurrence (see maintenanceRecurrence.ts).
   frequency: z.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom']),
-  frequency_interval: z.number().min(1).optional(),
-  start_date: dateSchema,
-  end_date: dateSchema.optional(),
-  notes: z.string().optional(),
-  assigned_to: uuidSchema.optional(),
+  frequency_interval: z.number().int().min(1),
+  // UTC only (`Z` suffix); timestamps with a numeric offset are rejected.
+  next_maintenance: z.string().datetime(),
   is_active: z.boolean().optional().default(true),
-  schedule_config: z.record(z.any()).optional()
-});
+  schedule_config: z.record(z.unknown())
+}).strict();
 
-export const updateMaintenanceScheduleSchema = createUpdateSchema(createMaintenanceScheduleSchema);
+// A custom frequency needs a valid rule. On partial updates this only runs
+// when both fields are present; AssetService re-checks the merged row.
+const requireCustomRecurrence = (
+  data: { frequency?: string; schedule_config?: Record<string, unknown> },
+  ctx: z.RefinementCtx
+): void => {
+  if (data.frequency !== 'custom' || data.schedule_config === undefined) return;
+  try {
+    parseCustomRecurrence(data.schedule_config);
+  } catch (error) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['schedule_config', 'recurrence'], message: (error as Error).message });
+  }
+};
+
+export const createMaintenanceScheduleSchema = maintenanceScheduleWriteSchema.superRefine(requireCustomRecurrence);
+
+// Response-only columns are tolerated on update (and dropped) so a client can
+// PUT back a row it read; legacy and unknown fields are still rejected.
+const maintenanceScheduleReadOnlyFields = [
+  'schedule_id', 'asset_id', 'tenant', 'created_by', 'created_by_name',
+  'created_at', 'updated_at', 'last_maintenance', 'archived_at'
+] as const;
+
+export const updateMaintenanceScheduleSchema = maintenanceScheduleWriteSchema
+  .partial()
+  .extend(Object.fromEntries(maintenanceScheduleReadOnlyFields.map((field) => [field, z.unknown().optional()])))
+  .strict()
+  .superRefine(requireCustomRecurrence)
+  .transform((data) => {
+    const writable = { ...data };
+    for (const field of maintenanceScheduleReadOnlyFields) delete writable[field];
+    return writable as Omit<typeof data, (typeof maintenanceScheduleReadOnlyFields)[number]>;
+  });
 
 export const maintenanceScheduleResponseSchema = z.object({
   schedule_id: uuidSchema,
   asset_id: uuidSchema,
-  schedule_type: z.string(),
+  schedule_name: z.string(),
+  description: z.string().nullable(),
+  maintenance_type: z.enum(['preventive', 'corrective', 'inspection', 'calibration', 'replacement']),
   frequency: z.string(),
-  frequency_interval: z.number().nullable(),
-  start_date: dateSchema,
-  end_date: dateSchema.nullable(),
+  frequency_interval: z.number().int(),
   last_maintenance: dateSchema.nullable(),
-  next_maintenance: dateSchema.nullable(),
-  notes: z.string().nullable(),
-  assigned_to: uuidSchema.nullable(),
+  next_maintenance: z.string().datetime(),
   is_active: z.boolean(),
-  schedule_config: z.record(z.any()).nullable(),
+  schedule_config: z.record(z.unknown()),
+  created_by: uuidSchema,
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,
   
-  // Assigned user details
-  assigned_user: z.object({
-    user_id: uuidSchema,
-    first_name: z.string(),
-    last_name: z.string(),
-    email: z.string()
-  }).optional()
+  archived_at: dateSchema.nullable(),
+  created_by_name: z.string().optional()
 });
 
 export const recordMaintenanceSchema = z.object({
@@ -361,6 +435,8 @@ export const bulkAssetStatusSchema = z.object({
 // Asset statistics schema
 export const assetStatsResponseSchema = z.object({
   total_assets: z.number(),
+  /** Assets whose status kind is `deployable` (FR-B5). */
+  deployed_assets: z.number().optional(),
   assets_by_type: z.record(z.number()),
   assets_by_status: z.record(z.number()),
   assets_by_client: z.record(z.number()),

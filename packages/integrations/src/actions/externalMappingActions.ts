@@ -1,6 +1,7 @@
 'use server';
 
 import logger from '@alga-psa/core/logger';
+import { PAYMENT_TERMS } from '@alga-psa/shared/billingClients/paymentPreferences';
 import {
   auditLog,
   ACCOUNTING_EXPORT_INVOICE_CANCELLED,
@@ -29,6 +30,11 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import {
+  duplicateMappingError,
+  duplicateTargetError,
+  mapUniqueViolation,
+} from '../lib/externalMappingUniqueViolation';
 import { getStoredQboCredentialsMap, QboClientService } from '../lib/qbo/qboClientService';
 import { isQboAutomatedSalesTaxEnabled } from '../lib/qbo/qboTaxSettings';
 import { QBO_AST_PSEUDO_TAX_CODES } from '../lib/qbo/types';
@@ -55,6 +61,17 @@ class ExpectedExternalMappingError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'ExpectedExternalMappingError';
+  }
+}
+
+/**
+ * A mapping conflict found by a pre-write check, carrying the user-facing
+ * error (message + i18n key) the 23505 translation would have produced.
+ */
+class MappingConflictError extends Error {
+  constructor(readonly conflict: ActionMessageError) {
+    super('External mapping conflict');
+    this.name = 'MappingConflictError';
   }
 }
 
@@ -156,14 +173,14 @@ const MUTABLE_MAPPING_ENTITY_TYPES = new Set([...CATALOG_ENTITY_TYPES, 'invoice'
 const REALM_BASED_INTEGRATION_TYPES = new Set(['quickbooks_online', 'xero']);
 
 /** CSV providers export to a file, not a connected realm. */
-const CSV_INTEGRATION_TYPES = new Set(['quickbooks_csv', 'xero_csv']);
+const CSV_INTEGRATION_TYPES = new Set(['quickbooks_csv', 'xero_csv', 'quickbooks_desktop']);
 
 const KNOWN_INTEGRATION_TYPES = new Set([
   ...REALM_BASED_INTEGRATION_TYPES,
   ...CSV_INTEGRATION_TYPES,
 ]);
 
-const PAYMENT_TERM_IDS = new Set(['net_30', 'net_15', 'due_on_receipt']);
+const PAYMENT_TERM_IDS = new Set<string>(PAYMENT_TERMS);
 
 function cloneMapping(mapping: ExternalEntityMapping): ExternalEntityMapping {
   return {
@@ -856,6 +873,37 @@ export const createExternalEntityMapping = withAuth(async (
 });
 
 /**
+ * QuickBooks Desktop stores the posting *account* name as the target of these
+ * entity types (the named item lives in metadata), and many services or tax
+ * regions post to one account.
+ */
+const QBD_SHARED_TARGET_ENTITY_TYPES = new Set<string>([
+  'service',
+  DISCOUNT_MAPPING_ENTITY_TYPE,
+  'tax_code',
+]);
+
+/**
+ * Whether this row's external target is one several entities may legitimately
+ * share. Mirrors the WHERE predicate of idx_unique_external_mapping: Xero
+ * revenue-account targets and the QuickBooks Desktop account targets above sit
+ * outside the index and reserve nothing.
+ */
+function sharesExternalTarget(
+  integrationType: string,
+  algaEntityType: string,
+  metadata: Record<string, unknown> | null
+): boolean {
+  if (integrationType === 'xero') {
+    return (metadata?.[XERO_TARGET_KIND_METADATA_KEY] ?? 'item') === 'account';
+  }
+  if (integrationType === 'quickbooks_desktop') {
+    return QBD_SHARED_TARGET_ENTITY_TYPES.has(algaEntityType);
+  }
+  return false;
+}
+
+/**
  * The per-row create path shared by the single and bulk actions: validation,
  * insert-or-relink inside its OWN transaction, audit, workflow event, cache
  * invalidation, and error mapping. Because each call owns its transaction, a
@@ -951,6 +999,23 @@ async function createMappingRow({
         xeroAliasIds = resolved.length > 0 ? resolved : [normalizedRealm];
       }
 
+      // The realm group a conflict is looked for in: the Xero identity group,
+      // or the single realm — keyed through COALESCE exactly as both unique
+      // indexes are, so a NULL realm and '' are one group.
+      const scopeToRealm = <T extends Knex.QueryBuilder>(query: T): T => {
+        if (xeroAliasIds) {
+          query.whereIn('external_realm_id', xeroAliasIds);
+        } else {
+          query.whereRaw("COALESCE(external_realm_id, '') = ?", [normalizedRealm ?? '']);
+        }
+        return query;
+      };
+
+      // Entity side: one mapping per Alga entity per realm. Reported here
+      // rather than left to idx_unique_alga_mapping's 23505, so the entity-side
+      // message does not depend on which index Postgres happens to check
+      // first, and so a relink can never revive a second live row for an
+      // entity that already has one.
       if (xeroAliasIds) {
         const liveConflict = await tenantDb(trx, tenant)
           .table<ExternalEntityMapping>('tenant_external_entity_mappings')
@@ -961,6 +1026,40 @@ async function createMappingRow({
         if (liveConflict) {
           throw new ExpectedExternalMappingError(
             'A mapping for this entity already exists for the connected Xero organisation. Edit the existing mapping instead.'
+          );
+        }
+      } else {
+        const liveForEntity = await scopeToRealm(
+          tenantDb(trx, tenant)
+            .table<ExternalEntityMapping>('tenant_external_entity_mappings')
+            .where({ tenant, integration_type, alga_entity_type, alga_entity_id })
+            .whereNull('deleted_at')
+        ).first();
+        if (liveForEntity) {
+          throw new MappingConflictError(duplicateMappingError());
+        }
+      }
+
+      // Target side: the external target is reserved by LIVE mappings only.
+      // A tombstone reserves nothing, so this check — not a 23505 from
+      // idx_unique_external_mapping — is what reports a real conflict, and an
+      // unlinked row can no longer block the target it used to hold. The
+      // query mirrors the index predicate: rows outside the index share their
+      // target by design, and a row for THIS entity is an entity-side
+      // conflict, reported above.
+      if (!sharesExternalTarget(integration_type, alga_entity_type, metadata ?? null)) {
+        const targetQuery = tenantDb(trx, tenant)
+          .table<ExternalEntityMapping>('tenant_external_entity_mappings')
+          .where({ tenant, integration_type, alga_entity_type, external_entity_id })
+          .whereNot({ alga_entity_id })
+          .whereNull('deleted_at');
+        if (integration_type === 'xero') {
+          targetQuery.whereRaw("COALESCE(metadata ->> 'xeroTargetKind', 'item') <> 'account'");
+        }
+        const targetHolder = await scopeToRealm(targetQuery).first();
+        if (targetHolder) {
+          throw new MappingConflictError(
+            duplicateTargetError({ integration_type, alga_entity_type })
           );
         }
       }
@@ -1103,19 +1202,13 @@ async function createMappingRow({
       error,
     });
 
-    if (error?.code === '23505') {
-      // idx_unique_external_mapping is keyed on the external target; anything
-      // else (idx_unique_alga_mapping) is the same Alga entity mapped twice.
-      if (error?.constraint === 'idx_unique_external_mapping') {
-        return actionError(
-          'This target is already mapped to another entity in this organisation. Choose a different target.',
-          'msp/integrations:errors.mappings.duplicateTarget'
-        );
-      }
-      return actionError(
-        'A mapping already exists for this entity. Edit the existing mapping instead.',
-        'msp/integrations:errors.mappings.duplicate'
-      );
+    if (error instanceof MappingConflictError) {
+      return error.conflict;
+    }
+
+    const uniqueViolation = mapUniqueViolation(error, { integration_type, alga_entity_type });
+    if (uniqueViolation) {
+      return uniqueViolation;
     }
 
     if (error?.code === ACCOUNTING_EXPORT_INVOICE_CANCELLED) {
@@ -1284,6 +1377,7 @@ export const updateExternalEntityMapping = withAuth(async (
     hasExternalEntityIdUpdate: updates.external_entity_id !== undefined,
   });
 
+  let updateScope: { integration_type?: string; alga_entity_type?: string } | null = null;
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
@@ -1300,6 +1394,11 @@ export const updateExternalEntityMapping = withAuth(async (
           'Mapping is unlinked. Create it again to relink the entity.'
         );
       }
+
+      updateScope = {
+        integration_type: before.integration_type,
+        alga_entity_type: before.alga_entity_type,
+      };
 
       // Realm, provider and entity-type fields are not editable here. The
       // persisted entity type determines whether the invoice lock is required.
@@ -1443,7 +1542,7 @@ export const updateExternalEntityMapping = withAuth(async (
     }
     const updateError = error as { code?: string } | null;
     if (updateError?.code === '23505') {
-      return actionError(
+      return mapUniqueViolation(error, updateScope ?? {}) ?? actionError(
         'A mapping already exists for this entity. Edit the existing mapping instead.',
         'msp/integrations:errors.mappings.duplicate'
       );

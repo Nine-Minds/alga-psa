@@ -3,6 +3,7 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import {
   getBoardCloseRulesRow,
   openBundleChildrenCount,
@@ -16,6 +17,7 @@ import {
   type TicketActivityActorInfo,
   type TicketActivitySource,
 } from '@alga-psa/shared/lib/ticketActivity';
+import type { BuiltWorkflowPayload } from '@alga-psa/event-schemas';
 import { diffTicketFields, publishTicketUpdate } from '../lib/liveUpdates';
 import {
   BundlePropagationConfirmationRequiredError,
@@ -34,16 +36,24 @@ import {
 } from '../lib/validateTicketClosure';
 import type { CloseRuleFailure } from '../lib/closeRuleConstants';
 import {
+  buildTicketStatusChangedPayload,
   buildTicketTransitionEvents,
   captureTicketTransitionSnapshot,
   publishTicketTransitionsAfterCommit,
 } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { buildTicketResolutionSlaStageCompletionEvent } from '@alga-psa/shared/services/tickets/ticketSlaStageEvents';
+import {
+  buildTicketClosedPayload,
+  buildTicketMergedPayload,
+  buildTicketUpdatedPayload,
+} from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import {
   BundleConcurrentModificationError,
   resolveClosedMasterChoices,
   type ClosedMasterChoice,
 } from '../lib/ticketBundlePolicy';
+import { effectiveBundleMode } from '../lib/bundleWorkflowLock';
 
 export type BundleMode = 'link_only' | 'sync_updates';
 
@@ -212,10 +222,12 @@ export async function reopenBundleMasterOnly(
   // Keep the denormalized `is_closed` column on tickets in sync with the
   // open status we're moving to — mirrors how updateTicketWithCache flips
   // is_closed when the status transitions across the closed boundary.
+  // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
   await tenantScopedTable(trx, 'tickets', tenant)
     .where({ ticket_id: masterTicketId })
     .update({
       status_id: openStatusId,
+      ...ticketStatusClockPatch(trx, openStatusId),
       is_closed: false,
       closed_at: null,
       closed_by: null,
@@ -404,14 +416,27 @@ export async function mirrorCommentToChild(
   return childGenerated.comment_id;
 }
 
+type BundlePublicationEventType =
+  | 'TICKET_MERGED'
+  | 'TICKET_CLOSED'
+  | 'TICKET_STATUS_CHANGED'
+  | 'TICKET_UPDATED'
+  | 'TICKET_REOPENED'
+  | 'TICKET_SLA_STAGE_ENTERED'
+  | 'TICKET_SLA_STAGE_MET'
+  | 'TICKET_SLA_STAGE_BREACHED';
+
+/** Discriminated by `eventType` so each payload keeps its `BuiltWorkflowPayload<T>` brand. */
 export type BundleAfterCommitPublication = {
-  eventType: string;
-  payload: Record<string, unknown>;
-  eventName?: string;
-  fromState?: string;
-  toState?: string;
-  idempotencyKey?: string;
-};
+  [T in BundlePublicationEventType]: {
+    eventType: T;
+    payload: BuiltWorkflowPayload<T>;
+    eventName?: string;
+    fromState?: string;
+    toState?: string;
+    idempotencyKey?: string;
+  };
+}[BundlePublicationEventType];
 
 /**
  * The child-row fields the apply_resolution consequence needs to mirror the
@@ -434,6 +459,8 @@ export type ApplyClosedMasterChoiceParams = {
   actor: TicketActivityActorInfo;
   source: TicketActivitySource | string;
   occurredAt: string;
+  /** Recorded as the reopen trigger on the master's activity. Defaults to 'add_child'. */
+  reopenTrigger?: string;
 };
 
 /**
@@ -461,8 +488,10 @@ export async function applyClosedMasterChoice(
 
       await tenantScopedTable(trx, 'tickets', tenant)
         .where({ ticket_id: childTicketId })
+        // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
         .update({
           status_id: master.statusId,
+          ...ticketStatusClockPatch(trx, master.statusId),
           is_closed: true,
           closed_at: occurredAt,
           closed_by: actor.userId ?? null,
@@ -507,7 +536,7 @@ export async function applyClosedMasterChoice(
 
       publications.push({
         eventType: 'TICKET_CLOSED',
-        payload: {
+        payload: buildTicketClosedPayload({
           ticketId: childTicketId,
           ...(actor.userId ? { userId: actor.userId, closedByUserId: actor.userId } : {}),
           closedAt: occurredAt,
@@ -516,7 +545,7 @@ export async function applyClosedMasterChoice(
             closed_at: { old: null, new: occurredAt },
             closed_by: { old: null, new: actor.userId ?? null },
           },
-        },
+        }),
         eventName: 'Ticket Closed',
         fromState: previousStatusId ?? undefined,
         toState: master.statusId ?? undefined,
@@ -525,12 +554,12 @@ export async function applyClosedMasterChoice(
       if (previousStatusId && master.statusId && previousStatusId !== master.statusId) {
         publications.push({
           eventType: 'TICKET_STATUS_CHANGED',
-          payload: {
+          payload: buildTicketStatusChangedPayload({
             ticketId: childTicketId,
             previousStatusId,
             newStatusId: master.statusId,
             changedAt: occurredAt,
-          },
+          }),
           eventName: 'Ticket Status Changed',
           fromState: previousStatusId,
           toState: master.statusId,
@@ -547,7 +576,13 @@ export async function applyClosedMasterChoice(
         enteredAt: snapshot?.entered_at ?? null,
         closedAt: occurredAt,
       });
-      if (slaCompletionEvent) {
+      if (slaCompletionEvent?.eventType === 'TICKET_SLA_STAGE_MET') {
+        publications.push({
+          eventType: slaCompletionEvent.eventType,
+          payload: slaCompletionEvent.payload,
+          idempotencyKey: slaCompletionEvent.idempotencyKey,
+        });
+      } else if (slaCompletionEvent?.eventType === 'TICKET_SLA_STAGE_BREACHED') {
         publications.push({
           eventType: slaCompletionEvent.eventType,
           payload: slaCompletionEvent.payload,
@@ -562,7 +597,7 @@ export async function applyClosedMasterChoice(
   const reopenResult = await reopenBundleMasterOnly(trx, tenant, master.masterTicketId, {
     actor,
     source,
-    trigger: 'add_child',
+    trigger: params.reopenTrigger ?? 'add_child',
     eventType: TICKET_ACTIVITY_EVENT.REOPENED,
     openStatusId: master.openStatusId ?? null,
   });
@@ -570,13 +605,13 @@ export async function applyClosedMasterChoice(
   if (reopenResult.reopened && reopenResult.previousStatusId && reopenResult.newStatusId) {
     publications.push({
       eventType: 'TICKET_UPDATED',
-      payload: {
+      payload: buildTicketUpdatedPayload({
         ticketId: master.masterTicketId,
         ...(actor.userId ? { userId: actor.userId, updatedByUserId: actor.userId } : {}),
         changes: {
           status_id: { old: reopenResult.previousStatusId, new: reopenResult.newStatusId },
         },
-      },
+      }),
       eventName: 'Ticket Updated',
     });
 
@@ -604,13 +639,17 @@ export async function applyClosedMasterChoice(
     }).filter((event) => event.eventType === 'TICKET_REOPENED' || event.eventType === 'TICKET_STATUS_CHANGED');
 
     for (const transitionEvent of transition) {
-      publications.push({
-        eventType: transitionEvent.eventType,
-        payload: transitionEvent.payload,
+      const meta = {
         eventName: transitionEvent.workflow?.eventName,
         fromState: transitionEvent.workflow?.fromState,
         toState: transitionEvent.workflow?.toState,
-      });
+      };
+      // Narrow per event so each payload keeps its own brand.
+      if (transitionEvent.eventType === 'TICKET_REOPENED') {
+        publications.push({ eventType: transitionEvent.eventType, payload: transitionEvent.payload, ...meta });
+      } else if (transitionEvent.eventType === 'TICKET_STATUS_CHANGED') {
+        publications.push({ eventType: transitionEvent.eventType, payload: transitionEvent.payload, ...meta });
+      }
     }
   }
 
@@ -685,6 +724,47 @@ async function findBundleMasterIds(
     .distinct('master_ticket_id')
     .whereIn('master_ticket_id', ticketIds);
   return rows.map((row: any) => row.master_ticket_id).filter(Boolean);
+}
+
+/**
+ * Enforces each child's board close rules exactly as a human close would,
+ * returning the first failure (or null). Used before any write by every path
+ * that applies a master's resolution to children.
+ */
+async function findChildCloseRuleFailure(
+  trx: Knex.Transaction,
+  tenant: string,
+  children: Array<BundleTicketRow & Record<string, any>>,
+  actor: TicketActivityActorInfo,
+  source: TicketActivitySource | string
+): Promise<BundleAttachFailure | null> {
+  for (const child of children) {
+    try {
+      await enforceTicketCloseRules(trx, tenant, {
+        ticket: {
+          ticket_id: child.ticket_id,
+          board_id: child.board_id ?? null,
+          category_id: child.category_id ?? null,
+          subcategory_id: child.subcategory_id ?? null,
+          priority_id: child.priority_id ?? null,
+          assigned_to: child.assigned_to ?? null,
+        },
+        actor,
+        source,
+      });
+    } catch (error) {
+      if (error instanceof TicketCloseValidationError) {
+        return {
+          ok: false,
+          code: 'close_rule_failed',
+          childTicketId: child.ticket_id,
+          closeRuleFailures: error.failures,
+        };
+      }
+      throw error;
+    }
+  }
+  return null;
 }
 
 /**
@@ -782,33 +862,14 @@ export async function attachChildrenToBundle(
   // close rules exactly as a human close. Failures must abort before any
   // write so a returned failure leaves nothing behind.
   if (context.isClosed && choice === 'apply_resolution') {
-    for (const childId of childIds) {
-      const child = byId.get(childId)!;
-      try {
-        await enforceTicketCloseRules(trx, tenant, {
-          ticket: {
-            ticket_id: childId,
-            board_id: child.board_id ?? null,
-            category_id: (child as any).category_id ?? null,
-            subcategory_id: (child as any).subcategory_id ?? null,
-            priority_id: (child as any).priority_id ?? null,
-            assigned_to: (child as any).assigned_to ?? null,
-          },
-          actor: params.actor,
-          source,
-        });
-      } catch (error) {
-        if (error instanceof TicketCloseValidationError) {
-          return {
-            ok: false,
-            code: 'close_rule_failed',
-            childTicketId: childId,
-            closeRuleFailures: error.failures,
-          };
-        }
-        throw error;
-      }
-    }
+    const closeRuleFailure = await findChildCloseRuleFailure(
+      trx,
+      tenant,
+      childIds.map((childId) => byId.get(childId)!),
+      params.actor,
+      source
+    );
+    if (closeRuleFailure) return closeRuleFailure;
   }
 
   let openStatusId: string | null = null;
@@ -881,12 +942,12 @@ export async function attachChildrenToBundle(
 
   const publications: BundleAfterCommitPublication[] = childIds.map((childId) => ({
     eventType: 'TICKET_MERGED',
-    payload: {
+    payload: buildTicketMergedPayload({
       sourceTicketId: childId,
       targetTicketId: params.masterTicketId,
       mergedAt: occurredAt,
       reason: params.mergedReason ?? 'bundle:added_children',
-    },
+    }),
     eventName: 'Ticket Merged',
   }));
 
@@ -926,6 +987,163 @@ export async function attachChildrenToBundle(
       publications,
     },
   };
+}
+
+export type BundleModeChangeFailure =
+  | { ok: false; code: 'settings_not_found' }
+  | BundleAttachFailure;
+
+export type BundleModeChangeResult =
+  | {
+      ok: true;
+      value: {
+        settings: { master_ticket_id: string; mode: BundleMode; reopen_on_child_reply: boolean };
+        publications: BundleAfterCommitPublication[];
+      };
+    }
+  | BundleModeChangeFailure;
+
+export type ChangeBundleSettingsParams = {
+  masterTicketId: string;
+  mode?: BundleMode;
+  reopenOnChildReply?: boolean;
+  /**
+   * The closed-master policy, required when switching a bundle whose master is
+   * closed to sync_updates. Ignored for any other change.
+   */
+  choice?: ClosedMasterChoice | null;
+  actor: TicketActivityActorInfo;
+  source?: TicketActivitySource | string;
+  occurredAt?: string;
+};
+
+/**
+ * Updates a bundle's settings. Switching to link_only never touches children.
+ * Switching to sync_updates on an open master changes nothing retroactively.
+ * Switching to sync_updates on a closed master applies the same closed-master
+ * policy as adding children to it (`keep_closed`, `apply_resolution` to the
+ * children that are still open, or `reopen_master`); the choice is required.
+ *
+ * A failure is returned (not thrown) before any write, so the caller's
+ * transaction is left untouched.
+ */
+export async function changeBundleSettings(
+  trx: Knex.Transaction,
+  tenant: string,
+  params: ChangeBundleSettingsParams
+): Promise<BundleModeChangeResult> {
+  const occurredAt = params.occurredAt ?? nowIso();
+  const source = params.source ?? TICKET_ACTIVITY_SOURCE.UI;
+
+  const existing = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+    .where({ master_ticket_id: params.masterTicketId })
+    .first();
+  if (!existing) return { ok: false, code: 'settings_not_found' };
+
+  const switchingToSync =
+    params.mode === 'sync_updates' && effectiveBundleMode(existing) !== 'sync_updates';
+
+  const publications: BundleAfterCommitPublication[] = [];
+  if (switchingToSync) {
+    const context = await getBundleMasterClosedContext(trx, tenant, params.masterTicketId);
+    if (!context) return { ok: false, code: 'master_not_found' };
+
+    const choice = params.choice ?? null;
+    if (!context.isClosed) {
+      if (choice) return { ok: false, code: 'choice_on_open_master' };
+    } else {
+      if (!choice) {
+        return { ok: false, code: 'choice_required', allowedChoices: context.allowedChoices };
+      }
+      if (!context.allowedChoices.includes(choice)) {
+        return { ok: false, code: 'choice_not_allowed', allowedChoices: context.allowedChoices };
+      }
+
+      const openChildren = (await tenantScopedTable(trx, 'tickets', tenant)
+        .select(
+          'ticket_id',
+          'ticket_number',
+          'status_id',
+          'board_id',
+          'category_id',
+          'subcategory_id',
+          'priority_id',
+          'assigned_to',
+          'response_state',
+          'itil_priority_level',
+          'entered_at'
+        )
+        .where({ master_ticket_id: params.masterTicketId })
+        .whereNull('closed_at')) as Array<BundleTicketRow & Record<string, any>>;
+
+      if (choice === 'apply_resolution') {
+        const closeRuleFailure = await findChildCloseRuleFailure(
+          trx,
+          tenant,
+          openChildren,
+          params.actor,
+          source
+        );
+        if (closeRuleFailure) return closeRuleFailure;
+      }
+
+      let openStatusId: string | null = null;
+      if (choice === 'reopen_master') {
+        openStatusId = await findDefaultOpenTicketStatusId(trx, tenant);
+        if (!openStatusId) return { ok: false, code: 'reopen_unavailable' };
+      }
+
+      if (choice !== 'keep_closed') {
+        publications.push(
+          ...(await applyClosedMasterChoice(trx, tenant, {
+            master: { ...context, masterTicketId: params.masterTicketId, openStatusId },
+            childTicketIds: openChildren.map((child) => child.ticket_id),
+            childSnapshots: new Map<string, BundleChildCloseSnapshot>(
+              openChildren.map((child) => [
+                child.ticket_id,
+                {
+                  status_id: child.status_id ?? null,
+                  response_state: child.response_state ?? null,
+                  itil_priority_level: child.itil_priority_level ?? null,
+                  entered_at: child.entered_at ?? null,
+                },
+              ])
+            ),
+            choice,
+            actor: params.actor,
+            source,
+            occurredAt,
+            reopenTrigger: 'bundle_mode_change',
+          }))
+        );
+      }
+    }
+  }
+
+  const update: Record<string, unknown> = {};
+  if (params.mode) update.mode = params.mode;
+  if (params.reopenOnChildReply !== undefined) update.reopen_on_child_reply = params.reopenOnChildReply;
+
+  if (Object.keys(update).length === 0) {
+    return {
+      ok: true,
+      value: {
+        settings: {
+          master_ticket_id: existing.master_ticket_id,
+          mode: existing.mode,
+          reopen_on_child_reply: existing.reopen_on_child_reply,
+        },
+        publications,
+      },
+    };
+  }
+
+  const [updated] = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+    .where({ master_ticket_id: params.masterTicketId })
+    .update(update)
+    .returning(['master_ticket_id', 'mode', 'reopen_on_child_reply']);
+
+  return { ok: true, value: { settings: updated, publications } };
 }
 
 interface DerivedBundleChildRow {
@@ -1171,6 +1389,11 @@ export async function propagateBundleMasterStatus(
       ? (nextIsClosed ? 'close' : 'reopen')
       : null;
 
+  // Human-work guard (R5.3): propagating assigned_to to children must not assign a non-internal user.
+  if (Object.prototype.hasOwnProperty.call(updateData, 'assigned_to')) {
+    await assertHumanWorkAssignee(trx, ctx.tenant, [updateData.assigned_to as string | null | undefined]);
+  }
+
   if (crossesBoundary === null) {
     // Legacy sync: mirror workflow fields to every child, no propagation rows.
     const propagateFields: Record<string, unknown> = {};
@@ -1225,7 +1448,13 @@ export async function propagateBundleMasterStatus(
     if (openChildIds.length > 0) {
       await tenantScopedTable(trx, 'tickets', ctx.tenant)
         .whereIn('ticket_id', openChildIds)
-        .update({ ...propagateFields, updated_by: ctx.user.user_id, updated_at: updatedAt });
+        // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
+        .update({
+          ...propagateFields,
+          ...ticketStatusClockPatch(trx, propagateFields.status_id as string | null | undefined),
+          updated_by: ctx.user.user_id,
+          updated_at: updatedAt,
+        });
     }
     if (closedChildIds.length > 0 && Object.keys(closedFields).length > 0) {
       await tenantScopedTable(trx, 'tickets', ctx.tenant)
@@ -1316,7 +1545,8 @@ export async function propagateBundleMasterStatus(
 
   await tenantScopedTable(trx, 'tickets', ctx.tenant)
     .whereIn('ticket_id', affectedChildIds)
-    .update(propagate);
+    // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
+    .update({ ...propagate, ...ticketStatusClockPatch(trx, propagate.status_id as string | null | undefined) });
 
   for (const before of propagateSnapshots.values()) {
     await publishTicketTransitionsAfterCommit(trx, {

@@ -1,7 +1,15 @@
 'use server';
 
 import User from '@alga-psa/db/models/user';
-import { DeletionValidationResult, IUser, IUserRole } from '@alga-psa/types';
+import {
+  DeletionValidationResult,
+  IUser,
+  IUserRole,
+  isClientUserType,
+  isInteractiveUserType,
+  isLicensedUserType,
+  isMspPrincipalUserType,
+} from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
@@ -18,10 +26,12 @@ import { hasPermission, throwPermissionError } from '@alga-psa/user-composition/
 import { getUserRoles } from '@alga-psa/user-composition/actions/userQueryActions';
 import logger from '@alga-psa/core/logger';
 import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
+import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import type { ActionResultMessageKey } from '@alga-psa/ui/lib/errorHandling';
-import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { prepareTicketResourceReassignment } from "@alga-psa/db/reassignTicketResources";
+import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import {
   sanitizeUserForResponse,
   USER_RESPONSE_FIELD_NAMES,
@@ -67,6 +77,9 @@ export type UpdateUserErrorCode =
   | 'REPORTS_TO_CYCLE'
   | 'SCIM_MANAGED_INACTIVE'
   | 'INVALID_TIMEZONE'
+  | 'INVALID_ACTIVE_STATE'
+  | 'LICENSE_LIMIT_REACHED'
+  | 'SOLO_PLAN_LIMIT'
   | 'PERMISSION_DENIED'
   | 'USER_UPDATE_FAILED';
 
@@ -387,6 +400,25 @@ async function findExistingUserByEmailGlobally(
 }
 
 /**
+ * User management only ever acts on interactive users (internal | client).
+ * Looks the target up under the tenant and throws 'User not found' for a missing
+ * row or a non-interactive principal (e.g. service), failing closed.
+ */
+async function assertInteractiveUserTarget(
+  tenant: string,
+  knexOrTrx: Knex | Knex.Transaction,
+  targetUserId: string
+): Promise<void> {
+  const target = await tenantDb(knexOrTrx, tenant).table('users')
+    .where({ user_id: targetUserId })
+    .first('user_type');
+  // Fail closed: a missing row and a non-interactive principal look the same.
+  if (!target || !isInteractiveUserType(target.user_type)) {
+    throw new Error('User not found');
+  }
+}
+
+/**
  * Client-portal callers may only manage client users of their own company
  * (mirrors assertCanManageClientUser in
  * packages/client-portal/src/actions/client-portal-actions/clientUserActions.ts).
@@ -402,7 +434,7 @@ async function assertPortalUserManagementScope(
   knexOrTrx: Knex | Knex.Transaction,
   targetUserId: string
 ): Promise<void> {
-  if (currentUser.user_type !== 'client') {
+  if (isMspPrincipalUserType(currentUser.user_type)) {
     return;
   }
 
@@ -509,6 +541,15 @@ export const addUser = withAuth(async (
         throwPermissionError('create user');
       }
 
+      // Only interactive person types can be created here; 'internal' is the
+      // backward-compatible default when no type is supplied. Anything else
+      // (including 'service') is rejected rather than mapped to a person type.
+      const requestedUserType: unknown = userData.userType ?? 'internal';
+      if (requestedUserType !== 'internal' && requestedUserType !== 'client') {
+        return { success: false, code: 'USER_CREATE_FAILED', error: 'Invalid user type' };
+      }
+      const newUserType: 'internal' | 'client' = requestedUserType;
+
       if (!userData.roleId) {
         return { success: false, code: 'ROLE_REQUIRED', error: 'Role is required' };
       }
@@ -523,7 +564,7 @@ export const addUser = withAuth(async (
       }
 
       // Validate role matches user type
-      const isClientUser = userData.userType === 'client';
+      const isClientUser = isClientUserType(newUserType);
       if (isClientUser && !role.client) {
         return {
           success: false,
@@ -542,7 +583,7 @@ export const addUser = withAuth(async (
       // Check if email already exists globally for this user_type. Internal
       // and client users may share an email by design.
       const emailExists = await findExistingUserByEmailGlobally(userData.email, {
-        userType: userData.userType || 'internal',
+        userType: newUserType,
       });
       if (emailExists) {
         return {
@@ -553,7 +594,7 @@ export const addUser = withAuth(async (
       }
 
       // Check license limits for  MSP (internal) users
-      if (userData.userType !== 'client') {
+      if (isLicensedUserType(newUserType)) {
         const tenantRow = await tenantDb(trx, tenant).table('tenants')
           .first('licensed_user_count', 'plan');
 
@@ -618,7 +659,7 @@ export const addUser = withAuth(async (
           is_inactive: false,
           hashed_password: await hashPassword(userData.password),
           tenant: tenant || undefined,
-          user_type: userData.userType || 'internal', // Default to 'internal' for backward compatibility
+          user_type: newUserType,
           contact_id: userData.contactId || undefined,
           reports_to: userData.reportsTo || undefined
         }).returning(USER_RESPONSE_FIELD_NAMES);
@@ -647,7 +688,7 @@ export const addUser = withAuth(async (
 
     if (result.success) {
       const occurredAt = new Date().toISOString();
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'USER_CREATED',
         payload: {
           userId: result.user.user_id,
@@ -717,6 +758,7 @@ export const deleteUser = withAuth(async (
       // Client-portal callers may only delete client users of their own
       // company; internal callers are gated by the RBAC check above.
       await assertPortalUserManagementScope(user, tenant, trx, userId);
+      await assertInteractiveUserTarget(tenant, trx, userId);
 
       return await tenantDb(trx, tenant).table('clients')
         .where({ account_manager_id: userId })
@@ -770,6 +812,8 @@ export const deleteUser = withAuth(async (
         ['contract_pricing_schedules', 'updated_by'],
         ['contract_template_pricing_schedules', 'created_by'],
         ['contract_template_pricing_schedules', 'updated_by'],
+        ['contract_template_price_sets', 'created_by'],
+        ['contract_template_price_sets', 'updated_by'],
         ['escalation_managers', 'manager_user_id'],
         ['external_files', 'deleted_by_id'],
         ['external_tax_imports', 'imported_by'],
@@ -947,7 +991,7 @@ export const deleteUser = withAuth(async (
 
     if (response.success) {
       const occurredAt = new Date().toISOString();
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'USER_DELETED',
         payload: {
           userId,
@@ -1019,6 +1063,7 @@ export const updateUser = withAuth(async (
       // gated by the RBAC check above.
       if (!isOwnProfile) {
         await assertPortalUserManagementScope(currentUser, tenant, trx, userId);
+        await assertInteractiveUserTarget(tenant, trx, userId);
       }
 
       // Defense-in-depth against mass-assignment: this generic profile-update
@@ -1033,6 +1078,13 @@ export const updateUser = withAuth(async (
         if (field in userData) {
           delete (userData as Record<string, unknown>)[field as string];
         }
+      }
+
+      // Active state is a strict boolean. Seat admission and every seat count
+      // read `is_inactive = false`, while sign-in only tests truthiness, so any
+      // other value (null, "false") would leave a user signed in but uncounted.
+      if ('is_inactive' in userData && typeof userData.is_inactive !== 'boolean') {
+        return { success: false, code: 'INVALID_ACTIVE_STATE', error: 'Active state must be true or false.' };
       }
 
       if (
@@ -1083,13 +1135,13 @@ export const updateUser = withAuth(async (
 
       let normalizedUserData = userData;
 
-      // The email uniqueness check and the timezone change check both need the
-      // stored row, so read it once.
+      // The email uniqueness check, the timezone change check and the
+      // reactivation seat check all need the stored row, so read it once.
       const timezoneProvided = 'timezone' in userData && userData.timezone !== undefined;
-      const existing = (userData.email || timezoneProvided)
+      const existing = (userData.email || timezoneProvided || 'is_inactive' in userData)
         ? await tenantDb(trx, tenant).table('users')
             .where({ user_id: userId })
-            .select('email', 'user_type', 'timezone')
+            .select('email', 'user_type', 'timezone', 'is_inactive')
             .first()
         : undefined;
 
@@ -1143,6 +1195,20 @@ export const updateUser = withAuth(async (
         };
       }
 
+      // Moving an internal user from inactive to active occupies a seat, so it
+      // is admitted like a new user. Only that transition is checked: an
+      // unrelated edit by an already-active user must not be refused at the limit.
+      if (
+        existing?.user_type === 'internal'
+        && existing.is_inactive === true
+        && userData.is_inactive === false
+      ) {
+        const licenseCheck = await checkInternalUserLicenseLimit(trx, tenant);
+        if (isInternalUserLicenseLimitRejected(licenseCheck)) {
+          return { success: false, code: licenseCheck.code, error: licenseCheck.error };
+        }
+      }
+
       await User.update(trx, userId, normalizedUserData);
       const updatedUser = await getSafeUserWithRoles(trx, userId, tenant);
       return { success: true, user: updatedUser };
@@ -1154,7 +1220,7 @@ export const updateUser = withAuth(async (
         (field) => userData[field as keyof typeof userData] !== undefined
       );
 
-      await publishWorkflowEvent({
+      await publishNonCatalogWorkflowEvent({
         eventType: 'USER_UPDATED',
         payload: {
           userId,
@@ -1293,13 +1359,7 @@ export const deactivateUserWithDisposition = withAuth(
             userId,
           );
 
-          const target = await tenantDb(trx, tenant)
-            .table("users")
-            .where({ user_id: userId })
-            .first("user_id");
-          if (!target) {
-            throw new Error("User not found");
-          }
+          await assertInteractiveUserTarget(tenant, trx, userId);
 
           for (const bucket of [
             disposition.tickets,
@@ -1402,7 +1462,9 @@ export const deactivateUserWithDisposition = withAuth(
               assigned_to: nextAssignee,
             };
             if (disposition.tickets.action === "archive") {
+              // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
               update.status_id = ticketArchiveStatuses.get(ticket.board_id);
+              Object.assign(update, ticketStatusClockPatch(trx, update.status_id as string | undefined));
               update.is_closed = true;
               update.closed_at = new Date();
               update.closed_by = currentUser.user_id;
@@ -1471,7 +1533,7 @@ export const deactivateUserWithDisposition = withAuth(
       revalidatePath("/settings");
       const occurredAt = new Date().toISOString();
       try {
-        await publishWorkflowEvent({
+        await publishNonCatalogWorkflowEvent({
           eventType: "USER_UPDATED",
           payload: {
             userId,
@@ -1528,6 +1590,7 @@ export const updateUserRoles = withAuth(async (
       if (!await hasPermission(currentUser, 'user', 'update', trx)) {
         throwPermissionError('update user roles');
       }
+      await assertInteractiveUserTarget(tenant, trx, userId);
 
       // Delete existing roles
       await tenantDb(trx, tenant).table('user_roles')
@@ -1546,7 +1609,7 @@ export const updateUserRoles = withAuth(async (
     });
 
     const occurredAt = new Date().toISOString();
-    await publishWorkflowEvent({
+    await publishNonCatalogWorkflowEvent({
       eventType: 'USER_ROLES_UPDATED',
       payload: {
         userId,
@@ -1564,6 +1627,9 @@ export const updateUserRoles = withAuth(async (
     const message = getErrorMessage(error);
     if (message.startsWith('Permission denied:')) {
       return { success: false, error: message };
+    }
+    if (message === 'User not found') {
+      return { success: false, error: 'User not found' };
     }
     const dbError = error as { code?: string; column?: string };
     if (dbError?.code === '22P02' || dbError?.code === '23503') {
@@ -1864,12 +1930,22 @@ export const adminChangeUserPassword = withAuth(async (
       };
     }
 
+    // Non-interactive principals (e.g. service) never have a password set
+    // through user management. Fail closed as if the user does not exist.
+    if (!isInteractiveUserType(targetUser.user_type)) {
+      return {
+        success: false,
+        error: 'User not found',
+        messageKey: 'common:errors.auth.userNotFound',
+      };
+    }
+
     // This flow is for MSP staff only. The 'Admin' role-name check below is
     // also satisfied by the client portal 'Admin' role, so gating on it alone
     // would let portal admins reset MSP staff passwords. Portal admins must
     // use the portal's own flow (resetClientUserPassword), which enforces
     // same-company scoping.
-    if (currentUser.user_type !== 'internal') {
+    if (!isLicensedUserType(currentUser.user_type)) {
       return {
         success: false,
         error: 'Unauthorized: Internal staff privileges required',

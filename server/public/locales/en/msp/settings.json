@@ -1,7 +1,9 @@
 {
   "escalationManager": {
     "unsavedChanges_one": "{{count}} unsaved change",
-    "unsavedChanges_other": "{{count}} unsaved changes"
+    "unsavedChanges_other": "{{count}} unsaved changes",
+    "unsavedChanges_few": "{{count}} unsaved changes",
+    "unsavedChanges_many": "{{count}} unsaved changes"
   },
   "page": {
     "title": "Admin Settings"
@@ -34,7 +36,8 @@
     "keyboardShortcuts": "Keyboard Shortcuts",
     "opportunities": "Opportunities",
     "mcpServer": "MCP Server",
-    "settingsFallback": "Settings"
+    "settingsFallback": "Settings",
+    "tags": "Tags"
   },
   "unsavedChanges": {
     "title": "Unsaved Changes",
@@ -423,7 +426,8 @@
       "placeholders": {
         "teamName": "Enter team name",
         "selectTeamLead": "Select a team lead",
-        "selectUserToAdd": "Select a user to add"
+        "selectUserToAdd": "Select a user to add",
+        "noTeamLead": "Not assigned"
       },
       "alert": {
         "unsavedChanges": "You have unsaved changes"
@@ -447,7 +451,9 @@
       },
       "leadName": "Lead: {{name}}",
       "memberCount_one": "{{count}} member",
-      "memberCount_other": "{{count}} members"
+      "memberCount_other": "{{count}} members",
+      "memberCount_few": "{{count}} members",
+      "memberCount_many": "{{count}} members"
     },
     "messages": {
       "error": {
@@ -673,8 +679,8 @@
           "suppressAiHelp": "Enterprise AI Assistant add-on only. If unavailable, replies reopen normally."
         },
         "liveTimer": {
-          "label": "Enable live ticket timer",
-          "help": "Shows the live timer and tracked intervals on tickets in this board. Manual time entry remains available."
+          "label": "Show stopwatch on tickets",
+          "help": "Shows the stopwatch controls on tickets in this board. Turn this off to hide the stopwatch here; manual time entry stays available. A stopwatch that is already running keeps running."
         },
         "clientPortalVisible": {
           "label": "Visible in client portal",
@@ -705,7 +711,8 @@
         "skipItem": "Skip this item",
         "importNewName": "Import with different name:",
         "importWithOrder": "Import with order {{order}}",
-        "importWithResolutions": "Import with Resolutions"
+        "importWithResolutions": "Import with Resolutions",
+        "removesIntro": "Deleting this board will also remove:"
       },
       "importTable": {
         "active": "Active"
@@ -774,7 +781,9 @@
           "deleteFailed": "Failed to delete board",
           "importFailed": "Failed to import boards",
           "updateStatusFailed": "Failed to update board status",
-          "updateDefaultFailed": "Failed to update default board"
+          "updateDefaultFailed": "Failed to update default board",
+          "hasEmailSenderRoute": "Cannot delete board: it has a dedicated outbound email sender route. Clear the board's ticket sender in the board editor first.",
+          "referencedByAutomations": "Cannot delete board: other settings still target it. Point them at another board (or remove them) first."
         }
       },
       "closeRules": {
@@ -851,7 +860,7 @@
           "statuses": "Priorities & statuses",
           "statusesHelp": "Default priority and the ticket statuses for this board",
           "display": "Display & behaviour",
-          "displayHelp": "Live timer and board type"
+          "displayHelp": "Stopwatch and board type"
         },
         "saveChanges": "Save Changes",
         "unsaved": "Unsaved",
@@ -888,6 +897,48 @@
         "useDefault": "Use ticket default",
         "duplicateRoute": "That sender route already exists.",
         "saveFailed": "Could not save sender routing. Please try again."
+      },
+      "deleteDependencies": {
+        "categories_one": "category",
+        "categories_other": "categories",
+        "categories_few": "categories",
+        "categories_many": "categories",
+        "statuses_one": "ticket status",
+        "statuses_other": "ticket statuses",
+        "statuses_few": "ticket statuses",
+        "statuses_many": "ticket statuses",
+        "autoCloseRules_one": "auto-close rule",
+        "autoCloseRules_other": "auto-close rules",
+        "autoCloseRules_few": "auto-close rules",
+        "autoCloseRules_many": "auto-close rules",
+        "notificationRules_one": "notification rule",
+        "notificationRules_other": "notification rules",
+        "notificationRules_few": "notification rules",
+        "notificationRules_many": "notification rules",
+        "portalVisibility_one": "client portal visibility assignment",
+        "portalVisibility_other": "client portal visibility assignments",
+        "portalVisibility_few": "client portal visibility assignments",
+        "portalVisibility_many": "client portal visibility assignments",
+        "emailSenderRoutes_one": "outbound sender route",
+        "emailSenderRoutes_other": "outbound sender routes",
+        "emailSenderRoutes_few": "outbound sender routes",
+        "emailSenderRoutes_many": "outbound sender routes",
+        "ticketTemplates_one": "ticket template",
+        "ticketTemplates_other": "ticket templates",
+        "ticketTemplates_few": "ticket templates",
+        "ticketTemplates_many": "ticket templates",
+        "recurringTickets_one": "recurring ticket schedule",
+        "recurringTickets_other": "recurring ticket schedules",
+        "recurringTickets_few": "recurring ticket schedules",
+        "recurringTickets_many": "recurring ticket schedules",
+        "checklistRules_one": "checklist apply rule",
+        "checklistRules_other": "checklist apply rules",
+        "checklistRules_few": "checklist apply rules",
+        "checklistRules_many": "checklist apply rules",
+        "cannedResponses_one": "board canned response",
+        "cannedResponses_other": "board canned responses",
+        "cannedResponses_few": "board canned responses",
+        "cannedResponses_many": "board canned responses"
       }
     },
     "priorities": {
@@ -979,7 +1030,8 @@
         "description": "Description",
         "items": "Items",
         "status": "Status",
-        "actions": "Actions"
+        "actions": "Actions",
+        "scope": "Available to"
       },
       "statusLabels": {
         "active": "Active",
@@ -997,7 +1049,9 @@
         "down": "Down",
         "remove": "Remove",
         "addItem": "Add Item",
-        "addRule": "Add Rule"
+        "addRule": "Add Rule",
+        "duplicateToClient": "Duplicate to client…",
+        "duplicate": "Duplicate"
       },
       "fields": {
         "name": {
@@ -1019,13 +1073,48 @@
         },
         "rules": {
           "label": "Auto-Apply Rules",
-          "help": "The template is automatically applied to new tickets matching any of these rules. Leave a field as \"Any\" to match all values.",
+          "help": "A template is applied to a new ticket when the ticket matches any one of its rules. A rule matches only when the ticket meets every filter you set. Leave a filter empty to ignore it.",
           "empty": "No auto-apply rules. This template can still be applied to tickets manually.",
           "board": "Board",
           "category": "Category",
           "subcategory": "Subcategory",
           "priority": "Priority",
-          "any": "Any"
+          "any": "Any",
+          "appliesToAll": "Applies to all tickets",
+          "appliesToAllClientTickets": "Applies to all {{client}} tickets",
+          "clients": "Clients",
+          "clientsAny": "Any client",
+          "clientsFixedByTemplate": "{{client}} only (set by the template's client)",
+          "clientsAddAnother": "Add another client",
+          "removeClient": "Remove {{name}}",
+          "origins": "Ticket source",
+          "originsAny": "Any source",
+          "fromServiceRequest": "Only tickets from a service request",
+          "anyServiceRequest": "Any service request",
+          "keywords": "Keywords",
+          "keywordsPlaceholder": "Type a word or phrase and press Enter",
+          "keywordsHelp": "Partial words match too, so \"onboard\" also finds \"onboarding\". Capitalization is ignored.",
+          "removeKeyword": "Remove {{keyword}}",
+          "keywordMode": "Match",
+          "keywordModeAny": "Any keyword",
+          "keywordModeAll": "All keywords",
+          "keywordTarget": "Look in",
+          "keywordTargetBoth": "Title and description",
+          "keywordTargetTitle": "Title",
+          "keywordTargetDescription": "Description",
+          "originLabels": {
+            "internal": "Created by staff",
+            "client_portal": "Client portal",
+            "inbound_email": "Inbound email",
+            "api": "API",
+            "recurring": "Recurring schedule"
+          },
+          "clientScopedWarning": "This template is scoped to {{client}}: these rules only apply to {{client}} tickets."
+        },
+        "availableTo": {
+          "label": "Available to",
+          "clear": "All clients",
+          "help": "Leave as All clients to offer this template on every ticket, or pick a client to restrict it to that client's tickets."
         }
       },
       "dialog": {
@@ -1033,13 +1122,17 @@
         "editTemplate": "Edit Checklist Template",
         "createFirstHelp": "Create the template first, then add checklist items and auto-apply rules.",
         "deleteTitle": "Delete Checklist Template",
-        "deleteMessage": "Are you sure you want to delete \"{{name}}\"? Checklists already added to tickets will not be affected."
+        "deleteMessage": "Are you sure you want to delete \"{{name}}\"? Checklists already added to tickets will not be affected.",
+        "duplicateTitle": "Duplicate to Client",
+        "duplicateHelp": "Copy \"{{name}}\" and its items into a new template scoped to one client. The copy is independent: later edits to either template do not affect the other.",
+        "duplicateClientPlaceholder": "Select a client"
       },
       "messages": {
         "success": {
           "created": "Checklist template created successfully",
           "updated": "Checklist template updated successfully",
-          "deleted": "Checklist template deleted successfully"
+          "deleted": "Checklist template deleted successfully",
+          "duplicated": "Checklist template duplicated to client"
         },
         "error": {
           "fetchFailed": "Failed to fetch checklist templates",
@@ -1049,8 +1142,18 @@
           "deleteFailed": "Failed to delete checklist template",
           "updateStatusFailed": "Failed to update template status",
           "itemSaveFailed": "Failed to save checklist item",
-          "ruleSaveFailed": "Failed to save auto-apply rule"
+          "ruleSaveFailed": "Failed to save auto-apply rule",
+          "duplicateFailed": "Failed to duplicate checklist template"
         }
+      },
+      "scope": {
+        "allClients": "All clients",
+        "unknownClient": "Unknown client"
+      },
+      "filter": {
+        "client": "Client",
+        "allClients": "All clients",
+        "clear": "Clear filter"
       }
     },
     "externalSystems": {
@@ -1138,7 +1241,9 @@
         "success": {
           "deleted": "Interaction type deleted",
           "imported_one": "Imported {{count}} interaction type",
-          "imported_other": "Imported {{count}} interaction types"
+          "imported_other": "Imported {{count}} interaction types",
+          "imported_few": "Imported {{count}} interaction types",
+          "imported_many": "Imported {{count}} interaction types"
         },
         "error": {
           "fetchFailed": "Failed to fetch interaction types",
@@ -1389,7 +1494,9 @@
         "saveDomain": "Save Domain",
         "updateDomain": "Update Domain",
         "submitting": "Submitting…",
-        "cancelEdit": "Cancel Edit"
+        "cancelEdit": "Cancel Edit",
+        "confirmUris": "I've registered these — confirm",
+        "confirmingUris": "Confirming…"
       },
       "form": {
         "label": "Custom domain",
@@ -1427,7 +1534,8 @@
         "deploying": "Deploying",
         "active": "Active",
         "disabled": "Disabled",
-        "unknown": "Unknown"
+        "unknown": "Unknown",
+        "pending_redirect_uri": "Pending Redirect URIs"
       },
       "messages": {
         "requestSubmitted": "Custom domain request submitted.",
@@ -1439,9 +1547,32 @@
         "registerFailed": "Failed to register custom domain.",
         "refreshFailed": "Failed to refresh domain status.",
         "retryFailed": "Retry failed.",
-        "disableFailed": "Failed to disable custom domain."
+        "disableFailed": "Failed to disable custom domain.",
+        "confirmUrisFailed": "Failed to confirm redirect URIs.",
+        "urisConfirmed": "Redirect URIs confirmed."
       },
-      "hostedTlsNote": "We will provision TLS certificates automatically once DNS is verified."
+      "hostedTlsNote": "We will provision TLS certificates automatically once DNS is verified.",
+      "surface": {
+        "label": "Serves",
+        "current": "Serves: {{value}}",
+        "updatingSurface": "Saving will change which app this domain serves and restart provisioning.",
+        "options": {
+          "client_portal": "Client portal",
+          "msp": "MSP app",
+          "both": "Both"
+        },
+        "descriptions": {
+          "client_portal": "The domain opens your client portal. This is the default.",
+          "msp": "The domain opens the MSP (technician) app. Single sign-on redirect URIs must be registered first.",
+          "both": "One domain serves both apps. Paths under /msp open the MSP app and paths under /client-portal open the client portal."
+        }
+      },
+      "redirectUris": {
+        "title": "SSO redirect URIs need to be registered",
+        "description": "This domain serves the MSP app, so single sign-on will only work once the redirect URIs below are registered with your SSO provider. The domain stays pending until they are confirmed.",
+        "listLabel": "Register these redirect URIs:",
+        "contactSupport": "Ask your administrator or contact support to register and confirm these redirect URIs."
+      }
     },
     "yourCompanyName": "Your Company Name",
     "brandingPreviewMode": "Branding preview theme mode",
@@ -1955,11 +2086,55 @@
       "editor": {
         "inlineLogoHint": "Your logo is embedded in the message when it is sent. Keep the src=\"cid:{{cid}}\" reference as it is — replacing it with a URL makes recipients approve an image download first."
       }
+    },
+    "templateVariables": {
+      "actions": {
+        "insert": "Insert at cursor",
+        "guide": "Read the complete guide",
+        "copy": "Copy {{path}}"
+      },
+      "insertHelp": "Select a variable to insert it.",
+      "availableHelp": "Variables available to this template.",
+      "fields": {
+        "search": {
+          "placeholder": "Search variables"
+        },
+        "globalSearch": {
+          "placeholder": "Search paths, descriptions, and concepts"
+        },
+        "category": {
+          "all": "All areas"
+        }
+      },
+      "title": "Email template variable reference",
+      "panelTitle": "Template variables",
+      "inferredContract": "Not currently sent. This contract is inferred from the template.",
+      "empty": "No matching variables.",
+      "example": "Example:",
+      "usedBy": "Used by {{templates}}",
+      "description": "Find the data available to each system email template. Copy the exact Handlebars token into a custom template.",
+      "enums": {
+        "categories": {
+          "appointments": "Appointments",
+          "auth": "Authentication",
+          "billing": "Billing",
+          "quotes": "Quotes",
+          "invoices": "Invoices",
+          "opportunities": "Opportunities",
+          "projects": "Projects",
+          "sla": "SLA",
+          "surveys": "Surveys",
+          "tickets": "Tickets",
+          "time": "Time"
+        }
+      }
     }
   },
   "timeEntry": {
     "title": "Time Entry Settings",
     "description": "Manage your time entry settings and time periods",
+    "accessDenied": "Access Denied: You do not have permission to view time periods.",
+    "loading": "Loading time entry settings...",
     "timePeriods": {
       "title": "Time Period Settings",
       "description": "Configure billing time period settings",
@@ -2057,7 +2232,7 @@
       "openMenu": "Open menu",
       "columns": {
         "startDate": "Start Date",
-        "endDate": "End Date",
+        "endDate": "Last Day",
         "actions": "Actions"
       },
       "form": {
@@ -2069,7 +2244,8 @@
         "startDate": "Start Date",
         "startDatePlaceholder": "Select start date",
         "noEndDate": "No End Date",
-        "endDate": "End Date",
+        "endDate": "Last Day of Period",
+        "endDateHelp": "The period includes this day.",
         "endDatePlaceholder": "Select end date",
         "deletePeriod": "Delete Period",
         "confirmDeleteTitle": "Confirm Delete",
@@ -2083,7 +2259,7 @@
         "noSettings": "No time period settings available. Unable to create a new time period.",
         "settingsRequired": "Cannot manage time period without settings.",
         "startDateRequired": "Start date must be provided.",
-        "startBeforeEnd": "Start date must be before end date.",
+        "startBeforeEnd": "End date cannot be before the start date.",
         "overlap": "The time period overlaps with an existing period.",
         "overlapRetry": "This time period overlaps with an existing one. Please choose different dates.",
         "create": "Failed to create time period.",
@@ -2261,7 +2437,9 @@
         "samples_other": "{{sample}} · {{count}} records",
         "noSample": "No sample",
         "missingRequired": "Required fields not mapped: {{fields}}",
-        "duplicate": "A custom field is mapped more than once. Choose a unique target for each source."
+        "duplicate": "A custom field is mapped more than once. Choose a unique target for each source.",
+        "samples_few": "{{sample}} · {{count}} records",
+        "samples_many": "{{sample}} · {{count}} records"
       },
       "actions": {
         "back": "Back to migrations",
@@ -2298,7 +2476,23 @@
         "nothingImportedBody": "This run created no new records. Every row matched something that already existed, so nothing was changed.",
         "claimedBySamePackage": "Already migrated by this package",
         "claimedByOtherPackage": "Already migrated by {{file}}",
-        "claimedByExistingEntity": "Matched to an existing entity"
+        "claimedByExistingEntity": "Matched to an existing entity",
+        "matchedBySku": "Matched existing product by SKU"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Products (catalog / price list)",
+          "vendorProducts": "Vendor price list (distributor costs)"
+        },
+        "productsHint": "Prices and costs are read as decimal amounts (for example 1,299.50) using the currency column when present, otherwise the tenant currency. Negative, non-numeric or over-precise amounts are dropped and reported; the row is still imported. Products match existing products by SKU; vendor price-list rows reference a product by SKU and create or match the vendor by name."
+      },
+      "configure": {
+        "products": {
+          "title": "Products",
+          "serviceType": "Service type for new products",
+          "serviceTypePlaceholder": "Select a service type",
+          "serviceTypeHelp": "Products whose SKU already exists are matched and left unchanged; only new products are filed under this service type."
+        }
       }
     },
     "jobDetails": {
@@ -2379,7 +2573,16 @@
   },
   "policyManagement": {
     "title": "Policy Management",
-    "upgradeDescription": "Policy management is a Pro feature. Please upgrade to access advanced policy controls."
+    "upgradeDescription": "Policy management is a Pro feature. Please upgrade to access advanced policy controls.",
+    "bundleLibrary": {
+      "title": "Authorization Bundle Library",
+      "upgradeDescription": "Advanced authorization bundle management is available on Pro. Upgrade to configure narrowing bundles for roles, teams, users, and API keys.",
+      "protectionsDescription": "Built-in authorization protections remain active even when configurable advanced controls are unavailable in this edition or tier."
+    },
+    "proFeature": {
+      "title": "Pro Feature",
+      "description": "Policy Management requires Pro. Please upgrade to access this feature."
+    }
   },
   "roleManagement": {
     "title": "Manage Roles",
@@ -2524,7 +2727,9 @@
         "noSessions": "No active sessions found"
       },
       "subtitle_one": "{{sessionCount}} active session across {{userCount}} user",
-      "subtitle_other": "{{sessionCount}} active sessions across {{userCount}} users"
+      "subtitle_other": "{{sessionCount}} active sessions across {{userCount}} users",
+      "subtitle_few": "{{sessionCount}} active sessions across {{userCount}} users",
+      "subtitle_many": "{{sessionCount}} active sessions across {{userCount}} users"
     }
   },
   "ssoBulk": {
@@ -2617,7 +2822,9 @@
         "unlinkedCount": "Unlinked {{count}} accounts via {{provider}}.",
         "previewUnlink_one": "Preview ready. We'll unlink {{count}} selected user.",
         "previewUnlink_other": "Preview ready. We'll unlink {{count}} selected users.",
-        "previewLink": "Preview ready. Review the summary before linking accounts."
+        "previewLink": "Preview ready. Review the summary before linking accounts.",
+        "previewUnlink_few": "Preview ready. We'll unlink {{count}} selected users.",
+        "previewUnlink_many": "Preview ready. We'll unlink {{count}} selected users."
       },
       "results": {
         "completeTitle": "Assignment complete",
@@ -2632,12 +2839,16 @@
         "wouldLink": "Would link",
         "alreadyUnlinked": "Already unlinked",
         "alreadyLinked": "Already linked",
-        "skippedInactive": "Skipped (inactive)"
+        "skippedInactive": "Skipped (inactive)",
+        "processed_few": "Processed {{count}} users.",
+        "processed_many": "Processed {{count}} users."
       },
       "providerNames": {
         "google": "Google Workspace",
         "microsoft": "Microsoft 365"
-      }
+      },
+      "selected_few": "{{count}} users selected.",
+      "selected_many": "{{count}} users selected."
     },
     "clientPortalProvisioning": {
       "deactivateBody": "When enabled, users managed by Entra provisioning are deactivated when access-group entitlement is removed.",
@@ -2653,6 +2864,10 @@
       "modeTitle": "Client portal Entra provisioning mode",
       "modeWorkflowManaged": "Workflow-managed",
       "workflowManagedInfo": "Workflow-managed mode publishes Entra access events only. The selected workflow is responsible for client portal user provisioning, role assignment, invitations, and lifecycle changes."
+    },
+    "proFeature": {
+      "title": "Single Sign-On Bulk Assignment",
+      "description": "This feature is available in Pro. Upgrade to manage Google Workspace and Microsoft 365 SSO assignments directly from the Security settings page."
     }
   },
   "profile": {
@@ -2836,7 +3051,8 @@
     "emptyState": "No users available.",
     "roles": {
       "client": "Client User",
-      "internal": "Internal User"
+      "internal": "Internal User",
+      "service": "Service"
     },
     "badge": {
       "inactive": "Inactive"
@@ -2901,7 +3117,9 @@
         "overallCompliance": "Overall Compliance",
         "pausedSla": "tickets with paused SLA",
         "ticketsTracked_one": "{{count}} ticket tracked",
-        "ticketsTracked_other": "{{count}} tickets tracked"
+        "ticketsTracked_other": "{{count}} tickets tracked",
+        "ticketsTracked_few": "{{count}} tickets tracked",
+        "ticketsTracked_many": "{{count}} tickets tracked"
       },
       "recentBreaches": {
         "empty": "No SLA breaches in the selected period",
@@ -2944,7 +3162,9 @@
         "responseTrackingDisabled": "Response state tracking disabled",
         "responseTrackingEnabled": "Response state tracking enabled",
         "statusesUpdated_one": "Successfully updated {{count}} status configuration",
-        "statusesUpdated_other": "Successfully updated {{count}} status configurations"
+        "statusesUpdated_other": "Successfully updated {{count}} status configurations",
+        "statusesUpdated_few": "Successfully updated {{count}} status configurations",
+        "statusesUpdated_many": "Successfully updated {{count}} status configurations"
       },
       "perStatus": {
         "description": "Configure which ticket statuses should pause the SLA timer. When a ticket is moved to a status with pausing enabled, the SLA timer will stop until the ticket is moved to another status.",
@@ -2956,7 +3176,9 @@
         "resetChanges": "Reset Changes",
         "saveChanges": "Save Changes",
         "saving": "Saving...",
-        "title": "Per-Status Pause Configuration"
+        "title": "Per-Status Pause Configuration",
+        "modifiedCount_few": "{{count}} statuses modified",
+        "modifiedCount_many": "{{count}} statuses modified"
       },
       "retry": "Retry"
     },
@@ -2999,7 +3221,9 @@
         "selectAll": "Select all",
         "selectAllVisible": "Select all visible",
         "selectedCount_one": "{{count}} selected",
-        "selectedCount_other": "{{count}} selected"
+        "selectedCount_other": "{{count}} selected",
+        "selectedCount_few": "{{count}} selected",
+        "selectedCount_many": "{{count}} selected"
       },
       "targets": {
         "always": "24/7 (ignore business hours)",
@@ -3092,7 +3316,13 @@
         "usageClients_one": "Client: {{names}}",
         "usageClients_other": "Clients: {{names}}",
         "usageTickets_one": "{{count}} ticket",
-        "usageTickets_other": "{{count}} tickets"
+        "usageTickets_other": "{{count}} tickets",
+        "usageBoards_few": "Boards: {{names}}",
+        "usageBoards_many": "Boards: {{names}}",
+        "usageClients_few": "Clients: {{names}}",
+        "usageClients_many": "Clients: {{names}}",
+        "usageTickets_few": "{{count}} tickets",
+        "usageTickets_many": "{{count}} tickets"
       },
       "description": "Manage service level agreement policies that define response and resolution time targets",
       "empty": "No SLA policies found. Click \"Add Policy\" to create your first policy.",
@@ -3553,10 +3783,211 @@
       "noLeadingTrailingDot": "Domain cannot start or end with a dot.",
       "notApplianceHost": "Choose a domain other than this server's primary host. The custom portal domain must be a different hostname that your reverse proxy forwards here.",
       "nothingToRetry": "No failed custom domain registration to retry.",
-      "retryOnlyAfterFailure": "Retry is only available after a failed registration."
+      "retryOnlyAfterFailure": "Retry is only available after a failed registration.",
+      "alreadyInUse": "This domain is already in use. Choose a different domain.",
+      "usedByOtherSurface": "This domain is already used by another of your custom domains. To serve the client portal and the MSP app from one domain, choose \"Both\".",
+      "invalidSurface": "Choose where the custom domain is served: client portal, MSP app, or both.",
+      "redirectUrisHosted": "Redirect URIs for hosted domains are registered by platform support.",
+      "nothingToConfirm": "No pending SSO redirect URI confirmation for this domain."
     }
   },
   "common": {
     "saving": "Saving..."
+  },
+  "featureFlags": {
+    "categories": {
+      "core": {
+        "title": "Core Features",
+        "description": "Essential features for daily operations"
+      },
+      "ui": {
+        "title": "User Interface",
+        "description": "New UI features and improvements"
+      },
+      "ai": {
+        "title": "AI Features",
+        "description": "Artificial intelligence powered features"
+      },
+      "integrations": {
+        "title": "Integrations",
+        "description": "Third-party service integrations"
+      },
+      "performance": {
+        "title": "Performance",
+        "description": "Performance optimization features"
+      },
+      "experimental": {
+        "title": "Experimental",
+        "description": "Cutting-edge features in development"
+      }
+    },
+    "features": {
+      "enable_ticket_automation": {
+        "title": "Ticket Automation",
+        "description": "Automatically assign and route tickets based on rules"
+      },
+      "enable_time_tracking": {
+        "title": "Time Tracking",
+        "description": "Track time spent on tickets and projects"
+      },
+      "enable_billing": {
+        "title": "Billing System",
+        "description": "Invoice generation and payment tracking"
+      },
+      "new_ticket_ui": {
+        "title": "New Ticket Interface",
+        "description": "Redesigned ticket creation and management UI"
+      },
+      "new_dashboard_layout": {
+        "title": "Modern Dashboard",
+        "description": "New dashboard with customizable widgets"
+      },
+      "ai_ticket_suggestions": {
+        "title": "AI Ticket Suggestions",
+        "description": "AI-powered ticket categorization and priority suggestions"
+      },
+      "enable_ai_time_tracking": {
+        "title": "AI Time Tracking",
+        "description": "Automatically track time based on activity"
+      },
+      "enable_predictive_analytics": {
+        "title": "Predictive Analytics",
+        "description": "Predict ticket volume and resource needs"
+      },
+      "enable_slack_integration": {
+        "title": "Slack Integration",
+        "description": "Send notifications and updates to Slack"
+      },
+      "teams-integration-ui": {
+        "description": "Integrate with Microsoft Teams"
+      },
+      "enable_jira_sync": {
+        "title": "Jira Sync",
+        "description": "Sync tickets with Jira issues"
+      },
+      "enable_query_caching": {
+        "title": "Query Caching",
+        "description": "Cache database queries for faster response times"
+      },
+      "enable_lazy_loading": {
+        "title": "Lazy Loading",
+        "description": "Load content as needed for better performance"
+      },
+      "enable_websocket_updates": {
+        "title": "Real-time Updates",
+        "description": "Use WebSockets for instant updates"
+      },
+      "enable_voice_commands": {
+        "title": "Voice Commands",
+        "description": "Control the app with voice commands"
+      },
+      "beta_mobile_app": {
+        "title": "Mobile App Beta",
+        "description": "Access to beta mobile application"
+      }
+    },
+    "enums": {
+      "stable": "Stable",
+      "beta": "Beta",
+      "experimental": "Experimental"
+    },
+    "loading": "Loading feature flags...",
+    "title": "Feature Flags",
+    "description": "Enable or disable features across your application. Some features may require a restart.",
+    "unsaved": "You have unsaved changes. Click Save to apply them.",
+    "requiresRestart": "Requires restart",
+    "errors": {
+      "loadFailed": "Error loading feature flags: {{message}}"
+    },
+    "dependencies": "Requires: {{dependencies}}"
+  },
+  "clientPortalLanguageConfig": {
+    "title": "Client Portal Language Settings",
+    "description": "Configure the language options available to your clients",
+    "fields": {
+      "defaultLanguage": {
+        "label": "Default Language",
+        "help": "This language will be used for new clients and when no preference is set"
+      },
+      "availableLanguages": {
+        "label": "Available Languages",
+        "help": "Select which languages clients can choose from"
+      }
+    },
+    "defaultSuffix": "(default)",
+    "preview": {
+      "title": "Preview",
+      "defaultLanguage": "Default language:",
+      "availableLanguages": "Available languages:"
+    },
+    "messages": {
+      "success": {
+        "saved": "Settings saved successfully"
+      }
+    },
+    "errors": {
+      "saveFailed": "Failed to save settings"
+    }
+  },
+  "enums": {
+    "locale": {
+      "en": "English",
+      "fr": "French",
+      "es": "Spanish",
+      "de": "German",
+      "nl": "Dutch",
+      "it": "Italian",
+      "pl": "Polish",
+      "pt": "Portuguese (Brazil)",
+      "sv": "Swedish",
+      "xx": "Pseudo (xx)",
+      "yy": "Pseudo (yy)"
+    }
+  },
+  "telemetry": {
+    "fields": {
+      "usageStats": {
+        "label": "Usage Statistics",
+        "enabledDescription": "Enabled - Sends anonymous usage data to help improve the product",
+        "disabledDescription": "Disabled - Sends anonymous usage data to help improve the product"
+      }
+    },
+    "environmentHelp": "Usage statistics are controlled via the {{variable}} environment variable. Contact your system administrator to modify this setting.",
+    "sections": {
+      "collectedData": {
+        "title": "What data is collected",
+        "featureUsage": "Feature usage patterns (no personal data)",
+        "errorReports": "Error reports for debugging",
+        "performance": "Performance metrics",
+        "configuration": "System configuration (anonymized)"
+      }
+    }
+  },
+  "dialogs": {
+    "statusImport": {
+      "title": "Import Standard Statuses",
+      "description": "Select the standard statuses you want to import",
+      "selectAll": "Select All ({{selected}}/{{total}})",
+      "closed": "Closed",
+      "default": "Default",
+      "empty": "No standard statuses available for import",
+      "importSelected": "Import Selected ({{count}})"
+    }
+  },
+  "tagDisplay": {
+    "title": "Display on chips",
+    "subtitle": "Tags shown next to contacts and clients in ticket lists, ticket headers and pickers.",
+    "loading": "Loading…",
+    "description": "Choose which tags show as badges next to contacts and clients, and in what order. A list with no tags shows no badges for that audience.",
+    "contacts": "Contacts",
+    "clients": "Clients",
+    "audienceInternal": "Internal users",
+    "audienceClient": "Client portal",
+    "clientNote": "Starts empty. Tags listed here are visible to the client's own users in the client portal.",
+    "noneSelected": "No tags shown.",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Remove",
+    "addTag": "Add a tag…"
   }
 }

@@ -111,21 +111,6 @@ vi.mock('@alga-psa/ui/context', () => ({
 
 vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: () => ({ enabled: false }),
-  useTicketTimeTracking: () => ({
-    isTracking: false,
-    currentIntervalId: null,
-    isLockedByOther: false,
-    startTracking: vi.fn().mockResolvedValue(false),
-    stopTracking: vi.fn().mockResolvedValue(undefined),
-    refreshLockState: vi.fn().mockResolvedValue(undefined),
-  }),
-}));
-
-vi.mock('@alga-psa/ui/services', () => ({
-  IntervalTrackingService: class {
-    endInterval = vi.fn().mockResolvedValue(undefined);
-    getOpenInterval = vi.fn().mockResolvedValue(null);
-  },
 }));
 
 vi.mock('@alga-psa/ui/components', () => ({
@@ -358,12 +343,22 @@ vi.mock('../TicketInfo', () => ({
 
 vi.mock('../bento/TicketBentoLayout', () => ({
   __esModule: true,
-  default: ({ onBatchSelectChange }: { onBatchSelectChange?: (changes: Record<string, unknown>) => Promise<boolean> }) => (
-    <button
-      type="button"
-      data-testid="change-priority"
-      onClick={() => onBatchSelectChange?.({ priority_id: 'priority-2' })}
-    />
+  // Grid shows the Created/Updated stamps in the hero, passed down as heroMeta.
+  default: ({
+    onBatchSelectChange,
+    heroMeta,
+  }: {
+    onBatchSelectChange?: (changes: Record<string, unknown>) => Promise<boolean>;
+    heroMeta?: React.ReactNode;
+  }) => (
+    <>
+      <button
+        type="button"
+        data-testid="change-priority"
+        onClick={() => onBatchSelectChange?.({ priority_id: 'priority-2' })}
+      />
+      {heroMeta}
+    </>
   ),
 }));
 

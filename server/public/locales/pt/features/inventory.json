@@ -32,7 +32,8 @@
     "to": "Para",
     "today": "Hoje",
     "total": "Total",
-    "unknown": "Desconhecido"
+    "unknown": "Desconhecido",
+    "recordUnavailable": "Não encontrado ou você não tem acesso"
   },
   "counts": {
     "adjustments": "{{count}} ajuste(s)",
@@ -1305,6 +1306,18 @@
     "ageAtVendor": "{{days}} dias com o fornecedor",
     "filters": {
       "statusActive": "Exibindo casos de RMA com status {{status}}."
+    },
+    "detail": {
+      "title": "RMA {{id}}",
+      "reference": "Referência do RMA",
+      "product": "Produto",
+      "returnedSerial": "Número de série da unidade devolvida",
+      "opened": "Aberto",
+      "updated": "Atualizado",
+      "age": "Idade (dias)",
+      "reason": "Motivo",
+      "viewUnit": "Ver unidade",
+      "viewAsset": "Ver ativo"
     }
   },
   "salesOrders": {
@@ -1564,6 +1577,10 @@
       "inProgress": "Reconstruindo…"
     },
     "receive": {
+      "searchProducts": "Pesquisar produtos ou SKU...",
+      "noProductsFound": "Nenhum produto encontrado",
+      "searchLocations": "Pesquisar locais...",
+      "noLocationsFound": "Nenhum local encontrado",
       "costNonNegative": "O custo unitário não pode ser negativo.",
       "failed": "Não foi possível receber o estoque.",
       "inProgress": "Recebendo…",
@@ -1698,6 +1715,12 @@
       "failed": "Não foi possível repor a devolução no estoque.",
       "restocking": "Repondo no estoque…",
       "submit": "Repor no estoque"
+    },
+    "printLabel": "Imprimir etiqueta",
+    "printWithTemplate": "Imprimir com {{code}}",
+    "claimant": {
+      "project": "Projeto {{number}}",
+      "salesOrder": "Pedido de venda {{number}}"
     }
   },
   "transfers": {

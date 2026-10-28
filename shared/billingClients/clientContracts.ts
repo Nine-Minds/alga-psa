@@ -1,10 +1,12 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { tryNormalizeDateOnly } from '@alga-psa/types';
 import type { IClientContract } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import type { ClientContractAssignmentCreateInput } from './types';
 import { assertBoardScopedTicketStatusSelection } from '../lib/boardScopedTicketStatusValidation';
 import { deriveClientContractStatus } from './clientContractStatus';
+import { getTenantLocalToday } from './tenantLocalDate';
 
 type RenewalMode = NonNullable<IClientContract['renewal_mode']>;
 
@@ -75,17 +77,27 @@ const findMixedCurrencyActiveAssignment = async (
       end_date: 'cc.end_date',
       currency_code: 'c.currency_code',
       contract_name: 'c.contract_name',
+      contract_status: 'c.status',
     });
+
+  const today = await getTenantLocalToday(knexOrTrx, tenant);
 
   const activeRow = rows.find((row: {
     start_date: string | null;
     end_date: string | null;
     currency_code?: string | null;
-  }) => deriveClientContractStatus({
-    isActive: true,
-    startDate: row.start_date,
-    endDate: row.end_date,
-  }) === 'active');
+    contract_status?: string | null;
+  }) => {
+    const status = deriveClientContractStatus({
+      isActive: true,
+      startDate: row.start_date,
+      endDate: row.end_date,
+      now: today,
+    });
+    // 'scheduled' is live here: a confirmed future-start contract will bill, so it conflicts.
+    // Draft headers keep the previous behaviour (a future-start draft never conflicted).
+    return status === 'active' || (status === 'scheduled' && row.contract_status !== 'draft');
+  });
   if (!activeRow || typeof activeRow.currency_code !== 'string' || activeRow.currency_code.trim().length === 0) {
     return null;
   }
@@ -223,7 +235,10 @@ const withRenewalDefaultsJoin = (
   return query;
 };
 
-export const normalizeClientContract = (row: any): IClientContract => {
+export const normalizeClientContract = (
+  row: any,
+  options: { today?: string } = {}
+): IClientContract => {
   if (!row) return row;
 
   const normalized = { ...row } as Record<string, unknown>;
@@ -309,6 +324,7 @@ export const normalizeClientContract = (row: any): IClientContract => {
     contractStatus: typeof normalized.contract_status === 'string'
       ? normalized.contract_status
       : undefined,
+    now: options.today,
   });
 
   delete normalized.tenant_default_renewal_mode;
@@ -356,7 +372,8 @@ export async function getClientContracts(
     ...RENEWAL_DEFAULT_SELECTIONS,
   ]);
 
-  return dedupeClientContractsByRenewalCycle(rows.map(normalizeClientContract));
+  const today = await getTenantLocalToday(knexOrTrx, tenant);
+  return dedupeClientContractsByRenewalCycle(rows.map((row: any) => normalizeClientContract(row, { today })));
 }
 
 export async function getActiveClientContractsByClientIds(
@@ -383,7 +400,8 @@ export async function getActiveClientContractsByClientIds(
     ...RENEWAL_DEFAULT_SELECTIONS,
   ]);
 
-  return dedupeClientContractsByRenewalCycle(rows.map(normalizeClientContract));
+  const today = await getTenantLocalToday(knexOrTrx, tenant);
+  return dedupeClientContractsByRenewalCycle(rows.map((row: any) => normalizeClientContract(row, { today })));
 }
 
 export async function getClientContractById(
@@ -405,7 +423,7 @@ export async function getClientContractById(
     ])
     .first();
 
-  return row ? normalizeClientContract(row) : null;
+  return row ? normalizeClientContract(row, { today: await getTenantLocalToday(knexOrTrx, tenant) }) : null;
 }
 
 export async function getDetailedClientContract(
@@ -432,7 +450,9 @@ export async function getDetailedClientContract(
 
   if (!clientContract) return null;
 
-  const normalized = normalizeClientContract(clientContract);
+  const normalized = normalizeClientContract(clientContract, {
+    today: await getTenantLocalToday(knexOrTrx, tenant),
+  });
 
   const contractLinesQuery = db.table('client_contracts as cc');
   db.tenantJoin(contractLinesQuery, 'contract_lines as cl', 'cc.contract_id', 'cl.contract_id');
@@ -508,7 +528,9 @@ export async function createClientContractAssignment(
     client_contract_id: uuidv4(),
     client_id: input.client_id,
     contract_id: input.contract_id,
-    template_contract_id: null,
+    // Provenance only: the template this contract was cloned from (null for
+    // contracts authored from scratch).
+    template_contract_id: input.template_contract_id ?? null,
     start_date: input.start_date,
     end_date: input.end_date,
     is_active: input.is_active,
@@ -580,7 +602,7 @@ export async function createClientContractAssignment(
   if (hasPoAmount) insertPayload.po_amount = input.po_amount ?? null;
 
   const [created] = await db.table<IClientContract>('client_contracts').insert(insertPayload).returning('*');
-  return normalizeClientContract(created);
+  return normalizeClientContract(created, { today: await getTenantLocalToday(knexOrTrx, tenant) });
 }
 
 export async function updateClientContractAssignment(
@@ -651,7 +673,22 @@ export async function updateClientContractAssignment(
     throw new Error(`Client contract ${clientContractId} not found`);
   }
 
-  return normalizeClientContract(updated);
+  return normalizeClientContract(updated, { today: await getTenantLocalToday(knexOrTrx, tenant) });
+}
+
+/**
+ * Activation was requested for an assignment that is already confirmed and active but has not
+ * started yet. Typed so the server-action boundary can map it to a localized expected error
+ * without matching on the message text.
+ */
+export class ContractAlreadyActiveScheduledError extends Error {
+  readonly startDate: string;
+
+  constructor(startDate: string) {
+    super(`Contract is already active and starts on ${startDate}; there is nothing to activate.`);
+    this.name = 'ContractAlreadyActiveScheduledError';
+    this.startDate = startDate;
+  }
 }
 
 /**
@@ -679,6 +716,15 @@ export async function activateClientContractAssignment(
   }
 
   const needsHeaderActivation = contract.status === 'draft' || contract.is_active === false;
+
+  // Already confirmed and active but not started yet: activating would change nothing. Say so
+  // instead of reporting a success the user cannot see any effect of (activation never moves
+  // start_date; that is deliberately unchanged).
+  if (!needsHeaderActivation && existing.is_active && existing.assignment_status === 'scheduled') {
+    throw new ContractAlreadyActiveScheduledError(
+      tryNormalizeDateOnly(existing.start_date) ?? String(existing.start_date)
+    );
+  }
 
   if (needsHeaderActivation) {
     // Same rule createClientContractAssignment enforces: a client cannot hold active

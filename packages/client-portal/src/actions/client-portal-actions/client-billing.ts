@@ -2,6 +2,7 @@
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal billing actions intentionally compose billing feature APIs for end-user self-service flows. */
 
+import { recordQuoteLifecycleTransition } from '@alga-psa/shared/lib/quotes/quoteLifecycleEvents';
 import { getConnection, createTenantKnex, withTransaction, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { toCalendarDateString, toCalendarDateStringInTimeZone } from '@alga-psa/core';
 import { buildDocumentFileName } from '@alga-psa/core/fileNames';
@@ -19,7 +20,8 @@ import {
 import {
   fetchInvoicesByClient,
   getInvoiceLineItems,
-  getInvoiceForRendering
+  getInvoiceForRendering,
+  getResolvedInvoiceTemplateId
 } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
 import { finalizeInvoice, unfinalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
@@ -144,6 +146,11 @@ async function getAuthorizedClientQuote(
     return permissionError('Unauthorized to access quote data', 'client-portal:errors.access.quoteData');
   }
 
+  if (allowedStatuses?.length) {
+    // Serialize selection and acceptance together; a second accepter must recheck status
+    // before it can change the optional items represented by the first acceptance event.
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first('quote_id');
+  }
   const quote = await Quote.getById(trx, tenant, quoteId);
   if (!quote || quote.client_id !== clientId || quote.is_template || quote.status === 'draft') {
     return actionError('Quote not found or access denied', 'client-portal:errors.billing.quoteNotFound');
@@ -234,6 +241,7 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
       const planQuery = scopedDb.table('client_contracts as cc')
         .where({
           'cc.client_id': clientId,
+          'cc.is_active': true,
         })
         .select(
           'cl.contract_line_id',
@@ -244,12 +252,17 @@ export const getClientContractLine = withAuth(async (user, { tenant }): Promise<
           'cl.service_category',
           'cl.custom_rate',
           'cl.contract_id',
+          'cl.is_active',
           'cl.tenant',
           'cc.client_id',
           'cc.start_date',
           'cc.end_date',
           'sc.category_name as service_category_name'
         )
+        .orderBy([
+          { column: 'cl.is_active', order: 'desc' },
+          { column: 'cc.start_date', order: 'desc' },
+        ])
         .first();
       scopedDb.tenantJoin(planQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
       scopedDb.tenantJoin(planQuery, 'contract_lines as cl', 'c.contract_id', 'cl.contract_id');
@@ -546,7 +559,7 @@ export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: str
           });
 
         if (markedViewed) {
-          await QuoteActivity.create(trx, tenant, {
+          const activity = await QuoteActivity.create(trx, tenant, {
             quote_id: quoteId,
             activity_type: 'viewed',
             description: 'Quote viewed by client in portal',
@@ -555,6 +568,7 @@ export const getClientQuoteById = withAuth(async (user, { tenant }, quoteId: str
               viewed_at: viewedAt,
             },
           });
+          await recordQuoteLifecycleTransition(trx, tenant, quote, { ...quote, viewed_at: viewedAt }, activity, { actor: { actorType: 'CONTACT', actorContactId: user.contact_id! } }, 'QUOTE_VIEWED');
         }
       }
 
@@ -644,7 +658,7 @@ export const acceptClientQuote = withAuth(async (
         accepted_at: acceptedAt,
         accepted_by: user.user_id,
         updated_by: user.user_id,
-      });
+      }, { actor: { actorType: 'CONTACT', actorContactId: user.contact_id! }, acceptedOnBehalf: false });
 
       await QuoteActivity.create(trx, tenant, {
         quote_id: quoteId,
@@ -702,7 +716,7 @@ export const rejectClientQuote = withAuth(async (
         rejected_at: rejectedAt,
         rejection_reason: trimmedReason,
         updated_by: user.user_id,
-      });
+      }, { actor: { actorType: 'CONTACT', actorContactId: user.contact_id! }, acceptedOnBehalf: false });
 
       await QuoteActivity.create(trx, tenant, {
         quote_id: quoteId,
@@ -836,6 +850,93 @@ export const getClientInvoiceTemplates = withAuth(async (user, { tenant }): Prom
       return expected;
     }
     console.error('Error fetching invoice templates:', error);
+    throw error;
+  }
+});
+
+export interface ClientInvoicePreviewData {
+  invoice: InvoiceViewModel;
+  template: IInvoiceTemplate | null;
+}
+
+/**
+ * Invoice + resolved template for the portal preview, with the template logo
+ * and designer-picked images already inlined as `data:` URIs.
+ *
+ * The browser cannot fetch those images itself: `/api/documents/view/<id>`
+ * only serves a portal user their own client's documents, and the logo and
+ * designer images belong to the MSP's own company. They are read here, after
+ * the invoice access check, with the tenant applied explicitly. The documents
+ * route guard is intentionally unchanged.
+ */
+export const getClientInvoicePreview = withAuth(async (user, { tenant }, invoiceId: string): Promise<ClientBillingActionResult<ClientInvoicePreviewData>> => {
+  const knex = await getConnection(tenant);
+
+  try {
+    const accessError = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return validateClientInvoiceAccess(trx, user, tenant, invoiceId);
+    });
+    if (accessError) {
+      return accessError;
+    }
+
+    const invoice = await getInvoiceForRendering(invoiceId);
+    if (isClientBillingActionError(invoice)) {
+      return invoice;
+    }
+    if (!invoice) {
+      return actionError('Invoice not found or access denied', 'client-portal:errors.billing.invoiceNotFound');
+    }
+
+    const [templates, resolvedTemplateId] = await Promise.all([
+      getInvoiceTemplates(),
+      getResolvedInvoiceTemplateId(invoiceId),
+    ]);
+    if (isClientBillingActionError(templates)) {
+      return templates;
+    }
+    if (isClientBillingActionError(resolvedTemplateId)) {
+      return resolvedTemplateId;
+    }
+
+    // Client override / tenant default when it is among the available
+    // templates, otherwise the first standard template, then the first one.
+    const resolvedTemplate = resolvedTemplateId
+      ? templates.find((entry) => entry.template_id === resolvedTemplateId)
+      : undefined;
+    const template = resolvedTemplate || templates.find((entry) => entry.isStandard) || templates[0] || null;
+
+    // Loaded on demand: the template renderer module is heavy and only this action needs it.
+    //
+    // Only MSP-authored image fields are inlined: the tenant logo binding and
+    // the src of image nodes in the template. The rest of the invoice (client
+    // name, address, line descriptions, notes) can be edited by the portal
+    // user, so resolving document URLs found there would let them read any
+    // image in the tenant by file id.
+    //
+    // An image that cannot be inlined (missing, not an image, too large) is
+    // dropped rather than left as a URL: the browser would only get a 403 for
+    // it and render a broken image.
+    const { inlineDocumentImageUrl, inlineTemplateImageSources } = await import('@alga-psa/billing/lib/invoice-template-ast/server-render');
+    const inlineOptions = { knex, tenant, unresolved: 'drop' as const };
+    const [logoUrl, inlinedTemplateAst] = await Promise.all([
+      inlineDocumentImageUrl(invoice.tenantClient?.logoUrl, inlineOptions),
+      template?.templateAst ? inlineTemplateImageSources(template.templateAst, inlineOptions) : Promise.resolve(null),
+    ]);
+    const inlinedInvoice: InvoiceViewModel = invoice.tenantClient
+      ? { ...invoice, tenantClient: { ...invoice.tenantClient, logoUrl: (logoUrl as string | null | undefined) ?? null } }
+      : invoice;
+    const inlinedTemplate: IInvoiceTemplate | null = template
+      ? { ...template, templateAst: template.templateAst ? inlinedTemplateAst : template.templateAst }
+      : null;
+
+    return { invoice: inlinedInvoice, template: inlinedTemplate };
+  } catch (error) {
+    const expected = billingActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    console.error('Error fetching client invoice preview:', error);
     throw error;
   }
 });
@@ -1354,6 +1455,8 @@ export interface ClientPortalHourBlock {
   expiration_date: string | null;
   status: string;
   currency_code: string | null;
+  /** Owning contract's name for contract-issued (Prepaid Block) blocks; null for ad-hoc blocks. */
+  contract_name: string | null;
   expiring_soon_days: number | null;
 }
 
@@ -1363,10 +1466,14 @@ export interface ClientPortalHourBlockBurnEntry {
   hours: number;
   entry_date: string | null;
   work_item_title: string | null;
+  /** Owning contract's name when the drawn block is contract-issued; null otherwise. */
+  contract_name: string | null;
 }
 
 /**
- * The signed-in client's hour blocks (active or expiring), newest first. Rows
+ * The signed-in client's active hour blocks (non-zero balance, including those
+ * expiring soon), oldest purchase first. Contract-issued blocks carry the owning
+ * contract's name; pending blocks (draft invoice) are never shown. Rows
  * are scoped to the portal user's client and gated by the client billing read
  * permission. No cross-client or MSP-internal fields leak through.
  */
@@ -1394,6 +1501,8 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
       const today = toCalendarDateStringInTimeZone(new Date(), timeZone);
       const query = db.table('hour_blocks as hb');
       db.tenantJoin(query, 'service_catalog as sc', 'hb.service_id', 'sc.service_id', { type: 'left' });
+      db.tenantJoin(query, 'contract_lines as cl', 'hb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
+      db.tenantJoin(query, 'contracts as ct', 'cl.contract_id', 'ct.contract_id', { type: 'left' });
       const rows = await query
         .where({ 'hb.client_id': clientId, 'hb.status': 'active' })
         .where('hb.remaining_minutes', '>', 0)
@@ -1405,6 +1514,7 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
           'hb.status',
           'hb.currency_code',
           { service_name: 'sc.service_name' },
+          { contract_name: 'ct.contract_name' },
         )
         .orderBy('hb.purchased_at', 'asc')
         .orderBy('hb.created_at', 'asc');
@@ -1437,6 +1547,7 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
           expiration_date: expirationDate,
           status: String(row.status),
           currency_code: (row.currency_code as string) ?? null,
+          contract_name: (row.contract_name as string | null) ?? null,
           expiring_soon_days: expiringSoonDays,
         };
       });
@@ -1476,9 +1587,14 @@ export const getClientHourBlockBurnHistory = withAuth(async (user, { tenant }): 
       db.tenantJoin(query, 'time_entries as te', 'hba.time_entry_id', 'te.entry_id', { type: 'left' });
       db.tenantJoin(query, 'tickets as tk', 'te.work_item_id', 'tk.ticket_id', { type: 'left' });
       db.tenantJoin(query, 'project_tasks as pt', 'te.work_item_id', 'pt.task_id', { type: 'left' });
+      db.tenantJoin(query, 'contract_lines as cl', 'hb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
+      db.tenantJoin(query, 'contracts as ct', 'cl.contract_id', 'ct.contract_id', { type: 'left' });
       const rows = await query
         .where({ 'hb.client_id': clientId })
+        // Pending blocks (draft invoice) hold allocations that clients must not see yet.
+        .whereNot({ 'hb.status': 'pending' })
         .select(
+          'ct.contract_name',
           'hba.allocation_id',
           'hba.minutes',
           'hba.created_at',
@@ -1495,6 +1611,7 @@ export const getClientHourBlockBurnHistory = withAuth(async (user, { tenant }): 
         hours: Math.round((Number(row.minutes ?? 0) / 60) * 10) / 10,
         entry_date: toCalendarDateString(row.work_date as string | Date | null),
         work_item_title: (row.ticket_title as string) ?? (row.task_title as string) ?? null,
+        contract_name: (row.contract_name as string | null) ?? null,
       }));
     });
   } catch (error) {

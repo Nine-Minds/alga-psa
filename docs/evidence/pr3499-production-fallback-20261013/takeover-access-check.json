@@ -1,0 +1,33 @@
+{
+  "checkedAt": "2026-10-14T02:16:57.793178+00:00",
+  "status": "BLOCKED",
+  "reviewedHead": "4e988aeac1036399d68eac2dc5ba3cb8347d9e58",
+  "applicationSourceUnchangedSince": "4571290674fe78f75438e90ec10ae0afc4d6e85a",
+  "appServerStartedOrRestarted": false,
+  "financialMutations": false,
+  "freshBrowser": {
+    "exitCode": 1,
+    "output": "Error: Connection timed out"
+  },
+  "openReview": {
+    "exitCode": 1,
+    "output": "Error: Connection timed out"
+  },
+  "hubSubscribers": 0,
+  "viewer": [
+    {
+      "HostName": "Rober\u2019s MacBook Pro",
+      "Online": false,
+      "LastSeen": "2026-10-14T02:10:00.1Z"
+    }
+  ],
+  "productionHealth": {
+    "http": 200,
+    "body": {
+      "status": "ok",
+      "version": "1.0.0"
+    }
+  },
+  "signedInAs": null,
+  "remaining": "Owner must restore the registered viewer workstation and Ghostty Pane IDE connection; preparation agent must then verify fresh browser, Open Review signedInAs and actual session. Fallback production evidence is not Open Review acceptance."
+}

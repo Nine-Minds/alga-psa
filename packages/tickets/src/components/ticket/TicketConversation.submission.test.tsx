@@ -209,6 +209,53 @@ describe('TicketConversation comment submission', () => {
     expect(onAddNewComment).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    { defaultReplyInternal: undefined, activeTab: 'all-comments', hideInternalTab: false, expected: false },
+    { defaultReplyInternal: false, activeTab: 'all-comments', hideInternalTab: false, expected: false },
+    { defaultReplyInternal: true, activeTab: 'all-comments', hideInternalTab: false, expected: true },
+    { defaultReplyInternal: true, activeTab: 'client', hideInternalTab: false, expected: false },
+    { defaultReplyInternal: false, activeTab: 'internal', hideInternalTab: false, expected: true },
+    { defaultReplyInternal: true, activeTab: 'resolution', hideInternalTab: false, expected: false },
+    { defaultReplyInternal: true, activeTab: 'all-comments', hideInternalTab: true, expected: false },
+  ])('uses the reply default without overriding explicit tabs or the portal: %j', async ({ expected, ...overrides }) => {
+    const onAddNewComment = vi.fn().mockResolvedValue(true);
+    const { container } = renderConversation({ ...overrides, onAddNewComment });
+    fireEvent.click(container.querySelector('#ticket-conversation-show-comment-editor-btn')!);
+    fireEvent.click(container.querySelector('#ticket-conversation-add-comment-btn')!);
+    await waitFor(() => expect(onAddNewComment).toHaveBeenCalledTimes(1));
+    expect(onAddNewComment.mock.calls[0][0]).toBe(expected);
+  });
+
+  it('allows a public override and defaults back to internal for the next new reply', async () => {
+    const onAddNewComment = vi.fn().mockResolvedValue(true);
+    const { container } = renderConversation({ defaultReplyInternal: true, onAddNewComment });
+    const open = () => fireEvent.click(container.querySelector('#ticket-conversation-show-comment-editor-btn')!);
+    const submit = () => fireEvent.click(container.querySelector('#ticket-conversation-add-comment-btn')!);
+    open();
+    const toggle = container.querySelector<HTMLInputElement>('#ticket-conversation-internal-toggle')!;
+    expect(toggle.checked).toBe(true);
+    fireEvent.click(toggle);
+    submit();
+    await waitFor(() => expect(container.querySelector('#ticket-conversation-add-comment-btn')).toBeNull());
+    expect(onAddNewComment.mock.calls[0][0]).toBe(false);
+    open();
+    submit();
+    await waitFor(() => expect(onAddNewComment).toHaveBeenCalledTimes(2));
+    expect(onAddNewComment.mock.calls[1][0]).toBe(true);
+  });
+
+  it('does not overwrite a draft when settings finish loading, but uses the default on the next open', async () => {
+    const onAddNewComment = vi.fn().mockResolvedValue(true);
+    const { container, rerender } = renderConversation({ onAddNewComment });
+    fireEvent.click(container.querySelector('#ticket-conversation-show-comment-editor-btn')!);
+    rerender(<TicketConversation {...defaultProps} onAddNewComment={onAddNewComment} defaultReplyInternal />);
+    expect(container.querySelector<HTMLInputElement>('#ticket-conversation-internal-toggle')!.checked).toBe(false);
+    fireEvent.click(container.querySelector('#ticket-conversation-add-comment-btn')!);
+    await waitFor(() => expect(container.querySelector('#ticket-conversation-add-comment-btn')).toBeNull());
+    fireEvent.click(container.querySelector('#ticket-conversation-show-comment-editor-btn')!);
+    expect(container.querySelector<HTMLInputElement>('#ticket-conversation-internal-toggle')!.checked).toBe(true);
+  });
+
   it('re-enables the composer for a retry after a failed save', async () => {
     const onAddNewComment = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true);
     const { container } = renderConversation({ hideInternalTab: true, onAddNewComment });

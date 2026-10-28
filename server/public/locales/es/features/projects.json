@@ -85,7 +85,9 @@
     "noService": "Sin servicio",
     "servicePlaceholder": "Seleccionar servicio predeterminado",
     "serviceHelp": "Se usa en los partes de tiempo de las tareas de esta fase cuando la propia tarea no define un servicio.",
-    "serviceDisplayLabel": "Servicio"
+    "serviceDisplayLabel": "Servicio",
+    "taskCount_few": "{{count}} tareas",
+    "taskCount_many": "{{count}} tareas"
   },
   "projectList": {
     "addProject": "Agregar proyecto",
@@ -314,7 +316,9 @@
     "bulkTagsFailure": "No se pudieron añadir etiquetas a las tareas seleccionadas",
     "taskTypeFallback": "Tarea",
     "timeline": "Cronograma",
-    "loadingTimeline": "Cargando cronograma..."
+    "loadingTimeline": "Cargando cronograma...",
+    "bulkTagsSuccess_few": "Etiquetas añadidas a {{count}} tareas",
+    "bulkTagsSuccess_many": "Etiquetas añadidas a {{count}} tareas"
   },
   "taskForm": {
     "addTitle": "Agregar tarea",
@@ -433,7 +437,15 @@
     "serviceInheritedFromProject": "Hereda {{service}} del proyecto.",
     "startDateLabel": "Fecha de inicio",
     "taskStartDateLabel": "Fecha de inicio de la tarea",
-    "startDatePlaceholder": "Seleccionar fecha de inicio"
+    "startDatePlaceholder": "Seleccionar fecha de inicio",
+    "createdTicketsIntro_few": "Has creado {{count}} tickets durante esta sesión:",
+    "createdTicketsIntro_many": "Has creado {{count}} tickets durante esta sesión:",
+    "documentCleanupFailure_few": "No se pudieron eliminar {{count}} documentos y permanecerán en Documentos",
+    "documentCleanupFailure_many": "No se pudieron eliminar {{count}} documentos y permanecerán en Documentos",
+    "documentsCleanupIntro_few": "Tiene {{count}} documentos que fueron {{cleanupType}}:",
+    "documentsCleanupIntro_many": "Tiene {{count}} documentos que fueron {{cleanupType}}:",
+    "ticketCleanupFailure_few": "No se pudieron eliminar {{count}} tickets",
+    "ticketCleanupFailure_many": "No se pudieron eliminar {{count}} tickets"
   },
   "taskDependencies": {
     "title": "Dependencias",
@@ -605,7 +617,16 @@
     "invoiceLinksHelp": "Se crearon borradores de factura. Abra cada grupo de monedas para revisarlo.",
     "currencyDraftLink": "Borrador de factura ({{currency}})",
     "productCount": "{{count}} productos",
-    "productsMovedToHoldOnClose": "{{count}} producto(s) vinculado(s) se movieron a En espera porque se canceló su evento de facturación."
+    "productsMovedToHoldOnClose": "{{count}} producto(s) vinculado(s) se movieron a En espera porque se canceló su evento de facturación.",
+    "availableBadge": "Disponible: {{available}}",
+    "availableByLocation": "Existencias libres por ubicación",
+    "freeOfOnHand": "{{free}} libres de {{onHand}}",
+    "stockHeld": "Solo hay {{free}} disponibles. {{held}} en existencia están bloqueadas para pedidos de venta o proyectos y no se pueden usar aquí.",
+    "stockInsufficient": "Solo hay {{onHand}} en existencia y se solicitaron {{requested}}.",
+    "reservedStockTitle": "Las existencias están reservadas para un pedido de venta o un proyecto",
+    "reservedStockMessage": "Solo {{free}} de este producto están libres. {{reserved}} en existencia están reservadas para pedidos de venta o proyectos y solicitó {{requested}}. Si lo agrega de todos modos, toma existencias con las que cuenta un pedido de venta o un proyecto y es posible que quede incompleto.",
+    "reservedStockConfirm": "Agregar de todos modos",
+    "fromStaging": "Desde la preparación"
   },
   "export": {
     "title": "Exportar tareas del proyecto",
@@ -644,7 +665,13 @@
     },
     "exportSelected": "Exportar {{count}} seleccionada(s)",
     "selectedTasksNotice_one": "Exportando {{count}} tarea seleccionada.",
-    "selectedTasksNotice_other": "Exportando {{count}} tareas seleccionadas."
+    "selectedTasksNotice_other": "Exportando {{count}} tareas seleccionadas.",
+    "phasesSelected_few": "{{selected}} de {{total}} fases seleccionadas",
+    "phasesSelected_many": "{{selected}} de {{total}} fases seleccionadas",
+    "selectedTasksNotice_few": "Exportando {{count}} tareas seleccionadas.",
+    "selectedTasksNotice_many": "Exportando {{count}} tareas seleccionadas.",
+    "success_few": "Se exportaron {{count}} tareas correctamente a CSV.",
+    "success_many": "Se exportaron {{count}} tareas correctamente a CSV."
   },
   "import": {
     "title": "Importar fases y tareas",
@@ -765,7 +792,9 @@
     "statusUnmatchedTooltip": "El estado no coincide con ningún estado existente para esta fase. Resuélvalo en los pasos de mapeo antes de importar.",
     "statusFallbackSuffix": "Predeterminado",
     "statusFallbackTooltip": "Usando el estado predeterminado de respaldo para esta fase.",
-    "inPhaseBadge": "en {{phase}}"
+    "inPhaseBadge": "en {{phase}}",
+    "taskCountLabel_few": "({{count}} tareas)",
+    "taskCountLabel_many": "({{count}} tareas)"
   },
   "dialogs": {
     "moveTask": {
@@ -839,7 +868,9 @@
       "badgeCount_other": "{{count}} Tareas",
       "badgeCount_one": "{{count}} Tarea",
       "billsToProject": "El tiempo se factura como tiempo del proyecto",
-      "billsToClient": "El tiempo se factura a nivel de cliente"
+      "billsToClient": "El tiempo se factura a nivel de cliente",
+      "badgeCount_few": "{{count}} Tareas",
+      "badgeCount_many": "{{count}} Tareas"
     },
     "bulkMoveTask": {
       "title": "Mover tareas",
@@ -943,7 +974,7 @@
       "choose_status": "Elegir un estado",
       "no_statuses_available": "No hay estados disponibles",
       "no_statuses_available_hint": "Primero cree estados en Configuración → Proyectos → Estados.",
-      "task_status_library_title": "Biblioteca de estados de tareas del proyecto",
+      "task_status_library_title": "Biblioteca de estados de tareas",
       "task_status_library_description": "Administre los estados de las tareas de los proyectos de su organización. Estos estados se pueden usar en todos los proyectos.",
       "task_status_library_empty": "No se encontraron estados de tareas del proyecto",
       "task_status_library_empty_hint": "Cree su primer estado para comenzar",
@@ -983,12 +1014,33 @@
       "last_closed_error": "Al menos un estado debe permanecer marcado como cerrado",
       "last_closed_delete_error": "No se puede eliminar el último estado cerrado para este tipo.",
       "addStatus": "Agregar nuevo estado",
-      "add_from_library": "Agregar estado"
+      "add_from_library": "Agregar estado",
+      "closed_badge": "(Cerrado)",
+      "drag_to_reorder": "Arrastre para reordenar",
+      "refresh_library": "Actualizar la biblioteca de estados",
+      "all_library_statuses_used": "Todos los estados de la biblioteca ya son una columna aquí. Use «Crear nuevo» para agregar otro.",
+      "delete_no_move_target": "No hay otra columna de estado a la que mover estas tareas. Agregue primero otra columna.",
+      "delete_scope_help": "Esto elimina la columna solo en este alcance. El estado permanece en su Biblioteca de estados de tareas.",
+      "fork_title": "¿Usar columnas de estado personalizadas para esta fase?",
+      "fork_message": "Esta fase dejará de heredar las columnas predeterminadas del proyecto. Las columnas de estado que agregue más adelante a los Valores predeterminados del proyecto no aparecerán aquí hasta que vuelva a cambiar la fase.",
+      "fork_confirm": "Usar estados personalizados",
+      "phase_uses_custom": "Esta fase tiene sus propias columnas de estado y ya no hereda los valores predeterminados del proyecto.",
+      "pending_title": "Cambios sin guardar en las columnas de estado",
+      "pending_apply_hint": "Nada cambia hasta que guarde.",
+      "pending_fork": "{{phase}} pasará a tener sus propias columnas de estado.",
+      "pending_revert": "{{phase}} volverá a las columnas predeterminadas del proyecto.",
+      "pending_order": "Nuevo orden de columnas para {{scope}}.",
+      "pending_preview_hint": "Se muestran las columnas predeterminadas del proyecto como vista previa. Guarde para aplicar el cambio y después podrá añadir o quitar columnas aquí.",
+      "rename_impact_title": "Dónde se aplica este cambio de nombre",
+      "rename_impact_following": "Adopta este cambio de nombre de inmediato: {{columns}} columna(s) en {{projects}}.",
+      "rename_impact_keeping": "Conserva el nombre «{{name}}»: {{columns}} columna(s) en {{projects}}. Estas columnas no están vinculadas a este estado de su Biblioteca de estados de tareas, por lo que esos proyectos seguirán informando el nombre anterior hasta que cambie el nombre de la columna allí.",
+      "rename_impact_more": "y {{remaining}} más",
+      "rename_impact_none": "Este estado todavía no se usa como columna en ningún proyecto."
     }
   },
   "templates": {
     "statuses": {
-      "manage_title": "Gestionar columnas de estado",
+      "manage_title": "Columnas de estado de tareas",
       "manage_description": "Defina las columnas de estado para las tareas en esta plantilla. Arrastre para reordenar.",
       "template_defaults": "Valores predeterminados de la plantilla",
       "added": "Columna de estado agregada",
@@ -1014,7 +1066,8 @@
       "replaced": "Columna de estado reemplazada",
       "replace_failed": "No se pudo reemplazar la columna de estado",
       "repair_status_columns": "Reparar columnas de estado",
-      "unresolved_apply_guard": "Las columnas de estado requieren reparación ({{count}})"
+      "unresolved_apply_guard": "Las columnas de estado requieren reparación ({{count}})",
+      "pending_row_hint": "Complete la columna de estado vacía antes de agregar otra."
     },
     "list": {
       "title": "Plantillas de proyecto",
@@ -1193,7 +1246,9 @@
       "taskCount_other": "{{count}} tareas",
       "unknownUser": "Desconocido",
       "unknownTask": "Tarea desconocida",
-      "checklistCountTitle": "{{count}} elemento de lista"
+      "checklistCountTitle": "{{count}} elemento de lista",
+      "taskCount_few": "{{count}} tareas",
+      "taskCount_many": "{{count}} tareas"
     },
     "taskForm": {
       "addTitle": "Agregar tarea",
@@ -1442,7 +1497,8 @@
     "notAvailable": "N/D",
     "saveAsTemplate": "Guardar como plantilla",
     "materials": "Materiales",
-    "shareTooltip": "Imprimir, importar y exportar"
+    "shareTooltip": "Imprimir, importar y exportar",
+    "staging": "Preparación"
   },
   "projectPhases": {
     "addTask": "Agregar tarea",
@@ -1457,18 +1513,6 @@
     "addError": "Error al añadir la fase. Inténtelo de nuevo.",
     "title": "Fases del proyecto",
     "import": "Importar"
-  },
-  "addStatusDialog": {
-    "phaseTitle": "Agregar estado de fase desde la biblioteca",
-    "projectTitle": "Agregar estado desde la biblioteca",
-    "selectLabel": "Seleccionar de la biblioteca de estados",
-    "placeholder": "Elegir un estado",
-    "helpText": "Seleccione un estado de la biblioteca de su inquilino para agregar a este proyecto.",
-    "noStatusesTitle": "No hay estados disponibles",
-    "noStatusesDescription": "Cree estados en Configuración → Proyectos → Estados.",
-    "adding": "Agregando...",
-    "addStatus": "Agregar estado",
-    "addFailed": "Error al agregar el estado. Inténtelo de nuevo."
   },
   "taskStatusSelect": {
     "ariaLabel": "Estado de la tarea",
@@ -1492,7 +1536,9 @@
     "addFailed": "Error al agregar el comentario",
     "submitting": "Enviando...",
     "loading": "Cargando...",
-    "empty": "Aún no hay comentarios. ¡Sé el primero en comentar!"
+    "empty": "Aún no hay comentarios. ¡Sé el primero en comentar!",
+    "loadError": "No se pudieron cargar los comentarios.",
+    "retry": "Reintentar"
   },
   "clientPortal": {
     "clientsWillSee": "Los clientes verán:",
@@ -1554,7 +1600,7 @@
     "statusColor": "Color del estado",
     "changeColor": "Cambiar color",
     "markClosed": "Marcar como estado cerrado",
-    "markClosedDescription": "Las tareas en estados cerrados se consideran completadas",
+    "markClosedDescription": "Las tareas con este estado se considerarán completadas",
     "creating": "Creando...",
     "createButton": "Crear estado",
     "nameRequired": "El nombre del estado es obligatorio",
@@ -1615,7 +1661,9 @@
       "submitting": "Añadiendo etiquetas...",
       "confirm_one": "Añadir etiquetas a {{count}} tarea",
       "confirm_other": "Añadir etiquetas a {{count}} tareas",
-      "failedHeading": "No se pudieron añadir etiquetas a las siguientes tareas:"
+      "failedHeading": "No se pudieron añadir etiquetas a las siguientes tareas:",
+      "confirm_few": "Añadir etiquetas a {{count}} tareas",
+      "confirm_many": "Añadir etiquetas a {{count}} tareas"
     }
   },
   "common:actions": {
@@ -1678,7 +1726,9 @@
       "lockedSummary_other": "{{count}} entradas por un total de {{amount}} están bloqueadas y no cambiarán.",
       "edit": "Editar condiciones",
       "saved": "Condiciones de facturación actualizadas",
-      "dialogTitle": "Editar condiciones de facturación"
+      "dialogTitle": "Editar condiciones de facturación",
+      "lockedSummary_few": "{{count}} entradas por un total de {{amount}} están bloqueadas y no cambiarán.",
+      "lockedSummary_many": "{{count}} entradas por un total de {{amount}} están bloqueadas y no cambiarán."
     },
     "setup": {
       "title": "Facturar este proyecto",
@@ -2027,5 +2077,202 @@
     "question": "Las dependencias no son obligatorias, así que puede continuar. ¿Desea hacerlo?",
     "proceed": "Continuar de todos modos",
     "cancel": "Cancelar"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Compacto"
+    },
+    "spacious": {
+      "label": "Espacioso"
+    },
+    "decrease": {
+      "title": "Reducir el ancho de las columnas"
+    },
+    "increase": {
+      "title": "Aumentar el ancho de las columnas"
+    },
+    "reset": {
+      "title": "Restablecer el valor predeterminado"
+    }
+  },
+  "staging": {
+    "status": {
+      "reserved": "Reservado",
+      "staged": "Preparado",
+      "installed": "Instalado",
+      "released": "Liberado",
+      "received": "Recibido"
+    },
+    "kind": {
+      "stock": "Inventario",
+      "untracked": "Sin control de stock",
+      "client": "Proporcionado por el cliente"
+    },
+    "actionFailed": "Eso no funcionó. Vuelva a intentarlo.",
+    "installed": "{{count}} artículo(s) instalado(s). Ahora son materiales del proyecto.",
+    "installFailed": "No se pudo instalar.",
+    "backToProject": "← Volver al proyecto",
+    "title": "Preparación",
+    "heading": "Preparación",
+    "intro": "Reserve y prepare el equipo antes de la instalación, empaquételo en cajas etiquetadas y luego instálelo. El stock se usa, y se factura, solo cuando se instala un artículo.",
+    "reserveStock": "Reservar stock",
+    "addClientItem": "Agregar artículo del cliente",
+    "newBox": "Nueva caja",
+    "printLabels": "Imprimir etiquetas",
+    "summary": {
+      "reserved": "{{count}} reservado(s)",
+      "staged": "{{count}} preparado(s)",
+      "client": "{{count}} proporcionado(s) por el cliente",
+      "installed": "{{count}} instalado(s)",
+      "boxes": "{{count}} caja(s)"
+    },
+    "loading": "Cargando preparación...",
+    "linesHeading": "Artículos",
+    "showReleased": "Mostrar liberados",
+    "selected": "{{count}} seleccionado(s)",
+    "stagedToast": "Preparado. El stock ahora se retiene para este proyecto.",
+    "stage": "Preparar",
+    "install": "Instalar",
+    "release": "Liberar",
+    "packInto": "Empaquetar en {{identifier}}",
+    "packIntoPlaceholder": "Empaquetar en caja...",
+    "empty": "Todavía no hay nada preparado para este proyecto. Reserve stock o agregue un artículo proporcionado por el cliente para comenzar.",
+    "col": {
+      "item": "Artículo",
+      "qty": "Cant.",
+      "packed": "Empaquetado",
+      "where": "Desde / tarea",
+      "status": "Estado"
+    },
+    "selectLine": "Seleccionar {{item}}",
+    "shortfall": "{{count}} en déficit: las reclamaciones en esta ubicación superan lo disponible (el stock se tomó mediante una anulación).",
+    "changeQuantity": "Cambiar cantidad",
+    "undoneToast": "Instalación revertida. El artículo vuelve a estar preparado.",
+    "undoInstall": "Deshacer instalación",
+    "boxesHeading": "Cajas",
+    "noBoxes": "Todavía no hay cajas. Cree una caja, empaquete artículos en ella y luego imprima su etiqueta y su manifiesto.",
+    "boxPosition": "Caja {{n}} de {{total}}",
+    "boxSealed": "Sellada",
+    "boxOpen": "Abierta",
+    "boxEmpty": "Vacía",
+    "unpack": "Desempaquetar",
+    "boxLabel": "Etiqueta",
+    "boxAllLabels": "Todas las etiquetas",
+    "manifest": "Manifiesto",
+    "reopen": "Reabrir",
+    "seal": "Sellar",
+    "editBox": "Editar caja",
+    "boxDeleted": "Caja eliminada.",
+    "deleteBox": "Eliminar caja",
+    "reprintHint": "«Caja n de m» en una etiqueta impresa queda fijada en el momento de imprimirla. Vuelva a imprimir las etiquetas después de agregar o eliminar cajas.",
+    "reservedToast": "Reservado. El stock se retiene para este proyecto; todavía no se ha usado nada.",
+    "releasedToast": "Liberado. El stock vuelve a estar disponible.",
+    "releaseTitle": "¿Liberar artículos?",
+    "releaseMessage": "Los artículos liberados devuelven su stock y salen de sus cajas. Esto no se puede deshacer; vuelva a reservarlos si todavía los necesita.",
+    "overrideTitle": "¿Usar stock reservado para otros?",
+    "overrideMessage": "{{message}} Instalar de todos modos usa stock que está reservado de forma blanda para un pedido de venta u otro proyecto.",
+    "installAnyway": "Instalar de todos modos",
+    "changeQuantityHint": "Más reserva más stock (si está disponible); menos devuelve la diferencia. No puede quedar por debajo de lo empaquetado.",
+    "reserve": {
+      "anyLocation": "Cualquier ubicación (unidades más antiguas primero)",
+      "locationOption": "{{name}}: {{free}} libre(s)",
+      "selectProduct": "Elija un producto.",
+      "quantityMin": "La cantidad debe ser de al menos 1.",
+      "failed": "No se pudo reservar el stock.",
+      "conflictOnHand": "Solo hay {{onHand}} disponible(s), se solicitaron {{requested}}. No se reservó nada.",
+      "conflictFree": "Solo hay {{free}} libre(s): {{reserved}} reservado(s) y {{held}} en retención firme para pedidos de venta o proyectos. Solicitó {{requested}}. No se reservó nada.",
+      "title": "Reservar stock",
+      "intro": "Reservar retiene stock para este proyecto sin consumirlo. El stock se usa, y se factura, solo cuando lo instala.",
+      "product": "Producto",
+      "productPlaceholder": "Seleccionar un producto...",
+      "productSearch": "Buscar productos...",
+      "noProducts": "No se encontraron productos",
+      "untracked": "Este producto no tiene control de stock. Se agrega como línea de planificación y no reclama stock.",
+      "location": "Reservar desde",
+      "locationPlaceholder": "Elija una ubicación",
+      "locationDetail": "{{onHand}} disponible(s), {{reserved}} reservado(s), {{held}} en retención firme.",
+      "units": "Unidades (opcional: déjelo vacío para tomar las más antiguas)",
+      "noUnitPicker": "No puede ver las unidades de stock, así que se toman las más antiguas.",
+      "quantity": "Cantidad",
+      "task": "Tarea",
+      "noTask": "Sin tarea",
+      "currency": "Moneda",
+      "currencyPlaceholder": "Predeterminado del tenant",
+      "rate": "Tarifa planificada (por unidad)",
+      "submit": "Reservar"
+    },
+    "clientItems": {
+      "chooseAsset": "Elija un activo.",
+      "describeItem": "Describa el artículo.",
+      "failed": "No se pudo agregar el artículo.",
+      "title": "Agregar artículo proporcionado por el cliente",
+      "intro": "Registre el equipo que proporciona el cliente mediante la preparación y las cajas. Nunca se convierte en stock y nunca se factura.",
+      "kind": "¿Qué es?",
+      "kindAsset": "Uno de los activos del cliente",
+      "kindItem": "Otro artículo (descríbalo)",
+      "asset": "Activo",
+      "assetPlaceholder": "Seleccionar un activo...",
+      "assetSearch": "Buscar por nombre, etiqueta o número de serie...",
+      "noAssets": "No hay activos disponibles de este cliente",
+      "description": "Descripción",
+      "quantity": "Cantidad",
+      "task": "Tarea",
+      "noTask": "Sin tarea",
+      "submit": "Agregar"
+    },
+    "boxForm": {
+      "failed": "No se pudo guardar la caja.",
+      "editTitle": "Editar caja {{identifier}}",
+      "createTitle": "Nueva caja",
+      "numbering": "Las cajas se numeran en orden dentro de este proyecto; un número nunca se reutiliza.",
+      "name": "Nombre (opcional)",
+      "task": "Tarea",
+      "noTask": "Sin tarea",
+      "location": "Dónde está la caja",
+      "noLocation": "Sin definir",
+      "locationNote": "Estante / zona",
+      "notes": "Notas (se imprimen en el manifiesto)",
+      "create": "Crear caja"
+    },
+    "pack": {
+      "nothingChosen": "Elija algo para empaquetar.",
+      "failed": "No se pudo empaquetar la caja.",
+      "title": "Empaquetar caja {{identifier}}",
+      "intro": "Los artículos reservados que empaqueta quedan preparados: su stock se retiene para este proyecto y ya no se puede tomar para nada más.",
+      "nothingToPack": "Todo lo que está en preparación ya está empaquetado o instalado.",
+      "quantityFor": "Cantidad de {{item}}",
+      "submit": "Empaquetar"
+    },
+    "print": {
+      "failed": "No se pudieron imprimir las etiquetas.",
+      "skipped": "Se omitieron {{count}} etiqueta(s) que no puede ver.",
+      "popupBlocked": "Su navegador bloqueó la ventana del PDF; permita las ventanas emergentes y vuelva a intentarlo.",
+      "title": "Imprimir etiquetas de preparación",
+      "boxes": "Cajas",
+      "noBoxes": "Todavía no hay cajas.",
+      "boxOption": "{{identifier}} (caja {{n}} de {{total}}){{name}}",
+      "includeUnboxed": "Imprimir también los artículos preparados que no están en una caja",
+      "layout": "Diseño",
+      "count": "{{count}} etiqueta(s) en un PDF.",
+      "noInventory": "{{count}} etiqueta(s) de unidad de stock no se incluyen porque no puede ver el inventario.",
+      "overCap": "Una impresión contiene como máximo {{max}} etiquetas. Elija menos cajas e imprima el resto por separado.",
+      "submit": "Imprimir"
+    },
+    "closeWarning": "{{count}} artículo(s) reservado(s) o preparado(s) todavía retienen stock para este proyecto.",
+    "releasedAll": "Se liberaron {{count}} artículo(s). El stock vuelve a estar disponible.",
+    "releaseAll": "Liberar todos los reservados y preparados",
+    "keepClaims": "Conservarlos",
+    "packAction": "Empaquetar",
+    "errors": {
+      "notFound": "Proyecto no encontrado",
+      "permission": {
+        "read": "No tiene permiso para ver proyectos.",
+        "update": "No tiene permiso para modificar proyectos.",
+        "inventory": "Necesita acceso al inventario para elegir unidades de stock.",
+        "billing": "Necesita acceso a facturación para instalar artículos en un proyecto.",
+        "asset": "Necesita acceso a activos para vincular activos del cliente.",
+        "inventoryStock": "Necesita acceso al inventario para ver los niveles de stock."
+      }
+    }
   }
 }

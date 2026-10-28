@@ -73,7 +73,9 @@ export function runServerUnitShard({ root, index, total, workers, env = process.
     // from the blob coverage maps.
     // --retry=1 on the command line, never in the shared server vitest config:
     // a fail-then-pass now leaves the shard green and lands in flaky-tests.json
-    // instead of disappearing into a rerun.
+    // instead of disappearing into a rerun. `it.fails` is incompatible with this:
+    // Vitest inverts the result after the retry loop, so it always records a
+    // retry-only pass. Assert the failure explicitly instead.
     const result = vitest(['run', ...shardArgs, ...parallelForks, '--retry=1',
       '--coverage.enabled=true', '--coverage.reporter=text-summary',
       '--reporter=default', '--reporter=json', '--reporter=blob', `--reporter=${path.join(root, 'scripts/lib/vitest-progress-reporter.mjs')}`,

@@ -28,6 +28,7 @@ import { ProductAccessError, getTenantProduct } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 import { hasPermission } from '../../auth/rbac';
 import { getConnection } from '../../db/db';
+import { guardAssetRead } from './assetReadGuard';
 
 export class ApiAssetController {
   private assetService: AssetService;
@@ -90,7 +91,9 @@ export class ApiAssetController {
    */
   async getById(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    
+    const denied = await guardAssetRead(context, params.id, this.assetService);
+    if (denied) return denied;
+
     const asset = await this.assetService.getWithDetails(params.id, context);
     
     if (!asset) {
@@ -167,6 +170,36 @@ export class ApiAssetController {
     return createApiResponse(relationships);
   }
 
+  /**
+   * FR-C8: GET /api/v1/assets/{id}/assignments — the asset's assignment
+   * history. An asset of another tenant is a 404, not an empty list, so a probe
+   * cannot tell the difference between "no history" and "not yours".
+   */
+  async listAssignments(req: NextRequest, params: { id: string }): Promise<NextResponse> {
+    const context = await this.requireAllowedContext(req);
+    const denied = await this.requireReadPermissions(context, ['asset']);
+    if (denied) return denied;
+
+    const asset = await this.assetService.getById(params.id, context);
+    if (!asset) {
+      return createErrorResponse('Asset not found', 404, 'NOT_FOUND');
+    }
+
+    const assignments = await this.assetService.getAssetAssignments(params.id, context);
+    return createApiResponse(assignments);
+  }
+
+  /** FR-B4: GET /api/v1/asset-statuses — the tenant's status registry. */
+  async listStatuses(req: NextRequest): Promise<NextResponse> {
+    const context = await this.requireAllowedContext(req);
+    const denied = await this.requireReadPermissions(context, ['asset']);
+    if (denied) return denied;
+
+    const includeArchived = new URL(req.url).searchParams.get('include_archived') === 'true';
+    const statuses = await this.assetService.listAssetStatuses(context, { includeArchived });
+    return createApiResponse(statuses);
+  }
+
   // Enforce read permission for each resource the caller's response exposes.
   // Returns a 403 error response on the first denial, or null when allowed.
   private async requireReadPermissions(
@@ -212,7 +245,7 @@ export class ApiAssetController {
     const context = await this.requireAllowedContext(req);
 
     // Response joins ticket data onto an asset — require read on both resources.
-    const denied = await this.requireReadPermissions(context, ['asset', 'ticket']);
+    const denied = await guardAssetRead(context, params.id, this.assetService, ['ticket']);
     if (denied) return denied;
 
     const tickets = await this.assetService.getAssetTickets(params.id, context);
@@ -336,7 +369,9 @@ export class ApiAssetController {
    */
   async listMaintenanceSchedules(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    
+    const denied = await guardAssetRead(context, params.id, this.assetService);
+    if (denied) return denied;
+
     const schedules = await this.assetService.getMaintenanceSchedules(params.id, context);
     
     return createApiResponse(schedules);
@@ -412,7 +447,9 @@ export class ApiAssetController {
    */
   async getMaintenanceHistory(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    
+    const denied = await guardAssetRead(context, params.id, this.assetService);
+    if (denied) return denied;
+
     const history = await this.assetService.getMaintenanceHistory(params.id, context);
     
     return createApiResponse(history);

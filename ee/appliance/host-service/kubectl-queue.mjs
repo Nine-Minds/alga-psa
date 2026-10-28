@@ -12,12 +12,19 @@ function truncateOutput(value) {
   return `${text.slice(0, MAX_OUTPUT_BYTES)}\n... output truncated at ${MAX_OUTPUT_BYTES} bytes ...`;
 }
 
+const DEFAULT_SLOW_COMMAND_MS = 5_000;
+
 export class SerialCommandQueue {
-  constructor({ name = 'command-queue' } = {}) {
+  // onSlowCommand(result) fires when a command's wait plus run time exceeds
+  // slowCommandMs: the queue is serial, so that time was also charged to every
+  // caller queued behind it.
+  constructor({ name = 'command-queue', onSlowCommand = null, slowCommandMs = DEFAULT_SLOW_COMMAND_MS } = {}) {
     this.name = name;
     this.queue = [];
     this.active = null;
     this.sequence = 0;
+    this.onSlowCommand = onSlowCommand;
+    this.slowCommandMs = slowCommandMs;
   }
 
   get size() {
@@ -92,6 +99,9 @@ export class SerialCommandQueue {
       };
 
       try { entry.onDone?.(result); } catch { /* callback best effort */ }
+      if (this.onSlowCommand && result.queuedMs + result.durationMs > this.slowCommandMs) {
+        try { this.onSlowCommand(result); } catch { /* callback best effort */ }
+      }
       entry.resolve(result);
       this.active = null;
       this.drain();
@@ -142,5 +152,9 @@ export class SerialCommandQueue {
 }
 
 export function createKubectlQueue(options = {}) {
-  return new SerialCommandQueue({ name: options.name || 'kubectl' });
+  return new SerialCommandQueue({
+    name: options.name || 'kubectl',
+    onSlowCommand: options.onSlowCommand,
+    slowCommandMs: options.slowCommandMs
+  });
 }

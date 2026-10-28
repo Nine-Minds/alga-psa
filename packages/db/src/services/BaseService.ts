@@ -7,9 +7,29 @@ import type { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, withTransaction } from '../lib/tenant';
 import { tenantDb } from '../lib/tenantDb';
+import { admitOperationalWrite } from '../lib/writeAdmission';
 
 const tableColumnsCache = new Map<string, Promise<Set<string>>>();
 const warnedMissingAuditFields = new Set<string>();
+
+/**
+ * Thrown when `applyFilters` receives a `<field>_from` / `<field>_to` key that
+ * has no column mapping for the resource. Failing loudly is deliberate: silently
+ * dropping the filter would return unfiltered rows the caller did not ask for.
+ *
+ * `statusCode`/`code` mirror the API middleware's ValidationError shape so the
+ * route layer renders this as a 400 rather than a 500, without packages/db
+ * depending on server internals.
+ */
+export class UnsupportedRangeFilterError extends Error {
+  readonly statusCode = 400;
+  readonly code = 'VALIDATION_ERROR';
+
+  constructor(public readonly filterKey: string) {
+    super(`Unsupported range filter "${filterKey}": no column mapping is defined for this resource`);
+    this.name = 'UnsupportedRangeFilterError';
+  }
+}
 
 // Import and re-export for services
 export interface ListOptions {
@@ -23,6 +43,8 @@ export interface ListOptions {
 export interface ServiceContext {
   userId: string;
   tenant: string;
+  /** Set by the verified API transport, never from a request body. */
+  apiKeyId?: string;
   user?: any;
   db?: Knex;
 }
@@ -47,6 +69,10 @@ export interface ServiceOptions {
   searchableFields?: string[];
   defaultSort?: string;
   defaultOrder?: 'asc' | 'desc';
+  /** Domain admission inside each inherited mutation's transaction, before
+   * row access. Custom mutation overrides must retain their own admission.
+   * Keeping this injected avoids a database-to-licensing dependency cycle. */
+  mutationGuard?: (trx: Knex.Transaction, context: ServiceContext) => Promise<void>;
 }
 
 export abstract class BaseService<T = any> {
@@ -63,6 +89,7 @@ export abstract class BaseService<T = any> {
   protected searchableFields: string[];
   protected defaultSort: string;
   protected defaultOrder: 'asc' | 'desc';
+  protected mutationGuard?: ServiceOptions['mutationGuard'];
 
   constructor(options: ServiceOptions) {
     this.tableName = options.tableName;
@@ -79,6 +106,31 @@ export abstract class BaseService<T = any> {
     this.searchableFields = options.searchableFields || [];
     this.defaultSort = options.defaultSort || this.auditFields.createdAt;
     this.defaultOrder = options.defaultOrder || 'desc';
+    // Default admission is the same decision `tenantDb` makes at the write terminals, taken
+    // early so a refused mutation does no row access or audit work first. A caller's guard
+    // COMPOSES with it (admission first), so a subclass cannot opt out by passing its own.
+    const callerGuard = options.mutationGuard;
+    this.mutationGuard = async (trx, context) => {
+      await admitOperationalWrite(trx, context.tenant, this.tableName, `service-mutation:${this.tableName}`);
+      await callerGuard?.(trx, context);
+    };
+  }
+
+  /**
+   * Run a custom mutation in one transaction whose first step is this
+   * service's mutationGuard, so admission and the write share the transaction.
+   * Overrides and service-specific writers use this instead of opening their
+   * own transaction, which would skip the guard.
+   */
+  protected async mutationTransaction<R>(
+    context: ServiceContext,
+    work: (trx: Knex.Transaction, tenant: string) => Promise<R>,
+  ): Promise<R> {
+    const { knex, tenant } = await this.getKnex();
+    return withTransaction(knex, async (trx) => {
+      await this.mutationGuard?.(trx, context);
+      return work(trx, tenant);
+    });
   }
 
   /**
@@ -96,6 +148,8 @@ export abstract class BaseService<T = any> {
   /**
    * Get database connection for a context (backward compatibility)
    */
+  // LEVERAGE: pattern comanaged-trx-threading — the same choose-the-caller's-handle rule
+  // as StorageService.deleteFile and the cleanupExpiredTokens services, spelled a third way.
   protected async getDbForContext(context: ServiceContext): Promise<Knex> {
     if (context.db) {
       return context.db;
@@ -122,20 +176,72 @@ export abstract class BaseService<T = any> {
   }
 
   /**
+   * Declared range-filter keys for this resource. Meaning is per key:
+   * - a string value is the column to constrain; whether the bound is `>=` or
+   *   `<=` is chosen from the key's suffix (`_from` / `_to`);
+   * - `null` means a range key this resource declares but does not support, so
+   *   `applyRangeFilters` throws `UnsupportedRangeFilterError` (400);
+   * - a key absent from the map is not a range filter at all. `applyRangeFilters`
+   *   ignores it and `applyFilters` treats it like any other filter.
+   *
+   * Key presence — not the `_from`/`_to` suffix — decides what is a range filter,
+   * so a real column filter such as `assigned_to` is never mistaken for one.
+   * Subclasses that expose additional ranges must extend this map (e.g.
+   * override, spread `super.rangeFilterColumns()`, and add keys).
+   */
+  protected rangeFilterColumns(): Record<string, string | null> {
+    return {
+      created_from: this.auditFields.createdAt,
+      created_to: this.auditFields.createdAt,
+      updated_from: this.auditFields.updatedAt,
+      updated_to: this.auditFields.updatedAt,
+    };
+  }
+
+  /**
+   * Apply the declared range filters. Only keys present in `rangeFilterColumns()`
+   * are range filters: a mapped key applies its bound, a `null` mapping throws
+   * `UnsupportedRangeFilterError`, and any other key is left for `applyFilters`
+   * or the caller's own filter code.
+   *
+   * Subclasses with hand-written filter methods can call this to get the common
+   * `created_from`/`updated_from` handling without adopting the rest of
+   * `applyFilters`.
+   */
+  protected applyRangeFilters(
+    query: Knex.QueryBuilder,
+    filters: Record<string, any>,
+    columns: Record<string, string | null> = this.rangeFilterColumns()
+  ): Knex.QueryBuilder {
+    Object.entries(filters ?? {}).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      if (!Object.prototype.hasOwnProperty.call(columns, key)) return;
+
+      const rangeColumn = columns[key];
+      if (rangeColumn === null) {
+        throw new UnsupportedRangeFilterError(key);
+      }
+
+      // Direction comes from the suffix, but only for keys declared as ranges.
+      query.where(rangeColumn, key.endsWith('_to') ? '<=' : '>=', value);
+    });
+
+    return query;
+  }
+
+  /**
    * Apply filters to query
    */
   protected applyFilters(query: Knex.QueryBuilder, filters: Record<string, any>): Knex.QueryBuilder {
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value === undefined || value === null) return;
+    const rangeColumns = this.rangeFilterColumns();
+    query = this.applyRangeFilters(query, filters, rangeColumns);
 
-      // Handle special filter types
-      if (key.endsWith('_from')) {
-        const field = key.replace('_from', '');
-        query.where(field, '>=', value);
-      } else if (key.endsWith('_to')) {
-        const field = key.replace('_to', '');
-        query.where(field, '<=', value);
-      } else if (key === 'search' && this.searchableFields.length > 0) {
+    Object.entries(filters ?? {}).forEach(([key, value]) => {
+      if (value === undefined || value === null) return;
+      // Declared range keys were applied (or rejected) above.
+      if (Object.prototype.hasOwnProperty.call(rangeColumns, key)) return;
+
+      if (key === 'search' && this.searchableFields.length > 0) {
         query.where(subQuery => {
           this.searchableFields.forEach((field, index) => {
             if (index === 0) {
@@ -182,29 +288,54 @@ export abstract class BaseService<T = any> {
   }
 
   /**
-   * Add audit fields for create operations
+   * Stamp create audit fields and return the row already filtered against the
+   * target table's columns, so a service can never write an audit column the
+   * table does not have. Pass `targetTable` when the row is written to a table
+   * other than this service's default `tableName`.
+   *
+   * This is the only supported way to add create audit fields; it goes through
+   * `filterAuditFields`, which reuses the shared `tableColumnsCache`.
    */
-  protected addCreateAuditFields(data: any, context: ServiceContext): any {
+  protected async addCreateAuditFields(
+    conn: Knex | Knex.Transaction,
+    data: any,
+    context: ServiceContext,
+    targetTable: string = this.tableName
+  ): Promise<any> {
     const now = new Date().toISOString();
-    return {
-      ...data,
-      [this.auditFields.createdBy]: context.userId,
-      [this.auditFields.updatedBy]: context.userId,
-      [this.auditFields.createdAt]: now,
-      [this.auditFields.updatedAt]: now,
-      [this.tenantColumn]: context.tenant
-    };
+    return this.filterAuditFields(
+      conn,
+      {
+        ...data,
+        [this.auditFields.createdBy]: context.userId,
+        [this.auditFields.updatedBy]: context.userId,
+        [this.auditFields.createdAt]: now,
+        [this.auditFields.updatedAt]: now,
+        [this.tenantColumn]: context.tenant
+      },
+      targetTable
+    );
   }
 
   /**
-   * Add audit fields for update operations
+   * Stamp update audit fields and return the row already filtered against the
+   * target table's columns. See `addCreateAuditFields` for the contract.
    */
-  protected addUpdateAuditFields(data: any, context: ServiceContext): any {
-    return {
-      ...data,
-      [this.auditFields.updatedBy]: context.userId,
-      [this.auditFields.updatedAt]: new Date().toISOString()
-    };
+  protected async addUpdateAuditFields(
+    conn: Knex | Knex.Transaction,
+    data: any,
+    context: ServiceContext,
+    targetTable: string = this.tableName
+  ): Promise<any> {
+    return this.filterAuditFields(
+      conn,
+      {
+        ...data,
+        [this.auditFields.updatedBy]: context.userId,
+        [this.auditFields.updatedAt]: new Date().toISOString()
+      },
+      targetTable
+    );
   }
 
   /**
@@ -318,10 +449,8 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const auditedData = await this.filterAuditFields(
-        trx,
-        this.addCreateAuditFields(data, context)
-      );
+      await this.mutationGuard?.(trx, context);
+      const auditedData = await this.addCreateAuditFields(trx, data, context);
       const [result] = await this.buildTenantScopedQuery(trx, context)
         .insert(auditedData)
         .returning('*');
@@ -336,10 +465,8 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const auditedData = await this.filterAuditFields(
-        trx,
-        this.addUpdateAuditFields(data, context)
-      );
+      await this.mutationGuard?.(trx, context);
+      const auditedData = await this.addUpdateAuditFields(trx, data, context);
 
       const [result] = await this.buildTenantScopedQuery(trx, context)
         .where(this.primaryKey, id)
@@ -361,13 +488,12 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.mutationGuard?.(trx, context);
       if (this.softDelete) {
-        const auditedData = await this.filterAuditFields(
+        const auditedData = await this.addUpdateAuditFields(
           trx,
-          this.addUpdateAuditFields(
-            { deleted_at: new Date().toISOString() },
-            context
-          )
+          { deleted_at: new Date().toISOString() },
+          context
         );
 
         await this.buildTenantScopedQuery(trx, context)
@@ -401,7 +527,10 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const auditedData = data.map(item => this.addCreateAuditFields(item, context));
+      await this.mutationGuard?.(trx, context);
+      const auditedData = await Promise.all(
+        data.map(item => this.addCreateAuditFields(trx, item, context))
+      );
       const results = await this.buildTenantScopedQuery(trx, context)
         .insert(auditedData)
         .returning('*');
@@ -413,10 +542,11 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.mutationGuard?.(trx, context);
       const results: any[] = [];
 
       for (const update of updates) {
-        const auditedData = this.addUpdateAuditFields(update.data, context);
+        const auditedData = await this.addUpdateAuditFields(trx, update.data, context);
 
         const [result] = await this.buildTenantScopedQuery(trx, context)
           .where(this.primaryKey, update.id)
@@ -436,8 +566,10 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await this.mutationGuard?.(trx, context);
       if (this.softDelete) {
-        const auditedData = this.addUpdateAuditFields(
+        const auditedData = await this.addUpdateAuditFields(
+          trx,
           { deleted_at: new Date().toISOString() },
           context
         );

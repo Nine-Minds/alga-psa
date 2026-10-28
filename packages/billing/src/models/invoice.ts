@@ -1,3 +1,4 @@
+import { loadInvoiceChargeLineIds } from '../services/invoiceChargeLineage';
 /**
  * @alga-psa/billing - Invoice Model
  *
@@ -12,6 +13,7 @@
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { formatLocationAddress } from '@alga-psa/core';
 import type {
   IInvoice,
   IInvoiceCharge,
@@ -38,6 +40,8 @@ type InvoiceChargeDetailPeriodRow = {
 
 type InvoiceChargeDisplayRow = IInvoiceCharge & {
   name?: string | null;
+  adjustment_period_start?: string | Date | null;
+  adjustment_period_end?: string | Date | null;
 };
 
 type InvoiceTimeEntrySnapshotRow = {
@@ -53,20 +57,28 @@ type InvoiceAnnotationRow = IInvoiceAnnotation & {
   tenant: string;
 };
 
-type InvoiceClientDetailsRow = {
+type InvoiceLocationAddressColumns = {
+  address_line1?: string | null;
+  address_line2?: string | null;
+  address_line3?: string | null;
+  city?: string | null;
+  state_province?: string | null;
+  postal_code?: string | null;
+  country_name?: string | null;
+};
+
+type InvoiceClientDetailsRow = InvoiceLocationAddressColumns & {
   client_name?: string | null;
   properties?: unknown;
-  location_address?: string | null;
 };
 
 type InvoiceContactRow = {
   full_name?: string | null;
 };
 
-type InvoiceTenantClientDetailsRow = {
+type InvoiceTenantClientDetailsRow = InvoiceLocationAddressColumns & {
   client_id?: string | null;
   client_name?: string | null;
-  location_address?: string | null;
 };
 
 type RecurringInvoiceSummaryRow = {
@@ -189,6 +201,13 @@ function attachCanonicalRecurringDetailPeriods(
     const chargeDetailRows = detailRowsByItemId.get(charge.item_id);
     if (!chargeDetailRows || chargeDetailRows.length === 0) {
       // Historical flat invoices stay parent-only when canonical detail rows do not exist.
+      if (charge.adjustment_period_start || charge.adjustment_period_end) {
+        return {
+          ...charge,
+          service_period_start: normalizeRecurringDetailPeriodDate(charge.adjustment_period_start),
+          service_period_end: normalizeRecurringDetailPeriodDate(charge.adjustment_period_end),
+        };
+      }
       return charge;
     }
 
@@ -482,14 +501,13 @@ const Invoice = {
         .select(
           'c.client_name',
           'c.properties',
-          knexOrTrx.raw(`CONCAT_WS(', ',
-            NULLIF(cl.address_line1, 'N/A'),
-            cl.address_line2,
-            NULLIF(cl.city, 'N/A'),
-            cl.state_province,
-            cl.postal_code,
-            NULLIF(cl.country_name, 'Unknown')
-          ) as location_address`)
+          'cl.address_line1',
+          'cl.address_line2',
+          'cl.address_line3',
+          'cl.city',
+          'cl.state_province',
+          'cl.postal_code',
+          'cl.country_name'
         )
         .where({
           'c.client_id': invoice.client_id
@@ -505,14 +523,13 @@ const Invoice = {
         .select(
           'tc.client_id',
           'c.client_name',
-          knexOrTrx.raw(`CONCAT_WS(', ',
-            NULLIF(cl.address_line1, 'N/A'),
-            cl.address_line2,
-            NULLIF(cl.city, 'N/A'),
-            cl.state_province,
-            cl.postal_code,
-            NULLIF(cl.country_name, 'Unknown')
-          ) as location_address`)
+          'cl.address_line1',
+          'cl.address_line2',
+          'cl.address_line3',
+          'cl.city',
+          'cl.state_province',
+          'cl.postal_code',
+          'cl.country_name'
         )
         .where({
           'tc.is_default': true
@@ -568,16 +585,15 @@ const Invoice = {
           client_id: invoice.client_id,
         })
         .select(
-          knexOrTrx.raw(`CONCAT_WS(', ',
-            NULLIF(address_line1, 'N/A'),
-            address_line2,
-            NULLIF(city, 'N/A'),
-            state_province,
-            postal_code,
-            NULLIF(country_name, 'Unknown')
-          ) as location_address`),
+          'address_line1',
+          'address_line2',
+          'address_line3',
+          'city',
+          'state_province',
+          'postal_code',
+          'country_name',
         )
-        .first() as { location_address?: string | null } | undefined
+        .first() as InvoiceLocationAddressColumns | undefined
       : undefined;
 
     let clientProperties: { logo?: string } = {};
@@ -610,7 +626,7 @@ const Invoice = {
     if (tenantClientDetails?.client_id) {
       const tenantLogoUrl = await getClientDocumentLogoUrl(tenantClientDetails.client_id, tenant).catch(() => null);
       const tenantClientName = asTrimmedString(tenantClientDetails.client_name);
-      const tenantClientAddress = asTrimmedString(tenantClientDetails.location_address);
+      const tenantClientAddress = formatLocationAddress(tenantClientDetails);
 
       if (tenantClientName.length > 0 || tenantClientAddress.length > 0 || tenantLogoUrl) {
         tenantClient = {
@@ -680,7 +696,7 @@ const Invoice = {
         // client name, which is every unsegmented invoice.
         name: billingProfile?.bill_to_name?.trim() || client.client_name || '',
         logo: logoUrl || clientProperties.logo || '',
-        address: billToLocation?.location_address || client.location_address || ''
+        address: formatLocationAddress(billToLocation) || formatLocationAddress(client)
       },
       billing_profile_id: invoice.billing_profile_id ?? null,
       billing_profile_name: billingProfile?.name ?? null,
@@ -705,6 +721,7 @@ const Invoice = {
       credit_applied: creditApplied,
       billing_cycle_id: invoice.billing_cycle_id,
       is_manual: Boolean(invoice.is_manual),
+      draft_adjustment_revision: Number((invoice as { draft_adjustment_revision?: number }).draft_adjustment_revision ?? 0),
       tax_source: invoice.tax_source || 'internal',
       recurring_service_period_start: recurringServicePeriodStarts[0] || null,
       recurring_service_period_end: recurringServicePeriodEnds[recurringServicePeriodEnds.length - 1] || null,
@@ -790,12 +807,24 @@ const Invoice = {
           'ic.tenant',
           'ic.billing_charge_type',
           'ic.service_id',
+          'ic.client_contract_id',
+          'ic.adjustment_source_kind',
+          'ic.adjustment_source_id',
+          'ic.adjustment_source_revision',
+          'ic.adjustment_reason',
+          'ic.adjustment_period_start',
+          'ic.adjustment_period_end',
           'sc.item_kind as service_item_kind',
           'sc.sku as service_sku',
           'sc.service_name as service_name',
           'ic.description as name',
           'ic.description',
           'ic.is_discount',
+          'ic.discount_type',
+          'ic.discount_percentage',
+          'ic.applies_to_item_id',
+          'ic.applies_to_service_id',
+          'ic.is_manual_credit',
           'ic.unit_code',
           'ic.unit_label',
           knexOrTrx.raw('CAST(ic.quantity AS DOUBLE PRECISION) as quantity'),
@@ -804,6 +833,10 @@ const Invoice = {
           knexOrTrx.raw('CAST(ic.tax_amount AS BIGINT) as tax_amount'),
           knexOrTrx.raw('CAST(ic.net_amount AS BIGINT) as net_amount'),
           'ic.is_manual',
+          'ic.is_taxable',
+          'ic.tax_region',
+          'ic.billing_profile_id',
+          'ic.manual_line_metadata',
           'ic.location_id'
         )
         .where('ic.invoice_id', invoiceId);
@@ -811,6 +844,17 @@ const Invoice = {
       const items = (await query) as InvoiceChargeDisplayRow[];
       if (items.length === 0) {
         return items;
+      }
+
+      const lineIds = await loadInvoiceChargeLineIds(knexOrTrx, tenant, invoiceId);
+      for (const item of items) {
+        item.adjustment_period_start = normalizeRecurringDetailPeriodDate(item.adjustment_period_start)?.slice(0, 10) ?? null;
+        item.adjustment_period_end = normalizeRecurringDetailPeriodDate(item.adjustment_period_end)?.slice(0, 10) ?? null;
+        const ids = lineIds.get(item.item_id);
+        const partial = (item.manual_line_metadata as any)?.partialPeriod;
+        (item as IInvoiceCharge).contract_line_id = ids?.size === 1
+          ? ids.values().next().value ?? null
+          : ids?.size ? null : partial?.contract_line_id ?? null;
       }
 
       const itemIds = items.map((item) => item.item_id).filter(Boolean);

@@ -45,8 +45,10 @@ export interface TicketScreenBootstrap {
   externalLinks: ITicketExternalLinkView[] | null;
   autoCloseState: ITicketAutoCloseState | null;
   canViewCommentMetadataDebug: boolean | null;
+  /** `workflow:manage`/`workflow:admin`: shows More -> Create workflow from ticket. Absent/null falls back to a client fetch. */
+  canManageWorkflows?: boolean | null;
   teams: ITeam[] | null;
-  displaySettings: { showWeekday?: boolean; responseStateTrackingEnabled?: boolean } | null;
+  displaySettings: { showWeekday?: boolean; responseStateTrackingEnabled?: boolean; defaultReplyInternal?: boolean } | null;
   tags: ITag[] | null;
   streams: {
     /** Non-comment timeline entries (system/time/alert lanes). */
@@ -64,4 +66,9 @@ export interface TicketScreenBootstrap {
     /** Prev/next pager data, computed server-side with the request's returnFilters. */
     adjacentTickets: Promise<AdjacentTicketData | null>;
   } | null;
+}
+
+/** Workflow authoring rights (`workflow:manage` or `workflow:admin`); the server action re-checks. */
+export function hasWorkflowManageAccess(permissions: readonly string[]): boolean {
+  return permissions.includes('workflow:manage') || permissions.includes('workflow:admin');
 }

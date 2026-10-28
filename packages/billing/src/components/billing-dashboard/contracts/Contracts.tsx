@@ -184,6 +184,8 @@ const Contracts: React.FC = () => {
       const result = await deleteContract(contractToDelete.contractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         handleError(getErrorMessage(result));
+        // The delete may have been refused after the list went stale; show current state.
+        await fetchContracts();
         setContractToDelete(null);
         return;
       }
@@ -194,6 +196,7 @@ const Contracts: React.FC = () => {
         ? err.message
         : t('contractsList.toasts.failedToDeleteContract', { defaultValue: 'Failed to delete contract' });
       toast.error(message);
+      await fetchContracts();
     } finally {
       setIsDeletingContract(false);
     }
@@ -230,6 +233,7 @@ const Contracts: React.FC = () => {
       const result = await deleteContract(draftToDiscard.contractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         handleError(getErrorMessage(result));
+        await fetchContracts();
         return;
       }
       await fetchContracts();
@@ -237,6 +241,7 @@ const Contracts: React.FC = () => {
       setDraftToDiscard(null);
     } catch (err) {
       handleError(err, t('contractsList.toasts.failedToDiscardDraft', { defaultValue: 'Failed to discard draft' }));
+      await fetchContracts();
     } finally {
       setIsDiscardingDraft(false);
     }
@@ -288,6 +293,7 @@ const Contracts: React.FC = () => {
       const result = await activateClientContractForBilling(clientContractId);
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));
+        await fetchContracts();
         return;
       }
       toast.success(t('contractsList.toasts.contractActivated', { defaultValue: 'Contract activated' }));
@@ -321,6 +327,7 @@ const Contracts: React.FC = () => {
     const normalized = (status || 'draft').toLowerCase();
     const statusConfig: Record<string, { variant: 'success' | 'default-muted' | 'warning' | 'error' | 'info'; label: string }> = {
       active: { variant: 'success', label: t('status.active', { defaultValue: 'Active' }) },
+      scheduled: { variant: 'info', label: t('status.scheduled', { defaultValue: 'Scheduled' }) },
       draft: { variant: 'default-muted', label: t('status.draft', { defaultValue: 'Draft' }) },
       terminated: { variant: 'warning', label: t('status.terminated', { defaultValue: 'Terminated' }) },
       expired: { variant: 'error', label: t('status.expired', { defaultValue: 'Expired' }) },
@@ -477,7 +484,8 @@ const Contracts: React.FC = () => {
                   ? t('contractsList.actions.resume', { defaultValue: 'Resume' })
                   : t('common.actions.edit', { defaultValue: 'Edit' })}
               </DropdownMenuItem>
-            {liveStatus === 'active' && (
+            {/* A scheduled contract is confirmed and can be terminated before it starts. */}
+            {(liveStatus === 'active' || liveStatus === 'scheduled') && (
               <DropdownMenuItem
                 id="terminate-contract-menu-item"
                 className="text-orange-600 focus:text-orange-600"
@@ -499,6 +507,15 @@ const Contracts: React.FC = () => {
                 }}
               >
                 {t('contractsList.actions.restore', { defaultValue: 'Restore' })}
+              </DropdownMenuItem>
+            )}
+            {liveStatus === 'scheduled' && (
+              // Already active: "Set to Active" would be a no-op, so explain the start date instead.
+              <DropdownMenuItem id="scheduled-start-menu-item" disabled>
+                {t('status.startsOn', {
+                  defaultValue: 'Starts {{date}}',
+                  date: formatCalendarDate(record.start_date, locale) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
+                })}
               </DropdownMenuItem>
             )}
             {liveStatus === 'draft' && (

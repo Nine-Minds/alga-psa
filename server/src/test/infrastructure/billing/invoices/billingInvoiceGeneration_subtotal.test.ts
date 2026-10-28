@@ -386,38 +386,13 @@ describe('Billing Invoice Subtotal Calculations', () => {
     expect(invoice!.subtotal).toBe(0);
   });
 
-  it('supports negative fixed-fee plans (credits) in subtotal totals', async () => {
+  it('rejects a negative standing fixed rate; credits belong on invoice adjustments', async () => {
     const creditService = await createTestService(context, {
-      service_name: 'Credit Plan Service',
-      default_rate: 12500,
-      tax_region: 'US-NY'
+      service_name: 'Credit Plan Service', default_rate: 12500, tax_region: 'US-NY',
     });
-
-    await createFixedPlanAssignment(context, creditService, {
-      planName: 'Credit Plan',
-      baseRateCents: -12500,
-      detailBaseRateCents: -12500,
-      startDate: '2025-02-01',
-      billingTiming: 'advance',
-      materializeServicePeriods: true
-    });
-
-    const billingCycleId = await context.createEntity('client_billing_cycles', {
-      client_id: context.clientId,
-      billing_cycle: 'monthly',
-      effective_date: '2025-02-01',
-      period_start_date: '2025-02-01',
-      period_end_date: '2025-03-01'
-    }, 'billing_cycle_id');
-
-    const invoice = await generateInvoice(billingCycleId);
-
-    expect(invoice).not.toBeNull();
-    expect(invoice!.subtotal).toBe(-12500);
-
-    const items = await getInvoiceItems(invoice!.invoice_id);
-
-    expect(items).toHaveLength(1);
-    expect(Number(items[0].net_amount)).toBe(-12500);
+    await expect(createFixedPlanAssignment(context, creditService, {
+      planName: 'Credit Plan', baseRateCents: -12500, detailBaseRateCents: -12500,
+      startDate: '2025-02-01', billingTiming: 'advance', materializeServicePeriods: true,
+    })).rejects.toMatchObject({ code: '23514', constraint: 'contract_lines_custom_rate_nonnegative' });
   });
 });

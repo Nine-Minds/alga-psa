@@ -32,7 +32,8 @@
     "to": "Do",
     "today": "Dzisiaj",
     "total": "Razem",
-    "unknown": "Nieznany"
+    "unknown": "Nieznany",
+    "recordUnavailable": "Nie znaleziono lub brak dostępu"
   },
   "counts": {
     "adjustments": "{{count}} korekt",
@@ -1305,6 +1306,18 @@
     "ageAtVendor": "u dostawcy od {{days}} dni",
     "filters": {
       "statusActive": "Wyświetlanie spraw RMA ze statusem {{status}}."
+    },
+    "detail": {
+      "title": "RMA {{id}}",
+      "reference": "Numer referencyjny RMA",
+      "product": "Produkt",
+      "returnedSerial": "Numer seryjny zwróconej jednostki",
+      "opened": "Otwarto",
+      "updated": "Zaktualizowano",
+      "age": "Wiek (dni)",
+      "reason": "Powód",
+      "viewUnit": "Wyświetl jednostkę",
+      "viewAsset": "Wyświetl zasób"
     }
   },
   "salesOrders": {
@@ -1564,6 +1577,10 @@
       "inProgress": "Przebudowywanie…"
     },
     "receive": {
+      "searchProducts": "Szukaj produktów lub SKU...",
+      "noProductsFound": "Nie znaleziono produktów",
+      "searchLocations": "Szukaj lokalizacji...",
+      "noLocationsFound": "Nie znaleziono lokalizacji",
       "costNonNegative": "Koszt jednostkowy nie może być ujemny.",
       "failed": "Nie udało się przyjąć zapasu.",
       "inProgress": "Przyjmowanie…",
@@ -1698,6 +1715,12 @@
       "failed": "Nie udało się ponownie przyjąć zwrotu na stan.",
       "restocking": "Ponowne przyjmowanie na stan…",
       "submit": "Przyjmij ponownie na stan"
+    },
+    "printLabel": "Drukuj etykietę",
+    "printWithTemplate": "Drukuj z użyciem {{code}}",
+    "claimant": {
+      "project": "Projekt {{number}}",
+      "salesOrder": "Zamówienie sprzedaży {{number}}"
     }
   },
   "transfers": {

@@ -78,3 +78,8 @@ flowchart TD
 * The workflow file in code is `workflows/system-email-processing.json`.
 * Human task generation points are highlighted in yellow.
 
+## Workflow events published
+
+When the system email processing workflow creates a new ticket (node **T** in the diagram), it stamps an `occurredAt` timestamp and publishes a `TICKET_CREATED` event to the workflow event bus. Any custom workflow in the Automation Hub that is attached to the **Ticket Created** trigger will therefore fire for inbound-email tickets, just as it does for tickets created through the UI, API, or client portal.
+
+If a matching workflow trigger is skipped — for example, because a payload field is missing, a schema reference is unrecognised, or a parameter mapping fails — the event row's `error_message` column is updated with a human-readable diagnostic. Query `workflow_events` where `error_message IS NOT NULL` to investigate silent non-fires.

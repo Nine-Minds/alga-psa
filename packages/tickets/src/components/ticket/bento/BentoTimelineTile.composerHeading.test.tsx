@@ -102,7 +102,8 @@ vi.mock('@alga-psa/ui/components/Switch', () => ({
   ),
 }));
 
-vi.mock('@alga-psa/ui/components/bento/BentoTile', () => ({
+vi.mock('@alga-psa/ui/components/bento/BentoTile', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/ui/components/bento/BentoTile')>()),
   BentoTile: ({ children }: { children: React.ReactNode }) => <section>{children}</section>,
   BentoTileEmpty: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
@@ -121,7 +122,8 @@ vi.mock('@alga-psa/ui/keyboard-shortcuts', () => ({
   usePageCreateShortcut: () => undefined,
 }));
 
-vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', () => ({
+vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/ui/ui-reflection/withDataAutomationId')>()),
   withDataAutomationId: ({ id }: { id: string }) => ({ 'data-testid': id }),
   // The Cc/Bcc control pulls in ReflectionContainer, which needs this HOC.
   withUIReflectionId: (Component: unknown) => Component,
@@ -171,6 +173,8 @@ vi.mock('../useTicketRichTextUploadSession', () => ({
 
 const defaultProps: BentoTimelineTileProps = {
   id: 'ticket-timeline',
+  // Newest-first: the composer entry sits above the history (see composer placement).
+  initialOrder: 'desc',
   ticketId: 'ticket-1',
   conversations: [],
   userMap: {},
@@ -194,6 +198,26 @@ function renderTimeline(overrides: Partial<BentoTimelineTileProps> = {}) {
   fireEvent.click(document.getElementById('ticket-timeline-add-comment-btn')!);
   return result;
 }
+
+describe('BentoTimelineTile composer placement and lane chips', () => {
+  it('puts the reply entry above the history for newest-first', () => {
+    render(<BentoTimelineTile {...defaultProps} initialOrder="desc" />);
+    expect(document.getElementById('ticket-timeline-add-comment-btn')).not.toBeNull();
+  });
+
+  it('docks the reply entry at the bottom (the newest end) for oldest-first, with no top entry', () => {
+    render(<BentoTimelineTile {...defaultProps} initialOrder="asc" />);
+    expect(document.getElementById('ticket-timeline-add-comment-btn')).toBeNull();
+    expect(document.getElementById('ticket-timeline-composer-dock-trigger')).not.toBeNull();
+  });
+
+  it('hides filter chips for lanes with nothing in them', () => {
+    render(<BentoTimelineTile {...defaultProps} />);
+    expect(document.getElementById('ticket-timeline-filter-everything')).not.toBeNull();
+    expect(document.getElementById('ticket-timeline-filter-system')).toBeNull();
+    expect(document.getElementById('ticket-timeline-filter-alert')).toBeNull();
+  });
+});
 
 describe('BentoTimelineTile composer heading', () => {
   beforeEach(() => {
@@ -219,6 +243,59 @@ describe('BentoTimelineTile composer heading', () => {
 
     fireEvent.click(document.getElementById('ticket-timeline-composer-lane-client')!);
     expect(screen.getByText('Reply to Andrew')).toBeInTheDocument();
+  });
+
+  it('defaults to Internal when enabled, allows Client, and resets the next reply after sending', async () => {
+    const onAddNewComment = vi.fn().mockResolvedValue(true);
+    renderTimeline({ defaultReplyInternal: true, onAddNewComment });
+
+    expect(screen.queryByText('Reply to Andrew')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('composer-editor'));
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    await vi.waitFor(() => {
+      expect(onAddNewComment).toHaveBeenCalledWith(true, false, null, undefined, null, undefined);
+      expect(screen.queryByTestId('composer-editor')).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(document.getElementById('ticket-timeline-add-comment-btn')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
+    expect(screen.getByText('Reply to Andrew')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('composer-editor'));
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    await vi.waitFor(() => {
+      expect(onAddNewComment).toHaveBeenLastCalledWith(false, false, null, undefined, null, undefined);
+      expect(screen.queryByTestId('composer-editor')).not.toBeInTheDocument();
+    });
+
+    fireEvent.click(document.getElementById('ticket-timeline-add-comment-btn')!);
+    expect(screen.queryByText('Reply to Andrew')).not.toBeInTheDocument();
+  });
+
+  it('uses the loaded default when opening without changing a reply already being composed', () => {
+    const { rerender } = render(<BentoTimelineTile {...defaultProps} />);
+    rerender(<BentoTimelineTile {...defaultProps} defaultReplyInternal />);
+    fireEvent.click(document.getElementById('ticket-timeline-add-comment-btn')!);
+    expect(screen.queryByText('Reply to Andrew')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
+    rerender(<BentoTimelineTile {...defaultProps} defaultReplyInternal />);
+    expect(screen.getByText('Reply to Andrew')).toBeInTheDocument();
+  });
+
+  it('resets to Internal after cancelling when enabled', () => {
+    renderTimeline({ defaultReplyInternal: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(document.getElementById('ticket-timeline-add-comment-btn')!);
+    expect(screen.queryByText('Reply to Andrew')).not.toBeInTheDocument();
+  });
+
+  it('preserves the existing visibility retention when the setting is disabled', () => {
+    renderTimeline({ defaultReplyInternal: false });
+    expect(screen.getByText('Reply to Andrew')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Internal' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(document.getElementById('ticket-timeline-add-comment-btn')!);
+    expect(screen.queryByText('Reply to Andrew')).not.toBeInTheDocument();
   });
 
   it('shows the no-contact fallback only in the client lane', () => {
@@ -343,7 +420,7 @@ describe('BentoTimelineTile composer heading', () => {
     fireEvent.click(screen.getByRole('switch', { name: 'Schedule' }));
     expect(screen.getByLabelText('Publish at (America/New_York)')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Add Comment' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reply to Andrew' }));
 
     expect(screen.getByRole('switch', { name: 'Schedule' })).toHaveAttribute('aria-checked', 'false');
     expect(screen.queryByLabelText('Publish at (America/New_York)')).not.toBeInTheDocument();

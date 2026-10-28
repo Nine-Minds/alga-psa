@@ -19,7 +19,7 @@ import {
   webhookSubscriptionSchema,
   webhookTemplateSchema,
   webhookEventSchema,
-  webhookEventTypeSchema,
+  webhookRetryFailedSchema,
   webhookSignatureSchema,
   CreateWebhookData,
   UpdateWebhookData,
@@ -55,6 +55,7 @@ import {
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 import { webhookModel } from '../../webhooks/webhookModel';
+import { WEBHOOK_EVENT_NAMES } from '../../webhooks/eventRegistry';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { verifyWebhookSignature as verifyAlgaWebhookSignature } from '../../webhooks/sign';
 import { signRequest } from '../../webhooks/sign';
@@ -621,7 +622,7 @@ export class ApiWebhookController {
       try {
         // Authenticate
         const apiRequest = await this.authenticate(req);
-        
+
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
@@ -630,14 +631,46 @@ export class ApiWebhookController {
           const url = new URL(apiRequest.url);
           const pathParts = url.pathname.split('/');
           const deliveryId = pathParts[pathParts.length - 2]; // delivery_id is before 'retry'
-          
+          const webhookId = await this.extractIdFromPath(apiRequest);
+
           const result = await this.webhookService.retryDelivery(
+            webhookId,
             deliveryId,
-            apiRequest.context!.tenant,
-            apiRequest.context!.userId
+            apiRequest.context!.tenant
           );
-          
-          return createSuccessResponse(result.data);
+
+          return createSuccessResponse(result.data, 202);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Retry every failed/abandoned delivery of a webhook
+   */
+  retryFailed() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        // Authenticate
+        const apiRequest = await this.authenticate(req);
+
+        // Run within tenant context
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          // Check permissions
+          await this.checkPermission(apiRequest, 'retry');
+
+          const id = await this.extractIdFromPath(apiRequest);
+          const options = await this.validateData(apiRequest, webhookRetryFailedSchema);
+
+          const result = await this.webhookService.retryFailedDeliveries(
+            id,
+            apiRequest.context!.tenant,
+            { since: options.since, limit: options.limit }
+          );
+
+          return createSuccessResponse(result.data, 202);
         });
       } catch (error) {
         return handleApiError(error);
@@ -1477,7 +1510,7 @@ export class ApiWebhookController {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
-          const events = [...webhookEventTypeSchema.options];
+          const events = [...WEBHOOK_EVENT_NAMES];
           
           return createSuccessResponse(events);
         });

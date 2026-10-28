@@ -88,6 +88,10 @@ export async function setupE2ETestEnvironment(options: {
         // Clean up API keys
         await tenantTable('api_keys').delete();
         
+        // Stopwatch sessions and suggestion dismissals reference users (segments cascade)
+        await tenantTable('time_tracking_sessions').delete();
+        await tenantTable('time_entry_suggestion_dismissals').delete();
+
         // Clean up time entries first
         await tenantTable('time_entries').delete();
           

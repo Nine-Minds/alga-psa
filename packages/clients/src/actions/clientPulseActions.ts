@@ -631,16 +631,22 @@ async function fetchMoney(
   clientId: string,
   nowMs: number,
 ): Promise<{ money: ClientPulseMoney; flags: ClientAttentionFlag[] }> {
+  // The aggregate carries `tenant` so the join below can match on the
+  // distribution key: without it Citus cannot push the join down to a single
+  // shard and opens a connection to another node mid-transaction, which is how
+  // this query started failing in production once that node hit its ceiling.
   const completedPayments = trx('invoice_payments')
     .where({ tenant, status: COMPLETED_PAYMENT_STATUS })
-    .groupBy('invoice_id')
-    .select('invoice_id')
+    .groupBy('tenant', 'invoice_id')
+    .select('tenant', 'invoice_id')
     .sum({ paid_amount: 'amount' })
     .as('ip');
 
   const [invoiceRows, draftRows, draftAggRow, contractCountRow, currencyRow, timeWipRow, ticketMaterialWipRow, projectMaterialWipRow] = await Promise.all([
     trx('invoices as i')
-      .leftJoin(completedPayments, 'ip.invoice_id', 'i.invoice_id')
+      .leftJoin(completedPayments, function joinCompletedPayments() {
+        this.on('ip.invoice_id', '=', 'i.invoice_id').andOn('ip.tenant', '=', 'i.tenant');
+      })
       .where({ 'i.tenant': tenant, 'i.client_id': clientId })
       .andWhere(function finalizedPredicate() {
         this.whereNotNull('i.finalized_at').orWhere('i.status', '!=', 'draft');
@@ -990,6 +996,37 @@ async function fetchDocuments(
 }
 
 /**
+ * One optional section, isolated: when it fails the screen loses that card
+ * instead of the whole snapshot.
+ *
+ * The savepoint is what makes that possible. A bare try/catch would not be
+ * enough — a failed statement aborts the enclosing Postgres transaction, so
+ * every later section's query would fail too and the caller would still get
+ * nothing. For the same reason the sections run one at a time: ROLLBACK TO
+ * SAVEPOINT also discards every savepoint opened after it, and interleaved
+ * sections would tear down each other's. They share the transaction's single
+ * connection either way, so nothing is lost by sequencing them.
+ */
+async function optionalSection<T>(
+  trx: Knex.Transaction,
+  section: string,
+  fetch: () => Promise<T>,
+): Promise<T | null> {
+  const savepoint = `client_pulse_${section}`;
+  await trx.raw(`SAVEPOINT ${savepoint}`);
+  try {
+    const result = await fetch();
+    await trx.raw(`RELEASE SAVEPOINT ${savepoint}`);
+    return result;
+  } catch (error) {
+    await trx.raw(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+    await trx.raw(`RELEASE SAVEPOINT ${savepoint}`);
+    console.error(`[getClientPulse] ${section} section unavailable; serving the pulse without it:`, error);
+    return null;
+  }
+}
+
+/**
  * Aggregated, RBAC-shaped snapshot powering the client command center.
  * Contract: ee/docs/plans/2026-07-02-client-command-center/PRD.md (D5/D6/D8).
  *
@@ -1061,20 +1098,27 @@ export const getClientPulse = withAuth(async (
       locations,
       record,
       notes,
-      serviceResult,
-      moneyResult,
-      installBaseResult,
-      documents,
     ] = await Promise.all([
       fetchPeople(trx, tenant, clientId, defaultContactId),
       fetchLocations(trx, tenant, clientId),
       fetchRecord(trx, tenant, clientRow, defaultContactId),
       fetchNotes(trx, tenant, clientRow.notes_document_id ?? null, clientRow.notes ?? null),
-      canReadTickets ? fetchService(trx, tenant, clientId, nowMs) : Promise.resolve(null),
-      canReadBilling ? fetchMoney(trx, tenant, clientId, nowMs) : Promise.resolve(null),
-      canReadInventory ? fetchInstallBase(trx, tenant, clientId, canReadAssets, nowMs) : Promise.resolve(null),
-      canReadDocuments ? fetchDocuments(trx, tenant, clientId) : Promise.resolve(null),
     ]);
+
+    // Each optional section degrades on its own (see optionalSection): one
+    // broken rollup costs the client screen a card, not the whole page.
+    const serviceResult = canReadTickets
+      ? await optionalSection(trx, 'service', () => fetchService(trx, tenant, clientId, nowMs))
+      : null;
+    const moneyResult = canReadBilling
+      ? await optionalSection(trx, 'money', () => fetchMoney(trx, tenant, clientId, nowMs))
+      : null;
+    const installBaseResult = canReadInventory
+      ? await optionalSection(trx, 'install_base', () => fetchInstallBase(trx, tenant, clientId, canReadAssets, nowMs))
+      : null;
+    const documents = canReadDocuments
+      ? await optionalSection(trx, 'documents', () => fetchDocuments(trx, tenant, clientId))
+      : null;
 
     const attention = sortAttention([
       ...(serviceResult?.flags ?? []),

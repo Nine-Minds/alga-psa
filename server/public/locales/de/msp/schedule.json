@@ -853,5 +853,81 @@
       "members": "Mitglieder",
       "creatorNote": "Sie können diesen Kalender verwalten."
     }
+  },
+  "ticketDetails": {
+    "title": "Ticketdetails",
+    "numberedTitle": "Ticket Nr. {{number}}",
+    "untitled": "Ticket ohne Titel",
+    "noDescription": "Keine Beschreibung",
+    "notAvailable": "Nicht verfügbar",
+    "unassigned": "Nicht zugewiesen",
+    "fields": {
+      "title": {
+        "label": "Titel"
+      },
+      "description": {
+        "label": "Beschreibung"
+      },
+      "status": {
+        "label": "Status"
+      },
+      "priority": {
+        "label": "Priorität"
+      },
+      "board": {
+        "label": "Board"
+      },
+      "client": {
+        "label": "Kunde"
+      },
+      "contact": {
+        "label": "Kontakt"
+      },
+      "assignedUser": {
+        "label": "Zugewiesener Benutzer"
+      },
+      "entered": {
+        "label": "Erfasst"
+      },
+      "updated": {
+        "label": "Aktualisiert"
+      },
+      "closed": {
+        "label": "Geschlossen"
+      }
+    }
+  },
+  "projectTaskDetails": {
+    "title": "Projektaufgabe",
+    "noDescription": "Keine Beschreibung",
+    "notAvailable": "Nicht verfügbar",
+    "unassigned": "Nicht zugewiesen",
+    "untitledItem": "Eintrag ohne Titel",
+    "noChecklistItems": "Keine Checklisteneinträge",
+    "fields": {
+      "description": {
+        "label": "Beschreibung"
+      },
+      "project": {
+        "label": "Projekt"
+      },
+      "phase": {
+        "label": "Phase"
+      },
+      "assignedTo": {
+        "label": "Zugewiesen an"
+      },
+      "dueDate": {
+        "label": "Fälligkeitsdatum"
+      },
+      "checklist": {
+        "label": "Checkliste"
+      }
+    }
+  },
+  "fallback": {
+    "agentSchedule": "Die Zeitplanansicht des Mitarbeiters wird jetzt in der Planung verwaltet. (agentId: {{agentId}})",
+    "timeEntry": "Zeiteinträge werden in der Planung verwaltet.",
+    "scheduling": "Die Terminplanung wird in der Planung verwaltet."
   }
 }

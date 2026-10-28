@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { IProject } from '@alga-psa/types';
 import { IStatus } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
@@ -16,6 +16,8 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { TagManager } from '@alga-psa/tags/components';
 import { updateProject, getProjectStatuses } from '../actions/projectActions';
+import { releaseAllProjectStaging } from '../actions/stagingActions';
+import { isStockConflictResult } from '@alga-psa/inventory/lib/stockConflict';
 import { getServices } from '../actions/serviceCatalogActions';
 import { timeEntryServiceChoices, type TimeEntryServiceChoice } from '@alga-psa/core';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
@@ -30,7 +32,10 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { ProjectTaskStatusSettings } from './settings/projects/ProjectTaskStatusSettings';
+import {
+  ProjectTaskStatusSettings,
+  type ProjectTaskStatusSettingsHandle,
+} from './settings/projects/ProjectTaskStatusSettings';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import ClientPortalConfigEditor from './ClientPortalConfigEditor';
@@ -83,7 +88,9 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
   const [showClientPortalConfig, setShowClientPortalConfig] = useState(false);
-  
+  // Status column edits are staged inside the editor and written by Save Changes.
+  const statusSettingsRef = useRef<ProjectTaskStatusSettingsHandle>(null);
+
   // TagContext is available if needed for tag-related features in the future
   // const { tags } = useTags();
 
@@ -165,6 +172,13 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
     setIsSubmitting(true);
 
     try {
+      // Staged status column changes first: a failure there keeps the drawer
+      // open with its toast instead of silently dropping them on close.
+      const statusesCommitted = await statusSettingsRef.current?.commitPendingChanges();
+      if (statusesCommitted === false) {
+        return;
+      }
+
       // Convert budgeted_hours to a number or null
       const budgetedHours = project.budgeted_hours ? Number(project.budgeted_hours) : null;
       
@@ -195,6 +209,35 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
         toast(t('materials.productsMovedToHoldOnClose', '{{count}} linked product(s) moved to On hold because their billing event was canceled.', {
           count: updatedProject.products_moved_to_hold,
         }), { icon: '⚠️' });
+      }
+      const activeStagingClaims = updatedProject.active_staging_claims ?? 0;
+      if (activeStagingClaims > 0) {
+        const projectId = project.project_id;
+        toast((toastInstance) => (
+          <span className="flex flex-col gap-2" id="project-close-staging-claims">
+            {t('staging.closeWarning', '{{count}} reserved or staged item(s) still hold stock for this project.', { count: activeStagingClaims })}
+            <span className="flex gap-2">
+              <Button
+                id="project-close-release-staging"
+                size="sm"
+                onClick={async () => {
+                  toast.dismiss(toastInstance.id);
+                  const released = await releaseAllProjectStaging(projectId);
+                  if (isReturnedActionError(released) || isStockConflictResult(released)) {
+                    handleError(getErrorMessage(released));
+                    return;
+                  }
+                  toast.success(t('staging.releasedAll', 'Released {{count}} item(s). The stock is free again.', { count: released.released }));
+                }}
+              >
+                {t('staging.releaseAll', 'Release all reserved and staged')}
+              </Button>
+              <Button id="project-close-keep-staging" size="sm" variant="outline" onClick={() => toast.dismiss(toastInstance.id)}>
+                {t('staging.keepClaims', 'Keep them')}
+              </Button>
+            </span>
+          </span>
+        ), { duration: 30000, icon: '⚠️' });
       }
       onSave(updatedProject);
     } catch (error) {
@@ -485,7 +528,11 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
 
           <div>
             <ProjectTaskStatusSettings
+              ref={statusSettingsRef}
               projectId={project.project_id}
+              onPendingChangesChange={(pending) => {
+                if (pending) setHasChanges(true);
+              }}
             />
           </div>
 

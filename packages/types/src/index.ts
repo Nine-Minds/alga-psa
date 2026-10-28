@@ -20,10 +20,12 @@ export * from './lib/dateOnly';
 export * from './lib/general';
 export * from './lib/tax';
 export * from './lib/temporal';
-export * from './lib/interval-tracking';
 export * from './lib/invoice-renderer/types';
 export * from './lib/invoice-template-ast';
 export * from './lib/invoice-print-settings';
+export * from './lib/recordLinks';
+export * from './lib/labels';
+export * from './lib/stagingManifest';
 export * from './lib/xeroCsvTaxImport';
 export * from './lib/companySync';
 export * from './lib/telemetry';
@@ -32,6 +34,7 @@ export * from './lib/onboardingWizard';
 export * from './lib/knowledgeBase';
 export * from './lib/senderActionResult';
 export * from './lib/externalSystems';
+export * from './lib/paymentSettings';
 export * from './search';
 export * from './deletion';
 export * from './constants/index';
@@ -160,14 +163,32 @@ export interface TenantScopedEntity extends AuditFields {
 }
 
 /**
+ * Who performed a ticket/comment action. Structurally identical to `WorkflowActor` in
+ * `@alga-psa/event-schemas` (kept here because `types` has no dependency on it).
+ */
+export type WorkflowActor =
+  | { actorType: 'USER'; actorUserId: string }
+  | { actorType: 'CONTACT'; actorContactId: string }
+  | { actorType: 'SYSTEM' };
+
+/**
  * Interface for event publishing using dependency injection pattern
  * This allows different contexts (server actions, workflows) to provide their own event publishers
+ *
+ * Actor contract for publishTicketCreated/Updated/Closed and publishCommentCreated:
+ * `userId` is a real user id or undefined. It must never be a substitute (ticket id,
+ * tenant id, ...). When no user acted, omit it; the payload then carries no `userId`
+ * and states the actor through `actorType` / `actorContactId`. Pass `actor` when the
+ * actor is known to be a contact (or otherwise not derivable from `userId`); when absent,
+ * implementations derive it with `resolveTicketEventActor({ userId })`.
+ * `publishTicketAssigned.userId` is the assignee, not the actor, and stays required.
  */
 export interface IEventPublisher {
   publishTicketCreated(data: {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void>;
 
@@ -175,6 +196,7 @@ export interface IEventPublisher {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     changes: Record<string, any>;
     metadata?: Record<string, any>;
   }): Promise<void>;
@@ -183,6 +205,7 @@ export interface IEventPublisher {
     tenantId: string;
     ticketId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void>;
 
@@ -191,6 +214,7 @@ export interface IEventPublisher {
     ticketId: string;
     commentId: string;
     userId?: string;
+    actor?: WorkflowActor;
     metadata?: Record<string, any>;
   }): Promise<void>;
 

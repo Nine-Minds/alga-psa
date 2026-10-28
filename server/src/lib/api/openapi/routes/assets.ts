@@ -74,7 +74,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
 
   const AssetExtensionData = registry.registerSchema(
     'AssetExtensionData',
-    zOpenApi.record(zOpenApi.unknown()).describe('Asset-type-specific extension data written to the corresponding extension table for workstation, network device, server, mobile device, or printer assets.'),
+    zOpenApi.record(zOpenApi.unknown()).describe('Asset-type-specific extension data written to the corresponding extension table for workstation, network device, server, mobile device, or printer assets. Validated against the schema of the asset type (on update, the new asset_type or the stored one); unknown keys are dropped, and other asset types return 400.'),
   );
 
   const AssetAttributes = registry.registerSchema(
@@ -95,6 +95,13 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       serial_number: zOpenApi.string().optional().describe('Optional serial number.'),
       purchase_date: zOpenApi.string().datetime().optional().describe('Optional purchase date/time.'),
       warranty_end_date: zOpenApi.string().datetime().optional().describe('Optional warranty end date/time.'),
+      manufacturer: zOpenApi.string().max(255).nullable().optional().describe('Hardware make. RMM sync fills it when the provider reports one.'),
+      model: zOpenApi.string().max(255).nullable().optional().describe('Hardware model. A first-class column, not a system_info lookup.'),
+      vendor_id: zOpenApi.string().uuid().nullable().optional().describe('Supplier; an inventory vendors.vendor_id of this tenant.'),
+      purchase_cost: zOpenApi.number().int().nullable().optional().describe('Purchase cost in minor units (cents).'),
+      purchase_cost_currency: zOpenApi.string().length(3).nullable().optional().describe('ISO currency code; defaults to the tenant currency when a cost is written without one.'),
+      order_number: zOpenApi.string().max(255).nullable().optional().describe('Purchase order number.'),
+      billing_profile_id: zOpenApi.string().uuid().nullable().optional().describe('Billing profile for work on this device. Must belong to the asset client and be active; cleared when the client changes.'),
       attributes: AssetAttributes.optional(),
       extension_data: AssetExtensionData.optional(),
     }),
@@ -113,7 +120,15 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       serial_number: zOpenApi.string().optional().describe('Serial number.'),
       purchase_date: zOpenApi.string().datetime().optional().describe('Purchase date/time.'),
       warranty_end_date: zOpenApi.string().datetime().optional().describe('Warranty end date/time.'),
+      manufacturer: zOpenApi.string().max(255).nullable().optional().describe('Hardware make. RMM sync fills it when the provider reports one.'),
+      model: zOpenApi.string().max(255).nullable().optional().describe('Hardware model. A first-class column, not a system_info lookup.'),
+      vendor_id: zOpenApi.string().uuid().nullable().optional().describe('Supplier; an inventory vendors.vendor_id of this tenant.'),
+      purchase_cost: zOpenApi.number().int().nullable().optional().describe('Purchase cost in minor units (cents).'),
+      purchase_cost_currency: zOpenApi.string().length(3).nullable().optional().describe('ISO currency code; defaults to the tenant currency when a cost is written without one.'),
+      order_number: zOpenApi.string().max(255).nullable().optional().describe('Purchase order number.'),
+      billing_profile_id: zOpenApi.string().uuid().nullable().optional().describe('Billing profile for work on this device. Must belong to the asset client and be active; cleared when the client changes.'),
       attributes: AssetAttributes.optional(),
+      extension_data: AssetExtensionData.optional().describe('Provided keys are written to the extension row; omitted keys remain.'),
     }),
   );
 
@@ -230,6 +245,15 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       serial_number: zOpenApi.string().nullable().optional().describe('Asset serial number, when recorded.'),
       purchase_date: zOpenApi.string().nullable().optional().describe('Asset purchase date from assets.purchase_date.'),
       warranty_end_date: zOpenApi.string().nullable().optional().describe('Warranty end date from assets.warranty_end_date.'),
+      contact_name_id: zOpenApi.string().uuid().nullable().optional().describe('The contact this asset is assigned to; drives portal contact-scoped visibility.'),
+      manufacturer: zOpenApi.string().nullable().optional().describe('Hardware make from assets.manufacturer.'),
+      model: zOpenApi.string().nullable().optional().describe('Hardware model from assets.model.'),
+      vendor_id: zOpenApi.string().uuid().nullable().optional().describe('Supplier from assets.vendor_id (inventory vendors).'),
+      vendor_name: zOpenApi.string().nullable().optional().describe('Supplier name from the joined vendors row.'),
+      purchase_cost: zOpenApi.number().int().nullable().optional().describe('Purchase cost in minor units (cents).'),
+      purchase_cost_currency: zOpenApi.string().nullable().optional().describe('ISO currency code of purchase_cost.'),
+      order_number: zOpenApi.string().nullable().optional().describe('Purchase order number from assets.order_number.'),
+      billing_profile_id: zOpenApi.string().uuid().nullable().optional().describe('Billing profile for work on this device; null means the location default or the client default applies.'),
       created_at: zOpenApi.string().datetime().describe('Asset creation timestamp.'),
       updated_at: zOpenApi.string().datetime().describe('Asset last update timestamp.'),
       tenant: zOpenApi.string().uuid().describe('Tenant UUID from assets.tenant; filtered to the authenticated request context.'),
@@ -375,19 +399,26 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const MaintenanceScheduleWrite = zOpenApi.object({
+    schedule_name: zOpenApi.string().trim().min(1).max(255).describe('Name displayed in the asset maintenance UI.'),
+    description: zOpenApi.string().nullable().optional().describe('Optional maintenance instructions.'),
+    maintenance_type: zOpenApi.enum(['preventive', 'corrective', 'inspection', 'calibration', 'replacement']).describe('Maintenance type stored by the UI and database.'),
+    frequency: zOpenApi.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom']).describe('Recurrence frequency, multiplied by frequency_interval. Does not change the explicit next_maintenance timestamp. `custom` takes its rule from schedule_config.recurrence.'),
+    frequency_interval: zOpenApi.number().int().min(1).describe('Positive integer frequency multiplier; monthly with 6 means every six months.'),
+    next_maintenance: zOpenApi.string().datetime().describe('Explicit next due timestamp, used unchanged for the initial open occurrence. Must be an ISO 8601 UTC timestamp with a `Z` suffix (e.g. 2026-11-01T13:00:00.000Z); values with a numeric offset such as -04:00 are rejected.'),
+    is_active: zOpenApi.boolean().optional().describe('Whether the schedule is active.'),
+    schedule_config: zOpenApi.object({
+      recurrence: zOpenApi.object({
+        unit: zOpenApi.enum(['days', 'weeks', 'months', 'years']).describe('Unit multiplied by frequency_interval.'),
+        weekdays: zOpenApi.array(zOpenApi.number().int().min(0).max(6)).min(1).optional().describe('Weeks only. 0 = Sunday … 6 = Saturday. The next due date is the next listed weekday in the current week (weeks start on Sunday); after the last one it jumps frequency_interval weeks to the first listed weekday.'),
+        days_of_month: zOpenApi.array(zOpenApi.number().int().min(1).max(31)).min(1).optional().describe('Months only. The next due date is the next listed day in the current month; after the last one it jumps frequency_interval months to the first listed day. Days are clamped to the month length (31 in February becomes 28/29).'),
+      }).strict().optional().describe('Required when frequency is `custom`; ignored for the fixed frequencies. Example: frequency_interval 2 with { "unit": "weeks", "weekdays": [1, 4] } is every other week on Monday and Thursday.'),
+    }).catchall(zOpenApi.unknown()).describe('Scheduling configuration. Use {} for the fixed frequencies. `recurrence` is required for `custom`; other keys such as `checklist` are stored as-is.'),
+  }).strict();
+
   const MaintenanceScheduleUpdateRequest = registry.registerSchema(
     'AssetMaintenanceScheduleUpdateRequest',
-    zOpenApi.object({
-      schedule_type: zOpenApi.enum(['preventive', 'inspection', 'calibration', 'replacement']).optional().describe('Type of maintenance schedule.'),
-      frequency: zOpenApi.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom']).optional().describe('Recurrence frequency. Changing this triggers next_maintenance recalculation.'),
-      frequency_interval: zOpenApi.number().min(1).optional().describe('Frequency multiplier used when calculating the next maintenance date.'),
-      start_date: zOpenApi.string().datetime().optional().describe('Schedule start date/time. Changing this triggers next_maintenance recalculation.'),
-      end_date: zOpenApi.string().datetime().optional().describe('Optional schedule end date/time.'),
-      notes: zOpenApi.string().optional().describe('Free-text schedule notes.'),
-      assigned_to: zOpenApi.string().uuid().optional().describe('Assigned user UUID from users.user_id.'),
-      is_active: zOpenApi.boolean().optional().describe('Whether the schedule is active.'),
-      schedule_config: zOpenApi.record(zOpenApi.unknown()).optional().describe('Custom scheduling configuration.'),
-    }),
+    MaintenanceScheduleWrite.partial(),
   );
 
   const MaintenanceScheduleResource = registry.registerSchema(
@@ -395,17 +426,18 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       schedule_id: zOpenApi.string().uuid().describe('Primary key from asset_maintenance_schedules.schedule_id.'),
       asset_id: zOpenApi.string().uuid().describe('Asset UUID from asset_maintenance_schedules.asset_id.'),
-      schedule_type: zOpenApi.string().optional().describe('Maintenance schedule type as used by ApiAssetController.'),
-      frequency: zOpenApi.string().optional().describe('Recurrence frequency.'),
-      frequency_interval: zOpenApi.number().nullable().optional().describe('Frequency multiplier.'),
-      start_date: zOpenApi.string().nullable().optional().describe('Schedule start date/time.'),
-      end_date: zOpenApi.string().nullable().optional().describe('Schedule end date/time.'),
+      schedule_name: zOpenApi.string().describe('Maintenance schedule name.'),
+      description: zOpenApi.string().nullable().describe('Maintenance instructions.'),
+      maintenance_type: zOpenApi.enum(['preventive', 'corrective', 'inspection', 'calibration', 'replacement']),
+      frequency: zOpenApi.string().describe('Recurrence frequency.'),
+      frequency_interval: zOpenApi.number().int().describe('Frequency multiplier.'),
       last_maintenance: zOpenApi.string().nullable().optional().describe('Last recorded maintenance date/time.'),
-      next_maintenance: zOpenApi.string().nullable().optional().describe('Next calculated maintenance date/time.'),
-      notes: zOpenApi.string().nullable().optional().describe('Free-text schedule notes.'),
-      assigned_to: zOpenApi.string().uuid().nullable().optional().describe('Assigned user UUID.'),
-      is_active: zOpenApi.boolean().optional().describe('Whether the schedule is active.'),
-      schedule_config: zOpenApi.record(zOpenApi.unknown()).nullable().optional().describe('Custom scheduling configuration.'),
+      next_maintenance: zOpenApi.string().datetime().describe('Next due date/time.'),
+      created_by: zOpenApi.string().uuid().describe('Authenticated caller who created the schedule; not a writable assignee.'),
+      created_by_name: zOpenApi.string().optional().describe('Creator display name included in list results.'),
+      archived_at: zOpenApi.string().nullable().optional().describe('Archive timestamp.'),
+      is_active: zOpenApi.boolean().describe('Whether the schedule is active.'),
+      schedule_config: zOpenApi.record(zOpenApi.unknown()).describe('Custom scheduling configuration.'),
       created_at: zOpenApi.string().datetime().optional().describe('Creation timestamp.'),
       updated_at: zOpenApi.string().datetime().optional().describe('Last update timestamp.'),
       tenant: zOpenApi.string().uuid().describe('Tenant UUID scoped from the request context.'),
@@ -415,7 +447,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   const MaintenanceSchedulePayload = registry.registerSchema(
     'AssetMaintenanceSchedulePayload',
     zOpenApi.object({
-      data: MaintenanceScheduleResource.optional().describe('Updated schedule row. Undefined when the schedule ID does not exist or belongs to another tenant.'),
+      data: MaintenanceScheduleResource.describe('Created or updated schedule row.'),
     }),
   );
 
@@ -430,16 +462,8 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
 
   const MaintenanceScheduleCreateRequest = registry.registerSchema(
     'AssetMaintenanceScheduleCreateRequest',
-    zOpenApi.object({
-      schedule_type: zOpenApi.enum(['preventive', 'inspection', 'calibration', 'replacement']).describe('Required type of maintenance schedule.'),
-      frequency: zOpenApi.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom']).describe('Required recurrence frequency used to calculate next_maintenance.'),
-      frequency_interval: zOpenApi.number().min(1).optional().describe('Frequency multiplier. Defaults to service logic when absent.'),
-      start_date: zOpenApi.string().datetime().optional().describe('Schedule start date/time. The current schema makes this optional; the service falls back to now when absent.'),
-      end_date: zOpenApi.string().datetime().optional().describe('Optional schedule end date/time.'),
-      notes: zOpenApi.string().optional().describe('Free-text schedule notes.'),
-      assigned_to: zOpenApi.string().uuid().optional().describe('Assigned user UUID from users.user_id.'),
-      is_active: zOpenApi.boolean().optional().describe('Whether the schedule is active. Defaults to true in validation.'),
-      schedule_config: zOpenApi.record(zOpenApi.unknown()).optional().describe('Custom scheduling configuration.'),
+    MaintenanceScheduleWrite.extend({
+      is_active: zOpenApi.boolean().default(true).describe('Whether the schedule is active; defaults to true.'),
     }),
   );
 
@@ -1100,20 +1124,20 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/maintenance/{scheduleId}',
     summary: 'Update asset maintenance schedule',
     description:
-      'Updates a maintenance schedule by asset_maintenance_schedules.schedule_id for the authenticated tenant. All request fields are optional because updateMaintenanceScheduleSchema is a partial form of the create schema. If frequency, frequency_interval, or start_date are supplied, the service loads the existing schedule for the tenant and recalculates next_maintenance. Missing or cross-tenant schedule IDs result in a 200 response with an undefined nested data value rather than 404.',
+      'Updates existing maintenance schedule columns for the authenticated tenant. All fields are optional; unknown and legacy fields are rejected. Response-only fields (schedule_id, asset_id, tenant, created_by, created_by_name, created_at, updated_at, last_maintenance, archived_at) are accepted and ignored so a row read from GET can be sent back as-is. next_maintenance is explicit: changing frequency alone preserves the current due date. Due-date changes synchronize the open occurrence and unsent notifications. Disabling cancels the open occurrence; re-enabling an unarchived schedule opens one. All writes are transactional. Missing or cross-tenant schedule IDs return 404.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
       params: MaintenanceScheduleParams,
       body: {
         schema: MaintenanceScheduleUpdateRequest,
-        description: 'Partial maintenance schedule update data.',
+        description: 'Partial maintenance schedule update data. Response-only fields are ignored; legacy and unknown fields return 400.',
         required: true,
       },
     },
     responses: {
       200: {
-        description: 'Maintenance schedule updated successfully. If the ID is not found, the nested data field may be absent.',
+        description: 'Maintenance schedule updated successfully.',
         schema: MaintenanceScheduleResponse,
       },
       400: {
@@ -1128,6 +1152,10 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
         description: 'Authenticated request context lacks permission to update asset maintenance schedules when auth wiring is present.',
         schema: ApiErrorEnvelope,
       },
+      404: {
+        description: 'Schedule not found in the authenticated tenant.',
+        schema: ApiErrorEnvelope,
+      },
       500: {
         description: 'Unexpected error.',
         schema: ApiErrorEnvelope,
@@ -1137,8 +1165,8 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       ...assetRouteExtensions,
       'x-rbac-resource': 'asset',
       'x-rbac-action': 'update',
-      'x-recalculates-next-maintenance': true,
-      'x-no-not-found-on-missing-id': true,
+      'x-recalculates-next-maintenance': false,
+      'x-no-not-found-on-missing-id': false,
     },
     edition: 'both',
   });
@@ -1503,6 +1531,560 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   });
 
 
+  // ---------------------------------------------------------------------------
+  // alga-2026-0002672: assignment history, the status registry and asset groups
+  // ---------------------------------------------------------------------------
+
+  const AssetAssignment = registry.registerSchema(
+    'AssetAssignment',
+    zOpenApi.object({
+      assignment_id: zOpenApi.string().uuid(),
+      asset_id: zOpenApi.string().uuid(),
+      contact_name_id: zOpenApi.string().uuid(),
+      contact_name: zOpenApi.string().nullable().optional().describe('Joined from contacts.full_name.'),
+      assigned_at: zOpenApi.string().datetime(),
+      assigned_by_user_id: zOpenApi.string().uuid().nullable().optional(),
+      unassigned_at: zOpenApi.string().datetime().nullable().optional().describe('Null while this is the current assignment.'),
+      unassigned_by_user_id: zOpenApi.string().uuid().nullable().optional(),
+      source: zOpenApi.enum(['manual', 'api', 'rmm', 'bundle', 'import', 'merge', 'system']).describe('Where the assignment came from.'),
+      note: zOpenApi.string().nullable().optional().describe('For an rmm assignment, the raw signed-in user name.'),
+    }),
+  );
+
+  const AssetAssignmentListResponse = registry.registerSchema(
+    'AssetAssignmentListResponse',
+    zOpenApi.object({ data: zOpenApi.array(AssetAssignment) }),
+  );
+
+  const AssetStatus = registry.registerSchema(
+    'AssetStatus',
+    zOpenApi.object({
+      status_id: zOpenApi.string().uuid(),
+      slug: zOpenApi.string().describe('What assets.status stores.'),
+      label: zOpenApi.string(),
+      kind: zOpenApi.enum(['deployable', 'pending', 'undeployable', 'archived']).describe('Lifecycle bucket; "deployed" metrics use kind = deployable.'),
+      is_builtin: zOpenApi.boolean(),
+      is_active: zOpenApi.boolean(),
+      display_order: zOpenApi.number().int(),
+    }),
+  );
+
+  const AssetStatusListResponse = registry.registerSchema(
+    'AssetStatusListResponse',
+    zOpenApi.object({ data: zOpenApi.array(AssetStatus) }),
+  );
+
+  const AssetGroup = registry.registerSchema(
+    'AssetGroup',
+    zOpenApi.object({
+      group_id: zOpenApi.string().uuid(),
+      client_id: zOpenApi.string().uuid(),
+      name: zOpenApi.string(),
+      kind: zOpenApi.enum(['bundle', 'shared_workspace']).describe('A bundle has one owner and moves as a unit; a shared workspace has users and its members carry no single assignee.'),
+      location_id: zOpenApi.string().uuid().nullable().optional(),
+      location_name: zOpenApi.string().nullable().optional(),
+      description: zOpenApi.string().nullable().optional(),
+      member_count: zOpenApi.number().int().optional(),
+      people_count: zOpenApi.number().int().optional(),
+      members: zOpenApi.array(zOpenApi.object({
+        asset_id: zOpenApi.string().uuid(),
+        asset_name: zOpenApi.string().nullable().optional(),
+        asset_type: zOpenApi.string().nullable().optional(),
+        asset_tag: zOpenApi.string().nullable().optional(),
+        asset_status: zOpenApi.string().nullable().optional(),
+      })).optional(),
+      contacts: zOpenApi.array(zOpenApi.object({
+        contact_name_id: zOpenApi.string().uuid(),
+        contact_name: zOpenApi.string().nullable().optional(),
+        role: zOpenApi.enum(['owner', 'user']),
+      })).optional(),
+    }),
+  );
+
+  const AssetGroupResponse = registry.registerSchema(
+    'AssetGroupResponse',
+    zOpenApi.object({ data: AssetGroup }),
+  );
+
+  const AssetGroupListResponse = registry.registerSchema(
+    'AssetGroupListResponse',
+    zOpenApi.object({ data: zOpenApi.array(AssetGroup) }),
+  );
+
+  const AssetGroupIdParams = registry.registerSchema(
+    'AssetGroupIdParams',
+    zOpenApi.object({ id: zOpenApi.string().uuid().describe('asset_groups.group_id') }),
+  );
+
+  const CreateAssetGroupRequest = registry.registerSchema(
+    'CreateAssetGroupRequest',
+    zOpenApi.object({
+      client_id: zOpenApi.string().uuid(),
+      name: zOpenApi.string().max(255),
+      kind: zOpenApi.enum(['bundle', 'shared_workspace']),
+      location_id: zOpenApi.string().uuid().nullable().optional(),
+      description: zOpenApi.string().nullable().optional(),
+      asset_ids: zOpenApi.array(zOpenApi.string().uuid()).optional().describe('Members to add in the same transaction.'),
+    }),
+  );
+
+  const UpdateAssetGroupRequest = registry.registerSchema(
+    'UpdateAssetGroupRequest',
+    zOpenApi.object({
+      name: zOpenApi.string().max(255).optional(),
+      kind: zOpenApi.enum(['bundle', 'shared_workspace']).optional().describe('shared_workspace to bundle is refused while users exist; the reverse unassigns every member.'),
+      location_id: zOpenApi.string().uuid().nullable().optional().describe('Propagates to every member.'),
+      description: zOpenApi.string().nullable().optional(),
+    }),
+  );
+
+  const AssetGroupMembersRequest = registry.registerSchema(
+    'AssetGroupMembersRequest',
+    zOpenApi.object({ asset_ids: zOpenApi.array(zOpenApi.string().uuid()).min(1) }),
+  );
+
+  const AssetGroupContactRequest = registry.registerSchema(
+    'AssetGroupContactRequest',
+    zOpenApi.object({
+      contact_name_id: zOpenApi.string().uuid().nullable().describe('Null with role owner clears the bundle owner.'),
+      role: zOpenApi.enum(['owner', 'user']),
+    }),
+  );
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/assets/{id}/assignments',
+    summary: 'List asset assignment history',
+    description:
+      'Returns every assignment of the path asset, newest first, with the contact name joined. An asset that does not exist in the authenticated tenant returns 404 rather than an empty array.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetIdParams },
+    responses: {
+      200: { description: 'Assignment history returned successfully.', schema: AssetAssignmentListResponse },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset read permission.', schema: ApiErrorEnvelope },
+      404: { description: 'Asset not found in this tenant.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'read',
+      'x-not-paginated': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/asset-statuses',
+    summary: 'List asset statuses',
+    description:
+      'Returns the tenant asset status registry in display order. Active statuses only unless include_archived=true. assets.status stores the slug.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      query: registry.registerSchema(
+        'AssetStatusListQuery',
+        zOpenApi.object({
+          include_archived: zOpenApi.enum(['true', 'false']).optional().describe('true also returns archived (is_active false) statuses.'),
+        }),
+      ),
+    },
+    responses: {
+      200: { description: 'Asset statuses returned successfully.', schema: AssetStatusListResponse },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset read permission.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'read',
+      'x-no-asset-existence-check': true,
+      'x-not-paginated': true,
+    },
+    edition: 'both',
+  });
+
+  // Equipment custody (alga-2026-0002683, C4). No new RBAC resource: asset:read / asset:update plus the record check.
+  const CustodyEnvelope = registry.registerSchema(
+    'AssetCustodyEnvelope',
+    zOpenApi.object({ data: zOpenApi.record(zOpenApi.any()) }).describe('Custody data wrapped in the standard envelope.'),
+  );
+  const OpenCustodyRequest = registry.registerSchema(
+    'OpenAssetCustodyRequest',
+    zOpenApi
+      .object({
+        ticket_id: zOpenApi.string().uuid().nullable().optional().describe('Ticket the equipment was received for; its client must match the asset.'),
+        location_id: zOpenApi.string().uuid().describe('Active stock location the item is shelved at.'),
+        bin: zOpenApi.string().max(64).describe('Free-text bin or shelf label.'),
+        purpose: zOpenApi.enum(['repair', 'warranty_evaluation', 'loaner_prep', 'staging']),
+        next_action_party: zOpenApi.enum(['msp', 'client', 'vendor']).optional(),
+        next_action_note: zOpenApi.string().max(2000).nullable().optional(),
+        follow_up_on: zOpenApi.string().describe('Date only, YYYY-MM-DD.').nullable().optional(),
+        condition_note: zOpenApi.string().max(2000).nullable().optional(),
+      })
+      .passthrough(),
+  );
+  const CustodyEventRequest = registry.registerSchema(
+    'AssetCustodyEventRequest',
+    zOpenApi
+      .object({ event_type: zOpenApi.enum(['moved', 'handed_off', 'shipped', 'received', 'returned']) })
+      .passthrough()
+      .describe('Fields depend on event_type: moved {location_id?, bin?}, handed_off {to_holder_user_id}, shipped {counterparty}, received {location_id, bin}, returned {counterparty?}.'),
+  );
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/assets/{id}/custody',
+    summary: 'Get asset custody',
+    description: 'Returns the open custody episode (if any), the episode history and the append-only event timeline of the asset. An asset the caller cannot read answers 404 with no data.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetIdParams },
+    responses: {
+      200: { description: 'Custody returned successfully.', schema: CustodyEnvelope },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset read permission.', schema: ApiErrorEnvelope },
+      404: { description: 'Asset not found or not readable.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: { ...assetRouteExtensions, 'x-rbac-resource': 'asset', 'x-rbac-action': 'read', 'x-not-paginated': true },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/assets/{id}/custody',
+    summary: 'Receive an asset into custody',
+    description: 'Opens a custody episode for the asset. Never touches stock, billing or time. 409 when an episode is already open.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetIdParams, body: { schema: OpenCustodyRequest, description: 'Where the item is shelved and who acts next.', required: true } },
+    responses: {
+      201: { description: 'Custody episode opened.', schema: CustodyEnvelope },
+      400: { description: 'Validation failed (inactive location, client mismatch, invalid date).', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset update permission.', schema: ApiErrorEnvelope },
+      404: { description: 'Asset not found or not readable.', schema: ApiErrorEnvelope },
+      409: { description: 'An episode is already open for this asset.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: { ...assetRouteExtensions, 'x-rbac-resource': 'asset', 'x-rbac-action': 'update' },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/assets/{id}/custody/events',
+    summary: 'Record a custody step',
+    description: 'Appends a moved, handed_off, shipped, received or returned step to the asset\u2019s open episode. Invalid transitions answer 409.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetIdParams, body: { schema: CustodyEventRequest, description: 'The step to record.', required: true } },
+    responses: {
+      201: { description: 'Step recorded.', schema: CustodyEnvelope },
+      400: { description: 'Validation failed.', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset update permission.', schema: ApiErrorEnvelope },
+      404: { description: 'Asset not found or not readable.', schema: ApiErrorEnvelope },
+      409: { description: 'The asset is not in custody, or the step is not allowed from the current state.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: { ...assetRouteExtensions, 'x-rbac-resource': 'asset', 'x-rbac-action': 'update' },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/asset-custody',
+    summary: 'List equipment in custody',
+    description: 'The custody queue. Rows and tab counts exclude assets the caller cannot read.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      query: registry.registerSchema(
+        'AssetCustodyQueueQuery',
+        zOpenApi.object({
+          tab: zOpenApi.string().optional(),
+          client_id: zOpenApi.string().uuid().optional(),
+          location_id: zOpenApi.string().uuid().optional(),
+          holder_user_id: zOpenApi.string().uuid().optional(),
+          purpose: zOpenApi.enum(['repair', 'warranty_evaluation', 'loaner_prep', 'staging']),
+          next_action_party: zOpenApi.enum(['msp', 'client', 'vendor']).optional(),
+          mine: zOpenApi.enum(['true', 'false']).optional(),
+          page: zOpenApi.string().optional(),
+          pageSize: zOpenApi.string().optional(),
+        }),
+      ),
+    },
+    responses: {
+      200: { description: 'Queue returned successfully.', schema: CustodyEnvelope },
+      400: { description: 'Invalid filter.', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset read permission.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: { ...assetRouteExtensions, 'x-rbac-resource': 'asset', 'x-rbac-action': 'read', 'x-no-asset-existence-check': true, 'x-not-paginated': true },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/asset-groups',
+    summary: 'List asset groups for a client',
+    description: 'Returns the client\u2019s bundles and shared workspaces with member and people counts. client_id is required.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      query: registry.registerSchema(
+        'AssetGroupListQuery',
+        zOpenApi.object({ client_id: zOpenApi.string().uuid().describe('Required; groups belong to a client.') }),
+      ),
+    },
+    responses: {
+      200: { description: 'Asset groups returned successfully.', schema: AssetGroupListResponse },
+      400: { description: 'client_id is missing or not a UUID.', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset read permission.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'read',
+      'x-no-asset-existence-check': true,
+      'x-not-paginated': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/asset-groups',
+    summary: 'Create an asset group',
+    description:
+      'Creates a bundle or shared workspace for a client, optionally with its first members. Adding a member to a bundle assigns it to the owner and moves it to the group location; adding one to a shared workspace unassigns it.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { body: { schema: CreateAssetGroupRequest, description: 'Group to create, optionally with its first members.', required: true } },
+    responses: {
+      200: { description: 'Asset group created successfully.', schema: AssetGroupResponse },
+      400: { description: 'Validation failed, or a group invariant was violated (client mismatch, asset already grouped).', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset update permission.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'update',
+      'x-no-asset-existence-check': true,
+      'x-no-event-published': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/asset-groups/{id}',
+    summary: 'Get an asset group',
+    description: 'Returns the group with its members and people.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetGroupIdParams },
+    responses: {
+      200: { description: 'Asset group returned successfully.', schema: AssetGroupResponse },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset read permission.', schema: ApiErrorEnvelope },
+      404: { description: 'Asset group not found in this tenant.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'read',
+      'x-no-asset-existence-check': true,
+      'x-not-paginated': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'put',
+    path: '/api/v1/asset-groups/{id}',
+    summary: 'Update an asset group',
+    description:
+      'Renames the group, changes its kind or moves its location. A location change moves every member. shared_workspace to bundle is refused while users exist; bundle to shared_workspace unassigns every member and drops the owner.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: AssetGroupIdParams,
+      body: { schema: UpdateAssetGroupRequest, description: 'Fields to change.', required: true },
+    },
+    responses: {
+      200: { description: 'Asset group updated successfully.', schema: AssetGroupResponse },
+      400: { description: 'Validation failed or a group invariant was violated.', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset update permission.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'update',
+      'x-no-asset-existence-check': true,
+      'x-no-event-published': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/asset-groups/{id}',
+    summary: 'Delete an asset group',
+    description: 'Deletes the group and its member and people rows. Members keep their current assignee and location.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: AssetGroupIdParams },
+    responses: {
+      200: { description: 'Asset group deleted successfully.', schema: registry.registerSchema('AssetGroupDeleteResponse', zOpenApi.object({ data: zOpenApi.object({ success: zOpenApi.boolean() }) })) },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset update permission.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'update',
+      'x-no-asset-existence-check': true,
+      'x-no-event-published': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/asset-groups/{id}/members',
+    summary: 'Add assets to a group',
+    description:
+      'Adds members. For a bundle each new member is assigned to the owner and moved to the group location; for a shared workspace each is unassigned. An asset of another client or already in another group is a 400.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: AssetGroupIdParams,
+      body: { schema: AssetGroupMembersRequest, description: 'Assets to add as members.', required: true },
+    },
+    responses: {
+      200: { description: 'Members added successfully.', schema: AssetGroupResponse },
+      400: { description: 'Validation failed or a group invariant was violated.', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset update permission.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'update',
+      'x-no-asset-existence-check': true,
+      'x-no-event-published': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/asset-groups/{id}/members',
+    summary: 'Remove an asset from a group',
+    description: 'Removes the asset named by asset_id. Its assignee and location are left as they are.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: AssetGroupIdParams,
+      query: registry.registerSchema(
+        'AssetGroupMemberQuery',
+        zOpenApi.object({ asset_id: zOpenApi.string().uuid().describe('Required.') }),
+      ),
+    },
+    responses: {
+      200: { description: 'Member removed successfully.', schema: AssetGroupResponse },
+      400: { description: 'asset_id is missing or not a UUID.', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset update permission.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'update',
+      'x-no-asset-existence-check': true,
+      'x-no-event-published': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/asset-groups/{id}/contacts',
+    summary: 'Set a group owner or add a workspace user',
+    description:
+      'With role owner, sets (or with a null contact clears) the bundle owner, which assigns or unassigns every member. With role user, adds a shared-workspace user. A user on a bundle or an owner on a workspace is a 400.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: AssetGroupIdParams,
+      body: { schema: AssetGroupContactRequest, description: 'The contact and the role to give them.', required: true },
+    },
+    responses: {
+      200: { description: 'Group people updated successfully.', schema: AssetGroupResponse },
+      400: { description: 'Validation failed or a group invariant was violated.', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset update permission.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'update',
+      'x-no-asset-existence-check': true,
+      'x-no-event-published': true,
+    },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete',
+    path: '/api/v1/asset-groups/{id}/contacts',
+    summary: 'Remove a group owner or workspace user',
+    description: 'Removes the contact named by contact_name_id. On a bundle this clears the owner, which unassigns every member.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: {
+      params: AssetGroupIdParams,
+      query: registry.registerSchema(
+        'AssetGroupContactQuery',
+        zOpenApi.object({ contact_name_id: zOpenApi.string().uuid().describe('Required.') }),
+      ),
+    },
+    responses: {
+      200: { description: 'Group people updated successfully.', schema: AssetGroupResponse },
+      400: { description: 'contact_name_id is missing or not a UUID.', schema: ApiErrorEnvelope },
+      401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
+      403: { description: 'Caller lacks asset update permission.', schema: ApiErrorEnvelope },
+      500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
+    },
+    extensions: {
+      ...assetRouteExtensions,
+      'x-rbac-resource': 'asset',
+      'x-rbac-action': 'update',
+      'x-no-asset-existence-check': true,
+      'x-no-event-published': true,
+    },
+    edition: 'both',
+  });
+
   registry.registerRoute({
     method: 'get',
     path: '/api/v1/assets/{id}/history',
@@ -1534,7 +2116,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}/maintenance',
     summary: 'List asset maintenance schedules',
     description:
-      'Returns maintenance schedule rows for the path asset ID in the authenticated tenant. The service filters asset_maintenance_schedules by asset_id and context.tenant and joins users to add assigned_user_name. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.',
+      'Returns maintenance schedule rows using the existing UI/database columns for the path asset ID in the authenticated tenant. The service filters asset_maintenance_schedules by asset_id and context.tenant and joins users to add created_by_name. It performs no asset existence check, so nonexistent or cross-tenant asset IDs return 200 with an empty array. Response links currently point at /api/v2/assets paths.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: { params: AssetIdParams },
@@ -1559,7 +2141,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/v1/assets/{id}/maintenance',
     summary: 'Create asset maintenance schedule',
     description:
-      'Creates a maintenance schedule for the path asset ID in the authenticated tenant. The request body is validated with createMaintenanceScheduleSchema; schedule_type and frequency are required, while start_date is optional in the current shared date schema and the service falls back to now when absent. The service inserts asset_id from the path, tenant from context, timestamps, and a calculated next_maintenance value. It does not verify asset existence, does not set created_by, and publishes no event.',
+      'Creates a maintenance schedule using the existing UI/database columns: schedule_name, description, maintenance_type, frequency, frequency_interval, schedule_config, next_maintenance, and is_active. The asset must belong to the authenticated tenant. asset_id comes from the path; tenant and created_by come from authentication. next_maintenance is stored unchanged. The schedule, upcoming notification, and initial open occurrence (if active) are created in one transaction. Legacy schedule_type, notes, start_date, end_date, and assigned_to fields are rejected. No database migration is required.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: {
@@ -1571,6 +2153,7 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       400: { description: 'Request body validation failed or the database rejected an invalid reference.', schema: ApiErrorEnvelope },
       401: { description: 'x-api-key is missing at middleware.', schema: MiddlewareUnauthorizedResponse },
       403: { description: 'Authenticated request context lacks permission to create or update asset maintenance schedules when auth wiring is present.', schema: ApiErrorEnvelope },
+      404: { description: 'Asset not found in the authenticated tenant.', schema: ApiErrorEnvelope },
       409: { description: 'Database unique constraint conflict if one is enforced.', schema: ApiErrorEnvelope },
       500: { description: 'Unexpected error.', schema: ApiErrorEnvelope },
     },
@@ -1578,9 +2161,9 @@ export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
       ...assetRouteExtensions,
       'x-rbac-resource': 'asset',
       'x-rbac-action': 'update',
-      'x-no-asset-existence-check': true,
-      'x-calculates-next-maintenance': true,
-      'x-created-by-set': false,
+      'x-no-asset-existence-check': false,
+      'x-calculates-next-maintenance': false,
+      'x-created-by-set': true,
       'x-no-event-published': true,
     },
     edition: 'both',

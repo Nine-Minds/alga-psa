@@ -5,13 +5,14 @@ import { tenantDb } from '@alga-psa/db';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
-import { withWorkflowPicker, withWorkflowNotFoundPolicy, withWorkflowRequireOneOf } from '../../jsonSchemaMetadata';
+import { withWorkflowPicker, withWorkflowNotFoundPolicy, withWorkflowRequireOneOf } from '@alga-psa/event-schemas';
 import { ContactModel, clearContactLinksBeforeDelete } from '../../../../models/contactModel';
 import type {
   ContactEmailAddressInput as ContactModelEmailInput,
   ContactPhoneNumberInput as ContactModelPhoneInput,
 } from '../../../../interfaces/contact.interfaces';
 import { buildContactArchivedPayload, buildContactCreatedPayload, buildContactUpdatedPayload } from '../../../streams/domainEventBuilders/contactEventBuilders';
+import type { BuiltWorkflowPayload, WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import { buildInteractionLoggedPayload, buildNoteCreatedPayload } from '../../../streams/domainEventBuilders/crmInteractionNoteEventBuilders';
 import { ticketUpdateStamp } from '../../../../lib/tickets/ticketUpdateStamp';
 import {
@@ -619,29 +620,16 @@ async function appendContactNoteBlock(
 const maybeWorkflowActor = (userId: string): { actorType: 'USER'; actorUserId: string } =>
   ({ actorType: 'USER', actorUserId: userId });
 
-async function publishWorkflowDomainEvent(params: {
-  eventType: string;
-  payload: Record<string, unknown>;
+async function publishWorkflowDomainEvent<T extends WorkflowCatalogEventType>(params: {
+  eventType: T;
+  payload: BuiltWorkflowPayload<T>;
   tenantId: string;
   occurredAt: string;
   actorUserId: string;
   idempotencyKey: string;
 }): Promise<void> {
   try {
-    const publishers = (await import('@alga-psa/event-bus/publishers')) as unknown as {
-      publishWorkflowEvent?: (value: {
-        eventType: string;
-        payload: Record<string, unknown>;
-        ctx: {
-          tenantId: string;
-          occurredAt: string;
-          actor: { actorType: 'USER'; actorUserId: string };
-        };
-        idempotencyKey: string;
-      }) => Promise<unknown>;
-    };
-    if (!publishers.publishWorkflowEvent) return;
-
+    const publishers = await import('@alga-psa/event-bus/publishers');
     await publishers.publishWorkflowEvent({
       eventType: params.eventType,
       payload: params.payload,
@@ -655,6 +643,58 @@ async function publishWorkflowDomainEvent(params: {
   } catch {
     // Best-effort publication; action persistence/audit remains source of truth.
   }
+}
+
+// CONTACT_DELETED has no catalog entry (no payload schema), so it goes through the non-catalog publisher.
+async function publishContactDeleted(params: {
+  contactId: string;
+  clientId: string | null;
+  tenantId: string;
+  actorUserId: string;
+}): Promise<void> {
+  const deletedAt = new Date().toISOString();
+  try {
+    const publishers = await import('@alga-psa/event-bus/publishers');
+    await publishers.publishNonCatalogWorkflowEvent({
+      eventType: 'CONTACT_DELETED',
+      payload: {
+        contactId: params.contactId,
+        ...(params.clientId ? { clientId: params.clientId } : {}),
+        deletedByUserId: params.actorUserId,
+        deletedAt,
+      },
+      ctx: { tenantId: params.tenantId, occurredAt: deletedAt, actor: maybeWorkflowActor(params.actorUserId) },
+      idempotencyKey: `contact_deleted:${params.contactId}:${deletedAt}`,
+    });
+  } catch {
+    // Best-effort publication; action persistence/audit remains source of truth.
+  }
+}
+
+async function publishContactClientChanged(
+  tx: { tenantId: string; actorUserId: string },
+  contactId: string,
+  before: Record<string, any>,
+  after: Record<string, any>
+): Promise<void> {
+  const occurredAt = new Date().toISOString();
+  const payload = buildContactUpdatedPayload({
+    contactId,
+    clientId: after.client_id ?? null,
+    before: { contact_name_id: contactId, client_id: before.client_id ?? null },
+    after: { contact_name_id: contactId, client_id: after.client_id ?? null },
+    updatedFieldKeys: ['client_id'],
+    updatedByUserId: tx.actorUserId,
+    updatedAt: occurredAt,
+  });
+  await publishWorkflowDomainEvent({
+    eventType: 'CONTACT_UPDATED',
+    payload,
+    tenantId: tx.tenantId,
+    occurredAt,
+    actorUserId: tx.actorUserId,
+    idempotencyKey: `contact_updated:${contactId}:${occurredAt}`,
+  });
 }
 
 export function registerContactActions(): void {
@@ -1250,6 +1290,13 @@ export function registerContactActions(): void {
           details: { action_id: 'contacts.delete', action_version: 1, contact_id: input.contact_id },
         });
 
+        await publishContactDeleted({
+          contactId: input.contact_id,
+          clientId: (existing as Record<string, any>).client_id ?? null,
+          tenantId: tx.tenantId,
+          actorUserId: tx.actorUserId,
+        });
+
         return { deleted: true, contact_id: input.contact_id };
       }),
   });
@@ -1344,6 +1391,31 @@ export function registerContactActions(): void {
         }
 
         const duplicateLoaded = await ensureContactExists(ctx, tx, duplicate.contact_name_id);
+
+        const duplicateOccurredAt = (duplicateLoaded.created_at as string | undefined) ?? new Date().toISOString();
+        // LEVERAGE: pattern contact-create-with-event
+        await publishWorkflowDomainEvent({
+          eventType: 'CONTACT_CREATED',
+          payload: buildContactCreatedPayload({
+            contactId: duplicateLoaded.contact_name_id,
+            clientId: duplicateLoaded.client_id ?? null,
+            fullName: duplicateLoaded.full_name,
+            email: duplicateLoaded.email ?? undefined,
+            primaryEmailCanonicalType: duplicateLoaded.primary_email_canonical_type ?? null,
+            primaryEmailCustomTypeId: duplicateLoaded.primary_email_custom_type_id ?? null,
+            primaryEmailType: duplicateLoaded.primary_email_type ?? null,
+            additionalEmailAddresses: duplicateLoaded.additional_email_addresses ?? [],
+            phoneNumbers: duplicateLoaded.phone_numbers ?? [],
+            defaultPhoneNumber: duplicateLoaded.default_phone_number ?? undefined,
+            defaultPhoneType: duplicateLoaded.default_phone_type ?? undefined,
+            createdByUserId: tx.actorUserId,
+            createdAt: duplicateOccurredAt,
+          }),
+          tenantId: tx.tenantId,
+          occurredAt: duplicateOccurredAt,
+          actorUserId: tx.actorUserId,
+          idempotencyKey: `contact_created:${duplicateLoaded.contact_name_id}`,
+        });
 
         await writeRunAudit(ctx, tx, {
           operation: 'workflow_action:contacts.duplicate',
@@ -1804,6 +1876,10 @@ export function registerContactActions(): void {
           after = await ensureContactExists(ctx, tx, input.contact_id);
         }
 
+        if (!noop) {
+          await publishContactClientChanged(tx, input.contact_id, before, after);
+        }
+
         await writeRunAudit(ctx, tx, {
           operation: 'workflow_action:contacts.add_to_client',
           changedData: {
@@ -1886,6 +1962,10 @@ export function registerContactActions(): void {
             .where({ contact_name_id: input.contact_id })
             .update({ client_id: input.target_client_id, updated_at: new Date().toISOString() });
           after = await ensureContactExists(ctx, tx, input.contact_id);
+        }
+
+        if (!noop) {
+          await publishContactClientChanged(tx, input.contact_id, before, after);
         }
 
         await writeRunAudit(ctx, tx, {

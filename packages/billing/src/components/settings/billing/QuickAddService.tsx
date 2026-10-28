@@ -11,9 +11,10 @@ import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker'
 import { EditableServiceTypeSelect } from '@alga-psa/ui/components/EditableServiceTypeSelect'
 import { Switch } from '@alga-psa/ui/components/Switch'
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert'
-import { createService, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from '@alga-psa/billing/actions/serviceActions'
+import { createServiceWithPricing, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from '@alga-psa/billing/actions/serviceActions'
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions'
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core'
+import { minorUnitsToRateText, rateTextToMinorUnits } from '@alga-psa/billing/lib/currency/rateInput'
 // Import getTaxRates and ITaxRate instead
 import { getTaxRates } from '@alga-psa/billing/actions/taxRateActions'; // Removed getActiveTaxRegions
 import { getTenantTaxSettings } from '@alga-psa/billing/actions/taxSettingsActions';
@@ -254,10 +255,9 @@ export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceType
             return null
           }
 
-          const dollars = parseFloat(rawInput)
-          const cents = Math.round((Number.isFinite(dollars) ? dollars : 0) * 100)
-
-          return { ...price, rate: cents }
+          // Minor units are the currency's own, so a rate typed as 50 on a JPY price is
+          // ¥50 — a fixed ×100 stored 5000 and the invoice billed ¥5,000.
+          return { ...price, rate: rateTextToMinorUnits(rawInput, price.currency_code) }
         })
         .filter((p): p is { currency_code: string; rate: number } => p !== null)
 
@@ -352,7 +352,9 @@ const submitData: CreateServiceInput = {
 
 console.log('[QuickAddService] Submitting service data:', submitData);
 console.log('[QuickAddService] Unit of measure value:', submitData.unit_of_measure);
-const createdService = await createService(submitData);
+const pricesToSave = normalizedPrices.length > 0 ? normalizedPrices : prices;
+// One transaction: a failed price write cannot leave a service with no prices.
+const createdService = await createServiceWithPricing(submitData, pricesToSave);
 console.log('[QuickAddService] Service created successfully:', createdService);
 
 if (isActionPermissionError(createdService)) {
@@ -364,12 +366,6 @@ if (isActionMessageError(createdService)) {
   return;
 }
 
-// Set all prices for the service (multi-currency support)
-if (createdService?.service_id) {
-  const pricesToSave = normalizedPrices.length > 0 ? normalizedPrices : prices;
-  await setServicePrices(createdService.service_id, pricesToSave);
-  console.log(`[QuickAddService] Set ${pricesToSave.length} price(s) for service ${createdService.service_id}`);
-}
 
       onServiceAdded()
       // Close dialog - in controlled mode this is handled by parent via onServiceAdded callback
@@ -634,16 +630,17 @@ if (createdService?.service_id) {
                           }
                         }}
                         onBlur={() => {
-                          // Convert to cents and update prices array on blur
+                          // Convert to the currency's minor units and update prices on blur
                           const inputValue = priceInputs[index] ?? '';
-                          const dollars = parseFloat(inputValue) || 0;
-                          const cents = Math.round(dollars * 100);
+                          const minorUnits = rateTextToMinorUnits(inputValue, price.currency_code);
                           const newPrices = [...prices];
-                          newPrices[index] = { ...newPrices[index], rate: cents };
+                          newPrices[index] = { ...newPrices[index], rate: minorUnits };
                           setPrices(newPrices);
                           // Format the display value
                           const newInputs = [...priceInputs];
-                          newInputs[index] = inputValue.trim() !== '' ? (cents / 100).toFixed(2) : '';
+                          newInputs[index] = inputValue.trim() !== ''
+                            ? minorUnitsToRateText(minorUnits, price.currency_code)
+                            : '';
                           setPriceInputs(newInputs);
                         }}
                         placeholder={t('quickAddService.fields.pricing.placeholders.rate', {

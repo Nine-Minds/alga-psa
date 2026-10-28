@@ -21,6 +21,7 @@ import {
   EventFilter,
   PayloadTransformation
 } from '../schemas/webhookSchemas';
+import { disallowedEventTypes } from '../../webhooks/eventRegistry';
 import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
 import { DatabaseService } from './DatabaseService';
 import { PaginatedResponse, SuccessResponse } from '../../types/api';
@@ -32,9 +33,17 @@ import {
   generateCollectionLinks, 
   addHateoasLinks 
 } from '../utils/responseHelpers';
+import { randomBytes } from 'node:crypto';
+import { webhookModel } from '../../webhooks/webhookModel';
+import { enqueueDeliveryRetry, retryFailedDeliveriesForWebhook } from '../../webhooks/deliveryRetry';
 import { performWebhookDeliveryRequest } from '../../webhooks/delivery';
 import { computeBackoff } from '../../webhooks/backoff';
-import { BadGatewayError, ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
+import {
+  ConflictError,
+  NotFoundError,
+  UnprocessableEntityError,
+  ValidationError,
+} from '../middleware/apiMiddleware';
 
 export class WebhookService {
   constructor(
@@ -47,92 +56,90 @@ export class WebhookService {
   // WEBHOOK CRUD OPERATIONS
   // ============================================================================
 
+  /**
+   * Create a webhook through the same persistence path as the settings UI:
+   * webhookModel.insert stores the row and the signing secret (vault), and the
+   * generated secret is returned once in the response, as rotate does.
+   * Delivery requires that secret (webhookModel.getSigningSecret).
+   */
   async createWebhook(
-      data: CreateWebhookData,
-      tenantId: string,
-      userId?: string
-    ): Promise<SuccessResponse<WebhookResponse>> {
-      await validateTenantAccess(tenantId);
-  
-      // Validate webhook URL
-      await this.validateWebhookUrl(data.url);
-  
-      // Validate event types
-      for (const eventType of data.event_types) {
-        await this.validateEventType(eventType);
-      }
-  
-      const webhookId = crypto.randomUUID();
-      const now = new Date().toISOString();
-  
-      const webhook = {
-        webhook_id: webhookId,
-        tenant: tenantId,
-        created_at: now,
-        updated_at: now,
-        total_deliveries: 0,
-        successful_deliveries: 0,
-        failed_deliveries: 0,
-        last_delivery_at: null,
-        last_success_at: null,
-        last_failure_at: null,
-        ...data
-      };
-  
-      await this.db.insert('webhooks', webhook);
-  
-      // Create subscriptions for each event type
-      for (const eventType of data.event_types) {
-        await this.createEventSubscription(webhookId, eventType, tenantId);
-      }
-  
-      // Publish event
-      await this.eventBus.publish('webhook.created', {
-        webhookId,
-        tenantId,
-        webhookName: data.name,
-        eventTypes: data.event_types,
-        userId
-      });
-  
-      // Audit log
-      await this.auditLog.log({
-        action: 'webhook_created',
-        entityType: 'webhook',
-        entityId: webhookId,
-        userId,
-        tenantId,
-        changes: webhook
-      });
-  
-      // Generate HATEOAS links
-      const links = generateComprehensiveLinks('webhooks', webhookId, '/api/v1', {
-        crudActions: ['read', 'update', 'delete'],
-        customActions: {
-          test: { method: 'POST', path: 'test' },
-          deliveries: { method: 'GET', path: 'deliveries' },
-          analytics: { method: 'GET', path: 'analytics' }
-        },
-        relationships: {
-          subscriptions: { resource: 'webhook-subscriptions', many: true },
-          templates: { resource: 'webhook-templates', many: true }
-        }
-      });
-  
-      const responseData = {
-        ...webhook,
-        last_delivery_at: webhook.last_delivery_at || undefined,
-        last_failure_at: webhook.last_failure_at || undefined,
-        last_success_at: webhook.last_success_at || undefined,
-        description: webhook.description || null
-      } as unknown as WebhookResponse;
-  
-      return {
-        success: true,
-        data: addHateoasLinks(responseData, links)
-      };
+    data: CreateWebhookData,
+    tenantId: string,
+    userId?: string
+  ): Promise<SuccessResponse<WebhookResponse & { signing_secret: string }>> {
+    await validateTenantAccess(tenantId);
+
+    if (!userId) {
+      throw new ValidationError('A user is required to create a webhook');
     }
 
+    // Validate webhook URL
+    await this.validateWebhookUrl(data.url);
+
+    // Validate event types
+    this.assertEventTypesAllowed(data.event_types, []);
+
+    const signingSecret = randomBytes(32).toString('base64url');
+    const created = await webhookModel.insert({
+      tenant: tenantId,
+      name: data.name,
+      url: data.url,
+      method: data.method,
+      eventTypes: data.event_types,
+      customHeaders: data.custom_headers ?? null,
+      eventFilter: (data.event_filter as Record<string, unknown> | undefined) ?? null,
+      payloadFields: data.payload_fields ?? null,
+      signingSecret,
+      retryConfig: (data.retry_config as Record<string, unknown> | undefined) ?? null,
+      verifySsl: data.verify_ssl,
+      rateLimitPerMin: data.rate_limit?.requests_per_minute,
+      isActive: data.is_active,
+      createdByUserId: userId,
+    });
+
+    // Generate HATEOAS links
+    const links = generateComprehensiveLinks('webhooks', created.webhookId, '/api/v1', {
+      crudActions: ['read', 'update', 'delete'],
+      customActions: {
+        test: { method: 'POST', path: 'test' },
+        deliveries: { method: 'GET', path: 'deliveries' },
+        analytics: { method: 'GET', path: 'analytics' },
+        'retry-failed': { method: 'POST', path: 'retry-failed' }
+      },
+      relationships: {
+        subscriptions: { resource: 'webhook-subscriptions', many: true },
+        templates: { resource: 'webhook-templates', many: true }
+      }
+    });
+
+    const responseData = {
+      webhook_id: created.webhookId,
+      tenant: created.tenant,
+      name: created.name,
+      description: data.description ?? null,
+      url: created.url,
+      method: created.method,
+      event_types: created.eventTypes,
+      custom_headers: created.customHeaders,
+      event_filter: created.eventFilter,
+      payload_fields: created.payloadFields,
+      retry_config: created.retryConfig,
+      is_active: created.isActive,
+      verify_ssl: created.verifySsl,
+      total_deliveries: created.totalDeliveries,
+      successful_deliveries: created.successfulDeliveries,
+      failed_deliveries: created.failedDeliveries,
+      created_at: created.createdAt,
+      updated_at: created.updatedAt,
+      // Shown once, like rotate. Never returned by read endpoints.
+      signing_secret: signingSecret,
+    } as unknown as WebhookResponse & { signing_secret: string };
+
+    return {
+      success: true,
+      data: addHateoasLinks(responseData, links) as WebhookResponse & { signing_secret: string }
+    };
+  }
 
   async getWebhook(
       webhookId: string,
@@ -160,7 +167,7 @@ export class WebhookService {
           test: { method: 'POST', path: 'test' },
           deliveries: { method: 'GET', path: 'deliveries' },
           analytics: { method: 'GET', path: 'analytics' },
-          retry: { method: 'POST', path: 'retry' }
+          'retry-failed': { method: 'POST', path: 'retry-failed' }
         },
         relationships: {
           subscriptions: { resource: 'webhook-subscriptions', many: true },
@@ -206,10 +213,14 @@ export class WebhookService {
     }
 
     // Validate event types if being updated
-    if (data.event_types) {
-      for (const eventType of data.event_types) {
-        await this.validateEventType(eventType);
-      }
+    // Legacy names already stored on the webhook pass through; names newly added must be registered.
+    // (createUpdateSchema erases the inferred field types, hence the explicit string[] view.)
+    const requestedEventTypes = data.event_types as string[] | undefined;
+    if (requestedEventTypes) {
+      this.assertEventTypesAllowed(
+        requestedEventTypes,
+        ((existing as { event_types?: string[] | null }).event_types ?? []) as string[]
+      );
     }
 
     const updated = {
@@ -224,8 +235,8 @@ export class WebhookService {
     );
 
     // Update event subscriptions if event types changed
-    if (data.event_types) {
-      await this.updateEventSubscriptions(webhookId, data.event_types, tenantId);
+    if (requestedEventTypes) {
+      await this.updateEventSubscriptions(webhookId, requestedEventTypes, tenantId);
     }
 
     // Publish event
@@ -335,7 +346,8 @@ export class WebhookService {
             customActions: {
               test: { method: 'POST', path: 'test' },
               deliveries: { method: 'GET', path: 'deliveries' },
-              analytics: { method: 'GET', path: 'analytics' }
+              analytics: { method: 'GET', path: 'analytics' },
+              'retry-failed': { method: 'POST', path: 'retry-failed' }
             }
           });
           return addHateoasLinks(webhook as WebhookResponse, resourceLinks);
@@ -567,17 +579,24 @@ export class WebhookService {
     }
   }
 
+  /**
+   * Re-queue one delivery. The retry is handed to the delivery queue as a
+   * fresh attempt (same path as the settings UI action) instead of being sent
+   * inline, so rate limiting, backoff and auto-disable still apply.
+   */
   async retryDelivery(
+    webhookId: string,
     deliveryId: string,
-    tenantId: string,
-    userId?: string
-  ): Promise<SuccessResponse<WebhookDelivery>> {
+    tenantId: string
+  ): Promise<SuccessResponse<{
+    queued: true;
+    webhook_id: string;
+    delivery_id: string;
+    event_id: string;
+  }>> {
     await validateTenantAccess(tenantId);
 
-    const delivery = await this.db.findOne('webhook_deliveries', {
-      delivery_id: deliveryId,
-      tenant: tenantId
-    });
+    const delivery = await webhookModel.getDeliveryById(tenantId, webhookId, deliveryId);
 
     if (!delivery) {
       throw new NotFoundError('Webhook delivery not found');
@@ -587,68 +606,61 @@ export class WebhookService {
       throw new ConflictError('Cannot retry successful delivery');
     }
 
-    const webhook = await this.db.findOne('webhooks', {
-      webhook_id: delivery.webhook_id,
-      tenant: tenantId
-    });
+    if (delivery.isTest) {
+      throw new ValidationError('Test deliveries cannot be retried');
+    }
 
+    const enqueued = await enqueueDeliveryRetry(delivery, tenantId);
+    if (!enqueued.queued) {
+      throw new UnprocessableEntityError('Stored delivery payload cannot be replayed');
+    }
+
+    return {
+      success: true,
+      data: {
+        queued: true,
+        webhook_id: webhookId,
+        delivery_id: deliveryId,
+        event_id: enqueued.eventId
+      }
+    };
+  }
+
+  /**
+   * Bulk counterpart of retryDelivery: re-queues every failed/abandoned
+   * delivery of a webhook, collapsing repeated attempts of one event.
+   */
+  async retryFailedDeliveries(
+    webhookId: string,
+    tenantId: string,
+    options: { since?: string; limit?: number } = {}
+  ): Promise<SuccessResponse<{
+    queued: number;
+    skipped: number;
+    total_candidates: number;
+    truncated: boolean;
+  }>> {
+    await validateTenantAccess(tenantId);
+
+    const webhook = await webhookModel.getById(webhookId, tenantId);
     if (!webhook) {
       throw new NotFoundError('Webhook not found');
     }
 
-    // Perform retry
-    try {
-      const payload = JSON.parse(delivery.request_body || '{}');
-      
-      const deliveryResult = await this.performWebhookDelivery({
-        webhook_id: delivery.webhook_id,
-        url: webhook.url,
-        method: webhook.method,
-        headers: webhook.custom_headers || {},
-        payload,
-        security: webhook.security,
-        retry_config: webhook.retry_config,
-        verify_ssl: webhook.verify_ssl
-      });
+    const result = await retryFailedDeliveriesForWebhook(tenantId, webhookId, {
+      since: options.since ? new Date(options.since) : undefined,
+      limit: options.limit
+    });
 
-      // Update delivery record
-      const updated = {
-        ...delivery,
-        response_status: deliveryResult.status_code,
-        response_headers: deliveryResult.response_headers,
-        response_body: deliveryResult.response_body,
-        status: deliveryResult.success ? 'delivered' : 'failed',
-        attempt_number: delivery.attempt_number + 1,
-        duration_ms: deliveryResult.duration_ms,
-        error_message: deliveryResult.error_message,
-        completed_at: new Date().toISOString(),
-        next_retry_at: null
-      };
-
-      await this.db.update('webhook_deliveries',
-        { delivery_id: deliveryId, tenant: tenantId },
-        updated
-      );
-
-      // Update webhook statistics
-      await this.updateWebhookStats(delivery.webhook_id, deliveryResult.success);
-
-      // Publish event
-      await this.eventBus.publish('webhook.delivery.retried', {
-        webhookId: delivery.webhook_id,
-        deliveryId,
-        tenantId,
-        success: deliveryResult.success,
-        userId
-      });
-
-      return {
-        success: true,
-        data: updated as WebhookDelivery
-      };
-    } catch (error) {
-      throw new BadGatewayError('Webhook retry failed. Please try again.');
-    }
+    return {
+      success: true,
+      data: {
+        queued: result.queued,
+        skipped: result.skipped,
+        total_candidates: result.totalCandidates,
+        truncated: result.truncated
+      }
+    };
   }
 
   async getDeliveryHistory(
@@ -886,15 +898,10 @@ export class WebhookService {
     }
   }
 
-  private async validateEventType(eventType: string): Promise<void> {
-    // Implementation would validate against supported event types
-    const supportedEvents = [
-      'ticket.created', 'ticket.updated', 'project.created', 
-      // ... other supported events
-    ];
-
-    if (!supportedEvents.includes(eventType)) {
-      throw new ValidationError(`Unsupported event type: ${eventType}`);
+  private assertEventTypesAllowed(requested: readonly string[], existing: readonly string[]): void {
+    const rejected = disallowedEventTypes(requested, existing);
+    if (rejected.length > 0) {
+      throw new ValidationError(`Unsupported event type: ${rejected.join(', ')}`);
     }
   }
 

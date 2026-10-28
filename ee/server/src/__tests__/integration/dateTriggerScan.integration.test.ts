@@ -1,3 +1,4 @@
+import { builtWorkflowPayload } from '@alga-psa/event-schemas';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -7,7 +8,7 @@ import { emitDateDomainEventOnce, normalizeDateDomainKeyDate, toTenantLocalDate 
 import { launchDateTriggeredWorkflows, buildDateTriggerFireKey } from '../../../../packages/workflows/src/lib/dateTriggerLauncher';
 
 const mocks = vi.hoisted(() => ({ publish: vi.fn(), temporalStart: vi.fn() }));
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: mocks.publish }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: mocks.publish, publishEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 vi.mock('../../../../packages/workflows/src/lib/workflowRuntimeV2Temporal', async (importOriginal) => ({
   ...((await importOriginal()) as typeof import('../../../../packages/workflows/src/lib/workflowRuntimeV2Temporal')),
   startWorkflowRuntimeV2TemporalRun: mocks.temporalStart,
@@ -50,7 +51,7 @@ describe('date trigger scan and workflow launch integration', () => {
         const workflowId = workflowIds[i];
         const definition = { trigger: { type: 'date', source: fixture.source, offsetDays: fixture.offsetDays, localTime: '08:00', timezone: 'UTC' }, payloadSchemaRef: fixture.ref, steps: [] };
         await trx('workflow_definitions').insert({ workflow_id: workflowId, tenant: tenantId, name: `Date scan ${fixture.source}`, payload_schema_ref: fixture.ref, trigger: JSON.stringify(definition.trigger), draft_definition: JSON.stringify(definition), draft_version: 1, status: 'published' });
-        await trx('workflow_definition_versions').insert({ workflow_id: workflowId, version: 1, definition_json: JSON.stringify(definition), published_at: fireDate });
+        await trx('workflow_definition_versions').insert({ workflow_id: workflowId, tenant: tenantId, version: 1, definition_json: JSON.stringify(definition), published_at: fireDate });
       }
 
       // Regression probe: OID 1082 is parsed by node-postgres as a local-midnight Date.
@@ -91,14 +92,14 @@ describe('date trigger scan and workflow launch integration', () => {
       const cycleKey = savedContract.renewal_cycle_key ?? normalizeDateDomainKeyDate(savedContract.decision_due_date);
       const published = await emitDateDomainEventOnce(trx, tenantId, {
         eventType: 'CONTRACT_RENEWAL_UPCOMING', entityId: clientContractId, cycleKey,
-        occursOn: normalizeDateDomainKeyDate(savedContract.decision_due_date), payload: {},
+        occursOn: normalizeDateDomainKeyDate(savedContract.decision_due_date), payload: builtWorkflowPayload('CONTRACT_RENEWAL_UPCOMING', {}),
       });
       expect(published).toBe(false);
       const savedAsset = await trx('assets').where({ tenant: tenantId, asset_id: assetId }).first('warranty_end_date');
       const warrantyDate = toTenantLocalDate(savedAsset.warranty_end_date, 'UTC');
       await expect(emitDateDomainEventOnce(trx, tenantId, {
         eventType: 'ASSET_WARRANTY_EXPIRING', entityId: assetId, cycleKey: warrantyDate,
-        occursOn: warrantyDate, payload: {},
+        occursOn: warrantyDate, payload: builtWorkflowPayload('ASSET_WARRANTY_EXPIRING', {}),
       })).resolves.toBe(false);
       expect(mocks.publish).toHaveBeenCalledTimes(3);
     } finally {

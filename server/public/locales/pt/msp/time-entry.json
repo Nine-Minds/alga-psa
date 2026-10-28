@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Adicionar lançamento de horas"
+    }
+  },
   "common": {
     "actions": {
       "view": "Visualizar",
@@ -127,12 +132,14 @@
       "billable": "Faturável",
       "notes": "Notas",
       "deleteTimeEntry": "Excluir entrada de tempo",
-      "unsavedChanges": "Alterações não salvas"
+      "unsavedChanges": "Alterações não salvas",
+      "contractLine": "Linha de contrato"
     },
     "placeholders": {
       "selectService": "Selecione um serviço",
       "selectDate": "Selecione a data",
-      "addNotes": "Adicionar notas"
+      "addNotes": "Adicionar notas",
+      "selectContractLine": "Selecionar uma linha de contrato"
     },
     "validation": {
       "startBeforeEnd": "O horário de início deve ser anterior ao horário de término",
@@ -150,6 +157,9 @@
       "task": "Padrão da tarefa",
       "phase": "Padrão da fase",
       "project": "Padrão do projeto"
+    },
+    "options": {
+      "resolveContractLineLater": "Nenhuma linha - resolver mais tarde"
     }
   },
   "workItemPicker": {
@@ -213,9 +223,9 @@
     },
     "labels": {
       "status": "Status:",
-      "showIntervals": "Mostrar intervalos",
       "grid": "Grade",
-      "list": "Lista"
+      "list": "Lista",
+      "showSuggestions": "Sugestões"
     }
   },
   "approval": {
@@ -396,57 +406,11 @@
     "noContract": "Nenhuma linha de contrato encontrada para este serviço. O tempo será encaminhado para o contrato padrão gerenciado pelo sistema.",
     "contract": "Contrato: {{name}}",
     "defaultContract": "Contrato padrão gerenciado pelo sistema",
-    "multipleLines": "Várias linhas de contrato disponíveis – usando seleção padrão"
+    "multipleEligible": "Várias linhas de contrato são elegíveis para esta data. Selecione uma linha de contrato para guardar a atribuição."
   },
   "billableLegend": {
     "title": "Legenda faturável",
     "description": "Indicadores coloridos para taxas de tempo faturáveis"
-  },
-  "intervalItem": {
-    "now": "Agora",
-    "autoClosed": "Fechado automaticamente",
-    "active": "Ativo"
-  },
-  "intervals": {
-    "createdFromNote_one": "Criado a partir do intervalo {{count}}",
-    "createdFromNote_other": "Criado a partir de intervalos {{count}}",
-    "selectedCount_one": "Intervalo {{count}} selecionado",
-    "selectedCount_other": "Intervalos {{count}} selecionados",
-    "title": "Intervalos de tempo do ticket",
-    "hideShortIntervals": "Ocultar intervalos inferiores a 1 minuto",
-    "totalTime": "Tempo total: {{value}}",
-    "selectedOne": "Intervalo {{count}} selecionado",
-    "selectedOther": "Intervalos {{count}} selecionados",
-    "tooltips": {
-      "createTimeEntry": "Criar entrada de tempo a partir de intervalos selecionados",
-      "deleteSelected": "Excluir intervalos selecionados",
-      "mergeSelected": "Mesclar intervalos selecionados"
-    },
-    "actions": {
-      "selectAll": "Selecionar tudo",
-      "deselectAll": "Desmarcar tudo",
-      "merge": "Mesclar"
-    },
-    "states": {
-      "loading": "Carregando intervalos...",
-      "noIntervalsThisPeriod": "Nenhum intervalo encontrado para este período",
-      "noIntervalsThisTicket": "Nenhum intervalo encontrado para este ticket",
-      "noIntervalsLongerThanMinute": "Nenhum intervalo maior que 1 minuto encontrado"
-    },
-    "entryName": "Entrada de tempo de ticket",
-    "messages": {
-      "cannotFindTimeSheet": "Não é possível criar a entrada de horas - não foi possível encontrar ou criar a planilha de horas",
-      "mergeFirst": "Por favor, mescle os intervalos antes de criar uma entrada de tempo",
-      "sameTicketOnly": "Só é possível criar entradas de tempo a partir de intervalos do mesmo ticket",
-      "mergeSameTicketOnly": "Só é possível mesclar intervalos do mesmo ticket",
-      "mergeSuccess": "Intervalos mesclados com sucesso",
-      "failedMerge": "Falha ao mesclar intervalos",
-      "noActivePeriod": "Nenhum período ativo encontrado",
-      "failedFetchTimeSheet": "Falha ao criar ou buscar planilha de horas",
-      "failedPrepareTimeEntry": "Falha ao preparar a entrada de horário",
-      "savedSuccess": "Entrada de tempo salva com sucesso",
-      "failedSave": "Falha ao salvar a entrada de tempo"
-    }
   },
   "addWorkItemDialog": {
     "title": "Adicionar item de trabalho",
@@ -503,14 +467,34 @@
       "missingFieldNamed": "Falta um campo obrigatório da planilha de horas ou do lançamento de horas: {{field}}."
     },
     "timePeriod": {
-      "datesRequired": "Informe datas de início e de término válidas."
+      "datesRequired": "Informe datas de início e de término válidas.",
+      "closed": "Este período de tempo está fechado. Reabra-o antes de fazer alterações.",
+      "permissions": {
+        "read": "Permissão negada: não é possível visualizar os períodos.",
+        "create": "Permissão negada: não é possível criar períodos.",
+        "update": "Permissão negada: não é possível atualizar os períodos.",
+        "delete": "Permissão negada: não é possível excluir os períodos."
+      }
     },
     "timePeriodSettings": {
       "invalidValue": "Um dos valores da configuração de período é inválido. Atualize a página e tente novamente.",
       "referenceMissing": "A configuração de período selecionada não é mais válida. Atualize a página e tente novamente.",
       "duplicate": "Já existe uma configuração de período conflitante.",
       "missingField": "Falta um campo obrigatório da configuração de período.",
-      "missingFieldNamed": "Falta um campo obrigatório da configuração de período: {{field}}."
+      "missingFieldNamed": "Falta um campo obrigatório da configuração de período: {{field}}.",
+      "permissions": {
+        "read": "Permissão negada: não é possível visualizar as configurações de período.",
+        "manage": "Permissão negada: não é possível gerenciar as configurações de período."
+      }
+    },
+    "stopwatch": {
+      "notFound": "Sessão do cronômetro não encontrada. Ela pode já ter sido registrada ou descartada. Atualize a página.",
+      "notOpen": "Esta sessão do cronômetro já está encerrada.",
+      "workItemNotFound": "Não foi possível encontrar o item de trabalho deste cronômetro.",
+      "unsupportedWorkItem": "O cronômetro só pode ser iniciado em tickets e tarefas de projeto.",
+      "boardDisabled": "O cronômetro está desativado para o quadro deste ticket.",
+      "alreadyOpen": "Você já tem um cronômetro em andamento. Pare-o ou descarte-o primeiro.",
+      "serviceRequired": "Escolha um serviço antes de registrar esta sessão do cronômetro."
     }
   },
   "workItemEntry": {
@@ -539,6 +523,55 @@
     "entryMissingPeriod": "A folha de horas desta entrada não tem período e não pode ser aberta.",
     "noPeriods": "Ainda não há períodos de tempo configurados, portanto não é possível registrar tempo. Peça a um administrador para criar períodos de tempo em Configurações → Registro de tempo.",
     "noEditablePeriods": "Todas as folhas de horas estão submetidas ou aprovadas, pelo que não há nenhum dia a que adicionar tempo. Peça a um aprovador que reabra uma folha ou a um administrador que adicione um período.",
-    "prepareFailed": "Ocorreu um erro ao preparar a entrada de tempo. Tente novamente."
+    "prepareFailed": "Ocorreu um erro ao preparar a entrada de tempo. Tente novamente.",
+    "periodRange": "{{start}} – {{end}}"
+  },
+  "suggestions": {
+    "title": "Sugestões",
+    "description": "Tickets em que você trabalhou neste período e que ainda não têm tempo registrado. Nada é registrado até você escolher Registrar tempo.",
+    "loading": "Carregando sugestões...",
+    "empty": "Nenhuma sugestão para este período",
+    "dismissAllForDay": "Dispensar tudo deste dia",
+    "logTime": "Registrar tempo",
+    "dismiss": "Dispensar",
+    "estimatedNotice": "Estes horários são estimados com base na sua atividade neste ticket. Ajuste-os para o tempo que você realmente trabalhou.",
+    "dismissFailed": "Falha ao dispensar a sugestão",
+    "activitySummary_one": "primeira atividade {{first}} · última {{last}} · {{count}} ação ({{kinds}})",
+    "activitySummary_other": "primeira atividade {{first}} · última {{last}} · {{count}} ações ({{kinds}})",
+    "kinds": {
+      "created": "criado",
+      "commented": "comentado",
+      "internalNote": "nota interna",
+      "statusChanged": "status alterado",
+      "priorityChanged": "prioridade alterada",
+      "assignmentChanged": "atribuição alterada",
+      "documentsChanged": "documentos alterados",
+      "checklistChanged": "checklist alterado",
+      "linksChanged": "links alterados",
+      "updated": "atualizado"
+    },
+    "activitySummary_few": "primeira atividade {{first}} · última {{last}} · {{count}} ações ({{kinds}})",
+    "activitySummary_many": "primeira atividade {{first}} · última {{last}} · {{count}} ações ({{kinds}})"
+  },
+  "stopwatch": {
+    "pausedNotice_one": "{{active}} registrado em {{count}} segmento (pausado {{paused}})",
+    "pausedNotice_other": "{{active}} registrados em {{count}} segmentos (pausado {{paused}})",
+    "discardDialog": {
+      "title": "Descartar este cronômetro?",
+      "message": "O tempo registrado em {{workItem}} ({{duration}}) será excluído e nenhum lançamento de tempo será criado. Esta ação não pode ser desfeita.",
+      "confirm": "Descartar",
+      "cancel": "Manter cronômetro"
+    },
+    "conflictDialog": {
+      "title": "Já existe um cronômetro aberto",
+      "message": "Você já está registrando {{duration}} em {{workItem}}. Apenas um cronômetro pode ficar aberto por vez.",
+      "stopAndLog": "Parar e registrar o atual, depois iniciar",
+      "discard": "Descartar o atual, depois iniciar (o tempo registrado é excluído)",
+      "confirm": "Continuar",
+      "cancel": "Cancelar"
+    },
+    "ticketFallbackName": "Ticket {{number}}",
+    "pausedNotice_few": "{{active}} registrados em {{count}} segmentos (pausado {{paused}})",
+    "pausedNotice_many": "{{active}} registrados em {{count}} segmentos (pausado {{paused}})"
   }
 }

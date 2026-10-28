@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { inboundEmailReplyReceivedEventPayloadSchema } from '../communicationsEventSchemas';
+import { inboundEmailReplyReceivedEventPayloadSchema } from '@alga-psa/event-schemas';
 import { buildWorkflowPayload } from '@alga-psa/event-schemas';
 import { buildInboundEmailReplyReceivedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inboundEmailReplyEventBuilders';
 

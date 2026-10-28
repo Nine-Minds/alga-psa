@@ -87,7 +87,7 @@ describe('Contract-cadence replenishment under concurrent execution', () => {
     });
 
     // Six initial periods: first locked, the rest billed through Aug 8.
-    const scheduleKey = `schedule:${tenantId}:contract_line:${obligationId}:contract:arrears`;
+    const scheduleKey = `schedule:${tenantId}:${obligationId}:contract:arrears`;
     const rows: Array<Record<string, unknown>> = [];
     const periods: Array<[string, string, string, string]> = [
       ['2026-02-08', '2026-03-08', '2026-03-08', '2026-04-08'],
@@ -107,7 +107,6 @@ describe('Contract-cadence replenishment under concurrent execution', () => {
         period_key: `period:${serviceStart}:${serviceEnd}`,
         revision: 1,
         obligation_id: obligationId,
-        obligation_type: 'contract_line',
         charge_family: 'fixed',
         cadence_owner: 'contract',
         due_position: 'arrears',

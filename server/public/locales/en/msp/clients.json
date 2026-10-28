@@ -25,6 +25,7 @@
     },
     "states": {
       "active": "Active",
+      "scheduled": "Scheduled",
       "inactive": "Inactive",
       "loading": "Loading...",
       "na": "N/A",
@@ -315,7 +316,20 @@
     "inboundDomainAutoCreateHelp": "Mapped domains can optionally create a contact for a trusted new sender. Domains must be unique across clients.",
     "inboundDomainAutoCreateUpdated": "Sender contact setting updated.",
     "inboundDomainAutoCreateUpdateFailed": "Could not update sender contact setting.",
-    "recurringTickets": "Recurring tickets"
+    "recurringTickets": "Recurring tickets",
+    "software": "Software",
+    "checklistsTab": "Checklists",
+    "checklists": {
+      "name": "Name",
+      "items": "Items",
+      "status": "Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "description": "Checklist templates that are only offered on this client's tickets. Edit them in Settings > Ticketing > Checklist Templates.",
+      "empty": "No client-specific checklist templates.",
+      "loadFailed": "Failed to load checklist templates",
+      "retry": "Retry"
+    }
   },
   "clientCommandCenter": {
     "cards": {
@@ -328,7 +342,8 @@
       "people": "People",
       "record": "Client record",
       "service": "Service",
-      "timeline": "Everything, in order"
+      "timeline": "Everything, in order",
+      "software": "Software"
     },
     "csatEmpty": "No survey responses yet.",
     "discardCancel": "Keep editing",
@@ -405,6 +420,12 @@
       "primary": "Primary"
     },
     "pulseError": "Could not load the client snapshot.",
+    "quickLinks": {
+      "assets": "Assets",
+      "contacts": "Contacts",
+      "label": "Quick links",
+      "software": "Software"
+    },
     "rail": {
       "close": "Close",
       "installBase": "Install base",
@@ -439,6 +460,13 @@
       "onTrack": "SLA on track",
       "onTrackLeft": "SLA {{left}} left",
       "paused": "SLA paused"
+    },
+    "software": {
+      "assetsMeta_one": "1 asset",
+      "assetsMeta_other": "{{count}} assets",
+      "loadError": "Could not load software inventory.",
+      "titles": "titles",
+      "viewAll": "All software"
     },
     "timeline": {
       "daysAgo": "{{count}}d ago",
@@ -571,11 +599,6 @@
     "invoiceDeliveryMethod": "Invoice delivery method",
     "invoiceTemplate": "Invoice template",
     "invoiceTemplateHelp": "Select a template or use default",
-    "paymentTerms": {
-      "dueOnReceipt": "Due on Receipt",
-      "net15": "Net 15",
-      "net30": "Net 30"
-    },
     "preferredPaymentMethod": "Preferred payment method",
     "defaultCurrency": "Default currency",
     "selectTaxRegion": "Select Tax Region (Optional)",
@@ -587,11 +610,6 @@
       "both": "Both",
       "email": "Email",
       "mail": "Mail"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Bank Transfer",
-      "check": "Check",
-      "creditCard": "Credit Card"
     },
     "paymentTermsLabel": "Payment terms",
     "standardTemplateLabel": "(Standard)",
@@ -1605,7 +1623,8 @@
         "warrantyEnd": "Warranty End",
         "agent": "Agent",
         "patching": "Patching",
-        "coverage": "Coverage"
+        "coverage": "Coverage",
+        "assignedTo": "Assigned to"
       },
       "details": {
         "local": "Local",
@@ -1652,7 +1671,28 @@
         "workstation": "Workstation"
       },
       "loadError": "Unable to load assets right now.",
-      "retry": "Retry"
+      "retry": "Retry",
+      "views": {
+        "assets": "Assets",
+        "groups": "Groups"
+      },
+      "groups": {
+        "newGroup": "New group",
+        "drawerTitle": "Asset group",
+        "name": "Name",
+        "kind": "Kind",
+        "kinds": {
+          "bundle": "Bundle",
+          "shared_workspace": "Shared workspace"
+        },
+        "columns": {
+          "name": "Name",
+          "kind": "Kind",
+          "location": "Location",
+          "members": "Members",
+          "people": "People"
+        }
+      }
     },
     "tickets": {
       "addTicket": "Add Ticket",
@@ -1768,7 +1808,8 @@
     },
     "cardExpiry": ", exp {{month}}/{{year}}",
     "legacyPaymentTerms": "\"{{value}}\" is not a recognized payment term and was never applied. Saving clears it.",
-    "cardOnFile": "{{type}} ending in {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} ending in {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Tenant default: {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Prepaid Balance Alerts",
@@ -1982,7 +2023,15 @@
     "accountingApply": "Apply selected",
     "accountingSkip": "Skip for now",
     "accountingRemapped": "Accounting mappings re-pointed",
-    "accountingSkipped": "{{count}} mapping(s) could not be re-pointed and need a manual re-link."
+    "accountingSkipped": "{{count}} mapping(s) could not be re-pointed and need a manual re-link.",
+    "assetsDescription": "These devices and RMM organizations move to the destination client. Sync keeps them there afterwards.",
+    "assetsTotal": "Assets",
+    "assetGroups": "Asset groups",
+    "deviceCount": "{{count}} devices",
+    "billingStrategyHeading": "Bill merged work and devices under",
+    "billingStrategySource": "{{source}} billing profile, kept as a separate profile on {{target}}",
+    "billingStrategyTarget": "{{target}} default billing profile",
+    "billingStrategyHelp": "Applies to {{tickets}} ticket(s), {{projects}} project(s), {{assets}} asset(s) and {{mappings}} RMM device group(s) that have no billing profile of their own. Rows with an explicit profile keep it, and invoices, billing cycles, payments and credits always stay on the merged profile."
   },
   "billingProfileContacts": {
     "title": "Profile contacts",
@@ -2000,5 +2049,21 @@
     "manager": "Manager",
     "seesTickets": "Sees profile tickets",
     "editHint": "Edit these on the billing profile, under the client's billing settings."
+  },
+  "clientSoftware": {
+    "columns": {
+      "assets": "Assets",
+      "lastSeen": "Last seen",
+      "title": "Title",
+      "versions": "Versions"
+    },
+    "empty": "No software inventory yet — inventory is collected per device",
+    "emptyAssetsLink": "View assets",
+    "exportCsv": "Export CSV",
+    "exportError": "Could not export software inventory.",
+    "installedOn": "Installed on",
+    "loadError": "Could not load software inventory.",
+    "moreAssets": "and {{count}} more (showing the first {{limit}} by name)",
+    "searchPlaceholder": "Search software..."
   }
 }

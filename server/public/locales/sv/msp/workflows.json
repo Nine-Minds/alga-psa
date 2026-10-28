@@ -534,7 +534,8 @@
         "anniversary": "kundens nästa årsdag",
         "renewal": "avtalets beslutsdatum för förnyelse",
         "contractEnd": "avtalets slutdatum",
-        "warrantyEnd": "tillgångens slutdatum för garantin"
+        "warrantyEnd": "tillgångens slutdatum för garantin",
+        "ticketStatusAge": "dagen då ärendet når antalet dagar i status"
       }
     }
   },
@@ -564,7 +565,8 @@
       "exportCsv": "Exportera CSV",
       "exportJson": "Exportera JSON",
       "close": "Stäng",
-      "viewRunDetails": "Visa körningsdetaljer"
+      "viewRunDetails": "Visa körningsdetaljer",
+      "backToEvents": "Tillbaka till händelser"
     },
     "table": {
       "schemaConflict": "katalog ≠ inskickat",
@@ -602,7 +604,12 @@
       "waitStepLine": "Steg: {{value}}",
       "matchedRunLabel": "Matchad körning",
       "runStatusLine": "Status: {{status}}",
-      "payloadLabel": "Nyttolast"
+      "payloadLabel": "Nyttolast",
+      "launchSkips": {
+        "title": "Arbetsflöden som inte startades",
+        "unknownWorkflow": "Borttaget arbetsflöde",
+        "intentional": "Avsiktligt"
+      }
     },
     "toasts": {
       "loadEventsFailed": "Det gick inte att läsa in arbetsflödeshändelser",
@@ -621,7 +628,8 @@
     },
     "actions": {
       "refresh": "Uppdatera",
-      "loadMore": "Läs in fler"
+      "loadMore": "Läs in fler",
+      "backToList": "Tillbaka till dead letter"
     },
     "table": {
       "columns": {
@@ -808,7 +816,20 @@
       "notPublishedNextVersion": "Inte publicerat än. När du publicerar skapas v{{next}}.",
       "tenantTimezoneOption": "Organisationens tidszon (standard)",
       "searchTimezones": "Sök tidszoner",
-      "inputDataEventPending": "Välj händelsen ovan; dina steg läser de data som händelsen skickar."
+      "inputDataEventPending": "Välj händelsen ovan; dina steg läser de data som händelsen skickar.",
+      "dateSourceTicketStatusAge": "Ärende i status i N dagar",
+      "statusAgeStatus": "Status",
+      "statusAgeStatusPlaceholder": "Välj en status",
+      "statusAgeStatusMissing": "Det finns ingen status med detta namn på den valda tavlan.",
+      "statusAgeOptionsFailed": "Det gick inte att läsa in statusar och tavlor.",
+      "statusAgeMatchByName": "Statusar matchas på namn. Om en status byter namn slutar den här utlösaren matcha.",
+      "statusAgeBoard": "Tavla (valfritt)",
+      "statusAgeAnyBoard": "Valfri tavla",
+      "statusAgeDays": "Dagar i status",
+      "statusAgeRepeat": "Upprepa så länge ärendet är i status",
+      "statusAgeRepeatEvery": "Upprepa var (dagar)",
+      "statusAgeNoActivity": "Endast om det inte har förekommit någon aktivitet (kommentarer eller ändringar av personer) under den tiden",
+      "statusAgeSummary": "Körs dagligen kl. {{time}} ({{timezone}}) för varje ärende som har varit i den valda statusen under det angivna antalet dagar"
     },
     "stepPanel": {
       "readOnly": "Skrivskyddad åtkomst: stegredigering är inaktiverad.",
@@ -860,6 +881,7 @@
       "add": "Lägg till",
       "remove": "Ta bort",
       "empty": "Inga mappningar ännu.",
+      "nameRequired": "Ange ett namn för den här mappningen.",
       "expressionLabel": "Uttryck"
     },
     "schemaForm": {
@@ -1370,6 +1392,41 @@
       "unsaved": "Osparade ändringar",
       "savedAgo": "Sparat · {{ago}}",
       "saved": "Sparat"
+    },
+    "launchSkips": {
+      "banner": {
+        "summary_one": "{{count}} händelse hoppades över de senaste {{days}} dagarna — {{reasons}}",
+        "summary_other": "{{count}} händelser hoppades över de senaste {{days}} dagarna — {{reasons}}",
+        "lastSkipped": "Senast överhoppad {{when}}",
+        "view": "Visa överhoppade händelser",
+        "summary_few": "{{count}} händelser hoppades över de senaste {{days}} dagarna — {{reasons}}",
+        "summary_many": "{{count}} händelser hoppades över de senaste {{days}} dagarna — {{reasons}}"
+      },
+      "drawer": {
+        "title": "Överhoppade händelser",
+        "windowLabel": "Tidsperiod",
+        "window": {
+          "24h": "Senaste 24 timmarna",
+          "7d": "Senaste 7 dagarna",
+          "30d": "Senaste 30 dagarna"
+        },
+        "allReasons": "Alla orsaker",
+        "reasonLabel": "Orsak",
+        "groupAttention": "Kräver uppmärksamhet",
+        "groupGuarded": "Skyddad / pausad (avsiktligt)",
+        "lastSeen": "Senast sedd {{when}}",
+        "columns": {
+          "received": "Mottagen",
+          "event": "Händelse",
+          "reason": "Orsak",
+          "message": "Meddelande"
+        },
+        "issuesTitle": "Valideringsproblem",
+        "issueRoot": "(nyttolast)",
+        "openEvent": "Öppna händelse",
+        "loadError": "Det gick inte att läsa in överhoppade händelser.",
+        "empty": "Inga överhoppade händelser under denna period."
+      }
     }
   },
   "actionInputFieldInfo": {
@@ -1686,7 +1743,9 @@
     "insertionPointLabel": "Nya steg hamnar här",
     "emptyBranchPrompt": "Lägg till ett steg i den här grenen",
     "emptyActivePrompt": "Nya steg hamnar här. Välj ett från paletten.",
-    "stepCount": "({{count}} steg)"
+    "stepCount": "({{count}} steg)",
+    "stepCount_few": "({{count}} steg)",
+    "stepCount_many": "({{count}} steg)"
   },
   "expressionEditor": {
     "ariaLabel": "Uttrycksredigerare",
@@ -1973,7 +2032,8 @@
     "dateTiming": {
       "before": "{{count}} dagar före",
       "after": "{{count}} dagar efter",
-      "onTheDay": "samma dag"
+      "onTheDay": "samma dag",
+      "daysInStatus": "{{count}} dagar i statusen"
     },
     "dateWithTiming": "{{source}}, {{timing}}"
   },
@@ -2198,7 +2258,12 @@
       "currentRun": "Körning {{id}}",
       "backToWorkflow": "Tillbaka till arbetsflödet"
     },
-    "title": "Studio för arbetsflödeskörningar"
+    "title": "Studio för arbetsflödeskörningar",
+    "communityEdition": {
+      "title": "Pro-funktion",
+      "description": "Studion för arbetsflödeskörningar är endast tillgänglig i Pro.",
+      "runId": "Körnings-ID: {{runId}}"
+    }
   },
   "schedules": {
     "common": {
@@ -2664,6 +2729,10 @@
       },
       "deleteDialog": {
         "fallbackEntityName": "det här arbetsflödet"
+      },
+      "launchSkips": {
+        "badge": "{{count}} överhoppade",
+        "badgeTitle": "Händelser som detta arbetsflöde inte startades för de senaste 7 dagarna"
       }
     },
     "eventsCatalog": {
@@ -2967,6 +3036,10 @@
         "selectBoard": "Välj eller ange en tavla",
         "selectPriority": "Välj eller ange en prioritet"
       }
+    },
+    "proFeature": {
+      "title": "Pro-funktion",
+      "description": "Arbetsflödessystemet är endast tillgängligt i Pro. Uppgradera din installation för att få tillgång till den här funktionen."
     }
   },
   "toggle": {
@@ -3059,5 +3132,75 @@
   "fieldPicker": {
     "searchPlaceholder": "Sök fält",
     "noMatches": "Inga matchande fält"
+  },
+  "launchSkipReasons": {
+    "missing_schema_ref": {
+      "label": "Referens till payload-schema saknas",
+      "hint": "Arbetsflödet saknar referens till payload-schema, så händelsens payload kan inte valideras."
+    },
+    "unknown_schema_ref": {
+      "label": "Okänd referens till payload-schema",
+      "hint": "Arbetsflödets referens till payload-schema finns inte i schemaregistret."
+    },
+    "missing_source_schema": {
+      "label": "Källschema saknas",
+      "hint": "Händelsen saknar källschema att jämföra med arbetsflödets schema."
+    },
+    "schema_mismatch": {
+      "label": "Händelsens payload matchar inte schemat",
+      "hint": "Händelsens payload matchar inte arbetsflödets schema och ingen mappning är konfigurerad."
+    },
+    "payload_mapping_failed": {
+      "label": "Payload-mappning misslyckades",
+      "hint": "Triggerns payload-mappning kunde inte tillämpas på händelsen."
+    },
+    "payload_validation_failed": {
+      "label": "Payload-validering misslyckades",
+      "hint": "Den mappade payloaden klarade inte arbetsflödets payload-schema."
+    },
+    "launch_failed": {
+      "label": "Start misslyckades",
+      "hint": "Workern accepterade händelsen, men start av arbetsflödeskörningen misslyckades."
+    },
+    "paused": {
+      "label": "Arbetsflödet är pausat",
+      "hint": "Arbetsflödet är pausat, så händelser startas avsiktligt inte."
+    },
+    "lineage_loop_guard": {
+      "label": "Loopskydd (ursprung)",
+      "hint": "Händelsen härstammar från detta arbetsflödes egen kedja; hoppades över för att förhindra en loop."
+    },
+    "self_trigger_guard": {
+      "label": "Skydd mot självutlösning",
+      "hint": "Händelsen skickades av detta arbetsflöde självt; hoppades över för att förhindra självutlösning."
+    },
+    "causation_depth_exceeded": {
+      "label": "Orsakskedjans djup överskreds",
+      "hint": "Kedjan av orsakade händelser överskred maxdjupet; hoppades över för att förhindra skenande loopar."
+    }
+  },
+  "createFromTicket": {
+    "title": "Skapa arbetsflöde från ärende",
+    "description": "Skapar ett arbetsflödesutkast vars första steg skapar ett ärende som #{{number}}. Inget publiceras.",
+    "cancel": "Avbryt",
+    "creating": "Skapar…",
+    "submit": "Skapa utkast och öppna designern",
+    "nameLabel": "Arbetsflödesnamn",
+    "triggerLabel": "Utlösare",
+    "triggerManual": "Manuell (kör vid behov)",
+    "ticketCreatedWarning": "Det här arbetsflödet skapar ett ärende, och ett nytt ärende utlöser samma utlösare igen. Lägg till ett villkor före publicering för att undvika en loop.",
+    "includeLegend": "Ta med från ärendet",
+    "propertiesAlways": "Rubrik, beskrivning, kund, kontakt, tavla, kategori och prioritet tas alltid med.",
+    "includeAssignment": "Tilldelning",
+    "includeTags": "Taggar",
+    "includeCustomFields": "Anpassade fält",
+    "includeChecklist": "Checklista",
+    "errors": {
+      "nameRequired": "Arbetsflödesnamn krävs",
+      "generic": "Det gick inte att skapa arbetsflödesutkastet"
+    },
+    "includeCustomFieldsCount": "Anpassade fält ({{n}})",
+    "includeChecklistCount": "Checklista ({{total}} punkter: {{templates}} från mallar / {{adHoc}} ad hoc)",
+    "checklistTemplateNote": "Punkter från mallar tillämpas på nytt från den aktuella mallen, så ändringar som gjorts på det här ärendet förs inte över."
   }
 }

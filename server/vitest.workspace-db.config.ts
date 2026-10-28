@@ -20,12 +20,14 @@ export default defineConfig({
       'src/{app,components,lib,services}/**/*.{db,integration}.{test,spec}.?(c|m)[jt]s?(x)',
       'migrations/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       'src/test/unit/**/*.db.test.?(c|m)[jt]s?(x)',
+      'src/test/contract/**/*.db.test.?(c|m)[jt]s?(x)',
       '../packages/**/*.db.test.?(c|m)[jt]s?(x)',
       '../shared/**/*.db.test.?(c|m)[jt]s?(x)',
       '../ee/packages/**/*.db.test.?(c|m)[jt]s?(x)',
       '../ee/server/src/__tests__/unit/**/*.db.test.?(c|m)[jt]s?(x)',
+      '../services/workflow-worker/**/*.db.test.?(c|m)[jt]s?(x)',
     ],
-    exclude: ['**/node_modules/**'],
+    exclude: ['**/node_modules/**', '../**/node_modules/**', '**/dist/**', '../**/dist/**'],
     coverage: { enabled: false },
     // Existing DB harnesses recreate test_database. Each CI shard/job owns
     // its own service; files inside it must remain serial.

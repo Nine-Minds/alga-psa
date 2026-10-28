@@ -1,5 +1,6 @@
 'use client'
 
+import { encodeTicketWhere } from '../lib/ticketWhereUrl';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -8,6 +9,7 @@ import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from '@
 import { ITag } from '@alga-psa/types';
 import { buildCreateTicketHref } from '../lib/createTicketRoute';
 import { createTicketActionsColumn } from './ticketActionsColumn';
+import { useTicketTemplatePermissions } from './templates/useTicketTemplatePermissions';
 import { CategoryPicker } from './CategoryPicker';
 import { BoardFilterPicker, NO_BOARD_VALUE } from './BoardFilterPicker';
 import BoardTabStrip from './BoardTabStrip';
@@ -38,6 +40,8 @@ import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { TagFilter } from '@alga-psa/ui/components/tags/TagFilter';
+import { WhereTagFilter } from './WhereTagFilter';
+import { WHERE_TAG_FILTERS, getWhereTagSelection, setWhereTagSelection, whereTagFilterChips } from '../lib/ticketWhereFilters';
 import type { TagSize } from '@alga-psa/ui/components/tags';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
@@ -47,7 +51,23 @@ import {
 } from '@alga-psa/ui/components/PrintOptionsDialog';
 import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { ShareActionsMenu, type ShareAction } from '@alga-psa/ui/components/ShareActionsMenu';
+import {
+  LIST_FILTER_DENSITY_PRESETS,
+  ListCard,
+  ListFilterChips,
+  ListFilterPanel,
+  ListFilterRow,
+  ListPageHeading,
+  ListToolbarEnd,
+  ListToolbarFiltersToggle,
+  ListToolbarResetButton,
+  ListToolbarRow,
+  ListToolbarSearchInput,
+  ListToolbarSurface,
+  useDebouncedValue,
+} from '@alga-psa/ui/components/ListToolbar';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
+import { LabelPrintDialog } from '@alga-psa/ui/components';
 import { IBoard, IClient, IContact, IUser, ITeam } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -64,7 +84,7 @@ import { XCircle, Clock, Download, Upload, ChevronDown, Printer, Settings2, Filt
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@alga-psa/ui/components/DropdownMenu';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
-import { useIntervalTracking, useRangeSelection } from '@alga-psa/ui/hooks';
+import { useRangeSelection } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
 import { handleError, isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
@@ -154,6 +174,9 @@ interface TicketingDashboardProps {
   initialCategories: ITicketCategory[];
   initialClients: IClient[];
   initialTags?: ITag[];
+  /** Contact / client tag definitions for the Requester tags / Client tags filters. */
+  contactTagDefinitions?: ITag[];
+  clientTagDefinitions?: ITag[];
   initialUsers?: IUser[];
   totalCount: number;
   currentPage: number;
@@ -203,21 +226,12 @@ interface TicketingDashboardProps {
   /** Controlled column widths for the ticket table (named views capture and apply them). */
   columnSizing?: Record<string, number>;
   onColumnSizingChange?: (columnSizing: Record<string, number>) => void;
+  /** App-owned slot rendered between the board tabs and the list. */
+  listCallout?: React.ReactNode;
 }
 
-const useDebounce = <T,>(value: T, delay: number): T => {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [value, delay]);
-  return debouncedValue;
-};
 
+const EMPTY_TAG_DEFINITIONS: ITag[] = [];
 const EMPTY_STRING_ARRAY: string[] = [];
 // Density lives in the view-settings layer now (board -> tenant -> default), so
 // the step and default are read from there rather than re-declared here.
@@ -233,38 +247,26 @@ const normalizeTicketListDensityLevel = (value: number): number => {
 // Indexed by zoom/10; `[&>td_*]:!text-[Xpx]` forces descendant elements to follow the row font-size.
 // `tagSize` scales tag padding/gap/icons (font already tracks the row override); sm for the compact
 // half, md for the spacious half — md matches the look tags have at the spacious end today.
-// `filterControlClass` scales the filter controls' height + font via a cascade on the filter rows.
 // These MUST be literal strings so Tailwind's scanner generates the arbitrary utilities — do not
-// build them via interpolation. Applied to Row 1 directly and to a `display:contents` wrapper around
-// Row 2's filter controls so the Bundled toggle / density control stay untouched.
-// 5 bands change every ~2 zoom steps; spacious anchors at ~38px/14px (today's size).
-const FILTER_CONTROL_SHARED =
-  '[&_button]:!min-h-0 [&_button]:!py-0 [&_button]:!items-center';
-const FILTER_CONTROL_30_12 = `[&_button]:!h-[30px] [&_input]:!h-[30px] [&_button]:!text-[12px] [&_input]:!text-[12px] ${FILTER_CONTROL_SHARED}`;
-const FILTER_CONTROL_32_12 = `[&_button]:!h-[32px] [&_input]:!h-[32px] [&_button]:!text-[12px] [&_input]:!text-[12px] ${FILTER_CONTROL_SHARED}`;
-const FILTER_CONTROL_34_13 = `[&_button]:!h-[34px] [&_input]:!h-[34px] [&_button]:!text-[13px] [&_input]:!text-[13px] ${FILTER_CONTROL_SHARED}`;
-const FILTER_CONTROL_36_13 = `[&_button]:!h-[36px] [&_input]:!h-[36px] [&_button]:!text-[13px] [&_input]:!text-[13px] ${FILTER_CONTROL_SHARED}`;
-const FILTER_CONTROL_38_14 = `[&_button]:!h-[38px] [&_input]:!h-[38px] [&_button]:!text-[14px] [&_input]:!text-[14px] ${FILTER_CONTROL_SHARED}`;
-
+// build them via interpolation.
+// The filter band's padding, gap and control size per density step live with the shared list toolbar
+// (LIST_FILTER_DENSITY_PRESETS); this table keeps the ticket-specific body and row sizing, same index.
 const TICKET_LIST_DENSITY_PRESETS: ReadonlyArray<{
-  filterPadding: string;
-  filterGap: string;
   bodyPadding: string;
   tableRowDensity: string;
   tagSize: TagSize;
-  filterControlClass: string;
 }> = [
-  { filterPadding: 'p-3',   filterGap: 'gap-2',   bodyPadding: 'p-2.5', tableRowDensity: '[&>td]:!py-0.5 [&>td]:!text-[11px] [&>td_*]:!text-[11px]', tagSize: 'sm', filterControlClass: FILTER_CONTROL_30_12 },
-  { filterPadding: 'p-3',   filterGap: 'gap-2',   bodyPadding: 'p-3',   tableRowDensity: '[&>td]:!py-1 [&>td]:!text-[12px] [&>td_*]:!text-[12px]',   tagSize: 'sm', filterControlClass: FILTER_CONTROL_30_12 },
-  { filterPadding: 'p-3.5', filterGap: 'gap-2.5', bodyPadding: 'p-3',   tableRowDensity: '[&>td]:!py-1.5 [&>td]:!text-[12px] [&>td_*]:!text-[12px]', tagSize: 'sm', filterControlClass: FILTER_CONTROL_32_12 },
-  { filterPadding: 'p-3.5', filterGap: 'gap-2.5', bodyPadding: 'p-3.5', tableRowDensity: '[&>td]:!py-2 [&>td]:!text-[13px] [&>td_*]:!text-[13px]',   tagSize: 'sm', filterControlClass: FILTER_CONTROL_32_12 },
-  { filterPadding: 'p-4',   filterGap: 'gap-3',   bodyPadding: 'p-4',   tableRowDensity: '[&>td]:!py-2.5 [&>td]:!text-[13px] [&>td_*]:!text-[13px]', tagSize: 'sm', filterControlClass: FILTER_CONTROL_34_13 },
-  { filterPadding: 'p-5',   filterGap: 'gap-4',   bodyPadding: 'p-5',   tableRowDensity: '[&>td]:!py-3 [&>td]:!text-[14px] [&>td_*]:!text-[14px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_34_13 },
-  { filterPadding: 'p-5',   filterGap: 'gap-4',   bodyPadding: 'p-5',   tableRowDensity: '[&>td]:!py-3.5 [&>td]:!text-[14px] [&>td_*]:!text-[14px]', tagSize: 'md', filterControlClass: FILTER_CONTROL_36_13 },
-  { filterPadding: 'p-6',   filterGap: 'gap-5',   bodyPadding: 'p-6',   tableRowDensity: '[&>td]:!py-4 [&>td]:!text-[15px] [&>td_*]:!text-[15px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_36_13 },
-  { filterPadding: 'p-6',   filterGap: 'gap-5',   bodyPadding: 'p-7',   tableRowDensity: '[&>td]:!py-5 [&>td]:!text-[15px] [&>td_*]:!text-[15px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
-  { filterPadding: 'p-7',   filterGap: 'gap-6',   bodyPadding: 'p-7',   tableRowDensity: '[&>td]:!py-6 [&>td]:!text-[16px] [&>td_*]:!text-[16px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
-  { filterPadding: 'p-8',   filterGap: 'gap-6',   bodyPadding: 'p-8',   tableRowDensity: '[&>td]:!py-7 [&>td]:!text-[17px] [&>td_*]:!text-[17px]',   tagSize: 'md', filterControlClass: FILTER_CONTROL_38_14 },
+  { bodyPadding: 'p-2.5', tableRowDensity: '[&>td]:!py-0.5 [&>td]:!text-[11px] [&>td_*]:!text-[11px]', tagSize: 'sm' },
+  { bodyPadding: 'p-3', tableRowDensity: '[&>td]:!py-1 [&>td]:!text-[12px] [&>td_*]:!text-[12px]', tagSize: 'sm' },
+  { bodyPadding: 'p-3', tableRowDensity: '[&>td]:!py-1.5 [&>td]:!text-[12px] [&>td_*]:!text-[12px]', tagSize: 'sm' },
+  { bodyPadding: 'p-3.5', tableRowDensity: '[&>td]:!py-2 [&>td]:!text-[13px] [&>td_*]:!text-[13px]', tagSize: 'sm' },
+  { bodyPadding: 'p-4', tableRowDensity: '[&>td]:!py-2.5 [&>td]:!text-[13px] [&>td_*]:!text-[13px]', tagSize: 'sm' },
+  { bodyPadding: 'p-5', tableRowDensity: '[&>td]:!py-3 [&>td]:!text-[14px] [&>td_*]:!text-[14px]', tagSize: 'md' },
+  { bodyPadding: 'p-5', tableRowDensity: '[&>td]:!py-3.5 [&>td]:!text-[14px] [&>td_*]:!text-[14px]', tagSize: 'md' },
+  { bodyPadding: 'p-6', tableRowDensity: '[&>td]:!py-4 [&>td]:!text-[15px] [&>td_*]:!text-[15px]', tagSize: 'md' },
+  { bodyPadding: 'p-7', tableRowDensity: '[&>td]:!py-5 [&>td]:!text-[15px] [&>td_*]:!text-[15px]', tagSize: 'md' },
+  { bodyPadding: 'p-7', tableRowDensity: '[&>td]:!py-6 [&>td]:!text-[16px] [&>td_*]:!text-[16px]', tagSize: 'md' },
+  { bodyPadding: 'p-8', tableRowDensity: '[&>td]:!py-7 [&>td]:!text-[17px] [&>td_*]:!text-[17px]', tagSize: 'md' },
 ];
 
 // Module scope has no hook to read the app locale from, so the printing helpers
@@ -344,6 +346,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialAgentAvatarUrls = {},
   initialTeamAvatarUrls = {},
   initialTicketTags = {},
+  contactTagDefinitions = EMPTY_TAG_DEFINITIONS,
+  clientTagDefinitions = EMPTY_TAG_DEFINITIONS,
   initialTeams = [],
   canUpdateTickets = true,
   onNavigateAway,
@@ -358,6 +362,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   listViewPicker,
   columnSizing,
   onColumnSizingChange,
+  listCallout,
 }) => {
   const BUNDLE_VIEW_STORAGE_KEY = 'tickets_bundle_view';
   const router = useRouter();
@@ -368,6 +373,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   useTagPermissions(['ticket']);
 
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
+  const [isPrintLabelsOpen, setIsPrintLabelsOpen] = useState(false);
   const {
     selectedTicketIds,
     setSelectedTicketIds,
@@ -504,6 +510,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
+  // Gates the row menu's "Create template from ticket" item; the server action is authoritative.
+  const templatePermissions = useTicketTemplatePermissions();
+
   // The only way out of this route. Announcing the departure *before* the push
   // is the point: the container mirrors filter state into the URL, and a write
   // that lands while the push is still in flight replaces the entry the router
@@ -524,8 +533,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   // Tag filter values from props
   const selectedTags = filterValues.tags ?? EMPTY_STRING_ARRAY;
+  const selectedWhere = filterValues.where;
   const ticketTagsRef = useRef<Record<string, ITag[]>>(initialTicketTags);
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>(initialTags || []);
+  // `where` tag filters (Requester tags / Client tags) come from the descriptor table.
+  const whereTagDefinitions = useMemo(
+    () => ({ 'contact.tags': contactTagDefinitions, 'client.tags': clientTagDefinitions }),
+    [contactTagDefinitions, clientTagDefinitions],
+  );
+  const hasWhereTagFilters = WHERE_TAG_FILTERS.some((d) => getWhereTagSelection(selectedWhere, d.path) !== null);
+  const whereTagFilterCount = WHERE_TAG_FILTERS.filter((d) => getWhereTagSelection(selectedWhere, d.path) !== null).length;
   const [tagsVersion, setTagsVersion] = useState(0); // Used to force re-render when tags are fetched
 
   const isFiltered = useMemo(() => {
@@ -539,13 +556,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       excludedCategories.length > 0 ||
       searchQuery !== '' ||
       selectedTags.length > 0 ||
+      hasWhereTagFilters ||
       selectedAssignees.length > 0 ||
       selectedTeams.length > 0 ||
       includeUnassigned ||
       selectedDueDateFilter !== 'all' ||
       selectedResponseState !== 'all' ||
       (allowSlaStatusFilter && selectedSlaStatus !== 'all');
-  }, [selectedBoards, excludedBoards, selectedClient, selectedContact, selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus]);
+  }, [selectedBoards, excludedBoards, selectedClient, selectedContact, selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, selectedTags, selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter, selectedResponseState, allowSlaStatusFilter, selectedSlaStatus, hasWhereTagFilters]);
 
   // Count of active filter groups (excludes the always-visible search box) — drives
   // the "Filters" button badge in the candidate #1 collapsed toolbar.
@@ -562,8 +580,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (allowSlaStatusFilter && selectedSlaStatus !== 'all') n++;
     if (selectedCategories.length > 0 || excludedCategories.length > 0) n++;
     if (selectedTags.length > 0) n++;
+    n += whereTagFilterCount;
     return n;
-  }, [selectedBoards, excludedBoards, selectedClient, selectedContact, selectedAssignees, selectedTeams, includeUnassigned, selectedStatus, selectedResponseState, selectedPriority, selectedDueDateFilter, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, selectedTags]);
+  }, [selectedBoards, excludedBoards, selectedClient, selectedContact, selectedAssignees, selectedTeams, includeUnassigned, selectedStatus, selectedResponseState, selectedPriority, selectedDueDateFilter, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, selectedTags, whereTagFilterCount]);
 
   // Candidate #1 toolbar: the picker controls collapse behind a "Filters" button.
   const [showFilters, setShowFilters] = useState(false);
@@ -654,7 +673,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   // No longer need client-side tag fetching since we get all tags from server
 
-  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 500);
 
   // Emit debounced search query changes to the container
   const isFirstSearchEmit = useRef(true);
@@ -694,7 +713,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       TICKET_LIST_DENSITY_PRESETS.length - 1,
       Math.max(0, Math.round(ticketListDensityLevel / TICKET_LIST_DENSITY_STEP))
     );
-    return TICKET_LIST_DENSITY_PRESETS[index];
+    return { ...LIST_FILTER_DENSITY_PRESETS[index], ...TICKET_LIST_DENSITY_PRESETS[index] };
   }, [ticketListDensityLevel]);
 
 
@@ -903,6 +922,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     if (f.tags && f.tags.length > 0) {
       params.set('tags', f.tags.join(','));
     }
+    const whereParam = encodeTicketWhere(f.where);
+    if (whereParam) params.set('where', whereParam);
     if (sortBy && sortBy !== 'entered_at') {
       params.set('sortBy', sortBy);
     }
@@ -1006,9 +1027,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   }, [currentUser?.user_id, id, openDrawer, replaceDrawer, renderContactDetails, t]);
 
-  // Use interval tracking hook to get interval count
-  const { intervalCount, isLoading: isLoadingIntervals } = useIntervalTracking(currentUser?.user_id);
-
   // Custom function for clicking on tickets with filter preservation
   const handleTicketClick = useCallback((ticketId: string) => {
     const filterQuery = getCurrentFiltersQuery();
@@ -1018,8 +1036,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     navigateAwayTo(href);
   }, [getCurrentFiltersQuery, navigateAwayTo]);
 
-
-  // Handle saving time entries created from intervals
 
   const [expandedBundleMasters, setExpandedBundleMasters] = useState<Set<string>>(new Set());
   const [loadedBundleChildrenMasters, setLoadedBundleChildrenMasters] = useState<Set<string>>(new Set());
@@ -1052,11 +1068,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           handleError(getErrorMessage(children), t('errors.loadBundledTickets', 'Failed to load bundled tickets'));
           return;
         }
-        if (children.length > 0) {
+        ticketTagsRef.current = { ...ticketTagsRef.current, ...children.metadata.ticketTags };
+        setTagsVersion((v) => v + 1);
+        setAdditionalAgentAvatarUrls((prev) => ({ ...prev, ...children.metadata.agentAvatarUrls }));
+        setTeamAvatarUrls((prev) => ({ ...prev, ...children.metadata.teamAvatarUrls }));
+        if (children.tickets.length > 0) {
           setTickets(prev => {
             const existing = new Set(prev.map(t => t.ticket_id).filter((id): id is string => !!id));
             const next = [...prev];
-            for (const child of children) {
+            for (const child of children.tickets) {
               if (child.ticket_id && !existing.has(child.ticket_id)) {
                 next.push(child);
                 existing.add(child.ticket_id);
@@ -1242,12 +1262,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     sortBy,
     sortDirection,
     bundleView,
+    where: selectedWhere,
   }), [
     selectedBoards, excludedBoards, selectedStatus, selectedPriority, selectedCategories, excludedCategories,
     selectedClient, selectedContact, debouncedSearchQuery, boardFilterState, selectedTags,
     selectedAssignees, selectedTeams, includeUnassigned, selectedDueDateFilter,
     filterValues.dueDateFrom, filterValues.dueDateTo, selectedResponseState,
-    allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView,
+    allowSlaStatusFilter, selectedSlaStatus, sortBy, sortDirection, bundleView, selectedWhere,
   ]);
 
   // Smart search runs over the chips alone; the typed text is the Jev query.
@@ -1578,6 +1599,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       onTicketClick: handleTicketClick,
       ticketTagsRef,
       onTagsChange: handleTagsChange,
+      tagsReadOnly: !canUpdateTickets,
       tagSize: densityClasses.tagSize,
       showClient: true,
       onClientClick: onQuickViewClient,
@@ -1692,6 +1714,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         duplicateFromTicketId: ticketId,
         isAlgaDeskMode: useAlgaDeskQuickAddForm,
       })),
+      // Opens the template editor prefilled from the ticket. Nothing is saved until Save there.
+      onCreateTemplate: (ticketId) => navigateAwayTo(`/msp/tickets/templates/new?fromTicket=${encodeURIComponent(ticketId)}`),
+      canCreateTemplate: templatePermissions.create,
     });
 
     return [selectionColumn, ...baseColumns, actionsColumn];
@@ -1702,6 +1727,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     viewPresentation,
     handleTicketClick,
     handleTagsChange,
+    canUpdateTickets,
     ticketTagsRef,
     onQuickViewClient,
     onQuickViewContact,
@@ -1723,6 +1749,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     densityClasses.tagSize,
     navigateAwayTo,
     useAlgaDeskQuickAddForm,
+    templatePermissions.create,
     t,
     locale,
     dateFormat,
@@ -2154,6 +2181,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       boardFilterState: 'active',
       showOpenOnly: true,
       tags: undefined,
+      where: undefined,
       assignedToIds: undefined,
       assignedTeamIds: undefined,
       includeUnassigned: false,
@@ -2166,9 +2194,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, [onFilterChange, exitSmartSearch]);
 
-  // LEVERAGE: pattern filter-descriptor-table — per-dimension "is-active / label / clear" logic is
-  // now duplicated three ways (toolbar controls, activeFilterCount, activeFilterChips). One
-  // descriptor list { key, isActive, label, clear } per filter would collapse all three.
+  // LEVERAGE: pattern filter-descriptor-table — the legacy dimensions below still duplicate
+  // "is-active / label / clear" three ways (toolbar controls, activeFilterCount, activeFilterChips).
+  // The `where` tag filters already come from WHERE_TAG_FILTERS (lib/ticketWhereFilters.ts); moving
+  // the legacy dimensions onto the same descriptor shape would collapse all three.
   // Active-filter chips (candidate #1): one removable chip per applied filter,
   // shown above the table so what's filtering is always visible. Labels reuse the
   // already-localized field/value strings; removal clears just that dimension.
@@ -2300,17 +2329,30 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       });
     });
 
-    return chips;
-  }, [selectedBoards, excludedBoards, boards, selectedClient, clients, selectedContact, contactOptions, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, handleBoardSelect, handleClientSelect, handleContactSelect, handleCategorySelect, onFilterChange, t]);
+    whereTagFilterChips(
+      selectedWhere,
+      (descriptor, tagId) => whereTagDefinitions[descriptor.path].find((d) => d.tag_id === tagId)?.tag_text,
+      (descriptor) => t(descriptor.labelKey, descriptor.defaultLabel),
+    ).forEach((chip) => {
+      chips.push({
+        key: chip.key,
+        label: chip.label,
+        onRemove: () => onFilterChange({ where: chip.clear() }),
+      });
+    });
+
+    return chips.map((chip) => ({
+      ...chip,
+      removeLabel: t('filters.removeFilterChip', 'Remove filter: {{label}}', { label: chip.label }),
+    }));
+  }, [selectedBoards, excludedBoards, boards, selectedClient, clients, selectedContact, contactOptions, selectedAssignees, initialUsers, selectedTeams, teams, includeUnassigned, selectedStatus, statusOptions, selectedResponseState, selectedPriority, priorityOptions, selectedDueDateFilter, dueDateFilterValue, allowSlaStatusFilter, selectedSlaStatus, selectedCategories, excludedCategories, categories, selectedTags, selectedWhere, whereTagDefinitions, handleBoardSelect, handleClientSelect, handleContactSelect, handleCategorySelect, onFilterChange, t]);
 
   return (
     <>
     <ReflectionContainer id={id} label="Ticketing Dashboard">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          {t('dashboard.title', 'Ticketing Dashboard')}
-        </h1>
-        <div className="flex items-center gap-3">
+      <ListPageHeading
+        title={t('dashboard.title', 'Ticketing Dashboard')}
+        actions={<>
           <ShareActionsMenu
             id={`${id}-share-actions`}
             disabled={isLoadingMore && !hasSelection}
@@ -2358,15 +2400,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           <Button id="add-ticket-button" onClick={openQuickAddTicket}>
             {t('dashboard.addTicket', 'Add Ticket')}
           </Button>
-        </div>
-      </div>
+        </>}
+      />
       <BoardTabStrip
         id={`${id}-board-tabs`}
         tabs={boardTabs}
         value={activeBoardTabId}
         onChange={handleBoardTabSelect}
       />
-      <div className="bg-[rgb(var(--color-card))] shadow rounded-lg">
+      {listCallout}
+      <ListCard>
         {/* Gated on resolveActiveBoardId via selectedBoard rather than on a
             second board-selection derivation: the highlighted tab, the
             board-scoped status options and this header must agree by
@@ -2380,12 +2423,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             t={t as (key: string, fallback: string) => string}
           />
         )}
-        <div className={`sticky top-0 z-40 bg-[rgb(var(--color-card))] rounded-t-lg border-b border-[rgb(var(--color-border-200))] ${densityClasses.filterPadding}`}>
+        <ListToolbarSurface density={densityClasses}>
           <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
             <div className={`space-y-3`}>
               {/* Candidate #1: always-visible search + Filters toggle + density */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <Input
+              <ListToolbarRow>
+                <ListToolbarSearchInput
                   id={`${id}-search-tickets-input`}
                   placeholder={smartSearchAvailable
                     ? t('filters.searchSmart', 'Search tickets and comments… Enter for smart search')
@@ -2401,8 +2444,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       setSearchQuery('');
                     }
                   }}
-                  className="h-[38px] w-full text-sm"
-                  containerClassName="flex-1 min-w-[260px] max-w-[460px]"
                 />
                 {smartSearchAvailable && (
                   <Button
@@ -2417,32 +2458,20 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     {t('smartSearch.run', 'Smart search')}
                   </Button>
                 )}
-                <Button
+                <ListToolbarFiltersToggle
                   id={`${id}-toggle-filters`}
-                  variant={showFilters ? 'soft' : 'outline'}
-                  onClick={() => setShowFilters((v) => !v)}
-                  className="shrink-0 flex items-center gap-1.5 h-[38px]"
-                >
-                  <Filter className="h-4 w-4" />
-                  {t('filters.button', 'Filters')}
-                  {activeFilterCount > 0 && (
-                    <span className="chip-primary ml-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold">
-                      {activeFilterCount}
-                    </span>
-                  )}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleResetFilters}
-                  className={`shrink-0 flex items-center gap-1 ${isFiltered ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+                  open={showFilters}
+                  activeCount={activeFilterCount}
+                  label={t('filters.button', 'Filters')}
+                  onToggle={() => setShowFilters((v) => !v)}
+                />
+                <ListToolbarResetButton
                   id='reset-filters'
-                  disabled={!isFiltered}
-                >
-                  <XCircle className="h-4 w-4" />
-                  {t('resetFilters', 'Reset')}
-                </Button>
-                <div className="ml-auto flex items-center gap-2 shrink-0">
+                  active={isFiltered}
+                  label={t('resetFilters', 'Reset')}
+                  onClick={handleResetFilters}
+                />
+                <ListToolbarEnd>
                   <div className="flex items-center gap-2 shrink-0">
                     <Label htmlFor={`${id}-bundle-view-toggle`} className={`${densityClasses.tagSize === 'sm' ? 'text-xs' : 'text-sm'} text-gray-600`}>
                       {t('dashboard.bundledToggle', 'Bundled')}
@@ -2471,41 +2500,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                       t={t as (key: string, fallback: string) => string}
                     />
                   )}
-                </div>
-              </div>
+                </ListToolbarEnd>
+              </ListToolbarRow>
 
-              {activeFilterChips.length > 0 && (
-                <div className="flex items-center flex-wrap gap-2">
-                  {activeFilterChips.map((chip) => (
-                    <span
-                      key={chip.key}
-                      className="chip-primary inline-flex items-center gap-1.5 rounded-full border border-[rgb(var(--color-primary-100))] py-1 pl-2.5 pr-1.5 text-xs font-medium"
-                    >
-                      <span className="max-w-[220px] truncate">{chip.label}</span>
-                      <button
-                        type="button"
-                        onClick={chip.onRemove}
-                        aria-label={`Remove ${chip.label}`}
-                        className="chip-primary inline-flex h-4 w-4 items-center justify-center rounded-full hover: hover:"
-                      >
-                        <XCircle className="h-3.5 w-3.5" />
-                      </button>
-                    </span>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={handleResetFilters}
-                    className="ml-1 text-xs font-medium text-[rgb(var(--color-text-500))] underline-offset-2 hover:text-[rgb(var(--color-text-700))] hover:underline"
-                  >
-                    {t('filters.clearFilters', 'Clear filters')}
-                  </button>
-                </div>
-              )}
+              <ListFilterChips chips={activeFilterChips} />
 
               {showFilters && (
-              <div className="space-y-3 pt-1 border-t border-gray-100 dark:border-[rgb(var(--color-border-200))]">
+              <ListFilterPanel>
               {/* Row 1: Primary filters */}
-              <div className={`flex items-center flex-wrap ${densityClasses.filterGap} ${densityClasses.filterControlClass}`}>
+              <ListFilterRow density={densityClasses}>
                 <BoardFilterPicker
                   id={`${id}-board-picker`}
                   boards={boards}
@@ -2651,7 +2654,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     placeholder={t('dashboard.filters.slaStatus', 'SLA Status')}
                   />
                 )}
-              </div>
+              </ListFilterRow>
 
               {/* Row 2: Category, tags */}
               <div className={`flex items-center flex-wrap ${densityClasses.filterGap}`}>
@@ -2705,13 +2708,25 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   }}
                   onClearTags={() => onFilterChange({ tags: undefined })}
                 />
+                {WHERE_TAG_FILTERS.map((descriptor) => (
+                  <WhereTagFilter
+                    key={descriptor.path}
+                    id={`${id}-where-${descriptor.taggedType}-tags`}
+                    label={t(descriptor.labelKey, descriptor.defaultLabel)}
+                    definitions={whereTagDefinitions[descriptor.path]}
+                    selection={getWhereTagSelection(selectedWhere, descriptor.path)}
+                    onChange={(selection) =>
+                      onFilterChange({ where: setWhereTagSelection(selectedWhere, descriptor.path, selection) })
+                    }
+                  />
+                ))}
                 </div>
               </div>
-              </div>
+              </ListFilterPanel>
               )}
             </div>
           </ReflectionContainer>
-        </div>
+        </ListToolbarSurface>
 
         <div className={densityClasses.bodyPadding}>
         {/* The smart search panel owns its run: an ordinary-list refresh (a chip
@@ -2834,7 +2849,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           </>
         )}
         </div>
-      </div>
+      </ListCard>
 
       <div className="app-print-root app-print-only">
         <PrintableTable
@@ -3156,8 +3171,18 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           setBulkDeleteErrors([]);
           setIsBulkDeleteDialogOpen(true);
         }}
+        onPrintLabels={() => setIsPrintLabelsOpen(true)}
         onClear={clearSelection}
       />
+      {isPrintLabelsOpen && (
+        <LabelPrintDialog
+          isOpen={isPrintLabelsOpen}
+          onClose={() => setIsPrintLabelsOpen(false)}
+          labelClass="ticket-work-tag"
+          ids={selectedTicketIdsArray}
+          idPrefix={`${id}-print-labels`}
+        />
+      )}
     </ReflectionContainer>
     </>
   );

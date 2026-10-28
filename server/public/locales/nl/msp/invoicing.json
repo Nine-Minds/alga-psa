@@ -98,6 +98,20 @@
         "assignedContractLine": "Toegewezen contractregel",
         "assignedWorkItem": "Toegewezen werkitem",
         "unresolvedWork": "Onopgelost werk"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · vervalt op {{date}}",
+        "trigger": {
+          "contract_start": "Prepaid blok: contractstart",
+          "exhaustion": "Prepaid blok: uitgeput",
+          "threshold": "Prepaid blok: gebruiksdrempel",
+          "expiry": "Prepaid blok: verval",
+          "renewal": "Prepaid blok: verlenging",
+          "manual": "Prepaid blok: handmatig uitgegeven"
+        },
+        "stalePendingWarning": "{{count}} openstaande prepaid blokken wachten al meer dan 14 dagen op afronding en houden tijdregistraties vast. Rond de conceptfacturen af of verwijder ze zodat de vastgehouden tijd gefactureerd kan worden.",
+        "stalePendingWarning_one": "{{count}} openstaand prepaid blok wacht al meer dan 14 dagen op afronding en houdt tijdregistraties vast. Rond de conceptfactuur af of verwijder deze zodat de vastgehouden tijd gefactureerd kan worden.",
+        "stalePendingWarning_other": "{{count}} openstaande prepaid blokken wachten al meer dan 14 dagen op afronding en houden tijdregistraties vast. Rond de conceptfacturen af of verwijder ze zodat de vastgehouden tijd gefactureerd kan worden."
       }
     },
     "actions": {
@@ -147,6 +161,7 @@
       "preview": {
         "title": "Factuurvoorbeeld",
         "description": "Dit is een voorbeeld van hoe de factuur eruit zal zien als deze is voltooid.",
+        "noBillingEmailWarning": "{{clientName}} heeft geen factuur-e-mailadres. De factuur kan worden gegenereerd, maar kan pas per e-mail worden verzonden of online worden betaald als u een factuurcontact, een factuur-e-mailadres van de klant of een e-mailadres op de factuur- of standaardlocatie instelt.",
         "summary_one": "{{count}}-factuur geselecteerd",
         "summary_other": "{{count}} facturen geselecteerd",
         "summaryCombined": "Deze selectie genereert één gecombineerde factuur.",
@@ -238,7 +253,8 @@
       "fixAllResult": "{{schedules}} planning(en) opnieuw opgebouwd voor {{clients}} klant(en).",
       "fixAllNoop": "Alle factureringsplanningen zijn al bijgewerkt. Alles wat hieronder nog staat, moet afzonderlijk worden gecontroleerd.",
       "fixAllError": "Kan serviceperioden niet opnieuw opbouwen. Probeer het opnieuw.",
-      "fixAllDenied": "U heeft geen toestemming om serviceperioden opnieuw op te bouwen."
+      "fixAllDenied": "U heeft geen toestemming om serviceperioden opnieuw op te bouwen.",
+      "fixAllManualReview": "{{count}} uur- of gebruiksperiode(s) moeten afzonderlijk worden beoordeeld."
     },
     "errors": {
       "title": "Er zijn fouten opgetreden bij het finaliseren van facturen:",
@@ -271,7 +287,8 @@
       "fixed": "FIX",
       "hourly": "T&M",
       "usage": "USE",
-      "bucket": "BKT"
+      "bucket": "BKT",
+      "prepaidBlock": "PRE"
     },
     "summary": {
       "selected": "{{count}} geselecteerd",
@@ -306,6 +323,21 @@
       "any": "alle",
       "clear": "Wissen",
       "countSummary": "{{groups}} groep(en) · {{obligations}} post(en)"
+    },
+    "lateTime": {
+      "title": "Laat goedgekeurde uurtijd",
+      "description": "Deze tijd is goedgekeurd nadat de factuur voor de bijbehorende serviceperiode al was uitgegeven. Invoer die wacht op facturering wordt eenmalig aan de volgende factuur toegevoegd, gemarkeerd als late tijd. Invoer buiten de terugkijkperiode wordt niet gefactureerd.",
+      "columns": {
+        "client": "Klant",
+        "technician": "Technicus",
+        "service": "Dienst",
+        "workDate": "Werkdatum",
+        "hours": "Uren",
+        "closedPeriod": "Afgesloten serviceperiode",
+        "status": "Status"
+      },
+      "nextInvoice": "Wordt gefactureerd op de volgende factuur",
+      "outsideLookback": "Buiten de terugkijkperiode — niet gefactureerd"
     }
   },
   "manualInvoices": {
@@ -332,7 +364,8 @@
       "title": "Geautomatiseerde regelitems",
       "service": "Dienst",
       "total": "Totaal",
-      "unknownService": "Onbekende dienst"
+      "unknownService": "Onbekende dienst",
+      "period": "Periode"
     },
     "lineItems": {
       "manual": "Handmatige regelitems",
@@ -345,7 +378,10 @@
       "saveChanges": "Wijzigingen opslaan",
       "processing": "Verwerken...",
       "generateSalesOrderInvoice": "Verkooporderfactuur genereren",
-      "clearSalesOrderSource": "Bronverkooporder wissen"
+      "clearSalesOrderSource": "Bronverkooporder wissen",
+      "addPartialPeriodCharge": "Kosten voor deelperiode toevoegen",
+      "reauthenticate": "Opnieuw aanmelden",
+      "retrySave": "Opslaan opnieuw proberen"
     },
     "labels": {
       "total": "Totaal",
@@ -393,11 +429,15 @@
       "SOURCE_ALREADY_BILLED": "Sommige geselecteerde items zijn niet meer factureerbaar (al gefactureerd, niet goedgekeurd of verwijderd). Vernieuw en probeer opnieuw.",
       "SOURCE_NOT_ELIGIBLE": "Een geselecteerd item hoort niet bij dit ticket of is niet langer in aanmerking komend. Vernieuw en probeer opnieuw.",
       "SOURCE_CURRENCY_MISMATCH": "Sommige geselecteerde producten zijn geprijsd in een andere valuta dan de factuurvaluta van deze klant en kunnen niet worden toegevoegd. Factureer ze apart in hun eigen valuta.",
+      "CLIENT_CONTRACT_NOT_FOUND": "Het geselecteerde contract hoort niet bij de klant van deze factuur.",
+      "SERVICE_REQUIRED": "Wijs een dienst toe aan deze kostenpost voordat u opslaat.",
       "RECURRING_PRICING_STALE": "Het voorbeeld is verouderd: {{details}}. Voer het voorbeeld opnieuw uit om de actuele bedragen te zien en genereer daarna opnieuw.",
-      "BILLING_PROFILE_NOT_FOUND": "Het geselecteerde facturatieprofiel is niet beschikbaar voor deze klant. Vernieuw de pagina en probeer het opnieuw."
+      "BILLING_PROFILE_NOT_FOUND": "Het geselecteerde facturatieprofiel is niet beschikbaar voor deze klant. Vernieuw de pagina en probeer het opnieuw.",
+      "sessionExpired": "Uw sessie is verlopen. Uw wijzigingen staan hier nog, maar zijn niet opgeslagen. Meld u opnieuw aan in een nieuw tabblad en probeer daarna opnieuw op te slaan.",
+      "saveRefreshFailed": "Uw wijzigingen zijn opgeslagen, maar de factuurpagina kon niet volledig worden vernieuwd. Herlaad de pagina om de opgeslagen factuur te bekijken."
     },
     "warnings": {
-      "noBillingEmail": "Deze klant heeft geen facturatie-e-mailadres. Stel een contactpersoon voor facturering, een facturatie-e-mailadres van de klant of een e-mailadres op de facturatielocatie of standaardlocatie in voordat u de factuur genereert."
+      "noBillingEmail": "Deze klant heeft geen factuur-e-mailadres. De factuur kan worden gegenereerd, maar kan pas per e-mail worden verzonden of online worden betaald als u een factuurcontact, een factuur-e-mailadres van de klant of een e-mailadres op de factuur- of standaardlocatie instelt."
     },
     "errorFallback": {
       "title": "Er is iets misgegaan",
@@ -405,6 +445,48 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} artikelen uit {{lineCount}} regels gereed voor facturering. Dit concept wordt aan de verkooporder gekoppeld."
+    },
+    "draftAdjustments": {
+      "title": "Factuuraanpassingen",
+      "description": "Voeg eenmalige kosten, kortingen of kredieten toe. Gegenereerde contractkosten blijven alleen-lezen; corrigeer het broncontract of voeg een aanpassing toe."
+    },
+    "partialPeriod": {
+      "title": "Kosten voor deelperiode",
+      "help": "Berekend als eenheden × stukprijs van de periode × gedekte dagen / dagen van de volledige periode. De invoer blijft bij de regel bewaard zodat die begrijpelijk blijft.",
+      "direction": "Richting",
+      "increase": "Verhoging",
+      "decrease": "Verlaging (krediet)",
+      "units": "Eenheden",
+      "unitPrice": "Stukprijs",
+      "coveredDays": "Gedekte dagen",
+      "fullPeriodDays": "Dagen van de volledige periode",
+      "description": "Beschrijving (optioneel)",
+      "reason": "Reden (optioneel)",
+      "previewUnavailable": "Voer een geldige berekening in.",
+      "resolvedAmount": "Berekend bedrag: {{amount}}",
+      "addCharge": "Kosten toevoegen",
+      "creditDescription": "Krediet: {{proration}}",
+      "errors": {
+        "units": "Eenheden moeten groter dan nul zijn.",
+        "unitPrice": "Stukprijs moet een getal zijn.",
+        "invalid": "Voer een geldige deelperiode in.",
+        "source": "Kies een gefactureerde service met een eenduidige serviceperiode."
+      },
+      "source": "Gefactureerde service selecteren",
+      "effectiveDate": "Ingangsdatum",
+      "sourceRate": "Tarief {{rate}}",
+      "permanentChangeNudge": "Is dit een permanente wijziging? Leg deze dan vast in het contract.",
+      "overlapConfirm": "Een automatische contractaanpassing overlapt deze periode al. Deze afzonderlijke handmatige aanpassing toch toevoegen?",
+      "invoiceDescription": {
+        "increase": "{{description}} — {{units}} extra {{unitLabel}}, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — tegoed voor {{units}} minder {{unitLabel}}, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Serviceaanpassing"
+    },
+    "exportWarnings": {
+      "discount": "{{adapter}}: configureer de kortingskoppeling voordat u {{description}} exporteert.",
+      "service": "{{adapter}}: wijs vóór export een gekoppelde dienst toe aan {{description}}.",
+      "unavailable": "De boekhoudgereedheid kon niet worden gecontroleerd. Controleer de koppelingen vóór export."
     },
     "hints": {
       "billingProfile": "De factuur en de factuurregels worden aan dit profiel toegerekend."
@@ -489,6 +571,17 @@
       "actionBar": {
         "selectedCount": "{{count}} geselecteerd",
         "clear": "Selectie wissen"
+      }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Factuur definitief gemaakt, maar een vervolgstap is niet voltooid: {{steps}}. De factuur is definitief; u kunt die stap opnieuw proberen.",
+      "steps": {
+        "credit_auto_apply": "automatische tegoedtoepassing",
+        "project_deposit_credits": "projectaanbetalingstegoeden",
+        "workflow_events": "workflowgebeurtenissen",
+        "accounting_export": "boekhoudexport",
+        "replenishment_status": "status prepaid-aanvulling",
+        "autopay": "automatische betaling"
       }
     }
   },
@@ -739,6 +832,7 @@
     }
   },
   "invoicePreview": {
+    "sessionExpired": "Uw sessie is verlopen tijdens het laden van deze factuur. Meld u opnieuw aan en laad daarna het voorbeeld opnieuw.",
     "title": "Factuurvoorbeeld",
     "templatePlaceholder": "Factuursjabloon selecteren...",
     "labels": {
@@ -789,6 +883,19 @@
       "cancel": "Annuleren",
       "confirm": "Factuur ongeldig maken",
       "voiding": "Ongeldig maken…"
+    },
+    "history": {
+      "title": "Geschiedenis",
+      "empty": "Geen geschiedenis vastgelegd.",
+      "loadFailed": "Factuurgeschiedenis laden mislukt.",
+      "system": "Systeem",
+      "ops": {
+        "invoice_finalized": "Definitief gemaakt",
+        "invoice_unfinalized": "Heropend",
+        "invoice_deleted": "Verwijderd"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "geen"
     }
   },
   "templateEditor": {
@@ -1309,7 +1416,7 @@
       "mediaSource": "Afbeeldingsbron",
       "mediaSourceLogo": "Bedrijfslogo",
       "mediaSourceCustom": "Eigen afbeelding",
-      "mediaSourceLogoHint": "Toont op elk document het logo uit de huisstijlinstellingen van uw bedrijf.",
+      "mediaSourceLogoHint": "Toont op elk document het logo uit het klantrecord van uw eigen bedrijf.",
       "mediaSourceUrl": "Bron-URL",
       "renameInner": "Ook {{count}} onderliggende lagen hernoemen ({{from}} → {{to}}…)?",
       "renameInnerApply": "Hernoemen",
@@ -1359,7 +1466,14 @@
           "widthTooltip": "De hieronder ingevoerde exacte breedte gebruiken",
           "heightTooltip": "De hieronder ingevoerde exacte hoogte gebruiken"
         }
-      }
+      },
+      "barcode": "Streepjescode",
+      "barcodeSymbology": "Type",
+      "barcodeQr": "QR-code",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Waarde",
+      "barcodeHintWorkTag": "Tekst, of een veld zoals {{example}} (de link naar het record). Houd de code minstens ongeveer 20 mm breed zodat hij scanbaar blijft.",
+      "barcodeHint": "De tekst die wordt gecodeerd. Houd de code minstens ongeveer 20 mm breed zodat hij scanbaar blijft."
     },
     "shell": {
       "selectedLabel": "Geselecteerd:",
@@ -1372,7 +1486,11 @@
       "title": "Pagina-instelling",
       "description": "Kies een papierpreset en paginamarge zonder het verborgen pagina-knooppunt te selecteren.",
       "paperPreset": "Papierpreset",
-      "marginMm": "Marge (mm)"
+      "marginMm": "Marge (mm)",
+      "customSize": "Aangepast formaat…",
+      "customWidth": "Breedte",
+      "customHeight": "Hoogte",
+      "customUnit": "Eenheid"
     },
     "breadcrumbs": {
       "emptyHelp": "Selecteer een component in het canvas om de hiërarchie te zien.",
@@ -1403,7 +1521,13 @@
         "noQuotesFound": "Geen offertes gevonden.",
         "selectQuote": "Offerte kiezen",
         "loadingQuoteDetails": "Offertedetails worden geladen…",
-        "loadingDocumentDetails": "Documentdetails worden geladen…"
+        "loadingDocumentDetails": "Documentdetails worden geladen…",
+        "zoom": {
+          "fit": "Passend",
+          "actual": "100%",
+          "label": "Zoom voorbeeld",
+          "fitWithScale": "Passend ({{percent}}%)"
+        }
       },
       "tabs": {
         "design": "Ontwerp",
@@ -2297,7 +2421,7 @@
     },
     "imagePicker": {
       "browse": "Documenten doorzoeken",
-      "hiddenFromClients": "{{document}} is verborgen voor klanten. Het wordt niet weergegeven op offertes of facturen die via het klantenportaal worden bekeken.",
+      "hiddenFromClients": "{{document}} is verborgen voor klanten, dus zij kunnen het niet openen in het klantenportaal. Het wordt nog steeds weergegeven op facturen en in PDF's van offertes die het gebruiken.",
       "updating": "Bijwerken...",
       "markVisible": "Markeren als zichtbaar voor klanten",
       "visibleInPortal": "Zichtbaar in het klantenportaal",
@@ -2322,6 +2446,7 @@
     }
   },
   "draftInvoiceDetails": {
+    "sessionExpired": "Uw sessie is verlopen tijdens het laden van de factuurgegevens. Meld u opnieuw aan en laad de gegevens opnieuw.",
     "title": "Factuurgegevens",
     "description": "Bewerk de metagegevens van de conceptfactuur voordat u deze definitief maakt.",
     "actions": {
@@ -2345,11 +2470,13 @@
     "description": "Ontwerp de indelingen waarmee pdf’s en voorbeelden voor {{type}} worden weergegeven.",
     "availableLayouts": "Beschikbare indelingen",
     "actions": {
-      "newLayout": "Nieuwe indeling"
+      "newLayout": "Nieuwe indeling",
+      "setDefaultForClass": "Instellen als standaard voor {{class}}"
     },
     "columns": {
       "name": "Naam",
-      "source": "Bron"
+      "source": "Bron",
+      "labelClass": "Klasse"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (Standaard)",
@@ -2381,7 +2508,10 @@
         "details": "Indelingsgegevens"
       },
       "fields": {
-        "version": "Versie"
+        "version": "Versie",
+        "labelClass": "Labelklasse",
+        "labelFields": "Velden die op het label worden getoond",
+        "labelFieldsHint": "De recordlink (QR-code) en de identificatie worden altijd getoond."
       },
       "placeholders": {
         "templateName": "Sjabloon voor {{type}}"
@@ -2418,7 +2548,9 @@
     "types": {
       "salesOrder": "Verkooporder",
       "packingSlip": "Pakbon",
-      "pickList": "Picklijst"
+      "pickList": "Picklijst",
+      "workTag": "Werklabel / Label",
+      "stagingManifest": "Paklijst"
     }
   },
   "errors": {
@@ -2426,7 +2558,8 @@
       "invoiceUpdate": "Toestemming geweigerd: bijwerkrechten voor facturen vereist",
       "invoiceDelete": "Toestemming geweigerd: verwijderrechten voor facturen vereist",
       "invoiceAccess": "Toestemming geweigerd: toegang tot de factuur geweigerd",
-      "otherClientInvoices": "Toestemming geweigerd: facturen van een andere klant zijn niet toegankelijk"
+      "otherClientInvoices": "Toestemming geweigerd: facturen van een andere klant zijn niet toegankelijk",
+      "invoiceRead": "Toegang geweigerd: leesrechten voor facturen vereist"
     },
     "invoice": {
       "notFound": "Factuur niet gevonden",
@@ -2448,7 +2581,9 @@
       "duplicate": "Er bestaat al een conflicterende factuur. Vernieuw de pagina en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht factuurveld.",
       "missingFieldNamed": "Er ontbreekt een verplicht factuurveld: {{field}}.",
-      "billingProfileUnavailable": "Het geselecteerde factureringsprofiel is niet beschikbaar voor deze klant."
+      "billingProfileUnavailable": "Het geselecteerde factureringsprofiel is niet beschikbaar voor deze klant.",
+      "deleteNotDraft": "Alleen conceptfacturen kunnen worden verwijderd; annuleer de factuur in plaats daarvan.",
+      "deleteHasPayments": "Facturen met geregistreerde betalingen kunnen niet worden verwijderd."
     },
     "billingCycle": {
       "notFoundRefresh": "Factuurcyclus niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
@@ -2488,5 +2623,15 @@
     "saving": "Opslaan…",
     "saveCorrection": "Correctie opslaan",
     "save": "Opslaan"
+  },
+  "draftInvoiceAdjustments": {
+    "sessionExpired": "Uw sessie is verlopen tijdens het laden van factuuraanpassingen. Meld u opnieuw aan en laad deze factuur opnieuw.",
+    "signIn": "Aanmelden",
+    "retry": "Opnieuw laden",
+    "blockedTitle": "Factuuraanpassingen niet beschikbaar",
+    "blocked": {
+      "exported": "Deze factuur is gesynchroniseerd met een boekhoudsysteem. Maak haar ongeldig of geef een apart krediet uit in plaats van de regels te bewerken.",
+      "exporting": "Er wordt een boekhoudingsexport voor deze factuur voorbereid. Wacht tot deze is voltooid voordat u de factuur wijzigt."
+    }
   }
 }

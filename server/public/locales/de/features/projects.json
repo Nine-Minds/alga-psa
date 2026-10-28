@@ -85,7 +85,9 @@
     "noService": "Kein Service",
     "servicePlaceholder": "Standard-Service auswählen",
     "serviceHelp": "Wird für Zeiteinträge auf Aufgaben dieser Phase verwendet, wenn die Aufgabe selbst keinen Service festlegt.",
-    "serviceDisplayLabel": "Dienst"
+    "serviceDisplayLabel": "Dienst",
+    "taskCount_few": "{{count}} Aufgaben",
+    "taskCount_many": "{{count}} Aufgaben"
   },
   "projectList": {
     "addProject": "Projekt hinzufügen",
@@ -314,7 +316,9 @@
     "bulkTagsFailure": "Tags konnten nicht zu den ausgewählten Aufgaben hinzugefügt werden",
     "taskTypeFallback": "Aufgabe",
     "timeline": "Zeitplan",
-    "loadingTimeline": "Zeitplan wird geladen..."
+    "loadingTimeline": "Zeitplan wird geladen...",
+    "bulkTagsSuccess_few": "Tags zu {{count}} Aufgaben hinzugefügt",
+    "bulkTagsSuccess_many": "Tags zu {{count}} Aufgaben hinzugefügt"
   },
   "taskForm": {
     "addTitle": "Aufgabe hinzufügen",
@@ -433,7 +437,15 @@
     "serviceInheritedFromProject": "Übernimmt {{service}} vom Projekt.",
     "startDateLabel": "Startdatum",
     "taskStartDateLabel": "Startdatum der Aufgabe",
-    "startDatePlaceholder": "Startdatum auswählen"
+    "startDatePlaceholder": "Startdatum auswählen",
+    "createdTicketsIntro_few": "Sie haben in dieser Sitzung {{count}} Tickets erstellt:",
+    "createdTicketsIntro_many": "Sie haben in dieser Sitzung {{count}} Tickets erstellt:",
+    "documentCleanupFailure_few": "{{count}} Dokumente konnten nicht gelöscht werden und verbleiben in Dokumente",
+    "documentCleanupFailure_many": "{{count}} Dokumente konnten nicht gelöscht werden und verbleiben in Dokumente",
+    "documentsCleanupIntro_few": "Sie haben {{count}} Dokumente, die {{cleanupType}} wurden:",
+    "documentsCleanupIntro_many": "Sie haben {{count}} Dokumente, die {{cleanupType}} wurden:",
+    "ticketCleanupFailure_few": "{{count}} Tickets konnten nicht gelöscht werden",
+    "ticketCleanupFailure_many": "{{count}} Tickets konnten nicht gelöscht werden"
   },
   "taskDependencies": {
     "title": "Abhängigkeiten",
@@ -605,7 +617,16 @@
     "invoiceLinksHelp": "Die Rechnungsentwürfe wurden erstellt. Öffnen Sie jede Währungsgruppe, um sie zu prüfen.",
     "currencyDraftLink": "Rechnungsentwurf in {{currency}}",
     "productCount": "{{count}} Produkte",
-    "productsMovedToHoldOnClose": "{{count}} verknüpfte Produkte wurden auf „Zurückgestellt“ gesetzt, da ihr Abrechnungsereignis storniert wurde."
+    "productsMovedToHoldOnClose": "{{count}} verknüpfte Produkte wurden auf „Zurückgestellt“ gesetzt, da ihr Abrechnungsereignis storniert wurde.",
+    "availableBadge": "Verfügbar: {{available}}",
+    "availableByLocation": "Freier Bestand nach Standort",
+    "freeOfOnHand": "{{free}} frei von {{onHand}}",
+    "stockHeld": "Nur {{free}} verfügbar. {{held}} vorrätige Stück sind für Kundenaufträge oder Projekte fest gesperrt und können hier nicht verwendet werden.",
+    "stockInsufficient": "Nur {{onHand}} auf Lager, {{requested}} angefordert.",
+    "reservedStockTitle": "Bestand ist für einen Kundenauftrag oder ein Projekt reserviert",
+    "reservedStockMessage": "Nur {{free}} dieses Produkts sind frei. {{reserved}} vorrätige Stück sind für Kundenaufträge oder Projekte reserviert, angefordert wurden {{requested}}. Wenn Sie sie trotzdem hinzufügen, entnehmen Sie Bestand, auf den ein Kundenauftrag oder Projekt zählt, und es kann unterversorgt bleiben.",
+    "reservedStockConfirm": "Trotzdem hinzufügen",
+    "fromStaging": "Aus der Bereitstellung"
   },
   "export": {
     "title": "Projektaufgaben exportieren",
@@ -644,7 +665,13 @@
     },
     "exportSelected": "{{count}} ausgewählte exportieren",
     "selectedTasksNotice_one": "{{count}} ausgewählte Aufgabe wird exportiert.",
-    "selectedTasksNotice_other": "{{count}} ausgewählte Aufgaben werden exportiert."
+    "selectedTasksNotice_other": "{{count}} ausgewählte Aufgaben werden exportiert.",
+    "phasesSelected_few": "{{selected}} von {{total}} Phasen ausgewählt",
+    "phasesSelected_many": "{{selected}} von {{total}} Phasen ausgewählt",
+    "selectedTasksNotice_few": "{{count}} ausgewählte Aufgaben werden exportiert.",
+    "selectedTasksNotice_many": "{{count}} ausgewählte Aufgaben werden exportiert.",
+    "success_few": "{{count}} Aufgaben erfolgreich als CSV exportiert.",
+    "success_many": "{{count}} Aufgaben erfolgreich als CSV exportiert."
   },
   "import": {
     "title": "Phasen und Aufgaben importieren",
@@ -765,7 +792,9 @@
     "statusUnmatchedTooltip": "Der Status entspricht keinem vorhandenen Status für diese Phase. Bitte vor dem Import in den Zuordnungsschritten lösen.",
     "statusFallbackSuffix": "Standard",
     "statusFallbackTooltip": "Verwendung des Standard-Ersatzstatus für diese Phase.",
-    "inPhaseBadge": "Phase {{phase}}"
+    "inPhaseBadge": "Phase {{phase}}",
+    "taskCountLabel_few": "({{count}} Aufgaben)",
+    "taskCountLabel_many": "({{count}} Aufgaben)"
   },
   "dialogs": {
     "moveTask": {
@@ -839,7 +868,9 @@
       "badgeCount_other": "{{count}} Aufgaben",
       "badgeCount_one": "{{count}} Aufgabe",
       "billsToProject": "Zeit wird als Projektzeit abgerechnet",
-      "billsToClient": "Zeit wird auf Kundenebene abgerechnet"
+      "billsToClient": "Zeit wird auf Kundenebene abgerechnet",
+      "badgeCount_few": "{{count}} Aufgaben",
+      "badgeCount_many": "{{count}} Aufgaben"
     },
     "bulkMoveTask": {
       "title": "Aufgaben verschieben",
@@ -943,7 +974,7 @@
       "choose_status": "Status wählen",
       "no_statuses_available": "Keine Status verfügbar",
       "no_statuses_available_hint": "Erstellen Sie zuerst Status unter Einstellungen → Projekte → Status.",
-      "task_status_library_title": "Projektaufgaben-Statusbibliothek",
+      "task_status_library_title": "Aufgaben-Statusbibliothek",
       "task_status_library_description": "Verwalten Sie die Projekt-Aufgabenstatus Ihrer Organisation. Diese Status können in allen Projekten verwendet werden.",
       "task_status_library_empty": "Keine Projektaufgabenstatus gefunden",
       "task_status_library_empty_hint": "Erstellen Sie Ihren ersten Status, um zu beginnen",
@@ -983,12 +1014,33 @@
       "last_closed_error": "Mindestens ein Status muss als geschlossen markiert bleiben",
       "last_closed_delete_error": "Der letzte geschlossene Status für diesen Typ kann nicht gelöscht werden.",
       "addStatus": "Neuen Status hinzufügen",
-      "add_from_library": "Status hinzufügen"
+      "add_from_library": "Status hinzufügen",
+      "closed_badge": "(Geschlossen)",
+      "drag_to_reorder": "Zum Umsortieren ziehen",
+      "refresh_library": "Statusbibliothek aktualisieren",
+      "all_library_statuses_used": "Jeder Status aus der Bibliothek ist hier schon eine Spalte. Verwenden Sie „Neu erstellen“, um einen weiteren hinzuzufügen.",
+      "delete_no_move_target": "Es gibt keine andere Statusspalte, in die diese Aufgaben verschoben werden können. Fügen Sie zuerst eine weitere Spalte hinzu.",
+      "delete_scope_help": "Dies entfernt die Spalte nur in diesem Bereich. Der Status bleibt in Ihrer Aufgaben-Statusbibliothek.",
+      "fork_title": "Benutzerdefinierte Statusspalten für diese Phase verwenden?",
+      "fork_message": "Diese Phase erbt dann die Standardspalten des Projekts nicht mehr. Statusspalten, die Sie später zu den Projektstandards hinzufügen, erscheinen hier erst, wenn Sie die Phase zurückschalten.",
+      "fork_confirm": "Benutzerdefinierte Status verwenden",
+      "phase_uses_custom": "Diese Phase hat eigene Statusspalten und erbt die Projektstandards nicht mehr.",
+      "pending_title": "Nicht gespeicherte Änderungen an Statusspalten",
+      "pending_apply_hint": "Es ändert sich nichts, bis Sie speichern.",
+      "pending_fork": "{{phase}} wechselt zu eigenen Statusspalten.",
+      "pending_revert": "{{phase}} kehrt zu den Standardspalten des Projekts zurück.",
+      "pending_order": "Neue Spaltenreihenfolge für {{scope}}.",
+      "pending_preview_hint": "Die Standardspalten des Projekts werden als Vorschau angezeigt. Speichern Sie, um den Wechsel zu übernehmen; danach können Sie hier Spalten hinzufügen oder entfernen.",
+      "rename_impact_title": "Wohin diese Umbenennung wirkt",
+      "rename_impact_following": "Übernimmt diese Umbenennung sofort: {{columns}} Spalte(n) in {{projects}}.",
+      "rename_impact_keeping": "Behält den Namen „{{name}}“: {{columns}} Spalte(n) in {{projects}}. Diese Spalten sind nicht mit diesem Status aus Ihrer Aufgaben-Statusbibliothek verknüpft, daher melden diese Projekte weiterhin den alten Namen, bis Sie die Spalte dort umbenennen.",
+      "rename_impact_more": "und {{remaining}} weitere",
+      "rename_impact_none": "Dieser Status wird noch in keinem Projekt als Spalte verwendet."
     }
   },
   "templates": {
     "statuses": {
-      "manage_title": "Statusspalten verwalten",
+      "manage_title": "Aufgaben-Statusspalten",
       "manage_description": "Definieren Sie die Statusspalten für Aufgaben in dieser Vorlage. Ziehen zum Neuanordnen.",
       "template_defaults": "Vorlagenstandards",
       "added": "Statusspalte hinzugefügt",
@@ -1014,7 +1066,8 @@
       "replaced": "Statusspalte ersetzt",
       "replace_failed": "Statusspalte konnte nicht ersetzt werden",
       "repair_status_columns": "Statusspalten reparieren",
-      "unresolved_apply_guard": "Statusspalten müssen repariert werden ({{count}})"
+      "unresolved_apply_guard": "Statusspalten müssen repariert werden ({{count}})",
+      "pending_row_hint": "Füllen Sie die leere Statusspalte aus, bevor Sie eine weitere hinzufügen."
     },
     "list": {
       "title": "Projektvorlagen",
@@ -1193,7 +1246,9 @@
       "taskCount_other": "{{count}} Aufgaben",
       "unknownUser": "Unbekannt",
       "unknownTask": "Unbekannte Aufgabe",
-      "checklistCountTitle": "{{count}} Checklistenpunkt"
+      "checklistCountTitle": "{{count}} Checklistenpunkt",
+      "taskCount_few": "{{count}} Aufgaben",
+      "taskCount_many": "{{count}} Aufgaben"
     },
     "taskForm": {
       "addTitle": "Aufgabe hinzufügen",
@@ -1442,7 +1497,8 @@
     "notAvailable": "K. A.",
     "saveAsTemplate": "Als Vorlage speichern",
     "materials": "Materialien",
-    "shareTooltip": "Drucken, importieren und exportieren"
+    "shareTooltip": "Drucken, importieren und exportieren",
+    "staging": "Bereitstellung"
   },
   "projectPhases": {
     "addTask": "Aufgabe hinzufügen",
@@ -1457,18 +1513,6 @@
     "addError": "Phase konnte nicht hinzugefügt werden. Bitte erneut versuchen.",
     "title": "Projektphasen",
     "import": "Importieren"
-  },
-  "addStatusDialog": {
-    "phaseTitle": "Phasenstatus aus Bibliothek hinzufügen",
-    "projectTitle": "Status aus Bibliothek hinzufügen",
-    "selectLabel": "Aus Statusbibliothek auswählen",
-    "placeholder": "Status wählen",
-    "helpText": "Wählen Sie einen Status aus der Statusbibliothek Ihres Mandanten, um ihn zu diesem Projekt hinzuzufügen.",
-    "noStatusesTitle": "Keine Status verfügbar",
-    "noStatusesDescription": "Erstellen Sie Status unter Einstellungen → Projekte → Status.",
-    "adding": "Wird hinzugefügt...",
-    "addStatus": "Status hinzufügen",
-    "addFailed": "Status konnte nicht hinzugefügt werden. Bitte versuchen Sie es erneut."
   },
   "taskStatusSelect": {
     "ariaLabel": "Aufgabenstatus",
@@ -1492,7 +1536,9 @@
     "addFailed": "Kommentar konnte nicht hinzugefügt werden",
     "submitting": "Wird gesendet...",
     "loading": "Laden...",
-    "empty": "Noch keine Kommentare. Seien Sie der Erste!"
+    "empty": "Noch keine Kommentare. Seien Sie der Erste!",
+    "loadError": "Kommentare konnten nicht geladen werden.",
+    "retry": "Erneut versuchen"
   },
   "clientPortal": {
     "clientsWillSee": "Kunden werden sehen:",
@@ -1554,7 +1600,7 @@
     "statusColor": "Statusfarbe",
     "changeColor": "Farbe ändern",
     "markClosed": "Als geschlossenen Status markieren",
-    "markClosedDescription": "Aufgaben in geschlossenen Status gelten als abgeschlossen",
+    "markClosedDescription": "Aufgaben mit diesem Status gelten als abgeschlossen",
     "creating": "Wird erstellt...",
     "createButton": "Status erstellen",
     "nameRequired": "Statusname ist erforderlich",
@@ -1615,7 +1661,9 @@
       "submitting": "Tags werden hinzugefügt...",
       "confirm_one": "Tags zu {{count}} Aufgabe hinzufügen",
       "confirm_other": "Tags zu {{count}} Aufgaben hinzufügen",
-      "failedHeading": "Tags konnten zu den folgenden Aufgaben nicht hinzugefügt werden:"
+      "failedHeading": "Tags konnten zu den folgenden Aufgaben nicht hinzugefügt werden:",
+      "confirm_few": "Tags zu {{count}} Aufgaben hinzufügen",
+      "confirm_many": "Tags zu {{count}} Aufgaben hinzufügen"
     }
   },
   "common:actions": {
@@ -1678,7 +1726,9 @@
       "lockedSummary_other": "{{count}} Einträge mit insgesamt {{amount}} sind gesperrt und ändern sich nicht.",
       "edit": "Konditionen bearbeiten",
       "saved": "Abrechnungskonditionen aktualisiert",
-      "dialogTitle": "Abrechnungskonditionen bearbeiten"
+      "dialogTitle": "Abrechnungskonditionen bearbeiten",
+      "lockedSummary_few": "{{count}} Einträge mit insgesamt {{amount}} sind gesperrt und ändern sich nicht.",
+      "lockedSummary_many": "{{count}} Einträge mit insgesamt {{amount}} sind gesperrt und ändern sich nicht."
     },
     "setup": {
       "title": "Dieses Projekt abrechnen",
@@ -2027,5 +2077,202 @@
     "question": "Abhängigkeiten werden nicht erzwungen, Sie können also fortfahren. Möchten Sie das?",
     "proceed": "Trotzdem fortfahren",
     "cancel": "Abbrechen"
+  },
+  "kanbanZoom": {
+    "compact": {
+      "label": "Kompakt"
+    },
+    "spacious": {
+      "label": "Geräumig"
+    },
+    "decrease": {
+      "title": "Spaltenbreite verringern"
+    },
+    "increase": {
+      "title": "Spaltenbreite erhöhen"
+    },
+    "reset": {
+      "title": "Auf Standard zurücksetzen"
+    }
+  },
+  "staging": {
+    "status": {
+      "reserved": "Reserviert",
+      "staged": "Bereitgestellt",
+      "installed": "Installiert",
+      "released": "Freigegeben",
+      "received": "Empfangen"
+    },
+    "kind": {
+      "stock": "Lagerbestand",
+      "untracked": "Nicht bestandsgeführt",
+      "client": "Vom Kunden gestellt"
+    },
+    "actionFailed": "Das hat nicht funktioniert. Bitte versuchen Sie es erneut.",
+    "installed": "{{count}} Artikel installiert. Sie sind jetzt Projektmaterial.",
+    "installFailed": "Installation fehlgeschlagen.",
+    "backToProject": "← Zurück zum Projekt",
+    "title": "Bereitstellung",
+    "heading": "Bereitstellung",
+    "intro": "Reservieren und stellen Sie Ausrüstung vor der Installation bereit, verpacken Sie sie in beschriftete Boxen und installieren Sie sie anschließend. Der Bestand wird erst verwendet und abrechenbar, wenn ein Artikel installiert wird.",
+    "reserveStock": "Bestand reservieren",
+    "addClientItem": "Kundenartikel hinzufügen",
+    "newBox": "Neue Box",
+    "printLabels": "Etiketten drucken",
+    "summary": {
+      "reserved": "{{count}} reserviert",
+      "staged": "{{count}} bereitgestellt",
+      "client": "{{count}} vom Kunden gestellt",
+      "installed": "{{count}} installiert",
+      "boxes": "{{count}} Box(en)"
+    },
+    "loading": "Bereitstellung wird geladen...",
+    "linesHeading": "Positionen",
+    "showReleased": "Freigegebene anzeigen",
+    "selected": "{{count}} ausgewählt",
+    "stagedToast": "Bereitgestellt. Der Bestand wird jetzt für dieses Projekt vorgehalten.",
+    "stage": "Bereitstellen",
+    "install": "Installieren",
+    "release": "Freigeben",
+    "packInto": "In {{identifier}} packen",
+    "packIntoPlaceholder": "In Box packen...",
+    "empty": "Für dieses Projekt ist noch nichts bereitgestellt. Reservieren Sie Bestand oder fügen Sie einen vom Kunden gestellten Artikel hinzu, um zu beginnen.",
+    "col": {
+      "item": "Artikel",
+      "qty": "Menge",
+      "packed": "Verpackt",
+      "where": "Von / Aufgabe",
+      "status": "Status"
+    },
+    "selectLine": "{{item}} auswählen",
+    "shortfall": "{{count}} fehlen: Die Ansprüche an diesem Standort übersteigen den tatsächlichen Bestand (Bestand wurde durch eine Überschreibung entnommen).",
+    "changeQuantity": "Menge ändern",
+    "undoneToast": "Installation zurückgenommen. Der Artikel ist wieder bereitgestellt.",
+    "undoInstall": "Installation zurücknehmen",
+    "boxesHeading": "Boxen",
+    "noBoxes": "Noch keine Boxen. Erstellen Sie eine Box, packen Sie Artikel hinein und drucken Sie dann ihr Etikett und ihre Packliste.",
+    "boxPosition": "Box {{n}} von {{total}}",
+    "boxSealed": "Verschlossen",
+    "boxOpen": "Offen",
+    "boxEmpty": "Leer",
+    "unpack": "Auspacken",
+    "boxLabel": "Etikett",
+    "boxAllLabels": "Alle Etiketten",
+    "manifest": "Packliste",
+    "reopen": "Wieder öffnen",
+    "seal": "Verschließen",
+    "editBox": "Box bearbeiten",
+    "boxDeleted": "Box gelöscht.",
+    "deleteBox": "Box löschen",
+    "reprintHint": "\"Box n von m\" auf einem gedruckten Etikett wird beim Drucken festgelegt. Drucken Sie die Etiketten erneut, nachdem Boxen hinzugefügt oder gelöscht wurden.",
+    "reservedToast": "Reserviert. Der Bestand wird für dieses Projekt vorgehalten; es wurde noch nichts verwendet.",
+    "releasedToast": "Freigegeben. Der Bestand ist wieder frei.",
+    "releaseTitle": "Artikel freigeben?",
+    "releaseMessage": "Freigegebene Artikel geben ihren Bestand zurück und verlassen ihre Boxen. Dies kann nicht rückgängig gemacht werden; reservieren Sie sie erneut, falls Sie sie noch benötigen.",
+    "overrideTitle": "Für andere reservierten Bestand verwenden?",
+    "overrideMessage": "{{message}} Eine Installation trotzdem verwendet Bestand, der für einen Verkaufsauftrag oder ein anderes Projekt weich reserviert ist.",
+    "installAnyway": "Trotzdem installieren",
+    "changeQuantityHint": "Mehr reserviert mehr Bestand (sofern verfügbar); weniger gibt die Differenz zurück. Die Menge kann nicht unter das Verpackte fallen.",
+    "reserve": {
+      "anyLocation": "Beliebiger Standort (älteste Einheiten zuerst)",
+      "locationOption": "{{name}}: {{free}} frei",
+      "selectProduct": "Wählen Sie ein Produkt aus.",
+      "quantityMin": "Die Menge muss mindestens 1 betragen.",
+      "failed": "Der Bestand konnte nicht reserviert werden.",
+      "conflictOnHand": "Nur {{onHand}} vorhanden, {{requested}} angefordert. Es wurde nichts reserviert.",
+      "conflictFree": "Nur {{free}} frei: {{reserved}} reserviert und {{held}} fest reserviert für Verkaufsaufträge oder Projekte. Sie haben {{requested}} angefordert. Es wurde nichts reserviert.",
+      "title": "Bestand reservieren",
+      "intro": "Durch das Reservieren wird Bestand für dieses Projekt vorgehalten, ohne ihn zu verbrauchen. Der Bestand wird erst verwendet und abgerechnet, wenn Sie ihn installieren.",
+      "product": "Produkt",
+      "productPlaceholder": "Produkt auswählen...",
+      "productSearch": "Produkte suchen...",
+      "noProducts": "Keine Produkte gefunden",
+      "untracked": "Dieses Produkt ist nicht bestandsgeführt. Es wird als Planungsposition hinzugefügt und beansprucht keinen Bestand.",
+      "location": "Reservieren von",
+      "locationPlaceholder": "Standort wählen",
+      "locationDetail": "{{onHand}} vorhanden, {{reserved}} reserviert, {{held}} fest reserviert.",
+      "units": "Einheiten (optional: leer lassen, um die ältesten zu verwenden)",
+      "noUnitPicker": "Sie können keine Lagereinheiten sehen, daher werden die ältesten Einheiten verwendet.",
+      "quantity": "Menge",
+      "task": "Aufgabe",
+      "noTask": "Keine Aufgabe",
+      "currency": "Währung",
+      "currencyPlaceholder": "Mandanten-Standard",
+      "rate": "Geplanter Satz (pro Einheit)",
+      "submit": "Reservieren"
+    },
+    "clientItems": {
+      "chooseAsset": "Wählen Sie ein Asset aus.",
+      "describeItem": "Beschreiben Sie den Artikel.",
+      "failed": "Der Artikel konnte nicht hinzugefügt werden.",
+      "title": "Vom Kunden gestellten Artikel hinzufügen",
+      "intro": "Erfassen Sie vom Kunden gestellte Ausrüstung über Bereitstellung und Boxen. Sie wird nie zu Bestand und nie abgerechnet.",
+      "kind": "Was ist es?",
+      "kindAsset": "Eines der Assets des Kunden",
+      "kindItem": "Ein anderer Artikel (beschreiben)",
+      "asset": "Asset",
+      "assetPlaceholder": "Asset auswählen...",
+      "assetSearch": "Nach Name, Tag oder Seriennummer suchen...",
+      "noAssets": "Keine Assets dieses Kunden verfügbar",
+      "description": "Beschreibung",
+      "quantity": "Menge",
+      "task": "Aufgabe",
+      "noTask": "Keine Aufgabe",
+      "submit": "Hinzufügen"
+    },
+    "boxForm": {
+      "failed": "Die Box konnte nicht gespeichert werden.",
+      "editTitle": "Box {{identifier}} bearbeiten",
+      "createTitle": "Neue Box",
+      "numbering": "Boxen werden in diesem Projekt der Reihe nach nummeriert; eine Nummer wird nie wiederverwendet.",
+      "name": "Bezeichnung (optional)",
+      "task": "Aufgabe",
+      "noTask": "Keine Aufgabe",
+      "location": "Standort der Box",
+      "noLocation": "Nicht festgelegt",
+      "locationNote": "Regal / Lagerplatz",
+      "notes": "Notizen (werden auf der Packliste gedruckt)",
+      "create": "Box erstellen"
+    },
+    "pack": {
+      "nothingChosen": "Wählen Sie etwas zum Verpacken aus.",
+      "failed": "Die Box konnte nicht gepackt werden.",
+      "title": "Box {{identifier}} packen",
+      "intro": "Reservierte Artikel, die Sie verpacken, werden bereitgestellt: Ihr Bestand wird für dieses Projekt vorgehalten und kann für nichts anderes mehr entnommen werden.",
+      "nothingToPack": "Alles in der Bereitstellung ist bereits verpackt oder installiert.",
+      "quantityFor": "Menge von {{item}}",
+      "submit": "Packen"
+    },
+    "print": {
+      "failed": "Die Etiketten konnten nicht gedruckt werden.",
+      "skipped": "{{count}} Etikett(en), die Sie nicht einsehen können, wurden ausgelassen.",
+      "popupBlocked": "Ihr Browser hat das PDF-Fenster blockiert; lassen Sie Pop-ups zu und versuchen Sie es erneut.",
+      "title": "Bereitstellungsetiketten drucken",
+      "boxes": "Boxen",
+      "noBoxes": "Noch keine Boxen.",
+      "boxOption": "{{identifier}} (Box {{n}} von {{total}}){{name}}",
+      "includeUnboxed": "Auch bereitgestellte Artikel drucken, die sich nicht in einer Box befinden",
+      "layout": "Layout",
+      "count": "{{count}} Etikett(en) in einem PDF.",
+      "noInventory": "{{count}} Lagereinheit-Etikett(en) sind nicht enthalten, da Sie Inventar nicht einsehen können.",
+      "overCap": "Ein Druckvorgang enthält höchstens {{max}} Etiketten. Wählen Sie weniger Boxen und drucken Sie den Rest separat.",
+      "submit": "Drucken"
+    },
+    "closeWarning": "{{count}} reservierte(s) oder bereitgestellte(s) Artikel halten noch Bestand für dieses Projekt.",
+    "releasedAll": "{{count}} Artikel freigegeben. Der Bestand ist wieder frei.",
+    "releaseAll": "Alle reservierten und bereitgestellten freigeben",
+    "keepClaims": "Behalten",
+    "packAction": "Packen",
+    "errors": {
+      "notFound": "Projekt nicht gefunden",
+      "permission": {
+        "read": "Sie haben keine Berechtigung, Projekte anzuzeigen.",
+        "update": "Sie haben keine Berechtigung, Projekte zu ändern.",
+        "inventory": "Sie benötigen Inventarzugriff, um Lagereinheiten auszuwählen.",
+        "billing": "Sie benötigen Abrechnungszugriff, um Artikel in ein Projekt einzubauen.",
+        "asset": "Sie benötigen Asset-Zugriff, um Kunden-Assets zu verknüpfen.",
+        "inventoryStock": "Sie benötigen Inventarzugriff, um Lagerbestände einzusehen."
+      }
+    }
   }
 }

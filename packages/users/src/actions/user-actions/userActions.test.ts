@@ -65,7 +65,13 @@ vi.mock('@alga-psa/db/models/user', () => ({
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
-  publishWorkflowEvent: publishWorkflowEventMock,
+  publishNonCatalogWorkflowEvent: publishWorkflowEventMock,
+  publishEvent: vi.fn(async () => undefined),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/core/encryption', () => ({
@@ -438,6 +444,7 @@ const CE_CLEANUP_TABLES: ReadonlySet<string> = new Set([
   // null lists
   'boards', 'workflow_tasks', 'comments', 'client_contracts',
   'contract_pricing_schedules', 'contract_template_pricing_schedules',
+  'contract_template_price_sets',
   'escalation_managers', 'external_files', 'external_tax_imports',
   'invoice_template_assignments', 'project_tasks', 'projects',
   'quote_activities', 'quote_document_template_assignments', 'quote_items',
@@ -525,8 +532,9 @@ function makeFakeTrx(present: ReadonlySet<string>) {
       },
       first: async () => {
         ops.push({ table, op: 'first' });
-        // assignedClient lookup returns null (no FK to clients)
-        return null;
+        // The interactive-target guard reads users.user_type; the target is a
+        // regular internal user. assignedClient lookup returns null.
+        return table === 'users' ? { user_type: 'internal' } : null;
       },
     };
     return chain;

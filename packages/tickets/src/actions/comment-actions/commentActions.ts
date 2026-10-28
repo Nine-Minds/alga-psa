@@ -1,6 +1,7 @@
 // @ts-nocheck
 // TODO: Comment model method signature changes
 'use server'
+import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -10,13 +11,15 @@ import { createTenantKnex, tenantDb, registerAfterCommit } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { TicketResponseState } from '@alga-psa/types';
+import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
+import { publishEvent, publishStoredWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { buildTicketCommunicationWorkflowEvents } from '../../lib/workflowTicketCommunicationEvents';
-import { isResponseStateTrackingEnabled } from '../../lib/responseStateSettings';
+import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '../../lib/workflowTicketCommunicationEvents';
+import { applyCommentResponseState, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 import { publishTicketUpdate } from '../../lib/liveUpdates';
+import { resolveCommentMergeTokens } from '../../lib/cannedResponses/commentMerge';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -72,7 +75,7 @@ async function assertClientCanCreateComment(
   user: any,
   comment: Omit<IComment, 'tenant'>
 ): Promise<void> {
-  if (user?.user_type !== 'client') {
+  if (!isClientUserType(user?.user_type)) {
     return;
   }
 
@@ -116,84 +119,26 @@ async function assertClientCanCreateComment(
   if (!ticket || ticket.client_id !== clientId) {
     throw new Error('Client user cannot access this ticket');
   }
-}
 
-/**
- * Helper function to determine the new response state based on comment properties
- * and update the ticket's response_state accordingly.
- *
- * Logic:
- * - Internal note (is_internal=true): No change to response state
- * - Client-visible comment from internal user: Set to 'awaiting_client'
- * - Comment from client: Set to 'awaiting_internal'
- */
-async function updateTicketResponseState(
-  trx: Knex.Transaction,
-  tenant: string,
-  ticketId: string,
-  authorType: 'internal' | 'client' | 'unknown',
-  isInternal: boolean,
-  userId: string | null
-): Promise<{ previousState: TicketResponseState; newState: TicketResponseState }> {
-  // Skip response state tracking when disabled for this tenant
-  const trackingEnabled = await isResponseStateTrackingEnabled(tenant, trx);
-  if (!trackingEnabled) {
-    return { previousState: null, newState: null };
-  }
-
-  // Get current ticket response state
-  const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-    .select('response_state')
-    .where({ ticket_id: ticketId })
-    .first();
-
-  const previousState = (ticket?.response_state || null) as TicketResponseState;
-  let newState: TicketResponseState = previousState;
-
-  // Internal notes don't change response state
-  if (isInternal) {
-    return { previousState, newState };
-  }
-
-  // Determine new state based on author type
-  if (authorType === 'internal') {
-    // Internal staff posting client-visible comment -> awaiting client response
-    newState = 'awaiting_client';
-  } else if (authorType === 'client') {
-    // Client posting comment -> awaiting internal response
-    newState = 'awaiting_internal';
-  }
-
-  // Only update if state actually changed
-  if (newState !== previousState) {
-    await tenantScopedTable(trx, 'tickets', tenant)
-      .where({ ticket_id: ticketId })
-      .update({ response_state: newState });
-
-    // Publish response state change event
-    try {
-      await publishEvent({
-        eventType: 'TICKET_RESPONSE_STATE_CHANGED',
-        payload: {
-          tenantId: tenant,
-          occurredAt: new Date().toISOString(),
-          ticketId,
-          userId,
-          previousResponseState: previousState,
-          newResponseState: newState,
-          previousState,
-          newState,
-          trigger: 'comment'
-        }
-      });
-      console.log(`[updateTicketResponseState] Published event: ${previousState} -> ${newState}`);
-    } catch (eventError) {
-      console.error(`[updateTicketResponseState] Failed to publish event:`, eventError);
-      // Don't throw - allow comment creation to succeed even if event publishing fails
+  // Comment.insert re-roots a client reply aimed at an internal thread into a
+  // fresh public thread (D1, for inbound email whose headers resolve to an
+  // internal thread). A portal user never sees internal threads, so an explicit
+  // parent_comment_id pointing at one is rejected here instead.
+  if (comment.parent_comment_id) {
+    const parentThread = await tenantDb(trx, tenant)
+      .tenantJoin(
+        tenantScopedTable(trx, 'comments as parent', tenant),
+        'comment_threads as thread',
+        'parent.thread_id',
+        'thread.thread_id'
+      )
+      .select('thread.is_internal as thread_is_internal')
+      .where('parent.comment_id', comment.parent_comment_id)
+      .first();
+    if (parentThread?.thread_is_internal) {
+      throw new Error('Reply visibility must match the thread root visibility');
     }
   }
-
-  return { previousState, newState };
 }
 
 export const findCommentsByTicketId = withAuth(async (_user, { tenant }, ticketId: string): Promise<IComment[] | TicketActionError> => {
@@ -246,21 +191,13 @@ export const createComment = withAuth(async (
       user_id: comment.user_id
     });
 
-    // Get user's type to set author_type
+    // Resolve author_type through the shared rules (same as the REST API path)
     if (comment.user_id) {
       const { knex: db } = await createTenantKnex();
-      const user = await withTransaction(db, async (trx: Knex.Transaction) => {
-        return await tenantScopedTable(trx, 'users', tenant!)
-          .select('user_type')
-          .where('user_id', comment.user_id)
-          .first();
+      const author = await withTransaction(db, async (trx: Knex.Transaction) => {
+        return await resolveCommentAuthor(trx, tenant!, comment.user_id);
       });
-
-      if (user) {
-        comment.author_type = user.user_type === 'internal' ? 'internal' : 'client';
-      } else {
-        comment.author_type = 'unknown';
-      }
+      comment.author_type = author.authorType;
     } else {
       comment.author_type = 'unknown';
     }
@@ -273,6 +210,18 @@ export const createComment = withAuth(async (
       throw new Error('Only internal MSP users may schedule client-visible comments');
     }
     normalizeScheduledPublication(comment);
+
+    // Canned responses: the picker resolves merge fields as it inserts, so the agent sees final text. This
+    // pass catches tokens that remain (hand-typed, or pasted from another response). Same pure resolver, same
+    // context loader. Unknown tokens are left as written; known tokens with no value become ''. Only MSP
+    // authors: a client-portal comment is never rewritten.
+    if (comment.note && comment.ticket_id && comment.author_type === 'internal') {
+      const { knex: mergeDb } = await createTenantKnex();
+      const noteToResolve = comment.note;
+      comment.note = await withTransaction(mergeDb, (trx: Knex.Transaction) =>
+        resolveCommentMergeTokens(trx, tenant!, comment.ticket_id, user.user_id, comment.author_type, noteToResolve)
+      );
+    }
 
     // Convert BlockNote JSON to Markdown if note exists
     if (comment.note) {
@@ -362,14 +311,13 @@ export const createComment = withAuth(async (
       // Update ticket response state based on comment (F005-F008)
       const isScheduled = comment.publish_state === 'scheduled';
       if (!isScheduled && comment.ticket_id && commentTenant) {
-        const { previousState, newState } = await updateTicketResponseState(
-          trx,
-          commentTenant,
-          comment.ticket_id,
-          comment.author_type as 'internal' | 'client' | 'unknown',
-          comment.is_internal || false,
-          comment.user_id || null
-        );
+        const { previousState, newState } = await applyCommentResponseState(trx, {
+          tenant: commentTenant,
+          ticketId: comment.ticket_id,
+          authorType: comment.author_type as 'internal' | 'client' | 'unknown',
+          isInternal: comment.is_internal || false,
+          userId: comment.user_id || null,
+        });
         console.log(`[createComment] Response state updated: ${previousState} -> ${newState}`);
       }
 
@@ -386,29 +334,36 @@ export const createComment = withAuth(async (
         // Persist notification intent with the comment; failed intent writes must roll back.
         try {
           const eventComment = await Comment.get(trx, commentTenant, commentId);
-          await persistCommentPublication(trx, {
+          await publishCommentEvent(trx, 'ticket', {
+            tenantId: commentTenant,
+            ticketId: comment.ticket_id!,
+            commentId,
+            userId: comment.user_id,
             eventType: 'TICKET_COMMENT_ADDED',
-            payload: {
-              tenantId: commentTenant,
-              occurredAt: new Date().toISOString(),
-              ticketId: comment.ticket_id!,
-              commentId,
-              userId: comment.user_id,
-              thread_id: eventComment?.thread_id,
-              parent_comment_id: eventComment?.parent_comment_id ?? null,
-              is_reply: Boolean(eventComment?.parent_comment_id),
-              comment: {
-                id: commentId,
-                content: comment.note!,
-                author: authorName,
-                isInternal: comment.is_internal || false,
-                authorType: comment.author_type, // F039: Include author_type in event payload
+          }, async () => {
+            await persistCommentPublication(trx, {
+              eventType: 'TICKET_COMMENT_ADDED',
+              payload: buildTicketCommentAddedPayload({
+                tenantId: commentTenant,
+                occurredAt: new Date().toISOString(),
+                ticketId: comment.ticket_id!,
+                commentId,
+                userId: comment.user_id,
                 thread_id: eventComment?.thread_id,
                 parent_comment_id: eventComment?.parent_comment_id ?? null,
-                is_reply: Boolean(eventComment?.parent_comment_id)
-              }
-            }
-          }, publishEvent);
+                is_reply: Boolean(eventComment?.parent_comment_id),
+                comment: {
+                  content: comment.note!,
+                  author: authorName,
+                  isInternal: comment.is_internal || false,
+                  authorType: comment.author_type, // F039: Include author_type in event payload
+                  thread_id: eventComment?.thread_id,
+                  parent_comment_id: eventComment?.parent_comment_id ?? null,
+                  is_reply: Boolean(eventComment?.parent_comment_id)
+                }
+              })
+            }, publishStoredWorkflowEvent);
+          });
           console.log(`[createComment] Persisted TICKET_COMMENT_ADDED intent for comment:`, commentId);
         } catch (eventError) {
           console.error(`[createComment] Failed to publish TICKET_COMMENT_ADDED event:`, eventError);
@@ -421,7 +376,8 @@ export const createComment = withAuth(async (
           const createdAt = insertedComment?.created_at ?? undefined;
           const visibility = comment.is_internal ? 'internal' : 'public';
 
-          const isInternalUser = user?.user_type === 'internal';
+          // internal | service are both 'user' authors (a service user is never a contact author).
+          const isInternalUser = isMspPrincipalUserType(user?.user_type);
           const hasContactId = Boolean(user?.contact_id);
           const author = isInternalUser
             ? { authorType: 'user', authorId: comment.user_id }
@@ -451,11 +407,7 @@ export const createComment = withAuth(async (
           });
 
           for (const ev of events) {
-            await publishWorkflowEvent({
-              eventType: ev.eventType,
-              payload: ev.payload,
-              ctx: workflowCtx,
-            });
+            await publishTicketCommunicationWorkflowEvent(ev, workflowCtx);
           }
         } catch (eventError) {
           console.error(`[createComment] Failed to publish workflow ticket message events:`, eventError);
@@ -570,11 +522,22 @@ export const createComment = withAuth(async (
   }
 });
 
-export const updateComment = withAuth(async (user, { tenant }, id: string, comment: Partial<IComment>) => {
+/**
+ * Who may change an existing comment, as on the ticket screen: its author. A
+ * user who may update tickets may also correct a comment nobody authored (one
+ * that arrived by email).
+ */
+async function assertMayChangeComment(trx: Knex.Transaction, user: { user_id: string; user_type: string }, existing: IComment): Promise<void> {
+  if (existing.user_id === user.user_id) return;
+  if (existing.user_id == null && isMspPrincipalUserType(user.user_type) && await hasPermission(user as any, 'ticket', 'update', trx)) return;
+  throw new Error('You can only edit your own comments');
+}
+
+export const updateComment = withAuth(async (user, { tenant }, id: string, requested: Partial<IComment>) => {
   console.log(`[updateComment] Starting update for comment ID: ${id}`, {
     commentData: {
-      ...comment,
-      note: comment.note ? `${comment.note.substring(0, 50)}...` : undefined
+      ...requested,
+      note: requested.note ? `${requested.note.substring(0, 50)}...` : undefined
     }
   });
 
@@ -610,38 +573,20 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
         .first();
       const oldAuthorName = oldAuthor ? `${oldAuthor.first_name} ${oldAuthor.last_name}` : 'Unknown User';
 
-      // Verify user permissions - only allow users to edit their own comments
-      // or  MSP (internal) users to edit any comment
-      if (comment.user_id && comment.user_id !== existingComment.user_id) {
-        const user = await tenantScopedTable(trx, 'users', commentTenant)
-          .select('user_type')
-          .where('user_id', comment.user_id)
-          .first();
-
-      // Only MSP (internal) users can edit other users' comments
-      if (!user || user.user_type !== 'internal') {
-        throw new Error('You can only edit your own comments');
+      await assertMayChangeComment(trx, user, existingComment);
+      // Only the text and its two flags are editable; authorship, timestamps,
+      // publication and deletion are history and have their own commands.
+      const comment: Partial<IComment> = {};
+      if (requested.note !== undefined) comment.note = requested.note;
+      if (requested.is_resolution !== undefined) comment.is_resolution = requested.is_resolution;
+      // A client can never make a comment internal, nor change an internal one.
+      if (requested.is_internal !== undefined) {
+        if (isMspPrincipalUserType(user.user_type)) {
+          comment.is_internal = requested.is_internal;
+        } else if (requested.is_internal !== Boolean(existingComment.is_internal)) {
+          throw new Error('Only MSP users can set comments as internal');
+        }
       }
-
-      // Set author_type based on user type
-      if (user) {
-        comment.author_type = user.user_type === 'internal' ? 'internal' : 'client';
-      } else {
-        comment.author_type = 'unknown';
-      }
-    }
-
-    // Validate internal comment permissions
-    if (comment.is_internal !== undefined) {
-      // Only allow internal comments from  MSP (internal) users
-      if (comment.is_internal && comment.author_type !== 'internal' && existingComment.author_type !== 'internal') {
-        throw new Error('Only MSP users can set comments as internal');
-      }
-      // If a client user is updating a comment, ensure they can't make it internal
-      if (existingComment.author_type === 'client') {
-        comment.is_internal = existingComment.is_internal; // Preserve internal status
-      }
-    }
 
     // Convert BlockNote JSON to Markdown if note is being updated
     if (comment.note !== undefined) {
@@ -696,33 +641,38 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
       }
 
       // Publish TICKET_COMMENT_UPDATED event if the comment was updated and we have user info
-      if (updatedComment && comment.user_id && commentTenant) {
-        const newAuthor = await tenantScopedTable(trx, 'users', commentTenant)
-          .select('first_name', 'last_name')
-          .where({ user_id: comment.user_id })
-          .first();
-        const newAuthorName = newAuthor ? `${newAuthor.first_name} ${newAuthor.last_name}` : 'Unknown User';
+      if (updatedComment && commentTenant) {
+        // Authorship is not editable, so the edited comment's author is the one already resolved.
+        const newAuthorName = oldAuthorName;
 
         try {
-          await publishEvent({
+          await publishCommentEvent(trx, 'ticket', {
+            tenantId: commentTenant,
+            ticketId: updatedComment.ticket_id!,
+            commentId: updatedComment.comment_id!,
+            userId: user.user_id,
             eventType: 'TICKET_COMMENT_UPDATED',
-            payload: {
-              tenantId: commentTenant,
-              ticketId: updatedComment.ticket_id!,
-              userId: comment.user_id,
-              oldComment: {
-                id: oldCommentData.id,
-                content: oldCommentData.content,
-                author: oldAuthorName,
-                isInternal: oldCommentData.isInternal
-              },
-              newComment: {
-                id: updatedComment.comment_id!,
-                content: updatedComment.note!,
-                author: newAuthorName,
-                isInternal: updatedComment.is_internal || false
+          }, async () => {
+            await publishEvent({
+              eventType: 'TICKET_COMMENT_UPDATED',
+              payload: {
+                tenantId: commentTenant,
+                ticketId: updatedComment.ticket_id!,
+                userId: user.user_id,
+                oldComment: {
+                  id: oldCommentData.id,
+                  content: oldCommentData.content,
+                  author: oldAuthorName,
+                  isInternal: oldCommentData.isInternal
+                },
+                newComment: {
+                  id: updatedComment.comment_id!,
+                  content: updatedComment.note!,
+                  author: newAuthorName,
+                  isInternal: updatedComment.is_internal || false
+                }
               }
-            }
+            });
           });
           console.log(`[updateComment] Published TICKET_COMMENT_UPDATED event for comment:`, id);
         } catch (eventError) {
@@ -794,6 +744,7 @@ export const deleteComment = withAuth(async (user, _ctx, id: string) => {
       if (existingComment?.is_system_generated) {
         throw new Error('This comment is system-generated and cannot be deleted.');
       }
+      if (existingComment) await assertMayChangeComment(trx, user, existingComment);
 
       // Delete comment reactions before comment (CitusDB doesn't support ON DELETE CASCADE)
       await tenantScopedTable(trx, 'comment_reactions', tenant)

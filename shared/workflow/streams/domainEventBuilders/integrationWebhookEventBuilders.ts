@@ -1,3 +1,5 @@
+import { builtWorkflowPayload } from '@alga-psa/event-schemas';
+
 const DEFAULT_SENSITIVE_KEY_PATTERN = /(secret|token|password|api[_-]?key|authorization|signature)/i;
 
 function safeJsonClone(value: unknown): unknown {
@@ -65,7 +67,7 @@ export function buildIntegrationWebhookReceivedPayload(params: {
   receivedAt?: string;
   rawPayloadRef?: string;
 }) {
-  return {
+  return builtWorkflowPayload('INTEGRATION_WEBHOOK_RECEIVED', {
     integrationId: params.integrationId,
     provider: params.provider,
     connectionId: params.connectionId,
@@ -73,6 +75,6 @@ export function buildIntegrationWebhookReceivedPayload(params: {
     eventName: params.eventName,
     receivedAt: params.receivedAt,
     rawPayloadRef: params.rawPayloadRef,
-  };
+  });
 }
 

@@ -168,7 +168,8 @@
       "expandGroup": "Expand group",
       "collapseGroup": "Collapse group",
       "renameGroup": "Rename group",
-      "deleteGroup": "Delete group"
+      "deleteGroup": "Delete group",
+      "groupMenu": "Group actions"
     },
     "dropActivitiesHere": "Drop activities here",
     "ungroupedHeading": "Ungrouped",
@@ -178,6 +179,16 @@
       "status": "Status",
       "priority": "Priority",
       "dueDate": "Due Date"
+    },
+    "defaultBadge": "Default",
+    "defaultBadgeHint": "Activities you haven't placed in a group appear here, including newly assigned work.",
+    "defaultGroupEmpty": "New work assigned to you will appear here",
+    "menu": {
+      "setDefault": "Make default for new work",
+      "unsetDefault": "Stop using as default"
+    },
+    "errors": {
+      "setDefaultFailed": "Couldn't update the default group"
     }
   },
   "printable": {
@@ -190,13 +201,10 @@
       "title": "Project Tasks",
       "actions": {
         "refresh": "Refresh",
-        "filter": "Filter",
-        "reset": "Reset",
         "viewAll": "View All"
       },
       "ariaLabels": {
-        "refresh": "Refresh Project Tasks",
-        "filter": "Filter Project Tasks"
+        "refresh": "Refresh Project Tasks"
       },
       "states": {
         "loading": "Loading project activities...",
@@ -204,47 +212,16 @@
       },
       "errors": {
         "loadFailed": "Failed to load project activities. Please try again later."
-      },
-      "filterDialog": {
-        "title": "Filter Project Tasks",
-        "description": "Select criteria to filter project task activities.",
-        "fields": {
-          "search": "Search",
-          "searchPlaceholder": "Search title, description",
-          "project": "Project",
-          "projectPlaceholder": "Select Project...",
-          "allProjects": "All Projects",
-          "phase": "Phase",
-          "phasePlaceholder": "Select Phase...",
-          "phaseLoadingPlaceholder": "Loading phases...",
-          "phaseSelectFirstPlaceholder": "Select a project first",
-          "allPhases": "All Phases",
-          "priority": "Priority",
-          "priorityPlaceholder": "Select Priority...",
-          "allPriorities": "All Priorities",
-          "dueDateRange": "Due Date Range",
-          "createdDateRange": "Created Date Range",
-          "showClosedTasks": "Show Closed Tasks"
-        },
-        "actions": {
-          "reset": "Reset",
-          "cancel": "Cancel",
-          "apply": "Apply Filters",
-          "clearDates": "Clear"
-        }
       }
     },
     "tickets": {
       "title": "Tickets",
       "actions": {
         "refresh": "Refresh",
-        "filter": "Filter",
-        "reset": "Reset",
         "viewAll": "View All"
       },
       "ariaLabels": {
-        "refresh": "Refresh Tickets",
-        "filter": "Filter Tickets"
+        "refresh": "Refresh Tickets"
       },
       "states": {
         "loading": "Loading ticket activities...",
@@ -252,31 +229,6 @@
       },
       "errors": {
         "loadFailed": "Failed to load ticket activities. Please try again later."
-      },
-      "filterDialog": {
-        "title": "Filter Tickets",
-        "description": "Select criteria to filter ticket activities.",
-        "fields": {
-          "search": "Search",
-          "searchPlaceholder": "Search title, description, ticket #",
-          "client": "Client",
-          "contact": "Contact",
-          "status": "Status",
-          "statusPlaceholder": "Select Status...",
-          "allStatuses": "All Statuses",
-          "priority": "Priority",
-          "priorityPlaceholder": "Select Priority...",
-          "allPriorities": "All Priorities",
-          "dueDateRange": "Due Date Range",
-          "createdDateRange": "Created Date Range",
-          "showClosedTickets": "Show Closed Tickets"
-        },
-        "actions": {
-          "reset": "Reset",
-          "cancel": "Cancel",
-          "apply": "Apply Filters",
-          "clearDates": "Clear"
-        }
       }
     },
     "workflowTasks": {
@@ -284,13 +236,10 @@
       "drawerTitle": "Workflow Tasks",
       "actions": {
         "refresh": "Refresh",
-        "filter": "Filter",
-        "reset": "Reset",
         "viewAll": "View All"
       },
       "ariaLabels": {
-        "refresh": "Refresh Workflow Tasks",
-        "filter": "Filter Workflow Tasks"
+        "refresh": "Refresh Workflow Tasks"
       },
       "states": {
         "loading": "Loading workflow task activities...",
@@ -298,33 +247,6 @@
       },
       "errors": {
         "loadFailed": "Failed to load workflow task activities. Please try again later."
-      },
-      "filterDialog": {
-        "title": "Filter Workflow Tasks",
-        "description": "Select criteria to filter workflow task activities.",
-        "fields": {
-          "search": "Search",
-          "searchPlaceholder": "Search title, description",
-          "workflowExecution": "Workflow Execution",
-          "workflowExecutionPlaceholder": "Select Workflow Execution...",
-          "allExecutions": "All Executions",
-          "priority": "Priority",
-          "priorityPlaceholder": "Select Priority...",
-          "allPriorities": "All Priorities",
-          "priorityHigh": "High",
-          "priorityMedium": "Medium",
-          "priorityLow": "Low",
-          "dueDateRange": "Due Date Range",
-          "createdDateRange": "Created Date Range",
-          "showClosedTasks": "Show Closed Tasks",
-          "includeHiddenTasks": "Include Hidden Tasks"
-        },
-        "actions": {
-          "reset": "Reset",
-          "cancel": "Cancel",
-          "apply": "Apply Filters",
-          "clearDates": "Clear"
-        }
       },
       "listDrawer": {
         "searchPlaceholder": "Search tasks...",
@@ -352,8 +274,6 @@
       "title": "Schedule",
       "actions": {
         "refresh": "Refresh",
-        "filter": "Filter",
-        "reset": "Reset",
         "viewAll": "View All"
       },
       "states": {
@@ -364,41 +284,17 @@
         "loadFailed": "Failed to load schedule activities. Please try again later.",
         "refreshFailed": "Failed to refresh schedule activities. Please try again later.",
         "addAdHocFailed": "Failed to add activity. Please try again."
-      },
-      "filterDialog": {
-        "title": "Filter Schedule Entries",
-        "description": "Select criteria to filter schedule activities.",
-        "fields": {
-          "search": "Search",
-          "searchPlaceholder": "Search title, description",
-          "dateRange": "Date Range",
-          "workItemType": "Related Work Item Type",
-          "workItemTypePlaceholder": "Select Work Item Type...",
-          "allTypes": "All Types",
-          "ticket": "Ticket",
-          "projectTask": "Project Task",
-          "workflowTask": "Workflow Task",
-          "showClosedEntries": "Show Closed Entries",
-          "showRecurringOnly": "Show Recurring Only"
-        },
-        "actions": {
-          "reset": "Reset",
-          "cancel": "Cancel",
-          "apply": "Apply Filters"
-        }
       }
     },
     "notifications": {
       "title": "Notifications",
       "actions": {
         "refresh": "Refresh",
-        "filter": "Filter",
         "reset": "Reset",
         "viewAll": "View All"
       },
       "ariaLabels": {
-        "refresh": "Refresh Notifications",
-        "filter": "Filter Notifications"
+        "refresh": "Refresh Notifications"
       },
       "tabs": {
         "unread": "Unread",
@@ -413,12 +309,7 @@
         "loadFailed": "Failed to load notification activities. Please try again later."
       },
       "filterDialog": {
-        "title": "Filter Notifications",
-        "description": "Select criteria to filter notification activities.",
         "fields": {
-          "status": "Status",
-          "unreadOnly": "Unread Only",
-          "showRead": "Show Read",
           "category": "Category",
           "categoryPlaceholder": "Select Category...",
           "allCategories": "All Categories",
@@ -429,11 +320,6 @@
             "system": "System"
           },
           "dateRange": "Date Range"
-        },
-        "actions": {
-          "reset": "Reset",
-          "cancel": "Cancel",
-          "apply": "Apply Filters"
         }
       },
       "priority": {
@@ -533,5 +419,32 @@
   "actions": {
     "print": "Print",
     "printOptions": "Print options"
+  },
+  "actionMenu": {
+    "moveToGroup": "Move to group",
+    "loadingGroups": "Loading…",
+    "newGroupTitle": "New group"
+  },
+  "deepLink": {
+    "notInView": "This item isn't in your current view.",
+    "notOnList": "This item is no longer on your activities list.",
+    "clearFilters": "Clear filters"
+  },
+  "myGroup": {
+    "label": "My group",
+    "chip": "My group: {{name}}",
+    "ungrouped": "Ungrouped",
+    "privacyHint": "Only you can see this. It organizes your activities list.",
+    "selectPlaceholder": "Choose a group",
+    "newGroup": "New group…",
+    "newGroupPlaceholder": "Group name",
+    "create": "Create",
+    "cancel": "Cancel",
+    "showOnBoard": "Show on my activities",
+    "errors": {
+      "load": "Couldn't load your groups.",
+      "move": "Couldn't change your group. Try again.",
+      "create": "Couldn't create the group. Try again."
+    }
   }
 }

@@ -1,5 +1,7 @@
+import { isClientUserType } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { phoneSearchDigits } from './contactSearchMatch';
 
 const LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
 export const LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
@@ -87,7 +89,7 @@ export function applyClientListIndexedSearchFilter(
 
   const prefixTsquery = buildListSearchPrefixTsquery(rawSearch);
   const identifier = rawSearch.match(LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
-  const isInternalUser = user.user_type !== 'client';
+  const isInternalUser = !isClientUserType(user.user_type);
   const clientScopePredicate = isInternalUser
     ? 'TRUE'
     : user.clientId
@@ -296,11 +298,17 @@ export function buildContactListSearchQuery(
 ): { sql: string; bindings: Knex.RawBinding[] } {
   const prefixTsquery = buildListSearchPrefixTsquery(rawSearch);
   const identifier = rawSearch.match(LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
+  const searchDigits = phoneSearchDigits(rawSearch);
+  const ilikePattern = `%${rawSearch}%`;
   const scopedDb = tenantDb(trx, tenant);
   const searchIndex = tenantScopedDerivedTableSql(scopedDb, 'app_search_index', 'si');
   const interactions = tenantScopedDerivedTableSql(scopedDb, 'interactions', 'interaction_match');
   const noteContacts = tenantScopedDerivedTableSql(scopedDb, 'contacts', 'note_contact');
   const documentAssociations = tenantScopedDerivedTableSql(scopedDb, 'document_associations', 'document_contact_match');
+  const contactPhones = tenantScopedDerivedTableSql(scopedDb, 'contact_phone_numbers', 'phone_contact_match');
+  const legacyNoteContacts = tenantScopedDerivedTableSql(scopedDb, 'contacts', 'legacy_note_contact');
+  const clientNameContacts = tenantScopedDerivedTableSql(scopedDb, 'contacts', 'client_name_contact');
+  const searchClients = tenantScopedDerivedTableSql(scopedDb, 'clients', 'client_name_match');
   const interactionJoin = tenantJoinSubquerySql(
     scopedDb,
     trx,
@@ -347,6 +355,65 @@ export function buildContactListSearchQuery(
       },
     }
   );
+  const clientNameJoin = tenantJoinSubquerySql(
+    scopedDb,
+    trx,
+    searchClients.subquery,
+    'client_name_match.client_id',
+    'client_name_contact.client_id',
+    {
+      rootTenantColumn: 'client_name_contact.tenant',
+      joinedTenantColumn: 'client_name_match.tenant',
+    }
+  );
+
+  // Citus cannot push down an OR that spans several distributed tables, so each
+  // additional match source is its own single-distributed-table (or co-located
+  // join) leg returning contact ids, UNION ALLed with the indexed matches.
+  // Mirrors applyClientListIndexedSearchFilter / PR #2547.
+  const extraLegs: Array<{ sql: string; bindings: Knex.RawBinding[] }> = [];
+
+  // Phones are stored formatted, so compare digits-only on both sides; that is
+  // what makes a partial or trailing digit search ('521 762', '762') land.
+  if (searchDigits) {
+    extraLegs.push({
+      sql: `
+          SELECT phone_contact_match.contact_name_id::text AS contact_id
+          FROM ${contactPhones.sql}
+          WHERE regexp_replace(phone_contact_match.phone_number, '[^0-9]+', '', 'g') LIKE '%' || ?::text || '%'
+        `,
+      bindings: [...contactPhones.bindings, searchDigits],
+    });
+  }
+
+  // Legacy plain-text notes column; BlockNote notes are covered by the document
+  // leg above.
+  extraLegs.push({
+    sql: `
+          SELECT legacy_note_contact.contact_name_id::text AS contact_id
+          FROM ${legacyNoteContacts.sql}
+          WHERE legacy_note_contact.notes ILIKE ?
+        `,
+    bindings: [...legacyNoteContacts.bindings, ilikePattern],
+  });
+
+  extraLegs.push({
+    sql: `
+          SELECT client_name_contact.contact_name_id::text AS contact_id
+          FROM ${clientNameContacts.sql}
+          ${clientNameJoin.sql}
+          WHERE client_name_match.client_name ILIKE ?
+        `,
+    bindings: [
+      ...clientNameContacts.bindings,
+      ...clientNameJoin.bindings,
+      ilikePattern,
+    ],
+  });
+
+  const extraLegsSql = extraLegs
+    .map((leg) => `UNION ALL\n          ${leg.sql.trim()}`)
+    .join('\n          ');
 
   const sql = `
         WITH q AS (
@@ -390,8 +457,13 @@ export function buildContactListSearchQuery(
               )
             )
         )
-        SELECT contact_id
-        FROM matched
+        SELECT DISTINCT contact_id
+        FROM (
+          SELECT contact_id
+          FROM matched
+          WHERE contact_id IS NOT NULL
+          ${extraLegsSql}
+        ) contact_matches
         WHERE contact_id IS NOT NULL
       `;
 
@@ -410,6 +482,7 @@ export function buildContactListSearchQuery(
     userId,
     true,
     userId,
+    ...extraLegs.flatMap((leg) => leg.bindings),
   ];
 
   return { sql, bindings };

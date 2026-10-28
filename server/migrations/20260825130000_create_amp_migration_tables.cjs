@@ -12,7 +12,8 @@
  * Keys, indexes, and Citus distribution follow the approved decision record
  * (docs/architecture/amp-decision-record.md): every table is tenant-first with
  * a composite (tenant, <id>) primary key, composite tenant-aware foreign keys,
- * standard RLS, and distribution on tenant colocated with `tenants`. Runs
+ * and distribution on tenant colocated with `tenants` (no RLS: tenant scoping
+ * is application-enforced, see 20260509120000). Runs
  * outside a transaction so create_distributed_table can execute.
  */
 
@@ -32,29 +33,6 @@ const TABLES = [
 
 async function createIndex(knex, name, definition) {
   await knex.raw(`CREATE INDEX IF NOT EXISTS ${name} ON ${definition}`);
-}
-
-async function enableRls(knex, table) {
-  await knex.raw(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`);
-  for (const [suffix, clause] of [
-    ['tenant_isolation_policy', "USING (tenant = current_setting('app.current_tenant', true)::uuid)"],
-    ['tenant_insert_policy', "FOR INSERT WITH CHECK (tenant = current_setting('app.current_tenant', true)::uuid)"],
-  ]) {
-    await knex.raw(`
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM pg_policies
-          WHERE schemaname = 'public'
-            AND tablename = '${table}'
-            AND policyname = '${table}_${suffix}'
-        ) THEN
-          EXECUTE $policy$CREATE POLICY ${table}_${suffix} ON ${table} ${clause}$policy$;
-        END IF;
-      END
-      $$;
-    `);
-  }
 }
 
 exports.up = async function up(knex) {
@@ -315,10 +293,6 @@ exports.up = async function up(knex) {
     'migration_mapping_profiles (tenant, entity_type, source_signature, updated_at DESC)'
   );
   await createIndex(knex, 'idx_migration_reports_job', 'migration_reports (tenant, migration_job_id, created_at DESC)');
-
-  for (const table of TABLES) {
-    await enableRls(knex, table);
-  }
 
   for (const table of TABLES) {
     await ensureTenantDistribution(knex, table);

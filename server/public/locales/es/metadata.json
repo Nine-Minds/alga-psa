@@ -201,7 +201,10 @@
             "title": "Tarea del proyecto"
           }
         },
-        "fallbackTitle": "Detalles del proyecto"
+        "fallbackTitle": "Detalles del proyecto",
+        "staging": {
+          "title": "Preparación del proyecto"
+        }
       },
       "templates": {
         "layout": {
@@ -288,6 +291,12 @@
       },
       "recurring": {
         "title": "Tickets recurrentes"
+      },
+      "templates": {
+        "title": "Plantillas de tickets"
+      },
+      "cannedResponses": {
+        "title": "Respuestas predefinidas"
       }
     },
     "workflowEditor": {
@@ -362,7 +371,10 @@
         },
         "fallbackTitle": "Detalles del activo"
       },
-      "title": "Activos"
+      "title": "Activos",
+      "custody": {
+        "title": "Equipos en custodia"
+      }
     },
     "chat": {
       "title": "Chat"
@@ -627,5 +639,8 @@
     "setupComplete": {
       "title": "Configuración de tarjeta"
     }
+  },
+  "pay": {
+    "title": "Pagar factura"
   }
 }

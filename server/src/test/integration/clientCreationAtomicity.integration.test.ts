@@ -20,7 +20,7 @@ vi.mock('@alga-psa/storage', () => ({ uploadEntityImage: vi.fn(), deleteEntityIm
 vi.mock('@alga-psa/clients/lib/documentsHelpers', () => ({ getClientLogoUrlAsync: vi.fn(), getClientLogoUrlsBatchAsync: vi.fn() }));
 vi.mock('@alga-psa/tags/actions/tagActions', () => ({ createTag: vi.fn(), findTagsByEntityId: vi.fn() }));
 vi.mock('@alga-psa/tags/lib/tagCleanup', () => ({ deleteEntityTags: vi.fn() }));
-vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn() }));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: vi.fn(), publishEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 
 import { createClient } from '@alga-psa/clients/actions/clientActions';
 let db: Knex;

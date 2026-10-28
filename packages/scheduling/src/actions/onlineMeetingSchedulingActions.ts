@@ -4,7 +4,8 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { hasPermission, withAuth } from '@alga-psa/auth';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildScheduleEntryCreatedPayload } from '@alga-psa/workflow-streams';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import { IEditScope } from '@alga-psa/types';
 import type { IRecurrencePattern, IScheduleEntry, IUserWithRoles } from '@alga-psa/types';
@@ -634,18 +635,10 @@ export const scheduleTeamsMeeting = withAuth(async (
 
       for (const scheduleEvent of scheduleEvents) {
         try {
-          await publishEvent({
-            eventType: 'SCHEDULE_ENTRY_CREATED',
-            payload: {
-              tenantId: tenant,
-              userId: user.user_id,
-              entryId: scheduleEvent.entry.entry_id,
-              changes: {
+          await publishWorkflowEvent({ eventType: 'SCHEDULE_ENTRY_CREATED', payload: buildScheduleEntryCreatedPayload({ userId: user.user_id, entryId: scheduleEvent.entry.entry_id, changes: {
                 after: scheduleEvent.entry,
                 assignedUserIds: scheduleEvent.assignedUserIds,
-              },
-            },
-          });
+              } }), ctx: { tenantId: tenant, actor: { actorType: 'USER', actorUserId: user.user_id } } });
         } catch (eventError) {
           console.error('[scheduleTeamsMeeting] Failed to publish SCHEDULE_ENTRY_CREATED event', eventError);
         }

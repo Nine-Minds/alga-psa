@@ -146,9 +146,18 @@ vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueueJobProcessor', 
   fetchImapMessageForPointer: vi.fn(async () => ({ id: 'imap-1' })),
 }));
 
-vi.mock('@alga-psa/event-bus/publishers', () => ({
+// The outbox dispatcher revives stored payloads (real schema check) and replays them with
+// publishBuiltWorkflowPayload / publishNonCatalogEventByName; route those into publishEventMock so the
+// delivery assertions below keep observing the single transport publish.
+vi.mock('@alga-psa/event-bus/publishers', async (importOriginal) => ({
+  reviveStoredWorkflowPayload: ((await importOriginal()) as any).reviveStoredWorkflowPayload,
   publishEvent: (...args: any[]) => publishEventMock(...args),
+  publishBuiltWorkflowPayload: (...args: any[]) => publishEventMock(...args),
+  publishNonCatalogEventByName: (...args: any[]) => publishEventMock(...args),
+  publishStoredWorkflowEvent: (...args: any[]) => publishEventMock(...args),
   publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 function tenantTable<Row extends object = Record<string, any>>(tableExpression: string): Knex.QueryBuilder<Row, Row[]> {

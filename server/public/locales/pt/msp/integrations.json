@@ -1,5 +1,8 @@
 {
   "integrations": {
+    "proFeature": {
+      "title": "Recurso Pro"
+    },
     "accounting": {
       "bulk": {
         "button": "Mapeamento em massa",
@@ -27,7 +30,8 @@
           "mapped": "Mapeado",
           "noResult": "Nenhum resultado foi devolvido para esta linha.",
           "pending": "Pendente",
-          "saved": "Guardado"
+          "saved": "Guardado",
+          "missingField": "Falta {{field}}"
         },
         "suggested": "Sugerido",
         "toSave": "{{total}} para guardar"
@@ -79,7 +83,8 @@
           "instant": "Instantâneo",
           "live": "Ao vivo",
           "manual": "Manual",
-          "twoWay": "2 vias"
+          "twoWay": "2 vias",
+          "iif": "IIF"
         },
         "highlights": {
           "delivery": "Entrega",
@@ -99,6 +104,9 @@
           },
           "xeroCsv": {
             "description": "Exporte faturas para CSV para importação manual para o Xero e importe dados fiscais de relatórios do Xero."
+          },
+          "qbd": {
+            "description": "Exporte faturas como arquivo IIF para importar no QuickBooks Desktop."
           }
         },
         "selected": "{{title}} selecionado",
@@ -124,6 +132,24 @@
           "paymentTerms": "Condições de pagamento",
           "discounts": "Descontos"
         }
+      },
+      "adjustmentMappings": {
+        "desktopAccount": "Nome da conta de receitas Desktop",
+        "description": "Associe descontos e créditos antes de exportar. A associação pertence a esta empresa contabilística.",
+        "add": "Adicionar associação",
+        "remove": "Remover associação",
+        "removeConfirm": "Remover esta associação contabilística?",
+        "desktopTaxAccount": "Nome da conta de imposto sobre vendas Desktop",
+        "desktopCustomer": "Nome do cliente Desktop",
+        "desktopTerms": "Nome das condições Desktop",
+        "descriptionTaxCodes": "Cada região fiscal indica o item ou grupo de imposto sobre vendas cobrado pelo QuickBooks Desktop e a conta de passivo em que é lançado.",
+        "descriptionServices": "Cada serviço indica o item do QuickBooks Desktop usado pelas suas linhas de fatura e a conta de receita em que são lançadas.",
+        "descriptionClients": "O cliente do QuickBooks Desktop com o qual cada cliente é faturado. Clientes não mapeados bloqueiam a exportação.",
+        "descriptionPaymentTerms": "As condições do QuickBooks Desktop impressas em cada fatura. Condições não mapeadas ficam em branco.",
+        "desktopItem": "Nome do item Desktop",
+        "desktopItemHelp": "O item exatamente como aparece na lista de itens do QuickBooks Desktop. Cada linha de fatura indica um item, por isso as exportações ficam bloqueadas até que seja definido.",
+        "desktopSalesTaxItem": "Item ou grupo de imposto sobre vendas",
+        "desktopSalesTaxItemHelp": "Deixe em branco para usar o item de imposto sobre vendas padrão das configurações do QuickBooks Desktop."
       }
     },
     "calendar": {
@@ -399,26 +425,75 @@
           "test": "Testar conexão",
           "testing": "Testando…"
         },
-        "description": "Insira o URL da sua instância CIPP e um token de API para permitir que Alga descubra e sincronize dados do Entra.",
-        "encryptionNote": "A chave de API fica criptografada em repouso e não será exibida novamente depois de salva.",
+        "description": "Insira os detalhes de um cliente de API do CIPP para que o Alga possa descobrir e sincronizar dados do Entra.",
+        "encryptionNote": "O segredo do cliente fica criptografado em repouso e não será exibido novamente depois de salvo.",
         "errors": {
           "missingFields": "O URL base e o token da API são obrigatórios.",
           "testFirst": "Teste a conexão antes de salvar.",
-          "unknown": "Ocorreu um erro desconhecido."
+          "unknown": "Ocorreu um erro desconhecido.",
+          "missingApiClientFields": "O URL da API, o ID do aplicativo (cliente), o segredo do cliente e o ID do tenant são obrigatórios."
         },
         "fields": {
           "apiToken": "Token de API",
-          "apiTokenHelp": "No CIPP, acesse Configurações → CIPP → Acesso à API. Copie a chave de API, não um segredo do cliente do Azure.",
+          "apiTokenHelp": "A chave de API estática de uma versão mais antiga do CIPP. O CIPP não emite mais essas chaves; prefira um cliente de API.",
           "apiTokenPlaceholder": "Insira o token...",
-          "baseUrl": "URL base do CIPP",
-          "baseUrlHelp": "Este é o host do aplicativo de funções CIPP-API (por exemplo, my-cipp-api.azurewebsites.net), não o frontend do CIPP usado para login.",
-          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+          "baseUrl": "URL da API do CIPP",
+          "baseUrlHelp": "O URL da API do CIPP, com ou sem o /api final.",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com",
+          "apiUrl": "URL da API",
+          "apiUrlPlaceholder": "https://your-cipp-api.azurewebsites.net/api",
+          "apiUrlHelp": "Cole o URL da API exibido no CIPP. Ele termina em /api; funciona com ou sem esse sufixo.",
+          "clientId": "ID do aplicativo (cliente)",
+          "clientIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "clientSecret": "Segredo do cliente",
+          "clientSecretPlaceholder": "Insira o segredo do cliente...",
+          "clientSecretHelp": "O CIPP exibe o segredo apenas uma vez, quando você salva o cliente com Save to Azure. Se você não o tiver mais, crie um novo segredo e insira-o aqui.",
+          "tenantId": "ID do tenant",
+          "tenantIdPlaceholder": "00000000-0000-0000-0000-000000000000",
+          "tenantIdHelp": "O ID do tenant exibido na página CIPP-API, ao lado do cliente."
         },
         "test": {
           "passed": "O CIPP respondeu. {{count}} tenants visíveis.",
           "required": "Teste a conexão antes de salvar."
         },
-        "title": "Conectar CIPP"
+        "title": "Conectar CIPP",
+        "reconnectTitle": "Reconectar CIPP",
+        "legacyDescription": "Insira o URL da API do CIPP e uma chave de API estática legada. O CIPP não emite mais essas chaves, então use um cliente de API, se possível.",
+        "reconnectNote": "O URL da API, o ID do aplicativo (cliente) e o ID do tenant são preenchidos a partir da conexão atual. Insira o segredo do cliente novamente. A conexão atual continua funcionando até que os novos detalhes passem em um teste e você salve.",
+        "reconnectNoteLegacy": "O URL da API é preenchido a partir da conexão atual. Insira o ID do aplicativo (cliente), o segredo do cliente e o ID do tenant de CIPP > Integrations > CIPP-API. A conexão atual continua funcionando até que os novos detalhes passem em um teste e você salve.",
+        "legacyNote": "As chaves de API legadas servem apenas para conexões criadas antes de o CIPP introduzir os clientes de API. As conexões existentes continuam funcionando.",
+        "legacyEncryptionNote": "A chave de API fica criptografada em repouso e não será exibida novamente depois de salva.",
+        "help": {
+          "title": "Onde encontrar isto no CIPP",
+          "steps": {
+            "openIntegration": "No CIPP, acesse Integrations > CIPP-API.",
+            "createClient": "Escolha Create New Client.",
+            "enable": "Habilite o cliente.",
+            "saveToAzure": "Escolha Save to Azure.",
+            "copySecret": "Copie o segredo do cliente. O CIPP o exibe apenas uma vez.",
+            "copyDetails": "Copie o ID do tenant e o URL da API dessa mesma página, junto com o ID do aplicativo (cliente)."
+          },
+          "tenantIdDelay": "O ID do tenant pode levar de 5 a 15 minutos para aparecer após o primeiro salvamento. Se ainda não estiver lá, aguarde e atualize a página do CIPP.",
+          "restrictions": "Se o cliente usar Allowed IP Ranges, adicione ali os IPs de saída do Alga. Se usar um Custom Role, a função deve permitir listtenants, listusers, listgroups, listusergroups e ListMailboxes."
+        },
+        "shape": {
+          "useLegacy": "Usar uma chave de API legada em vez disso",
+          "useApiClient": "Usar um cliente de API do CIPP em vez disso (recomendado)"
+        },
+        "failure": {
+          "unreachable": "Não foi possível acessar o CIPP neste URL",
+          "tokenRejected": "A Microsoft rejeitou o login do cliente de API",
+          "apiRefused": "O CIPP recusou o token de acesso",
+          "legacyRejected": "O CIPP rejeitou a chave de API",
+          "roleBlocked": "A função personalizada do CIPP bloqueia uma permissão necessária para a sincronização",
+          "transport": {
+            "dns": "Não foi possível acessar {{host}}: o nome do host não é resolvido. Verifique a URL da API; copie-a de CIPP > Integrations > CIPP-API.",
+            "refused": "Não foi possível acessar {{host}}: a conexão foi recusada. O host existe, mas não aceita conexões. Verifique a URL da API e se o aplicativo de funções CIPP-API está em execução.",
+            "timeout": "Não foi possível acessar {{host}}: a solicitação expirou. O host pode estar indisponível ou um firewall pode estar bloqueando nosso tráfego. Verifique a URL da API e tente novamente.",
+            "tls": "Não foi possível acessar {{host}}: o certificado TLS não foi aceito. Use a URL https da API mostrada em CIPP > Integrations > CIPP-API.",
+            "network": "Não foi possível acessar {{host}}: a solicitação de rede falhou antes de o CIPP responder. Verifique a URL da API e tente novamente."
+          }
+        }
       },
       "console": {
         "actions": {
@@ -771,7 +846,6 @@
             "validationFailed": "A Microsoft fez seu login, mas a lista de tenants gerenciados não pôde ser lida; nada foi salvo. Suas permissões foram aceitas — geralmente significa que o tenant de parceiro não está integrado ao Microsoft 365 Lighthouse ou não tem relações GDAP ativas.",
             "tokenRejected": "A Microsoft rejeitou o token de acesso da conexão; nada foi salvo. Inicie a conexão novamente."
           },
-          "cippServerLabel": "Servidor CIPP",
           "connectingSuffix": "(Conectando...)",
           "details": "Detalhes da conexão",
           "directCredentialSourceLabel": "Fonte da credencial:",
@@ -784,7 +858,17 @@
           "types": {
             "cipp": "CIPP",
             "direct": "Microsoft Entra Direto"
-          }
+          },
+          "authTypeLabel": "Autenticação",
+          "authTypes": {
+            "api_client": "Cliente de API",
+            "legacy_api_token": "Chave de API legada"
+          },
+          "apiUrlLabel": "URL da API",
+          "clientIdLabel": "ID do aplicativo (cliente)",
+          "cippTenantIdLabel": "ID do tenant",
+          "legacyNotice": "Esta conexão usa uma chave de API legada do CIPP. Ela continua sincronizando sem alterações. Reconecte para mudar para um cliente de API do CIPP.",
+          "reconnectCipp": "Reconectar"
         },
         "currentStep": {
           "connect": {
@@ -983,8 +1067,8 @@
             "description": "O Alga lê os tenants por meio da instância do CIPP que você já mantém.",
             "label": "CIPP (CyberDrain Improved Partner Portal)",
             "prerequisites": {
-              "apiHost": "O host do aplicativo de funções CIPP-API, não o frontend do CIPP.",
-              "apiKey": "Uma chave de API do CIPP com acesso à lista de tenants.",
+              "apiHost": "O URL da API, o ID do aplicativo (cliente) e o ID do tenant de CIPP > Integrations > CIPP-API.",
+              "apiKey": "O segredo do cliente de API, que o CIPP exibe apenas uma vez.",
               "instance": "Uma instância CIPP em funcionamento."
             }
           },
@@ -1223,7 +1307,12 @@
         "recommendedUnsaved": "Recomendado — não salvo",
         "unsavedChange": "Alteração não salva",
         "unsavedNotice": "Estes filtros só terão efeito depois de serem salvos."
-      }
+      },
+      "proFeature": {
+        "description": "A integração com o Microsoft Entra está disponível no AlgaPSA Pro.",
+        "notice": "A integração de identidade do Microsoft Entra é um recurso do Pro."
+      },
+      "loading": "Carregando a integração com o Microsoft Entra…"
     },
     "google": {
       "settings": {
@@ -1294,6 +1383,9 @@
       }
     },
     "hudu": {
+      "proFeature": {
+        "description": "A integração com a documentação de TI do Hudu está disponível no AlgaPSA Pro."
+      },
       "clientTab": {
         "source": "Fonte: Hudu",
         "openInHudu": "Aberto em Hudu",
@@ -1669,10 +1761,15 @@
           "consentNotGranted": "A Microsoft não confirmou o consentimento do administrador.",
           "consentPersistFailed": "Não foi possível registrar o consentimento do administrador da Microsoft.",
           "invalidState": "Esta solicitação de configuração da Microsoft é inválida ou expirou. Inicie novamente nas configurações de Provedores.",
-          "microsoftError": "A Microsoft não conseguiu concluir a solicitação de configuração. Tente novamente ou use a configuração manual.",
+          "microsoftError": "A Microsoft não conseguiu concluir o pedido de configuração.",
           "missingCode": "A Microsoft não retornou um código de autorização. Inicie a configuração novamente.",
-          "sessionMismatch": "Sua sessão do AlgaPSA não corresponde ao administrador que iniciou esta configuração. Faça login e tente novamente.",
-          "optionsLoadFailed": "Não foi possível carregar as opções de configuração do email da Microsoft."
+          "sessionMismatch": "Esta configuração foi iniciada noutro navegador ou numa janela privada. Conclua-a na mesma janela em que a iniciou ou use o link de aprovação.",
+          "optionsLoadFailed": "Não foi possível carregar as opções de configuração do email da Microsoft.",
+          "policyBlocked": "Uma política de Acesso Condicional ou de dispositivo no seu locatário da Microsoft bloqueou o início de sessão. Peça ao administrador da Microsoft que isente esta aplicação ou aprove a partir de um dispositivo permitido pela política.",
+          "adminRequired": "A aplicação tem de ser aprovada por um administrador global da Microsoft. Copie o link de aprovação e envie-o a essa pessoa.",
+          "wrongTenant": "A conta Microsoft utilizada pertence a um locatário da Microsoft diferente daquele que está a ser configurado.",
+          "appNotFound": "A aplicação Microsoft não foi encontrada nesse locatário da Microsoft. Pode ter sido eliminada ou o locatário da Microsoft está incorreto. Pode configurar manualmente outra aplicação.",
+          "quoteDiagnostics": "Indique isto ao verificar os registos de início de sessão do Entra: {{diagnostics}}"
         },
         "fields": {
           "clientId": "ID do cliente",
@@ -2314,6 +2411,9 @@
         }
       },
       "ninjaOne": {
+        "proFeature": {
+          "description": "A integração RMM com NinjaOne está disponível no AlgaPSA Pro."
+        },
         "loading": "Carregando as configurações de integração do NinjaOne...",
         "card": {
           "title": "Integração NinjaOne RMM",
@@ -2590,7 +2690,206 @@
           "select": "Selecione o contato"
         }
       },
+      "datto": {
+        "errors": {
+          "loadSettings": "Falha ao carregar as configurações do Datto RMM",
+          "loadSiteMappings": "Falha ao carregar os mapeamentos de sites",
+          "saveConfig": "Falha ao salvar a configuração do Datto RMM",
+          "connectionTest": "Falha no teste de conexão",
+          "disconnect": "Falha na desconexão",
+          "syncSites": "Falha na sincronização de sites",
+          "someSitesFailed": "Alguns sites não foram sincronizados: {{errors}}",
+          "syncDevices": "Falha na sincronização de dispositivos",
+          "someDevicesFailed": "Alguns dispositivos não foram sincronizados: {{errors}}",
+          "updateMapping": "Falha ao atualizar o mapeamento",
+          "backfillAlerts": "Falha no preenchimento de alertas",
+          "someAlertsFailed": "Alguns alertas não foram atualizados: {{errors}}",
+          "ingestSoftware": "Falha na ingestão de software",
+          "someSoftwareFailed": "Alguns dispositivos tiveram falha na ingestão de software: {{errors}}",
+          "createClients": "Não foi possível criar clientes para os sites do Datto",
+          "someClientsFailed": "Alguns sites não foram mapeados: {{errors}}",
+          "regenerateWebhookSecret": "Não foi possível regenerar o segredo do webhook"
+        },
+        "toasts": {
+          "saveFailedTitle": "Falha ao salvar",
+          "savedTitle": "Salvo",
+          "savedDescription": "Configuração do Datto RMM atualizada.",
+          "connectionFailedTitle": "Falha na conexão",
+          "connectedTitle": "Conectado",
+          "connectedDescription": "Conexão com o Datto RMM verificada.",
+          "disconnectFailedTitle": "Falha na desconexão",
+          "disconnectedTitle": "Desconectado",
+          "disconnectedDescription": "Credenciais do Datto RMM removidas. Os mapeamentos de sites foram mantidos.",
+          "syncFailedTitle": "Falha na sincronização",
+          "sitesSyncedTitle": "Sites sincronizados",
+          "sitesSyncedDescription": "Os sites do Datto foram sincronizados em mapeamentos de sites.",
+          "devicesSyncedTitle": "Dispositivos sincronizados",
+          "devicesSyncedDescription": "Os dispositivos do Datto foram sincronizados em ativos.",
+          "updateFailedTitle": "Falha na atualização",
+          "backfillFailedTitle": "Falha no preenchimento",
+          "alertsSyncedTitle": "Alertas sincronizados",
+          "alertsSyncedDescription": "Os alertas abertos do Datto foram preenchidos.",
+          "ingestionFailedTitle": "Falha na ingestão",
+          "softwareIngestedTitle": "Software ingerido",
+          "softwareIngestedDescription": "O inventário de software do Datto foi ingerido.",
+          "optionsSavedDescription": "Opções do Datto RMM atualizadas.",
+          "createClientsFailedTitle": "Falha ao criar clientes",
+          "sitesSyncedWithClients": "Os sites do Datto foram sincronizados. Novos sites: {{created}} clientes criados, {{linked}} associados, {{failed}} falhados.",
+          "webhookSecretRegeneratedTitle": "Segredo do webhook regenerado",
+          "webhookSecretRegeneratedDescription": "Atualize o valor do cabeçalho nas suas respostas de webhook do Datto."
+        },
+        "success": {
+          "saved": "Configuração do Datto RMM salva. Execute \"Testar conexão\" para ativá-la.",
+          "unnamedAccount": "sua conta",
+          "connection": "Conexão bem-sucedida. Conta: {{account}}. Sites: {{sites}}, Dispositivos: {{devices}}.",
+          "disconnected": "Desconectado.",
+          "siteSyncCompleted": "Sincronização de sites concluída. Processados: {{processed}}, Criados: {{created}}, Atualizados: {{updated}}, Com falha: {{failed}}",
+          "deviceSyncCompleted": "Sincronização de dispositivos concluída. Processados: {{processed}}, Criados: {{created}}, Atualizados: {{updated}}, Com falha: {{failed}}",
+          "alertBackfillCompleted": "Preenchimento de alertas concluído. Processados: {{processed}}, Criados: {{created}}, Atualizados: {{updated}}, Com falha: {{failed}}",
+          "softwareIngestionCompleted": "Ingestão de software concluída. Processados: {{processed}}, Instalados/Atualizados: {{created}}, Ativos atualizados: {{updated}}, Com falha: {{failed}}",
+          "clientsCreated": "Criados {{created}} clientes e associados {{linked}} existentes. Ignorados: {{skipped}}, Falhados: {{failed}}"
+        },
+        "mappings": {
+          "site": "Site do Datto",
+          "client": "Cliente Alga",
+          "defaultContact": "Contato padrão",
+          "missingBadge": "Não está no Datto",
+          "onDemandBadge": "A pedido",
+          "signedInUsersSite": "Utilizadores com sessão iniciada no site",
+          "signedInUsersSelect": "Escolha um site mapeado"
+        },
+        "dattoIdLabel": "ID do Datto: {{id}}",
+        "client": {
+          "loading": "Carregando clientes…",
+          "select": "Selecionar cliente",
+          "suggested": "Sugerido: {{client}}",
+          "create": "Criar cliente \"{{name}}\"",
+          "creating": "A criar…"
+        },
+        "contact": {
+          "select": "Selecionar contato"
+        },
+        "autoSync": "Sincronização automática",
+        "platform": {
+          "custom": "URL personalizada"
+        },
+        "webhook": {
+          "copiedTitle": "Copiado",
+          "url": "URL do webhook",
+          "urlCopied": "URL do webhook copiada para a área de transferência.",
+          "copy": "Copiar",
+          "headerName": "Nome do cabeçalho personalizado",
+          "headerNameCopied": "Nome do cabeçalho do webhook copiado para a área de transferência.",
+          "secret": "Segredo do cabeçalho",
+          "secretCopied": "Segredo do webhook copiado para a área de transferência.",
+          "bodyTemplate": "Modelo do corpo (alerta acionado)",
+          "bodyTemplateCopied": "Modelo do corpo copiado para a área de transferência.",
+          "resolveBodyTemplate": "Modelo do corpo (alerta resolvido)",
+          "resolveBodyTemplateCopied": "Modelo do corpo de resolução copiado para a área de transferência.",
+          "unavailable": "Informações do webhook indisponíveis. (Requer permissão de atualização das definições.)"
+        },
+        "disconnectConfirm": {
+          "title": "Desconectar o Datto RMM?",
+          "message": "A chave de API e o segredo armazenados são removidos, o segredo do webhook é redefinido e as sincronizações agendadas são interrompidas. Os mapeamentos de sites e os ativos sincronizados são mantidos."
+        },
+        "actions": {
+          "disconnect": "Desconectar",
+          "refresh": "Atualizar",
+          "saving": "Salvando...",
+          "save": "Salvar",
+          "testing": "Testando...",
+          "testConnection": "Testar conexão",
+          "disconnecting": "Desconectando...",
+          "syncing": "Sincronizando...",
+          "syncSites": "Sincronizar sites",
+          "syncDevices": "Sincronizar dispositivos",
+          "ingesting": "Ingerindo...",
+          "ingestSoftware": "Ingerir software",
+          "syncAlerts": "Sincronizar alertas",
+          "createClients": "Criar clientes",
+          "createClientsForUnmapped": "Criar clientes para não mapeados ({{count}})",
+          "regenerateSecret": "Regenerar segredo"
+        },
+        "title": "Datto RMM",
+        "description": "Conecte o Datto RMM para sincronizar sites e dispositivos, ingerir alertas e abrir o Web Remote a partir dos ativos.",
+        "status": {
+          "connected": "Conectado",
+          "disconnected": "Desconectado",
+          "instanceUrlNotSet": "URL da API não definida"
+        },
+        "counts": {
+          "mappedSites": "Sites mapeados",
+          "syncedDevices": "Dispositivos sincronizados",
+          "activeAlerts": "Alertas ativos",
+          "lastSync": "Última sincronização",
+          "never": "Nunca"
+        },
+        "lastError": "Último erro: {{error}}",
+        "fields": {
+          "platform": "Plataforma",
+          "platformHelp": "Escolha a região que aparece no endereço usado para entrar no Datto RMM (por exemplo, https://merlot.rmm.datto.com corresponde a Merlot).",
+          "instanceUrl": "URL da API",
+          "instanceUrlHelp": "O host da API do Datto, por ex. https://merlot-api.centrastage.net. Um /api final é adicionado automaticamente.",
+          "apiUserNote": "Crie um usuário de API do Datto dedicado ao Alga. Abra esse usuário no Datto RMM para gerar sua chave de API e seu segredo, e conceda ao nível de segurança dele acesso de leitura aos dados de conta, sites, dispositivos, alertas e auditoria.",
+          "softwareOnSync": "Ingerir software durante a sincronização de dispositivos",
+          "softwareOnSyncHelp": "Lê a auditoria de software de cada dispositivo alterado durante a sincronização. Isso exige uma chamada de API extra por dispositivo alterado e pode ser lento em contas grandes.",
+          "resolveOnClose": "Resolver o alerta do Datto quando o ticket for fechado",
+          "resolveOnCloseHelp": "Requer um usuário de API do Datto com acesso de gravação a alertas. Deixe desativado para um usuário de API somente leitura.",
+          "rebootComponent": "Componente de reinicialização",
+          "rebootComponentSelect": "Selecione um componente",
+          "rebootComponentUid": "UID do componente",
+          "rebootComponentFallback": "A lista de componentes não está disponível ({{reason}}). Cole o UID do componente.",
+          "rebootComponentUnknownReason": "erro desconhecido",
+          "rebootComponentHelp": "Deixe vazio para desativar a ação de reinicialização. Somente componentes que já estão na sua conta do Datto podem ser executados.",
+          "hostChangedHint": "A plataforma ou a URL da API mudou. Insira novamente a chave de API e o segredo da API para salvar.",
+          "optionsNeedCredentials": "Salve primeiro a chave de API e o segredo. Estas opções ficam bloqueadas enquanto não houver credenciais armazenadas.",
+          "autoCreateClients": "Criar clientes automaticamente para novos sites",
+          "autoCreateClientsHelp": "Os sites são atualizados antes de cada sincronização agendada de dispositivos. Quando ativado, um site visto pela primeira vez recebe um cliente Alga com o seu nome ou é associado ao cliente que já tem esse nome. Os sites não mapeados existentes e os sites a pedido não são alterados."
+        },
+        "auth": {
+          "apiKey": "Chave de API",
+          "enterApiKey": "Digite a chave de API",
+          "saved": "Salvo: {{value}}",
+          "apiSecret": "Segredo da API",
+          "savedEnterToUpdate": "Salvo (digite para atualizar)",
+          "enterApiSecret": "Digite o segredo da API"
+        },
+        "statusLine": {
+          "configured": "Status: Configurado",
+          "notConfigured": "Status: Não configurado"
+        },
+        "loadingSettings": "Carregando configurações do Datto RMM...",
+        "sections": {
+          "sites": "Sites",
+          "sitesDescription": "Sincronize os sites do Datto em mapeamentos de sites do Alga e depois associe-os a clientes do Alga.",
+          "siteMapping": "Mapeamento de sites",
+          "siteMappingDescription": "Atribua cada site do Datto a um cliente do Alga e controle a sincronização automática por site. As sugestões vêm do nome do site ou do nome da empresa no Autotask e nunca são aplicadas automaticamente.",
+          "siteMappingEmpty": "Nenhum site encontrado. Execute \"Sincronizar sites\" primeiro.",
+          "devices": "Dispositivos",
+          "devicesDescription": "Sincronize os dispositivos do Datto em ativos do Alga para os sites com sincronização automática ativada.",
+          "alerts": "Alertas",
+          "alertsDescription": "Os alertas são consultados no cronograma configurado em Automação de alertas, abaixo. Use \"Sincronizar alertas\" para buscar agora os alertas abertos.",
+          "webhooks": "Webhook (via rápida opcional)",
+          "webhooksDescription": "A consulta periódica é o caminho garantido. Para receber alertas em segundos, adicione uma ação de resposta de webhook às políticas de monitoramento do Datto usando a URL, o cabeçalho personalizado e o modelo do corpo abaixo.",
+          "assetActions": "Ações de ativos",
+          "assetActionsDescription": "Escolha o componente do Datto que reinicializa um dispositivo quando um técnico clica em \"Reinicializar dispositivo\" em um ativo. Ele é executado como Quick Job e requer um usuário de API com acesso de gravação."
+        },
+        "createClientsConfirm": {
+          "title": "Criar clientes para os sites não mapeados?",
+          "message": "Cada um dos {{count}} sites não mapeados recebe um cliente Alga com o seu nome e é mapeado para ele. Um site cujo nome corresponde a um cliente existente é associado a esse cliente. Os sites a pedido e os que já não existem no Datto não são alterados."
+        },
+        "proFeature": {
+          "description": "A integração com o Datto RMM está disponível no AlgaPSA Pro."
+        },
+        "regenerateSecretConfirm": {
+          "title": "Regenerar o segredo do webhook?",
+          "message": "O segredo atual deixa de funcionar imediatamente. Os alertas do webhook são rejeitados até que cada resposta de webhook do Datto envie o novo valor do cabeçalho. A sondagem não é afetada."
+        }
+      },
       "tanium": {
+        "proFeature": {
+          "description": "A integração RMM com Tanium está disponível no AlgaPSA Pro."
+        },
         "loading": "Carregando configurações de integração do Tanium...",
         "actions": {
           "discoverScopes": "Descubra escopos",
@@ -2661,6 +2960,9 @@
         }
       },
       "levelio": {
+        "proFeature": {
+          "description": "A integração RMM com Level.io está disponível no AlgaPSA Pro."
+        },
         "actions": {
           "backfillAlerts": "Alertas de preenchimento",
           "disconnect": "Desconectar",
@@ -2733,16 +3035,35 @@
           "copied": "Copiado",
           "copy": "Cópia",
           "description": "Level não pode registrar webhooks por meio de sua API. No Level, crie uma automação com uma ação HTTP POST usando o URL, o cabeçalho e a carga útil abaixo para enviar alertas para o Alga em tempo real.",
+          "fallbackDescription": "Use esta alternativa apenas quando os webhooks nativos em Configurações → Webhooks do Level não puderem ser usados. Crie uma automação com uma ação HTTP POST usando a URL, o cabeçalho e o payload abaixo para enviar alertas ao Alga.",
+          "fallbackNameHint": "Edite o valor \"name\" em cada automação. Junto com o dispositivo, ele identifica o alerta; repetições com o mesmo nome no mesmo dispositivo contam como um único alerta.",
+          "fallbackTitle": "Alternativa: requisição HTTP de automação",
           "header": "Cabeçalho: {{name}}",
           "hideSecret": "Ocultar segredo",
           "loading": "Os detalhes do webhook são carregados após a configuração da integração.",
+          "nativeDescription": "No Level, abra Configurações → Webhooks, adicione um webhook com a URL e a chave de assinatura abaixo e ative os eventos listados. O Level assina cada entrega e o Alga verifica a assinatura.",
+          "nativeEvents": "Eventos a ativar",
+          "nativeEventsHelp": "Ative alert_active e alert_resolved. Os demais eventos são confirmados e ignorados.",
+          "nativeSigningSecret": "Chave de assinatura",
+          "nativeTitle": "Webhook nativo (recomendado)",
           "payload": "Modelo de carga útil",
+          "regenerateCancel": "Cancelar",
+          "regenerateConfirmLabel": "Gerar novamente",
+          "regenerateConfirmMessage": "Os webhooks existentes do Level falharão com 401 até que você cole a nova chave de assinatura nas configurações de webhook do Level. O Level tenta reenviar, mas as entregas podem ser perdidas se a chave não for atualizada.",
+          "regenerateConfirmTitle": "Gerar a chave de assinatura novamente?",
+          "regenerateConfirmed": "Chave de assinatura gerada novamente. Atualize-a nas configurações de webhook do Level.",
+          "regenerateFailed": "Falha ao gerar a chave de assinatura novamente",
+          "regenerateSecret": "Gerar chave novamente",
           "showSecret": "Mostrar segredo",
           "title": "Webhook de alerta",
           "url": "URL do webhook"
         }
       },
       "huntress": {
+        "proFeature": {
+          "title": "Integração com Huntress",
+          "description": "A integração de segurança com Huntress é um recurso Pro."
+        },
         "columns": {
           "organization": "Organização da Huntress",
           "client": "Cliente Alga",
@@ -2783,7 +3104,7 @@
         },
         "connection": {
           "title": "Conectado à conta {{account}}",
-          "summary": "{{organizations}} organizações ({{unmapped}} não mapeadas) · {{openIncidents}} incidentes em aberto · última consulta: {{lastPoll}}",
+          "summary": "{{organizations}} organizações ({{unmapped}} não mapeadas) · {{openAlerts}} alertas em aberto · última consulta: {{lastPoll}}",
           "neverPolled": "nunca",
           "lastPollFailed": "Falha na última consulta: {{error}}",
           "routingIncompleteWarning": "A consulta de incidentes está pausada até que a configuração de roteamento abaixo esteja completa (quadro, cliente/quadro alternativo e as prioridades dos três níveis de gravidade).",
@@ -2806,6 +3127,8 @@
           "selectPriority": "Prioridade",
           "pollInterval": "Intervalo de consulta (minutos)",
           "autoClose": "Fechar os tickets quando a Huntress encerrar o incidente",
+          "ingestEscalations": "Criar tickets a partir das escalações da Huntress",
+          "ingestEscalationsHelp": "As escalações usam as mesmas configurações de quadro, categoria, mapeamento de prioridades e fechamento automático dos incidentes. Uma escalação que abrange várias organizações cria um ticket por organização.",
           "closedStatus": "Status de encerramento",
           "selectStatus": "Selecionar status",
           "save": "Salvar configuração de roteamento",
@@ -2884,6 +3207,56 @@
         "errors": {
           "saveFailed": "Não foi possível salvar a programação de sincronização de dispositivos."
         }
+      },
+      "peopleMode": {
+        "label": "Pessoas",
+        "options": {
+          "off": "Desativado",
+          "suggest": "Sugerir",
+          "auto": "Atribuir automaticamente"
+        },
+        "updateFailed": "Não foi possível atualizar o modo de pessoas"
+      },
+      "signedInUsers": {
+        "title": "Usuários conectados",
+        "description": "Os nomes de usuário informados pelos dispositivos desta organização e o contato correspondente a cada um.",
+        "empty": "Nenhum usuário conectado informado ainda.",
+        "noClient": "Associe esta organização a um cliente antes de associar seus usuários.",
+        "refresh": "Atualizar",
+        "selectContact": "Selecionar contato",
+        "loadFailed": "Não foi possível carregar os usuários conectados.",
+        "saveFailed": "Não foi possível salvar a associação.",
+        "columns": {
+          "user": "Usuário conectado",
+          "devices": "Dispositivos",
+          "method": "Associado por",
+          "contact": "Contato"
+        },
+        "methods": {
+          "mapped": "Associação salva",
+          "email": "E-mail",
+          "username": "Nome de usuário",
+          "name": "Nome completo",
+          "none": "Sem correspondência"
+        }
+      },
+      "clientChange": {
+        "title": "Mover os dispositivos desta organização?",
+        "message": "{{count}} ativo(s) serão movidos para {{client}}. Atribuições, grupos e perfis de faturamento do cliente anterior serão removidos.",
+        "confirm": "Mover dispositivos"
+      },
+      "billingProfile": {
+        "label": "Perfil de faturamento",
+        "clientDefault": "Padrão do cliente",
+        "updateFailed": "Falha ao atualizar o perfil de faturamento"
+      },
+      "errors": {
+        "invalidPeopleMode": "Esse não é um modo de pessoas válido.",
+        "billingProfileUnavailable": "Esse perfil de faturamento não está disponível para este cliente.",
+        "mappingNotFound": "Esse vínculo não existe mais. Atualize a página e tente novamente.",
+        "forbidden": "Você não tem permissão para alterar isso.",
+        "clientNotFound": "Esse cliente já não existe. Atualize e tente novamente.",
+        "contactNotForClient": "Esse contato não pertence ao cliente a que este site está mapeado."
       }
     },
     "sso": {
@@ -3454,6 +3827,11 @@
           "regenerate": "Gerar pacote novamente",
           "regenerating": "Gerando novamente..."
         }
+      },
+      "unavailable": {
+        "signInTitle": "Login no Teams indisponível",
+        "tabTitle": "Guia do Teams indisponível",
+        "description": "A integração com o Microsoft Teams está disponível apenas no Pro."
       }
     },
     "xero": {
@@ -3847,13 +4225,16 @@
             "callControl": "Controle de chamadas",
             "xapi": "API de configuração",
             "lastChecked": "Última verificação",
-            "notConnectedHint": "Conecte a API do PBX acima para usar este recurso."
+            "notConnectedHint": "Conecte a API do PBX acima para usar este recurso.",
+            "usersBlocked": "A função do aplicativo de API do 3CX não pode ler usuários. Conceda os direitos necessários em 3CX Admin Console > Integrations > API > (app) > Role.",
+            "contactsBlocked": "A função do aplicativo de API do 3CX não pode gerenciar contatos. Conceda os direitos necessários em 3CX Admin Console > Integrations > API > (app) > Role."
           },
           "extensions": {
             "title": "Ramais",
             "sync": "Sincronizar do PBX",
             "lastSync": "Última sincronização",
             "empty": "Nenhum ramal sincronizado ainda.",
+            "emptyAfterSync": "O 3CX não retornou usuários ativados; verifique as permissões do aplicativo de API",
             "dn": "Ramal",
             "pbxUser": "Usuário do PBX",
             "algaUser": "Usuário do AlgaPSA",
@@ -3953,6 +4334,59 @@
           "providers": "Hoje o Teams Phone; o mesmo núcleo de chamadas sustentará os próximos provedores."
         }
       }
+    },
+    "qbd": {
+      "settings": {
+        "title": "Integração QuickBooks Desktop (IIF)",
+        "description": "Exporte faturas como arquivo IIF para Arquivo → Utilitários → Importar → Arquivos IIF no QuickBooks Desktop.",
+        "loading": "Carregando configurações do QuickBooks Desktop...",
+        "savedMessage": "Configurações salvas com sucesso",
+        "save": "Salvar configurações",
+        "connectionsPermissionNotice": "Você pode visualizar as configurações do QuickBooks Desktop, mas alterá-las exige a capacidade de gerenciar conexões. Peça a um administrador para concedê-la.",
+        "errors": {
+          "load": "Falha ao carregar as configurações do QuickBooks Desktop",
+          "save": "Falha ao salvar as configurações do QuickBooks Desktop"
+        },
+        "warning": {
+          "title": "Faça primeiro um backup do arquivo da empresa",
+          "description": "O QuickBooks Desktop cria qualquer nome de cliente, item, conta ou condição que não reconheça ao importar um arquivo IIF, e importações IIF não podem ser desfeitas. Verifique se cada nome abaixo e nos mapeamentos corresponde exatamente ao arquivo da empresa e teste a primeira importação em uma cópia de backup."
+        },
+        "exportSettings": {
+          "title": "Configurações de exportação IIF",
+          "description": "Informe os nomes de contas e itens do QuickBooks Desktop exatamente como aparecem no plano de contas e na lista de itens."
+        },
+        "fields": {
+          "arAccount": "Conta de contas a receber",
+          "arAccountHelp": "A conta a receber em que cada fatura é lançada.",
+          "defaultIncomeAccount": "Conta de receita padrão",
+          "defaultIncomeAccountHelp": "A conta de receita para itens mapeados a partir de uma exportação e para qualquer mapeamento de Serviços ou Descontos sem conta.",
+          "salesTaxPayableAccount": "Conta de imposto sobre vendas a pagar",
+          "salesTaxPayableAccountHelp": "A conta em que a linha de imposto sobre vendas é lançada, a menos que o mapeamento de códigos fiscais da região indique outra.",
+          "defaultSalesTaxItem": "Item de imposto sobre vendas padrão",
+          "defaultSalesTaxItemHelp": "Item ou grupo de imposto sobre vendas para faturas tributadas cujo mapeamento de códigos fiscais não indica nenhum.",
+          "newProductItemType": "Tipo de item para produtos novos",
+          "inventoryWarning": "Os recebimentos de estoque do Alga não são exportados, então as quantidades em estoque no QuickBooks ficarão negativas, a menos que você também registre o estoque no QuickBooks.",
+          "nonInventoryHelp": "Recomendado: o Alga continua como sistema de referência do estoque e o QuickBooks registra apenas a venda.",
+          "inventoryAssetAccount": "Conta de ativo de estoque",
+          "cogsAccount": "Conta de custo das mercadorias vendidas"
+        },
+        "mappings": {
+          "title": "Mapeamentos do QuickBooks",
+          "description": "Mapeie clientes, serviços, descontos, códigos fiscais e condições de pagamento do Alga para os nomes no arquivo da empresa do QuickBooks Desktop. Cada serviço e desconto precisa de um item do Desktop; condições de pagamento não mapeadas ficam em branco.",
+          "permissionNotice": "Editar mapeamentos do QuickBooks Desktop requer a permissão de gerenciar mapeamentos. Peça a um administrador para concedê-la."
+        },
+        "exports": {
+          "description": "Crie um lote de exportação do QuickBooks Desktop, execute-o e, em seguida, baixe o arquivo IIF nos detalhes do lote."
+        },
+        "newItems": {
+          "title": "Itens criados pelas exportações",
+          "description": "Quando uma exportação cria um item novo no QuickBooks para um produto do Alga, usa este tipo de item. Serviços são sempre criados como itens de serviço."
+        },
+        "itemTypes": {
+          "nonInventory": "Peça sem estoque",
+          "inventory": "Peça de estoque"
+        }
+      }
     }
   },
   "errors": {
@@ -3980,6 +4414,8 @@
       "managePermission": "Permissão negada: você não tem permissão para gerenciar os mapeamentos contábeis.",
       "loadFailed": "Não é possível carregar os dados de mapeamento. Tente novamente.",
       "duplicate": "Já existe um mapeamento para esta entidade. Edite o mapeamento existente.",
+      "duplicateTarget": "Este destino já está mapeado para outra entidade nesta organização. Escolha um destino diferente.",
+      "duplicateXeroItem": "Este item do Xero já está mapeado para outro serviço. Um item só pode ser mapeado para um serviço; para faturar vários serviços com o mesmo código, mapeie-os para uma conta de receita.",
       "saveFailed": "Não é possível salvar o mapeamento. Tente novamente.",
       "idRequiredForUpdate": "O ID do mapeamento é obrigatório para a atualização.",
       "noUpdateData": "Nenhum dado de atualização informado.",
@@ -4070,6 +4506,10 @@
       "contactWithoutClient": "Já existe no sistema um contato com este endereço de email sem atribuição de cliente",
       "emailOnAnotherClient": "Este email já está associado a outro cliente",
       "emailOnAnotherClientNamed": "Este email já está associado a {{clientName}}"
+    },
+    "quickbooksDesktop": {
+      "viewSettingsPermission": "O usuário não tem permissão para visualizar as configurações de integração",
+      "manageIntegrationsPermission": "O usuário não tem permissão para gerenciar as configurações de integração"
     }
   },
   "telephony": {

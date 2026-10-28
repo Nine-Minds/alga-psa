@@ -7,6 +7,11 @@ import type {
   ISO8601String,
 } from "@alga-psa/types";
 import { toPlainDate } from "@alga-psa/core";
+import {
+  allocateCentsByWeights,
+  fixedMemberContributionCents,
+  fixedRateBasisOf,
+} from "@alga-psa/shared/billingClients/fixedMemberRate";
 import type {
   ChargeComputeClient,
   ChargeComputeTaxPorts,
@@ -40,6 +45,11 @@ export interface FixedPlanServiceRow {
   configuration_quantity?: number | string | null;
   configuration_custom_rate?: unknown;
   service_base_rate: number | string | null;
+  /**
+   * What `service_base_rate` means ('per_unit' or 'share'; see
+   * fixedMemberRate.ts). NULL on a stored rate reads as per-unit.
+   */
+  base_rate_basis?: string | null;
   enable_proration?: boolean | null;
   quantity?: number | string | null;
   /**
@@ -266,7 +276,11 @@ export function resolveFixedPlanLevelBaseRate({
             Number(
               service.configuration_quantity ?? service.service_quantity ?? 1,
             ) || 1;
-          derivedBaseRate += parsedServiceBaseRate * quantity;
+          derivedBaseRate += fixedMemberContributionCents(
+            parsedServiceBaseRate,
+            fixedRateBasisOf(service),
+            quantity,
+          );
           hasServiceBaseRate = true;
         }
       }
@@ -396,10 +410,11 @@ function formatCents(cents: number, currencyCode: string): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: currencyCode || "USD",
+  // LEVERAGE: pattern currency-minor-units — hard-coded /100 assumes a 2-digit currency; display/compute formatting should go through formatCurrencyFromMinorUnits (alga0002091 follow-up)
   }).format(cents / 100);
 }
 
-export type FixedFeeAllocationBasis = "stored_shares" | "quantity" | "even_split";
+export type FixedFeeAllocationBasis = "stored_rates" | "quantity" | "even_split";
 
 export interface FixedFeeAllocation {
   basis: FixedFeeAllocationBasis;
@@ -418,50 +433,11 @@ const nonNegativeFinite = (raw: unknown): number => {
 };
 
 /**
- * Split `totalCents` across weighted members so the parts sum EXACTLY to the
- * total: floor each exact share, then hand the leftover cents to the largest
- * fractional remainders (ties broken by service_id so the split never depends
- * on row order). `totalCents` is in the contract/invoice currency's minor
- * units; nothing here knows or assumes a currency.
- */
-function allocateCentsByWeights(
-  totalCents: number,
-  members: Array<{ key: string; weight: number }>,
-): { amounts: number[]; proportions: number[] } {
-  const weightSum = members.reduce((sum, member) => sum + member.weight, 0);
-  const exact = members.map((member) => (totalCents * member.weight) / weightSum);
-  const amounts = exact.map((value) => Math.floor(value));
-  let remainder = totalCents - amounts.reduce((sum, value) => sum + value, 0);
-  const order = members
-    .map((member, index) => ({ index, key: member.key, fraction: exact[index] - amounts[index] }))
-    .sort(
-      (a, b) =>
-        b.fraction - a.fraction ||
-        (a.key < b.key ? -1 : a.key > b.key ? 1 : 0) ||
-        a.index - b.index,
-    );
-  for (let cursor = 0; remainder > 0 && order.length > 0; cursor += 1) {
-    amounts[order[cursor % order.length].index] += 1;
-    remainder -= 1;
-  }
-  return {
-    amounts,
-    proportions: members.map((member) => member.weight / weightSum),
-  };
-}
-
-// LEVERAGE: pattern fixed-fee-allocation — "split one fixed fee across member
-// services by a weight, with cent remainder handling" now exists in three
-// places: the FMV allocation in computeFixedCharges below (no remainder
-// handling), this helper, and the wizard's quantity share in
-// contractWizardActions (last member takes the remainder). A single
-// allocation layer should own weight → exact cents.
-/**
  * Allocation for a fixed fee whose members carry no catalog price (FMV total
  * of 0), so the fee cannot be apportioned by fair market value. The full fee
  * is always billed. Weight chain:
- *  1. stored per-service shares (contract_line_service_fixed_config.base_rate,
- *     already the member's share of the line total — never × quantity) when
+ *  1. stored per-service amounts (contract_line_service_fixed_config.base_rate
+ *     read through its basis: a share as-is, a per-unit rate × quantity) when
  *     they sum to more than 0;
  *  2. otherwise service quantity;
  *  3. otherwise an even split.
@@ -471,17 +447,27 @@ export function allocateFixedFeeWithoutCatalogPrice(
   services: Array<{
     service_id: string;
     service_base_rate?: number | string | null;
+    base_rate_basis?: string | null;
+    pricing_basis?: string | null;
     quantity: number;
   }>,
 ): FixedFeeAllocation {
-  const shareWeights = services.map((service) => nonNegativeFinite(service.service_base_rate));
+  // Each member's stored amount is its contribution to the line fee: a share
+  // as-is, a per-unit rate × quantity (so 225×1 and 225×3 weigh 225 : 675).
+  const shareWeights = services.map((service) =>
+    fixedMemberContributionCents(
+      nonNegativeFinite(service.service_base_rate),
+      fixedRateBasisOf(service),
+      service.quantity,
+    ),
+  );
   const quantityWeights = services.map((service) => nonNegativeFinite(service.quantity));
   const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
 
   let basis: FixedFeeAllocationBasis;
   let weights: number[];
   if (sum(shareWeights) > 0) {
-    basis = "stored_shares";
+    basis = "stored_rates";
     weights = shareWeights;
   } else if (sum(quantityWeights) > 0) {
     basis = "quantity";
@@ -500,8 +486,8 @@ export function allocateFixedFeeWithoutCatalogPrice(
 
 function allocationBasisLabel(basis: FixedFeeAllocationBasis): string {
   switch (basis) {
-    case "stored_shares":
-      return "Stored per-service shares";
+    case "stored_rates":
+      return "Stored per-service amounts";
     case "quantity":
       return "Service quantity";
     case "even_split":
@@ -1005,8 +991,24 @@ export function computeFixedCharges(
     // When a guard above already resolved the charges (seats only), the
     // allocation below runs over nothing.
     const bundleAllocationNeeded = !generatedCharges;
-    // LEVERAGE: pattern fixed-fee-allocation — FMV-weighted split; rounds each
-    // member independently (no remainder handling), unlike the zero-FMV path.
+    // FMV-weighted split through the shared allocator when every FMV is
+    // non-negative; a credit (negative FMV) keeps the legacy per-member rounding.
+    // LEVERAGE: friction fixed-fee-allocation-negative-weights — allocateCentsByWeights assumes non-negative weights, so credit members still round independently below.
+    const fmvWeights = normalizedBundleServices.map((service) =>
+      Math.round(preferredCatalogRate(service) * service.quantity),
+    );
+    const fmvProrated =
+      planLevelEnableProration ? Math.round(baseRateInCents * coverageRatio) : baseRateInCents;
+    const fmvAllocation =
+      bundleAllocationNeeded && !zeroFmvAllocation && totalFMVCents > 0 && fmvWeights.every((w) => w >= 0)
+        ? allocateCentsByWeights(
+            fmvProrated,
+            normalizedBundleServices.map((service, index) => ({
+              key: String(index).padStart(6, "0"),
+              weight: fmvWeights[index],
+            })),
+          )
+        : null;
     const serviceAllocations = (bundleAllocationNeeded ? normalizedBundleServices : []).map((service, serviceIndex) => {
       // FMV is based on the service's catalog rate (cents), not plan overrides.
       const rateForFMV = preferredCatalogRate(service);
@@ -1029,7 +1031,9 @@ export function computeFixedCharges(
 
       const allocatedAmount = zeroFmvAllocation
         ? zeroFmvAllocation.amounts[serviceIndex]
-        : Math.round(effectiveBaseRateInCents * proportion);
+        : fmvAllocation
+          ? fmvAllocation.amounts[serviceIndex]
+          : Math.round(effectiveBaseRateInCents * proportion);
 
       const { taxRegion: serviceTaxRegion, isTaxable } =
         taxPorts.getTaxInfoFromService(service);
@@ -1146,7 +1150,7 @@ export function computeFixedCharges(
           {
             label: "Allocation weight",
             value:
-              zeroFmvAllocation.basis === "stored_shares"
+              zeroFmvAllocation.basis === "stored_rates"
                 ? formatCents(weight, currencyCode)
                 : String(weight),
           },
@@ -1222,7 +1226,15 @@ export function computeFixedCharges(
           parsedBaseRate !== null && !Number.isNaN(parsedBaseRate)
             ? Math.round(parsedBaseRate)
             : preferredCatalogRate(service);
-        const total = baseRateInCents * quantity;
+        // A stored rate is read through its basis (a share is not scaled by
+        // quantity); the catalog fallback is always a unit price.
+        const total = fixedMemberContributionCents(
+          baseRateInCents,
+          parsedBaseRate !== null && !Number.isNaN(parsedBaseRate)
+            ? fixedRateBasisOf(service)
+            : "per_unit",
+          quantity,
+        );
 
         const { taxRegion: serviceTaxRegion, isTaxable } =
           taxPorts.getTaxInfoFromService(service);

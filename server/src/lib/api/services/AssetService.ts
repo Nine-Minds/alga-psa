@@ -21,15 +21,43 @@ import {
   NetworkDeviceAssetData,
   ServerAssetData,
   MobileDeviceAssetData,
-  PrinterAssetData
+  PrinterAssetData,
+  parseAssetExtensionData
 } from '../schemas/asset';
-import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
+import { buildAssetCreatedPayload, buildAssetUpdatedPayload } from '@alga-psa/workflow-streams';
 import { NotFoundError, ConflictError, ValidationError } from '../middleware/apiMiddleware';
 import { resolveWritableAssetType, resolveAttributeSchemaForWrite, validateAttributesForWrite, attributesMergeExpression, serializeAttributesForInsert } from '@alga-psa/assets/lib/assetAttributeWrites';
+import { advanceMaintenanceDate, parseCustomRecurrence } from '@alga-psa/assets/lib/maintenanceRecurrence';
 import { isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes';
+import { validateAssetStatusSlug } from '@alga-psa/assets/lib/assetStatusRegistry';
+import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/assetAssignment';
+import { getAssetGroupSummary, removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
+import { assertBillingProfileForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
 
 function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
   return issues.map((issue) => ({ path: ['attributes', issue.key], code: issue.code, message: issue.message }));
+}
+
+function hasExtensionData(data: Record<string, unknown> | undefined): data is Record<string, unknown> {
+  return !!data && Object.keys(data).length > 0;
+}
+
+function validateExtensionData(assetType: string, data: Record<string, unknown>): Record<string, unknown> {
+  const parsed = parseAssetExtensionData(assetType, data);
+  if (!parsed) {
+    throw new ValidationError('Invalid extension_data', [
+      { path: ['extension_data'], code: 'unsupported_asset_type', message: `Asset type '${assetType}' has no extension data` }
+    ]);
+  }
+  if (!parsed.success) {
+    throw new ValidationError('Invalid extension_data', parsed.error.errors.map((issue) => ({
+      path: ['extension_data', ...issue.path],
+      code: issue.code,
+      message: issue.message
+    })));
+  }
+  return parsed.data;
 }
 
 function mapInvalidAssetTypeError(error: unknown, slug: string): unknown {
@@ -88,15 +116,39 @@ export class AssetService extends BaseService<any> {
         createdAt: 'created_at',
         updatedAt: 'updated_at'
       },
-      searchableFields: ['asset_tag', 'name', 'serial_number', 'location'],
+      searchableFields: ['asset_tag', 'name', 'serial_number', 'location', 'manufacturer', 'model'],
       defaultSort: 'created_at',
       defaultOrder: 'desc'
     });
   }
 
+  /**
+   * Range keys the asset list accepts: the common created_ and updated_ keys
+   * plus the purchase-date and warranty windows. Any other `_from`/`_to` key is
+   * rejected by `applyRangeFilters`.
+   */
+  protected rangeFilterColumns(): Record<string, string> {
+    return {
+      ...super.rangeFilterColumns(),
+      created_from: `${this.tableName}.created_at`,
+      created_to: `${this.tableName}.created_at`,
+      updated_from: `${this.tableName}.updated_at`,
+      updated_to: `${this.tableName}.updated_at`,
+      purchase_date_from: `${this.tableName}.purchase_date`,
+      purchase_date_to: `${this.tableName}.purchase_date`,
+      warranty_end_from: `${this.tableName}.warranty_end_date`,
+      warranty_end_to: `${this.tableName}.warranty_end_date`,
+    };
+  }
+
   async list(options: ListOptions, context: ServiceContext, filters?: AssetFilterData): Promise<ListResult<any>> {
     const knex = await this.getDbForContext(context);
     const query = scopedTable(knex, context.tenant, this.tableName);
+
+    // Common and asset-specific range filters. Unsupported range keys fail loudly.
+    if (filters) {
+      this.applyRangeFilters(query, filters);
+    }
 
     // Apply filters
     if (filters) {
@@ -115,6 +167,18 @@ export class AssetService extends BaseService<any> {
       if (filters.contact_name_id) {
         query.where(`${this.tableName}.contact_name_id`, filters.contact_name_id);
       }
+      if (filters.manufacturer) {
+        query.where(`${this.tableName}.manufacturer`, 'ilike', `%${filters.manufacturer}%`);
+      }
+      if (filters.model) {
+        query.where(`${this.tableName}.model`, 'ilike', `%${filters.model}%`);
+      }
+      if (filters.vendor_id) {
+        query.where(`${this.tableName}.vendor_id`, filters.vendor_id);
+      }
+      if (filters.billing_profile_id) {
+        query.where(`${this.tableName}.billing_profile_id`, filters.billing_profile_id);
+      }
       if (filters.asset_type) {
         query.where(`${this.tableName}.asset_type`, filters.asset_type);
       }
@@ -127,18 +191,6 @@ export class AssetService extends BaseService<any> {
       if (filters.client_name) {
         tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id');
         query.where('clients.client_name', 'ilike', `%${filters.client_name}%`);
-      }
-      if (filters.purchase_date_from) {
-        query.where(`${this.tableName}.purchase_date`, '>=', filters.purchase_date_from);
-      }
-      if (filters.purchase_date_to) {
-        query.where(`${this.tableName}.purchase_date`, '<=', filters.purchase_date_to);
-      }
-      if (filters.warranty_end_from) {
-        query.where(`${this.tableName}.warranty_end_date`, '>=', filters.warranty_end_from);
-      }
-      if (filters.warranty_end_to) {
-        query.where(`${this.tableName}.warranty_end_date`, '<=', filters.warranty_end_to);
       }
       if (filters.has_warranty !== undefined) {
         if (filters.has_warranty) {
@@ -164,10 +216,14 @@ export class AssetService extends BaseService<any> {
     tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', {
       type: 'left',
     });
+    tenantDb(knex, context.tenant).tenantJoin(query, 'vendors', 'assets.vendor_id', 'vendors.vendor_id', {
+      type: 'left',
+    });
     query
       .select(
         `${this.tableName}.*`,
         'clients.client_name',
+        'vendors.vendor_name',
         knex.raw(`
           CASE 
             WHEN ${this.tableName}.warranty_end_date IS NULL THEN 'no_warranty'
@@ -182,6 +238,8 @@ export class AssetService extends BaseService<any> {
     const countQuery = scopedTable(knex, context.tenant, this.tableName);
 
     if (filters) {
+      // Apply the same range filters to count query
+      this.applyRangeFilters(countQuery, filters);
       // Apply the same filters to count query
       if (filters.client_id) {
         countQuery.where(`${this.tableName}.client_id`, filters.client_id);
@@ -243,12 +301,23 @@ export class AssetService extends BaseService<any> {
     tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id', {
       type: 'left',
     });
-      
+    tenantDb(knex, context.tenant).tenantJoin(query, 'vendors', 'assets.vendor_id', 'vendors.vendor_id', {
+      type: 'left',
+    });
+    // FR-C6/FR-E3: mobile and the REST clients read the assignee and the group
+    // off this payload, so they travel with the asset rather than needing a
+    // second round trip.
+    tenantDb(knex, context.tenant).tenantJoin(query, 'contacts', 'assets.contact_name_id', 'contacts.contact_name_id', {
+      type: 'left',
+    });
+
     const asset = await query.select(
         `${this.tableName}.*`,
         'clients.client_name',
+        'vendors.vendor_name',
+        'contacts.full_name as contact_name',
         knex.raw(`
-          CASE 
+          CASE
             WHEN ${this.tableName}.warranty_end_date IS NULL THEN 'no_warranty'
             WHEN ${this.tableName}.warranty_end_date < NOW() THEN 'expired'
             WHEN ${this.tableName}.warranty_end_date < NOW() + INTERVAL '30 days' THEN 'expiring_soon'
@@ -258,7 +327,43 @@ export class AssetService extends BaseService<any> {
       )
       .first();
 
-    return asset || null;
+    if (!asset) return null;
+
+    asset.group = await getAssetGroupSummary(knex, context.tenant, id);
+    return asset;
+  }
+
+  /**
+   * The record context the authorization kernel evaluates for an asset read.
+   * Mirrors `resolveAssetAuthorizationRecords` in the assets package (assignees
+   * and teams come from asset_associations). Tenant-scoped: another tenant's id
+   * resolves to null.
+   */
+  async getAuthorizationRecord(id: string, context: ServiceContext): Promise<Record<string, any> | null> {
+    const knex = await this.getDbForContext(context);
+    const asset = await scopedTable(knex, context.tenant, this.tableName)
+      .where({ asset_id: id })
+      .select('asset_id', 'client_id')
+      .first();
+    if (!asset) return null;
+
+    const associations: Array<{ entity_type: string; entity_id: string }> = await scopedTable(
+      knex,
+      context.tenant,
+      'asset_associations',
+    )
+      .where({ asset_id: id })
+      .select('entity_type', 'entity_id');
+
+    const assignedUserIds = associations.filter((a) => a.entity_type === 'user').map((a) => a.entity_id);
+    const teamIds = associations.filter((a) => a.entity_type === 'team').map((a) => a.entity_id);
+    return {
+      id: asset.asset_id,
+      ownerUserId: assignedUserIds[0] ?? null,
+      assignedUserIds,
+      clientId: asset.client_id ?? null,
+      teamIds,
+    };
   }
 
   async getWithDetails(id: string, context: ServiceContext): Promise<any | null> {
@@ -302,6 +407,9 @@ export class AssetService extends BaseService<any> {
     const typeEntry = await resolveRestAssetType(knex, context.tenant, assetData.asset_type);
     const issues = validateAttributesForWrite(typeEntry, attributes, 'create');
     if (issues.length) throw new ValidationError('Invalid asset attributes', validationDetails(issues));
+    const extensionData = hasExtensionData(extension_data)
+      ? validateExtensionData(assetData.asset_type, extension_data)
+      : undefined;
 
     if (assetData.location_id) {
       await this.assertLocationBelongsToClient(knex, context.tenant, assetData.client_id, assetData.location_id);
@@ -309,33 +417,64 @@ export class AssetService extends BaseService<any> {
     if (assetData.contact_name_id) {
       await this.assertContactBelongsToClient(knex, context.tenant, assetData.client_id, assetData.contact_name_id);
     }
-    
+    if (assetData.vendor_id) {
+      await this.assertVendorExists(knex, context.tenant, assetData.vendor_id);
+    }
+    await this.assertValidStatus(knex, context.tenant, assetData.status);
+    if (assetData.billing_profile_id) {
+      await this.assertBillingProfile(knex, context.tenant, assetData.client_id, assetData.billing_profile_id);
+    }
+    if (assetData.purchase_cost !== undefined && assetData.purchase_cost !== null && !assetData.purchase_cost_currency) {
+      assetData.purchase_cost_currency = await this.resolveTenantCurrency(knex, context.tenant);
+    }
+
+    // FR-C3: the assignee is applied through setAssetAssignee (source `api`)
+    // so the open asset_assignments row is written with it.
+    const { contact_name_id: requestedContactId, ...assetColumns } = assetData as Record<string, any>;
+
     const assetRecord = {
-      ...assetData,
+      ...assetColumns,
+      contact_name_id: null,
       ...(attributes !== undefined ? { attributes: serializeAttributesForInsert(attributes) } : {}),
       tenant: context.tenant,
       created_at: new Date(),
       updated_at: new Date()
     };
 
-    const [asset] = await scopedTable(knex, context.tenant, this.tableName)
-      .insert(assetRecord)
-      .returning('*');
+    // One transaction: a rejected assignee must not leave an asset behind
+    // without the contact the caller asked for, and a failed extension write
+    // must not leave a committed asset with no extension row.
+    const asset = await knex.transaction(async (trx) => {
+      const [created] = await scopedTable(trx, context.tenant, this.tableName)
+        .insert(assetRecord)
+        .returning('*');
 
-    // Handle extension data if provided
-    if (extension_data && Object.keys(extension_data).length > 0) {
-      await this.upsertExtensionData(asset.asset_id, asset.asset_type, extension_data, context);
-    }
+      if (requestedContactId) {
+        await this.applyAssignee(trx, context, created.asset_id, requestedContactId);
+      }
+
+      if (extensionData) {
+        await this.upsertExtensionData(created.asset_id, created.asset_type, extensionData, context, trx);
+      }
+      return created;
+    });
 
     // Publish event
-    await publishEvent({
+    await publishWorkflowEvent({
       eventType: 'ASSET_CREATED',
-      payload: {
-        tenantId: context.tenant,
+      payload: buildAssetCreatedPayload({
         assetId: asset.asset_id,
-        userId: context.userId,
-        timestamp: new Date().toISOString()
-      }
+        clientId: asset.client_id || undefined,
+        createdByUserId: context.userId,
+        createdAt: asset.created_at,
+        assetType: asset.asset_type,
+        serialNumber: asset.serial_number,
+      }),
+      ctx: {
+        tenantId: context.tenant,
+        occurredAt: asset.created_at,
+        actor: { actorType: 'USER', actorUserId: context.userId },
+      },
     });
 
     return this.getWithDetails(asset.asset_id, context);
@@ -346,18 +485,22 @@ export class AssetService extends BaseService<any> {
     const knex = await this.getDbForContext(context);
     const updateData: Record<string, unknown> = { ...data };
     const attributes = data.attributes as Record<string, unknown> | undefined;
+    const extensionInput = data.extension_data;
     delete updateData.attributes;
+    delete updateData.extension_data;
 
     const needsCurrent =
       data.location_id !== undefined ||
       data.contact_name_id !== undefined ||
+      data.status !== undefined ||
       data.client_id !== undefined;
-    const needsAssetContext = needsCurrent || data.attributes !== undefined || data.asset_type !== undefined;
+    const needsAssetContext =
+      needsCurrent || data.attributes !== undefined || data.asset_type !== undefined || hasExtensionData(extensionInput);
 
     const current = needsAssetContext
       ? await scopedTable(knex, context.tenant, this.tableName)
           .where({ [this.primaryKey]: id })
-          .first('client_id', 'location_id', 'contact_name_id', 'asset_type')
+          .first('client_id', 'location_id', 'contact_name_id', 'asset_type', 'status', 'billing_profile_id')
       : null;
 
     if (needsAssetContext && !current) {
@@ -374,6 +517,11 @@ export class AssetService extends BaseService<any> {
       if (issues.length) throw new ValidationError('Invalid asset attributes', validationDetails(issues));
       if (attributes !== undefined) updateData.attributes = attributesMergeExpression(knex, attributes);
     }
+
+    const effectiveAssetType = data.asset_type ?? current?.asset_type;
+    const extensionData = hasExtensionData(extensionInput)
+      ? validateExtensionData(effectiveAssetType, extensionInput)
+      : undefined;
 
     if (data.location_id) {
       const clientId = data.client_id || current?.client_id;
@@ -411,27 +559,103 @@ export class AssetService extends BaseService<any> {
       updateData.contact_name_id = null;
     }
 
-    updateData.updated_at = new Date();
-
-    const updated = await scopedTable(knex, context.tenant, this.tableName)
-      .where({ [this.primaryKey]: id })
-      .update(updateData);
-
-    if (!updated) {
-      throw new NotFoundError('Asset not found');
+    if (data.vendor_id) {
+      await this.assertVendorExists(knex, context.tenant, data.vendor_id);
+    }
+    if (data.status !== undefined) {
+      await this.assertValidStatus(knex, context.tenant, data.status, current?.status);
+    }
+    if (data.billing_profile_id) {
+      const clientId = data.client_id || current?.client_id;
+      if (!clientId) throw new NotFoundError('Asset not found');
+      await this.assertBillingProfile(knex, context.tenant, clientId, data.billing_profile_id);
+    } else if (
+      data.client_id &&
+      current?.client_id &&
+      data.client_id !== current.client_id &&
+      data.billing_profile_id === undefined
+    ) {
+      // FR-F1: a profile belongs to one client, so the move clears it.
+      updateData.billing_profile_id = null;
+    }
+    if (data.purchase_cost !== undefined) {
+      if (data.purchase_cost === null) {
+        updateData.purchase_cost_currency = null;
+      } else if (!data.purchase_cost_currency) {
+        updateData.purchase_cost_currency = await this.resolveTenantCurrency(knex, context.tenant);
+      }
     }
 
-    // Publish event
-    await publishEvent({
-      eventType: 'ASSET_UPDATED',
-      payload: {
-        tenantId: context.tenant,
-        assetId: id,
-        userId: context.userId,
-        changes: data,
-        timestamp: new Date().toISOString()
+    // FR-C3: the assignee leaves the column patch and goes through the helper.
+    const assigneeProvided = Object.prototype.hasOwnProperty.call(updateData, 'contact_name_id');
+    const nextContactId = assigneeProvided ? (updateData.contact_name_id as string | null) : undefined;
+    delete updateData.contact_name_id;
+
+    updateData.updated_at = new Date();
+
+    const before = await scopedTable(knex, context.tenant, this.tableName)
+      .where({ [this.primaryKey]: id })
+      .first();
+
+    // One transaction for the columns, the group removal, the assignee and the
+    // extension row: separately, a failed assignment left the client move
+    // committed without its FR-E5 group removal (or the other way round), and a
+    // failed extension write left the rest of the same PUT committed.
+    const after = await knex.transaction(async (trx) => {
+      const [updated] = await scopedTable(trx, context.tenant, this.tableName)
+        .where({ [this.primaryKey]: id })
+        .update(updateData)
+        .returning('*');
+
+      if (!updated) {
+        throw new NotFoundError('Asset not found');
       }
+
+      if (
+        data.client_id &&
+        current?.client_id &&
+        data.client_id !== current.client_id
+      ) {
+        // FR-E5: the group belongs to the old client.
+        await removeAssetFromAnyGroup(trx, context.tenant, id, { actorUserId: context.userId });
+      }
+
+      if (nextContactId !== undefined) {
+        await this.applyAssignee(trx, context, id, nextContactId);
+      }
+
+      if (extensionData) {
+        // A retype moves the extension row to the new type's table; the old
+        // one goes with the type it belonged to.
+        if (data.asset_type && current?.asset_type && data.asset_type !== current.asset_type) {
+          await this.deleteExtensionData(id, current.asset_type, context, trx);
+        }
+        await this.upsertExtensionData(id, effectiveAssetType, extensionData, context, trx);
+      }
+
+      return updated;
     });
+
+    // Publish event
+    const updatePayload = buildAssetUpdatedPayload({
+      assetId: id,
+      before: (before ?? {}) as Record<string, unknown>,
+      after: after as Record<string, unknown>,
+      updatedPaths: Object.keys(updateData).filter((key) => key !== 'updated_at'),
+      updatedByUserId: context.userId,
+      updatedAt: updateData.updated_at as Date,
+    });
+    if (updatePayload.updatedFields || updatePayload.changes) {
+      await publishWorkflowEvent({
+        eventType: 'ASSET_UPDATED',
+        payload: updatePayload,
+        ctx: {
+          tenantId: context.tenant,
+          occurredAt: updateData.updated_at as Date,
+          actor: { actorType: 'USER', actorUserId: context.userId },
+        },
+      });
+    }
 
     const asset = await this.getById(id, context);
     if (!asset) {
@@ -477,6 +701,81 @@ export class AssetService extends BaseService<any> {
     if (!contact) {
       throw new ValidationError('Selected contact is not available for this client');
     }
+  }
+
+  /**
+   * FR-C3 / T099: REST writes record their assignment with source `api`, and a
+   * shared-workspace member is rejected as a 400 rather than a 500.
+   */
+  private async applyAssignee(
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    assetId: string,
+    contactId: string | null
+  ): Promise<void> {
+    try {
+      await setAssetAssignee(trx, context.tenant, assetId, contactId, {
+        actorUserId: context.userId,
+        source: 'api',
+      });
+    } catch (error) {
+      if (isAssetAssigneeError(error)) {
+        throw new ValidationError(error.message, { contact_name_id: [error.message] });
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * FR-B3: `status` must be an active tenant asset_statuses slug. An archived
+   * status is accepted only when it is the value already stored.
+   */
+  private async assertValidStatus(
+    knex: Knex,
+    tenant: string,
+    status: string | undefined,
+    storedStatus?: string | null
+  ): Promise<void> {
+    if (status === undefined) return;
+    const result = await validateAssetStatusSlug(knex, tenant, status, storedStatus);
+    if (!result.ok) {
+      const { error } = result as Extract<typeof result, { ok: false }>;
+      throw new ValidationError(error.message, { status: [error.message] });
+    }
+  }
+
+  /** FR-F1: the profile must belong to the row's client and be active. */
+  private async assertBillingProfile(
+    knex: Knex,
+    tenant: string,
+    clientId: string,
+    billingProfileId: string
+  ): Promise<void> {
+    try {
+      await assertBillingProfileForClient(knex, tenant, clientId, billingProfileId);
+    } catch (error) {
+      throw new ValidationError(
+        error instanceof Error ? error.message : 'Selected billing profile is not available for this client',
+        { billing_profile_id: ['Selected billing profile is not available for this client'] }
+      );
+    }
+  }
+
+  /** Suppliers come from the inventory `vendors` table (FR-A1). */
+  private async assertVendorExists(knex: Knex, tenant: string, vendorId: string): Promise<void> {
+    const vendor = await scopedTable(knex, tenant, 'vendors')
+      .where({ vendor_id: vendorId })
+      .first('vendor_id');
+
+    if (!vendor) {
+      throw new ValidationError('Selected vendor is not available');
+    }
+  }
+
+  private async resolveTenantCurrency(knex: Knex, tenant: string): Promise<string> {
+    const settings = await scopedTable(knex, tenant, 'default_billing_settings')
+      .first('default_currency_code');
+    return (settings?.default_currency_code as string | undefined) || 'USD';
   }
 
   private async assertAssetExists(
@@ -587,39 +886,62 @@ export class AssetService extends BaseService<any> {
       .first();
   }
 
-  async upsertExtensionData(assetId: string, assetType: string, data: any, context: ServiceContext): Promise<void> {
+  /**
+   * Every array-shaped extension column is `jsonb`, but node-pg renders a bare
+   * JS array as an array literal, which Postgres rejects with 22P02 for a json
+   * column. Mirrors encodeExtensionJsonArrays in the internal asset actions.
+   */
+  private encodeExtensionJsonArrays(fields: Record<string, unknown>): Record<string, unknown> {
+    const encoded: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(fields)) {
+      encoded[key] = Array.isArray(value) ? JSON.stringify(value) : value;
+    }
+    return encoded;
+  }
+
+  async upsertExtensionData(
+    assetId: string,
+    assetType: string,
+    data: any,
+    context: ServiceContext,
+    trx?: Knex
+  ): Promise<void> {
     const tableName = this.getExtensionTableName(assetType);
     if (!tableName) return;
 
-    const extensionData = {
-      ...data,
-      asset_id: assetId,
-      tenant: context.tenant,
-      updated_at: new Date()
-    };
+    // The extension tables carry no created_at/updated_at columns, and
+    // tenant/asset_id are the Citus partition key + PK, so they cannot appear
+    // in an UPDATE SET clause.
+    const { tenant: _tenant, asset_id: _assetId, ...rest } = (data ?? {}) as Record<string, unknown>;
+    const extensionFields = this.encodeExtensionJsonArrays(rest);
 
-    // Check if record exists
-    const knex = await this.getDbForContext(context);
-    const existing = await scopedTable(knex, context.tenant, tableName)
+    const conn = trx ?? (await this.getDbForContext(context));
+    const existing = await scopedTable(conn, context.tenant, tableName)
       .where({ asset_id: assetId })
       .first();
 
     if (existing) {
-      await scopedTable(knex, context.tenant, tableName)
+      if (Object.keys(extensionFields).length === 0) return;
+      await scopedTable(conn, context.tenant, tableName)
         .where({ asset_id: assetId })
-        .update(extensionData);
+        .update(extensionFields);
     } else {
-      extensionData.created_at = new Date();
-      await scopedTable(knex, context.tenant, tableName).insert(extensionData);
+      await scopedTable(conn, context.tenant, tableName)
+        .insert({ tenant: context.tenant, asset_id: assetId, ...extensionFields });
     }
   }
 
-  async deleteExtensionData(assetId: string, assetType: string, context: ServiceContext): Promise<void> {
+  async deleteExtensionData(
+    assetId: string,
+    assetType: string,
+    context: ServiceContext,
+    trx?: Knex
+  ): Promise<void> {
     const tableName = this.getExtensionTableName(assetType);
     if (!tableName) return;
 
-    const knex = await this.getDbForContext(context);
-    await scopedTable(knex, context.tenant, tableName)
+    const conn = trx ?? (await this.getDbForContext(context));
+    await scopedTable(conn, context.tenant, tableName)
       .where({ asset_id: assetId })
       .del();
   }
@@ -891,90 +1213,90 @@ export class AssetService extends BaseService<any> {
 
   async createMaintenanceSchedule(assetId: string, data: CreateMaintenanceScheduleData, context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
-    await this.assertAssetExists(knex, context.tenant, assetId);
-    if (data.assigned_to) {
-      await this.assertUserExists(knex, context.tenant, data.assigned_to, 'Assigned user not found');
-    }
+    this.assertCustomRecurrence(data.frequency, data.schedule_config);
+    return knex.transaction(async (trx) => {
+      await this.assertAssetExists(trx, context.tenant, assetId);
+      const [schedule] = await scopedTable(trx, context.tenant, 'asset_maintenance_schedules')
+        .insert({
+          ...data,
+          description: data.description ?? null,
+          asset_id: assetId,
+          tenant: context.tenant,
+          created_by: context.userId,
+          created_at: new Date(),
+          updated_at: new Date()
+        })
+        .returning('*');
 
-    const scheduleData = {
-      ...data,
-      asset_id: assetId,
-      tenant: context.tenant,
-      created_at: new Date(),
-      updated_at: new Date()
-    };
-
-    // Calculate next maintenance date
-    (scheduleData as any).next_maintenance = this.calculateNextMaintenanceDate(
-      data.start_date || new Date().toISOString(), 
-      data.frequency, 
-      data.frequency_interval
-    );
-
-    const [schedule] = await tenantDb(knex, context.tenant).table('asset_maintenance_schedules')
-      .insert(scheduleData)
-      .returning('*');
-
-    if (schedule.is_active !== false) {
-      await scopedTable(knex, context.tenant, 'asset_maintenance_occurrences').insert({
-        tenant: context.tenant, schedule_id: schedule.schedule_id, asset_id: assetId,
-        due_date: schedule.next_maintenance, status: 'open'
+      await scopedTable(trx, context.tenant, 'asset_maintenance_notifications').insert({
+        tenant: context.tenant,
+        schedule_id: schedule.schedule_id,
+        asset_id: assetId,
+        notification_type: 'upcoming',
+        notification_date: schedule.next_maintenance,
+        notification_data: {
+          schedule_name: schedule.schedule_name,
+          maintenance_type: schedule.maintenance_type
+        }
       });
-    }
 
-    return schedule;
+      if (schedule.is_active) {
+        await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences').insert({
+          tenant: context.tenant, schedule_id: schedule.schedule_id, asset_id: assetId,
+          due_date: schedule.next_maintenance, status: 'open'
+        });
+      }
+      return schedule;
+    });
   }
 
   async updateMaintenanceSchedule(scheduleId: string, data: UpdateMaintenanceScheduleData, context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
-    const existing = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
-      .where({ schedule_id: scheduleId })
-      .first();
+    return knex.transaction(async (trx) => {
+      const existing = await scopedTable(trx, context.tenant, 'asset_maintenance_schedules')
+        .where({ schedule_id: scheduleId })
+        .forUpdate()
+        .first();
+      if (!existing) {
+        throw new NotFoundError('Maintenance schedule not found');
+      }
+      this.assertCustomRecurrence(data.frequency ?? existing.frequency, data.schedule_config ?? existing.schedule_config);
 
-    if (!existing) {
-      throw new NotFoundError('Maintenance schedule not found');
-    }
+      const [schedule] = await scopedTable(trx, context.tenant, 'asset_maintenance_schedules')
+        .where({ schedule_id: scheduleId })
+        .update({ ...data, updated_at: new Date() })
+        .returning('*');
 
-    if (data.assigned_to) {
-      await this.assertUserExists(knex, context.tenant, data.assigned_to, 'Assigned user not found');
-    }
-
-    const updateData = {
-      ...data,
-      updated_at: new Date()
-    };
-
-    // Recalculate next maintenance if frequency changed
-    if (data.frequency || data.frequency_interval || data.start_date) {
-      const startDate = data.start_date || existing.start_date;
-      const frequency = data.frequency || existing.frequency;
-      const interval = data.frequency_interval || existing.frequency_interval;
-      (updateData as any).next_maintenance = this.calculateNextMaintenanceDate(startDate, frequency, interval);
-    }
-
-    const updated = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
-      .where({ schedule_id: scheduleId })
-      .update(updateData);
-
-    if (!updated) {
-      throw new NotFoundError('Maintenance schedule not found');
-    }
-
-    const schedule = await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
-      .where({ schedule_id: scheduleId })
-      .first();
-
-    if ((updateData as any).next_maintenance) {
-      await scopedTable(knex, context.tenant, 'asset_maintenance_occurrences')
-        .where({ schedule_id: scheduleId, status: 'open' })
-        .update({ due_date: (updateData as any).next_maintenance, updated_at: new Date() });
-    }
-
-    if (!schedule) {
-      throw new NotFoundError('Maintenance schedule not found');
-    }
-
-    return schedule;
+      if (data.next_maintenance) {
+        await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences')
+          .where({ schedule_id: scheduleId, status: 'open' })
+          .update({ due_date: data.next_maintenance, updated_at: new Date() });
+      }
+      if (data.next_maintenance || data.schedule_name || data.maintenance_type) {
+        await scopedTable(trx, context.tenant, 'asset_maintenance_notifications')
+          .where({ schedule_id: scheduleId, is_sent: false })
+          .update({
+            notification_date: schedule.next_maintenance,
+            notification_data: trx.raw(
+              "notification_data || ?::jsonb",
+              [JSON.stringify({ schedule_name: schedule.schedule_name, maintenance_type: schedule.maintenance_type })]
+            )
+          });
+      }
+      if (data.is_active === false && existing.is_active) {
+        await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences')
+          .where({ schedule_id: scheduleId, status: 'open' })
+          .update({ status: 'cancelled', closed_at: new Date(), closed_by: context.userId, updated_at: new Date() });
+      } else if (data.is_active === true && !existing.is_active && !schedule.archived_at) {
+        await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences')
+          .insert({
+            tenant: context.tenant, schedule_id: scheduleId, asset_id: schedule.asset_id,
+            due_date: schedule.next_maintenance, status: 'open'
+          })
+          .onConflict().ignore();
+      }
+      return schedule;
+    });
   }
 
   async deleteMaintenanceSchedule(scheduleId: string, context: ServiceContext): Promise<void> {
@@ -1014,7 +1336,6 @@ export class AssetService extends BaseService<any> {
         .forUpdate()
         .first();
       if (!schedule || schedule.archived_at) throw new ConflictError('Maintenance schedule is inactive');
-      if (schedule.frequency === 'custom') throw new ValidationError('Custom maintenance frequency cannot be completed until its recurrence is configured');
       const occurrenceQuery = scopedTable(trx, context.tenant, 'asset_maintenance_occurrences')
         .where({ schedule_id: data.schedule_id, asset_id: assetId });
       if (data.occurrence_id) {
@@ -1034,7 +1355,7 @@ export class AssetService extends BaseService<any> {
         performed_by: performedBy, created_at: new Date()
       };
       const [maintenance] = await scopedTable(trx, context.tenant, 'asset_maintenance_history').insert(row).returning('*');
-      const nextMaintenance = this.calculateNextMaintenanceDate(performedAt, schedule.frequency, schedule.frequency_interval);
+      const nextMaintenance = this.calculateNextMaintenanceDate(performedAt, schedule.frequency, schedule.frequency_interval, schedule.schedule_config);
       await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences').where({ occurrence_id: occurrence.occurrence_id, status: 'open' }).update({ status: 'completed', history_id: maintenance.history_id, closed_at: new Date(), closed_by: performedBy, updated_at: new Date() });
       await scopedTable(trx, context.tenant, 'asset_maintenance_schedules').where({ schedule_id: data.schedule_id }).update({ last_maintenance: performedAt, next_maintenance: nextMaintenance, updated_at: new Date() });
       await scopedTable(trx, context.tenant, 'asset_maintenance_occurrences').insert({ tenant: context.tenant, schedule_id: schedule.schedule_id, asset_id: assetId, due_date: nextMaintenance, status: 'open' });
@@ -1117,6 +1438,41 @@ export class AssetService extends BaseService<any> {
     return assets;
   }
 
+  /** FR-C8: the asset's assignment history, newest first. */
+  async getAssetAssignments(assetId: string, context: ServiceContext): Promise<any[]> {
+    const knex = await this.getDbForContext(context);
+    const query = scopedTable(knex, context.tenant, 'asset_assignments as aa')
+      .where({ 'aa.asset_id': assetId })
+      .select(
+        'aa.assignment_id',
+        'aa.asset_id',
+        'aa.contact_name_id',
+        'aa.assigned_at',
+        'aa.assigned_by_user_id',
+        'aa.unassigned_at',
+        'aa.unassigned_by_user_id',
+        'aa.source',
+        'aa.note',
+        'contacts.full_name as contact_name',
+      );
+    tenantDb(knex, context.tenant).tenantJoin(query, 'contacts', 'contacts.contact_name_id', 'aa.contact_name_id', {
+      type: 'left',
+    });
+
+    return query.orderBy('aa.assigned_at', 'desc');
+  }
+
+  /** FR-B4: the tenant's asset statuses, in display order. */
+  async listAssetStatuses(
+    context: ServiceContext,
+    options?: { includeArchived?: boolean }
+  ): Promise<any[]> {
+    const knex = await this.getDbForContext(context);
+    const query = scopedTable(knex, context.tenant, 'asset_statuses').select('*');
+    if (!options?.includeArchived) query.where({ is_active: true });
+    return query.orderBy('display_order', 'asc').orderBy('label', 'asc');
+  }
+
   // Statistics
   async getStatistics(context: ServiceContext): Promise<any> {
     const [basicStats, typeStats, statusStats, clientStats, warrantyStats, maintenanceStats] = await Promise.all([
@@ -1150,24 +1506,21 @@ export class AssetService extends BaseService<any> {
     return tableMap[assetType] || null;
   }
 
-  private calculateNextMaintenanceDate(startDate: string, frequency: string, interval?: number): Date {
-    const start = new Date(startDate);
-    const intervalValue = interval || 1;
-    
-    switch (frequency) {
-      case 'daily':
-        return new Date(start.getTime() + (intervalValue * 24 * 60 * 60 * 1000));
-      case 'weekly':
-        return new Date(start.getTime() + (intervalValue * 7 * 24 * 60 * 60 * 1000));
-      case 'monthly': case 'quarterly': case 'yearly': {
-        const months = frequency === 'monthly' ? intervalValue : frequency === 'quarterly' ? intervalValue * 3 : intervalValue * 12;
-        const originalDay = start.getUTCDate(); const result = new Date(start);
-        result.setUTCDate(1); result.setUTCMonth(result.getUTCMonth() + months);
-        const lastDay = new Date(Date.UTC(result.getUTCFullYear(), result.getUTCMonth() + 1, 0)).getUTCDate();
-        result.setUTCDate(Math.min(originalDay, lastDay)); return result;
-      }
-      case 'custom': throw new ValidationError('Custom maintenance frequency cannot be completed until its recurrence is configured');
-      default: throw new ValidationError(`Unsupported maintenance frequency: ${frequency}`);
+  // Shared with the UI actions so both paths advance schedules identically.
+  private calculateNextMaintenanceDate(startDate: string, frequency: string, interval?: number, scheduleConfig?: unknown): Date {
+    try {
+      return advanceMaintenanceDate(startDate, frequency, interval || 1, scheduleConfig);
+    } catch (error) {
+      throw new ValidationError((error as Error).message);
+    }
+  }
+
+  private assertCustomRecurrence(frequency: string | undefined, scheduleConfig: unknown): void {
+    if (frequency !== 'custom') return;
+    try {
+      parseCustomRecurrence(scheduleConfig);
+    } catch (error) {
+      throw new ValidationError((error as Error).message);
     }
   }
 
@@ -1181,7 +1534,8 @@ export class AssetService extends BaseService<any> {
       const nextMaintenance = this.calculateNextMaintenanceDate(
         performedAt,
         schedule.frequency,
-        schedule.frequency_interval
+        schedule.frequency_interval,
+        schedule.schedule_config
       );
 
       await scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
@@ -1215,8 +1569,20 @@ export class AssetService extends BaseService<any> {
       ])
       .first();
 
+    // FR-B5: "deployed" is every status whose kind is `deployable`, so a
+    // tenant's custom "In use" counts and the literal `active` slug does not
+    // have to be special.
+    const deployed = await scopedTable(knex, context.tenant, this.tableName)
+      .whereIn(
+        'status',
+        scopedTable(knex, context.tenant, 'asset_statuses').where({ kind: 'deployable' }).select('slug')
+      )
+      .count<{ count: string }>('asset_id as count')
+      .first();
+
     return {
       total_assets: parseInt(stats?.total_assets || '0'),
+      deployed_assets: parseInt(String(deployed?.count ?? '0')),
       assets_added_this_month: parseInt(stats?.assets_added_this_month || '0'),
       average_asset_age_days: stats?.average_asset_age_days ? Math.round(parseFloat(stats.average_asset_age_days)) : null,
       total_asset_value: parseFloat(stats?.total_asset_value || '0')

@@ -447,6 +447,43 @@
         "close": "Sluiten",
         "download": "Downloaden als .txt"
       },
+      "quotePayload": {
+        "entity": "Offerte",
+        "fields": {
+          "client_id": "Klant-ID",
+          "quote_number": "Offertenummer",
+          "version": "Versie",
+          "contact_id": "Contact-ID",
+          "opportunity_id": "Verkoopkans-ID",
+          "previous_status": "Vorige status",
+          "new_status": "Nieuwe status",
+          "currency_code": "Valutacode",
+          "total_amount": "Totaalbedrag",
+          "performed_by_type": "Type uitvoerder",
+          "performed_by_id": "ID uitvoerder",
+          "sent_at": "Verzonden op",
+          "viewed_at": "Bekeken op",
+          "approved_at": "Goedgekeurd op",
+          "accepted_at": "Geaccepteerd op",
+          "rejected_at": "Afgewezen op",
+          "expired_at": "Verlopen op",
+          "converted_at": "Omgezet op",
+          "conversion_reverted_at": "Omzetting teruggedraaid op",
+          "superseded_at": "Vervangen op",
+          "cancelled_at": "Geannuleerd op",
+          "accepted_by_name": "Geaccepteerd door",
+          "accepted_on_behalf": "Namens klant geaccepteerd",
+          "selected_optional_item_ids": "IDs geselecteerde optionele regels",
+          "rejection_reason": "Reden voor afwijzing",
+          "conversion_targets": "Omzettingsdoelen",
+          "contract_id": "Contract-ID",
+          "invoice_id": "Factuur-ID",
+          "sales_order_id": "Order-ID",
+          "released_invoice_id": "ID ontkoppelde factuur",
+          "superseded_by_quote_id": "ID vervangende offerte",
+          "next_version": "Volgende versie"
+        }
+      },
       "form": {
         "createTitle": "Webhook aanmaken",
         "editTitle": "Webhook bewerken",
@@ -460,6 +497,8 @@
         "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
         "ticketFilter": "Ticketfilter",
         "ticketFilterPlaceholder": "Eén ticket-UUID per regel. Laat leeg om alle overeenkomende ticketgebeurtenissen te ontvangen.",
+        "legacyEventsHelp": "Deze gebeurtenistypen worden niet meer ondersteund. Ze blijven bewaard op deze webhook, maar worden nooit afgeleverd. Schakel een type uit om het te verwijderen.",
+        "legacyEventLabel": "niet ondersteund",
         "retryConfig": "Retry-configuratie (JSON)",
         "verifySsl": "SSL-certificaten verifiëren",
         "webhookActive": "Webhook is actief",
@@ -500,6 +539,8 @@
         "sending": "Verzenden…",
         "rotateSecret": "Geheim roteren",
         "rotating": "Roteren…",
+        "retryFailed": "Mislukte leveringen opnieuw proberen",
+        "retryingFailed": "Opnieuw proberen…",
         "back": "Terug naar webhooks"
       },
       "deliveries": {
@@ -541,6 +582,8 @@
         "stateChangeFailed": "Webhookstatus kon niet worden bijgewerkt.",
         "retryQueued": "Opnieuw proberen in wachtrij voor gebeurtenis {{eventId}}.",
         "retryFailed": "Kon levering niet opnieuw proberen.",
+        "retryFailedQueued": "{{queued}} leveringen in wachtrij om opnieuw te proberen, {{skipped}} overgeslagen.",
+        "retryFailedFailed": "Kon mislukte leveringen niet opnieuw proberen.",
         "invalidHeaderLine": "Ongeldige headerregel: \"{{line}}\"",
         "invalidRetryConfig": "De retry-configuratie moet een JSON-object zijn"
       },
@@ -727,6 +770,9 @@
     }
   },
   "connectSso": {
+    "proFeature": {
+      "description": "Het koppelen van SSO-accounts is beschikbaar in Pro. Upgrade om uw Google Workspace- of Microsoft 365-account te verbinden voor naadloze authenticatie."
+    },
     "linkError": {
       "title": "SSO-koppeling mislukt.",
       "no_matching_user": "Het account waarmee u bent aangemeld is {{providerEmail}}, maar uw AlgaPSA-aanmelding is {{accountEmail}}. Koppel een account dat {{accountEmail}} gebruikt, of vraag de beheerder van uw identiteitsprovider om {{accountEmail}} als primair e-mailadres van dat account in te stellen.",
@@ -794,6 +840,7 @@
       "deliveryNotFound": "Aflevering niet gevonden.",
       "testNotRetryable": "Testafleveringen kunnen niet opnieuw worden geprobeerd.",
       "payloadInvalid": "Deze aflevering kan niet opnieuw worden geprobeerd omdat de opgeslagen payload ongeldig is.",
+      "unsupportedEventType": "Niet-ondersteund gebeurtenistype: {{eventTypes}}",
       "validation": { "unknownEntity": "Onbekende webhookentiteit ‘{{entity}}’.", "unknownField": "Onbekend veld ‘{{field}}’ voor webhookentiteit ‘{{entity}}’." }
     },
     "inboundWebhooks": {

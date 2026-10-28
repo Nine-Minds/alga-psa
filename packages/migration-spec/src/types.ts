@@ -80,7 +80,36 @@ export interface AmpAssetRecord extends AmpEntityRecordBase {
   serial_number?: string | null;
   manufacturer?: string | null;
   model?: string | null;
+  /** Source lifecycle state; mapped to an asset_statuses slug on apply (FR-B2). */
+  status?: string | null;
+  /** External identifier of the person the asset is assigned to (FR-C3). */
+  assignee_external_identifier?: string | null;
   purchase_date?: string | null;
+}
+
+/** Money is integer minor units + ISO 4217 code; a null currency means "tenant currency at apply time". */
+export interface AmpProductRecord extends AmpEntityRecordBase {
+  name: string;
+  sku?: string | null;
+  category_name?: string | null;
+  unit_of_measure?: string | null;
+  price_minor?: number | null;
+  price_currency?: string | null;
+  cost_minor?: number | null;
+  cost_currency?: string | null;
+  description?: string | null;
+  is_active?: number | null;
+}
+
+export interface AmpVendorProductRecord extends AmpEntityRecordBase {
+  product_package_record_id?: string | null;
+  product_sku?: string | null;
+  vendor_name: string;
+  vendor_sku?: string | null;
+  unit_cost_minor?: number | null;
+  cost_currency?: string | null;
+  lead_time_days?: number | null;
+  is_preferred?: number | null;
 }
 
 export interface AmpExternalIdentifierRecord {
@@ -115,6 +144,8 @@ export interface AmpEntityRecordMap {
   tickets: AmpTicketRecord;
   ticket_comments: AmpTicketCommentRecord;
   assets: AmpAssetRecord;
+  products: AmpProductRecord;
+  vendor_products: AmpVendorProductRecord;
 }
 
 export type AmpEntityRecord = AmpEntityRecordMap[AmpEntityType];

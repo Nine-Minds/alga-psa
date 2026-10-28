@@ -1,4 +1,5 @@
 import type { ZodTypeAny } from 'zod';
+import { WEBHOOK_EVENT_NAMES, webhookEventsForEntity } from '../../../webhooks/eventRegistry';
 import { WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY } from '../../../webhooks/payloadFields';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import type { ApiResponseSpec } from '../types';
@@ -92,61 +93,21 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const TicketWebhookEvent = registry.registerSchema(
     'TicketWebhookEventV1',
     zOpenApi
-      .enum([
-        'ticket.created',
-        'ticket.updated',
-        'ticket.status_changed',
-        'ticket.assigned',
-        'ticket.closed',
-        'ticket.comment.added',
-      ])
+      .enum(
+        webhookEventsForEntity('ticket').map((e) => e.name) as unknown as [string, ...string[]],
+      )
       .describe('Ticket-domain webhook events emitted by the eventBus subscriber.'),
   );
 
   const WebhookEventType = registry.registerSchema(
     'WebhookEventTypeV1',
-    zOpenApi.enum([
-      'ticket.created',
-      'ticket.updated',
-      'ticket.status_changed',
-      'ticket.assigned',
-      'ticket.closed',
-      'ticket.comment.added',
-      'project.created',
-      'project.updated',
-      'project.status_changed',
-      'project.assigned',
-      'project.closed',
-      'project.completed',
-      'project.task.created',
-      'project.task.updated',
-      'project.task.status_changed',
-      'project.task.assigned',
-      'project.task.completed',
-      'client.created',
-      'client.updated',
-      'contact.created',
-      'contact.updated',
-      'time.entry.created',
-      'time.entry.updated',
-      'time.entry.approved',
-      'invoice.created',
-      'invoice.finalized',
-      'invoice.sent',
-      'invoice.paid',
-      'asset.created',
-      'asset.updated',
-      'asset.maintenance.scheduled',
-      'asset.maintenance.completed',
-      'system.backup.completed',
-      'system.backup.failed',
-      'system.maintenance.started',
-      'system.maintenance.completed',
-      'workflow.execution.started',
-      'workflow.execution.completed',
-      'workflow.execution.failed',
-      'custom.event',
-    ]),
+    zOpenApi
+      .enum(WEBHOOK_EVENT_NAMES as unknown as [string, ...string[]])
+      .describe(
+        'Public webhook event name from the single event registry (ticket.*, project.*, client.*, contact.*, client_location.*, quote.*). ' +
+          'Webhooks created earlier may still store retired names (time.entry.*, invoice.*, asset.*, system.*, workflow.*, custom.event); ' +
+          'those are returned as stored, never deliver, and are rejected when newly added.',
+      ),
   );
 
   // ---------------------------------------------------------------------------
@@ -218,6 +179,26 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const WebhookRetryFailedBody = registry.registerSchema(
+    'WebhookRetryFailedBodyV1',
+    zOpenApi
+      .object({
+        since: zOpenApi
+          .string()
+          .datetime()
+          .optional()
+          .describe('Only consider deliveries whose attempted_at is at or after this timestamp.'),
+        limit: zOpenApi
+          .number()
+          .int()
+          .min(1)
+          .max(1000)
+          .optional()
+          .describe('Maximum number of candidate delivery rows to re-queue. Defaults to 500.'),
+      })
+      .describe('All fields optional; an empty body retries the newest 500 candidates.'),
+  );
+
   const WebhookSignatureBody = registry.registerSchema(
     'WebhookSignatureBodyV1',
     zOpenApi
@@ -274,7 +255,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       description: zOpenApi.string().nullable(),
       url: zOpenApi.string(),
       method: zOpenApi.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
-      event_types: zOpenApi.array(WebhookEventType),
+      event_types: zOpenApi.array(zOpenApi.string()).describe('Event names as stored; may include retired legacy names (inert).'),
       security: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
       payload_format: zOpenApi.enum(['json', 'xml', 'form_data', 'custom']).optional(),
       content_type: zOpenApi.string().optional(),
@@ -367,11 +348,37 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const WebhookDeliveryRetryQueued = registry.registerSchema(
+    'WebhookDeliveryRetryQueuedV1',
+    zOpenApi.object({
+      queued: zOpenApi.literal(true),
+      webhook_id: zOpenApi.string().uuid(),
+      delivery_id: zOpenApi.string().uuid(),
+      event_id: zOpenApi.string().uuid().describe('event_id of the re-queued envelope.'),
+    }),
+  );
+
+  const WebhookRetryFailedResult = registry.registerSchema(
+    'WebhookRetryFailedResultV1',
+    zOpenApi.object({
+      queued: zOpenApi.number().int().describe('Deliveries handed to the delivery queue.'),
+      skipped: zOpenApi
+        .number()
+        .int()
+        .describe('Candidate rows not re-queued: repeat attempts of an already queued event, or an unusable stored envelope.'),
+      total_candidates: zOpenApi
+        .number()
+        .int()
+        .describe('All failed/abandoned non-test deliveries matching the filter, before the limit.'),
+      truncated: zOpenApi.boolean().describe('True when total_candidates exceeded the limit.'),
+    }),
+  );
+
   const WebhookSubscriptionsResponse = registry.registerSchema(
     'WebhookSubscriptionsResponseV1',
     zOpenApi.object({
       webhook_id: zOpenApi.string().uuid(),
-      event_types: zOpenApi.array(WebhookEventType),
+      event_types: zOpenApi.array(zOpenApi.string()).describe('Event names as stored; may include retired legacy names (inert).'),
     }),
   );
 
@@ -485,6 +492,14 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     'WebhookDeliveryEnvelopeV1',
     successOf(WebhookDeliveryRecord),
   );
+  const WebhookDeliveryRetryQueuedEnvelope = registry.registerSchema(
+    'WebhookDeliveryRetryQueuedEnvelopeV1',
+    successOf(WebhookDeliveryRetryQueued),
+  );
+  const WebhookRetryFailedEnvelope = registry.registerSchema(
+    'WebhookRetryFailedEnvelopeV1',
+    successOf(WebhookRetryFailedResult),
+  );
   const WebhookHealthEnvelope = registry.registerSchema(
     'WebhookHealthEnvelopeV1',
     successOf(WebhookHealth),
@@ -542,6 +557,12 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       author: zOpenApi.string().nullable(),
       timestamp: zOpenApi.string().datetime(),
       is_internal: zOpenApi.boolean(),
+      author_type: zOpenApi
+        .enum(['internal', 'client', 'unknown'])
+        .optional()
+        .describe('Who wrote the comment: MSP staff (`internal`), a client/contact (`client`), or unknown.'),
+      contact_id: zOpenApi.string().uuid().optional().describe('Present when a contact wrote the comment.'),
+      contact_name: zOpenApi.string().optional().describe('Present when a contact wrote the comment.'),
     }),
   );
 
@@ -553,6 +574,9 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       author: zOpenApi.string().nullable(),
       is_internal: zOpenApi.boolean(),
       is_resolution: zOpenApi.boolean(),
+      author_type: zOpenApi.enum(['internal', 'client', 'unknown']).optional(),
+      contact_id: zOpenApi.string().uuid().optional().describe('Present when a contact wrote the comment.'),
+      contact_name: zOpenApi.string().optional().describe('Present when a contact wrote the comment.'),
       created_at: zOpenApi.string().datetime(),
       updated_at: zOpenApi.string().datetime().nullable(),
     }),
@@ -570,6 +594,11 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       status_id: zOpenApi.string().uuid().nullable().optional(),
       status_name: zOpenApi.string().nullable().optional(),
       is_closed: zOpenApi.boolean().optional(),
+      response_state: zOpenApi
+        .enum(['awaiting_client', 'awaiting_internal'])
+        .nullable()
+        .optional()
+        .describe('Current response state of the ticket. On ticket.response_state_changed it equals new_response_state.'),
       previous_status_id: zOpenApi
         .string()
         .uuid()
@@ -581,6 +610,16 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
         .nullable()
         .optional()
         .describe('Only populated on ticket.status_changed.'),
+      previous_response_state: zOpenApi
+        .enum(['awaiting_client', 'awaiting_internal'])
+        .nullable()
+        .optional()
+        .describe('Only populated on ticket.response_state_changed. null when there was no prior state.'),
+      new_response_state: zOpenApi
+        .enum(['awaiting_client', 'awaiting_internal'])
+        .nullable()
+        .optional()
+        .describe('Only populated on ticket.response_state_changed. null when the state was cleared (e.g. ticket closed).'),
       priority_id: zOpenApi.string().uuid().nullable().optional(),
       priority_name: zOpenApi.string().nullable().optional(),
       client_id: zOpenApi.string().uuid().nullable().optional(),
@@ -665,6 +704,11 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     envelopeFor('ticket.comment.added', TicketWebhookData),
   );
 
+  const TicketResponseStateChangedEnvelope = registry.registerSchema(
+    'TicketResponseStateChangedDeliveryV1',
+    envelopeFor('ticket.response_state_changed', TicketWebhookData),
+  );
+
   const outboundDefs: Array<{ event: string; envelope: ZodTypeAny; description: string }> = [
     {
       event: 'ticket.created',
@@ -700,7 +744,13 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       event: 'ticket.comment.added',
       envelope: TicketCommentAddedEnvelope,
       description:
-        'Emitted when a comment is added to a ticket. `data.comment` carries the new comment block; attachments are never included.',
+        'Emitted when a comment is added to a ticket. `data.comment` carries the new comment block (including `author_type` and, for contact authors, `contact_id`/`contact_name`); attachments are never included.',
+    },
+    {
+      event: 'ticket.response_state_changed',
+      envelope: TicketResponseStateChangedEnvelope,
+      description:
+        'Emitted when whose turn it is on a ticket changes. `data.previous_response_state` and `data.new_response_state` are `awaiting_client`, `awaiting_internal` or null (null when cleared, e.g. on close).',
     },
   ];
 
@@ -762,6 +812,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     if (handler === 'createTemplate') req.body = { schema: WebhookTemplateBody };
     if (handler === 'useTemplate') req.body = { schema: WebhookTemplateCreateBody };
     if (handler === 'verifySignature') req.body = { schema: WebhookSignatureBody };
+    if (handler === 'retryFailed') req.body = { schema: WebhookRetryFailedBody };
 
     return req;
   }
@@ -784,6 +835,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
         'getDeliveries',
         'getDelivery',
         'retryDelivery',
+        'retryFailed',
         'getWebhookAnalytics',
         'getHealth',
         'rotateSecret',
@@ -799,12 +851,22 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       responses[409] = { description: 'Webhook already exists.', schema: ApiError };
     }
 
+    if (handler === 'retryDelivery') {
+      responses[409] = { description: 'Delivery already succeeded; nothing to retry.', schema: ApiError };
+      responses[422] = {
+        description: 'Stored delivery envelope is not replayable (payload no longer matches the delivery contract).',
+        schema: ApiError,
+      };
+    }
+
     const code =
       handler === 'delete'
         ? 204
         : ['create', 'createTemplate', 'useTemplate'].includes(handler)
           ? 201
-          : 200;
+          : ['retryDelivery', 'retryFailed'].includes(handler)
+            ? 202
+            : 200;
 
     responses[code] = successResponse;
     return responses;
@@ -857,7 +919,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       action: 'read',
       summary: 'List available webhook events',
       description:
-        'Returns the supported webhook event types from webhookEventTypeSchema (ticket.*, project.*, invoice.*, etc.).',
+        'Returns the supported webhook event types from webhookEventTypeSchema (ticket.*, project.*, client.*, contact.*, client_location.*, quote.*).',
       success: { description: 'Event type list.', schema: WebhookEventListEnvelope },
     },
     {
@@ -1000,8 +1062,9 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       handler: 'retryDelivery',
       action: 'retry',
       summary: 'Retry delivery',
-      description: 'Re-sends a previously failed delivery and records a new attempt on the same delivery row.',
-      success: { description: 'Retry attempted.', schema: WebhookDeliveryEnvelope },
+      description:
+        'Re-queues a previously failed delivery as a fresh attempt on the shared webhook delivery queue (rate limiting, backoff and auto-disable still apply). Returns 202 without sending the request in-band; the new attempt lands as its own delivery row. Test deliveries are rejected.',
+      success: { description: 'Retry queued.', schema: WebhookDeliveryRetryQueuedEnvelope },
     },
     {
       method: 'get',
@@ -1012,6 +1075,16 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       description:
         'Derives status (healthy | failing | disabled), success_rate, and last delivery timestamps from the webhook stats counters.',
       success: { description: 'Health status returned.', schema: WebhookHealthEnvelope },
+    },
+    {
+      method: 'post',
+      path: '/api/v1/webhooks/{id}/retry-failed',
+      handler: 'retryFailed',
+      action: 'retry',
+      summary: 'Retry failed deliveries',
+      description:
+        'Re-queues every failed/abandoned non-test delivery of the webhook, oldest first, collapsing repeated attempts of the same event to a single enqueue. Accepts an optional since/limit body (default limit 500, max 1000) and never performs the HTTP calls in-band.',
+      success: { description: 'Retries queued.', schema: WebhookRetryFailedEnvelope },
     },
     {
       method: 'post',

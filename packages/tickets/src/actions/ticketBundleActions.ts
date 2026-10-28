@@ -7,6 +7,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { z } from 'zod';
 import type { IUser } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
+import { publishBundleAfterCommitPublication } from '../lib/ticketBundlePublication';
 import { publishWorkflowEvent, type WorkflowEventPublishContext } from '@alga-psa/event-bus/publishers';
 import { actionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError } from '@alga-psa/ui/lib/errorHandling';
@@ -20,11 +21,16 @@ import {
   revertBundlePropagationForChild,
   revertBundlePropagationsForMaster,
   attachChildrenToBundle,
+  changeBundleSettings,
   getBundleMasterClosedContext,
   type BundleAfterCommitPublication,
   type BundleAttachFailure,
 } from './ticketBundleUtils';
 import type { BundleStatusPropagationPreview } from '../lib/ticketBundlePropagation';
+import {
+  buildTicketMergedPayload,
+  buildTicketSplitPayload,
+} from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import {
   BundleConcurrentModificationError,
   type ClosedMasterChoice,
@@ -162,6 +168,23 @@ function bundleAttachFailureToActionError(
   }
 }
 
+function publishBundlePublication(
+  publication: BundleAfterCommitPublication,
+  workflowCtx: WorkflowEventPublishContext
+): Promise<void> {
+  return publishBundleAfterCommitPublication(publication, (event) =>
+    publishWorkflowEvent({
+      eventType: event.eventType,
+      payload: event.payload,
+      ctx: workflowCtx,
+      eventName: event.eventName,
+      fromState: event.fromState,
+      toState: event.toState,
+      idempotencyKey: event.idempotencyKey,
+    })
+  );
+}
+
 function registerBundlePublications(
   trx: Knex.Transaction,
   workflowCtx: WorkflowEventPublishContext,
@@ -170,16 +193,7 @@ function registerBundlePublications(
   for (const publication of publications) {
     registerAfterCommit(
       trx,
-      () =>
-        publishWorkflowEvent({
-          eventType: publication.eventType as any,
-          payload: publication.payload,
-          ctx: workflowCtx,
-          eventName: publication.eventName,
-          fromState: publication.fromState,
-          toState: publication.toState,
-          idempotencyKey: publication.idempotencyKey,
-        }),
+      () => publishBundlePublication(publication, workflowCtx),
       `${publication.eventType} bundle-attach`
     );
   }
@@ -498,12 +512,12 @@ export const promoteBundleMasterAction = withAuth(async (user, { tenant }, input
     eventType: 'TICKET_MERGED',
     ctx: workflowCtx,
     eventName: 'Ticket Merged',
-    payload: {
+    payload: buildTicketMergedPayload({
       sourceTicketId: result.oldMasterTicketId,
       targetTicketId: result.newMasterTicketId,
       mergedAt: occurredAt,
       reason: 'bundle:promote_master',
-    },
+    }),
   });
 
   return result;
@@ -518,41 +532,47 @@ const updateBundleSettingsSchema = z.object({
   masterTicketId: z.string().uuid(),
   mode: z.enum(['link_only', 'sync_updates']).optional(),
   reopenOnChildReply: z.boolean().optional(),
+  /** Required when switching a bundle with a closed master to sync_updates. */
+  onClosedMaster: closedMasterChoiceSchema.optional(),
 });
 
-export const updateBundleSettingsAction = withAuth(async (user, { tenant }, input: z.input<typeof updateBundleSettingsSchema>) => {
+type UpdateBundleSettingsResult = {
+  master_ticket_id: string;
+  mode: 'link_only' | 'sync_updates';
+  reopen_on_child_reply: boolean;
+};
+
+export const updateBundleSettingsAction = withAuth(async (
+  user,
+  { tenant },
+  input: z.input<typeof updateBundleSettingsSchema>
+): Promise<UpdateBundleSettingsResult | TicketActionError> => {
   try {
   const data = updateBundleSettingsSchema.parse(input);
   const { knex: db } = await createTenantKnex();
+  const occurredAt = nowIso();
+  const workflowCtx = buildTicketBundleWorkflowCtx({ tenantId: tenant, actorUserId: user.user_id, occurredAt });
 
-  return withTransaction(db, async (trx) => {
+  return await withTransaction(db, async (trx) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
       throw new Error('Permission denied: Cannot modify ticket bundles');
     }
 
-    const existing = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
-      .where({ master_ticket_id: data.masterTicketId })
-      .first();
-    if (!existing) throw new Error('Bundle settings not found');
-
-    const update: any = {};
-    if (data.mode) update.mode = data.mode;
-    if (data.reopenOnChildReply !== undefined) update.reopen_on_child_reply = data.reopenOnChildReply;
-
-    if (Object.keys(update).length === 0) {
-      return {
-        master_ticket_id: existing.master_ticket_id,
-        mode: existing.mode,
-        reopen_on_child_reply: existing.reopen_on_child_reply,
-      };
+    const result = await changeBundleSettings(trx, tenant, {
+      masterTicketId: data.masterTicketId,
+      mode: data.mode,
+      reopenOnChildReply: data.reopenOnChildReply,
+      choice: data.onClosedMaster ?? null,
+      actor: bundleActorInfo(user as IUser),
+      source: TICKET_ACTIVITY_SOURCE.UI,
+      occurredAt,
+    });
+    if (!result.ok) {
+      if (result.code === 'settings_not_found') throw new Error('Bundle settings not found');
+      return bundleAttachFailureToActionError(result);
     }
-
-    const [updated] = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
-      .where({ master_ticket_id: data.masterTicketId })
-      .update(update)
-      .returning(['master_ticket_id', 'mode', 'reopen_on_child_reply']);
-
-    return updated;
+    registerBundlePublications(trx, workflowCtx, result.value.publications);
+    return result.value.settings;
   });
   } catch (error) {
     const expected = ticketBundleActionErrorFrom(error);
@@ -617,12 +637,12 @@ export const removeChildFromBundleAction = withAuth(async (user, { tenant }, inp
     eventType: 'TICKET_SPLIT',
     ctx: workflowCtx,
     eventName: 'Ticket Split',
-    payload: {
+    payload: buildTicketSplitPayload({
       originalTicketId: result.masterTicketId,
       newTicketIds: [result.childTicketId],
       splitAt: occurredAt,
       reason: 'bundle:remove_child',
-    },
+    }),
   });
 
   return result;
@@ -789,12 +809,12 @@ export const unbundleMasterTicketAction = withAuth(async (user, { tenant }, inpu
       eventType: 'TICKET_SPLIT',
       ctx: workflowCtx,
       eventName: 'Ticket Split',
-      payload: {
+      payload: buildTicketSplitPayload({
         originalTicketId: result.masterTicketId,
         newTicketIds: result.childTicketIds,
         splitAt: occurredAt,
         reason: 'bundle:unbundle_master',
-      },
+      }),
     });
   }
 

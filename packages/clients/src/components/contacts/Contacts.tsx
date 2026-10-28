@@ -9,6 +9,7 @@ import { formatPhoneForDisplay, formatPhoneLabel } from '@alga-psa/validation';
 import { getAllContacts, getContactsByClient, getAllClients, searchContactListIds } from '@alga-psa/clients/actions';
 import { exportContactsToCSV, deleteContact, updateContact, getContactLastUsagePhoneTypes, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
+import { contactMatchesPhoneDigits, phoneSearchDigits } from '../../lib/contactSearchMatch';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -68,6 +69,38 @@ import {
 } from '../../lib/clientListViewAdapters';
 
 const CONTACTS_PAGE_SIZE_SETTING = 'contacts_page_size';
+
+/**
+ * Folds contacts returned by a CSV import into the list: a contact the import
+ * updated is merged over its existing row in place, and only contacts with new
+ * ids are appended.
+ *
+ * The import returns bare contact rows, without the list-only fields
+ * `getAllContacts` adds (`avatarUrl`, `client_name`). Merging rather than
+ * replacing keeps the existing avatar; `client_name` is re-derived from the
+ * loaded clients so a re-assigned or new contact stays searchable by client.
+ */
+function mergeContactsById(
+  current: IContact[],
+  imported: IContact[],
+  clientNameById: ReadonlyMap<string, string>,
+): IContact[] {
+  const withClientName = (contact: IContact): IContact => ({
+    ...contact,
+    client_name: contact.client_id
+      ? clientNameById.get(contact.client_id) ?? contact.client_name ?? null
+      : null,
+  });
+  const importedById = new Map(imported.map((contact) => [contact.contact_name_id, contact]));
+  const merged = current.map((contact) => {
+    const replacement = importedById.get(contact.contact_name_id);
+    if (!replacement) return contact;
+    importedById.delete(contact.contact_name_id);
+    return withClientName({ ...contact, ...replacement });
+  });
+  return [...merged, ...Array.from(importedById.values(), withClientName)];
+}
+
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
 
@@ -632,8 +665,9 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     }
   };
 
-  const handleImportComplete = (newContacts: IContact[]) => {
-    setContacts(prev => [...prev, ...newContacts]);
+  const handleImportComplete = (importedContacts: IContact[]) => {
+    const clientNameById = new Map(clients.map((client) => [client.client_id, client.client_name]));
+    setContacts(prev => mergeContactsById(prev, importedContacts, clientNameById));
     setIsImportDialogOpen(false);
   };
 
@@ -902,21 +936,26 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
   }, [searchTerm]);
 
   const filteredContacts = useMemo(() => {
+    const searchTermLower = searchTerm.toLowerCase();
+    // Mirrors the server legs in buildContactListSearchQuery so instant results
+    // match what the indexed search returns a moment later.
+    const searchDigits = phoneSearchDigits(searchTerm);
+    const matchesLocally = (contact: IContact): boolean => Boolean(
+      contact.full_name.toLowerCase().includes(searchTermLower) ||
+      (contact.email && contact.email.toLowerCase().includes(searchTermLower)) ||
+      contact.additional_email_addresses?.some((emailAddress) =>
+        emailAddress.email_address.toLowerCase().includes(searchTermLower)
+      ) ||
+      (contact.client_name && String(contact.client_name).toLowerCase().includes(searchTermLower)) ||
+      (contact.notes && contact.notes.toLowerCase().includes(searchTermLower)) ||
+      (searchDigits && contactMatchesPhoneDigits(contact, searchDigits))
+    );
+
     return contacts.filter(contact => {
-      const searchTermLower = searchTerm.toLowerCase();
       const matchesSearch = !searchTermLower ||
                           (indexedSearchContactIds
-                            ? indexedSearchContactIds.has(contact.contact_name_id) ||
-                              contact.full_name.toLowerCase().includes(searchTermLower) ||
-                              (contact.email && contact.email.toLowerCase().includes(searchTermLower)) ||
-                              contact.additional_email_addresses?.some((emailAddress) =>
-                                emailAddress.email_address.toLowerCase().includes(searchTermLower)
-                              )
-                            : contact.full_name.toLowerCase().includes(searchTermLower) ||
-                              (contact.email && contact.email.toLowerCase().includes(searchTermLower)) ||
-                              contact.additional_email_addresses?.some((emailAddress) =>
-                                emailAddress.email_address.toLowerCase().includes(searchTermLower)
-                              ));
+                            ? indexedSearchContactIds.has(contact.contact_name_id) || matchesLocally(contact)
+                            : matchesLocally(contact));
       const matchesStatus = filterStatus === 'all' ||
         (filterStatus === 'active' && !contact.is_inactive) ||
         (filterStatus === 'inactive' && contact.is_inactive);

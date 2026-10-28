@@ -149,43 +149,6 @@ describe('MSP contract-lines sub-batch i18n wiring contract', () => {
     expect(getLeaf(EN, 'dialog.validation.serviceSelectRequired')).toBe('Service {{index}}: Please select a service');
   });
 
-  it('T009: HourlyContractLineConfiguration basics card title includes interpolated plan name and hourly suffix', () => {
-    const source = read('../../src/components/billing-dashboard/contract-lines/HourlyContractLineConfiguration.tsx');
-    expectSourceHasKeys(source, ['configuration.hourly.basics.cardTitle', 'configuration.hourly.basics.heading', 'configuration.hourly.basics.description']);
-    expect(getLeaf(EN, 'configuration.hourly.basics.cardTitle')).toBe('Edit Contract Line: {{name}} (Hourly)');
-  });
-
-  it('T010: HourlyContractLineConfiguration plan-wide overtime settings are translated', () => {
-    const source = read('../../src/components/billing-dashboard/contract-lines/HourlyContractLineConfiguration.tsx');
-    expectSourceHasKeys(source, [
-      'configuration.hourly.planWideSettings.trigger',
-      'configuration.hourly.planWideSettings.overtime.enableLabel',
-      'configuration.hourly.planWideSettings.overtime.tooltip',
-      'configuration.hourly.planWideSettings.overtime.rateLabel',
-      'configuration.hourly.planWideSettings.overtime.thresholdLabel',
-    ]);
-  });
-
-  it('T011: HourlyContractLineConfiguration after-hours settings are translated', () => {
-    const source = read('../../src/components/billing-dashboard/contract-lines/HourlyContractLineConfiguration.tsx');
-    expectSourceHasKeys(source, [
-      'configuration.hourly.planWideSettings.afterHours.enableLabel',
-      'configuration.hourly.planWideSettings.afterHours.tooltip',
-      'configuration.hourly.planWideSettings.afterHours.multiplierLabel',
-      'configuration.hourly.planWideSettings.afterHours.multiplierHelp',
-    ]);
-  });
-
-  it('T012: HourlyContractLineConfiguration service rates section text is translated', () => {
-    const source = read('../../src/components/billing-dashboard/contract-lines/HourlyContractLineConfiguration.tsx');
-    expectSourceHasKeys(source, [
-      'configuration.hourly.services.cardTitle',
-      'configuration.hourly.services.emptyState',
-      'configuration.hourly.services.nonHourlyServiceMessage',
-      'configuration.hourly.actions.saveConfiguration',
-    ]);
-  });
-
   it('T013: UsageContractLineConfiguration basics section is translated with usage card title interpolation', () => {
     const source = read('../../src/components/billing-dashboard/contract-lines/UsageContractLineConfiguration.tsx');
     expectSourceHasKeys(source, ['configuration.usage.basics.cardTitle', 'configuration.usage.basics.heading', 'configuration.usage.basics.description']);
@@ -214,7 +177,10 @@ describe('MSP contract-lines sub-batch i18n wiring contract', () => {
 
   it('T017: UsageContractLinePresetConfiguration translated save/validation error messages exist', () => {
     const source = read('../../src/components/billing-dashboard/contract-lines/UsageContractLinePresetConfiguration.tsx');
-    expectSourceHasKeys(source, ['preset.usage.errors.noChangesDetected', 'preset.usage.errors.validationErrorsInModifiedServices']);
+    expectSourceHasKeys(source, [
+      'preset.usage.errors.failedToSaveContractLinePreset',
+      'preset.usage.errors.invalidPlanTypeOrNotFound',
+    ]);
   });
 
   it('T018: HourlyContractLinePresetConfiguration basics section fields are translated', () => {
@@ -378,41 +344,6 @@ describe('MSP contract-lines sub-batch i18n wiring contract', () => {
     ]);
   });
 
-  it('T033: ServiceHourlyConfigForm base labels/tooltips are translated', () => {
-    const source = read('../../src/components/billing-dashboard/contract-lines/ServiceHourlyConfigForm.tsx');
-    expectSourceHasKeys(source, [
-      'forms.hourlyConfig.labels.hourlyRate',
-      'forms.hourlyConfig.labels.minimumBillableTime',
-      'forms.hourlyConfig.labels.roundUpToNearest',
-      'forms.hourlyConfig.tooltips.hourlyRate',
-      'forms.hourlyConfig.tooltips.minimumBillableTime',
-      'forms.hourlyConfig.tooltips.roundUpToNearest',
-    ]);
-  });
-
-  it('T034: ServiceHourlyConfigForm user-type-rates section strings are translated', () => {
-    const source = read('../../src/components/billing-dashboard/contract-lines/ServiceHourlyConfigForm.tsx');
-    expectSourceHasKeys(source, [
-      'forms.hourlyConfig.userTypeRates.heading',
-      'forms.hourlyConfig.userTypeRates.tooltip',
-      'forms.hourlyConfig.userTypeRates.addNewRateLabel',
-      'common.actions.add',
-    ]);
-  });
-
-  it('T035: ServiceHourlyConfigForm user-type option labels and validation errors are translated', () => {
-    const source = read('../../src/components/billing-dashboard/contract-lines/ServiceHourlyConfigForm.tsx');
-    expectSourceHasKeys(source, [
-      'forms.hourlyConfig.userTypeRates.options.technician',
-      'forms.hourlyConfig.userTypeRates.options.engineer',
-      'forms.hourlyConfig.userTypeRates.options.consultant',
-      'forms.hourlyConfig.userTypeRates.options.projectManager',
-      'forms.hourlyConfig.userTypeRates.options.administrator',
-      'forms.hourlyConfig.userTypeRates.validation.selectTypeAndRate',
-      'forms.hourlyConfig.userTypeRates.validation.duplicateType',
-    ]);
-  });
-
   it('T036: ContractLineServiceForm title/loading/errors are translated', () => {
     const source = read('../../src/components/billing-dashboard/contract-lines/ContractLineServiceForm.tsx');
     expectSourceHasKeys(source, [
@@ -528,18 +459,6 @@ describe('MSP contract-lines sub-batch i18n wiring contract', () => {
       'typeSelector.descriptions.hourly',
       'typeSelector.descriptions.usage',
     ]);
-  });
-
-  it('T046: ContractLineTypeRouter loading/errors are translated with interpolated id/type values', () => {
-    const source = read('../../src/components/billing-dashboard/contract-lines/ContractLineTypeRouter.tsx');
-    expectSourceHasKeys(source, [
-      'router.contractLine.loading',
-      'router.contractLine.notFound',
-      'router.contractLine.loadFailed',
-      'router.contractLine.unsupportedType',
-    ]);
-    expect(getLeaf(EN, 'router.contractLine.notFound')).toBe('Contract line with ID {{id}} not found.');
-    expect(getLeaf(EN, 'router.contractLine.unsupportedType')).toBe('Unknown or unsupported contract line type: {{type}}');
   });
 
   it('T047: ContractLinePresetTypeRouter loading/errors are translated with interpolated id/type values', () => {

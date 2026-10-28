@@ -1,4 +1,5 @@
 import React, { useEffect, useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type DrawerProps = {
   /** Whether the drawer is open */
@@ -104,6 +105,7 @@ export function Drawer({
   closeOnEscape = true,
   style,
 }: DrawerProps) {
+  const { t } = useTranslation('common');
   const drawerRef = useRef<HTMLDivElement>(null);
   const previousFocusRef = useRef<Element | null>(null);
   const [closeButtonHovered, setCloseButtonHovered] = useState(false);
@@ -261,7 +263,7 @@ export function Drawer({
               style={currentCloseButtonStyle}
               onMouseEnter={() => setCloseButtonHovered(true)}
               onMouseLeave={() => setCloseButtonHovered(false)}
-              aria-label="Close drawer"
+              aria-label={t('drawer.actions.close', { defaultValue: 'Close drawer' })}
             >
               <svg
                 width="20"

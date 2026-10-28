@@ -112,6 +112,18 @@ export class BadRequestError extends Error implements ApiError {
   }
 }
 
+export class UnprocessableEntityError extends Error implements ApiError {
+  statusCode = 422;
+  code = 'UNPROCESSABLE_ENTITY';
+  details: any;
+
+  constructor(message: string = 'Unprocessable entity', details?: any) {
+    super(message);
+    this.name = 'UnprocessableEntityError';
+    this.details = details;
+  }
+}
+
 export class BadGatewayError extends Error implements ApiError {
   statusCode = 502;
   code = 'BAD_GATEWAY';
@@ -192,6 +204,9 @@ export function createServerActionErrorResponse(error: ServerActionErrorResult):
 }
 
 const APPLICATION_ERROR_STATUS: Record<string, number> = {
+  CO_MANAGED_NOT_ACTIVE: 409,
+  CO_MANAGED_READ_ONLY: 423,
+  HUMAN_WORK_ASSIGNEE_INVALID: 422,
   QBO_AUTH_ERROR: 401,
   QBO_CONFIG_MISSING: 400,
   QBO_INVALID_INPUT: 400,

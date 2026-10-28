@@ -217,7 +217,10 @@
       "policies": {
         "title": "Tillgångspolicyer"
       },
-      "title": "Tillgångar"
+      "title": "Tillgångar",
+      "custody": {
+        "title": "Utrustning i förvar"
+      }
     },
     "billing": {
       "title": "Fakturering",
@@ -403,6 +406,9 @@
           "detail": {
             "title": "Projektuppgift"
           }
+        },
+        "staging": {
+          "title": "Projektförberedelse"
         }
       },
       "templates": {
@@ -549,6 +555,12 @@
       },
       "recurring": {
         "title": "Återkommande ärenden"
+      },
+      "templates": {
+        "title": "Ärendemallar"
+      },
+      "cannedResponses": {
+        "title": "Färdiga svar"
       }
     },
     "timeEntry": {
@@ -627,5 +639,8 @@
     "setupComplete": {
       "title": "Kortregistrering"
     }
+  },
+  "pay": {
+    "title": "Betala faktura"
   }
 }

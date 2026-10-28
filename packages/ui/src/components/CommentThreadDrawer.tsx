@@ -6,6 +6,7 @@ import Drawer from './Drawer';
 import HybridThreadNode from './HybridThreadNode';
 import InlineReplyComposer from './InlineReplyComposer';
 import type { CommentThreadGroup } from './CommentThreadList';
+import { useTranslation } from '../lib/i18n/client';
 
 export interface CommentThreadDrawerProps<TComment> {
   id?: string;
@@ -26,6 +27,7 @@ export interface CommentThreadDrawerProps<TComment> {
   submitLabel?: string;
   cancelLabel?: string;
   isSubmitting?: boolean;
+  canReply?: boolean;
   uploadFile?: (file: File, blockId?: string) => Promise<string>;
   searchMentions?: (query: string) => Promise<any[]>;
   /** Forwarded to the reply composer's editor footer (e.g. Cc/Bcc control). */
@@ -49,15 +51,17 @@ export function CommentThreadDrawer<TComment>({
   replyRoomName,
   initialInternal = false,
   showInternalToggle = true,
-  submitLabel = 'Reply',
-  cancelLabel = 'Cancel',
+  submitLabel,
+  cancelLabel,
   isSubmitting = false,
+  canReply = true,
   uploadFile,
   searchMentions,
   replyFooterActions,
   replySubmitDisabled = false,
   onSubmitReply,
 }: CommentThreadDrawerProps<TComment>): React.ReactElement {
+  const { t } = useTranslation('common');
   const rootCommentId = group ? getCommentId(group.root) : null;
   const composerParentId = replyParentCommentId || rootCommentId || '';
   const composerRoomName = useMemo(
@@ -78,7 +82,7 @@ export function CommentThreadDrawer<TComment>({
             />
           )}
         </div>
-        {composerParentId && (
+        {canReply && composerParentId && (
           <div className="comment-thread-drawer-composer border-t border-gray-200 pt-4">
             <InlineReplyComposer
               id={`${id}-composer`}
@@ -86,8 +90,8 @@ export function CommentThreadDrawer<TComment>({
               roomName={composerRoomName}
               initialInternal={initialInternal}
               showInternalToggle={showInternalToggle}
-              submitLabel={submitLabel}
-              cancelLabel={cancelLabel}
+              submitLabel={submitLabel ?? t('inlineReplyComposer.actions.reply', { defaultValue: 'Reply' })}
+              cancelLabel={cancelLabel ?? t('actions.cancel', { defaultValue: 'Cancel' })}
               isSubmitting={isSubmitting}
               uploadFile={uploadFile}
               searchMentions={searchMentions}

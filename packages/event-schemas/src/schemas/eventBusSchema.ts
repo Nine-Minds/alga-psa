@@ -1,4 +1,22 @@
+import {
+  quoteSentEventPayloadSchema,
+  quoteViewedEventPayloadSchema,
+  quoteApprovedEventPayloadSchema,
+  quoteAcceptedEventPayloadSchema,
+  quoteRejectedEventPayloadSchema,
+  quoteExpiredEventPayloadSchema,
+  quoteConvertedEventPayloadSchema,
+  quoteConversionRevertedEventPayloadSchema,
+  quoteSupersededEventPayloadSchema,
+  quoteCancelledEventPayloadSchema,
+} from './domain/quoteEventSchemas';
 import { z } from 'zod';
+import {
+  EXTENSION_EVENT_TYPES,
+  EXTENSION_PAYLOAD_SCHEMAS,
+  assertEventExtensionsCompose,
+  type ExtensionEventType,
+} from './extensions';
 import {
   emailProviderConnectedEventPayloadSchema,
   emailProviderDisconnectedEventPayloadSchema,
@@ -55,6 +73,7 @@ import {
   paymentRecordedEventPayloadSchema,
   paymentRefundedEventPayloadSchema,
   prepaidBalanceAlertScanRequestedEventPayloadSchema,
+  prepaidBlockUsageChangedEventPayloadSchema,
   recurringBillingRunCompletedEventPayloadSchema,
   recurringBillingRunFailedEventPayloadSchema,
   recurringBillingRunStartedEventPayloadSchema,
@@ -64,6 +83,10 @@ import {
   clientArchivedEventPayloadSchema,
   clientCreatedEventPayloadSchema,
   clientDeletedEventPayloadSchema,
+  clientLocationCreatedEventPayloadSchema,
+  clientLocationUpdatedEventPayloadSchema,
+  clientLocationDeactivatedEventPayloadSchema,
+  clientLocationDeletedEventPayloadSchema,
   clientMergedEventPayloadSchema,
   clientOwnerAssignedEventPayloadSchema,
   clientStatusChangedEventPayloadSchema,
@@ -135,6 +158,7 @@ import {
 import {
   assetAssignedEventPayloadSchema,
   assetCreatedEventPayloadSchema,
+  assetCustodyChangedEventPayloadSchema,
   assetUnassignedEventPayloadSchema,
   assetUpdatedEventPayloadSchema,
   assetWarrantyExpiringEventPayloadSchema,
@@ -152,7 +176,6 @@ import {
   ticketAutoCloseWarningEventPayloadSchema,
   ticketClosedEventPayloadSchema,
   ticketCreatedEventPayloadSchema,
-  ticketRequesterFieldsSchema,
   ticketCustomerRepliedEventPayloadSchema,
   ticketEscalatedEventPayloadSchema,
   ticketExternalLinkEventPayloadSchema,
@@ -193,7 +216,7 @@ import {
 } from './domain/inventoryEventSchemas';
 
 // Define event types
-export const EVENT_TYPES = [
+const CORE_EVENT_TYPES = [
   // Tickets (existing + legacy)
   'TICKET_CREATED',
   'TICKET_UPDATED',
@@ -343,6 +366,7 @@ export const EVENT_TYPES = [
   'CREDIT_NOTE_VOIDED',
   'CREDIT_EXPIRING',
   'PREPAID_BALANCE_ALERT_SCAN_REQUESTED',
+  'PREPAID_BLOCK_USAGE_CHANGED',
   'HOUR_BLOCK_EXPIRING',
   'CONTRACT_CREATED',
   'CONTRACT_UPDATED',
@@ -365,6 +389,20 @@ export const EVENT_TYPES = [
   'CLIENT_MERGED',
   'CLIENT_ARCHIVED',
   'CLIENT_DELETED',
+  'QUOTE_SENT',
+  'QUOTE_VIEWED',
+  'QUOTE_APPROVED',
+  'QUOTE_ACCEPTED',
+  'QUOTE_REJECTED',
+  'QUOTE_EXPIRED',
+  'QUOTE_CONVERTED',
+  'QUOTE_CONVERSION_REVERTED',
+  'QUOTE_SUPERSEDED',
+  'QUOTE_CANCELLED',
+  'CLIENT_LOCATION_CREATED',
+  'CLIENT_LOCATION_UPDATED',
+  'CLIENT_LOCATION_DEACTIVATED',
+  'CLIENT_LOCATION_DELETED',
   'CONTACT_CREATED',
   'CONTACT_UPDATED',
   'CONTACT_PRIMARY_SET',
@@ -494,6 +532,7 @@ export const EVENT_TYPES = [
   'ASSET_ASSIGNED',
   'ASSET_UNASSIGNED',
   'ASSET_WARRANTY_EXPIRING',
+  'ASSET_CUSTODY_CHANGED',
   'FILE_UPLOADED',
   'MEDIA_PROCESSING_SUCCEEDED',
   'MEDIA_PROCESSING_FAILED',
@@ -535,6 +574,20 @@ export const EVENT_TYPES = [
   'UNKNOWN',
 ] as const satisfies readonly [string, ...string[]];
 
+// An extension may add event types, never redeclare one: a collision with a core
+// name fails here at compile time and in assertEventExtensionsCompose at load.
+type AssertNoCoreCollision<T extends never> = T;
+export type EventExtensionCoreCollisions = AssertNoCoreCollision<
+  Extract<ExtensionEventType, (typeof CORE_EVENT_TYPES)[number]>
+>;
+assertEventExtensionsCompose(CORE_EVENT_TYPES);
+
+// Core plus extension event types; the extension list is empty natively.
+export const EVENT_TYPES = [...CORE_EVENT_TYPES, ...EXTENSION_EVENT_TYPES] as const satisfies readonly [
+  string,
+  ...string[],
+];
+
 export const EventTypeEnum = z.enum(EVENT_TYPES);
 
 export type EventType = z.infer<typeof EventTypeEnum>;
@@ -560,8 +613,16 @@ export const BaseEventSchema = z.object({
 // Ticket event payload schema
 export const TicketEventPayloadSchema = BasePayloadSchema.extend({
   ticketId: z.string().uuid(),
-  userId: z.string().uuid(), // The user being assigned to the ticket
+  // Acting user. Present only when a user acted; see actorType. Never a substitute id.
+  // (TICKET_ASSIGNED requires it and means the assignee: TicketAssignedLegacyPayloadSchema.)
+  userId: z.string().uuid().optional(),
   assignedByUserId: z.string().uuid().optional(), // The user who performed the action
+  // Declared so the legacy branch keeps them: consumers receive the parsed object.
+  actorType: z.enum(['USER', 'CONTACT', 'SYSTEM']).optional(),
+  actorUserId: z.string().uuid().optional(),
+  actorContactId: z.string().uuid().optional(),
+  occurredAt: z.string().optional(),
+  commentId: z.string().uuid().optional(),
   changes: z.record(z.unknown()).optional(),
   externalLinks: z.array(z.record(z.unknown())).optional(),
   ...TicketNotificationSuppressionSchema,
@@ -880,7 +941,7 @@ export const ClientEventPayloadSchema = BasePayloadSchema.extend({
 
 export const UserEventPayloadSchema = BasePayloadSchema.extend({
   userId: z.string().uuid(),
-  userType: z.enum(['internal', 'client']).optional(),
+  userType: z.enum(['internal', 'client', 'service']).optional(),
   email: z.string().email().optional(),
   changedFields: z.array(z.string()).optional(),
   roleIds: z.array(z.string().uuid()).optional(),
@@ -1186,17 +1247,21 @@ export const RmmWebhookEventPayloadSchema = BasePayloadSchema.extend({
   rawPayload: z.record(z.unknown()), // Full webhook payload for processing
 });
 
-// The legacy branch parses first and strips unknown keys, so it must carry the requester identity too.
-const TicketCreatedPayloadSchema = z.union([
-  TicketEventPayloadSchema.extend(ticketRequesterFieldsSchema),
-  ticketCreatedEventPayloadSchema,
-]);
-const TicketUpdatedPayloadSchema = z.union([TicketEventPayloadSchema, ticketUpdatedEventPayloadSchema]);
-const TicketClosedPayloadSchema = z.union([TicketEventPayloadSchema, ticketClosedEventPayloadSchema]);
-const TicketAutoCloseWarningPayloadSchema = z.union([TicketEventPayloadSchema, ticketAutoCloseWarningEventPayloadSchema]);
+// The legacy branch parses first and strips unknown keys, and with `userId` optional it matches
+// domain payloads too. Give it the domain fields as optional extras (legacy definitions win on
+// shared keys) so a domain payload parsed by it keeps fields like contactNameId or closedAt.
+function legacyTicketUnion<D extends z.AnyZodObject>(domainSchema: D) {
+  return z.union([domainSchema.partial().merge(TicketEventPayloadSchema), domainSchema]);
+}
+const TicketCreatedPayloadSchema = legacyTicketUnion(ticketCreatedEventPayloadSchema);
+const TicketUpdatedPayloadSchema = legacyTicketUnion(ticketUpdatedEventPayloadSchema);
+const TicketClosedPayloadSchema = legacyTicketUnion(ticketClosedEventPayloadSchema);
+const TicketAutoCloseWarningPayloadSchema = legacyTicketUnion(ticketAutoCloseWarningEventPayloadSchema);
 const MaintenanceJobRequestedPayloadSchema = maintenanceJobRequestedEventPayloadSchema;
 const InboundEmailProviderAutoPausedPayloadSchema = inboundEmailProviderAutoPausedEventPayloadSchema;
-const TicketAssignedPayloadSchema = z.union([TicketEventPayloadSchema, ticketAssignedEventPayloadSchema]);
+// On TICKET_ASSIGNED `userId` is the assignee (the notification recipient), so it stays required.
+export const TicketAssignedLegacyPayloadSchema = TicketEventPayloadSchema.extend({ userId: z.string().uuid() });
+const TicketAssignedPayloadSchema = z.union([TicketAssignedLegacyPayloadSchema, ticketAssignedEventPayloadSchema]);
 const TicketResponseStateChangedPayloadSchemaV2 = z.union([
   TicketResponseStateChangedPayloadSchema,
   ticketResponseStateChangedEventPayloadSchema,
@@ -1218,7 +1283,8 @@ const InboundEmailReceivedPayloadSchema = z.union([
 ]);
 
 // Map event types to their payload schemas
-export const EventPayloadSchemas = {
+/** Core payload schemas; `EventPayloadSchemas` hands out these same objects. */
+export const CorePayloadSchemas = {
   // Tickets (existing + legacy)
   TICKET_CREATED: TicketCreatedPayloadSchema,
   TICKET_UPDATED: TicketUpdatedPayloadSchema,
@@ -1363,6 +1429,7 @@ export const EventPayloadSchemas = {
   CREDIT_NOTE_VOIDED: creditNoteVoidedEventPayloadSchema,
   CREDIT_EXPIRING: creditExpiringEventPayloadSchema,
   PREPAID_BALANCE_ALERT_SCAN_REQUESTED: prepaidBalanceAlertScanRequestedEventPayloadSchema,
+  PREPAID_BLOCK_USAGE_CHANGED: prepaidBlockUsageChangedEventPayloadSchema,
   HOUR_BLOCK_EXPIRING: hourBlockExpiringEventPayloadSchema,
   CONTRACT_CREATED: ContractCreatedPayloadSchema,
   CONTRACT_UPDATED: ContractUpdatedPayloadSchema,
@@ -1385,6 +1452,20 @@ export const EventPayloadSchemas = {
   CLIENT_MERGED: clientMergedEventPayloadSchema,
   CLIENT_ARCHIVED: clientArchivedEventPayloadSchema,
   CLIENT_DELETED: clientDeletedEventPayloadSchema,
+  QUOTE_SENT: quoteSentEventPayloadSchema,
+  QUOTE_VIEWED: quoteViewedEventPayloadSchema,
+  QUOTE_APPROVED: quoteApprovedEventPayloadSchema,
+  QUOTE_ACCEPTED: quoteAcceptedEventPayloadSchema,
+  QUOTE_REJECTED: quoteRejectedEventPayloadSchema,
+  QUOTE_EXPIRED: quoteExpiredEventPayloadSchema,
+  QUOTE_CONVERTED: quoteConvertedEventPayloadSchema,
+  QUOTE_CONVERSION_REVERTED: quoteConversionRevertedEventPayloadSchema,
+  QUOTE_SUPERSEDED: quoteSupersededEventPayloadSchema,
+  QUOTE_CANCELLED: quoteCancelledEventPayloadSchema,
+  CLIENT_LOCATION_CREATED: clientLocationCreatedEventPayloadSchema,
+  CLIENT_LOCATION_UPDATED: clientLocationUpdatedEventPayloadSchema,
+  CLIENT_LOCATION_DEACTIVATED: clientLocationDeactivatedEventPayloadSchema,
+  CLIENT_LOCATION_DELETED: clientLocationDeletedEventPayloadSchema,
   CONTACT_CREATED: contactCreatedEventPayloadSchema,
   CONTACT_UPDATED: contactUpdatedEventPayloadSchema,
   CONTACT_PRIMARY_SET: contactPrimarySetEventPayloadSchema,
@@ -1515,6 +1596,7 @@ export const EventPayloadSchemas = {
   ASSET_ASSIGNED: assetAssignedEventPayloadSchema,
   ASSET_UNASSIGNED: assetUnassignedEventPayloadSchema,
   ASSET_WARRANTY_EXPIRING: assetWarrantyExpiringEventPayloadSchema,
+  ASSET_CUSTODY_CHANGED: assetCustodyChangedEventPayloadSchema,
   FILE_UPLOADED: fileUploadedEventPayloadSchema,
   MEDIA_PROCESSING_SUCCEEDED: mediaProcessingSucceededEventPayloadSchema,
   MEDIA_PROCESSING_FAILED: mediaProcessingFailedEventPayloadSchema,
@@ -1554,6 +1636,8 @@ export const EventPayloadSchemas = {
   // Generic unknown type for custom events
   UNKNOWN: CustomEventPayloadSchema,
 } as const;
+
+export const EventPayloadSchemas = { ...CorePayloadSchemas, ...EXTENSION_PAYLOAD_SCHEMAS } as const;
 
 const missingPayloadSchemas = EVENT_TYPES.filter((t) => !(t in EventPayloadSchemas));
 if (missingPayloadSchemas.length > 0) {
@@ -1619,6 +1703,7 @@ export type InvoiceGeneratedEvent = z.infer<typeof EventSchemas.INVOICE_GENERATE
 export type InvoiceFinalizedEvent = z.infer<typeof EventSchemas.INVOICE_FINALIZED>;
 export type CreditExpiringEvent = z.infer<typeof EventSchemas.CREDIT_EXPIRING>;
 export type PrepaidBalanceAlertScanRequestedEvent = z.infer<typeof EventSchemas.PREPAID_BALANCE_ALERT_SCAN_REQUESTED>;
+export type PrepaidBlockUsageChangedEvent = z.infer<typeof EventSchemas.PREPAID_BLOCK_USAGE_CHANGED>;
 export type HourBlockExpiringEvent = z.infer<typeof EventSchemas.HOUR_BLOCK_EXPIRING>;
 export type CustomEvent = z.infer<typeof EventSchemas.CUSTOM_EVENT>;
 export type InboundEmailReceivedEvent = z.infer<typeof EventSchemas.INBOUND_EMAIL_RECEIVED>;
@@ -1704,7 +1789,9 @@ export function convertToWorkflowEvent(event: Event, hooks?: WorkflowPublishHook
   // matching workflow at payload validation. Default it at the stream boundary
   // so no publisher can silently opt out of workflow triggers (alga-2026-0002379).
   // LEVERAGE: friction workflow-payload-occurred-at — publishers should build payloads with
-  // buildWorkflowPayload; this default is the backstop for the raw publishEvent callers.
+  // buildWorkflowPayload; this default is the backstop for the raw publishEvent callers. The workflow
+  // worker repeats the default from the envelope timestamp at its consumer boundary
+  // (WorkflowRuntimeV2EventStreamWorker.normalizeSourcePayload), so three layers now stamp one field.
   const rawPayload = event.payload as Record<string, unknown> | undefined;
   const payload =
     rawPayload && typeof rawPayload === 'object' && typeof rawPayload.occurredAt !== 'string'

@@ -317,7 +317,7 @@
         "description": "Konfigurera avancerade alternativ för e-postbehandling",
         "folderFiltersLabel": "Mappfilter",
         "folderFiltersPlaceholder": "Inbox, Support, Anpassad mapp",
-        "folderFiltersHelp": "Kommaseparerad lista över mappar att bevaka (standard: Inbox)",
+        "folderFiltersHelp": "Kommaseparerad lista över mappar att bevaka (standard: Inbox). Använd exakt det mappnamn som visas i Outlook och skriv nästlade mappar som Inbox/Undermapp.",
         "maxEmailsPerSync": "Högsta antal e-postmeddelanden per synkronisering"
       }
     },
@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Pro-funktion",
+      "domainsDescription": "Hanterade domäner kräver Pro.",
+      "settingsDescription": "Inställningar för hanterad e-post kräver Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Det gick inte att läsa in hanterade domäner",
       "loadOutboundSettingsFailed": "Det gick inte att läsa in inställningarna för utgående e-post",
@@ -930,6 +935,12 @@
       "copyHostAriaLabel": "Kopiera värd",
       "copyFqdnAriaLabel": "Kopiera fullständigt namn",
       "hostHint": "Tips: Ange bara det värdnamn som visas ovan hos din DNS-leverantör. De flesta leverantörer (Namecheap, GoDaddy, Cloudflare och andra) lägger till ”{{domain}}” automatiskt. Om du i stället klistrar in det fullständiga namnet upprepas domänen (…{{domain}}.{{domain}}) och posten kan aldrig verifieras."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Pro-funktion",
+        "description": "Instruktioner för DNS-poster kräver Pro."
+      }
     }
   },
   "inboundRules": {
@@ -1131,7 +1142,10 @@
       "duplicateShortName": "En konfiguration med det här kortnamnet finns redan",
       "createFailed": "Det gick inte att skapa standardinställningar för inkommande ärenden. Försök igen.",
       "notFound": "Konfigurationen av standardinställningar hittades inte",
-      "updateFailed": "Det gick inte att uppdatera standardinställningarna för inkommande ärenden. Försök igen."
+      "updateFailed": "Det gick inte att uppdatera standardinställningarna för inkommande ärenden. Försök igen.",
+      "locationRequiresClient": "Välj en kund innan du väljer en plats",
+      "locationClientMismatch": "Den valda platsen tillhör inte den valda kunden",
+      "referencedByProviders": "Den här konfigurationen används fortfarande av följande e-postleverantörer: {{providers}}. Välj andra standardvärden för inkommande ärenden för de leverantörerna innan du tar bort den."
     },
     "ticketFieldOptions": {
       "permissionDenied": "Åtkomst nekad: Det går inte att läsa alternativen för ärendefält",

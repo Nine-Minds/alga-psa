@@ -1,6 +1,7 @@
 // @ts-nocheck
 'use server';
 
+import { isClientUserType } from '@alga-psa/types';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
@@ -10,15 +11,17 @@ import {
   IInvoiceCharge
 } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
-import { toPlainDate, displayAddressField, displayCountry } from '@alga-psa/core';
+import { toPlainDate, formatLocationAddress } from '@alga-psa/core';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { getClientContractPurchaseOrderContext, getPurchaseOrderConsumedCents } from '@alga-psa/billing/services/purchaseOrderService';
 import { withAuth } from '@alga-psa/auth';
+import { withSerializableAuth } from './serializableAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   permissionError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { enrichContractChangeDescriptions } from '../lib/billing/contractChangeInvoiceProjection.server';
 
 type InvoiceQueryUser = {
   user_id: string;
@@ -62,7 +65,7 @@ async function assertClientPortalInvoiceAccess(
   user: InvoiceQueryUser,
   invoiceId: string
 ): Promise<ActionPermissionError | null> {
-  if (user.user_type !== 'client') {
+  if (!isClientUserType(user.user_type)) {
     return null;
   }
   const portalClientId = await getClientPortalUserClientId(knex, tenant, user);
@@ -142,6 +145,10 @@ async function enrichInvoiceWithProjectRenderingData(
   invoice: InvoiceViewModel,
 ): Promise<InvoiceViewModel> {
   const db = tenantDb(knex, tenant);
+  // Delivered rows are never rewritten for a presentation repair. Where the
+  // canonical companion ledger still exists, derive their display text at read
+  // time; legacy rows without source data keep their honest stored wording.
+  invoice = await enrichContractChangeDescriptions(knex, tenant, invoiceId, invoice);
   const projectQuery = db.table('invoices as invoice');
   db.tenantJoin(projectQuery, 'projects as project', 'invoice.project_id', 'project.project_id', { type: 'left' });
   const project = await projectQuery
@@ -280,6 +287,7 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, client: any): Promise
       : null,
     credit_applied: Number(invoice.credit_applied || 0),
     is_manual: invoice.is_manual,
+    draft_adjustment_revision: Number(invoice.draft_adjustment_revision ?? 0),
     invoice_type: invoice.invoice_type ?? null,
     is_prepayment: Boolean(invoice.is_prepayment),
     finalized_at: invoice.finalized_at ? (typeof invoice.finalized_at === 'string' ? toPlainDate(invoice.finalized_at) : invoice.finalized_at) : undefined,
@@ -494,6 +502,7 @@ export const fetchInvoicesPaginated = withAuth(async (
           'invoices.due_date',
           'invoices.status',
           'invoices.is_manual',
+          'invoices.draft_adjustment_revision',
           'invoices.finalized_at',
           'invoices.billing_cycle_id',
           'invoices.currency_code',
@@ -549,20 +558,12 @@ export const fetchInvoicesPaginated = withAuth(async (
         const clientProperties = invoice.properties as { logo?: string } || {};
 
         // Format location address
-        const addressParts: string[] = [];
-        const addressLine1 = displayAddressField(invoice.address_line1);
-        if (addressLine1) addressParts.push(addressLine1);
-        if (invoice.address_line2) addressParts.push(invoice.address_line2);
-        const cityStateZip = [displayAddressField(invoice.city), invoice.state_province, invoice.postal_code]
-          .filter(Boolean).join(', ');
-        if (cityStateZip) addressParts.push(cityStateZip);
-        const countryName = displayCountry(invoice.country_name);
-        if (countryName) addressParts.push(countryName);
+        const address = formatLocationAddress(invoice);
 
         return getBasicInvoiceViewModel(invoice, {
           client_name: invoice.client_name,
           logo: clientProperties.logo || '',
-          address: addressParts.join(', ') || ''
+          address
         });
       }));
 
@@ -645,6 +646,7 @@ export const fetchInvoicesByClient = withAuth(async (
           'invoices.due_date',
           'invoices.status',
           'invoices.is_manual',
+          'invoices.draft_adjustment_revision',
           'invoices.finalized_at',
           'invoices.billing_cycle_id',
           'invoices.currency_code',
@@ -694,20 +696,12 @@ export const fetchInvoicesByClient = withAuth(async (
       const clientProperties = invoice.properties as { logo?: string } || {};
       
       // Format location address
-      const addressParts: string[] = [];
-      const addressLine1 = displayAddressField(invoice.address_line1);
-      if (addressLine1) addressParts.push(addressLine1);
-      if (invoice.address_line2) addressParts.push(invoice.address_line2);
-      const cityStateZip = [displayAddressField(invoice.city), invoice.state_province, invoice.postal_code]
-        .filter(Boolean).join(', ');
-      if (cityStateZip) addressParts.push(cityStateZip);
-      const countryName = displayCountry(invoice.country_name);
-      if (countryName) addressParts.push(countryName);
-      
+      const address = formatLocationAddress(invoice);
+
       return getBasicInvoiceViewModel(invoice, {
         client_name: invoice.client_name,
         logo: clientProperties.logo || '',
-        address: addressParts.join(', ') || ''
+        address
       });
     }));
   } catch (error) {
@@ -767,6 +761,7 @@ export const fetchInvoicesByContract = withAuth(async (
           'invoices.due_date',
           'invoices.status',
           'invoices.is_manual',
+          'invoices.draft_adjustment_revision',
           'invoices.finalized_at',
           'invoices.billing_cycle_id',
           'invoices.currency_code',
@@ -837,7 +832,7 @@ export const getInvoiceForRendering = withAuth(async (
   }
 });
 
-export const getEnrichedInvoiceViewModel = withAuth(async (
+export const getEnrichedInvoiceViewModel = withSerializableAuth(withAuth(async (
   user,
   { tenant },
   invoiceId: string
@@ -889,15 +884,43 @@ export const getEnrichedInvoiceViewModel = withAuth(async (
 
   await enrichInvoiceViewModelWithLocations(knex, tenant, viewModel, invoiceId);
   return viewModel;
-});
+}));
 
-export const getResolvedInvoiceTemplateId = withAuth(async (
+/**
+ * Read the draft invoice header and its charges from one MVCC snapshot for the
+ * manual adjustment editor. A list projection plus getInvoiceLineItems can
+ * combine different invoice revisions after a save/reselection.
+ */
+export const getInvoiceAdjustmentSnapshot = withSerializableAuth(withAuth(async (
   user,
   { tenant },
   invoiceId: string
-): Promise<string | null> => {
+): Promise<InvoiceViewModel | null | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return null;
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
+  }
+
+  const { knex } = await createTenantKnex();
+  return knex.transaction(async (trx) => {
+    await trx.raw('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+    const denied = await assertClientPortalInvoiceAccess(trx, tenant, user, invoiceId);
+    if (denied) return denied;
+    try {
+      return await Invoice.getFullInvoiceById(trx, tenant, invoiceId);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Invoice not found') return null;
+      throw error;
+    }
+  });
+}));
+
+export const getResolvedInvoiceTemplateId = withSerializableAuth(withAuth(async (
+  user,
+  { tenant },
+  invoiceId: string
+): Promise<string | null | ActionPermissionError> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
 
   const { knex } = await createTenantKnex();
@@ -906,7 +929,7 @@ export const getResolvedInvoiceTemplateId = withAuth(async (
   // portal caller probe invoices outside their own client.
   const denied = await assertClientPortalInvoiceAccess(knex, tenant, user, invoiceId);
   if (denied) {
-    return null;
+    return denied;
   }
 
   const db = tenantDb(knex, tenant);
@@ -942,7 +965,7 @@ export const getResolvedInvoiceTemplateId = withAuth(async (
   const templates = await Invoice.getAllTemplates(knex, tenant);
   const defaultTemplate = templates.find((template) => template.is_default || template.isTenantDefault) ?? templates[0];
   return defaultTemplate?.template_id ?? null;
-});
+}));
 
 export type InvoicePurchaseOrderSummary = {
   invoice_id: string;
@@ -953,7 +976,7 @@ export type InvoicePurchaseOrderSummary = {
   remaining_cents: number | null;
 };
 
-export const getInvoicePurchaseOrderSummary = withAuth(async (
+export const getInvoicePurchaseOrderSummary = withSerializableAuth(withAuth(async (
   user,
   { tenant },
   invoiceId: string
@@ -1007,10 +1030,10 @@ export const getInvoicePurchaseOrderSummary = withAuth(async (
     consumed_cents: consumed,
     remaining_cents: remaining,
   };
-});
+}));
 
 // New function to get invoice items on demand
-export const getInvoiceLineItems = withAuth(async (
+export const getInvoiceLineItems = withSerializableAuth(withAuth(async (
   user,
   { tenant },
   invoiceId: string
@@ -1033,4 +1056,4 @@ export const getInvoiceLineItems = withAuth(async (
     console.error('Error fetching invoice items:', error);
     throw new Error('Error fetching invoice items');
   }
-});
+}));

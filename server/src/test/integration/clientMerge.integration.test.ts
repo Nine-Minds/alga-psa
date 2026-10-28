@@ -102,6 +102,11 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(async () => {}),
   publishWorkflowEvent: vi.fn(async () => {}),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 
 /** The workflow events published so far, read off the mock itself. */
@@ -843,6 +848,185 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     expect(await table('contract_recurring_unit_adjustments').where({ client_id: source })).toEqual([]);
     expect(await table('contract_recurring_unit_adjustments').where({ adjustment_id: adjustmentId }).first())
       .toMatchObject({ client_id: target, status: 'pending' });
+  }, HOOK_TIMEOUT);
+
+  it('TM021 (T141-T143): the billing choice decides what unprofiled work carries over', async () => {
+    // FR-F5: one strategy applied uniformly to tickets, projects, assets and
+    // RMM mappings — the rows the merge moves that have no profile of their
+    // own. Billing history keeps today's stamping either way (TM010).
+
+    // `projects.status` is a real FK; the fixture tenant has no statuses.
+    const projectStatusId = async (): Promise<string> => {
+      const existing = await table('statuses').where({ status_type: 'project' }).first();
+      if (existing) return existing.status_id;
+      const [status] = await table('statuses')
+        .insert({
+          tenant: tenantId,
+          name: 'Open',
+          status_type: 'project',
+          order_number: 1,
+          created_by: userId,
+          is_closed: false,
+          is_default: true,
+        })
+        .returning('status_id');
+      return status.status_id;
+    };
+
+    const seedUnprofiledWork = async (clientId: string, label: string) => {
+      const ticketId = uuidv4();
+      await table('tickets').insert({
+        tenant: tenantId,
+        ticket_id: ticketId,
+        ticket_number: `BILLCHOICE-${ticketId.slice(0, 8)}`,
+        title: `${label} ticket with no profile`,
+        client_id: clientId,
+        billing_profile_id: null,
+        entered_at: db.fn.now(),
+      });
+
+      const assetId = uuidv4();
+      await table('assets').insert({
+        tenant: tenantId,
+        asset_id: assetId,
+        asset_type: 'unknown',
+        client_id: clientId,
+        asset_tag: `BC-${assetId.slice(0, 8)}`,
+        name: `${label} laptop`,
+        status: 'active',
+        billing_profile_id: null,
+      });
+
+      const projectId = uuidv4();
+      await table('projects').insert({
+        tenant: tenantId,
+        project_id: projectId,
+        project_name: `${label} project with no profile`,
+        client_id: clientId,
+        status: await projectStatusId(),
+        wbs_code: `BC-${projectId}`,
+        project_number: `BC-${projectId.slice(0, 8)}`,
+        billing_profile_id: null,
+      });
+
+      const integrationId = uuidv4();
+      await table('rmm_integrations').insert({
+        tenant: tenantId,
+        integration_id: integrationId,
+        provider: `tacticalrmm-${integrationId.slice(0, 8)}`,
+        is_active: true,
+      });
+      const mappingId = uuidv4();
+      await table('rmm_organization_mappings').insert({
+        tenant: tenantId,
+        mapping_id: mappingId,
+        integration_id: integrationId,
+        external_organization_id: `org-${mappingId.slice(0, 8)}`,
+        client_id: clientId,
+        billing_profile_id: null,
+      });
+
+      return { ticketId, projectId, assetId, mappingId };
+    };
+
+    const profilesOf = async (work: { ticketId: string; projectId: string; assetId: string; mappingId: string }) => ({
+      ticket: (await table('tickets').where({ ticket_id: work.ticketId }).first())?.billing_profile_id ?? null,
+      project: (await table('projects').where({ project_id: work.projectId }).first())?.billing_profile_id ?? null,
+      asset: (await table('assets').where({ asset_id: work.assetId }).first())?.billing_profile_id ?? null,
+      mapping: (await table('rmm_organization_mappings').where({ mapping_id: work.mappingId }).first())
+        ?.billing_profile_id ?? null,
+    });
+
+    // Default strategy: the absorbed client's own default follows its work, so
+    // nothing silently re-prices onto the parent's profile.
+    const keepTarget = await seedClient('Billing Choice Group');
+    const keepSource = await seedClient('Billing Choice North');
+    await ensureDefaultBillingProfile({ db, tenantId }, keepTarget);
+    const keepSourceDefault = await ensureDefaultBillingProfile({ db, tenantId }, keepSource);
+    const kept = await seedUnprofiledWork(keepSource, 'Kept');
+
+    const keepPreview = await db.transaction((trx) =>
+      previewClientMerge(trx, tenantId, { sourceClientId: keepSource, targetClientId: keepTarget }));
+    expect(keepPreview.billingChoice).toMatchObject({
+      unstampedTickets: 1,
+      unstampedProjects: 1,
+      unstampedAssets: 1,
+      unstampedRmmMappings: 1,
+    });
+    expect(keepPreview.assets.total).toBe(1);
+
+    const keepResult = await db.transaction((trx) =>
+      executeClientMerge(trx, tenantId, userId, {
+        sourceClientId: keepSource,
+        targetClientId: keepTarget,
+        billingStrategy: 'source_profile',
+      }));
+
+    expect(await profilesOf(kept)).toEqual({
+      ticket: keepSourceDefault,
+      project: keepSourceDefault,
+      asset: keepSourceDefault,
+      mapping: keepSourceDefault,
+    });
+    expect(await table('client_merges').where({ merge_id: keepResult.mergeId }).first())
+      .toMatchObject({ billing_strategy: 'source_profile' });
+
+    // The other choice: the NULLs stay NULL so the attribution chain resolves
+    // them against the parent's default from now on.
+    const adoptTarget = await seedClient('Billing Adopt Group');
+    const adoptSource = await seedClient('Billing Adopt North');
+    await ensureDefaultBillingProfile({ db, tenantId }, adoptTarget);
+    await ensureDefaultBillingProfile({ db, tenantId }, adoptSource);
+    const adopted = await seedUnprofiledWork(adoptSource, 'Adopted');
+
+    const adoptResult = await db.transaction((trx) =>
+      executeClientMerge(trx, tenantId, userId, {
+        sourceClientId: adoptSource,
+        targetClientId: adoptTarget,
+        billingStrategy: 'target_default',
+      }));
+
+    expect(await profilesOf(adopted)).toEqual({ ticket: null, project: null, asset: null, mapping: null });
+    expect(await table('tickets').where({ ticket_id: adopted.ticketId }).first())
+      .toMatchObject({ client_id: adoptTarget });
+    expect(await table('assets').where({ asset_id: adopted.assetId }).first())
+      .toMatchObject({ client_id: adoptTarget });
+    expect(await table('client_merges').where({ merge_id: adoptResult.mergeId }).first())
+      .toMatchObject({ billing_strategy: 'target_default' });
+  }, HOOK_TIMEOUT);
+
+  it('re-stamps the autopay authorization of a moved profile onto the parent (edition-optional)', async () => {
+    // The autopay table exists only where the enterprise migrations ran. It hangs
+    // off the profile, which moves, so its redundant client_id has to follow.
+    // A CE database gets the real enterprise migration for the length of this
+    // case, so the re-stamp is exercised in every edition rather than skipped.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const autopayMigration = require('../../../../ee/server/migrations/20260926091000_create_autopay_tables.cjs');
+    const installedHere = !(await db.schema.hasTable('billing_profile_autopay'));
+    if (installedHere) await autopayMigration.up(db);
+    try {
+      const target = await seedClient('Autopay Group');
+      const source = await seedClient('Autopay North');
+      await ensureDefaultBillingProfile({ db, tenantId }, target);
+      await ensureDefaultBillingProfile({ db, tenantId }, source);
+      const profile = await table('client_billing_profiles').where({ client_id: source, is_default: true }).first();
+
+      await table('billing_profile_autopay').insert({
+        tenant: tenantId,
+        billing_profile_id: profile.billing_profile_id,
+        client_id: source,
+        is_enabled: false,
+      });
+
+      const result = await db.transaction((trx) =>
+        executeClientMerge(trx, tenantId, userId, { sourceClientId: source, targetClientId: target }));
+
+      expect(result.counts['autopay authorization']).toBe(1);
+      expect(await table('billing_profile_autopay').where({ billing_profile_id: profile.billing_profile_id }).first())
+        .toMatchObject({ client_id: target });
+    } finally {
+      if (installedHere) await autopayMigration.down(db);
+    }
   }, HOOK_TIMEOUT);
 
   it('TM019: accounts for every client-keyed table in the schema', async () => {

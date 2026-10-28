@@ -284,7 +284,7 @@ export function useListViews<TLive, F = Record<string, unknown>>({
       toast.error(t('listViews.errors.saveFailed', 'The view could not be saved.'));
       return false;
     } finally {
-      setIsSaving(false);
+      if (mountedRef.current) setIsSaving(false);
     }
   }, [t]);
 

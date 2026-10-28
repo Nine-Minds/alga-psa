@@ -48,6 +48,15 @@ describe('quoteAdapters', () => {
     });
   });
 
+  it('maps custom quote section titles for document template bindings', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', buildQuote({
+      recurring_section_title: '  Retainer  ',
+      onetime_section_title: '  Setup  ',
+    }));
+    expect(viewModel.recurring_section_title).toBe('Retainer');
+    expect(viewModel.onetime_section_title).toBe('Setup');
+  });
+
   it('normalizes Date values and preserves trimmed ISO date strings', () => {
     expect(toIsoDateString(new Date('2026-07-17T12:30:00.000Z'))).toBe('2026-07-17T12:30:00.000Z');
     expect(toIsoDateString(' 2026-07-31T00:00:00.000Z ')).toBe('2026-07-31T00:00:00.000Z');
@@ -924,6 +933,44 @@ describe('quoteAdapters cadence bands and optional add-ons', () => {
     expect(annual.name).toBe('Annually');
     expect(annual.total_label).toBe('Annually Total');
     expect(onetime.total_label).toBe('One-time Total');
+  });
+
+  // alga-2026-0002573: the quote's own section titles rename the monthly and
+  // one-time bands. Every other cadence keeps the vocabulary name, and a band
+  // the author named is flagged so the PDF/preview localization does not
+  // translate it back to "Monthly".
+  it('renames the monthly and one-time bands from the quote section titles', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', mixedCadenceQuote({
+      recurring_section_title: '  Ongoing Care Plan  ',
+      onetime_section_title: 'Kickoff & Setup',
+    }));
+    const bands = viewModel.groups_by_cadence ?? [];
+    const monthly = bands.find((band) => band.cadence_key === 'monthly')!;
+    const annual = bands.find((band) => band.cadence_key === 'annually')!;
+    const onetime = bands.find((band) => band.cadence_key === 'onetime')!;
+
+    expect(monthly.name).toBe('Ongoing Care Plan');
+    expect(monthly.total_label).toBe('Ongoing Care Plan Total');
+    expect(monthly.name_is_custom).toBe(true);
+    expect(onetime.name).toBe('Kickoff & Setup');
+    expect(onetime.name_is_custom).toBe(true);
+    expect(annual.name).toBe('Annually');
+    expect(annual.name_is_custom).toBeUndefined();
+  });
+
+  it('keeps the vocabulary band names when the section titles are blank or spaces', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', mixedCadenceQuote({
+      recurring_section_title: '   ',
+      onetime_section_title: null,
+    }));
+    const bands = viewModel.groups_by_cadence ?? [];
+    const monthly = bands.find((band) => band.cadence_key === 'monthly')!;
+    const onetime = bands.find((band) => band.cadence_key === 'onetime')!;
+
+    expect(monthly.name).toBe('Monthly');
+    expect(onetime.name).toBe('One-time');
+    expect(monthly.name_is_custom).toBeUndefined();
+    expect(onetime.name_is_custom).toBeUndefined();
   });
 
   it('excludes pending (unselected) add-ons from band and overall totals and reports them as optional_*', async () => {

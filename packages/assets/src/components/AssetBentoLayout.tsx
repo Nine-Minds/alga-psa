@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   Activity,
@@ -19,6 +19,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import Drawer from '@alga-psa/ui/components/Drawer';
+import { Button } from '@alga-psa/ui/components/Button';
 import { ContentCardVariantProvider } from '@alga-psa/ui/components';
 import {
   BentoChip,
@@ -35,6 +36,9 @@ import {
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import useSWR from 'swr';
 import { getAssetLinkedTickets, getAssetMaintenanceReport } from '../actions/assetActions';
+import { CustodyCard } from './custody/CustodyCard';
+import { getAssetSoftwareSummary } from '../actions/softwareActions';
+import { getAssetGroup } from '../actions/assetGroupActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { useClientDrawer } from '@alga-psa/ui';
 import type { Asset, AssetFact, AssetSummaryMetrics, RmmCachedData } from '@alga-psa/types';
@@ -49,6 +53,13 @@ import {
   warrantyPhrase,
   worstStorage,
 } from '../lib/assetSignals';
+import { formatMinorUnits } from '../lib/money';
+import { useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { assetStatusLabel } from '../lib/assetStatus';
+import { calendarDateToLocalDate } from '../lib/calendarDate';
+import { AssetAssigneeRow } from './AssetAssigneeRow';
+import { AssetSignedInUserRow } from './AssetSignedInUserRow';
+import { AssetGroupDrawer } from './groups/AssetGroupDrawer';
 import { AssetTimeline } from './AssetTimeline';
 import AssetFormClient from './AssetFormClient';
 import { AssetNotesPanel } from './panels/AssetNotesPanel';
@@ -67,6 +78,12 @@ interface FocusView {
   label: string;
   icon: LucideIcon;
   content: React.ReactNode;
+  /**
+   * Rendered in the drawer's pinned footer. Every view supplies one: a footer
+   * is also what stops the panel itself from being a second scroll container
+   * on top of the content pane.
+   */
+  footer?: React.ReactNode;
 }
 
 /**
@@ -101,8 +118,11 @@ export function AssetBentoLayout({
   // on every /msp route. Optional by design — fall back to a link if absent.
   const clientDrawer = useClientDrawer();
   const now = Date.now();
+  // F021: the Status row reads the registry's label, not the stored slug.
+  const { statuses: assetStatuses } = useAssetStatusRegistry();
 
   const ext = asset.workstation ?? asset.server;
+  const networkDevice = asset.network_device;
   const isRmmManaged = Boolean(asset.rmm_provider || rmmData?.provider);
   const agentTone = AGENT_TONE[asset.agent_status ?? 'unknown'] ?? 'neutral';
   const disk = worstStorage(rmmData?.storage);
@@ -116,10 +136,40 @@ export function AssetBentoLayout({
     asset.asset_id ? ['asset', asset.asset_id, 'maintenance'] : null,
     ([, aid]) => unwrapAssetActionResult(getAssetMaintenanceReport(aid))
   );
-  const softwareCount = Array.isArray(ext?.installed_software) ? ext.installed_software.length : null;
+  /**
+   * F071: the tile names the siblings and the people; `asset.group` only counts
+   * them. Keyed under this asset so the group drawer's member revalidation
+   * (matchAssetCacheKeys) drops it after an owner or membership change.
+   */
+  const { data: groupDetail } = useSWR(
+    asset.group?.group_id ? ['asset', asset.asset_id, 'group', asset.group.group_id] : null,
+    ([, , , groupId]) => unwrapAssetActionResult(getAssetGroup(groupId as string))
+  );
+  // Counts asset_software (is_current), the same source as the Software tab.
+  // undefined while loading or on error, so the tile shows nothing until known.
+  const { data: softwareSummary } = useSWR(
+    asset.asset_id ? ['asset', asset.asset_id, 'software-summary'] : null,
+    ([, aid]) => unwrapAssetActionResult(getAssetSoftwareSummary(aid))
+  );
+  const softwareCount = softwareSummary?.total_installed;
+  const groupSiblings = (groupDetail?.members ?? []).filter(
+    (member) => member.asset_id !== asset.asset_id
+  );
+  const groupPeople = asset.group?.kind === 'bundle'
+    ? (groupDetail?.contacts ?? []).filter((contact) => contact.role === 'owner')
+    : (groupDetail?.contacts ?? []).filter((contact) => contact.role === 'user');
+  // Owned here because the drawer footer holds the edit form's Save button.
+  const [editSaving, setEditSaving] = useState(false);
+  const purchaseCostLabel = formatMinorUnits(asset.purchase_cost, asset.purchase_cost_currency);
 
   const pendingPatches =
     (ext?.pending_os_patches ?? 0) + (ext?.pending_software_patches ?? 0) || ext?.pending_patches;
+
+  const closeFooter = (
+    <Button id="asset-bento-focus-done" variant="outline" onClick={() => onFocusChange(null)}>
+      {t('assetBento.close', { defaultValue: 'Close' })}
+    </Button>
+  );
 
   const views: FocusView[] = useMemo(() => [
     // Edit leads: it is the action people reach for most, and hosting it here
@@ -128,14 +178,52 @@ export function AssetBentoLayout({
       id: 'edit',
       label: t('assetBento.editAsset', { defaultValue: 'Edit asset' }),
       icon: Pencil,
-      content: <AssetFormClient assetId={asset.asset_id} onSaved={() => onFocusChange(null)} />,
+      // Save and Cancel live in the pinned footer below, so the form drops its
+      // own trailing row: at full length they sat ~700px below the fold.
+      content: (
+        <AssetFormClient
+          assetId={asset.asset_id}
+          onSaved={() => onFocusChange(null)}
+          onCancel={() => onFocusChange(null)}
+          hideActions
+          onSavingChange={setEditSaving}
+        />
+      ),
+      footer: (
+        <>
+          <Button
+            id="asset-bento-focus-cancel"
+            variant="outline"
+            disabled={editSaving}
+            onClick={() => onFocusChange(null)}
+          >
+            {t('common.actions.cancel', { defaultValue: 'Cancel' })}
+          </Button>
+          {/* Submits the form it names, from outside it. */}
+          <Button id="asset-bento-focus-save" type="submit" form="asset-edit-form" disabled={editSaving}>
+            {editSaving
+              ? t('common.actions.saving', { defaultValue: 'Saving...' })
+              : t('assetForm.actions.saveChanges', { defaultValue: 'Save Changes' })}
+          </Button>
+        </>
+      ),
     },
     { id: 'service-history', label: t('assetDetailTabs.tabs.serviceHistory', { defaultValue: 'Service history' }), icon: Activity, content: <ServiceHistoryTab asset={asset} /> },
     { id: 'software', label: t('assetDetailTabs.tabs.software', { defaultValue: 'Software' }), icon: Boxes, content: <SoftwareInventoryTab asset={asset} /> },
     { id: 'maintenance', label: t('assetDetailTabs.tabs.maintenance', { defaultValue: 'Maintenance' }), icon: CalendarDays, content: <MaintenanceSchedulesTab assetId={asset.asset_id} /> },
     { id: 'related-assets', label: t('assetDetailTabs.tabs.relatedAssets', { defaultValue: 'Related assets' }), icon: Network, content: <RelatedAssetsTab asset={asset} /> },
+    ...(asset.group
+      ? [{
+          id: 'group',
+          label: t('assetGroups.drawerTitle', { defaultValue: 'Group' }),
+          icon: Boxes,
+          // Deleting the group takes this tab with it, so the focus view has
+          // to step back instead of sitting on a group that no longer exists.
+          content: <AssetGroupDrawer groupId={asset.group.group_id} onDeleted={() => onFocusChange(null)} />,
+        }]
+      : []),
     { id: 'documents-passwords', label: t('assetDetailTabs.tabs.documentsPasswords', { defaultValue: 'Documents & passwords' }), icon: Lock, content: <DocumentsPasswordsTab asset={asset} /> },
-  ], [asset, t, onFocusChange]);
+  ], [asset, t, onFocusChange, editSaving]);
 
   const activeView = focusView ? views.find((view) => view.id === focusView) ?? null : null;
 
@@ -205,10 +293,52 @@ export function AssetBentoLayout({
               <div className="space-y-1.5 text-sm">
                 <BentoLabelValue label={t('assetBento.tag', { defaultValue: 'Tag' })} value={asset.asset_tag} mono />
                 <BentoLabelValue label={t('assetBento.serial', { defaultValue: 'Serial' })} value={asset.serial_number} mono />
-                <BentoLabelValue label={t('assetBento.status', { defaultValue: 'Status' })} value={asset.status} />
+                <BentoLabelValue label={t('assetBento.status', { defaultValue: 'Status' })} value={assetStatusLabel(t, asset.status, assetStatuses)} />
+                {/* FR-C6: the assignee is always shown, even when empty. */}
+                <AssetAssigneeRow
+                  assetId={asset.asset_id}
+                  clientId={asset.client_id}
+                  contactNameId={asset.contact_name_id ?? null}
+                  contactName={asset.contact_name ?? null}
+                  sharedWorkspace={asset.group?.kind === 'shared_workspace'
+                    ? {
+                        group_id: asset.group.group_id,
+                        name: asset.group.name,
+                        user_count: asset.group.user_count ?? 0,
+                      }
+                    : null}
+                />
                 <BentoLabelValue label={t('assetBento.location', { defaultValue: 'Location' })} value={asset.location} />
-                <BentoLabelValue label={t('assetBento.purchased', { defaultValue: 'Purchased' })} value={asset.purchase_date ? new Date(asset.purchase_date).toLocaleDateString() : undefined} />
-                <BentoLabelValue label={t('assetBento.warrantyEnds', { defaultValue: 'Warranty ends' })} value={asset.warranty_end_date ? new Date(asset.warranty_end_date).toLocaleDateString() : undefined} />
+                {/* FR-A1 rows are hidden when empty rather than showing a dash. */}
+                {asset.manufacturer ? (
+                  <BentoLabelValue id="asset-bento-manufacturer" label={t('assetBento.manufacturer', { defaultValue: 'Manufacturer' })} value={asset.manufacturer} />
+                ) : null}
+                {asset.model ? (
+                  <BentoLabelValue id="asset-bento-model" label={t('assetBento.model', { defaultValue: 'Model' })} value={asset.model} />
+                ) : null}
+                {asset.vendor_name ? (
+                  <BentoLabelValue id="asset-bento-vendor" label={t('assetBento.vendor', { defaultValue: 'Vendor' })} value={asset.vendor_name} />
+                ) : null}
+                {purchaseCostLabel ? (
+                  <BentoLabelValue id="asset-bento-purchase-cost" label={t('assetBento.purchaseCost', { defaultValue: 'Purchase cost' })} value={purchaseCostLabel} />
+                ) : null}
+                {asset.order_number ? (
+                  <BentoLabelValue id="asset-bento-order-number" label={t('assetBento.orderNumber', { defaultValue: 'Order no.' })} value={asset.order_number} mono />
+                ) : null}
+                {/* FR-F4: shown only when the device overrides the client default. */}
+                {asset.billing_profile_id ? (
+                  <BentoLabelValue
+                    id="asset-bento-billing-profile"
+                    label={t('assetBento.billingProfile', { defaultValue: 'Billing profile' })}
+                    value={asset.billing_profile_name ?? asset.billing_profile_id}
+                  />
+                ) : null}
+                {/* Both columns hold UTC midnight for a calendar day, so they are
+                    read as calendar parts — `new Date(...).toLocaleDateString()`
+                    renders the previous day west of UTC and disagreed with the
+                    edit form's picker. */}
+                <BentoLabelValue label={t('assetBento.purchased', { defaultValue: 'Purchased' })} value={calendarDateToLocalDate(asset.purchase_date)?.toLocaleDateString()} />
+                <BentoLabelValue label={t('assetBento.warrantyEnds', { defaultValue: 'Warranty ends' })} value={calendarDateToLocalDate(asset.warranty_end_date)?.toLocaleDateString()} />
               </div>
             </BentoTile>
 
@@ -220,6 +350,27 @@ export function AssetBentoLayout({
                   <BentoLabelValue label={t('assetBento.cores', { defaultValue: 'Cores' })} value={ext.cpu_cores} />
                   <BentoLabelValue label={t('assetBento.ram', { defaultValue: 'RAM' })} value={ext.ram_gb != null ? `${ext.ram_gb} GB` : undefined} />
                   <BentoLabelValue label={t('assetBento.ip', { defaultValue: 'IP' })} value={rmmData?.lan_ip ?? asset.workstation?.lan_ip} mono />
+                </div>
+              ) : networkDevice ? (
+                <div id="asset-bento-network-device" className="space-y-1.5 text-sm">
+                  <BentoLabelValue
+                    id="asset-bento-network-device-type"
+                    label={t('assetForm.fields.deviceType', { defaultValue: 'Device Type' })}
+                    value={networkDevice.device_type
+                      ? t(`assetDetails.deviceTypes.${networkDevice.device_type}`, { defaultValue: networkDevice.device_type })
+                      : undefined}
+                  />
+                  <BentoLabelValue label={t('assetDetails.fields.managementIp', { defaultValue: 'Management IP' })} value={networkDevice.management_ip || undefined} mono />
+                  <BentoLabelValue label={t('assetDetails.fields.portCount', { defaultValue: 'Port Count' })} value={networkDevice.port_count ?? undefined} />
+                  <BentoLabelValue label={t('assetDetails.fields.firmwareVersion', { defaultValue: 'Firmware Version' })} value={networkDevice.firmware_version || undefined} />
+                  <BentoLabelValue
+                    label={t('assetDetails.fields.powerDraw', { defaultValue: 'Power Draw' })}
+                    value={networkDevice.power_draw_watts != null ? `${networkDevice.power_draw_watts} W` : undefined}
+                  />
+                  <BentoLabelValue
+                    label={t('assetDetails.fields.poeSupport', { defaultValue: 'PoE Support' })}
+                    value={networkDevice.supports_poe ? t('common.yes', { defaultValue: 'Yes' }) : t('common.no', { defaultValue: 'No' })}
+                  />
                 </div>
               ) : (
                 <BentoTileEmpty id="asset-bento-hardware-empty">
@@ -244,12 +395,80 @@ export function AssetBentoLayout({
                 <p className="text-sm text-[rgb(var(--color-text-700))]">
                   {t('assetBento.packagesReported', { defaultValue: '{{count}} packages reported', count: softwareCount })}
                 </p>
-              ) : (
+              ) : softwareCount === 0 ? (
                 <BentoTileEmpty id="asset-bento-software-empty">
                   {t('assetBento.noSoftware', { defaultValue: 'No software inventory reported.' })}
                 </BentoTileEmpty>
-              )}
+              ) : null}
             </BentoTile>
+
+            {/* F071: the group the asset belongs to, with its siblings and people. */}
+            {asset.group ? (
+              <BentoTile
+                id="asset-bento-group"
+                title={asset.group.kind === 'bundle'
+                  ? t('assetGroups.kinds.bundle', { defaultValue: 'Bundle' })
+                  : t('assetGroups.kinds.shared_workspace', { defaultValue: 'Shared workspace' })}
+                icon={<Boxes className="h-4 w-4" />}
+                action={
+                  <button
+                    id="asset-bento-group-open"
+                    type="button"
+                    onClick={() => onFocusChange('group')}
+                    className="text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline"
+                  >
+                    {t('assetGroups.actions.manage', { defaultValue: 'Manage' })}
+                  </button>
+                }
+              >
+                <div className="space-y-1.5 text-sm">
+                  <BentoLabelValue label={t('assetGroups.fields.name', { defaultValue: 'Name' })} value={asset.group.name} />
+                  {asset.group.location_name ? (
+                    <BentoLabelValue label={t('assetBento.location', { defaultValue: 'Location' })} value={asset.group.location_name} />
+                  ) : null}
+                  {/* The people who go with the group: a bundle's owner, a workspace's users. */}
+                  {groupPeople.length > 0 ? (
+                    <BentoLabelValue
+                      label={asset.group.kind === 'bundle'
+                        ? t('assetGroups.fields.owner', { defaultValue: 'Owner' })
+                        : t('assetGroups.fields.users', { defaultValue: 'Users' })}
+                      value={groupPeople
+                        .slice(0, 4)
+                        .map((contact) => contact.contact_name ?? '')
+                        .filter(Boolean)
+                        .join(', ')}
+                    />
+                  ) : asset.group.kind === 'shared_workspace' ? (
+                    <BentoLabelValue
+                      label={t('assetGroups.fields.users', { defaultValue: 'Users' })}
+                      value={asset.group.user_count ?? 0}
+                    />
+                  ) : null}
+                </div>
+                {/* The siblings, linked: "what else is on this desk". */}
+                {groupSiblings.length > 0 ? (
+                  <BentoRowList>
+                    {groupSiblings.slice(0, 5).map((member) => (
+                      <BentoRow key={member.asset_id} align="center" meta={member.asset_tag ?? undefined}>
+                        <HardDrive className="h-3.5 w-3.5 flex-shrink-0 text-[rgb(var(--color-text-400))]" />
+                        <Link
+                          id={`asset-bento-group-sibling-${member.asset_id}`}
+                          href={`/msp/assets/${member.asset_id}`}
+                          className="truncate text-sm text-[rgb(var(--color-text-700))] hover:underline min-w-0"
+                        >
+                          {member.asset_name}
+                        </Link>
+                      </BentoRow>
+                    ))}
+                  </BentoRowList>
+                ) : (
+                  <BentoLabelValue
+                    label={t('assetGroups.fields.members', { defaultValue: 'Members' })}
+                    value={asset.group.member_count ?? 0}
+                  />
+                )}
+              </BentoTile>
+            ) : null}
 
             <CustomTypeDetailsPanel asset={asset} />
 
@@ -280,12 +499,17 @@ export function AssetBentoLayout({
                   <BentoGauge
                     percent={disk?.utilization_percent}
                     label={disk ? `${t('assetBento.disk', { defaultValue: 'Disk' })} ${disk.name}` : t('assetBento.disk', { defaultValue: 'Disk' })}
-                    caption={disk ? `${disk.free_gb} GB free of ${disk.total_gb} GB` : undefined}
+                    caption={disk ? (disk.free_gb != null ? `${disk.free_gb} GB free of ${disk.total_gb} GB` : `${disk.total_gb} GB`) : undefined}
                   />
                 </div>
                 <div className="mt-3 space-y-1.5 border-t border-[rgb(var(--color-border-100))] pt-3 text-sm">
                   <BentoLabelValue label={t('assetBento.uptime', { defaultValue: 'Uptime' })} value={formatUptime(rmmData?.uptime_seconds, t) ?? undefined} mono />
-                  <BentoLabelValue label={t('assetBento.signedIn', { defaultValue: 'Signed in' })} value={rmmData?.current_user} />
+                  {/* FR-D5: the row offers the matched contact, or a one-off mapping. */}
+                  <AssetSignedInUserRow
+                    assetId={asset.asset_id}
+                    clientId={asset.client_id}
+                    signedInUser={rmmData?.current_user ?? ext?.current_user ?? null}
+                  />
                 </div>
               </BentoTile>
             ) : null}
@@ -310,6 +534,8 @@ export function AssetBentoLayout({
                 </ul>
               ) : null}
             </BentoTile>
+
+            <CustodyCard id="asset-bento-custody" assetId={asset.asset_id} />
 
             <BentoTile
               id="asset-bento-related"
@@ -340,6 +566,16 @@ export function AssetBentoLayout({
                   {t('assetBento.noRelated', { defaultValue: 'Not linked to any other asset.' })}
                 </BentoTileEmpty>
               )}
+              {/* F071: an ungrouped asset gets the way into a group from here. */}
+              {!asset.group ? (
+                <Link
+                  id="asset-bento-add-to-group"
+                  href={`/msp/clients/${asset.client_id}?tab=assets&view=groups`}
+                  className="mt-3 inline-block text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline"
+                >
+                  {t('assetGroups.actions.addToGroup', { defaultValue: 'Add to group' })}
+                </Link>
+              ) : null}
             </BentoTile>
 
             {assetFacts && assetFacts.length > 0 ? (
@@ -444,7 +680,17 @@ export function AssetBentoLayout({
           <AssetInventoryProvenanceSection assetId={asset.asset_id} />
         </div>
 
-        <Drawer id="asset-bento-focus" isOpen={Boolean(activeView)} onClose={() => onFocusChange(null)} width="min(1200px, 88vw)" hideCloseButton>
+        {/* The footer is pinned outside the scrollable body, which is also what
+            keeps the panel from scrolling behind the content pane — two nested
+            scrollbars for one drawer. */}
+        <Drawer
+          id="asset-bento-focus"
+          isOpen={Boolean(activeView)}
+          onClose={() => onFocusChange(null)}
+          width="min(1200px, 88vw)"
+          hideCloseButton
+          footer={activeView?.footer ?? closeFooter}
+        >
           {activeView ? (
             <div className="flex flex-col h-full min-w-0">
               <div className="flex items-center justify-between border-b border-[rgb(var(--color-border-200))] pb-3">

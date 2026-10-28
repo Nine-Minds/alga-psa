@@ -230,12 +230,14 @@
       "selectService": "Select Service",
       "taxable": "(Taxable)",
       "nonTaxable": "(Non-Taxable)",
-      "calculatedOnSave": "(calculated on save)"
+      "calculatedOnSave": "(calculated on save)",
+      "credit": "Credit"
     },
     "expanded": {
       "discount": "Discount",
       "item": "Item {{number}}",
-      "markedForRemoval": "Marked for removal"
+      "markedForRemoval": "Marked for removal",
+      "credit": "Credit"
     },
     "fields": {
       "service": "Service",
@@ -247,10 +249,18 @@
       "applyDiscountTo": "Apply Discount To",
       "entireInvoice": "Entire Invoice",
       "rate": "Rate ({{currencySymbol}})",
-      "description": "Description"
+      "description": "Description",
+      "creditUnit": "Unit credit ({{currencySymbol}})",
+      "taxTreatment": "Tax treatment",
+      "nonTaxable": "Non-taxable",
+      "location": "Location",
+      "clientDefaultLocation": "Client default",
+      "billingProfile": "Billing profile",
+      "clientDefaultProfile": "Client default"
     },
     "placeholders": {
-      "discountDescription": "e.g., Early Payment Discount"
+      "discountDescription": "e.g., Early Payment Discount",
+      "creditDescription": "e.g., Goodwill credit"
     },
     "actions": {
       "add": "Add",
@@ -267,11 +277,15 @@
       "invoiceTotal": "{{percentage}}% of invoice total",
       "amount": "Amount: -{{currencySymbol}}{{amount}}",
       "appliedTo": "Applied to: {{description}}",
-      "subtotal": "Subtotal: {{currencySymbol}}{{amount}}"
+      "subtotal": "Subtotal: {{currencySymbol}}{{amount}}",
+      "credit": "Credit"
     },
     "options": {
       "percentage": "Percentage",
       "fixedAmount": "Fixed Amount"
+    },
+    "errors": {
+      "serviceRequired": "Assign a service to this charge before saving."
     }
   },
   "contractLineServices": {
@@ -402,7 +416,8 @@
       "createBatch": "Create Batch",
       "creating": "Creating...",
       "cancelBatch": "Cancel Batch",
-      "retry": "Retry"
+      "retry": "Retry",
+      "resolveUnmapped": "Resolve unmapped items"
     },
     "states": {
       "loadingBatches": "Loading batches...",
@@ -459,7 +474,8 @@
       "executeError": "Failed to execute batch",
       "cancelled": "Batch cancelled",
       "cancelError": "Failed to cancel batch",
-      "realmRequired": "Choose a connected accounting company before creating the export."
+      "realmRequired": "Choose a connected accounting company before creating the export.",
+      "artifactDownloadError": "Unable to download this export file."
     },
     "status": {
       "pending": "Pending",
@@ -470,6 +486,41 @@
       "failed": "Failed",
       "cancelled": "Cancelled",
       "needsAttention": "Needs Attention"
+    },
+    "artifacts": {
+      "title": "Delivered files",
+      "download": "Download",
+      "unavailable": "This historical batch has no saved file artifact. It cannot be recovered without running a new export.",
+      "storageFallback": "Stored in database backup"
+    },
+    "unmapped": {
+      "title": "Unmapped QuickBooks items",
+      "descriptionDesktop": "These need a QuickBooks Desktop customer or item before they can be exported. Create them as new entries (the IIF file will add them to QuickBooks Desktop) or link them to an existing QuickBooks entry with the exact same name. Your choices are saved as QuickBooks Desktop mappings, so future exports will not ask again.",
+      "descriptionCsv": "These have no QuickBooks mapping yet. Export them under the name below (QuickBooks adds new names when you import the CSV) or link them to an existing QuickBooks entry with the exact same name. Your choices are saved as mappings, so future exports will not ask again.",
+      "permissionNotice": "Saving QuickBooks mappings requires the manage-mappings capability. Ask an administrator, or map these items from the QuickBooks settings.",
+      "kinds": {
+        "client": "Client",
+        "service": "Service",
+        "product": "Product",
+        "discount": "Discount"
+      },
+      "modes": {
+        "create": "Create new",
+        "existing": "Already in QuickBooks"
+      },
+      "nameAria": "QuickBooks name for {{name}}",
+      "desktopNote": "New products use the item type chosen in the QuickBooks Desktop settings. Choose \"Already in QuickBooks\" for anything that exists in your company file, so its details are not overwritten.",
+      "actions": {
+        "cancel": "Cancel",
+        "goToMappings": "Go to QuickBooks mappings",
+        "save": "Save mappings and export"
+      },
+      "toast": {
+        "saved": "QuickBooks mappings saved",
+        "saveError": "Failed to save QuickBooks mappings"
+      },
+      "postsTo": "Posts to {{account}}",
+      "postsToDefault": "Posts to the default income account"
     }
   },
   "templateRenderer": {
@@ -633,7 +684,8 @@
       "referenceMissing": "The selected client, contract, or billing record no longer exists. Please refresh and try again.",
       "duplicate": "This client contract assignment already exists.",
       "missingField": "Missing required client contract field.",
-      "missingFieldNamed": "Missing required client contract field: {{field}}."
+      "missingFieldNamed": "Missing required client contract field: {{field}}.",
+      "alreadyActiveScheduled": "This contract is already active and starts on {{startDate}}; there is nothing to activate."
     },
     "cycle": {
       "cannotCreateNext": "Cannot create next billing cycle at this time"
@@ -707,7 +759,25 @@
         "create": "Permission denied: Cannot create accounting export batches",
         "read": "Permission denied: Cannot access accounting export batches",
         "update": "Permission denied: Cannot modify accounting export batches",
-        "execute": "Permission denied: Cannot execute accounting export batches"
+        "execute": "Permission denied: Cannot execute accounting export batches",
+        "createMappings": "Creating QuickBooks mappings from an export requires the export and manage-mappings capabilities"
+      },
+      "quickbooksMapping": {
+        "noDecisions": "Choose how to handle at least one unmapped item.",
+        "stale": "One of the selected items is no longer unmapped for this batch. Refresh and try again.",
+        "duplicateSubmission": "\"{{algaName}}\" was submitted twice.",
+        "invalidMode": "Choose create or existing for \"{{algaName}}\".",
+        "nameRequired": "Enter a QuickBooks name for \"{{algaName}}\".",
+        "nameInvalidCharacters": "The QuickBooks name for \"{{algaName}}\" cannot contain tabs, line breaks or double quotes.",
+        "nameTooLong": "The QuickBooks name for \"{{algaName}}\" is longer than {{maxLength}} characters.",
+        "duplicateNewName": "\"{{qbName}}\" is used for more than one new QuickBooks entry.",
+        "duplicateClientName": "\"{{qbName}}\" is chosen for more than one client. Each QuickBooks name can be mapped to only one.",
+        "duplicateItemName": "\"{{qbName}}\" is chosen for more than one item. Each QuickBooks name can be mapped to only one.",
+        "nameTakenByClient": "\"{{qbName}}\" is already mapped to another client, so it cannot also be used for \"{{algaName}}\". Choose a different QuickBooks name, or change the existing mapping in the QuickBooks mappings.",
+        "nameTakenByItem": "\"{{qbName}}\" is already mapped to another item, so it cannot also be used for \"{{algaName}}\". Choose a different QuickBooks name, or change the existing mapping in the QuickBooks mappings.",
+        "unsupportedBatch": "This batch is not a QuickBooks Desktop or QuickBooks CSV export.",
+        "nameTakenConcurrently": "One of these QuickBooks names was just mapped to another entry. Refresh the list and choose a different name.",
+        "desktopIncomeAccountRequired": "Set the default income account in the QuickBooks Desktop settings before mapping items from an export."
       }
     },
     "vendorBill": {

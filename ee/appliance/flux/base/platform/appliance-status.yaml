@@ -275,6 +275,40 @@ spec:
                 });
               }
 
+              // LEVERAGE: pattern appliance-status-triplicate — same /status interpretation as
+              // host-service/status-engine.mjs and operator/lib/status.mjs.
+              // Non-200, unreachable, invalid JSON or version != 1 => 'unavailable' (never degrades).
+              function httpGetJson(rawUrl, timeoutMs) {
+                return new Promise((resolve) => {
+                  let parsed;
+                  try { parsed = new URL(rawUrl); } catch { return resolve(null); }
+                  const req = http.request(parsed, { method: 'GET', timeout: timeoutMs }, (res) => {
+                    let body = '';
+                    res.setEncoding('utf8');
+                    res.on('data', (chunk) => { if (body.length < 65536) body += chunk; });
+                    res.on('end', () => {
+                      if (res.statusCode !== 200) return resolve(null);
+                      try { resolve(JSON.parse(body)); } catch { resolve(null); }
+                    });
+                  });
+                  req.on('timeout', () => req.destroy());
+                  req.on('error', () => resolve(null));
+                  req.end();
+                });
+              }
+
+              function interpretEmailServiceStatus(body) {
+                if (!body || body.version !== 1 || !['ok', 'degraded', 'down'].includes(body.status)) {
+                  return { state: 'unavailable', reasons: [] };
+                }
+                const reasons = (Array.isArray(body.reasons) ? body.reasons : [])
+                  .filter((reason) => reason && reason.severity !== 'info')
+                  .map((reason) => String(reason.message || reason.code || '').slice(0, 200))
+                  .filter(Boolean)
+                  .slice(0, 5);
+                return { state: body.status, reasons };
+              }
+
               function readyCondition(item) {
                 return (item?.status?.conditions || []).find((entry) => entry.type === 'Ready') || null;
               }
@@ -778,6 +812,18 @@ spec:
                   };
                 }));
 
+                const emailComponent = resources.find((entry) => entry.name === 'email-service');
+                let emailService = { health: 'unavailable', reasons: [] };
+                if (emailComponent && emailComponent.ready) {
+                  const interpreted = interpretEmailServiceStatus(await httpGetJson('http://email-service.msp.svc.cluster.local:8080/status', 3000));
+                  emailService = { health: interpreted.state, reasons: interpreted.reasons };
+                  if (interpreted.state === 'degraded' || interpreted.state === 'down') {
+                    emailComponent.ready = false;
+                    emailComponent.status = 'degraded';
+                    emailComponent.message = `Inbound email is ${interpreted.state}: ${interpreted.reasons.join('; ')}`.slice(0, 500);
+                  }
+                }
+
                 const sources = fluxItems(sourcesJson?.items);
                 const kustomizations = fluxItems(kustomizationsJson?.items);
                 const helmReleases = fluxItems(helmJson?.items);
@@ -872,6 +918,7 @@ spec:
                   bootstrap,
                   recentEvents,
                   loginProbe,
+                  emailService,
                 };
                 return result;
               }

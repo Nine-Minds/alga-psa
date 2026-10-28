@@ -98,6 +98,20 @@
         "assignedContractLine": "Ligne de contrat attribuée",
         "assignedWorkItem": "Élément de travail affecté",
         "unresolvedWork": "Travail non résolu"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · échéance le {{date}}",
+        "trigger": {
+          "contract_start": "Bloc prépayé : début du contrat",
+          "exhaustion": "Bloc prépayé : épuisé",
+          "threshold": "Bloc prépayé : seuil d’utilisation",
+          "expiry": "Bloc prépayé : expiration",
+          "renewal": "Bloc prépayé : renouvellement",
+          "manual": "Bloc prépayé : émis manuellement"
+        },
+        "stalePendingWarning": "{{count}} blocs prépayés en attente depuis plus de 14 jours de finalisation retiennent des saisies de temps. Finalisez ou supprimez leurs factures brouillons afin que le temps retenu puisse être facturé.",
+        "stalePendingWarning_one": "{{count}} bloc prépayé en attente depuis plus de 14 jours de finalisation retient des saisies de temps. Finalisez ou supprimez sa facture brouillon afin que le temps retenu puisse être facturé.",
+        "stalePendingWarning_other": "{{count}} blocs prépayés en attente depuis plus de 14 jours de finalisation retiennent des saisies de temps. Finalisez ou supprimez leurs factures brouillons afin que le temps retenu puisse être facturé."
       }
     },
     "actions": {
@@ -147,6 +161,7 @@
       "preview": {
         "title": "Aperçu de la facture",
         "description": "Ceci est un aperçu de l'apparence de la facture une fois finalisée.",
+        "noBillingEmailWarning": "{{clientName}} n'a pas d'e-mail de facturation. La facture peut être générée, mais elle ne pourra pas être envoyée par e-mail ni payée en ligne tant que vous n'aurez pas défini un contact de facturation, un e-mail de facturation du client ou un e-mail sur le site de facturation ou par défaut.",
         "summary_one": "Facture {{count}} sélectionnée",
         "summary_other": "Factures {{count}} sélectionnées",
         "summaryCombined": "Cette sélection générera une facture combinée.",
@@ -238,7 +253,8 @@
       "fixAllResult": "{{schedules}} planning(s) reconstruit(s) pour {{clients}} client(s).",
       "fixAllNoop": "Tous les plannings de facturation sont déjà à jour. Tout élément encore listé ci-dessous doit être examiné individuellement.",
       "fixAllError": "Impossible de reconstruire les périodes de service. Veuillez réessayer.",
-      "fixAllDenied": "Vous n’avez pas l’autorisation de reconstruire les périodes de service."
+      "fixAllDenied": "Vous n’avez pas l’autorisation de reconstruire les périodes de service.",
+      "fixAllManualReview": "{{count}} période(s) horaire(s) ou d'utilisation nécessitent un examen individuel."
     },
     "errors": {
       "title": "Des erreurs se sont produites lors de la finalisation des factures :",
@@ -271,7 +287,8 @@
       "fixed": "FIX",
       "hourly": "T&M",
       "usage": "USE",
-      "bucket": "BKT"
+      "bucket": "BKT",
+      "prepaidBlock": "PRE"
     },
     "summary": {
       "selected": "{{count}} sélectionné(s)",
@@ -306,6 +323,21 @@
       "any": "tout",
       "clear": "Effacer",
       "countSummary": "{{groups}} groupe(s) · {{obligations}} élément(s)"
+    },
+    "lateTime": {
+      "title": "Temps horaire approuvé tardivement",
+      "description": "Ce temps a été approuvé après l'émission de la facture de sa période de service. Les entrées en attente de facturation sont ajoutées une seule fois à la prochaine facture, signalées comme temps tardif. Les entrées hors de la période de rétroaction ne sont pas facturées.",
+      "columns": {
+        "client": "Client",
+        "technician": "Technicien",
+        "service": "Service",
+        "workDate": "Date de travail",
+        "hours": "Heures",
+        "closedPeriod": "Période de service clôturée",
+        "status": "Statut"
+      },
+      "nextInvoice": "Facturé sur la prochaine facture",
+      "outsideLookback": "Hors de la période de rétroaction — non facturé"
     }
   },
   "manualInvoices": {
@@ -332,7 +364,8 @@
       "title": "Éléments de campagne automatisés",
       "service": "Service",
       "total": "Total",
-      "unknownService": "Service inconnu"
+      "unknownService": "Service inconnu",
+      "period": "Période"
     },
     "lineItems": {
       "manual": "Éléments de campagne manuels",
@@ -345,7 +378,10 @@
       "saveChanges": "Enregistrer les modifications",
       "processing": "Traitement...",
       "generateSalesOrderInvoice": "Générer la facture de la commande client",
-      "clearSalesOrderSource": "Effacer la commande client source"
+      "clearSalesOrderSource": "Effacer la commande client source",
+      "addPartialPeriodCharge": "Ajouter des frais de période partielle",
+      "reauthenticate": "Se reconnecter",
+      "retrySave": "Réessayer l’enregistrement"
     },
     "labels": {
       "total": "Total",
@@ -393,11 +429,15 @@
       "SOURCE_ALREADY_BILLED": "Certains éléments sélectionnés ne sont plus facturables (déjà facturés, non approuvés ou supprimés). Actualisez et réessayez.",
       "SOURCE_NOT_ELIGIBLE": "Un élément sélectionné n'appartient pas à ce ticket ou n'est plus éligible. Actualisez et réessayez.",
       "SOURCE_CURRENCY_MISMATCH": "Certains produits sélectionnés sont facturés dans une autre devise que celle de ce client et ne peuvent pas être ajoutés. Facturez-les séparément dans leur devise.",
+      "CLIENT_CONTRACT_NOT_FOUND": "Le contrat sélectionné n’appartient pas au client de cette facture.",
+      "SERVICE_REQUIRED": "Attribuez un service à cette ligne avant d’enregistrer.",
       "RECURRING_PRICING_STALE": "L'aperçu n'est plus à jour : {{details}}. Relancez l'aperçu pour afficher les montants actuels, puis générez de nouveau.",
-      "BILLING_PROFILE_NOT_FOUND": "Le profil de facturation sélectionné n'est pas disponible pour ce client. Actualisez la page et réessayez."
+      "BILLING_PROFILE_NOT_FOUND": "Le profil de facturation sélectionné n'est pas disponible pour ce client. Actualisez la page et réessayez.",
+      "sessionExpired": "Votre session a expiré. Vos modifications sont toujours ici, mais elles n’ont pas été enregistrées. Reconnectez-vous dans un nouvel onglet, puis réessayez l’enregistrement.",
+      "saveRefreshFailed": "Vos modifications ont été enregistrées, mais la page de la facture n’a pas pu s’actualiser complètement. Rechargez la page pour afficher la facture enregistrée."
     },
     "warnings": {
-      "noBillingEmail": "Ce client n'a pas d'adresse e-mail de facturation. Ajoutez un contact de facturation, une adresse e-mail de facturation du client ou une adresse e-mail à son emplacement de facturation ou par défaut avant de générer la facture."
+      "noBillingEmail": "Ce client n'a pas d'e-mail de facturation. La facture peut être générée, mais elle ne pourra pas être envoyée par e-mail ni payée en ligne tant que vous n'aurez pas défini un contact de facturation, un e-mail de facturation du client ou un e-mail sur le site de facturation ou par défaut."
     },
     "errorFallback": {
       "title": "Quelque chose s'est mal passé",
@@ -405,6 +445,48 @@
     },
     "salesOrderContext": {
       "summary": "Quantité prête à être facturée : {{quantity}} article(s) sur {{lineCount}} ligne(s). La facture provisoire sera liée à la commande client."
+    },
+    "draftAdjustments": {
+      "title": "Ajustements de facture",
+      "description": "Ajoutez des frais, des remises ou des crédits ponctuels. Les frais de contrat générés restent en lecture seule ; corrigez le contrat source ou ajoutez un ajustement."
+    },
+    "partialPeriod": {
+      "title": "Frais de période partielle",
+      "help": "Calculé comme unités × prix unitaire de la période × jours couverts / jours de la période complète. Les saisies sont conservées avec le poste pour qu'il reste compréhensible.",
+      "direction": "Sens",
+      "increase": "Augmentation",
+      "decrease": "Diminution (crédit)",
+      "units": "Unités",
+      "unitPrice": "Prix unitaire",
+      "coveredDays": "Jours couverts",
+      "fullPeriodDays": "Jours de la période complète",
+      "description": "Description (facultatif)",
+      "reason": "Motif (facultatif)",
+      "previewUnavailable": "Saisissez un calcul valide.",
+      "resolvedAmount": "Montant calculé : {{amount}}",
+      "addCharge": "Ajouter des frais",
+      "creditDescription": "Crédit : {{proration}}",
+      "errors": {
+        "units": "Les unités doivent être supérieures à zéro.",
+        "unitPrice": "Le prix unitaire doit être un nombre.",
+        "invalid": "Saisissez une période partielle valide.",
+        "source": "Choisissez un service facturé dont la période de service est sans ambiguïté."
+      },
+      "source": "Sélectionner un service facturé",
+      "effectiveDate": "Date d’effet",
+      "sourceRate": "Tarif {{rate}}",
+      "permanentChangeNudge": "S’agit-il d’un changement permanent ? Enregistrez-le plutôt dans le contrat.",
+      "overlapConfirm": "Un ajustement automatique de contrat chevauche déjà cette période. Ajouter quand même cet ajustement manuel distinct ?",
+      "invoiceDescription": {
+        "increase": "{{description}} — {{units}} {{unitLabel}} supplémentaires, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — avoir pour {{units}} {{unitLabel}} en moins, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Ajustement de service"
+    },
+    "exportWarnings": {
+      "discount": "{{adapter}} : configurez l’association des remises avant d’exporter {{description}}.",
+      "service": "{{adapter}} : attribuez un service associé à {{description}} avant l’exportation.",
+      "unavailable": "La préparation comptable n’a pas pu être vérifiée. Vérifiez les associations avant l’exportation."
     },
     "hints": {
       "billingProfile": "La facture et ses lignes sont facturées à ce profil."
@@ -489,6 +571,17 @@
       "actionBar": {
         "selectedCount": "{{count}} sélectionnés",
         "clear": "Effacer la sélection"
+      }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Facture finalisée, mais une étape de suivi n'a pas abouti : {{steps}}. La facture est finalisée ; vous pouvez relancer cette étape.",
+      "steps": {
+        "credit_auto_apply": "application automatique du crédit",
+        "project_deposit_credits": "crédits d'acompte de projet",
+        "workflow_events": "événements de workflow",
+        "accounting_export": "export comptable",
+        "replenishment_status": "statut de réapprovisionnement prépayé",
+        "autopay": "prélèvement automatique"
       }
     }
   },
@@ -739,6 +832,7 @@
     }
   },
   "invoicePreview": {
+    "sessionExpired": "Votre session a expiré pendant le chargement de cette facture. Reconnectez-vous, puis rechargez l’aperçu.",
     "title": "Aperçu de la facture",
     "templatePlaceholder": "Sélectionnez le modèle de facture...",
     "labels": {
@@ -789,6 +883,19 @@
       "cancel": "Annuler",
       "confirm": "Annuler la facture",
       "voiding": "Annulation…"
+    },
+    "history": {
+      "title": "Historique",
+      "empty": "Aucun historique enregistré.",
+      "loadFailed": "Échec du chargement de l'historique de la facture.",
+      "system": "Système",
+      "ops": {
+        "invoice_finalized": "Finalisée",
+        "invoice_unfinalized": "Rouverte",
+        "invoice_deleted": "Supprimée"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "aucun"
     }
   },
   "templateEditor": {
@@ -1309,7 +1416,7 @@
       "mediaSource": "Source de l'image",
       "mediaSourceLogo": "Logo de l'entreprise",
       "mediaSourceCustom": "Image personnalisée",
-      "mediaSourceLogoHint": "Affiche sur chaque document le logo défini dans les paramètres de marque de votre entreprise.",
+      "mediaSourceLogoHint": "Affiche sur chaque document le logo de la fiche client de votre propre entreprise.",
       "mediaSourceUrl": "URL source",
       "renameInner": "Renommer aussi {{count}} calques internes ({{from}} → {{to}}…) ?",
       "renameInnerApply": "Renommer",
@@ -1359,7 +1466,14 @@
           "widthTooltip": "Utiliser la largeur exacte saisie ci-dessous",
           "heightTooltip": "Utiliser la hauteur exacte saisie ci-dessous"
         }
-      }
+      },
+      "barcode": "Code-barres",
+      "barcodeSymbology": "Type",
+      "barcodeQr": "Code QR",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Valeur",
+      "barcodeHintWorkTag": "Du texte, ou un champ tel que {{example}} (le lien vers l’enregistrement). Gardez le code large d’au moins 20 mm environ pour qu’il soit lisible.",
+      "barcodeHint": "Le texte à encoder. Gardez le code large d’au moins 20 mm environ pour qu’il soit lisible."
     },
     "shell": {
       "selectedLabel": "Sélectionné :",
@@ -1372,7 +1486,11 @@
       "title": "Mise en page",
       "description": "Choisissez le préréglage de papier et la marge sans sélectionner le nœud de page masqué.",
       "paperPreset": "Préréglage papier",
-      "marginMm": "Marge (mm)"
+      "marginMm": "Marge (mm)",
+      "customSize": "Taille personnalisée…",
+      "customWidth": "Largeur",
+      "customHeight": "Hauteur",
+      "customUnit": "Unité"
     },
     "breadcrumbs": {
       "emptyHelp": "Sélectionnez un composant du canevas pour voir sa hiérarchie.",
@@ -1403,7 +1521,13 @@
         "noQuotesFound": "Aucun devis trouvé.",
         "selectQuote": "Sélectionner un devis",
         "loadingQuoteDetails": "Chargement des détails du devis…",
-        "loadingDocumentDetails": "Chargement des détails du document…"
+        "loadingDocumentDetails": "Chargement des détails du document…",
+        "zoom": {
+          "fit": "Ajuster",
+          "actual": "100 %",
+          "label": "Zoom de l'aperçu",
+          "fitWithScale": "Ajuster ({{percent}} %)"
+        }
       },
       "tabs": {
         "design": "Conception",
@@ -2297,7 +2421,7 @@
     },
     "imagePicker": {
       "browse": "Parcourir les documents",
-      "hiddenFromClients": "{{document}} est masqué pour les clients. Il n’apparaîtra pas sur les devis ni les factures consultés depuis le portail client.",
+      "hiddenFromClients": "{{document}} est masqué pour les clients, qui ne peuvent donc pas l’ouvrir dans le portail client. Il apparaît toujours sur les factures et dans les PDF de devis qui l’utilisent.",
       "updating": "Mise à jour...",
       "markVisible": "Rendre visible pour les clients",
       "visibleInPortal": "Visible dans le portail client",
@@ -2322,6 +2446,7 @@
     }
   },
   "draftInvoiceDetails": {
+    "sessionExpired": "Votre session a expiré pendant le chargement des détails de la facture. Reconnectez-vous, puis rechargez les détails.",
     "title": "Détails de la facture",
     "description": "Modifiez les métadonnées du brouillon de facture avant sa finalisation.",
     "actions": {
@@ -2345,11 +2470,13 @@
     "description": "Concevez les mises en page utilisées pour produire les PDF et aperçus de type « {{type}} ».",
     "availableLayouts": "Mises en page disponibles",
     "actions": {
-      "newLayout": "Nouvelle mise en page"
+      "newLayout": "Nouvelle mise en page",
+      "setDefaultForClass": "Définir par défaut pour {{class}}"
     },
     "columns": {
       "name": "Nom",
-      "source": "Source"
+      "source": "Source",
+      "labelClass": "Classe"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (standard)",
@@ -2381,7 +2508,10 @@
         "details": "Détails de la mise en page"
       },
       "fields": {
-        "version": "Version"
+        "version": "Version",
+        "labelClass": "Classe d'étiquette",
+        "labelFields": "Champs affichés sur l'étiquette",
+        "labelFieldsHint": "Le lien de l'enregistrement (code QR) et l'identifiant sont toujours affichés."
       },
       "placeholders": {
         "templateName": "Modèle pour {{type}}"
@@ -2418,7 +2548,9 @@
     "types": {
       "salesOrder": "Commande client",
       "packingSlip": "Bon de livraison",
-      "pickList": "Liste de prélèvement"
+      "pickList": "Liste de prélèvement",
+      "workTag": "Étiquette de travail / Label",
+      "stagingManifest": "Manifeste de colisage"
     }
   },
   "errors": {
@@ -2426,7 +2558,8 @@
       "invoiceUpdate": "Autorisation refusée : autorisation de mise à jour des factures requise",
       "invoiceDelete": "Autorisation refusée : autorisation de suppression des factures requise",
       "invoiceAccess": "Autorisation refusée : accès à la facture refusé",
-      "otherClientInvoices": "Autorisation refusée : impossible d’accéder aux factures d’un autre client"
+      "otherClientInvoices": "Autorisation refusée : impossible d’accéder aux factures d’un autre client",
+      "invoiceRead": "Autorisation refusée : lecture des factures requise"
     },
     "invoice": {
       "notFound": "Facture introuvable",
@@ -2448,7 +2581,9 @@
       "duplicate": "Une facture en conflit existe déjà. Veuillez actualiser la page et réessayer.",
       "missingField": "Un champ obligatoire de la facture est manquant.",
       "missingFieldNamed": "Un champ obligatoire de la facture est manquant : {{field}}.",
-      "billingProfileUnavailable": "Le profil de facturation sélectionné n'est pas disponible pour ce client."
+      "billingProfileUnavailable": "Le profil de facturation sélectionné n'est pas disponible pour ce client.",
+      "deleteNotDraft": "Seules les factures brouillon peuvent être supprimées ; annulez plutôt la facture.",
+      "deleteHasPayments": "Les factures avec des paiements enregistrés ne peuvent pas être supprimées."
     },
     "billingCycle": {
       "notFoundRefresh": "Cycle de facturation introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
@@ -2488,5 +2623,15 @@
     "saving": "Enregistrement…",
     "saveCorrection": "Enregistrer la correction",
     "save": "Enregistrer"
+  },
+  "draftInvoiceAdjustments": {
+    "sessionExpired": "Votre session a expiré pendant le chargement des ajustements de facture. Reconnectez-vous, puis rechargez cette facture.",
+    "signIn": "Se connecter",
+    "retry": "Recharger",
+    "blockedTitle": "Ajustements de facture indisponibles",
+    "blocked": {
+      "exported": "Cette facture est synchronisée avec un système comptable. Annulez-la ou émettez un crédit distinct au lieu de modifier ses lignes.",
+      "exporting": "Un export comptable de cette facture est en cours de préparation. Attendez qu’il soit terminé avant de modifier la facture."
+    }
   }
 }

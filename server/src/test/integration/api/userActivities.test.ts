@@ -76,6 +76,7 @@ import {
   moveActivityToGroupForApi,
   removeActivityFromGroupsForApi,
   reorderActivitiesInGroupForApi,
+  setDefaultActivityGroupForApi,
 } from '@alga-psa/user-activities/server/activity-actions';
 import { hasPermission } from '@alga-psa/auth';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
@@ -655,6 +656,65 @@ describe('User Activities v1 API — ad-hoc CRUD, list, and the API-key bridge',
         { activityId: 'a', activityType: 'ticket', sortOrder: 0 },
       ]),
     ).rejects.toThrow(/group not found/i);
+  });
+
+  it('reports isDefault in the groups list (what GET /api/v1/activities/groups returns)', async () => {
+    const g1 = await createGroup('First', 0);
+    const g2 = await createGroup('Inbox', 1);
+    expect((await getUserActivityGroupsForApi(ctx.user, tenantId)).map((g) => g.isDefault)).toEqual([false, false]);
+
+    await setDefaultActivityGroupForApi(ctx.user, tenantId, g2);
+    expect((await getUserActivityGroupsForApi(ctx.user, tenantId)).map((g) => g.isDefault)).toEqual([false, true]);
+
+    // Switching clears the previous default; null clears all.
+    await setDefaultActivityGroupForApi(ctx.user, tenantId, g1);
+    expect((await getUserActivityGroupsForApi(ctx.user, tenantId)).map((g) => g.isDefault)).toEqual([true, false]);
+    await setDefaultActivityGroupForApi(ctx.user, tenantId, null);
+    expect((await getUserActivityGroupsForApi(ctx.user, tenantId)).map((g) => g.isDefault)).toEqual([false, false]);
+  });
+
+  it('setDefault throws Group not found for another user\'s group and leaves their row unchanged', async () => {
+    const otherUserId = randomUUID();
+    await ctx.db('users').insert({
+      tenant: tenantId, user_id: otherUserId, username: `other-${otherUserId.slice(0, 8)}`,
+      first_name: 'O', last_name: 'U', email: `o-${otherUserId.slice(0, 8)}@example.com`,
+      hashed_password: 'x', user_type: 'internal', is_inactive: false,
+    });
+    const [row] = await ctx.db('user_activity_groups')
+      .insert({ tenant: tenantId, user_id: otherUserId, group_name: 'Theirs', sort_order: 0, is_default: true })
+      .returning('group_id');
+    const theirs = (row as any).group_id ?? row;
+
+    await expect(setDefaultActivityGroupForApi(ctx.user, tenantId, theirs)).rejects.toThrow(/group not found/i);
+    const after = await ctx.db('user_activity_groups').where({ tenant: tenantId, group_id: theirs }).first();
+    expect(after.is_default).toBe(true);
+  });
+
+  it('reorder upserts an unpinned activity and moves it out of the caller\'s other group', async () => {
+    const other = await createGroup('Waiting', 0);
+    const inbox = await createGroup('Inbox', 1);
+    await moveActivityToGroupForApi(ctx.user, tenantId, 'pinned', 'ticket', other, 0);
+
+    await reorderActivitiesInGroupForApi(ctx.user, tenantId, inbox, [
+      { activityId: 'unpinned', activityType: 'ticket', sortOrder: 0 },
+      { activityId: 'pinned', activityType: 'ticket', sortOrder: 1 },
+    ]);
+
+    expect(await groupItemIds(inbox)).toEqual(['unpinned', 'pinned']);
+    expect(await groupItemIds(other)).toEqual([]);
+  });
+
+  it('the partial unique index rejects a second default group for the same (tenant, user)', async () => {
+    await ctx.db('user_activity_groups')
+      .insert({ tenant: tenantId, user_id: userId, group_name: 'A', sort_order: 0, is_default: true });
+    // Non-default rows are unconstrained.
+    await ctx.db('user_activity_groups')
+      .insert({ tenant: tenantId, user_id: userId, group_name: 'B', sort_order: 1 });
+    // Last statement: a unique violation aborts the surrounding (rolled-back) test transaction.
+    await expect(
+      ctx.db('user_activity_groups')
+        .insert({ tenant: tenantId, user_id: userId, group_name: 'C', sort_order: 2, is_default: true }),
+    ).rejects.toThrow(/idx_user_activity_groups_one_default|duplicate key/i);
   });
 
   // ── Route layer (HTTP + API-key bridge + validation) ─────────────────────────

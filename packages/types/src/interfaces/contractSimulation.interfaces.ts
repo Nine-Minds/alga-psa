@@ -58,6 +58,12 @@ export interface ScenarioFixedConfig {
    */
   base_rate: number | null;
   /**
+   * What `base_rate` means: 'per_unit' (× quantity) or 'share' (the member's
+   * slice of the line fee, as-is). Absent on a non-null rate reads as per_unit.
+   * Interpreted by `fixedMemberRate` in shared/billingClients.
+   */
+  base_rate_basis?: "per_unit" | "share" | null;
+  /**
    * 'unit' bills quantity × unit rate (zero bills zero) through the shared
    * fixed-charge path; absent/'bundle' keeps allocation semantics.
    */
@@ -131,6 +137,51 @@ export interface ScenarioCatalogService {
   is_license: boolean;
 }
 
+/**
+ * A line-owned allowance pool (`contract_line_buckets` /
+ * `contract_template_line_buckets`) with its members. Carried on the line so a
+ * pool is simulated whether or not any service holds a Bucket config: the
+ * allowance lives here, the scenario's services only reference it through
+ * ScenarioPoolRef. Optional: scenarios without it fall back to the pools their
+ * Bucket-config services describe (legacy service bucket config, drafts).
+ */
+export interface ScenarioPool {
+  pool_id: string;
+  pool_name: string | null;
+  covers_all_services: boolean;
+  total_minutes: number;
+  billing_period: string;
+  /** Cents per hour (or per unit on a Usage line) of overage. */
+  overage_rate: number;
+  allow_rollover: boolean;
+  after_hours_multiplier: number | null;
+  business_hours_schedule_id: string | null;
+  /** Explicit members with their burn multipliers. */
+  members: Array<{ service_id: string; burn_multiplier: number }>;
+}
+
+/**
+ * Prepaid Block overlay on an Hourly scenario line (contract_line_prepaid_blocks).
+ * Present only on block lines; the line stays contract_line_type "Hourly".
+ */
+export interface ScenarioPrepaidBlockConfig {
+  /** Block size in minutes. */
+  block_minutes: number;
+  /** Cents, in the scenario currency. */
+  block_price: number;
+  /** Catalog service the block invoice line is sold as (tax, GL, export mapping). */
+  sold_as_service_id: string | null;
+  /** Null = never expires. */
+  expiry_months: number | null;
+  trigger_on_exhaustion: boolean;
+  /** 1-99, or null when no usage threshold is configured. */
+  trigger_threshold_percent: number | null;
+  trigger_on_expiry: boolean;
+  /** Carried for display; renewal issuance is not simulated. */
+  trigger_on_renewal: boolean;
+  replenishment_tier: "draft" | "auto_issue";
+}
+
 export interface ScenarioLine {
   /** Stable key inside the scenario: live contract_line_id or `scenario-<n>`. */
   key: string;
@@ -149,7 +200,11 @@ export interface ScenarioLine {
   overtime_threshold: number | null;
   /** Cents per hour. */
   overtime_rate: number | null;
+  /** Prepaid Block config when this Hourly line sells prepaid blocks. */
+  prepaid_block?: ScenarioPrepaidBlockConfig | null;
   services: ScenarioLineService[];
+  /** Line-owned pools; see ScenarioPool. */
+  pools?: ScenarioPool[];
 }
 
 export interface ScenarioPricingSchedule {
@@ -257,6 +312,101 @@ export interface ContractDraftBucketOverlayInput {
   billing_period?: "monthly" | "weekly";
 }
 
+/** One fixed-line service member in the contract wizard (shared by wizard, resume, template snapshot and simulator). */
+export interface ContractWizardFixedService {
+  service_id: string;
+  service_name?: string;
+  /** Allocation quantity for 'bundle'; recurring seats/units (whole number >= 0) for 'unit'. */
+  quantity: number;
+  /** 'bundle' shares the line base rate; 'unit' bills quantity × unit_rate. */
+  pricing_basis: FixedPricingBasis;
+  /** Minor units of the contract currency. Only used when pricing_basis is 'unit'. */
+  unit_rate?: number | null;
+  bucket_overlay?: ContractDraftBucketOverlayInput | null;
+  /** Draft-only resolved catalog rate in minor units. Never submitted. */
+  resolved_rate?: number | null;
+  /** Draft-only provenance for the resolved rate. Never submitted. */
+  resolved_rate_source?: "currency-price" | "catalog-default" | "none";
+}
+
+/** One recurring Fixed contract line as the wizard holds it. */
+export interface ContractWizardFixedLine {
+  /** Stable client key (uuid); the source contract_line_id on resume. */
+  line_key: string;
+  /** Informational; finalize does not reuse ids. */
+  source_contract_line_id?: string;
+  /** Template line this fixed line was opened from; maps template line-scoped discounts. */
+  source_template_line_id?: string;
+  contract_line_name?: string;
+  description?: string | null;
+  location_id?: string | null;
+  /** Falls back to the contract billing_frequency. */
+  billing_frequency?: string;
+  /** Falls back to the contract billing_timing. */
+  billing_timing?: "arrears" | "advance";
+  enable_proration: boolean;
+  /** Bundle total in minor units; null/undefined follows the catalog. */
+  base_rate?: number | null;
+  services: ContractWizardFixedService[];
+}
+
+/**
+ * A contract-wide automatic discount authored in the wizard, before the
+ * contract (and therefore any discount row) exists. Values stay in the
+ * authoring units the discount editor uses — percent units (`10` = 10%) or
+ * decimal currency (`50` = $50.00) — and are converted once where they are
+ * stored (`toStoredDiscountValue`) or simulated.
+ */
+export interface ContractDraftDiscount {
+  /** Stable client-side key for list editing; never persisted. */
+  draft_key: string;
+  discount_name: string;
+  discount_type: "percentage" | "fixed";
+  value: number;
+  /** Date-only (YYYY-MM-DD). */
+  start_date: string;
+  /** Date-only (YYYY-MM-DD); null/absent never expires. */
+  end_date?: string | null;
+}
+
+/**
+ * A line-level bucket pool authored in the wizard (structurally the wizard's
+ * `BucketPoolDraft`). Units match what the wizard submits: minutes and cents.
+ */
+export interface ContractDraftBucketPoolInput {
+  /** Which wizard line the pool belongs to; absent means 'hourly'. */
+  line_key?: "hourly" | "usage";
+  bucket_name?: string | null;
+  total_minutes: number;
+  overage_rate: number;
+  allow_rollover: boolean;
+  covers_all_services: boolean;
+  after_hours_multiplier?: number | null;
+  business_hours_schedule_id?: string | null;
+  members: Array<{
+    service_id: string;
+    service_name?: string;
+    burn_multiplier: number;
+  }>;
+}
+
+/** A wizard Prepaid Block line: its own Hourly services plus the block config (minor units of the draft currency). */
+export interface ContractDraftPrepaidBlockLine {
+  name?: string;
+  services: Array<{ service_id: string; service_name?: string; hourly_rate?: number }>;
+  block: {
+    block_minutes: number;
+    block_price: number;
+    sold_as_service_id?: string | null;
+    expiry_months?: number | null;
+    trigger_on_exhaustion?: boolean;
+    trigger_threshold_percent?: number | null;
+    trigger_on_expiry?: boolean;
+    trigger_on_renewal?: boolean;
+    replenishment_tier?: "draft" | "auto_issue";
+  };
+}
+
 /** Minimal unsaved ContractWizard state accepted by the EE scenario hydrator. */
 export interface ContractDraftSimulationInput {
   client_id: string;
@@ -268,18 +418,7 @@ export interface ContractDraftSimulationInput {
   cadence_owner?: CadenceOwner;
   billing_timing?: "arrears" | "advance";
   enable_proration: boolean;
-  fixed_base_rate?: number;
-  fixed_billing_frequency?: string;
-  fixed_services: Array<{
-    service_id: string;
-    service_name?: string;
-    /** Allocation quantity for 'bundle'; recurring units (>= 0) for 'unit'. */
-    quantity: number;
-    pricing_basis?: FixedPricingBasis | null;
-    /** Minor units of the draft currency; null/absent follows the catalog price. Only for 'unit'. */
-    unit_rate?: number | null;
-    bucket_overlay?: ContractDraftBucketOverlayInput | null;
-  }>;
+  fixed_lines: ContractWizardFixedLine[];
   product_services: Array<{
     service_id: string;
     service_name?: string;
@@ -303,6 +442,12 @@ export interface ContractDraftSimulationInput {
     bucket_overlay?: ContractDraftBucketOverlayInput | null;
   }>;
   usage_billing_frequency?: string;
+  /** Line-level pools (members + burn multipliers); same model as saved pools. */
+  bucket_pools?: ContractDraftBucketPoolInput[];
+  /** Contract-wide discounts authored in the wizard, priced by the simulator. */
+  discounts?: ContractDraftDiscount[];
+  /** Prepaid Block lines (validated wizard drafts); each simulates its block issue like a saved block line. */
+  prepaid_block_lines?: ContractDraftPrepaidBlockLine[];
 }
 
 /* ----------------------------- results ----------------------------- */
@@ -352,10 +497,31 @@ export interface SimulatedPeriod {
   invoice_view_model: WasmInvoiceViewModel;
 }
 
+/**
+ * A note on a simulation run. `info` and `warning` accompany priced periods.
+ *
+ * `error` is BLOCKING: the simulator refused to run (for example a service has
+ * a configuration type it can't price). A result that carries any `error`
+ * diagnostic has `periods: []` and therefore no totals; consumers must test
+ * with {@link isSimulationBlocked} and show the diagnostic instead of totals,
+ * and must not compare a blocked result (a blocked side has no figures, so a
+ * delta against it would read as a misleading $0 change).
+ *
+ * `message` is the English text. `message_key` plus `message_params` is the
+ * localized form (i18next `{{placeholders}}`); the structured fields name the
+ * offending contract line, service and configuration type when known.
+ */
 export interface SimulationDiagnostic {
-  severity: "info" | "warning";
+  severity: "info" | "warning" | "error";
   message: string;
   line_key?: string;
+  code?: ContractSimulationErrorCode;
+  message_key?: string;
+  message_params?: Record<string, string | number>;
+  line_name?: string;
+  service_id?: string;
+  service_name?: string;
+  configuration_type?: string;
 }
 
 export interface ContractSimulationResult {
@@ -389,6 +555,150 @@ export interface SimulationComparison {
   periods: SimulationPeriodDelta[];
   /** Cents. */
   horizon_total_delta: number;
+}
+
+/* ----------------------------- refusals ----------------------------- */
+
+/**
+ * Why the simulator refused to run, carried as the `code` of the coded error
+ * the simulator throws internally and as the `code` of the resulting blocking
+ * diagnostic. Each one is something the user can act on (fix the contract's
+ * configuration, pick a client, change the replay range). The simulator entry
+ * points convert these into a blocking result or a typed refusal; the action
+ * boundary does the same as a backstop. Any error without one of these codes
+ * is unexpected and is logged.
+ */
+export const CONTRACT_SIMULATION_ERROR_CODES = [
+  "CONTRACT_SIMULATION_UNSUPPORTED_LINE_TYPE",
+  "CONTRACT_SIMULATION_UNSUPPORTED_SERVICE_CONFIGURATION",
+  "CONTRACT_SIMULATION_SERVICE_NOT_IN_CATALOG",
+  "CONTRACT_SIMULATION_POOL_MISSING",
+  "CONTRACT_SIMULATION_CONTRACT_NOT_FOUND",
+  "CONTRACT_SIMULATION_CLIENT_NOT_AVAILABLE",
+  "CONTRACT_SIMULATION_CLIENT_REQUIRED",
+  "CONTRACT_SIMULATION_HISTORY_REQUIRES_CLIENT",
+  "CONTRACT_SIMULATION_INVALID_REPLAY_RANGE",
+  "CONTRACT_SIMULATION_SCENARIO_INVALID",
+  "CONTRACT_SIMULATION_SCENARIO_REFERENCE_INVALID",
+  /** Not a refusal the simulator chose: an unexpected failure the action boundary logged. */
+  "CONTRACT_SIMULATION_UNEXPECTED",
+] as const;
+
+export type ContractSimulationErrorCode =
+  (typeof CONTRACT_SIMULATION_ERROR_CODES)[number];
+
+export function isContractSimulationErrorCode(
+  value: unknown,
+): value is ContractSimulationErrorCode {
+  return (
+    typeof value === "string" &&
+    (CONTRACT_SIMULATION_ERROR_CODES as readonly string[]).includes(value)
+  );
+}
+
+/** The shape of a thrown coded refusal (structurally a CodedError). */
+export interface ContractSimulationRefusalError {
+  message: string;
+  code: string;
+  messageKey?: string;
+  messageParams?: Record<string, string | number>;
+}
+
+/** Whether `error` is a coded refusal from the simulator. */
+export function isContractSimulationRefusalError(
+  error: unknown,
+): error is ContractSimulationRefusalError {
+  return (
+    error instanceof Error &&
+    isContractSimulationErrorCode((error as { code?: unknown }).code)
+  );
+}
+
+/**
+ * The blocking diagnostic a refusal becomes. The structured fields come from
+ * the refusal's params: lineKey, lineName, serviceId, serviceName,
+ * configurationType.
+ */
+export function simulationRefusalToDiagnostic(
+  error: ContractSimulationRefusalError,
+): SimulationDiagnostic {
+  const params = error.messageParams;
+  const read = (name: string): string | undefined => {
+    const value = params?.[name];
+    return value === undefined || value === "" ? undefined : String(value);
+  };
+  const diagnostic: SimulationDiagnostic = {
+    severity: "error",
+    message: error.message,
+    code: error.code as ContractSimulationErrorCode,
+  };
+  if (error.messageKey) diagnostic.message_key = error.messageKey;
+  if (params) diagnostic.message_params = params;
+  const lineKey = read("lineKey");
+  const lineName = read("lineName");
+  const serviceId = read("serviceId");
+  const serviceName = read("serviceName");
+  const configurationType = read("configurationType");
+  if (lineKey) diagnostic.line_key = lineKey;
+  if (lineName) diagnostic.line_name = lineName;
+  if (serviceId) diagnostic.service_id = serviceId;
+  if (serviceName) diagnostic.service_name = serviceName;
+  if (configurationType) diagnostic.configuration_type = configurationType;
+  return diagnostic;
+}
+
+/**
+ * The result of a run the simulator refused: blocking diagnostics and no
+ * periods, hence no totals.
+ */
+export function blockedSimulationResult(
+  scenario:
+    | Partial<Pick<ContractScenario, "scenario_id" | "currency_code" | "horizon">>
+    | null
+    | undefined,
+  diagnostics: SimulationDiagnostic[],
+): ContractSimulationResult {
+  return {
+    scenario_id: scenario?.scenario_id ?? "",
+    currency_code: scenario?.currency_code || "USD",
+    horizon: scenario?.horizon ?? { start_date: "", period_count: 0 },
+    periods: [],
+    diagnostics,
+  };
+}
+
+/** True when the result carries a blocking diagnostic (and so has no totals). */
+export function isSimulationBlocked(
+  result: Pick<ContractSimulationResult, "diagnostics">,
+): boolean {
+  return result.diagnostics.some((diagnostic) => diagnostic.severity === "error");
+}
+
+/** The blocking diagnostics of a result, in order. */
+export function blockingDiagnostics(
+  result: Pick<ContractSimulationResult, "diagnostics">,
+): SimulationDiagnostic[] {
+  return result.diagnostics.filter((diagnostic) => diagnostic.severity === "error");
+}
+
+/**
+ * Typed refusal for the actions that don't return a ContractSimulationResult
+ * (snapshot, draft scenario, prefill). The UI renders `diagnostic` where the
+ * scenario or prefill would have appeared.
+ */
+export interface ContractSimulationRefusal {
+  refused: true;
+  diagnostic: SimulationDiagnostic;
+}
+
+export function isContractSimulationRefusal(
+  value: unknown,
+): value is ContractSimulationRefusal {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    (value as ContractSimulationRefusal).refused === true
+  );
 }
 
 /** Structured CE result for the EE-guarded simulator actions. */

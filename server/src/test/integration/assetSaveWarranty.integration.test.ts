@@ -20,6 +20,11 @@ const published = vi.hoisted(() => ({ calls: [] as unknown[] }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn().mockResolvedValue(undefined),
   publishWorkflowEvent: vi.fn(async (event: unknown) => { published.calls.push(event); }),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
 }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
@@ -101,6 +106,14 @@ async function seedTenant(): Promise<{ tenantId: string; userId: string; clientI
     ...(hasColumn('clients', 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
+  // A tenant made straight in SQL misses the status registry that real tenants
+  // get from the migration or the onboarding seed, and asset writes validate
+  // against it.
+  await table(tenantId, 'asset_statuses').insert([
+    { tenant: tenantId, slug: 'active', label: 'Active', kind: 'deployable', is_builtin: true, is_active: true, display_order: 0 },
+    { tenant: tenantId, slug: 'inactive', label: 'Inactive', kind: 'undeployable', is_builtin: true, is_active: true, display_order: 3 },
+  ]);
+
   actionAuth.tenant = tenantId;
   actionAuth.userId = userId;
   return { tenantId, userId, clientId };
@@ -113,6 +126,7 @@ async function cleanupTenant(tenant: string): Promise<void> {
     'workstation_assets',
     'network_device_assets',
     'assets',
+    'asset_statuses',
     'clients',
     'users',
   ]) {

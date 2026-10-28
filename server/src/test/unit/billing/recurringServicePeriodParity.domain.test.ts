@@ -7,7 +7,6 @@ describe('recurring service period parity comparison', () => {
   it('T293: parity comparison surfaces differences between legacy derived timing and persisted service-period schedules before cutover', () => {
     const sourceObligation = {
       obligationId: 'line-1',
-      obligationType: 'contract_line' as const,
       chargeFamily: 'fixed' as const,
     };
     const derivedSelections = [
@@ -32,7 +31,6 @@ describe('recurring service period parity comparison', () => {
           duePosition: 'arrears',
           sourceObligation: {
             obligationId: 'line-2',
-            obligationType: 'contract_line',
             chargeFamily: 'fixed',
           },
           start: '2025-01-15',
@@ -52,14 +50,13 @@ describe('recurring service period parity comparison', () => {
       derivedSelections,
       persistedRecords: [
         buildRecurringServicePeriodRecord({
-          scheduleKey: 'schedule:tenant-1:contract_line:line-1:client:arrears',
+          scheduleKey: 'schedule:tenant-1:line-1:client:arrears',
           periodKey: 'period:2025-01-01:2025-02-01',
           cadenceOwner: 'client',
           duePosition: 'arrears',
           sourceObligation: {
             tenant: 'tenant-1',
             obligationId: 'line-1',
-            obligationType: 'contract_line',
             chargeFamily: 'fixed',
           },
           servicePeriod: { start: '2025-01-01', end: '2025-02-01', semantics: 'half_open' },
@@ -67,14 +64,13 @@ describe('recurring service period parity comparison', () => {
         }),
         buildRecurringServicePeriodRecord({
           recordId: 'rsp_extra',
-          scheduleKey: 'schedule:tenant-1:contract_line:line-3:client:arrears',
+          scheduleKey: 'schedule:tenant-1:line-3:client:arrears',
           periodKey: 'period:2025-02-01:2025-03-01',
           cadenceOwner: 'client',
           duePosition: 'arrears',
           sourceObligation: {
             tenant: 'tenant-1',
             obligationId: 'line-3',
-            obligationType: 'contract_line',
             chargeFamily: 'fixed',
           },
           servicePeriod: { start: '2025-02-01', end: '2025-03-01', semantics: 'half_open' },
@@ -87,19 +83,19 @@ describe('recurring service period parity comparison', () => {
     expect(comparison.drifts).toEqual([
       expect.objectContaining({
         kind: 'invoice_window_mismatch',
-        scheduleKey: 'schedule:tenant-1:contract_line:line-1:client:arrears',
+        scheduleKey: 'schedule:tenant-1:line-1:client:arrears',
         periodKey: 'period:2025-01-01:2025-02-01',
         derivedInvoiceWindowStart: '2025-02-01',
         persistedInvoiceWindowStart: '2025-02-02',
       }),
       expect.objectContaining({
         kind: 'missing_persisted_period',
-        scheduleKey: 'schedule:tenant-1:contract_line:line-2:client:arrears',
+        scheduleKey: 'schedule:tenant-1:line-2:client:arrears',
         periodKey: 'period:2025-01-15:2025-02-15',
       }),
       expect.objectContaining({
         kind: 'unexpected_persisted_period',
-        scheduleKey: 'schedule:tenant-1:contract_line:line-3:client:arrears',
+        scheduleKey: 'schedule:tenant-1:line-3:client:arrears',
         periodKey: 'period:2025-02-01:2025-03-01',
       }),
     ]);

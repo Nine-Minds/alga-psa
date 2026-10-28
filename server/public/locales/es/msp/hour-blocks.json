@@ -1,7 +1,7 @@
 {
   "section": {
     "title": "Bloques de horas",
-    "description": "Bloques de horas de prepago de compra única. El tiempo que no cubre una línea de contrato se descuenta de estos bloques por fecha de vencimiento (primero los más antiguos).",
+    "description": "Bloques de horas de prepago puntuales. Solo reciben el tiempo que no cubre ninguna línea de contrato. Los bloques emitidos por una línea de contrato de Bloque prepagado solo se descuentan con el tiempo de esa misma línea.",
     "availableBalance": "{{hours}} h disponibles",
     "noBlocks": "Aún no hay bloques de horas. Venda un bloque a este cliente u otorgue horas de cortesía.",
     "loadFailed": "No se pudieron cargar los bloques de horas. Inténtelo de nuevo."
@@ -126,7 +126,8 @@
     "autoExpired": "Vencido automáticamente",
     "voidedLabel": "Anulado",
     "purchaseReversed": "Compra revertida (factura desfinalizada)",
-    "unknownUser": "Sistema"
+    "unknownUser": "Sistema",
+    "sourceContract": "Contrato: {{contract}}"
   },
   "expire": {
     "error": "No se pudo caducar el bloque de horas.",
@@ -154,5 +155,16 @@
       "missingField": "Falta un campo obligatorio del bloque de horas. Revise el formulario e inténtelo de nuevo.",
       "referenceMissing": "El cliente, servicio o factura seleccionado ya no existe. Actualice la página e inténtelo de nuevo."
     }
+  },
+  "coverage": {
+    "oneLine": "El tiempo de {{service}} se factura a través de {{contract}} / {{line}} y no descontará de este bloque de horas.",
+    "manyLines": "El tiempo de {{service}} asignado a una línea de contrato no descontará de este bloque de horas.",
+    "linesLabel": "Líneas de contrato que cubren {{service}}:",
+    "unscopedIntro": "Este bloque de horas cubre todo el trabajo, pero el tiempo de estos servicios se factura a través de una línea de contrato y no descontará de él:",
+    "unscopedService": "{{service}} — {{contract}} / {{line}}",
+    "unscopedServiceAssigned": "{{service}} — cuando se asigna a una línea de contrato",
+    "more": "y {{count}} más",
+    "badge": "Solapamiento con contrato",
+    "viewContract": "Ver contrato"
   }
 }

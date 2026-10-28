@@ -18,11 +18,14 @@ import logger from '@alga-psa/core/logger';
 import { registerFeatureFlagChecker } from '@alga-psa/core/features';
 import { featureFlags } from '@alga-psa/core/server';
 import { TenantEmailService, StaticTemplateProcessor, EmailProviderManager } from '@alga-psa/email';
+// LEVERAGE: friction tenancy-server-barrel — the '@alga-psa/tenancy/server' barrel mixes next/auth-dependent and pure code; import the auth-free subpath.
+import { buildTenantPortalUrl } from '@alga-psa/tenancy/lib/tenantPortalUrl';
 import { HealthServer } from './healthServer.js';
+import { getWorkflowWorkerMetrics } from './metrics.js';
 import { registerEnterpriseStorageProviders } from './registerEnterpriseStorageProviders.js';
 
 async function startServices() {
-  const healthServer = new HealthServer();
+  const healthServer = new HealthServer(undefined, getWorkflowWorkerMetrics().registry);
   try {
     // Start the health HTTP server before anything else so kubelet probes
     // (rewritten by the Istio sidecar to hit localhost:PORT/health) get a
@@ -47,6 +50,15 @@ async function startServices() {
     // the same PostHog-backed feature evaluator in this process as well.
     registerFeatureFlagChecker((flag, context) => featureFlags.isEnabled(flag, context));
 
+    // CM L0c: install the co-managed write-admission resolver. Fails open: an image
+    // whose co-managed packages do not resolve must still boot and write.
+    try {
+      const { installCoManagedWriteAdmission } = await import('@alga-psa/licensing/co-managed-write-admission');
+      installCoManagedWriteAdmission();
+    } catch (error) {
+      logger.error('Failed to install co-managed write admission:', error);
+    }
+
     initializeWorkflowRuntimeV2();
 
     // Workflow actions resolve email integrations through a runtime registry.
@@ -55,6 +67,7 @@ async function startServices() {
       TenantEmailService: Object.assign(TenantEmailService, { resolveOutboundSenderForTenant: TenantEmailService.resolveOutboundSenderForTenant }) as any,
       StaticTemplateProcessor: StaticTemplateProcessor as any,
       EmailProviderManager: EmailProviderManager as any,
+      buildTenantPortalUrl,
     });
 
     await registerEnterpriseStorageProviders();
@@ -62,7 +75,7 @@ async function startServices() {
     const runtimeV2EventWorkerId = `runtime-v2-events-${Date.now()}`;
     const runtimeV2TemporalWorkerId = `runtime-v2-temporal-${Date.now()}`;
     const dataStoreSweepWorkerId = `data-store-sweep-${Date.now()}`;
-    const runtimeV2EventWorker = new WorkflowRuntimeV2EventStreamWorker(runtimeV2EventWorkerId);
+    const runtimeV2EventWorker = new WorkflowRuntimeV2EventStreamWorker(runtimeV2EventWorkerId, getWorkflowWorkerMetrics());
     const runtimeV2TemporalWorker = new WorkflowRuntimeV2TemporalWorker(runtimeV2TemporalWorkerId);
     const dataStoreSweepWorker = new WorkflowDataStoreSweepWorker(dataStoreSweepWorkerId);
     logger.info('[WorkflowWorker] Starting runtime v2 workers', {

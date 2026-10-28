@@ -5,7 +5,7 @@ import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { AssetService } from '@/lib/api/services/AssetService';
 
-vi.mock('server/src/lib/eventBus/publishers', () => ({ publishEvent: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('server/src/lib/eventBus/publishers', () => ({ publishEvent: vi.fn().mockResolvedValue(undefined), publishWorkflowEvent: vi.fn(async () => undefined), publishNonCatalogWorkflowEvent: vi.fn(async () => undefined), publishStoredWorkflowEvent: vi.fn(async () => undefined), publishBuiltWorkflowPayload: vi.fn(async () => undefined), publishNonCatalogEventByName: vi.fn(async () => undefined), publishUnregisteredEventType: vi.fn(async () => undefined) }));
 let db: Knex;
 const tenantIds = new Set<string>();
 const table = (tenant: string, name: string) => tenantDb(db, tenant).table(name);
@@ -28,6 +28,9 @@ async function fixture() {
     { key: 'env', label: 'Environment', kind: 'select', options: ['prod', 'qa'], required: false },
   ]) });
   await table(tenant, 'asset_type_registry').insert({ tenant, slug: 'second_custom', name: 'Second Custom', is_builtin: false, display_order: 1, fields_schema: JSON.stringify([{ key: 'code', label: 'Code', kind: 'number', required: true }]) });
+  // A tenant made straight in SQL misses the onboarding seed that gives real
+  // tenants their builtin statuses, and every asset write validates its slug.
+  await table(tenant, 'asset_statuses').insert({ tenant, slug: 'active', label: 'Active', kind: 'deployable', is_builtin: true, is_active: true, display_order: 0 });
   return { tenant, clientId, svc: service(tenant), context: { tenant, userId: uuidv4(), db } as any };
 }
 async function createAsset(f: Awaited<ReturnType<typeof fixture>>, attrs: Record<string, unknown>, type = 'rmm_endpoint') {
@@ -38,7 +41,7 @@ describe('REST asset custom attributes', () => {
   afterEach(async () => {
     vi.restoreAllMocks();
     for (const tenant of tenantIds) {
-      await table(tenant, 'assets').del(); await table(tenant, 'asset_type_registry').del(); await table(tenant, 'clients').del();
+      await table(tenant, 'assets').del(); await table(tenant, 'asset_type_registry').del(); await table(tenant, 'asset_statuses').del(); await table(tenant, 'clients').del();
       await tenantRows().where({ tenant }).del();
     }
     tenantIds.clear();

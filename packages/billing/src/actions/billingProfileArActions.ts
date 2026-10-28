@@ -53,16 +53,19 @@ export const getClientArSummary = withAuth(async (
     // Outstanding balance per invoice, net of recorded payments and applied
     // credit — the same definition the client command centre ages on, so the
     // two surfaces cannot disagree about what is owed.
+    // `tenant` is selected and grouped so the join can match on the
+    // distribution key as well as the invoice: Citus only pushes a join to a
+    // single shard when the distribution column is part of it.
     const paidSubquery = db
       .table('invoice_payments')
-      .select('invoice_id')
+      .select('tenant', 'invoice_id')
       .sum({ paid_amount: 'amount' })
-      .groupBy('invoice_id')
+      .groupBy('tenant', 'invoice_id')
       .as('ip');
 
     const query = db.table('invoices as i');
     query.leftJoin(paidSubquery, function joinPayments(this: Knex.JoinClause) {
-      this.on('ip.invoice_id', '=', 'i.invoice_id');
+      this.on('ip.invoice_id', '=', 'i.invoice_id').andOn('ip.tenant', '=', 'i.tenant');
     });
     const invoices = await query
       .where('i.client_id', clientId)

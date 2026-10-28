@@ -181,6 +181,7 @@
       "reopenWithChildren": "Reopen children too",
       "childBanner": "This ticket is bundled under {{number}}.",
       "locked": "Status, priority and assignee are locked; work from the master ticket.",
+      "linkOnly": "Linked to the master and managed on its own.",
       "openMaster": "Open master ticket {{number}}",
       "masterBanner": "Master of a bundle ({{count}} children).",
       "mode": "Mode: {{mode}}",

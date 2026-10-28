@@ -22,6 +22,11 @@ import PriceChangeRolloutDialog from './PriceChangeRolloutDialog';
 import RateReviewDialog from './RateReviewDialog';
 import { getDefaultBillingSettings } from '../../../actions/billingSettingsActions';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
+import {
+  minorUnitsToRateText,
+  rateTextToMinorUnits,
+  rescaleRateToCurrency,
+} from '@alga-psa/billing/lib/currency/rateInput';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { getServiceCategories } from '../../../actions/categoryActions';
 // Import action to get tax rates
@@ -52,11 +57,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
-// Removed old SERVICE_TYPE_OPTIONS
-
 const BILLING_METHOD_OPTION_VALUES = ['fixed', 'hourly', 'usage'] as const;
-
-// Removed hardcoded SERVICE_CATEGORY_OPTIONS - will use fetched categories instead
 
 const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
 
@@ -406,8 +407,11 @@ const ServiceCatalogManager: React.FC = () => {
     // blur has flushed), so `editingPrices[0]` may still hold the old value;
     // trusting it silently discards what the operator typed.
     const fallbackRateCents = Math.round(Number(prices[0]?.rate ?? 0));
+    // Scaled by the primary price's own currency: a rate typed as 50 on a JPY price is
+    // ¥50, and a fixed ×100 would store 5000 for the invoice to bill as ¥5,000.
+    const primaryCurrency = prices[0]?.currency_code ?? defaultCurrency;
     const parsedRateCents =
-      rateInput.trim() === '' ? Number.NaN : Math.round(parseFloat(rateInput) * 100);
+      rateInput.trim() === '' ? Number.NaN : rateTextToMinorUnits(rateInput, primaryCurrency);
     const newRateCents = Number.isFinite(parsedRateCents) ? parsedRateCents : fallbackRateCents;
     // The baseline is the price that was effective when the dialog opened, held
     // outside mutable editing state (see `originalPriceCentsRef`).
@@ -858,11 +862,11 @@ const ServiceCatalogManager: React.FC = () => {
           } else {
             // Show primary price (first one, typically USD)
             const primaryPrice = prices[0];
-            const primaryRate = `${getCurrencySymbol(primaryPrice.currency_code)}${(primaryPrice.rate / 100).toFixed(2)}`;
+            const primaryRate = `${getCurrencySymbol(primaryPrice.currency_code)}${minorUnitsToRateText(primaryPrice.rate, primaryPrice.currency_code)}`;
             // Show indicator if there are additional currencies
             primaryDisplay = prices.length > 1
               ? (
-                <span title={prices.map(p => `${p.currency_code}: ${getCurrencySymbol(p.currency_code)}${(p.rate / 100).toFixed(2)}`).join('\n')}>
+                <span title={prices.map(p => `${p.currency_code}: ${getCurrencySymbol(p.currency_code)}${minorUnitsToRateText(p.rate, p.currency_code)}`).join('\n')}>
                   {primaryRate} <span className="text-xs text-muted-foreground">+{prices.length - 1}</span>
                 </span>
               )
@@ -891,12 +895,6 @@ const ServiceCatalogManager: React.FC = () => {
           );
         },
       },
-      // Category column hidden - using Service Types for organization
-      // {
-      //   title: 'Category',
-      //   dataIndex: 'category_id',
-      //   render: (value, record) => categories.find(cat => cat.category_id === value)?.category_name || 'N/A',
-      // },
       {
         title: t('serviceCatalog.table.unit', { defaultValue: 'Unit' }),
         dataIndex: 'unit_of_measure',
@@ -974,44 +972,6 @@ const ServiceCatalogManager: React.FC = () => {
       },
     ];
 
-    // Removed conditional columns based on old service_type
-    // TODO: Re-add conditional columns based on new category/billing method if needed
-    // Hidden columns: SKU, Inventory, Seat Limit, License Term
-    // baseColumns.push(
-    //   {
-    //     title: 'SKU',
-    //     dataIndex: 'sku',
-    //     render: (value, record) => {
-    //       const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
-    //       return type?.name === 'Hardware' ? value || 'N/A' : 'N/A';
-    //     },
-    //   },
-    //   {
-    //     title: 'Inventory',
-    //     dataIndex: 'inventory_count',
-    //     render: (value, record) => {
-    //       const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
-    //       return type?.name === 'Hardware' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
-    //     },
-    //   },
-    //   {
-    //     title: 'Seat Limit',
-    //     dataIndex: 'seat_limit',
-    //     render: (value, record) => {
-    //       const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
-    //       return type?.name === 'Software License' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
-    //     },
-    //   },
-    //   {
-    //     title: 'License Term',
-    //     dataIndex: 'license_term',
-    //     render: (value, record) => {
-    //       const type = allServiceTypes.find(t => t.id === record.custom_service_type_id);
-    //       return type?.name === 'Software License' ? (value ?? 'N/A') : 'N/A'; // Use ?? for 0
-    //     }
-    //   }
-    // );
-
     // Always add actions column at the end
     baseColumns.push({
       title: t('common.columns.actions', { defaultValue: 'Actions' }),
@@ -1045,7 +1005,7 @@ const ServiceCatalogManager: React.FC = () => {
                 setEditingPrices(prices);
                 // Set rate input for the first/primary price
                 const primaryRate = prices.length > 0 ? prices[0].rate : record.default_rate;
-                setRateInput((primaryRate / 100).toFixed(2));
+                setRateInput(minorUnitsToRateText(Number(primaryRate ?? 0), prices[0]?.currency_code ?? defaultCurrency));
                 setIsEditDialogOpen(true);
               }}
             >
@@ -1211,7 +1171,7 @@ const ServiceCatalogManager: React.FC = () => {
                   setEditingPrices(prices);
                   // Set rate input for the first/primary price
                   const primaryRate = prices.length > 0 ? prices[0].rate : record.default_rate;
-                  setRateInput((primaryRate / 100).toFixed(2));
+                  setRateInput(minorUnitsToRateText(Number(primaryRate ?? 0), prices[0]?.currency_code ?? defaultCurrency));
                   setIsEditDialogOpen(true);
 
                   // Ensure the current page is preserved
@@ -1436,8 +1396,20 @@ const ServiceCatalogManager: React.FC = () => {
                         value={price.currency_code}
                         onValueChange={(value) => {
                           const newPrices = [...editingPrices];
-                          newPrices[index] = { ...newPrices[index], currency_code: value };
+                          // Keep the amount the operator typed: minor units are per currency,
+                          // so 50 stays 50 across a USD -> JPY switch instead of becoming 5000.
+                          // The primary row re-reads its live text, which may not have blurred.
+                          newPrices[index] = {
+                            ...newPrices[index],
+                            currency_code: value,
+                            rate: index === 0 && rateInput.trim() !== ''
+                              ? rateTextToMinorUnits(rateInput, value)
+                              : rescaleRateToCurrency(newPrices[index].rate, newPrices[index].currency_code, value),
+                          };
                           setEditingPrices(newPrices);
+                          if (index === 0 && editingService) {
+                            setEditingService({ ...editingService, default_rate: newPrices[0].rate });
+                          }
                         }}
                         placeholder={t('serviceCatalog.fields.pricing.placeholders.currency', {
                           defaultValue: 'Currency'
@@ -1452,7 +1424,7 @@ const ServiceCatalogManager: React.FC = () => {
                         id={`edit-price-rate-${index}`}
                         type="text"
                         inputMode="decimal"
-                        value={index === 0 ? rateInput : (price.rate / 100).toFixed(2)}
+                        value={index === 0 ? rateInput : minorUnitsToRateText(price.rate, price.currency_code)}
                         onChange={(e) => {
                           const value = e.target.value.replace(/[^0-9.]/g, '');
                           const decimalCount = (value.match(/\./g) || []).length;
@@ -1461,10 +1433,11 @@ const ServiceCatalogManager: React.FC = () => {
                               setRateInput(value);
                             } else {
                               // For non-primary prices, update directly
-                              const dollars = parseFloat(value) || 0;
-                              const cents = Math.round(dollars * 100);
                               const newPrices = [...editingPrices];
-                              newPrices[index] = { ...newPrices[index], rate: cents };
+                              newPrices[index] = {
+                                ...newPrices[index],
+                                rate: rateTextToMinorUnits(value, price.currency_code),
+                              };
                               setEditingPrices(newPrices);
                             }
                           }
@@ -1472,15 +1445,14 @@ const ServiceCatalogManager: React.FC = () => {
                         onBlur={() => {
                           if (index === 0) {
                             // Primary price - update both editingPrices and default_rate
-                            const dollars = parseFloat(rateInput) || 0;
-                            const cents = Math.round(dollars * 100);
+                            const minorUnits = rateTextToMinorUnits(rateInput, price.currency_code);
                             const newPrices = [...editingPrices];
-                            newPrices[0] = { ...newPrices[0], rate: cents };
+                            newPrices[0] = { ...newPrices[0], rate: minorUnits };
                             setEditingPrices(newPrices);
                             if (editingService) {
-                              setEditingService({ ...editingService, default_rate: cents });
+                              setEditingService({ ...editingService, default_rate: minorUnits });
                             }
-                            setRateInput((cents / 100).toFixed(2));
+                            setRateInput(minorUnitsToRateText(minorUnits, price.currency_code));
                           }
                         }}
                         placeholder={t('serviceCatalog.fields.pricing.placeholders.rate', { defaultValue: '0.00' })}
@@ -1499,7 +1471,7 @@ const ServiceCatalogManager: React.FC = () => {
                           setEditingPrices(newPrices);
                           // If removing the first price, update rateInput
                           if (index === 0 && newPrices.length > 0) {
-                            setRateInput((newPrices[0].rate / 100).toFixed(2));
+                            setRateInput(minorUnitsToRateText(newPrices[0].rate, newPrices[0].currency_code));
                             if (editingService) {
                               setEditingService({ ...editingService, default_rate: newPrices[0].rate });
                             }

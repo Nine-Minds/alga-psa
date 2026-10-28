@@ -1,3 +1,4 @@
+import { listExtensionMaintenanceSchedules } from './jobScheduleExtensions';
 import { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME } from './billingJobNames';
 
 /**
@@ -63,6 +64,15 @@ export const MAINTENANCE_FANOUT_SCHEDULES: ReadonlyArray<{ jobName: string; cron
   { jobName: 'recover-comment-publications', cron: '* * * * *' },
   { jobName: 'generate-recurring-tickets', cron: '*/15 * * * *' },
 ];
+
+/**
+ * The EE schedule set: the native catalog followed by rows registered through
+ * `registerMaintenanceSchedule` (normally via `defineJob({ schedule })`). With
+ * nothing registered this is a copy of MAINTENANCE_FANOUT_SCHEDULES.
+ */
+export function listMaintenanceFanoutSchedules(): Array<{ jobName: string; cron: string }> {
+  return [...MAINTENANCE_FANOUT_SCHEDULES, ...listExtensionMaintenanceSchedules('ee')];
+}
 
 /**
  * Prefixes of the per-tenant Temporal schedules the server used to upsert at

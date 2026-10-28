@@ -131,16 +131,21 @@ export const HardwareSpecsPanel: React.FC<HardwareSpecsPanelProps> = ({
                    <div className="flex items-center gap-2 flex-1">
                      <div className="w-32">
                        <UtilizationBar 
-                         value={drive.utilization_percent} 
+                         value={drive.utilization_percent ?? null} 
                          showLabel={false}
                          size="sm"
                        />
                      </div>
                      <span className="text-sm text-gray-900">
-                       {t('hardwareSpecsPanel.values.freeStorage', {
-                         defaultValue: '{{size}} GB Free',
-                         size: drive.free_gb.toFixed(1)
-                       })}
+                       {drive.free_gb != null
+                         ? t('hardwareSpecsPanel.values.freeStorage', {
+                             defaultValue: '{{size}} GB Free',
+                             size: drive.free_gb.toFixed(1)
+                           })
+                         : t('hardwareSpecsPanel.values.totalStorage', {
+                             defaultValue: '{{size}} GB',
+                             size: drive.total_gb.toFixed(1)
+                           })}
                      </span>
                    </div>
                  </div>

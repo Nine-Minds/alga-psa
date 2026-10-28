@@ -33,9 +33,16 @@ import type {
 import {
   FEATURE_MINIMUM_TIER,
   TIER_FEATURES,
+  blockingDiagnostics,
+  isContractSimulationRefusal,
   isContractSimulationUnavailable,
+  isSimulationBlocked,
 } from "@alga-psa/types";
 import { FeatureUpgradeNotice } from "@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice";
+import {
+  SimulationBlockedCallout,
+  useBlockingDiagnosticMessage,
+} from "./SimulationBlockedCallout";
 import { useTierFeature } from "server/src/context/TierContext";
 import {
   getContractScenarioSnapshot,
@@ -59,6 +66,8 @@ interface ContractSimulatorWorkspaceProps {
   /** Reserved for replay/prefill entry points; snapshot resolves the binding server-side. */
   clientId?: string | null;
   initialScenario?: ContractScenario | null;
+  /** A replacement `initialScenario` is being loaded: any projection on screen already describes an older draft. */
+  scenarioReloading?: boolean;
   readOnlyScenario?: boolean;
   forceProfile?: boolean;
 }
@@ -76,6 +85,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
   clientContractId = null,
   clientId = null,
   initialScenario = null,
+  scenarioReloading = false,
   readOnlyScenario = false,
   forceProfile = false,
 }) => {
@@ -84,12 +94,19 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
   const hasSimulatorAccess = useTierFeature(TIER_FEATURES.CONTRACT_SIMULATOR);
   const scenarioRevisionRef = useRef(0);
   const lastProjectedScenarioRef = useRef<string | null>(null);
+  const appliedScenarioRef = useRef<string | null>(null);
 
   const [pristine, setPristine] = useState<ContractScenario | null>(null);
   const [working, setWorking] = useState<ContractScenario | null>(null);
   const [isLoadingSnapshot, setIsLoadingSnapshot] = useState(true);
   const [unavailable, setUnavailable] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const describeBlocking = useBlockingDiagnosticMessage();
+  // The message hook returns a fresh closure per render; effects and callbacks
+  // read it through a ref so a refusal is described in the current language
+  // without re-running the load.
+  const describeBlockingRef = useRef(describeBlocking);
+  describeBlockingRef.current = describeBlocking;
 
   const [horizonCount, setHorizonCount] = useState(6);
   const [compareEnabled, setCompareEnabled] = useState(false);
@@ -100,6 +117,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
     useState<ContractSimulationResult | null>(null);
   const [lastRunAt, setLastRunAt] = useState<Date | null>(null);
   const [isStale, setIsStale] = useState(false);
+  const [pendingScenarioRun, setPendingScenarioRun] = useState(false);
   const [isPrefilling, setIsPrefilling] = useState(false);
   const [prefillError, setPrefillError] = useState<string | null>(null);
   const [prefillFeedback, setPrefillFeedback] =
@@ -142,10 +160,28 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
       setLoadError(null);
       try {
         if (initialScenario) {
+          // A draft scenario is rebuilt by its owner on every edit, so compare
+          // content: an identical rebuild must not discard assumptions typed
+          // here, and a genuine replacement must not inherit the run bar's
+          // "current" verdict from a scenario it no longer describes.
+          const incoming = JSON.stringify(initialScenario);
+          if (appliedScenarioRef.current === incoming) return;
+          const replacesApplied = appliedScenarioRef.current !== null;
+          appliedScenarioRef.current = incoming;
           setPristine(structuredClone(initialScenario));
           setWorking(structuredClone(initialScenario));
           if (HORIZON_OPTIONS.includes(initialScenario.horizon.period_count)) {
             setHorizonCount(initialScenario.horizon.period_count);
+          }
+          if (replacesApplied) {
+            scenarioRevisionRef.current += 1;
+            const hasProjection = lastProjectedScenarioRef.current !== null;
+            lastProjectedScenarioRef.current = null;
+            setExplanationLine(null);
+            if (hasProjection) {
+              setIsStale(true);
+              setPendingScenarioRun(true);
+            }
           }
           return;
         }
@@ -161,6 +197,10 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
         if (cancelled) return;
         if (isContractSimulationUnavailable(snapshot)) {
           setUnavailable(true);
+          return;
+        }
+        if (isContractSimulationRefusal(snapshot)) {
+          setLoadError(describeBlockingRef.current(snapshot.diagnostic));
           return;
         }
         setPristine(snapshot);
@@ -379,6 +419,10 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
         setUnavailable(true);
         return;
       }
+      if (isContractSimulationRefusal(outcome)) {
+        setPrefillError(describeBlockingRef.current(outcome.diagnostic));
+        return;
+      }
       applyPrefill(outcome, "recent_average");
     } catch (error) {
       setPrefillError(error instanceof Error ? error.message : String(error));
@@ -400,6 +444,10 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
         );
         if (isContractSimulationUnavailable(outcome)) {
           setUnavailable(true);
+          return;
+        }
+        if (isContractSimulationRefusal(outcome)) {
+          setPrefillError(describeBlockingRef.current(outcome.diagnostic));
           return;
         }
         applyPrefill(outcome, "replay");
@@ -445,10 +493,15 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
       setBaselineResult(resolvedBaseline);
       setLastRunAt(new Date());
       setIsStale(scenarioRevisionRef.current !== revisionAtStart);
-      const firstChangedPeriod = resolvedBaseline
+      // A blocked side has no periods to compare against or to select.
+      const comparable =
+        resolvedBaseline && !isSimulationBlocked(resolvedBaseline)
+          ? resolvedBaseline
+          : null;
+      const firstChangedPeriod = comparable
         ? scenarioOutcome.periods.findIndex(
             (period, index) =>
-              period.total !== resolvedBaseline.periods[index]?.total,
+              period.total !== comparable.periods[index]?.total,
           )
         : scenarioOutcome.periods.findIndex(
             (period, index, periods) =>
@@ -462,6 +515,16 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
       setIsSimulating(false);
     }
   }, [working, pristine, horizonCount, compareEnabled]);
+
+  // A replacement scenario arrived while a projection was on screen: re-run it
+  // so the totals describe the scenario in hand instead of waiting for someone
+  // to notice the stale banner.
+  useEffect(() => {
+    if (!pendingScenarioRun) return;
+    if (!working || !pristine || isSimulating) return;
+    setPendingScenarioRun(false);
+    void handleSimulate();
+  }, [pendingScenarioRun, working, pristine, isSimulating, handleSimulate]);
 
   const pristineLineJsonByKey = useMemo(() => {
     const map = new Map<string, string>();
@@ -486,9 +549,13 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
     return JSON.stringify(working) !== JSON.stringify(pristine);
   }, [working, pristine]);
 
+  // What the operator is looking at: a projection is only current when nothing
+  // has changed under it, including the draft the scenario itself came from.
+  const projectionStale = isStale || scenarioReloading;
+
   const periodLabels = useMemo(() => {
     return Array.from({ length: horizonCount }, (_, index) => {
-      const fromResult = isStale ? null : result?.periods[index]?.label;
+      const fromResult = projectionStale ? null : result?.periods[index]?.label;
       return (
         fromResult ??
         prefillPeriodLabels[index] ??
@@ -498,7 +565,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
         })
       );
     });
-  }, [horizonCount, isStale, prefillPeriodLabels, result, t]);
+  }, [horizonCount, projectionStale, prefillPeriodLabels, result, t]);
 
   const horizonOptions = useMemo(
     () =>
@@ -518,6 +585,13 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
     selectedPeriodIndex !== null
       ? (result?.periods[selectedPeriodIndex] ?? null)
       : null;
+  // A blocked result has a blocking diagnostic and no periods, so it never
+  // shows totals; a blocked baseline is never compared against (compareSimulations
+  // returns null) and never handed to the timeline as a baseline.
+  const resultBlocked = result ? isSimulationBlocked(result) : false;
+  const baselineBlocked = baselineResult
+    ? isSimulationBlocked(baselineResult)
+    : false;
   const comparison = useMemo(
     () =>
       compareEnabled && result && baselineResult
@@ -637,7 +711,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
                 ? t("contractSimulator.runBar.simulating", {
                     defaultValue: "Simulating…",
                   })
-                : isStale && result
+                : projectionStale && result
                   ? t("contractSimulator.runBar.updateSimulation", {
                       defaultValue: "Update simulation",
                     })
@@ -688,11 +762,18 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
               />
             )}
             <div className="ml-auto flex items-center gap-1.5 text-xs text-[rgb(var(--color-text-400))]">
-              {isStale ? (
+              {projectionStale ? (
                 <>
                   <Pencil className="h-3.5 w-3.5 text-[rgb(var(--color-primary-500))]" />
                   {t("contractSimulator.runBar.stale", {
                     defaultValue: "Changes not simulated",
+                  })}
+                </>
+              ) : resultBlocked ? (
+                <>
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                  {t("contractSimulator.runBar.blocked", {
+                    defaultValue: "Simulation can't run",
                   })}
                 </>
               ) : lastRunAt ? (
@@ -718,9 +799,27 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
             </Alert>
           )}
 
-          {result ? (
+          {result && resultBlocked ? (
             <>
-              {isStale && (
+              {projectionStale && (
+                <Alert variant="warning">
+                  <Pencil className="h-4 w-4" />
+                  <AlertDescription>
+                    {t("contractSimulator.runBar.staleBlockedBanner", {
+                      defaultValue:
+                        "This message is from the previous simulation. Update the simulation to include your latest changes.",
+                    })}
+                  </AlertDescription>
+                </Alert>
+              )}
+              <SimulationBlockedCallout
+                diagnostics={blockingDiagnostics(result)}
+                onFocusLine={setFocusedLineKey}
+              />
+            </>
+          ) : result ? (
+            <>
+              {projectionStale && (
                 <Alert variant="warning">
                   <Pencil className="h-4 w-4" />
                   <AlertDescription>
@@ -730,6 +829,15 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
                     })}
                   </AlertDescription>
                 </Alert>
+              )}
+              {compareEnabled && baselineResult && baselineBlocked && (
+                <SimulationBlockedCallout
+                  title={t("contractSimulator.errors.baselineTitle", {
+                    defaultValue:
+                      "The current contract can't be simulated, so there is nothing to compare with",
+                  })}
+                  diagnostics={blockingDiagnostics(baselineResult)}
+                />
               )}
               {comparison && (
                 <div className="flex items-center justify-between rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-4 py-3">
@@ -761,7 +869,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
                   </div>
                 </div>
               )}
-              {result.diagnostics.length > 0 && (
+              {result.diagnostics.some((d) => d.severity !== "error") && (
                 <ul
                   aria-live="polite"
                   aria-label={t("contractSimulator.diagnostics.title", {
@@ -774,7 +882,9 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
                       defaultValue: "Simulation notes",
                     })}
                   </li>
-                  {result.diagnostics.map((diagnostic, index) => (
+                  {result.diagnostics
+                    .filter((d) => d.severity !== "error")
+                    .map((diagnostic, index) => (
                     <li
                       key={`${diagnostic.message}-${index}`}
                       className="flex items-start gap-2 text-xs text-[rgb(var(--color-text-600))]"
@@ -811,7 +921,9 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
                 <SimulationTimeline
                   periods={result.periods}
                   baselinePeriods={
-                    compareEnabled ? (baselineResult?.periods ?? null) : null
+                    compareEnabled && !baselineBlocked
+                      ? (baselineResult?.periods ?? null)
+                      : null
                   }
                   currencyCode={result.currency_code}
                   selectedIndex={selectedPeriodIndex}

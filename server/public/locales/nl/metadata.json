@@ -196,7 +196,10 @@
             "title": "Projecttaak"
           }
         },
-        "fallbackTitle": "Projectgegevens"
+        "fallbackTitle": "Projectgegevens",
+        "staging": {
+          "title": "Project klaarzetten"
+        }
       },
       "title": "Projecten",
       "templates": {
@@ -269,6 +272,12 @@
       },
       "recurring": {
         "title": "Terugkerende tickets"
+      },
+      "templates": {
+        "title": "Ticketsjablonen"
+      },
+      "cannedResponses": {
+        "title": "Standaardantwoorden"
       }
     },
     "timeEntry": {
@@ -354,6 +363,9 @@
           "title": "Asset bewerken"
         },
         "fallbackTitle": "Activadetails"
+      },
+      "custody": {
+        "title": "Apparatuur in bewaring"
       }
     },
     "chat": {
@@ -627,5 +639,8 @@
     "setupComplete": {
       "title": "Kaart instellen"
     }
+  },
+  "pay": {
+    "title": "Factuur betalen"
   }
 }

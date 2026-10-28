@@ -5,6 +5,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { getWorkflowEmailProvider } from '../../registries/workflowEmailRegistry';
 import { TicketModel } from '../../../../models/ticketModel';
+import { ticketStatusClockPatch } from '../../../../lib/ticketStatusClock';
 import {
   captureTicketTransitionSnapshot,
   publishTicketTransitionsAfterCommit,
@@ -12,7 +13,7 @@ import {
 import { createTicketWithSideEffects } from '../../../../services/tickets/createTicketWithSideEffects';
 import { auditCloseRulesBypassIfGated } from '../../../../lib/ticketCloseRules';
 import { TICKET_ACTIVITY_ACTOR, TICKET_ACTIVITY_SOURCE } from '../../../../lib/ticketActivity';
-import { applyChecklistTemplateToTicket } from '../../../../lib/ticketChecklists';
+import { addChecklistItemsToTicket, applyChecklistTemplateToTicket, type AddChecklistItemInput } from '../../../../lib/ticketChecklists';
 import {
   uuidSchema,
   isoDateTimeSchema,
@@ -29,13 +30,14 @@ import {
   type TenantTxContext,
 } from './shared';
 import { getCurrentTicketAdditionalUserIds } from './userRecipients';
+import { assertHumanWorkAssignee } from '../../../../lib/humanWork/assertHumanWorkAssignee';
 import {
   WORKFLOW_COMMENT_VISIBILITY_LABELS,
   withWorkflowExplicitChoice,
   withWorkflowJsonSchemaMetadata,
   withWorkflowPicker,
   withWorkflowNotFoundPolicy,
-} from '../../jsonSchemaMetadata';
+} from '@alga-psa/event-schemas';
 import { orderTicketCommentsNewestFirst, whereCustomerAuthoredComment } from './ticketComments';
 
 /**
@@ -352,6 +354,9 @@ const reconcileWorkflowTicketAdditionalUsers = async (
   assignedTo: string | null,
   additionalUsers: WorkflowTicketResolvedAdditionalUser[]
 ): Promise<void> => {
+  // Human-work guard (R5.3): additional agents and the primary must be active internal users.
+  await assertHumanWorkAssignee(tx.trx, tx.tenantId, [assignedTo, ...additionalUsers.map((u) => u.userId)]);
+
   await tenantScopedTable(tx, 'ticket_resources')
     .where('ticket_id', ticketId)
     .delete();
@@ -677,6 +682,10 @@ export function registerTicketActions(): void {
             is_resolution: false,
             author_type: 'system',
             author_id: tx.actorUserId,
+            // `metadata.source = 'workflow'` is the persisted workflow-origin marker: the ticket.status_age
+            // no-activity clock ignores such comments, so a workflow's own comment can't re-arm itself.
+            // Not `is_system_generated`: that would also make the comment uneditable and change how its
+            // author renders, which is user-visible.
             metadata: { source: 'workflow', run_id: ctx.runId, step_path: ctx.stepPath },
             ...(hasEmailRecipients ? { emailRecipients: { cc: ccAddresses, bcc: bccAddresses } } : {})
           },
@@ -1219,8 +1228,10 @@ export function registerTicketActions(): void {
       // Update ticket closure fields.
       await tenantScopedTable(tx, 'tickets')
         .where('ticket_id', input.ticket_id)
+        // LEVERAGE: pattern ticket-status-write — spread the status clock patch into every tickets.status_id UPDATE
         .update({
           status_id: closedStatus.status_id,
+          ...ticketStatusClockPatch(tx.trx, closedStatus.status_id as string),
           is_closed: true,
           closed_at: nowIso,
           closed_by: tx.actorUserId,
@@ -1844,7 +1855,8 @@ export function registerTicketActions(): void {
       ticket_id: uuidSchema,
       template_id: uuidSchema,
       applied: z.boolean().describe('False when the template was already on the ticket (idempotent no-op)'),
-      items_added: z.number().int()
+      items_added: z.number().int(),
+      reason: z.enum(['template-client-mismatch']).optional().describe('Set when the template is scoped to a different client than the ticket and was not applied')
     }),
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
@@ -1891,8 +1903,62 @@ export function registerTicketActions(): void {
         ticket_id: input.ticket_id,
         template_id: input.template_id,
         applied: applyResult.applied,
-        items_added: applyResult.itemsAdded
+        items_added: applyResult.itemsAdded,
+        // Workflow choice: a client-scope mismatch is a non-fatal no-op reported in the output
+        // (like the idempotent already-applied case) so a run isn't failed by template scope.
+        ...(applyResult.reason ? { reason: applyResult.reason } : {})
       };
+    })
+  });
+
+  // ---------------------------------------------------------------------------
+  // tickets.add_checklist_items
+  // ---------------------------------------------------------------------------
+  registry.register({
+    id: 'tickets.add_checklist_items',
+    version: 1,
+    inputSchema: z.object({
+      ticket_id: withWorkflowPicker(uuidSchema, 'Ticket id', 'ticket'),
+      items: z.array(z.object({
+        item_name: z.string().trim().min(1).describe('Checklist item text'),
+        description: z.string().optional().describe('Optional item details'),
+        is_required: z.boolean().default(false).describe('Required items gate ticket closure')
+      })).min(1).describe('Checklist items to append, in order')
+    }),
+    outputSchema: z.object({
+      ticket_id: uuidSchema,
+      added: z.array(z.object({
+        checklist_item_id: uuidSchema,
+        item_name: z.string()
+      }))
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Add checklist items',
+      category: 'Business Operations',
+      description: 'Append ad-hoc checklist items (unchecked, unassigned) to a ticket'
+    },
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+      await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
+
+      const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
+      if (!ticket) {
+        throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found', details: { ticket_id: input.ticket_id } });
+      }
+
+      const added = await addChecklistItemsToTicket(tx.trx, tx.tenantId, input.ticket_id, input.items as AddChecklistItemInput[], {
+        source: 'workflow',
+        createdBy: tx.actorUserId ?? null
+      });
+
+      await writeRunAudit(ctx, tx, {
+        operation: 'workflow_action:tickets.add_checklist_items',
+        changedData: { ticket_id: input.ticket_id, items_added: added.length },
+        details: { action_id: 'tickets.add_checklist_items', action_version: 1 }
+      });
+
+      return { ticket_id: input.ticket_id, added };
     })
   });
 }

@@ -212,7 +212,10 @@
             "title": "Tarefa do Projeto"
           }
         },
-        "fallbackTitle": "Detalhes do projeto"
+        "fallbackTitle": "Detalhes do projeto",
+        "staging": {
+          "title": "Preparação do projeto"
+        }
       },
       "title": "Projetos",
       "templates": {
@@ -300,6 +303,12 @@
       },
       "recurring": {
         "title": "Tickets recorrentes"
+      },
+      "templates": {
+        "title": "Modelos de tickets"
+      },
+      "cannedResponses": {
+        "title": "Respostas prontas"
       }
     },
     "userActivities": {
@@ -377,7 +386,10 @@
         },
         "fallbackTitle": "Detalhes do ativo"
       },
-      "title": "Ativos"
+      "title": "Ativos",
+      "custody": {
+        "title": "Equipamento sob custódia"
+      }
     },
     "createContact": {
       "title": "Criar contato"
@@ -627,5 +639,8 @@
     "setupComplete": {
       "title": "Configuração do cartão"
     }
+  },
+  "pay": {
+    "title": "Pagar fatura"
   }
 }

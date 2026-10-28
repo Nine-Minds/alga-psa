@@ -297,7 +297,7 @@
         "description": "Configurar opciones avanzadas de procesamiento de correo electrónico",
         "folderFiltersLabel": "Filtros de carpeta",
         "folderFiltersPlaceholder": "Bandeja de entrada, Soporte, Carpeta personalizada",
-        "folderFiltersHelp": "Lista de carpetas separadas por comas para monitorear (predeterminado: Bandeja de entrada)",
+        "folderFiltersHelp": "Lista de carpetas separadas por comas para monitorear (predeterminado: Bandeja de entrada). Use el nombre exacto de la carpeta tal como aparece en Outlook y escriba las carpetas anidadas como Bandeja de entrada/Subcarpeta.",
         "maxEmailsPerSync": "Máximo de correos electrónicos por sincronización"
       },
       "readiness": {
@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Función Pro",
+      "domainsDescription": "Los dominios administrados requieren Pro.",
+      "settingsDescription": "La configuración de correo electrónico administrado requiere Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Error al cargar los dominios administrados",
       "loadOutboundSettingsFailed": "Error al cargar la configuración de correo saliente",
@@ -930,6 +935,12 @@
       "copyHostAriaLabel": "Copiar host",
       "copyFqdnAriaLabel": "Copiar nombre completo",
       "hostHint": "Consejo: en su proveedor de DNS, introduzca solo el Host que se muestra arriba. La mayoría de los proveedores (Namecheap, GoDaddy, Cloudflare, entre otros) añaden “{{domain}}” automáticamente. Si pega el nombre completo, el dominio se duplica (…{{domain}}.{{domain}}) y el registro nunca se verificará."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Función Pro",
+        "description": "Las instrucciones de registros DNS requieren Pro."
+      }
     }
   },
   "inboundRules": {
@@ -1131,7 +1142,10 @@
       "duplicateShortName": "Ya existe una configuración con este nombre corto",
       "createFailed": "No se pudieron crear los valores predeterminados de tickets entrantes. Inténtelo de nuevo.",
       "notFound": "No se encontró la configuración de valores predeterminados",
-      "updateFailed": "No se pudieron actualizar los valores predeterminados de tickets entrantes. Inténtelo de nuevo."
+      "updateFailed": "No se pudieron actualizar los valores predeterminados de tickets entrantes. Inténtelo de nuevo.",
+      "locationRequiresClient": "Seleccione una empresa antes de seleccionar una ubicación",
+      "locationClientMismatch": "La ubicación seleccionada no pertenece a la empresa seleccionada",
+      "referencedByProviders": "Esta configuración todavía la usan los siguientes proveedores de correo electrónico: {{providers}}. Seleccione otros valores predeterminados de tickets entrantes en esos proveedores antes de eliminarla."
     },
     "ticketFieldOptions": {
       "permissionDenied": "Permiso denegado: no se pueden leer las opciones de campo de ticket",

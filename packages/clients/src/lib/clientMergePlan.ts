@@ -352,10 +352,22 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   { table: 'projects', label: 'project', stampsBillingProfile: true },
   { table: 'contacts', label: 'contact' },
   { table: 'interactions', label: 'interaction' },
-  { table: 'assets', label: 'asset' },
+  // FR-F5: assets and RMM organization mappings now carry a billing profile,
+  // so they follow the same stamping rule as tickets and projects.
+  { table: 'assets', label: 'asset', stampsBillingProfile: true },
+  // FR-E11: groups belong to a client, so they move with it (and with their
+  // members and people, which are keyed by group). This is also why a merge is
+  // exempt from FR-E5's "a client change removes the asset from its group".
+  { table: 'asset_groups', label: 'asset group' },
+  // Equipment custody records the owning client of the held asset. The asset
+  // moves, so its custody (open or closed) follows; one open record per asset,
+  // not per client, so a move cannot collide.
+  { table: 'asset_custody', label: 'equipment custody record' },
   { table: 'client_locations', label: 'location' },
   { table: 'client_inbound_email_domains', label: 'inbound email domain' },
   { table: 'client_name_aliases', label: 'name alias' },
+  // Client-scoped checklist templates keep applying to the surviving client's tickets.
+  { table: 'checklist_templates', label: 'checklist template' },
   { table: 'ticket_materials', label: 'ticket material' },
   { table: 'project_materials', label: 'project material' },
   { table: 'survey_invitations', label: 'survey invitation' },
@@ -393,7 +405,7 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   // Integrations that keep writing after the merge. `rmm_organization_mappings`
   // is the one that matters: device sync creates assets against the mapped
   // client, so leaving it behind re-populates the client the merge just emptied.
-  { table: 'rmm_organization_mappings', label: 'RMM organisation mapping' },
+  { table: 'rmm_organization_mappings', label: 'RMM organisation mapping', stampsBillingProfile: true },
   { table: 'rmm_maintenance_windows', label: 'RMM maintenance window' },
   { table: 'inbound_ticket_defaults', label: 'inbound ticket default' },
 
@@ -413,6 +425,8 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   // cannot be preserved; moving makes them spendable across the parent, which is
   // still better than stranding them on a client that will never file a ticket.
   { table: 'hour_blocks', label: 'hour block' },
+  // Prepaid Block issuances follow the hour blocks and contract assignments they schedule.
+  { table: 'contract_line_block_issuances', label: 'prepaid block issuance' },
   { table: 'prepaid_balance_alerts', label: 'prepaid balance alert' },
   { table: 'usage_tracking', label: 'usage record' },
   { table: 'bucket_usage', label: 'bucket usage record' },
@@ -527,6 +541,8 @@ export const PROFILE_HISTORY_TABLES: Array<{
   table: string;
   label: string;
   nullableBillingProfile?: boolean;
+  /** Table exists only in some editions; skipped (count 0) where it is not installed. */
+  editionOptional?: boolean;
 }> = [
   { table: 'invoices', label: 'invoice', nullableBillingProfile: true },
   { table: 'client_billing_cycles', label: 'billing cycle' },
@@ -534,4 +550,8 @@ export const PROFILE_HISTORY_TABLES: Array<{
   { table: 'transactions', label: 'transaction', nullableBillingProfile: true },
   { table: 'credit_tracking', label: 'credit', nullableBillingProfile: true },
   { table: 'client_tax_settings', label: 'tax setting' },
+  // Enterprise autopay consent hangs off the profile (PK tenant + billing_profile_id)
+  // and repeats the profile's client_id. The profile moves to the target, so the
+  // row's client_id must follow it. One row per profile, so no key collision.
+  { table: 'billing_profile_autopay', label: 'autopay authorization', editionOptional: true },
 ];

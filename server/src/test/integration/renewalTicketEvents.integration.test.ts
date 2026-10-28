@@ -18,8 +18,9 @@ vi.mock('@alga-psa/event-bus/publishers', async () => {
   const actual = await vi.importActual<typeof import('@alga-psa/event-bus/publishers')>(
     '@alga-psa/event-bus/publishers'
   );
-  const capture = async (event: { eventType: string; payload: Record<string, any> }) => {
-    published.push({ eventType: event.eventType, payload: event.payload });
+  // Typed publishers carry the tenant in ctx and the real publisher stamps it into the payload; mirror that.
+  const capture = async (event: { eventType: string; payload: Record<string, any>; ctx?: { tenantId?: string } }) => {
+    published.push({ eventType: event.eventType, payload: event.ctx?.tenantId ? { tenantId: event.ctx.tenantId, ...event.payload } : event.payload });
   };
   return { ...actual, publishEvent: vi.fn(capture), publishWorkflowEvent: vi.fn(capture) };
 });

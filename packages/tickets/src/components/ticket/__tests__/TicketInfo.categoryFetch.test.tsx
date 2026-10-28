@@ -19,6 +19,7 @@ vi.mock('@alga-psa/ui/hooks', () => ({
 
 vi.mock('@alga-psa/ui/context', () => ({
   useRegisterUnsavedChanges: vi.fn(),
+  useOptionalActivityCrossFeature: () => null,
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({

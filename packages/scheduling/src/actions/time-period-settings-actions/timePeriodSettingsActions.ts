@@ -7,11 +7,15 @@ import { validateData, validateArray } from '@alga-psa/core';
 import { timePeriodSettingsSchema } from '../../schemas/timeSheet.schemas';
 import { formatUtcDateNoTime } from '@alga-psa/core';
 import { Knex } from 'knex';
-import { withAuth } from '@alga-psa/auth';
+import { Temporal } from '@js-temporal/polyfill';
+import { resolveUserTimeZone } from '@alga-psa/db';
+import { defaultEffectiveFrom } from '../../lib/timePeriodSuggester';
+import { hasPermission, withAuth } from '@alga-psa/auth';
 import {
   actionError,
   isActionMessageError,
   isActionPermissionError,
+  permissionError,
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
@@ -83,12 +87,39 @@ function timePeriodSettingsActionErrorFrom(error: unknown, fallback: string): Ti
   return actionError(fallback);
 }
 
+// Time period settings decide every tenant's time-sheet cadence, so reading them needs
+// `time_period:read` and changing them needs `time_period:manage` — the same split the
+// v1 API applies in ApiTimeSheetController.
+const TIME_PERIOD_SETTINGS_PERMISSION_MESSAGES: Record<'read' | 'manage', string> = {
+  read: 'Permission denied: cannot view time period settings.',
+  manage: 'Permission denied: cannot manage time period settings.',
+};
+
+async function timePeriodSettingsPermissionError(
+  user: Parameters<typeof hasPermission>[0],
+  action: 'read' | 'manage',
+  db: Knex | Knex.Transaction
+): Promise<ActionPermissionError | null> {
+  if (await hasPermission(user, 'time_period', action, db)) {
+    return null;
+  }
+  return permissionError(
+    TIME_PERIOD_SETTINGS_PERMISSION_MESSAGES[action],
+    `msp/time-entry:errors.timePeriodSettings.permissions.${action}`
+  );
+}
+
 export const getActiveTimePeriodSettings = withAuth(async (
-  _user,
+  user,
   { tenant }
 ): Promise<TimePeriodSettingsActionResult<ITimePeriodSettings[]>> => {
   try {
     const { knex: db } = await createTenantKnex();
+
+    const denied = await timePeriodSettingsPermissionError(user, 'read', db);
+    if (denied) {
+      return denied;
+    }
 
     const activeSettings = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await tenantScopedTable<ITimePeriodSettings>(trx, 'time_period_settings', tenant)
@@ -115,12 +146,17 @@ export const getActiveTimePeriodSettings = withAuth(async (
 });
 
 export const updateTimePeriodSettings = withAuth(async (
-  _user,
+  user,
   { tenant },
   settings: ITimePeriodSettings
 ): Promise<TimePeriodSettingsActionResult<void>> => {
   try {
     const { knex: db } = await createTenantKnex();
+
+    const denied = await timePeriodSettingsPermissionError(user, 'manage', db);
+    if (denied) {
+      return denied;
+    }
 
     // Validate input settings
     const validatedSettings = validateData(timePeriodSettingsSchema, {
@@ -163,18 +199,48 @@ export const updateTimePeriodSettings = withAuth(async (
 });
 
 export const createTimePeriodSettings = withAuth(async (
-  _user,
+  user,
   { tenant },
   settings: Partial<ITimePeriodSettings>
 ): Promise<TimePeriodSettingsActionResult<ITimePeriodSettings>> => {
   try {
     const { knex: db } = await createTenantKnex();
 
+    const denied = await timePeriodSettingsPermissionError(user, 'manage', db);
+    if (denied) {
+      return denied;
+    }
+
+    let effectiveFrom: string;
+    if (settings.effective_from) {
+      effectiveFrom = formatUtcDateNoTime(new Date(settings.effective_from));
+    } else {
+      // Default: start of the period containing today in the creating user's timezone, so the
+      // current period is fully covered and an evening save in the Americas isn't a day ahead.
+      const userId = user?.user_id || null;
+      let timeZone = 'UTC';
+      if (userId) {
+        try {
+          timeZone = (await resolveUserTimeZone(db, tenant, userId)) || 'UTC';
+        } catch (tzError) {
+          console.warn('Could not resolve user timezone for effective_from default; using UTC', tzError);
+        }
+      }
+      let localToday: Temporal.PlainDate;
+      try {
+        localToday = Temporal.Now.plainDateISO(timeZone);
+      } catch {
+        console.warn(`Unknown timezone "${timeZone}" for effective_from default; using UTC`);
+        localToday = Temporal.Now.plainDateISO('UTC');
+      }
+      effectiveFrom = defaultEffectiveFrom(settings as ITimePeriodSettings, localToday).toString();
+    }
+
     const now = formatISO(new Date());
     const newSettings = {
       ...settings,
       is_active: true,
-      effective_from: settings.effective_from ? formatUtcDateNoTime(new Date(settings.effective_from)) : formatUtcDateNoTime(new Date()),
+      effective_from: effectiveFrom,
       effective_to: settings.effective_to ? formatUtcDateNoTime(new Date(settings.effective_to)) : undefined,
       start_day: settings.start_day || 1,
       end_day: settings.end_day || END_OF_PERIOD,
@@ -227,12 +293,17 @@ export const createTimePeriodSettings = withAuth(async (
 });
 
 export const deleteTimePeriodSettings = withAuth(async (
-  _user,
+  user,
   { tenant },
   settingId: string
 ): Promise<TimePeriodSettingsActionResult<void>> => {
   try {
     const { knex: db } = await createTenantKnex();
+
+    const denied = await timePeriodSettingsPermissionError(user, 'manage', db);
+    if (denied) {
+      return denied;
+    }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const deleted = await tenantScopedTable(trx, 'time_period_settings', tenant)
