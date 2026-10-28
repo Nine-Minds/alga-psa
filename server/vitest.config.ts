@@ -244,6 +244,7 @@ export default defineConfig({
       // only resolves once packages/db has a built dist — not guaranteed in
       // every CI lane (e.g. workspace-unit never builds it).
       { find: /^@alga-psa\/db\/tenantDb$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/tenantDb.ts') },
+      { find: /^@alga-psa\/db\/writeAdmission$/, replacement: path.resolve(__dirname, '../packages/db/src/writeAdmission.ts') },
       // Same as workDate: ./reassignTicketResources maps to src/lib, not a mirror path.
       { find: /^@alga-psa\/db\/reassignTicketResources$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/reassignTicketResources.ts') },
 

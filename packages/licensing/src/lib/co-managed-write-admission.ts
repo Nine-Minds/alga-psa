@@ -19,7 +19,7 @@
  * this subpath directly and must boot when the co-managed package does not resolve.
  */
 import type { Knex } from 'knex';
-import { invalidateWriteAdmission, registerWriteAdmissionResolver, type WriteAdmissionResolver } from '@alga-psa/db';
+import { invalidateWriteAdmission, registerWriteAdmissionResolver, type WriteAdmissionResolver } from '@alga-psa/db/writeAdmission';
 import { forcedValue } from '@alga-psa/core/capability';
 import { CoManagedLifecycleError, type CoManagedOperationalState } from './co-managed-lifecycle-error';
 
