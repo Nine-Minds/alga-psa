@@ -1,5 +1,6 @@
 'use server'
 
+import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { loadPortalTicketExternalLinks } from '../../lib/portalTicketExternalLinks';
@@ -728,21 +729,29 @@ export const addClientTicketComment = withAuth(async (
       }
 
       // Publish comment added event
-      await persistCommentPublication(trx, {
+      await publishCommentEvent(trx, 'ticket', {
+        tenantId: tenant,
+        ticketId,
+        commentId: newComment.comment_id,
+        userId,
         eventType: 'TICKET_COMMENT_ADDED',
-        payload: buildTicketCommentAddedPayload({
-          tenantId: tenant,
-          occurredAt: newComment.created_at ?? new Date().toISOString(),
-          ticketId: ticketId,
-          commentId: newComment.comment_id,
-          userId,
-          comment: {
-            content: content,
-            author: `${userRecord.first_name} ${userRecord.last_name}`,
-            isInternal
-          }
-        })
-      }, publishStoredWorkflowEvent);
+      }, async () => {
+        await persistCommentPublication(trx, {
+          eventType: 'TICKET_COMMENT_ADDED',
+          payload: buildTicketCommentAddedPayload({
+            tenantId: tenant,
+            occurredAt: newComment.created_at ?? new Date().toISOString(),
+            ticketId: ticketId,
+            commentId: newComment.comment_id,
+            userId,
+            comment: {
+              content: content,
+              author: `${userRecord.first_name} ${userRecord.last_name}`,
+              isInternal
+            }
+          })
+        }, publishStoredWorkflowEvent);
+      });
 
       await publishTicketUpdate({
         tenantId: tenant,
