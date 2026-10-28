@@ -1,12 +1,22 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, UserPreferences } from '@alga-psa/db';
 import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
 import { acceptCoManagedRelationship, declineCoManagedRelationship, getCoManagedAcceptanceState } from '@alga-psa/co-managed';
 import { startCoManagedProvisioningCleanupWorkflow } from '@enterprise/lib/co-managed/workflowClient';
 
 interface AcceptanceInput { relationshipId: string; revision: number; scopeFingerprint: string }
+
+// Read only the authenticated customer's own preference, after consent. A read
+// failure must not silently turn a required password change into access.
+export const getCoManagedPasswordStatus = withAuth(async (user, { tenant }) => {
+  await requireCapabilityForAction('co-managed', tenant, 'serves');
+  if (user.user_type !== 'internal') throw new Error('Permission denied');
+  const { knex } = await createTenantKnex(tenant);
+  const preference = await UserPreferences.get(knex, user.user_id, 'has_reset_password');
+  return { hasResetPassword: preference ? preference.setting_value === true : true };
+});
 
 // These run before acceptance, so they opt out of the awaiting-acceptance guard.
 // They gate on `serves` (durable participation), not `admits`: a customer who is
