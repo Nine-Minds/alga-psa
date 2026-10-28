@@ -279,7 +279,7 @@ function CustodyEventList({ id, assetId, lang }: { id: string; assetId: string; 
             {[new Date(event.occurred_at).toLocaleString(lang), event.actor_name].filter(Boolean).join(' · ')}
             {event.note ? ` · ${event.note}` : ''}
           </div>
-          {documentIds.length ? renderCustodyPhotos?.(documentIds) : null}
+          {documentIds.length ? renderCustodyPhotos?.(documentIds, event.event_id) : null}
         </li>
       ))}
     </ul>

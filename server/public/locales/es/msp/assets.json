@@ -199,6 +199,10 @@
         "msp": "Propiedad del MSP"
       },
       "custody": {
+    "photos": {
+      "limit": "Hasta 20 fotos, 10 MB en total. Las fotos no son visibles para los clientes.",
+      "tooLarge": "Seleccione un máximo de 20 fotos que no superen los 10 MB en total."
+    },
         "any": "Cualquier custodia",
         "inCustody": "En custodia del MSP",
         "notInCustody": "Fuera de custodia del MSP"

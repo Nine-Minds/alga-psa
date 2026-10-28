@@ -199,6 +199,10 @@
         "msp": "Eigendom van MSP"
       },
       "custody": {
+    "photos": {
+      "limit": "Maximaal 20 foto’s, samen 10 MB. Foto’s zijn verborgen voor klanten.",
+      "tooLarge": "Kies maximaal 20 foto’s van samen niet meer dan 10 MB."
+    },
         "any": "Elke bewaring",
         "inCustody": "In bewaring bij MSP",
         "notInCustody": "Niet in bewaring bij MSP"

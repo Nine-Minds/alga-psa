@@ -2,17 +2,17 @@
   {
     "id": "T001",
     "description": "Database-backed receive with two photos and transaction rollback including upload cleanup",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T002",
     "description": "Asset and document authorization, tenant isolation and client visibility",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T003",
     "description": "Custody history photo mapping and rendering, including denied reads",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T004",
@@ -22,11 +22,11 @@
   {
     "id": "T005",
     "description": "Other custody actions upload, persist, display and clean up photos on failure",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "T006",
-    "description": "Verify aggregate photo limits on the picker and server action, including request overhead",
-    "implemented": false
+    "description": "Picker and server enforce 20 photos and a 10 MiB aggregate limit, leaving multipart headroom under the default 20 MB request limit",
+    "implemented": true
   }
 ]

@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Validate intake document authorization and ownership; safely clean only uploads belonging to the failed attempt",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F002",
@@ -12,12 +12,12 @@
   {
     "id": "F003",
     "description": "Expose authorized custody event photos in card and history",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F004",
     "description": "Provide a shared photo field for move, hand off, ship and return with failure cleanup",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F005",
@@ -27,7 +27,7 @@
   {
     "id": "F006",
     "description": "Enforce asset and document read authorization and client-hidden visibility",
-    "implemented": false
+    "implemented": true
   },
   {
     "id": "F007",

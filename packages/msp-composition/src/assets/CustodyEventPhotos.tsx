@@ -6,7 +6,7 @@ import { getDocument, getDocumentThumbnailUrl } from '@alga-psa/documents/action
 import Documents from '@alga-psa/documents/components/Documents';
 
 /** Resolve each photo independently; a denied or failed read leaves no visible content. */
-function CustodyEventPhoto({ documentId }: { documentId: string }) {
+function CustodyEventPhoto({ documentId, id }: { documentId: string; id: string }) {
   const [photo, setPhoto] = useState<{ document: IDocument; url: string } | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -24,14 +24,14 @@ function CustodyEventPhoto({ documentId }: { documentId: string }) {
   if (!photo || failed) return null;
   return (
     <>
-      <button className="mr-2 mt-2" type="button" id={`custody-photo-${documentId}`} hidden={!loaded} onClick={() => setOpen(true)}>
+      <button className="mr-2 mt-2" type="button" id={id} hidden={!loaded} onClick={() => setOpen(true)}>
         <img src={photo.url} alt={loaded ? photo.document.document_name : ''} className="h-16 w-16 rounded object-cover" onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />
       </button>
-      {open ? <Documents id={`custody-photo-viewer-${documentId}`} documents={[]} userId="" readOnly drawerOnly documentToOpen={photo.document} onDocumentClosed={() => setOpen(false)} /> : null}
+      {open ? <Documents id={`${id}-viewer`} documents={[]} userId="" readOnly drawerOnly documentToOpen={photo.document} onDocumentClosed={() => setOpen(false)} /> : null}
     </>
   );
 }
 
-export function CustodyEventPhotos({ documentIds }: { documentIds: string[] }) {
-  return <>{documentIds.map(id => <CustodyEventPhoto key={id} documentId={id} />)}</>;
+export function CustodyEventPhotos({ documentIds, id = 'custody-photos' }: { documentIds: string[]; id?: string }) {
+  return <>{documentIds.map(documentId => <CustodyEventPhoto key={documentId} id={`${id}-${documentId}`} documentId={documentId} />)}</>;
 }

@@ -85,7 +85,7 @@ async function assertAssetReadable(
 }
 
 /** Resolve the episode's asset and apply the record-level check, as one "not found" for either miss. */
-async function authorizeEpisode(
+export async function authorizeCustodyEpisode(
   knex: Knex | Knex.Transaction,
   tenant: string,
   user: AssetAuthUser,
@@ -154,12 +154,21 @@ export async function receiveEquipmentService(
   user: AssetAuthUser,
   input: ReceiveEquipmentInput
 ): Promise<ReceiveEquipmentResult> {
-  const ctx = await createAssetReadContext(knex, tenant, user);
-  const result = await knex.transaction(async (trx) => {
-    if (input.asset_id) await assertAssetReadable(trx, tenant, ctx, input.asset_id);
-    await assertCustodyDocumentsReadable(trx, tenant, user, input.document_ids);
-    return receiveEquipmentForTicket(trx, tenant, user.user_id, input);
-  });
+  const result = await knex.transaction(trx => receiveEquipmentInTransaction(trx, tenant, user, input));
+  await publishEquipmentReceived(tenant, user, result);
+  return result;
+}
+
+export async function receiveEquipmentInTransaction(
+  trx: Knex.Transaction, tenant: string, user: AssetAuthUser, input: ReceiveEquipmentInput
+): Promise<ReceiveEquipmentResult> {
+  const ctx = await createAssetReadContext(trx, tenant, user);
+  if (input.asset_id) await assertAssetReadable(trx, tenant, ctx, input.asset_id);
+  await assertCustodyDocumentsReadable(trx, tenant, user, input.document_ids);
+  return receiveEquipmentForTicket(trx, tenant, user.user_id, input);
+}
+
+export async function publishEquipmentReceived(tenant: string, user: AssetAuthUser, result: ReceiveEquipmentResult): Promise<void> {
   const at = result.event.occurred_at;
   if (result.createdAsset) {
     try {
@@ -179,7 +188,6 @@ export async function receiveEquipmentService(
     }
   }
   await publishCustodyChanged({ tenant, actorUserId: user.user_id, custody: result.custody, eventType: 'received', occurredAt: at });
-  return result;
 }
 
 export async function recordCustodyEventService(
@@ -189,22 +197,32 @@ export async function recordCustodyEventService(
   custodyId: string,
   input: CustodyEventInput
 ) {
-  await authorizeEpisode(knex, tenant, user, custodyId);
-  const result = await knex.transaction(async trx => {
-    await assertCustodyDocumentsReadable(trx, tenant, user, input.document_ids);
-    const recorded = await recordCustodyEvent(trx, tenant, user.user_id, custodyId, input);
-    await associateCustodyDocuments(trx, tenant, recorded.event.asset_id, input.document_ids);
-    return recorded;
-  });
+  const result = await knex.transaction(trx => recordCustodyEventInTransaction(trx, tenant, user, custodyId, input));
+  await publishRecordedCustodyEvent(tenant, user, result);
+  return result;
+}
+
+export async function recordCustodyEventInTransaction(
+  trx: Knex.Transaction, tenant: string, user: AssetAuthUser, custodyId: string, input: CustodyEventInput
+) {
+  await authorizeCustodyEpisode(trx, tenant, user, custodyId);
+  await assertCustodyDocumentsReadable(trx, tenant, user, input.document_ids);
+  const result = await recordCustodyEvent(trx, tenant, user.user_id, custodyId, input);
+  await associateCustodyDocuments(trx, tenant, result.event.asset_id, input.document_ids);
+  return result;
+}
+
+export async function publishRecordedCustodyEvent(
+  tenant: string, user: AssetAuthUser, result: Awaited<ReturnType<typeof recordCustodyEventInTransaction>>
+): Promise<void> {
   await publishCustodyChanged({
     tenant,
     actorUserId: user.user_id,
     custody: result.custody,
-    eventType: input.event_type,
+    eventType: result.event.event_type,
     occurredAt: result.event.occurred_at,
   });
   await publishAssetStatusChange(tenant, user.user_id, result.assetStatusChange, result.event.occurred_at);
-  return result;
 }
 
 export async function updateCustodyService(
@@ -214,7 +232,7 @@ export async function updateCustodyService(
   custodyId: string,
   patch: UpdateCustodyPatch
 ) {
-  await authorizeEpisode(knex, tenant, user, custodyId);
+  await authorizeCustodyEpisode(knex, tenant, user, custodyId);
   const result = await knex.transaction((trx) => updateCustodyDetails(trx, tenant, user.user_id, custodyId, patch));
   if (result.changedFields.length > 0) {
     await publishCustodyChanged({

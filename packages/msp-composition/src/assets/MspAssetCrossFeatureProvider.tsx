@@ -17,6 +17,7 @@ import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { CustodyEventPhotos } from './CustodyEventPhotos';
+import { recordCustodyEventWithPhotos } from './custodyPhotoActions';
 
 export function MspAssetCrossFeatureProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation('msp/assets');
@@ -86,7 +87,8 @@ export function MspAssetCrossFeatureProvider({ children }: { children: ReactNode
 
   const value = useMemo<AssetCrossFeatureCallbacks>(
     () => ({
-      renderCustodyPhotos: (documentIds) => <CustodyEventPhotos documentIds={documentIds} />,
+      renderCustodyPhotos: (documentIds, eventId) => <CustodyEventPhotos documentIds={documentIds} id={`custody-event-${eventId}`} />,
+      recordCustodyEventWithPhotos,
       renderQuickAddTicket,
       openTicketDetailsDrawer,
       createTicketFromAsset,

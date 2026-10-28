@@ -1,7 +1,7 @@
 # Plan — intake photos on the asset and custody history
 
-Mechanism read on the follow-up 1/3 base (`fc507349ef`). Note: this card's worktree still sits before C4;
-the engine rebases it onto its stack parent (`3c9f8a48`). Re-verify the file:line below after that rebase.
+The approved mechanism was read on the follow-up 1/3 base (`fc507349ef`) and re-verified after
+stacking this branch on follow-up 1/3 at `a5856113f9`. Line numbers below describe the original review.
 
 ## D1 — The custody event IS the link. No new table, no new column.
 
@@ -90,3 +90,21 @@ nothing: events without stored ids are left alone and that limitation is recorde
 - **Backfill on a large table:** batch by asset, log the count, and keep it in the normal migration runner.
 - **Stacking:** this card's branch deploys on follow-up 1/3; re-verify `DialogShell`'s contract and
   `custodyEventToHistoryEntry` after the rebase (both are touched there).
+
+## Transactional upload lifecycle
+
+Private document uploads compose with the receive or custody-step transaction. A storage upload
+session persists each original or derived path before the provider writes it. The document and
+event commit claims only the retained file IDs. On failure, documents and associations roll back;
+provider deletion runs immediately and keeps failed paths for the CE/EE maintenance sweep. An
+active transaction holds the session row lock, so recovery skips live uploads and recovers expired
+sessions after a process crash. No public cleanup action accepts document IDs.
+
+The same lifecycle serves ticket intake and all custody-step photo inputs. It adds storage-recovery
+records, not another event-photo relationship: event.document_ids remains the only event link.
+
+The extraction is bounded to operations that compose uploaded documents with a domain transaction.
+Receive and five custody steps share the same lifetime and rollback requirements; the existing
+single-document action remains available to its other callers. File paths are owned before external
+I/O, so the mechanism also covers a provider writing bytes and then throwing before external_files
+is inserted. Preview failures retain only the referenced artifacts and recover any unused writes.

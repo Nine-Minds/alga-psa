@@ -38,6 +38,14 @@ Intake photos belong to the equipment, not only to the ticket it came in on.
 4. The asset Documents area (`packages/assets/src/components/tabs/DocumentsPasswordsTab.tsx`) lists by entity
    association, so it would show them the moment the association exists.
 
+## Upload behavior
+
+Ticket receive and later custody actions accept up to 20 images totalling 10 MiB per submission.
+All are client-hidden, including uploads filed into a client-visible folder. Move, hand off, ship,
+receive back and return use the shared picker and upload transaction. Failed domain writes roll
+back documents and associations. Failed storage deletion remains owned by a durable recovery
+session and is retried by maintenance; it never becomes an untracked file.
+
 ## Done when
 
 Receive a dock with two photos on a ticket; open the asset: both photos are in the asset's Documents, and
@@ -53,6 +61,6 @@ distinct from consuming. No second stock ledger.
 
 ## Out of scope
 
-- Photo capture/compression/upload UX changes (the receive dialog's picker stays as it is).
+- Photo capture, editing and compression. The shared picker adds count/aggregate-size validation only.
 - Any new document store, OCR, or media-thumbnail pipeline.
 - Reconstructing `document_ids` for historical events that never stored them (no evidence to do it honestly).
