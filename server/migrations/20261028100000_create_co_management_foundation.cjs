@@ -13,8 +13,10 @@
  *   `co_managed_entitlements.tenant` and `co_managed_allocations.tenant` are the
  *   SPONSOR.
  * - Widens `tenants.product_code` to admit 'co_managed' as a NOT VALID CHECK
- *   under a new name. 20261028103000 validates it and drops the superseded
- *   constraint. Skipped when the live constraint already admits 'co_managed'.
+ *   under a temporary name. 20261028103000 validates it and re-adds the
+ *   original name with the widened check; 20261028104000 validates that and
+ *   drops the temporary one (no RENAME: Citus refuses it on distributed
+ *   tables). Skipped when the live constraint already admits 'co_managed'.
  * - No permission or role_permission is written here (DO-NOT-PORT #27);
  *   permissions are seeded per sponsor at admission.
  *

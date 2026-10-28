@@ -1,12 +1,20 @@
-// Step 2 of 2 for admitting 'co_managed' in tenants.product_code (step 1 is
+// Step 2 of 3 for admitting 'co_managed' in tenants.product_code (step 1 is
 // 20261028100000_create_co_management_foundation, which adds the new CHECK
-// NOT VALID). VALIDATE takes SHARE UPDATE EXCLUSIVE for one scan while reads
-// and writes continue; the superseded two-value constraint is then dropped and
-// the new one takes its name, so later `DROP CONSTRAINT IF EXISTS
-// tenants_product_code_check` migrations keep working.
+// NOT VALID under a temporary name). VALIDATE takes SHARE UPDATE EXCLUSIVE for
+// one scan while reads and writes continue; the superseded two-value constraint
+// is then replaced by a NOT VALID three-value constraint under the original
+// name, so later `DROP CONSTRAINT IF EXISTS tenants_product_code_check`
+// migrations keep working. Step 3 (20261028104000) validates it and drops the
+// temporary constraint.
 //
-// Idempotent: a no-op when the new constraint is absent (already renamed, or
-// step 1 found the live constraint already admitting 'co_managed').
+// The original name is re-added rather than renamed onto because Citus refuses
+// RENAME CONSTRAINT on distributed tables, and `tenants` is distributed. The
+// validated temporary constraint guards writes while the re-added one is
+// still NOT VALID.
+//
+// Idempotent: a no-op when the temporary constraint is absent (sequence already
+// finished, or step 1 found the live constraint already admitting 'co_managed'),
+// and the original name is only replaced while it still lacks 'co_managed'.
 const OLD = 'tenants_product_code_check';
 const NEXT = 'tenants_product_code_check_co_managed';
 
@@ -35,9 +43,13 @@ exports.up = async function up(knex) {
   await onOneConnection(knex, async (run) => {
     if ((await constraintDef(run, NEXT)) === null) return;
     await run(`ALTER TABLE tenants VALIDATE CONSTRAINT ${NEXT}`);
-    // migration-lint: allow 3 - drops the superseded two-value product check only after its replacement validated
+    const live = await constraintDef(run, OLD);
+    if (live && live.includes('co_managed')) return;
     await run(`ALTER TABLE tenants DROP CONSTRAINT IF EXISTS ${OLD}`);
-    await run(`ALTER TABLE tenants RENAME CONSTRAINT ${NEXT} TO ${OLD}`);
+    await run(`
+      ALTER TABLE tenants ADD CONSTRAINT ${OLD}
+        CHECK (product_code IS NOT NULL AND product_code IN ('psa', 'algadesk', 'co_managed')) NOT VALID
+    `);
   });
 };
 
