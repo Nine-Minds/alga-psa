@@ -217,9 +217,11 @@ async function writeFixedLineMembers(
         },
         {
           pricing_basis: 'unit',
-          base_rate: service.unit_rate as number,
-          base_rate_basis: 'per_unit',
-          rate_provenance: 'custom',
+          base_rate: service.unit_rate ?? null,
+          // A null rate is catalog-priced (inherited) and has no basis.
+          ...(typeof service.unit_rate === 'number'
+            ? { base_rate_basis: 'per_unit' as const, rate_provenance: 'custom' as const }
+            : { rate_provenance: 'inherited' as const }),
         },
       );
       continue;

@@ -148,7 +148,25 @@ export default class ContractLineServiceFixedConfig {
       updateData.base_rate_basis = rate.base_rate_basis ?? null;
       updateData.rate_provenance = data.rate_provenance ?? (rate.base_rate === null ? 'inherited' : 'custom');
     } else if (data.base_rate_basis !== undefined) {
-      updateData.base_rate_basis = data.base_rate_basis;
+      // A basis states what a stored rate means; it cannot stand alone. Resolve
+      // against the stored rate so the pair is always written (or refused) together.
+      const stored = await this.table('contract_line_service_fixed_config')
+        .where({ config_id: configId })
+        .first('base_rate', 'pricing_basis', 'base_rate_basis');
+      if (stored && stored.base_rate !== null && stored.base_rate !== undefined) {
+        const rate = resolveFixedMemberRateWrite({
+          base_rate: Number(stored.base_rate),
+          base_rate_basis: data.base_rate_basis,
+          pricing_basis: (data as { pricing_basis?: string | null }).pricing_basis ?? stored.pricing_basis ?? null,
+          storedBasis: stored.base_rate_basis ?? null,
+        });
+        updateData.base_rate = rate.base_rate;
+        updateData.base_rate_basis = rate.base_rate_basis ?? null;
+      } else if (data.base_rate_basis !== null) {
+        throw new Error('A fixed member base_rate_basis requires base_rate');
+      } else {
+        updateData.base_rate_basis = null;
+      }
     }
     
     // Remove config_id from update data if present
