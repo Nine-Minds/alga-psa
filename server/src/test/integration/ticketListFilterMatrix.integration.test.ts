@@ -192,9 +192,14 @@ async function seedFixture(): Promise<void> {
   // Where people work: K1 at the warehouse, K3 at the head office, K2 nowhere in particular.
   const locWarehouse = uuidv4();
   const locHeadOffice = uuidv4();
+  const location = (id: string, client: string, name: string, line1: string, isDefault: boolean) => ({
+    tenant: tenantId, location_id: id, client_id: client, location_name: name,
+    address_line1: line1, city: 'Testville', country_code: 'US', country_name: 'United States',
+    is_default: isDefault, is_active: true,
+  });
   await db('client_locations').insert([
-    { tenant: tenantId, location_id: locWarehouse, client_id: c1, location_name: 'Warehouse', is_default: true, is_active: true },
-    { tenant: tenantId, location_id: locHeadOffice, client_id: c1, location_name: 'Head office', is_default: false, is_active: true },
+    location(locWarehouse, c1, 'Warehouse', '1 Warehouse Way', true),
+    location(locHeadOffice, c1, 'Head office', '2 Head Office Row', false),
   ]);
   await db('contact_locations').insert([
     { tenant: tenantId, contact_name_id: k1, location_id: locWarehouse, is_primary: true },
@@ -300,7 +305,8 @@ async function seedFixture(): Promise<void> {
   const foreignLocation = uuidv4();
   await db('client_locations').insert({
     tenant: other.tenantId, location_id: foreignLocation, client_id: foreignClient,
-    location_name: 'Warehouse', is_default: true, is_active: true,
+    location_name: 'Warehouse', address_line1: '1 Warehouse Way', city: 'Testville',
+    country_code: 'US', country_name: 'United States', is_default: true, is_active: true,
   });
   await db('contact_locations').insert({
     tenant: other.tenantId, contact_name_id: foreignContact, location_id: foreignLocation, is_primary: true,
