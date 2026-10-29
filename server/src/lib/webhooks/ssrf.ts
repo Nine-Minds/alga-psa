@@ -77,6 +77,7 @@ async function resolveAddresses(hostname: string): Promise<string[]> {
   return results.map((result) => result.address);
 }
 
+// LEVERAGE: pattern ssrf-guard — server/src/lib/net/safeFetch.ts is the pinned-DNS equivalent for user-supplied fetch URLs; this guard validates only (check-then-fetch)
 export async function assertSafeWebhookTarget(targetUrl: string): Promise<void> {
   if (isPrivateTargetAllowed()) {
     return;

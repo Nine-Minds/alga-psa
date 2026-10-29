@@ -1,4 +1,5 @@
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
+import { ATTACHABLE_ENTITY_TYPES } from '../../schemas/documentAttach';
 
 export function registerDocumentRoutes(registry: ApiOpenApiRegistry) {
   const tag = 'Documents';
@@ -242,6 +243,84 @@ export function registerDocumentRoutes(registry: ApiOpenApiRegistry) {
       'x-public-when-tenant-logo': true,
       'x-api-key-auth-skipped': true,
     },
+    edition: 'both',
+  });
+
+  const AttachDocumentBody = registry.registerSchema(
+    'AttachDocumentBody',
+    zOpenApi.object({
+      entity_type: zOpenApi
+        .enum(ATTACHABLE_ENTITY_TYPES)
+        .describe('Kind of record the file is attached to.'),
+      entity_id: zOpenApi.string().uuid().describe('UUID of the ticket, project task, client, contact or asset.'),
+      source: zOpenApi
+        .discriminatedUnion('type', [
+          zOpenApi.object({
+            type: zOpenApi.literal('url'),
+            url: zOpenApi
+              .string()
+              .describe(
+                'https URL the server downloads the file from (public hosts only, port 443, at most 3 redirects, size capped at the storage limit). Signed URLs are used once and never logged.',
+              ),
+          }),
+          zOpenApi.object({
+            type: zOpenApi.literal('base64'),
+            content: zOpenApi
+              .string()
+              .describe('Standard base64 of the file bytes. Only for small content the caller wrote itself; requires file_name.'),
+          }),
+        ])
+        .describe('Where the file bytes come from: an https URL (preferred) or base64.'),
+      file_name: zOpenApi
+        .string()
+        .optional()
+        .describe('File name including extension. Required for base64. For url, defaults to the Content-Disposition name, then the last URL path segment.'),
+      mime_type: zOpenApi
+        .string()
+        .optional()
+        .describe('Declared MIME type. The server sniffs the bytes and a recognised type overrides this; the storage allowlist is applied to the resolved type.'),
+    }),
+  );
+
+  const AttachedDocument = registry.registerSchema(
+    'AttachedDocument',
+    zOpenApi.object({
+      data: zOpenApi.record(zOpenApi.unknown()).describe('The created document row (document_id, document_name, mime_type, file_size, folder_path, ...).'),
+    }),
+  );
+
+  const AttachDocumentError = registry.registerSchema(
+    'AttachDocumentError',
+    zOpenApi.object({
+      error: zOpenApi.object({
+        code: zOpenApi.string(),
+        message: zOpenApi.string(),
+        details: zOpenApi.unknown().optional(),
+      }),
+    }),
+  );
+
+  registry.registerRoute({
+    method: 'post',
+    path: '/api/v1/documents',
+    summary: 'Attach a file to a ticket, project task, client, contact or asset',
+    description:
+      'Creates a document from an https URL or from base64 and associates it with one entity. One file per call. ' +
+      'The server downloads URL sources itself (public hosts only). Validation (size, MIME type allowlist), storage, the document row, the association, previews and DOCUMENT_ASSOCIATED events run in one shared upload core; ' +
+      'ticket attachments also write a ticket activity entry. Requires document:create and <entity>:update. ' +
+      'Errors: 400 invalid source, unsafe or unreachable URL (a remote error status is reported in the message, never as our status), oversize, or disallowed type; 403 permission denied; 404 entity not found.',
+    tags: [tag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { body: { schema: AttachDocumentBody } },
+    responses: {
+      201: { description: 'Document created and attached.', schema: AttachedDocument },
+      400: { description: 'Validation failure: bad source, unsafe URL, fetch failure, size or type not allowed.', schema: AttachDocumentError },
+      401: { description: 'API key missing/invalid.', schema: AttachDocumentError },
+      403: { description: 'Permission denied (document:create or the entity update permission).', schema: AttachDocumentError },
+      404: { description: 'Entity not found.', schema: AttachDocumentError },
+      500: { description: 'Unexpected failure.', schema: AttachDocumentError },
+    },
+    extensions: { 'x-tenant-scoped': true, 'x-rbac-resource': 'document', 'x-rbac-action': 'create' },
     edition: 'both',
   });
 

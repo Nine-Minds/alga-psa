@@ -25,6 +25,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
+import { buildTicketRecordContext } from './recordContexts';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { compileTenantScopedResourceReadAuthorizationSql, resolveDefaultBuiltinRelationshipRules } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
@@ -134,21 +135,9 @@ export class ApiTicketController extends ApiBaseController {
     this.ticketService = ticketService;
   }
 
-  // A ticket is "assigned" only to its primary `assigned_to` for read authorization.
-  // Do not trust `ticket_resources.additional_user_id` as a read grant because
-  // time-entry workflows can create those rows without ticket row-level authorization.
+  // LEVERAGE: pattern ticket-record-context — thin wrapper over the shared builder; callers should import ./recordContexts directly
   private buildTicketRecordContext(ticket: Record<string, any>) {
-    const assignedUserIds = new Set<string>();
-    if (typeof ticket.assigned_to === 'string') assignedUserIds.add(ticket.assigned_to);
-    return {
-      id: ticket.ticket_id,
-      ownerUserId: typeof ticket.entered_by === 'string' ? ticket.entered_by : undefined,
-      assignedUserIds: Array.from(assignedUserIds),
-      clientId: typeof ticket.client_id === 'string' ? ticket.client_id : undefined,
-      boardId: typeof ticket.board_id === 'string' ? ticket.board_id : undefined,
-      teamIds: typeof ticket.assigned_team_id === 'string' ? [ticket.assigned_team_id] : [],
-      statusId: ticket.status_id,
-    };
+    return buildTicketRecordContext(ticket);
   }
 
   private async assertTicketReadAllowed(
