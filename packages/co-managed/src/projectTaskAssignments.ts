@@ -66,9 +66,21 @@ export async function assignCoManagedProjectTask(db: Knex, inputActor: CoManaged
     if (!existing) {
       if (request.expectedRevision !== null) throw new CoManagedTaskEditError('TASK_EDIT_CONFLICT', 'revision');
       const referenceId = randomUUID();
+      // A concurrent first assignment has no row to lock, so both callers reach this insert. ON CONFLICT DO NOTHING waits
+      // for the winner to commit and then inserts nothing, instead of raising a unique violation that would abort the transaction.
       // write-admission: exempt — MSP-owned participation reference (no customer data), written under the reference-row lock inside L2 admission (withCoManagedSharedWork 'update')
-      await home.table('co_managed_project_task_references').insert({ tenant: actor.tenant, reference_id: referenceId, customer_tenant: resource.tenant,
-        relationship_id: resource.relationshipId, task_id: resource.id, client_id: relationship.sponsor_client_id, active: true, revision: 1, ...assignedColumns, ...snapshots });
+      const inserted = await home.table('co_managed_project_task_references').insert({ tenant: actor.tenant, reference_id: referenceId, customer_tenant: resource.tenant,
+        relationship_id: resource.relationshipId, task_id: resource.id, client_id: relationship.sponsor_client_id, active: true, revision: 1, ...assignedColumns, ...snapshots })
+        .onConflict(['tenant', 'customer_tenant', 'relationship_id', 'task_id']).ignore().returning('reference_id');
+      if (inserted.length === 0) {
+        // Lost the race: the winner's row and audit entry are committed. Same operation id and request replays its receipt;
+        // anything else is a stale first-assignment, i.e. the normal revision conflict.
+        if (request.operationId) {
+          const replay = await findCoManagedTaskReplay<CoManagedTaskAssignmentReceipt>(context, operationId, requestHash);
+          if (replay) return replay;
+        }
+        throw new CoManagedTaskEditError('TASK_EDIT_CONFLICT', 'revision');
+      }
       const receipt = await audit({ referenceId, revision: 1, assigneeName: option.name });
       await context.assertCurrent();
       return receipt;

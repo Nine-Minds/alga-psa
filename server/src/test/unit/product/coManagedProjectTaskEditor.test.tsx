@@ -20,7 +20,8 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const snapshot = (revision = 3, name = 'Patch servers') => ({ revision, taskUpdatedAt: '2026-10-01T10:00:00.000Z',
-  values: { task_name: name, project_status_mapping_id: 'm1', due_date: '2026-10-20T00:00:00.000Z' } });
+  values: { task_name: name, project_status_mapping_id: 'm1', due_date: '2026-10-20T00:00:00.000Z' },
+  assignee: { kind: 'user' as const, name: 'Quinn Tech' } });
 const props = { customerTenant: 'c1', relationshipId: 'r1', taskId: 't1', userId: 'u1' };
 
 beforeEach(() => {
@@ -68,10 +69,18 @@ describe('co-managed project task editor', () => {
     expect((await screen.findByText('This task could not be saved.')).textContent).not.toMatch(/invalid|not found|denied/i);
   });
 
+  it('shows the current MSP assignee by display name on first render, with no ids', async () => {
+    render(<CoManagedProjectTaskEditor customerTenant="c1" relationshipId="r1" taskId="t1" userId="u1" />);
+    await screen.findByText('Assigned to Quinn Tech');
+    expect(document.body.textContent).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}/);
+  });
+
   it('explains a task without an MSP reference and offers assignment', async () => {
     mocks.snapshot.mockResolvedValue(null);
     render(<CoManagedProjectTaskEditor {...props} />);
     await screen.findByText(/once it is assigned to you/);
+    // No reference looks exactly like a denial: no assignee text, no extra signal.
+    expect(screen.queryByText(/Assigned to /)).toBeNull();
     expect(document.getElementById('co-managed-task-save')).toBeNull();
     expect(document.getElementById('co-managed-task-assign-me')).not.toBeNull();
   });

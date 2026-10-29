@@ -17,7 +17,10 @@ export type CoManagedTaskEditPatch = Partial<Record<CoManagedTaskEditField, stri
  * `updated_at` as served by the loader (customer-side drift). Both are compared, never written. */
 export interface CoManagedTaskEditRequest { /** Client-generated per submit attempt; a repeat of the same id replays the original receipt. */ operationId?: string; expectedRevision: number; expectedTaskUpdatedAt: string; patch: CoManagedTaskEditPatch }
 export interface CoManagedTaskEditReceipt { revision: number; taskUpdatedAt: string }
-export interface CoManagedTaskSnapshot { revision: number; taskUpdatedAt: string; values: CoManagedTaskEditPatch }
+/** `assignee` is the current MSP assignee as a display name and kind only; ids never leave the server. */
+export interface CoManagedTaskSnapshot { revision: number; taskUpdatedAt: string; values: CoManagedTaskEditPatch; assignee: { kind: 'user' | 'team'; name: string } | null }
+const assigneeOf = (reference: { assigned_to?: string | null; assigned_team_id?: string | null; assignee_name?: string | null }): CoManagedTaskSnapshot['assignee'] =>
+  reference.assignee_name ? { kind: reference.assigned_team_id ? 'team' : 'user', name: reference.assignee_name } : null;
 
 export type CoManagedTaskEditErrorCode = 'INVALID_TASK_EDIT' | 'TASK_EDIT_CONFLICT';
 /** A conflict carries a fresh snapshot so the editor can reload; it never merges. */
@@ -82,7 +85,7 @@ export async function getCoManagedProjectTaskSnapshot(db: Knex, inputActor: CoMa
   return withCoManagedSharedWork(db, actor, resource, 'read', async context => {
     const reference = await referenceRow(context, false);
     const row = await lockTaskShared(context.trx, resource);
-    return { revision: reference.revision, taskUpdatedAt: iso(row.updated_at), values: values(row, context.redactedFields) };
+    return { revision: reference.revision, taskUpdatedAt: iso(row.updated_at), values: values(row, context.redactedFields), assignee: assigneeOf(reference) };
   });
 }
 async function lockTaskShared(trx: Knex.Transaction, resource: CoManagedSharedResource) {
@@ -122,7 +125,7 @@ export async function editCoManagedProjectTask(db: Knex, inputActor: CoManagedSe
       if (replay) return replay;
     }
     const task = await lockTask(trx, resource);
-    const fresh = (): CoManagedTaskSnapshot => ({ revision: reference.revision, taskUpdatedAt: iso(task.updated_at), values: values(task, context.redactedFields) });
+    const fresh = (): CoManagedTaskSnapshot => ({ revision: reference.revision, taskUpdatedAt: iso(task.updated_at), values: values(task, context.redactedFields), assignee: assigneeOf(reference) });
     // Side one: shared-command concurrency. Side two: the customer changed the task since it was loaded.
     if (reference.revision !== request.expectedRevision) throw new CoManagedTaskEditError('TASK_EDIT_CONFLICT', 'revision', fresh());
     if (iso(task.updated_at) !== request.expectedTaskUpdatedAt) throw new CoManagedTaskEditError('TASK_EDIT_CONFLICT', 'customer_drift', fresh());

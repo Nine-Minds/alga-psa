@@ -38,9 +38,9 @@ describe('CM L3c idempotency, history and shared search', () => {
     configureL3cDbEnv();
     db = await connectL3cDb();
     world = await seedL3cWorld(db);
-    collab = await seedL3cProject(db, world, `${TERM} project`, ['replay', 'history', 'other', 'refuse']);
+    collab = await seedL3cProject(db, world, `${TERM} project`, ['replay', 'history', 'other', 'refuse', 'race', 'race-other', 'snap']);
     await shareProject(db, world, collab.projectId, true);
-    await indexProjectRows(db, world.customer, `${TERM} project`, collab, [`${TERM} one`, `${TERM} two`, `${TERM} three`, `${TERM} four`]);
+    await indexProjectRows(db, world.customer, `${TERM} project`, collab, [`${TERM} one`, `${TERM} two`, `${TERM} three`, `${TERM} four`, `${TERM} five`, `${TERM} six`, `${TERM} seven`]);
   }, 180_000);
 
   afterAll(async () => {
@@ -114,7 +114,7 @@ describe('CM L3c idempotency, history and shared search', () => {
 
   it('shared search: page, typeahead and counts come from the same relation', async () => {
     const result = await searchSharedProjects(db, actor(), world.relationshipId, { query: TERM });
-    expect(result.totalCount).toBe(6);
+    expect(result.totalCount).toBe(9);
     expect(result.results.length).toBe(result.totalCount);
     expect(Object.values(result.groups).reduce((a, b) => a + b, 0)).toBe(result.totalCount);
     expect(result.typeahead.length).toBeGreaterThan(0);
@@ -123,5 +123,37 @@ describe('CM L3c idempotency, history and shared search', () => {
     const urls = JSON.stringify(result.results);
     expect(urls).toContain(`/msp/co-management/tasks/${world.customer}/${world.relationshipId}/`);
     expect(urls).toContain(`/msp/co-management/projects/${world.customer}/${world.relationshipId}/`);
+  });
+
+  it('concurrent first assignments: same operation id replays one receipt; a different id takes the revision conflict', async () => {
+    const id = collab.taskIds[4];
+    const operationId = uuidv4();
+    const call = (opId: string) => assignCoManagedProjectTask(db, actor(), resource(id), { operationId: opId, assignee: self(), expectedRevision: null });
+    const results = await Promise.allSettled([call(operationId), call(operationId)]);
+    expect(results.map(r => r.status)).toEqual(['fulfilled', 'fulfilled']);
+    const [a, b] = results.map(r => (r as PromiseFulfilledResult<unknown>).value);
+    expect(a).toEqual(b);
+    expect(await db('co_managed_project_task_references').where({ tenant: world.sponsor, task_id: id }).count({ n: '*' }).first().then(r => Number(r?.n))).toBe(1);
+    expect(await auditCount(id)).toBe(1);
+
+    const other = collab.taskIds[5];
+    const raced = await Promise.allSettled([call2(other, uuidv4()), call2(other, uuidv4())]);
+    const rejected = raced.filter(r => r.status === 'rejected') as PromiseRejectedResult[];
+    expect(raced.filter(r => r.status === 'fulfilled')).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    expect(rejected[0].reason).toMatchObject({ code: 'TASK_EDIT_CONFLICT', reason: 'revision' });
+    expect((await referenceRow(other)).revision).toBe(1);
+
+    function call2(taskId: string, opId: string) {
+      return assignCoManagedProjectTask(db, actor(), resource(taskId), { operationId: opId, assignee: self(), expectedRevision: null });
+    }
+  });
+
+  it('snapshot carries the MSP assignee as display name and kind only', async () => {
+    const id = collab.taskIds[6];
+    await assignCoManagedProjectTask(db, actor(), resource(id), { assignee: self(), expectedRevision: null });
+    const snapshot = await getCoManagedProjectTaskSnapshot(db, actor(), resource(id));
+    expect(snapshot.assignee).toEqual({ kind: 'user', name: expect.any(String) });
+    expect(JSON.stringify(snapshot)).not.toContain(world.technician.userId);
   });
 });

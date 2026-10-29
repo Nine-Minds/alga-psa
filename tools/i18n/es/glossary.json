@@ -2243,6 +2243,7 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{field}}: {{from}} → {{to}}",
       "{{from}} → {{to}}",
       "RMA {{id}}",
       "API",

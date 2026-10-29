@@ -34,7 +34,7 @@ export default function CoManagedProjectTaskEditor({ customerTenant, relationshi
   const [statusId, setStatusId] = useState('');
   const [due, setDue] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>('idle');
-  const [assigneeName, setAssigneeName] = useState<string | null>(null);
+  const [assigned, setAssigned] = useState<string | null>(null);
   const [historyKey, setHistoryKey] = useState(0);
   const attempt = useRef<{ operationId: string; signature: string } | null>(null);
 
@@ -69,7 +69,7 @@ export default function CoManagedProjectTaskEditor({ customerTenant, relationshi
         operationId: attempt.current.operationId, expectedRevision: snapshot.revision, expectedTaskUpdatedAt: snapshot.taskUpdatedAt, patch });
       attempt.current = null;
       if (result.success) {
-        const next = { revision: result.receipt.revision, taskUpdatedAt: result.receipt.taskUpdatedAt, values: { ...snapshot.values, ...patch } };
+        const next = { revision: result.receipt.revision, taskUpdatedAt: result.receipt.taskUpdatedAt, values: { ...snapshot.values, ...patch }, assignee: snapshot.assignee };
         setSnapshot(next); setStatus('saved'); setHistoryKey(key => key + 1);
       } else setStatus(result.error === 'CONFLICT' ? 'conflict' : 'rejected');
       if (!result.success && result.error === 'CONFLICT') conflictSnapshot.current = result.snapshot;
@@ -84,8 +84,8 @@ export default function CoManagedProjectTaskEditor({ customerTenant, relationshi
   };
 
   const assignment = <CoManagedProjectTaskAssignment customerTenant={customerTenant} relationshipId={relationshipId} taskId={taskId} userId={userId}
-    revision={snapshot?.revision ?? null} assigneeName={assigneeName}
-    onChanged={name => { if (name) setAssigneeName(name); void reload(); }} />;
+    revision={snapshot?.revision ?? null} assigneeName={assigned ?? snapshot?.assignee?.name ?? null}
+    onChanged={name => { if (name) setAssigned(name); void reload(); }} />;
   const statusNames = Object.fromEntries(statuses.map(option => [option.statusMappingId, option.name]));
 
   return <div id="co-managed-task-editor" className="min-w-0 space-y-6">

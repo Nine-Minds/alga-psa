@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getServerTranslation(undefined, 'metadata');
-  return { title: t('msp.coManagement.sharedTasks.title', { defaultValue: 'Shared Task' }) };
+  return { title: t('msp.coManagement.sharedTasks.taskTitle', { defaultValue: 'Shared Task' }) };
 }
 
 export default async function CoManagedSharedTaskPage({ params }: { params: Promise<{ customerTenant: string; relationshipId: string; taskId: string }> }) {
