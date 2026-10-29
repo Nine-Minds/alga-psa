@@ -526,7 +526,12 @@ jobs:
             verify_mode=pulled
             test -n "$E2E_REGISTRY_NAMESPACE"
           fi
-          for service in "$SERVER_ARCHIVE" setup email-service hocuspocus redis pgbouncer algasim $worker_images; do
+          # Bring one service's candidate image into the local daemon and write its
+          # receipt. Pulls and loads are network- or gunzip-bound per image, so every
+          # service runs at once below; the daemon serialises nothing between them.
+          acquire() {
+            service="$1"
+            started=$SECONDS
             record="$BUILD_RECORD_DIRECTORY/$service-build.json"
             receipt="$RUNNER_TEMP/verified-$service.json"
             if [ "$IMAGE_TRANSPORT" = registry ]; then
@@ -549,7 +554,23 @@ jobs:
               docker load --input "$archive"
               rm "$archive"
             fi
+            echo "acquired $service in $((SECONDS - started))s"
+          }
+          acquisitions=""
+          for service in "$SERVER_ARCHIVE" setup email-service hocuspocus redis pgbouncer algasim $worker_images; do
+            acquire "$service" > "$RUNNER_TEMP/acquire-$service.log" 2>&1 &
+            acquisitions="$acquisitions $!:$service"
           done
+          acquisition_failed=0
+          for acquisition in $acquisitions; do
+            service="${acquisition#*:}"
+            if ! wait "${acquisition%%:*}"; then
+              echo "::error::Acquiring the $service candidate image failed"
+              acquisition_failed=1
+            fi
+            cat "$RUNNER_TEMP/acquire-$service.log"
+          done
+          test "$acquisition_failed" = 0
           # Resolve explicit and Compose-generated tags so a configuration change cannot
           # accidentally run an old/pulled image instead of this run's build.
           docker-compose -p alga-e2e-test --profile enterprise config --format json > "$RUNNER_TEMP/fresh-install-compose.json"
