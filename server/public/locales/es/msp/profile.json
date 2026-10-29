@@ -802,6 +802,8 @@
       "title": "Conectar un proveedor",
       "description": "Elija un proveedor para finalizar el enlace SSO. Será redirigido a través del flujo de inicio de sesión del proveedor.",
       "noneConfigured": "No hay proveedores SSO configurados para este entorno. Solicite a su administrador que configure las credenciales de Google o Microsoft.",
+      "noneConfiguredAdmin": "No SSO providers are configured yet. Set up your organization's Google or Microsoft application first.",
+      "openProviderSetup": "Set up an SSO provider",
       "notConfigured": "No configurado",
       "branding": {
         "google": "Continuar con Google",

@@ -524,7 +524,10 @@
       "title": "TI cogerida"
     },
     "coManagement": {
-      "title": "Acesso cogerido"
+      "title": "Acesso cogerido",
+      "providers": {
+        "title": "Email and Identity Providers"
+      }
     }
   },
   "auth": {

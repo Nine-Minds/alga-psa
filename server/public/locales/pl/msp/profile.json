@@ -804,6 +804,8 @@
       "title": "Połącz dostawcę",
       "description": "Wybierz dostawcę, aby zakończyć łączenie SSO. Zostaniesz przekierowany przez proces logowania dostawcy.",
       "noneConfigured": "Dla tego środowiska nie skonfigurowano żadnych dostawców SSO. Poproś administratora o skonfigurowanie poświadczeń Google lub Microsoft.",
+      "noneConfiguredAdmin": "No SSO providers are configured yet. Set up your organization's Google or Microsoft application first.",
+      "openProviderSetup": "Set up an SSO provider",
       "notConfigured": "Nie skonfigurowano",
       "branding": {
         "google": "Kontynuuj z Google",

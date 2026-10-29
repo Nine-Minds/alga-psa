@@ -4033,5 +4033,12 @@
     "moveDown": "Omlaag",
     "remove": "Verwijderen",
     "addTag": "Tag toevoegen…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Back to Email settings",
+      "title": "Email and identity providers",
+      "description": "Register your own Google or Microsoft application for inbound email, and staff sign-in. These credentials belong to your workspace."
+    }
   }
 }
