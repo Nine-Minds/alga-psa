@@ -420,6 +420,34 @@ describe.sequential('policy actions gate by relationship side', () => {
     expect(admission.fn).not.toHaveBeenCalled();
   });
 
+  it('assignee names resolve in the sponsor tenant for both sides (customer included)', async () => {
+    const w = await world();
+    const a = await actions();
+    const teamId = randomUUID();
+    await tenantDb(db, w.sponsorTenant).table('teams').insert({ tenant: w.sponsorTenant, team_id: teamId, team_name: 'Sponsor Service Desk', manager_id: w.MT.userId });
+    await replaceCoManagedStaffAssignments(db, w.admin, w.target, await w.revision(), [
+      { kind: 'user', principalId: w.MT.userId, role: 'technician' }, { kind: 'user', principalId: w.MV.userId, role: 'viewer' },
+      { kind: 'team', principalId: teamId, role: 'viewer' }]);
+    const read = async (tenant: string, userId: string) => {
+      await sessionOf(w, tenant, userId);
+      return await a.getCoManagedPolicyAction(w.relationshipId) as any;
+    };
+    const customerView = await read(w.customerTenant, w.customerAdmin.userId);
+    expect(customerView.side).toBe('customer');
+    const sponsorView = await read(w.sponsorTenant, w.admin.userId);
+    expect(sponsorView.side).toBe('sponsor');
+    for (const view of [customerView, sponsorView]) {
+      expect(view.names.users[w.MT.userId]).toBe('MT Tech');
+      expect(view.names.users[w.MV.userId]).toBe('MV Tech');
+      expect(view.names.teams[teamId]).toBe('Sponsor Service Desk');
+      for (const name of [...Object.values(view.names.users), ...Object.values(view.names.teams)] as string[]) {
+        expect(name).not.toBe('');
+        expect(name).not.toContain('null');
+      }
+    }
+    expect(customerView.names).toEqual(sponsorView.names);
+  });
+
   it('(e) the sponsor side still passes admits and still runs the sponsor admission', async () => {
     const w = await world();
     const a = await actions();

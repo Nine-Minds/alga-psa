@@ -94,7 +94,7 @@ function EntryEditor({ id, title, relationshipId, kind, entries, accessOptions, 
 }
 
 /** Save / Reload with the expected-revision contract: a competing change locks the form until the user reloads. */
-function useRevisionSave(revision: number, onReload: () => void, submit: (revision: number) => Promise<SaveResult>) {
+function useRevisionSave(revision: number, onReload: () => void, submit: (revision: number) => Promise<SaveResult>, onChanged?: () => void) {
   const [busy, setBusy] = useState(false);
   const [conflict, setConflict] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
@@ -104,7 +104,7 @@ function useRevisionSave(revision: number, onReload: () => void, submit: (revisi
     setBusy(true); setFailure(null); setSaved(false);
     try {
       const result = await submit(revision);
-      if (result.ok) { setSaved(true); onReload(); return; }
+      if (result.ok) { setSaved(true); onChanged?.(); onReload(); return; }
       if (result.errorCode === 'POLICY_CHANGED') setConflict(true); else setFailure(result.errorCode);
     } catch { setFailure('SAVE_FAILED'); } finally { setBusy(false); }
   };
@@ -136,13 +136,13 @@ const toEntries = (grants: { id: string; canCollaborate: boolean }[], names: Rec
 const toGrants = (entries: Entry[]) => entries.map(entry => ({ id: entry.id, canCollaborate: entry.access === 'collaborate' }));
 
 /** Customer side: which boards and projects are shared, with what access, and whether everything on them or only escalated tickets is visible. */
-export function CoManagedScopeEditor({ relationshipId, loaded, onReload }: { relationshipId: string; loaded: Loaded; onReload: () => void }) {
+export function CoManagedScopeEditor({ relationshipId, loaded, onReload, onChanged }: { relationshipId: string; loaded: Loaded; onReload: () => void; onChanged?: () => void }) {
   const { t } = useTranslation('msp/licensing');
   const [mode, setMode] = useState(loaded.policy.visibilityMode);
   const [boards, setBoards] = useState(() => toEntries(loaded.policy.boards, loaded.names.boards));
   const [projects, setProjects] = useState(() => toEntries(loaded.policy.projects, loaded.names.projects));
   const state = useRevisionSave(loaded.policy.revision, onReload, revision => replaceCoManagedCustomerScopeAction(relationshipId, revision,
-    { visibilityMode: mode, boards: toGrants(boards), projects: toGrants(projects) }));
+    { visibilityMode: mode, boards: toGrants(boards), projects: toGrants(projects) }), onChanged);
   const disabled = state.busy || state.conflict;
   const access = [{ value: 'view', label: t('coManaged.policy.viewOnly', { defaultValue: 'View' }) },
     { value: 'collaborate', label: t('coManaged.policy.collaborate', { defaultValue: 'Collaborate' }) }];
@@ -164,7 +164,7 @@ export function CoManagedScopeEditor({ relationshipId, loaded, onReload }: { rel
 }
 
 /** Sponsor side: which users and teams are assigned to this customer, as Technician or Viewer. */
-export function CoManagedAssignmentsEditor({ relationshipId, loaded, onReload }: { relationshipId: string; loaded: Loaded; onReload: () => void }) {
+export function CoManagedAssignmentsEditor({ relationshipId, loaded, onReload, onChanged }: { relationshipId: string; loaded: Loaded; onReload: () => void; onChanged?: () => void }) {
   const { t } = useTranslation('msp/licensing');
   const initial = (kind: 'user' | 'team'): Entry[] => loaded.policy.assignments.filter(a => a.kind === kind).map(a => ({
     id: a.principalId, name: (kind === 'user' ? loaded.names.users : loaded.names.teams)[a.principalId] ?? '', access: a.role }));
@@ -172,7 +172,7 @@ export function CoManagedAssignmentsEditor({ relationshipId, loaded, onReload }:
   const [teams, setTeams] = useState(() => initial('team'));
   const state = useRevisionSave(loaded.policy.revision, onReload, revision => replaceCoManagedStaffAssignmentsAction(relationshipId, revision, [
     ...users.map(entry => ({ kind: 'user' as const, principalId: entry.id, role: entry.access as CoManagedStaffAssignment['role'] })),
-    ...teams.map(entry => ({ kind: 'team' as const, principalId: entry.id, role: entry.access as CoManagedStaffAssignment['role'] }))]));
+    ...teams.map(entry => ({ kind: 'team' as const, principalId: entry.id, role: entry.access as CoManagedStaffAssignment['role'] }))]), onChanged);
   const disabled = state.busy || state.conflict;
   const roles = [{ value: 'technician', label: t('coManaged.policy.technician', { defaultValue: 'Technician' }) },
     { value: 'viewer', label: t('coManaged.policy.viewer', { defaultValue: 'Viewer' }) }];

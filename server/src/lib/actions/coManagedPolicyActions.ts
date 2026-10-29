@@ -49,7 +49,8 @@ export const getCoManagedPolicyAction = withAuth(async (user, { tenant }, relati
   try {
     const { knex, actor, target } = await setup(user, tenant, relationshipId);
     const policy = await getCoManagedCollaborationPolicy(knex, actor, target);
-    const customer = tenantDb(knex, target.customerTenant), home = tenantDb(knex, tenant);
+    // Boards and projects are the customer's; assignment principals (users, teams) are always the sponsor's, whichever side is asking.
+    const customer = tenantDb(knex, target.customerTenant), sponsor = tenantDb(knex, policy.sponsorTenant);
     const names = async (db: ReturnType<typeof tenantDb>, table: string, idColumn: string, label: (row: any) => string, ids: string[]) => {
       const out: Record<string, string> = {};
       if (ids.length) for (const row of await db.table(table).whereIn(idColumn, ids)) out[row[idColumn]] = label(row);
@@ -63,8 +64,8 @@ export const getCoManagedPolicyAction = withAuth(async (user, { tenant }, relati
       names: {
         boards: await names(customer, 'boards', 'board_id', r => r.board_name, policy.boards.map(b => b.id)),
         projects: await names(customer, 'projects', 'project_id', r => r.project_name, policy.projects.map(p => p.id)),
-        users: await names(home, 'users', 'user_id', r => coManagedDisplayName(r, r.username), userIds),
-        teams: await names(home, 'teams', 'team_id', r => r.team_name, teamIds),
+        users: await names(sponsor, 'users', 'user_id', r => coManagedDisplayName(r, r.username), userIds),
+        teams: await names(sponsor, 'teams', 'team_id', r => r.team_name, teamIds),
       } };
   } catch (error) { return refusal(error); }
 });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -35,7 +35,13 @@ const FIELDS: Record<Operation, { key: string; label: string; type: 'text' | 'bo
  * then edits only what was approved. Every refusal other than a named outcome is shown as
  * "no longer available", exactly as the server answers it.
  */
-export default function CoManagedDelegatedAdministration({ relationshipId }: { relationshipId: string }) {
+export default function CoManagedDelegatedAdministration({ relationshipId, onChanged, refreshSignal = 0 }: {
+  relationshipId: string;
+  /** Called after an approve, revoke or edit succeeded, so siblings holding the relationship revision can refetch. */
+  onChanged?: () => void;
+  /** Changes when a sibling wrote; the screen refetches in place so the next approve/revoke uses the current revision. */
+  refreshSignal?: number;
+}) {
   const { t } = useTranslation('msp/licensing');
   const [screen, setScreen] = useState<Screen | null>(null);
   // The refusal is held as a server error code and translated at render, so fetching never depends on the translation function.
@@ -50,18 +56,21 @@ export default function CoManagedDelegatedAdministration({ relationshipId }: { r
     CO_MANAGED_DELEGATION_TARGET_CHANGED: t('coManaged.delegation.targetChanged', { defaultValue: 'The record changed. Refresh and try again.' }),
   } as Record<string, string>)[code] ?? code;
 
-  const load = useCallback(async () => {
-    setScreen(null);
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) setScreen(null);
     const result = await getCoManagedDelegatedScreenAction(relationshipId).catch(() => null);
     // A refusal from a failed save must survive the reload that follows it: only a dialog opening or a successful save clears the message.
     if (result?.ok) setScreen(result.screen); else setRefusal(result?.errorCode ?? 'NOT_AVAILABLE');
   }, [relationshipId]);
   useEffect(() => { void load(); }, [load]);
+  const handled = useRef(refreshSignal);
+  useEffect(() => { if (handled.current !== refreshSignal) { handled.current = refreshSignal; void load(true); } }, [refreshSignal, load]);
 
   const revoke = async (grant: Grant) => {
     if (!screen) return;
     const result = await revokeCoManagedDelegatedGrantAction(relationshipId, screen.revision, grant.grantId).catch(() => null);
     setRefusal(result?.ok ? null : result?.errorCode ?? 'NOT_AVAILABLE');
+    if (result?.ok) onChanged?.();
     await load();
   };
 
@@ -105,7 +114,7 @@ export default function CoManagedDelegatedAdministration({ relationshipId }: { r
         : <p id="co-managed-delegation-empty">{t('coManaged.delegation.empty', { defaultValue: 'No delegated access has been approved.' })}</p>}
     </>}
     {screen && approving && <ApproveDialog relationshipId={relationshipId} revision={screen.revision} operationName={operationName}
-      onClose={() => setApproving(false)} onDone={async (error) => { setApproving(false); setRefusal(error ?? null); await load(); }} />}
+      onClose={() => setApproving(false)} onDone={async (error) => { setApproving(false); setRefusal(error ?? null); if (!error) onChanged?.(); await load(); }} />}
     {editing && <EditDialog relationshipId={relationshipId} grant={editing} operationName={operationName}
       onClose={() => setEditing(null)} onDone={async (error) => { setEditing(null); setRefusal(error ?? null); await load(); }} />}
   </div>;

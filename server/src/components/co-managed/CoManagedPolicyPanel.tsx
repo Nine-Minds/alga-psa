@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -23,7 +23,13 @@ const LAYERS = ['lifecycle', 'staff', 'grant', 'home'] as const;
  * and, for a chosen technician and board, which layer of the access matrix refuses and why.
  * The verdicts come from the server's single evaluator; nothing here recombines the layers.
  */
-export default function CoManagedPolicyPanel({ relationshipId }: { relationshipId: string }) {
+export default function CoManagedPolicyPanel({ relationshipId, onChanged, refreshSignal = 0 }: {
+  relationshipId: string;
+  /** Called after this panel successfully wrote, so siblings holding the relationship revision can refetch. */
+  onChanged?: () => void;
+  /** Changes when a sibling wrote; the panel refetches in place (drafts are kept) so its next save uses the current revision. */
+  refreshSignal?: number;
+}) {
   const { t } = useTranslation('msp/licensing');
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [error, setError] = useState<false | 'load' | 'permission'>(false);
@@ -33,15 +39,18 @@ export default function CoManagedPolicyPanel({ relationshipId }: { relationshipI
   const [explained, setExplained] = useState<Explained | null>(null);
   const [explainError, setExplainError] = useState(false);
 
-  const load = useCallback(async () => {
-    setError(false); setLoaded(null); setExplained(null);
+  // `quiet` refetches without clearing the view, so open editors keep their drafts while their revision catches up.
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) { setError(false); setLoaded(null); setExplained(null); }
     try {
       const next = await getCoManagedPolicyAction(relationshipId);
-      if (next.ok) setLoaded(next); else { setError(next.errorCode === 'PERMISSION_DENIED' ? 'permission' : 'load'); return; }
+      if (next.ok) { setLoaded(next); setError(false); } else { setError(next.errorCode === 'PERMISSION_DENIED' ? 'permission' : 'load'); return; }
       setUsers(await listCoManagedExplanationUsersAction(relationshipId).catch(() => []));
     } catch { setError('load'); }
   }, [relationshipId]);
   useEffect(() => { void load(); }, [load]);
+  const handled = useRef(refreshSignal);
+  useEffect(() => { if (handled.current !== refreshSignal) { handled.current = refreshSignal; void load(true); } }, [refreshSignal, load]);
 
   const explain = async () => {
     setExplainError(false); setExplained(null);
@@ -86,7 +95,7 @@ export default function CoManagedPolicyPanel({ relationshipId }: { relationshipI
   if (!loaded) return <p role="status" id="co-managed-policy-loading">{t('coManaged.loading')}</p>;
 
   return <div id="co-managed-policy-panel" className="space-y-4">
-    {loaded.side === 'customer' && loaded.canManage && <CoManagedScopeEditor relationshipId={relationshipId} loaded={loaded} onReload={() => void load()} />}
+    {loaded.side === 'customer' && loaded.canManage && <CoManagedScopeEditor relationshipId={relationshipId} loaded={loaded} onReload={() => void load()} onChanged={onChanged} />}
     {!(loaded.side === 'customer' && loaded.canManage) && <Card><CardHeader><CardTitle>{t('coManaged.policy.grantsTitle', { defaultValue: 'What the customer shares' })}</CardTitle></CardHeader>
       <CardContent className="space-y-2">
         <p className="text-sm">{loaded.policy.visibilityMode === 'board_scope'
@@ -95,7 +104,7 @@ export default function CoManagedPolicyPanel({ relationshipId }: { relationshipI
         {grantRows.length ? <DataTable id="co-managed-policy-grants" data={grantRows} columns={grantColumns} pagination={false} />
           : <p id="co-managed-policy-no-grants">{t('coManaged.policy.noGrants', { defaultValue: 'No boards or projects are visible to you.' })}</p>}
       </CardContent></Card>}
-    {loaded.side === 'sponsor' && loaded.canManage && <CoManagedAssignmentsEditor relationshipId={relationshipId} loaded={loaded} onReload={() => void load()} />}
+    {loaded.side === 'sponsor' && loaded.canManage && <CoManagedAssignmentsEditor relationshipId={relationshipId} loaded={loaded} onReload={() => void load()} onChanged={onChanged} />}
     {!(loaded.side === 'sponsor' && loaded.canManage) && <Card><CardHeader><CardTitle>{t('coManaged.policy.assignmentsTitle', { defaultValue: 'Who is assigned' })}</CardTitle></CardHeader>
       <CardContent>
         {assignmentRows.length ? <DataTable id="co-managed-policy-assignments" data={assignmentRows} columns={assignmentColumns} pagination={false} />

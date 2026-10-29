@@ -103,6 +103,8 @@ export interface CoManagedCustomerScope {
 export interface CoManagedStaffAssignment { kind: 'user' | 'team'; principalId: string; role: CoManagedStaffRole }
 export interface CoManagedCollaborationPolicy extends CoManagedCustomerScope {
   revision: number;
+  /** The sponsor workspace that owns the staff assignments' principals (users and teams); read from the relationship row, never from the caller. */
+  sponsorTenant: string;
   assignments: CoManagedStaffAssignment[];
   /** Customer-owned redaction list (a mechanism with no configuration UI yet). */
   redactedFields: string[];
@@ -210,7 +212,7 @@ export async function getCoManagedCollaborationPolicy(db: Knex, actor: CoManaged
     const scope = await readCustomerScope(trx, target, relationship.visibility_mode);
     // The sponsor sees the scope in effect; dormant board grants stay the customer's own configuration.
     if (actor.tenant !== target.customerTenant && scope.visibilityMode !== 'board_scope') scope.boards = [];
-    return { ...scope, revision: relationship.revision, redactedFields: relationship.redacted_fields ?? [],
+    return { ...scope, revision: relationship.revision, sponsorTenant: relationship.sponsor_tenant, redactedFields: relationship.redacted_fields ?? [],
       assignments: await readAssignments(trx, relationship.sponsor_tenant, target) };
   });
 }

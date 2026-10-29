@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -24,6 +24,12 @@ export default function CoManagedAdministration({ initialRelationshipId }: { ini
     }, () => setError(true));
   }, []);
 
+  // Both panels cache the relationship's shared revision. A successful write by one bumps a counter for the other, which
+  // refetches in place (no remount, so drafts and confirmations survive). The writer never refreshes itself.
+  const [refresh, setRefresh] = useState({ policy: 0, delegation: 0 });
+  const policyChanged = useCallback(() => setRefresh(r => ({ ...r, delegation: r.delegation + 1 })), []);
+  const delegationChanged = useCallback(() => setRefresh(r => ({ ...r, policy: r.policy + 1 })), []);
+
   const current = workspaces?.find(w => w.relationshipId === selected);
 
   return <div id="co-managed-administration" className="min-w-0 space-y-4">
@@ -42,11 +48,11 @@ export default function CoManagedAdministration({ initialRelationshipId }: { ini
       {selected && <>
         {current?.effective !== false && <section aria-labelledby="co-managed-effective-access-heading" className="space-y-2">
           <h2 id="co-managed-effective-access-heading" className="text-xl font-semibold">{t('coManaged.administration.effective', { defaultValue: 'Effective access' })}</h2>
-          <CoManagedPolicyPanel key={`policy-${selected}`} relationshipId={selected} />
+          <CoManagedPolicyPanel key={`policy-${selected}`} relationshipId={selected} onChanged={policyChanged} refreshSignal={refresh.policy} />
         </section>}
         {current?.delegated !== false && <section aria-labelledby="co-managed-delegation-heading" className="space-y-2">
           <h2 id="co-managed-delegation-heading" className="text-xl font-semibold">{t('coManaged.administration.delegation', { defaultValue: 'Delegated administration' })}</h2>
-          <CoManagedDelegatedAdministration key={`delegation-${selected}`} relationshipId={selected} />
+          <CoManagedDelegatedAdministration key={`delegation-${selected}`} relationshipId={selected} onChanged={delegationChanged} refreshSignal={refresh.delegation} />
         </section>}
       </>}
     </>}
