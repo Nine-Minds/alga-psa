@@ -435,7 +435,8 @@
       "unnamed": "Klant",
       "workspace": "Werkruimte",
       "capacity": "{{allocated}} van {{count}} co-managed plekken toegewezen.",
-      "openClient": "Co-managed IT instellen voor deze klant"
+      "openClient": "Co-managed IT instellen voor deze klant",
+      "readOnly": "Co-managed IT is alleen-lezen voor deze werkruimte. Bestaande relaties worden getoond; nieuwe configuratie is niet beschikbaar."
     },
     "provisioning": {
       "administrator": "Beheerder",
@@ -512,7 +513,12 @@
         "requested": "Aangevraagd",
         "prepared": "Werkruimte voorbereid",
         "accepted": "Geaccepteerd",
-        "declined": "Geweigerd"
+        "declined": "Geweigerd",
+        "terminated": "Beëindigd",
+        "staff_assignments_changed": "Personeelstoewijzingen gewijzigd",
+        "customer_scope_changed": "Klantbereik gewijzigd",
+        "delegation_granted": "Delegatie verleend",
+        "delegation_revoked": "Delegatie ingetrokken"
       }
     },
     "workspace": {

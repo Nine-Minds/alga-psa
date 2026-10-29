@@ -11,6 +11,7 @@ import type { NavigationSection } from './menuConfig';
  * as they do to every menuConfig item.
  */
 export const CO_MANAGED_MENU_GROUP: NavigationSection = {
+  id: 'co-managed',
   title: '',
   items: [
     {

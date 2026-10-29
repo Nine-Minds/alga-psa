@@ -8,6 +8,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { resolveClientRelationshipSummary } from '@/lib/co-managed/clientRelationshipSummary';
 import CoManagedClientSetup from './CoManagedClientSetup';
 import CoManagedClientRecovery from './CoManagedClientRecovery';
+import CoManagedRelationshipHistory from './CoManagedRelationshipHistory';
 
 /** Embeddable client-relationship sections: status/setup, capacity, access and
  * SLA, delegation, and history/departure. Detailed settings mount only while
@@ -153,17 +154,9 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
         </Card>
       )}
 
-      {selected && selected.ended && (
-        <Card aria-labelledby={`${idPrefix}-history-title`}>
-          <CardHeader><CardTitle id={`${idPrefix}-history-title`}>
-            {t('coManaged.client.history', { defaultValue: 'Relationship history' })}
-          </CardTitle></CardHeader>
-          <CardContent>
-            <p className="text-sm text-[rgb(var(--color-text-600))]">
-              {t('coManaged.client.endedHint', { defaultValue: 'This relationship has ended. Retained history and archives remain available.' })}
-            </p>
-          </CardContent>
-        </Card>
+      {selected && (
+        <CoManagedRelationshipHistory idPrefix={`${idPrefix}-history`} clientId={clientId}
+          relationshipId={selected.relationshipId} />
       )}
     </div>
   );

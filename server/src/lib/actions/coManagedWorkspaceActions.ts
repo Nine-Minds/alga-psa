@@ -7,12 +7,11 @@ import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
 import { countCoManagedCommittedSeats } from '@alga-psa/licensing';
 import { isCoManagedUuid, resolveCoManagedManagementTarget } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
+import { COMANAGED_HISTORY_LIMIT } from '../co-managed/relationshipHistory';
 
 // Everything here shows state that already exists, so each gates on `serves`
 // (sticky), never `admits`: an ended or entitlement-less relationship must stay
 // readable. No user id, email or event id leaves the server.
-
-export const COMANAGED_HISTORY_LIMIT = 50;
 
 export interface CoManagedHistoryEntry {
   eventType: string;

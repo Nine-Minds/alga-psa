@@ -18,14 +18,16 @@ export default async function CoManagedPage({ searchParams }: { searchParams?: P
   const session = await getSession();
   const tenant = session?.user?.tenant;
   if (!tenant) notFound();
-  // One root, two sides: a customer workspace sees its own relationship home
-  // (existing state, so `serves`); the sponsor's overview is an entry point
-  // (`admits`). algadesk never reaches here: the product boundary denies it.
+  // One root, two sides, one gate: both are reads of existing state, so both
+  // need only `serves` (the same gate that puts the menu item there; a served
+  // sponsor must never get a menu item that 404s). Starting anything (setup,
+  // Enable, seats) stays `admits`: the overview hides those entry points and the
+  // server actions enforce it. algadesk never reaches here: the product boundary denies it.
   if (await getCurrentTenantProduct() === 'co_managed') {
     await requireCapabilityForPage('co-managed', tenant, 'serves');
     return <CoManagedCustomerHome />;
   }
-  await requireCapabilityForPage('co-managed', tenant, 'admits');
+  await requireCapabilityForPage('co-managed', tenant, 'serves');
   const clientId = (await searchParams)?.clientId;
   return <CoManagedOverview initialClientId={typeof clientId === 'string' && UUID.test(clientId) ? clientId : undefined} />;
 }

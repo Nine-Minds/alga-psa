@@ -435,7 +435,8 @@
       "unnamed": "Kunde",
       "workspace": "Arbeitsbereich",
       "capacity": "{{allocated}} von {{count}} Co-Managed-Plätzen zugewiesen.",
-      "openClient": "Co-Managed IT für diesen Kunden einrichten"
+      "openClient": "Co-Managed IT für diesen Kunden einrichten",
+      "readOnly": "Co-Managed IT ist für diesen Arbeitsbereich schreibgeschützt. Bestehende Beziehungen werden angezeigt; eine neue Einrichtung ist nicht verfügbar."
     },
     "provisioning": {
       "administrator": "Administrator",
@@ -512,7 +513,12 @@
         "requested": "Angefragt",
         "prepared": "Arbeitsbereich vorbereitet",
         "accepted": "Angenommen",
-        "declined": "Abgelehnt"
+        "declined": "Abgelehnt",
+        "terminated": "Beendet",
+        "staff_assignments_changed": "Mitarbeiterzuweisungen geändert",
+        "customer_scope_changed": "Kundenbereich geändert",
+        "delegation_granted": "Delegierung erteilt",
+        "delegation_revoked": "Delegierung widerrufen"
       }
     },
     "workspace": {

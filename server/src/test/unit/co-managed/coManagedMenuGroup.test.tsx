@@ -5,6 +5,7 @@ import { cleanup, render, waitFor } from '@testing-library/react';
 
 const state = vi.hoisted(() => ({
   served: true,
+  admitted: true,
   product: 'psa' as string,
   permissions: ['co_management:read'] as string[],
   sections: [] as any[],
@@ -12,7 +13,7 @@ const state = vi.hoisted(() => ({
 
 vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: (_k: string, o?: { defaultValue?: boolean }) => o?.defaultValue ?? false,
-  useCapability: (cap: string) => ({ enabled: cap === 'co-managed' && state.served, admitted: state.served, resolved: true }),
+  useCapability: (cap: string) => ({ enabled: cap === 'co-managed' && state.served, admitted: state.served && state.admitted, resolved: true }),
 }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_k: string, o?: any) => o?.defaultValue ?? _k }) }));
 vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
@@ -36,7 +37,7 @@ async function mount() {
   await new Promise((r) => setTimeout(r, 0));
 }
 
-beforeEach(() => { state.served = true; state.product = 'psa'; state.permissions = ['co_management:read']; state.sections = []; });
+beforeEach(() => { state.served = true; state.admitted = true; state.product = 'psa'; state.permissions = ['co_management:read']; state.sections = []; });
 afterEach(cleanup);
 
 describe('Co-managed IT menu group (msp.navigation.group slot)', () => {
@@ -49,6 +50,27 @@ describe('Co-managed IT menu group (msp.navigation.group slot)', () => {
     state.product = 'co_managed';
     await mount();
     expect(hrefs().filter((h) => h === '/msp/co-managed')).toHaveLength(1);
+  });
+
+  it('served but not admitted: the group is still contributed (the page it targets renders read-only)', async () => {
+    state.admitted = false;
+    await mount();
+    expect(hrefs().filter((h) => h === '/msp/co-managed')).toHaveLength(1);
+  });
+
+  it('not served: no group', async () => {
+    state.served = false;
+    state.admitted = false;
+    await mount();
+    expect(state.sections.some((s) => s.id === 'co-managed')).toBe(false);
+    expect(hrefs()).not.toContain('/msp/co-managed');
+  });
+
+  it('sections carry unique React keys (the main group and the co-managed group are both untitled)', async () => {
+    await mount();
+    const keys = state.sections.map((s, i) => s.id ?? (s.title || `nav-section-${i}`));
+    expect(state.sections.some((s) => s.id === 'co-managed')).toBe(true);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 
   it('capability off: absent', async () => {

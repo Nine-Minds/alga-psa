@@ -435,7 +435,8 @@
       "unnamed": "Cliente",
       "workspace": "Espacio de trabajo",
       "capacity": "{{allocated}} de {{count}} puestos cogestionados asignados.",
-      "openClient": "Configurar TI cogestionada para este cliente"
+      "openClient": "Configurar TI cogestionada para este cliente",
+      "readOnly": "La TI cogestionada es de solo lectura para este espacio de trabajo. Se muestran las relaciones existentes; la configuración nueva no está disponible."
     },
     "provisioning": {
       "administrator": "Administrador",
@@ -512,7 +513,12 @@
         "requested": "Solicitada",
         "prepared": "Espacio de trabajo preparado",
         "accepted": "Aceptada",
-        "declined": "Rechazada"
+        "declined": "Rechazada",
+        "terminated": "Finalizada",
+        "staff_assignments_changed": "Asignaciones de personal modificadas",
+        "customer_scope_changed": "Alcance del cliente modificado",
+        "delegation_granted": "Delegación concedida",
+        "delegation_revoked": "Delegación revocada"
       }
     },
     "workspace": {

@@ -435,7 +435,8 @@
       "unnamed": "Klient",
       "workspace": "Obszar roboczy",
       "capacity": "Przydzielono {{allocated}} z {{count}} stanowisk współzarządzania.",
-      "openClient": "Skonfiguruj współzarządzane IT dla tego klienta"
+      "openClient": "Skonfiguruj współzarządzane IT dla tego klienta",
+      "readOnly": "Współzarządzane IT jest w tym obszarze roboczym tylko do odczytu. Wyświetlane są istniejące relacje; nowa konfiguracja jest niedostępna."
     },
     "provisioning": {
       "administrator": "Administrator",
@@ -512,7 +513,12 @@
         "requested": "Zgłoszono",
         "prepared": "Przygotowano obszar roboczy",
         "accepted": "Zaakceptowano",
-        "declined": "Odrzucono"
+        "declined": "Odrzucono",
+        "terminated": "Zakończona",
+        "staff_assignments_changed": "Zmieniono przypisania pracowników",
+        "customer_scope_changed": "Zmieniono zakres klienta",
+        "delegation_granted": "Przyznano delegowanie",
+        "delegation_revoked": "Cofnięto delegowanie"
       }
     },
     "workspace": {

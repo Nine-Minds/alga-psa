@@ -606,6 +606,7 @@ describe('capability gate coverage (AST) — branch is green', () => {
 
 describe('glob matching', () => {
   it.each([
+    // Glob sample only: this page does not exist yet (it ships in L9), but the glob must already cover it.
     ['server/src/app/msp/co-managed/providers/page.tsx', true],
     ['server/src/app/msp/co-managed/page.tsx', true],
     ['server/src/app/msp/tickets/page.tsx', false],

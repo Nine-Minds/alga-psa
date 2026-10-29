@@ -10,6 +10,12 @@ import {
   type CoManagedHistoryEntry,
 } from '@/lib/actions/coManagedWorkspaceActions';
 
+/** An event type with no label yet reads as words ("some_new_event" -> "Some new event"). */
+const humanize = (type: string): string => {
+  const words = type.replace(/[_-]+/g, ' ').trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
+
 /** Relationship events, newest first (the action caps them at 50). Each row
  * shows what happened, which revision, when, and who: "You" for the viewing
  * workspace, otherwise the counterpart's name. No identifiers are rendered. */
@@ -37,7 +43,7 @@ export default function CoManagedRelationshipHistory({ idPrefix, clientId, relat
     {
       title: t('coManaged.history.event', { defaultValue: 'Event' }),
       dataIndex: 'eventType',
-      render: (value: string) => t(`coManaged.history.events.${value}`, { defaultValue: value.replace(/_/g, ' ') }),
+      render: (value: string) => t(`coManaged.history.events.${value}`, { defaultValue: humanize(value) }),
     },
     { title: t('coManaged.history.revision', { defaultValue: 'Revision' }), dataIndex: 'revision' },
     {
