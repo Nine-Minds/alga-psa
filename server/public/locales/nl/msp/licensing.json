@@ -505,7 +505,7 @@
       "revision": "Revisie",
       "when": "Wanneer",
       "by": "Door",
-      "you": "Jij",
+      "you": "U",
       "provider": "Aanbieder",
       "empty": "Nog geen relatiegebeurtenissen.",
       "error": "De relatiegeschiedenis kon niet worden geladen.",
@@ -522,7 +522,7 @@
       }
     },
     "workspace": {
-      "title": "Co-managed IT",
+      "title": "Gezamenlijk beheerde IT",
       "sponsor": "Beheerd door",
       "none": "Deze werkruimte heeft geen co-managed IT-relatie.",
       "loading": "Laden…",

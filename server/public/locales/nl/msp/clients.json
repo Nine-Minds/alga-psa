@@ -493,7 +493,7 @@
       "ticketOpened": "Ticket geopend",
       "unitDelivered": "Apparatuur geleverd"
     },
-    "discardFeatureMessage": "Je hebt niet-opgeslagen wijzigingen in deze weergave. Sluiten en negeren?"
+    "discardFeatureMessage": "U hebt niet-opgeslagen wijzigingen in deze weergave. Sluiten en negeren?"
   },
   "quickAddClient": {
     "lifecycleStatus": "Levenscyclus",
