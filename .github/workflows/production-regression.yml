@@ -101,14 +101,13 @@ jobs:
     # GitHub Container Registry; a fork's read-only token silently keeps it on
     # archive artifacts. Granted here, not workflow-wide, so the other lanes
     # never hold a package-writing token.
+    # Its build-images job also reads earlier runs' build records and archives,
+    # for verified image reuse.
     permissions:
       contents: read
       packages: write
-    secrets: inherit
-    # Its build-images job reads earlier runs' artifacts for verified image reuse.
-    permissions:
-      contents: read
       actions: read
+    secrets: inherit
 
   temporal:
     needs: selection
