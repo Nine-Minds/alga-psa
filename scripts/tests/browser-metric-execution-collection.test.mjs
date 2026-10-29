@@ -115,7 +115,7 @@ for (const defect of ['missing-marker', 'skipped-marker', 'failed-job', 'recorde
 
 test('the browser matrix emits non-selection evidence only for the explicit false filter result', () => {
   const workflow = yaml.load(readFileSync('.github/workflows/e2e-fresh-install-tests.yaml', 'utf8'));
-  const job = Object.values(workflow.jobs).find(job => job.name === 'Production browser (${{ matrix.edition }})');
+  const job = workflow.jobs['production-browser'];
   const markers = job.steps.filter(step => step.name === 'Record browser tests not selected');
   assert.equal(markers.length, 1);
   assert.equal(markers[0].if, "needs.changes.outputs.run_tests == 'false'");

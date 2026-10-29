@@ -344,6 +344,16 @@ and retry-only, skipped and expected-failure cases cannot satisfy a mandatory
 journey. Neither that policy probe nor a collection-only check establishes
 that the application journey itself passed.
 
+The browser lane runs its suites as parallel shards of one job definition:
+per edition a `browser` shard (Playwright journeys), an `api` shard, and for
+enterprise an `upgrades` shard (supported PostgreSQL and Citus upgrades) and an
+`integrations` shard (Teams development, Microsoft callback). Every shard
+installs the same candidate images and verifies them against the build records;
+only the `browser` shard publishes Playwright evidence and records journey
+readiness, so the job named `Production browser (<edition>)` is still the one
+the metrics and flaky-test reports read. The aggregate gate requires every
+shard of both editions to succeed.
+
 ## Browser collection coverage
 
 `node scripts/collect-browser-test-inventory.mjs` runs the real Playwright
