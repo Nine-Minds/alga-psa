@@ -77,6 +77,22 @@
     "./participationEvidence": {
       "types": "./src/participationEvidence.ts",
       "import": "./src/participationEvidence.ts"
+    },
+    "./schedulingRegistration": {
+      "types": "./src/schedulingRegistration.ts",
+      "import": "./src/schedulingRegistration.ts"
+    },
+    "./appointmentMeetingCreation": {
+      "types": "./src/appointmentMeetingCreation.ts",
+      "import": "./src/appointmentMeetingCreation.ts"
+    },
+    "./meetingCreationOperation": {
+      "types": "./src/meetingCreationOperation.ts",
+      "import": "./src/meetingCreationOperation.ts"
+    },
+    "./nativeScheduleMeetingSync": {
+      "types": "./src/nativeScheduleMeetingSync.ts",
+      "import": "./src/nativeScheduleMeetingSync.ts"
     }
   },
   "scripts": {
