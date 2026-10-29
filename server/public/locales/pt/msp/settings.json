@@ -4033,5 +4033,12 @@
     "moveDown": "Mover para baixo",
     "remove": "Remover",
     "addTag": "Adicionar uma tag…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Voltar às configurações de email",
+      "title": "Provedores de email e identidade",
+      "description": "Registre seu próprio aplicativo do Google ou da Microsoft para emails recebidos e login da equipe. Essas credenciais pertencem ao seu espaço de trabalho."
+    }
   }
 }

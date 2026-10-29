@@ -398,7 +398,7 @@ export class ContractLineServiceConfigurationService {
             if (scheduled.ok === false) throw new Error(scheduled.error);
             const { quantity, custom_rate, ...restBase } = baseConfig ?? {};
             baseConfig = restBase;
-            const { base_rate, effective_period_start, ...restFixed } = incoming ?? {};
+            const { base_rate, base_rate_basis, effective_period_start, ...restFixed } = incoming ?? {};
             typeConfig = restFixed;
           }
         }

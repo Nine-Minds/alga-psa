@@ -31,6 +31,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   accounting_sync_cycles: { scope: 'tenant' },
   accounting_sync_operations: { scope: 'tenant' },
   asset_groups: { scope: 'tenant' },
+  ticket_watchers: { scope: 'tenant' },
   asset_group_members: { scope: 'tenant' },
   asset_group_contacts: { scope: 'tenant' },
   asset_assignments: { scope: 'tenant' },

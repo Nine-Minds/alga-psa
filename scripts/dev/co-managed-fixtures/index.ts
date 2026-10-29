@@ -2,9 +2,9 @@
 /**
  * Co-managed IT review fixtures, composed per layer.
  *
- *   npm run fixtures:co-managed -- --through L1a            apply (idempotent)
- *   npm run fixtures:co-managed -- --through L1a --verify   read-only assertions
- *   npm run fixtures:co-managed -- --through L1a --reset    remove layer deltas (dependents first)
+ *   npm run fixtures:co-managed -- --through L9            apply (idempotent)
+ *   npm run fixtures:co-managed -- --through L9 --verify   read-only assertions
+ *   npm run fixtures:co-managed -- --through L9 --reset    remove layer deltas (dependents first)
  *
  * Each layer module (base.ts, L1a.ts, ...) applies its own delta and declares
  * `requires`. Credentials come from server/.env.local, parsed line by line: do
@@ -16,12 +16,13 @@ import { fileURLToPath } from 'node:url';
 import knexFactory, { type Knex } from 'knex';
 import { baseModule, FLAG_EXPECTATIONS } from './base';
 import { l1aModule } from './L1a';
+import { l9Module } from './L9';
 import { resolveModules, type FixtureEngines, type FixtureModule } from './shared';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
 /** Layers in order; later cards append theirs here. */
-export const REGISTRY: FixtureModule[] = [baseModule, l1aModule];
+export const REGISTRY: FixtureModule[] = [baseModule, l1aModule, l9Module];
 
 // LEVERAGE: pattern co-managed-env-local — hand-rolled line-by-line reader of
 // server/.env.local, as in scripts/dev shell loaders; a shared loader belongs below this.

@@ -58,3 +58,24 @@ describe('co-managed permission catalog entries', () => {
     expect([...CO_MANAGED_PERMISSION_ACTIONS].sort()).toEqual(CO_MANAGED_PERMISSIONS.map(p => p.action).sort());
   });
 });
+
+describe('co_managed system_settings grants (customer-owned provider setup, L9)', () => {
+  const settings = (product: string) => catalog.getProductPermissions(product)
+    .filter((p: any) => p.resource === 'system_settings')
+    .map((p: any) => `${p.action}`).sort();
+
+  it('exposes only read and update to co_managed, and leaves psa/algadesk unchanged', () => {
+    expect(settings('co_managed')).toEqual(['read', 'update']);
+    expect(settings('psa')).toEqual(['create', 'delete', 'read', 'update']);
+    expect(settings('algadesk')).toEqual(['read', 'update']);
+  });
+
+  it('grants them to the co_managed msp:Admin role only', () => {
+    const { msp } = roleGrants.compileLegacyRoleGrants('co_managed');
+    expect(msp.Admin).toBe('ALL_MSP');
+    for (const [role, list] of Object.entries(msp) as Array<[string, string[] | string]>) {
+      if (role === 'Admin') continue;
+      expect(JSON.stringify(list)).not.toContain('system_settings');
+    }
+  });
+});

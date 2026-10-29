@@ -117,13 +117,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # `prebuild` services compile the application on the runner first (see
+        # the "production build" steps below); `node` is the version their
+        # Dockerfile.build compiles with.
         include:
           - service: server
+            edition: community
+            prebuild: true
+            node: '24'
             dockerfile: Dockerfile.build
             image: alga-e2e-test_server_ce_local:latest
             artifact: fresh-install-server-community
             cache: false
           - service: server-ee
+            edition: enterprise
+            prebuild: true
+            node: '26.1.0'
             dockerfile: ee/server/Dockerfile.build
             image: alga-e2e-test_server_ee_local:latest
             artifact: fresh-install-server-enterprise
@@ -218,6 +227,54 @@ jobs:
           sudo swapon /swapfile-alga-production-build
           free -h
 
+      # The server images are compiled on the runner (scripts/build-production-server.sh,
+      # the same recipe as the Dockerfiles' builder stages) and the Dockerfiles
+      # then only package the result (PREBUILT_NEXT=true). Outside the image
+      # the webpack filesystem cache and the Nx cache can be carried between
+      # runs: a snapshot of both travels through the registry like the candidate
+      # images do, under one moving tag per edition. Only runs of main write it,
+      # because a cache shapes build output; pull requests only read it. A
+      # missing or unreadable snapshot means a cold build, never a failure.
+      - name: Set up Node.js for the production build
+        if: matrix.prebuild
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install oras for build-cache snapshots
+        if: matrix.prebuild
+        uses: oras-project/setup-oras@v2
+
+      - name: Remove the proprietary server tree from the community build
+        if: matrix.prebuild && matrix.edition == 'community'
+        run: |
+          # Mirrors Dockerfile.build: community resolution is owned by the Next
+          # aliases and checked-in fallback modules, and no proprietary module
+          # may be resolvable while the community application compiles.
+          rm -rf ee/server
+          rm -f server/src/scripts/check-extension.ts
+
+      - name: Install repository dependencies for the production build
+        if: matrix.prebuild
+        run: npm install --include=optional
+
+      - name: Restore the build-cache snapshot
+        if: matrix.prebuild
+        id: build_cache
+        env:
+          BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}
+        run: node scripts/build-cache-snapshot.mjs restore --reference "$BUILD_CACHE_REFERENCE" --path server/node_modules/.cache/webpack --path .nx/cache
+
+      - name: Build the production application on the runner
+        if: matrix.prebuild
+        env:
+          NEXT_BUILD_MAX_OLD_SPACE_SIZE: '12288'
+          EDITION_NAME: ${{ matrix.edition }}
+        run: |
+          scripts/build-production-server.sh "$EDITION_NAME"
+          du -sh server/.next server/node_modules/.cache/webpack .nx/cache 2>/dev/null || true
+
       - name: Build and export ${{ matrix.service }}
         id: export_image
         uses: docker/build-push-action@v6
@@ -232,6 +289,7 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
           build-args: |
             NEXT_BUILD_MAX_OLD_SPACE_SIZE=12288
+            PREBUILT_NEXT=${{ matrix.prebuild && 'true' || 'false' }}
           outputs: ${{ env.IMAGE_TRANSPORT == 'registry' && 'type=image,push=true' || format('type=docker,dest={0}/{1}.tar', runner.temp, matrix.service) }}
           # One plain manifest per image, never an index with attestations: the
           # consumer pulls exactly one digest and the build record binds that
@@ -286,6 +344,15 @@ jobs:
           docker buildx imagetools inspect "$BUILD_REGISTRY_REFERENCE@$BUILD_REPORTED_DIGEST" --raw > "$BUILD_MANIFEST"
           node scripts/record-docker-registry-build.mjs "$BUILD_MANIFEST" "$BUILD_RECORD"
 
+      # Written after the image is published, so a snapshot failure can only
+      # cost the next run its warm start, never this run its candidate.
+      - name: Save the build-cache snapshot
+        if: matrix.prebuild && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.IMAGE_TRANSPORT == 'registry'
+        continue-on-error: true
+        env:
+          BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}
+        run: node scripts/build-cache-snapshot.mjs save --reference "$BUILD_CACHE_REFERENCE" --path server/node_modules/.cache/webpack --path .nx/cache
+
       - name: Upload image build record
         uses: actions/upload-artifact@v4
         with:
@@ -307,9 +374,12 @@ jobs:
   # One job definition, run once per shard. Every shard installs the same
   # candidate stack from the same images and then runs only the suites its
   # matrix entry names, so the suites that used to run back to back in one
-  # job run side by side. The shard whose lane is `browser` keeps the name the
-  # browser-metrics layer matches ("Production browser (<edition>)") and is the
-  # only one that runs Playwright journeys and records journey readiness.
+  # job run side by side. The Playwright journeys are themselves split across
+  # several `browser-<n>` shards per edition (`shard: <n>/<total>`); the runner
+  # partitions the journey files by their measured duration
+  # (e2e-tests/journey-weights.json) and the `browser-evidence` job below merges
+  # the shards' evidence back into the one per-edition record and records
+  # journey readiness under the name the browser-metrics layer matches.
   production-browser:
     name: Production ${{ matrix.lane }} (${{ matrix.edition }})
     needs: [changes, browser-collection, build-images]
@@ -327,13 +397,24 @@ jobs:
       fail-fast: false
       matrix:
         # `lane` names the shard (job title, log artifact); `suites` lists what
-        # it runs, resolved by the "Resolve this shard's suites" step below.
+        # it runs, resolved by the "Resolve this shard's suites" step below;
+        # `shard` is the browser suite's share of the journeys, <index>/<total>.
+        # Every browser lane of an edition must name the same total and the
+        # indexes must cover 1..total exactly once, or the merged evidence
+        # fails for missing or duplicated journeys.
         include:
           - edition: community
             server_archive: server
             compose_suffix: ''
-            lane: browser
+            lane: browser-1
             suites: browser
+            shard: 1/2
+          - edition: community
+            server_archive: server
+            compose_suffix: ''
+            lane: browser-2
+            suites: browser
+            shard: 2/2
           - edition: community
             server_archive: server
             compose_suffix: ''
@@ -342,8 +423,21 @@ jobs:
           - edition: enterprise
             server_archive: server-ee
             compose_suffix: ':docker-compose.e2e-ee.yaml'
-            lane: browser
+            lane: browser-1
             suites: browser
+            shard: 1/3
+          - edition: enterprise
+            server_archive: server-ee
+            compose_suffix: ':docker-compose.e2e-ee.yaml'
+            lane: browser-2
+            suites: browser
+            shard: 2/3
+          - edition: enterprise
+            server_archive: server-ee
+            compose_suffix: ':docker-compose.e2e-ee.yaml'
+            lane: browser-3
+            suites: browser
+            shard: 3/3
           - edition: enterprise
             server_archive: server-ee
             compose_suffix: ':docker-compose.e2e-ee.yaml'
@@ -352,8 +446,13 @@ jobs:
           - edition: enterprise
             server_archive: server-ee
             compose_suffix: ':docker-compose.e2e-ee.yaml'
-            lane: upgrades
-            suites: upgrade citus
+            lane: upgrade
+            suites: upgrade
+          - edition: enterprise
+            server_archive: server-ee
+            compose_suffix: ':docker-compose.e2e-ee.yaml'
+            lane: citus
+            suites: citus
           - edition: enterprise
             server_archive: server-ee
             compose_suffix: ':docker-compose.e2e-ee.yaml'
@@ -419,9 +518,26 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "Shard $LANE runs: $SUITES (playwright=$playwright, workspace_dependencies=$workspace_dependencies)"
 
-      - name: Record browser tests not selected
-        if: needs.changes.outputs.run_tests == 'false'
-        run: echo "Browser tests were not selected by the changes filter."
+      # Written before anything can fail and uploaded with the journey evidence,
+      # so the merge knows how many shards to expect and which this one is even
+      # when the runner never started. The runner reads the same `shard` value
+      # from E2E_SHARD and records it in its evidence; the merge checks the two
+      # agree.
+      - name: Describe this browser shard
+        if: needs.changes.outputs.run_tests == 'true' && steps.shard.outputs.browser == 'true'
+        env:
+          EDITION: ${{ matrix.edition }}
+          LANE: ${{ matrix.lane }}
+          SHARD: ${{ matrix.shard }}
+        run: |
+          case "$SHARD" in
+            [1-9]*/[1-9]*) ;;
+            *) echo "::error::Browser lane $LANE needs shard: <index>/<total>, got '$SHARD'"; exit 1 ;;
+          esac
+          jq -n --arg edition "$EDITION" --arg lane "$LANE" --arg shard "$SHARD" \
+            '{edition: $edition, lane: $lane, index: ($shard | split("/")[0] | tonumber), total: ($shard | split("/")[1] | tonumber)}' \
+            > "$RUNNER_TEMP/browser-shard.json"
+          cat "$RUNNER_TEMP/browser-shard.json"
 
       - name: Checkout repository
         if: needs.changes.outputs.run_tests == 'true'
@@ -1131,6 +1247,7 @@ jobs:
         env:
           E2E_BASE_URL: http://localhost:3000
           E2E_EDITION: ${{ matrix.edition }}
+          E2E_SHARD: ${{ matrix.shard }}
           E2E_REVISION: ${{ github.sha }}
           E2E_ARTIFACT_MANIFEST: ${{ runner.temp }}/browser-artifact-manifest.json
           E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
@@ -1165,12 +1282,18 @@ jobs:
           done
         shell: bash
 
-      # Publish completed browser evidence before the independent API lane.
+      # This shard's share of the journey evidence, with the shard descriptor
+      # and the verified candidate manifest. The `browser-evidence` job merges
+      # every shard of the edition into `fresh-install-playwright-<edition>`,
+      # records journey readiness and publishes the flaky evidence; a shard
+      # artifact on its own never satisfies the gate (its evidence declares
+      # `selection.mode: shard`). Uploaded only after a successful installation
+      # setup, so the descriptor's presence tells the merge the shard came up.
       - name: Upload Playwright diagnostics
         if: always() && steps.shard.outputs.browser == 'true' && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
         uses: actions/upload-artifact@v4
         with:
-          name: fresh-install-playwright-${{ matrix.edition }}
+          name: fresh-install-browser-shard-${{ matrix.edition }}-${{ matrix.lane }}
           path: |
             e2e-tests/playwright-report/
             e2e-tests/test-results/
@@ -1179,32 +1302,8 @@ jobs:
             ${{ runner.temp }}/algasim-catalog.json
             ${{ runner.temp }}/algasim-image-id.txt
             ${{ runner.temp }}/browser-artifact-manifest.json
+            ${{ runner.temp }}/browser-shard.json
           retention-days: 7
-
-      # A retry-only pass still fails the strict gate above, so this upload must
-      # survive the red job that publishes it. Reporting flakes is never itself a
-      # gate. The runner fills this directory only when something retried, so a
-      # run with no flake (or one that died before the runner wrote anything)
-      # publishes nothing and the weekly report spends no API budget on it; the
-      # always-written document rides along in the diagnostics artifact above.
-      - name: Upload browser flaky-test evidence
-        if: always() && steps.shard.outputs.browser == 'true' && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
-        uses: actions/upload-artifact@v4
-        with:
-          name: flaky-tests-browser-${{ matrix.edition }}
-          path: e2e-tests/execution-evidence/flaky/
-          if-no-files-found: ignore
-          retention-days: 30
-
-      - name: Record browser journey readiness
-        if: always() && steps.shard.outputs.browser == 'true' && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
-        continue-on-error: true
-        run: node scripts/record-browser-metrics.mjs
-        env:
-          TEST_METRICS_BROWSER: e2e-tests/execution-evidence/metrics.json
-          E2E_EDITION: ${{ matrix.edition }}
-          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
-          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
 
       - name: Stop background consumers before API fixtures and database switches
         if: ${{ !cancelled() && steps.wait_for_setup.outputs.status == 'success' }}
@@ -1759,9 +1858,94 @@ jobs:
           fi
         shell: bash
 
+  # One job per edition, carrying the name the browser-metrics collector
+  # matches ("browser / Production browser (<edition>)"). It folds the
+  # edition's browser shards back into the single evidence record
+  # (`fresh-install-playwright-<edition>`) that the metrics reconciliation and
+  # the weekly flaky report read, and records journey readiness from the merged
+  # metrics. The gate job below performs the same merge from the same shard
+  # artifacts, so neither waits on the other.
+  browser-evidence:
+    name: Production browser (${{ matrix.edition }})
+    needs: [changes, production-browser]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        edition: [community, enterprise]
+    steps:
+      - name: Record browser tests not selected
+        if: needs.changes.outputs.run_tests == 'false'
+        run: echo "Browser tests were not selected by the changes filter."
+
+      - uses: actions/checkout@v4
+        if: needs.changes.outputs.run_tests == 'true'
+
+      - uses: actions/setup-node@v4
+        if: needs.changes.outputs.run_tests == 'true'
+        with:
+          node-version: '22'
+
+      - name: Download this edition's browser shard evidence
+        if: needs.changes.outputs.run_tests == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: fresh-install-browser-shard-${{ matrix.edition }}-*
+          path: ${{ runner.temp }}/browser-shards
+
+      # Fails when the merged evidence did not pass: a shard that never
+      # published, a shard whose journeys failed, or shards that disagree about
+      # the collection or the candidate. Writes its files either way so the
+      # uploads and the recorder below still see the merged state.
+      - name: Merge browser shard evidence
+        id: merge
+        if: needs.changes.outputs.run_tests == 'true'
+        env:
+          EDITION: ${{ matrix.edition }}
+        run: node scripts/merge-browser-shards.mjs --edition "$EDITION" --input "$RUNNER_TEMP/browser-shards" --output "$RUNNER_TEMP/browser-evidence"
+
+      - name: Upload merged Playwright execution evidence
+        if: always() && steps.merge.outcome != 'skipped' && !env.ACT
+        uses: actions/upload-artifact@v4
+        with:
+          name: fresh-install-playwright-${{ matrix.edition }}
+          path: ${{ runner.temp }}/browser-evidence/
+          retention-days: 7
+
+      # A retry-only pass still fails the strict gate, so this upload must
+      # survive the red job that publishes it. Reporting flakes is never itself a
+      # gate. The merge fills this directory only when something retried, so a
+      # run with no flake publishes nothing and the weekly report spends no API
+      # budget on it; the always-written document rides along in the merged
+      # evidence artifact above.
+      - name: Upload browser flaky-test evidence
+        if: always() && steps.merge.outcome != 'skipped' && !env.ACT
+        uses: actions/upload-artifact@v4
+        with:
+          name: flaky-tests-browser-${{ matrix.edition }}
+          path: ${{ runner.temp }}/browser-evidence/e2e-tests/execution-evidence/flaky/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      # Recorded once every browser shard's installation setup succeeded (each
+      # shard publishes its descriptor only then), including failed or partial
+      # journey execution. A shard that never came up records nothing, as the
+      # single browser job did after a setup failure.
+      - name: Record browser journey readiness
+        if: always() && steps.merge.outcome != 'skipped' && steps.merge.outputs.complete == 'true' && !env.ACT
+        continue-on-error: true
+        run: node scripts/record-browser-metrics.mjs
+        env:
+          TEST_METRICS_BROWSER: ${{ runner.temp }}/browser-evidence/e2e-tests/execution-evidence/metrics.json
+          E2E_EDITION: ${{ matrix.edition }}
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
+
   # Preserve the required check name while requiring every shard of both
-  # editions and the builds. The shards publish disjoint artifacts, so the
-  # evidence below still arrives once per edition.
+  # editions and the builds. The browser shards are merged here from their own
+  # artifacts, so the evidence below still arrives once per edition.
   fresh-install-e2e:
     needs: [changes, browser-collection, build-images, production-browser]
     if: always()
@@ -1774,12 +1958,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Download both browser execution artifacts
+      - name: Download every browser shard's execution artifact
         if: always() && needs.changes.outputs.run_tests == 'true'
         uses: actions/download-artifact@v4
         with:
-          pattern: fresh-install-playwright-*
+          pattern: fresh-install-browser-shard-*
           path: test-results/fresh-install-input
+      - name: Merge each edition's browser shards into its execution evidence
+        if: always() && needs.changes.outputs.run_tests == 'true'
+        run: |
+          status=0
+          for edition in community enterprise; do
+            node scripts/merge-browser-shards.mjs --edition "$edition" \
+              --input test-results/fresh-install-input \
+              --output "test-results/fresh-install-input/fresh-install-playwright-$edition" || status=1
+          done
+          exit "$status"
       - name: Download both API execution artifacts
         if: always() && needs.changes.outputs.run_tests == 'true'
         uses: actions/download-artifact@v4
