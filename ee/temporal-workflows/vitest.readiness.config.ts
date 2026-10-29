@@ -37,6 +37,7 @@ export default defineConfig({
       'src/activities/__tests__/tenant-suspension-activities.test.ts',
       'src/activities/__tests__/tenant-deletion-external-links.test.ts',
       'src/activities/__tests__/tenant-deletion-answer-mappings.test.ts',
+      'src/activities/__tests__/tenant-deletion-prepaid-block-order.test.ts',
       'src/activities/__tests__/defaultTaxRateTenantDeletionOrder.test.ts',
       'src/activities/__tests__/workScheduleTenantDeletionOrder.test.ts',
       'src/activities/__tests__/teamsObservabilityTenantDeletionOrder.test.ts',

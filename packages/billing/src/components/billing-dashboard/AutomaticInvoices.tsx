@@ -1151,7 +1151,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     // Prepaid Block issuances never carry a billing cycle (see prepaidBlockDueWork.ts);
     // they must not veto the cycle shared by the window's other members.
     const cycleMembers = members.filter(
-      (member) => (member as { chargeType?: string | null }).chargeType !== 'PrepaidBlock',
+      (member) => (member as { chargeType?: string | null }).chargeType !== 'PrepaidBlock' || Boolean(member.billingCycleId),
     );
     const billingCycleIds = new Set(
       cycleMembers

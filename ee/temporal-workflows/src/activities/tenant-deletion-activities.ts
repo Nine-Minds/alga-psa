@@ -164,11 +164,11 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'invoice_payments',
   'payment_confirmation_emails',
   'invoice_template_assignments',
-  'contract_line_block_issuances',
   'hour_block_audit',
   'hour_block_service_scopes',
   'hour_block_time_allocations',
   'hour_blocks',
+  'contract_line_block_issuances',
   'time_tracking_session_segments',
   'time_tracking_sessions',
   'time_entry_suggestion_dismissals',
@@ -449,6 +449,12 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'service_request_answer_mapping_versions', 'service_request_answer_mappings',
   'service_request_submission_attachments', 'service_request_submissions',
   'service_request_definition_versions', 'service_request_definitions',
+  'co_management_board_scopes',
+  'co_managed_allocations',
+  'co_managed_entitlements',
+  'co_managed_provisioning_operations',
+  'co_management_relationship_events',
+  'co_management_relationships',
 
   // === LEVEL 3: Mid-level entities ===
   // Document-related leaf tables (must come before documents)

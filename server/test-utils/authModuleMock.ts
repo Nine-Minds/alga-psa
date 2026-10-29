@@ -62,6 +62,10 @@ export function createAuthModuleMock() {
   const hasPermission = vi.fn((user: IUserWithRoles, resource?: string, action?: string) =>
     Promise.resolve(permissionCheckRef.fn(user, resource, action))
   );
+  const checkMultiplePermissions = vi.fn((user: IUserWithRoles, checks: { resource: string; action: string }[]) =>
+    Promise.resolve(checks.map(({ resource, action }) =>
+      ({ resource, action, granted: permissionCheckRef.fn(user, resource, action) })))
+  );
   const getSession = vi.fn(async () =>
     currentUserRef.user
       ? { user: { id: currentUserRef.user.user_id, tenant: currentUserRef.user.tenant } }
@@ -86,6 +90,7 @@ export function createAuthModuleMock() {
     getSession,
     getCurrentUser,
     hasPermission,
+    checkMultiplePermissions,
     withAuth: (action: (...a: any[]) => any) => async (...args: any[]) => {
       const user = await requireUser();
       return runInTenant(user.tenant, async () => action(user, { tenant: user.tenant }, ...args));

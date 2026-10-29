@@ -21,6 +21,14 @@ export async function register() {
       console.error('Failed to initialize application:', error);
     }
 
+    // Registering the co-managed capability resolvers is a side effect of this import. A failure
+    // leaves the gate unregistered, which fails closed (admits/serves are false).
+    try {
+      await import('@alga-psa/co-managed/capability');
+    } catch (error) {
+      console.error('Failed to register the co-managed capability:', error);
+    }
+
     // Wire the DB-prefs-aware locale resolver into @alga-psa/ui's server i18n.
     // Done here (instead of at the @alga-psa/ui level) to avoid a
     // ui→tenancy circular dependency; tenancy already depends on ui.

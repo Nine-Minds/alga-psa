@@ -445,7 +445,13 @@
     "expires": "Expires {{date}}",
     "recentBurn": "Recent usage",
     "timeEntry": "Time entry",
-    "contractLabel": "Contract: {{contract}}"
+    "contractLabel": "Contract: {{contract}}",
+    "hoursLeftValue": "{{hours}}h left · {{value}}",
+    "validFrom": "Valid from {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — prepaid block, {{hours}} h",
+    "overPrepaidBlock": "{{name}} (over prepaid block)"
   },
   "bucketUsage": {
     "contractLine": "Bucket Contract Line",

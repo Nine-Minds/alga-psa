@@ -13,7 +13,8 @@ import {
   baseFilterSchema,
   booleanTransform,
   dateSchema,
-  isoDateSchema
+  isoDateSchema,
+  paginationQuerySchema
 } from './common';
 import { approvalStatusSchema, timeEntryResponseSchema, workItemTypeSchema } from './timeEntry';
 
@@ -504,3 +505,74 @@ export type CalendarResponse = z.infer<typeof calendarResponseSchema>;
 export type CreateScheduleEntryData = z.infer<typeof createScheduleEntrySchema>;
 export type UpdateScheduleEntryData = z.infer<typeof updateScheduleEntrySchema>;
 export type ScheduleEntryResponse = z.infer<typeof scheduleEntryResponseSchema>;
+
+
+// Schedule entry list/search query: ISO 8601 date (YYYY-MM-DD) or date-time.
+// A date-only value names a whole UTC day: start_date=D means "starting at or
+// after D 00:00Z" and end_date=D means "ending on or before D", i.e. strictly
+// before (D+1) 00:00Z. Date-time values are exact, inclusive instants.
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+const scheduleQueryDateSchema = z.union([
+  isoDateSchema.refine((v) => !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) && new Date(`${v}T00:00:00Z`).toISOString().startsWith(v), 'Invalid date'),
+  z.string().datetime({ offset: true }),
+], { errorMap: () => ({ message: 'Expected ISO 8601 date or date-time' }) });
+
+const scheduleEntryFilterShape = {
+  start_date: scheduleQueryDateSchema.optional(),
+  end_date: scheduleQueryDateSchema.optional(),
+  user_id: uuidSchema.optional(),
+};
+
+
+/**
+ * Filters handed to TimeSheetService schedule-entry queries. Exactly one of
+ * end_date (inclusive instant) / end_before (exclusive instant) is set when the
+ * caller bounded the end.
+ */
+export interface ScheduleEntryFilters {
+  start_date?: string;
+  end_date?: string;
+  end_before?: string;
+  user_id?: string;
+}
+
+// Checked on the normalized bounds, so start_date=2026-11-04T12:00Z with
+// end_date=2026-11-04 (the whole day) is a valid range.
+const startNotAfterEnd = ({ filters: f }: { filters: ScheduleEntryFilters }) =>
+  !f.start_date
+  || (!f.end_date || Date.parse(f.start_date) <= Date.parse(f.end_date))
+  && (!f.end_before || Date.parse(f.start_date) < Date.parse(f.end_before));
+const startNotAfterEndIssue = { message: 'start_date must not be after end_date', path: ['start_date'] };
+
+function toScheduleEntryFilters(q: { start_date?: string; end_date?: string; user_id?: string }): ScheduleEntryFilters {
+  const filters: ScheduleEntryFilters = {};
+  if (q.start_date) {
+    filters.start_date = DATE_ONLY.test(q.start_date) ? `${q.start_date}T00:00:00.000Z` : q.start_date;
+  }
+  if (q.end_date) {
+    if (DATE_ONLY.test(q.end_date)) {
+      const nextDay = new Date(`${q.end_date}T00:00:00.000Z`);
+      nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+      filters.end_before = nextDay.toISOString();
+    } else {
+      filters.end_date = q.end_date;
+    }
+  }
+  if (q.user_id) {
+    filters.user_id = q.user_id;
+  }
+  return filters;
+}
+
+// GET /api/v1/schedules: filters only. Deliberately unpaginated (returns every
+// visible entry); page/limit are ignored for backwards compatibility.
+export const scheduleEntryListQuerySchema = z.object(scheduleEntryFilterShape)
+  .transform((q) => ({ filters: toScheduleEntryFilters(q) }))
+  .refine(startNotAfterEnd, startNotAfterEndIssue);
+
+// GET /api/v1/schedules/search: same filters plus page/limit.
+export const scheduleEntrySearchQuerySchema = paginationQuerySchema
+  .pick({ page: true, limit: true })
+  .extend(scheduleEntryFilterShape)
+  .transform(({ page, limit, ...q }) => ({ page, limit, filters: toScheduleEntryFilters(q) }))
+  .refine(startNotAfterEnd, startNotAfterEndIssue);

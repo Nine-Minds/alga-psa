@@ -445,7 +445,13 @@
     "expires": "Wygasa {{date}}",
     "recentBurn": "Ostatnie wykorzystanie",
     "timeEntry": "Wpis czasu",
-    "contractLabel": "Umowa: {{contract}}"
+    "contractLabel": "Umowa: {{contract}}",
+    "hoursLeftValue": "Pozostało {{hours}} godz. · {{value}}",
+    "validFrom": "Obowiązuje od {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — blok przedpłacony, {{hours}} godz.",
+    "overPrepaidBlock": "{{name}} (ponad blok przedpłacony)"
   },
   "bucketUsage": {
     "contractLine": "Linia umowy z pakietem godzin",

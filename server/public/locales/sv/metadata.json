@@ -601,6 +601,12 @@
     },
     "layout": {
       "defaultTitle": "Översikt | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "Samhanterad IT"
+    },
+    "coManagement": {
+      "title": "Samhanterad åtkomst"
     }
   },
   "share": {

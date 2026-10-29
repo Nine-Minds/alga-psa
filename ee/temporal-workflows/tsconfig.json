@@ -107,13 +107,15 @@
       "@alga-psa/authorization/*": ["../../packages/authorization/src/*"],
       "@alga-psa/licensing": ["../../packages/licensing/src/index.ts"],
       "@alga-psa/licensing/*": ["../../packages/licensing/src/*"],
+      "@alga-psa/co-managed": ["../../packages/co-managed/src/index.ts"],
+      "@alga-psa/co-managed/*": ["../../packages/co-managed/src/*"],
       "@alga-psa/validation": ["../../packages/validation/src/index.ts"],
       "@alga-psa/validation/*": ["../../packages/validation/src/*"]
     },
     "typeRoots": ["../../node_modules/@types", "./node_modules/@types"]
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/test-utils/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/test-utils/**/*", "src/__tests__/integration/**/*"],
   "ts-node": {
     "esm": true
   }

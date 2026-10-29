@@ -2,7 +2,7 @@ import type { CadenceOwner } from '@alga-psa/types';
 
 import { DEFAULT_RECURRING_AUTHORING_BILLING_TIMING } from './recurringAuthoringPolicy';
 import { resolveCadenceOwner } from './recurringTiming';
-import { resolveEffectiveBillingTiming } from './contractLineTimingRule';
+import { contractLineOwnStream } from './contractLineTimingRule';
 
 export type RecurringBillingTiming = 'arrears' | 'advance';
 
@@ -85,6 +85,10 @@ export function normalizeRecurringStorageForLineType<T extends NormalizableRecur
   const normalized = normalizeLiveRecurringStorage(row);
   return {
     ...normalized,
-    billing_timing: resolveEffectiveBillingTiming(lineType, normalized.billing_timing),
+    // The line's own stream owns the family/timing mapping for a line type.
+    billing_timing: contractLineOwnStream({
+      contract_line_type: lineType,
+      billing_timing: normalized.billing_timing,
+    }).duePosition,
   };
 }

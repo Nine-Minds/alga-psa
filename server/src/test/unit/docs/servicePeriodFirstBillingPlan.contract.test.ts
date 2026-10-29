@@ -164,6 +164,8 @@ const servicePeriodPostInventoryRefs = new Set([
   'server/src/test/unit/workflow-event-contracts/contracts/billing.ts',
   'server/src/test/integration/billing/billingProfileAttribution.integration.test.ts',
   'packages/billing/src/lib/billing/pricing/isPeriodAlreadyInvoiced.ts',
+  // alga-2026-0002684: cadence Prepaid Block reads the client-cadence billed recurring periods.
+  'shared/billingClients/billedClientCadenceRecurringPeriods.ts',
   'shared/billingClients/resolveFixedLineRate.ts',
   // alga-2026-0002499: contract-scoped client-cadence billed-boundary regression test.
   'server/src/test/unit/billing/clientCadenceContractBoundary.regeneration.test.ts',
@@ -200,6 +202,17 @@ const servicePeriodPostInventoryRefs = new Set([
   'server/src/test/unit/billing/prepaidBlockAcceptance.db.test.ts',
   'packages/billing/tests/prepaidBlockDueWork.db.test.ts',
   'packages/billing/tests/prepaidBlockInvoicing.db.test.ts',
+  // alga-2026-0002684: prepaid-block charge rules and compute (shared by the
+  // billing engine and the simulator) read issuance service-period bounds; the
+  // DB, migration and compute tests seed or assert them.
+  'packages/billing/src/lib/billing/chargeResolution/prepaidBlockRules.ts',
+  'packages/billing/src/lib/billing/compute/computePrepaidBlockCharges.ts',
+  'packages/billing/tests/prepaidBlockDeployFixes.db.test.ts',
+  'packages/billing/tests/prepaidBlockDuplicateGuard.db.test.ts',
+  'packages/client-portal/tests/clientHourBlocks.minorUnits.db.test.ts',
+  'server/migrations/__tests__/prepaidHoursContractsMigration.integration.test.ts',
+  'server/src/test/unit/billing/computeCadencePrepaidBlockCharges.test.ts',
+  'shared/billingClients/__tests__/recurringRunExecutionIdentity.prepaidBlockStream.test.ts',
   // Calendar month-end close and grouped zero-dollar claims added persisted
   // window readers and regression fixtures after the pass-0 snapshot.
   'packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts',

@@ -1948,6 +1948,7 @@
       "sourceAlreadyMerged": "Este cliente já foi mesclado em outro cliente.",
       "targetAlreadyMerged": "O cliente de destino foi ele próprio mesclado em outro cliente. Mescle naquele.",
       "sourceIsTenantDefault": "O registro da sua própria organização não pode ser mesclado em um cliente.",
+      "sourceHasCoManagement": "Este cliente tem um espaço de trabalho de TI cogerenciada. Cancele a configuração ou encerre a cogestão antes de mesclá-lo.",
       "parentLinkCycle": "Esse cliente está registrado como filho do que você está mesclando, então a mesclagem inverteria a hierarquia.",
       "invalidContractCutover": "Uma das datas de virada está fora da vigência do contrato correspondente."
     },

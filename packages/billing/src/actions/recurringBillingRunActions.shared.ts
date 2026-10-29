@@ -87,7 +87,7 @@ export function mapClientCadenceInvoiceCandidatesToRecurringRunTargets(
   ): string | null => {
     // Prepaid Block issuances never carry a billing cycle (see prepaidBlockDueWork.ts);
     // they must not veto the cycle shared by the window's other members.
-    const cycleMembers = candidate.members.filter((member) => member.chargeType !== 'PrepaidBlock');
+    const cycleMembers = candidate.members.filter((member) => member.chargeType !== 'PrepaidBlock' || Boolean(member.billingCycleId));
     const billingCycleIds = new Set(
       cycleMembers
         .map((member) => member.billingCycleId)

@@ -2011,7 +2011,9 @@
       "blockSummary": "{{hours}} horas por {{price}}",
       "expiresAfter_one": "expira após {{count}} mês",
       "expiresAfter_other": "expira após {{count}} meses",
-      "neverExpires": "nunca expira"
+      "neverExpires": "nunca expira",
+      "cadenceSummary": "{{hours}} h por período de faturação por {{price}}",
+      "overageRate": "excedente {{rate}}/h"
     }
   },
   "wizardTemplateLines": {
@@ -2313,7 +2315,8 @@
       "period": "Período: {{period}}"
     },
     "prepaid": {
-      "blockSummaryNeutral": "{{hours}} horas por {{price}} (na moeda do cliente)"
+      "blockSummaryNeutral": "{{hours}} horas por {{price}} (na moeda do cliente)",
+      "cadenceSummaryNeutral": "{{hours}} h por período de faturação por {{price}} (na moeda do cliente)"
     }
   },
   "templatePreview": {
@@ -2778,7 +2781,7 @@
     "done": "Concluído"
   },
   "sellHourBlockNote": {
-    "text": "Um pacote de horas do contrato fatura apenas o excedente. Para cobrar antecipadamente um bloco de horas, adicione uma linha de Bloco pré-pago a este contrato."
+    "text": "Uma bolsa de horas do contrato fatura apenas o excedente. Para cobrar um bloco de horas antecipadamente, adicione ao contrato uma linha de Bloco pré-pago e emita-a a cada período de faturação."
   },
   "review": {
     "saveTemplateRates": "Guardar estas tarifas em {{currency}} no modelo",
@@ -2960,7 +2963,17 @@
       "tier": "Fatura seguinte",
       "tierDraft": "Criar um rascunho para revisão",
       "tierAutoIssue": "Finalizar e enviar automaticamente",
-      "blockPriceNeutral": "Preço do bloco (na moeda do cliente)"
+      "blockPriceNeutral": "Preço do bloco (na moeda do cliente)",
+      "ratePerHour": "Equivale a {{rate}} por hora do bloco.",
+      "issueMode": "Emitir blocos",
+      "issueModeCadence": "Cada período de faturação",
+      "blockFeeInAdvance": "A linha é faturada em atraso; a taxa do bloco é faturada antecipadamente.",
+      "issueModeConsumption": "Quando o bloco atual se esgota ou expira",
+      "rolloverPeriods": "Horas não utilizadas",
+      "rolloverNone": "Expiram no fim do período",
+      "cadenceNote": "Faturado antecipadamente a cada período. As horas acima do bloco são faturadas à taxa horária da linha na fatura seguinte.",
+      "rolloverCarry_one": "Transitar {{count}} período",
+      "rolloverCarry_other": "Transitar {{count}} períodos"
     },
     "status": {
       "pending": "Pendente",

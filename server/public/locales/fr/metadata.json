@@ -519,6 +519,12 @@
     },
     "layout": {
       "defaultTitle": "Tableau de bord | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "Informatique cogérée"
+    },
+    "coManagement": {
+      "title": "Accès cogéré"
     }
   },
   "auth": {

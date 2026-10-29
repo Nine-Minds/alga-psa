@@ -40,7 +40,7 @@ const resolve = (engine: BillingEngine, contractLineType: string) =>
       contract_line_id: "cl-1",
       contract_line_type: contractLineType,
     },
-    timing: TIMING,
+    timings: { line: TIMING },
     timingSource: "derived",
     families: new Set(["fixed", "hourly", "usage", "product", "license"]),
   });
