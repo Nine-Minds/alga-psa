@@ -53,6 +53,26 @@
     "./sharedWorkRedaction": {
       "types": "./src/sharedWorkRedaction.ts",
       "import": "./src/sharedWorkRedaction.ts"
+    },
+    "./schedulingRegistration": {
+      "types": "./src/schedulingRegistration.ts",
+      "import": "./src/schedulingRegistration.ts"
+    },
+    "./appointmentMeetingCreation": {
+      "types": "./src/appointmentMeetingCreation.ts",
+      "import": "./src/appointmentMeetingCreation.ts"
+    },
+    "./meetingCreationOperation": {
+      "types": "./src/meetingCreationOperation.ts",
+      "import": "./src/meetingCreationOperation.ts"
+    },
+    "./meetingReconciliation": {
+      "types": "./src/meetingReconciliation.ts",
+      "import": "./src/meetingReconciliation.ts"
+    },
+    "./nativeScheduleMeetingSync": {
+      "types": "./src/nativeScheduleMeetingSync.ts",
+      "import": "./src/nativeScheduleMeetingSync.ts"
     }
   },
   "scripts": {

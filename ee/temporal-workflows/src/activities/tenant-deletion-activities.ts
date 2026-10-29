@@ -452,6 +452,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_managed_allocations',
   'co_managed_entitlements',
   'co_managed_provisioning_operations',
+  'co_managed_meeting_creation_operations',
   'co_management_relationship_events',
   'co_management_relationships',
 
