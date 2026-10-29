@@ -270,6 +270,17 @@ export interface TimeSourceRest {
   readonly sheets?: TimeSourceRestSurface;
 }
 
+/**
+ * AUTHORIZATION CONTRACT. Every hook runs BEFORE the native action's own
+ * `hasPermission` / ownership checks (those need native SQL, and the native
+ * path must stay at zero extra statements). Therefore a provider that answers
+ * `{ handled: true }` OWNS authorization for that call: it must authenticate
+ * the caller (`ctx.userId`, `ctx.tenant`), enforce its own RBAC and tenancy,
+ * and return an error value (never data) when the caller may not act. Only
+ * `{ handled: false }` hands the call back to the native body, which then
+ * performs its usual checks. A provider must never answer `handled: true` for
+ * time it does not own.
+ */
 export interface TimeSource {
   readonly kind: TimeSourceKind;
   /** Optional: only non-native sources implement REST-service delegation. */

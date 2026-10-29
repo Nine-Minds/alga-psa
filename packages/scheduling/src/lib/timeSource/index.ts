@@ -13,6 +13,10 @@
  *      that declared `servesCapability`.
  * The native fast path therefore costs 0 statements and 0 capability reads.
  *
+ * AUTHORIZATION: hooks run before the native permission checks, so a source
+ * answering `handled: true` owns authorization for that call (see the
+ * contract on `TimeSource`).
+ *
  * `delegateToTimeSource(ctx, call)` is what call sites use. It returns
  * `{ handled: false }` without invoking anything when the resolved source is
  * native, so the call site then runs today's body verbatim.
@@ -100,6 +104,7 @@ export async function resolveTimeSource(ctx: TimeSourceContext): Promise<TimeSou
  * (never calling `call`) when the time is native, so the caller falls through to
  * its own native body. A non-native source may itself answer `{ handled: false }`.
  */
+// A `handled: true` answer owns authorization for the call: native hasPermission has NOT run.
 export async function delegateToTimeSource<R extends { handled: boolean }>(
   ctx: TimeSourceContext,
   call: (source: TimeSource, ctx: TimeSourceContext) => Promise<R> | R,
@@ -114,6 +119,7 @@ export async function delegateToTimeSource<R extends { handled: boolean }>(
  * REST-service flavour of `delegateToTimeSource`: looks the method up by name on
  * the resolved source's `rest.<surface>`. Native (or an omitted method) is a miss.
  */
+// A `handled: true` answer owns authorization for the call: native hasPermission has NOT run.
 export async function delegateRest(
   ctx: TimeSourceContext,
   surface: 'entries' | 'sheets',
