@@ -1177,6 +1177,20 @@ async function readStatusIsClosed(
 }
 
 /**
+ * A co-managed collaborator is admitted to the master ticket, not to the
+ * bundle. Propagating its status would write rows on children the collaborator
+ * may never have been admitted to, so the whole edit is refused rather than
+ * silently narrowed to the visible children. Called before any child write on
+ * either propagation path. Native callers (including master closes and the
+ * auto-close engine) never set `collaborator`, so they are never refused.
+ */
+export function assertBundlePropagationAuthority(ctx: Pick<BundleStatusPropagationContext, 'collaborator'>): void {
+  if (ctx.collaborator) {
+    throw new Error('Shared bundle workflow edits require authority for every child ticket');
+  }
+}
+
+/**
  * One tenant-scoped read of the master's children, left-joining each child's
  * active propagation row from this master. "Child is closed" is read from the
  * denormalized `tickets.is_closed` column (the authoritative close state the
@@ -1405,6 +1419,7 @@ export async function propagateBundleMasterStatus(
     if (Object.keys(propagateFields).length === 0) {
       return { propagated: false, action: null, affectedChildIds: [] };
     }
+    assertBundlePropagationAuthority(ctx);
 
     const childRows = await tenantScopedTable(trx, 'tickets', ctx.tenant)
       .where({ master_ticket_id: masterId })
@@ -1504,6 +1519,8 @@ export async function propagateBundleMasterStatus(
     // activity row (a "children not updated" entry would be noise).
     return { propagated: false, action: crossesBoundary, affectedChildIds: [] };
   }
+
+  assertBundlePropagationAuthority(ctx);
 
   if (options.propagateToChildren === undefined) {
     const preview = await previewBundleStatusPropagation(trx, ctx.tenant, masterId, nextStatusId as string);

@@ -55,6 +55,8 @@ export interface BundleStatusPropagationContext {
   source?: string;
   /** The master ticket's status before this update was applied. */
   previousMasterStatusId: string | null;
+  /** A co-managed collaborator edit: admitted to the master ticket, never to its bundle. */
+  collaborator?: boolean;
 }
 
 export interface PropagateBundleMasterStatusOptions {

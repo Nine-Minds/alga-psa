@@ -37,3 +37,11 @@ export { retainCoManagedWorkSnapshot } from './workSnapshotEvidence';
 export { retainCoManagedHistoricalWorkEvidence } from './historicalWorkEvidence';
 export { hasCoManagedLocalPermission } from './localPermission';
 export { loadCoManagedLifecycleFacts, loadCoManagedStaffRoles, loadCoManagedGrantFacts, loadCoManagedHomeFacts } from './sharedWork';
+// L3b1: shared ticket handoff engine, Working queue and shared-ticket write path.
+export * from './ticketHandoffs';
+export * from './ticketQueue';
+export * from './ticketEditing';
+export * from './ticketAssignments';
+export * from './ticketBulkHandback';
+export * from './ticketCollaboration';
+export * from './sharedTicketDetails';

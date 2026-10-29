@@ -184,16 +184,20 @@ export async function listCoManagedCustomerTickets(db: Knex, actor: CoManagedSes
       // Every ticket on a board shares that board's scope row: read it once per board (shared lock), not once per ticket.
       const boards = await tenantDb(trx, customerTenant).table('co_management_board_scopes').where('relationship_id', relationshipId).forShare()
         .select('board_id', 'can_collaborate');
-      if (!boards.length) continue;
+      // L3b1: escalated tickets are explicit grants, readable in either mode and on boards with no scope row.
+      const explicit = new Map<string, { canCollaborate: boolean }>((await tenantDb(trx, customerTenant).table('co_management_ticket_work')
+        .where('relationship_id', relationshipId).whereNull('grant_revoked_at').whereNotNull('first_escalated_at').forShare()
+        .select('ticket_id', 'can_collaborate')).map((w: any) => [w.ticket_id, { canCollaborate: w.can_collaborate }]));
+      if (!boards.length && !explicit.size) continue;
       const scopeByBoard = new Map<string, { canCollaborate: boolean }>(boards.map((b: any) => [b.board_id, { canCollaborate: b.can_collaborate }]));
-      const rows = await ticketQuery(trx, customerTenant).whereIn('tickets.board_id', boards.map((b: any) => b.board_id)).forShare('tickets')
+      const rows = await ticketQuery(trx, customerTenant).where(scoped => scoped.whereIn('tickets.board_id', boards.map((b: any) => b.board_id))
+        .orWhereIn('tickets.ticket_id', [...explicit.keys()])).forShare('tickets')
         .orderBy('tickets.entered_at', 'desc').orderBy('tickets.ticket_id').limit((page + 1) * pageSize + 1).select(...TICKET_COLUMNS);
       const customer = await tenantDb(trx, customerTenant).table('tenants').first('client_name');
       for (const row of rows) {
         const resource: CoManagedSharedResource = { tenant: customerTenant, relationshipId, kind: 'ticket', id: row.ticket_id };
-        const scope = scopeByBoard.get(row.board_id);
-        if (!scope) continue;
-        const grant = { visibilityMode: mode, scope, explicit: null };
+        const scope = scopeByBoard.get(row.board_id) ?? null;
+        const grant = { visibilityMode: mode, scope, explicit: explicit.get(row.ticket_id) ?? null };
         if (!evaluateCoManagedAccess({ lifecycle: lifecycle.lifecycle, staff: { roles }, grant, home: home.facts }).read) continue;
         collected.push({ resource, customerName: customer?.client_name ?? '', entered: date(row.entered_at) ?? '',
           fields: visibleCoManagedFields(ticketSummaryCandidates(customerTenant, row), home.redactedFields.concat(lifecycle.relationship.redacted_fields ?? [])) });
