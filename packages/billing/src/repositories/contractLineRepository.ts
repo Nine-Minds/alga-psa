@@ -30,6 +30,7 @@ import {
   type TemplateAmountSlotKind,
 } from '@alga-psa/shared/billingClients/templateAmounts';
 import { resolveClonedRate } from '../lib/billing/pricing/resolveFixedLineRate';
+import { fixedMemberRateProvenance, resolveFixedMemberRatePair } from '@alga-psa/shared/billingClients/fixedMemberRate';
 
 export type DetailedContractLine = IContractLineMapping & {
   contract_line_name?: string;
@@ -862,15 +863,20 @@ export async function cloneTemplateLineToContract(
       });
 
       if (configurationType === 'Fixed') {
+        const pricingBasis = serviceFixedByConfigId.get(templateConfiguration.config_id)?.pricing_basis === 'unit'
+          ? 'unit'
+          : 'bundle';
+        const rate = resolveFixedMemberRatePair({
+          base_rate: memberRate,
+          base_rate_basis: memberRateBasis,
+          pricing_basis: pricingBasis,
+        });
         await tenantScopedTable(trx, tenant, 'contract_line_service_fixed_config').insert({
           tenant,
           config_id: newConfigId,
-          base_rate: memberRate,
-          base_rate_basis: memberRate === null ? null : memberRateBasis,
-          rate_provenance: memberRate === null ? 'inherited' : 'custom',
-          pricing_basis: serviceFixedByConfigId.get(templateConfiguration.config_id)?.pricing_basis === 'unit'
-            ? 'unit'
-            : 'bundle',
+          ...rate,
+          rate_provenance: fixedMemberRateProvenance(rate),
+          pricing_basis: pricingBasis,
           created_at: now,
           updated_at: now,
         });

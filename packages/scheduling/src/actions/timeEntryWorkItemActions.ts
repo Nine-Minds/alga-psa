@@ -1,5 +1,6 @@
 'use server'
 
+import { delegateToTimeSource } from '../lib/timeSource';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { IWorkItem, IExtendedWorkItem } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -33,6 +34,9 @@ export const fetchWorkItemsForTimeSheet = withAuth(async (
   { tenant },
   timeSheetId: string
 ): Promise<IExtendedWorkItem[] | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.listWorkItems(ctx, timeSheetId));
+  if (delegated.handled) return delegated.value;
   try {
   const {knex: db} = await createTenantKnex();
   const scopedDb = tenantDb(db, tenant) as any;
@@ -196,6 +200,9 @@ export const addWorkItem = withAuth(async (
   { tenant },
   workItem: Omit<IWorkItem, 'tenant'>
 ): Promise<IWorkItem | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.addWorkItem(ctx, workItem));
+  if (delegated.handled) return delegated.value;
   try {
   const {knex: db} = await createTenantKnex();
   const scopedDb = tenantDb(db, tenant) as any;
@@ -241,6 +248,9 @@ export const deleteWorkItem = withAuth(async (
   { tenant },
   workItemId: string
 ): Promise<void | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.removeWorkItem(ctx, workItemId));
+  if (delegated.handled) return delegated.value;
   try {
   const {knex: db} = await createTenantKnex();
 

@@ -435,7 +435,8 @@
       "unnamed": "Kunde",
       "workspace": "Arbeitsbereich",
       "capacity": "{{allocated}} von {{count}} Co-Managed-Plätzen zugewiesen.",
-      "openClient": "Co-Managed IT für diesen Kunden einrichten"
+      "openClient": "Co-Managed IT für diesen Kunden einrichten",
+      "readOnly": "Co-Managed IT ist für diesen Arbeitsbereich schreibgeschützt. Bestehende Beziehungen werden angezeigt; eine neue Einrichtung ist nicht verfügbar."
     },
     "provisioning": {
       "administrator": "Administrator",
@@ -526,6 +527,35 @@
     "previewError": "Diese Änderung konnte nicht bepreist werden. Aktualisieren Sie und versuchen Sie es erneut.",
     "purchaseNeedsAdmin": "Ein Kontoadministrator muss Co-Managed-Kapazität hinzufügen.",
     "purchaseProviderUnconfigured": "Der Zahlungsanbieter ist nicht konfiguriert.",
-    "purchaseUnavailable": "Der Kauf von gehostetem Co-Managed ist in dieser Bereitstellung nicht verfügbar."
+    "purchaseUnavailable": "Der Kauf von gehostetem Co-Managed ist in dieser Bereitstellung nicht verfügbar.",
+    "history": {
+      "title": "Beziehungsverlauf",
+      "event": "Ereignis",
+      "revision": "Revision",
+      "when": "Wann",
+      "by": "Von",
+      "you": "Sie",
+      "provider": "Anbieter",
+      "empty": "Noch keine Beziehungsereignisse.",
+      "error": "Der Beziehungsverlauf konnte nicht geladen werden.",
+      "events": {
+        "requested": "Angefragt",
+        "prepared": "Arbeitsbereich vorbereitet",
+        "accepted": "Angenommen",
+        "declined": "Abgelehnt",
+        "terminated": "Beendet",
+        "staff_assignments_changed": "Mitarbeiterzuweisungen geändert",
+        "customer_scope_changed": "Kundenbereich geändert",
+        "delegation_granted": "Delegierung erteilt",
+        "delegation_revoked": "Delegierung widerrufen"
+      }
+    },
+    "workspace": {
+      "title": "Gemeinsam verwaltete IT",
+      "sponsor": "Verwaltet von",
+      "none": "Dieser Arbeitsbereich hat keine Co-managed-IT-Beziehung.",
+      "loading": "Wird geladen…",
+      "error": "Co-managed IT konnte nicht geladen werden."
+    }
   }
 }

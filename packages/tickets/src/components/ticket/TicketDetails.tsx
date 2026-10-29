@@ -99,8 +99,9 @@ import type { RecurringTicketSource } from '../../lib/recurring/types';
 import { buildCreateTicketHref } from '../../lib/createTicketRoute';
 import {
     setTicketWatchListOnAttributes,
-    type TicketWatchListEntry,
 } from '@shared/lib/tickets/watchList';
+import type { AddTicketWatcherInput } from '@shared/services/tickets/ticketWatcherService';
+import type { TicketWatchersResult } from '../../actions/ticketWatcherActions';
 import type {
     BundleMasterClosedContextActionResult,
     EligibleChildTicket
@@ -362,6 +363,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     } = dataSource.comments;
     const { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getClientLocations } = dataSource.people;
     const { addTicketResource, getTicketResources, removeTicketResource, assignTeamToTicket, removeTeamFromTicket, getTeamById, getTeams } = dataSource.resources;
+    const { addTicketWatchers, setTicketWatcherActive, removeTicketWatcher } = dataSource.watchers;
     const { checkTicketClosure, getTicketAutoCloseState } = dataSource.closeRules;
     const {
         previewBundleStatusPropagationAction, addChildrenToBundleAction, findTicketByNumberAction,
@@ -2608,21 +2610,34 @@ const handleClose = () => {
         }
     };
 
-    const handleUpdateWatchList = async (watchList: TicketWatchListEntry[]): Promise<boolean> => {
+    // Watcher writes go through TicketWatcherService-backed server actions; the
+    // whole `attributes` object is never rewritten from here. The returned list is
+    // applied to local display state only (the server already synced the mirror).
+    const runWatcherAction = async (
+        action: () => Promise<TicketWatchersResult | ActionMessageError | ActionPermissionError>
+    ): Promise<boolean> => {
         if (!ticket.ticket_id || isWatchListSaving) {
             return false;
         }
 
-            setIsWatchListSaving(true);
+        setIsWatchListSaving(true);
         try {
-            const updatedAttributes = setTicketWatchListOnAttributes(ticket.attributes, watchList);
-            const result = await updateTicketWithCache(ticket.ticket_id, {
-                attributes: updatedAttributes ?? null,
-            });
+            const result = await action();
             if (isReturnedActionError(result)) {
                 throw result;
             }
 
+            const updatedAttributes = setTicketWatchListOnAttributes(
+                ticket.attributes,
+                result.watchers.map((watcher) => ({
+                    email: watcher.email,
+                    active: watcher.active,
+                    name: watcher.name ?? undefined,
+                    entity_type: watcher.entity_type ?? undefined,
+                    entity_id: watcher.entity_id ?? undefined,
+                    source: watcher.source ?? undefined,
+                }))
+            );
             setTicket((prevTicket) => ({
                 ...prevTicket,
                 attributes: updatedAttributes ?? null,
@@ -2639,6 +2654,13 @@ const handleClose = () => {
             setIsWatchListSaving(false);
         }
     };
+
+    const handleAddWatchers = (inputs: AddTicketWatcherInput[]) =>
+        runWatcherAction(() => addTicketWatchers(ticket.ticket_id!, inputs));
+    const handleSetWatcherActive = (email: string, active: boolean) =>
+        runWatcherAction(() => setTicketWatcherActive(ticket.ticket_id!, email, active));
+    const handleRemoveWatcher = (email: string) =>
+        runWatcherAction(() => removeTicketWatcher(ticket.ticket_id!, email));
 
     const handleLoadAllContactsForWatchList = useCallback(async () => {
         if (allContactsForWatchListLoading || allContactsForWatchList.length > 0) {
@@ -4594,7 +4616,9 @@ const handleClose = () => {
                     team={team}
                     onAssignTeam={handleAssignTeam}
                     onRemoveTeamAssignment={handleRemoveTeamAssignment}
-                    onUpdateWatchList={handleUpdateWatchList}
+                    onAddWatchers={handleAddWatchers}
+                    onSetWatcherActive={handleSetWatcherActive}
+                    onRemoveWatcher={handleRemoveWatcher}
                     watchListSaving={isWatchListSaving}
                     contacts={contacts}
                     allContactsForWatchList={allContactsForWatchList}
@@ -4813,7 +4837,9 @@ const handleClose = () => {
                                 allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                 onTagsChange={capabilities.tags ? handleTagsChange : undefined}
                                 onItilFieldChange={handleItilFieldChange}
-                                onUpdateWatchList={handleUpdateWatchList}
+                                onAddWatchers={handleAddWatchers}
+                    onSetWatcherActive={handleSetWatcherActive}
+                    onRemoveWatcher={handleRemoveWatcher}
                                 watchListSaving={isWatchListSaving}
                                 allContactsForWatchList={allContactsForWatchList}
                                 allContactsForWatchListLoading={allContactsForWatchListLoading}

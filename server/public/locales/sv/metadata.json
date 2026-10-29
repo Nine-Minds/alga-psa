@@ -606,7 +606,10 @@
       "title": "Samhanterad IT"
     },
     "coManagement": {
-      "title": "Samhanterad åtkomst"
+      "title": "Samhanterad åtkomst",
+      "providers": {
+        "title": "E-post- och identitetsleverantörer"
+      }
     }
   },
   "share": {

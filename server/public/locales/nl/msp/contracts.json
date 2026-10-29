@@ -698,6 +698,13 @@
       "statusSuperseded": "Vervangen",
       "supersededHistory": "Vervangen openstaande wijzigingen ({{count}})",
       "supersededBy": "Vervangen door"
+    },
+    "pricing": {
+      "catalog": "catalogus",
+      "override": "overschreven",
+      "cost": "Kosten: {{cost}}",
+      "costInCurrency": "Kosten in {{currency}}: {{cost}}",
+      "margin": "Marge: {{margin}} per eenheid"
     }
   },
   "contractLineEdit": {
@@ -1972,7 +1979,10 @@
         "one": "{{count}} product",
         "other": "{{count}} producten"
       },
-      "overrideRate": "– overschrijven {{rate}}/{{currencyCode}}"
+      "overrideRate": "– overschrijven {{rate}}/{{currencyCode}}",
+      "cost": "Kosten: {{cost}}",
+      "costInCurrency": "Kosten in {{currency}}: {{cost}}",
+      "margin": "Marge: {{margin}} per eenheid"
     },
     "hourly": {
       "badgeCount": {

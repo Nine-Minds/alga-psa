@@ -5,8 +5,10 @@ import type { CoManagedClientManagementView, CoManagedClientRelationshipView } f
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { resolveClientRelationshipSummary } from '@/lib/co-managed/clientRelationshipSummary';
 import CoManagedClientSetup from './CoManagedClientSetup';
 import CoManagedClientRecovery from './CoManagedClientRecovery';
+import CoManagedRelationshipHistory from './CoManagedRelationshipHistory';
 
 /** Embeddable client-relationship sections: status/setup, capacity, access and
  * SLA, delegation, and history/departure. Detailed settings mount only while
@@ -33,6 +35,7 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
   // A cancelled setup stays listed as history and does not stop the client from
   // being set up again. A departed workspace's history is retained, so the client
   // shows that ended relationship instead of offering setup.
+  const phase = resolveClientRelationshipSummary(view);
   const hasLiveRelationship = view.relationships.some((entry) => !entry.ended);
   const hasRetainedRelationship = view.relationships.some((entry) => entry.retained);
   const endedOn = selected?.ended && selected.endedAt
@@ -48,15 +51,13 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
           <div>
             <p className="text-sm text-[rgb(var(--color-text-500))]">{t('coManaged.client.forClient', { defaultValue: 'Co-managed IT for {{name}}', name: clientName })}</p>
             <h3 className="text-lg font-semibold">
-              {selected
-                ? t(`coManaged.provisioning.states.${selected.state}`, { defaultValue: selected.state })
-                : view.inconsistent && !hasLiveRelationship
+              {phase.kind === 'live' || phase.kind === 'ended'
+                ? t(`coManaged.provisioning.states.${phase.relationship.state}`, { defaultValue: phase.relationship.state })
+                : phase.kind === 'attention'
                   ? t('coManaged.client.inconsistent', { defaultValue: 'Co-managed record needs attention' })
-                : view.selectionRequired
-                  ? (hasLiveRelationship
+                  : phase.kind === 'selection_required' && phase.multiple
                     ? t('coManaged.client.selectionRequired', { defaultValue: 'Select a co-managed relationship' })
-                    : t('coManaged.client.notEnabled', { defaultValue: 'Co-managed IT not enabled' }))
-                  : t('coManaged.client.notEnabled', { defaultValue: 'Co-managed IT not enabled' })}
+                    : t('coManaged.client.notEnabled', { defaultValue: 'Co-managed IT not enabled' })}
             </h3>
             {endedOn && <p id={`${idPrefix}-ended-on`} className="text-sm text-[rgb(var(--color-text-600))]">{endedOn}</p>}
             {!selected && view.inconsistent && !hasLiveRelationship && (
@@ -66,7 +67,7 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
             )}
           </div>
           <div className="flex items-end gap-2">
-            {(view.selectionRequired ? view.relationships.length > 0 : view.relationships.length > 1) && (
+            {(hasLiveRelationship || hasRetainedRelationship) && (view.selectionRequired ? view.relationships.length > 0 : view.relationships.length > 1) && (
               <div className="min-w-64">
                 <CustomSelect
                   id={`${idPrefix}-relationship`}
@@ -153,17 +154,9 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
         </Card>
       )}
 
-      {selected && selected.ended && (
-        <Card aria-labelledby={`${idPrefix}-history-title`}>
-          <CardHeader><CardTitle id={`${idPrefix}-history-title`}>
-            {t('coManaged.client.history', { defaultValue: 'Relationship history' })}
-          </CardTitle></CardHeader>
-          <CardContent>
-            <p className="text-sm text-[rgb(var(--color-text-600))]">
-              {t('coManaged.client.endedHint', { defaultValue: 'This relationship has ended. Retained history and archives remain available.' })}
-            </p>
-          </CardContent>
-        </Card>
+      {selected && (
+        <CoManagedRelationshipHistory idPrefix={`${idPrefix}-history`} clientId={clientId}
+          relationshipId={selected.relationshipId} />
       )}
     </div>
   );

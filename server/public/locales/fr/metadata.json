@@ -524,7 +524,10 @@
       "title": "Informatique cogérée"
     },
     "coManagement": {
-      "title": "Accès cogéré"
+      "title": "Accès cogéré",
+      "providers": {
+        "title": "Fournisseurs d'e-mail et d'identité"
+      }
     }
   },
   "auth": {

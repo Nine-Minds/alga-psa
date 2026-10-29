@@ -1,3 +1,4 @@
+import { delegateToTimeSource } from '@alga-psa/scheduling/lib/timeSource';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import { createClientContractLineCycles } from '@alga-psa/billing/lib/billing/createBillingCycles';
@@ -45,6 +46,18 @@ export type NextTimePeriodOutcome =
 export async function createNextTimePeriodForTenant(tenantId: string): Promise<NextTimePeriodOutcome> {
   return runWithTenant(tenantId, async () => {
     const tenantKnex = await getConnection(tenantId);
+    // Time-source seam: resolved once per tenant, not per period. A registered non-native source may
+    // own this tenant's materialization; native falls through untouched (0 statements).
+    const delegated = await delegateToTimeSource({ tenant: tenantId }, (source, ctx) =>
+      source.periods.materialize(ctx, tenantKnex, tenantId));
+    if (delegated.handled) {
+      const { settingsConfigured, period } = delegated.value;
+      if (!settingsConfigured) return { status: 'skipped', details: 'Skipped - no time period settings configured' };
+      return {
+        status: 'completed',
+        details: period ? `Created new time period ${period.start_date} to ${period.end_date}` : 'No new time period needed',
+      };
+    }
     // The settings are loaded from the tenant's own rows inside createNextTimePeriod;
     // this job cannot supply them.
     const { settingsConfigured, period: result } = await createNextTimePeriod(tenantKnex, tenantId);

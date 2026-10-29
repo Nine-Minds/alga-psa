@@ -135,6 +135,7 @@ const translate = (key: string, options?: Record<string, unknown>) => {
 };
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: translate }),
+  useOptionalI18n: () => null,
   useFormatters: () => ({
     formatCurrency: (amount: number, currencyCode: string) => `${currencyCode} ${amount.toFixed(2)}`,
     formatDate: (v: unknown) => String(v),

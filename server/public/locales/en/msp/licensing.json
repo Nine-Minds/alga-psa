@@ -435,7 +435,8 @@
       "unnamed": "Client",
       "workspace": "Workspace",
       "capacity": "{{allocated}} of {{count}} co-managed seats allocated.",
-      "openClient": "Set up co-managed IT for this client"
+      "openClient": "Set up co-managed IT for this client",
+      "readOnly": "Co-managed IT is read-only for this workspace. Existing relationships are shown; new setup is not available."
     },
     "provisioning": {
       "administrator": "Administrator",
@@ -526,6 +527,35 @@
     "previewError": "Could not price this change. Refresh and try again.",
     "purchaseNeedsAdmin": "An account administrator must add co-managed capacity.",
     "purchaseProviderUnconfigured": "The payment provider is not configured.",
-    "purchaseUnavailable": "Hosted co-managed purchasing is not available in this deployment."
+    "purchaseUnavailable": "Hosted co-managed purchasing is not available in this deployment.",
+    "history": {
+      "title": "Relationship history",
+      "event": "Event",
+      "revision": "Revision",
+      "when": "When",
+      "by": "By",
+      "you": "You",
+      "provider": "Provider",
+      "empty": "No relationship events yet.",
+      "error": "Relationship history could not be loaded.",
+      "events": {
+        "requested": "Requested",
+        "prepared": "Workspace prepared",
+        "accepted": "Accepted",
+        "declined": "Declined",
+        "terminated": "Ended",
+        "staff_assignments_changed": "Staff assignments changed",
+        "customer_scope_changed": "Customer scope changed",
+        "delegation_granted": "Delegation granted",
+        "delegation_revoked": "Delegation revoked"
+      }
+    },
+    "workspace": {
+      "title": "Co-managed IT",
+      "sponsor": "Managed by",
+      "none": "This workspace has no co-managed IT relationship.",
+      "loading": "Loading…",
+      "error": "Co-managed IT could not be loaded."
+    }
   }
 }

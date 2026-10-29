@@ -435,7 +435,8 @@
       "unnamed": "Cliente",
       "workspace": "Espacio de trabajo",
       "capacity": "{{allocated}} de {{count}} puestos cogestionados asignados.",
-      "openClient": "Configurar TI cogestionada para este cliente"
+      "openClient": "Configurar TI cogestionada para este cliente",
+      "readOnly": "La TI cogestionada es de solo lectura para este espacio de trabajo. Se muestran las relaciones existentes; la configuración nueva no está disponible."
     },
     "provisioning": {
       "administrator": "Administrador",
@@ -526,6 +527,35 @@
     "previewError": "No se pudo calcular el precio de este cambio. Actualice e inténtelo de nuevo.",
     "purchaseNeedsAdmin": "Un administrador de la cuenta debe añadir capacidad de cogestión.",
     "purchaseProviderUnconfigured": "El proveedor de pagos no está configurado.",
-    "purchaseUnavailable": "La compra de cogestión alojada no está disponible en esta implementación."
+    "purchaseUnavailable": "La compra de cogestión alojada no está disponible en esta implementación.",
+    "history": {
+      "title": "Historial de la relación",
+      "event": "Evento",
+      "revision": "Revisión",
+      "when": "Cuándo",
+      "by": "Por",
+      "you": "Usted",
+      "provider": "Proveedor",
+      "empty": "Aún no hay eventos de la relación.",
+      "error": "No se pudo cargar el historial de la relación.",
+      "events": {
+        "requested": "Solicitada",
+        "prepared": "Espacio de trabajo preparado",
+        "accepted": "Aceptada",
+        "declined": "Rechazada",
+        "terminated": "Finalizada",
+        "staff_assignments_changed": "Asignaciones de personal modificadas",
+        "customer_scope_changed": "Alcance del cliente modificado",
+        "delegation_granted": "Delegación concedida",
+        "delegation_revoked": "Delegación revocada"
+      }
+    },
+    "workspace": {
+      "title": "TI cogestionada",
+      "sponsor": "Gestionado por",
+      "none": "Este espacio de trabajo no tiene una relación de TI cogestionada.",
+      "loading": "Cargando…",
+      "error": "No se pudo cargar la TI cogestionada."
+    }
   }
 }

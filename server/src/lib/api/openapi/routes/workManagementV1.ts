@@ -1356,7 +1356,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'post', path: '/api/v1/tickets/{id}/agents',
     summary: 'Add a ticket additional agent',
-    description: 'Adds a user as an additional agent on the ticket and publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI unless suppressed. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.',
+    description: 'Internal staff only: adds a user as an additional agent on the ticket (external people, client contacts and bare emails go to POST /api/v1/tickets/{id}/watchers; a one-off comment copy uses comment cc/bcc). Publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI unless suppressed. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.',
     tags: [tag], security: [{ ApiKeyAuth: [] }],
     request: { params: IdParam, body: { schema: TicketAgentBody } },
     responses: {
@@ -1380,6 +1380,77 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       404: { description: 'Ticket or additional agent not found.', schema: ApiError },
       500: { description: 'Unexpected controller/service failure.', schema: ApiError },
     },
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  const TicketWatcherBody = registry.registerSchema(
+    'WorkV1TicketWatcherBody',
+    zOpenApi.object({
+      contact_id: zOpenApi.string().uuid().optional().describe('Client contact to watch; resolved to the contact email and name. Exactly one of contact_id, user_id, email.'),
+      user_id: zOpenApi.string().uuid().optional().describe('Internal user to watch; resolved to the user email and name. Exactly one of contact_id, user_id, email.'),
+      email: zOpenApi.string().email().optional().describe('Any bare email address (external mailbox). Exactly one of contact_id, user_id, email.'),
+      name: zOpenApi.string().min(1).max(255).optional().describe('Display name; only used when the watcher has no name yet.'),
+      active: zOpenApi.boolean().optional().describe('Whether the watcher receives updates; defaults to true.'),
+      silent: zOpenApi.boolean().optional().describe('Request-scoped, never stored. When true the write emits no customer or internal notification.'),
+    }),
+  );
+  const TicketWatcherActiveBody = registry.registerSchema(
+    'WorkV1TicketWatcherActiveBody',
+    zOpenApi.object({
+      email: zOpenApi.string().email().describe('Email of an existing watcher (case-insensitive).'),
+      active: zOpenApi.boolean().describe('true to resume updates, false to pause them without removing the watcher.'),
+      silent: zOpenApi.boolean().optional().describe('Request-scoped, never stored. Suppresses notifications for this change.'),
+    }),
+  );
+  const TicketWatcherRemoveQuery = registry.registerSchema(
+    'WorkV1TicketWatcherRemoveQuery',
+    zOpenApi.object({
+      email: zOpenApi.string().email().describe('Email of the watcher to remove (case-insensitive).'),
+      silent: zOpenApi.enum(['true', 'false']).optional().describe('Request-scoped. "true" suppresses notifications for this removal.'),
+    }),
+  );
+  const watcherNote = 'Watchers are persistent (contacts, users or any email) and are copied on ticket updates; they are distinct from additional agents (internal staff, /agents) and from a comment cc (one-off, never joins the watch list). Unless silent=true the write emits one TICKET_UPDATED event; silent=true sets suppressContactNotifications and suppressInternalNotifications on it. The response is the full watcher list: {email, name, active, entity_type, entity_id, source}.';
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/{id}/watchers',
+    summary: 'List ticket watchers',
+    description: `Returns everyone on the ticket watch list. ${watcherNote}`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: ticketStdResponses({ code: 200, description: 'Watcher list.' }),
+    extensions: ticketExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/{id}/watchers',
+    summary: 'Add a ticket watcher',
+    description: `Idempotent set-add of a watcher by exactly one of contact_id, user_id or email; an existing email is re-activated, not duplicated. An unknown or other-tenant contact/user, or one without an email, returns 422. ${watcherNote}`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: TicketWatcherBody } },
+    responses: {
+      ...ticketStdResponses({ code: 200, description: 'Watcher added (or already present); full list returned.' }),
+      422: { description: 'Contact or user not found in this tenant, or has no email.', schema: ApiError },
+    },
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'patch', path: '/api/v1/tickets/{id}/watchers',
+    summary: 'Pause or resume a ticket watcher',
+    description: `Sets active on an existing watcher identified by email; the watcher stays on the list. ${watcherNote}`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: TicketWatcherActiveBody } },
+    responses: ticketStdResponses({ code: 200, description: 'Watcher updated; full list returned.' }),
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete', path: '/api/v1/tickets/{id}/watchers',
+    summary: 'Remove a ticket watcher',
+    description: `Removes the watcher with the given ?email=. Returns 404 when that email is not a watcher. ${watcherNote}`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, query: TicketWatcherRemoveQuery },
+    responses: ticketStdResponses({ code: 200, description: 'Watcher removed; full list returned.' }),
     extensions: ticketExt('update'), edition: 'both',
   });
 

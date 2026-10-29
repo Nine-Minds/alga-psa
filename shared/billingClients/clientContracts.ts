@@ -35,7 +35,16 @@ const normalizeDateOnly = (value: unknown): string | undefined => {
   if (value === null || value === undefined) return undefined;
   if (value instanceof Date) {
     if (Number.isNaN(value.getTime())) return undefined;
-    return value.toISOString().slice(0, 10);
+    // client_contracts.start_date / end_date are pg DATE columns and pg has no DATE (1082)
+    // parser, so the driver yields a Date at *server-local* midnight. Local getters reverse
+    // that; toISOString() would read the UTC day and be a day early east of UTC.
+    // LEVERAGE: friction pg-date-parsing — DATE columns arrive as local-midnight Dates, so every reader
+    // re-derives the calendar date by hand (same site: formatDbDate in TimeSheetService). A global 1082
+    // parser returning strings would remove this; the string branch below already handles that shape.
+    const year = String(value.getFullYear()).padStart(4, '0');
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
   if (typeof value !== 'string') return undefined;
 
@@ -273,6 +282,13 @@ export const normalizeClientContract = (
 
   const normalizedEndDate = normalizeDateOnly(normalized.end_date);
   const normalizedStartDate = normalizeDateOnly(normalized.start_date);
+  // start_date / end_date are DATE columns: pg returns them as a Date at server-local midnight,
+  // and normalizeDateOnly reads that Date with local getters to emit YYYY-MM-DD, so every
+  // consumer sees one representation whatever the server time zone.
+  if (normalizedStartDate !== undefined) normalized.start_date = normalizedStartDate;
+  if (normalizedEndDate !== undefined || normalized.end_date === null) {
+    normalized.end_date = normalizedEndDate ?? null;
+  }
   const effectiveNoticePeriodDays = normalizeNonNegativeInteger(normalized.effective_notice_period_days);
   const effectiveRenewalMode = normalizeRenewalMode(normalized.effective_renewal_mode);
   const isInactiveAssignment = normalized.is_active !== true;

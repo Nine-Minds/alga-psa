@@ -26,6 +26,7 @@ import {
   resolveQuoteDiscountConversionShares,
   summarizeContractSide,
 } from '../../../../billingClients/quoteConversionDiscounts';
+import { resolveFixedMemberRatePair } from '../../../../billingClients/fixedMemberRate';
 import { prepareQuoteTermsForDb } from '../../../../lib/quoteTerms';
 import { SharedNumberingService } from '../../../../services/numberingService';
 
@@ -1355,9 +1356,8 @@ async function convertQuoteToDraftContractRecords(
       fixedConfigRows.map(({ configId, item }) => ({
         tenant,
         config_id: configId,
-        base_rate: item.unit_price,
         // Stamp per_unit only; the quote-quantity defect on this path is out of scope.
-        base_rate_basis: 'per_unit',
+        ...resolveFixedMemberRatePair({ base_rate: item.unit_price, base_rate_basis: 'per_unit' }),
         created_at: nowIso,
         updated_at: nowIso,
       }))

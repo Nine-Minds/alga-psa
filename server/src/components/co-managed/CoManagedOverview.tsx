@@ -8,6 +8,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCapability } from '@alga-psa/ui/hooks';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { getCoManagedBillingState, getCoManagedClientOverviewAction } from '@/lib/actions/coManagedActions';
 
@@ -23,6 +24,9 @@ const PAGE_SIZE = 20;
  */
 export default function CoManagedOverview({ initialClientId }: { initialClientId?: string }) {
   const { t } = useTranslation('msp/licensing');
+  // Served shows what exists; the client record's co-managed tab (setup, seats)
+  // only exists for an admitted sponsor, so links into it are admit-only.
+  const { admitted } = useCapability('co-managed');
   const [capacity, setCapacity] = useState<Capacity | null>(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -46,9 +50,11 @@ export default function CoManagedOverview({ initialClientId }: { initialClientId
 
   const columns: ColumnDefinition<Row>[] = [
     { title: t('coManaged.overview.client', { defaultValue: 'Client' }), dataIndex: 'clientName', sortable: false,
-      render: (_value, row) => <Link id={`co-managed-overview-client-${row.operationId}`}
-        className="font-semibold text-[rgb(var(--color-primary-700))] hover:underline" href={hrefFor(row)}>
-        {row.clientName ?? t('coManaged.overview.unnamed', { defaultValue: 'Client' })}</Link> },
+      render: (_value, row) => admitted
+        ? <Link id={`co-managed-overview-client-${row.operationId}`}
+          className="font-semibold text-[rgb(var(--color-primary-700))] hover:underline" href={hrefFor(row)}>
+          {row.clientName ?? t('coManaged.overview.unnamed', { defaultValue: 'Client' })}</Link>
+        : <span className="font-semibold">{row.clientName ?? t('coManaged.overview.unnamed', { defaultValue: 'Client' })}</span> },
     { title: t('coManaged.overview.workspace', { defaultValue: 'Workspace' }), dataIndex: 'workspaceName', sortable: false,
       render: (value) => value ?? '—' },
     { title: t('coManaged.overview.status', { defaultValue: 'Status' }), dataIndex: 'state', sortable: false,
@@ -65,9 +71,9 @@ export default function CoManagedOverview({ initialClientId }: { initialClientId
           ? t('coManaged.client.seatUsage', { count: row.seats, used: row.usedSeats, defaultValue: '{{used}} of {{count}} technician seats' })
           : t('coManaged.client.seatAllocation', { count: row.seats, defaultValue: '{{count}} allocated technician seats' }) },
     { title: t('coManaged.overview.actions', { defaultValue: 'Actions' }), dataIndex: 'operationId', id: 'actions', sortable: false,
-      render: (_value, row) => <Button id={`co-managed-overview-manage-${row.operationId}`} variant="outline" size="sm" asChild>
+      render: (_value, row) => admitted ? <Button id={`co-managed-overview-manage-${row.operationId}`} variant="outline" size="sm" asChild>
         <Link href={hrefFor(row)}>{t('coManaged.client.viewDetails', { defaultValue: 'View details' })}</Link>
-      </Button> },
+      </Button> : null },
   ];
 
   return <div id="co-managed-overview" className="min-w-0 space-y-4">
@@ -75,11 +81,14 @@ export default function CoManagedOverview({ initialClientId }: { initialClientId
       <h1 className="text-3xl font-bold text-[rgb(var(--color-text-900))]">{t('coManaged.title')}</h1>
       <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">{t('coManaged.description')}</p>
     </header>
+    {!admitted && <p id="co-managed-overview-readonly" role="status" className="text-sm text-[rgb(var(--color-text-600))]">
+      {t('coManaged.overview.readOnly', { defaultValue: 'Co-managed IT is read-only for this workspace. Existing relationships are shown; new setup is not available.' })}
+    </p>}
     {capacity && <p id="co-managed-overview-capacity" role="status" className="text-sm text-[rgb(var(--color-text-600))]">
       {t('coManaged.overview.capacity', { allocated: capacity.allocated, count: capacity.capacity,
         defaultValue: '{{allocated}} of {{count}} co-managed seats allocated.' })}
     </p>}
-    {initialClientId && <p>
+    {admitted && initialClientId && <p>
       <Link id="co-managed-overview-selected-client" className="text-primary underline"
         href={`/msp/clients/${encodeURIComponent(initialClientId)}?tab=co-managed`}>
         {t('coManaged.overview.openClient', { defaultValue: 'Set up co-managed IT for this client' })}
