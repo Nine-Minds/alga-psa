@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { TemplateAst } from '@alga-psa/types';
+import { LABEL_CLASSES, LABEL_HIDEABLE_FIELDS, type TemplateAst } from '@alga-psa/types';
 import {
   CUSTOM_PAGE_SIZE_UNITS,
   INVOICE_PRINT_MARGIN_MM_RANGE,
@@ -82,6 +82,10 @@ const styleDeclarationSchema = z.object({
   fontStyle: z.string().optional(),
   lineHeight: z.union([z.string(), z.number()]).optional(),
   textAlign: z.enum(['left', 'center', 'right', 'justify']).optional(),
+  // Table/text fitting: fixed layout lets column widths hold on the page, nowrap
+  // keeps numeric cells on one line, overflow-wrap lets long tokens break.
+  tableLayout: z.enum(['auto', 'fixed']).optional(),
+  whiteSpace: z.enum(['normal', 'nowrap', 'pre', 'pre-line', 'pre-wrap']).optional(),
   overflow: z.enum(['visible', 'hidden', 'clip']).optional(),
   overflowWrap: z.enum(['normal', 'break-word', 'anywhere']).optional(),
   breakInside: z.enum(['auto', 'avoid', 'avoid-page']).optional(),
@@ -562,6 +566,11 @@ export const templateAstSchema = z.object({
     locale: z.string().optional(),
     currencyCode: z.string().optional(),
     printSettings: printSettingsSchema.optional(),
+    // Optional and ignored outside `work-tag` documents (invoice / quote ASTs never carry them).
+    labelClass: z.enum(LABEL_CLASSES).optional(),
+    labelSettings: z.object({
+      hiddenFields: z.array(z.enum(LABEL_HIDEABLE_FIELDS)).optional(),
+    }).strict().optional(),
   }).strict().optional(),
   styles: z.object({
     tokens: z.record(cssIdentifierSchema, z.object({

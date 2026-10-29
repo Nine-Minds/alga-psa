@@ -18,6 +18,7 @@ import {
 } from '../lib/billing/billingProfileInvoiceScope';
 import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
 import { paymentMethodDisplayLabel } from '@alga-psa/shared/billingClients/paymentPreferences';
+import { prepaidBlockFeeDescription } from '../lib/billing/compute/prepaidBlockDescriptions';
 import { dueDateForPaymentTerms } from '../lib/billing/invoiceDueDate';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingConfig from '../models/projectBillingConfig';
@@ -57,7 +58,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { auditLog } from '@alga-psa/db';
 import { getClientDocumentLogoUrl } from '@alga-psa/formatting/avatarUtils';
-import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
+import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, describeTimeCharge, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
 import { previewAutomaticInvoiceDiscounts, reconcileAutomaticInvoiceAdjustments } from '../services/invoiceAutomaticAdjustments';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import {
@@ -274,11 +275,9 @@ function getChargeUnitPrice(charge: IBillingCharge): number {
  * Bucket-style description for a prepaid-hour-block informational line:
  * "Prepaid hour block (Svc) — 4.0 hrs consumed, 12.5 hrs remaining".
  */
-/** Overtime entries bill as two lines; the overtime segment says so. */
+/** Overtime segments and late (closed-period) time say so; see describeTimeCharge. */
 function timeChargeDescription(charge: IBillingCharge): string {
-  return isTimeBasedCharge(charge) && charge.timeSegment === 'overtime'
-    ? `${charge.serviceName} (overtime)`
-    : charge.serviceName;
+  return isTimeBasedCharge(charge) ? describeTimeCharge(charge) : charge.serviceName;
 }
 
 function formatHourBlockChargeDescription(charge: IHourBlockCharge): string {
@@ -287,8 +286,7 @@ function formatHourBlockChargeDescription(charge: IHourBlockCharge): string {
 }
 
 function formatPrepaidBlockChargeDescription(charge: IPrepaidBlockCharge): string {
-  const hourShortLabel = resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel;
-  return `Prepaid block (${charge.serviceName}) — ${charge.quantity.toFixed(2)} ${hourShortLabel}`;
+  return prepaidBlockFeeDescription({ name: charge.serviceName, hours: charge.quantity });
 }
 
 function normalizePreviewRecurringDetailPeriods(
@@ -1534,6 +1532,7 @@ async function normalizeRecurringSelectorInput(params: {
         ?? recurringServicePeriod.obligation_id,
       windowStart: normalizedWindowStart,
       windowEnd: normalizedWindowEnd,
+      chargeStream: params.selectorInput.executionWindow.chargeStream ?? null,
     });
   }
 
@@ -1669,6 +1668,11 @@ function getSelectedRecurringObligationIdFromSelectorInput(
   throw new Error('Recurring selector input execution window kind is not supported.');
 }
 
+/**
+ * Scopes the engine's selections to the selected obligations. Selections are
+ * keyed by line, then stream, so scoping by line keeps every stream of a
+ * selected line (a line is due when any of its streams is).
+ */
 function scopeRecurringTimingSelectionsForSelectorInputs(
   recurringTimingSelections: Record<string, unknown>,
   selectorInputs: IRecurringDueSelectionInput[],
@@ -2161,20 +2165,6 @@ async function calculateChargeDetails(
       : { taxAmount: 0, taxRate: 0 };
   }
   return { netAmount, taxCalculationResult };
-}
-
-// TODO: Move to billingAndTax.ts
-function getPaymentTermDays(paymentTerms: string): number {
-  switch (paymentTerms) {
-    case 'net_30':
-      return 30;
-    case 'net_15':
-      return 15;
-    case 'due_on_receipt':
-      return 0;
-    default:
-      return 30; // Default to 30 days if unknown payment term
-  }
 }
 
 // Adapter function to convert data to WasmInvoiceViewModel

@@ -30,8 +30,6 @@ jobs:
       full: ${{ steps.filter.outputs.full }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -165,7 +163,35 @@ jobs:
         run: npx --no-install playwright install --with-deps chromium
 
       - name: Install PDF comparison tools
-        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+        # poppler-utils provides pdftotext, a hard dependency of the invoice PDF
+        # integration tests. The runner image ships third-party apt sources we do
+        # not control: packages.microsoft.com has returned HTTP 403 for the Ubuntu
+        # InRelease file, `apt-get update` exits 100, and the job dies before
+        # running a single test. Only that failure mode is tolerated: the vendor
+        # source lists are dropped, and a remaining `apt-get update` failure is
+        # forgiven ONLY when every error line is an HTTP 403 fetch failure (or
+        # apt's own "index files failed" summary of it). Any other update error
+        # fails the step. The install itself is never tolerated failing, and
+        # pdftotext is verified afterwards, so a genuinely missing poppler still
+        # stops the job here instead of surfacing as an opaque test failure.
+        run: |
+          set -uo pipefail
+          sudo rm -f /etc/apt/sources.list.d/*microsoft* /etc/apt/sources.list.d/*azure-cli*
+          update_log="$(mktemp)"
+          if ! sudo apt-get update >"$update_log" 2>&1; then
+            cat "$update_log"
+            unexpected="$(grep -E '^E:' "$update_log" | grep -vE '403|Some index files failed to download' || true)"
+            if [ -n "$unexpected" ] || ! grep -qE '403' "$update_log"; then
+              echo "::error::apt-get update failed for a reason other than a third-party HTTP 403"
+              exit 1
+            fi
+            echo "::warning::apt-get update hit a third-party HTTP 403; continuing to the install, which must still succeed."
+          else
+            cat "$update_log"
+          fi
+          set -e
+          sudo apt-get install -y poppler-utils
+          pdftotext -v
 
       - name: Install locked collaboration server for integration tests
         run: npm ci --prefix hocuspocus --ignore-scripts

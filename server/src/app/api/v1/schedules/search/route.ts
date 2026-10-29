@@ -1,6 +1,6 @@
 /**
  * Schedule Search API Route
- * GET /api/v1/schedules/search - Search schedule entries
+ * GET /api/v1/schedules/search - Search schedule entries (start_date, end_date, user_id; paginated)
  */
 
 import { ApiTimeSheetController } from 'server/src/lib/api/controllers/ApiTimeSheetController';
@@ -10,7 +10,7 @@ const controller = new ApiTimeSheetController();
 
 export async function GET(request: Request) {
   try {
-    return await controller.list()(request as any);
+    return await controller.searchScheduleEntries()(request as any);
   } catch (error) {
     return handleApiError(error);
   }

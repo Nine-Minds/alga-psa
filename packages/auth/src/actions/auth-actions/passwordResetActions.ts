@@ -3,6 +3,7 @@
 import { createTenantKnex, runWithTenant, tenantDb } from '@alga-psa/db';
 import { PasswordResetService } from '@alga-psa/auth';
 import { hashPassword } from '@alga-psa/core/encryption';
+import { isInteractiveUserType } from '@alga-psa/types';
 
 import { recoverPassword } from '../useRegister';
 
@@ -45,8 +46,11 @@ export async function requestPasswordReset(
   email: string,
   userType: 'internal' | 'client' = 'internal'
 ): Promise<RequestResetResult> {
-  const portal = userType === 'client' ? 'client' : 'msp';
-  await recoverPassword(email, portal);
+  // Only interactive types map to a portal; anything else is a no-op with the same
+  // enumeration-safe result rather than being coerced to the MSP portal.
+  if (isInteractiveUserType(userType)) {
+    await recoverPassword(email, userType === 'client' ? 'client' : 'msp');
+  }
   return {
     success: true,
     message: 'If an account exists with this email, you will receive a password reset link shortly.'
@@ -106,6 +110,10 @@ export async function completePasswordReset(
 
     const tenantFromToken = verificationResult.tenant;
     const user = verificationResult.user;
+
+    if (!isInteractiveUserType(user.user_type)) {
+      return { success: false, message: 'Invalid or expired reset token', error: 'Invalid token' };
+    }
 
     // Run the password update in the token's tenant context
     const result = await runWithTenant(tenantFromToken, async () => {

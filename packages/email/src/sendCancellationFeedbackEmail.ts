@@ -90,10 +90,17 @@ ${data.reasonText}
 This email was automatically generated from the AlgaPSA subscription cancellation process.
   `.trim();
 
-  await emailService.sendEmail({
+  const result = await emailService.sendEmail({
     to: 'support@nineminds.com',
     subject,
     html: htmlBody,
     text: textBody,
   });
+
+  // Email services resolve { success: false } on provider failures instead of throwing.
+  if (result && result.success === false) {
+    throw new Error(
+      result.error ? `Failed to send cancellation feedback email: ${result.error}` : 'Failed to send cancellation feedback email'
+    );
+  }
 }

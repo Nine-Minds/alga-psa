@@ -96,7 +96,7 @@
     },
     "timing": {
       "advance": "Im voraus",
-      "arrears": "Im Rückstand"
+      "arrears": "Nachträglich"
     }
   },
   "po": {
@@ -616,6 +616,7 @@
       "quantityShort": "Menge: {{quantity}}",
       "quantityTaxAllocation": "Menge (für Steuerzuweisung)",
       "rateTaxAllocation": "Tarif (für Steuerzuweisung)",
+      "shareOfLineFee": "Anteil am Positionspreis",
       "title": "Dienste ({{count}})",
       "typeLabel": "{{type}}-Service",
       "unitOfMeasure": "Maßeinheit",
@@ -771,7 +772,7 @@
     },
     "fixedConfig": {
       "defaultBaseRate": "Standard-Grundtarif:",
-      "defaultRatePlaceholder": "Standard: ${{rate}}",
+      "defaultRatePlaceholder": "Standard: {{rate}}",
       "enterBaseRate": "Grundtarif eingeben",
       "leaveBlankDefault": "Leer lassen, um den Standardtarif zu verwenden",
       "notSet": "Nicht festgelegt",
@@ -779,7 +780,7 @@
       "title": "Festtarifkonfiguration"
     },
     "hourlyConfig": {
-      "defaultRate": "Standard: ${{rate}}",
+      "defaultRate": "Standard: {{rate}}",
       "hourlyRate": "Stundensatz",
       "minimumBillableMinutes": "Minimale abrechenbare Minuten",
       "roundUpToNearest": "Auf nächstes (Minuten) aufrunden",
@@ -805,7 +806,7 @@
     },
     "title": "Vertragslinien aus Vorlagenbausteinen hinzufügen",
     "usageConfig": {
-      "defaultRate": "Standard: ${{rate}}",
+      "defaultRate": "Standard: {{rate}}",
       "recordDrivenNote": "Nutzungsbasierte Dienste werden anhand des in der Verbrauchserfassung erfassten Verbrauchs je Leistungszeitraum abgerechnet. Ein Zeitraum ohne Verbrauchsdatensatz erzeugt keine Abrechnung — erfasse den Verbrauch (oder eine explizite Null) für jeden Zeitraum, um diese Dienste abzurechnen.",
       "ratePerUnit": "Tarif (pro Einheit)",
       "unitHint": "z. B. GB, API-Aufruf, Benutzer",
@@ -1290,9 +1291,7 @@
     },
     "loadingTemplate": "Vorlage wird geladen...",
     "servicesLabel": "Dienste",
-    "summary": {
-      "clientCurrency": "Währung des Kunden"
-    },
+    "summary": {},
     "templateBadge": "Vorlage",
     "templateNotFound": "Vertragsvorlage nicht gefunden",
     "templateSnapshotTitle": "Vorlagen-Snapshot",
@@ -1337,6 +1336,16 @@
       "hypothetical": "Hypothetisches Kundenprofil",
       "open": "Simulieren",
       "title": "Vorlagensimulation"
+    },
+    "pricing": {
+      "title": "Preise nach Währung",
+      "addCurrency": "Währung hinzufügen",
+      "removeCurrency": "Entfernen",
+      "missing": "{{count}} Betrag/Beträge fehlen",
+      "baseCurrency": "(Basis)",
+      "changeBaseCurrency": "Basiswährung ändern",
+      "changeBaseConfirm": "Basiswährung auf {{currency}} ändern? Bestehende Beträge werden NICHT umgerechnet: Sie behalten ihren Zahlenwert und werden als {{currency}} gelesen.",
+      "noSlots": "Diese Vorlage enthält noch keine Beträge, die bepreist werden müssen."
     },
     "discounts": {
       "title": "Standardvertragsrabatte",
@@ -1544,6 +1553,9 @@
       "confirm": "Bestätigen und fortfahren",
       "cancel": "Zurück"
     },
+    "templatePicker": {
+      "needsRates": "Benötigt {{currency}}-Preise"
+    },
     "discounts": {
       "help": "Vertragsweite Rabatte gelten für jede berechtigte Position, die dieser Vertrag berechnet. Sie werden mit dem Vertrag angelegt, sobald Sie die Einrichtung abschließen, und die Simulation unten berechnet sie mit.",
       "draftDialog": {
@@ -1673,7 +1685,8 @@
       "preview": {
         "billingCadenceLabel": "Abrechnungsrhythmus:",
         "notSpecified": "Nicht angegeben",
-        "templateLabel": "Vorlage:"
+        "templateLabel": "Vorlage:",
+        "currencyLabel": "Basiswährung:"
       },
       "selectTemplateOptional": "Vorlage auswählen (optional)",
       "startFromTemplate": "Aus Vorlage starten"
@@ -1731,10 +1744,6 @@
       "recurringQuantityLabel": "Wiederkehrende Menge",
       "allocationQuantityLabel": "Zuordnungsmenge",
       "noCurrencyPrice": "Kein Preis in {{currency}} im Katalog. Geben Sie einen Stückpreis ein."
-    },
-    "advanceSuggestion": {
-      "message": "Bei nachträglicher Abrechnung kann diese Position erst nach Ende ihres ersten Leistungszeitraums abgerechnet werden. Bei Abrechnung im Voraus nach dem Vertragsrhythmus wird sie stattdessen zum Startdatum abgerechnet.",
-      "action": "Im Voraus nach Vertragsrhythmus abrechnen"
     }
   },
   "wizardProducts": {
@@ -1985,7 +1994,7 @@
     },
     "total": {
       "title": "Geschätzte monatliche Summe",
-      "description": "Nur feste Gebühren. Stunden- und nutzungsbasierte Services werden separat basierend auf der tatsächlichen Nutzung abgerechnet.",
+      "description": "Produkte und feste Gebühren sind in dieser Summe enthalten. Stunden- und nutzungsbasierte Services werden nach tatsächlichem Aufwand abgerechnet.",
       "perMonth": "pro Monat",
       "savedDraftValue": "Gespeicherter Entwurfswert: {{amount}}"
     },
@@ -2002,7 +2011,9 @@
       "blockSummary": "{{hours}} Stunden für {{price}}",
       "expiresAfter_one": "läuft nach {{count}} Monat ab",
       "expiresAfter_other": "läuft nach {{count}} Monaten ab",
-      "neverExpires": "läuft nie ab"
+      "neverExpires": "läuft nie ab",
+      "cadenceSummary": "{{hours}} Std. je Abrechnungszeitraum für {{price}}",
+      "overageRate": "Mehrverbrauch {{rate}}/Std."
     }
   },
   "wizardTemplateLines": {
@@ -2025,8 +2036,15 @@
     "unitRate": "Tarif pro Einheit",
     "serviceRate": "Service-Tarif",
     "noCurrencyPrice": "Kein Preis in {{currency}} für diesen Service. Geben Sie einen Tarif ein, sonst kann der Vertrag nicht erstellt werden.",
-    "templateRateNote": "Aus der Vorlage (der Betrag ist nicht mit einer Währung gekennzeichnet).",
-    "reviewTitle": "Aus der Vorlage erstellte Linien"
+    "reviewTitle": "Aus der Vorlage erstellte Linien",
+    "fallbackAlert": "Diese Vorlage hat keine Preise in {{currency}}. Ihre Struktur wird kopiert; geben Sie unten Beträge in {{currency}} ein. Vorlagenbeträge dienen nur als Referenz und werden nicht umgerechnet.",
+    "templateReference": "Vorlage: {{amount}} {{currency}}",
+    "catalogPrice": "Katalogpreis",
+    "fromTemplateCurrency": "Aus der Vorlage ({{currency}})",
+    "fromTemplatePriceSet": "Aus den {{currency}}-Preisen der Vorlage",
+    "noCurrencyAmount": "Kein Betrag in {{currency}}. Geben Sie einen ein, sonst kann der Vertrag nicht erstellt werden.",
+    "overtimeRate": "Überstundentarif",
+    "bucketOverageRate": "Überschreitungstarif"
   },
   "templateWizard": {
     "title": {
@@ -2070,8 +2088,10 @@
           "usage": "Nutzung"
         }
       },
-      "recurringQuantityInvalid": "Die wiederkehrende Menge für „{{serviceName}}“ muss eine ganze Zahl ab null sein, und ein Stückpreis muss ein gültiger Betrag sein."
-    }
+      "recurringQuantityInvalid": "Die wiederkehrende Menge für „{{serviceName}}“ muss eine ganze Zahl ab null sein, und ein Stückpreis muss ein gültiger Betrag sein.",
+      "currencyRequired": "Die Basiswährung ist erforderlich"
+    },
+    "currency": "Basiswährung *"
   },
   "templateBasics": {
     "heading": "Vorlagengrundlagen",
@@ -2089,7 +2109,8 @@
     "help": {
       "templateName": "Verwenden Sie einen aussagekräftigen Namen, damit Teams die richtige Vorlage schnell identifizieren können.",
       "internalNotes": "Diese Notizen bleiben bei der Vorlage, um Kontext bereitzustellen, wenn Teammitglieder sie verwenden.",
-      "billingFrequency": "Legt den Standardrhythmus fest, wenn die Vorlage angewendet wird. Er kann pro Kunde angepasst werden."
+      "billingFrequency": "Legt den Standardrhythmus fest, wenn die Vorlage angewendet wird. Er kann pro Kunde angepasst werden.",
+      "currency": "Die in diesem Assistenten eingegebenen Tarife gelten in dieser Währung. Preise für weitere Währungen können anschließend in der Vorlage ergänzt werden. Beträge werden nie umgerechnet."
     }
   },
   "templateFixed": {
@@ -2224,7 +2245,7 @@
   },
   "templateReview": {
     "heading": "Vorlage überprüfen",
-    "description": "Bestätigen Sie den Vorlageninhalt. Die Tarife werden durch die Preisgestaltung jedes Services in der Währung des Kunden festgelegt, wenn ein Vertrag aus dieser Vorlage erstellt wird.",
+    "description": "Bestätigen Sie den Vorlageninhalt. Die Tarife werden in der Basiswährung der Vorlage gespeichert. Andere Währungen verwenden die Preissätze der Vorlage, oder Sie geben die Beträge ein, wenn Sie einen Vertrag erstellen.",
     "sections": {
       "basics": "Vorlagengrundlagen",
       "fixedFeeServices": "Festgebühren-Services",
@@ -2236,7 +2257,8 @@
     "fields": {
       "templateName": "Vorlagenname",
       "billingFrequency": "Abrechnungsfrequenz",
-      "internalNotes": "Interne Notizen"
+      "internalNotes": "Interne Notizen",
+      "baseCurrency": "Basiswährung"
     },
     "fallback": {
       "none": "—",
@@ -2272,8 +2294,7 @@
       "serviceLabel": "Dienst:",
       "invoiceWindowLabel": "Rechnungsfenster:",
       "unitRateLabel": "Stückpreis:",
-      "unitRateFromCatalog": "Katalogpreis in der Währung des Kunden",
-      "unitRateNeutral": "{{rate}} in der Währung des Kunden"
+      "unitRateFromCatalog": "Katalogpreis in der Währung des Kunden"
     },
     "hourly": {
       "minimumBillableTimeLabel": "Minimale abrechenbare Zeit:",
@@ -2287,14 +2308,15 @@
       "hoursIncluded": "{{value}} Stunden enthalten",
       "unitsIncluded": "{{value}} {{unit}} enthalten",
       "unitsFallback": "Einheiten",
-      "overage": "Überschreitung ${{amount}}/{{unit}}",
+      "overage": "Überschreitung {{amount}}/{{unit}}",
       "hourSingular": "Stunde",
       "unitSingular": "Einheit",
       "rolloverEnabled": "Übertrag aktiviert",
       "period": "Periode: {{period}}"
     },
     "prepaid": {
-      "blockSummaryNeutral": "{{hours}} Stunden für {{price}} (in der Währung des Kunden)"
+      "blockSummaryNeutral": "{{hours}} Stunden für {{price}} (in der Währung des Kunden)",
+      "cadenceSummaryNeutral": "{{hours}} Std. je Abrechnungszeitraum für {{price}} (in der Währung des Kunden)"
     }
   },
   "templatePreview": {
@@ -2404,6 +2426,22 @@
       "description": "Dieser Vertrag hat keine Vertragspositionen. Fügen Sie zuerst Vertragspositionen hinzu und kehren Sie dann zur Simulation zurück.",
       "title": "Noch nichts zu simulieren"
     },
+    "errors": {
+      "title": "Die Simulation kann nicht ausgeführt werden",
+      "baselineTitle": "Der aktuelle Vertrag kann nicht simuliert werden, daher gibt es nichts zum Vergleichen",
+      "unsupportedLineType": "Die Vertragsposition „{{lineName}}\" hat den Positionstyp „{{lineType}}\", den der Simulator nicht berechnen kann. Ändern Sie die Position auf Festpreis, Stundensatz oder Nutzung und simulieren Sie erneut.",
+      "unsupportedServiceConfiguration": "„{{serviceName}}\" in der Vertragsposition „{{lineName}}\" hat den Konfigurationstyp „{{configurationType}}\", den der Simulator nicht berechnen kann. Stellen Sie die Leistung auf Festpreis, Stundensatz, Nutzung oder Kontingent ein und simulieren Sie erneut.",
+      "serviceNotInCatalog": "Die Vertragsposition „{{lineName}}\" verwendet eine Leistung, die nicht mehr im Servicekatalog enthalten ist ({{serviceId}}). Entfernen Sie sie aus der Position oder stellen Sie die Leistung wieder her und simulieren Sie erneut.",
+      "poolMissing": "„{{serviceName}}\" in der Vertragsposition „{{lineName}}\" ist als Kontingent eingerichtet, hat aber keinen Pool mit inkludierten Stunden. Ergänzen Sie die inkludierten Stunden des Pools in der Vertragsposition und simulieren Sie erneut.",
+      "contractNotFound": "Dieser Vertrag ist nicht verfügbar. Möglicherweise wurde er gelöscht. Laden Sie die Seite neu.",
+      "clientNotAvailable": "Der Kunde für diese Simulation ist nicht verfügbar. Möglicherweise wurde er gelöscht. Wählen Sie einen anderen Kunden.",
+      "clientRequired": "Wählen Sie vor der Simulation einen Kunden aus.",
+      "historyRequiresClient": "Historische Annahmen benötigen ein Szenario, das an einen echten Kunden gebunden ist. Wählen Sie einen Kunden für diese Simulation und versuchen Sie es erneut.",
+      "invalidReplayRange": "Der Wiedergabezeitraum ist ungültig. Wählen Sie einen Zeitraum, der nach seinem Beginn endet und höchstens 120 Abrechnungszeiträume umfasst.",
+      "scenarioInvalid": "Dieses Szenario kann nicht simuliert werden, weil seine Einrichtung unvollständig ist. Laden Sie die Seite neu und versuchen Sie es erneut.",
+      "scenarioReferenceInvalid": "Dieses Szenario verweist auf etwas, das nicht mehr verfügbar ist, etwa eine Vertragsposition, Leistung, einen Steuersatz oder Kundenstandort. Laden Sie die Seite neu, um mit dem aktuellen Vertrag zu beginnen.",
+      "unexpected": "Der Simulator konnte wegen eines unerwarteten Fehlers nicht ausgeführt werden. Versuchen Sie es erneut. Wenn das Problem weiterhin besteht, wenden Sie sich an den Support."
+    },
     "explanation": {
       "amount": "Betrag",
       "close": "Schließen",
@@ -2450,6 +2488,7 @@
       "simulatedDelta": "simulierte Differenz"
     },
     "runBar": {
+      "blocked": "Simulation nicht möglich",
       "compareToggle": "Änderungen gegenüber aktuellem Vertrag anzeigen",
       "horizonOption": "{{count}} Kundenabrechnungszeiträume",
       "lastRun": "Simulation aktuell · {{count}} Kundenabrechnungszeiträume",
@@ -2458,6 +2497,7 @@
       "simulating": "Simulation läuft…",
       "stale": "Änderungen nicht simuliert",
       "staleBanner": "Diese Beträge stammen aus der vorherigen Simulation. Simulation aktualisieren, um die neuesten Änderungen einzubeziehen.",
+      "staleBlockedBanner": "Diese Meldung stammt aus der vorherigen Simulation. Aktualisieren Sie die Simulation, um Ihre letzten Änderungen zu berücksichtigen.",
       "updateSimulation": "Simulation aktualisieren"
     },
     "scenario": {
@@ -2492,7 +2532,7 @@
       "editDetails": "Regeln bearbeiten",
       "editDetailsFor": "Details für {{line}} bearbeiten",
       "fields": {
-        "adjustmentAmount": "Korrekturbetrag in Dollar",
+        "adjustmentAmount": "Korrekturbetrag",
         "adjustmentDescription": "Korrekturbeschreibung",
         "adjustmentPeriod": "Korrekturzeitraum",
         "billingFrequency": "Abrechnungsfrequenz",
@@ -2510,16 +2550,16 @@
         "lineType": "Linientyp",
         "minimumBillableMinutes": "Minimal abrechenbare Minuten",
         "minimumUsage": "Mindestnutzung",
-        "overtimeRate": "Überstundensatz ($/Std.)",
+        "overtimeRate": "Überstundensatz pro Stunde",
         "overtimeThreshold": "Überstundenschwelle (Stunden)",
         "roundUpMinutes": "Aufrunden auf Minuten",
         "scheduleEffectiveDate": "Preisplan gültig ab",
         "scheduleEndDate": "Preisplan-Enddatum",
-        "scheduleRate": "Preisplansatz in Dollar",
+        "scheduleRate": "Preisplansatz",
         "serviceQuantity": "Lizenz- oder Produktmenge",
         "tierMaximum": "Stufenmaximum",
         "tierMinimum": "Stufenminimum",
-        "tierRate": "Stufensatz in Dollar",
+        "tierRate": "Stufensatz",
         "usageUnit": "Nutzungseinheit"
       },
       "frequencies": {
@@ -2544,7 +2584,7 @@
       "placeholders": {
         "minimum": "Minimum",
         "minimumMinutes": "Mindestminuten",
-        "overtimeRate": "Überstunden $/Std.",
+        "overtimeRate": "Überstundensatz pro Stunde",
         "roundMinutes": "Minuten runden",
         "thresholdHours": "Schwellenstunden"
       },
@@ -2577,7 +2617,8 @@
         "value": "Wert",
         "appliesTo": "Gilt für",
         "description": "Beschreibung",
-        "amount": "Betrag ($)",
+        "amount": "Betrag",
+        "rate": "Satz",
         "billingPeriod": "Abrechnungszeitraum",
         "timing": "Zeitpunkt"
       },
@@ -2684,6 +2725,10 @@
       "duplicate": "Ein passender Datensatz des Vertragsassistenten existiert bereits.",
       "resumeUnsupportedShape": "Dieser Entwurf kann im Assistenten nicht fortgesetzt werden, ohne seine Preise zu ändern: {{lines}}",
       "fixedLineNoService": "Die feste Position „{{lineName}}\" hat einen wiederkehrenden Betrag, aber keinen Service, auf dem er abgerechnet werden kann. Fügen Sie vor dem Abschluss einen Service hinzu.",
+      "templateAmountsMissing": "Der Vertrag kann nicht in {{currency}} erstellt werden. Für folgende Beträge gibt es keinen Wert in {{currency}}: {{amounts}}. Geben Sie für jeden einen Betrag ein oder ergänzen Sie {{currency}}-Preise in der Vorlage.",
+      "currencyPricingMissing": "Der Vertrag kann nicht in {{currency}} erstellt werden. Für folgende Services ist kein Preis in {{currency}} hinterlegt: {{services}}.",
+      "invalidTemplateCurrency": "„{{currency}}“ ist kein gültiger ISO-4217-Währungscode",
+      "templateCurrencyHasPriceSet": "Diese Vorlage hat bereits eine Preisliste in {{currency}}. Löschen Sie sie, bevor {{currency}} die Basiswährung wird.",
       "standingTerms": "Dieser Entwurf enthält dauerhafte Rabattbedingungen. Bearbeiten Sie die Registerkarten Positionen und Rabatte, um diese Bedingungen beizubehalten."
     },
     "pricingSchedule": {
@@ -2724,7 +2769,8 @@
       "advance": "Im Voraus nach dem Vertragsrhythmus abgerechnet: Die erste Rechnung ist ab dem {{date}} verfügbar, dem Vertragsstart."
     },
     "client": {
-      "arrears": "Nachträglich nach dem Abrechnungsplan des Kunden abgerechnet: Die erste Rechnung ist am {{date}} verfügbar, wenn der aktuelle Abrechnungszeitraum des Kunden endet.",
+      "arrears": "Nachträglich nach dem Abrechnungsplan des Kunden abgerechnet: Die erste Rechnung ist am {{date}} verfügbar, wenn der Abrechnungszeitraum des Kunden, der das Startdatum enthält, endet.",
+      "arrearsPartial": "Nachträglich nach dem Abrechnungsplan des Kunden abgerechnet: Die erste Rechnung ist am {{date}} verfügbar, wenn der Abrechnungszeitraum des Kunden, der das Startdatum enthält, endet. Da das Startdatum mitten in diesem Zeitraum liegt, deckt sie {{periodStart}} – {{periodEnd}} ab.",
       "advance": "Im Voraus nach dem Abrechnungsplan des Kunden abgerechnet: Die erste Rechnung ist ab dem {{date}} verfügbar, dem Beginn des Abrechnungszeitraums des Kunden, der den Vertragsstart enthält."
     }
   },
@@ -2735,7 +2781,12 @@
     "done": "Fertig"
   },
   "sellHourBlockNote": {
-    "text": "Ein Vertrags-Stundenkontingent berechnet nur die Mehrverbrauchsstunden. Um einen Stundenblock im Voraus zu berechnen, fügen Sie diesem Vertrag eine Prepaid-Block-Linie hinzu."
+    "text": "Ein Vertrags-Stundenkontingent berechnet nur den Mehrverbrauch. Um einen Stundenblock im Voraus zu berechnen, fügen Sie dem Vertrag eine Prepaid-Block-Position hinzu und stellen Sie sie jeden Abrechnungszeitraum aus."
+  },
+  "review": {
+    "saveTemplateRates": "Diese {{currency}}-Preise in der Vorlage speichern",
+    "saveMissingTemplateRates": "Fehlende {{currency}}-Preise zur Vorlage hinzufügen",
+    "updateTemplateRates": "Die {{currency}}-Preise der Vorlage mit diesen Beträgen aktualisieren"
   },
   "billingTimingField": {
     "arrears": "Nachträglich",
@@ -2912,7 +2963,17 @@
       "tier": "Folgerechnung",
       "tierDraft": "Entwurf zur Prüfung erstellen",
       "tierAutoIssue": "Automatisch abschließen und senden",
-      "blockPriceNeutral": "Blockpreis (in der Währung des Kunden)"
+      "blockPriceNeutral": "Blockpreis (in der Währung des Kunden)",
+      "ratePerHour": "Entspricht {{rate}} pro Stunde des Blocks.",
+      "issueMode": "Blöcke ausstellen",
+      "issueModeCadence": "Jeden Abrechnungszeitraum",
+      "blockFeeInAdvance": "Die Position wird nachträglich abgerechnet; die Blockgebühr wird im Voraus berechnet.",
+      "issueModeConsumption": "Wenn der aktuelle Block aufgebraucht oder abgelaufen ist",
+      "rolloverPeriods": "Ungenutzte Stunden",
+      "rolloverNone": "Am Ende des Zeitraums verfallen",
+      "cadenceNote": "Im Voraus für jeden Zeitraum abgerechnet. Stunden über den Block hinaus werden mit dem Stundensatz der Position auf der nächsten Rechnung berechnet.",
+      "rolloverCarry_one": "{{count}} Zeitraum übertragen",
+      "rolloverCarry_other": "{{count}} Zeiträume übertragen"
     },
     "status": {
       "pending": "Ausstehend",
@@ -2937,5 +2998,9 @@
       "invalidBlock": "Vervollständigen Sie Blockgröße, Preis und Auslöser für jede Prepaid-Block-Position, bevor Sie abschließen.",
       "rateRequired": "Die Prepaid-Block-Leistung \"{{serviceName}}\" benötigt einen Stundensatz über null (Stunden über den Block hinaus werden zu diesem Satz abgerechnet)."
     }
+  },
+  "arrearsFirstInvoiceHint": {
+    "message": "Erste Rechnung: Die Rechnung vom {{invoiceDate}} deckt {{periodStart}} – {{periodEnd}} ab (nachträglich abgerechnet). Wählen Sie „Im Voraus“, um sie mit der Rechnung für den Zeitraum ab {{advanceInvoiceDate}} abzurechnen.",
+    "billInAdvance": "Im Voraus abrechnen"
   }
 }

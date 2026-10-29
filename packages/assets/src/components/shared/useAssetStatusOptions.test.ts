@@ -5,7 +5,8 @@ vi.mock('../../actions/assetStatusActions', () => ({
   listAssetStatuses: vi.fn(),
 }));
 
-const { buildAssetStatusOptions, resolveAssetStatusLabel } = await import('./useAssetStatusOptions');
+const { buildAssetStatusOptions } = await import('./useAssetStatusOptions');
+const { assetStatusLabel } = await import('../../lib/assetStatus');
 
 const t = (key: string, options?: Record<string, unknown>) => String(options?.defaultValue ?? key);
 
@@ -35,9 +36,9 @@ describe('buildAssetStatusOptions', () => {
     expect(options[1].label).toBe('In repair');
   });
 
-  it('falls back to the five builtins while the registry is loading', () => {
+  it('falls back to the six builtins while the registry is loading', () => {
     expect(buildAssetStatusOptions(null, t).map((option) => option.value))
-      .toEqual(['active', 'in_stock', 'maintenance', 'inactive', 'retired']);
+      .toEqual(['active', 'in_stock', 'maintenance', 'held_by_msp', 'inactive', 'retired']);
   });
 
   it('keeps an archived status the asset already carries selectable', () => {
@@ -76,32 +77,32 @@ describe('renamed builtins', () => {
   it('shows the tenant label instead of the shipped translation', () => {
     const translate = (key: string, options?: Record<string, unknown>) =>
       key === 'assetStatuses.active' ? 'Aktiv' : String(options?.defaultValue ?? key);
-    expect(resolveAssetStatusLabel(translate, 'active', [status({ slug: 'active', label: 'In service' })]))
+    expect(assetStatusLabel(translate, 'active', [status({ slug: 'active', label: 'In service' })]))
       .toBe('In service');
-    expect(resolveAssetStatusLabel(translate, 'active', [status({ slug: 'active', label: 'Active' })]))
+    expect(assetStatusLabel(translate, 'active', [status({ slug: 'active', label: 'Active' })]))
       .toBe('Aktiv');
   });
 });
 
 // T030: every surface that prints a bare slug reads it through this resolver,
 // so a custom status never shows as "in_repair".
-describe('resolveAssetStatusLabel', () => {
+describe('assetStatusLabel', () => {
   it('prefers the registry label for a custom status', () => {
-    const label = resolveAssetStatusLabel(t, 'in_repair', [
+    const label = assetStatusLabel(t, 'in_repair', [
       status({ slug: 'in_repair', label: 'Repair bench', kind: 'pending', is_builtin: false }),
     ]);
     expect(label).toBe('Repair bench');
   });
 
   it('humanizes a custom slug while the registry is still loading', () => {
-    expect(resolveAssetStatusLabel(t, 'in_repair', null)).toBe('In repair');
+    expect(assetStatusLabel(t, 'in_repair', null)).toBe('In repair');
   });
 
   it('keeps the builtin label for a builtin slug', () => {
-    expect(resolveAssetStatusLabel(t, 'in_stock', null)).toBe('In stock');
+    expect(assetStatusLabel(t, 'in_stock', null)).toBe('In stock');
   });
 
   it('renders nothing for an asset with no status', () => {
-    expect(resolveAssetStatusLabel(t, null, null)).toBe('');
+    expect(assetStatusLabel(t, null, null)).toBe('');
   });
 });

@@ -5,8 +5,10 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { gzipSync } from 'node:zlib';
+import { createHash } from 'node:crypto';
 import { findReusableBuild, orderSourceRuns } from '../lib/docker-archive-reuse.mjs';
 import { recordDockerArchiveBuild } from '../record-docker-archive-build.mjs';
+import { recordDockerRegistryBuild } from '../record-docker-registry-build.mjs';
 import { verifyDockerArchive, verifyLoadedDockerImage } from '../verify-docker-archive-build.mjs';
 
 const sourceRevision = 'b'.repeat(40), candidateRevision = 'c'.repeat(40);
@@ -77,4 +79,68 @@ test('different inputs, a different dockerfile, or tampered archive bytes all me
     assert.equal(existsSync(f.recordPath), false, `${name}: no candidate record is written`);
     assert.equal(existsSync(f.archivePath), false, `${name}: no archive is left behind`);
   }
+});
+
+async function registryFixture(t, { kindOfSource = 'registry' } = {}) {
+  const root = mkdtempSync(path.join(tmpdir(), 'registry-reuse-'));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const sourceDir = path.join(root, 'source');
+  execFileSync('mkdir', ['-p', sourceDir, path.join(root, 'out')]);
+  const manifest = Buffer.from(JSON.stringify({ schemaVersion: 2, mediaType: 'application/vnd.oci.image.manifest.v1+json',
+    config: { digest: id, size: 10 }, layers: [{ digest: `sha256:${'3'.repeat(64)}`, size: 20 }] }));
+  const manifestDigest = `sha256:${createHash('sha256').update(manifest).digest('hex')}`;
+  const base = { revision: sourceRevision, runId: '100', attempt: 1, service: 'redis', image: 'alga-e2e-test-redis:latest', dockerfile: 'redis/Dockerfile',
+    platform: 'linux/amd64', configImageId: id, buildReportedDigest: manifestDigest, metadata: { 'containerimage.config.digest': id, 'containerimage.digest': manifestDigest } };
+  const reference = 'ghcr.io/nine-minds/alga-psa/e2e-redis';
+  let source;
+  if (kindOfSource === 'registry') {
+    writeFileSync(path.join(sourceDir, 'manifest.json'), manifest);
+    source = await recordDockerRegistryBuild({ ...base, registry: { reference, tag: 'run-100-1-' + sourceRevision } }, path.join(sourceDir, 'manifest.json'), path.join(sourceDir, 'redis-build.json'));
+  } else {
+    writeFileSync(path.join(sourceDir, 'redis.tar.gz'), gzipSync(Buffer.alloc(2048)));
+    source = await recordDockerArchiveBuild({ ...base, buildReportedDigest: reported, metadata: { 'containerimage.config.digest': id, 'containerimage.digest': reported } }, path.join(sourceDir, 'redis.tar.gz'), path.join(sourceDir, 'redis-build.json'));
+  }
+  const zip = path.join(root, 'record.zip'); execFileSync('zip', ['-q', '-j', zip, path.join(sourceDir, 'redis-build.json')]);
+  const calls = [];
+  const api = {
+    listRuns: async () => [{ id: '100', headSha: sourceRevision, createdAt: '2026-10-28T10:00:00Z', status: 'completed' }],
+    listArtifacts: async () => [{ id: 'a1', name: 'fresh-install-build-record-redis', expired: false }],
+    downloadArtifact: async (artifactId, destination) => { calls.push(['download', artifactId]); execFileSync('cp', [zip, destination]); },
+  };
+  const hashes = { [sourceRevision]: { sha256: `sha256:${'e'.repeat(64)}`, files: 4 }, [candidateRevision]: { sha256: `sha256:${'e'.repeat(64)}`, files: 4 } };
+  const served = { [`${reference}@${manifestDigest}`]: manifest };
+  return { root, source, api, calls, hashes, manifest, manifestDigest, reference, served,
+    args: (extra = {}) => ({ api, inputsHash: revision => hashes[revision], ensureCommit: () => {}, service: 'redis', image: 'alga-e2e-test-redis:latest',
+      dockerfile: 'redis/Dockerfile', artifactName: 'fresh-install-image-redis', candidate, branches: ['main'],
+      archivePath: path.join(root, 'out', 'redis.tar.gz'), recordPath: path.join(root, 'out', 'redis-build.json'),
+      transport: 'registry', registryNamespace: 'ghcr.io/nine-minds/alga-psa',
+      inspectManifest: async (ref, digest) => { calls.push(['inspect', `${ref}@${digest}`]); const bytes = served[`${ref}@${digest}`]; if (!bytes) throw new Error('manifest unknown'); return bytes; }, ...extra }) };
+}
+
+test('on the registry transport a reused build re-records the manifest the registry still serves, moving no bytes', async (t) => {
+  const f = await registryFixture(t);
+  const result = await findReusableBuild(f.args());
+  assert.equal(result.reused, true, JSON.stringify(result));
+  const record = JSON.parse(readFileSync(path.join(f.root, 'out', 'redis-build.json'), 'utf8'));
+  assert.equal(record.kind, 'docker-registry-build');
+  assert.equal(record.revision, candidateRevision);
+  assert.deepEqual(record.registry, f.source.registry);
+  assert.equal(record.reuse.sourceRevision, sourceRevision);
+  assert.equal(record.reuse.inputs.sha256, `sha256:${'e'.repeat(64)}`);
+  assert.equal(existsSync(path.join(f.root, 'out', 'redis.tar.gz')), false, 'no archive is produced on the registry transport');
+  assert.deepEqual(f.calls, [['download', 'a1'], ['inspect', `${f.reference}@${f.manifestDigest}`]]);
+});
+
+test('registry reuse refuses a manifest the registry no longer serves, a foreign namespace, or a source on the other transport', async (t) => {
+  const gone = await registryFixture(t);
+  delete gone.served[`${gone.reference}@${gone.manifestDigest}`];
+  assert.equal((await findReusableBuild(gone.args())).reused, false);
+  assert.equal(existsSync(path.join(gone.root, 'out', 'redis-build.json')), false);
+  const foreign = await registryFixture(t);
+  assert.equal((await findReusableBuild(foreign.args({ registryNamespace: 'ghcr.io/someone-else/alga-psa' }))).reused, false);
+  const archiveSource = await registryFixture(t, { kindOfSource: 'artifact' });
+  const result = await findReusableBuild(archiveSource.args());
+  assert.equal(result.reused, false);
+  assert.equal(archiveSource.calls.filter(c => c[0] === 'inspect').length, 0, 'a source built for the artifact transport is skipped before any registry inspection');
+  await assert.rejects(findReusableBuild(archiveSource.args({ transport: 'carrier-pigeon' })), /Unknown image transport/);
 });

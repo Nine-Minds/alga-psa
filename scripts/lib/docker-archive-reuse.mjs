@@ -1,16 +1,21 @@
-// Find an earlier run whose build of this image had identical inputs, fetch
-// its archive, verify it against that run's own record, and re-issue the
-// record for the candidate with the reuse proof attached. Every step that
-// cannot be verified returns "build it" rather than trusting anything.
-import { createWriteStream, mkdtempSync, readFileSync, renameSync, rmSync } from 'node:fs';
+// Find an earlier run whose build of this image had identical inputs and
+// re-issue its record for the candidate with the reuse proof attached. On the
+// artifact transport the archive is fetched and verified against its own
+// record; on the registry transport the manifest the registry still serves is
+// verified against the record and no bytes move. Sources on the other
+// transport are skipped. Every step that cannot be verified returns "build it".
+import { createWriteStream, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { verifyBuildRecord, verifyDockerArchive } from '../verify-docker-archive-build.mjs';
+import { verifyBuildRecord, verifyDockerArchive, verifyRegistryManifest, verifyRegistryRecord } from '../verify-docker-archive-build.mjs';
 import { recordDockerArchiveBuild } from '../record-docker-archive-build.mjs';
+import { recordDockerRegistryBuild } from '../record-docker-registry-build.mjs';
 import { IMAGE_POLICY_PATH } from './image-inputs.mjs';
+
+export const TRANSPORT_KINDS = { artifact: 'docker-archive-build', registry: 'docker-registry-build' };
 
 const WORKFLOW = 'production-regression.yml';
 
@@ -54,7 +59,10 @@ export function orderSourceRuns(runsByBranch, currentRunId) {
 }
 
 export async function findReusableBuild({ api, inputsHash, ensureCommit, service, image, dockerfile, artifactName,
-  candidate, branches, archivePath, recordPath, log = () => {} }) {
+  candidate, branches, archivePath, recordPath, transport = 'artifact', inspectManifest, registryNamespace, log = () => {} }) {
+  const kind = TRANSPORT_KINDS[transport];
+  if (!kind) throw new Error(`Unknown image transport: ${transport}`);
+  if (transport === 'registry' && (typeof inspectManifest !== 'function' || !registryNamespace)) throw new Error('Registry reuse needs a manifest inspector and the candidate namespace');
   const candidateHash = inputsHash(candidate.revision);
   log(`inputs at candidate ${candidate.revision.slice(0, 10)}: ${candidateHash.sha256} over ${candidateHash.files} files`);
   const runs = orderSourceRuns(await Promise.all(branches.map(branch => api.listRuns(branch).catch(() => []))), candidate.runId);
@@ -66,7 +74,7 @@ export async function findReusableBuild({ api, inputsHash, ensureCommit, service
       try { artifacts = await api.listArtifacts(run.id); } catch (error) { reason(error.message); continue; }
       const recordArtifact = artifacts.find(a => a.name === `fresh-install-build-record-${service}` && !a.expired);
       const imageArtifact = artifacts.find(a => a.name === artifactName && !a.expired);
-      if (!recordArtifact || !imageArtifact) { reason('no unexpired record and image artifacts'); continue; }
+      if (!recordArtifact || (transport === 'artifact' && !imageArtifact)) { reason('no unexpired record and image artifacts'); continue; }
       const recordDir = path.join(work, `record-${run.id}`);
       let source;
       try {
@@ -75,26 +83,42 @@ export async function findReusableBuild({ api, inputsHash, ensureCommit, service
         source = JSON.parse(readFileSync(path.join(recordDir, `${service}-build.json`), 'utf8'));
         verifyBuildRecord(source, { revision: source.revision, runId: source.build?.runId, attempt: source.build?.attempt, service });
       } catch (error) { reason(`record unusable: ${error.message}`); continue; }
+      if (source.kind !== kind) { reason(`built for the ${source.kind === 'docker-registry-build' ? 'registry' : 'artifact'} transport`); continue; }
       if (source.image !== image || source.dockerfile !== dockerfile) { reason('image or dockerfile differs'); continue; }
       // A record that itself reused an older build carries the original build's revision.
       const original = source.reuse?.sourceRevision ?? source.revision;
       let sourceHash;
       try { ensureCommit(original); sourceHash = inputsHash(original); } catch (error) { reason(`cannot hash ${original.slice(0, 10)}: ${error.message}`); continue; }
       if (sourceHash.sha256 !== candidateHash.sha256) { reason(`inputs differ (${sourceHash.sha256.slice(7, 19)} vs ${candidateHash.sha256.slice(7, 19)})`); continue; }
-      const imageDir = path.join(work, `image-${run.id}`);
-      try {
-        await api.downloadArtifact(imageArtifact.id, `${imageDir}.zip`);
-        unzip(`${imageDir}.zip`, imageDir);
-        rmSync(`${imageDir}.zip`, { force: true });
-        const downloaded = path.join(imageDir, `${service}.tar.gz`);
-        await verifyDockerArchive(source, downloaded, { revision: source.revision, runId: source.build.runId, attempt: source.build.attempt, service });
-        renameSync(downloaded, archivePath);
-      } catch (error) { reason(`archive unusable: ${error.message}`); rmSync(archivePath, { force: true }); continue; }
       const reuse = { sourceRevision: original, sourceRunId: source.reuse?.sourceRunId ?? source.build.runId, sourceAttempt: source.reuse?.sourceAttempt ?? source.build.attempt,
         artifactRunId: run.id, inputs: { policy: IMAGE_POLICY_PATH, sha256: candidateHash.sha256, files: candidateHash.files } };
-      const record = await recordDockerArchiveBuild({ ...candidate, service, image: source.image, dockerfile: source.dockerfile, platform: source.platform,
-        configImageId: source.configImageId, buildReportedDigest: source.buildReportedDigest, metadata: source.metadata, reuse }, archivePath, recordPath);
-      log(`reusing ${service} built at ${original.slice(0, 10)} in run ${reuse.sourceRunId} (artifact from run ${run.id})`);
+      const identity = { ...candidate, service, image: source.image, dockerfile: source.dockerfile, platform: source.platform,
+        configImageId: source.configImageId, buildReportedDigest: source.buildReportedDigest, metadata: source.metadata, reuse };
+      let record;
+      if (transport === 'registry') {
+        // The registry must still serve the recorded manifest, under this repository's
+        // candidate namespace; the candidate cleanup removes old versions.
+        const manifestPath = path.join(work, `manifest-${run.id}.json`);
+        try {
+          const registry = verifyRegistryRecord(source, { registryNamespace });
+          const bytes = await inspectManifest(registry.reference, registry.manifestDigest);
+          verifyRegistryManifest(bytes, { manifestDigest: registry.manifestDigest, configImageId: source.configImageId });
+          writeFileSync(manifestPath, bytes);
+          record = await recordDockerRegistryBuild({ ...identity, registry: { reference: registry.reference, tag: registry.tag } }, manifestPath, recordPath);
+        } catch (error) { reason(`registry manifest unusable: ${error.message}`); rmSync(recordPath, { force: true }); continue; }
+      } else {
+        const imageDir = path.join(work, `image-${run.id}`);
+        try {
+          await api.downloadArtifact(imageArtifact.id, `${imageDir}.zip`);
+          unzip(`${imageDir}.zip`, imageDir);
+          rmSync(`${imageDir}.zip`, { force: true });
+          const downloaded = path.join(imageDir, `${service}.tar.gz`);
+          await verifyDockerArchive(source, downloaded, { revision: source.revision, runId: source.build.runId, attempt: source.build.attempt, service });
+          renameSync(downloaded, archivePath);
+        } catch (error) { reason(`archive unusable: ${error.message}`); rmSync(archivePath, { force: true }); continue; }
+        record = await recordDockerArchiveBuild(identity, archivePath, recordPath);
+      }
+      log(`reusing ${service} built at ${original.slice(0, 10)} in run ${reuse.sourceRunId} (${transport} record from run ${run.id})`);
       return { reused: true, record };
     }
     return { reused: false, reason: runs.length ? 'no earlier run had identical inputs and usable artifacts' : 'no earlier completed runs found' };

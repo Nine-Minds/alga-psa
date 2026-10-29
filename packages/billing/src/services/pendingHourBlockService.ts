@@ -20,6 +20,10 @@ export interface CreatePendingHourBlockForInvoiceChargeInput {
   contractLineId?: string | null;
   clientContractId?: string | null;
   issuanceId?: string | null;
+  /** Cadence blocks: the recurring_service_periods row (charge_family 'prepaid_block') that issued the block. */
+  servicePeriodRecordId?: string | null;
+  /** First day the block may be drawn (cadence blocks: service period start). Null = unbounded. */
+  validFrom?: string | Date | null;
   replenishmentBucketUsageId?: string | null;
   createdBy?: string | null;
   notes?: string | null;
@@ -60,6 +64,8 @@ export async function createPendingHourBlockForInvoiceCharge(
     contract_line_id: input.contractLineId ?? null,
     client_contract_id: input.clientContractId ?? null,
     issuance_id: input.issuanceId ?? null,
+    service_period_record_id: input.servicePeriodRecordId ?? null,
+    valid_from: toCalendarDateString(input.validFrom),
     created_by: input.createdBy ?? null,
     notes: input.notes?.trim() || null,
   });

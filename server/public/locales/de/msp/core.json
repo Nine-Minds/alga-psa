@@ -105,7 +105,11 @@
     "passwords": "Passwörter",
     "ticketsAll": "Alle Tickets",
     "ticketsRecurring": "Wiederkehrende Tickets",
-    "ticketsTemplates": "Ticket-Vorlagen"
+    "ticketsTemplates": "Ticket-Vorlagen",
+    "assetsCustody": "Equipment in Verwahrung",
+    "ticketsCannedResponses": "Textbausteine",
+    "profile": "Profil",
+    "signOut": "Abmelden"
   },
   "sidebar": {
     "backToMain": "Zurück zur Hauptansicht",
@@ -154,7 +158,8 @@
       "extensions": "Erweiterungen",
       "experimentalFeatures": "Experimentelle Funktionen",
       "profile": "Profil",
-      "security": "Sicherheit"
+      "security": "Sicherheit",
+      "tags": "Tags"
     }
   },
   "dashboard": {
@@ -843,5 +848,10 @@
     "errors": {
       "enterpriseOnly": "Chatfunktionen sind nur in der Enterprise Edition verfügbar"
     }
+  },
+  "coManagedWorkspace": {
+    "loading": "Arbeitsbereich wird geladen…",
+    "navigation": "Kundenarbeitsbereich",
+    "passwordError": "Der Passwortstatus konnte nicht geprüft werden. Bitte laden Sie diese Seite neu."
   }
 }

@@ -2243,8 +2243,11 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{from}} → {{to}}",
+      "RMA {{id}}",
       "API",
       "CSV",
+      "Datto RMM",
       "Excel",
       "HTML",
       "ID",

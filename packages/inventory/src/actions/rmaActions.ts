@@ -2,7 +2,7 @@
 
 import { buildInventoryRmaCreatedPayload } from '@alga-psa/shared/workflow/streams/domainEventBuilders/inventoryEventBuilders';
 import { Knex } from 'knex';
-import { withTransaction, createTenantKnex } from '@alga-psa/db';
+import { withTransaction, createTenantKnex, admitOperationalWrite } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IRmaCase, IStockUnit, RmaStatus } from '@alga-psa/types';
@@ -14,6 +14,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { publishInventoryEvent, recordStockMovement, timestampPayload } from '../lib';
 import { resolveTenantCurrency } from '../lib';
+import { rmaCaseQuery } from '../lib/rmaCaseQuery';
 
 /**
  * RMA / return-path lifecycle (design §6.G).
@@ -632,6 +633,7 @@ export const deployReplacement = withAuth(
 
       // Relink the existing asset to the replacement unit (carry live serial + MAC).
       if (rma.asset_id) {
+        await admitOperationalWrite(trx, tenant, 'assets', 'rma-relink-asset');
         await trx('assets')
           .where({ tenant, asset_id: rma.asset_id })
           .update({
@@ -801,41 +803,28 @@ export const listRmaCases = withAuth(
       await requireInvPerm(user, 'read');
       const { knex: db } = await createTenantKnex();
       return withTransaction(db, async (trx: Knex.Transaction) => {
-        const query = trx('rma_cases as r')
-          .leftJoin('clients as c', function () {
-            this.on('r.client_id', '=', 'c.client_id').andOn('r.tenant', '=', 'c.tenant');
-          })
-          .leftJoin('vendors as v', function () {
-            this.on('r.vendor_id', '=', 'v.vendor_id').andOn('r.tenant', '=', 'v.tenant');
-          })
-          .leftJoin('service_catalog as sc', function () {
-            this.on('r.service_id', '=', 'sc.service_id').andOn('r.tenant', '=', 'sc.tenant');
-          })
-          .leftJoin('stock_units as su', function () {
-            this.on('r.returned_unit_id', '=', 'su.unit_id').andOn('r.tenant', '=', 'su.tenant');
-          })
-          .where({ 'r.tenant': tenant })
-          .select(
-            'r.*',
-            'c.client_name',
-            'v.vendor_name',
-            'sc.service_name',
-            'sc.sku as service_sku',
-            'su.serial_number as returned_serial_number',
-            'su.mac_address as returned_mac_address',
-            'su.unit_cost as returned_unit_cost',
-            'su.cost_currency as returned_unit_cost_currency',
-            trx.raw(`CASE
-              WHEN r.status = 'sent_to_vendor' THEN GREATEST(
-                0,
-                FLOOR(EXTRACT(EPOCH FROM (now() - COALESCE(r.updated_at, r.opened_at, now()))) / 86400)
-              )::int
-              ELSE NULL
-            END as age_days`),
-          );
+        const query = rmaCaseQuery(trx, tenant);
         if (filter?.status) query.andWhere({ 'r.status': filter.status });
         if (filter?.rma_type) query.andWhere({ 'r.rma_type': filter.rma_type });
         return (await query.orderBy('r.opened_at', 'desc')) as IRmaCase[];
+      });
+    });
+  },
+);
+
+/**
+ * Read a single RMA case (same row shape as `listRmaCases`). Read-only: no row lock,
+ * no writes. Returns null for a missing or other-tenant id so callers can show one
+ * "not found or no access" state.
+ */
+export const getRmaCase = withAuth(
+  async (user, { tenant }, rmaId: string): Promise<IRmaCase | null | RmaActionError> => {
+    return withRmaActionErrors(async () => {
+      await requireInvPerm(user, 'read');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        const row = await rmaCaseQuery(trx, tenant).andWhere({ 'r.rma_id': rmaId }).first();
+        return (row as IRmaCase | undefined) ?? null;
       });
     });
   },

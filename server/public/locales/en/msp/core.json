@@ -105,7 +105,11 @@
     "extensions": "Extensions",
     "ticketsAll": "All Tickets",
     "ticketsRecurring": "Recurring Tickets",
-    "ticketsTemplates": "Ticket Templates"
+    "ticketsTemplates": "Ticket Templates",
+    "assetsCustody": "Equipment in custody",
+    "ticketsCannedResponses": "Canned Responses",
+    "profile": "Profile",
+    "signOut": "Sign out"
   },
   "marketing": {
     "dialogs": {
@@ -506,7 +510,8 @@
       "extensions": "Extensions",
       "experimentalFeatures": "Experimental Features",
       "profile": "Profile",
-      "security": "Security"
+      "security": "Security",
+      "tags": "Tags"
     }
   },
   "dashboard": {
@@ -843,5 +848,10 @@
     "errors": {
       "enterpriseOnly": "Chat features are only available in Enterprise Edition"
     }
+  },
+  "coManagedWorkspace": {
+    "loading": "Loading workspace…",
+    "navigation": "Customer workspace",
+    "passwordError": "Unable to check password status. Please reload this page."
   }
 }

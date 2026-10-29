@@ -123,7 +123,7 @@ test('failed archive receipt CLI removes stale receipt', async t => {
   assert.equal(result.status, 1); await assert.rejects(readFile(output), { code: 'ENOENT' });
 });
 
-test('a manifest with a reused component names the verified scope and the reused services', async t => {
+test('a manifest with a reused component keeps its transport identity and names the reused services', async t => {
   const f = await fixture(t, 'community');
   const source = 'b'.repeat(40);
   const redis = f.components.find(component => component.record.service === 'redis');
@@ -131,7 +131,8 @@ test('a manifest with a reused component names the verified scope and the reused
   redis.receipt = await createBrowserArchiveReceipt(redis.record, path.join(f.directory, 'redis.tar.gz'), f.expected);
   redis.inspection[0].Config.Labels['org.opencontainers.image.revision'] = source;
   const manifest = build(f);
-  assert.equal(manifest.scope, 'candidate-verified-archives');
+  assert.equal(manifest.kind, 'browser-ci-docker-archives', 'reuse does not change the transport identity');
+  assert.equal(manifest.scope, 'candidate-built-archives-only');
   assert.deepEqual(manifest.reused, ['redis']);
   assert.equal(manifest.components.find(component => component.record.service === 'redis').record.reuse.sourceRevision, source);
   assert.deepEqual(validateBrowserArtifactManifest(manifest, f.expected), manifest);

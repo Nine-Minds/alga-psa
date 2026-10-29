@@ -3,6 +3,7 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { checkPortalInvitationLimit, formatRateLimitError } from '@alga-psa/auth';
 import crypto from 'crypto';
 import { Knex } from 'knex';
+import { isCoManagedInvitationServed } from '../lib/coManagedInvitationCapability';
 
 export interface UserInvitation {
   invitation_id: string;
@@ -34,7 +35,7 @@ export interface UserTokenVerificationResult {
   };
   invitation?: UserInvitation;
   error?: string;
-  errorCode?: 'INVALID_OR_EXPIRED_TOKEN' | 'VERIFICATION_FAILED';
+  errorCode?: 'INVALID_OR_EXPIRED_TOKEN' | 'VERIFICATION_FAILED' | 'CAPABILITY_UNAVAILABLE';
 }
 
 const USER_INVITATION_TENANT_DISCOVERY = 'tenant-discovery';
@@ -143,11 +144,13 @@ export class UserInvitationService {
       const { knex } = await createTenantKnex();
 
       return await withTransaction(knex, async (trx) => {
+        // Discover the product in the same statement as the trusted tenant so
+        // ordinary PSA verification keeps its existing query budget.
         const tokenInfo = await tenantDb(trx, USER_INVITATION_TENANT_DISCOVERY)
           .unscoped('user_invitations', 'tenant discovery from user invitation token')
           .where({ token, used_at: null })
           .where('expires_at', '>', trx.fn.now())
-          .select('tenant')
+          .select('tenant', trx.raw('(SELECT product_code FROM tenants WHERE tenants.tenant = user_invitations.tenant) AS product_code'))
           .first();
 
         if (!tokenInfo) {
@@ -159,6 +162,13 @@ export class UserInvitationService {
         }
 
         const tokenTenant = tokenInfo.tenant;
+
+        // Verification is the browser's first invitation entry point. Gate it
+        // before exposing invitee details or mutating any invitation rows; both
+        // verification and password completion pass through this boundary.
+        if (tokenInfo.product_code === 'co_managed' && !await isCoManagedInvitationServed(tokenTenant)) {
+          return { valid: false, error: 'This feature is not available.', errorCode: 'CAPABILITY_UNAVAILABLE' };
+        }
 
         // Clean up expired tokens for this tenant (single-shard query)
         await tenantDb(trx, tokenTenant).table('user_invitations')

@@ -1,0 +1,15 @@
+ DEPRECATED  `test.poolOptions` was removed in Vitest 4. All previous `poolOptions` are now top-level options. Please, refer to the migration guide: https://vitest.dev/guide/migration#pool-rework
+
+ RUN  v4.1.11 /home/robert/alga-copies/feature-prepaid-hours-on-contracts-priced-block-in-advan/ee/server
+      Running tests with seed "1792949977314"
+
+🚀 Starting EE server test global setup...
+✅ EE server test environment configured
+
+ Test Files  15 passed (15)
+      Tests  66 passed (66)
+   Start at  13:39:37
+   Duration  2.68s (transform 6.54s, setup 1.37s, import 21.11s, tests 1.10s, environment 1.77s)
+
+🧹 EE server test global teardown complete
+simunit exit 0

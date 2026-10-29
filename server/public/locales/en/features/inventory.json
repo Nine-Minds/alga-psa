@@ -32,7 +32,8 @@
     "to": "To",
     "today": "Today",
     "total": "Total",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "recordUnavailable": "Not found, or you don't have access"
   },
   "counts": {
     "adjustments": "{{count}} adjustment(s)",
@@ -1305,6 +1306,18 @@
     "ageAtVendor": "{{days}}d at vendor",
     "filters": {
       "statusActive": "Showing {{status}} RMA cases."
+    },
+    "detail": {
+      "title": "RMA {{id}}",
+      "reference": "RMA reference",
+      "product": "Product",
+      "returnedSerial": "Returned unit serial",
+      "opened": "Opened",
+      "updated": "Updated",
+      "age": "Age (days)",
+      "reason": "Reason",
+      "viewUnit": "View unit",
+      "viewAsset": "View asset"
     }
   },
   "salesOrders": {
@@ -1564,6 +1577,10 @@
       "inProgress": "Rebuilding…"
     },
     "receive": {
+      "searchProducts": "Search products or SKU...",
+      "noProductsFound": "No products found",
+      "searchLocations": "Search locations...",
+      "noLocationsFound": "No locations found",
       "costNonNegative": "Unit cost can't be negative.",
       "failed": "Couldn't receive stock.",
       "inProgress": "Receiving…",
@@ -1698,6 +1715,12 @@
       "failed": "Couldn't restock the return.",
       "restocking": "Restocking…",
       "submit": "Restock"
+    },
+    "printLabel": "Print label",
+    "printWithTemplate": "Print with {{code}}",
+    "claimant": {
+      "project": "Project {{number}}",
+      "salesOrder": "Sales order {{number}}"
     }
   },
   "transfers": {

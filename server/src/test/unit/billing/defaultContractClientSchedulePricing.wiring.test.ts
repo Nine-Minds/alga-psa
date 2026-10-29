@@ -33,7 +33,7 @@ describe('system-managed default runtime billing routing and pricing wiring', ()
   });
 
   it('F076: ignores contract-authored service configuration pricing overrides for system-managed default lines', () => {
-    expect(timeComputeSource).toContain('if (serviceConfig && !isSystemManagedDefault) {');
+    expect(timeComputeSource).toContain('if (isSystemManagedDefault) return { minimumMinutes: 0, roundUpMinutes: 0, contractRate: undefined };');
     // Per-user-type override is still gated on !isSystemManagedDefault, but now reads as a const
     // assignment inside the time-rate resolution chain rather than a standalone if-statement.
     expect(timeComputeSource).toContain('!isSystemManagedDefault &&');

@@ -297,7 +297,7 @@
         "description": "Konfigurieren Sie erweiterte E-Mail-Verarbeitungsoptionen",
         "folderFiltersLabel": "Ordnerfilter",
         "folderFiltersPlaceholder": "Posteingang, Support, Benutzerdefinierter Ordner",
-        "folderFiltersHelp": "Durch Kommas getrennte Liste der zu überwachenden Ordner (Standard: Posteingang)",
+        "folderFiltersHelp": "Durch Kommas getrennte Liste der zu überwachenden Ordner (Standard: Posteingang). Verwenden Sie den genauen Ordnernamen wie in Outlook angezeigt und geben Sie verschachtelte Ordner als Posteingang/Unterordner an.",
         "maxEmailsPerSync": "Maximale E-Mails pro Synchronisierung"
       },
       "readiness": {

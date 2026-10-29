@@ -589,3 +589,173 @@ describe('bulk grid manual-entry opt-in', () => {
     expect(screen.queryByText('Enter the identifier exactly as it appears in your accounting system.')).toBeNull();
   });
 });
+
+describe('AccountingMappingModuleView bulk grid without a provider catalog', () => {
+  // QuickBooks CSV/Desktop and Xero CSV have no catalog to pick from, like the
+  // single-mapping dialog's free-text fallback.
+  const MP = 'qbcsv-service-mappings-bulk';
+  const manualModule = () =>
+    buildModule({
+      id: 'qbcsv-service-mappings',
+      adapterType: 'quickbooks_csv',
+      externalTarget: undefined,
+      manualExternalEntry: true,
+      labels: {
+        tab: 'Items / Services',
+        addButton: 'Add Service Mapping',
+        algaColumn: 'Alga Service',
+        externalColumn: 'QuickBooks Item',
+        dialog: { addTitle: 'Add', editTitle: 'Edit', algaField: 'Alga Service', externalField: 'QuickBooks Item' },
+        deleteConfirmation: { title: 'Delete', message: () => 'Delete?' }
+      }
+    } as Partial<AccountingMappingModule>);
+
+  beforeAll(() => {
+    if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};
+  });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    loadMock.mockResolvedValue({ ...loadResult([]), externalEntities: [] });
+  });
+  afterEach(() => cleanup());
+
+  async function openManualBulk() {
+    render(<AccountingMappingModuleView module={manualModule()} context={{ realmId: null }} />);
+    fireEvent.click(await screen.findByText('Bulk map'));
+    await screen.findByTestId(`${MP}-grid`);
+  }
+
+  it('renders a writable text field per row instead of an empty picker', async () => {
+    await openManualBulk();
+    const input = el(`${MP}-external-svc-host`);
+    expect(input.tagName).toBe('INPUT');
+    expect(input).toHaveAttribute('placeholder', 'Enter QuickBooks Item...');
+    expect(screen.getByText('Enter the identifier exactly as it appears in your accounting system.')).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: 'Web Hosting' } });
+    expect(el(`${MP}-external-svc-host`).value).toBe('Web Hosting');
+    expect(el(`${MP}-select-svc-host`)).toBeChecked();
+    expect(screen.getByTestId(`${MP}-count`)).toHaveTextContent('1 to save');
+  });
+
+  it('saves the typed values, trimmed, and skips blank or ignored rows', async () => {
+    createManyMock.mockImplementation(async (_ctx: unknown, inputs: any[]) =>
+      inputs.map((i) => ({ algaEntityId: i.algaEntityId, ok: true }))
+    );
+    await openManualBulk();
+    fireEvent.change(el(`${MP}-external-svc-host`), { target: { value: '  Web Hosting  ' } });
+    fireEvent.change(el(`${MP}-external-svc-backup`), { target: { value: 'Managed Backup' } });
+    fireEvent.change(el(`${MP}-external-svc-basic`), { target: { value: '   ' } });
+    fireEvent.click(el(`${MP}-ignore-svc-backup`));
+
+    await act(async () => {
+      fireEvent.click(saveAll());
+    });
+    await waitFor(() => expect(createManyMock).toHaveBeenCalledTimes(1));
+    expect(createManyMock.mock.calls[0][1]).toEqual([
+      expect.objectContaining({ algaEntityId: 'svc-host', externalEntityId: 'Web Hosting' })
+    ]);
+  });
+});
+
+describe('AccountingMappingModuleView bulk grid with metadata fields (QuickBooks Desktop)', () => {
+  const DP = 'quickbooks_desktop-service-mapping-bulk';
+  const desktopModule = () =>
+    buildModule({
+      id: 'quickbooks_desktop-service-mapping',
+      adapterType: 'quickbooks_desktop',
+      externalTarget: undefined,
+      manualExternalEntry: true,
+      createMany: undefined,
+      labels: {
+        tab: 'Items / Services',
+        addButton: 'Add mapping',
+        algaColumn: 'Items / Services',
+        externalColumn: 'Desktop income account name',
+        dialog: { addTitle: 'Add', editTitle: 'Edit', algaField: 'Items / Services', externalField: 'Desktop income account name' },
+        deleteConfirmation: { title: 'Delete', message: () => 'Delete?' }
+      },
+      metadata: { fields: [{ key: 'qbdItem', label: 'Desktop item name', required: true }] }
+    } as Partial<AccountingMappingModule>);
+
+  beforeAll(() => {
+    if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};
+  });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    const base = loadResult(['svc-mapped']);
+    loadMock.mockResolvedValue({
+      ...base,
+      mappings: base.mappings.map((m) => ({ ...m, external_entity_id: 'Services Income', metadata: { qbdItem: 'Done Item' } })),
+      externalEntities: []
+    });
+    createMock.mockResolvedValue({ id: 'new' });
+  });
+  afterEach(() => cleanup());
+
+  async function openDesktopBulk() {
+    render(<AccountingMappingModuleView module={desktopModule()} context={{ realmId: null }} />);
+    fireEvent.click(await screen.findByText('Bulk map'));
+    await screen.findByTestId(`${DP}-grid`);
+  }
+
+  it('shows writable account and item name columns, and saves a row only when both are filled', async () => {
+    await openDesktopBulk();
+    expect(screen.getByText('Desktop income account name')).toBeInTheDocument();
+    expect(screen.getByText('Desktop item name')).toBeInTheDocument();
+
+    fireEvent.change(el(`${DP}-external-svc-host`), { target: { value: 'Services Income' } });
+    expect(screen.getByTestId(`${DP}-status-svc-host`)).toHaveTextContent('Needs Desktop item name');
+    expect(screen.getByTestId(`${DP}-count`)).toHaveTextContent('0 to save');
+
+    fireEvent.change(el(`${DP}-field-qbdItem-svc-host`), { target: { value: '  Web Hosting  ' } });
+    expect(screen.getByTestId(`${DP}-status-svc-host`)).toHaveTextContent('Pending');
+    expect(screen.getByTestId(`${DP}-count`)).toHaveTextContent('1 to save');
+
+    await act(async () => {
+      fireEvent.click(saveAll());
+    });
+    await waitFor(() => expect(createMock).toHaveBeenCalledTimes(1));
+    expect(createMock.mock.calls[0][1]).toEqual(expect.objectContaining({
+      algaEntityId: 'svc-host',
+      externalEntityId: 'Services Income',
+      metadata: { qbdItem: 'Web Hosting' }
+    }));
+  });
+
+  it('shows the stored item name on mapped rows', async () => {
+    await openDesktopBulk();
+    fireEvent.click(document.getElementById(`${DP}-filter`)!);
+    fireEvent.click(await screen.findByText('All'));
+    expect(await screen.findByText('Done Item')).toBeInTheDocument();
+  });
+});
+
+describe('bulk grid manual-entry opt-in', () => {
+  beforeAll(() => {
+    if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};
+  });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    loadMock.mockResolvedValue({ ...loadResult([]), externalEntities: [] });
+  });
+  afterEach(() => cleanup());
+
+  it('only file-based modules that opt in type the target', () => {
+    expect(isManualEntryModule({ manualExternalEntry: true })).toBe(true);
+    expect(isManualEntryModule({})).toBe(false);
+    expect(isManualEntryModule({ manualExternalEntry: false })).toBe(false);
+    // A multi-catalog target kind always needs a catalog pick.
+    expect(isManualEntryModule({ manualExternalEntry: true, externalTarget: {} as never })).toBe(false);
+  });
+
+  it('keeps the catalog picker when a catalog-backed module returns an empty catalog', async () => {
+    const qboLike = buildModule({ id: 'qbo-live-service-mappings', adapterType: 'quickbooks_online', externalTarget: undefined } as Partial<AccountingMappingModule>);
+    render(<AccountingMappingModuleView module={qboLike} context={context} />);
+    fireEvent.click(await screen.findByText('Bulk map'));
+    await screen.findByTestId('qbo-live-service-mappings-bulk-grid');
+
+    expect(document.querySelector('input#qbo-live-service-mappings-bulk-external-svc-host')).toBeNull();
+    expect(screen.queryByText('Enter the identifier exactly as it appears in your accounting system.')).toBeNull();
+  });
+});

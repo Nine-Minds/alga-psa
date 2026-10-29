@@ -158,6 +158,7 @@ const maintenanceFrequencySchema = z.enum([
 
 const maintenanceTypeSchema = z.enum([
   'preventive',
+  'corrective',
   'inspection',
   'calibration',
   'replacement'

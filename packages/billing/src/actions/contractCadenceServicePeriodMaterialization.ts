@@ -21,8 +21,9 @@ import {
   isRecurringServicePeriodCandidateCovered,
 } from '@shared/billingClients/regenerateRecurringServicePeriods';
 import {
-  resolveEffectiveBillingTiming,
-  resolveRecurringChargeFamily,
+  contractLineRecurringStreams,
+  streamForChargeFamily,
+  type LineRecurringStream,
 } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 
 export { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME };
@@ -42,6 +43,8 @@ type ContractCadenceObligationRow = {
   /** Authored line bounds, intersected with the assignment below. */
   line_start_date?: unknown;
   line_end_date?: unknown;
+  /** contract_line_prepaid_blocks.issue_mode (null when the line has no block config). */
+  prepaid_block_issue_mode?: string | null;
 };
 
 // LEVERAGE: pattern recurring-period-row-mapping
@@ -324,14 +327,18 @@ async function persistRecurringServicePeriodRegeneration(
 
 async function retireFutureContractCadenceRowsForLine(
   trx: Knex.Transaction,
-  params: { tenant: string; contractLineId: string; retiredAt: string },
-) {
-  await tenantDb(trx, params.tenant).table('recurring_service_periods')
+  params: { tenant: string; contractLineId: string; retiredAt: string; chargeFamily?: RecurringChargeFamily },
+): Promise<number> {
+  const query = tenantDb(trx, params.tenant).table('recurring_service_periods')
     .where({
       tenant: params.tenant,
       obligation_id: params.contractLineId,
       cadence_owner: 'contract',
-    })
+    });
+  if (params.chargeFamily) {
+    query.where('charge_family', params.chargeFamily);
+  }
+  return query
     .whereNotIn('lifecycle_state', ['archived', 'superseded', 'billed'])
     .update({
       lifecycle_state: 'superseded',
@@ -347,6 +354,7 @@ async function loadContractCadenceObligations(
   const query = db.table('contract_lines as cl');
   db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'cl.contract_id');
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+  db.tenantJoin(query, 'contract_line_prepaid_blocks as pb', 'pb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
   // LEVERAGE: friction live-recurring-line-predicate — eligibility re-derived per reader; see whereLiveClientCadenceRecurringLine
   query
     .where('cc.is_active', true)
@@ -365,6 +373,7 @@ async function loadContractCadenceObligations(
       'cc.end_date as assignment_end_date',
       'cl.start_date as line_start_date',
       'cl.end_date as line_end_date',
+      'pb.issue_mode as prepaid_block_issue_mode',
     );
 
   if (params.contractId) {
@@ -432,11 +441,12 @@ function resolveFurthestServicePeriodEnd(
  */
 const MAX_CONTINUATION_SCAN_BATCHES = 500;
 
-async function syncContractCadenceObligation(
+async function syncContractCadenceStream(
   trx: Knex.Transaction,
   params: {
     tenant: string;
     obligation: ContractCadenceObligationRow;
+    stream: LineRecurringStream;
     sourceRunPrefix: string;
     /**
      * Run date for the rolling coverage horizon. Defaults to the wall clock.
@@ -493,10 +503,7 @@ async function syncContractCadenceObligation(
     return emptyObligationSyncResult(true);
   }
 
-  const duePosition: DuePosition = resolveEffectiveBillingTiming(
-    params.obligation.contract_line_type,
-    params.obligation.billing_timing,
-  );
+  const { family: lineChargeFamily, duePosition } = params.stream;
   const sourceRuleVersion = [
     'contract_cadence',
     `billing_cycle:${frequency}`,
@@ -504,10 +511,12 @@ async function syncContractCadenceObligation(
     `due:${duePosition}`,
   ].join('|');
   const sourceRunKey = `${params.sourceRunPrefix}:${params.obligation.contract_line_id}:${materializedAt}`;
-  const existingRecords = await loadExistingRecurringServicePeriodRecords(trx, {
+  // Each stream owns its own schedule; another stream's rows are neither
+  // coverage nor supersede candidates here.
+  const existingRecords = (await loadExistingRecurringServicePeriodRecords(trx, {
     tenant: params.tenant,
     contractLineId: params.obligation.contract_line_id,
-  });
+  })).filter((record) => streamForChargeFamily(record.sourceObligation.chargeFamily) === params.stream.stream);
   const billedBoundaryEnd = existingRecords
     .filter((record) => record.lifecycleState === 'billed' || record.invoiceLinkage != null)
     .map((record) => record.servicePeriod.end)
@@ -545,7 +554,7 @@ async function syncContractCadenceObligation(
     sourceObligation: {
       tenant: params.tenant,
       obligationId: params.obligation.contract_line_id,
-      chargeFamily: resolveRecurringChargeFamily(params.obligation.contract_line_type),
+      chargeFamily: lineChargeFamily,
     },
     duePosition,
     sourceRuleVersion,
@@ -713,6 +722,72 @@ async function syncContractCadenceObligation(
   };
 }
 
+/**
+ * Streams of a line come from contractLineRecurringStreams (the single source).
+ * Each stream is synchronized independently; a stream the line no longer has
+ * (a cadence block switched back to consumption) has its unbilled rows retired.
+ */
+async function syncContractCadenceObligation(
+  trx: Knex.Transaction,
+  params: {
+    tenant: string;
+    obligation: ContractCadenceObligationRow;
+    sourceRunPrefix: string;
+    asOf?: ISO8601String;
+  },
+): Promise<ContractCadenceObligationSyncResult> {
+  const streams = contractLineRecurringStreams(
+    params.obligation,
+    { issue_mode: params.obligation.prepaid_block_issue_mode ?? null },
+  );
+  const results: ContractCadenceObligationSyncResult[] = [];
+  for (const stream of streams) {
+    results.push(await syncContractCadenceStream(trx, { ...params, stream }));
+  }
+
+  if (!streams.some((entry) => entry.stream === 'prepaid_block')) {
+    const retired = await retireFutureContractCadenceRowsForLine(trx, {
+      tenant: params.tenant,
+      contractLineId: params.obligation.contract_line_id,
+      retiredAt: new Date().toISOString(),
+      chargeFamily: 'prepaid_block',
+    });
+    if (retired > 0) {
+      results.push({ ...emptyObligationSyncResult(true), periodsSuperseded: retired, meetsExpectedCoverage: true });
+    }
+  }
+
+  return mergeObligationSyncResults(results);
+}
+
+function mergeObligationSyncResults(
+  results: ContractCadenceObligationSyncResult[],
+): ContractCadenceObligationSyncResult {
+  const furthest = results
+    .map((result) => result.furthestServicePeriodEnd)
+    .filter((value): value is ISO8601String => value != null)
+    .sort(compareIsoDateOnly)
+    .at(-1) ?? null;
+  const expected = results
+    .map((result) => result.expectedCoverageEnd)
+    .filter((value): value is ISO8601String => value != null)
+    .sort(compareIsoDateOnly)
+    .at(-1) ?? null;
+  return {
+    changed: results.some((result) => result.changed),
+    periodsGenerated: results.reduce((sum, result) => sum + result.periodsGenerated, 0),
+    periodsRealigned: results.reduce((sum, result) => sum + result.periodsRealigned, 0),
+    periodsSuperseded: results.reduce((sum, result) => sum + result.periodsSuperseded, 0),
+    hitPeriodCap: results.some((result) => result.hitPeriodCap),
+    wasExhaustedBeforeRun: results.some((result) => result.wasExhaustedBeforeRun),
+    overrideConflicts: results.reduce((sum, result) => sum + result.overrideConflicts, 0),
+    furthestServicePeriodEnd: furthest,
+    expectedCoverageEnd: expected,
+    meetsExpectedCoverage: results.every((result) => result.meetsExpectedCoverage),
+    unresolvedGapCount: results.reduce((sum, result) => sum + result.unresolvedGapCount, 0),
+  };
+}
+
 async function loadEligibleContractCadenceObligationsForReplenishment(
   trx: Knex.Transaction,
   params: { tenant: string; asOf: ISO8601String },
@@ -722,6 +797,7 @@ async function loadEligibleContractCadenceObligationsForReplenishment(
   const query = db.table('contract_lines as cl');
   db.tenantJoin(query, 'client_contracts as cc', 'cc.contract_id', 'cl.contract_id');
   db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
+  db.tenantJoin(query, 'contract_line_prepaid_blocks as pb', 'pb.contract_line_id', 'cl.contract_line_id', { type: 'left' });
   whereLiveRecurringContractLine(query, { excludeSystemManagedDefault: true }, { cc: 'cc', ct: 'ct', cl: 'cl' });
   const rows = await query
     .where('cl.cadence_owner', 'contract')
@@ -747,6 +823,7 @@ async function loadEligibleContractCadenceObligationsForReplenishment(
       'cc.end_date as assignment_end_date',
       'cl.start_date as line_start_date',
       'cl.end_date as line_end_date',
+      'pb.issue_mode as prepaid_block_issue_mode',
     ) as ContractCadenceObligationRow[];
 
   // A contract assigned to more than one client produces duplicate line rows.

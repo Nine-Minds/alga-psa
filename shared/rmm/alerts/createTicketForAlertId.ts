@@ -67,10 +67,19 @@ export async function createTicketForAlertId(
   }
 
   const rawMetadata = typeof alert.metadata === 'string' ? safeParse(alert.metadata) : alert.metadata;
+  const metadataRecord =
+    rawMetadata && typeof rawMetadata === 'object' ? (rawMetadata as Record<string, unknown>) : null;
+  // Datto stores the raw alert, which names its site under alertSourceInfo
+  // rather than a top-level organizationId.
+  const datto = metadataRecord?.alertSourceInfo;
+  const dattoSiteUid =
+    datto && typeof datto === 'object' ? (datto as Record<string, unknown>).siteUid : null;
   const externalOrgId =
-    rawMetadata && typeof rawMetadata === 'object' && 'organizationId' in rawMetadata
-      ? String((rawMetadata as Record<string, unknown>).organizationId)
-      : null;
+    metadataRecord && 'organizationId' in metadataRecord
+      ? String(metadataRecord.organizationId)
+      : dattoSiteUid != null && String(dattoSiteUid).trim()
+        ? String(dattoSiteUid).trim()
+        : null;
   if (externalOrgId) {
     const orgMapping = await db.table('rmm_organization_mappings')
       .where({

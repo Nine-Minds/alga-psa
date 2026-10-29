@@ -206,7 +206,10 @@
             "title": "Attività del progetto"
           }
         },
-        "fallbackTitle": "Dettagli del progetto"
+        "fallbackTitle": "Dettagli del progetto",
+        "staging": {
+          "title": "Allestimento del progetto"
+        }
       },
       "templates": {
         "layout": {
@@ -284,6 +287,9 @@
       },
       "templates": {
         "title": "Modelli di ticket"
+      },
+      "cannedResponses": {
+        "title": "Risposte predefinite"
       }
     },
     "timeEntry": {
@@ -366,7 +372,10 @@
         },
         "fallbackTitle": "Dettagli asset"
       },
-      "title": "Asset"
+      "title": "Asset",
+      "custody": {
+        "title": "Apparecchiature in custodia"
+      }
     },
     "chat": {
       "title": "Chat"
@@ -510,6 +519,12 @@
     },
     "layout": {
       "defaultTitle": "Dashboard | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "IT cogestita"
+    },
+    "coManagement": {
+      "title": "Accesso cogestito"
     }
   },
   "auth": {
@@ -630,5 +645,8 @@
     "setupComplete": {
       "title": "Configurazione della carta"
     }
+  },
+  "pay": {
+    "title": "Paga fattura"
   }
 }

@@ -15,6 +15,24 @@ the build arguments, and the policy itself). `scripts/lib/image-inputs.mjs`
 hashes the git tree entries (mode, blob, path) of those inputs at a revision.
 Two revisions with the same hash for an image would build the same context.
 
+## Two transports
+
+Candidate images reach the browser job one of two ways, chosen by the
+workflow's `changes` job: a same-repository run pushes each image to the
+GitHub container registry under `ghcr.io/<repo>/e2e-<service>` and the
+consumer pulls it by manifest digest (`docker-registry-build` records); a
+fork's run exports a gzip archive artifact (`docker-archive-build` records).
+Reuse follows the transport of the current run and only considers earlier
+builds on the same transport:
+
+- **registry**: the earlier record's manifest must still be served by the
+  registry (`docker buildx imagetools inspect --raw`) under this repository's
+  candidate namespace and must match the record's digest and image config;
+  the candidate's record then points at that same manifest and no bytes move.
+  The daily candidate-image cleanup bounds how far back a match can reach.
+- **artifact**: the earlier run's archive artifact is downloaded and verified
+  against its record before it stands in for a build.
+
 ## The lookup
 
 `scripts/reuse-docker-archive-build.mjs` runs before each build:

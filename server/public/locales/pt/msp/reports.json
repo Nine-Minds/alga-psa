@@ -310,7 +310,9 @@
       "hourlyRate": "Tarifa / hora",
       "expirationDate": "Expira",
       "neverExpires": "Nunca",
-      "adhocBlock": "Avulso"
+      "adhocBlock": "Avulso",
+      "remainingValue": "Valor restante",
+      "validFrom": "Válido a partir de"
     },
     "statusValues": {
       "active": "Ativo",
@@ -318,7 +320,8 @@
       "yes": "Sim",
       "no": "Não",
       "expired": "Expirado",
-      "voided": "Cancelado"
+      "voided": "Cancelado",
+      "all": "Todos os status"
     },
     "profitability": {
       "formats": {

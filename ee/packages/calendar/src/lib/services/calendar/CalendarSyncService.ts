@@ -771,7 +771,11 @@ export class CalendarSyncService {
   }
 
   /**
-   * Delete a schedule entry and its external calendar event
+   * Delete a schedule entry and its external calendar event.
+   *
+   * WARNING: this deletes the Alga schedule_entries row as well as the provider event.
+   * Use it only for a genuine user-initiated delete. To detach one provider's copy
+   * (unassignment, archive) while keeping the Alga entry, use removeProviderCopy().
    * @param skipExternalDelete - If true, skip deleting from external calendar (use when external already deleted)
    */
   async deleteScheduleEntry(

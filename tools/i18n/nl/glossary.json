@@ -2218,6 +2218,9 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Stopwatch",
+      "{{from}} → {{to}}",
+      "RMA {{id}}",
       "({{count}} ticket)",
       "({{count}} tickets)",
       ",",
@@ -2286,6 +2289,7 @@
       "Dashboard | AlgaPSA",
       "date",
       "Datto",
+      "Datto RMM",
       "Deadline",
       "Debug",
       "December",
@@ -2448,6 +2452,7 @@
       "Shift",
       "short-text",
       "Simulator",
+      "Sites",
       "SKU",
       "SLA",
       "Slug",

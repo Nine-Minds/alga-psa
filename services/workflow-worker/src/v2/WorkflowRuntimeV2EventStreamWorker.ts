@@ -168,6 +168,39 @@ export class WorkflowRuntimeV2EventStreamWorker {
     await this.redis.close().catch(() => undefined);
   }
 
+  /**
+   * Source payload for the event, with `occurredAt` guaranteed whenever the envelope can supply it.
+   *
+   * Every catalogued workflow payload schema requires `occurredAt`, and a missing one makes the worker
+   * skip every matching workflow at payload validation (alga-2026-0002379). Producers are supposed to
+   * stamp it, but the consumer is the one place no publisher can bypass, so a missing/non-string value
+   * is filled from the envelope timestamp (never from the clock: the time must be the event's own).
+   * Without an envelope timestamp the payload is left alone so validation still fails loudly.
+   * Done once here, before schema resolution and mapping, so mapped payloads see it via `event.payload`.
+   */
+  private normalizeSourcePayload(event: {
+    event_id: string;
+    event_type: string;
+    tenant: string;
+    timestamp?: string;
+    payload?: unknown;
+  }): Record<string, unknown> {
+    // A string payload cannot reach here: the stream envelope schema (payload: record) rejects it.
+    const source = (event.payload && typeof event.payload === 'object' ? event.payload : {}) as Record<string, unknown>;
+    if (typeof source.occurredAt === 'string') return source;
+    if (typeof event.timestamp !== 'string' || event.timestamp.length === 0) return source;
+
+    logger.warn('[WorkflowRuntimeV2EventStreamWorker] Event payload had no occurredAt; defaulted from envelope timestamp', {
+      workerId: this.workerId,
+      eventId: event.event_id,
+      eventType: event.event_type,
+      tenant: event.tenant,
+      payloadKeys: Object.keys(source).sort(),
+      event: 'workflow_event_occurred_at_defaulted',
+    });
+    return { ...source, occurredAt: event.timestamp };
+  }
+
   private async processEvent(raw: unknown): Promise<void> {
     const event = WorkflowEventBaseSchema.parse(raw);
 
@@ -233,7 +266,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
       eventType: event.event_type,
     });
 
-    const payload = (event.payload && typeof event.payload === 'object' ? event.payload : {}) as Record<string, unknown>;
+    const payload = this.normalizeSourcePayload(event);
     const correlation = resolveWorkflowEventCorrelation({
       eventName: event.event_type,
       payload,
@@ -539,6 +572,9 @@ export class WorkflowRuntimeV2EventStreamWorker {
             issues,
             workflowPayloadSchemaRef,
             sourcePayloadSchemaRef: effectiveSourceSchemaRef,
+            // Lets a future reject be traced back to the emitting path.
+            eventId: event.event_id,
+            payloadKeys: Object.keys(payload).sort(),
           },
           errorMessageSection: 'validation',
         });

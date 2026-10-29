@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TICKET_LIST_SORT_KEYS } from '../lib/ticketListSort';
+import { ticketWhereSchema } from '../lib/ticketWhere';
 
 export const ticketFormSchema = z.object({
   title: z.string(),
@@ -147,7 +148,7 @@ export const ticketListItemSchema = baseTicketSchema.extend({
   latest_activity_at: z.string().nullable().optional(),
   latest_activity_actor: z
     .object({
-      kind: z.enum(['user', 'client_user', 'contact', 'email_sender', 'system']),
+      kind: z.enum(['user', 'client_user', 'service', 'contact', 'email_sender', 'system']),
       name: z.string().nullable(),
     })
     .nullable()
@@ -188,4 +189,5 @@ export const ticketListFiltersSchema = z.object({
   sortBy: z.enum(TICKET_LIST_SORT_KEYS).optional(),
   sortDirection: z.enum(['asc', 'desc']).optional(),
   bundleView: z.enum(['bundled', 'individual']).optional(),
+  where: ticketWhereSchema.optional(),
 });

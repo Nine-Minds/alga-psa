@@ -995,6 +995,40 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
       .toMatchObject({ billing_strategy: 'target_default' });
   }, HOOK_TIMEOUT);
 
+  it('re-stamps the autopay authorization of a moved profile onto the parent (edition-optional)', async () => {
+    // The autopay table exists only where the enterprise migrations ran. It hangs
+    // off the profile, which moves, so its redundant client_id has to follow.
+    // A CE database gets the real enterprise migration for the length of this
+    // case, so the re-stamp is exercised in every edition rather than skipped.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const autopayMigration = require('../../../../ee/server/migrations/20260926091000_create_autopay_tables.cjs');
+    const installedHere = !(await db.schema.hasTable('billing_profile_autopay'));
+    if (installedHere) await autopayMigration.up(db);
+    try {
+      const target = await seedClient('Autopay Group');
+      const source = await seedClient('Autopay North');
+      await ensureDefaultBillingProfile({ db, tenantId }, target);
+      await ensureDefaultBillingProfile({ db, tenantId }, source);
+      const profile = await table('client_billing_profiles').where({ client_id: source, is_default: true }).first();
+
+      await table('billing_profile_autopay').insert({
+        tenant: tenantId,
+        billing_profile_id: profile.billing_profile_id,
+        client_id: source,
+        is_enabled: false,
+      });
+
+      const result = await db.transaction((trx) =>
+        executeClientMerge(trx, tenantId, userId, { sourceClientId: source, targetClientId: target }));
+
+      expect(result.counts['autopay authorization']).toBe(1);
+      expect(await table('billing_profile_autopay').where({ billing_profile_id: profile.billing_profile_id }).first())
+        .toMatchObject({ client_id: target });
+    } finally {
+      if (installedHere) await autopayMigration.down(db);
+    }
+  }, HOOK_TIMEOUT);
+
   it('TM019: accounts for every client-keyed table in the schema', async () => {
     // A table nobody thought about does not fail loudly — its rows just stay on
     // the archived client, keeping a live write path aimed at a tombstone. The

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const findUserByEmailMock = vi.fn();
-const findUserByEmailAndTypeMock = vi.fn();
+const findUsersByEmailAndTypeMock = vi.fn();
 const findUserByEmailTenantAndTypeMock = vi.fn();
 
 vi.mock('@alga-psa/db/admin', () => ({
@@ -20,7 +20,7 @@ vi.mock('@alga-psa/db/admin', () => ({
 vi.mock('@alga-psa/db/models/user', () => ({
   default: {
     findUserByEmail: (...args: unknown[]) => findUserByEmailMock(...args),
-    findUserByEmailAndType: (...args: unknown[]) => findUserByEmailAndTypeMock(...args),
+    findUsersByEmailAndType: (...args: unknown[]) => findUsersByEmailAndTypeMock(...args),
     findUserByEmailTenantAndType: (...args: unknown[]) => findUserByEmailTenantAndTypeMock(...args),
   },
 }));
@@ -57,7 +57,7 @@ describe('OAuth profile mapping user boundaries', () => {
     expect(mapped.user_type).toBe('client');
     expect(mapped.tenant).toBe(tenantId);
     expect(findUserByEmailMock).not.toHaveBeenCalled();
-    expect(findUserByEmailAndTypeMock).not.toHaveBeenCalled();
+    expect(findUsersByEmailAndTypeMock).not.toHaveBeenCalled();
   });
 
   it('T005: rejects internal users for client portal OAuth mode', async () => {
@@ -93,7 +93,7 @@ describe('OAuth profile mapping user boundaries', () => {
   });
 
   it('authenticates internal users through a type-scoped lookup', async () => {
-    findUserByEmailAndTypeMock.mockResolvedValueOnce({
+    findUsersByEmailAndTypeMock.mockResolvedValueOnce([{
       user_id: 'user-3',
       email: 'internal@example.com',
       username: 'internal',
@@ -102,7 +102,7 @@ describe('OAuth profile mapping user boundaries', () => {
       user_type: 'internal',
       tenant: tenantId,
       is_inactive: false,
-    });
+    }]);
 
     const { mapOAuthProfileToExtendedUser } = await import('../../../lib/auth/ssoProviders');
     const mapped = await mapOAuthProfileToExtendedUser({
@@ -112,12 +112,12 @@ describe('OAuth profile mapping user boundaries', () => {
     });
 
     expect(mapped.user_type).toBe('internal');
-    expect(findUserByEmailAndTypeMock).toHaveBeenCalledWith('internal@example.com', 'internal');
+    expect(findUsersByEmailAndTypeMock).toHaveBeenCalledWith('internal@example.com', 'internal');
     expect(findUserByEmailMock).not.toHaveBeenCalled();
   });
 
   it('rejects a client record returned during internal OAuth mode', async () => {
-    findUserByEmailAndTypeMock.mockResolvedValueOnce({
+    findUsersByEmailAndTypeMock.mockResolvedValueOnce([{
       user_id: 'user-4',
       email: 'client@example.com',
       username: 'client',
@@ -128,7 +128,7 @@ describe('OAuth profile mapping user boundaries', () => {
       is_inactive: false,
       contact_id: 'contact-2',
       client_id: 'client-2',
-    });
+    }]);
 
     const { isOAuthMappingFailure, mapOAuthProfileToExtendedUser } = await import(
       '../../../lib/auth/ssoProviders'

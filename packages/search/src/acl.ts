@@ -1,3 +1,4 @@
+import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import User from '@alga-psa/db/models/user';
@@ -130,19 +131,20 @@ export async function resolveSearchAclPrincipal(
   clientAccess: ClientAccess = { mode: 'all' },
 ): Promise<SearchAclPrincipal> {
   const rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
-  const isClientPortal = user.user_type === 'client';
+  const isClientPortal = isClientUserType(user.user_type);
+  const isMspPrincipal = isMspPrincipalUserType(user.user_type);
   const permissions = new Set<string>();
   const roles = new Set<string>();
 
   for (const role of rolesWithPermissions) {
     if (isClientPortal && !role.client) continue;
-    if (!isClientPortal && !role.msp) continue;
+    if (!isClientPortal && !(isMspPrincipal && role.msp)) continue;
 
     roles.add(role.role_name);
 
     for (const permission of role.permissions) {
       if (isClientPortal && !permission.client) continue;
-      if (!isClientPortal && !permission.msp) continue;
+      if (!isClientPortal && !(isMspPrincipal && permission.msp)) continue;
       permissions.add(`${permission.resource}:${permission.action}`);
     }
   }
@@ -263,6 +265,8 @@ registerSearchVisibilityVerifier('ticket_comment', async (knex, user, row) => {
   )
     .select('ticket_id', 'is_internal')
     .where('comment_id', row.id)
+    .whereNull('deleted_at')
+    .where('publish_state', 'published')
     .first();
   if (!comment) return false;
   if (comment.is_internal && !user.isInternal) return false;
@@ -307,6 +311,7 @@ registerSearchVisibilityVerifier('project_task_comment', async (knex, user, row)
   const query = db.table<{ project_id: string }>('project_task_comments as ptc')
     .select('pp.project_id')
     .where('ptc.task_comment_id', row.id)
+    .whereNull('ptc.deleted_at')
     .first();
   db.tenantJoin(query, 'project_tasks as pt', 'pt.task_id', 'ptc.task_id');
   db.tenantJoin(query, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');

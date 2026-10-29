@@ -93,6 +93,36 @@
         "checkbox": "Kontrollkästchen",
         "date": "Datum",
         "file-upload": "Datei-Upload"
+      },
+      "visibility": {
+        "title": "Anzeigen, wenn…",
+        "none": "Immer sichtbar",
+        "addRule": "Bedingung hinzufügen",
+        "removeRule": "Bedingung entfernen",
+        "source": "Feld",
+        "selectSource": "Feld auswählen",
+        "operator": "Bedingung",
+        "value": "Wert",
+        "valueTrue": "Aktiviert",
+        "valueFalse": "Deaktiviert",
+        "selectValue": "Wert auswählen",
+        "legacyBooleanWarning": "Diese Regel vergleicht mit Text, ein Kontrollkästchen enthält jedoch wahr/falsch und passt daher nie. Wählen Sie den Wert erneut aus.",
+        "saveFailed": "Die Sichtbarkeitsregeln konnten nicht gespeichert werden.",
+        "contextSources": {
+          "requesterUserId": "Anfragender Benutzer",
+          "clientId": "Anfragender Mandant",
+          "contactId": "Anfragender Kontakt"
+        },
+        "operators": {
+          "equals": "ist gleich",
+          "not-equals": "ist ungleich",
+          "is-true": "ist aktiviert / wahr",
+          "is-false": "ist deaktiviert / falsch",
+          "has-value": "hat einen Wert",
+          "is-empty": "ist leer"
+        },
+        "advancedJson": "Erweitert (JSON)",
+        "advancedJsonHelp": "Die vollständige gespeicherte Konfiguration, einschließlich Kontext-Standardwerten. Sichtbarkeitsregeln ändern Sie einfacher über „Anzeigen, wenn…“ an jedem Feld. Ungespeicherte Änderungen hier werden verworfen, wenn dort eine Regel geändert wird."
       }
     },
     "execution": {
@@ -144,7 +174,50 @@
       "visibility": {
         "title": "Sichtbarkeitskonfiguration",
         "config": "Sichtbarkeitskonfiguration (JSON-Objekt)",
-        "save": "Sichtbarkeitskonfiguration speichern"
+        "save": "Sichtbarkeitskonfiguration speichern",
+        "audience": {
+          "removedReferences": "Nicht verfügbare Zielgruppenauswahlen wurden entfernt. Prüfen und speichern Sie die Zielgruppe.",
+          "reference_client_id": "Kunde",
+          "reference_client_tags": "Kunden-Tag",
+          "reference_contact_id": "Kontakt",
+          "reference_contact_tags": "Kontakt-Tag",
+          "reference_contact_group_id": "Kundengruppe",
+          "chooseTags": "Tags auswählen",
+          "loadError": "Zielgruppenauswahl konnte nicht geladen werden.",
+          "saveError": "Zielgruppe konnte nicht gespeichert werden.",
+          "saved": "Zielgruppe gespeichert",
+          "convertedReadOnly": "Diese migrierte Zielgruppe ist schreibgeschützt.",
+          "replace": "Durch eine neue Zielgruppe ersetzen",
+          "clientTags": "Kunden-Tags",
+          "contactTags": "Kontakt-Tags",
+          "allUsers": "Alle Benutzer dieses Kunden",
+          "missingClient": "Kunde nicht verfügbar",
+          "missingContact": "Kontakt nicht verfügbar",
+          "narrowTags": "Nur Kontakte mit Tag",
+          "remove": "Entfernen",
+          "allPortalUsers": "Alle Kundenportal-Benutzer",
+          "reach": "Sichtbar für {{count}} Kontakte bei {{clients}} Kunden",
+          "reachUnavailable": "Reichweite nicht verfügbar",
+          "title": "Wer dieses Formular sehen kann",
+          "everyone": "Alle",
+          "everyoneHelp": "Alle authentifizierten Kundenbenutzer können dieses Formular sehen und absenden.",
+          "scoped": "Ausgewählte Kunden und Kontaktpersonen",
+          "scopedHelp": "Nur Benutzer der ausgewählten Kunden oder Mitglieder der ausgewählten Gruppen können dieses Formular sehen und absenden.",
+          "addClient": "Kunden hinzufügen",
+          "clientPlaceholder": "Kunden suchen...",
+          "noClients": "Noch keine Kunden ausgewählt.",
+          "selectedClients": "Ausgewählte Kunden",
+          "removeClient": "{{name}} entfernen",
+          "groupsOf": "Kundenbenutzergruppen von {{name}}",
+          "groupLabel": "{{group}} ({{client}})",
+          "loadingGroups": "Gruppen werden geladen...",
+          "noGroups": "Dieser Kunde hat keine Kundenbenutzergruppen.",
+          "groupsHelp": "Jeder Kunde gilt entweder für alle seine Benutzer oder nur für die Mitglieder ausgewählter Gruppen. Eine Gruppe gewährt nur Mitgliedern des eigenen Kunden Zugriff. Ein Kunde kann nicht für alle Benutzer freigegeben sein und zugleich ausgewählte Gruppen haben.",
+          "emptyWarning": "Niemand sieht dieses Formular, bis Sie eine Zielgruppe hinzufügen.",
+          "save": "Zielgruppe speichern",
+          "allUsersOf": "Alle Benutzer von {{name}}",
+          "onlyGroups": "Nur Mitglieder ausgewählter Gruppen"
+        }
       },
       "fields": {
         "executionProvider": "Ausführungsanbieter",
@@ -387,7 +460,8 @@
       "ticketRoutingUpdated": "Konfiguration des Ticket-Routings aktualisiert",
       "workflowConfigurationUpdated": "Workflow-Konfiguration aktualisiert",
       "formBehaviorConfigUpdated": "Formularverhalten-Konfiguration aktualisiert",
-      "visibilityConfigUpdated": "Sichtbarkeitskonfiguration aktualisiert"
+      "visibilityConfigUpdated": "Sichtbarkeitskonfiguration aktualisiert",
+      "audienceUpdated": "Zielgruppe aktualisiert"
     },
     "error": {
       "loadFailed": "Serviceanfragen konnten nicht geladen werden",
@@ -410,7 +484,8 @@
       "formBehaviorInvalid": "Ungültiges Formularverhalten-JSON",
       "visibilityNotObject": "Sichtbarkeitskonfiguration muss ein JSON-Objekt sein",
       "visibilityInvalid": "Ungültiges Sichtbarkeits-JSON",
-      "saveAllPartial": "Einige Abschnitte konnten nicht gespeichert werden: {{sections}}"
+      "saveAllPartial": "Einige Abschnitte konnten nicht gespeichert werden: {{sections}}",
+      "audienceSaveFailed": "Zielgruppe konnte nicht aktualisiert werden"
     }
   }
 }

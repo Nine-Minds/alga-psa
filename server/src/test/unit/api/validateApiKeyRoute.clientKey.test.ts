@@ -3,11 +3,17 @@ import { NextRequest } from 'next/server';
 
 const validateApiKeyMock = vi.hoisted(() => vi.fn());
 
-vi.mock('@alga-psa/auth', () => ({
-  ApiKeyService: {
-    validateApiKey: validateApiKeyMock,
-  },
-}));
+// The route maps lifecycle refusals through the API middleware, whose import
+// graph reaches withAuth-wrapped actions; mock the complete auth surface.
+vi.mock('@alga-psa/auth', async () => {
+  const { createAuthModuleMock } = await import('../../../../test-utils/authModuleMock');
+  return {
+    ...createAuthModuleMock(),
+    ApiKeyService: {
+      validateApiKey: validateApiKeyMock,
+    },
+  };
+});
 
 import { POST } from '@/app/api/auth/validate-api-key/route';
 
