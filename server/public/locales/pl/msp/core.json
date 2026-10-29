@@ -109,7 +109,8 @@
     "assetsCustody": "Sprzęt w przechowaniu",
     "ticketsCannedResponses": "Gotowe odpowiedzi",
     "profile": "Profil",
-    "signOut": "Wyloguj się"
+    "signOut": "Wyloguj się",
+    "coManaged": "IT w współzarządzaniu"
   },
   "sidebar": {
     "backToMain": "Powrót do głównego",

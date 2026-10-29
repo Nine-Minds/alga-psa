@@ -814,6 +814,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'tag_definitions', deletion: 'ordered' },
   { table: 'custom_task_types', deletion: 'ordered' },
   { table: 'tenant_time_period_settings', deletion: 'ordered' },
+  { table: 'time_period_calendar_locks', deletion: 'ordered' },
   { table: 'time_periods', deletion: 'ordered' },
   { table: 'time_period_types', deletion: 'ordered' },
   { table: 'time_period_settings', deletion: 'ordered' },

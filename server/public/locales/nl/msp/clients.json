@@ -492,7 +492,8 @@
       "ticketClosed": "Ticket gesloten",
       "ticketOpened": "Ticket geopend",
       "unitDelivered": "Apparatuur geleverd"
-    }
+    },
+    "discardFeatureMessage": "U hebt niet-opgeslagen wijzigingen in deze weergave. Sluiten en negeren?"
   },
   "quickAddClient": {
     "lifecycleStatus": "Levenscyclus",

@@ -50765,6 +50765,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 ],
                 "format": "uuid"
               },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "user_name": {
                 "type": "string"
               },
@@ -50958,6 +50964,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                         "null"
                       ],
                       "format": "uuid"
+                    },
+                    "billing_mode": {
+                      "type": "string",
+                      "enum": [
+                        "commercial",
+                        "operational"
+                      ]
                     }
                   },
                   "required": [
@@ -50986,7 +50999,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "contract_line_source",
                     "contract_line_unresolved_reason",
                     "catalog_pricing_acknowledged_at",
-                    "catalog_pricing_acknowledged_by"
+                    "catalog_pricing_acknowledged_by",
+                    "billing_mode"
                   ]
                 }
               }
@@ -51000,6 +51014,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "submitted_at",
               "approved_at",
               "approved_by",
+              "notes",
               "user_name"
             ]
           }
@@ -51507,6 +51522,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "null"
                 ],
                 "format": "uuid"
+              },
+              "billing_mode": {
+                "type": "string",
+                "enum": [
+                  "commercial",
+                  "operational"
+                ]
               }
             },
             "required": [
@@ -51535,7 +51557,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "contract_line_source",
               "contract_line_unresolved_reason",
               "catalog_pricing_acknowledged_at",
-              "catalog_pricing_acknowledged_by"
+              "catalog_pricing_acknowledged_by",
+              "billing_mode"
             ]
           }
         }

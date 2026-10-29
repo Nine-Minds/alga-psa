@@ -157,17 +157,22 @@ export default function ClientCommandCenter({
 
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
 
+  const focusedTab = useMemo(() => (focusTabId ? tabs.find((tab) => tab.id === focusTabId) ?? null : null), [focusTabId, tabs]);
+  const focusedTabDirty = useCallback(() => Boolean(focusedTab?.hasUnsavedChanges?.()), [focusedTab]);
+  const focusedRecordDirty = Boolean(hasUnsavedRecordChanges && focusTabId && RECORD_FORM_TAB_IDS.has(focusTabId));
+
   const closeFocus = useCallback(() => {
     // Closing a record form with pending edits reads as "done" while the edits
-    // sit unsaved — confirm the discard instead of losing them silently.
-    if (hasUnsavedRecordChanges && focusTabId && RECORD_FORM_TAB_IDS.has(focusTabId)) {
+    // sit unsaved — confirm the discard instead of losing them silently. Feature
+    // drafts (e.g. a co-managed setup form) report their own dirty state.
+    if (focusedRecordDirty || focusedTabDirty()) {
       setConfirmDiscardOpen(true);
       return;
     }
     deepLinkConsumedRef.current = true;
     setFocusTabId(null);
     onTabUrlChange(null);
-  }, [onTabUrlChange, hasUnsavedRecordChanges, focusTabId]);
+  }, [onTabUrlChange, focusedRecordDirty, focusedTabDirty]);
 
   /** First existing tab id from a preference list (AlgaDesk filters some out). */
   const resolveTab = useCallback((...preferred: string[]): string | null => {
@@ -499,15 +504,20 @@ export default function ClientCommandCenter({
         onClose={() => setConfirmDiscardOpen(false)}
         onConfirm={() => {
           setConfirmDiscardOpen(false);
-          onDiscardRecordChanges();
+          if (focusedRecordDirty) onDiscardRecordChanges();
+          focusedTab?.onDiscardUnsavedChanges?.();
           deepLinkConsumedRef.current = true;
           setFocusTabId(null);
           onTabUrlChange(null);
         }}
         title={t('clientCommandCenter.discardTitle', { defaultValue: 'Unsaved changes' })}
-        message={t('clientCommandCenter.discardMessage', {
-          defaultValue: 'You have unsaved client record changes. Close and discard them?',
-        })}
+        message={focusedRecordDirty
+          ? t('clientCommandCenter.discardMessage', {
+            defaultValue: 'You have unsaved client record changes. Close and discard them?',
+          })
+          : t('clientCommandCenter.discardFeatureMessage', {
+            defaultValue: 'You have unsaved changes in this view. Close and discard them?',
+          })}
         confirmLabel={t('clientCommandCenter.discardConfirm', { defaultValue: 'Discard changes' })}
         cancelLabel={t('clientCommandCenter.discardCancel', { defaultValue: 'Keep editing' })}
       />

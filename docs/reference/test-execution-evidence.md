@@ -344,6 +344,44 @@ and retry-only, skipped and expected-failure cases cannot satisfy a mandatory
 journey. Neither that policy probe nor a collection-only check establishes
 that the application journey itself passed.
 
+The browser lane runs its suites as parallel shards of one job definition:
+per edition several `browser-<n>` shards (Playwright journeys), an `api` shard,
+and for enterprise an `upgrades` shard (supported PostgreSQL and Citus
+upgrades) and an `integrations` shard (Teams development, Microsoft callback).
+Every shard installs the same candidate images and verifies them against the
+build records.
+
+The journeys are partitioned across the `browser-<n>` shards by the runner
+itself. Each shard lists the whole collection, then takes its share
+(`E2E_SHARD=<index>/<total>`, from the matrix) of the journey files, assigned
+heaviest-first from the measured durations in `e2e-tests/journey-weights.json`
+so the shards finish together; a journey the profile does not know weighs a
+typical one. Playwright's own `--shard` is not used because it balances by test
+count, and the two slowest journey files hold one test each. The shard runs
+only its files, lists them first and refuses to run if the listing differs
+from its assignment, and publishes evidence whose `selection.mode` is `shard`,
+which the gate never accepts on its own. Its artifact,
+`fresh-install-browser-shard-<edition>-<lane>`, also carries a shard
+descriptor (`_temp/browser-shard.json`) written before the journeys run.
+
+The `browser-evidence` job, one per edition and named
+`Production browser (<edition>)`, merges the shards back into the single
+per-edition record (`scripts/merge-browser-shards.mjs`): the shared collection
+is the expectation, the shard reports are concatenated, and the result is
+reconciled against the full collection again, so a shard that never published,
+an over-matched file filter or a journey run twice shows up as missing or
+unexpected tests. Shards must agree on the collection, the candidate manifest
+and the checkout. The merged record is published as
+`fresh-install-playwright-<edition>`, the flaky evidence as
+`flaky-tests-browser-<edition>`, and journey readiness is recorded there, so
+the metrics and flaky-test reports read what they always did. The aggregate
+gate performs the same merge from the same shard artifacts, so neither job
+waits on the other, and requires every shard of both editions to succeed.
+
+Refresh the weight profile from a run's merged `results.json` with
+`node scripts/update-browser-journey-weights.mjs <results.json>`; a stale
+profile costs balance, never coverage.
+
 ## Browser collection coverage
 
 `node scripts/collect-browser-test-inventory.mjs` runs the real Playwright

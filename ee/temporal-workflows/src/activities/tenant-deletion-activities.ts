@@ -589,6 +589,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'tag_definitions',
   'custom_task_types',
   'tenant_time_period_settings',
+  'time_period_calendar_locks',
   'time_periods',
   'time_period_types',
   'time_period_settings',
