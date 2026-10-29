@@ -296,7 +296,7 @@ const Comment = {
     try {
       // Get existing comment first
       const existingComment = await tenantScopedTable<IComment>(trx, 'comments', tenant)
-        .select('*')
+        .select('comment_id', 'parent_comment_id', 'thread_id', 'user_id', 'actor_reference_id')
         .where('comment_id', id)
         .first();
 

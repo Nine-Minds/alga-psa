@@ -1,6 +1,6 @@
 import { isInteractiveUserType } from '@alga-psa/types';
 
-import { readTicketNotificationActor, resolveTicketNotificationActorNames, userDisplayName } from '../../notifications/ticketNotificationContext';
+import { readTicketNotificationActor, resolveTicketNotificationActorNames } from '../../notifications/ticketNotificationContext';
 
 import { readAssignedTeamId } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
@@ -80,6 +80,19 @@ function shouldCreateTicketCommentNotification(
   return recipientType === 'internal'
     ? shouldCreateStaffTicketNotification(suppression)
     : shouldCreateContactPortalTicketNotification(suppression);
+}
+
+/**
+ * Display name for a users row, or `fallback` when the row is missing or has no
+ * usable name (a null first/last name must not render as "null null").
+ */
+// LEVERAGE: pattern user-display-name — `${u.first_name} ${u.last_name}` is repeated across handlers in this file
+function userDisplayName(
+  user: { first_name?: string | null; last_name?: string | null } | null | undefined,
+  fallback: string
+): string {
+  const name = user ? `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() : '';
+  return name || fallback;
 }
 
 /**
@@ -1895,7 +1908,6 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
                 text: commentPreview,
                 author: authorName,
                 ...(userId ? { authorId: userId } : {}),
-              ...(actor.actorReference ? { actorReference: actor.actorReference } : {}),
                 ...(actor.actorReference ? { actorReference: actor.actorReference } : {}),
                 isInternal: false
               }
