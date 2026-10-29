@@ -15,8 +15,9 @@ import {
 } from '../ticketDataSource';
 
 const METHOD_GROUPS = [
-  'ticket', 'comments', 'people', 'resources', 'options', 'closeRules', 'bundles', 'checklist',
-  'externalLinks', 'activity', 'email', 'materials', 'fixedFees', 'tiles', 'tags', 'avatars', 'viewer',
+  'ticket', 'comments', 'people', 'resources', 'watchers', 'options', 'closeRules', 'bundles',
+  'checklist', 'externalLinks', 'activity', 'email', 'materials', 'fixedFees', 'tiles', 'tags',
+  'avatars', 'viewer',
 ] as const;
 
 describe('native ticket data source contract', () => {
@@ -32,7 +33,7 @@ describe('native ticket data source contract', () => {
     expect('boundTicketId' in nativeTicketDataSource).toBe(false);
   });
 
-  it('declares 27 capabilities and the seventeen method groups, every method a function', () => {
+  it('declares 27 capabilities and the eighteen method groups, every method a function', () => {
     expect(Object.keys(NATIVE_TICKET_CAPABILITIES)).toHaveLength(27);
     expect(Object.keys(NO_TICKET_CAPABILITIES)).toEqual(Object.keys(NATIVE_TICKET_CAPABILITIES));
     let methods = 0;
@@ -44,7 +45,7 @@ describe('native ticket data source contract', () => {
         methods += 1;
       }
     }
-    expect(methods).toBe(100);
+    expect(methods).toBe(103);
   });
 
   it('forwards arguments and results unchanged, resolving the action at call time', async () => {

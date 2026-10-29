@@ -242,7 +242,9 @@ export interface TicketBentoLayoutProps {
     mode: 'remove_all' | 'keep_all' | 'selective',
     keepUserIds?: string[],
   ) => Promise<void> | void;
-  onUpdateWatchList?: (watchList: any[]) => Promise<boolean>;
+  onAddWatchers?: (inputs: any[]) => Promise<boolean>;
+  onSetWatcherActive?: (email: string, active: boolean) => Promise<boolean>;
+  onRemoveWatcher?: (email: string) => Promise<boolean>;
   watchListSaving?: boolean;
   contacts?: IContact[];
   allContactsForWatchList?: IContact[];
@@ -953,7 +955,9 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       <TicketWatchListCard
         id={`${id}-watch-list`}
         attributes={ticket.attributes}
-        onUpdateWatchList={props.onUpdateWatchList}
+        onAddWatchers={props.onAddWatchers}
+        onSetWatcherActive={props.onSetWatcherActive}
+        onRemoveWatcher={props.onRemoveWatcher}
         watchListSaving={props.watchListSaving}
         internalUsers={props.availableAgents}
         clientContacts={props.contacts}

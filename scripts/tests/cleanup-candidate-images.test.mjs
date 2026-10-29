@@ -31,7 +31,7 @@ test('deletes only versions older than the retention window and tolerates packag
   const f = fake({ versions: { 'alga-psa/e2e-server-ee': [{ id: 1, created_at: hoursAgo(1) }, { id: 2, created_at: hoursAgo(71) }, { id: 3, created_at: hoursAgo(73) }, ...old],
     'alga-psa/e2e-redis': [{ id: 7, created_at: 'not a date' }] } });
   const summary = await cleanupCandidateImages({ repository: 'Nine-Minds/alga-psa', token: 'token', maxAgeHours: 72, now, request: f.request });
-  assert.equal(summary.deleted, 151); assert.equal(summary.kept, 3); assert.equal(summary.failed, 0); assert.equal(summary.missing, 8);
+  assert.equal(summary.deleted, 151); assert.equal(summary.kept, 3); assert.equal(summary.failed, 0); assert.equal(summary.missing, 9);
   const deletes = f.calls.filter(call => call.method === 'DELETE');
   assert.equal(deletes.length, 151);
   assert.ok(deletes.every(call => call.url.includes('/packages/container/alga-psa%2Fe2e-server-ee/versions/')));
@@ -51,4 +51,17 @@ test('rejects an unusable configuration before calling the API', async () => {
   for (const input of [{ repository: 'nope', token: 'token', maxAgeHours: 72 }, { repository: 'a/b', token: '', maxAgeHours: 72 }, { repository: 'a/b', token: 'token', maxAgeHours: 0 }]) {
     await assert.rejects(cleanupCandidateImages({ ...input, request: () => assert.fail('must not call the API') }));
   }
+});
+
+test('build-cache snapshots lose only their untagged, superseded versions', async () => {
+  const tags = names => ({ metadata: { container: { tags: names } } });
+  const f = fake({ versions: { 'alga-psa/build-cache': [
+    { id: 11, created_at: hoursAgo(200), ...tags(['enterprise']) }, { id: 12, created_at: hoursAgo(200), ...tags(['community']) },
+    { id: 13, created_at: hoursAgo(200), ...tags([]) }, { id: 14, created_at: hoursAgo(10), ...tags([]) }, { id: 15, created_at: hoursAgo(90) } ],
+    // Candidate images go by age alone, tagged or not.
+    'alga-psa/e2e-setup': [{ id: 21, created_at: hoursAgo(90), ...tags(['run-1-1-abc']) }] } });
+  const summary = await cleanupCandidateImages({ repository: 'Nine-Minds/alga-psa', token: 'token', maxAgeHours: 72, now, request: f.request });
+  const deleted = f.calls.filter(call => call.method === 'DELETE').map(call => Number(call.url.split('/').pop())).sort();
+  assert.deepEqual(deleted, [13, 15, 21]);
+  assert.equal(summary.kept, 3);
 });

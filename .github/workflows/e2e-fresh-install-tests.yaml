@@ -117,13 +117,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # `prebuild` services compile the application on the runner first (see
+        # the "production build" steps below); `node` is the version their
+        # Dockerfile.build compiles with.
         include:
           - service: server
+            edition: community
+            prebuild: true
+            node: '24'
             dockerfile: Dockerfile.build
             image: alga-e2e-test_server_ce_local:latest
             artifact: fresh-install-server-community
             cache: false
           - service: server-ee
+            edition: enterprise
+            prebuild: true
+            node: '26.1.0'
             dockerfile: ee/server/Dockerfile.build
             image: alga-e2e-test_server_ee_local:latest
             artifact: fresh-install-server-enterprise
@@ -218,6 +227,54 @@ jobs:
           sudo swapon /swapfile-alga-production-build
           free -h
 
+      # The server images are compiled on the runner (scripts/build-production-server.sh,
+      # the same recipe as the Dockerfiles' builder stages) and the Dockerfiles
+      # then only package the result (PREBUILT_NEXT=true). Outside the image
+      # the webpack filesystem cache and the Nx cache can be carried between
+      # runs: a snapshot of both travels through the registry like the candidate
+      # images do, under one moving tag per edition. Only runs of main write it,
+      # because a cache shapes build output; pull requests only read it. A
+      # missing or unreadable snapshot means a cold build, never a failure.
+      - name: Set up Node.js for the production build
+        if: matrix.prebuild
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install oras for build-cache snapshots
+        if: matrix.prebuild
+        uses: oras-project/setup-oras@v2
+
+      - name: Remove the proprietary server tree from the community build
+        if: matrix.prebuild && matrix.edition == 'community'
+        run: |
+          # Mirrors Dockerfile.build: community resolution is owned by the Next
+          # aliases and checked-in fallback modules, and no proprietary module
+          # may be resolvable while the community application compiles.
+          rm -rf ee/server
+          rm -f server/src/scripts/check-extension.ts
+
+      - name: Install repository dependencies for the production build
+        if: matrix.prebuild
+        run: npm install --include=optional
+
+      - name: Restore the build-cache snapshot
+        if: matrix.prebuild
+        id: build_cache
+        env:
+          BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}
+        run: node scripts/build-cache-snapshot.mjs restore --reference "$BUILD_CACHE_REFERENCE" --path server/node_modules/.cache/webpack --path .nx/cache
+
+      - name: Build the production application on the runner
+        if: matrix.prebuild
+        env:
+          NEXT_BUILD_MAX_OLD_SPACE_SIZE: '12288'
+          EDITION_NAME: ${{ matrix.edition }}
+        run: |
+          scripts/build-production-server.sh "$EDITION_NAME"
+          du -sh server/.next server/node_modules/.cache/webpack .nx/cache 2>/dev/null || true
+
       - name: Build and export ${{ matrix.service }}
         id: export_image
         uses: docker/build-push-action@v6
@@ -232,6 +289,7 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
           build-args: |
             NEXT_BUILD_MAX_OLD_SPACE_SIZE=12288
+            PREBUILT_NEXT=${{ matrix.prebuild && 'true' || 'false' }}
           outputs: ${{ env.IMAGE_TRANSPORT == 'registry' && 'type=image,push=true' || format('type=docker,dest={0}/{1}.tar', runner.temp, matrix.service) }}
           # One plain manifest per image, never an index with attestations: the
           # consumer pulls exactly one digest and the build record binds that
@@ -285,6 +343,15 @@ jobs:
           # the builder's own copy: the record proves the push landed.
           docker buildx imagetools inspect "$BUILD_REGISTRY_REFERENCE@$BUILD_REPORTED_DIGEST" --raw > "$BUILD_MANIFEST"
           node scripts/record-docker-registry-build.mjs "$BUILD_MANIFEST" "$BUILD_RECORD"
+
+      # Written after the image is published, so a snapshot failure can only
+      # cost the next run its warm start, never this run its candidate.
+      - name: Save the build-cache snapshot
+        if: matrix.prebuild && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.IMAGE_TRANSPORT == 'registry'
+        continue-on-error: true
+        env:
+          BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}
+        run: node scripts/build-cache-snapshot.mjs save --reference "$BUILD_CACHE_REFERENCE" --path server/node_modules/.cache/webpack --path .nx/cache
 
       - name: Upload image build record
         uses: actions/upload-artifact@v4
@@ -379,8 +446,13 @@ jobs:
           - edition: enterprise
             server_archive: server-ee
             compose_suffix: ':docker-compose.e2e-ee.yaml'
-            lane: upgrades
-            suites: upgrade citus
+            lane: upgrade
+            suites: upgrade
+          - edition: enterprise
+            server_archive: server-ee
+            compose_suffix: ':docker-compose.e2e-ee.yaml'
+            lane: citus
+            suites: citus
           - edition: enterprise
             server_archive: server-ee
             compose_suffix: ':docker-compose.e2e-ee.yaml'

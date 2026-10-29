@@ -22,6 +22,8 @@ import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipi
 import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
 import { SharedNumberingService } from '../services/numberingService';
 import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
+import { TicketWatcherService } from '../services/tickets/ticketWatcherService';
+import { parseTicketWatchListAttributes } from '../lib/tickets/watchList';
 import { resolveAssetBillingProfileId } from './assetBillingProfileModel';
 import { buildTicketCommentAddedPayload, buildTicketModelChanges } from '../lib/tickets/ticketWorkflowEventPayloads';
 
@@ -1035,6 +1037,13 @@ export class TicketModel {
 
     // Insert the ticket
     await tenantDb(trx, tenant).table('tickets').insert(dbData);
+
+    // Bring ticket_watchers in line with the initial attributes.watch_list (inbound To/Cc,
+    // board defaults); the mirror is then rewritten from the table.
+    // Skipped when the ticket was created without one (the common case).
+    if (parseTicketWatchListAttributes(completeValidation.attributes).length > 0) {
+      await TicketWatcherService.seedFromAttributes(trx, tenant, ticketId);
+    }
 
     if (options?.serviceRequestSubmissionId) {
       const updated = await tenantDb(trx, tenant).table('service_request_submissions')

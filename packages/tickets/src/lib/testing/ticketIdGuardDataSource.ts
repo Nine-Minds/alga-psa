@@ -24,6 +24,7 @@ export const TICKET_ID_KEYED_GROUPS = [
   'comments',
   'people',
   'resources',
+  'watchers',
   'bundles',
   'checklist',
   'externalLinks',

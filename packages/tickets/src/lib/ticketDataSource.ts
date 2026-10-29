@@ -97,6 +97,11 @@ import type { getTicketStatuses, getAllPriorities } from '@alga-psa/reference-da
 import type { getTicketCategories, getTicketCategoriesByBoard } from '../actions/ticketCategoryActions';
 import type { addTicketResource, getTicketResources, removeTicketResource } from '../actions/ticketResourceActions';
 import type { assignTeamToTicket, removeTeamFromTicket } from '../actions/teamAssignmentActions';
+import type {
+  addTicketWatchers,
+  setTicketWatcherActive,
+  removeTicketWatcher,
+} from '../actions/ticketWatcherActions';
 import type { getTeamById, getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import type { getTicketLayoutPreference, setTicketLayoutPreference } from '../actions/ticketLayoutPreference';
 import type { getRecurringSourceForTicket } from '../actions/recurringTicketActions';
@@ -438,6 +443,18 @@ export interface TicketResourceMethods {
   getTeams: typeof getTeams;
 }
 
+/**
+ * Watch list: contacts, users and bare emails copied on ticket activity.
+ * Deliberately NOT part of {@link TicketResourceMethods}: a watcher is never an
+ * assigned agent. Writes go through TicketWatcherService, so the screen never
+ * rewrites `tickets.attributes` to change watchers.
+ */
+export interface TicketWatcherMethods {
+  addTicketWatchers: typeof addTicketWatchers;
+  setTicketWatcherActive: typeof setTicketWatcherActive;
+  removeTicketWatcher: typeof removeTicketWatcher;
+}
+
 /** Pickable option lists (status, priority, category). */
 export interface TicketOptionMethods {
   getTicketStatuses: typeof getTicketStatuses;
@@ -572,6 +589,7 @@ export interface TicketDataSource {
   readonly comments: TicketCommentMethods;
   readonly people: TicketPeopleMethods;
   readonly resources: TicketResourceMethods;
+  readonly watchers: TicketWatcherMethods;
   readonly options: TicketOptionMethods;
   readonly closeRules: TicketCloseRuleMethods;
   readonly bundles: TicketBundleMethods;

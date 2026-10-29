@@ -346,10 +346,26 @@ that the application journey itself passed.
 
 The browser lane runs its suites as parallel shards of one job definition:
 per edition several `browser-<n>` shards (Playwright journeys), an `api` shard,
-and for enterprise an `upgrades` shard (supported PostgreSQL and Citus
-upgrades) and an `integrations` shard (Teams development, Microsoft callback).
+and for enterprise an `upgrade` shard (supported PostgreSQL upgrade), a
+`citus` shard (supported Citus upgrade) and an `integrations` shard (Teams
+development, Microsoft callback).
 Every shard installs the same candidate images and verifies them against the
 build records.
+
+The two server candidates are compiled on the build runner rather than inside
+their Dockerfiles: `scripts/build-production-server.sh <edition>` runs the
+same recipe as the builder stages (assemblyscript templates, `nx build-deps
+server`, `next build --webpack`), and the Dockerfiles are then built with
+`PREBUILT_NEXT=true`, which makes them package `server/.next` and the
+packages' `dist` directories from the context instead of rebuilding them.
+Building on the runner is what lets the webpack filesystem cache
+(`server/node_modules/.cache/webpack`, configured in `next.config.mjs`) and
+the Nx cache survive between runs: `scripts/build-cache-snapshot.mjs` pulls a
+snapshot of both from `ghcr.io/<repository>/build-cache:<edition>` before the
+build and, on runs of `main` only, pushes the new state afterwards. A pull
+request never writes a snapshot, because a cache can shape build output. A
+missing or unreadable snapshot is a cold build, not a failure. The daily
+candidate-image cleanup removes the superseded, untagged snapshot versions.
 
 The journeys are partitioned across the `browser-<n>` shards by the runner
 itself. Each shard lists the whole collection, then takes its share

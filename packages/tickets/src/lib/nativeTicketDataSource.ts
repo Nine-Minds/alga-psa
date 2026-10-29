@@ -92,6 +92,12 @@ export const nativeTicketDataSource: TicketDataSource = Object.freeze({
     getTeams: lazy(() => import('@alga-psa/teams/actions'), 'getTeams'),
   }),
 
+  watchers: Object.freeze({
+    addTicketWatchers: lazy(() => import('../actions/ticketWatcherActions'), 'addTicketWatchers'),
+    setTicketWatcherActive: lazy(() => import('../actions/ticketWatcherActions'), 'setTicketWatcherActive'),
+    removeTicketWatcher: lazy(() => import('../actions/ticketWatcherActions'), 'removeTicketWatcher'),
+  }),
+
   options: Object.freeze({
     getTicketStatuses: lazy(() => import('@alga-psa/reference-data/actions'), 'getTicketStatuses'),
     getAllPriorities: lazy(() => import('@alga-psa/reference-data/actions'), 'getAllPriorities'),
