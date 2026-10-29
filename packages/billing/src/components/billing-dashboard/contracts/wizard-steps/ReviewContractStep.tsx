@@ -206,14 +206,13 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
     return formatDateInLocale(local);
   };
 
-  // Products resumed from a saved draft carry no catalog price; look it up in
-  // the contract currency through the same shared hook the Products step uses,
-  // so the two steps cannot disagree.
-  const { rates: resumedCatalogRates } = useProductCatalogRates(
+  // Products are priced through the same shared (contract currency, service id)
+  // lookup the Products step uses, so the two steps cannot disagree — whether
+  // the product was just picked, resumed from a saved draft, or the contract
+  // currency changed after it was picked.
+  const { rates: productCatalogRates } = useProductCatalogRates(
     currencyCode,
-    data.product_services
-      .filter((product) => product.service_id && product.currency_rate === undefined)
-      .map((product) => product.service_id),
+    data.product_services.map((product) => product.service_id),
   );
 
   // Per line: unit members bill quantity × unit rate; the base rate is the
@@ -239,8 +238,8 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             item_kind: 'product',
             quantity: product.quantity,
             configuration_custom_rate: product.custom_rate,
-            price_rate: product.currency_rate ?? resumedCatalogRates[product.service_id]?.currency_rate ?? null,
-            default_rate: product.default_rate ?? resumedCatalogRates[product.service_id]?.default_rate ?? null,
+            price_rate: productCatalogRates[product.service_id]?.currency_rate ?? null,
+            default_rate: productCatalogRates[product.service_id]?.default_rate ?? null,
           })),
       },
       data.billing_frequency,

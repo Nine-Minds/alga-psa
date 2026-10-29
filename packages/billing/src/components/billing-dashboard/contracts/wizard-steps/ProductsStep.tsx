@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { getCurrencySymbol } from '@alga-psa/core';
+import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
-import { useProductCatalogRates } from '../../../../hooks/useProductCatalogRates';
+import { primeProductCatalogRates, useProductCatalogRates } from '../../../../hooks/useProductCatalogRates';
 import { productUnitMarginCents } from '../../../../lib/productUnitMargin';
 import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../ServiceCatalogPicker';
 import type { ContractWizardData } from '../ContractWizard';
@@ -23,8 +23,6 @@ interface ProductsStepProps {
 export function ProductsStep({ data, updateData }: ProductsStepProps) {
   const { t } = useTranslation('msp/contracts');
   const { money } = useCurrencyFormat();
-  // Rate inputs are keyed by row key (not array index) so removing a row cannot shift them.
-  const [rateInputs, setRateInputs] = useState<Record<string, string>>({});
 
   // Stable per-row key: the product id (plus an occurrence count when the same product is
   // attached twice); rows that have no product yet fall back to their position.
@@ -38,24 +36,13 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
     });
   }, [data.product_services]);
 
-  // The draft is the only price state. Rows that carry no catalog price (resumed drafts) and
-  // every row's cost come from the shared lookup that the Review step also uses.
+  // The draft holds only what the user chose (product, quantity, override). Catalog price and
+  // cost always come from the shared lookup keyed by (contract currency, service id) — the same
+  // one the Review step and Contract Lines use — so nothing here can go stale or drift by row.
   const { rates: catalogRates, canViewCost } = useProductCatalogRates(
     data.currency_code,
     data.product_services.map((line) => line.service_id),
   );
-
-  useEffect(() => {
-    const next: Record<string, string> = {};
-    data.product_services.forEach((line, index) => {
-      if (line.custom_rate !== undefined) {
-        next[rowKeys[index]] = (line.custom_rate / 100).toFixed(2);
-      }
-    });
-    setRateInputs(next);
-  }, [data.product_services, rowKeys]);
-
-  const currencySymbol = getCurrencySymbol(data.currency_code);
 
   const handleAddProduct = () => {
     updateData({
@@ -72,22 +59,20 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
   };
 
   const handleProductChange = (index: number, item: ServiceCatalogPickerItem) => {
+    // The picker row was fetched in the contract currency: hand its price to the shared lookup
+    // so the row is priced at once (the lookup still fetches cost).
+    primeProductCatalogRates(data.currency_code, item.service_id, {
+      currency_rate: item.currency_rate ?? null,
+      default_rate: item.default_rate ?? null,
+    });
     const next = [...data.product_services];
     next[index] = {
       ...next[index],
       service_id: item.service_id,
       service_name: item.service_name,
       custom_rate: undefined,
-      // Carried so the review total prices the product with the same chain the engine uses.
-      currency_rate: item.currency_rate ?? null,
-      default_rate: item.default_rate ?? null,
     };
     updateData({ product_services: next });
-
-    setRateInputs((prev) => {
-      const { [rowKeys[index]]: _, ...rest } = prev;
-      return rest;
-    });
   };
 
   // LEVERAGE: pattern clamped-number-input — the input's onChange clamps to min, so the field can't be cleared while typing; use QuantityInput
@@ -97,34 +82,14 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
     updateData({ product_services: next });
   };
 
-  const handleRateInputChange = (index: number, value: string) => {
-    const sanitized = value.replace(/[^0-9.]/g, '');
-    const decimalCount = (sanitized.match(/\./g) || []).length;
-    if (decimalCount <= 1) {
-      setRateInputs((prev) => ({ ...prev, [rowKeys[index]]: sanitized }));
-    }
-  };
-
-  const commitRate = (index: number) => {
-    const rowKey = rowKeys[index];
-    const input = (rateInputs[rowKey] ?? '').trim();
+  // The override is held in the draft only (minor units); CurrencyInput owns the text being typed.
+  const handleOverrideChange = (index: number, amount: number | undefined) => {
     const next = [...data.product_services];
-
-    if (!input || input === '.') {
-      next[index] = { ...next[index], custom_rate: undefined };
-      updateData({ product_services: next });
-      setRateInputs((prev) => {
-        const { [rowKey]: _, ...rest } = prev;
-        return rest;
-      });
-      return;
-    }
-
-    const dollars = parseFloat(input);
-    const cents = Number.isFinite(dollars) ? Math.round(dollars * 100) : 0;
-    next[index] = { ...next[index], custom_rate: cents };
+    next[index] = {
+      ...next[index],
+      custom_rate: amount === undefined ? undefined : Math.max(0, Math.round(amount * 100)),
+    };
     updateData({ product_services: next });
-    setRateInputs((prev) => ({ ...prev, [rowKey]: (cents / 100).toFixed(2) }));
   };
 
   return (
@@ -155,10 +120,9 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
 
           {data.product_services.map((line, index) => {
             const lookup = line.service_id ? catalogRates[line.service_id] : undefined;
-            // undefined = not known yet (resumed draft still resolving): show no warning meanwhile.
-            const currencyRate: number | null | undefined =
-              line.currency_rate !== undefined ? line.currency_rate : lookup?.currency_rate;
-            const legacyDefaultRate = line.default_rate ?? lookup?.default_rate ?? null;
+            // undefined = not known yet (lookup in flight): claim nothing about the price meanwhile.
+            const currencyRate: number | null | undefined = lookup?.currency_rate;
+            const legacyDefaultRate = lookup?.default_rate ?? null;
             const isMissingPrice = Boolean(
               line.service_id && currencyRate === null && line.custom_rate == null,
             );
@@ -220,21 +184,14 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
                           defaultValue: 'Override unit price (optional)',
                         })}
                       </Label>
-                      <div className="relative w-40">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--color-text-400))]">
-                          {currencySymbol}
-                        </span>
-                        <Input
-                          id={`product-rate-${index}`}
-                          type="text"
-                          inputMode="decimal"
-                          value={rateInputs[rowKeys[index]] ?? ''}
-                          onChange={(event) => handleRateInputChange(index, event.target.value)}
-                          onBlur={() => commitRate(index)}
-                          placeholder=""
-                          className="pl-10"
-                        />
-                      </div>
+                      <CurrencyInput
+                        id={`product-rate-${index}`}
+                        currencyCode={data.currency_code}
+                        value={line.custom_rate !== undefined ? line.custom_rate / 100 : undefined}
+                        onChange={(amount) => handleOverrideChange(index, amount)}
+                        placeholder=""
+                        containerClassName="w-40"
+                      />
                       {currencyRate != null && currencyRate > 0 ? (
                         <div className="text-xs text-muted-foreground" data-testid={`product-catalog-price-${index}`}>
                           {t('wizardProducts.labels.catalogPriceInCurrency', {

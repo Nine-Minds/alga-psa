@@ -113,6 +113,12 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   }),
 }));
 
+vi.mock('@alga-psa/ui/lib', () => ({
+  useCurrencyFormat: () => ({
+    money: (minorUnits: number, currency: string) => `${currency} ${(minorUnits / 100).toFixed(2)}`,
+  }),
+}));
+
 vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
   useFormatBillingFrequency: () => (value: string) => value,
   useFormatContractLineType: () => (value: string) => value,
@@ -205,7 +211,13 @@ import ContractLines from '../src/components/billing-dashboard/contracts/Contrac
 
 import { resetProductCatalogRatesCache } from '../src/hooks/useProductCatalogRates';
 
-const productMember = (serviceId: string, name: string, configId: string, customRate: number | null) => ({
+const productMember = (
+  serviceId: string,
+  name: string,
+  configId: string,
+  customRate: number | null,
+  extra: { baseRate?: number | null; serviceLineCustomRate?: number | null } = {},
+) => ({
   service: {
     service_id: serviceId,
     service_name: name,
@@ -222,8 +234,9 @@ const productMember = (serviceId: string, name: string, configId: string, custom
     custom_rate: customRate,
     quantity: 3,
   },
-  typeConfig: { pricing_basis: 'unit', base_rate: null },
+  typeConfig: { pricing_basis: 'unit', base_rate: extra.baseRate ?? null },
   bucketConfig: null,
+  service_line_custom_rate: extra.serviceLineCustomRate ?? null,
 });
 
 const renderContractLines = () => render(
@@ -296,8 +309,9 @@ describe('Contract Lines recurring product pricing', () => {
     expect((await screen.findByTestId('recurring-product-price-config-override')).textContent).toBe('AUD 45.00');
     expect(screen.getByTestId('recurring-product-price-config-override').parentElement!.textContent)
       .toContain('(override)');
-    // Cost is tracked in another currency: labelled, never converted, no margin.
-    expect(screen.getByTestId('recurring-product-cost-config-override').textContent)
+    // Cost is tracked in another currency: labelled, never converted, no margin. The override
+    // prices the member before the catalog lookup lands, so wait for the cost to arrive.
+    expect((await screen.findByTestId('recurring-product-cost-config-override')).textContent)
       .toBe('Cost in NZD: NZD 30.00');
   });
 
@@ -315,5 +329,37 @@ describe('Contract Lines recurring product pricing', () => {
     expect(screen.queryByTestId('recurring-product-cost-config-catalog')).toBeNull();
     expect(screen.queryByTestId('recurring-product-cost-config-override')).toBeNull();
     expect(screen.queryByText(/Cost/)).toBeNull();
+  });
+
+  it('prices like the invoice engine: a fixed-config base_rate is not an override, a service-line rate is', async () => {
+    // A quote-converted member carries a real base_rate; the engine ignores it for products.
+    actionMocks.getContractLineServicesWithConfigurations.mockResolvedValue([
+      productMember('svc-catalog', 'Quoted laptop', 'config-quoted', null, { baseRate: 7777 }),
+      productMember('svc-override', 'Legacy laptop', 'config-legacy', null, { serviceLineCustomRate: 5000 }),
+    ]);
+    await expand();
+
+    const quoted = await screen.findByTestId('recurring-product-price-config-quoted');
+    expect(quoted.textContent).toBe('AUD 120.00');
+    expect(quoted.parentElement!.textContent).toContain('(catalog)');
+    const legacy = screen.getByTestId('recurring-product-price-config-legacy');
+    expect(legacy.textContent).toBe('AUD 50.00');
+    expect(legacy.parentElement!.textContent).toContain('(override)');
+  });
+
+  it('says a member has no price when nothing in the chain prices it, instead of an amount', async () => {
+    actionMocks.getContractLineServicesWithConfigurations.mockResolvedValue([
+      productMember('svc-unpriced', 'Unpriced laptop', 'config-unpriced', null, { baseRate: 7777 }),
+    ]);
+    actionMocks.getServiceCatalogRatesForCurrency.mockResolvedValue({ 'svc-unpriced': null });
+    actionMocks.getServiceCatalogCostInfo.mockResolvedValue({
+      canViewCost: true,
+      items: { 'svc-unpriced': { default_rate: null, cost: null, cost_currency: null } },
+    });
+    await expand();
+
+    expect((await screen.findByTestId('recurring-product-missing-price-config-unpriced')).textContent)
+      .toBe('No AUD price in the catalog. Enter a unit price.');
+    expect(screen.queryByText(/77\.77/)).toBeNull();
   });
 });

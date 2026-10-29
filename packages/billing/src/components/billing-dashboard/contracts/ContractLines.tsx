@@ -56,7 +56,8 @@ import {
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './BucketOverlayFields';
 import { BucketOverlayInput } from './ContractWizard';
-import { currencyFractionDigits, getCurrencySymbol } from '@alga-psa/core';
+import { getCurrencySymbol } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { toast } from 'react-hot-toast';
 import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
 import {
@@ -175,6 +176,8 @@ interface ServiceConfiguration {
   typeConfig: any;
   rateTiers?: IContractLineServiceRateTier[];
   bucketConfig?: any; // Add bucketConfig property for merged bucket data
+  /** Legacy `contract_line_services.custom_rate`; second link of the engine's member-rate chain. */
+  service_line_custom_rate?: number | null;
 }
 
 interface PendingServiceAddition {
@@ -1086,8 +1089,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
 
   // Catalog-priced recurring product members have no stored rate; their effective unit price
   // comes from the shared resolver (the invoice engine's chain) fed by the shared catalog lookup.
-  const formatMinorMoney = (minorUnits: number, currencyCode: string) =>
-    formatCurrency(minorUnits / Math.pow(10, currencyFractionDigits(currencyCode)), currencyCode);
+  const { money: formatMinorMoney } = useCurrencyFormat();
   const recurringProductIds = useMemo(
     () => Object.values(lineServices)
       .flat()
@@ -1104,13 +1106,30 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   const renderRecurringProductRate = (serviceConfig: ServiceConfiguration) => {
     const currencyCode = contract.currency_code;
     const lookup = productCatalogRates[serviceConfig.service.service_id];
+    // Exactly the engine's inputs (computeRecurringQuantityCharges): the fixed config's
+    // base_rate is not one of them — the engine never reads it for a product member.
     const member = {
-      configuration_custom_rate: serviceConfig.configuration.custom_rate ?? serviceConfig.typeConfig?.base_rate,
+      configuration_custom_rate: serviceConfig.configuration.custom_rate,
+      service_line_custom_rate: serviceConfig.service_line_custom_rate,
       price_rate: lookup?.currency_rate,
       default_rate: lookup?.default_rate,
     };
-    if (!currencyCode || !hasRecurringMemberRate(member)) {
-      return formatRate(serviceConfig.typeConfig?.hourly_rate || serviceConfig.typeConfig?.base_rate);
+    if (!currencyCode) {
+      return formatRate(null);
+    }
+    if (!hasRecurringMemberRate(member)) {
+      // Still loading: claim nothing. Loaded with no rate anywhere in the chain: the engine
+      // cannot bill this member, so say so instead of showing an amount it will not charge.
+      return lookup
+        ? (
+          <span className="text-amber-700" data-testid={`recurring-product-missing-price-${serviceConfig.configuration.config_id}`}>
+            {t('wizardProducts.validation.noCurrencyPriceEnterUnitPrice', {
+              defaultValue: 'No {{currency}} price in the catalog. Enter a unit price.',
+              currency: currencyCode,
+            })}
+          </span>
+        )
+        : formatRate(null);
     }
     const { rateCents, source } = resolveRecurringMemberRate(member);
     const isOverride = source !== 'currency catalog price';
