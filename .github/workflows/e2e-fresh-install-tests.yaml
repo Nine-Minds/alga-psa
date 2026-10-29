@@ -176,6 +176,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The tree hash names the source irrespective of the commit that carries
+      # it: a pull request's merge commit and the squash commit that lands it
+      # on main have different SHAs and the same tree whenever main did not
+      # move in between. Every candidate is labelled with it, and the server
+      # candidates are also tagged with it, so the Argo deployment build can
+      # recognise an image CI already built from exactly this source and copy
+      # it instead of compiling again.
+      - name: Resolve the source tree
+        id: tree
+        run: echo "tree=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
+
       - name: Ensure build disk headroom
         run: |
           # Avoid minutes of unconditional cleanup on runners with enough space.
@@ -288,6 +299,7 @@ jobs:
           tags: ${{ env.IMAGE_TRANSPORT == 'registry' && format('{0}:{1}', env.REGISTRY_REFERENCE, env.REGISTRY_TAG) || matrix.image }}
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
+            com.nineminds.source-tree=${{ steps.tree.outputs.tree }}
           build-args: |
             NEXT_BUILD_MAX_OLD_SPACE_SIZE=12288
           outputs: ${{ env.IMAGE_TRANSPORT == 'registry' && 'type=image,push=true' || format('type=docker,dest={0}/{1}.tar', runner.temp, matrix.service) }}
@@ -343,6 +355,17 @@ jobs:
           # the builder's own copy: the record proves the push landed.
           docker buildx imagetools inspect "$BUILD_REGISTRY_REFERENCE@$BUILD_REPORTED_DIGEST" --raw > "$BUILD_MANIFEST"
           node scripts/record-docker-registry-build.mjs "$BUILD_MANIFEST" "$BUILD_RECORD"
+
+      # A second tag on the recorded manifest, after the record is written so
+      # the candidate's identity stays bound to the run's own tag and digest.
+      # Same source, same image: the Argo build looks this tag up by the tree
+      # of the commit it is deploying (see nm-kube-config, check-image-exists).
+      - name: Tag the candidate with its source tree
+        if: env.IMAGE_TRANSPORT == 'registry' && matrix.prebuild
+        env:
+          TREE: ${{ steps.tree.outputs.tree }}
+          BUILD_REPORTED_DIGEST: ${{ steps.export_image.outputs.digest }}
+        run: docker buildx imagetools create --tag "$REGISTRY_REFERENCE:tree-$TREE" "$REGISTRY_REFERENCE@$BUILD_REPORTED_DIGEST"
 
       # Written after the image is published, so a snapshot failure can only
       # cost the next run its warm start, never this run its candidate.

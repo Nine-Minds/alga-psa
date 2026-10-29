@@ -388,6 +388,17 @@ when it is unset; and `next.config.mjs` makes production builds validate
 webpack snapshots by content hash, because a fresh checkout gives every file a
 new mtime and the timestamp-only default would invalidate every module.
 
+Every candidate carries the label `com.nineminds.source-tree` (the Git tree
+hash of the checkout it was built from, next to the commit in
+`org.opencontainers.image.revision`), and the two server candidates are also
+tagged `tree-<tree hash>` in the registry after their identity record is
+written. A pull request's merge commit and the squash commit that lands it on
+`main` have the same tree whenever `main` did not move in between, so the Argo
+deployment build can recognise an image CI already built from exactly the
+source it is deploying and copy it instead of compiling again. The candidate's
+own identity record is unaffected: it binds the run's tag and manifest digest,
+and the tree tag is a second name for that same digest.
+
 The journeys are partitioned across the `browser-<n>` shards by the runner
 itself. Each shard lists the whole collection, then takes its share
 (`E2E_SHARD=<index>/<total>`, from the matrix) of the journey files, assigned
