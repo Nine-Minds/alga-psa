@@ -1,6 +1,7 @@
 'use client';
 
 
+import { buildFixedMemberRatePatch } from './fixedMemberRatePatch';
 import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Card, Box } from '@radix-ui/themes';
@@ -949,10 +950,13 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
           }
         } else if (serviceConfig.configuration.configuration_type === 'Fixed') {
           if (editData.base_rate !== undefined) {
-            typeConfig.base_rate = editData.base_rate;
             // The edit keeps what the stored number means (share vs per unit); a
-            // rate on a member that had none is a unit price.
-            typeConfig.base_rate_basis = serviceConfig.typeConfig?.base_rate_basis ?? 'per_unit';
+            // rate on a member that had none is a unit price. A null rate is the
+            // catalog price and carries no basis.
+            Object.assign(typeConfig, buildFixedMemberRatePatch(
+              editData.base_rate,
+              serviceConfig.typeConfig?.base_rate_basis,
+            ));
           }
         }
 
