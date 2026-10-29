@@ -13,13 +13,21 @@ import type {
 import { updateSubscriptionMetadata } from '../services/stripe-service.js';
 import { getSecret } from '@alga-psa/core/secrets';
 import { tierFromStripeProduct } from '@ee/lib/stripe/stripeTierMapping.js';
-import { normalizeProductCode } from './product-bootstrap-resolver.js';
+import { isSelfServeProductCode, normalizeProductCode } from './product-bootstrap-resolver.js';
 import type { SeedRunLog } from './onboarding-seeds-operations.js';
+import { runTenantBootstrapTransaction, type TenantBootstrapContext } from './tenant-bootstrap-context.js';
 import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
 
 const logger = () => Context.current().log;
 const TENANT_CREATION_SUBSCRIPTION_DISCOVERY_CONTEXT = 'tenant-creation-subscription-discovery';
 const TENANT_CREATION_BOOTSTRAP_CONTEXT = 'tenant-creation-bootstrap';
+
+/** A reserved operation that authorizes bootstrapping a non-self-serve tenant.
+ * `verify` runs inside the bootstrap transaction and returns the pre-minted
+ * identifiers the new tenant must adopt, or throws if the call does not match. */
+export interface CoManagedBootstrapOperation {
+  verify(trx: Knex.Transaction, input: CreateTenantActivityInput): Promise<{ clientId: string }>;
+}
 
 export interface InsertStripeSubscriptionForTenantInput {
   tenantId: string;
@@ -100,9 +108,10 @@ export async function insertStripeSubscriptionForTenant(
  * Create a new tenant in the main application database
  */
 export async function createTenantInDB(
-  input: CreateTenantActivityInput
+  input: CreateTenantActivityInput,
+  context?: TenantBootstrapContext & { coManagedOperation?: CoManagedBootstrapOperation },
 ): Promise<CreateTenantActivityResult> {
-  const log = logger();
+  const log = context?.log ?? logger();
   log.info('Creating tenant in database', {
     tenantName: input.tenantName,
     licenseCount: input.licenseCount
@@ -113,7 +122,7 @@ export async function createTenantInDB(
   }
 
   try {
-    const knex = await getAdminConnection();
+    const knex = context?.transaction ?? await getAdminConnection();
 
     // Durable idempotency guard: refuse to mint a second tenant for a Stripe
     // subscription that was already provisioned. Backstops the Temporal reuse
@@ -135,7 +144,18 @@ export async function createTenantInDB(
       }
     }
 
-    const result = await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
+    const result = await runTenantBootstrapTransaction(context?.transaction, async (trx: Knex.Transaction) => {
+      // Products that are not self-serve exist only for a reserved operation.
+      // The reservation's own verifier decides whether this call matches it; a
+      // mismatch throws instead of minting a second tenant.
+      let reservedClientId: string | undefined;
+      if (!isSelfServeProductCode(normalizeProductCode(input.productCode))) {
+        if (!context?.transaction || !context.coManagedOperation || input.stripeCustomerId || input.stripeSubscriptionId ||
+            input.stripePriceId || input.appleIap || input.billingSource !== 'manual' || input.addons?.length) {
+          throw new Error('This product can only be bootstrapped for a reserved operation with sponsorship billing');
+        }
+        reservedClientId = (await context.coManagedOperation.verify(trx, input)).clientId;
+      }
       // Create tenant first (include admin email since it's required)
       const tenantCompanyName = input.companyName ?? input.tenantName;
 
@@ -328,6 +348,8 @@ export async function createTenantInDB(
         // unconfigured tenant, so both no-op this early; currency falls back to
         // 'USD' because default_billing_settings does not exist yet.
         const createdClient = await createClientWithDefaults(trx, tenantId, {
+          // A reserved operation pre-mints its client id so later steps can address it.
+          ...(reservedClientId ? { client_id: reservedClientId } : {}),
           client_name: clientName,
           client_type: 'company',
           is_inactive: false,
@@ -444,16 +466,17 @@ export async function createTenantInDB(
  * Set up initial tenant data (contract lines, default settings, etc.)
  */
 export async function setupTenantDataInDB(
-  input: SetupTenantDataActivityInput
+  input: SetupTenantDataActivityInput,
+  context?: TenantBootstrapContext,
 ): Promise<SetupTenantDataActivityResult> {
-  const log = logger();
+  const log = context?.log ?? logger();
   log.info('Setting up tenant data', { tenantId: input.tenantId });
 
   try {
-    const knex = await getAdminConnection();
+    const knex = context?.transaction ?? await getAdminConnection();
     const setupSteps: string[] = [];
 
-    await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
+    await runTenantBootstrapTransaction(context?.transaction, async (trx: Knex.Transaction) => {
       await ensureMiscellaneousService(trx, input.tenantId);
       // Set up tenant email settings with defaults (simple insert, no ON CONFLICT to avoid distributed table issues)
       try {

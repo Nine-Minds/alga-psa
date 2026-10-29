@@ -18,7 +18,8 @@ export type MergeBlockerCode =
   | 'SOURCE_IS_TENANT_DEFAULT'
   | 'PARENT_LINK_CYCLE'
   | 'INVALID_CONTRACT_CUTOVER'
-  | 'INVALID_CONTACT_LOCATION';
+  | 'INVALID_CONTACT_LOCATION'
+  | 'SOURCE_HAS_CO_MANAGEMENT';
 
 export interface MergeBlocker {
   code: MergeBlockerCode;
@@ -33,6 +34,8 @@ export interface MergeClientFacts {
   mergedIntoClientId: string | null;
   /** The tenant's own client record cannot be absorbed into a customer. */
   isTenantDefault: boolean;
+  /** A co-managed workspace provisioned for this client still holds seats. */
+  hasLiveCoManagement?: boolean;
 }
 
 export interface MergeGuardInput {
@@ -129,6 +132,15 @@ export function evaluateMergeGuards(input: MergeGuardInput): MergeBlocker[] {
       'SOURCE_IS_TENANT_DEFAULT',
       'Your own organisation record cannot be merged into a client.',
       'msp/clients:errors.clientMerge.sourceIsTenantDefault',
+    ));
+  }
+  // The co-managed setup records its client by id; merging the client away
+  // would orphan the workspace and the seats it holds.
+  if (input.source.hasLiveCoManagement) {
+    blockers.push(blocker(
+      'SOURCE_HAS_CO_MANAGEMENT',
+      'This client has a co-managed IT workspace. Cancel its setup or end co-management before merging it.',
+      'msp/clients:errors.clientMerge.sourceHasCoManagement',
     ));
   }
   // Absorbing a client into one of its own recorded children would leave the

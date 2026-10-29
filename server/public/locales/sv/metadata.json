@@ -601,6 +601,15 @@
     },
     "layout": {
       "defaultTitle": "Översikt | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "Samhanterad IT"
+    },
+    "coManagement": {
+      "title": "Samhanterad åtkomst",
+      "providers": {
+        "title": "E-post- och identitetsleverantörer"
+      }
     }
   },
   "share": {

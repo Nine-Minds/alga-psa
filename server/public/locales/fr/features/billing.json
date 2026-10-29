@@ -445,7 +445,13 @@
     "expires": "Expire le {{date}}",
     "recentBurn": "Consommation récente",
     "timeEntry": "Entrée de temps",
-    "contractLabel": "Contrat : {{contract}}"
+    "contractLabel": "Contrat : {{contract}}",
+    "hoursLeftValue": "{{hours}} h restantes · {{value}}",
+    "validFrom": "Valide à partir du {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — bloc prépayé, {{hours}} h",
+    "overPrepaidBlock": "{{name}} (au-delà du bloc prépayé)"
   },
   "bucketUsage": {
     "contractLine": "Ligne de contrat de forfait d’heures",

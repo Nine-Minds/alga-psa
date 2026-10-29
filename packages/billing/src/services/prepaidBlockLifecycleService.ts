@@ -88,6 +88,8 @@ export interface LockedInvoiceBlock {
   client_contract_id: string | null;
   contract_line_id: string | null;
   issuance_id: string | null;
+  /** Set for a cadence-mode block (one per service period); null for consumption blocks. */
+  service_period_record_id: string | null;
 }
 
 /**
@@ -113,6 +115,7 @@ export async function lockInvoiceBlocksWithLineSiblings(
     .select(
       'block_id', 'status', 'total_minutes', 'remaining_minutes', 'first_allocated_at', 'source_invoice_id',
       'source_invoice_charge_id', 'service_id', 'client_id', 'client_contract_id', 'contract_line_id', 'issuance_id',
+      'service_period_record_id',
     );
   return rows.filter((r) => r.source_invoice_id === invoiceId);
 }
@@ -397,7 +400,7 @@ async function releaseBlockAllocations(
 
 export interface VoidLinkedBlockInput {
   blockId: string;
-  status: 'pending' | 'active';
+  status: 'pending' | 'active' | 'expired';
   contractLineId: string | null;
   issuanceId: string | null;
   invoiceId: string;
@@ -484,9 +487,9 @@ async function blockIsUsed(trx: Knex.Transaction, tenant: string, block: { block
  *    activated, and contract gap-draw blocks): allocations released, block
  *    voided, issuance restored per kind, line re-drawn. This closes the old gap
  *    where a voided bucket-replenishment invoice left its block pending forever.
- *  - `active` blocks follow the existing manual-void guard: refused when the
+ *  - `active` and `expired` blocks follow the existing manual-void guard: refused when the
  *    block has ever been used; an unused block is voided with the invoice.
- *  - terminal (expired/voided) blocks are left as they are.
+ *  - already voided blocks are left as they are.
  *
  * Check-then-write: every refusal is decided under the locks before the first
  * write, so a refusal leaves nothing half-done (callers inside a transaction
@@ -505,7 +508,7 @@ export async function voidHourBlocksForVoidedInvoice(
   const linked = await lockInvoiceBlocksWithLineSiblings(trx, tenant, invoiceId, contractLineIds);
 
   for (const block of linked) {
-    if (block.status === 'active' && await blockIsUsed(trx, tenant, block)) {
+    if ((block.status === 'active' || block.status === 'expired') && await blockIsUsed(trx, tenant, block)) {
       const usedHours = ((Number(block.total_minutes) - Number(block.remaining_minutes)) / 60).toFixed(1);
       const totalHours = (Number(block.total_minutes) / 60).toFixed(1);
       return {
@@ -518,7 +521,7 @@ export async function voidHourBlocksForVoidedInvoice(
   const reason = `Invoice voided: ${voidReason}`;
   const lines = new Set<string>(contractLineIds);
   for (const block of linked) {
-    if (block.status !== 'pending' && block.status !== 'active') continue;
+    if (block.status !== 'pending' && block.status !== 'active' && block.status !== 'expired') continue;
     const result = await releaseAndVoidLinkedBlock(trx, tenant, {
       blockId: block.block_id,
       status: block.status,

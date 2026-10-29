@@ -2011,7 +2011,9 @@
       "blockSummary": "{{hours}} Stunden für {{price}}",
       "expiresAfter_one": "läuft nach {{count}} Monat ab",
       "expiresAfter_other": "läuft nach {{count}} Monaten ab",
-      "neverExpires": "läuft nie ab"
+      "neverExpires": "läuft nie ab",
+      "cadenceSummary": "{{hours}} Std. je Abrechnungszeitraum für {{price}}",
+      "overageRate": "Mehrverbrauch {{rate}}/Std."
     }
   },
   "wizardTemplateLines": {
@@ -2313,7 +2315,8 @@
       "period": "Periode: {{period}}"
     },
     "prepaid": {
-      "blockSummaryNeutral": "{{hours}} Stunden für {{price}} (in der Währung des Kunden)"
+      "blockSummaryNeutral": "{{hours}} Stunden für {{price}} (in der Währung des Kunden)",
+      "cadenceSummaryNeutral": "{{hours}} Std. je Abrechnungszeitraum für {{price}} (in der Währung des Kunden)"
     }
   },
   "templatePreview": {
@@ -2778,7 +2781,7 @@
     "done": "Fertig"
   },
   "sellHourBlockNote": {
-    "text": "Ein Vertrags-Stundenkontingent berechnet nur die Mehrverbrauchsstunden. Um einen Stundenblock im Voraus zu berechnen, fügen Sie diesem Vertrag eine Prepaid-Block-Linie hinzu."
+    "text": "Ein Vertrags-Stundenkontingent berechnet nur den Mehrverbrauch. Um einen Stundenblock im Voraus zu berechnen, fügen Sie dem Vertrag eine Prepaid-Block-Position hinzu und stellen Sie sie jeden Abrechnungszeitraum aus."
   },
   "review": {
     "saveTemplateRates": "Diese {{currency}}-Preise in der Vorlage speichern",
@@ -2960,7 +2963,17 @@
       "tier": "Folgerechnung",
       "tierDraft": "Entwurf zur Prüfung erstellen",
       "tierAutoIssue": "Automatisch abschließen und senden",
-      "blockPriceNeutral": "Blockpreis (in der Währung des Kunden)"
+      "blockPriceNeutral": "Blockpreis (in der Währung des Kunden)",
+      "ratePerHour": "Entspricht {{rate}} pro Stunde des Blocks.",
+      "issueMode": "Blöcke ausstellen",
+      "issueModeCadence": "Jeden Abrechnungszeitraum",
+      "blockFeeInAdvance": "Die Position wird nachträglich abgerechnet; die Blockgebühr wird im Voraus berechnet.",
+      "issueModeConsumption": "Wenn der aktuelle Block aufgebraucht oder abgelaufen ist",
+      "rolloverPeriods": "Ungenutzte Stunden",
+      "rolloverNone": "Am Ende des Zeitraums verfallen",
+      "cadenceNote": "Im Voraus für jeden Zeitraum abgerechnet. Stunden über den Block hinaus werden mit dem Stundensatz der Position auf der nächsten Rechnung berechnet.",
+      "rolloverCarry_one": "{{count}} Zeitraum übertragen",
+      "rolloverCarry_other": "{{count}} Zeiträume übertragen"
     },
     "status": {
       "pending": "Ausstehend",

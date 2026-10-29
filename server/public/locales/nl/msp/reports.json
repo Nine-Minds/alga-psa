@@ -310,7 +310,9 @@
       "hourlyRate": "Tarief / uur",
       "expirationDate": "Verloopt",
       "neverExpires": "Nooit",
-      "adhocBlock": "Ad-hoc"
+      "adhocBlock": "Ad-hoc",
+      "remainingValue": "Resterende waarde",
+      "validFrom": "Geldig vanaf"
     },
     "statusValues": {
       "active": "Actief",

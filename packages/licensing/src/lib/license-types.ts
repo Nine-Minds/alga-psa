@@ -24,6 +24,10 @@ export interface LicenseClaims {
    * re-sign (or the License page's "Refresh license now").
    */
   seats?: number;
+  /** Purchased customer-technician capacity. Absent means zero, never unlimited.
+   * Valid only for the sponsoring tenant identified by `aud`; separate from MSP seats.
+   */
+  co_managed_seats?: number;
   /** Issued-at (seconds since epoch) */
   iat: number;
   /** Expiry (seconds since epoch) */

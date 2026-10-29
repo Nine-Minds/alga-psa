@@ -2019,7 +2019,9 @@
       "badgeCount_few": "{{count}} pozycje",
       "badgeCount_many": "{{count}} pozycji",
       "expiresAfter_few": "wygasa po {{count}} miesiącach",
-      "expiresAfter_many": "wygasa po {{count}} miesiącach"
+      "expiresAfter_many": "wygasa po {{count}} miesiącach",
+      "cadenceSummary": "{{hours}} godz. w każdym okresie rozliczeniowym za {{price}}",
+      "overageRate": "nadwyżka {{rate}}/godz."
     }
   },
   "wizardTemplateLines": {
@@ -2323,7 +2325,8 @@
       "period": "Okres: {{period}}"
     },
     "prepaid": {
-      "blockSummaryNeutral": "{{hours}} godz. za {{price}} (w walucie klienta)"
+      "blockSummaryNeutral": "{{hours}} godz. za {{price}} (w walucie klienta)",
+      "cadenceSummaryNeutral": "{{hours}} godz. w każdym okresie rozliczeniowym za {{price}} (w walucie klienta)"
     }
   },
   "templatePreview": {
@@ -2788,7 +2791,7 @@
     "done": "Gotowe"
   },
   "sellHourBlockNote": {
-    "text": "Pakiet godzin w umowie rozlicza tylko przekroczenie. Aby z góry naliczyć opłatę za pakiet godzin, dodaj do tej umowy linię Przedpłacony pakiet."
+    "text": "Pula godzin w umowie rozlicza tylko nadwyżkę. Aby pobierać opłatę z góry za blok godzin, dodaj do umowy pozycję Blok przedpłacony i wystawiaj ją w każdym okresie rozliczeniowym."
   },
   "review": {
     "saveTemplateRates": "Zapisz te stawki w {{currency}} w szablonie",
@@ -2970,7 +2973,19 @@
       "tier": "Faktura następna",
       "tierDraft": "Utwórz wersję roboczą do przeglądu",
       "tierAutoIssue": "Finalizuj i wyślij automatycznie",
-      "blockPriceNeutral": "Cena bloku (w walucie klienta)"
+      "blockPriceNeutral": "Cena bloku (w walucie klienta)",
+      "ratePerHour": "Daje to {{rate}} za godzinę bloku.",
+      "issueMode": "Wystawiaj bloki",
+      "issueModeCadence": "W każdym okresie rozliczeniowym",
+      "blockFeeInAdvance": "Pozycja jest rozliczana z dołu; opłata za blok jest rozliczana z góry.",
+      "issueModeConsumption": "Gdy bieżący blok się wyczerpie lub wygaśnie",
+      "rolloverPeriods": "Niewykorzystane godziny",
+      "rolloverNone": "Wygasają na koniec okresu",
+      "cadenceNote": "Rozliczane z góry w każdym okresie. Godziny ponad blok są rozliczane według stawki godzinowej pozycji na następnej fakturze.",
+      "rolloverCarry_one": "Przenieś na {{count}} okres",
+      "rolloverCarry_few": "Przenieś na {{count}} okresy",
+      "rolloverCarry_many": "Przenieś na {{count}} okresów",
+      "rolloverCarry_other": "Przenieś na {{count}} okresy"
     },
     "status": {
       "pending": "Oczekujący",

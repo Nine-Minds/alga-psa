@@ -156,7 +156,7 @@ describe('TimeSheetService.search (real Postgres)', () => {
         // strict(): an undocumented extra column in the payload fails, as does a missing documented one
         expect(() => timeSheetSearchRowSchema.strict().parse(row)).not.toThrow();
         expect(Object.keys(row).sort()).toEqual(
-          ['tenant', 'id', 'user_id', 'period_id', 'approval_status', 'submitted_at', 'approved_at', 'approved_by', 'user_name',
+          ['tenant', 'id', 'user_id', 'period_id', 'approval_status', 'submitted_at', 'approved_at', 'approved_by', 'notes', 'user_name',
             ...(include_entries === 'true' ? ['time_entries'] : [])].sort(),
         );
       }

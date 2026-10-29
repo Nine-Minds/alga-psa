@@ -2011,7 +2011,9 @@
       "blockSummary": "{{hours}} horas por {{price}}",
       "expiresAfter_one": "caduca tras {{count}} mes",
       "expiresAfter_other": "caduca tras {{count}} meses",
-      "neverExpires": "no caduca"
+      "neverExpires": "no caduca",
+      "cadenceSummary": "{{hours}} h cada periodo de facturación por {{price}}",
+      "overageRate": "exceso {{rate}}/h"
     }
   },
   "wizardTemplateLines": {
@@ -2313,7 +2315,8 @@
       "period": "Período: {{period}}"
     },
     "prepaid": {
-      "blockSummaryNeutral": "{{hours}} horas por {{price}} (en la moneda del cliente)"
+      "blockSummaryNeutral": "{{hours}} horas por {{price}} (en la moneda del cliente)",
+      "cadenceSummaryNeutral": "{{hours}} h cada periodo de facturación por {{price}} (en la moneda del cliente)"
     }
   },
   "templatePreview": {
@@ -2778,7 +2781,7 @@
     "done": "Listo"
   },
   "sellHourBlockNote": {
-    "text": "Una bolsa de horas del contrato solo factura el exceso. Para cobrar por adelantado un bloque de horas, agregue una línea de Bloque prepagado a este contrato."
+    "text": "Una bolsa de horas del contrato solo factura el exceso. Para cobrar un bloque de horas por adelantado, añada una línea de Bloque prepagado al contrato y emítala cada periodo de facturación."
   },
   "review": {
     "saveTemplateRates": "Guardar estas tarifas en {{currency}} en la plantilla",
@@ -2960,7 +2963,17 @@
       "tier": "Factura de seguimiento",
       "tierDraft": "Crear un borrador para revisión",
       "tierAutoIssue": "Finalizar y enviar automáticamente",
-      "blockPriceNeutral": "Precio del bloque (en la moneda del cliente)"
+      "blockPriceNeutral": "Precio del bloque (en la moneda del cliente)",
+      "ratePerHour": "Equivale a {{rate}} por hora del bloque.",
+      "issueMode": "Emitir bloques",
+      "issueModeCadence": "Cada periodo de facturación",
+      "blockFeeInAdvance": "La línea se factura a mes vencido; la tarifa del bloque se factura por adelantado.",
+      "issueModeConsumption": "Cuando el bloque actual se agota o caduca",
+      "rolloverPeriods": "Horas sin usar",
+      "rolloverNone": "Caducan al final del periodo",
+      "cadenceNote": "Se factura por adelantado cada periodo. Las horas que superen el bloque se facturan a la tarifa por hora de la línea en la siguiente factura.",
+      "rolloverCarry_one": "Trasladar {{count}} periodo",
+      "rolloverCarry_other": "Trasladar {{count}} periodos"
     },
     "status": {
       "pending": "Pendiente",

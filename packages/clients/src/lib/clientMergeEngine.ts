@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { countLiveCoManagedWorkspacesForClient } from '@alga-psa/core/config/deletion';
 import { tenantDb, admitOperationalWrite } from '@alga-psa/db';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 import {
@@ -254,6 +255,7 @@ async function readClientFacts(
     clientName: row.client_name as string,
     mergedIntoClientId: (row.merged_into_client_id as string | null) ?? null,
     isTenantDefault: Boolean(tenantDefault),
+    hasLiveCoManagement: await countLiveCoManagedWorkspacesForClient(trx, { tenant, entityId: clientId }) > 0,
   };
 }
 

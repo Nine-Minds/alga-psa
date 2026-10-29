@@ -1,0 +1,62 @@
+2026-10-25T18:05:59.0787558Z  FAIL   node  src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts > service-period-first billing plan artifacts > T003: inventory captures persisted service-period readers outside the billing engine
+2026-10-25T18:05:59.0789158Z  FAIL   node  src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts > service-period-first billing plan artifacts > T003: inventory captures persisted service-period readers outside the billing engine
+2026-10-25T18:05:59.0805275Z AssertionError: expected [ …(255) ] to deeply equal [ …(256) ]
+2026-10-25T18:05:59.0805294Z 
+2026-10-25T18:05:59.0805486Z - Expected
+2026-10-25T18:05:59.0805628Z + Received
+2026-10-25T18:05:59.0805637Z 
+2026-10-25T18:05:59.0805874Z @@ -244,11 +244,10 @@
+2026-10-25T18:05:59.0806324Z     "server/src/test/unit/invoiceWorkflowEvents.test.ts",
+2026-10-25T18:05:59.0806889Z     "server/src/test/unit/migrations/recurringServicePeriodsMigration.test.ts",
+2026-10-25T18:05:59.0807262Z     "server/src/test/unit/workflow-event-contracts/contracts/billing.ts",
+2026-10-25T18:05:59.0807518Z     "server/test-utils/billingTestHelpers.ts",
+2026-10-25T18:05:59.0808024Z     "shared/billingClients/__tests__/recurringRunExecutionIdentity.prepaidBlockStream.test.ts",
+2026-10-25T18:05:59.0808399Z -   "shared/billingClients/billedClientCadenceRecurringPeriods.ts",
+2026-10-25T18:05:59.0808669Z     "shared/billingClients/bucketUsageService.ts",
+2026-10-25T18:05:59.0808978Z     "shared/billingClients/calendarMonthEndClosePolicy.ts",
+2026-10-25T18:05:59.0809296Z     "shared/billingClients/clientCadenceScheduleRegeneration.ts",
+2026-10-25T18:05:59.0809554Z     "shared/billingClients/recurringDueWork.ts",
+2026-10-25T18:05:59.0809862Z     "shared/billingClients/recurringRunExecutionIdentity.ts",
+2026-10-25T18:05:59.0809871Z 
+2026-10-25T18:05:59.0810376Z  ❯ src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts:453:7
+2026-10-25T18:05:59.0924040Z     451|         ...servicePeriodPostInventoryRefs,
+2026-10-25T18:05:59.0924108Z 
+2026-10-25T18:05:59.0924470Z     452|       ])].sort()
+2026-10-25T18:05:59.0924926Z     453|     ).toEqual(outsideEngine);
+2026-10-25T18:05:59.0925188Z        |       ^
+2026-10-25T18:05:59.0925430Z     454|   });
+2026-10-25T18:05:59.0925616Z     455| 
+2026-10-25T18:05:59.0925631Z 
+2026-10-25T18:05:59.0926054Z ⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+2026-10-25T18:05:59.0926067Z 
+2026-10-25T18:05:59.0964000Z  Test Files  1 failed | 945 passed (946)
+2026-10-25T18:05:59.1004411Z       Tests  1 failed | 5924 passed (5925)
+2026-10-25T18:05:59.1004675Z    Start at  17:36:53
+2026-10-25T18:05:59.1061850Z    Duration  1745.16s (transform 97.79s, setup 173.73s, collect 859.88s, tests 340.03s, environment 150.36s, prepare 134.38s)
+2026-10-25T18:05:59.1061885Z 
+2026-10-25T18:06:04.5854482Z JSON report written to /home/runner/work/alga-psa/alga-psa/test-results/server-coverage/results.json
+2026-10-25T18:06:04.7073723Z blob report written to /home/runner/work/alga-psa/alga-psa/test-results/server-coverage/blob.json
+2026-10-25T18:06:04.7285173Z  % Coverage report from v8
+2026-10-25T18:06:04.9101364Z 
+2026-10-25T18:06:04.9102200Z =============================== Coverage summary ===============================
+2026-10-25T18:06:04.9103035Z Statements   : 22.9% ( 66465/290142 )
+2026-10-25T18:06:04.9103542Z Branches     : 19.11% ( 42170/220632 )
+2026-10-25T18:06:04.9104040Z Functions    : 22.03% ( 12199/55359 )
+2026-10-25T18:06:04.9104654Z Lines        : 23.24% ( 63242/272077 )
+2026-10-25T18:06:04.9105536Z ================================================================================
+2026-10-25T18:06:06.8277932Z Runner exited with 1
+2026-10-25T18:06:06.8278427Z Runner did not report success
+2026-10-25T18:06:06.8279142Z File failed: server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts
+2026-10-25T18:06:06.8280854Z failed: server/src/test/unit/docs/servicePeriodFirstBillingPlan.contract.test.ts > service-period-first billing plan artifacts T003: inventory captures persisted service-period readers outside the billing engine
+2026-10-25T18:06:06.8282804Z Server unit shard execution: failed
+2026-10-25T18:06:06.8711169Z ##[error]Process completed with exit code 1.
+2026-10-25T18:06:06.8782817Z ##[group]Run actions/upload-artifact@v4
+2026-10-25T18:06:06.8783166Z with:
+2026-10-25T18:06:06.8783410Z   name: server-unit-shard-4
+2026-10-25T18:06:06.8783706Z   path: test-results/server-coverage/
+2026-10-25T18:06:06.8784019Z   if-no-files-found: error
+2026-10-25T18:06:06.8784311Z   retention-days: 7
+2026-10-25T18:06:06.8784556Z   compression-level: 6
+2026-10-25T18:06:06.8784810Z   overwrite: false
+2026-10-25T18:06:06.8785055Z   include-hidden-files: false
+2026-10-25T18:06:06.8785319Z env:
