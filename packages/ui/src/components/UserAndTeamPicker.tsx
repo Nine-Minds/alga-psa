@@ -15,6 +15,7 @@ import { useRegisterUIComponent } from '../ui-reflection/useRegisterUIComponent'
 import { CommonActions } from '../ui-reflection/actionBuilders';
 import type { GetUserAvatarUrlsBatch } from './UserPicker';
 import { useTranslation } from '../lib/i18n/client';
+import { truncateTeamDescription } from '../lib/utils';
 
 export type GetTeamAvatarUrlsBatch = (teamIds: string[], tenant: string) => Promise<Map<string, string | null>>;
 
@@ -536,19 +537,19 @@ const UserAndTeamPicker = ({
                 className="relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:bg-[rgb(var(--color-primary-500)/0.08)] text-gray-900"
                 parentId={pickerId}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full min-w-0">
                   <TeamAvatar
                     teamId={team.team_id}
                     teamName={team.team_name || t('pickers.unnamedTeam', 'Unnamed Team')}
                     avatarUrl={resolveTeamAvatar(team.team_id)}
                     size="sm"
                   />
-                  <div className="flex flex-col min-w-0">
+                  <div className="flex flex-col flex-1 min-w-0">
                     <span>{team.team_name || t('pickers.unnamedTeam', 'Unnamed Team')}</span>
                     <span className="text-xs text-gray-500">{memberCount} members · Lead: {leadName}</span>
                     {team.description && (
                       <span className="text-xs text-gray-500 truncate" title={team.description}>
-                        {team.description}
+                        {truncateTeamDescription(team.description)}
                       </span>
                     )}
                   </div>

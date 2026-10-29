@@ -15,6 +15,7 @@ import { Button } from './Button';
 import type { ITeam } from '@alga-psa/types';
 import TeamAvatar from './TeamAvatar';
 import { useTranslation } from '../lib/i18n/client';
+import { truncateTeamDescription } from '../lib/utils';
 
 export type GetTeamAvatarUrlsBatch = (teamIds: string[], tenant: string) => Promise<Map<string, string | null>>;
 
@@ -762,12 +763,12 @@ const MultiUserAndTeamPicker = ({
                           avatarUrl={teamAvatarUrls[team.team_id] ?? null}
                           size="sm"
                         />
-                        <div className="ml-2 flex flex-col min-w-0">
+                        <div className="ml-2 flex flex-col flex-1 min-w-0">
                           <span>{team.team_name || 'Unnamed Team'}</span>
                           <span className="text-xs text-gray-500">{memberCount} members · Lead: {leadName}</span>
                           {team.description && (
                             <span className="text-xs text-gray-500 truncate" title={team.description}>
-                              {team.description}
+                              {truncateTeamDescription(team.description)}
                             </span>
                           )}
                         </div>
