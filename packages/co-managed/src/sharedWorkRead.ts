@@ -3,7 +3,7 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import { lockCoManagedLocalAuthentication } from './localAuthentication';
 import { evaluateCoManagedAccess, type CoManagedVisibilityMode } from './policy';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
-import { withCoManagedSharedWork, CoManagedSharedWorkError, loadCoManagedGrantFacts, loadCoManagedHomeFacts, loadCoManagedLifecycleFacts,
+import { withCoManagedSharedWork, CoManagedSharedWorkError, loadCoManagedHomeFacts, loadCoManagedLifecycleFacts,
   loadCoManagedStaffRoles, type CoManagedSessionActor, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { withCoManagedCustomerTicket } from './customerWork';
 import { isCoManagedUuid } from './sharedWorkIdentity';
@@ -174,15 +174,20 @@ export async function listCoManagedCustomerTickets(db: Knex, actor: CoManagedSes
       const probe = evaluateCoManagedAccess({ lifecycle: lifecycle.lifecycle, staff: { roles }, home: home.facts,
         grant: { visibilityMode: mode, scope: { canCollaborate: false } } });
       if (!probe.read) continue;
-      const boards = await tenantDb(trx, customerTenant).table('co_management_board_scopes').where('relationship_id', relationshipId).select('board_id');
+      // Every ticket on a board shares that board's scope row: read it once per board (shared lock), not once per ticket.
+      const boards = await tenantDb(trx, customerTenant).table('co_management_board_scopes').where('relationship_id', relationshipId).forShare()
+        .select('board_id', 'can_collaborate');
       if (!boards.length) continue;
-      const rows = await ticketQuery(trx, customerTenant).whereIn('tickets.board_id', boards.map((b: any) => b.board_id))
+      const scopeByBoard = new Map<string, { canCollaborate: boolean }>(boards.map((b: any) => [b.board_id, { canCollaborate: b.can_collaborate }]));
+      const rows = await ticketQuery(trx, customerTenant).whereIn('tickets.board_id', boards.map((b: any) => b.board_id)).forShare('tickets')
         .orderBy('tickets.entered_at', 'desc').orderBy('tickets.ticket_id').limit((page + 1) * pageSize + 1).select(...TICKET_COLUMNS);
       const customer = await tenantDb(trx, customerTenant).table('tenants').first('client_name');
       for (const row of rows) {
         const resource: CoManagedSharedResource = { tenant: customerTenant, relationshipId, kind: 'ticket', id: row.ticket_id };
-        const grant = await loadCoManagedGrantFacts(trx, resource, mode, 'share');
-        if (!grant || !evaluateCoManagedAccess({ lifecycle: lifecycle.lifecycle, staff: { roles }, grant, home: home.facts }).read) continue;
+        const scope = scopeByBoard.get(row.board_id);
+        if (!scope) continue;
+        const grant = { visibilityMode: mode, scope, explicit: null };
+        if (!evaluateCoManagedAccess({ lifecycle: lifecycle.lifecycle, staff: { roles }, grant, home: home.facts }).read) continue;
         collected.push({ resource, customerName: customer?.client_name ?? '', entered: date(row.entered_at) ?? '',
           fields: visibleCoManagedFields(ticketSummaryCandidates(customerTenant, row), home.redactedFields.concat(lifecycle.relationship.redacted_fields ?? [])) });
       }

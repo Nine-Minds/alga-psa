@@ -273,6 +273,10 @@ export async function executeCoManagedDelegatedCommand(db: Knex, actor: CoManage
     await context.credential.assertCurrent(); await assertCoManagedOperationalWrite(context.trx,target.customerTenant);
     await coManagedDelegatedReceipts.append(context.trx, { tenant: target.customerTenant, operation_id: command.operationId, grant_id: command.grantId,
       actor_tenant: actor.tenant, actor_user_id: actor.userId, request_fingerprint: fingerprint });
+    // audit_logs has a BEFORE INSERT trigger that overwrites `tenant` from app.current_tenant. This request runs in the sponsor's
+    // tenant context, so without pinning the GUC the customer's audit row would be filed under the sponsor (or fail on an unset GUC).
+    // Transaction-local, same as accountingAudit.ts; nothing after this statement relies on the ambient tenant.
+    await context.trx.raw('select set_config(?, ?, true)', ['app.current_tenant', target.customerTenant]);
     await context.owner.table('audit_logs').insert({ tenant: target.customerTenant, audit_id: randomUUID(), user_id: null, operation: 'co_managed_delegated_administration',
       table_name: definition.table, record_id: grant.target_id, changed_data: {}, details: { actor_tenant: actor.tenant, actor_user_id: actor.userId,
         relationship_id: target.relationshipId, grant_id: grant.grant_id, operation_id: command.operationId, delegated_operation: operation, changed_fields: Object.keys(patch).sort() } });
