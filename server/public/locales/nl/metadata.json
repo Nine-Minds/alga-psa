@@ -533,6 +533,9 @@
       },
       "sharedTicket": {
         "title": "Gedeeld ticket"
+        },
+      "providers": {
+        "title": "E-mail- en identiteitsproviders"
       }
     }
   },

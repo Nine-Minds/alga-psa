@@ -2,7 +2,7 @@
   {
     "runner": "legacy-email-review",
     "cwd": "server",
-    "cli": "server/node_modules/vitest/vitest.mjs",
+    "cli": "node_modules/vitest/vitest.mjs",
     "config": "vitest.config.ts",
     "filters": [
       "src/test/e2e/email-processing.test.ts",
@@ -20,7 +20,7 @@
   {
     "runner": "invoice-visual-review",
     "cwd": "server",
-    "cli": "server/node_modules/vitest/vitest.mjs",
+    "cli": "node_modules/vitest/vitest.mjs",
     "config": "vitest.config.ts",
     "filters": [
       "src/test/visual/invoiceTemplateGolden.test.ts"
@@ -38,7 +38,7 @@
   {
     "runner": "tenant-deletion-hotpath-review",
     "cwd": "ee/temporal-workflows",
-    "cli": "server/node_modules/vitest/vitest.mjs",
+    "cli": "node_modules/vitest/vitest.mjs",
     "config": "vitest.no-docker.config.ts",
     "filters": [
       "src/activities/__tests__/tenantDeletionQueryBudget.test.ts"
@@ -56,7 +56,7 @@
   {
     "runner": "server-hotpath-review",
     "cwd": "server",
-    "cli": "server/node_modules/vitest/vitest.mjs",
+    "cli": "node_modules/vitest/vitest.mjs",
     "config": "vitest.config.ts",
     "filters": [
       "src/test/contract/hotPathQueryBudget.local.test.ts"
@@ -74,7 +74,7 @@
   {
     "runner": "co-managed-built-worker-access-review",
     "cwd": "ee/temporal-workflows",
-    "cli": "server/node_modules/vitest/vitest.mjs",
+    "cli": "node_modules/vitest/vitest.mjs",
     "config": "vitest.co-managed-worker-access.config.ts",
     "filters": [
       "src/__tests__/worker-access/coManagedBuiltWorkerAccess.integration.test.ts"

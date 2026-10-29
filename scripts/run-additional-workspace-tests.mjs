@@ -54,7 +54,7 @@ const env = {
 const filters = process.argv.slice(3);
 if (filters.some((filter) => filter.startsWith('-'))) throw new Error('Only file filters are supported');
 let args = ['--config', settings.config, ...filters];
-const run = (args) => spawnSync(process.execPath, [path.join(root, settings.vitest ?? 'server/node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
+const run = (args) => spawnSync(process.execPath, [path.join(root, settings.vitest ?? 'node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
 let allFiles = [];
 let before;
 let evidence;

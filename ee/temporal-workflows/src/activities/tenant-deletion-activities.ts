@@ -245,6 +245,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'tag_references',
   'tag_display_rules',
   'ticket_resources',
+  'ticket_watchers',
   'client_portal_visibility_group_boards',
   'import_job_items',
   'import_jobs',

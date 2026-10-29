@@ -30,6 +30,7 @@ const INTENTIONALLY_UNLINKED: Record<string, string> = {
   '/msp/co-managed': 'capability-gated Co-managed IT menu group contributed through the msp.navigation.group UI slot (config/coManagedMenu.ts), not menuConfig; coManagedMenuGroup.test.tsx pins it',
   '/msp/co-management/administration': 'capability-gated Access & administration screen; the sidebar shows it only when the co-managed capability holds (SidebarWithFeatureFlags filters it out otherwise), so the registry-level coherence check does not see it',
   '/msp/co-management/customer-tickets': 'capability-gated (co-managed serves) sponsor queue of customer-shared tickets, reached by its own deep links; the nav entry arrives when the L1b Oversight shell absorbs this route',
+  '/msp/co-management/providers': 'capability-gated provider setup reached through the product-neutral /msp/go/providers entry (Open Providers in email setup, profile SSO)',
   '/msp/create-opportunity': 'reached via the Quick Create button in the header, not the sidebar',
   '/msp/create-ticket': 'reached via the Quick Create button in the header, not the sidebar',
   '/msp/integrations': 'legacy path kept routable; the user-facing entry is /msp/settings/integrations',

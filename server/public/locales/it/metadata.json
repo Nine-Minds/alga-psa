@@ -533,6 +533,9 @@
       },
       "sharedTicket": {
         "title": "Ticket condiviso"
+        },
+      "providers": {
+        "title": "Provider di email e identità"
       }
     }
   },

@@ -414,17 +414,21 @@
       "cancel": "Anuluj",
       "delete": "Usuń",
       "placeholder": "Wprowadź nazwę nowego zespołu",
+      "descriptionPlaceholder": "Wprowadź opcjonalny opis zespołu",
       "selectManager": "Wybierz kierownika"
     },
     "details": {
       "loading": "Ładowanie szczegółów zespołu...",
       "notFound": "Nie znaleziono zespołu",
+      "noDescription": "Brak opisu",
       "fields": {
         "teamLead": "Lider zespołu",
+        "description": "Opis",
         "addMember": "Dodaj członka"
       },
       "placeholders": {
         "teamName": "Wprowadź nazwę zespołu",
+        "description": "Wprowadź opis zespołu",
         "selectTeamLead": "Wybierz lidera zespołu",
         "selectUserToAdd": "Wybierz użytkownika do dodania",
         "noTeamLead": "Nieprzypisany"
@@ -436,8 +440,10 @@
         "discard": "Odrzuć",
         "saveChanges": "Zapisz zmiany",
         "saveName": "Zapisz nazwę",
+        "saveDescription": "Zapisz opis",
         "cancel": "Anuluj",
         "editName": "Edytuj nazwę",
+        "editDescription": "Edytuj opis",
         "remove": "Usuń"
       },
       "table": {
@@ -462,6 +468,7 @@
         "createFailed": "Nie udało się utworzyć zespołu: {{error}}",
         "deleteFailed": "Nie udało się usunąć zespołu",
         "updateName": "Nie udało się zaktualizować nazwy zespołu",
+        "updateDescription": "Nie udało się zaktualizować opisu zespołu",
         "saveChanges": "Nie udało się zapisać zmian. Spróbuj ponownie."
       }
     }
@@ -4033,5 +4040,12 @@
     "moveDown": "Przenieś w dół",
     "remove": "Usuń",
     "addTag": "Dodaj tag…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Wróć do ustawień e-mail",
+      "title": "Dostawcy poczty e-mail i tożsamości",
+      "description": "Zarejestruj własną aplikację Google lub Microsoft do obsługi przychodzących wiadomości e-mail i logowania pracowników. Te poświadczenia należą do Twojego obszaru roboczego."
+    }
   }
 }
