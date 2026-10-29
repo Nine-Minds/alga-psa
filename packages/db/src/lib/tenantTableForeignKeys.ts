@@ -184,7 +184,7 @@ export const TENANT_TABLE_FOREIGN_KEYS: readonly TenantTableForeignKey[] = [
   { child: 'comment_threads', parent: 'tickets', column: 'ticket_id', deleteRule: 'CASCADE', name: 'comment_threads_ticket_fk' },
   { child: 'co_management_private_comments', parent: 'co_management_private_comments', column: 'parent_comment_id,thread_id', deleteRule: 'NO ACTION', name: 'co_management_private_comment_parent_fk' },
   { child: 'co_management_private_comments', parent: 'co_management_private_threads', column: 'thread_id', deleteRule: 'NO ACTION', name: 'co_management_private_comment_thread_fk' },
-  { child: 'co_management_command_receipts', parent: 'co_management_relationships', column: 'tenant,relationship_id', deleteRule: 'NO ACTION', name: 'co_management_command_relationship_fk' },
+  { child: 'co_management_command_receipts', parent: 'co_management_relationships', column: 'relationship_id', deleteRule: 'NO ACTION', name: 'co_management_command_relationship_fk' },
   { child: 'comments', parent: 'comment_threads', column: 'thread_id', deleteRule: 'CASCADE', name: 'comments_thread_fk' },
   { child: 'comments', parent: 'collaboration_actor_references', column: 'actor_reference_id', deleteRule: 'NO ACTION', name: 'comments_collaboration_actor_fk' },
   { child: 'comments', parent: 'comments', column: 'parent_comment_id', deleteRule: 'CASCADE', name: 'comments_parent_comment_fk' },
