@@ -14,6 +14,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
 
 import { editCoManagedProjectTask, getCoManagedProjectTaskSnapshot, CoManagedTaskEditError } from '@alga-psa/co-managed/projectTaskEditing';
 import { assignCoManagedProjectTask } from '@alga-psa/co-managed/projectTaskAssignments';
+import { listCoManagedAssignedTasks } from '@alga-psa/co-managed/projectTaskQueue';
 import { isCoManagedSharedWorkError } from '@alga-psa/co-managed/sharedWorkIdentity';
 import { writeCoManagedSharedTask } from '../../lib/co-managed/editProjectTask';
 
@@ -32,6 +33,16 @@ const referenceRow = (id: string) => db('co_managed_project_task_references')
 async function openTask(id: string) {
   await assignCoManagedProjectTask(db, actor(), resource(id), { assignee: self(), expectedRevision: null });
   return getCoManagedProjectTaskSnapshot(db, actor(), resource(id));
+}
+/** The queue row's Organization must be the CUSTOMER's name, never the assignee's own MSP organization. */
+async function expectQueueShowsCustomerOrganization(id: string) {
+  const customerName = (await db('tenants').where({ tenant: world.customer }).first('client_name')).client_name;
+  const sponsorName = (await db('tenants').where({ tenant: world.sponsor }).first('client_name')).client_name;
+  expect(customerName).toBeTruthy();
+  expect(customerName).not.toBe(sponsorName);
+  const row = (await listCoManagedAssignedTasks(db, actor(), { assigned: 'any', limit: 100 })).rows.find(r => r.taskId === id);
+  expect(row?.organizationName).toBe(customerName);
+  expect(row?.organizationName).not.toBe(sponsorName);
 }
 const conflictOf = async (promise: Promise<unknown>) => {
   const error = await promise.then(() => null, e => e);
@@ -61,9 +72,13 @@ describe('CM L3c task editing and assignment', () => {
     const id = collab.taskIds[0];
     const snapshot = await openTask(id);
     expect(snapshot.revision).toBe(1);
+    await expectQueueShowsCustomerOrganization(id);
+    // A stale snapshot is repaired by the next edit.
+    await db('co_managed_project_task_references').where({ tenant: world.sponsor, task_id: id }).update({ organization_name: 'stale' });
 
     const receipt = await editCoManagedProjectTask(db, actor(), resource(id),
       { expectedRevision: snapshot.revision, expectedTaskUpdatedAt: snapshot.taskUpdatedAt, patch: { task_name: 'Renamed by MSP' } }, writeCoManagedSharedTask);
+    await expectQueueShowsCustomerOrganization(id);
 
     expect(receipt.revision).toBe(2);
     expect((await taskRow(id)).task_name).toBe('Renamed by MSP');

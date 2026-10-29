@@ -6,6 +6,13 @@ import { snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, isCoManage
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { assertCoManagedProjectWorkServed } from './projectTaskGate';
 
+/** The customer organization's display name, or '' when redacted. Single source for the project list and the reference snapshot. */
+export async function readCoManagedCustomerOrganizationName(trx: Knex.Transaction, customerTenant: string, redactedFields: Parameters<typeof isCoManagedReadFieldHidden>[0]): Promise<string> {
+  if (isCoManagedReadFieldHidden(redactedFields, ['client_name', 'organizationName', 'tenants'])) return '';
+  const organization = await tenantDb(trx, customerTenant).table('tenants').first('client_name');
+  return organization?.client_name ?? '';
+}
+
 const MAX_PAGE = 100;
 const pageSize = (limit?: number) => Number.isInteger(limit) && limit! > 0 ? Math.min(limit!, MAX_PAGE) : 50;
 
@@ -67,9 +74,9 @@ async function readProject(db: Knex, actor: CoManagedSessionActor, customerTenan
       const customer = tenantDb(context.trx, customerTenant);
       const project = await customer.table('projects').where('project_id', projectId).first('project_name');
       const scope = await customer.table('co_management_project_scopes').where({ relationship_id: relationshipId, project_id: projectId }).first('can_collaborate');
-      const organization = isCoManagedReadFieldHidden(context.redactedFields, ['client_name', 'organizationName', 'tenants']) ? null : await customer.table('tenants').first('client_name');
+      const organizationName = await readCoManagedCustomerOrganizationName(context.trx, customerTenant, context.redactedFields);
       if (!project || !scope) return null;
-      return { customerTenant, relationshipId, projectId, projectName: project.project_name, organizationName: organization?.client_name ?? '', canCollaborate: Boolean(scope.can_collaborate) };
+      return { customerTenant, relationshipId, projectId, projectName: project.project_name, organizationName, canCollaborate: Boolean(scope.can_collaborate) };
     });
   } catch (error) {
     if (isCoManagedSharedWorkError(error)) return null;

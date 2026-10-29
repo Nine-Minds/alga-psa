@@ -6,6 +6,7 @@ import { coManagedAssigneeOption, type CoManagedAssignee } from './sharedWorkAss
 import { snapshotCoManagedSessionActor, isCoManagedUuid, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { CoManagedTaskEditError } from './projectTaskEditing';
+import { readCoManagedCustomerOrganizationName } from './projectTaskQueue';
 import { assertCoManagedProjectWorkServed } from './projectTaskGate';
 import { coManagedRequestHash, findCoManagedTaskReplay, recordCoManagedTaskAudit } from './projectTaskAudit';
 
@@ -49,7 +50,7 @@ export async function assignCoManagedProjectTask(db: Knex, inputActor: CoManaged
     const taskName = isCoManagedReadFieldHidden(context.redactedFields, ['task_name', 'values.task_name', 'project_tasks.task_name']) ? '' : task.task_name;
     const projectName = isCoManagedReadFieldHidden(context.redactedFields, ['project', 'projectName', 'project_name', 'projects.project_name']) ? '' : task.project_name;
     const assignedColumns = { assigned_to: assignee.kind === 'user' ? assignee.id : null, assigned_team_id: assignee.kind === 'team' ? assignee.id : null };
-    const snapshots = { assignee_name: option.name, organization_name: option.organizationName, task_name: taskName, project_name: projectName };
+    const snapshots = { assignee_name: option.name, organization_name: await readCoManagedCustomerOrganizationName(trx, resource.tenant, context.redactedFields), task_name: taskName, project_name: projectName };
     const existing = await home.table('co_managed_project_task_references')
       .where({ customer_tenant: resource.tenant, relationship_id: resource.relationshipId, task_id: resource.id }).forUpdate().first();
     const requestHash = coManagedRequestHash('task_assignment', resource, { assignee: { kind: assignee.kind, id: assignee.id }, expectedRevision: request.expectedRevision });

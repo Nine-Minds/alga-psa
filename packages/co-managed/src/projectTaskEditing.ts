@@ -4,6 +4,7 @@ import { tenantDb } from '@alga-psa/db';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { snapshotCoManagedSessionActor, isCoManagedUuid, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+import { readCoManagedCustomerOrganizationName } from './projectTaskQueue';
 import { assertCoManagedProjectWorkServed } from './projectTaskGate';
 import { coManagedRequestHash, findCoManagedTaskReplay, recordCoManagedTaskAudit } from './projectTaskAudit';
 
@@ -142,7 +143,7 @@ export async function editCoManagedProjectTask(db: Knex, inputActor: CoManagedSe
     const patchedName = request.patch.task_name;
     // write-admission: exempt — MSP-owned participation reference (no customer data), written under the reference-row lock inside L2 admission (withCoManagedSharedWork 'update')
     await home.table('co_managed_project_task_references').where({ reference_id: reference.reference_id })
-      .update({ revision: next, updated_at: trx.fn.now(), ...(patchedName ? { task_name: patchedName } : {}) });
+      .update({ revision: next, updated_at: trx.fn.now(), organization_name: await readCoManagedCustomerOrganizationName(trx, resource.tenant, context.redactedFields), ...(patchedName ? { task_name: patchedName } : {}) });
     const receipt = { revision: next, taskUpdatedAt: iso(written.updated_at) };
     const changes = Object.fromEntries(Object.keys(request.patch).map(field => [field, { from: (task as any)[field] instanceof Date ? (task as any)[field].toISOString() : ((task as any)[field] ?? null), to: request.patch[field as CoManagedTaskEditField] ?? null }]));
     await recordCoManagedTaskAudit(context, { operation: 'co_managed_project_task_update', operationId: request.operationId ?? randomUUID(), requestHash, changes, receipt });

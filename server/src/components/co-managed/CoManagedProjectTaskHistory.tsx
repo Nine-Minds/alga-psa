@@ -38,7 +38,7 @@ export default function CoManagedProjectTaskHistory({ customerTenant, relationsh
     return typeof value === 'string' || typeof value === 'number' ? String(value) : null;
   };
   const describe = (field: string, change: unknown): string => {
-    if (field === 'msp_assignee' && isChange(change)) return t('coManaged.sharedTasks.changeAssigned', { defaultValue: 'Assignee set to {{name}}', name: typeof change.name === 'string' ? change.name : '' });
+    if (field === 'msp_assignee' && change && typeof change === 'object' && typeof (change as { name?: unknown }).name === 'string') return t('coManaged.sharedTasks.changeAssigned', { defaultValue: 'Assignee set to {{name}}', name: (change as { name: string }).name });
     if (!isChange(change)) return label(field);
     const from = show(field, change.from), to = show(field, change.to);
     return from !== null && to !== null ? t('coManaged.sharedTasks.changeFromTo', { defaultValue: '{{field}}: {{from}} → {{to}}', field: label(field), from, to })
