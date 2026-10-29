@@ -131,6 +131,7 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
       throw new StripeWireError(400, 'Missing required param: email.');
     }
     res.json(core.createCustomer({
+      id: typeof body.id === 'string' ? body.id : undefined,
       email,
       name: typeof body.name === 'string' ? body.name : undefined,
       metadata: (body.metadata ?? {}) as Record<string, string>,
@@ -150,12 +151,16 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
 
     const session = core.createCheckoutSession(
       {
-        mode: 'payment',
+        mode: body.mode === 'subscription' ? 'subscription' : 'payment',
         customer: typeof body.customer === 'string' ? body.customer : undefined,
         line_items: lineItems,
-        success_url: typeof body.success_url === 'string' ? body.success_url : '',
+        success_url: typeof body.success_url === 'string' ? body.success_url : undefined,
         cancel_url: typeof body.cancel_url === 'string' ? body.cancel_url : undefined,
+        return_url: typeof body.return_url === 'string' ? body.return_url : undefined,
+        ui_mode: typeof body.ui_mode === 'string' ? body.ui_mode : undefined,
         metadata,
+        subscription_data: body.subscription_data && typeof body.subscription_data === 'object'
+          ? { metadata: (body.subscription_data.metadata ?? {}) as Record<string, string> } : undefined,
         expires_at: typeof body.expires_at === 'number' ? body.expires_at : undefined,
         currency: body.currency !== undefined ? String(body.currency) : undefined,
         amount: body.amount !== undefined ? Number(body.amount) : undefined,
@@ -165,10 +170,56 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
     res.status(200).json(session);
   }));
 
+  v1.get('/prices/:id', route((req, res) => {
+    res.json(core.getPrice(String(req.params.id)));
+  }));
+
+  v1.get('/subscriptions', route((req, res) => {
+    const customer = typeof req.query.customer === 'string' ? req.query.customer : undefined;
+    const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+    res.json(core.listSubscriptions(customer, status));
+  }));
+
+  v1.get('/subscriptions/:id', route((req, res) => {
+    res.json(core.getSubscription(String(req.params.id)));
+  }));
+
+  v1.post('/subscriptions/:id', route((req, res) => {
+    const body = (req.body ?? {}) as Record<string, any>;
+    const item = Array.isArray(body.items) ? body.items[0] : undefined;
+    res.json(core.updateSubscription(String(req.params.id), {
+      itemId: item && typeof item.id === 'string' ? item.id : undefined,
+      quantity: item && item.quantity !== undefined ? Number(item.quantity) : undefined,
+      cancelAtPeriodEnd: body.cancel_at_period_end !== undefined ? Boolean(body.cancel_at_period_end) : undefined,
+      metadata: body.metadata && typeof body.metadata === 'object' ? body.metadata : undefined,
+    }));
+  }));
+
+  v1.delete('/subscriptions/:id', route((req, res) => {
+    res.json(core.cancelSubscription(String(req.params.id)));
+  }));
+
+  v1.post('/invoices/create_preview', route((req, res) => {
+    const body = (req.body ?? {}) as Record<string, any>;
+    const details = body.subscription_details && typeof body.subscription_details === 'object' ? body.subscription_details : {};
+    const item = Array.isArray(details.items) ? details.items[0] : undefined;
+    res.json(core.createInvoicePreview({
+      customer: typeof body.customer === 'string' ? body.customer : '',
+      subscription: typeof body.subscription === 'string' ? body.subscription : undefined,
+      quantity: item && item.quantity !== undefined ? Number(item.quantity) : undefined,
+      cancelAt: typeof details.cancel_at === 'number' ? details.cancel_at : undefined,
+    }));
+  }));
+
   v1.get('/checkout/sessions/:id', route((req, res) => {
     checkFault(core, 'checkout.sessions.retrieve');
     const session = core.getCheckoutSession(String(req.params.id));
     res.json(sessionResponse(core, session, req.query.expand ?? (req.query as Record<string, unknown>)['expand[]']));
+  }));
+
+  v1.get('/checkout/sessions', route((req, res) => {
+    const customer = typeof req.query.customer === 'string' ? req.query.customer : undefined;
+    res.json(core.listCheckoutSessions(customer));
   }));
 
   v1.post('/checkout/sessions/:id/expire', route(async (req, res) => {
