@@ -802,6 +802,8 @@
       "title": "Conecte um provedor",
       "description": "Escolha um provedor para finalizar o link SSO. Você será redirecionado pelo fluxo de login do provedor.",
       "noneConfigured": "Nenhum provedor de SSO está configurado para este ambiente. Peça ao seu administrador para configurar as credenciais do Google ou da Microsoft.",
+      "noneConfiguredAdmin": "Nenhum provedor de SSO foi configurado ainda. Primeiro configure o aplicativo do Google ou da Microsoft da sua organização.",
+      "openProviderSetup": "Configurar um provedor de SSO",
       "notConfigured": "Não configurado",
       "branding": {
         "google": "Continuar com o Google",

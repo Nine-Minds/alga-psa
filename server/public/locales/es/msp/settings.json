@@ -414,17 +414,21 @@
       "cancel": "Cancelar",
       "delete": "Eliminar",
       "placeholder": "Ingrese el nombre del nuevo equipo",
+      "descriptionPlaceholder": "Ingrese una descripción opcional del equipo",
       "selectManager": "Seleccionar un gerente"
     },
     "details": {
       "loading": "Cargando detalles del equipo...",
       "notFound": "No se encontró el equipo",
+      "noDescription": "Sin descripción",
       "fields": {
         "teamLead": "Líder del equipo",
+        "description": "Descripción",
         "addMember": "Agregar miembro"
       },
       "placeholders": {
         "teamName": "Ingrese el nombre del equipo",
+        "description": "Ingrese la descripción del equipo",
         "selectTeamLead": "Seleccionar un líder de equipo",
         "selectUserToAdd": "Seleccionar un usuario para agregar",
         "noTeamLead": "Sin asignar"
@@ -436,8 +440,10 @@
         "discard": "Descartar",
         "saveChanges": "Guardar cambios",
         "saveName": "Guardar nombre",
+        "saveDescription": "Guardar descripción",
         "cancel": "Cancelar",
         "editName": "Editar nombre",
+        "editDescription": "Editar descripción",
         "remove": "Eliminar"
       },
       "table": {
@@ -462,6 +468,7 @@
         "createFailed": "Error al crear el equipo: {{error}}",
         "deleteFailed": "Error al eliminar el equipo",
         "updateName": "No se pudo actualizar el nombre del equipo",
+        "updateDescription": "No se pudo actualizar la descripción del equipo",
         "saveChanges": "No se pudieron guardar los cambios. Inténtelo de nuevo."
       }
     }
@@ -4033,5 +4040,12 @@
     "moveDown": "Bajar",
     "remove": "Quitar",
     "addTag": "Agregar una etiqueta…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Volver a la configuración de correo electrónico",
+      "title": "Proveedores de correo electrónico e identidad",
+      "description": "Registre su propia aplicación de Google o Microsoft para el correo electrónico entrante y el inicio de sesión del personal. Estas credenciales pertenecen a su espacio de trabajo."
+    }
   }
 }

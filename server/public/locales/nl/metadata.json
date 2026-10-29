@@ -524,7 +524,19 @@
       "title": "Gezamenlijk beheerde IT"
     },
     "coManagement": {
-      "title": "Toegang voor gezamenlijk beheer"
+      "title": "Toegang voor gezamenlijk beheer",
+      "administration": {
+        "title": "Co-managed beheer"
+      },
+      "customerTickets": {
+        "title": "Klanttickets"
+      },
+      "sharedTicket": {
+        "title": "Gedeeld ticket"
+      },
+      "providers": {
+        "title": "E-mail- en identiteitsproviders"
+      }
     }
   },
   "auth": {

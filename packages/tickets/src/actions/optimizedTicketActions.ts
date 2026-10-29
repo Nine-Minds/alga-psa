@@ -3,6 +3,7 @@
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
+import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResolution';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { resolveCommentMergeTokens } from '../lib/cannedResponses/commentMerge';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
@@ -63,6 +64,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import { preserveStoredWatchList } from '@alga-psa/shared/lib/tickets/watchList';
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import { resolveLatestActivityActor, type LatestActivityNames } from '../lib/latestActivityActor';
@@ -800,7 +802,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     const pickerUserIds = new Set((users as Array<{ user_id: string }>).map((agent) => agent.user_id));
     const extraAuthorIds = Array.from(
       new Set(
-        (comments as Array<{ user_id?: string | null }>)
+        (comments as Array<{ user_id?: string | null; actor_reference_id?: string | null; actor_display_name?: string | null; actor_organization_name?: string | null }>)
+          .filter((comment) => !hasCommentCollaborationAttribution(comment))
           .map((comment) => comment.user_id)
           .filter((userId): userId is string => Boolean(userId))
       )
@@ -2616,9 +2619,14 @@ export async function updateTicketInTransaction(
       }
 
     // Get current ticket state before update
-    const currentTicket = await tenantScopedTable(trx, 'tickets', tenant)
-      .where({ ticket_id: id })
-      .first();
+    // An update that carries `attributes` re-writes the stored watch_list mirror, so it
+    // takes the same row lock as watcher writes (TicketWatcherService) to avoid
+    // restoring a stale mirror.
+    const currentTicketQuery = tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id: id });
+    if ((validatedData as Record<string, unknown>).attributes !== undefined) {
+      currentTicketQuery.forUpdate();
+    }
+    const currentTicket = await currentTicketQuery.first();
 
     if (!currentTicket) {
       throw new Error('Ticket not found');
@@ -2641,6 +2649,16 @@ export async function updateTicketInTransaction(
 
     // Clean up the data before update
     const updateData = { ...validatedData };
+
+    // `attributes.watch_list` is a derived mirror of `ticket_watchers`, written only by
+    // TicketWatcherService (see ticketWatcherActions). A general update ignores what it
+    // is given for that key and keeps the stored mirror.
+    if ('attributes' in updateData && updateData.attributes !== undefined) {
+      (updateData as Record<string, unknown>).attributes = preserveStoredWatchList(
+        currentTicket.attributes,
+        updateData.attributes
+      );
+    }
 
     // Handle null values for category and subcategory
     if ('category_id' in updateData && !updateData.category_id) {

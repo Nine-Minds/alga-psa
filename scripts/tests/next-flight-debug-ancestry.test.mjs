@@ -82,7 +82,7 @@ test('installation refuses a different Next version without changing files', t =
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'next-flight-version-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ version: '16.4.0' }));
-  assert.throws(() => patchNextFlightDebug(root), /requires Next 16.3.8/);
+  assert.throws(() => patchNextFlightDebug(root), /requires Next 16.4.2/);
   assert.deepEqual(fs.readdirSync(root), ['package.json']);
 });
 
@@ -131,7 +131,7 @@ test('real long-lived async work retains bounded ancestry after destroy (unpatch
 test('installer covers both bundlers and channel variants, preserves production, and is idempotent', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'next-flight-install-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
-  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ version: '16.3.8' }));
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({ version: '16.4.2' }));
   const files = [];
   for (const base of ['app-page', 'use-cache-probe-worker']) {
     for (const variant of ['', '-turbo', '-experimental', '-turbo-experimental']) {

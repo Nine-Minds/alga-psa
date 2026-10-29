@@ -35,27 +35,18 @@ const env = {
   HOUR_BLOCK_DB_NAME: databaseName,
   TEST_DB_NAME: databaseName,
   DB_NAME_SERVER: databaseName,
-  ACCOUNTING_SYNC_DB_TESTS: '1',
-  ACCOUNTING_SYNC_DB_HOST: process.env.DB_HOST || '127.0.0.1',
-  ACCOUNTING_SYNC_DB_PORT: process.env.DB_PORT || '5432',
-  ACCOUNTING_SYNC_DB_USER: process.env.DB_USER_SERVER || 'app_user',
-  ACCOUNTING_SYNC_DB_PASSWORD: process.env.DB_PASSWORD_SERVER || '',
-  ACCOUNTING_SYNC_DB_NAME: databaseName,
-  OUTBOUND_DIAG_DB_TESTS: '1',
-  OUTBOUND_DIAG_DB_HOST: process.env.DB_HOST || '127.0.0.1',
-  OUTBOUND_DIAG_DB_PORT: process.env.DB_PORT || '5432',
-  OUTBOUND_DIAG_DB_USER: process.env.DB_USER_SERVER || 'app_user',
-  OUTBOUND_DIAG_DB_PASSWORD: process.env.DB_PASSWORD_SERVER || '',
-  OUTBOUND_DIAG_DB_NAME: databaseName,
-  INVOICE_LIFECYCLE_DB_TESTS: '1',
-  INVOICE_LIFECYCLE_DB_HOST: process.env.DB_HOST || '127.0.0.1',
-  INVOICE_LIFECYCLE_DB_PORT: process.env.DB_PORT || '5432',
-  INVOICE_LIFECYCLE_DB_USER: process.env.DB_USER_SERVER || 'app_user',
-  INVOICE_LIFECYCLE_DB_PASSWORD: process.env.DB_PASSWORD_SERVER || '',
-  INVOICE_LIFECYCLE_DB_NAME: databaseName,
+  // App-credential opt-in suites share one connection contract under their own prefix.
+  ...Object.fromEntries(['ACCOUNTING_SYNC', 'OUTBOUND_DIAG', 'INVOICE_LIFECYCLE', 'CONTRACT_LINE_SAVE'].flatMap((prefix) => [
+    [`${prefix}_DB_TESTS`, '1'],
+    [`${prefix}_DB_HOST`, process.env.DB_HOST || '127.0.0.1'],
+    [`${prefix}_DB_PORT`, process.env.DB_PORT || '5432'],
+    [`${prefix}_DB_USER`, process.env.DB_USER_SERVER || 'app_user'],
+    [`${prefix}_DB_PASSWORD`, process.env.DB_PASSWORD_SERVER || ''],
+    [`${prefix}_DB_NAME`, databaseName],
+  ])),
 };
 const args = ['--config', 'vitest.workspace-db.config.ts', ...process.argv.slice(2)];
-const run = (args) => spawnSync(process.execPath, [path.join(cwd, 'node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
+const run = (args) => spawnSync(process.execPath, [path.join(root, 'node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
 const filters = process.argv.slice(2);
 let before;
 let evidence;

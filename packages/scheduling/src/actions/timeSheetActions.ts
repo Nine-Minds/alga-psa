@@ -1,5 +1,6 @@
 'use server'
 
+import { delegateToTimeSource } from '../lib/timeSource';
 import { assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
   ITimeEntry,
@@ -117,6 +118,9 @@ export const fetchTimeSheetsForApproval = withAuth(async (
   { tenant },
   includeApproved: boolean = false
 ): Promise<ITimeSheetApprovalView[] | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.listForApproval(ctx, includeApproved));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
@@ -190,6 +194,9 @@ export const addCommentToTimeSheet = withAuth(async (
   comment: string,
   isApprover: boolean
 ): Promise<ITimeSheetComment | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.comment(ctx, timeSheetId, userId, comment, isApprover));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
@@ -240,6 +247,9 @@ export const addCommentToTimeSheet = withAuth(async (
 });
 
 export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheetIds: string[], managerId: string): Promise<{ success: true } | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.bulkApprove(ctx, timeSheetIds, managerId));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -334,6 +344,9 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
 });
 
 export const fetchTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeSheetView | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.read(ctx, timeSheetId));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
@@ -379,6 +392,9 @@ export const fetchTimeSheet = withAuth(async (user, { tenant }, timeSheetId: str
 });
 
 export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeEntry[] | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.listEntries(ctx, timeSheetId));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
@@ -444,6 +460,9 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, ti
 });
 
 export const fetchTimeSheetComments = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeSheetComment[] | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.comments(ctx, timeSheetId));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
@@ -508,6 +527,9 @@ export const fetchTimeSheetComments = withAuth(async (user, { tenant }, timeShee
 });
 
 export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string, approverId: string): Promise<void | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.approve(ctx, timeSheetId, approverId));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -601,6 +623,9 @@ export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: s
 });
 
 export const requestChangesForTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string, approverId: string): Promise<void | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.requestChanges(ctx, timeSheetId, approverId));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -662,6 +687,9 @@ export const reverseTimeSheetApproval = withAuth(async (
   approverId: string,
   reason: string
 ): Promise<void | TimeSheetActionError> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.sheets.reverseApproval(ctx, timeSheetId, approverId, reason));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex: db } = await createTenantKnex();
 

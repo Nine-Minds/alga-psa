@@ -109,7 +109,9 @@
     "assetsCustody": "Utrustning i förvar",
     "ticketsCannedResponses": "Färdiga svar",
     "profile": "Profil",
-    "signOut": "Logga ut"
+    "signOut": "Logga ut",
+    "coManaged": "Samförvaltad IT",
+    "coManagedAdministration": "Åtkomst och administration"
   },
   "marketing": {
     "dialogs": {

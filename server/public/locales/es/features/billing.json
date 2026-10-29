@@ -290,6 +290,13 @@
       "pending": "Facturas en espera de aprobación o procesamiento adicional",
       "prepayment": "Facturas de anticipo o depósito",
       "partially_applied": "Facturas con pagos parciales aplicados"
+    },
+    "billingPeriod": {
+      "weekly": "por semana",
+      "monthly": "por mes",
+      "quarterly": "por trimestre",
+      "semi-annually": "por semestre",
+      "annually": "por año"
     }
   },
   "quoteForm": {

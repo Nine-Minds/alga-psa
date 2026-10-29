@@ -588,7 +588,8 @@
       "failedToResetRate": "Failed to reset the line rate",
       "protectedStartDate": "Start date must be on or before {{boundary}} to include protected service history.",
       "protectedEndDate": "End date must be on or after {{boundary}} to include protected service history.",
-      "cannotEditWithInvoices": "Cannot edit contract line: This contract has associated invoices. Contract lines cannot be edited once invoices have been generated."
+      "cannotEditWithInvoices": "Cannot edit contract line: This contract has associated invoices. Contract lines cannot be edited once invoices have been generated.",
+      "reloadLatest": "Reload latest"
     },
     "loading": {
       "contractLines": "Loading contract lines",
@@ -698,6 +699,13 @@
       "statusSuperseded": "Superseded",
       "supersededHistory": "Superseded pending edits ({{count}})",
       "supersededBy": "Superseded by"
+    },
+    "pricing": {
+      "catalog": "catalog",
+      "override": "override",
+      "cost": "Cost: {{cost}}",
+      "costInCurrency": "Cost in {{currency}}: {{cost}}",
+      "margin": "Margin: {{margin}} per unit"
     }
   },
   "contractLineEdit": {
@@ -1695,6 +1703,9 @@
       "label": "Billing profile",
       "none": "Use the client's default profile",
       "hint": "Charges from this contract are billed to this profile unless a line overrides it."
+    },
+    "billingTiming": {
+      "label": "Billing Timing"
     }
   },
   "wizardFixed": {
@@ -1744,7 +1755,8 @@
       "recurringQuantityLabel": "Recurring quantity",
       "allocationQuantityLabel": "Allocation quantity",
       "noCurrencyPrice": "No {{currency}} price in the catalog. Enter a unit rate."
-    }
+    },
+    "billingTimingLabel": "Billing Timing"
   },
   "wizardProducts": {
     "actions": {
@@ -1767,7 +1779,8 @@
       "productMissingPrice": "This product has no default price and no override. It cannot be billed until you enter a unit price.",
       "noCurrencyPriceEnterUnitPrice": "No {{currency}} price in the catalog. Enter a unit price.",
       "noCurrencyPriceWithLegacyHint": "No {{currency}} price in the catalog. Legacy default rate: {{rate}}. Enter a unit price in {{currency}}."
-    }
+    },
+    "billingTimingLabel": "Billing Timing"
   },
   "wizardHourly": {
     "actions": {
@@ -1825,7 +1838,8 @@
         "rolloverDisabled": "Disabled",
         "rolloverEnabled": "Enabled"
       }
-    }
+    },
+    "billingTimingLabel": "Billing Timing"
   },
   "wizardUsage": {
     "actions": {
@@ -1863,7 +1877,8 @@
     },
     "values": {
       "defaultUnit": "unit"
-    }
+    },
+    "billingTimingLabel": "Billing Timing"
   },
   "wizardReview": {
     "heading": "Review Contract",
@@ -1972,7 +1987,10 @@
         "one": "{{count}} product",
         "other": "{{count}} products"
       },
-      "overrideRate": "- override {{rate}}/{{currencyCode}}"
+      "overrideRate": "- override {{rate}}/{{currencyCode}}",
+      "cost": "Cost: {{cost}}",
+      "costInCurrency": "Cost in {{currency}}: {{cost}}",
+      "margin": "Margin: {{margin}} per unit"
     },
     "hourly": {
       "badgeCount": {
@@ -1995,8 +2013,12 @@
     "total": {
       "title": "Estimated Monthly Total",
       "description": "Products and fixed charges are included in this total. Hourly and usage services are billed on actuals.",
-      "perMonth": "per month",
-      "savedDraftValue": "Saved draft value: {{amount}}"
+      "savedDraftValue": "Saved draft value: {{amount}}",
+      "titleCadence": "Estimated Total",
+      "mixedFrequencyTitle": "Estimated Total by Billing Frequency",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "about {{amount}} a month",
+      "savedDraftValueMonthly": "Saved draft value: {{amount}} per month"
     },
     "finalChecklist": {
       "title": "Before you finish:",
@@ -2014,6 +2036,13 @@
       "neverExpires": "never expires",
       "cadenceSummary": "{{hours}} h every billing period for {{price}}",
       "overageRate": "overage {{rate}}/h"
+    },
+    "billingTiming": {
+      "label": "Billing timing:",
+      "advance": "In advance",
+      "arrears": "In arrears",
+      "advanceInherited": "In advance (contract default)",
+      "arrearsInherited": "In arrears (contract default)"
     }
   },
   "wizardTemplateLines": {
@@ -2759,6 +2788,7 @@
   "wizardFirstInvoice": {
     "loading": "Checking the client's billing schedule…",
     "arrearsPreviewNote": "Until then, an invoice preview for this client has nothing to bill for this line.",
+    "arrearsPreviewNoteMany": "Until then, an invoice preview for this client has nothing to bill for these lines.",
     "unavailable": {
       "missingStartDate": "Choose a start date to see when this contract first invoices.",
       "unsupportedFrequency": "No first invoice date is shown because contract-cadence billing doesn't support this frequency. Pick a supported frequency or bill on the client's schedule.",
@@ -2795,7 +2825,11 @@
     "options": {
       "advance": "In Advance (bill at start of period)",
       "arrears": "In Arrears (bill at end of period)"
-    }
+    },
+    "inheritWithValue": "Use contract default — {{timing}}",
+    "inheritedAdvance": "In advance",
+    "inheritedArrears": "In arrears",
+    "contractDefaultHelp": "Default for fixed lines, which can bill in advance. Hourly and usage lines always bill in arrears, whatever you choose here."
   },
   "contractDiscounts": {
     "title": "Discounts",

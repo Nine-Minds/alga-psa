@@ -606,7 +606,19 @@
       "title": "Samhanterad IT"
     },
     "coManagement": {
-      "title": "Samhanterad åtkomst"
+      "title": "Samhanterad åtkomst",
+      "administration": {
+        "title": "Samhanterad administration"
+      },
+      "customerTickets": {
+        "title": "Kundärenden"
+      },
+      "sharedTicket": {
+        "title": "Delat ärende"
+      },
+      "providers": {
+        "title": "E-post- och identitetsleverantörer"
+      }
     }
   },
   "share": {

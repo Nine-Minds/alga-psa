@@ -588,7 +588,8 @@
       "failedToResetRate": "Kan het regeltarief niet opnieuw instellen",
       "protectedStartDate": "De startdatum moet op of vóór {{boundary}} liggen om beschermde servicehistorie mee te nemen.",
       "protectedEndDate": "De einddatum moet op of na {{boundary}} liggen om beschermde servicehistorie mee te nemen.",
-      "cannotEditWithInvoices": "Kan contractregel niet bewerken: dit contract heeft bijbehorende facturen. Contractregels kunnen niet worden bewerkt zodra facturen zijn gegenereerd."
+      "cannotEditWithInvoices": "Kan contractregel niet bewerken: dit contract heeft bijbehorende facturen. Contractregels kunnen niet worden bewerkt zodra facturen zijn gegenereerd.",
+      "reloadLatest": "Laatste versie laden"
     },
     "loading": {
       "contractLines": "Contractregels laden",
@@ -698,6 +699,13 @@
       "statusSuperseded": "Vervangen",
       "supersededHistory": "Vervangen openstaande wijzigingen ({{count}})",
       "supersededBy": "Vervangen door"
+    },
+    "pricing": {
+      "catalog": "catalogus",
+      "override": "overschreven",
+      "cost": "Kosten: {{cost}}",
+      "costInCurrency": "Kosten in {{currency}}: {{cost}}",
+      "margin": "Marge: {{margin}} per eenheid"
     }
   },
   "contractLineEdit": {
@@ -1695,6 +1703,9 @@
       "label": "Facturatieprofiel",
       "none": "Standaardprofiel van de klant gebruiken",
       "hint": "Kosten uit dit contract worden aan dit profiel toegerekend, tenzij een regel dit overschrijft."
+    },
+    "billingTiming": {
+      "label": "Factureringsmoment"
     }
   },
   "wizardFixed": {
@@ -1744,7 +1755,8 @@
       "recurringQuantityLabel": "Terugkerende hoeveelheid",
       "allocationQuantityLabel": "Toewijzingshoeveelheid",
       "noCurrencyPrice": "Geen prijs in {{currency}} in de catalogus. Voer een eenheidstarief in."
-    }
+    },
+    "billingTimingLabel": "Factureringsmoment"
   },
   "wizardProducts": {
     "actions": {
@@ -1767,7 +1779,8 @@
       "productMissingPrice": "Dit product heeft geen standaardprijs en geen override. Het kan niet worden gefactureerd totdat u een prijs per eenheid invoert.",
       "noCurrencyPriceEnterUnitPrice": "Geen {{currency}}-prijs in de catalogus. Voer een eenheidsprijs in.",
       "noCurrencyPriceWithLegacyHint": "Geen {{currency}}-prijs in de catalogus. Verouderd standaardtarief: {{rate}}. Voer een eenheidsprijs in {{currency}} in."
-    }
+    },
+    "billingTimingLabel": "Factureringsmoment"
   },
   "wizardHourly": {
     "actions": {
@@ -1825,7 +1838,8 @@
         "rolloverDisabled": "Uitgeschakeld",
         "rolloverEnabled": "Ingeschakeld"
       }
-    }
+    },
+    "billingTimingLabel": "Factureringsmoment"
   },
   "wizardUsage": {
     "actions": {
@@ -1863,7 +1877,8 @@
     },
     "values": {
       "defaultUnit": "eenheid"
-    }
+    },
+    "billingTimingLabel": "Factureringsmoment"
   },
   "wizardReview": {
     "heading": "Contract controleren",
@@ -1972,7 +1987,10 @@
         "one": "{{count}} product",
         "other": "{{count}} producten"
       },
-      "overrideRate": "– overschrijven {{rate}}/{{currencyCode}}"
+      "overrideRate": "– overschrijven {{rate}}/{{currencyCode}}",
+      "cost": "Kosten: {{cost}}",
+      "costInCurrency": "Kosten in {{currency}}: {{cost}}",
+      "margin": "Marge: {{margin}} per eenheid"
     },
     "hourly": {
       "badgeCount": {
@@ -1995,8 +2013,12 @@
     "total": {
       "title": "Geschat maandtotaal",
       "description": "Producten en vaste kosten zijn in dit totaal opgenomen. Uur- en verbruiksservices worden op basis van werkelijk gebruik gefactureerd.",
-      "perMonth": "per maand",
-      "savedDraftValue": "Opgeslagen conceptwaarde: {{amount}}"
+      "savedDraftValue": "Opgeslagen conceptwaarde: {{amount}}",
+      "titleCadence": "Geschat totaal",
+      "mixedFrequencyTitle": "Geschat totaal per factureringsfrequentie",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "ongeveer {{amount}} per maand",
+      "savedDraftValueMonthly": "Opgeslagen conceptwaarde: {{amount}} per maand"
     },
     "finalChecklist": {
       "title": "Voor u afrondt:",
@@ -2014,6 +2036,13 @@
       "neverExpires": "verloopt nooit",
       "cadenceSummary": "{{hours}} u per factuurperiode voor {{price}}",
       "overageRate": "meerverbruik {{rate}}/u"
+    },
+    "billingTiming": {
+      "label": "Factureringsmoment:",
+      "advance": "Vooraf",
+      "arrears": "Achteraf",
+      "advanceInherited": "Vooraf (contractstandaard)",
+      "arrearsInherited": "Achteraf (contractstandaard)"
     }
   },
   "wizardTemplateLines": {
@@ -2759,6 +2788,7 @@
   "wizardFirstInvoice": {
     "loading": "Factureringsschema van de klant controleren…",
     "arrearsPreviewNote": "Tot die tijd valt er in een factuurvoorbeeld voor deze klant niets te factureren voor deze regel.",
+    "arrearsPreviewNoteMany": "Tot die tijd valt er in een factuurvoorbeeld voor deze klant niets te factureren voor deze regels.",
     "unavailable": {
       "missingStartDate": "Kies een startdatum om te zien wanneer dit contract voor het eerst wordt gefactureerd.",
       "unsupportedFrequency": "Er wordt geen datum voor de eerste factuur getoond omdat facturering volgens het contractritme deze frequentie niet ondersteunt. Kies een ondersteunde frequentie of factureer volgens het schema van de klant.",
@@ -2795,7 +2825,11 @@
     "options": {
       "advance": "Vooraf (factureer aan het begin van de periode)",
       "arrears": "Achteraf (factureer aan het einde van de periode)"
-    }
+    },
+    "inheritWithValue": "Contractstandaard gebruiken — {{timing}}",
+    "inheritedAdvance": "vooraf",
+    "inheritedArrears": "achteraf",
+    "contractDefaultHelp": "Standaard voor vaste regels, die vooraf gefactureerd kunnen worden. Uren- en gebruiksregels worden altijd achteraf gefactureerd, wat u hier ook kiest."
   },
   "contractDiscounts": {
     "title": "Kortingen",

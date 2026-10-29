@@ -109,7 +109,9 @@
     "assetsCustody": "Equipos en custodia",
     "ticketsCannedResponses": "Respuestas predefinidas",
     "profile": "Perfil",
-    "signOut": "Cerrar sesión"
+    "signOut": "Cerrar sesión",
+    "coManaged": "TI cogestionada",
+    "coManagedAdministration": "Acceso y administración"
   },
   "sidebar": {
     "backToMain": "Volver al inicio",

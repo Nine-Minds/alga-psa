@@ -293,8 +293,8 @@ const ACTIVE_PERMISSIONS = [
 
   { resource: 'system_settings', action: 'create', msp: true, client: false, description: 'Create system settings', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
   { resource: 'system_settings', action: 'delete', msp: true, client: false, description: 'Delete system settings', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
-  { resource: 'system_settings', action: 'read', msp: true, client: false, description: 'View system-wide configuration', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
-  { resource: 'system_settings', action: 'update', msp: true, client: false, description: 'Modify system configuration and defaults', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
+  { resource: 'system_settings', action: 'read', msp: true, client: false, description: 'View system-wide configuration', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'system_settings', action: 'update', msp: true, client: false, description: 'Modify system configuration and defaults', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
 
   { resource: 'tag', action: 'create', msp: true, client: false, description: 'Create new tags for categorization', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin', 'msp:Agent'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Finance', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'], co_managed: ['msp:Admin', 'msp:Dispatcher', 'msp:Project Manager', 'msp:Technician'] } },
   { resource: 'tag', action: 'delete', msp: true, client: false, description: 'Remove tags from the system', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },

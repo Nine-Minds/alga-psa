@@ -524,7 +524,19 @@
       "title": "TI cogestionada"
     },
     "coManagement": {
-      "title": "Acceso cogestionado"
+      "title": "Acceso cogestionado",
+      "administration": {
+        "title": "Administración cogestionada"
+      },
+      "customerTickets": {
+        "title": "Tickets de clientes"
+      },
+      "sharedTicket": {
+        "title": "Ticket compartido"
+      },
+      "providers": {
+        "title": "Proveedores de correo electrónico e identidad"
+      }
     }
   },
   "auth": {

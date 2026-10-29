@@ -588,7 +588,8 @@
       "failedToResetRate": "Nie udało się przywrócić stawki pozycji",
       "protectedStartDate": "Data rozpoczęcia musi przypadać {{boundary}} lub wcześniej, aby uwzględnić chronioną historię usług.",
       "protectedEndDate": "Data zakończenia musi przypadać {{boundary}} lub później, aby uwzględnić chronioną historię usług.",
-      "cannotEditWithInvoices": "Nie można edytować linii kontraktowej: ta umowa ma powiązane faktury. Linii kontraktowych nie można edytować po wygenerowaniu faktur."
+      "cannotEditWithInvoices": "Nie można edytować linii kontraktowej: ta umowa ma powiązane faktury. Linii kontraktowych nie można edytować po wygenerowaniu faktur.",
+      "reloadLatest": "Wczytaj najnowszą wersję"
     },
     "loading": {
       "contractLines": "Ładowanie linii kontraktowych",
@@ -698,6 +699,13 @@
       "statusSuperseded": "Zastąpiono",
       "supersededHistory": "Zastąpione oczekujące edycje ({{count}})",
       "supersededBy": "Zastąpiono przez"
+    },
+    "pricing": {
+      "catalog": "katalog",
+      "override": "nadpisana",
+      "cost": "Koszt: {{cost}}",
+      "costInCurrency": "Koszt w {{currency}}: {{cost}}",
+      "margin": "Marża: {{margin}} za jednostkę"
     }
   },
   "contractLineEdit": {
@@ -1699,6 +1707,9 @@
       "label": "Profil rozliczeniowy",
       "none": "Użyj domyślnego profilu klienta",
       "hint": "Opłaty z tej umowy są rozliczane w tym profilu, chyba że pozycja go zastąpi."
+    },
+    "billingTiming": {
+      "label": "Moment rozliczenia"
     }
   },
   "wizardFixed": {
@@ -1748,7 +1759,8 @@
       "recurringQuantityLabel": "Ilość cykliczna",
       "allocationQuantityLabel": "Ilość alokacji",
       "noCurrencyPrice": "Brak ceny w walucie {{currency}} w katalogu. Podaj stawkę jednostkową."
-    }
+    },
+    "billingTimingLabel": "Moment rozliczenia"
   },
   "wizardProducts": {
     "actions": {
@@ -1771,7 +1783,8 @@
       "productMissingPrice": "Ten produkt nie ma ceny domyślnej ani nadpisania. Nie można go rozliczać, dopóki nie wprowadzisz ceny jednostkowej.",
       "noCurrencyPriceEnterUnitPrice": "Brak ceny w {{currency}} w katalogu. Wprowadź cenę jednostkową.",
       "noCurrencyPriceWithLegacyHint": "Brak ceny w {{currency}} w katalogu. Starsza domyślna stawka: {{rate}}. Wprowadź cenę jednostkową w {{currency}}."
-    }
+    },
+    "billingTimingLabel": "Moment rozliczenia"
   },
   "wizardHourly": {
     "actions": {
@@ -1829,7 +1842,8 @@
         "rolloverDisabled": "Wyłączone",
         "rolloverEnabled": "Włączone"
       }
-    }
+    },
+    "billingTimingLabel": "Moment rozliczenia"
   },
   "wizardUsage": {
     "actions": {
@@ -1867,7 +1881,8 @@
     },
     "values": {
       "defaultUnit": "jednostka"
-    }
+    },
+    "billingTimingLabel": "Moment rozliczenia"
   },
   "wizardReview": {
     "heading": "Przejrzyj umowę",
@@ -1976,7 +1991,10 @@
         "one": "Liczba produktów: {{count}}",
         "other": "Liczba produktów: {{count}}"
       },
-      "overrideRate": "- nadpisanie {{rate}}/{{currencyCode}}"
+      "overrideRate": "- nadpisanie {{rate}}/{{currencyCode}}",
+      "cost": "Koszt: {{cost}}",
+      "costInCurrency": "Koszt w {{currency}}: {{cost}}",
+      "margin": "Marża: {{margin}} za jednostkę"
     },
     "hourly": {
       "badgeCount": {
@@ -1999,8 +2017,12 @@
     "total": {
       "title": "Szacowana suma miesięczna",
       "description": "Produkty i opłaty stałe są wliczone w tę sumę. Usługi godzinowe i rozliczane według zużycia są rozliczane według rzeczywistych wartości.",
-      "perMonth": "miesięcznie",
-      "savedDraftValue": "Zapisana wartość wersji roboczej: {{amount}}"
+      "savedDraftValue": "Zapisana wartość wersji roboczej: {{amount}}",
+      "titleCadence": "Szacowana suma",
+      "mixedFrequencyTitle": "Szacowana suma według częstotliwości rozliczeń",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "ok. {{amount}} miesięcznie",
+      "savedDraftValueMonthly": "Zapisana wartość wersji roboczej: {{amount}} miesięcznie"
     },
     "finalChecklist": {
       "title": "Zanim zakończysz:",
@@ -2022,6 +2044,13 @@
       "expiresAfter_many": "wygasa po {{count}} miesiącach",
       "cadenceSummary": "{{hours}} godz. w każdym okresie rozliczeniowym za {{price}}",
       "overageRate": "nadwyżka {{rate}}/godz."
+    },
+    "billingTiming": {
+      "label": "Moment rozliczenia:",
+      "advance": "Z góry",
+      "arrears": "Z dołu",
+      "advanceInherited": "Z góry (domyślnie z umowy)",
+      "arrearsInherited": "Z dołu (domyślnie z umowy)"
     }
   },
   "wizardTemplateLines": {
@@ -2769,6 +2798,7 @@
   "wizardFirstInvoice": {
     "loading": "Sprawdzanie harmonogramu rozliczeń klienta…",
     "arrearsPreviewNote": "Do tego czasu podgląd faktur tego klienta nie zawiera nic do rozliczenia dla tej pozycji.",
+    "arrearsPreviewNoteMany": "Do tego czasu podgląd faktur tego klienta nie zawiera nic do rozliczenia dla tych pozycji.",
     "unavailable": {
       "missingStartDate": "Wybierz datę rozpoczęcia, aby zobaczyć, kiedy ta umowa zostanie po raz pierwszy zafakturowana.",
       "unsupportedFrequency": "Data pierwszej faktury nie jest wyświetlana, ponieważ rozliczanie według cyklu umowy nie obsługuje tej częstotliwości. Wybierz obsługiwaną częstotliwość lub rozliczaj według harmonogramu klienta.",
@@ -2805,7 +2835,11 @@
     "options": {
       "advance": "Z góry (rozlicz na początku okresu)",
       "arrears": "Z dołu (rozlicz na końcu okresu)"
-    }
+    },
+    "inheritWithValue": "Użyj domyślnej wartości umowy — {{timing}}",
+    "inheritedAdvance": "z góry",
+    "inheritedArrears": "z dołu",
+    "contractDefaultHelp": "Domyślna wartość dla pozycji stałych, które mogą być rozliczane z góry. Pozycje godzinowe i według zużycia zawsze są rozliczane z dołu, niezależnie od tego wyboru."
   },
   "contractDiscounts": {
     "title": "Rabaty",

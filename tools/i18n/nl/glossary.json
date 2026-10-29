@@ -2566,6 +2566,7 @@
       "Cc/Bcc",
       "Training",
       "Code 128",
+      "per week",
       "Asset: {{name}}",
       "Ticket: {{number}}",
       "RMA {{number}} · {{status}}"

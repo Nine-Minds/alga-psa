@@ -69,11 +69,36 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'upgrade_boundary', co_managed: 'not_found' },
   },
   {
-    // Sponsor-side co-managed management. Only a PSA sponsor has these screens;
-    // the capability gate in each page decides whether a PSA tenant sees them.
-    group: 'msp_co_managed_sponsor',
-    staticPrefixes: ['/msp/co-management', '/msp/co-managed'],
+    // The one sponsor-prefix screen a co_managed customer also uses: its own Effective access and delegated
+    // administration. /msp/co-management has no rule of its own, so the rest of that prefix stays closed to
+    // co_managed (unmatched means not_found); the page and its actions still decide, per side, what the caller may see.
+    group: 'msp_co_managed_administration',
+    staticPrefixes: ['/msp/co-management/administration'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
+  },
+  {
+    // Sponsor-only queue of tickets customers shared with the sponsor, and its shared-ticket screen. Only a PSA
+    // sponsor has them; the capability gate in the route layout decides whether a PSA tenant sees them.
+    group: 'msp_co_managed_customer_tickets',
+    staticPrefixes: ['/msp/co-management/customer-tickets'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
+  },
+  {
+    // Customer-owned Google / Microsoft provider setup. The page itself is
+    // gated by the co-managed capability ('serves'), so a co_managed workspace
+    // reaches this one capability-scoped page without the wider integrations
+    // surface.
+    group: 'msp_co_management_providers',
+    staticPrefixes: ['/msp/co-management/providers'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
+  },
+  {
+    // One side-aware co-managed root: a PSA sponsor sees the overview, a
+    // co_managed customer sees its own relationship home. The capability gate
+    // in the route layout decides whether a tenant may see either.
+    group: 'msp_co_managed_sponsor',
+    staticPrefixes: ['/msp/co-managed'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
   },
   {
     group: 'msp_internal_not_found',

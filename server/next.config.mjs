@@ -590,6 +590,16 @@ const nextConfig = {
         path.resolve(__dirname, '../node_modules'),
       ],
     };
+    // Production builds run from fresh checkouts (CI, the Argo build), where
+    // every file's mtime is new. webpack's default snapshots trust timestamps
+    // alone, so a restored filesystem cache would be invalidated wholesale on
+    // the first build. Check the content hash when the timestamp has moved;
+    // development keeps the cheap timestamp-only default.
+    if (!dev) {
+      const byContent = { timestamp: true, hash: true };
+      config.snapshot = { ...config.snapshot, module: byContent, resolve: byContent,
+        buildDependencies: byContent, resolveBuildDependencies: byContent };
+    }
 
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
