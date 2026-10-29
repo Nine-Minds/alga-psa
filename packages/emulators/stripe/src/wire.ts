@@ -170,6 +170,10 @@ export function wire(router: Router, core: StripeEmulatorCore, env: HostEnv): vo
     res.status(200).json(session);
   }));
 
+  v1.get('/products/:id', route((req, res) => {
+    res.json(core.getProduct(String(req.params.id)));
+  }));
+
   v1.get('/prices/:id', route((req, res) => {
     res.json(core.getPrice(String(req.params.id)));
   }));

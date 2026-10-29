@@ -95,6 +95,17 @@ export interface StripePaymentIntent {
   [key: string]: unknown;
 }
 
+export interface StripeProduct {
+  id: string;
+  object: 'product';
+  name: string;
+  description: string | null;
+  active: boolean;
+  metadata: Record<string, string>;
+  created: number;
+  livemode: false;
+}
+
 export interface StripePrice {
   id: string;
   object: 'price';
@@ -200,6 +211,7 @@ export class StripeEmulatorCore implements EmulatorCore {
   readonly customers = new Map<string, StripeCustomer>();
   readonly sessions = new Map<string, StripeCheckoutSession>();
   readonly paymentIntents = new Map<string, StripePaymentIntent>();
+  readonly products = new Map<string, StripeProduct>();
   readonly prices = new Map<string, StripePrice>();
   readonly subscriptions = new Map<string, StripeSubscription>();
   readonly events = new Map<string, StripeEvent>();
@@ -218,6 +230,7 @@ export class StripeEmulatorCore implements EmulatorCore {
     this.customers.clear();
     this.sessions.clear();
     this.paymentIntents.clear();
+    this.products.clear();
     this.prices.clear();
     this.subscriptions.clear();
     this.events.clear();
@@ -301,6 +314,32 @@ export class StripeEmulatorCore implements EmulatorCore {
     return customer;
   }
 
+  // ── Products ──────────────────────────────────────────────────────────────
+
+  /** Creates (or, for an existing id, updates) a product. Every price references one, as in Stripe. */
+  createProduct(input: { id?: string; name?: string; description?: string | null; metadata?: Record<string, string> }): StripeProduct {
+    const id = input.id ?? this.newId('prod');
+    const existing = this.products.get(id);
+    const product: StripeProduct = {
+      id,
+      object: 'product',
+      name: input.name ?? existing?.name ?? id,
+      description: input.description ?? existing?.description ?? null,
+      active: true,
+      metadata: input.metadata ?? existing?.metadata ?? {},
+      created: existing?.created ?? Math.floor(Date.now() / 1000),
+      livemode: false,
+    };
+    this.products.set(id, product);
+    return product;
+  }
+
+  getProduct(id: string): StripeProduct {
+    const product = this.products.get(id);
+    if (!product) throw new StripeWireError(404, `No such product: ${id}`);
+    return product;
+  }
+
   // ── Prices ────────────────────────────────────────────────────────────────
 
   listPrices(): StripeList<StripePrice> {
@@ -309,6 +348,10 @@ export class StripeEmulatorCore implements EmulatorCore {
 
   createPrice(input: { id?: string; unitAmount: number; currency?: string; interval?: 'month' | 'year'; product?: string }): StripePrice {
     const id = input.id ?? this.newId('price');
+    // A price's product is retrievable, so callers that resolve `price.product` by id work.
+    const product = input.product && this.products.has(input.product)
+      ? this.getProduct(input.product)
+      : this.createProduct({ id: input.product });
     const price: StripePrice = {
       id,
       object: 'price',
@@ -317,7 +360,7 @@ export class StripeEmulatorCore implements EmulatorCore {
       type: input.interval ? 'recurring' : 'one_time',
       billing_scheme: 'per_unit',
       recurring: input.interval ? { interval: input.interval, interval_count: 1, usage_type: 'licensed' } : null,
-      product: input.product ?? this.newId('prod'),
+      product: product.id,
       active: true,
       livemode: false,
     };

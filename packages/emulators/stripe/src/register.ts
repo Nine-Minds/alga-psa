@@ -73,6 +73,18 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
   });
 
   reg.seeder({
+    name: 'product',
+    description: 'Create or update a product that prices reference (deterministic test setup)',
+    params: z.object({
+      id: z.string().optional(),
+      name: z.string().optional(),
+      description: z.string().optional(),
+      metadata: z.record(z.string()).optional(),
+    }),
+    run: ({ id, name, description, metadata }) => core.createProduct({ id, name, description, metadata }),
+  });
+
+  reg.seeder({
     name: 'price',
     description: 'Create a recurring or one-time price for subscription checkout (deterministic test setup)',
     params: z.object({
@@ -185,6 +197,12 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
     name: 'payment-intents',
     description: 'Payment intents',
     get: () => [...core.paymentIntents.values()],
+  });
+
+  reg.stateView({
+    name: 'products',
+    description: 'Products',
+    get: () => [...core.products.values()],
   });
 
   reg.stateView({
