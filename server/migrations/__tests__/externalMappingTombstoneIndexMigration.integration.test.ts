@@ -16,6 +16,11 @@ const MIGRATION_PATH = path.resolve(
   '../20261027130000_exclude_tombstones_from_external_mapping_unique_indexes.cjs'
 );
 
+const LATEST_INDEX_MIGRATION_PATH = path.resolve(
+  __dirname,
+  '../20261029160000_allow_shared_quickbooks_online_tax_code_targets.cjs'
+);
+
 const MAPPINGS = 'tenant_external_entity_mappings';
 const EXTERNAL_INDEX = 'idx_unique_external_mapping';
 const ALGA_INDEX = 'idx_unique_alga_mapping';
@@ -81,8 +86,12 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (!db) return;
-  // Leave the DB in the migrated state even if a test failed mid-way.
+  // Leave the DB in the migrated state even if a test failed mid-way. `up`
+  // above installs this migration's own predicate; the later shared
+  // QuickBooks Online tax-code migration (20261029160000) builds on it, so
+  // re-apply that one too and hand the DB back in its current shape.
   await migration.up(db).catch(() => undefined);
+  await require(LATEST_INDEX_MIGRATION_PATH).up(db).catch(() => undefined);
   for (const tenant of tenantIds) {
     await db(MAPPINGS).where({ tenant }).del();
     await db('tenants').where({ tenant }).del();
