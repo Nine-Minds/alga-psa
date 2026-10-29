@@ -1,0 +1,98 @@
+[
+  {
+    "id": "T001",
+    "description": "Printing issues only SELECTs and changes no watched table (T-noside)",
+    "featureIds": [
+      "F004",
+      "F005"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "description": "Skip-count and uniform 404 (T-skip)",
+    "featureIds": [
+      "F004",
+      "F005",
+      "F007"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T003",
+    "description": "Linked asset merge and suffix rules (T-asset-link, T-suffix)",
+    "featureIds": [
+      "F003"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T004",
+    "description": "Binding allowlist and hidden-field schema rules (T-sens, T-hidden)",
+    "featureIds": [
+      "F008",
+      "F009"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T005",
+    "description": "Template resolution order and wrong-class 400 (T-resolve)",
+    "featureIds": [
+      "F011"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T006",
+    "description": "Override sanitising (T-overrides)",
+    "featureIds": [
+      "F006"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T007",
+    "description": "Migration up/down, one default per class (T-migration)",
+    "featureIds": [
+      "F010"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T008",
+    "description": "Logo inlining and omission (R1)",
+    "featureIds": [
+      "F012"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T009",
+    "description": "Work reason derivation",
+    "featureIds": [
+      "F002"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T010",
+    "description": "Dialog component behaviour (T-ui)",
+    "featureIds": [
+      "F017",
+      "F018",
+      "F019",
+      "F020",
+      "F021"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "T011",
+    "description": "Standard templates stay contained and QR decodes (T-qr e2e)",
+    "featureIds": [
+      "F013"
+    ],
+    "implemented": true
+  }
+]

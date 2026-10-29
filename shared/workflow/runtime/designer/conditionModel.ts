@@ -1,5 +1,19 @@
 import jsonata from 'jsonata';
+import {
+  PREDICATE_OPERATORS,
+  operatorTakesList,
+  operatorTakesValue,
+} from '@alga-psa/predicates';
+import type {
+  PredicateClause,
+  PredicateGroup,
+  PredicateLiteral,
+  PredicateOperator,
+} from '@alga-psa/predicates';
 import { normalizeExpressionSource } from '../expressionEngine';
+
+// LEVERAGE: pattern condition-dialect-jsonata — this adapter is one of several condition dialects that
+// should compile from the shared predicate model (see packages/predicates/spec/SEMANTICS.md).
 
 /**
  * Structured form of a workflow condition (an If step's `condition.$expr`).
@@ -9,57 +23,25 @@ import { normalizeExpressionSource } from '../expressionEngine';
  * the model (mixed and/or, nested groups, arbitrary functions) parse to `null`, and the designer
  * falls back to editing the raw expression.
  */
-export type WorkflowConditionOperator =
-  | 'equals'
-  | 'not_equals'
-  | 'in'
-  | 'not_in'
-  | 'gt'
-  | 'gte'
-  | 'lt'
-  | 'lte'
-  | 'contains'
-  | 'starts_with'
-  | 'ends_with'
-  | 'is_empty'
-  | 'is_not_empty';
+export type WorkflowConditionOperator = PredicateOperator;
 
-export type WorkflowConditionLiteral = string | number | boolean | null;
+export type WorkflowConditionLiteral = PredicateLiteral;
 
-export type WorkflowConditionClause = {
-  /** Field path such as `vars.ticket.ticket.priority_id` or `payload.ticketId`. */
-  path: string;
-  operator: WorkflowConditionOperator;
-  /** A literal for single-value operators, a list for `in`/`not_in`, absent for `is_empty`/`is_not_empty`. */
-  value?: WorkflowConditionLiteral | WorkflowConditionLiteral[];
-};
+/** A workflow condition clause is a predicate clause; the builder's group is the flat form of `PredicateGroup`. */
+export type WorkflowConditionClause = PredicateClause;
 
 export type WorkflowConditionGroup = {
-  join: 'and' | 'or';
+  join: PredicateGroup['join'];
   clauses: WorkflowConditionClause[];
 };
 
-export const WORKFLOW_CONDITION_OPERATORS: readonly WorkflowConditionOperator[] = [
-  'equals',
-  'not_equals',
-  'in',
-  'not_in',
-  'gt',
-  'gte',
-  'lt',
-  'lte',
-  'contains',
-  'starts_with',
-  'ends_with',
-  'is_empty',
-  'is_not_empty',
-];
+export const WORKFLOW_CONDITION_OPERATORS: readonly WorkflowConditionOperator[] = PREDICATE_OPERATORS;
 
 export const conditionOperatorTakesValue = (operator: WorkflowConditionOperator): boolean =>
-  operator !== 'is_empty' && operator !== 'is_not_empty';
+  operatorTakesValue(operator);
 
 export const conditionOperatorTakesList = (operator: WorkflowConditionOperator): boolean =>
-  operator === 'in' || operator === 'not_in';
+  operatorTakesList(operator);
 
 const COMPARISON_OPERATOR_SYMBOLS: Partial<Record<WorkflowConditionOperator, string>> = {
   equals: '=',

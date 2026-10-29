@@ -32,7 +32,8 @@
     "to": "A",
     "today": "Oggi",
     "total": "Totale",
-    "unknown": "Sconosciuto"
+    "unknown": "Sconosciuto",
+    "recordUnavailable": "Non trovato, oppure non hai accesso"
   },
   "counts": {
     "adjustments": "{{count}} rettifica/rettifiche",
@@ -1305,6 +1306,18 @@
     "ageAtVendor": "{{days}}g presso il fornitore",
     "filters": {
       "statusActive": "Visualizzazione dei casi RMA con stato {{status}}."
+    },
+    "detail": {
+      "title": "RMA {{id}}",
+      "reference": "Riferimento RMA",
+      "product": "Prodotto",
+      "returnedSerial": "Numero di serie dell'unità restituita",
+      "opened": "Aperto",
+      "updated": "Aggiornato",
+      "age": "Età (giorni)",
+      "reason": "Motivo",
+      "viewUnit": "Visualizza unità",
+      "viewAsset": "Visualizza asset"
     }
   },
   "salesOrders": {
@@ -1564,6 +1577,10 @@
       "inProgress": "Ricostruzione…"
     },
     "receive": {
+      "searchProducts": "Cerca prodotti o SKU...",
+      "noProductsFound": "Nessun prodotto trovato",
+      "searchLocations": "Cerca ubicazioni...",
+      "noLocationsFound": "Nessuna ubicazione trovata",
       "costNonNegative": "Il costo unitario non può essere negativo.",
       "failed": "Impossibile ricevere la giacenza.",
       "inProgress": "Ricezione…",
@@ -1698,6 +1715,12 @@
       "failed": "Impossibile reintegrare il reso.",
       "restocking": "Reintegro…",
       "submit": "Reintegra"
+    },
+    "printLabel": "Stampa etichetta",
+    "printWithTemplate": "Stampa con {{code}}",
+    "claimant": {
+      "project": "Progetto {{number}}",
+      "salesOrder": "Ordine di vendita {{number}}"
     }
   },
   "transfers": {

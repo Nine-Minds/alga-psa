@@ -25,6 +25,7 @@
     },
     "states": {
       "active": "Attivo",
+      "scheduled": "Pianificato",
       "inactive": "Inattivo",
       "loading": "Caricamento...",
       "na": "N/D",
@@ -315,7 +316,20 @@
     "inboundDomainAutoCreateHelp": "I domini associati possono creare un contatto per un nuovo mittente attendibile.",
     "inboundDomainAutoCreateUpdated": "Impostazione dei contatti mittente aggiornata.",
     "inboundDomainAutoCreateUpdateFailed": "Impossibile aggiornare l’impostazione dei contatti mittente.",
-    "recurringTickets": "Ticket ricorrenti"
+    "recurringTickets": "Ticket ricorrenti",
+    "software": "Software",
+    "checklistsTab": "Checklist",
+    "checklists": {
+      "name": "Nome",
+      "items": "Elementi",
+      "status": "Stato",
+      "active": "Attivo",
+      "inactive": "Inattivo",
+      "description": "Modelli di checklist offerti solo sui ticket di questo cliente. Modificali in Impostazioni > Ticket > Modelli di checklist.",
+      "empty": "Nessun modello di checklist specifico per il cliente.",
+      "loadFailed": "Impossibile caricare i modelli di checklist",
+      "retry": "Riprova"
+    }
   },
   "clientCommandCenter": {
     "cards": {
@@ -328,7 +342,8 @@
       "people": "Persone",
       "record": "Scheda cliente",
       "service": "Servizio",
-      "timeline": "Tutto, in ordine"
+      "timeline": "Tutto, in ordine",
+      "software": "Software"
     },
     "csatEmpty": "Ancora nessuna risposta ai sondaggi.",
     "discardCancel": "Continua a modificare",
@@ -405,6 +420,12 @@
       "primary": "Principale"
     },
     "pulseError": "Impossibile caricare il riepilogo del cliente.",
+    "quickLinks": {
+      "assets": "Asset",
+      "contacts": "Contatti",
+      "label": "Collegamenti rapidi",
+      "software": "Software"
+    },
     "rail": {
       "close": "Chiudi",
       "installBase": "Parco installato",
@@ -439,6 +460,13 @@
       "onTrack": "SLA nei tempi",
       "onTrackLeft": "SLA: {{left}} rimasti",
       "paused": "SLA in pausa"
+    },
+    "software": {
+      "assetsMeta_one": "{{count}} asset",
+      "assetsMeta_other": "{{count}} asset",
+      "loadError": "Impossibile caricare l'inventario software.",
+      "titles": "titoli",
+      "viewAll": "Tutto il software"
     },
     "timeline": {
       "daysAgo": "{{count}} gg fa",
@@ -571,11 +599,6 @@
     "invoiceDeliveryMethod": "Metodo di consegna della fattura",
     "invoiceTemplate": "Modello di fattura",
     "invoiceTemplateHelp": "Seleziona un modello o utilizza quello predefinito",
-    "paymentTerms": {
-      "dueOnReceipt": "A causa della ricevuta",
-      "net15": "netto 15",
-      "net30": "30 netti"
-    },
     "preferredPaymentMethod": "Metodo di pagamento preferito",
     "defaultCurrency": "Valuta predefinita",
     "selectTaxRegion": "Seleziona regione fiscale (facoltativo)",
@@ -587,11 +610,6 @@
       "both": "Entrambi",
       "email": "E-mail",
       "mail": "Posta"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Bonifico bancario",
-      "check": "Controllo",
-      "creditCard": "Carta di credito"
     },
     "paymentTermsLabel": "Termini di pagamento",
     "standardTemplateLabel": "(Standard)",
@@ -1763,7 +1781,8 @@
     },
     "cardExpiry": ", scade {{month}}/{{year}}",
     "legacyPaymentTerms": "«{{value}}» non è una condizione di pagamento riconosciuta e non è mai stata applicata. Verrà rimossa al salvataggio.",
-    "cardOnFile": "{{type}} con ultime cifre {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} con ultime cifre {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Predefinito del tenant: {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Avvisi saldo prepagato",
@@ -1929,6 +1948,7 @@
       "sourceAlreadyMerged": "Questo cliente è già stato unito a un altro cliente.",
       "targetAlreadyMerged": "Il cliente di destinazione è stato a sua volta unito a un altro cliente. Unisci a quello.",
       "sourceIsTenantDefault": "La scheda della tua organizzazione non può essere unita a un cliente.",
+      "sourceHasCoManagement": "Questo cliente ha uno spazio di lavoro IT in co-gestione. Annulla la configurazione o termina la co-gestione prima di unirlo.",
       "parentLinkCycle": "Quel cliente risulta figlio di quello che stai unendo, quindi l'unione invertirebbe la gerarchia.",
       "invalidContractCutover": "Una delle date di subentro è al di fuori della durata del relativo contratto."
     },
@@ -2030,5 +2050,21 @@
     "manager": "Responsabile",
     "seesTickets": "Vede i ticket del profilo",
     "editHint": "Si modificano sul profilo di fatturazione, nelle impostazioni di fatturazione del cliente."
+  },
+  "clientSoftware": {
+    "columns": {
+      "assets": "Asset",
+      "lastSeen": "Ultimo rilevamento",
+      "title": "Titolo",
+      "versions": "Versioni"
+    },
+    "empty": "Nessun inventario software finora — l'inventario viene raccolto per dispositivo",
+    "emptyAssetsLink": "Vedi asset",
+    "exportCsv": "Esporta CSV",
+    "exportError": "Impossibile esportare l'inventario software.",
+    "installedOn": "Installato su",
+    "loadError": "Impossibile caricare l'inventario software.",
+    "moreAssets": "e altri {{count}} (primi {{limit}} per nome)",
+    "searchPlaceholder": "Cerca software..."
   }
 }

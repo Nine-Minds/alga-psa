@@ -10,6 +10,7 @@
  */
 
 import { Knex } from 'knex';
+import { mergePaymentSettings } from '@alga-psa/types';
 import { getConnection, tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import {
@@ -43,7 +44,6 @@ import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildPaymentAppliedPayload,
   buildPaymentFailedPayload,
-  buildPaymentRecordedPayload,
   buildPaymentRefundedPayload,
 } from 'server/src/lib/api/services/paymentWorkflowEvents';
 
@@ -71,6 +71,9 @@ interface ClientData {
   client_name: string;
   billing_location_email?: string;
 }
+
+/** Stripe Checkout Sessions last at most 24h; independent of the tenant's link-lifetime setting. */
+export const CHECKOUT_SESSION_TTL_HOURS = 24;
 
 export class PaymentService {
   private tenantId: string;
@@ -147,12 +150,7 @@ export class PaymentService {
       return DEFAULT_PAYMENT_SETTINGS;
     }
 
-    const settings = config.settings as Partial<PaymentSettings> | undefined;
-    return {
-      ...DEFAULT_PAYMENT_SETTINGS,
-      ...settings,
-      defaultProvider: config.provider_type,
-    };
+    return mergePaymentSettings(config.settings, { defaultProvider: config.provider_type });
   }
 
   /**
@@ -275,12 +273,10 @@ export class PaymentService {
       throw new Error(`No billing email address for client: ${client.client_name}. Please set a billing contact, billing email, or a billing/default location email.`);
     }
 
-    // Get payment settings for expiration
-    const settings = await this.getPaymentSettings();
-    // Stripe Checkout Sessions have a max expiration of 24 hours
-    const STRIPE_MAX_EXPIRATION_HOURS = 24;
-    const effectiveExpirationHours = Math.min(settings.paymentLinkExpirationHours, STRIPE_MAX_EXPIRATION_HOURS);
-    const expiresAt = new Date(Date.now() + effectiveExpirationHours * 60 * 60 * 1000);
+    // Checkout Sessions are short-lived by provider design. The tenant's
+    // `paymentLinkExpirationHours` is the lifetime of the durable `/pay/<token>`
+    // link in emails (see paymentLinkToken), not of this session.
+    const expiresAt = new Date(Date.now() + CHECKOUT_SESSION_TTL_HOURS * 60 * 60 * 1000);
 
     // Build success URL - must match client portal routes
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -765,6 +761,9 @@ export class PaymentService {
       referenceNumber: event.paymentIntentId,
       // A PaymentIntent settles once; auto-pay lands it from both the charge path and the webhook.
       dedupeByReference: true,
+      // recordExternalPayment publishes PAYMENT_RECORDED (post-commit, real insert only).
+      source: 'online_payment',
+      gatewayTransactionId: event.paymentIntentId,
       // The settling Checkout Session id so the terminal-status cleanup never
       // retires the very session whose completion settled the invoice.
       externalLinkId: event.externalLinkId,
@@ -807,25 +806,6 @@ export class PaymentService {
     });
 
     const occurredAt = new Date().toISOString();
-    await publishWorkflowEvent({
-      eventType: 'PAYMENT_RECORDED',
-      payload: buildPaymentRecordedPayload({
-        paymentId,
-        clientId: invoice.client_id,
-        receivedAt: occurredAt,
-        amount: event.amount,
-        currency: String(invoice.currency_code || event.currency || 'USD'),
-        method: event.provider,
-        gatewayTransactionId: event.paymentIntentId,
-      }),
-      ctx: {
-        tenantId: this.tenantId,
-        occurredAt,
-        actor: { actorType: 'SYSTEM' },
-      },
-      idempotencyKey: `payment_recorded:${paymentId}`,
-    });
-
     await publishWorkflowEvent({
       eventType: 'PAYMENT_APPLIED',
       payload: buildPaymentAppliedPayload({

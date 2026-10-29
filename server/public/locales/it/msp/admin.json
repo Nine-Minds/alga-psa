@@ -830,7 +830,8 @@
           "groups_read": "Leggi gruppi della directory",
           "entitlement_group_resolves": "Risolvi gruppo di autorizzazione",
           "user_yield_preview": "Anteprima degli utenti inclusi",
-          "per_tenant_users": "Utenti CIPP per tenant"
+          "per_tenant_users": "Utenti CIPP per tenant",
+          "cipp_token_mint": "Emissione del token API CIPP"
         },
         "readiness": {
           "authenticated": "Accesso effettuato",
@@ -911,8 +912,8 @@
           "noManagedTenants": "Non sono stati restituiti tenant gestiti. Il partner deve essere registrato in Microsoft 365 Lighthouse con relazioni GDAP attive.",
           "mappedTenantMissing": "Il tenant associato «{{client}}» non è stato restituito dal rilevamento. GDAP potrebbe essere scaduto o terminato.",
           "mappingsLookupFailed": "Non è stato possibile leggere le associazioni dei tenant confermate. Esegui di nuovo la diagnostica; se il problema persiste, controlla le associazioni.",
-          "cippCredentialsMissing": "Sono necessari l’URL di base CIPP e un token API. Configurali nella scheda Connessione.",
-          "cippAuthRejected": "CIPP ha rifiutato la credenziale API. Rinnova la chiave API CIPP da Impostazioni > CIPP > Accesso API; non si tratta di un segreto client Azure.",
+          "cippCredentialsMissing": "L'URL dell'API CIPP e le credenziali sono obbligatori. Configurali nella scheda Connessione.",
+          "cippAuthRejected": "CIPP ha rifiutato la chiave API legacy. Riconnettiti con un client API CIPP dalla scheda Connessione (creane uno in CIPP > Integrations > CIPP-API).",
           "cippEmptyTenantList": "CIPP non ha restituito tenant. Controlla la visibilità dei clienti e la configurazione CIPP.",
           "cippUnreachable": "CIPP non è raggiungibile. Verifica l’URL di base, DNS/TLS e la connettività in uscita.",
           "cippPerTenantFailed": "CIPP non ha potuto leggere la directory di questo tenant.",

@@ -323,6 +323,21 @@
       "any": "cualquiera",
       "clear": "Limpiar",
       "countSummary": "{{groups}} grupo(s) · {{obligations}} cargo(s)"
+    },
+    "lateTime": {
+      "title": "Tiempo por horas aprobado tarde",
+      "description": "Este tiempo se aprobó después de emitir la factura de su período de servicio. Las entradas pendientes de facturar se añaden una sola vez a la próxima factura, marcadas como tiempo tardío. Las entradas fuera del período de revisión no se facturan.",
+      "columns": {
+        "client": "Cliente",
+        "technician": "Técnico",
+        "service": "Servicio",
+        "workDate": "Fecha de trabajo",
+        "hours": "Horas",
+        "closedPeriod": "Período de servicio cerrado",
+        "status": "Estado"
+      },
+      "nextInvoice": "Se factura en la próxima factura",
+      "outsideLookback": "Fuera del período de revisión — no se factura"
     }
   },
   "manualInvoices": {
@@ -557,6 +572,17 @@
         "selectedCount": "{{count}} seleccionados",
         "clear": "Limpiar selección"
       }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Factura finalizada, pero un paso posterior no se completó: {{steps}}. La factura está finalizada; puede reintentar ese paso.",
+      "steps": {
+        "credit_auto_apply": "aplicación automática de crédito",
+        "project_deposit_credits": "créditos de depósito de proyecto",
+        "workflow_events": "eventos de flujo de trabajo",
+        "accounting_export": "exportación contable",
+        "replenishment_status": "estado de reposición prepagada",
+        "autopay": "pago automático"
+      }
     }
   },
   "finalizedTab": {
@@ -595,7 +621,9 @@
       "bulkPdfFailed": "No se pudieron generar archivos PDF. Por favor inténtelo de nuevo.",
       "unfinalizeFailed": "No se pudo anular la finalización de la factura. Por favor inténtelo de nuevo.",
       "bulkUnfinalizeFailed": "No se pudieron anular la finalización de las facturas. Por favor inténtelo de nuevo.",
-      "bulkUnfinalizeInvoiceFailed": "No se pudo reabrir {{invoiceNumber}}: {{reason}}"
+      "bulkUnfinalizeInvoiceFailed": "No se pudo reabrir {{invoiceNumber}}: {{reason}}",
+      "explainThis": "Ver explicación",
+      "usedHourBlockExplanation": "Al finalizar esta factura, sus horas prepagadas quedaron disponibles para los registros de tiempo. Desde entonces se ha asignado tiempo al bloque. Reabrir la factura anularía el bloque, aunque esas asignaciones y los cargos posteriores aún podrían depender de él. Para mantener la coherencia de la facturación, no se puede revertir la finalización de las facturas de bloques que se hayan utilizado, aunque el tiempo se haya revertido después. Considere un ajuste separado o una nota de crédito para corregir la factura."
     },
     "bulk": {
       "actionBar": {
@@ -857,6 +885,19 @@
       "cancel": "Cancelar",
       "confirm": "Anular factura",
       "voiding": "Anulando…"
+    },
+    "history": {
+      "title": "Historial",
+      "empty": "No hay historial registrado.",
+      "loadFailed": "No se pudo cargar el historial de la factura.",
+      "system": "Sistema",
+      "ops": {
+        "invoice_finalized": "Finalizada",
+        "invoice_unfinalized": "Reabierta",
+        "invoice_deleted": "Eliminada"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "ninguno"
     }
   },
   "templateEditor": {
@@ -1377,7 +1418,7 @@
       "mediaSource": "Origen de la imagen",
       "mediaSourceLogo": "Logotipo de la empresa",
       "mediaSourceCustom": "Imagen personalizada",
-      "mediaSourceLogoHint": "Muestra en cada documento el logotipo de la configuración de marca de su empresa.",
+      "mediaSourceLogoHint": "Muestra en cada documento el logotipo del registro de cliente de su propia empresa.",
       "mediaSourceUrl": "URL de origen",
       "renameInner": "¿Cambiar también el nombre de {{count}} capas internas ({{from}} → {{to}}…)?",
       "renameInnerApply": "Cambiar nombre",
@@ -1427,7 +1468,14 @@
           "widthTooltip": "Usar el ancho exacto indicado abajo",
           "heightTooltip": "Usar el alto exacto indicado abajo"
         }
-      }
+      },
+      "barcode": "Código de barras",
+      "barcodeSymbology": "Tipo",
+      "barcodeQr": "Código QR",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Valor",
+      "barcodeHintWorkTag": "Texto o un campo como {{example}} (el enlace al registro). Mantenga el código con al menos unos 20 mm de ancho para que se pueda escanear.",
+      "barcodeHint": "El texto que se codificará. Mantenga el código con al menos unos 20 mm de ancho para que se pueda escanear."
     },
     "shell": {
       "selectedLabel": "Seleccionado:",
@@ -1440,7 +1488,11 @@
       "title": "Configuración de página",
       "description": "Elija preset de papel y margen sin seleccionar el nodo de página oculto.",
       "paperPreset": "Preset de papel",
-      "marginMm": "Margen (mm)"
+      "marginMm": "Margen (mm)",
+      "customSize": "Tamaño personalizado…",
+      "customWidth": "Ancho",
+      "customHeight": "Alto",
+      "customUnit": "Unidad"
     },
     "breadcrumbs": {
       "emptyHelp": "Seleccione un componente del lienzo para ver su jerarquía.",
@@ -1471,7 +1523,13 @@
         "noQuotesFound": "Sin cotizaciones.",
         "selectQuote": "Seleccionar cotización",
         "loadingQuoteDetails": "Cargando detalles de la cotización…",
-        "loadingDocumentDetails": "Cargando detalles del documento…"
+        "loadingDocumentDetails": "Cargando detalles del documento…",
+        "zoom": {
+          "fit": "Ajustar",
+          "actual": "100 %",
+          "label": "Zoom de la vista previa",
+          "fitWithScale": "Ajustar ({{percent}} %)"
+        }
       },
       "tabs": {
         "design": "Diseño",
@@ -2365,7 +2423,7 @@
     },
     "imagePicker": {
       "browse": "Explorar documentos",
-      "hiddenFromClients": "{{document}} está oculto para los clientes. No aparecerá en las cotizaciones ni en las facturas consultadas a través del portal del cliente.",
+      "hiddenFromClients": "{{document}} está oculto para los clientes, por lo que no pueden abrirlo en el portal del cliente. Sigue apareciendo en las facturas y en los PDF de cotizaciones que lo usan.",
       "updating": "Actualizando...",
       "markVisible": "Marcar como visible para los clientes",
       "visibleInPortal": "Visible en el portal del cliente",
@@ -2414,11 +2472,13 @@
     "description": "Configure los diseños utilizados para generar los PDF y las vistas previas de {{type}}.",
     "availableLayouts": "Diseños disponibles",
     "actions": {
-      "newLayout": "Nuevo diseño"
+      "newLayout": "Nuevo diseño",
+      "setDefaultForClass": "Establecer como predeterminada para {{class}}"
     },
     "columns": {
       "name": "Nombre",
-      "source": "Fuente"
+      "source": "Fuente",
+      "labelClass": "Clase"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (Estándar)",
@@ -2450,7 +2510,10 @@
         "details": "Detalles del diseño"
       },
       "fields": {
-        "version": "Versión"
+        "version": "Versión",
+        "labelClass": "Clase de etiqueta",
+        "labelFields": "Campos que se muestran en la etiqueta",
+        "labelFieldsHint": "El enlace del registro (código QR) y el identificador siempre se muestran."
       },
       "placeholders": {
         "templateName": "Plantilla de {{type}}"
@@ -2487,7 +2550,9 @@
     "types": {
       "salesOrder": "Orden de venta",
       "packingSlip": "Nota de entrega",
-      "pickList": "Lista de preparación de pedidos"
+      "pickList": "Lista de preparación de pedidos",
+      "workTag": "Etiqueta de trabajo / Etiqueta",
+      "stagingManifest": "Manifiesto de embalaje"
     }
   },
   "errors": {
@@ -2495,7 +2560,8 @@
       "invoiceUpdate": "Permiso denegado: se requiere permiso de actualización de facturas",
       "invoiceDelete": "Permiso denegado: se requiere permiso de eliminación de facturas",
       "invoiceAccess": "Permiso denegado: acceso a la factura denegado",
-      "otherClientInvoices": "Permiso denegado: no se puede acceder a las facturas de otro cliente"
+      "otherClientInvoices": "Permiso denegado: no se puede acceder a las facturas de otro cliente",
+      "invoiceRead": "Permiso denegado: se requiere permiso de lectura de facturas"
     },
     "invoice": {
       "notFound": "Factura no encontrada",
@@ -2509,6 +2575,7 @@
       "onlyDraftEditable": "Solo se pueden editar las facturas en borrador",
       "numberExists": "El número de factura ya existe. Elija un número diferente.",
       "notFinalized": "La factura no está finalizada",
+      "usedHourBlockUnfinalize": "No se puede revertir la finalización de esta factura: su bloque de horas {{blockId}} ya se ha utilizado ({{usedHours}} de {{totalHours}} h). Considere un ajuste separado o una nota de crédito para corregir la factura.",
       "unfinalizeFailed": "No se pudo revertir la finalización de la factura debido a un error de datos inesperado. Actualice la página e inténtelo de nuevo.",
       "paidOrCancelled": "No se puede modificar una factura pagada o cancelada",
       "syncedVoidInstead": "Esta factura está sincronizada con un sistema contable: anúlela en lugar de eliminarla.",
@@ -2517,7 +2584,9 @@
       "duplicate": "Ya existe una factura en conflicto. Actualice la página e inténtelo de nuevo.",
       "missingField": "Falta un campo obligatorio de la factura.",
       "missingFieldNamed": "Falta un campo obligatorio de la factura: {{field}}.",
-      "billingProfileUnavailable": "El perfil de facturación seleccionado no está disponible para este cliente."
+      "billingProfileUnavailable": "El perfil de facturación seleccionado no está disponible para este cliente.",
+      "deleteNotDraft": "Solo se pueden eliminar facturas en borrador; anule la factura en su lugar.",
+      "deleteHasPayments": "No se pueden eliminar facturas con pagos registrados."
     },
     "billingCycle": {
       "notFoundRefresh": "No se encontró el ciclo de facturación. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",

@@ -430,7 +430,26 @@ export class TagService extends BaseService {
   ): Promise<TagResponse[]> {
     const { knex, tenant } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    return withTransaction(knex, async (trx) =>
+      this.tagEntityInTransaction(trx, tenant, entityId, entityType, tagTexts, options, context));
+  }
+
+  /** tagEntity's body, on a caller's already-open transaction. */
+  private async tagEntityInTransaction(
+    trx: Knex.Transaction,
+    tenant: string,
+    entityId: string,
+    entityType: TaggedEntityType,
+    tagTexts: string[],
+    options: {
+      board_id?: string;
+      default_colors?: {
+        background_color?: string;
+        text_color?: string;
+      };
+    },
+    context: ServiceContext
+  ): Promise<TagResponse[]> {
       const createdTags: TagResponse[] = [];
 
       for (const tagText of tagTexts) {
@@ -488,7 +507,6 @@ export class TagService extends BaseService {
       }
 
       return createdTags;
-    });
   }
 
   /**
@@ -512,6 +530,7 @@ export class TagService extends BaseService {
   /**
    * Replace all tags for an entity
    */
+  // LEVERAGE: friction nested-transaction — withTransaction(knex, …) on a pooled handle opens a second connection instead of a savepoint; TagService.replaceEntityTags deadlocked on it
   async replaceEntityTags(
     entityId: string,
     entityType: TaggedEntityType,
@@ -535,8 +554,9 @@ export class TagService extends BaseService {
         await TagMapping.delete(trx, tenant, tag.mapping_id); // Use mapping_id instead of tag_id
       }
 
-      // Add new tags
-      return await this.tagEntity(entityId, entityType, tagTexts, options, context);
+      // Add new tags in this same transaction: a second connection would wait
+      // on the mapping rows this one has just deleted and never return.
+      return await this.tagEntityInTransaction(trx, tenant, entityId, entityType, tagTexts, options, context);
     });
   }
 

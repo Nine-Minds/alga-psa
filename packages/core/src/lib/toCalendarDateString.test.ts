@@ -26,9 +26,14 @@ function pickerLocalMidnightFor(isoDateOnly: string): Date {
   return new Date(y, m - 1, d, 0, 0, 0, 0);
 }
 
-function assertTz(zone: string, expectedOffsetMinutes: number) {
+// Probe the offset at a fixed summer instant (the scenarios below are Aug/Sep 2026), not "now":
+// Europe/Berlin and America/New_York change offset at DST transitions, so a wall-clock probe
+// fails whenever the suite runs outside summer time.
+const TZ_PROBE_INSTANT = new Date('2026-08-31T12:00:00.000Z');
+
+function assertTz(zone: string, expectedOffsetMinutes: number, probe: Date = TZ_PROBE_INSTANT) {
   process.env.TZ = zone;
-  expect(new Date().getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
+  expect(probe.getTimezoneOffset(), `TZ=${zone} did not take effect`).toBe(expectedOffsetMinutes);
 }
 
 describe('toCalendarDateString — DatePicker Date → YYYY-MM-DD', () => {
@@ -99,7 +104,8 @@ describe('toCalendarDateString — why the contract read boundary does not use i
   });
 
   it('passes the YYYY-MM-DD string the boundary emits through unchanged in every zone', () => {
-    assertTz('Pacific/Auckland', -780);
+    // Auckland is UTC+13 only in its southern summer (the Dec 31 scenario), not at the Aug probe instant.
+    assertTz('Pacific/Auckland', -780, new Date('2026-12-31T00:00:00.000Z'));
     expect(toCalendarDateString('2026-12-31')).toBe('2026-12-31');
     assertTz('America/Los_Angeles', 420);
     expect(toCalendarDateString('2026-04-01')).toBe('2026-04-01');

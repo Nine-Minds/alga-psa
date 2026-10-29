@@ -64,7 +64,7 @@ const server = Server.configure({
           }),
     ],
     async onConnect(data) {
-        validateDocumentRoomAccess(data.documentName, data.request);
+        await validateDocumentRoomAccess(data.documentName, data.request);
     },
     })
 

@@ -32,7 +32,8 @@
     "to": "Naar",
     "today": "Vandaag",
     "total": "Totaal",
-    "unknown": "Onbekend"
+    "unknown": "Onbekend",
+    "recordUnavailable": "Niet gevonden, of u hebt geen toegang"
   },
   "counts": {
     "adjustments": "{{count}} aanpassing(en)",
@@ -1305,6 +1306,18 @@
     "ageAtVendor": "{{days}} d bij leverancier",
     "filters": {
       "statusActive": "RMA-zaken met status {{status}} worden weergegeven."
+    },
+    "detail": {
+      "title": "RMA {{id}}",
+      "reference": "RMA-referentie",
+      "product": "Product",
+      "returnedSerial": "Serienummer geretourneerde eenheid",
+      "opened": "Geopend",
+      "updated": "Bijgewerkt",
+      "age": "Leeftijd (dagen)",
+      "reason": "Reden",
+      "viewUnit": "Eenheid bekijken",
+      "viewAsset": "Asset bekijken"
     }
   },
   "salesOrders": {
@@ -1564,6 +1577,10 @@
       "inProgress": "Opnieuw opbouwen…"
     },
     "receive": {
+      "searchProducts": "Producten of SKU zoeken...",
+      "noProductsFound": "Geen producten gevonden",
+      "searchLocations": "Locaties zoeken...",
+      "noLocationsFound": "Geen locaties gevonden",
       "costNonNegative": "Kostprijs per eenheid kan niet negatief zijn.",
       "failed": "Kon voorraad niet ontvangen.",
       "inProgress": "Ontvangen…",
@@ -1698,6 +1715,12 @@
       "failed": "Kan de retour niet opnieuw op voorraad nemen.",
       "restocking": "Opnieuw op voorraad nemen…",
       "submit": "Opnieuw op voorraad nemen"
+    },
+    "printLabel": "Label afdrukken",
+    "printWithTemplate": "Afdrukken met {{code}}",
+    "claimant": {
+      "project": "Bij project {{number}}",
+      "salesOrder": "Verkooporder {{number}}"
     }
   },
   "transfers": {

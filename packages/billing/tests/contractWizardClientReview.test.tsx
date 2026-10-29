@@ -164,4 +164,28 @@ describe('contract wizard client projection', () => {
 
     expect(screen.getAllByText('Not selected').length).toBeGreaterThan(0);
   });
+
+  it('includes a cadence Prepaid Block fee in the Estimated Monthly Total', async () => {
+    mocks.getClientByIdForBilling.mockResolvedValue({ client_name: 'Cool Cars' });
+    const { withIssueMode, emptyPrepaidBlockDraft } = await import(
+      '../src/components/billing-dashboard/contracts/prepaidBlockConfigDraft'
+    );
+    // $1,500 fixed fee + a 10 h / $1,500 block per period = $3,000 a month, not $1,500.
+    render(
+      <ReviewContractStep
+        data={buildData({
+          client_id: 'client-cool',
+          fixed_lines: [{ billing_frequency: 'monthly', base_rate: 150000, services: [] }] as any,
+          prepaid_block_drafts: [
+            {
+              services: [{ service_id: 's1', service_name: 'Support', hourly_rate: 15000 }],
+              block: { ...withIssueMode(emptyPrepaidBlockDraft(), 'cadence'), hours: '10', priceManual: true, priceMinor: 150000 },
+            },
+          ] as any,
+        })}
+      />,
+    );
+    const total = screen.getByText('Estimated Monthly Total').closest('div')!.parentElement!;
+    expect(total).toHaveTextContent('$3000');
+  });
 });

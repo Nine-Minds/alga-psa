@@ -202,6 +202,27 @@
         "save": "Nie udało się zapisać ustawień",
         "range": "Wpisz liczbę całkowitą od 1 do 365."
       }
+    },
+    "paymentTerms": {
+      "title": "Domyślne warunki płatności",
+      "description": "Ustaw warunki płatności używane na nowych fakturach, gdy ani klient, ani jego profil rozliczeniowy ich nie określa.",
+      "fields": {
+        "terms": {
+          "label": "Warunki płatności",
+          "help": "Dotyczy tylko nowych faktur. Istniejące faktury i klienci z własnymi warunkami zachowują je."
+        }
+      },
+      "actions": {
+        "save": "Zapisz"
+      },
+      "toast": {
+        "updated": "Domyślne warunki płatności zostały zaktualizowane."
+      },
+      "errors": {
+        "load": "Nie udało się wczytać ustawień",
+        "save": "Nie udało się zapisać ustawień",
+        "invalid": "Wybierz prawidłowe warunki płatności."
+      }
     }
   },
   "quoting": {
@@ -215,8 +236,56 @@
     }
   },
   "tax": {
-    "defaultRate": { "title": "Domyślna stawka podatku", "tooltip": "Wybierz stawkę dziedziczoną przez nowych klientów, produkty i usługi.", "description": "Ustaw stawkę dla nowych klientów i pozycji katalogu. Istniejące rekordy nie ulegną zmianie.", "loading": "Wczytywanie domyślnej stawki...", "empty": "Utwórz aktywną stawkę przed wyborem domyślnej.", "invalid": "Skonfigurowana stawka nie jest już aktywna lub prawidłowa. Wybierz inną.", "field": { "label": "Domyślna stawka podatku" }, "options": { "none": "Brak domyślnej stawki organizacji" }, "help": "Bez stawki domyślnej nowe pozycje katalogu pozostają nieopodatkowane, a klienci używają najstarszej aktywnej stawki, jeśli istnieje.", "actions": { "save": "Zapisz domyślną", "saving": "Zapisywanie..." }, "toast": { "saved": "Zapisano domyślną stawkę." }, "errors": { "load": "Nie udało się wczytać domyślnej stawki.", "save": "Nie udało się zapisać domyślnej stawki." } },
-    "backfill": { "title": "Zastosuj domyślną stawkę do istniejącego katalogu", "description": "Wyświetl produkty i usługi bez stawki podatku.", "warning": "Zmienia to przyszłe opodatkowanie i nie modyfikuje wystawionych faktur.", "loading": "Wczytywanie podglądu...", "empty": "Nie znaleziono odpowiednich produktów ani usług.", "target": "Stawka docelowa: {{rate}}", "count": "Liczba odpowiednich pozycji: {{count}}", "dialog": { "title": "Zastosuj domyślną stawkę" }, "actions": { "preview": "Wyświetl istniejące pozycje", "apply": "Zastosuj wybrane", "applying": "Stosowanie..." }, "toast": { "applied": "Zastosowano domyślną stawkę do wybranych pozycji." }, "errors": { "preview": "Nie udało się wyświetlić katalogu.", "apply": "Nie udało się zastosować domyślnej stawki." } },
+    "defaultRate": {
+      "title": "Domyślna stawka podatku",
+      "tooltip": "Wybierz stawkę dziedziczoną przez nowych klientów, produkty i usługi.",
+      "description": "Ustaw stawkę dla nowych klientów i pozycji katalogu. Istniejące rekordy nie ulegną zmianie.",
+      "loading": "Wczytywanie domyślnej stawki...",
+      "empty": "Utwórz aktywną stawkę przed wyborem domyślnej.",
+      "invalid": "Skonfigurowana stawka nie jest już aktywna lub prawidłowa. Wybierz inną.",
+      "field": {
+        "label": "Domyślna stawka podatku"
+      },
+      "options": {
+        "none": "Brak domyślnej stawki organizacji"
+      },
+      "help": "Bez stawki domyślnej nowe pozycje katalogu pozostają nieopodatkowane, a klienci używają najstarszej aktywnej stawki, jeśli istnieje.",
+      "actions": {
+        "save": "Zapisz domyślną",
+        "saving": "Zapisywanie..."
+      },
+      "toast": {
+        "saved": "Zapisano domyślną stawkę."
+      },
+      "errors": {
+        "load": "Nie udało się wczytać domyślnej stawki.",
+        "save": "Nie udało się zapisać domyślnej stawki."
+      }
+    },
+    "backfill": {
+      "title": "Zastosuj domyślną stawkę do istniejącego katalogu",
+      "description": "Wyświetl produkty i usługi bez stawki podatku.",
+      "warning": "Zmienia to przyszłe opodatkowanie i nie modyfikuje wystawionych faktur.",
+      "loading": "Wczytywanie podglądu...",
+      "empty": "Nie znaleziono odpowiednich produktów ani usług.",
+      "target": "Stawka docelowa: {{rate}}",
+      "count": "Liczba odpowiednich pozycji: {{count}}",
+      "dialog": {
+        "title": "Zastosuj domyślną stawkę"
+      },
+      "actions": {
+        "preview": "Wyświetl istniejące pozycje",
+        "apply": "Zastosuj wybrane",
+        "applying": "Stosowanie..."
+      },
+      "toast": {
+        "applied": "Zastosowano domyślną stawkę do wybranych pozycji."
+      },
+      "errors": {
+        "preview": "Nie udało się wyświetlić katalogu.",
+        "apply": "Nie udało się zastosować domyślnej stawki."
+      }
+    },
     "taxRegions": {
       "title": "Regiony podatkowe",
       "description": "Zarządzaj regionami podatkowymi i powiązanymi ustawieniami."
@@ -1000,7 +1069,10 @@
       "taxRate": {
         "label": "Stawka podatku (opcjonalnie)",
         "placeholder": "Wybierz stawkę podatku (opcjonalnie)",
-        "loading": "Ładowanie stawek podatku...", "inherit": "Użyj domyślnej stawki", "inheritNamed": "Użyj domyślnej stawki ({{rate}})", "nonTaxable": "Nie podlega opodatkowaniu"
+        "loading": "Ładowanie stawek podatku...",
+        "inherit": "Użyj domyślnej stawki",
+        "inheritNamed": "Użyj domyślnej stawki ({{rate}})",
+        "nonTaxable": "Nie podlega opodatkowaniu"
       },
       "sku": {
         "label": "SKU",
@@ -1096,7 +1168,10 @@
       "taxRate": {
         "label": "Stawka podatku",
         "placeholder": "Nie podlega opodatkowaniu",
-        "loading": "Załadunek...", "inherit": "Użyj domyślnej stawki", "inheritNamed": "Użyj domyślnej stawki ({{rate}})", "nonTaxable": "Nie podlega opodatkowaniu"
+        "loading": "Załadunek...",
+        "inherit": "Użyj domyślnej stawki",
+        "inheritNamed": "Użyj domyślnej stawki ({{rate}})",
+        "nonTaxable": "Nie podlega opodatkowaniu"
       },
       "active": {
         "label": "Aktywny"
@@ -1422,6 +1497,103 @@
     }
   },
   "payment": {
+    "import": {
+      "title": "Importuj istniejących klientów Stripe",
+      "description": "Przenieś klientów Stripe i zapisane karty z innego systemu. Import nigdy nie zapisuje klienta do automatycznych płatności; potwierdzasz to dla każdego wiersza.",
+      "open": "Rozpocznij import",
+      "preview": "Podgląd",
+      "execute": "Importuj",
+      "reset": "Zacznij od nowa",
+      "default": "domyślna",
+      "done": "Import zakończony",
+      "attest": "Klient autoryzował cykliczne obciążenia tej karty",
+      "alreadyEnrolled": "Już zapisano",
+      "scaRisk": "Ryzyko SCA: brak dowodu, że karta została zapisana do użycia bez obecności klienta",
+      "cardsImported": "Zaimportowane karty: {{count}}",
+      "csv": {
+        "label": "Wiersze (klient, profil rozliczeniowy, identyfikator klienta Stripe)",
+        "upload": "Prześlij CSV"
+      },
+      "assisted": {
+        "run": "Dopasuj według e-maila, potem nazwy",
+        "summary": "Zaproponowano: {{matched}}, niejednoznacznych: {{ambiguous}} (nie zaproponowano){{truncated}}",
+        "truncated": "; lista skrócona",
+        "ambiguousTitle": "Niejednoznaczne dopasowania (nie zaproponowano)",
+        "addRow": "Dodaj jako wiersz",
+        "matchedBy": "Dopasowano według: {{by}}",
+        "by": {
+          "email": "e-mail",
+          "name": "nazwa"
+        },
+        "ambiguousReasons": {
+          "multiple-profiles": "Pasuje do wielu profili rozliczeniowych",
+          "multiple-customers": "Pasuje do wielu klientów Stripe"
+        }
+      },
+      "errors": {
+        "preview": "Podgląd nie powiódł się",
+        "noRows": "Dodaj co najmniej jeden wiersz",
+        "match": "Dopasowanie nie powiodło się",
+        "execute": "Import nie powiódł się"
+      },
+      "table": {
+        "customer": "Klient Stripe",
+        "plan": "Planowana akcja",
+        "cards": "Karty",
+        "enroll": "Zapisz do automatycznych płatności",
+        "clientProfile": "Klient / profil rozliczeniowy",
+        "include": "Uwzględnij"
+      },
+      "actions": {
+        "adopt": "Przejmij",
+        "already-imported": "Już zaimportowano",
+        "conflict": "Konflikt",
+        "skip": "Pomiń"
+      },
+      "cardActions": {
+        "import": "Importuj",
+        "already-imported": "Już zaimportowano",
+        "conflict": "Konflikt",
+        "skip": "Pomiń"
+      },
+      "cardReasons": {
+        "unsupported-method": "nieobsługiwana metoda",
+        "expired-card": "karta wygasła",
+        "card-claimed-elsewhere": "karta należy do innego klienta"
+      },
+      "reasons": {
+        "invalid-customer-id": "Nieprawidłowy identyfikator klienta Stripe",
+        "customer-not-found": "Nie znaleziono klienta w Stripe",
+        "customer-deleted": "Klient został usunięty w Stripe",
+        "profile-not-found": "Nie znaleziono klienta lub profilu rozliczeniowego",
+        "profile-inactive": "Profil rozliczeniowy jest nieaktywny",
+        "currency-not-configured": "Dla tego klienta nie skonfigurowano waluty rozliczeniowej",
+        "currency-unsupported": "Waluta rozliczeniowa nie jest obsługiwana przez automatyczne płatności Stripe",
+        "duplicate-customer-in-input": "Ten sam klient Stripe występuje w więcej niż jednym wierszu",
+        "duplicate-profile-in-input": "Ten sam profil rozliczeniowy występuje z więcej niż jednym klientem Stripe",
+        "customer-claimed-by-other": "Klient Stripe jest już przypisany do innego klienta lub profilu rozliczeniowego",
+        "customer-metadata-owned-by-other": "Metadane klienta Stripe wskazują inną organizację, klienta lub profil rozliczeniowy",
+        "profile-mapped-to-other-customer": "Ten profil rozliczeniowy używa już innego klienta Stripe"
+      },
+      "warnings": {
+        "no-cards": "Klient nie ma metod płatności",
+        "customer-currency-mismatch": "Waluta klienta Stripe różni się od waluty rozliczeniowej",
+        "no-importable-card": "Żadna karta nie może zostać zaimportowana"
+      },
+      "resultStatus": {
+        "imported": "Zaimportowano",
+        "unchanged": "Nic do zrobienia",
+        "skipped": "Pominięto",
+        "conflict": "Konflikt",
+        "failed": "Niepowodzenie"
+      },
+      "enrollment": {
+        "enrolled": "zapisano do automatycznych płatności",
+        "not-eligible": "nie kwalifikuje się do zapisu",
+        "already-enrolled": "już zapisano",
+        "failed": "zapis nie powiódł się"
+      }
+    },
     "messages": {
       "loadConfigFailed": "Nie udało się załadować konfiguracji płatności",
       "keysRequired": "Wprowadź zarówno klucz tajny, jak i klucz publikowalny",
@@ -1448,7 +1620,7 @@
       "daysPlural": "{{count}} dni",
       "daysDecimal": "{{count}} dni",
       "hoursUnit": "godzin ({{formatted}})",
-      "willExpireAfter": "Linki płatności wygasną po {{duration}}"
+      "willExpireAfter": "Link do płatności z e-maila będzie działał przez {{duration}}"
     },
     "notConnected": {
       "title": "Stripe nie jest połączony",
@@ -1466,7 +1638,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Wygaśnięcie linku płatności",
-        "description": "Jak długo linki płatności pozostają ważne, zanim wygasną"
+        "description": "Jak długo działa link do płatności w e-mailach z fakturą (od 1 godziny do 30 dni). Każde kliknięcie otwiera nową, bezpieczną płatność, dopóki faktura jest nieopłacona."
       },
       "actions": {
         "save": "Zapisz ustawienia",

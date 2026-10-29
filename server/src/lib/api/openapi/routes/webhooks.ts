@@ -1,4 +1,5 @@
 import type { ZodTypeAny } from 'zod';
+import { WEBHOOK_EVENT_NAMES, webhookEventsForEntity } from '../../../webhooks/eventRegistry';
 import { WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY } from '../../../webhooks/payloadFields';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 import type { ApiResponseSpec } from '../types';
@@ -92,63 +93,21 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const TicketWebhookEvent = registry.registerSchema(
     'TicketWebhookEventV1',
     zOpenApi
-      .enum([
-        'ticket.created',
-        'ticket.updated',
-        'ticket.status_changed',
-        'ticket.assigned',
-        'ticket.closed',
-        'ticket.comment.added',
-        'ticket.response_state_changed',
-      ])
+      .enum(
+        webhookEventsForEntity('ticket').map((e) => e.name) as unknown as [string, ...string[]],
+      )
       .describe('Ticket-domain webhook events emitted by the eventBus subscriber.'),
   );
 
   const WebhookEventType = registry.registerSchema(
     'WebhookEventTypeV1',
-    zOpenApi.enum([
-      'ticket.created',
-      'ticket.updated',
-      'ticket.status_changed',
-      'ticket.assigned',
-      'ticket.closed',
-      'ticket.comment.added',
-      'ticket.response_state_changed',
-      'project.created',
-      'project.updated',
-      'project.status_changed',
-      'project.assigned',
-      'project.closed',
-      'project.completed',
-      'project.task.created',
-      'project.task.updated',
-      'project.task.status_changed',
-      'project.task.assigned',
-      'project.task.completed',
-      'client.created',
-      'client.updated',
-      'contact.created',
-      'contact.updated',
-      'time.entry.created',
-      'time.entry.updated',
-      'time.entry.approved',
-      'invoice.created',
-      'invoice.finalized',
-      'invoice.sent',
-      'invoice.paid',
-      'asset.created',
-      'asset.updated',
-      'asset.maintenance.scheduled',
-      'asset.maintenance.completed',
-      'system.backup.completed',
-      'system.backup.failed',
-      'system.maintenance.started',
-      'system.maintenance.completed',
-      'workflow.execution.started',
-      'workflow.execution.completed',
-      'workflow.execution.failed',
-      'custom.event',
-    ]),
+    zOpenApi
+      .enum(WEBHOOK_EVENT_NAMES as unknown as [string, ...string[]])
+      .describe(
+        'Public webhook event name from the single event registry (ticket.*, project.*, client.*, contact.*, client_location.*, quote.*). ' +
+          'Webhooks created earlier may still store retired names (time.entry.*, invoice.*, asset.*, system.*, workflow.*, custom.event); ' +
+          'those are returned as stored, never deliver, and are rejected when newly added.',
+      ),
   );
 
   // ---------------------------------------------------------------------------
@@ -296,7 +255,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       description: zOpenApi.string().nullable(),
       url: zOpenApi.string(),
       method: zOpenApi.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
-      event_types: zOpenApi.array(WebhookEventType),
+      event_types: zOpenApi.array(zOpenApi.string()).describe('Event names as stored; may include retired legacy names (inert).'),
       security: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
       payload_format: zOpenApi.enum(['json', 'xml', 'form_data', 'custom']).optional(),
       content_type: zOpenApi.string().optional(),
@@ -419,7 +378,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
     'WebhookSubscriptionsResponseV1',
     zOpenApi.object({
       webhook_id: zOpenApi.string().uuid(),
-      event_types: zOpenApi.array(WebhookEventType),
+      event_types: zOpenApi.array(zOpenApi.string()).describe('Event names as stored; may include retired legacy names (inert).'),
     }),
   );
 
@@ -960,7 +919,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       action: 'read',
       summary: 'List available webhook events',
       description:
-        'Returns the supported webhook event types from webhookEventTypeSchema (ticket.*, project.*, invoice.*, etc.).',
+        'Returns the supported webhook event types from webhookEventTypeSchema (ticket.*, project.*, client.*, contact.*, client_location.*, quote.*).',
       success: { description: 'Event type list.', schema: WebhookEventListEnvelope },
     },
     {

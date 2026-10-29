@@ -73,6 +73,12 @@ export interface IHourBlock extends TenantEntity {
    */
   first_allocated_at?: string | null;
   expiration_date?: string | null;
+  /**
+   * First calendar day (YYYY-MM-DD) the block may be drawn on. Null = no lower
+   * bound (every ad-hoc and consumption block). Cadence blocks set it to their
+   * service period start so earlier time never draws a later block.
+   */
+  valid_from?: string | null;
   /** Null ⇒ direct grant. */
   source_invoice_id?: string | null;
   /**
@@ -96,6 +102,8 @@ export interface IHourBlock extends TenantEntity {
   client_contract_id?: string | null;
   /** contract_line_block_issuances row that produced this block. */
   issuance_id?: string | null;
+  /** recurring_service_periods row (charge_family 'prepaid_block') that issued a cadence block; soft reference. */
+  service_period_record_id?: string | null;
   voided_at?: string | null;
   voided_by?: string | null;
   void_reason?: string | null;

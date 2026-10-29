@@ -4,10 +4,13 @@ import type { Knex } from 'knex';
 import {
   createClientContractAssignment,
   deriveClientContractStatus,
+  getTenantLocalToday,
   updateClientContractAssignment,
 } from '@alga-psa/shared/billingClients';
 import { normalizeClientContract } from '@alga-psa/shared/billingClients/clientContracts';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+
+export { normalizeClientContract };
 
 const RENEWAL_DEFAULT_SELECTIONS = [
   'dbs.default_renewal_mode as tenant_default_renewal_mode',
@@ -98,7 +101,8 @@ const ClientContract = {
         ...RENEWAL_DEFAULT_SELECTIONS,
       ]);
 
-      return dedupeClientContractsByRenewalCycle(rows.map(normalizeClientContract));
+      const today = await getTenantLocalToday(db, tenant);
+      return dedupeClientContractsByRenewalCycle(rows.map((row: any) => normalizeClientContract(row, { today })));
     } catch (error) {
       console.error(`Error fetching contracts for client ${clientId}:`, error);
       throw error;
@@ -133,7 +137,8 @@ const ClientContract = {
         ...RENEWAL_DEFAULT_SELECTIONS,
       ]);
 
-      return dedupeClientContractsByRenewalCycle(rows.map(normalizeClientContract));
+      const today = await getTenantLocalToday(db, tenant);
+      return dedupeClientContractsByRenewalCycle(rows.map((row: any) => normalizeClientContract(row, { today })));
     } catch (error) {
       console.error('Error fetching contracts for clients:', error);
       throw error;
@@ -161,7 +166,7 @@ const ClientContract = {
         ])
         .first();
 
-      return row ? normalizeClientContract(row) : null;
+      return row ? normalizeClientContract(row, { today: await getTenantLocalToday(db, tenant) }) : null;
     } catch (error) {
       console.error(`Error fetching client contract ${clientContractId}:`, error);
       throw error;
@@ -196,7 +201,9 @@ const ClientContract = {
         return null;
       }
 
-      const normalized = normalizeClientContract(clientContract) as any;
+      const normalized = normalizeClientContract(clientContract, {
+        today: await getTenantLocalToday(db, tenant),
+      }) as any;
 
       const assignmentContractLinesQuery = facade.table('client_contracts as cc')
         .where({

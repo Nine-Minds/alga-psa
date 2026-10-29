@@ -881,6 +881,7 @@
       "add": "Aggiungi",
       "remove": "Rimuovi",
       "empty": "Nessuna mappatura.",
+      "nameRequired": "Inserisci un nome per questa mappatura.",
       "expressionLabel": "Espressione"
     },
     "schemaForm": {

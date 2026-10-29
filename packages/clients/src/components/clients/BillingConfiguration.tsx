@@ -40,6 +40,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { ClientBillingSchedule } from './ClientBillingSchedule';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { normalizePaymentTerms } from '@alga-psa/shared/billingClients/paymentPreferences';
 
 interface BillingConfigurationProps {
     client: IClient;
@@ -54,7 +55,9 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
     const { t } = useTranslation('msp/clients');
     const [activeTab, setActiveTab] = useState('general');
     const [billingConfig, setBillingConfig] = useState({
-        payment_terms: client.payment_terms || 'net_30',
+        // '' = unset: follows the tenant default. Legacy free text is treated as unset,
+        // matching due-date calculation, and is replaced with '' on save.
+        payment_terms: normalizePaymentTerms(client.payment_terms) ?? '',
         credit_limit: client.credit_limit || 0,
         preferred_payment_method: client.preferred_payment_method || '',
         auto_invoice: client.auto_invoice || false,

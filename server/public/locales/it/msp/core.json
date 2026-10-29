@@ -105,7 +105,11 @@
     "passwords": "Password",
     "ticketsAll": "Tutti i ticket",
     "ticketsRecurring": "Ticket ricorrenti",
-    "ticketsTemplates": "Modelli di ticket"
+    "ticketsTemplates": "Modelli di ticket",
+    "assetsCustody": "Apparecchiature in custodia",
+    "ticketsCannedResponses": "Risposte predefinite",
+    "profile": "Profilo",
+    "signOut": "Esci"
   },
   "sidebar": {
     "backToMain": "Torna al principale",
@@ -154,7 +158,8 @@
       "extensions": "Estensioni",
       "experimentalFeatures": "Funzionalità sperimentali",
       "profile": "Profilo",
-      "security": "Sicurezza"
+      "security": "Sicurezza",
+      "tags": "Tag"
     }
   },
   "dashboard": {
@@ -843,5 +848,10 @@
     "errors": {
       "enterpriseOnly": "Le funzionalità di chat sono disponibili solo in Enterprise Edition"
     }
+  },
+  "coManagedWorkspace": {
+    "loading": "Caricamento dell’area di lavoro…",
+    "navigation": "Area di lavoro cliente",
+    "passwordError": "Impossibile verificare lo stato della password. Ricarica questa pagina."
   }
 }

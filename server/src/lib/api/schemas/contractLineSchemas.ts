@@ -34,7 +34,12 @@ export const contractStatusSchema = z.enum(['active', 'draft', 'terminated', 'ex
 
 // Prepaid Block config overlay for Hourly lines (contract_line_prepaid_blocks).
 // block_price is in minor units of the contract's currency.
+// issue_mode 'cadence' bills one block per service period, in advance; rollover_periods (0..12)
+// is how many further periods unused hours stay valid and applies to cadence only. The
+// consumption triggers and expiry_months cannot be combined with cadence.
 export const prepaidBlockConfigSchema = z.object({
+  issue_mode: z.enum(['consumption', 'cadence']).optional(),
+  rollover_periods: z.number().int().min(0).max(12).optional(),
   block_minutes: z.number().int().min(1),
   block_price: z.number().int().min(0),
   sold_as_service_id: uuidSchema.nullable().optional(),
@@ -44,6 +49,27 @@ export const prepaidBlockConfigSchema = z.object({
   trigger_on_expiry: z.boolean().optional(),
   trigger_on_renewal: z.boolean().optional(),
   replenishment_tier: z.enum(['draft', 'auto_issue']).optional(),
+}).superRefine((block, ctx) => {
+  if (block.issue_mode === 'cadence') {
+    const conflicting = block.trigger_on_exhaustion === true
+      || block.trigger_on_expiry === true
+      || block.trigger_on_renewal === true
+      || block.trigger_threshold_percent != null
+      || block.expiry_months != null;
+    if (conflicting) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Blocks issued every billing period cannot use the exhaustion, threshold, expiry or renewal triggers or expiry_months; use rollover_periods',
+        path: ['issue_mode'],
+      });
+    }
+  } else if ((block.rollover_periods ?? 0) !== 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'rollover_periods applies only when issue_mode is cadence',
+      path: ['rollover_periods'],
+    });
+  }
 });
 
 // Base contract line schema (without refinements)
@@ -163,6 +189,9 @@ export const combinedFixedPlanConfigResponseSchema = z.object({
 
 export const pricingBasisSchema = z.enum(['bundle', 'unit']);
 
+// What a stored fixed-member base_rate means (see shared/billingClients/fixedMemberRate.ts).
+export const fixedBaseRateBasisSchema = z.enum(['per_unit', 'share']);
+
 // Base service configuration
 export const planServiceConfigurationSchema = z.object({
   config_id: uuidSchema,
@@ -181,6 +210,7 @@ export const planServiceConfigurationSchema = z.object({
 export const planServiceFixedConfigSchema = z.object({
   config_id: uuidSchema,
   base_rate: z.number().min(0).optional(),
+  base_rate_basis: fixedBaseRateBasisSchema.nullable().optional(),
   pricing_basis: pricingBasisSchema.nullable().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
@@ -192,8 +222,14 @@ export const planServiceFixedConfigSchema = z.object({
 // currency. 'bundle' (default): the line total is authoritative and the
 // quantity only allocates a share of it. The basis is chosen when the service
 // is added and cannot be changed by an update.
+//
+// base_rate_basis states what a stored base_rate means for a bundle member:
+// 'per_unit' (rate x quantity; the default when absent, the API's documented
+// unit-rate sense) or 'share' (the member's slice of the line total, quantity
+// ignored). Per-unit services are always per_unit.
 export const createPlanServiceFixedConfigSchema = z.object({
   base_rate: z.number().min(0).nullable().optional(),
+  base_rate_basis: fixedBaseRateBasisSchema.optional(),
   pricing_basis: pricingBasisSchema.optional()
 });
 
@@ -322,7 +358,13 @@ export const updatePlanServiceSchema = z.object({
     createPlanServiceHourlyConfigSchema.partial(),
     createPlanServiceUsageConfigSchema.partial(),
     createPlanServiceBucketConfigSchema.partial()
-  ]).optional(),
+  ]).and(
+    // The partial branches above strip unknown keys and the hourly/usage/bucket
+    // partials accept an empty object, so an invalid base_rate_basis would be
+    // silently dropped. Validate it explicitly whenever it is present (default
+    // strip: the right side contributes no keys other than base_rate_basis).
+    z.object({ base_rate_basis: fixedBaseRateBasisSchema.optional() })
+  ).optional(),
   rate_tiers: z.array(createRateTierSchema).optional(),
   user_type_rates: z.array(createUserTypeRateSchema).optional()
 });
@@ -387,6 +429,11 @@ export const createContractSchema = contractCreateObject.superRefine((data, ctx)
 
 export const updateContractSchema = createUpdateSchema(contractCreateObject);
 
+export const CONTRACT_START_DATE_DESCRIPTION =
+  "Earliest start_date across the contract's client assignments (client_contracts); MIN ignores assignments with a null start_date. Falls back to the contract's own stored start_date only when the contract has no assignments.";
+export const CONTRACT_END_DATE_DESCRIPTION =
+  "Latest end_date across the contract's client assignments (client_contracts); MAX ignores assignments with a null (open-ended) end_date. Falls back to the contract's own stored end_date only when the contract has no assignments.";
+
 export const contractResponseSchema = z.object({
   contract_id: uuidSchema,
   contract_name: z.string(),
@@ -399,8 +446,8 @@ export const contractResponseSchema = z.object({
   is_active: z.boolean(),
   is_system_managed_default: z.boolean().optional(),
   is_template: z.boolean().optional(),
-  start_date: z.string().datetime().nullable().optional(),
-  end_date: z.string().datetime().nullable().optional(),
+  start_date: z.string().datetime().nullable().optional().describe(CONTRACT_START_DATE_DESCRIPTION),
+  end_date: z.string().datetime().nullable().optional().describe(CONTRACT_END_DATE_DESCRIPTION),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,

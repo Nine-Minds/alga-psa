@@ -3,6 +3,7 @@
  * Business logic for client-related operations
  */
 
+import { deactivateClientScopedChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { Knex } from 'knex';
 import { locationAddressSql } from './locationAddressSql';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
@@ -39,13 +40,11 @@ import {
   buildClientStatusChangedPayload,
   buildClientUpdatedPayload,
 } from '@alga-psa/workflow-streams';
-import { buildContactPrimarySetPayload } from '@alga-psa/workflow-streams';
+import { buildContactPrimarySetPayload, buildContactArchivedPayload } from '@alga-psa/workflow-streams';
 import {
-  ensureDefaultContractForClientIfBillingConfigured,
-} from '@alga-psa/shared/billingClients/defaultContract';
-import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
-import { initializeClientDefaultTax } from '@alga-psa/shared/billingClients/defaultTaxRate';
-import { resolveProductCode } from '@alga-psa/types';
+  createClientWithDefaults,
+  type CreateClientWithDefaultsData,
+} from '@alga-psa/shared/models/clientCreation';
 import {
   ClientMergeBlockedError,
   executeClientMerge,
@@ -392,36 +391,18 @@ export class ClientService extends BaseService<IClient> {
         is_inactive: data.is_inactive || false,
         lifecycle_status: (data as any).lifecycle_status ?? 'active',
         client_since: data.client_since ?? null,
-        tenant: context.tenant,
-        created_at: knex.raw('now()'),
-        updated_at: knex.raw('now()')
+        tenant: context.tenant
       };
 
-      // Insert into clients table
-      const [client] = await tenantDb(trx, context.tenant).table('clients').insert(clientData).returning('*')
-        .catch((error: unknown) => throwClientWriteApiError(error, data.client_name));
-
-      // Terminal step of charge attribution — every client has exactly one.
-      await ensureClientDefaultBillingProfile(trx, context.tenant, client.client_id, {
-        clientName: client.client_name,
-      });
-
-      await ensureDefaultContractForClientIfBillingConfigured(trx, {
-        tenant: context.tenant,
-        clientId: client.client_id,
-      });
-
-      // Tax initialization shares the client transaction: for PSA tenants an
-      // invalid/missing configuration must roll the client back rather than
-      // commit a client with no usable tax setup. AlgaDesk tenants have no tax
-      // rates (the product intentionally excludes billing) and keep the same
-      // exemption as the UI and shared client-writer paths.
-      const tenantProduct = await tenantDb(trx, context.tenant)
-        .table('tenants')
-        .first('product_code');
-      if (resolveProductCode(tenantProduct?.product_code).productCode !== 'algadesk') {
-        await initializeClientDefaultTax(trx, context.tenant, client.client_id);
-      }
+      // The shared creation seam owns the insert plus every default a client
+      // needs (tenant currency, default billing profile, default contract,
+      // default tax settings) in this transaction. Its failures are mapped to
+      // the same API errors direct inserts used to raise.
+      const client = await createClientWithDefaults(
+        trx,
+        context.tenant,
+        clientData as unknown as CreateClientWithDefaultsData
+      ).catch((error: unknown) => throwClientWriteApiError(error, data.client_name));
 
       // Handle tags if provided
       if ((data as any).tags && (data as any).tags.length > 0) {
@@ -523,6 +504,7 @@ export class ClientService extends BaseService<IClient> {
     clientId: string
   ): Promise<void> {
     await this.cleanupDefaultContractsForDeletedClient(trx, tenant, clientId);
+    await deactivateClientScopedChecklistTemplates(trx, tenant, clientId);
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_billing_settings', { client_id: clientId });
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_billing_cycles', { client_id: clientId });
     await this.deleteFromTenantTableIfExists(trx, tenant, 'client_tax_settings', { client_id: clientId });
@@ -650,6 +632,7 @@ export class ClientService extends BaseService<IClient> {
   async update(id: string, data: UpdateClientData, context: ServiceContext): Promise<IClient> {
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
+      let newlyDeactivatedContactIds: string[] = [];
       const db = tenantDb(trx, context.tenant);
       const before = await db.table('clients')
         .where('client_id', id)
@@ -716,6 +699,12 @@ export class ClientService extends BaseService<IClient> {
 
         const contactIds = contacts.map((c) => c.contact_name_id);
 
+        // Only contacts that were active flip state (and get contact.deactivated).
+        const activeNow = await db.table('contacts')
+          .select('contact_name_id')
+          .where({ client_id: id, is_inactive: false });
+        newlyDeactivatedContactIds = activeNow.map((c) => c.contact_name_id);
+
         // Deactivate all contacts
         await db.table('contacts')
           .where({ client_id: id })
@@ -740,7 +729,7 @@ export class ClientService extends BaseService<IClient> {
         }
       }
 
-      return { before, after: client, updatedFieldKeys };
+      return { before, after: client, updatedFieldKeys, newlyDeactivatedContactIds };
     });
 
     const occurredAt = (result.after as any).updated_at ?? new Date().toISOString();
@@ -819,6 +808,21 @@ export class ClientService extends BaseService<IClient> {
         }),
         ctx: { tenantId: context.tenant, occurredAt, actor },
         idempotencyKey: `client_archived:${id}:${occurredAt}`,
+      });
+    }
+
+    // Contacts the cascade flipped to inactive are real contact.deactivated transitions.
+    for (const contactId of result.newlyDeactivatedContactIds) {
+      await publishWorkflowEvent({
+        eventType: 'CONTACT_ARCHIVED',
+        payload: buildContactArchivedPayload({
+          contactId,
+          clientId: id,
+          archivedByUserId: typeof context.userId === 'string' ? context.userId : undefined,
+          archivedAt: occurredAt,
+        }),
+        ctx: { tenantId: context.tenant, occurredAt, actor },
+        idempotencyKey: `contact_archived:${contactId}:${occurredAt}`,
       });
     }
 
@@ -903,7 +907,7 @@ export class ClientService extends BaseService<IClient> {
           throw new NotFoundError('Client not found');
         }
 
-        return createClientLocation(trx, context.tenant, clientId, data);
+        return createClientLocation(trx, context.tenant, clientId, data, { actorUserId: context.userId });
       });
     } catch (error) {
       throwClientLocationApiError(error);
@@ -921,7 +925,7 @@ export class ClientService extends BaseService<IClient> {
     const { knex } = await this.getKnex();
     try {
       return await withTransaction(knex, (trx) =>
-        updateClientLocation(trx, context.tenant, clientId, locationId, data)
+        updateClientLocation(trx, context.tenant, clientId, locationId, data, { actorUserId: context.userId })
       );
     } catch (error) {
       throwClientLocationApiError(error);
@@ -938,7 +942,7 @@ export class ClientService extends BaseService<IClient> {
     const { knex } = await this.getKnex();
     try {
       await withTransaction(knex, (trx) =>
-        deleteClientLocation(trx, context.tenant, clientId, locationId)
+        deleteClientLocation(trx, context.tenant, clientId, locationId, { actorUserId: context.userId })
       );
     } catch (error) {
       throwClientLocationApiError(error);

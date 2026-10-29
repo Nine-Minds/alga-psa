@@ -1,12 +1,15 @@
 'use server'
 
+import { getRoleAssignmentViolation, isMspPrincipalUserType } from '@alga-psa/types';
 import { IPermission, IRole, IPolicy, IUserRole, IUserWithRoles, ICondition, DeletionValidationResult } from '@alga-psa/types';
 import { ITicket } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import { PolicyEngine } from '../lib/policy/PolicyEngine';
 import { USER_ATTRIBUTES, TICKET_ATTRIBUTES } from '../lib/attributes/EntityAttributes';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '../lib/withAuth';
+import { filterPermissionsByServedCapabilities } from '../lib/permissionCapabilities';
 import { hasPermission } from '../lib/rbac';
 import { isBuiltInRoleName } from '../lib/policy/builtInRoles';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -143,7 +146,7 @@ async function checkClientPortalRoleScope(
   targetUser: { user_type?: string; contact_id?: string | null } | undefined,
   role: IRole | undefined
 ): Promise<AuthActionError | null> {
-  if (currentUser.user_type !== 'client') {
+  if (isMspPrincipalUserType(currentUser.user_type)) {
     return null;
   }
 
@@ -155,7 +158,7 @@ async function checkClientPortalRoleScope(
     return permissionError('Permission denied: Client portal admins may only manage client portal roles.', 'msp/settings:errors.security.permissions.portalRolesOnly');
   }
 
-  if (targetUser.user_type !== 'client') {
+  if (!isClientUserType(targetUser.user_type)) {
     return permissionError('Permission denied: Client portal admins may only manage client portal users.', 'msp/settings:errors.security.permissions.portalUsersOnly');
   }
 
@@ -450,11 +453,13 @@ export const assignRoleToUser = withAuth(async (currentUser, { tenant }, userId:
         }
 
         // Validate role compatibility based on user type
-        if (user.user_type === 'internal' && !role.msp) {
+        // LEVERAGE: pattern role-assignment-user-type — same decision in policyActions.assignRoleToUser and users roleActions.assignRoleToUser
+        const roleViolation = getRoleAssignmentViolation(user.user_type, role);
+        if (roleViolation === 'portal_role_on_msp_user') {
             return actionError('Cannot assign a client portal role to an MSP user.', 'msp/settings:errors.roles.portalRoleOnMspUser');
         }
 
-        if (user.user_type === 'client' && !role.client) {
+        if (roleViolation === 'msp_role_on_portal_user') {
             return actionError('Cannot assign an MSP role to a client portal user.', 'msp/settings:errors.roles.mspRoleOnPortalUser');
         }
 
@@ -683,7 +688,7 @@ export async function evaluateAccess(user: IUserWithRoles, resource: any, action
 export const getRolePermissions = withAuth(async (_user, { tenant }, roleId: string): Promise<IPermission[]> => {
     try {
         const { knex: db } = await createTenantKnex();
-        return withTransaction(db, async (trx: Knex.Transaction) => {
+        const granted = await withTransaction(db, async (trx: Knex.Transaction) => {
             const scopedDb = tenantDb(trx, tenant);
             const query = scopedDb.table('role_permissions');
             scopedDb.tenantJoin(query, 'permissions', 'role_permissions.permission_id', 'permissions.permission_id');
@@ -694,6 +699,7 @@ export const getRolePermissions = withAuth(async (_user, { tenant }, roleId: str
                 })
                 .select('permissions.permission_id', 'permissions.resource', 'permissions.action', 'permissions.tenant', 'permissions.msp', 'permissions.client', 'permissions.description');
         });
+        return filterPermissionsByServedCapabilities(tenant, granted);
     } catch (error) {
         console.error('Error fetching role permissions:', error);
         throw error;
@@ -703,11 +709,12 @@ export const getRolePermissions = withAuth(async (_user, { tenant }, roleId: str
 export const getPermissions = withAuth(async (_user, { tenant }): Promise<IPermission[]> => {
     try {
         const { knex: db } = await createTenantKnex();
-        return withTransaction(db, async (trx: Knex.Transaction) => {
-            const permissions = await tenantScopedTable(trx, 'permissions', tenant)
+        const permissions = await withTransaction(db, async (trx: Knex.Transaction) => {
+            return tenantScopedTable(trx, 'permissions', tenant)
                 .select('permission_id', 'resource', 'action', 'tenant', 'msp', 'client', 'description');
-            return permissions;
         });
+        // The role editor never lists a capability the tenant is not served for.
+        return filterPermissionsByServedCapabilities(tenant, permissions);
     } catch (error) {
         console.error('Error fetching permissions:', error);
         throw error;

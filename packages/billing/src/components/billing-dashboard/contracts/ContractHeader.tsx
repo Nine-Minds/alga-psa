@@ -3,7 +3,7 @@
 import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { ContractStatus, IContract } from '@alga-psa/types';
+import type { ClientContractDerivedStatus, IContract } from '@alga-psa/types';
 import type { IContractSummary } from '@alga-psa/billing/actions/contractActions';
 import { Calendar, CalendarClock, FileCheck, Layers3, Coins } from 'lucide-react';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
@@ -13,7 +13,7 @@ import { toCalendarDisplayDate } from '@alga-psa/core';
 interface ContractHeaderProps {
   contract: IContract;
   summary?: IContractSummary | null;
-  liveStatus?: ContractStatus;
+  liveStatus?: ClientContractDerivedStatus;
 }
 
 type SummaryStat = {
@@ -96,12 +96,15 @@ const ContractHeader: React.FC<ContractHeaderProps> = ({ contract, summary, live
           <h1 className="text-2xl font-bold text-foreground">{contract.contract_name}</h1>
           <Badge variant={
             status === 'active' ? 'success' :
+            status === 'scheduled' ? 'info' :
             status === 'terminated' ? 'warning' :
             status === 'expired' ? 'error' :
             'default-muted'
           }>
             {status === 'active'
               ? t('contractHeader.status.active', { defaultValue: 'Active' })
+              : status === 'scheduled'
+                ? t('contractHeader.status.scheduled', { defaultValue: 'Scheduled' })
               : status === 'terminated'
                 ? t('contractHeader.status.terminated', { defaultValue: 'Terminated' })
                 : status === 'expired'

@@ -350,6 +350,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
         const rawStatus: string = (rec.assignment_status ?? rec.contract_status ?? (record.is_active ? 'active' : 'inactive')).toString().toLowerCase();
         const variantByStatus: Record<string, 'success' | 'warning' | 'default-muted' | 'error' | 'info'> = {
           active: 'success',
+          scheduled: 'info',
           draft: 'default-muted',
           expired: 'error',
           terminated: 'warning',
@@ -359,6 +360,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
         };
         const labelByStatus: Record<string, string> = {
           active: t('common.states.active', { defaultValue: 'Active' }),
+          scheduled: t('common.states.scheduled', { defaultValue: 'Scheduled' }),
           draft: t('common.states.draft', { defaultValue: 'Draft' }),
           expired: t('common.states.expired', { defaultValue: 'Expired' }),
           terminated: t('common.states.terminated', { defaultValue: 'Terminated' }),

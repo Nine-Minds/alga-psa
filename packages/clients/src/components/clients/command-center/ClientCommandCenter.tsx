@@ -18,6 +18,8 @@ import { useContactQuickViewDrawer } from '../../contacts/bento/useContactQuickV
 import ConcernsCard from './ConcernsCard';
 import ClientTimelinePanel from './ClientTimelinePanel';
 import FocusViewHost from './FocusViewHost';
+import SoftwareCard from './SoftwareCard';
+import type { GetClientSoftwareSummary } from './ClientSoftwareView';
 import {
   DocumentsCard,
   InstallBaseCard,
@@ -36,8 +38,12 @@ interface ClientCommandCenterProps {
   idPrefix: string;
   clientId: string;
   tabs: TabContent[];
+  /** Client software read action (assets-owned, injected); null hides the Software tile. */
+  getSoftwareSummary?: GetClientSoftwareSummary | null;
   /** ?tab= value present when the page loaded (deep link, D3). */
   initialTabId?: string | null;
+  /** Open a registered tab in place (e.g. a header summary action) without a server navigation. */
+  openTabRequest?: { tabId: string; nonce: number } | null;
   /** Sync the focus-view state back into the URL (?tab=). */
   onTabUrlChange: (tabId: string | null) => void;
   /** Dirty state of the shared client-record edit buffer (Details / Additional Info). */
@@ -76,7 +82,9 @@ export default function ClientCommandCenter({
   idPrefix,
   clientId,
   tabs,
+  getSoftwareSummary = null,
   initialTabId,
+  openTabRequest,
   onTabUrlChange,
   hasUnsavedRecordChanges,
   onDiscardRecordChanges,
@@ -137,6 +145,15 @@ export default function ClientCommandCenter({
     setFocusTabId(tabId);
     onTabUrlChange(tabId);
   }, [tabIds, onTabUrlChange]);
+
+  // Header summary actions ask for a tab by nonce, keeping the focus view open
+  // in place instead of navigating (which would re-render the server tree).
+  const lastOpenTabRequestRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!openTabRequest || lastOpenTabRequestRef.current === openTabRequest.nonce) return;
+    lastOpenTabRequestRef.current = openTabRequest.nonce;
+    if (tabIds.has(openTabRequest.tabId)) openFocus(openTabRequest.tabId);
+  }, [openTabRequest, tabIds, openFocus]);
 
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
 
@@ -255,6 +272,14 @@ export default function ClientCommandCenter({
     });
   }
 
+  // Persistent entry points to the focus views customers did not find. Only
+  // views that exist for this composition (AlgaDesk drops some) render.
+  const quickLinks = ([
+    { key: 'contacts', label: t('clientCommandCenter.quickLinks.contacts', { defaultValue: 'Contacts' }), onClick: focusOpener('contacts') },
+    { key: 'assets', label: t('clientCommandCenter.quickLinks.assets', { defaultValue: 'Assets' }), onClick: focusOpener('assets') },
+    { key: 'software', label: t('clientCommandCenter.quickLinks.software', { defaultValue: 'Software' }), onClick: focusOpener('software') },
+  ] as const).filter((link): link is typeof link & { onClick: () => void } => link.onClick !== null);
+
   return (
     <div id={`${idPrefix}-command-center`} className="min-w-0">
       <div className="flex flex-wrap items-center gap-x-5 gap-y-1 mb-3 text-sm text-[rgb(var(--color-text-600))]">
@@ -286,6 +311,26 @@ export default function ClientCommandCenter({
           </button>
         )}
       </div>
+
+      {quickLinks.length > 0 && (
+        <nav
+          id={`${idPrefix}-quick-links`}
+          aria-label={t('clientCommandCenter.quickLinks.label', { defaultValue: 'Quick links' })}
+          className="flex flex-wrap items-center gap-2 mb-4"
+        >
+          {quickLinks.map((link) => (
+            <button
+              key={link.key}
+              id={`${idPrefix}-quick-link-${link.key}`}
+              type="button"
+              onClick={link.onClick}
+              className="rounded-full border border-[rgb(var(--color-border-200))] px-3 py-1 text-sm font-semibold text-primary-700 hover:bg-primary-50"
+            >
+              {link.label}
+            </button>
+          ))}
+        </nav>
+      )}
 
       {pulseError && (
         <p id={`${idPrefix}-pulse-error`} className="text-sm text-red-600 dark:text-red-400 mb-4">{pulseError}</p>
@@ -358,6 +403,16 @@ export default function ClientCommandCenter({
               // header already opens Assets and the footer link would duplicate it.
               onOpenAssetList={tabIds.has('equipment') ? focusOpener('assets') : null}
               onOpenAsset={(assetId) => router.push(`/msp/assets/${assetId}`)}
+              className={SPAN_HALF}
+              t={t}
+            />
+          )}
+          {!isAlgaDeskMode && getSoftwareSummary && tabIds.has('software') && (
+            <SoftwareCard
+              id={`${idPrefix}-card-software`}
+              clientId={clientId}
+              getSummary={getSoftwareSummary}
+              onOpen={focusOpener('software')}
               className={SPAN_HALF}
               t={t}
             />
