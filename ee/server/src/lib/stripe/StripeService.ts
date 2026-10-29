@@ -1615,7 +1615,12 @@ export class StripeService {
       return readSession(await this.stripe.checkout.sessions.create({
         customer: customerId, ui_mode: 'embedded', mode: 'subscription',
         line_items: [{ price: priceId, quantity }], metadata, subscription_data: { metadata },
-        return_url: `${getStripeReturnBaseUrl()}/msp/co-managed?purchase=${operationId}`,
+        // Card payments complete inside the embedded dialog (onComplete). A redirect-based method
+        // returns to the account page that hosts the pool editor, NOT the co-managed overview: that
+        // page is entitlement-gated and 404s for a first purchase whose webhook has not landed yet.
+        // The editor re-reads the pending operation there and offers Resume; nothing is granted.
+        redirect_on_completion: 'if_required',
+        return_url: `${getStripeReturnBaseUrl()}/msp/account#account-co-managed`,
       }, { idempotencyKey }));
     });
     // Reconciliation, not this call, decides whether capacity rises.

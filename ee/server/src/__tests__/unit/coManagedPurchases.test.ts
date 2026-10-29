@@ -73,6 +73,8 @@ describe('dedicated co-managed purchase adapter', () => {
     expect(service.stripe.checkout.sessions.create).toHaveBeenCalledWith(expect.objectContaining({
       customer: 'cus_msp', mode: 'subscription', ui_mode: 'embedded', line_items: [{ price: 'price_co', quantity: 6 }],
       metadata, subscription_data: { metadata },
+      // Returns to the account pool editor (always reachable), never the entitlement-gated overview.
+      redirect_on_completion: 'if_required', return_url: expect.stringMatching(/\/msp\/account#account-co-managed$/),
     }), { idempotencyKey: `co-managed:${tenant}:${operationId}` });
     expect(service.stripe.subscriptions.update).not.toHaveBeenCalled();
     expect(service.syncCoManagedSubscription).not.toHaveBeenCalled();
