@@ -9,12 +9,12 @@ import { loadServerMigration } from '../test-utils/serverMigrations';
 import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 const MIGRATIONS = [
-  '20261029100000_add_warranty_review_to_rma_cases.cjs',
-  '20261029100100_backfill_rma_case_warranty_review.cjs',
-  '20261029100200_validate_rma_case_constraints.cjs',
-  '20261029100300_create_rma_events.cjs',
-  '20261029100400_add_warranty_permissions.cjs',
-  '20261029100500_upsert_inventory_rma_updated_event_catalog.cjs',
+  '20261029000000_add_warranty_review_to_rma_cases.cjs',
+  '20261029000100_backfill_rma_case_warranty_review.cjs',
+  '20261029000200_validate_rma_case_constraints.cjs',
+  '20261029000300_create_rma_events.cjs',
+  '20261029000400_add_warranty_permissions.cjs',
+  '20261029000500_upsert_inventory_rma_updated_event_catalog.cjs',
 ].map((f) => loadServerMigration<{ up: (k: Knex) => Promise<void>; down: (k: Knex) => Promise<void> }>(f));
 
 const NEW_COLUMNS = [

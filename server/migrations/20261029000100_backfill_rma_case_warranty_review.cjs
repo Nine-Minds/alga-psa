@@ -2,7 +2,7 @@
 
 /**
  * Step 2 of 3 for warranty review on rma_cases (alga-2026-0002683, card C5); step 1 is
- * 20261029100000_add_warranty_review_to_rma_cases, step 3 is 20261029100200_validate_rma_case_constraints.
+ * 20261029000000_add_warranty_review_to_rma_cases, step 3 is 20261029000200_validate_rma_case_constraints.
  *
  * Batched backfill (each statement touches at most BATCH rows and the loop runs until nothing is left):
  *  - closed cases get closed_reason = 'resolved'

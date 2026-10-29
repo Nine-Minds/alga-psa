@@ -2,7 +2,7 @@
 
 /**
  * Step 3 of 3 for warranty review on rma_cases (alga-2026-0002683, card C5); see
- * 20261029100000_add_warranty_review_to_rma_cases (step 1) and 20261029100100_backfill_rma_case_warranty_review
+ * 20261029000000_add_warranty_review_to_rma_cases (step 1) and 20261029000100_backfill_rma_case_warranty_review
  * (step 2).
  *
  * Runs outside a transaction so the indexes can be built CONCURRENTLY and VALIDATE CONSTRAINT holds only a

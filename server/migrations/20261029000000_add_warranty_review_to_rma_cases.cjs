@@ -18,9 +18,9 @@
  *
  * Split in three so each step is safe on a live table (migration-lint rules 1, 2, 3, 5):
  *   1. this file: nullable columns, and every CHECK re-stated NOT VALID
- *   2. 20261029100100: batched backfill of closed_reason, rma_number and next_number, then the rma_number
+ *   2. 20261029000100: batched backfill of closed_reason, rma_number and next_number, then the rma_number
  *      presence CHECK (NOT VALID; it cannot exist earlier because UPDATEs re-check NOT VALID constraints)
- *   3. 20261029100200 (transaction: false): VALIDATE the CHECKs, build the indexes CONCURRENTLY,
+ *   3. 20261029000200 (transaction: false): VALIDATE the CHECKs, build the indexes CONCURRENTLY,
  *      SET NOT NULL on rma_number, add the composite FKs
  *
  * Numbering note: ordered after 20261028134000 (the newest migration on main when C5 was rebased).
