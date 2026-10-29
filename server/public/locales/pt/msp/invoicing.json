@@ -623,7 +623,9 @@
       "bulkPdfFailed": "Falha ao gerar PDFs. Por favor, tente novamente.",
       "unfinalizeFailed": "Falha ao desfinalizar a fatura. Por favor, tente novamente.",
       "bulkUnfinalizeFailed": "Falha ao desfinalizar faturas. Por favor, tente novamente.",
-      "bulkUnfinalizeInvoiceFailed": "Não foi possível reabrir {{invoiceNumber}}: {{reason}}"
+      "bulkUnfinalizeInvoiceFailed": "Não foi possível reabrir {{invoiceNumber}}: {{reason}}",
+      "explainThis": "Ver explicação",
+      "usedHourBlockExplanation": "A finalização desta fatura disponibilizou as horas pré-pagas para os registos de tempo. Entretanto, foi atribuído tempo ao bloco. Reabrir a fatura anularia o bloco, embora essas atribuições e eventuais cobranças posteriores ainda possam depender dele. Para manter a consistência da faturação, não é possível reverter a finalização de faturas de blocos que já tenham sido utilizados, mesmo que o tempo tenha sido posteriormente revertido. Considere um ajuste separado ou uma nota de crédito para corrigir a fatura."
     },
     "bulk": {
       "actionBar": {
@@ -2575,6 +2577,7 @@
       "onlyDraftEditable": "Somente faturas em rascunho podem ser editadas",
       "numberExists": "O número da fatura já existe. Escolha um número diferente.",
       "notFinalized": "A fatura não está finalizada",
+      "usedHourBlockUnfinalize": "Não é possível reverter a finalização desta fatura: o bloco de horas {{blockId}} já foi utilizado ({{usedHours}} de {{totalHours}} h). Considere um ajuste separado ou uma nota de crédito para corrigir a fatura.",
       "unfinalizeFailed": "Não foi possível reverter a finalização da fatura devido a um erro inesperado nos dados. Atualize a página e tente novamente.",
       "paidOrCancelled": "Não é possível modificar uma fatura paga ou cancelada",
       "syncedVoidInstead": "Esta fatura está sincronizada com um sistema contábil — anule-a em vez de excluí-la.",

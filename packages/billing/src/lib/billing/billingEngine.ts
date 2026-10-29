@@ -9,10 +9,12 @@ import {
   type UnpricedContractBillingObligation,
 } from "./domain";
 import {
-  type ResolvedContractChargeObligation,
+  type LoadedContractChargeObligation,
   normalizeResolvedContractCharge,
 } from "./domain/calculateContractCharge";
 import { createTenantKnex, tenantDb, withTransaction } from "@alga-psa/db";
+import { ensureUtcMidnightIsoDate, normalizeAnchorSettingsForCycle } from "@alga-psa/shared/billingClients/billingCycleAnchors";
+import type { CadenceAdvanceRule } from "@alga-psa/shared/billingClients/cadenceBoundaryAdvance";
 import { resolvePrepaidBlockBusinessDate, toDateOnly as toPrepaidBlockDateOnly } from "../prepaidBlockDates";
 import {
   IBillingPeriod,
@@ -29,7 +31,6 @@ import {
   IProductCharge,
   ILicenseCharge,
   IHourBlockCharge,
-  IPrepaidBlockCharge,
   IProjectBillingConfig,
   IProjectBillingScheduleEntry,
   IProjectPhaseRateOverride,
@@ -69,7 +70,12 @@ import {
   getCurrencySymbol,
 } from "@alga-psa/core";
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from "@alga-psa/shared/billingClients";
-import { isAdvanceTimingAllowedForLineType, resolveEffectiveBillingTiming } from "@alga-psa/shared/billingClients/contractLineTimingRule";
+import {
+  isAdvanceTimingAllowedForLineType,
+  resolveEffectiveBillingTiming,
+  streamForChargeFamily,
+  type RecurringChargeStream,
+} from "@alga-psa/shared/billingClients/contractLineTimingRule";
 import {
   ambiguousTicketProjectLinksQuery,
   ticketProjectAttributionJoin,
@@ -118,10 +124,15 @@ import {
 } from "./billingProfileResolution";
 import {
   DatabaseChargeSource,
+  orderChargesForInvoice,
   resolveContractLineChargesWithDiagnostics,
   type ChargeFamily,
   type ContractObligationSink,
+  type HourBlockDrawSupplyRow,
+  type PrepaidCoverageRow,
   type PooledTimeExclusion,
+  type CadencePrepaidBlockSupply,
+  type PrepaidBlockIssuanceSupply,
   type ResolvedLineCharge,
 } from "./chargeResolution";
 
@@ -178,10 +189,13 @@ type ResolvedRecurringChargeTiming = {
   coverageRatio: number;
 };
 
-type RecurringChargeTimingSelections = Record<
-  string,
-  ResolvedRecurringChargeTiming
+/** One line's due timing per recurring stream (absent stream: not due). */
+type RecurringStreamTimings = Partial<
+  Record<RecurringChargeStream, ResolvedRecurringChargeTiming>
 >;
+
+/** Keyed by line id, then stream: timing is resolved per (line, stream). */
+type RecurringChargeTimingSelections = Record<string, RecurringStreamTimings>;
 
 type CalculateBillingOptions = {
   recurringTimingSelections?: RecurringChargeTimingSelections;
@@ -1825,6 +1839,7 @@ export class BillingEngine {
 
     const contractObligations: UnpricedContractBillingObligation[] = [];
     const contractTaxContexts: Record<string, ChargeComputeTaxContext> = {};
+    const resolvedContractCharges: ResolvedLineCharge[] = [];
     const usageServicePeriodStatuses: IUsageServicePeriodStatus[] = [];
     for (const clientContractLine of clientContractLines) {
       console.log(
@@ -1844,13 +1859,15 @@ export class BillingEngine {
             "bucket",
             "product",
             "license",
+            "hourBlockDraw",
+            "cadencePrepaidBlock",
           ]);
       const resolved = await this.resolveLineCharges({
         clientId,
         billingPeriod,
         line: clientContractLine,
         cycle,
-        timing:
+        timings:
           recurringTimingSelections[clientContractLine.client_contract_line_id],
         timingSource: options.recurringTimingSelectionSource,
         projectContext: projectBillingContext,
@@ -1858,55 +1875,28 @@ export class BillingEngine {
         families,
         pools: options.projectTarget ? "ignore" : "apply",
       });
-      for (const charge of resolved.charges) {
-        contractObligations.push(charge.obligation);
-        contractTaxContexts[charge.obligation.taxContextKey] = charge.taxContext;
-      }
+      resolvedContractCharges.push(...resolved.charges);
       usageServicePeriodStatuses.push(...resolved.usageStatuses);
-
-      // Prepaid Block lines: zero-dollar consumption info lines for time that
-      // drew the line's blocks within the line's service period. Covered time
-      // is then marked invoiced alongside the hourly remainder (overage).
-      if (
-        !options.projectTarget &&
-        (clientContractLine.contract_line_type === "Hourly" ||
-          clientContractLine.contract_line_type === undefined)
-      ) {
-        const blockLineSelection =
-          recurringTimingSelections[clientContractLine.client_contract_line_id];
-        if (
-          cycle ||
-          blockLineSelection ||
-          options.recurringTimingSelectionSource === "persisted"
-        ) {
-          const blockLineTiming = this.resolveServiceDrivenChargeTiming(
-            billingPeriod,
-            clientContractLine,
-            cycle,
-            blockLineSelection,
-            options.recurringTimingSelectionSource,
-          );
-          if (blockLineTiming) {
-            totalCharges = totalCharges.concat(
-              await this.calculateContractLineHourBlockCharges(
-                clientId,
-                clientContractLine,
-                blockLineTiming,
-              ),
-            );
-          }
-        }
-      }
     }
 
+    // The selected prepaid-block issuances are the client's, not a line's: a
+    // block whose line is no longer active still invoices.
     if (prepaidBlockIssuanceIds.length > 0 && !options.projectTarget) {
-      totalCharges = totalCharges.concat(
-        await this.loadPrepaidBlockIssuanceCharges(
-          clientId,
-          billingPeriod,
-          prepaidBlockIssuanceIds,
-        ),
-      );
+      const issuances = await this.resolveLineCharges({
+        clientId,
+        billingPeriod,
+        line: this.documentScopeLine(clientId),
+        cycle,
+        families: new Set<ChargeFamily>(["prepaidBlock"]),
+        pools: "ignore",
+        prepaidBlockIssuanceIds,
+      });
+      resolvedContractCharges.push(...issuances.charges);
+    }
+
+    for (const charge of orderChargesForInvoice(resolvedContractCharges)) {
+      contractObligations.push(charge.obligation);
+      contractTaxContexts[charge.obligation.taxContextKey] = charge.taxContext;
     }
 
     if (clientContractLines.length > 0 && materialCharges.length > 0) {
@@ -3197,28 +3187,56 @@ export class BillingEngine {
   }
 
   /**
-   * Contract-line variant of {@link calculateHourBlockUsageCharges}: zero-dollar
-   * consumption lines for a Prepaid Block line's own blocks, in the line's
-   * service period, with `client_contract_line_id` set (plan section 4).
-   *
-   * Only allocations to `active` or `expired` blocks count. An entry with any
-   * allocation to the line's `pending` block is held (see
-   * applyPrepaidBlockCoverageToTimeEntries), so it contributes no consumption
-   * here either; otherwise its minutes would be shown now and again once the
-   * block activates.
+   * Placeholder line for the client's document: the prepaid-block issuances a
+   * run selects belong to the client, not to one contract line.
    */
-  private async calculateContractLineHourBlockCharges(
+  private documentScopeLine(clientId: string): IClientContractLine {
+    return {
+      client_contract_line_id: `document:${clientId}`,
+      client_id: clientId,
+    } as IClientContractLine;
+  }
+
+  /**
+   * Data supply for the shared resolver's hourBlockDraw family: the
+   * allocation rows of one contract line's own blocks inside its service
+   * period, oldest block first. Which of them count is the resolver's call.
+   */
+  /**
+   * Earlier invoice-claimed windows whose approved time rides this line's
+   * next invoice (see lateHourlyTime.ts). The hourly load and the block draw
+   * lines read the same windows, so late time is priced, covered and shown on
+   * the same invoice, once.
+   */
+  private async loadCarriedWindowsForLine(
+    clientContractLine: IClientContractLine,
+    before: ISO8601String,
+    periodEndExclusive: ISO8601String,
+  ) {
+    return loadCarriedForwardWindows(this.knex, this.tenant as string, {
+      obligationIds: [
+        ...new Set(
+          [
+            clientContractLine.client_contract_line_id,
+            clientContractLine.contract_line_id,
+          ].filter((id): id is string => Boolean(id)),
+        ),
+      ],
+      before,
+      periodEndExclusive,
+    });
+  }
+
+  private async loadHourBlockDrawRows(
     clientId: string,
     clientContractLine: IClientContractLine,
     timing: ResolvedRecurringChargeTiming,
-  ): Promise<IHourBlockCharge[]> {
+  ): Promise<HourBlockDrawSupplyRow[]> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
     }
-    const tenant = this.tenant;
-
-    const db = tenantDb(this.knex, tenant);
+    const db = tenantDb(this.knex, this.tenant);
     const query = db.table("hour_block_time_allocations as hba");
     db.tenantJoin(query, "hour_blocks as hb", "hba.block_id", "hb.block_id");
     db.tenantJoin(
@@ -3235,15 +3253,44 @@ export class BillingEngine {
       { type: "left" },
     );
 
-    const allocationRows = await query
+    const carriedWindows = await this.loadCarriedWindowsForLine(
+      clientContractLine,
+      timing.servicePeriodStartExclusive,
+      timing.servicePeriodEndExclusive,
+    );
+    query
       .where({
         "hb.client_id": clientId,
         "hb.contract_line_id": clientContractLine.contract_line_id,
         "te.invoiced": false,
       })
-      .where("te.approval_status", "APPROVED")
-      .where("te.start_time", ">=", timing.servicePeriodStartExclusive)
-      .where("te.end_time", "<", timing.servicePeriodEndExclusive)
+      .where("te.approval_status", "APPROVED");
+    if (carriedWindows.length === 0) {
+      query
+        .where("te.start_time", ">=", timing.servicePeriodStartExclusive)
+        .where("te.end_time", "<", timing.servicePeriodEndExclusive);
+    } else {
+      query.where(function (this: Knex.QueryBuilder) {
+        this.where(function (this: Knex.QueryBuilder) {
+          this.where("te.start_time", ">=", timing.servicePeriodStartExclusive).where(
+            "te.end_time",
+            "<",
+            timing.servicePeriodEndExclusive,
+          );
+        });
+        // Late time dated in an earlier, already-invoiced window draws the
+        // block valid on its work date; its draw line rides this invoice with
+        // the entry (same windows and line rule as the hourly load).
+        for (const window of carriedWindows) {
+          this.orWhere(function (this: Knex.QueryBuilder) {
+            this.where("te.contract_line_id", clientContractLine.contract_line_id)
+              .where("te.start_time", ">=", window.startInclusive)
+              .where("te.start_time", "<", window.endExclusive);
+          });
+        }
+      });
+    }
+    return await query
       .orderBy("hb.purchased_at", "asc")
       .orderBy("hb.block_id", "asc")
       .select(
@@ -3256,56 +3303,18 @@ export class BillingEngine {
         "hba.minutes",
         "te.billable_duration",
       );
-
-    // Any allocation to the line's pending block holds the whole entry (see
-    // applyPrepaidBlockCoverageToTimeEntries), so it contributes nothing here.
-    const heldEntryIds = new Set<string>(
-      allocationRows
-        .filter((row: any) => row.block_status === "pending")
-        .map((row: any) => row.time_entry_id),
-    );
-    const rows = allocationRows.filter(
-      (row: any) =>
-        !heldEntryIds.has(row.time_entry_id) &&
-        (row.block_status === "active" || row.block_status === "expired"),
-    );
-    if (rows.length === 0) return [];
-
-    const { aggregateHourBlockBurnRows, computeHourBlockCharges } =
-      await import("./compute/computeHourBlockCharges");
-    const blocks = aggregateHourBlockBurnRows(rows);
-    const profile = resolveChargeProfileFor(
-      await this.loadChargeProfileAssignments(clientId, clientContractLine),
-    );
-
-    return computeHourBlockCharges({
-      billingPeriod: {
-        startDate: timing.servicePeriodStart,
-        endDate: timing.servicePeriodEnd,
-      },
-      blocks,
-    }).charges.map((charge) => ({
-      ...charge,
-      client_contract_line_id: clientContractLine.client_contract_line_id,
-      client_contract_id: clientContractLine.client_contract_id || undefined,
-      contract_name: clientContractLine.contract_name || undefined,
-      location_id: clientContractLine.location_id ?? null,
-      billing_profile_id: profile?.billingProfileId ?? null,
-      billing_profile_source: profile?.source ?? null,
-    }));
   }
 
   /**
-   * Up-front `prepaid_block` charges for the selected scheduled issuances
-   * (plan section 4). Quantity is the block size in hours, `rate` the price per
-   * hour in whole minor units, and `total` is authoritative at the configured
-   * block price. Currency is the contract's, never a column default.
+   * Data supply for the shared resolver's prepaidBlock family: the selected
+   * issuances with their block configuration, as stored. Whether each is
+   * scheduled, due and fully configured is the resolver's call.
    */
-  private async loadPrepaidBlockIssuanceCharges(
+  private async loadPrepaidBlockIssuanceSupply(
     clientId: string,
     billingPeriod: IBillingPeriod,
     issuanceIds: string[],
-  ): Promise<IPrepaidBlockCharge[]> {
+  ): Promise<PrepaidBlockIssuanceSupply[]> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
@@ -3365,120 +3374,149 @@ export class BillingEngine {
       );
     }
 
-    const client = await db
-      .table("clients")
-      .where({ client_id: clientId })
-      .first();
-    if (!client) {
-      throw new Error(`Client ${clientId} not found in tenant ${tenant}`);
-    }
-    const defaultTaxRegion = await this.getClientDefaultTaxRegionCode(clientId);
     const clientDefaultBillingProfileId =
       await this.getClientDefaultBillingProfileId(clientId);
+    // Both sides of the readiness check are on the tenant business date; the
+    // due date is read TZ-independently from the date column.
+    const readyAsOf = await resolvePrepaidBlockBusinessDate(this.knex, tenant);
 
-    const charges: IPrepaidBlockCharge[] = [];
-    const businessToday = await resolvePrepaidBlockBusinessDate(this.knex, tenant);
+    const supplies: PrepaidBlockIssuanceSupply[] = [];
     for (const row of issuances) {
-      if (row.status !== "scheduled") {
-        throw new Error(
-          `Prepaid block issuance ${row.issuance_id} is ${row.status}, not scheduled; it cannot be invoiced.`,
-        );
-      }
-      // Server-side readiness guard (the Invoices screen shows such rows as early): a date-triggered
-      // block (expiry, renewal) must not be issued before its due date, or the new block's expiry
-      // clock would start while the old block still has hours.
-      // Both sides on the tenant business date (the listing's readiness uses the same
-      // source), and the due date read TZ-independently from the date column.
-      const dueDate = toPrepaidBlockDateOnly(row.due_date) ?? String(row.due_date).slice(0, 10);
-      if (dueDate > businessToday) {
-        throw new Error(
-          `Prepaid block issuance ${row.issuance_id} is not due until ${dueDate}; it cannot be invoiced yet.`,
-        );
-      }
-      if (!row.sold_as_service_id) {
-        throw new Error(
-          `Prepaid block line ${row.contract_line_id} has no sold-as service configured.`,
-        );
-      }
-      if (!row.contract_currency_code) {
-        throw new Error(
-          `Contract for prepaid block line ${row.contract_line_id} has no currency.`,
-        );
-      }
-      const blockMinutes = Number(row.block_minutes);
-      const blockPrice = Number(row.block_price);
       const scopeRows = await db
         .table("contract_line_services")
         .where({ contract_line_id: row.contract_line_id })
         .select("service_id");
-      const hours = blockMinutes / 60;
-      const rate = Math.round(blockPrice / hours);
-
-      const { taxRegion: serviceTaxRegion, isTaxable } =
-        await this.getTaxInfoFromService({
-          service_id: row.sold_as_service_id,
-          tax_rate_id: row.sold_as_tax_rate_id,
-        });
-      const effectiveTaxRegion =
-        serviceTaxRegion ?? defaultTaxRegion ?? undefined;
-      let taxAmount = 0;
-      let taxRate = 0;
-      if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
-        try {
-          const taxResult = await new TaxService().calculateTax(
-            client.client_id,
-            blockPrice,
-            billingPeriod.endDate,
-            effectiveTaxRegion,
-            true,
-            row.contract_currency_code,
-          );
-          taxRate = taxResult.taxRate;
-          taxAmount = taxResult.taxAmount;
-        } catch (error) {
-          console.error(
-            `Error calculating tax for prepaid block issuance ${row.issuance_id}:`,
-            error,
-          );
-        }
-      }
-
-      const profile = resolveChargeProfile({
-        contractLineBillingProfileId: row.line_billing_profile_id ?? null,
-        clientDefaultBillingProfileId,
-      });
-      charges.push({
-        type: "prepaid_block",
-        issuance_id: row.issuance_id,
-        contract_line_id: row.contract_line_id,
-        client_contract_id: row.client_contract_id,
-        contract_name: row.contract_name || undefined,
-        serviceId: row.sold_as_service_id,
-        serviceName: row.sold_as_service_name ?? "Prepaid block",
-        block_minutes: blockMinutes,
-        block_price: blockPrice,
-        currency_code: row.contract_currency_code,
-        expiry_months:
+      supplies.push({
+        issuanceId: row.issuance_id,
+        contractLineId: row.contract_line_id,
+        clientContractId: row.client_contract_id,
+        contractName: row.contract_name,
+        blockMinutes: Number(row.block_minutes),
+        blockPrice: Number(row.block_price),
+        expiryMonths:
           row.expiry_months === null || row.expiry_months === undefined
             ? null
             : Number(row.expiry_months),
-        scope_service_ids: scopeRows.map((scope: any) => scope.service_id),
-        quantity: hours,
-        rate,
-        total: blockPrice,
-        tax_amount: taxAmount,
-        tax_rate: taxRate,
-        tax_region: effectiveTaxRegion,
-        is_taxable: isTaxable,
+        scopeServiceIds: scopeRows.map((scope: any) => scope.service_id),
+        soldAsServiceId: row.sold_as_service_id,
+        serviceName: row.sold_as_service_name ?? "Prepaid block",
+        soldAsTaxRateId: row.sold_as_tax_rate_id,
+        currencyCode: row.contract_currency_code,
+        locationId: row.line_location_id ?? null,
+        taxDate: billingPeriod.endDate,
         servicePeriodStart: billingPeriod.startDate,
         servicePeriodEnd: billingPeriod.endDate,
-        billingTiming: "advance",
-        location_id: row.line_location_id ?? null,
-        billing_profile_id: profile.billingProfileId,
-        billing_profile_source: profile.source,
-      } satisfies IPrepaidBlockCharge);
+        status: row.status,
+        dueDate:
+          toPrepaidBlockDateOnly(row.due_date) ??
+          String(row.due_date).slice(0, 10),
+        readyAsOf,
+        billingProfile: {
+          contractLineBillingProfileId: row.line_billing_profile_id ?? null,
+          clientDefaultBillingProfileId,
+        },
+      });
     }
-    return charges;
+    return supplies;
+  }
+
+  /**
+   * Data supply for the shared resolver's cadencePrepaidBlock family: the
+   * line's stored block terms (null unless the block is cadence-issued) and the
+   * cadence rollover is counted on. Whether a period is due, and the block's
+   * dates and price, are the resolver's call.
+   */
+  private async loadCadencePrepaidBlockSupply(
+    clientId: string,
+    line: IClientContractLine,
+  ): Promise<CadencePrepaidBlockSupply | null> {
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+    const db = tenantDb(this.knex, this.tenant);
+    const query = db.table("contract_line_prepaid_blocks as cfg");
+    db.tenantJoin(
+      query,
+      "service_catalog as sc",
+      "sc.service_id",
+      "cfg.sold_as_service_id",
+      { type: "left" },
+    );
+    const cfg = await query
+      .where("cfg.contract_line_id", line.contract_line_id)
+      .where("cfg.issue_mode", "cadence")
+      .first(
+        "cfg.block_minutes",
+        "cfg.block_price",
+        "cfg.rollover_periods",
+        "cfg.sold_as_service_id",
+        "sc.service_name as sold_as_service_name",
+        "sc.tax_rate_id as sold_as_tax_rate_id",
+      );
+    if (!cfg) return null;
+
+    const scopeRows = await db
+      .table("contract_line_services")
+      .where({ contract_line_id: line.contract_line_id })
+      .select("service_id");
+
+    const isClientCadence =
+      (line as { is_system_managed_default?: boolean | null })
+        .is_system_managed_default === true ||
+      resolveCadenceOwner(line.cadence_owner) === "client";
+    let cadence: CadenceAdvanceRule;
+    if (isClientCadence) {
+      const clientRow = await db
+        .table("clients")
+        .where({ client_id: clientId })
+        .first("billing_cycle");
+      const settings = await db
+        .table("client_billing_settings")
+        .where({ client_id: clientId })
+        .first(
+          "billing_cycle_anchor_day_of_month",
+          "billing_cycle_anchor_month_of_year",
+          "billing_cycle_anchor_day_of_week",
+          "billing_cycle_anchor_reference_date",
+        );
+      const billingCycle = (clientRow?.billing_cycle ??
+        "monthly") as BillingCycleType;
+      cadence = {
+        owner: "client",
+        billingCycle,
+        anchor: normalizeAnchorSettingsForCycle(billingCycle, {
+          dayOfMonth: settings?.billing_cycle_anchor_day_of_month ?? null,
+          monthOfYear: settings?.billing_cycle_anchor_month_of_year ?? null,
+          dayOfWeek: settings?.billing_cycle_anchor_day_of_week ?? null,
+          referenceDate: settings?.billing_cycle_anchor_reference_date
+            ? ensureUtcMidnightIsoDate(
+              new Date(settings.billing_cycle_anchor_reference_date).toISOString(),
+            )
+            : null,
+        }),
+      };
+    } else {
+      cadence = {
+        owner: "contract",
+        billingCycle: (line.billing_frequency ?? "monthly") as BillingCycleType,
+        anchorDate: resolveContractCadenceAnchorDate({
+          assignmentStartDate: toISOTimestamp(toPlainDate(line.start_date)),
+        }).slice(0, 10),
+      };
+    }
+
+    return {
+      contractLineId: line.contract_line_id,
+      blockMinutes: Number(cfg.block_minutes),
+      blockPrice: Number(cfg.block_price),
+      rolloverPeriods: Number(cfg.rollover_periods ?? 0),
+      scopeServiceIds: scopeRows.map((scope: any) => scope.service_id),
+      soldAsServiceId: cfg.sold_as_service_id ?? null,
+      serviceName: cfg.sold_as_service_name ?? "Prepaid block",
+      soldAsTaxRateId: cfg.sold_as_tax_rate_id ?? null,
+      cadence,
+    };
   }
 
   private async getClientContractLinesForBillingPeriod(
@@ -3887,7 +3925,7 @@ export class BillingEngine {
     const dueFixedLines = lines.filter(
       (line) =>
         String(line.contract_line_type ?? "").toLowerCase() === "fixed" &&
-        Boolean(persistedSelections![line.client_contract_line_id]),
+        Boolean(persistedSelections![line.client_contract_line_id]?.line),
     );
     if (dueFixedLines.length === 0) {
       return result;
@@ -3958,7 +3996,7 @@ export class BillingEngine {
     }
 
     for (const line of priceableLines) {
-      const selection = persistedSelections[line.client_contract_line_id];
+      const selection = persistedSelections[line.client_contract_line_id]?.line;
       let charges: IFixedPriceCharge[] = [];
       try {
         charges = await this.calculateFixedPriceCharges(
@@ -4414,7 +4452,7 @@ export class BillingEngine {
   }
 
   private calculateResolvedContractObligation(
-    charge: ResolvedContractChargeObligation,
+    charge: LoadedContractChargeObligation,
     clientId: string,
     billingPeriod: IBillingPeriod,
     currencyCode: string,
@@ -4499,7 +4537,7 @@ export class BillingEngine {
     billingPeriod: IBillingPeriod;
     line: IClientContractLine;
     cycle?: string;
-    timing?: ResolvedRecurringChargeTiming;
+    timings?: RecurringStreamTimings;
     timingSource?: CalculateBillingOptions["recurringTimingSelectionSource"];
     preloaded?: PreloadedFixedChargeInputs;
     projectContext?: ProjectBillingContext | null;
@@ -4507,6 +4545,8 @@ export class BillingEngine {
     families: ReadonlySet<ChargeFamily>;
     pools?: "apply" | "ignore";
     untimedWithoutCadence?: boolean;
+    /** Issuances to invoice; only the document-scope source is given them. */
+    prepaidBlockIssuanceIds?: string[];
   }): Promise<{
     charges: ResolvedLineCharge[];
     usageStatuses: IUsageServicePeriodStatus[];
@@ -4533,11 +4573,21 @@ export class BillingEngine {
         billingPeriod,
         clientContractLine: line,
         billingCycle: input.cycle,
-        recurringTimingSelection: input.timing,
+        recurringTimingSelections: input.timings,
         recurringTimingSelectionSource: input.timingSource,
         projectTarget: Boolean(input.projectTarget),
         untimedWithoutCadence: input.untimedWithoutCadence,
+        prepaidBlockIssuanceIds: input.prepaidBlockIssuanceIds,
+        documentScope: input.prepaidBlockIssuanceIds !== undefined,
         loaders: {
+          cadencePrepaidBlock: () =>
+            this.loadCadencePrepaidBlockSupply(clientId, line),
+          prepaidBlockIssuances: (issuanceIds) =>
+            this.loadPrepaidBlockIssuanceSupply(clientId, billingPeriod, issuanceIds),
+          prepaidCoverage: (entryIds) =>
+            this.loadPrepaidCoverageRows(line.contract_line_id, entryIds),
+          hourBlockDraws: (timing) =>
+            this.loadHourBlockDrawRows(clientId, line, asRecurring(timing)),
           fixed: (timing, sink) =>
             this.loadFixedPriceObligation(
               clientId,
@@ -4607,12 +4657,20 @@ export class BillingEngine {
   /** Compatibility adapter: resolve one family's facts, then use shared pricing. */
   private async calculateFamilyCharges<T extends IBillingCharge>(
     family: ChargeFamily,
-    input: Omit<Parameters<BillingEngine["resolveLineCharges"]>[0], "families">,
+    input: Omit<
+      Parameters<BillingEngine["resolveLineCharges"]>[0],
+      "families" | "timings"
+    > & {
+      /** The line stream's already selected timing (compatibility callers). */
+      timing?: ResolvedRecurringChargeTiming;
+    },
   ): Promise<T[]> {
+    const { timing, ...rest } = input;
     const { charges } = await this.resolveLineCharges({
-      ...input,
+      ...rest,
+      timings: timing ? { line: timing } : undefined,
       families: new Set([family]),
-      pools: input.projectTarget ? "ignore" : "apply",
+      pools: input.pools ?? (input.projectTarget ? "ignore" : "apply"),
     });
     const sink: ContractObligationSink = { obligations: [], taxContexts: {} };
     for (const charge of charges) {
@@ -4625,6 +4683,46 @@ export class BillingEngine {
       input.billingPeriod,
       input.line.currency_code || "USD",
     ) as T[];
+  }
+
+  /**
+   * Compatibility adapter (preview and tests): the charges the shared resolver
+   * produces for the selected prepaid-block issuances, priced.
+   */
+  private async loadPrepaidBlockIssuanceCharges(
+    clientId: string,
+    billingPeriod: IBillingPeriod,
+    issuanceIds: string[],
+  ): Promise<IBillingCharge[]> {
+    return this.calculateFamilyCharges("prepaidBlock", {
+      clientId,
+      billingPeriod,
+      line: this.documentScopeLine(clientId),
+      pools: "ignore",
+      prepaidBlockIssuanceIds: issuanceIds,
+    });
+  }
+
+  /**
+   * Compatibility adapter (preview and tests): one line's draw charges for an
+   * already selected service period.
+   */
+  private async calculateContractLineHourBlockCharges(
+    clientId: string,
+    line: IClientContractLine,
+    timing: ResolvedRecurringChargeTiming,
+  ): Promise<IBillingCharge[]> {
+    return this.calculateFamilyCharges("hourBlockDraw", {
+      clientId,
+      billingPeriod: {
+        tenant: this.tenant as string,
+        startDate: timing.servicePeriodStartExclusive ?? timing.servicePeriodStart,
+        endDate: timing.servicePeriodEndExclusive ?? timing.servicePeriodEnd,
+      } as IBillingPeriod,
+      line,
+      timing,
+      timingSource: "persisted",
+    });
   }
 
   private calculateFixedPriceCharges(
@@ -4729,7 +4827,7 @@ export class BillingEngine {
       billingPeriod,
       line,
       cycle: billingCycle,
-      timing: recurringTimingSelection,
+      timings: recurringTimingSelection ? { line: recurringTimingSelection } : undefined,
       timingSource: recurringTimingSelectionSource,
       families: new Set<ChargeFamily>(["bucket"]),
       untimedWithoutCadence: true,
@@ -5177,8 +5275,9 @@ export class BillingEngine {
       if (!timingSelection) {
         continue;
       }
-      recurringTimingSelections[clientContractLine.client_contract_line_id] =
-        timingSelection;
+      recurringTimingSelections[clientContractLine.client_contract_line_id] = {
+        line: timingSelection,
+      };
     }
 
     return recurringTimingSelections;
@@ -5191,9 +5290,11 @@ export class BillingEngine {
 
     for (const record of records) {
       const lineId = record.sourceObligation.obligationId;
-      if (recurringTimingSelections[lineId]) {
+      // Timing is selected per (line, stream); the guard is per stream.
+      const stream = streamForChargeFamily(record.sourceObligation.chargeFamily);
+      if (recurringTimingSelections[lineId]?.[stream]) {
         throw new Error(
-          `${RECURRING_TIMING_ROLLOUT_GUARD_PREFIX}: ${lineId}: multiple persisted due periods matched one runtime obligation`,
+          `${RECURRING_TIMING_ROLLOUT_GUARD_PREFIX}: ${lineId}${stream === "line" ? "" : ` (${stream})`}: multiple persisted due periods matched one runtime obligation`,
         );
       }
 
@@ -5221,7 +5322,8 @@ export class BillingEngine {
         coveragePeriod,
       );
 
-      recurringTimingSelections[lineId] = {
+      const lineTimings = (recurringTimingSelections[lineId] ??= {});
+      lineTimings[stream] = {
         servicePeriodRecordId: record.recordId,
         duePosition: record.duePosition,
         servicePeriodStart: toISODate(
@@ -5278,21 +5380,31 @@ export class BillingEngine {
     ).sort();
 
     for (const lineId of lineIds) {
-      const canonical = canonicalSelections[lineId];
-      const provided = providedSelections[lineId];
+      const streams = Array.from(
+        new Set([
+          ...(Object.keys(canonicalSelections[lineId] ?? {}) as RecurringChargeStream[]),
+          ...(Object.keys(providedSelections[lineId] ?? {}) as RecurringChargeStream[]),
+        ]),
+      ).sort();
 
-      if (!canonical) {
-        mismatches.push(`${lineId}: unexpected external selection`);
-        continue;
-      }
+      for (const stream of streams) {
+        const canonical = canonicalSelections[lineId]?.[stream];
+        const provided = providedSelections[lineId]?.[stream];
+        const label = stream === "line" ? lineId : `${lineId} (${stream})`;
 
-      if (!provided) {
-        mismatches.push(`${lineId}: missing canonical selection`);
-        continue;
-      }
+        if (!canonical) {
+          mismatches.push(`${label}: unexpected external selection`);
+          continue;
+        }
 
-      if (!this.areRecurringChargeTimingsEquivalent(canonical, provided)) {
-        mismatches.push(`${lineId}: selection diverged from canonical timing`);
+        if (!provided) {
+          mismatches.push(`${label}: missing canonical selection`);
+          continue;
+        }
+
+        if (!this.areRecurringChargeTimingsEquivalent(canonical, provided)) {
+          mismatches.push(`${label}: selection diverged from canonical timing`);
+        }
       }
     }
 
@@ -5329,6 +5441,7 @@ export class BillingEngine {
     );
   }
 
+  // LEVERAGE: pattern line-recurring-streams — derives the line stream's due position and a hardcoded "fixed" family by hand; belongs behind contractLineRecurringStreams (needs its inputs to be line rows with contract_line_type)
   private buildRecurringChargeTimingSelection(
     billingPeriod: IBillingPeriod,
     clientContractLine: IClientContractLine,
@@ -5763,18 +5876,11 @@ export class BillingEngine {
     // (exactly once, via the invoiced flag); see lateHourlyTime.ts.
     const carriedWindows = projectTarget
       ? []
-      : await loadCarriedForwardWindows(this.knex, tenant, {
-          obligationIds: [
-            ...new Set(
-              [
-                clientContractLine.client_contract_line_id,
-                clientContractLine.contract_line_id,
-              ].filter((id): id is string => Boolean(id)),
-            ),
-          ],
-          before: servicePeriodStartExclusive,
-          periodEndExclusive: servicePeriodEndExclusive,
-        });
+      : await this.loadCarriedWindowsForLine(
+          clientContractLine,
+          servicePeriodStartExclusive,
+          servicePeriodEndExclusive,
+        );
 
     const query = db.table<any>("time_entries");
     db.tenantJoin(query, "users", "time_entries.user_id", "users.user_id");
@@ -5959,14 +6065,10 @@ export class BillingEngine {
         entry.late_for_service_period = window.source;
       }
     }
-    // Prepaid Block lines: minutes already drawn from the line's blocks are
-    // not priced here, and entries touching a pending block are held.
-    const timeEntries = projectTarget
-      ? loadedTimeEntries
-      : await this.applyPrepaidBlockCoverageToTimeEntries(
-          clientContractLine.contract_line_id,
-          loadedTimeEntries,
-        );
+    // Prepaid Block coverage (minutes already drawn, entries held by a pending
+    // block, the block valid on a late entry's work date) is decided by the
+    // charge resolver from loadPrepaidCoverageRows, never here.
+    const timeEntries = loadedTimeEntries;
 
     const obligation = {
       kind: "hourly",
@@ -6031,62 +6133,50 @@ export class BillingEngine {
   }
 
   /**
-   * Overage subtraction for Prepaid Block lines (plan section 4).
-   *
-   * Minutes an entry drew from the line's `active` or `expired` blocks are
-   * already paid for and are removed from what the hourly obligation prices;
-   * the remainder bills at the line's hourly rate. An entry with ANY minutes
-   * allocated to the line's `pending` block is HELD: not priced, not marked
-   * invoiced. It surfaces once the block activates (then it is covered or
-   * partially covered) or falls back to overage if the block is voided. Only
-   * blocks owned by this contract line count; ad-hoc blocks are untouched.
-   * Lines without blocks pay one indexed lookup and change nothing.
+   * Data supply for the resolver's prepaid coverage (see applyPrepaidCoverage
+   * in chargeResolution/prepaidBlockRules.ts): the allocations of the given
+   * time entries to blocks owned by this contract line, with the block status.
+   * Ad-hoc blocks are untouched. Lines without blocks pay one indexed lookup.
    */
-  private async applyPrepaidBlockCoverageToTimeEntries<
-    T extends { entry_id: string; billable_duration: number | string },
-  >(contractLineId: string, timeEntries: T[]): Promise<T[]> {
-    if (timeEntries.length === 0) return timeEntries;
+  private async loadPrepaidCoverageRows(
+    contractLineId: string,
+    entryIds: string[],
+  ): Promise<PrepaidCoverageRow[]> {
+    if (entryIds.length === 0) return [];
     const db = tenantDb(this.knex, this.tenant as string);
     const query = db.table("hour_block_time_allocations as hba");
     db.tenantJoin(query, "hour_blocks as hb", "hba.block_id", "hb.block_id");
-    const rows: Array<{ time_entry_id: string; status: string; minutes: string | number }> =
-      await query
-        .where("hb.contract_line_id", contractLineId)
-        .whereIn(
-          "hba.time_entry_id",
-          timeEntries.map((entry) => entry.entry_id),
-        )
-        .select("hba.time_entry_id", "hb.status", "hba.minutes");
-    if (rows.length === 0) return timeEntries;
-
-    const coveredByEntry = new Map<string, number>();
-    const heldEntries = new Set<string>();
-    for (const row of rows) {
-      const minutes = Number(row.minutes) || 0;
-      if (minutes <= 0) continue;
-      if (row.status === "pending") {
-        heldEntries.add(row.time_entry_id);
-      } else if (row.status === "active" || row.status === "expired") {
-        coveredByEntry.set(
-          row.time_entry_id,
-          (coveredByEntry.get(row.time_entry_id) ?? 0) + minutes,
-        );
-      }
-    }
-
-    const result: T[] = [];
-    for (const entry of timeEntries) {
-      if (heldEntries.has(entry.entry_id)) continue;
-      const covered = coveredByEntry.get(entry.entry_id) ?? 0;
-      if (covered <= 0) {
-        result.push(entry);
-        continue;
-      }
-      const remainder = Number(entry.billable_duration) - covered;
-      if (remainder <= 0) continue;
-      result.push({ ...entry, billable_duration: remainder });
-    }
-    return result;
+    db.tenantJoin(query, "time_entries as te", "hba.time_entry_id", "te.entry_id");
+    const rows: Array<{
+      time_entry_id: string;
+      status: string;
+      minutes: string | number;
+      work_date: unknown;
+      start_time: unknown;
+      valid_from: unknown;
+      expiration_date: unknown;
+    }> = await query
+      .where("hb.contract_line_id", contractLineId)
+      .whereIn("hba.time_entry_id", entryIds)
+      .select(
+        "hba.time_entry_id",
+        "hb.status",
+        "hba.minutes",
+        "te.work_date",
+        "te.start_time",
+        "hb.valid_from",
+        "hb.expiration_date",
+      );
+    return rows.map((row) => ({
+      entryId: row.time_entry_id,
+      blockStatus: row.status,
+      minutes: Number(row.minutes),
+      // Same work date the draw used (hourBlockService.selectEligibleBlocks).
+      workDate:
+        toPrepaidBlockDateOnly(row.work_date) ?? toPrepaidBlockDateOnly(row.start_time),
+      blockValidFrom: toPrepaidBlockDateOnly(row.valid_from),
+      blockExpirationDate: toPrepaidBlockDateOnly(row.expiration_date),
+    }));
   }
 
   /** Resolve entry eligibility with the same timing/coverage rules used to bill it. */
@@ -7630,7 +7720,8 @@ export class BillingEngine {
     );
     const recurringLinkedCharge = await db
       .table("recurring_service_periods")
-      .where("charge_family", "fixed")
+      // A cadence prepaid block fee is the other advance stream a line can bill.
+      .whereIn("charge_family", ["fixed", "prepaid_block"])
       .where("due_position", billingTiming)
       .whereNotNull("invoice_id")
       .where("obligation_id", clientContractLineId)

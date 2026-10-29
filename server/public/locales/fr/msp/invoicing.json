@@ -623,7 +623,9 @@
       "bulkPdfFailed": "Échec de la génération des fichiers PDF. Veuillez réessayer.",
       "unfinalizeFailed": "Échec de la finalisation de la facture. Veuillez réessayer.",
       "bulkUnfinalizeFailed": "Échec de la finalisation des factures. Veuillez réessayer.",
-      "bulkUnfinalizeInvoiceFailed": "Impossible de rouvrir {{invoiceNumber}} : {{reason}}"
+      "bulkUnfinalizeInvoiceFailed": "Impossible de rouvrir {{invoiceNumber}} : {{reason}}",
+      "explainThis": "Afficher l’explication",
+      "usedHourBlockExplanation": "La finalisation de cette facture a rendu ses heures prépayées disponibles pour les saisies de temps. Du temps a depuis été affecté au bloc. La réouverture de la facture annulerait le bloc alors que ces affectations et des frais ultérieurs pourraient encore en dépendre. Pour préserver la cohérence de la facturation, il est impossible d’annuler la finalisation des factures de blocs ayant déjà été utilisés, même si le temps a ensuite été annulé. Envisagez un ajustement distinct ou un avoir pour corriger la facture."
     },
     "bulk": {
       "actionBar": {
@@ -2575,6 +2577,7 @@
       "onlyDraftEditable": "Seules les factures brouillon peuvent être modifiées",
       "numberExists": "Ce numéro de facture existe déjà. Choisissez un autre numéro.",
       "notFinalized": "La facture n’est pas finalisée",
+      "usedHourBlockUnfinalize": "Impossible d’annuler la finalisation de cette facture : son bloc d’heures {{blockId}} a déjà été utilisé ({{usedHours}} sur {{totalHours}} h). Envisagez un ajustement distinct ou un avoir pour corriger la facture.",
       "unfinalizeFailed": "Impossible d’annuler la finalisation de la facture en raison d’une erreur de données inattendue. Veuillez actualiser la page et réessayer.",
       "paidOrCancelled": "Impossible de modifier une facture payée ou annulée",
       "syncedVoidInstead": "Cette facture est synchronisée avec un système comptable : annulez-la au lieu de la supprimer.",

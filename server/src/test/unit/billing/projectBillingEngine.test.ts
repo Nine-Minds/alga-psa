@@ -878,6 +878,7 @@ describe("project billing engine orchestration", () => {
     vi.spyOn(engine as any, "calculateTimeBasedCharges").mockResolvedValue([
       contractTime,
     ]);
+    vi.spyOn(engine as any, "loadHourBlockDrawRows").mockResolvedValue([]);
     vi.spyOn(engine as any, "calculateMaterialCharges").mockResolvedValue([
       material,
     ]);
@@ -1128,6 +1129,7 @@ describe("project billing engine orchestration", () => {
     vi.spyOn(engine as any, "calculateLicenseCharges").mockResolvedValue([]);
     vi.spyOn(engine as any, "calculateContractLineHourBlockCharges").mockResolvedValue([]);
     vi.spyOn(engine as any, "calculateTicketFixedFeeCharges").mockResolvedValue([]);
+    vi.spyOn(engine as any, "loadHourBlockDrawRows").mockResolvedValue([]);
     vi.spyOn(engine as any, "calculateMaterialCharges").mockResolvedValue([
       material,
     ]);
@@ -1294,8 +1296,8 @@ describe("ticket time project attribution", () => {
 
     // The exclusion itself is a loader predicate, and it keys off the project
     // the COALESCE join now resolves for ticket time.
-    expect(billingEngineSource).toContain(
-      'this.whereNull("projects.project_id").orWhereNotIn(\n          "projects.project_id",\n          fixedPriceProjectIds,',
+    expect(billingEngineSource).toMatch(
+      /this\.whereNull\("projects\.project_id"\)\.orWhereNotIn\(\s*"projects\.project_id",\s*fixedPriceProjectIds,/,
     );
   });
 
@@ -1371,8 +1373,8 @@ describe("ticket time project attribution", () => {
       "AND te.approval_status = 'APPROVED'",
     );
     expect(billingEngineSource).toContain("AND te.start_time >= ?");
-    expect(billingEngineSource).toContain(
-      "await this.getAmbiguousTicketProjectWarnings(\n            clientId,\n            billingPeriod,\n            options.projectTarget,\n          )",
+    expect(billingEngineSource).toMatch(
+      /await this\.getAmbiguousTicketProjectWarnings\(\s*clientId,\s*billingPeriod,\s*options\.projectTarget,\s*\)/,
     );
   });
 });

@@ -623,7 +623,9 @@
       "bulkPdfFailed": "Failed to generate PDFs. Please try again.",
       "unfinalizeFailed": "Failed to unfinalize invoice. Please try again.",
       "bulkUnfinalizeFailed": "Failed to unfinalize invoices. Please try again.",
-      "bulkUnfinalizeInvoiceFailed": "Could not unfinalize {{invoiceNumber}}: {{reason}}"
+      "bulkUnfinalizeInvoiceFailed": "Could not unfinalize {{invoiceNumber}}: {{reason}}",
+      "explainThis": "Explain this",
+      "usedHourBlockExplanation": "Finalizing this invoice made its prepaid hours available for time entries. Time has since been allocated to the block. Reopening the invoice would undo the block while those allocations and any later charges could still depend on it. To keep billing consistent, invoices for blocks that have ever been used cannot be unfinalized, even if the time was later reversed. Consider a separate adjustment or credit note to correct the invoice."
     },
     "bulk": {
       "actionBar": {
@@ -2575,6 +2577,7 @@
       "onlyDraftEditable": "Only draft invoices can be edited",
       "numberExists": "Invoice number already exists. Choose a different number.",
       "notFinalized": "Invoice is not finalized",
+      "usedHourBlockUnfinalize": "Cannot unfinalize this invoice: its hour block {{blockId}} has already been used ({{usedHours}} of {{totalHours}} hrs). Consider a separate adjustment or credit note to correct the invoice.",
       "unfinalizeFailed": "Invoice could not be unfinalized because an unexpected data error occurred. Please refresh and try again.",
       "paidOrCancelled": "Cannot modify a paid or cancelled invoice",
       "syncedVoidInstead": "This invoice is synced to an accounting system — void it instead of deleting.",

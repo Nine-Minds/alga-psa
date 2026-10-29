@@ -623,7 +623,9 @@
       "bulkPdfFailed": "Det gick inte att skapa PDF-filerna. Försök igen.",
       "unfinalizeFailed": "Det gick inte att återställa fakturan till utkast. Försök igen.",
       "bulkUnfinalizeFailed": "Det gick inte att återställa fakturorna till utkast. Försök igen.",
-      "bulkUnfinalizeInvoiceFailed": "Det gick inte att återställa {{invoiceNumber}} till utkast: {{reason}}"
+      "bulkUnfinalizeInvoiceFailed": "Det gick inte att återställa {{invoiceNumber}} till utkast: {{reason}}",
+      "explainThis": "Visa förklaring",
+      "usedHourBlockExplanation": "När denna faktura fastställdes blev de förbetalda timmarna tillgängliga för tidposter. Sedan dess har tid tilldelats timblocket. Om fakturan återställs till utkast tas blocket bort, trots att tilldelningarna och eventuella senare avgifter fortfarande kan vara beroende av det. För att hålla faktureringen konsekvent kan fakturor för block som någon gång har använts inte återställas till utkast, även om tiden senare har återförts. Överväg en separat justering eller kreditfaktura för att korrigera fakturan."
     },
     "bulk": {
       "actionBar": {
@@ -2575,6 +2577,7 @@
       "onlyDraftEditable": "Endast fakturautkast kan redigeras",
       "numberExists": "Fakturanumret finns redan. Välj ett annat nummer.",
       "notFinalized": "Fakturan är inte fastställd",
+      "usedHourBlockUnfinalize": "Det går inte att återställa denna faktura till utkast: timblocket {{blockId}} har redan använts ({{usedHours}} av {{totalHours}} tim). Överväg en separat justering eller kreditfaktura för att korrigera fakturan.",
       "unfinalizeFailed": "Det gick inte att återställa fakturan till utkast eftersom ett oväntat datafel uppstod. Ladda om sidan och försök igen.",
       "paidOrCancelled": "Det går inte att ändra en betald eller makulerad faktura",
       "syncedVoidInstead": "Den här fakturan är synkroniserad med ett bokföringssystem – makulera den istället för att radera den.",

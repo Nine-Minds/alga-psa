@@ -519,6 +519,12 @@
     },
     "layout": {
       "defaultTitle": "Panel | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "TI cogestionada"
+    },
+    "coManagement": {
+      "title": "Acceso cogestionado"
     }
   },
   "auth": {

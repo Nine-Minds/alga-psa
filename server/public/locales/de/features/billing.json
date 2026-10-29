@@ -445,7 +445,13 @@
     "expires": "Läuft am {{date}} ab",
     "recentBurn": "Letzte Nutzung",
     "timeEntry": "Zeiteintrag",
-    "contractLabel": "Vertrag: {{contract}}"
+    "contractLabel": "Vertrag: {{contract}}",
+    "hoursLeftValue": "{{hours}} Std. übrig · {{value}}",
+    "validFrom": "Gültig ab {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — Prepaid-Block, {{hours}} Std.",
+    "overPrepaidBlock": "{{name}} (über Prepaid-Block hinaus)"
   },
   "bucketUsage": {
     "contractLine": "Vertragslinie für Stundenkontingent",

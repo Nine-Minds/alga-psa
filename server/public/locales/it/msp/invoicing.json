@@ -623,7 +623,9 @@
       "bulkPdfFailed": "Impossibile generare PDF. Per favore riprova.",
       "unfinalizeFailed": "Impossibile definalizzare la fattura. Per favore riprova.",
       "bulkUnfinalizeFailed": "Impossibile definalizzare le fatture. Per favore riprova.",
-      "bulkUnfinalizeInvoiceFailed": "Impossibile riaprire {{invoiceNumber}}: {{reason}}"
+      "bulkUnfinalizeInvoiceFailed": "Impossibile riaprire {{invoiceNumber}}: {{reason}}",
+      "explainThis": "Mostra spiegazione",
+      "usedHourBlockExplanation": "La finalizzazione di questa fattura ha reso disponibili le ore prepagate per le registrazioni di tempo. Da allora è stato assegnato del tempo al blocco. Riaprire la fattura annullerebbe il blocco, anche se tali assegnazioni ed eventuali addebiti successivi potrebbero ancora dipenderne. Per mantenere coerente la fatturazione, non è possibile annullare la finalizzazione delle fatture relative a blocchi già utilizzati, anche se il tempo è stato successivamente stornato. Per correggere la fattura, valuta una rettifica separata o una nota di credito."
     },
     "bulk": {
       "actionBar": {
@@ -2575,6 +2577,7 @@
       "onlyDraftEditable": "Solo le fatture in bozza possono essere modificate",
       "numberExists": "Il numero della fattura esiste già. Scegliere un numero diverso.",
       "notFinalized": "La fattura non è finalizzata",
+      "usedHourBlockUnfinalize": "Impossibile annullare la finalizzazione di questa fattura: il blocco di ore {{blockId}} è già stato utilizzato ({{usedHours}} di {{totalHours}} ore). Per correggere la fattura, valuta una rettifica separata o una nota di credito.",
       "unfinalizeFailed": "Non è stato possibile annullare la finalizzazione della fattura a causa di un errore imprevisto nei dati. Aggiornare la pagina e riprovare.",
       "paidOrCancelled": "Non è possibile modificare una fattura pagata o annullata",
       "syncedVoidInstead": "Questa fattura è sincronizzata con un sistema contabile: annullarla anziché eliminarla.",

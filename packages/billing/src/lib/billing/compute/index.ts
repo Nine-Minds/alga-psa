@@ -5,6 +5,7 @@ export * from "./computeTimeBasedCharges";
 export * from "./computeUsageBasedCharges";
 export * from "./computeBucketCharges";
 export * from "./computeHourBlockCharges";
+export * from "./computePrepaidBlockCharges";
 export * from "./computeRecurringQuantityCharges";
 export * from "./computeDiscountsAndAdjustments";
 export * from "./contractInvoiceAdjustments";

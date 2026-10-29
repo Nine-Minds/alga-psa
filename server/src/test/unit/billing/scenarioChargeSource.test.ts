@@ -25,7 +25,7 @@ function sourceFor(line: Record<string, unknown>) {
     lineFacts: { clientContractLineId: "ccl-1" } as any,
     client: { client_id: "c" },
     billingPeriod: {} as any,
-    timing: { servicePeriodStart: "2026-07-01", servicePeriodEnd: "2026-08-01" } as any,
+    timings: { line: { servicePeriodStart: "2026-07-01", servicePeriodEnd: "2026-08-01" } } as any,
     periodIndex: 0,
     taxPorts: {} as any,
     currencyCode: "USD",
@@ -36,10 +36,10 @@ function sourceFor(line: Record<string, unknown>) {
 }
 
 describe("ScenarioChargeSource", () => {
-  it("rejects timing requests other than the line's own due position", async () => {
+  it("resolves timing per stream: a stream with no timing is not due", async () => {
     const source = sourceFor({ services: [] });
-    await expect(source.resolveTiming({ duePosition: "advance" } as any)).rejects.toThrow(/only the line's own position/);
-    await expect(source.resolveTiming({ duePosition: "line" } as any)).resolves.toMatchObject({ status: "due" });
+    await expect(source.resolveTiming({ stream: "line" } as any)).resolves.toMatchObject({ status: "due" });
+    await expect(source.resolveTiming({ stream: "prepaid_block" } as any)).resolves.toEqual({ status: "not-due" });
   });
 
   it("derives pools from line.pools and from Bucket-config services, without duplicating a described pool", async () => {

@@ -21,12 +21,13 @@ jobs:
     timeout-minutes: 5
     outputs:
       run_tests: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.should_run == 'true' }}
+      image_transport: ${{ steps.transport.outputs.image_transport }}
+      registry_namespace: ${{ steps.transport.outputs.registry_namespace }}
+      registry_tag: ${{ steps.transport.outputs.registry_tag }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -41,6 +42,31 @@ jobs:
           TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
           TIER1_HEAD_SHA: ${{ github.sha }}
         run: node scripts/select-integration-tests.mjs
+
+      # Candidate images travel from build-images to production-browser through
+      # the GitHub Container Registry when this run's token can push there: the
+      # builder pushes and the consumer pulls by manifest digest, instead of a
+      # tar export, gzip, artifact upload, download and `docker load` (14 of the
+      # enterprise browser job's 44 minutes in run 40790512018). GitHub issues a
+      # read-only token to pull requests from forks and to Dependabot, so those
+      # runs keep the gzip archive artifacts. Both transports produce the same
+      # build records, receipts and browser artifact manifest.
+      - name: Select the candidate image transport
+        id: transport
+        env:
+          SAME_REPOSITORY: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          transport=artifact
+          if [ "$SAME_REPOSITORY" = true ] && [ "$ACTOR" != 'dependabot[bot]' ]; then transport=registry; fi
+          {
+            echo "image_transport=$transport"
+            # Registry repository names are lowercase; the repository slug may not be.
+            echo "registry_namespace=ghcr.io/${GITHUB_REPOSITORY,,}"
+            # The tag is for people browsing the registry; consumers pull by digest.
+            echo "registry_tag=run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${GITHUB_SHA}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Candidate image transport: $transport"
 
   browser-collection:
     name: Standalone browser collection
@@ -81,6 +107,13 @@ jobs:
     # so both sides must run the same Docker. See production-browser below.
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE_TRANSPORT: ${{ needs.changes.outputs.image_transport }}
+      REGISTRY_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/e2e-${{ matrix.service }}
+      REGISTRY_TAG: ${{ needs.changes.outputs.registry_tag }}
     strategy:
       fail-fast: false
       matrix:
@@ -164,6 +197,14 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
+      - name: Authenticate to the candidate image registry
+        if: env.IMAGE_TRANSPORT == 'registry'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Provide memory headroom for production compilation
         if: matrix.service == 'server' || matrix.service == 'server-ee'
         run: |
@@ -184,12 +225,19 @@ jobs:
           context: ${{ matrix.context || '.' }}
           file: ${{ matrix.dockerfile }}
           platforms: linux/amd64
-          tags: ${{ matrix.image }}
+          # Registry transport pushes under the run's tag only: the local Compose
+          # name is applied by the consumer after it pulls the recorded digest.
+          tags: ${{ env.IMAGE_TRANSPORT == 'registry' && format('{0}:{1}', env.REGISTRY_REFERENCE, env.REGISTRY_TAG) || matrix.image }}
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
           build-args: |
             NEXT_BUILD_MAX_OLD_SPACE_SIZE=12288
-          outputs: type=docker,dest=${{ runner.temp }}/${{ matrix.service }}.tar
+          outputs: ${{ env.IMAGE_TRANSPORT == 'registry' && 'type=image,push=true' || format('type=docker,dest={0}/{1}.tar', runner.temp, matrix.service) }}
+          # One plain manifest per image, never an index with attestations: the
+          # consumer pulls exactly one digest and the build record binds that
+          # digest to this image's config.
+          provenance: false
+          sbom: false
           no-cache: ${{ inputs.no_cache == true }}
           # The server/email workspace layers are huge; exporting them to the
           # shared Actions cache adds transfer time and evicts smaller caches.
@@ -198,12 +246,14 @@ jobs:
           cache-to: ${{ matrix.cache && format('type=gha,version=2,scope=fresh-install-{0},mode=max,ignore-error=true,timeout=3m', matrix.service) || '' }}
 
       - name: Compress image for transfer
+        if: env.IMAGE_TRANSPORT == 'artifact'
         env:
           IMAGE_ARCHIVE: ${{ runner.temp }}/${{ matrix.service }}.tar
         run: |
           gzip -1 "$IMAGE_ARCHIVE"
 
       - name: Record actual image archive build identity
+        if: env.IMAGE_TRANSPORT == 'artifact'
         env:
           IMAGE_ARCHIVE: ${{ runner.temp }}/${{ matrix.service }}.tar.gz
           BUILD_RECORD: ${{ runner.temp }}/${{ matrix.service }}-build.json
@@ -216,6 +266,26 @@ jobs:
           BUILD_METADATA: ${{ steps.export_image.outputs.metadata }}
         run: node scripts/record-docker-archive-build.mjs "$IMAGE_ARCHIVE" "$BUILD_RECORD"
 
+      - name: Record actual published candidate image identity
+        if: env.IMAGE_TRANSPORT == 'registry'
+        env:
+          BUILD_MANIFEST: ${{ runner.temp }}/${{ matrix.service }}-manifest.json
+          BUILD_RECORD: ${{ runner.temp }}/${{ matrix.service }}-build.json
+          BUILD_SERVICE: ${{ matrix.service }}
+          BUILD_IMAGE: ${{ matrix.image }}
+          BUILD_DOCKERFILE: ${{ matrix.dockerfile }}
+          BUILD_PLATFORM: linux/amd64
+          BUILD_CONFIG_IMAGE_ID: ${{ steps.export_image.outputs.imageid }}
+          BUILD_REPORTED_DIGEST: ${{ steps.export_image.outputs.digest }}
+          BUILD_METADATA: ${{ steps.export_image.outputs.metadata }}
+          BUILD_REGISTRY_REFERENCE: ${{ env.REGISTRY_REFERENCE }}
+          BUILD_REGISTRY_TAG: ${{ env.REGISTRY_TAG }}
+        run: |
+          # The manifest bytes the registry serves under the reported digest, not
+          # the builder's own copy: the record proves the push landed.
+          docker buildx imagetools inspect "$BUILD_REGISTRY_REFERENCE@$BUILD_REPORTED_DIGEST" --raw > "$BUILD_MANIFEST"
+          node scripts/record-docker-registry-build.mjs "$BUILD_MANIFEST" "$BUILD_RECORD"
+
       - name: Upload image build record
         uses: actions/upload-artifact@v4
         with:
@@ -224,7 +294,9 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload image archive
+        if: env.IMAGE_TRANSPORT == 'artifact'
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact || format('fresh-install-image-{0}', matrix.service) }}
           path: ${{ runner.temp }}/${{ matrix.service }}.tar.gz
@@ -242,6 +314,9 @@ jobs:
     # Chromium. Unpin once both tolerate 26.04.
     runs-on: ubuntu-24.04
     timeout-minutes: 120
+    permissions:
+      contents: read
+      packages: read
     strategy:
       fail-fast: false
       matrix:
@@ -254,6 +329,9 @@ jobs:
             compose_suffix: ':docker-compose.e2e-ee.yaml'
     env:
       COMPOSE_FILE: docker-compose.base.yaml:docker-compose.ce.yaml:docker-compose.prod.yaml:docker-compose.setup-ubuntu.override.yaml:docker-compose.imap-test.yaml:docker-compose.e2e-emulators.yaml${{ matrix.compose_suffix }}
+      IMAGE_TRANSPORT: ${{ needs.changes.outputs.image_transport }}
+      # Pulls are refused outside this namespace, whatever a build record says.
+      E2E_REGISTRY_NAMESPACE: ${{ needs.changes.outputs.registry_namespace }}
     steps:
       - name: Check build results
         env:
@@ -395,8 +473,16 @@ jobs:
           fi
           df -h /
 
+      - name: Authenticate to the candidate image registry
+        if: steps.install_docker_compose.outcome == 'success' && env.IMAGE_TRANSPORT == 'registry'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Download images from this run
-        if: steps.install_docker_compose.outcome == 'success'
+        if: steps.install_docker_compose.outcome == 'success' && env.IMAGE_TRANSPORT == 'artifact'
         uses: actions/download-artifact@v8.0.1
         with:
           digest-mismatch: error
@@ -414,14 +500,14 @@ jobs:
           merge-multiple: true
 
       - name: Download production server for this edition
-        if: steps.install_docker_compose.outcome == 'success'
+        if: steps.install_docker_compose.outcome == 'success' && env.IMAGE_TRANSPORT == 'artifact'
         uses: actions/download-artifact@v8.0.1
         with:
           digest-mismatch: error
           name: fresh-install-server-${{ matrix.edition }}
           path: ${{ runner.temp }}/fresh-install-images
 
-      - name: Load and verify images
+      - name: Acquire and verify candidate images
         if: steps.install_docker_compose.outcome == 'success'
         env:
           IMAGE_DIRECTORY: ${{ runner.temp }}/fresh-install-images
@@ -435,11 +521,34 @@ jobs:
           echo "E2E_CALLBACK_TLS_DIR=$E2E_CALLBACK_TLS_DIR" >> "$GITHUB_ENV"
           worker_images="workflow-worker"
           if [ "$EDITION" = enterprise ]; then worker_images="$worker_images temporal-worker"; fi
+          verify_mode=loaded
+          if [ "$IMAGE_TRANSPORT" = registry ]; then
+            verify_mode=pulled
+            test -n "$E2E_REGISTRY_NAMESPACE"
+          fi
           for service in "$SERVER_ARCHIVE" setup email-service hocuspocus redis pgbouncer algasim $worker_images; do
-            archive="$IMAGE_DIRECTORY/$service.tar.gz"
-            node scripts/browser-artifact-manifest.mjs archive "$archive" "$RUNNER_TEMP/verified-$service.json" "$BUILD_RECORD_DIRECTORY/$service-build.json" "$service"
-            docker load --input "$archive"
-            rm "$archive"
+            record="$BUILD_RECORD_DIRECTORY/$service-build.json"
+            receipt="$RUNNER_TEMP/verified-$service.json"
+            if [ "$IMAGE_TRANSPORT" = registry ]; then
+              # Pull the digest the build job recorded, from this repository's
+              # candidate namespace only, then give it the name Compose expects.
+              reference=$(jq -r '.registry.reference' "$record")
+              manifest_digest=$(jq -r '.registry.manifestDigest' "$record")
+              local_image=$(jq -r '.image' "$record")
+              case "$reference" in
+                "$E2E_REGISTRY_NAMESPACE"/e2e-*) ;;
+                *) echo "Refusing to pull $service from $reference"; exit 1 ;;
+              esac
+              docker pull --quiet "$reference@$manifest_digest"
+              docker tag "$reference@$manifest_digest" "$local_image"
+              docker image inspect "$local_image" > "$RUNNER_TEMP/pulled-$service.json"
+              node scripts/browser-artifact-manifest.mjs registry "$RUNNER_TEMP/pulled-$service.json" "$receipt" "$record" "$service"
+            else
+              archive="$IMAGE_DIRECTORY/$service.tar.gz"
+              node scripts/browser-artifact-manifest.mjs archive "$archive" "$receipt" "$record" "$service"
+              docker load --input "$archive"
+              rm "$archive"
+            fi
           done
           # Resolve explicit and Compose-generated tags so a configuration change cannot
           # accidentally run an old/pulled image instead of this run's build.
@@ -451,7 +560,7 @@ jobs:
             if [ "$service" = worker-test-state ]; then record_service=algasim; fi
             inspection="$RUNNER_TEMP/loaded-$service.json"
             docker image inspect "$image" > "$inspection"
-            node scripts/verify-docker-archive-build.mjs loaded "$inspection" "$BUILD_RECORD_DIRECTORY/$record_service-build.json" "$record_service"
+            node scripts/verify-docker-archive-build.mjs "$verify_mode" "$inspection" "$BUILD_RECORD_DIRECTORY/$record_service-build.json" "$record_service"
           done
           node --input-type=module <<'NODE'
           import { writeFileSync } from 'node:fs';

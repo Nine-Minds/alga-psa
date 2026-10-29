@@ -18,6 +18,7 @@ import {
 } from '../lib/billing/billingProfileInvoiceScope';
 import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
 import { paymentMethodDisplayLabel } from '@alga-psa/shared/billingClients/paymentPreferences';
+import { prepaidBlockFeeDescription } from '../lib/billing/compute/prepaidBlockDescriptions';
 import { dueDateForPaymentTerms } from '../lib/billing/invoiceDueDate';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingConfig from '../models/projectBillingConfig';
@@ -285,8 +286,7 @@ function formatHourBlockChargeDescription(charge: IHourBlockCharge): string {
 }
 
 function formatPrepaidBlockChargeDescription(charge: IPrepaidBlockCharge): string {
-  const hourShortLabel = resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel;
-  return `Prepaid block (${charge.serviceName}) — ${charge.quantity.toFixed(2)} ${hourShortLabel}`;
+  return prepaidBlockFeeDescription({ name: charge.serviceName, hours: charge.quantity });
 }
 
 function normalizePreviewRecurringDetailPeriods(
@@ -1532,6 +1532,7 @@ async function normalizeRecurringSelectorInput(params: {
         ?? recurringServicePeriod.obligation_id,
       windowStart: normalizedWindowStart,
       windowEnd: normalizedWindowEnd,
+      chargeStream: params.selectorInput.executionWindow.chargeStream ?? null,
     });
   }
 
@@ -1667,6 +1668,11 @@ function getSelectedRecurringObligationIdFromSelectorInput(
   throw new Error('Recurring selector input execution window kind is not supported.');
 }
 
+/**
+ * Scopes the engine's selections to the selected obligations. Selections are
+ * keyed by line, then stream, so scoping by line keeps every stream of a
+ * selected line (a line is due when any of its streams is).
+ */
 function scopeRecurringTimingSelectionsForSelectorInputs(
   recurringTimingSelections: Record<string, unknown>,
   selectorInputs: IRecurringDueSelectionInput[],

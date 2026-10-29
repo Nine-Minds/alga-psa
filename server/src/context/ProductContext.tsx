@@ -19,9 +19,10 @@ const ProductContext = createContext<ProductContextValue | undefined>(undefined)
 
 interface ProductProviderProps {
   children: React.ReactNode;
+  productCode?: ProductCode;
 }
 
-export function ProductProvider({ children }: ProductProviderProps) {
+export function ProductProvider({ children, productCode: serverProductCode }: ProductProviderProps) {
   const { data: session, status } = useSession();
   const isLoading = status === 'loading';
   const edition: ProductEdition = process.env.NEXT_PUBLIC_EDITION === 'enterprise'
@@ -29,8 +30,8 @@ export function ProductProvider({ children }: ProductProviderProps) {
     : 'community';
 
   const { productCode, isMisconfigured } = useMemo(() => {
-    return resolveProductCode(session?.user?.product_code);
-  }, [session?.user]);
+    return resolveProductCode(serverProductCode ?? session?.user?.product_code);
+  }, [serverProductCode, session?.user]);
 
   const value = useMemo<ProductContextValue>(
     () => ({

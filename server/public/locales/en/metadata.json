@@ -601,6 +601,12 @@
     },
     "layout": {
       "defaultTitle": "Dashboard | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "Co-Managed IT"
+    },
+    "coManagement": {
+      "title": "Co-Managed Access"
     }
   },
   "share": {

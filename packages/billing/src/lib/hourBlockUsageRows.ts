@@ -1,4 +1,5 @@
 import { toCalendarDateString } from '@alga-psa/core';
+import { computeRemainingBlockValueMinor } from '@alga-psa/shared/billingClients/hourBlockService';
 
 import type { HourBlockUsage } from '../actions/contractReportActions';
 
@@ -16,6 +17,7 @@ export interface HourBlockUsageQueryRow {
   hourly_rate?: number | string | null;
   currency_code?: string | null;
   purchased_at?: string | Date | null;
+  valid_from?: string | Date | null;
   expiration_date?: string | Date | null;
 }
 
@@ -47,7 +49,11 @@ export function mapHourBlockUsageRow(row: HourBlockUsageQueryRow): HourBlockUsag
     utilization_percentage: totalMinutes > 0 ? Math.round((usedMinutes / totalMinutes) * 100) : 0,
     hourly_rate: Number(row.hourly_rate ?? 0),
     currency_code: row.currency_code || 'USD',
+    remaining_value: row.status === 'active'
+      ? computeRemainingBlockValueMinor({ remaining_minutes: remainingMinutes, hourly_rate: row.hourly_rate })
+      : 0,
     purchased_at: row.purchased_at ? new Date(row.purchased_at).toISOString().slice(0, 10) : null,
+    valid_from: toCalendarDateString(row.valid_from ?? null),
     expiration_date: toCalendarDateString(row.expiration_date ?? null),
   };
 }

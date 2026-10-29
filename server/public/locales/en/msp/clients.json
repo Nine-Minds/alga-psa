@@ -1975,6 +1975,7 @@
       "sourceAlreadyMerged": "This client has already been merged into another client.",
       "targetAlreadyMerged": "The destination client has itself been merged into another client. Merge into that one instead.",
       "sourceIsTenantDefault": "Your own organisation record cannot be merged into a client.",
+      "sourceHasCoManagement": "This client has a co-managed IT workspace. Cancel its setup or end co-management before merging it.",
       "parentLinkCycle": "That client is recorded as a child of the one you are merging, so merging this way would invert the hierarchy.",
       "invalidContractCutover": "One of the cutover dates falls outside its contract term."
     },

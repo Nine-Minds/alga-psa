@@ -107,7 +107,9 @@
     "ticketsRecurring": "Terugkerende tickets",
     "ticketsTemplates": "Ticketsjablonen",
     "assetsCustody": "Apparatuur in bewaring",
-    "ticketsCannedResponses": "Standaardantwoorden"
+    "ticketsCannedResponses": "Standaardantwoorden",
+    "profile": "Profiel",
+    "signOut": "Afmelden"
   },
   "sidebar": {
     "backToMain": "Terug naar hoofd",
@@ -846,5 +848,10 @@
     "errors": {
       "enterpriseOnly": "Chatfuncties zijn alleen beschikbaar in Enterprise Edition"
     }
+  },
+  "coManagedWorkspace": {
+    "loading": "Werkruimte laden…",
+    "navigation": "Klantwerkruimte",
+    "passwordError": "Kan de wachtwoordstatus niet controleren. Laad deze pagina opnieuw."
   }
 }

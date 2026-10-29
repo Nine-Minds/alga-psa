@@ -107,7 +107,9 @@
     "ticketsRecurring": "Zgłoszenia cykliczne",
     "ticketsTemplates": "Szablony zgłoszeń",
     "assetsCustody": "Sprzęt w przechowaniu",
-    "ticketsCannedResponses": "Gotowe odpowiedzi"
+    "ticketsCannedResponses": "Gotowe odpowiedzi",
+    "profile": "Profil",
+    "signOut": "Wyloguj się"
   },
   "sidebar": {
     "backToMain": "Powrót do głównego",
@@ -846,5 +848,10 @@
     "errors": {
       "enterpriseOnly": "Funkcje czatu są dostępne tylko w Enterprise Edition"
     }
+  },
+  "coManagedWorkspace": {
+    "loading": "Ładowanie obszaru roboczego…",
+    "navigation": "Obszar roboczy klienta",
+    "passwordError": "Nie można sprawdzić stanu hasła. Odśwież tę stronę."
   }
 }

@@ -623,7 +623,9 @@
       "bulkPdfFailed": "PDFs konnten nicht generiert werden. Bitte versuchen Sie es erneut.",
       "unfinalizeFailed": "Die Rechnung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
       "bulkUnfinalizeFailed": "Rechnungen konnten nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
-      "bulkUnfinalizeInvoiceFailed": "{{invoiceNumber}} konnte nicht wieder geöffnet werden: {{reason}}"
+      "bulkUnfinalizeInvoiceFailed": "{{invoiceNumber}} konnte nicht wieder geöffnet werden: {{reason}}",
+      "explainThis": "Erklärung anzeigen",
+      "usedHourBlockExplanation": "Mit der Finalisierung dieser Rechnung wurden die vorausbezahlten Stunden für Zeiteinträge verfügbar. Inzwischen wurden dem Stundenblock Zeiten zugeordnet. Ein erneutes Öffnen der Rechnung würde den Block rückgängig machen, obwohl diese Zuordnungen und spätere Gebühren noch davon abhängen könnten. Damit die Abrechnung konsistent bleibt, kann die Finalisierung von Rechnungen für bereits verwendete Blöcke nicht aufgehoben werden, auch wenn die Zeiten später storniert wurden. Verwenden Sie zur Korrektur der Rechnung eine separate Anpassung oder Gutschrift."
     },
     "bulk": {
       "actionBar": {
@@ -2575,6 +2577,7 @@
       "onlyDraftEditable": "Nur Rechnungsentwürfe können bearbeitet werden",
       "numberExists": "Die Rechnungsnummer existiert bereits. Wählen Sie eine andere Nummer.",
       "notFinalized": "Die Rechnung ist nicht finalisiert",
+      "usedHourBlockUnfinalize": "Die Finalisierung dieser Rechnung kann nicht aufgehoben werden: Der Stundenblock {{blockId}} wurde bereits verwendet ({{usedHours}} von {{totalHours}} Std.). Verwenden Sie zur Korrektur der Rechnung eine separate Anpassung oder Gutschrift.",
       "unfinalizeFailed": "Die Finalisierung der Rechnung konnte wegen eines unerwarteten Datenfehlers nicht aufgehoben werden. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "paidOrCancelled": "Eine bezahlte oder stornierte Rechnung kann nicht geändert werden",
       "syncedVoidInstead": "Diese Rechnung ist mit einem Buchhaltungssystem synchronisiert – stornieren Sie sie, statt sie zu löschen.",

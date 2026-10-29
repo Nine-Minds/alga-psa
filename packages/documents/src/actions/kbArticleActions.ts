@@ -1,6 +1,7 @@
 'use server';
 
 import { randomUUID } from 'crypto';
+import { canReadKnowledgeBase } from '@alga-psa/auth/lib/knowledgeBasePermissions';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -612,7 +613,7 @@ export const getKnowledgeBaseCategories = withAuth(
   ): Promise<IKBArticleCategory[] | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
-    if (!tenant || !(await hasPermission(user, 'document', 'read'))) {
+    if (!tenant || !(await canReadKnowledgeBase(user))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -652,7 +653,7 @@ export const getArticles = withAuth(
 
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'read'))) {
+    if (!(await canReadKnowledgeBase(user))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -798,7 +799,7 @@ export const getArticlesWithTags = withAuth(
     const effectivePageSize = Math.min(Math.max(pageSize, 1), 100);
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'read'))) {
+    if (!(await canReadKnowledgeBase(user))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -937,7 +938,7 @@ export const getArticle = withAuth(
   ): Promise<IKBArticleWithDocument | null | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'read'))) {
+    if (!(await canReadKnowledgeBase(user))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -981,7 +982,7 @@ export const getStaleArticles = withAuth(
   ): Promise<IKBArticleWithDocument[] | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'read'))) {
+    if (!(await canReadKnowledgeBase(user))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
@@ -1066,7 +1067,7 @@ export const getArticleTemplates = withAuth(
   ): Promise<IKBArticleTemplate[] | ActionPermissionError> => {
     const { knex } = await createTenantKnex();
 
-    if (!(await hasPermission(user, 'document', 'read'))) {
+    if (!(await canReadKnowledgeBase(user))) {
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 

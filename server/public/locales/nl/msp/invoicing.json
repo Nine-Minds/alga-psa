@@ -623,7 +623,9 @@
       "bulkPdfFailed": "Kan geen PDF's genereren. Probeer het opnieuw.",
       "unfinalizeFailed": "Kan de finalisatie van de factuur niet ongedaan maken. Probeer het opnieuw.",
       "bulkUnfinalizeFailed": "Kan de finalisatie van facturen niet ongedaan maken. Probeer het opnieuw.",
-      "bulkUnfinalizeInvoiceFailed": "{{invoiceNumber}} kon niet worden heropend: {{reason}}"
+      "bulkUnfinalizeInvoiceFailed": "{{invoiceNumber}} kon niet worden heropend: {{reason}}",
+      "explainThis": "Toelichting tonen",
+      "usedHourBlockExplanation": "Door deze factuur definitief te maken, werden de vooruitbetaalde uren beschikbaar voor tijdregistraties. Sindsdien is er tijd aan het urenblok toegewezen. Als de factuur opnieuw wordt geopend, wordt het blok ongedaan gemaakt, terwijl die toewijzingen en eventuele latere kosten er nog van afhankelijk kunnen zijn. Om de facturatie consistent te houden, kunnen facturen voor blokken die ooit zijn gebruikt niet worden teruggezet naar concept, ook niet als de tijd later is teruggedraaid. Overweeg een afzonderlijke aanpassing of creditnota om de factuur te corrigeren."
     },
     "bulk": {
       "actionBar": {
@@ -2575,6 +2577,7 @@
       "onlyDraftEditable": "Alleen conceptfacturen kunnen worden bewerkt",
       "numberExists": "Het factuurnummer bestaat al. Kies een ander nummer.",
       "notFinalized": "De factuur is niet definitief gemaakt",
+      "usedHourBlockUnfinalize": "Deze factuur kan niet worden teruggezet naar concept: het urenblok {{blockId}} is al gebruikt ({{usedHours}} van {{totalHours}} uur). Overweeg een afzonderlijke aanpassing of creditnota om de factuur te corrigeren.",
       "unfinalizeFailed": "De factuur kon niet ongedaan definitief worden gemaakt door een onverwachte gegevensfout. Vernieuw de pagina en probeer het opnieuw.",
       "paidOrCancelled": "Een betaalde of geannuleerde factuur kan niet worden gewijzigd",
       "syncedVoidInstead": "Deze factuur is gesynchroniseerd met een boekhoudsysteem — storneer deze in plaats van te verwijderen.",

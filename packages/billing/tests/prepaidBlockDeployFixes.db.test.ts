@@ -396,6 +396,66 @@ describe.runIf(enabled)('Fix 3: an early Prepaid Block member does not block the
     }
   });
 
+  // Plan D8: a cadence block's price is known before generation.
+  async function insertCadenceBlockPeriod(w: World, enableProration: boolean) {
+    await w.db('contracts').where({ tenant: w.tenant, contract_id: w.contractId }).update({ owner_client_id: w.clientId });
+    await w.db('client_billing_cycles').insert({
+      tenant: w.tenant, billing_profile_id: w.profileId, billing_cycle_id: uuidv4(), client_id: w.clientId, billing_cycle: 'monthly',
+      period_start_date: '2026-10-01', period_end_date: '2026-11-01', effective_date: '2026-10-01',
+    });
+    await w.db('contract_lines').where({ tenant: w.tenant, contract_line_id: w.lineId }).update({
+      billing_frequency: 'monthly', billing_timing: 'arrears', cadence_owner: 'client', enable_proration: enableProration,
+    });
+    await w.db('contract_line_prepaid_blocks').where({ tenant: w.tenant, contract_line_id: w.lineId })
+      .update({ issue_mode: 'cadence', block_minutes: 600, block_price: 150000, expiry_months: null, trigger_on_expiry: false, trigger_on_exhaustion: false, trigger_threshold_percent: null, trigger_on_renewal: false });
+    await w.db('recurring_service_periods').insert({
+      tenant: w.tenant,
+      schedule_key: `schedule:${w.tenant}:${w.lineId}:client:advance:prepaid_block`,
+      period_key: 'period:2026-10-01:2026-11-01',
+      revision: 1,
+      obligation_id: w.lineId,
+      charge_family: 'prepaid_block',
+      cadence_owner: 'client',
+      due_position: 'advance',
+      lifecycle_state: 'generated',
+      service_period_start: '2026-10-01',
+      service_period_end: '2026-11-01',
+      invoice_window_start: '2026-10-01',
+      invoice_window_end: '2026-11-01',
+      provenance_kind: 'generated',
+      source_rule_version: '1.0.0',
+    });
+  }
+
+  it.each([
+    ['proration off', false, 150000],
+    ['proration on, assignment covers the whole period', true, 150000],
+  ])('cadence block member carries its block price as amountCents (%s)', async (_label, proration, expected) => {
+    const w = await setup({ startDate: '2026-03-01', lineCreatedAt: '2026-01-01T00:00:00Z', tenantTimeZone: 'America/New_York' });
+    try {
+      await insertCadenceBlockPeriod(w, proration);
+      const candidates = await withSystemTime('2026-10-13T16:00:00Z', () => dueWorkCandidates(w, '2026-10-13'));
+      const member = candidates.flatMap((c) => c.members).find((m: any) => m.chargeType === 'PrepaidBlock');
+      expect(member).toBeDefined();
+      expect(member.amountCents).toBe(expected);
+    } finally {
+      await teardown(w);
+    }
+  });
+
+  it('a proration-enabled cadence block starting mid-period stays pending (coverage ratio < 1)', async () => {
+    const w = await setup({ startDate: '2026-10-15', lineCreatedAt: '2026-01-01T00:00:00Z', tenantTimeZone: 'America/New_York' });
+    try {
+      await insertCadenceBlockPeriod(w, true);
+      const candidates = await withSystemTime('2026-10-20T16:00:00Z', () => dueWorkCandidates(w, '2026-10-20'));
+      const member = candidates.flatMap((c) => c.members).find((m: any) => m.chargeType === 'PrepaidBlock');
+      expect(member).toBeDefined();
+      expect(member.amountCents ?? null).toBeNull();
+    } finally {
+      await teardown(w);
+    }
+  });
+
   it('a window holding only an early block is still notYetDue with availableOnDate (the block\'s due date)', async () => {
     const w = await setup({ startDate: '2026-10-01', lineCreatedAt: '2026-01-01T00:00:00Z', tenantTimeZone: 'America/New_York' });
     try {

@@ -651,7 +651,9 @@
       "bulkPdfFailed": "Nie udało się wygenerować plików PDF. Spróbuj ponownie.",
       "unfinalizeFailed": "Nie udało się cofnąć finalizacji faktury. Spróbuj ponownie.",
       "bulkUnfinalizeFailed": "Nie udało się cofnąć finalizacji faktur. Spróbuj ponownie.",
-      "bulkUnfinalizeInvoiceFailed": "Nie można ponownie otworzyć {{invoiceNumber}}: {{reason}}"
+      "bulkUnfinalizeInvoiceFailed": "Nie można ponownie otworzyć {{invoiceNumber}}: {{reason}}",
+      "explainThis": "Pokaż wyjaśnienie",
+      "usedHourBlockExplanation": "Sfinalizowanie tej faktury udostępniło opłacone z góry godziny do ewidencji czasu. Od tego momentu do bloku przypisano czas. Ponowne otwarcie faktury spowodowałoby wycofanie bloku, chociaż te przypisania i późniejsze opłaty mogłyby nadal od niego zależeć. Aby zachować spójność rozliczeń, nie można cofnąć finalizacji faktur za bloki, które zostały już użyte, nawet jeśli czas został później wycofany. Rozważ osobną korektę lub notę kredytową, aby poprawić fakturę."
     },
     "bulk": {
       "actionBar": {
@@ -2627,6 +2629,7 @@
       "onlyDraftEditable": "Edytować można tylko faktury w wersji roboczej",
       "numberExists": "Numer faktury już istnieje. Wybierz inny numer.",
       "notFinalized": "Faktura nie została sfinalizowana",
+      "usedHourBlockUnfinalize": "Nie można cofnąć finalizacji tej faktury: blok godzin {{blockId}} został już użyty ({{usedHours}} z {{totalHours}} godz.). Rozważ osobną korektę lub notę kredytową, aby poprawić fakturę.",
       "unfinalizeFailed": "Nie udało się cofnąć finalizacji faktury z powodu nieoczekiwanego błędu danych. Odśwież stronę i spróbuj ponownie.",
       "paidOrCancelled": "Nie można modyfikować opłaconej lub anulowanej faktury",
       "syncedVoidInstead": "Ta faktura jest zsynchronizowana z systemem księgowym — anuluj ją zamiast usuwać.",
