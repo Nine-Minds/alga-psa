@@ -117,6 +117,14 @@
     "./nativeTaskCommentAccess": {
       "types": "./src/nativeTaskCommentAccess.ts",
       "import": "./src/nativeTaskCommentAccess.ts"
+    },
+    "./coManagedWorkspace": {
+      "types": "./src/coManagedWorkspace.ts",
+      "import": "./src/coManagedWorkspace.ts"
+    },
+    "./projectTaskAudit": {
+      "types": "./src/projectTaskAudit.ts",
+      "import": "./src/projectTaskAudit.ts"
     }
   },
   "scripts": {

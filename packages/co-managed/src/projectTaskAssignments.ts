@@ -7,11 +7,14 @@ import { snapshotCoManagedSessionActor, isCoManagedUuid, CoManagedSharedWorkErro
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { CoManagedTaskEditError } from './projectTaskEditing';
 import { assertCoManagedProjectWorkServed } from './projectTaskGate';
+import { coManagedRequestHash, findCoManagedTaskReplay, recordCoManagedTaskAudit } from './projectTaskAudit';
 
 export interface CoManagedTaskAssignmentRequest {
   assignee: { kind: 'user' | 'team'; id: string };
   /** The reference `revision` the caller loaded; omit (null) to create the reference. */
   expectedRevision: number | null;
+  /** Client-generated per submit attempt; a repeat of the same id replays the original receipt. */
+  operationId?: string;
 }
 export interface CoManagedTaskAssignmentReceipt { referenceId: string; revision: number; assigneeName: string }
 
@@ -26,7 +29,8 @@ export async function assignCoManagedProjectTask(db: Knex, inputActor: CoManaged
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!inputResource || inputResource.kind !== 'project_task' || ![inputResource.tenant, inputResource.id, inputResource.relationshipId].every(isCoManagedUuid) ||
       !request || !['user', 'team'].includes(request.assignee?.kind) || !isCoManagedUuid(request.assignee?.id) ||
-      !(request.expectedRevision === null || (Number.isInteger(request.expectedRevision) && request.expectedRevision > 0))) throw new CoManagedSharedWorkError();
+      !(request.expectedRevision === null || (Number.isInteger(request.expectedRevision) && request.expectedRevision > 0)) ||
+      (request.operationId !== undefined && !isCoManagedUuid(request.operationId))) throw new CoManagedSharedWorkError();
   const resource: CoManagedSharedResource = { kind: 'project_task', tenant: inputResource.tenant.toLowerCase(), id: inputResource.id.toLowerCase(), relationshipId: inputResource.relationshipId.toLowerCase() };
   await assertCoManagedProjectWorkServed(actor.tenant);
   return withCoManagedSharedWork(db, actor, resource, 'update', async context => {
@@ -48,19 +52,34 @@ export async function assignCoManagedProjectTask(db: Knex, inputActor: CoManaged
     const snapshots = { assignee_name: option.name, organization_name: option.organizationName, task_name: taskName, project_name: projectName };
     const existing = await home.table('co_managed_project_task_references')
       .where({ customer_tenant: resource.tenant, relationship_id: resource.relationshipId, task_id: resource.id }).forUpdate().first();
+    const requestHash = coManagedRequestHash('task_assignment', resource, { assignee: { kind: assignee.kind, id: assignee.id }, expectedRevision: request.expectedRevision });
+    const operationId = request.operationId?.toLowerCase() ?? randomUUID();
+    if (request.operationId) {
+      const replay = await findCoManagedTaskReplay<CoManagedTaskAssignmentReceipt>(context, operationId, requestHash);
+      if (replay) return replay;
+    }
+    const audit = async (receipt: CoManagedTaskAssignmentReceipt) => {
+      await recordCoManagedTaskAudit(context, { operation: 'co_managed_project_task_assignment', operationId, requestHash,
+        changes: { msp_assignee: { from: existing ? (existing.assigned_to ?? existing.assigned_team_id) : null, to: assignee.id, kind: assignee.kind, name: option.name } }, receipt });
+      return receipt;
+    };
     if (!existing) {
       if (request.expectedRevision !== null) throw new CoManagedTaskEditError('TASK_EDIT_CONFLICT', 'revision');
       const referenceId = randomUUID();
+      // write-admission: exempt — MSP-owned participation reference (no customer data), written under the reference-row lock inside L2 admission (withCoManagedSharedWork 'update')
       await home.table('co_managed_project_task_references').insert({ tenant: actor.tenant, reference_id: referenceId, customer_tenant: resource.tenant,
         relationship_id: resource.relationshipId, task_id: resource.id, client_id: relationship.sponsor_client_id, active: true, revision: 1, ...assignedColumns, ...snapshots });
+      const receipt = await audit({ referenceId, revision: 1, assigneeName: option.name });
       await context.assertCurrent();
-      return { referenceId, revision: 1, assigneeName: option.name };
+      return receipt;
     }
     if (existing.revision !== request.expectedRevision) throw new CoManagedTaskEditError('TASK_EDIT_CONFLICT', 'revision');
     const revision = existing.revision + 1;
+    // write-admission: exempt — MSP-owned participation reference (no customer data), written under the reference-row lock inside L2 admission (withCoManagedSharedWork 'update')
     await home.table('co_managed_project_task_references').where({ reference_id: existing.reference_id })
       .update({ active: true, revision, updated_at: trx.fn.now(), ...assignedColumns, ...snapshots });
+    const receipt = await audit({ referenceId: existing.reference_id, revision, assigneeName: option.name });
     await context.assertCurrent();
-    return { referenceId: existing.reference_id, revision, assigneeName: option.name };
+    return receipt;
   });
 }

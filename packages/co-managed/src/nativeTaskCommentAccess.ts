@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite, getCoManagedOperationalState } from '@alga-psa/licensing/lifecycle';
 import { snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, assertCoManagedSessionUnexpired, authorizeCoManagedWorkRecord,
   CoManagedSharedWorkError, isCoManagedUuid, type CoManagedSessionActor } from './sharedWorkIdentity';
@@ -14,6 +14,8 @@ const COMMENT_AUTHOR_SOURCES = ['author', 'user_id', 'actor_reference_id'] as co
 export const CO_MANAGED_TASK_LOCATOR_PAGE = 500;
 
 export interface CoManagedNativeTaskCommentAccess {
+  /** The requested tasks that exist in this workspace, after the locked re-walk. */
+  taskIds: readonly string[];
   hidden(taskId: string, fields: readonly string[]): boolean;
   assertCurrent(): Promise<void>;
 }
@@ -62,7 +64,8 @@ export async function admitCoManagedNativeTaskCommentAccess(trx: Knex.Transactio
   if (!tenant || !['co_managed', 'psa'].includes(tenant.product_code) || tenant.suspended_at) throw new CoManagedSharedWorkError();
   const subject = await lockCoManagedSessionIdentity(trx, actor);
   const located = await locate(trx, actor.tenant, request, null);
-  if ('ids' in request && located.size !== (request.ids as string[]).length) throw new CoManagedSharedWorkError();
+  // An id that is not a task of this workspace is simply absent (it has no comments and discloses nothing);
+  // access is decided over the tasks that do exist, so one stale board id cannot blank every count.
   const projectIds = [...new Set(located.values())].sort();
   const records = projectIds.length ? await (() => {
     const projects = owner.table('projects').whereIn('project_id', projectIds).orderBy('project_id');
@@ -87,9 +90,28 @@ export async function admitCoManagedNativeTaskCommentAccess(trx: Knex.Transactio
   }
   const assertCurrent = async () => { await assertCoManagedSessionUnexpired(trx, actor); if (action === 'update') await assertCoManagedOperationalWrite(trx, actor.tenant); };
   await assertCurrent();
-  return { assertCurrent, hidden(taskId, fields) {
+  return { taskIds: [...confirmed.keys()], assertCurrent, hidden(taskId, fields) {
     const projectId = confirmed.get(taskId.toLowerCase()), policy = projectId ? policies.get(projectId) : undefined;
     if (!policy) throw new CoManagedSharedWorkError();
     return isCoManagedReadFieldHidden(policy, fields.includes('author') ? [...fields, ...COMMENT_AUTHOR_SOURCES] : fields);
   } };
+}
+
+/**
+ * Board comment counts for a co-managed workspace: one transaction admits the readers (keyset locator,
+ * no id-count cap) and counts with a single `= ANY(uuid[])` bind. Comment bodies are not read.
+ */
+export async function countCoManagedNativeTaskComments(db: Knex, inputActor: CoManagedSessionActor, taskIds: readonly string[]): Promise<Record<string, number>> {
+  const actor = snapshotCoManagedSessionActor(inputActor);
+  return withTransaction(db, async trx => {
+    const access = await admitCoManagedNativeTaskCommentAccess(trx, actor, { taskIds }, 'read');
+    const counts: Record<string, number> = {};
+    for (let offset = 0; offset < access.taskIds.length; offset += 5000) {
+      const rows = await tenantDb(trx, actor.tenant).table('project_task_comments')
+        .whereRaw('task_id = ANY(?::uuid[])', [access.taskIds.slice(offset, offset + 5000)]).groupBy('task_id').select('task_id').count('* as count');
+      for (const row of rows) counts[row.task_id as string] = parseInt(row.count as string) || 0;
+    }
+    await access.assertCurrent();
+    return counts;
+  });
 }

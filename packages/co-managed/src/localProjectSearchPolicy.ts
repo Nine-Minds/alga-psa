@@ -3,6 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { serves } from '@alga-psa/core/capability';
 import { getCoManagedOperationalState } from '@alga-psa/licensing/lifecycle';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization';
+import { isCoManagedWorkspace } from './coManagedWorkspace';
 import { CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
 import { lockCoManagedLocalAuthentication, type CoManagedLocalAuthentication } from './localAuthentication';
 import { hasCoManagedLocalPermission } from './localPermission';
@@ -24,8 +25,7 @@ export async function getCoManagedLocalProjectSearchPolicy(trx: Knex.Transaction
   // Flag off, no entitlement or kill switch: the capability does not serve, so nothing changes.
   if (!(await serves('co-managed', actor.tenant)).served) return null;
   const owner = tenantDb(trx, actor.tenant);
-  const workspace = await owner.table('tenants').first('product_code');
-  if (workspace?.product_code !== 'co_managed') return null;
+  if (!await isCoManagedWorkspace(trx, actor.tenant)) return null;
   await getCoManagedOperationalState(trx, actor.tenant);
   const locked = await owner.table('tenants').forShare().first('product_code', 'suspended_at');
   if (!locked || locked.suspended_at) throw new CoManagedSharedWorkError();

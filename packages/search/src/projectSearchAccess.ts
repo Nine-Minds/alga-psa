@@ -4,8 +4,9 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import { serves } from '@alga-psa/core/capability';
 import { getCoManagedLocalProjectSearchPolicy, isCoManagedReadFieldHidden, type CoManagedSearchAuthentication } from '@alga-psa/co-managed/localProjectSearchPolicy';
 import { listCoManagedSharedProjects } from '@alga-psa/co-managed/projectTaskQueue';
+import { isCoManagedWorkspace } from '@alga-psa/co-managed/coManagedWorkspace';
 import type { CoManagedSessionActor } from '@alga-psa/co-managed/sharedWorkIdentity';
-import type { SearchQueryOptions } from './query';
+import { countSearchMatches, countSearchMatchesByType, runSearchQuery, runSearchTypeaheadQuery, type SearchIndexHit, type SearchQueryOptions } from './query';
 
 export type SearchAuthentication = CoManagedSearchAuthentication;
 export const PROJECT_SEARCH_TYPES = ['project', 'project_phase', 'project_task'] as const;
@@ -19,7 +20,7 @@ const COLUMNS = ['tenant', 'object_type', 'object_id', 'parent_type', 'parent_id
  * terms through ranks, pagination and counts. Comments are excluded: task conversations are L4c.
  */
 function projectRelation(trx: Knex.Transaction, tenant: string, projects: Knex.QueryBuilder, redactedFields: readonly string[],
-  neutralAcl: boolean, urlPrefix: string): Knex.QueryBuilder[] {
+  neutralAcl: boolean, shared: { relationshipId: string } | null): Knex.QueryBuilder[] {
   const owner = tenantDb(trx, tenant), hidden = (names: readonly string[]) => isCoManagedReadFieldHidden(redactedFields, names);
   const branches: Knex.QueryBuilder[] = [];
   for (const kind of PROJECT_SEARCH_TYPES) {
@@ -43,7 +44,10 @@ function projectRelation(trx: Knex.Transaction, tenant: string, projects: Knex.Q
     query.select('i.tenant', 'i.object_type', 'i.object_id',
       trx.raw('?::text as parent_type', [kind === 'project' ? null : 'project']),
       trx.raw((kind === 'project' ? 'NULL::text' : 'p.project_id::text') + ' as parent_id'),
-      { title, subtitle, body }, trx.raw(`? || p.project_id::text || ${suffix} as url`, [urlPrefix]), trx.raw("'{}'::jsonb as metadata"),
+      { title, subtitle, body }, (shared
+        // Shared Tasks surface addresses work by customer workspace + relationship (a locator; admission re-checks it).
+        ? trx.raw(isTask ? "'/msp/co-management/tasks/' || ?::text || '/' || ?::text || '/' || t.task_id::text as url" : "'/msp/co-management/projects/' || ?::text || '/' || ?::text || '/' || p.project_id::text as url", [tenant, shared.relationshipId])
+        : trx.raw(`'/msp/projects/' || p.project_id::text || ${suffix} as url`)), trx.raw("'{}'::jsonb as metadata"),
       ...(neutralAcl
         // Shared mode: the customer's index ACL describes customer principals and must not shape an MSP
         // reader's view. Project admission already decided access, so the ACL columns are projected neutrally.
@@ -65,6 +69,8 @@ export async function withProjectSearchAccess<T>(db: Knex, tenant: string, input
   work: (knex: Knex, searchIndex?: SearchQueryOptions['searchIndex']) => Promise<T>): Promise<T> {
   // Flag off, no entitlement or kill switch: no transaction, no session lookup; the caller's knex is untouched.
   if (!(await serves('co-managed', tenant)).served) return work(db);
+  // A served PSA sponsor is still native here: only a co_managed workspace gets the local project policy.
+  if (!await isCoManagedWorkspace(db, tenant)) return work(db);
   const authentication = await resolveAuthentication();
   const actor = { tenant, userId: inputUser.user_id, userType: inputUser.user_type };
   if (inputUser.tenant !== tenant) throw new Error('Search principal does not belong to this tenant');
@@ -76,7 +82,7 @@ export async function withProjectSearchAccess<T>(db: Knex, tenant: string, input
     // are replaced here (comments are L4c), everything else keeps its own index ACL.
     const ordinary = tenantDb(trx, tenant).table('app_search_index as i')
       .whereNotIn('i.object_type', [...PROJECT_SEARCH_TYPES, 'project_task_comment', 'time_entry']).select(COLUMNS.map(name => `i.${name}`));
-    const relation = trx.unionAll([ordinary, ...projectRelation(trx, tenant, policy.projects, policy.redactedFields, false, '/msp/projects/')], true).toSQL();
+    const relation = trx.unionAll([ordinary, ...projectRelation(trx, tenant, policy.projects, policy.redactedFields, false, null)], true).toSQL();
     const result = await work(trx, { sql: `(${relation.sql}) s`, bindings: [...relation.bindings] as Knex.RawBinding[] });
     await policy.assertCurrent();
     return result;
@@ -112,7 +118,33 @@ export async function withSharedProjectSearchAccess<T>(db: Knex, actor: CoManage
     const base = tenantDb(trx, customerTenant).table('projects').whereRaw('project_id = ANY(?::uuid[])', [ids])
       .select('tenant', 'project_id', 'client_id', 'project_name', 'description', 'created_at', 'updated_at');
     const projects = trx.from(base.as('q')).select('q.*');
-    const relation = trx.unionAll(projectRelation(trx, customerTenant, projects, [], true, '/msp/co-managed/projects/'), true).toSQL();
+    const relation = trx.unionAll(projectRelation(trx, customerTenant, projects, [], true, { relationshipId }), true).toSQL();
     return work(trx, customerTenant, { sql: `(${relation.sql}) s`, bindings: [...relation.bindings] as Knex.RawBinding[] });
+  });
+}
+
+export interface SharedProjectSearchResult {
+  results: SearchIndexHit[]; typeahead: SearchIndexHit[]; totalCount: number; groups: Record<string, number>;
+}
+
+/**
+ * One relationship's shared-project search for the Shared Tasks surface. The page, the typeahead strip and
+ * every count are produced in ONE `withSharedProjectSearchAccess` call from the SAME admitted relation, so a
+ * masked or unshared row cannot appear in any of them. The customer's ACL columns are projected neutrally
+ * (project admission already decided access), hence an internal principal with no index permissions.
+ */
+export async function searchSharedProjects(db: Knex, actor: CoManagedSessionActor, relationshipId: string,
+  input: { query: string; limit?: number }): Promise<SharedProjectSearchResult> {
+  const limit = Math.max(1, Math.min(Math.floor(Number(input.limit ?? 30)) || 30, 100));
+  return withSharedProjectSearchAccess(db, actor, relationshipId, async (knex, tenant, searchIndex) => {
+    const acl = { userId: actor.userId, tenant, permissions: [], roles: [], isInternal: true, clientAccess: { mode: 'all' as const } };
+    const base = { knex, tenant, query: input.query, allowedTypes: [...PROJECT_SEARCH_TYPES], acl, searchIndex };
+    const [results, typeahead, groups, totalCount] = await Promise.all([
+      runSearchQuery({ ...base, limit, includeSnippets: false }),
+      runSearchTypeaheadQuery(base),
+      countSearchMatchesByType(base),
+      countSearchMatches(base),
+    ]);
+    return { results, typeahead, groups: groups as Record<string, number>, totalCount };
   });
 }

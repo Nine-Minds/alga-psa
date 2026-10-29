@@ -114,3 +114,50 @@ export async function listCoManagedSharedProjectTasks(db: Knex, inputActor: CoMa
     };
   });
 }
+
+export interface CoManagedAssignedTaskRow {
+  customerTenant: string; relationshipId: string; taskId: string; taskName: string; projectName: string; organizationName: string; assigneeName: string;
+  assignedToMe: boolean; revision: number;
+}
+export interface CoManagedAssignedTaskPage { rows: CoManagedAssignedTaskRow[]; next: { referenceId: string } | null }
+
+/**
+ * The MSP's Shared Tasks queue: participation references this technician (or their teams) holds. The reference
+ * nominates; every row is re-admitted through L2 (grant, staff role, home RBAC, lifecycle), so a revoked grant or an
+ * ended relationship drops the row. Names come from the reference's own snapshots (no customer-tenant read per row).
+ * Not yet built: the working/oversight `view` split and status/due filters (see the L3c plan, step 2).
+ */
+export async function listCoManagedAssignedTasks(db: Knex, inputActor: CoManagedSessionActor,
+  options: { assigned?: 'me' | 'my_teams' | 'any'; limit?: number; after?: { referenceId: string } } = {}): Promise<CoManagedAssignedTaskPage> {
+  const actor = snapshotCoManagedSessionActor(inputActor), limit = pageSize(options.limit), assigned = options.assigned ?? 'any';
+  if (!['me', 'my_teams', 'any'].includes(assigned) || (options.after && !isCoManagedUuid(options.after.referenceId))) throw new CoManagedSharedWorkError();
+  await assertCoManagedProjectWorkServed(actor.tenant);
+  const rows: CoManagedAssignedTaskRow[] = [];
+  let cursor = options.after?.referenceId.toLowerCase() ?? null, lastReturned: string | null = null;
+  for (;;) {
+    const batch = await withTransaction(db, async trx => {
+      const subject = await lockCoManagedSessionIdentity(trx, actor), teams = [...(subject.teamIds ?? [])];
+      const query = tenantDb(trx, actor.tenant).table('co_managed_project_task_references').where('active', true).orderBy('reference_id').limit(limit);
+      query.where(scope => {
+        if (assigned === 'me' || assigned === 'any') scope.orWhere('assigned_to', actor.userId);
+        if (assigned === 'my_teams' || assigned === 'any') scope.orWhereIn('assigned_team_id', teams);
+      });
+      if (cursor) query.where('reference_id', '>', cursor);
+      return query.select('reference_id', 'customer_tenant', 'relationship_id', 'task_id', 'task_name', 'project_name', 'organization_name', 'assignee_name', 'assigned_to', 'revision');
+    });
+    for (const reference of batch) {
+      if (rows.length >= limit) return { rows, next: { referenceId: lastReturned! } };
+      cursor = reference.reference_id;
+      try {
+        await withCoManagedSharedWork(db, actor, { kind: 'project_task', tenant: reference.customer_tenant, relationshipId: reference.relationship_id, id: reference.task_id }, 'read', async () => undefined);
+      } catch (error) {
+        if (isCoManagedSharedWorkError(error)) continue;
+        throw error;
+      }
+      rows.push({ customerTenant: reference.customer_tenant, relationshipId: reference.relationship_id, taskId: reference.task_id, taskName: reference.task_name,
+        projectName: reference.project_name, organizationName: reference.organization_name, assigneeName: reference.assignee_name, assignedToMe: reference.assigned_to === actor.userId, revision: reference.revision });
+      lastReturned = reference.reference_id;
+    }
+    if (batch.length < limit) return { rows, next: null };
+  }
+}

@@ -1,6 +1,6 @@
 /**
  * CM L3c: native task-comment access is keyset-bounded. A project (or an id set) with more than the old
- * 1000-task cap is admitted whole, and unknown ids still deny the batch.
+ * 1000-task cap is admitted whole, and unknown ids are ignored (they have no comments to count).
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
@@ -12,7 +12,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
   getSecret: async (_n: string, e?: string, f = '') => (e ? process.env[e] : undefined) ?? f,
 }));
 
-import { admitCoManagedNativeTaskCommentAccess, CO_MANAGED_TASK_LOCATOR_PAGE } from '@alga-psa/co-managed/nativeTaskCommentAccess';
+import { admitCoManagedNativeTaskCommentAccess, countCoManagedNativeTaskComments, CO_MANAGED_TASK_LOCATOR_PAGE } from '@alga-psa/co-managed/nativeTaskCommentAccess';
 import { isCoManagedSharedWorkError } from '@alga-psa/co-managed/sharedWorkIdentity';
 
 const TASKS = 1200;
@@ -94,23 +94,28 @@ describe('CM L3c native task comment access beyond the old 1000-task cap', () =>
     }
   });
 
-  it('still denies an unknown task id, and a batch that contains one', async () => {
-    await db.transaction(async trx => {
-      await expect(admitCoManagedNativeTaskCommentAccess(trx, actor(), { taskIds: [uuidv4()] }, 'read')).rejects.toSatisfy(isCoManagedSharedWorkError);
-    });
-    await db.transaction(async trx => {
-      await expect(admitCoManagedNativeTaskCommentAccess(trx, actor(), { taskIds: [...big.taskIds, uuidv4()] }, 'read')).rejects.toSatisfy(isCoManagedSharedWorkError);
-    });
+  it('counts through the locator for tasks at index >= 1000 (the old cap) and ignores unknown ids', async () => {
+    const ids = [...big.taskIds, uuidv4()];
+    const counts = await countCoManagedNativeTaskComments(db, actor(), ids);
+    expect(Object.keys(counts).length).toBe(TASKS);
+    for (const index of [0, 999, 1000, 1100, TASKS - 2]) expect(counts[big.taskIds[index]]).toBe(1);
+    expect(counts[big.taskIds[TASKS - 1]]).toBe(2);
+    expect(Object.values(counts).reduce((a, b) => a + b, 0)).toBe(TASKS + 1);
+  });
+
+  it('still denies a malformed task id', async () => {
     await db.transaction(async trx => {
       await expect(admitCoManagedNativeTaskCommentAccess(trx, actor(), { taskIds: ['not-a-uuid'] }, 'read')).rejects.toSatisfy(isCoManagedSharedWorkError);
     });
   });
 
-  it('does not treat another workspace as local: a task of a different tenant is unknown', async () => {
+  it('does not treat another workspace as local: a task of a different tenant is unknown and ignored', async () => {
     const sponsorActor = sessionActor(world.sponsor, world.technician);
     await db.transaction(async trx => {
       // The sponsor's own tenant has none of the customer's task ids.
-      await expect(admitCoManagedNativeTaskCommentAccess(trx, sponsorActor, { taskIds: [other.taskIds[0]] }, 'read')).rejects.toSatisfy(isCoManagedSharedWorkError);
+      const access = await admitCoManagedNativeTaskCommentAccess(trx, sponsorActor, { taskIds: [other.taskIds[0]] }, 'read');
+      expect(access.taskIds).toEqual([]);
+      expect(() => access.hidden(other.taskIds[0], ['note'])).toThrow();
     });
   });
 });

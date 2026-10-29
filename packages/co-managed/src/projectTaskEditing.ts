@@ -1,9 +1,11 @@
+import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { snapshotCoManagedSessionActor, isCoManagedUuid, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { assertCoManagedProjectWorkServed } from './projectTaskGate';
+import { coManagedRequestHash, findCoManagedTaskReplay, recordCoManagedTaskAudit } from './projectTaskAudit';
 
 /** Fields an MSP technician may change on a customer's task. Assignment is deliberately absent:
  * it lives on the MSP reference row (projectTaskAssignments.ts), never on the customer's task. */
@@ -13,7 +15,7 @@ export type CoManagedTaskEditPatch = Partial<Record<CoManagedTaskEditField, stri
 
 /** What the caller loaded: the reference `revision` (shared-command concurrency) and the task's
  * `updated_at` as served by the loader (customer-side drift). Both are compared, never written. */
-export interface CoManagedTaskEditRequest { expectedRevision: number; expectedTaskUpdatedAt: string; patch: CoManagedTaskEditPatch }
+export interface CoManagedTaskEditRequest { /** Client-generated per submit attempt; a repeat of the same id replays the original receipt. */ operationId?: string; expectedRevision: number; expectedTaskUpdatedAt: string; patch: CoManagedTaskEditPatch }
 export interface CoManagedTaskEditReceipt { revision: number; taskUpdatedAt: string }
 export interface CoManagedTaskSnapshot { revision: number; taskUpdatedAt: string; values: CoManagedTaskEditPatch }
 
@@ -50,7 +52,8 @@ function snapshotRequest(input: CoManagedTaskEditRequest): CoManagedTaskEditRequ
     if (field === 'due_date' && value !== null && (typeof value !== 'string' || !Number.isFinite(Date.parse(value)))) invalid();
     patch[field] = value;
   }
-  return { expectedRevision: input.expectedRevision, expectedTaskUpdatedAt: new Date(input.expectedTaskUpdatedAt).toISOString(), patch };
+  if (input.operationId !== undefined && !isCoManagedUuid(input.operationId)) invalid();
+  return { operationId: input.operationId?.toLowerCase(), expectedRevision: input.expectedRevision, expectedTaskUpdatedAt: new Date(input.expectedTaskUpdatedAt).toISOString(), patch };
 }
 
 function taskResource(input: CoManagedSharedResource): CoManagedSharedResource {
@@ -112,6 +115,12 @@ export async function editCoManagedProjectTask(db: Knex, inputActor: CoManagedSe
     for (const field of Object.keys(request.patch) as CoManagedTaskEditField[]) if (fieldHidden(context.redactedFields, field)) throw new CoManagedSharedWorkError();
     const { trx } = context, home = tenantDb(trx, actor.tenant), customer = tenantDb(trx, resource.tenant);
     const reference = await referenceRow(context, true);
+    // Replay: the reference lock above serialises concurrent retries; a known operation id returns its original receipt.
+    const requestHash = coManagedRequestHash('task_edit', resource, { expectedRevision: request.expectedRevision, expectedTaskUpdatedAt: request.expectedTaskUpdatedAt, patch: request.patch });
+    if (request.operationId) {
+      const replay = await findCoManagedTaskReplay<CoManagedTaskEditReceipt>(context, request.operationId, requestHash);
+      if (replay) return replay;
+    }
     const task = await lockTask(trx, resource);
     const fresh = (): CoManagedTaskSnapshot => ({ revision: reference.revision, taskUpdatedAt: iso(task.updated_at), values: values(task, context.redactedFields) });
     // Side one: shared-command concurrency. Side two: the customer changed the task since it was loaded.
@@ -128,9 +137,41 @@ export async function editCoManagedProjectTask(db: Knex, inputActor: CoManagedSe
     const written = await lockTaskShared(trx, resource);
     const next = reference.revision + 1;
     const patchedName = request.patch.task_name;
+    // write-admission: exempt — MSP-owned participation reference (no customer data), written under the reference-row lock inside L2 admission (withCoManagedSharedWork 'update')
     await home.table('co_managed_project_task_references').where({ reference_id: reference.reference_id })
       .update({ revision: next, updated_at: trx.fn.now(), ...(patchedName ? { task_name: patchedName } : {}) });
+    const receipt = { revision: next, taskUpdatedAt: iso(written.updated_at) };
+    const changes = Object.fromEntries(Object.keys(request.patch).map(field => [field, { from: (task as any)[field] instanceof Date ? (task as any)[field].toISOString() : ((task as any)[field] ?? null), to: request.patch[field as CoManagedTaskEditField] ?? null }]));
+    await recordCoManagedTaskAudit(context, { operation: 'co_managed_project_task_update', operationId: request.operationId ?? randomUUID(), requestHash, changes, receipt });
     await context.assertCurrent();
-    return { revision: next, taskUpdatedAt: iso(written.updated_at) };
+    return receipt;
+  });
+}
+
+export interface CoManagedProjectTaskStatusOption { statusMappingId: string; name: string }
+
+/**
+ * The statuses a technician may move a shared task to: the mappings of the task's own project that are
+ * project-level or belong to the task's phase (the same scope `editCoManagedProjectTask` validates against).
+ * Display names only; the mapping id is the value the editor submits.
+ */
+export async function listCoManagedProjectTaskStatusOptions(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource): Promise<CoManagedProjectTaskStatusOption[]> {
+  const actor = snapshotCoManagedSessionActor(inputActor), resource = taskResource(inputResource);
+  await assertCoManagedProjectWorkServed(actor.tenant);
+  return withCoManagedSharedWork(db, actor, resource, 'read', async context => {
+    if (fieldHidden(context.redactedFields, 'project_status_mapping_id')) return [];
+    const customer = tenantDb(context.trx, resource.tenant);
+    const taskQuery = customer.table('project_tasks as task').where('task.task_id', resource.id);
+    customer.tenantJoin(taskQuery, 'project_phases as phase', 'task.phase_id', 'phase.phase_id');
+    const task = await taskQuery.first('task.phase_id', 'phase.project_id');
+    if (!task) throw new CoManagedSharedWorkError();
+    const query = customer.table('project_status_mappings as psm')
+      .where('psm.project_id', task.project_id)
+      .where(scope => scope.whereNull('psm.phase_id').orWhere('psm.phase_id', task.phase_id));
+    customer.tenantJoin(query, 'statuses as s', 'psm.status_id', 's.status_id', { type: 'left' });
+    customer.tenantJoin(query, 'standard_statuses as ss', 'psm.standard_status_id', 'ss.standard_status_id', { type: 'left' });
+    const rows = await query.orderBy('psm.display_order')
+      .select('psm.project_status_mapping_id', context.trx.raw('COALESCE(psm.custom_name, s.name, ss.name) as name')) as Array<{ project_status_mapping_id: string; name: string | null }>;
+    return rows.filter(row => row.name).map(row => ({ statusMappingId: row.project_status_mapping_id, name: row.name as string }));
   });
 }
