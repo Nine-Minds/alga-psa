@@ -24275,6 +24275,13 @@
                     "null"
                   ],
                   "format": "uuid"
+                },
+                "billing_mode": {
+                  "type": "string",
+                  "enum": [
+                    "commercial",
+                    "operational"
+                  ]
                 }
               },
               "required": [
@@ -24303,7 +24310,8 @@
                 "contract_line_source",
                 "contract_line_unresolved_reason",
                 "catalog_pricing_acknowledged_at",
-                "catalog_pricing_acknowledged_by"
+                "catalog_pricing_acknowledged_by",
+                "billing_mode"
               ]
             }
           }
@@ -24459,6 +24467,12 @@
                     "null"
                   ],
                   "format": "uuid"
+                },
+                "notes": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "user_name": {
                   "type": "string"
@@ -24653,6 +24667,13 @@
                           "null"
                         ],
                         "format": "uuid"
+                      },
+                      "billing_mode": {
+                        "type": "string",
+                        "enum": [
+                          "commercial",
+                          "operational"
+                        ]
                       }
                     },
                     "required": [
@@ -24681,7 +24702,8 @@
                       "contract_line_source",
                       "contract_line_unresolved_reason",
                       "catalog_pricing_acknowledged_at",
-                      "catalog_pricing_acknowledged_by"
+                      "catalog_pricing_acknowledged_by",
+                      "billing_mode"
                     ]
                   }
                 }
@@ -24695,6 +24717,7 @@
                 "submitted_at",
                 "approved_at",
                 "approved_by",
+                "notes",
                 "user_name"
               ]
             }

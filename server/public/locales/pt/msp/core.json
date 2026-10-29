@@ -109,7 +109,8 @@
     "assetsCustody": "Equipamento sob custódia",
     "ticketsCannedResponses": "Respostas prontas",
     "profile": "Perfil",
-    "signOut": "Sair"
+    "signOut": "Sair",
+    "coManaged": "TI cogerida"
   },
   "sidebar": {
     "backToMain": "Voltar ao principal",

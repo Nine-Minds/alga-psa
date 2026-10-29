@@ -79,11 +79,29 @@ export function applyBrowserPolicy({ cases, judgments = [], floorFiles = [], cha
     if (reason) selected.push({ ...entry, probability, reason });
     else deferred.push({ identity: browserIdentity(entry), probability });
   }
-  const filters = [...new Set(selected.map(entry => {
+  return { selected, deferred, filters: browserFilters(selected, cwdPrefix), threshold, cwdPrefix };
+}
+
+/** One Playwright location filter per selected case, relative to `cwdPrefix`. */
+export function browserFilters(selected, cwdPrefix = 'e2e-tests/') {
+  return [...new Set(selected.map(entry => {
     if (!Number.isInteger(entry.line)) throw new Error(`Collected case has no location: ${entry.file}`);
     return `${entry.file.startsWith(cwdPrefix) ? entry.file.slice(cwdPrefix.length) : entry.file}:${entry.line}`;
   }))].sort();
-  return { selected, deferred, filters, threshold };
+}
+
+/**
+ * The same policy restricted to the journey files a runner covers (its shard's
+ * assignment): the selected cases and the deferred cases of those files, with
+ * the filters for just those cases. The judgment itself is unchanged, so
+ * every shard of a run records one deferred list and the merge reconciles
+ * their union against the whole collection.
+ */
+export function scopeBrowserPolicy(policy, files) {
+  const scope = new Set(files);
+  const selected = policy.selected.filter(entry => scope.has(entry.file));
+  const deferred = policy.deferred.filter(entry => scope.has(entry.identity[0]));
+  return { selected, deferred, filters: browserFilters(selected, policy.cwdPrefix), threshold: policy.threshold, cwdPrefix: policy.cwdPrefix };
 }
 
 /** Journeys the provider-readiness policy requires for an edition always run. */

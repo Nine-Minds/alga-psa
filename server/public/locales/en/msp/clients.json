@@ -492,7 +492,8 @@
       "ticketClosed": "Ticket closed",
       "ticketOpened": "Ticket opened",
       "unitDelivered": "Equipment delivered"
-    }
+    },
+    "discardFeatureMessage": "You have unsaved changes in this view. Close and discard them?"
   },
   "quickAddClient": {
     "lifecycleStatus": "Lifecycle",

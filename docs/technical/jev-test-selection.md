@@ -96,6 +96,14 @@ mode, and made for the revision being tested. Anything else runs everything.
   The fresh-install gate accepts a `jev` selection only when every deferred
   identity exists in the collection, sits below the threshold, and the judgment
   revision matches; otherwise it fails as a filtered run, exactly as before.
+- The journeys run as several `browser-<n>` shards per edition
+  (`E2E_SHARD=<index>/<total>`). Each shard judges the whole collection, so
+  all derive the same selection; they partition the files with a selected
+  journey by measured weight and each runs its share as filters, recording the
+  shared judgment. `scripts/merge-browser-shards.mjs` checks the shards agree
+  on the judgment and stayed inside their files, excuses the deferred journeys
+  once, and publishes the per-edition `jev` record the gate reads. A shard
+  the partition leaves without a file publishes an empty report.
 
 ## Fallbacks
 

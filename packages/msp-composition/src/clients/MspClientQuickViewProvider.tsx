@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { ClientCrossFeatureProvider } from '@alga-psa/clients/context/ClientCrossFeatureContext';
+import { useOptionalClientCrossFeature } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import type {
   ClientCrossFeatureCallbacks,
   QuickAddTicketRenderProps,
@@ -63,6 +64,8 @@ const emptyTicketFormOptions = async (): Promise<TicketFormOptions> => ({
 });
 
 export function MspClientQuickViewProvider({ children }: { children: ReactNode }) {
+  const outer = useOptionalClientCrossFeature();
+  const renderClientCoManagedIntegration = outer?.renderClientCoManagedIntegration;
   const renderQuickAddTicket = useCallback(
     (props: QuickAddTicketRenderProps) => <QuickAddTicketRouteBridge {...props} />,
     [],
@@ -73,6 +76,7 @@ export function MspClientQuickViewProvider({ children }: { children: ReactNode }
       renderQuickAddTicket,
       renderSurveySummaryCard: noopRender,
       getSlaPolicies,
+      renderClientCoManagedIntegration,
       // The quick-view never invokes these — stubbed so the editor form options,
       // assets, and ticket-list implementations stay out of the host page's bundle.
       getTicketFormOptions: emptyTicketFormOptions,
@@ -80,7 +84,7 @@ export function MspClientQuickViewProvider({ children }: { children: ReactNode }
       renderClientTickets: noopRender,
       renderContactTickets: noopRender,
     }),
-    [renderQuickAddTicket],
+    [renderQuickAddTicket, renderClientCoManagedIntegration],
   );
 
   return <ClientCrossFeatureProvider value={value}>{children}</ClientCrossFeatureProvider>;

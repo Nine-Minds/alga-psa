@@ -4,6 +4,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
+import { admits } from '@alga-psa/core/capability';
 import { CoManagedAdmissionError, getCoManagedEntitlementState, getLicenseStateRow } from '@alga-psa/licensing';
 import { getCoManagedManagementOptions, getCoManagedManagementStatus, changeCoManagedAllocationForActor,
   getCoManagedClientManagement as readCoManagedClientManagement,
@@ -11,15 +12,21 @@ import { getCoManagedManagementOptions, getCoManagedManagementStatus, changeCoMa
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { admitCoManagedSponsor } from '../co-managed/admitSponsor';
 
-// Every action here is an enabling or management read/write, so each gates on
-// `admits` (flag AND entitlement) before touching the database.
+// Enabling and management actions gate on `admits` (flag AND entitlement) before
+// touching the database. The two overview reads (seat capacity and the client
+// table) show state that already exists, so they gate on `serves`: a served but
+// not admitted sponsor sees a read-only overview. Only an admitted sponsor has
+// its co-management grants (re)applied.
+async function admitSponsorWhenAdmitted(tenant: string): Promise<void> {
+  if ((await admits('co-managed', tenant)).admitted) await admitCoManagedSponsor(tenant);
+}
 
 /** Seat capacity for the sponsor, used to hint whether another workspace fits.
  * Purchase flows are deliberately absent: capacity comes from the entitlement row. */
 export const getCoManagedBillingState = withAuth(async (user, { tenant }) => {
-  await requireCapabilityForAction('co-managed', tenant, 'admits');
+  await requireCapabilityForAction('co-managed', tenant, 'serves');
   if (user.user_type !== 'internal') throw new Error('Permission denied');
-  await admitCoManagedSponsor(tenant);
+  await admitSponsorWhenAdmitted(tenant);
   const canReadRelationships = await hasPermission(user, 'co_management', 'read');
   if (!canReadRelationships && !await hasPermission(user, 'account_management', 'read')) throw new Error('Permission denied');
   const { knex } = await createTenantKnex(tenant);
@@ -51,8 +58,8 @@ export const getCoManagedProvisioningStatus = withAuth(async (user, { tenant }, 
 
 /** Authorized cross-client overview table. */
 export const getCoManagedClientOverviewAction = withAuth(async (user, { tenant }, input: { search?: string; page?: number; pageSize?: number } = {}) => {
-  await requireCapabilityForAction('co-managed', tenant, 'admits');
-  if (user.user_type === 'internal') await admitCoManagedSponsor(tenant);
+  await requireCapabilityForAction('co-managed', tenant, 'serves');
+  if (user.user_type === 'internal') await admitSponsorWhenAdmitted(tenant);
   if (user.user_type !== 'internal' || !await hasPermission(user, 'co_management', 'read')) throw new Error('Permission denied');
   const actor = await coManagedBrowserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);

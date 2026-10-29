@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { applyBrowserPolicy, applyIntegrationPolicy, loadJevSelection, providerFloorFiles } from '../lib/jev-enforcement.mjs';
+import { applyBrowserPolicy, applyIntegrationPolicy, loadJevSelection, providerFloorFiles, scopeBrowserPolicy } from '../lib/jev-enforcement.mjs';
 
 const revision = 'a'.repeat(40);
 
@@ -82,6 +82,15 @@ test('browser policy forces floor and changed journeys, runs unjudged cases, and
   assert.deepEqual(policy.filters, ['tests/invoice-generation.spec.ts:12', 'tests/login.spec.ts:5', 'tests/microsoft-calendar.spec.ts:20',
     'tests/new-journey.spec.ts:3', 'tests/portal-identity.spec.ts:7', 'tests/qbo-export.spec.ts:9']);
   assert.throws(() => applyBrowserPolicy({ cases: [{ ...cases[0], line: undefined }], judgments: [], threshold: 0.5 }), /no location/);
+  // A shard scopes the same judgment to its files: its selected and deferred
+  // cases, its filters, the threshold unchanged.
+  const scoped = scopeBrowserPolicy(policy, ['e2e-tests/tests/invoice-generation.spec.ts', 'e2e-tests/tests/login.spec.ts']);
+  assert.deepEqual(scoped.selected.map(entry => entry.titles[0]), ['signs in', 'generates']);
+  assert.deepEqual(scoped.deferred, policy.deferred);
+  assert.deepEqual(scoped.filters, ['tests/invoice-generation.spec.ts:12', 'tests/login.spec.ts:5']);
+  assert.equal(scoped.threshold, 0.5);
+  assert.deepEqual(scopeBrowserPolicy(policy, ['e2e-tests/tests/qbo-export.spec.ts']).deferred, []);
+  assert.deepEqual(scopeBrowserPolicy(policy, []), { selected: [], deferred: [], filters: [], threshold: 0.5, cwdPrefix: 'e2e-tests/' });
 });
 
 test('the provider floor is every journey file the readiness policy names for an edition', () => {
