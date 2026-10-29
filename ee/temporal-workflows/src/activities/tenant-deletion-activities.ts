@@ -56,12 +56,12 @@ export {
  * Synced from cli/cleanup-tenant.nu
  */
 export const TENANT_TABLES_DELETION_ORDER: string[] = [
-  // rma_cases has a NO ACTION FK to asset_custody (rma_cases_custody_fk) plus FKs to clients/assets/
-  // stock_units/tickets deleted later, so rma_events (FK to rma_cases) then rma_cases go first.
-  'rma_events',
-  'rma_cases',
   'email_sender_routes',
   'email_sender_addresses',
+  // rma_cases has a NO ACTION FK to asset_custody (rma_cases_custody_fk) plus FKs to clients/assets/
+  // stock_units/tickets deleted later, so rma_events (FK to rma_cases) then rma_cases precede asset_custody.
+  'rma_events',
+  'rma_cases',
   'asset_custody_events',
   'asset_custody',
   'sessions',

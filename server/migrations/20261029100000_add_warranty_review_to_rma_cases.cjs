@@ -17,8 +17,9 @@
  * - closed cases backfill closed_reason = 'resolved'
  *
  * Split in three so each step is safe on a live table (migration-lint rules 1, 2, 3, 5):
- *   1. this file: nullable columns, and every CHECK re-stated NOT VALID (plus rma_number IS NOT NULL)
- *   2. 20261029100100: batched backfill of closed_reason, rma_number and next_number
+ *   1. this file: nullable columns, and every CHECK re-stated NOT VALID
+ *   2. 20261029100100: batched backfill of closed_reason, rma_number and next_number, then the rma_number
+ *      presence CHECK (NOT VALID; it cannot exist earlier because UPDATEs re-check NOT VALID constraints)
  *   3. 20261029100200 (transaction: false): VALIDATE the CHECKs, build the indexes CONCURRENTLY,
  *      SET NOT NULL on rma_number, add the composite FKs
  *
@@ -76,11 +77,6 @@ exports.up = async function up(knex) {
   await knex.raw(
     `ALTER TABLE rma_cases ADD CONSTRAINT rma_cases_denial_reason_check CHECK (warranty_outcome IS DISTINCT FROM 'not_covered' OR (denial_reason IS NOT NULL AND length(btrim(denial_reason)) > 0)) NOT VALID`
   );
-
-  // Proves rma_number is never NULL once the backfill has run; validated, then promoted to a real NOT NULL
-  // by 20261029100200 (the validated CHECK lets SET NOT NULL skip its table scan).
-  await knex.raw('ALTER TABLE rma_cases DROP CONSTRAINT IF EXISTS rma_cases_rma_number_present_check');
-  await knex.raw('ALTER TABLE rma_cases ADD CONSTRAINT rma_cases_rma_number_present_check CHECK (rma_number IS NOT NULL) NOT VALID');
 };
 
 exports.down = async function down(knex) {

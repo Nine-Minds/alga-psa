@@ -287,6 +287,8 @@ let manifestIndex: Map<string, TenantTableEntry> | undefined;
 export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'email_sender_routes', deletion: 'ordered' },
   { table: 'email_sender_addresses', deletion: 'ordered' },
+  { table: 'rma_events', deletion: 'ordered' },
+  { table: 'rma_cases', deletion: 'ordered', clientKeyed: true },
   { table: 'asset_custody_events', deletion: 'ordered' },
   { table: 'asset_custody', deletion: 'ordered', clientKeyed: true },
   { table: 'sessions', deletion: 'ordered' },
@@ -294,7 +296,6 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'staging_containers', deletion: 'ordered', scope: { scope: 'tenant' } },
   { table: 'stock_movements', deletion: 'ordered' },
   { table: 'stock_transfer_lines', deletion: 'ordered' },
-  { table: 'rma_cases', deletion: 'ordered', clientKeyed: true },
   { table: 'kit_components', deletion: 'ordered' },
   { table: 'stock_levels', deletion: 'ordered' },
   { table: 'product_inventory_settings', deletion: 'ordered' },

@@ -88,6 +88,10 @@ exports.up = async function up(knex) {
     ) m
     WHERE n.tenant = m.tenant AND n.entity_type = 'RMA'
   `);
+
+  // Every row is numbered now. Added NOT VALID (validated, then promoted to NOT NULL, by step 3).
+  await knex.raw('ALTER TABLE rma_cases DROP CONSTRAINT IF EXISTS rma_cases_rma_number_present_check');
+  await knex.raw('ALTER TABLE rma_cases ADD CONSTRAINT rma_cases_rma_number_present_check CHECK (rma_number IS NOT NULL) NOT VALID');
 };
 
 exports.down = async function down() {
