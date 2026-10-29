@@ -36,6 +36,86 @@ const detail: ContactDetail = {
   additional_email_addresses: [{ contact_additional_email_address_id: "e1", email_address: "jd@personal.test", canonical_type: "personal" }],
 };
 
+describe("contact locations", () => {
+  const linked: ContactDetail = {
+    ...detail,
+    work_arrangement: "on_site",
+    locations: [
+      { location_id: "loc-warehouse", location_name: "Warehouse", is_primary: true, is_active: true },
+      { location_id: "loc-head", location_name: "Head office", is_primary: false, is_active: true },
+    ],
+  };
+
+  it("loads the links and the work arrangement from the contact", () => {
+    const values = contactFormFromDetail(linked);
+    expect(values.workArrangement).toBe("on_site");
+    expect(values.locations).toEqual([
+      { location_id: "loc-warehouse", is_primary: true },
+      { location_id: "loc-head", is_primary: false },
+    ]);
+  });
+
+  it("refuses two primaries, as the partial unique index would", () => {
+    const values = {
+      ...emptyContactForm({ id: "client-1", name: "Acme" }),
+      fullName: "Jane Doe",
+      email: "jane@acme.test",
+      locations: [
+        { location_id: "loc-warehouse", is_primary: true },
+        { location_id: "loc-head", is_primary: true },
+      ],
+    };
+    const check = validateContactForm(values, t, "US");
+    expect(check.errors.locations).toBe("Only one location can be the primary one.");
+    expect(hasContactErrors(check)).toBe(true);
+  });
+
+  it("makes a single link the primary and sends the set on create", () => {
+    const values = {
+      ...emptyContactForm({ id: "client-1", name: "Acme" }),
+      fullName: "Jane Doe",
+      email: "jane@acme.test",
+      workArrangement: "remote" as const,
+      locations: [{ location_id: "loc-warehouse" }],
+    };
+    expect(buildContactCreatePayload(values, "US")).toMatchObject({
+      work_arrangement: "remote",
+      locations: [{ location_id: "loc-warehouse", is_primary: true }],
+    });
+  });
+
+  it("omits both fields on create when neither was touched", () => {
+    const payload = buildContactCreatePayload(
+      { ...emptyContactForm(null), fullName: "Jane Doe", email: "jane@acme.test" },
+      "US",
+    );
+    expect(payload).not.toHaveProperty("locations");
+    expect(payload).not.toHaveProperty("work_arrangement");
+  });
+
+  it("sends nothing on update when the set is unchanged, whatever its order", () => {
+    const values = contactFormFromDetail(linked);
+    expect(buildContactUpdatePayload(values, linked, "US")).toEqual({});
+    const reordered = { ...values, locations: [...values.locations].reverse() };
+    expect(buildContactUpdatePayload(reordered, linked, "US")).toEqual({});
+  });
+
+  it("sends the empty set when a client change cleared the selection", () => {
+    const values = { ...contactFormFromDetail(linked), clientId: "client-2", locations: [] };
+    expect(buildContactUpdatePayload(values, linked, "US")).toMatchObject({
+      client_id: "client-2",
+      locations: [],
+    });
+  });
+
+  it("sends a changed work arrangement, including back to unset", () => {
+    const values = { ...contactFormFromDetail(linked), workArrangement: "remote" as const };
+    expect(buildContactUpdatePayload(values, linked, "US")).toMatchObject({ work_arrangement: "remote" });
+    expect(buildContactUpdatePayload({ ...contactFormFromDetail(linked), workArrangement: null }, linked, "US"))
+      .toMatchObject({ work_arrangement: null });
+  });
+});
+
 describe("contact form", () => {
   it("starts attached to the preset client with one empty phone row", () => {
     const values = emptyContactForm({ id: "client-1", name: "Acme" });

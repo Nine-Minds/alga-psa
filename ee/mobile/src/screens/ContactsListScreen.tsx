@@ -318,6 +318,7 @@ const ContactRow = memo(function ContactRow({
   const fullName = item.full_name;
   const handlePress = useCallback(() => onPress(contactId, fullName), [contactId, fullName, onPress]);
   const reachLine = getContactReachLine(item);
+  const locationLine = contactPrimaryLocationLabel(item, t("list.remote", { defaultValue: "Remote" }));
 
   return (
     <Pressable
@@ -356,9 +357,9 @@ const ContactRow = memo(function ContactRow({
             {reachLine}
           </Text>
         ) : null}
-        {contactPrimaryLocationLabel(item) ? (
+        {locationLine ? (
           <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }} numberOfLines={1}>
-            {contactPrimaryLocationLabel(item)}
+            {locationLine}
           </Text>
         ) : null}
       </View>

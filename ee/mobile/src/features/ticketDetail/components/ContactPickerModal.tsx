@@ -46,6 +46,7 @@ export function ContactPickerModal({
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
+  const remoteLabel = t("contactPicker.remote", { defaultValue: "Remote" });
 
   const [contacts, setContacts] = useState<ContactListItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -263,9 +264,9 @@ export function ContactPickerModal({
                     {contact.email ? (
                       <Text style={{ ...typography.caption, color: colors.textSecondary }}>{contact.email}</Text>
                     ) : null}
-                    {contactPrimaryLocationLabel(contact) ? (
+                    {contactPrimaryLocationLabel(contact, remoteLabel) ? (
                       <Text style={{ ...typography.caption, color: colors.textSecondary }}>
-                        {contactPrimaryLocationLabel(contact)}
+                        {contactPrimaryLocationLabel(contact, remoteLabel)}
                       </Text>
                     ) : null}
                   </View>

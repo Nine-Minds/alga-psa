@@ -501,7 +501,8 @@
     "apply": "Change contact",
     "unableToLoad": "Unable to load contacts.",
     "noResults": "No contacts found.",
-    "create": "New contact"
+    "create": "New contact",
+    "remote": "Remote"
   },
   "dueDateModal": {
     "title": "Due date",

@@ -41,6 +41,9 @@ export type ClientLocation = {
   phone_extension?: string | null;
   email?: string | null;
   is_default?: boolean;
+  is_active?: boolean;
+  /** How many contacts work here; also why deleting the location would be refused. */
+  contact_count?: number;
 };
 
 export type ListClientsParams = {

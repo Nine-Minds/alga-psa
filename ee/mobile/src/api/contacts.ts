@@ -246,16 +246,20 @@ export function getContactReachLine(contact: ContactListItem): string | null {
 
 /**
  * The one-line "where this person works" label for a list or picker row: the primary location name
- * (with "+N" when there are more), or "Remote" for a remote worker with no links, or nothing. Never
- * the client's default location — that is a guess the rows should not make.
+ * (with "+N" when there are more), or the caller's own translated "Remote" for a remote worker with
+ * no links, or nothing. Never the client's default location — that is a guess the rows should not
+ * make, and never display English either: `remoteLabel` comes from the screen's translator.
  */
-export function contactPrimaryLocationLabel(contact: ContactListItem): string | null {
+export function contactPrimaryLocationLabel(
+  contact: ContactListItem,
+  remoteLabel: string,
+): string | null {
   const locations = contact.locations ?? [];
   const primary = locations.find((location) => location.is_primary)
     ?? (locations.length === 1 ? locations[0] : null);
   const name = primary?.location_name?.trim();
   if (name) return locations.length > 1 ? `${name} +${locations.length - 1}` : name;
-  return contact.work_arrangement === "remote" ? "Remote" : null;
+  return contact.work_arrangement === "remote" ? remoteLabel : null;
 }
 
 export function buildContactAvatarUri(

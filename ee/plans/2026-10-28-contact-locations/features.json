@@ -493,7 +493,7 @@
     "prdRefs": [
       "FR-G3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ContactFormModal work-arrangement select and location multi-select with primary toggle loaded from /api/v1/clients/{id}/locations, enabled once a client is set; contactForm validation enforces at most one primary"
   },
   {

@@ -712,7 +712,7 @@
     "featureIds": [
       "F053"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "api/contacts.test: getContact parses locations[] and work_arrangement; createContact and updateContact send them when provided"
   },
   {
@@ -739,7 +739,7 @@
     "featureIds": [
       "F055"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ContactFormModal loads the client's locations once a client is set, lets the user pick two and mark one primary, and submits locations with the primary flag"
   },
   {
@@ -748,7 +748,7 @@
     "featureIds": [
       "F055"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "contactForm.test: two primaries is a validation error; changing the client clears the selection and the diff payload sends locations []"
   },
   {
@@ -757,7 +757,7 @@
     "featureIds": [
       "F056"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ContactsListScreen row and ContactPickerModal row show the primary location name and nothing when unlinked"
   },
   {
