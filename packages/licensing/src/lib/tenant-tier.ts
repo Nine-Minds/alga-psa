@@ -10,11 +10,27 @@
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { type TenantTier, resolveTier } from '@alga-psa/types';
-import { getLicenseStateRow, resolveSelfHostTier } from './license-state';
+import { getLicenseStateRow, resolveSelfHostTier, type SelfHostLicenseInput } from './license-state';
+import { getTenantOwnLicenseInput } from './tenant-license-state';
 
 export function hasActiveSoloProTrial(value?: string | null): boolean {
   if (!value) return false;
   return new Date(value).getTime() > Date.now();
+}
+
+/**
+ * The self-host licence record that governs `tenantId`: its own signed claim when one is staged
+ * (config-gated), otherwise the installation singleton; null on a hosted install. Tier resolution
+ * and seat enforcement both read it, so a workspace cannot be licensed by one record and metered
+ * by another. Strictly additive: hosted installs issue no claim lookup, and ANY failure of that
+ * lookup is "no claim" — it must never become a catch-all downgrade to 'essentials' (DO-NOT-PORT
+ * #14). A failure to read the installation row itself propagates; callers keep their own policy.
+ */
+export async function getEffectiveSelfHostLicenseInput(tenantId: string): Promise<SelfHostLicenseInput | null> {
+  const installation = await getLicenseStateRow();
+  if (!installation) return null;
+  const own = await getTenantOwnLicenseInput(tenantId, await getAdminConnection()).catch(() => null);
+  return own ?? installation;
 }
 
 /**
@@ -30,7 +46,7 @@ export async function resolveTenantTier(tenantId: string): Promise<TenantTier> {
     // Pass the request's tenant so a tenant-bound license that was issued for a
     // different install resolves to essentials (license_wrong_tenant) instead of
     // unlocking its tier here.
-    const selfHost = resolveSelfHostTier(await getLicenseStateRow(), tenantId);
+    const selfHost = resolveSelfHostTier(await getEffectiveSelfHostLicenseInput(tenantId), tenantId);
     if (selfHost !== null) {
       return selfHost.tier;
     }

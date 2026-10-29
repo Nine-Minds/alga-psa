@@ -98,7 +98,7 @@ export async function checkInternalUserLicenseLimit(
   const seatLimit = await (async () => {
     try {
       const { checkApplianceLicenseSeatLimit } = await import('@enterprise/lib/license/userSeatGuard');
-      return await checkApplianceLicenseSeatLimit(used);
+      return await checkApplianceLicenseSeatLimit(used, tenant);
     } catch {
       return null;
     }
