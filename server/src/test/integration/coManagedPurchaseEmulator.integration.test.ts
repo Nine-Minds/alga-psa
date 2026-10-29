@@ -17,6 +17,7 @@ import { EmulatorHost } from '@alga-psa/emulator-host';
 import stripeEmulator from '@alga-psa/emulator-stripe';
 import { tenantDb } from '@alga-psa/db';
 import { getCoManagedEntitlementState } from '../../../../packages/licensing/src/lib/co-managed-entitlements';
+import { runCoManagedPurchase } from '../../../../packages/licensing/src/lib/co-managed-purchases';
 import { StripeService } from '@ee/lib/stripe/StripeService';
 
 const holder = vi.hoisted(() => ({ db: null as unknown as Knex }));
@@ -186,5 +187,26 @@ describe('co-managed purchase against the Stripe emulator', () => {
     await service.purchaseCoManagedSeats(tenant, 3, operationId);
     expect((await state('subscriptions')).filter((subscription) => subscription.metadata?.subscription_kind === 'co_managed')).toHaveLength(1);
     expect(await sponsor.table('co_managed_purchase_operations').where({ operation_id: operationId }).first('state')).toMatchObject({ state: 'completed' });
+  }, HOOK_TIMEOUT);
+  it('refuses a reduction below allocated seats, a second in-flight purchase, and a changed quantity (A5)', async () => {
+    const { tenant, sponsor } = await sponsorFixture();
+    await sponsor.table('co_managed_entitlements').insert({ tenant, source: 'hosted', source_reference: 'sub_seed', capacity: 6,
+      verified_at: new Date(), valid_until: new Date(Date.now() + 3600_000) });
+    await sponsor.table('co_managed_allocations').insert({ tenant, allocation_id: randomUUID(), operation_id: randomUUID(),
+      request_fingerprint: 'a'.repeat(64), customer_tenant: randomUUID(), relationship_id: randomUUID(), seats: 4, state: 'active' });
+
+    const never = async () => { throw new Error('provider must not be called'); };
+    await expect(runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: randomUUID(), quantity: 3 }, never))
+      .rejects.toMatchObject({ code: 'ALLOCATED_CAPACITY_REQUIRED' });
+
+    const first = randomUUID();
+    const pending = async () => ({ kind: 'checkout' as const, sessionId: 'cs_pending', clientSecret: 'secret' });
+    await runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: first, quantity: 8 }, pending);
+    await expect(runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: randomUUID(), quantity: 9 }, never))
+      .rejects.toMatchObject({ code: 'PURCHASE_IN_PROGRESS' });
+    await expect(runCoManagedPurchase(db, { sponsorTenant: tenant, operationId: first, quantity: 9 }, never))
+      .rejects.toMatchObject({ code: 'OPERATION_CONFLICT' });
+    // Nothing above raised capacity: only verified reconciliation does.
+    expect(await getCoManagedEntitlementState(db, tenant)).toMatchObject({ capacity: 6, allocated: 4 });
   }, HOOK_TIMEOUT);
 });
