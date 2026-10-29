@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { Auth } from '@auth/core';
 import { createLocalJWKSet, decodeJwt, jwtVerify } from 'jose';
-import { afterAll, beforeAll, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import msgraphEmulator from '../src/index';
 import { MsGraphCore } from '../src/core';
@@ -21,8 +21,11 @@ beforeAll(async () => {
   await fetch(`http://127.0.0.1:${controlPort}/control/msgraph/seed/client`, {
     method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ clientId, clientSecret }),
   });
-  vi.stubEnv('MICROSOFT_LOGIN_BASE_URL', base);
 });
+// Per test, not in beforeAll: server/src/test/setup.ts sweeps
+// vi.unstubAllEnvs() after every unit test, so a stub established once would
+// send every later provider to the default simulator port instead.
+beforeEach(() => { vi.stubEnv('MICROSOFT_LOGIN_BASE_URL', base); });
 afterAll(async () => { vi.unstubAllEnvs(); await host.stop(); });
 
 async function authorization(nonce = 'request-nonce', challenge?: string) {
@@ -94,7 +97,11 @@ it('binds an authorization code to its original user despite another account sig
   expect(decodeJwt(tokens.id_token!)).toMatchObject({ sub: 'first-admin', email: 'first@example.test', nonce: 'first-nonce' });
 });
 
-it.each(['issuer', 'audience', 'signature'] as const)('the application provider rejects an ID token with a forged %s', async field => {
+it.each([
+  ['issuer', 'ERR_JWT_CLAIM_VALIDATION_FAILED'],
+  ['audience', 'ERR_JWT_CLAIM_VALIDATION_FAILED'],
+  ['signature', 'ERR_JWS_SIGNATURE_VERIFICATION_FAILED'],
+] as const)('the application provider rejects an ID token with a forged %s', async (field, code) => {
   const tokens = await (await redeem(await authorization())).json();
   const claims = decodeJwt(tokens.id_token);
   if (field === 'issuer') claims.iss = `${base}/another-tenant/v2.0`;
@@ -106,7 +113,9 @@ it.each(['issuer', 'audience', 'signature'] as const)('the application provider 
     forged = parts.join('.');
   }
   const provider = buildMicrosoftSsoEmulatorProvider({ clientId, clientSecret, authority: tenant, profile: async profile => profile });
-  await expect(provider.token.conform(new Response(JSON.stringify({ ...tokens, id_token: forged })))).rejects.toThrow();
+  // The verification error itself, so an unreachable JWKS cannot pass this.
+  await expect(provider.token.conform(new Response(JSON.stringify({ ...tokens, id_token: forged }))))
+    .rejects.toMatchObject({ code });
 });
 
 it('the application provider rejects a correctly signed expired ID token', async () => {
