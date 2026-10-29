@@ -8,7 +8,7 @@ vi.mock('./tenant-license-state', () => ({ getTenantOwnLicenseInput: state.own }
 vi.mock('@alga-psa/db/admin', () => ({ getAdminConnection: async () => { state.admin(); return {}; } }));
 vi.mock('@alga-psa/db', () => ({ tenantDb: () => ({ table: () => ({ select: () => ({ first: async () => ({ plan: state.plan }) }) }) }) }));
 
-import { resolveTenantTier } from './tenant-tier';
+import { getEffectiveSelfHostLicenseInput, resolveTenantTier } from './tenant-tier';
 
 beforeEach(() => {
   state.installation = null; state.plan = 'pro';
@@ -50,5 +50,27 @@ describe('resolveTenantTier — tier resolution on errors is unchanged', () => {
     state.resolveSelfHost.mockImplementation(() => { throw new Error('boom'); });
     state.plan = 'pro';
     expect(await resolveTenantTier('t')).toBe('pro');
+  });
+});
+
+describe('getEffectiveSelfHostLicenseInput — one governing record for tier and seats', () => {
+  it('is null on a hosted install and issues no claim lookup', async () => {
+    expect(await getEffectiveSelfHostLicenseInput('t')).toBeNull();
+    expect(state.own).not.toHaveBeenCalled();
+  });
+
+  it("prefers the tenant's own claim, else the installation row", async () => {
+    state.installation = { id: 1 };
+    state.own.mockResolvedValue(null);
+    expect(await getEffectiveSelfHostLicenseInput('t')).toBe(state.installation);
+    const own = { license_scope: 'tenant' };
+    state.own.mockResolvedValue(own);
+    expect(await getEffectiveSelfHostLicenseInput('t')).toBe(own);
+  });
+
+  it('a failing claim lookup is "no claim", never an error', async () => {
+    state.installation = { id: 1 };
+    state.own.mockRejectedValue(new Error('relation "tenant_license_state" does not exist'));
+    expect(await getEffectiveSelfHostLicenseInput('t')).toBe(state.installation);
   });
 });
