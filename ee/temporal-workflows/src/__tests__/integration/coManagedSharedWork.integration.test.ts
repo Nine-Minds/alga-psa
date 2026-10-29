@@ -69,9 +69,10 @@ let migrationWork: string;
 const databaseName = `co_managed_l2_${randomUUID().replaceAll('-', '')}`.slice(0, 60);
 
 beforeAll(async () => {
+  const inheritedDbPort = process.env.DB_PORT; // CI's DB env, before the local wiring overwrites it
   wireLocalTestDbEnv();
-  // wireLocalTestDbEnv points at the shared 5472 instance; the card's own dev database is 5474.
-  process.env.DB_PORT = process.env.CO_MANAGED_TEST_DB_PORT ?? '5474';
+  // wireLocalTestDbEnv hardcodes 5472; locally set CO_MANAGED_TEST_DB_PORT=5474 for the card database. CI's DB_PORT is respected.
+  process.env.DB_PORT = process.env.CO_MANAGED_TEST_DB_PORT ?? inheritedDbPort ?? '5432';
   process.env.NEXTAUTH_SECRET = 'co-managed-integration-test-secret';
   process.env.CAPABILITY_CACHE_TTL_MS = '0';
   // The real gate, with the release flag as the only seam: eligibility, participation and product code are the real rows.
