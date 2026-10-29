@@ -60,7 +60,7 @@ export async function resolveInteractionBrowserActor(user: IUser, tenant: string
 /** After-commit event publication for provider commands; a failed search event never fails the write. */
 export const publishInteractionEvent: InteractionEventPublisher = async event => {
   try {
-    await publishEvent({ eventType: event.eventType, payload: { ...event.payload, timestamp: new Date().toISOString() } } as any);
+    await publishEvent({ eventType: event.eventType, payload: { ...event.payload, timestamp: new Date().toISOString() } });
   } catch (eventError) {
     console.error(`[coManagedInteractionReader] Failed to publish ${event.eventType} event:`, eventError);
   }

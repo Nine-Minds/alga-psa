@@ -93,6 +93,7 @@ async function prepareAppointmentMeeting(db: Knex, tenant: string, intent: Appoi
     const active = await owner.table(TABLE).where('appointment_request_id', input.id).whereNull('completed_at').forUpdate().first();
     if (active && (active.purpose !== intent.purpose || active.requested_by !== actor.userId || active.request_fingerprint !== fingerprint)) throw new MeetingCreationOperationConflict();
     const operationId = active?.operation_id ?? randomUUID();
+    // write-admission: exempt — co-managed meeting-creation operation log, written by its owning state machine under the operation row lock
     if (!active) await owner.table(TABLE).insert({ tenant, operation_id: operationId, appointment_request_id: input.id, requested_by: actor.userId,
       credential_kind: actor.kind, credential_id: actor.kind === 'session' ? actor.sessionId : actor.apiKeyId, purpose: intent.purpose, approval_input: JSON.stringify(input),
       request_fingerprint: fingerprint, creation_target: JSON.stringify(target), provider_request: JSON.stringify(providerRequest), status: 'prepared' });

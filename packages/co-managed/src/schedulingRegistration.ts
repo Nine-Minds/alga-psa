@@ -11,6 +11,7 @@
  *   'interaction'      readInteractions readInteractionMeeting createInteraction updateInteraction deleteInteraction
  *   'meetingDocuments' admitMeetingDocuments
  *   'meetingArtifacts' consumeMeetingArtifact
+ *   'meetingReconciliation' recoverAppointmentMeeting synchronizeScheduleMeeting   (Teams sweep)
  */
 import { sharedWorkSeam } from '@alga-psa/shared/utils/sharedWorkSeam';
 import { readCoManagedNativeSchedules } from './nativeScheduleRead';
@@ -18,7 +19,8 @@ import { commandCoManagedNativeSchedule } from './nativeScheduleCommand';
 import { readCoManagedNativeAppointmentRequests } from './nativeAppointmentRequest';
 import { declineCoManagedNativeAppointment, rescheduleCoManagedNativeAppointment } from './nativeAppointmentRequestCommand';
 import { approveCoManagedNativeAppointment, associateCoManagedNativeAppointmentTicket } from './nativeAppointmentApproval';
-import { approveCoManagedAppointmentWithMeeting, generateCoManagedAppointmentMeeting, type AppointmentMeetingProvider } from './appointmentMeetingCreation';
+import { approveCoManagedAppointmentWithMeeting, generateCoManagedAppointmentMeeting, recoverCoManagedAppointmentMeeting, type AppointmentMeetingProvider } from './appointmentMeetingCreation';
+import { synchronizeNativeScheduleMeeting } from './nativeScheduleMeetingSync';
 import { readCoManagedNativeInteractions } from './nativeInteractionRead';
 import { createCoManagedNativeInteraction, updateCoManagedNativeInteraction, deleteCoManagedNativeInteraction } from './nativeInteractionCommand';
 import { readCoManagedInteractionMeeting, admitCoManagedMeetingDocuments, consumeCoManagedMeetingArtifact } from './nativeMeetingRead';
@@ -47,12 +49,17 @@ export const coManagedInteractionProvider = {
 
 export const coManagedMeetingDocumentsProvider = { admitMeetingDocuments: admitCoManagedMeetingDocuments };
 export const coManagedMeetingArtifactsProvider = { consumeMeetingArtifact: consumeCoManagedMeetingArtifact };
+export const coManagedMeetingReconciliationProvider = {
+  recoverAppointmentMeeting: recoverCoManagedAppointmentMeeting,
+  synchronizeScheduleMeeting: synchronizeNativeScheduleMeeting,
+};
 
 const registrations = {
   scheduling: coManagedSchedulingProvider,
   interaction: coManagedInteractionProvider,
   meetingDocuments: coManagedMeetingDocumentsProvider,
   meetingArtifacts: coManagedMeetingArtifactsProvider,
+  meetingReconciliation: coManagedMeetingReconciliationProvider,
 } as const;
 
 /** Idempotent: a seam that already has a provider is left alone (hot reload, duplicate bundles). */

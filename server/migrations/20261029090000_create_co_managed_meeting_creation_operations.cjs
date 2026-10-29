@@ -9,11 +9,22 @@
 // The identity/disclosure-payload immutability trigger is on this NEW table
 // only (Citus skips triggers; the app also never updates those columns).
 // Nothing here touches an existing table.
-const { ensureTenantDistribution, supportsTriggers } = require('./utils/citusDistribution.cjs');
+const { ensureTenantDistribution, hasCitus, supportsTriggers } = require('./utils/citusDistribution.cjs');
 
 const TABLE = 'co_managed_meeting_creation_operations';
 
 exports.up = async function up(knex) {
+  // Function DDL first: Citus propagates CREATE FUNCTION over one connection per
+  // node and refuses it once this transaction has run a parallel operation on a
+  // distributed table (create_distributed_table, CREATE INDEX on its shards).
+  await knex.raw(`CREATE OR REPLACE FUNCTION preserve_co_managed_meeting_creation_identity() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+    IF ROW(NEW.tenant, NEW.operation_id, NEW.appointment_request_id, NEW.requested_by, NEW.credential_kind, NEW.credential_id, NEW.purpose, NEW.approval_input, NEW.request_fingerprint, NEW.creation_target, NEW.provider_request, NEW.created_at)
+      IS DISTINCT FROM ROW(OLD.tenant, OLD.operation_id, OLD.appointment_request_id, OLD.requested_by, OLD.credential_kind, OLD.credential_id, OLD.purpose, OLD.approval_input, OLD.request_fingerprint, OLD.creation_target, OLD.provider_request, OLD.created_at) THEN
+      RAISE EXCEPTION 'Meeting creation identity and disclosure payload are immutable' USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+  END $$`);
+
   if (!(await knex.schema.hasTable(TABLE))) {
     await knex.schema.createTable(TABLE, (table) => {
       table.uuid('tenant').notNullable();
@@ -61,13 +72,6 @@ exports.up = async function up(knex) {
     [TABLE]
   );
 
-  await knex.raw(`CREATE OR REPLACE FUNCTION preserve_co_managed_meeting_creation_identity() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
-    IF ROW(NEW.tenant, NEW.operation_id, NEW.appointment_request_id, NEW.requested_by, NEW.credential_kind, NEW.credential_id, NEW.purpose, NEW.approval_input, NEW.request_fingerprint, NEW.creation_target, NEW.provider_request, NEW.created_at)
-      IS DISTINCT FROM ROW(OLD.tenant, OLD.operation_id, OLD.appointment_request_id, OLD.requested_by, OLD.credential_kind, OLD.credential_id, OLD.purpose, OLD.approval_input, OLD.request_fingerprint, OLD.creation_target, OLD.provider_request, OLD.created_at) THEN
-      RAISE EXCEPTION 'Meeting creation identity and disclosure payload are immutable' USING ERRCODE = '23514';
-    END IF;
-    RETURN NEW;
-  END $$`);
   if (await supportsTriggers(knex, TABLE)) {
     await knex.raw('DROP TRIGGER IF EXISTS preserve_co_managed_meeting_creation_identity ON ??', [TABLE]);
     await knex.raw(
@@ -78,11 +82,16 @@ exports.up = async function up(knex) {
 };
 
 exports.down = async function down(knex) {
-  if (await knex.schema.hasTable(TABLE)) {
-    if (await knex(TABLE).first('operation_id')) {
-      throw new Error('Cannot discard retained meeting creation operations; export or reconcile them before rollback');
-    }
-    await knex.schema.dropTable(TABLE);
+  // The retained-row probe and the DROP TABLE both touch every shard; keep them
+  // on one connection per node so the function DDL below may share the transaction.
+  if (await hasCitus(knex)) await knex.raw("SET LOCAL citus.multi_shard_modify_mode TO 'sequential'");
+  const exists = await knex.schema.hasTable(TABLE);
+  if (exists && (await knex(TABLE).first('operation_id'))) {
+    throw new Error('Cannot discard retained meeting creation operations; export or reconcile them before rollback');
+  }
+  if (exists && (await supportsTriggers(knex, TABLE))) {
+    await knex.raw('DROP TRIGGER IF EXISTS preserve_co_managed_meeting_creation_identity ON ??', [TABLE]);
   }
   await knex.raw('DROP FUNCTION IF EXISTS preserve_co_managed_meeting_creation_identity()');
+  if (exists) await knex.schema.dropTable(TABLE);
 };

@@ -1,6 +1,6 @@
 import logger from '@alga-psa/core/logger';
-import { serves } from '@alga-psa/core/capability';
 import { getConnection } from '@alga-psa/db';
+import { sharedWorkSeam } from '@alga-psa/shared/utils/sharedWorkSeam';
 import { OnlineMeetingModel } from '@alga-psa/clients/models';
 import {
   fetchAndPersistMeetingArtifacts,
@@ -49,19 +49,31 @@ async function loadEeTeamsMeetingConfigModule(): Promise<EeTeamsMeetingConfigMod
 }
 
 /**
+ * Verbs the co-managed provider registers on the 'meetingReconciliation' seam
+ * (packages/co-managed/src/schedulingRegistration.ts). Typed loosely here so this
+ * native module never names the co-managed package.
+ */
+interface MeetingReconciliationProvider {
+  recoverAppointmentMeeting(db: unknown, tenant: string, operationId: string, provider: unknown, publish: unknown): Promise<unknown>;
+  synchronizeScheduleMeeting(db: unknown, operation: { tenant: string; meetingId: string; operationId: string }, deliver: unknown): Promise<unknown>;
+}
+
+const meetingReconciliationSeam = sharedWorkSeam<MeetingReconciliationProvider>('meetingReconciliation');
+
+/**
  * Co-managed durable meeting work (appointment creation recovery, calendar sync intents).
  *
- * Isolation contract: the participation verdict is read first (cached, no SQL, no co-managed
- * import); only a served tenant reaches any co-managed SQL, and the co-managed package is loaded
- * lazily here and nowhere at module scope. Any failure (package unresolved, table or columns
- * absent, provider error) is logged and swallowed so the native sweep always runs.
+ * Isolation contract: the provider is reached through the shared-work seam, which answers null
+ * with no SQL when nothing is registered and otherwise consults the cached participation verdict
+ * first; only a served tenant reaches any co-managed SQL. Any failure (verdict unavailable, table
+ * or columns absent, provider error) is logged and swallowed so the native sweep always runs.
  */
 async function reconcileCoManagedMeetings(tenantId: string): Promise<void> {
   try {
-    if (!(await serves('co-managed', tenantId)).served) return;
+    const reconciliation = await meetingReconciliationSeam.resolve(tenantId);
+    if (!reconciliation) return;
 
-    const [reconciliation, appointments, schedule] = await Promise.all([
-      import('@alga-psa/co-managed/meetingReconciliation'),
+    const [appointments, schedule] = await Promise.all([
       import('@alga-psa/scheduling/lib/appointmentMeetingCreation'),
       import('@alga-psa/scheduling/lib/scheduleMeetingSynchronization'),
     ]);
@@ -73,7 +85,7 @@ async function reconcileCoManagedMeetings(tenantId: string): Promise<void> {
       const publish = await appointments.appointmentReconciliationPublisher();
       for (const operationId of operationIds) {
         try {
-          await reconciliation.recoverCoManagedAppointmentMeeting(db, tenantId, operationId, provider, publish);
+          await reconciliation.recoverAppointmentMeeting(db, tenantId, operationId, provider, publish);
         } catch (error) {
           logger.warn('[TeamsMeetingSweep] Co-managed meeting creation recovery failed', {
             tenantId, operationId, error: error instanceof Error ? error.message : String(error),
@@ -87,7 +99,7 @@ async function reconcileCoManagedMeetings(tenantId: string): Promise<void> {
       const deliver = await schedule.scheduleMeetingSyncDelivery();
       for (const sync of syncs) {
         try {
-          await reconciliation.synchronizeNativeScheduleMeeting(db, { tenant: tenantId, ...sync }, deliver);
+          await reconciliation.synchronizeScheduleMeeting(db, { tenant: tenantId, ...sync }, deliver);
         } catch (error) {
           logger.warn('[TeamsMeetingSweep] Co-managed schedule meeting sync failed', {
             tenantId, meetingId: sync.meetingId, error: error instanceof Error ? error.message : String(error),

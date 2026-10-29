@@ -62,6 +62,7 @@ async function beginCreation(db: Knex, tenant: string, operationId: string, iden
   return withTransaction(db, async trx => {
     const row = await retainCreation(trx, tenant, operationId, identify);
     if (row.status !== 'prepared') return false;
+    // write-admission: exempt — co-managed meeting-creation operation log, written by its owning state machine under the operation row lock
     await tenantDb(trx, tenant).table(TABLE).where('operation_id', operationId).update({ status: 'uncertain', external_attempted_at: trx.fn.now(),
       attempt_count: row.attempt_count + 1, next_attempt_at: trx.raw("now() + interval '2 minutes'"), updated_at: trx.fn.now() });
     return true;
@@ -81,6 +82,7 @@ async function executeCreation(db: Knex, tenant: string, operationId: string, id
     const created = event?.joinWebUrl && meetingId;
     // Receipt bookkeeping must survive expiry DURING the irreversible provider
     // effect. Fresh authorization is required in the separate attachment tx.
+    // write-admission: exempt — co-managed meeting-creation operation log, written by its owning state machine under the operation row lock
     await tenantDb(trx, tenant).table(TABLE).where('operation_id', operationId).update({
       status: created ? 'created' : outcome.status === 'skipped' ? 'cleaned' : 'cleanup_pending',
       event_receipt: event ? JSON.stringify(event) : null, provider_meeting_id: meetingId,
@@ -100,6 +102,7 @@ async function requestCreationCleanup(db: Knex, tenant: string, operationId: str
     const row = await owner.table(TABLE).where('operation_id', operationId).forUpdate().first();
     if (!row || row.completed_at) return;
     const untouched = row.status === 'prepared' && !row.external_attempted_at;
+    // write-admission: exempt — co-managed meeting-creation operation log, written by its owning state machine under the operation row lock
     await owner.table(TABLE).where('operation_id', operationId).update({ status: untouched ? 'abandoned' : 'cleanup_pending',
       completed_at: untouched ? trx.fn.now() : null, next_attempt_at: trx.fn.now(), updated_at: trx.fn.now() });
   });
@@ -134,6 +137,7 @@ async function attachCreation(db: Knex, tenant: string, operationId: string, ide
     }
     await owner.table('appointment_requests').where('appointment_request_id', row.appointment_request_id).update({ online_meeting_id: row.provider_meeting_id,
       online_meeting_provider: 'teams', online_meeting_url: event.joinWebUrl, updated_at: trx.fn.now() });
+    // write-admission: exempt — co-managed meeting-creation operation log, written by its owning state machine under the operation row lock
     await owner.table(TABLE).where('operation_id', operationId).update({ status: 'attached', meeting_id: meetingId, completed_at: trx.fn.now(), updated_at: trx.fn.now() });
     const retained = await retainNativeAppointmentRequest(trx, actor, credential.subject, row.appointment_request_id);
     const view = await nativeAppointmentRequestView(trx, actor, credential.subject, retained);
@@ -218,6 +222,7 @@ export async function recoverCoManagedAppointmentMeeting(db: Knex, tenant: strin
     if (!await owner.table(TABLE).where('operation_id', operationId).where('next_attempt_at', '<=', trx.raw('clock_timestamp()')).first('operation_id')) return { status: 'deferred' as const };
     if (row.status === 'prepared') {
       if (await owner.table(TABLE).where('operation_id', operationId).where('created_at', '<=', trx.raw("clock_timestamp() - interval '15 minutes'")).first('operation_id')) {
+        // write-admission: exempt — co-managed meeting-creation operation log, written by its owning state machine under the operation row lock
         await owner.table(TABLE).where('operation_id', operationId).update({ status: 'abandoned', completed_at: trx.fn.now(), updated_at: trx.fn.now() });
         return { status: 'abandoned' as const };
       }
@@ -236,6 +241,7 @@ export async function recoverCoManagedAppointmentMeeting(db: Knex, tenant: strin
       if (status === 'cleanup_pending' && event) terminal = (await provider.remove(event)).status === 'deleted';
       else if (event?.joinWebUrl && meetingId) status = 'created';
     } catch { /* Persist a bounded retry, never a raw transport error. */ }
+    // write-admission: exempt — co-managed meeting-creation operation log, written by its owning state machine under the operation row lock
     await owner.table(TABLE).where('operation_id', operationId).update({ status: terminal ? 'cleaned' : status,
       event_receipt: event ? JSON.stringify(event) : null, provider_meeting_id: meetingId, completed_at: terminal ? trx.fn.now() : null,
       attempt_count: Math.min(2147483647, row.attempt_count + 1), last_error_code: terminal || status === 'created' ? null : 'creation_recovery_pending',
