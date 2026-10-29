@@ -1,7 +1,8 @@
 import type { CoManagedSharedWorkSummary, CoManagedDisplayReference } from '@alga-psa/co-managed';
+import type { IComment, CommentAudience } from '@alga-psa/types';
 import { nativeTicketDataSource } from '@alga-psa/tickets/lib/nativeTicketDataSource';
 import {
-  composeTicketDataSource, NO_TICKET_CAPABILITIES,
+  composeTicketDataSource, NO_TICKET_CAPABILITIES, TICKET_SCREEN_FIELDS,
   type TicketDataSource, type TicketDataSourceOverrides,
 } from '@alga-psa/tickets/lib/ticketDataSource';
 
@@ -13,8 +14,11 @@ import {
  *
  * Read-only (`screen.readOnly`), every optional section absent
  * (`NO_TICKET_CAPABILITIES`). Data the summary does not carry (description,
- * people, comments, documents, ...) is the empty shape the seam allows;
- * conversations arrive with L4a. Any method that would write throws.
+ * people, documents, ...) is the empty shape the seam allows. Any method that
+ * would write throws, except conversation writes when a `SharedTicketConversation`
+ * is supplied: then the conversation is read and posted through it (every audience
+ * through the co-managed writer, since the ticket lives in a foreign tenant) while
+ * every ticket field stays frozen.
  */
 export class CoManagedReadOnlyTicketError extends Error {
   constructor(group: string, method: string) {
@@ -22,6 +26,22 @@ export class CoManagedReadOnlyTicketError extends Error {
     this.name = 'CoManagedReadOnlyTicketError';
   }
 }
+
+/** What the screen needs from a loaded shared conversation; `createSharedConversationSession` satisfies it. */
+export interface SharedTicketConversation {
+  load(): Promise<unknown>;
+  comments(): IComment[];
+  /** Audiences the viewer may write to; empty means the conversation is read-only. */
+  writeAudiences(): readonly CommentAudience[];
+  write(message: { content: string; audience: CommentAudience; parentCommentId?: string }): Promise<IComment>;
+  /** Audience of an existing comment, for a reply that inherits its thread's audience. */
+  audienceOf?(commentId: string): CommentAudience | undefined;
+}
+
+const AUDIENCES: readonly string[] = ['requester', 'shared_it', 'organization_private'];
+/** Same shape the native actions return for a failure, so the screen's existing handling reports it. */
+const actionError = (message: string) => ({ actionError: message }) as never;
+const messageOf = (error: unknown) => error instanceof Error ? error.message : 'Failed to add comment';
 
 const ref = (value: unknown): CoManagedDisplayReference | null =>
   value && typeof value === 'object' && 'id' in value ? value as CoManagedDisplayReference : null;
@@ -68,20 +88,48 @@ function group(name: (typeof idKeyedGroups)[number], reads: Group = {}): Group {
 const none = async () => [];
 const nothing = async () => null;
 
-export function createCoManagedSharedTicketDataSource(summary: CoManagedSharedWorkSummary, backHref: string): TicketDataSource {
+export function createCoManagedSharedTicketDataSource(summary: CoManagedSharedWorkSummary, backHref: string, conversation?: SharedTicketConversation): TicketDataSource {
   const record = sharedTicketRecord(summary);
+  const audiences = conversation?.writeAudiences() ?? [];
+  const writable = audiences.length > 0;
+  // Fail closed: only an audience the composer offered is written; a missing one is never inferred from `is_internal`.
+  const post = async (content: string, audience: unknown, parentCommentId?: string | null) => {
+    if (!conversation) throw new CoManagedReadOnlyTicketError('comments', 'create');
+    const chosen = typeof audience === 'string' && AUDIENCES.includes(audience) ? audience as CommentAudience
+      : parentCommentId ? conversation.audienceOf?.(parentCommentId) : undefined;
+    if (!chosen || !audiences.includes(chosen)) throw new Error('Choose who can see this comment before posting it.');
+    return conversation.write({ content, audience: chosen, ...(parentCommentId ? { parentCommentId } : {}) });
+  };
+  const addComment = async (_ticketId: string, content: string, _isInternal: boolean, isResolution?: boolean, _closes?: boolean,
+    _suppression?: unknown, schedule?: unknown, _recipients?: unknown, audienceId?: string | null) => {
+    // Resolution and scheduling are native-only; the shared command cannot honor them.
+    if (isResolution || schedule) return actionError('This comment cannot be posted.');
+    try { return await post(content, audienceId); } catch (error) { return actionError(messageOf(error)); }
+  };
+  const conversationReads: Group = conversation ? {
+    findCommentsByTicketId: async () => { await conversation.load(); return conversation.comments(); },
+    findCommentById: async (id: string) => conversation.comments().find(comment => comment.comment_id === id) ?? null,
+    createComment: async (comment: IComment) => {
+      try { return (await post(comment.note ?? '', comment.collaboration_audience, comment.parent_comment_id)).comment_id; } catch (error) { return actionError(messageOf(error)); }
+    },
+    addTicketCommentWithCache: addComment,
+    addTicketCommentWithCacheForCurrentUser: addComment,
+  } : {};
   const overrides = {
     kind: 'co-managed-shared',
     boundTicketId: summary.resource.id,
     capabilities: NO_TICKET_CAPABILITIES,
-    screen: { readOnly: true, backHref, refresh: () => { if (typeof window !== 'undefined') window.location.reload(); } },
+    // Writable only for the conversation: every ticket field is frozen, and the ticket groups below still refuse writes.
+    screen: { readOnly: !writable, backHref, ...(writable ? { frozenFields: TICKET_SCREEN_FIELDS } : {}),
+      refresh: () => { if (typeof window !== 'undefined') window.location.reload(); } },
+    conversation: writable ? { audiences } : {},
     ticket: group('ticket', {
       getTicketById: async (id: string) => id === record.ticket_id ? record : null,
       findBoardById: async () => null, getRecurringSourceForTicket: nothing, getScheduledHoursForTicket: async () => 0,
       getTicketAppointmentRequests: none, getAdjacentTicketIds: async () => ({ previous: null, next: null }),
     }),
-    // Conversations are L4a: no comments yet, and nothing to react to.
-    comments: group('comments', { findCommentsByTicketId: none, findCommentById: nothing, getCommentsReactionsBatch: async () => ({}) }),
+    // Without a conversation: no comments, and nothing to react to.
+    comments: group('comments', { findCommentsByTicketId: none, findCommentById: nothing, getCommentsReactionsBatch: async () => ({ reactions: {}, userNames: {} }), ...conversationReads }),
     people: group('people', { findUserById: nothing, getAllUsers: none, getAllActiveContacts: none, getContactByContactNameId: nothing,
       getContactsByClient: none, getClientById: nothing, getAllClients: none, getClientLocations: none, getClientBillingProfiles: none }),
     resources: group('resources', { getTicketResources: none, getTeamById: nothing, getTeams: none }),
