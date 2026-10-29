@@ -14,6 +14,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
+import { truncateTeamDescription } from '@alga-psa/ui/lib/utils';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -234,7 +235,14 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
                 avatarUrl={teamAvatars[team.team_id] ?? null}
                 size="sm"
               />
-              <span className="truncate">{team.team_name}</span>
+              <span className="flex flex-col flex-1 min-w-0">
+                <span className="truncate">{team.team_name}</span>
+                {team.description && (
+                  <span className="text-xs font-normal text-muted-foreground truncate" title={team.description}>
+                    {truncateTeamDescription(team.description)}
+                  </span>
+                )}
+              </span>
             </button>
             <Button
               id={`delete-team-${team.team_id}-btn`}
