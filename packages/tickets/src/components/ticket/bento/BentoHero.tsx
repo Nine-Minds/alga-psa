@@ -1,5 +1,6 @@
 'use client';
 
+import { ticketCreatorName } from '../ticketCreatorName';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PartialBlock } from '@blocknote/core';
 import { Pencil, SlidersHorizontal, Flame, Save, CheckCircle, Plus, Tag } from 'lucide-react';
@@ -230,9 +231,7 @@ export function BentoHero({
   const { searchUsersForMentions } = dataSource.viewer;
   const activityCrossFeature = useOptionalActivityCrossFeature();
   // A local creator is a user row; a shared ticket's creator arrives as an attributed display name (null-safe either way).
-  const openedByName = createdByUser
-    ? [createdByUser.first_name, createdByUser.last_name].map(part => part?.trim()).filter(Boolean).join(' ') || null
-    : (typeof ticket.created_by_display_name === 'string' && ticket.created_by_display_name.trim()) || null;
+  const openedByName = ticketCreatorName(createdByUser, ticket);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);

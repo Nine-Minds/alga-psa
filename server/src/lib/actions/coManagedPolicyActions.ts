@@ -2,7 +2,7 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
+import { CapabilityUnavailableError, requireCapabilityForAction } from '@alga-psa/core/capability/server';
 import { CoManagedPolicyError, coManagedDisplayName, requireCoManagedPolicyReader, evaluateCoManagedAccess, getCoManagedCollaborationPolicy, hasCoManagedLocalPermission,
   loadCoManagedLifecycleFacts, loadCoManagedStaffRoles, replaceCoManagedCustomerScope, replaceCoManagedStaffAssignments,
   type CoManagedCustomerScope, type CoManagedStaffAssignment } from '@alga-psa/co-managed';
@@ -10,9 +10,12 @@ import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { admitCoManagedSponsor } from '../co-managed/admitSponsor';
 import { resolveCoManagedRelationshipTarget } from '../co-managed/relationshipTarget';
 
-// Policy administration spans both sides of a relationship (the customer edits
-// its grants, the sponsor edits staff assignments), so each action gates on
-// `admits` and the access-policy library decides which side may do what.
+// Policy administration spans both sides of a relationship (the customer edits its grants, the
+// sponsor edits staff assignments). The gate is by side: a customer workspace needs `serves`, a
+// sponsor needs `admits` (and is the only side admitted into the permission catalog). Because the
+// side is only known after the relationship is resolved, setup() first requires that some mode
+// holds (so a closed capability costs no co-managed query), then asserts the side's own mode.
+// The access-policy library still decides which side may do what.
 
 type Failure = { ok: false; errorCode: 'FORBIDDEN' | 'PERMISSION_DENIED' | 'INVALID_POLICY' | 'POLICY_CHANGED' | 'RESOURCE_NOT_FOUND' };
 const refusal = (error: unknown): Failure => {
@@ -22,12 +25,22 @@ const refusal = (error: unknown): Failure => {
 };
 
 async function setup(user: { user_id: string; user_type?: string }, tenant: string, relationshipId: string) {
-  await requireCapabilityForAction('co-managed', tenant, 'admits');
+  // LEVERAGE: pattern capability-either-mode — a two-sided action needs "whichever mode holds"; a second such action should extract an adapter next to requireCapabilityForAction (and teach the entry-point contract about it).
+  // `admits` first and short-circuiting: an admitted sponsor needs no participation read, and a forced-off or flag-off
+  // non-participating tenant is refused here, before any co-managed table is read.
+  let held: 'admits' | 'serves' = 'admits';
+  try { await requireCapabilityForAction('co-managed', tenant, 'admits'); }
+  catch (error) {
+    if (!(error instanceof CapabilityUnavailableError)) throw error;
+    held = 'serves';
+    await requireCapabilityForAction('co-managed', tenant, 'serves');
+  }
   if (user.user_type !== 'internal') throw new CoManagedPolicyError('FORBIDDEN');
   const { knex } = await createTenantKnex(tenant);
-  await admitCoManagedSponsor(tenant, knex);
-  const actor = await coManagedBrowserActor(user, tenant);
   const target = await resolveCoManagedRelationshipTarget(knex, tenant, relationshipId);
+  if (held !== (target.side === 'sponsor' ? 'admits' : 'serves')) throw new CapabilityUnavailableError();
+  if (target.side === 'sponsor') await admitCoManagedSponsor(tenant, knex);
+  const actor = await coManagedBrowserActor(user, tenant);
   return { knex, actor: { tenant: actor.tenant, userId: actor.userId }, target };
 }
 

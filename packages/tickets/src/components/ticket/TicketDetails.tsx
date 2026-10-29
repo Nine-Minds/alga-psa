@@ -4927,6 +4927,7 @@ const handleClose = () => {
                                         void handleContactChange(value === 'none' ? null : value)
                                     }
                                     className="!w-full"
+                                    disabled={dataSource.screen.readOnly === true}
                                 />
                             </div>
                             <div>
@@ -4947,6 +4948,7 @@ const handleClose = () => {
                                         void handleLocationChange(value === 'none' ? null : value)
                                     }
                                     className="!w-full"
+                                    disabled={dataSource.screen.readOnly === true}
                                 />
                             </div>
                         </div>

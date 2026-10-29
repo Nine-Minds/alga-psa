@@ -18,11 +18,21 @@ import { getCoManagedSharedWorkSummary, listCoManagedCustomerTickets } from '../
 import { saveCoManagedDelegatedGrant, revokeCoManagedDelegatedGrant, executeCoManagedDelegatedCommand, getCoManagedDelegatedScreen,
   coManagedDelegatedReceipts, CoManagedDelegationError } from '../../../../../packages/co-managed/src/delegatedAdministration';
 import { prepareNativeAccessOperation } from './helpers/coManagedFixtures';
+import '../../../../../packages/co-managed/src/capability';
+import { registerFeatureFlagChecker } from '../../../../../packages/core/src/lib/features';
+import { clearCapabilityCache } from '../../../../../packages/core/src/capability/testing';
 
 // Same substitutions as coManagedProvisioning.integration.test.ts: transport and framework seams only.
 // No authentication, permission, lifecycle or policy function is replaced.
 const delivery = vi.hoisted(() => ({ send: vi.fn() }));
-const actorState = vi.hoisted(() => ({ user: null as any }));
+const actorState = vi.hoisted(() => ({ user: null as any, session: null as any }));
+const flag = vi.hoisted(() => ({ on: true }));
+const admission = vi.hoisted(() => ({ fn: null as any }));
+vi.mock('../../../../../server/src/lib/co-managed/admitSponsor', async importOriginal => {
+  const actual = await importOriginal<typeof import('../../../../../server/src/lib/co-managed/admitSponsor')>();
+  admission.fn = vi.fn(actual.admitCoManagedSponsor);
+  return { ...actual, admitCoManagedSponsor: admission.fn };
+});
 const appliance = vi.hoisted(() => ({ check: vi.fn(async () => ({ seats: 0 })) }));
 vi.mock('@alga-psa/db', async importOriginal => {
   const actual = await importOriginal<typeof import('@alga-psa/db')>();
@@ -38,6 +48,7 @@ vi.mock('@alga-psa/auth', async () => ({
   shouldTouchApiKeyLastUsed: (await import('../../../../../packages/auth/src/services/apiKeyService')).shouldTouchApiKeyLastUsed,
   checkPortalInvitationLimit: async () => ({ success: true }), formatRateLimitError: async () => 'Rate limited',
   verifyAuthenticator: async () => false,
+  getSession: async () => actorState.session, getApiKeyUserOverride: () => null,
 }));
 vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: async () => actorState.user }));
 vi.mock('@alga-psa/user-composition/lib/permissions', () => ({ hasPermission: async () => true }));
@@ -62,6 +73,9 @@ beforeAll(async () => {
   // wireLocalTestDbEnv points at the shared 5472 instance; the card's own dev database is 5474.
   process.env.DB_PORT = process.env.CO_MANAGED_TEST_DB_PORT ?? '5474';
   process.env.NEXTAUTH_SECRET = 'co-managed-integration-test-secret';
+  process.env.CAPABILITY_CACHE_TTL_MS = '0';
+  // The real gate, with the release flag as the only seam: eligibility, participation and product code are the real rows.
+  registerFeatureFlagChecker(async () => flag.on);
   process.env.NEXT_PUBLIC_BASE_URL = 'https://app.example.test';
   const root = path.resolve(__dirname, '../../../../..');
   migrationWork = mkdtempSync(path.join(tmpdir(), 'co-managed-schema-'));
@@ -82,7 +96,7 @@ afterAll(async () => {
   } finally { await admin.destroy(); if (migrationWork) rmSync(migrationWork, { recursive: true, force: true }); }
 });
 
-afterEach(() => { delete process.env.FORCE_CAPABILITIES; });
+afterEach(() => { delete process.env.FORCE_CAPABILITIES; flag.on = true; clearCapabilityCache(); });
 
 type Session = { kind: 'session'; tenant: string; userId: string; sessionId: string };
 
@@ -352,5 +366,103 @@ describe.sequential('(d) the psa budget', () => {
     expect(captured.length).toBeGreaterThan(0);
     expect(JSON.stringify(data)).toContain('hello'); // the comment read really happened on this path
     expect(captured.filter(sql => COMANAGED_TABLE.test(sql))).toEqual([]);
+  });
+});
+
+
+// The real capability gate (flag + entitlement + product code), real actions, real rows. Only the session
+// lookup and the release-flag provider are seams.
+describe.sequential('policy actions gate by relationship side', () => {
+  const COMANAGED_TABLE = /\b(co_management_\w+|co_managed_\w+|collaboration_actor_references)\b/i;
+  const asUser = async (tenant: string, userId: string) => {
+    const user = await tenantDb(db, tenant).table('users').where({ user_id: userId }).first();
+    actorState.user = { tenant, user_id: userId, user_type: user.user_type, username: user.username, email: user.email };
+    actorState.session = { session_id: randomUUID(), user: { tenant, id: userId, user_type: user.user_type } };
+  };
+  const actions = async () => import('../../../../../server/src/lib/actions/coManagedPolicyActions');
+  const sessionOf = async (w: World, tenant: string, userId: string) => {
+    await asUser(tenant, userId);
+    const sessionId = actorState.session.session_id;
+    await tenantDb(db, tenant).table('sessions').insert({ tenant, session_id: sessionId, user_id: userId, expires_at: new Date(Date.now() + 3600000) });
+  };
+  const capture = async <T>(work: () => Promise<T>) => {
+    const seen: string[] = [];
+    const watch = (query: { sql: string }) => seen.push(query.sql);
+    db.on('query', watch);
+    try { return { value: await work(), seen }; } finally { db.removeListener('query', watch); }
+  };
+
+  it('(a)(b)(c) a co_managed customer reads and edits its own policy; removal revokes the MSP user on the next request', async () => {
+    const w = await world();
+    const a = await actions();
+    await sessionOf(w, w.customerTenant, w.customerAdmin.userId);
+    const read = await a.getCoManagedPolicyAction(w.relationshipId) as any;
+    expect(read).toMatchObject({ ok: true, side: 'customer' });
+    expect(read.policy.boards).toEqual([expect.objectContaining({ id: w.boardId, canCollaborate: true })]);
+    const save = (revision: number, scope: any) => a.replaceCoManagedCustomerScopeAction(w.relationshipId, revision, scope) as Promise<any>;
+    const view = await save(read.policy.revision, { visibilityMode: 'board_scope', boards: [{ id: w.boardId, canCollaborate: false }], projects: [] });
+    expect(view.ok).toBe(true);
+    expect(view.revision).toBeGreaterThan(read.policy.revision);
+    expect(await listed(w, w.MT.actor)).toEqual([w.ticketId]); // View still shares the ticket
+    const escalation = await save(view.revision, { visibilityMode: 'escalation_only', boards: [{ id: w.boardId, canCollaborate: false }], projects: [] });
+    expect(escalation.revision).toBeGreaterThan(view.revision);
+    expect(await listed(w, w.MT.actor)).toEqual([]);
+    const back = await save(escalation.revision, { visibilityMode: 'board_scope', boards: [{ id: w.boardId, canCollaborate: true }], projects: [] });
+    expect(back.ok).toBe(true);
+    expect(await listed(w, w.MT.actor)).toEqual([w.ticketId]);
+    const removed = await save(back.revision, { visibilityMode: 'board_scope', boards: [], projects: [] });
+    expect(removed.revision).toBeGreaterThan(back.revision);
+    await denied(getCoManagedSharedWorkSummary(db, w.MT.actor, w.resource));
+    expect(await listed(w, w.MT.actor)).toEqual([]);
+    // The customer side never runs the sponsor admission (its entitlement row lock).
+    admission.fn.mockClear();
+    await a.getCoManagedPolicyAction(w.relationshipId);
+    expect(admission.fn).not.toHaveBeenCalled();
+  });
+
+  it('(e) the sponsor side still passes admits and still runs the sponsor admission', async () => {
+    const w = await world();
+    const a = await actions();
+    await sessionOf(w, w.sponsorTenant, w.admin.userId);
+    admission.fn.mockClear();
+    const value = await a.getCoManagedPolicyAction(w.relationshipId) as any;
+    expect(value).toMatchObject({ ok: true, side: 'sponsor' });
+    expect(admission.fn).toHaveBeenCalledWith(w.sponsorTenant, expect.anything());
+  });
+
+  it('(d) the kill switch closes both sides with zero co-managed queries', async () => {
+    const w = await world();
+    const a = await actions();
+    process.env.FORCE_CAPABILITIES = 'co-managed:off';
+    for (const [tenant, userId] of [[w.customerTenant, w.customerAdmin.userId], [w.sponsorTenant, w.admin.userId]] as const) {
+      await sessionOf(w, tenant, userId);
+      const { seen, value } = await capture(() => a.getCoManagedPolicyAction(w.relationshipId).then(() => null, (e: any) => e));
+      expect((value as any)?.code).toBe('CAPABILITY_UNAVAILABLE');
+      expect(seen.filter(sql => COMANAGED_TABLE.test(sql))).toEqual([]);
+    }
+  });
+
+  it('(d) flag off refuses the sponsor; the customer is still served; a psa tenant with no entitlement never reaches the policy tables', async () => {
+    const w = await world();
+    const a = await actions();
+    flag.on = false;
+    await sessionOf(w, w.sponsorTenant, w.admin.userId);
+    const sponsorError = await a.getCoManagedPolicyAction(w.relationshipId).then(() => null, (e: any) => e);
+    expect(sponsorError?.code).toBe('CAPABILITY_UNAVAILABLE');
+    // serves has no flag by design: an existing customer workspace keeps working.
+    await sessionOf(w, w.customerTenant, w.customerAdmin.userId);
+    expect(await a.getCoManagedPolicyAction(w.relationshipId)).toMatchObject({ ok: true, side: 'customer' });
+    // A psa tenant that was never entitled: refused, and nothing beyond the gate's own resolver reads is issued.
+    const plain = { tenant: randomUUID(), requested_by: randomUUID(), relationship_id: randomUUID() };
+    await tenantDb(db, plain.tenant).table('tenants').insert({ tenant: plain.tenant, client_name: 'Plain MSP', email: `plain-${plain.tenant}@example.test`, plan: 'pro', product_code: 'psa' });
+    await tenantDb(db, plain.tenant).table('users').insert({ tenant: plain.tenant, user_id: plain.requested_by, username: `plain-${plain.requested_by}`,
+      email: `plain-${plain.requested_by}@example.test`, first_name: 'Plain', last_name: 'Admin', hashed_password: 'x', user_type: 'internal', is_inactive: false });
+    for (const on of [false, true]) {
+      flag.on = on; clearCapabilityCache();
+      await sessionOf(w, plain.tenant, plain.requested_by);
+      const { seen, value } = await capture(() => a.getCoManagedPolicyAction(plain.relationship_id).then(() => null, (e: any) => e));
+      expect((value as any)?.code).toBe('CAPABILITY_UNAVAILABLE');
+      expect(seen.filter(sql => /co_management_(board|project|staff|policy|scopes)|co_managed_provisioning_operations|co_management_relationships.*relationship_id/i.test(sql) && !/distinct/i.test(sql))).toEqual([]);
+    }
   });
 });
