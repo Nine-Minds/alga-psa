@@ -459,6 +459,10 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_management_delegated_grants',
   'co_management_project_scopes',
   'co_management_staff_assignments',
+  // Org-private notes (author tenant): comments -> threads -> receipts, ahead of the actor references they cite.
+  'co_management_private_comments',
+  'co_management_private_threads',
+  'co_management_private_command_receipts',
   'collaboration_actor_references',
   'co_managed_participation_evidence',
   'co_management_relationships',
