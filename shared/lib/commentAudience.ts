@@ -116,7 +116,7 @@ export async function nativeThreadAudience(
   if (named == null && (input.isInternal || input.authorType !== 'internal')) return {};
   if (!(await isCoManagedWorkspace(trx, tenant))) return {};
   if (named == null) throw new CoManagedAudienceRequiredError();
-  return { collaboration_audience: named };
+  return { collaboration_audience: named as NativeCommentAudience };
 }
 
 /**
