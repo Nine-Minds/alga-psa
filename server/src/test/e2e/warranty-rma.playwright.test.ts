@@ -9,6 +9,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { inflateSync } from 'node:zlib';
 import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import {
   createTestDbConnection,
   createTenantAndLogin,
@@ -32,10 +33,45 @@ interface World {
   locationId: string;
 }
 
+/**
+ * createTenantAndLogin only grants the admin ticket/user/client permissions, but the warranty/RMA panel and
+ * manager actions check warranty, asset, inventory, etc. Grant every MSP permission in the catalog to the
+ * role(s) the admin holds. Idempotent: existing permission and role_permission rows are left alone.
+ */
+async function grantAllMspPermissions(db: Knex, tenantId: string, adminUserId: string): Promise<number> {
+  const requireFromRoot = createRequire(process.cwd() + '/package.json');
+  const { ACTIVE_PERMISSIONS } = requireFromRoot('./migrations/utils/permissions/catalog.cjs') as {
+    ACTIVE_PERMISSIONS: Array<{ resource: string; action: string; msp?: boolean }>;
+  };
+  const unique = new Map<string, { resource: string; action: string }>();
+  for (const p of ACTIVE_PERMISSIONS) {
+    if (p.msp) unique.set(`${p.resource}:${p.action}`, { resource: p.resource, action: p.action });
+  }
+  const roleIds: string[] = (await db('user_roles').where({ tenant: tenantId, user_id: adminUserId }).select('role_id')).map(
+    (r: { role_id: string }) => r.role_id
+  );
+  for (const { resource, action } of unique.values()) {
+    let row = await db('permissions').where({ tenant: tenantId, resource, action, msp: true }).first('permission_id');
+    if (!row) {
+      row = { permission_id: uuidv4() };
+      await db('permissions').insert({ permission_id: row.permission_id, tenant: tenantId, resource, action, msp: true, client: false });
+    }
+    for (const roleId of roleIds) {
+      await db('role_permissions')
+        .insert({ tenant: tenantId, role_id: roleId, permission_id: row.permission_id })
+        .onConflict()
+        .ignore();
+    }
+  }
+  return unique.size;
+}
+
 async function seedWorld(db: Knex, data: TenantTestData): Promise<World> {
   const tenantId = data.tenant.tenantId;
   const clientId = data.client!.clientId;
   const userId = data.adminUser.userId;
+
+  await grantAllMspPermissions(db, tenantId, userId);
 
   await db('asset_statuses')
     .insert(
@@ -193,7 +229,7 @@ test.describe('Warranty review and RMA E2E', () => {
       await page.keyboard.press('Escape');
       await page.getByRole('tab', { name: 'Warranty review' }).click();
       await expect(page.locator(`#rma-open-detail-${row.rma_id}`)).toBeVisible();
-      await expect(page.locator('#rma-cases-table')).toContainText(rmaNumber);
+      await expect(page.locator('[data-automation-id="rma-cases-table"]')).toContainText(rmaNumber);
 
       // ?assetId= opens the dialog prefilled with that equipment.
       if (second) {
