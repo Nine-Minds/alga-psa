@@ -348,7 +348,7 @@
     "prdRefs": [
       "FR-D3"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Conformance rows for location_id and contact.locations added to packages/predicates/spec/conformance.json and SEMANTICS.md; evaluator, SQL compiler and JSONata backends pass"
   },
   {

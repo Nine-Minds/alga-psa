@@ -5,14 +5,17 @@ import type { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TagFilter } from '@alga-psa/ui/components/tags/TagFilter';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { WhereTagMode, WhereTagSelection } from '../lib/ticketWhereFilters';
+import {
+  locationFilterLabel,
+  type WhereLocationOption,
+  type WhereTagMode,
+  type WhereTagSelection,
+} from '../lib/ticketWhereFilters';
 
-export interface WhereLocationOption {
-  location_id: string;
-  location_name: string;
-  /** Prefixed to the label when the list spans clients, so two "Head office" rows are tellable apart. */
-  client_name?: string | null;
-}
+// Both live in the descriptor module, so the checklist editor can label a location without pulling
+// this control in; re-exported here because the toolbar imports them from the control.
+export { locationFilterLabel };
+export type { WhereLocationOption };
 
 interface WhereLocationFilterProps {
   id: string;
@@ -20,10 +23,6 @@ interface WhereLocationFilterProps {
   options: WhereLocationOption[];
   selection: WhereTagSelection | null;
   onChange: (selection: WhereTagSelection | null) => void;
-}
-
-export function locationFilterLabel(option: WhereLocationOption): string {
-  return option.client_name ? `${option.client_name} · ${option.location_name}` : option.location_name;
 }
 
 /**
@@ -37,13 +36,20 @@ export function WhereLocationFilter({ id, label, options, selection, onChange }:
   const mode: WhereTagMode = selection?.mode ?? 'in';
 
   // TagFilter is a checkbox popover keyed on display text, so the mapping lives here and nowhere else.
-  const asTags: ITag[] = options.map((option) => ({
-    tag_id: option.location_id,
-    tag_text: locationFilterLabel(option),
-  } as ITag));
+  const selectedIds = selection?.ids ?? [];
+  const listed = new Set(options.map((option) => option.location_id));
+  const asTags: ITag[] = [
+    ...options.map((option) => ({ tag_id: option.location_id, tag_text: locationFilterLabel(option) } as ITag)),
+    // A saved view may carry a location this list does not offer (another client's, or a
+    // deactivated one). It is shown by id rather than dropped, so touching the control never
+    // silently narrows the filter and the operator can still clear it.
+    ...selectedIds
+      .filter((locationId) => !listed.has(locationId))
+      .map((locationId) => ({ tag_id: locationId, tag_text: locationId } as ITag)),
+  ];
   const idByText = new Map(asTags.map((tag) => [tag.tag_text, tag.tag_id as string]));
   const textById = new Map(asTags.map((tag) => [tag.tag_id as string, tag.tag_text]));
-  const selectedTexts = (selection?.ids ?? [])
+  const selectedTexts = selectedIds
     .map((locationId) => textById.get(locationId))
     .filter((text): text is string => Boolean(text));
 

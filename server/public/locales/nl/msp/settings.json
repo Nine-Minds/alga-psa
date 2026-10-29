@@ -1164,6 +1164,8 @@
           "client_id": "Klant",
           "client_tags": "Klantlabels",
           "contact_tags": "Contactlabels",
+          "location_id": "Locatie",
+          "contact_locations": "Locatie van aanvrager",
           "ticket_origin": "Ticketbron",
           "title_folded": "Titel",
           "description_folded": "Beschrijving",

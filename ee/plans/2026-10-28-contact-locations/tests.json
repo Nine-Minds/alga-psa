@@ -521,7 +521,7 @@
     "featureIds": [
       "F039"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Conformance rows for location_id (equals, in, not_in, is_empty, is_not_empty) and contact.locations (in, not_in, is_empty, is_not_empty) pass on evaluator, SQL compiler and JSONata backends"
   },
   {
@@ -531,7 +531,7 @@
       "F038",
       "F039"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Filter matrix: 'contact.locations in [Warehouse]' returns exactly the tickets whose requester is linked to Warehouse, including a bundle master through a child in bundled view; a client-portal user sees only their visible subset"
   },
   {
@@ -541,7 +541,7 @@
       "F038",
       "F039"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Filter matrix: 'location_id in [Warehouse]' returns the tickets at Warehouse; 'is_empty' returns tickets with no location; 'not_in' includes tickets with no location per SEMANTICS.md"
   },
   {
@@ -568,7 +568,7 @@
     "featureIds": [
       "F041"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Location filter options list the filtered client's locations, or all tenant locations grouped by client without a client filter"
   },
   {
@@ -577,7 +577,7 @@
     "featureIds": [
       "F040"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "URL round trip: where=v1:location_id:in:<id> and contact.locations:in:<id> load into the toolbar and survive save as a view"
   },
   {
@@ -586,7 +586,7 @@
     "featureIds": [
       "F042"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Checklist predicate editor offers Location and Requester location with the location control and in/not_in operators"
   },
   {
@@ -595,7 +595,7 @@
     "featureIds": [
       "F043"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Ticket list column picker offers Location, off by default; enabling it shows the location name per row"
   },
   {

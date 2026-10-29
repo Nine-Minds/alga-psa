@@ -1153,6 +1153,411 @@
       "skip": {
         "jsonata": "set-valued paths are not representable in the workflow condition adapter"
       }
+    },
+    {
+      "id": "location-equals",
+      "description": "equals on an id column: the ticket at that location, and nothing for a ticket with no location",
+      "covers": {
+        "operators": [
+          "equals"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "location_id",
+        "operator": "equals",
+        "value": "11111111-1111-4111-8111-111111111111"
+      },
+      "rows": [
+        {
+          "id": "at-warehouse",
+          "record": {
+            "location_id": "11111111-1111-4111-8111-111111111111"
+          },
+          "expected": true
+        },
+        {
+          "id": "at-head-office",
+          "record": {
+            "location_id": "22222222-2222-4222-8222-222222222222"
+          },
+          "expected": false
+        },
+        {
+          "id": "no-location",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "location-in",
+      "description": "in on an id column: at any of the listed locations; no location never matches",
+      "covers": {
+        "operators": [
+          "in"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "location_id",
+        "operator": "in",
+        "value": [
+          "11111111-1111-4111-8111-111111111111",
+          "33333333-3333-4333-8333-333333333333"
+        ]
+      },
+      "rows": [
+        {
+          "id": "at-warehouse",
+          "record": {
+            "location_id": "11111111-1111-4111-8111-111111111111"
+          },
+          "expected": true
+        },
+        {
+          "id": "at-depot",
+          "record": {
+            "location_id": "33333333-3333-4333-8333-333333333333"
+          },
+          "expected": true
+        },
+        {
+          "id": "at-head-office",
+          "record": {
+            "location_id": "22222222-2222-4222-8222-222222222222"
+          },
+          "expected": false
+        },
+        {
+          "id": "no-location",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "location-not-in",
+      "description": "not_in on an id column is the complement of in, so a ticket with no location is included",
+      "covers": {
+        "operators": [
+          "not_in"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "location_id",
+        "operator": "not_in",
+        "value": [
+          "11111111-1111-4111-8111-111111111111"
+        ]
+      },
+      "rows": [
+        {
+          "id": "at-warehouse",
+          "record": {
+            "location_id": "11111111-1111-4111-8111-111111111111"
+          },
+          "expected": false
+        },
+        {
+          "id": "at-head-office",
+          "record": {
+            "location_id": "22222222-2222-4222-8222-222222222222"
+          },
+          "expected": true
+        },
+        {
+          "id": "no-location",
+          "record": {},
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "location-is-empty",
+      "description": "is_empty on an id column is 'no value': an id is never the empty string",
+      "covers": {
+        "operators": [
+          "is_empty"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "location_id",
+        "operator": "is_empty"
+      },
+      "rows": [
+        {
+          "id": "no-location",
+          "record": {},
+          "expected": true
+        },
+        {
+          "id": "at-warehouse",
+          "record": {
+            "location_id": "11111111-1111-4111-8111-111111111111"
+          },
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "location-is-not-empty",
+      "description": "is_not_empty on an id column: the ticket has a location, whichever it is",
+      "covers": {
+        "operators": [
+          "is_not_empty"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "location_id",
+        "operator": "is_not_empty"
+      },
+      "rows": [
+        {
+          "id": "at-warehouse",
+          "record": {
+            "location_id": "11111111-1111-4111-8111-111111111111"
+          },
+          "expected": true
+        },
+        {
+          "id": "no-location",
+          "record": {},
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "contact-locations-in",
+      "description": "in on a set across a relation hop: the requester is linked to any of the listed locations",
+      "covers": {
+        "operators": [
+          "in"
+        ],
+        "pathKind": "set"
+      },
+      "predicate": {
+        "path": "contact.locations",
+        "operator": "in",
+        "value": [
+          "11111111-1111-4111-8111-111111111111",
+          "33333333-3333-4333-8333-333333333333"
+        ]
+      },
+      "rows": [
+        {
+          "id": "requester-at-warehouse",
+          "record": {
+            "contact": {
+              "locations": [
+                "11111111-1111-4111-8111-111111111111"
+              ]
+            }
+          },
+          "expected": true
+        },
+        {
+          "id": "requester-at-warehouse-and-head-office",
+          "record": {
+            "contact": {
+              "locations": [
+                "11111111-1111-4111-8111-111111111111",
+                "22222222-2222-4222-8222-222222222222"
+              ]
+            }
+          },
+          "expected": true
+        },
+        {
+          "id": "requester-at-head-office",
+          "record": {
+            "contact": {
+              "locations": [
+                "22222222-2222-4222-8222-222222222222"
+              ]
+            }
+          },
+          "expected": false
+        },
+        {
+          "id": "requester-unlinked",
+          "record": {
+            "contact": {
+              "locations": []
+            }
+          },
+          "expected": false
+        },
+        {
+          "id": "no-requester",
+          "record": {},
+          "expected": false
+        }
+      ],
+      "skip": {
+        "jsonata": "set-valued paths are not representable in the workflow condition adapter"
+      }
+    },
+    {
+      "id": "contact-locations-not-in",
+      "description": "not_in on a set across a relation hop: no link to any listed location, a missing requester included",
+      "covers": {
+        "operators": [
+          "not_in"
+        ],
+        "pathKind": "set"
+      },
+      "predicate": {
+        "path": "contact.locations",
+        "operator": "not_in",
+        "value": [
+          "11111111-1111-4111-8111-111111111111"
+        ]
+      },
+      "rows": [
+        {
+          "id": "requester-at-warehouse",
+          "record": {
+            "contact": {
+              "locations": [
+                "11111111-1111-4111-8111-111111111111"
+              ]
+            }
+          },
+          "expected": false
+        },
+        {
+          "id": "requester-at-warehouse-and-head-office",
+          "record": {
+            "contact": {
+              "locations": [
+                "11111111-1111-4111-8111-111111111111",
+                "22222222-2222-4222-8222-222222222222"
+              ]
+            }
+          },
+          "expected": false
+        },
+        {
+          "id": "requester-at-head-office",
+          "record": {
+            "contact": {
+              "locations": [
+                "22222222-2222-4222-8222-222222222222"
+              ]
+            }
+          },
+          "expected": true
+        },
+        {
+          "id": "requester-unlinked",
+          "record": {
+            "contact": {
+              "locations": []
+            }
+          },
+          "expected": true
+        },
+        {
+          "id": "no-requester",
+          "record": {},
+          "expected": true
+        }
+      ],
+      "skip": {
+        "jsonata": "set-valued paths are not representable in the workflow condition adapter"
+      }
+    },
+    {
+      "id": "contact-locations-is-empty",
+      "description": "is_empty on a set across a relation hop: the requester works nowhere in particular, or there is none",
+      "covers": {
+        "operators": [
+          "is_empty"
+        ],
+        "pathKind": "set"
+      },
+      "predicate": {
+        "path": "contact.locations",
+        "operator": "is_empty"
+      },
+      "rows": [
+        {
+          "id": "requester-unlinked",
+          "record": {
+            "contact": {
+              "locations": []
+            }
+          },
+          "expected": true
+        },
+        {
+          "id": "no-requester",
+          "record": {},
+          "expected": true
+        },
+        {
+          "id": "requester-at-warehouse",
+          "record": {
+            "contact": {
+              "locations": [
+                "11111111-1111-4111-8111-111111111111"
+              ]
+            }
+          },
+          "expected": false
+        }
+      ],
+      "skip": {
+        "jsonata": "set-valued paths are not representable in the workflow condition adapter"
+      }
+    },
+    {
+      "id": "contact-locations-is-not-empty",
+      "description": "is_not_empty on a set across a relation hop: the requester is linked to some location",
+      "covers": {
+        "operators": [
+          "is_not_empty"
+        ],
+        "pathKind": "set"
+      },
+      "predicate": {
+        "path": "contact.locations",
+        "operator": "is_not_empty"
+      },
+      "rows": [
+        {
+          "id": "requester-at-warehouse",
+          "record": {
+            "contact": {
+              "locations": [
+                "11111111-1111-4111-8111-111111111111"
+              ]
+            }
+          },
+          "expected": true
+        },
+        {
+          "id": "requester-unlinked",
+          "record": {
+            "contact": {
+              "locations": []
+            }
+          },
+          "expected": false
+        },
+        {
+          "id": "no-requester",
+          "record": {},
+          "expected": false
+        }
+      ],
+      "skip": {
+        "jsonata": "set-valued paths are not representable in the workflow condition adapter"
+      }
     }
   ]
 }

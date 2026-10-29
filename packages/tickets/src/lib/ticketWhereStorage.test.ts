@@ -36,6 +36,24 @@ describe('where in stored views (sanitize / validate)', () => {
     expect(sanitizeStoredTicketView({ filters: { where: { join: 'and', clauses: [{ path: 'requester.tags', operator: 'in', value: ['a'] }] } } })?.filters?.where).toBeUndefined();
   });
 
+  // Saving a view must keep a location clause: there is no "live location ids" universe to validate
+  // against, and "cannot validate" never means "drop".
+  it('keeps the location paths through sanitize and capture validation', () => {
+    const withLocations: PredicateGroup = {
+      join: 'and',
+      clauses: [
+        { path: 'location_id', operator: 'in', value: [LIVE] },
+        { path: 'contact.locations', operator: 'not_in', value: [DEAD] },
+      ],
+    };
+    expect(sanitizeStoredTicketView({ filters: { where: withLocations } })?.filters?.where).toEqual(withLocations);
+    const out = validateCapturedFilters(
+      { where: withLocations },
+      { whereTagIds: { 'contact.tags': new Set([LIVE]), 'client.tags': new Set([LIVE]) } },
+    );
+    expect(out.where).toEqual(withLocations);
+  });
+
   it('validateCapturedFilters drops deleted tag ids, and clauses left empty', () => {
     const out = validateCapturedFilters({ where }, { whereTagIds: { 'contact.tags': new Set([LIVE]), 'client.tags': new Set([LIVE]) } });
     expect(out.where?.clauses).toEqual([{ path: 'contact.tags', operator: 'in', value: [LIVE] }]);

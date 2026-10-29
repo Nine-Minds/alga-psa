@@ -81,6 +81,9 @@ interface Fixture {
   c1: string;
   c2: string;
   k1: string;
+  /** Locations of c1: the warehouse K1 works at, and the head office K3 works at. */
+  locWarehouse: string;
+  locHeadOffice: string;
   vipContactTag: string;
   vipClientTag: string;
   urgentTag: string;
@@ -89,7 +92,7 @@ interface Fixture {
 
 let fx: Fixture;
 let idToName: Map<string, TicketName>;
-let foreign: { tenantId: string; vipContactTag: string };
+let foreign: { tenantId: string; vipContactTag: string; locationId: string };
 
 const DAY = 24 * 3600 * 1000;
 
@@ -186,6 +189,18 @@ async function seedFixture(): Promise<void> {
   });
   await db('contacts').insert([contact(k1, c1, 'K1'), contact(k2, c2, 'K2'), contact(k3, c1, 'K3')]);
 
+  // Where people work: K1 at the warehouse, K3 at the head office, K2 nowhere in particular.
+  const locWarehouse = uuidv4();
+  const locHeadOffice = uuidv4();
+  await db('client_locations').insert([
+    { tenant: tenantId, location_id: locWarehouse, client_id: c1, location_name: 'Warehouse', is_default: true, is_active: true },
+    { tenant: tenantId, location_id: locHeadOffice, client_id: c1, location_name: 'Head office', is_default: false, is_active: true },
+  ]);
+  await db('contact_locations').insert([
+    { tenant: tenantId, contact_name_id: k1, location_id: locWarehouse, is_primary: true },
+    { tenant: tenantId, contact_name_id: k3, location_id: locHeadOffice, is_primary: true },
+  ]);
+
   const vipContactTag = await insertTagDef(tenantId, 'VIP', 'contact');
   const vipClientTag = await insertTagDef(tenantId, 'VIP', 'client');
   const urgentTag = await insertTagDef(tenantId, 'urgent', 'ticket');
@@ -220,7 +235,7 @@ async function seedFixture(): Promise<void> {
     }),
   ]);
   await db('tickets').insert([
-    ticket('T1', { board_id: b1, status_id: sOpen1, category_id: catA, assigned_to: agentX, client_id: c1, contact_name_id: k1 }),
+    ticket('T1', { board_id: b1, status_id: sOpen1, category_id: catA, assigned_to: agentX, client_id: c1, contact_name_id: k1, location_id: locWarehouse }),
     ticket('T2', {
       board_id: b1, status_id: sClosed1, priority_id: p2, category_id: catA, subcategory_id: catA1,
       assigned_team_id: team, client_id: c2, contact_name_id: k2,
@@ -228,6 +243,7 @@ async function seedFixture(): Promise<void> {
     }),
     ticket('T3', {
       board_id: b2, status_id: sOpen2, category_id: catB, client_id: c1, contact_name_id: k3,
+      location_id: locHeadOffice,
       due_date: new Date(now + 3 * DAY),
     }),
     ticket('T4', {
@@ -250,7 +266,7 @@ async function seedFixture(): Promise<void> {
 
   fx = {
     tenantId, actorId, agentX, agentY, team, b1, b2, sOpen1, sClosed1, p2, catA, catA1, catB,
-    c1, c2, k1, vipContactTag, vipClientTag, urgentTag, ticketIds: ids,
+    c1, c2, k1, locWarehouse, locHeadOffice, vipContactTag, vipClientTag, urgentTag, ticketIds: ids,
   };
   idToName = new Map(TICKET_NAMES.map((name) => [ids[name], name]));
 
@@ -281,7 +297,15 @@ async function seedFixture(): Promise<void> {
   });
   const foreignVip = await insertTagDef(other.tenantId, 'VIP', 'contact');
   await mapTag(other.tenantId, foreignVip, foreignContact, 'contact');
-  foreign = { tenantId: other.tenantId, vipContactTag: foreignVip };
+  const foreignLocation = uuidv4();
+  await db('client_locations').insert({
+    tenant: other.tenantId, location_id: foreignLocation, client_id: foreignClient,
+    location_name: 'Warehouse', is_default: true, is_active: true,
+  });
+  await db('contact_locations').insert({
+    tenant: other.tenantId, contact_name_id: foreignContact, location_id: foreignLocation, is_primary: true,
+  });
+  foreign = { tenantId: other.tenantId, vipContactTag: foreignVip, locationId: foreignLocation };
 }
 
 const base: ITicketListFilters = {
@@ -399,6 +423,20 @@ const CASES: MatrixCase[] = [
   { id: 'where-two-clauses-and', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'contact.tags', operator: 'in', value: [f.vipContactTag] }, { path: 'client.tags', operator: 'not_in', value: [f.vipClientTag] }] } }), individual: [], bundled: [] },
   { id: 'where-ticket-tags-by-definition-id', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'tags', operator: 'in', value: [f.urgentTag] }] } }), individual: ['CH1', 'T1'], bundled: ['M', 'T1'] },
   { id: 'where-other-tenant-tag-id-matches-nothing', filters: () => ({ where: { join: 'and', clauses: [{ path: 'contact.tags', operator: 'in', value: [foreign.vipContactTag] }] } }), individual: [], bundled: [] },
+
+  // Location of the ticket: a clause on the ticket's own column, so a bundle master never matches
+  // through a child (SEMANTICS.md, "self or any child").
+  { id: 'location-in-warehouse', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'location_id', operator: 'in', value: [f.locWarehouse] }] } }), individual: ['T1'], bundled: ['T1'] },
+  { id: 'location-in-both-c1-locations', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'location_id', operator: 'in', value: [f.locWarehouse, f.locHeadOffice] }] } }), individual: ['T1', 'T3'], bundled: ['T1', 'T3'] },
+  { id: 'location-is-empty', filters: () => ({ where: { join: 'and', clauses: [{ path: 'location_id', operator: 'is_empty' }] } }), individual: ['CH1', 'CH2', 'M', 'T2', 'T4'], bundled: ['M', 'T2', 'T4'] },
+  // not_in is exactly NOT in, so a ticket with no location is included.
+  { id: 'location-not-in-warehouse-keeps-no-location', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'location_id', operator: 'not_in', value: [f.locWarehouse] }] } }), individual: ['CH1', 'CH2', 'M', 'T2', 'T3', 'T4'], bundled: ['M', 'T2', 'T3', 'T4'] },
+
+  // Where the requester works: a set two hops out, which does roll up to a bundle master
+  { id: 'contact-locations-any-of-warehouse', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'contact.locations', operator: 'in', value: [f.locWarehouse] }] } }), individual: ['CH1', 'T1'], bundled: ['M', 'T1'] },
+  { id: 'contact-locations-none-of-warehouse-keeps-no-contact', filters: (f) => ({ where: { join: 'and', clauses: [{ path: 'contact.locations', operator: 'not_in', value: [f.locWarehouse] }] } }), individual: ['CH2', 'M', 'T2', 'T3', 'T4'], bundled: ['T2', 'T3', 'T4'] },
+  { id: 'contact-locations-none', filters: () => ({ where: { join: 'and', clauses: [{ path: 'contact.locations', operator: 'is_empty' }] } }), individual: ['CH2', 'M', 'T2', 'T4'], bundled: ['T2', 'T4'] },
+  { id: 'contact-locations-other-tenant-location-matches-nothing', filters: () => ({ where: { join: 'and', clauses: [{ path: 'contact.locations', operator: 'in', value: [foreign.locationId] }] } }), individual: [], bundled: [] },
 ];
 
 describeDb('ticket list filter matrix (DB-backed, compiled predicates)', () => {
@@ -493,6 +531,22 @@ describeDb('ticket list filter matrix (DB-backed, compiled predicates)', () => {
       // Whatever the portal user may see, the filter never widens it.
       expect(filtered.names.every((name) => ['CH1', 'T1'].includes(name))).toBe(true);
       expect(filtered.total).toBe(filtered.names.length);
+
+      // Same for the location filters: a requester-location clause is still confined to the subset.
+      const byLocation = await names({
+        ...base,
+        bundleView: 'individual',
+        where: { join: 'and', clauses: [{ path: 'contact.locations', operator: 'in', value: [fx.locWarehouse] }] },
+      });
+      expect(byLocation.names.every((name) => ['CH1', 'T1'].includes(name))).toBe(true);
+      expect(byLocation.total).toBe(byLocation.names.length);
+      const atWarehouse = await names({
+        ...base,
+        bundleView: 'individual',
+        where: { join: 'and', clauses: [{ path: 'location_id', operator: 'in', value: [fx.locWarehouse] }] },
+      });
+      expect(atWarehouse.names.every((name) => name === 'T1')).toBe(true);
+      expect(atWarehouse.total).toBe(atWarehouse.names.length);
     } finally {
       authMocks.user = { user_id: fx.actorId, user_type: 'internal', tenant: fx.tenantId };
     }

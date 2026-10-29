@@ -57,6 +57,16 @@ Only `in`, `not_in`, `is_empty`, `is_not_empty` are valid:
 Across a `many` relation the same words apply to the union of the related rows' values: `not_in` is
 `NOT EXISTS (a related row whose value is in the list)`.
 
+## Ids and sets across a hop
+
+Two shapes are named in the table because query schemas lean on them and they are easy to get wrong:
+
+- An **id column** (`uuid`, e.g. a ticket's `location_id`) is empty only when missing — an id is never
+  `''` — so `is_empty` is "no value" and `not_in` includes the rows that have none. Cases `location-*`.
+- A **set across a relation hop** (`contact.locations`, the requester's rows in `contact_locations`)
+  follows the set rules over the union of the related rows, and a missing hop is an empty set: `in` is
+  false, `not_in` and `is_empty` are true. Cases `contact-locations-*`.
+
 ## Complements
 
 `not_in` and `is_empty` are defined as the negation of `in` and `is_not_empty` evaluated over the full path,

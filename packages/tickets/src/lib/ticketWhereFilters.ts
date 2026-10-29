@@ -54,6 +54,18 @@ export const WHERE_LOCATION_FILTERS: readonly WhereLocationFilterDescriptor[] = 
     'locations' in descriptor.options)
   .map((descriptor) => ({ ...descriptor, locationOf: descriptor.options.locations } as WhereLocationFilterDescriptor));
 
+export interface WhereLocationOption {
+  location_id: string;
+  location_name: string;
+  /** Prefixed to the label when the list spans clients, so two "Head office" rows are tellable apart. */
+  client_name?: string | null;
+}
+
+/** How one location reads in a filter control: "Client · Location" when the list spans clients. */
+export function locationFilterLabel(option: WhereLocationOption): string {
+  return option.client_name ? `${option.client_name} · ${option.location_name}` : option.location_name;
+}
+
 export interface WhereTagSelection {
   mode: WhereTagMode;
   /** Tag definition ids, or location ids — whichever the path's value column holds. */

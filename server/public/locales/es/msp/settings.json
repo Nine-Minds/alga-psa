@@ -1164,6 +1164,8 @@
           "client_id": "Cliente",
           "client_tags": "Etiquetas del cliente",
           "contact_tags": "Etiquetas del contacto",
+          "location_id": "Ubicación",
+          "contact_locations": "Ubicación del solicitante",
           "ticket_origin": "Origen del ticket",
           "title_folded": "Título",
           "description_folded": "Descripción",

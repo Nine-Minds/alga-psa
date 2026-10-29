@@ -27,8 +27,27 @@ const schema: QuerySchema = {
     n: { kind: 'column', column: 'n', type: 'number' },
     b: { kind: 'column', column: 'b', type: 'boolean' },
     tags: { kind: 'set', table: 'conf_tag', local: 'row_id', foreign: 'row_id', valueColumn: 'tag', valueType: 'string' },
+    // An id column, as `tickets.location_id` is: emptiness is "no value", never the empty string.
+    location_id: { kind: 'column', column: 'location_id', type: 'uuid' },
   },
   relations: {
+    // A set two hops out, as `contact.locations` is: the requester's rows in contact_locations.
+    contact: {
+      kind: 'one',
+      table: 'conf_contact',
+      local: 'contact_id',
+      foreign: 'contact_id',
+      attributes: {
+        locations: {
+          kind: 'set',
+          table: 'conf_contact_location',
+          local: 'contact_id',
+          foreign: 'contact_id',
+          valueColumn: 'location_id',
+          valueType: 'uuid',
+        },
+      },
+    },
     owner: {
       kind: 'one',
       table: 'conf_owner',
@@ -61,8 +80,10 @@ describeDb('predicates SQL compiler', () => {
       pool: { min: 1, max: 1 },
     });
     trx = await db.transaction();
-    await trx.raw(`CREATE TEMP TABLE conf_item (tenant uuid, row_id text, s text, n numeric, b boolean, owner_id text, parent_id text)`);
+    await trx.raw(`CREATE TEMP TABLE conf_item (tenant uuid, row_id text, s text, n numeric, b boolean, owner_id text, parent_id text, location_id uuid, contact_id text)`);
     await trx.raw(`CREATE TEMP TABLE conf_tag (tenant uuid, row_id text, tag text)`);
+    await trx.raw(`CREATE TEMP TABLE conf_contact (tenant uuid, contact_id text)`);
+    await trx.raw(`CREATE TEMP TABLE conf_contact_location (tenant uuid, contact_id text, location_id uuid)`);
     await trx.raw(`CREATE TEMP TABLE conf_owner (tenant uuid, owner_id text, label text)`);
     await trx.raw(`CREATE TEMP TABLE conf_owner_tag (tenant uuid, owner_id text, tag text)`);
   });
@@ -84,21 +105,47 @@ describeDb('predicates SQL compiler', () => {
   for (const testCase of conformance.cases) {
     if (testCase.skip?.sql) continue;
     it(`conformance: ${testCase.id}`, async () => {
-      await trx.raw('TRUNCATE conf_item, conf_tag');
+      await trx.raw('TRUNCATE conf_item, conf_tag, conf_contact, conf_contact_location');
       for (const row of testCase.rows) {
-        const record = row.record as { s?: string; n?: number; b?: boolean; tags?: string[] };
+        const record = row.record as {
+          s?: string;
+          n?: number;
+          b?: boolean;
+          tags?: string[];
+          location_id?: string;
+          contact?: { locations?: string[] };
+        };
+        // A row that declares a `contact` gets one of its own, so "no requester" stays a missing hop.
+        const contactId = record.contact ? `${row.id}-contact` : null;
         await trx('conf_item').insert({
           tenant: TENANT,
           row_id: row.id,
           s: record.s ?? null,
           n: record.n ?? null,
           b: record.b ?? null,
+          location_id: record.location_id ?? null,
+          contact_id: contactId,
         });
                 const tags = record.tags ?? [];
         if (tags.length > 0) {
           await trx('conf_tag').insert(tags.map((tag) => ({ tenant: TENANT, row_id: row.id, tag })));
           // Same tags under another tenant's row id must never be seen.
           await trx('conf_tag').insert(tags.map((tag) => ({ tenant: OTHER_TENANT, row_id: row.id, tag })));
+        }
+        if (contactId) {
+          await trx('conf_contact').insert([
+            { tenant: TENANT, contact_id: contactId },
+            // The same contact id in another tenant: the hop must not find it.
+            { tenant: OTHER_TENANT, contact_id: contactId },
+          ]);
+          const links = record.contact?.locations ?? [];
+          if (links.length > 0) {
+            await trx('conf_contact_location').insert(links.flatMap((locationId) => [
+              { tenant: TENANT, contact_id: contactId, location_id: locationId },
+              // And the same links under another tenant, which must never widen a match.
+              { tenant: OTHER_TENANT, contact_id: contactId, location_id: locationId },
+            ]));
+          }
         }
       }
       const expected = testCase.rows.filter((row) => row.expected).map((row) => row.id).sort();

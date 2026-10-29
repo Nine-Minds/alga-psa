@@ -1164,6 +1164,8 @@
           "client_id": "Kund",
           "client_tags": "Kundtaggar",
           "contact_tags": "Kontakttaggar",
+          "location_id": "Plats",
+          "contact_locations": "Beställarens plats",
           "ticket_origin": "Ärendekälla",
           "title_folded": "Rubrik",
           "description_folded": "Beskrivning",
