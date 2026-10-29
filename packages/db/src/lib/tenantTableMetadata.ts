@@ -28,6 +28,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   co_management_private_threads: { scope: 'tenant' },
   co_management_private_comments: { scope: 'tenant' },
   co_management_private_command_receipts: { scope: 'tenant' },
+  co_management_command_receipts: { scope: 'tenant' },
   collaboration_actor_references: { scope: 'tenant' },
   co_managed_participation_evidence: { scope: 'tenant' },
   co_management_delegated_grants: { scope: 'tenant' },

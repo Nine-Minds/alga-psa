@@ -463,6 +463,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_management_private_comments',
   'co_management_private_threads',
   'co_management_private_command_receipts',
+  'co_management_command_receipts',
   'collaboration_actor_references',
   'co_managed_participation_evidence',
   'co_management_relationships',

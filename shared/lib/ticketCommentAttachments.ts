@@ -69,13 +69,16 @@ export async function dispatchCommentPublication(conn: Connection, tenant: strin
   // Intents persisted before ticket events stopped using the ticket id as the actor
   // carry userId/actorUserId === ticketId. Heal them (a narrow data fix, not a schema rule).
   const payload = scrubLegacyTicketIdActor(comment.comment_publication_payload);
-  const { userId: persistedUserId, actorType: _t, actorUserId: _u, actorContactId: _c, ...persisted } = payload;
+  const { userId: persistedUserId, actorType: persistedActorType, actorUserId: _u, actorContactId: _c, actorReference: persistedReference, ...persisted } = payload;
   // Intents persisted before the producer-side fix can be missing the author
   // identity the event schema requires. Heal them here from the comment row so
   // they publish instead of failing validation on every reconcile pass.
   const author = payload.comment?.author ?? await resolveCommentAuthorDisplay(conn, tenant, comment);
   // Identity comes from the persisted real user, else the comment row. No ticket-id fallback.
-  const actor = resolveTicketEventActor({ userId: persistedUserId ?? comment.user_id, contactId: comment.contact_id });
+  // A qualified (foreign) author has no local user row; keep its persisted collaborator reference.
+  const actor = persistedActorType === 'COLLABORATOR' && persistedReference
+    ? { actorType: 'COLLABORATOR' as const, actorReference: persistedReference }
+    : resolveTicketEventActor({ userId: persistedUserId ?? comment.user_id, contactId: comment.contact_id });
   await publish({ eventType: 'TICKET_COMMENT_ADDED', payload: { ...persisted,
     ...ticketEventActorFields(actor),
     // The persisted audience (set only on shared-work threads) survives into the published
