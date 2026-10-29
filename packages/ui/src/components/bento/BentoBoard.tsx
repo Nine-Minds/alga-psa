@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { BentoBoardSlotContext } from './BentoTile';
 import ViewSwitcher from '../ViewSwitcher';
 
@@ -57,7 +57,13 @@ function tierFor(width: number, bp: { medium: number; wide: number }): BentoBoar
   return 'narrow';
 }
 
+/** Id of the wrapper the board scrolls to and focuses when a section is opened. */
+function slotElementId(boardId: string, tileKey: string) {
+  return `${boardId}-slot-${tileKey}`;
+}
+
 function Column({
+  boardId,
   tiles,
   labels,
   empty,
@@ -65,6 +71,7 @@ function Column({
   onSlotOpen,
   emptyLabel,
 }: {
+  boardId: string;
   tiles: BentoBoardTile[];
   labels: Map<string, string>;
   empty: Set<string>;
@@ -110,6 +117,9 @@ function Column({
       {tiles.map((tile) => (
         <div
           key={tile.key}
+          id={slotElementId(boardId, tile.key)}
+          // Programmatic focus target when the board opens this section; never in the tab order.
+          tabIndex={-1}
           style={{ order: order.get(tile.key) }}
           className={empty.has(tile.key) ? '-mt-2' : 'basis-full'}
         >
@@ -182,11 +192,25 @@ export function BentoBoard({ id, main, tiles, groups = [], emptyShelfLabel, narr
   }, []);
   // Sections the user opened stay on the board even while still empty.
   const [opened, setOpened] = useState<Set<string>>(() => new Set());
+  // The key the user just opened, so content arriving on its own (report(false))
+  // never yanks the page around — only a deliberate open does.
+  const pendingOpenRef = useRef<string | null>(null);
   const onSlotOpen = useCallback((key: string) => {
+    pendingOpenRef.current = key;
     setOpened((current) => (current.has(key) ? current : new Set(current).add(key)));
   }, []);
+  // Same commit the slot turns from a chip into a full card: bring it into view.
+  useEffect(() => {
+    const key = pendingOpenRef.current;
+    if (!key || !opened.has(key)) return;
+    pendingOpenRef.current = null;
+    const el = document.getElementById(slotElementId(id, key));
+    if (!el) return;
+    el.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+    el.focus({ preventScroll: true });
+  }, [opened, id]);
   const shelved = new Set([...empty].filter((key) => !opened.has(key)));
-  const columnProps = { labels: new Map<string, string>(), empty: shelved, onSlotEmpty, onSlotOpen, emptyLabel: emptyShelfLabel };
+  const columnProps = { boardId: id, labels: new Map<string, string>(), empty: shelved, onSlotEmpty, onSlotOpen, emptyLabel: emptyShelfLabel };
 
   const groupOrder = new Map(groups.map((group, index) => [group.key, index]));
   const labels = new Map(groups.map((group) => [group.key, group.label]));
