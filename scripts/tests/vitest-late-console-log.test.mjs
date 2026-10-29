@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { stripVTControlCharacters } from 'node:util';
 import { isLateConsoleLogTeardown } from '../lib/vitest-unhandled-errors.mjs';
 
 const vitest = fileURLToPath(new URL('../../node_modules/vitest/vitest.mjs', import.meta.url));
@@ -41,7 +42,8 @@ function fixture(t, { wireServerHandler, extraTest = '' }) {
   const result = spawnSync(process.execPath, [vitest, 'run'], {
     cwd: root, env: { ...process.env, CI: '1' }, encoding: 'utf8', timeout: 60000,
   });
-  return { status: result.status, output: result.stdout + result.stderr };
+  // CI runners get colored vitest output even when piped; assertions read plain text.
+  return { status: result.status, output: stripVTControlCharacters(result.stdout + result.stderr) };
 }
 
 test('a log emitted while a fork drains its rpc channel fails an all-green run without the handler', { timeout: 90000 }, (t) => {
