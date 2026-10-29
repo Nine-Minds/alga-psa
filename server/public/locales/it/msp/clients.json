@@ -1948,6 +1948,7 @@
       "sourceAlreadyMerged": "Questo cliente è già stato unito a un altro cliente.",
       "targetAlreadyMerged": "Il cliente di destinazione è stato a sua volta unito a un altro cliente. Unisci a quello.",
       "sourceIsTenantDefault": "La scheda della tua organizzazione non può essere unita a un cliente.",
+      "sourceHasCoManagement": "Questo cliente ha uno spazio di lavoro IT in co-gestione. Annulla la configurazione o termina la co-gestione prima di unirlo.",
       "parentLinkCycle": "Quel cliente risulta figlio di quello che stai unendo, quindi l'unione invertirebbe la gerarchia.",
       "invalidContractCutover": "Una delle date di subentro è al di fuori della durata del relativo contratto."
     },

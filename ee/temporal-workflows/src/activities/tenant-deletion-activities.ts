@@ -448,6 +448,12 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'service_request_answer_mapping_versions', 'service_request_answer_mappings',
   'service_request_submission_attachments', 'service_request_submissions',
   'service_request_definition_versions', 'service_request_definitions',
+  'co_management_board_scopes',
+  'co_managed_allocations',
+  'co_managed_entitlements',
+  'co_managed_provisioning_operations',
+  'co_management_relationship_events',
+  'co_management_relationships',
 
   // === LEVEL 3: Mid-level entities ===
   // Document-related leaf tables (must come before documents)

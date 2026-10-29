@@ -107,7 +107,9 @@
     "ticketsRecurring": "⟦Řḗƈŭřřīƞɠ Ŧīƈķḗŧş⟧",
     "ticketsTemplates": "⟦Ŧīƈķḗŧ Ŧḗḿƥŀȧŧḗş⟧",
     "assetsCustody": "⟦Ḗʠŭīƥḿḗƞŧ īƞ ƈŭşŧȯḓẏ⟧",
-    "ticketsCannedResponses": "⟦Ƈȧƞƞḗḓ Řḗşƥȯƞşḗş⟧"
+    "ticketsCannedResponses": "⟦Ƈȧƞƞḗḓ Řḗşƥȯƞşḗş⟧",
+    "profile": "⟦Ƥřȯƒīŀḗ⟧",
+    "signOut": "⟦Şīɠƞ ȯŭŧ⟧"
   },
   "marketing": {
     "dialogs": {
@@ -846,5 +848,10 @@
     "errors": {
       "enterpriseOnly": "⟦Ƈħȧŧ ƒḗȧŧŭřḗş ȧřḗ ȯƞŀẏ ȧṽȧīŀȧƀŀḗ īƞ Ḗƞŧḗřƥřīşḗ Ḗḓīŧīȯƞ⟧"
     }
+  },
+  "coManagedWorkspace": {
+    "loading": "⟦Ŀȯȧḓīƞɠ ẇȯřķşƥȧƈḗ…⟧",
+    "navigation": "⟦Ƈŭşŧȯḿḗř ẇȯřķşƥȧƈḗ⟧",
+    "passwordError": "⟦Ŭƞȧƀŀḗ ŧȯ ƈħḗƈķ ƥȧşşẇȯřḓ şŧȧŧŭş. Ƥŀḗȧşḗ řḗŀȯȧḓ ŧħīş ƥȧɠḗ.⟧"
   }
 }

@@ -519,6 +519,12 @@
     },
     "layout": {
       "defaultTitle": "Pulpit | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "Współzarządzane IT"
+    },
+    "coManagement": {
+      "title": "Dostęp do współzarządzania"
     }
   },
   "auth": {

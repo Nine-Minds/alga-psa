@@ -2,6 +2,8 @@
 
 import React from "react";
 import { useProduct } from "@/context/ProductContext";
+import ClientCoManagedIntegration from '@/components/co-managed/CoManagedClientIntegration';
+import type { ClientCoManagedIntegrationProps } from '@alga-psa/clients/context/ClientCrossFeatureContext';
 import { DrawerOutlet } from "@alga-psa/ui";
 import { ActivityDrawerProvider } from "@alga-psa/msp-composition/user-activities/ActivityDrawerProvider";
 import { SchedulingProviderWithCallbacks } from '@alga-psa/scheduling/providers/SchedulingProviderWithCallbacks';
@@ -26,6 +28,12 @@ interface WorkspaceProvidersProps {
 
 export default function WorkspaceProviders({ children }: WorkspaceProvidersProps) {
   const { isAlgaDesk } = useProduct();
+  // App-owned co-managed client integration, injected through the composition
+  // seam so packages/clients never imports server or enterprise code.
+  const renderClientCoManagedIntegration = React.useCallback(
+    (props: ClientCoManagedIntegrationProps) => <ClientCoManagedIntegration {...props} />,
+    []
+  );
 
   // AlgaDesk mounts its own (deliberately lean, feature-gated) cross-feature providers
   // and a single DrawerOutlet in AlgaDeskMspShell. Wrapping again here would (1) mount a
@@ -43,7 +51,7 @@ export default function WorkspaceProviders({ children }: WorkspaceProvidersProps
         <MspClientIntegrationProvider>
           <ActivityDrawerProvider>
             <MspClientDrawerProvider>
-              <MspClientCrossFeatureProvider>
+              <MspClientCrossFeatureProvider clientCoManagedIntegration={renderClientCoManagedIntegration}>
                 <MspAssetCrossFeatureProvider>
                   <MspDocumentsCrossFeatureProvider>
                     <MspSchedulingCrossFeatureProvider>

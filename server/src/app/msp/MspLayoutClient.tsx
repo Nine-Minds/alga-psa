@@ -4,6 +4,7 @@ import React from "react";
 import { AppSessionProvider } from "@alga-psa/auth/client";
 import DefaultLayout from "@/components/layout/DefaultLayout";
 import AlgaDeskMspShell from "@/components/layout/AlgaDeskMspShell";
+import CoManagedCustomerShell from '@/components/co-managed/CoManagedCustomerShell';
 import { TagProvider } from "@alga-psa/tags/context";
 import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHogUserIdentifier";
 import { ClientUIStateProvider } from "@alga-psa/ui/ui-reflection/ClientUIStateProvider";
@@ -21,6 +22,8 @@ import type { SupportedLocale } from "@alga-psa/core/i18n/config";
 import type { ProductCode } from '@alga-psa/types';
 import { resolveProductRouteBehavior } from '@/lib/productSurfaceRegistry';
 import { ProductRouteBoundary } from '@/components/product/ProductRouteBoundary';
+import { CoManagedWorkspaceBoundary } from '@/components/co-managed/CoManagedFeatureBoundary';
+import { productUsesWorkspaceOnboarding } from '@/lib/workspaceOnboardingPolicy';
 import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
 import { MspCallLinkProvider } from '@/components/layout/MspCallLinkProvider';
 import { IncomingCallProvider } from '@/components/layout/IncomingCallProvider';
@@ -116,7 +119,9 @@ export function MspLayoutClient({
   const [clientNeedsOnboarding, setClientNeedsOnboarding] = useState(false);
   const [clientOnboardingCheckComplete, setClientOnboardingCheckComplete] = useState(false);
   // Only a user who can complete workspace setup is ever sent to it.
-  const shouldForceOnboarding = canRunOnboarding && (needsOnboarding || clientNeedsOnboarding);
+  const canRunProductOnboarding = productUsesWorkspaceOnboarding(productCode) && canRunOnboarding;
+  const shouldForceOnboarding = canRunProductOnboarding && (needsOnboarding || clientNeedsOnboarding);
+  const redirectCustomerHome = productCode === 'co_managed' && (isOnboardingPage || pathname === '/msp/dashboard' || pathname === '/msp');
   const canShowLicenseBanner =
     selfHostLicensing &&
     !isOnboardingPage &&
@@ -130,6 +135,10 @@ export function MspLayoutClient({
   }, [shouldForceOnboarding, isOnboardingPage, router]);
 
   useEffect(() => {
+    if (redirectCustomerHome) router.replace('/msp/tickets');
+  }, [redirectCustomerHome, router]);
+
+  useEffect(() => {
     let isCancelled = false;
 
     setClientNeedsOnboarding(false);
@@ -139,7 +148,7 @@ export function MspLayoutClient({
 
     // A user who cannot run setup is never redirected to it, so there is
     // nothing to look up: skip the tenant settings fetch.
-    if (!canRunOnboarding) {
+    if (!canRunProductOnboarding) {
       setClientOnboardingCheckComplete(true);
       return () => {
         isCancelled = true;
@@ -187,7 +196,7 @@ export function MspLayoutClient({
     return () => {
       isCancelled = true;
     };
-  }, [needsOnboarding, isOnboardingPage, sessionTenant, onboardingResolvedServerSide, canRunOnboarding]);
+  }, [needsOnboarding, isOnboardingPage, sessionTenant, onboardingResolvedServerSide, canRunProductOnboarding]);
 
   const isAlgaDesk = productCode === 'algadesk';
 
@@ -195,8 +204,9 @@ export function MspLayoutClient({
     <OnboardingRedirectFallback />
   ) : (
     <AppSessionProvider session={session}>
+      <CoManagedWorkspaceBoundary productCode={productCode} requireAcceptance>
       <MspBrandingProvider branding={mspBranding}>
-      <ProductProvider>
+      <ProductProvider productCode={productCode}>
         <TierProvider selfHostLicensing={selfHostLicensing}>
           <MspCallLinkProvider>
           <IncomingCallProvider tenant={session?.user?.tenant} userId={session?.user?.id}>
@@ -215,7 +225,7 @@ export function MspLayoutClient({
                 hasLoaded={dataTablePreferences.hasLoadedInitial && !dataTablePreferences.isLoading}
                 onPageSizesChange={dataTablePreferences.setValue}
               >
-                {isOnboardingPage ? children : (
+                {redirectCustomerHome ? null : isOnboardingPage ? children : (
                 <KeyboardShortcutsProvider
                   routeKey={pathname ?? '/msp'}
                   storage={shortcutPreference.storage}
@@ -227,7 +237,9 @@ export function MspLayoutClient({
                     }
                   }}
                 >
-                  {isAlgaDesk ? (
+                  {productCode === 'co_managed' ? (
+                    <CoManagedCustomerShell>{routeBehavior === 'allowed' ? children : <ProductRouteBoundary behavior={routeBehavior} scope="msp" />}</CoManagedCustomerShell>
+                  ) : isAlgaDesk ? (
                     routeBehavior === 'allowed' ? (
                       <AlgaDeskMspShell initialSidebarCollapsed={initialSidebarCollapsed}>
                         {children}
@@ -253,6 +265,7 @@ export function MspLayoutClient({
         </TierProvider>
       </ProductProvider>
       </MspBrandingProvider>
+      </CoManagedWorkspaceBoundary>
     </AppSessionProvider>
   );
 

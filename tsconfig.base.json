@@ -150,6 +150,8 @@
       "@alga-psa/users/*": ["packages/users/src/*"],
       "@alga-psa/licensing": ["packages/licensing/src"],
       "@alga-psa/licensing/*": ["packages/licensing/src/*"],
+      "@alga-psa/co-managed": ["packages/co-managed/src"],
+      "@alga-psa/co-managed/*": ["packages/co-managed/src/*"],
       "@alga-psa/tags": ["packages/tags/src"],
       "@alga-psa/tags/*": ["packages/tags/src/*"],
       "@alga-psa/sla": ["packages/sla/src"],
