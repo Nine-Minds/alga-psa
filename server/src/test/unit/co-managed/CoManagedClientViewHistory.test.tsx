@@ -67,4 +67,12 @@ describe('sponsor-side relationship history', () => {
     render(<CoManagedClientView view={HEADER_CASES.active} clientId="client-1" clientName="Acme" idPrefix="t" />);
     await waitFor(() => expect(screen.getByText('Some new event')).toBeInTheDocument());
   });
+
+  it('relationship chooser: absent for cancelled-only, present for several live', () => {
+    const cancelled = render(<CoManagedClientView view={HEADER_CASES.cancelledOnly} clientId="client-1" clientName="Acme" idPrefix="c" />);
+    expect(cancelled.container.querySelector('#c-relationship')).toBeNull();
+    cleanup();
+    const several = render(<CoManagedClientView view={HEADER_CASES.severalLive} clientId="client-1" clientName="Acme" idPrefix="s" />);
+    expect(several.container.querySelector('#s-relationship')).not.toBeNull();
+  });
 });

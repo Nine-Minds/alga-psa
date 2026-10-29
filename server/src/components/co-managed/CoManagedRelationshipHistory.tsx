@@ -5,6 +5,7 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ColumnDefinition } from '@alga-psa/types';
+import { COMANAGED_HISTORY_LIMIT } from '@/lib/co-managed/relationshipHistory';
 import {
   getCoManagedRelationshipHistory,
   type CoManagedHistoryEntry,
@@ -73,7 +74,14 @@ export default function CoManagedRelationshipHistory({ idPrefix, clientId, relat
             {t('coManaged.history.empty', { defaultValue: 'No relationship events yet.' })}
           </p>
         ) : (
-          <DataTable id={`${idPrefix}-history-table`} data={entries ?? []} columns={columns} pagination={false} />
+          // LEVERAGE: friction datatable-pagination-false — pagination={false} only hides the pager; rows still slice to pageSize (default 10). Other pagination={false} call sites with >10 rows are latently truncated; engine should skip the pagination row model when disabled.
+          <DataTable
+            id={`${idPrefix}-history-table`}
+            data={entries ?? []}
+            columns={columns}
+            pagination={false}
+            pageSize={COMANAGED_HISTORY_LIMIT}
+          />
         )}
       </CardContent>
     </Card>

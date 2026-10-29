@@ -8,6 +8,14 @@ import CoManagedOverview from '@/components/co-managed/CoManagedOverview';
 import CoManagedCustomerHome from '@/components/co-managed/CoManagedCustomerHome';
 
 export async function generateMetadata(): Promise<Metadata> {
+  // Same gate as the page: when it would 404, the tab must not read "Co-Managed IT".
+  const tenant = (await getSession())?.user?.tenant;
+  if (!tenant) return {};
+  try {
+    await requireCapabilityForPage('co-managed', tenant, 'serves');
+  } catch {
+    return {};
+  }
   const { t } = await getServerTranslation(undefined, 'metadata');
   return { title: t('msp.coManaged.title', { defaultValue: 'Co-Managed IT' }) };
 }
