@@ -61,6 +61,10 @@ test('both runtime images ship the workspace packages their runtime imports reso
     const text = read(file);
     assert.match(text, /^COPY \.\/packages\/ \.\/packages\/$/m, `${file} copies the workspace packages`);
     assert.match(text, /test -f \/app\/packages\/core\/dist\/index\.js/, `${file} refuses to package without the core runtime export`);
+    // The browser lane runs the server as 1000:1000; a page render that cannot
+    // create logs/ in /app/server throws, and the image optimizer writes .next/cache.
+    assert.match(text, /^COPY --chown=1000:1000 \.\/server\/\.next \.\/server\/\.next$/m, `${file} hands .next to the runtime user`);
+    assert.match(text, /^RUN chown 1000:1000 \/app\/server \/app\/server\/tsconfig\.json$/m, `${file} hands the server directory to the runtime user`);
   }
 });
 

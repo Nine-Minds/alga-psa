@@ -56,7 +56,7 @@ COPY ./shared/package.json ./shared/package.json
 
 # Copy pre-built Next.js artifacts (must exist locally)
 # server/dist is no longer required here; workflow-worker is built/deployed separately
-COPY ./server/.next ./server/.next
+COPY --chown=1000:1000 ./server/.next ./server/.next
 
 # Copy runtime files
 COPY ./server/public ./server/public
@@ -83,6 +83,14 @@ RUN test -f /app/packages/core/dist/index.js
 # Copy entrypoint
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
+
+# The image must also run as a non-root user (the browser lane runs it as
+# 1000:1000; hardened deployments may too). At runtime the server creates
+# logs/ in its working directory for winston's file transport and .next/cache
+# for the image optimizer, and Next may rewrite tsconfig.json; a page render
+# that cannot create logs/ throws. Give that user the directory, as the old
+# test image did.
+RUN chown 1000:1000 /app/server /app/server/tsconfig.json
 
 # Create build timestamp for verification
 RUN echo "BUILD_TIME=$(date)" > /app/build-info.txt && \
