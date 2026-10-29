@@ -4033,5 +4033,12 @@
     "moveDown": "Przenieś w dół",
     "remove": "Usuń",
     "addTag": "Dodaj tag…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Wróć do ustawień e-mail",
+      "title": "Dostawcy poczty e-mail i tożsamości",
+      "description": "Zarejestruj własną aplikację Google lub Microsoft do obsługi przychodzących wiadomości e-mail i logowania pracowników. Te poświadczenia należą do Twojego obszaru roboczego."
+    }
   }
 }

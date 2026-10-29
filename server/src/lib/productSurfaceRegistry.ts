@@ -69,6 +69,15 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'upgrade_boundary', co_managed: 'not_found' },
   },
   {
+    // Customer-owned Google / Microsoft provider setup. The page itself is
+    // gated by the co-managed capability ('serves'), so a co_managed workspace
+    // reaches this one capability-scoped page without the wider integrations
+    // surface.
+    group: 'msp_co_management_providers',
+    staticPrefixes: ['/msp/co-management/providers'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
+  },
+  {
     // One side-aware co-managed root: a PSA sponsor sees the overview, a
     // co_managed customer sees its own relationship home. The capability gate
     // in the route layout decides whether a tenant may see either.

@@ -6,6 +6,7 @@ import type { HostEnv } from '@alga-psa/emulator-host';
 import { GraphApiError, publicEvent, publicOnlineMeeting, publicSubscription, publicTeam } from './core';
 import type { MsGraphCore } from './core';
 import { BOT_FRAMEWORK_ISSUER, botFrameworkJwks } from './botFramework';
+import { entraJwks } from './entraOidc';
 import { deliverCalendarNotifications, deliverNotifications, validateNotificationUrl } from './notifier';
 
 interface Authed {
@@ -86,6 +87,23 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
 
   // --- Microsoft login surface ---
 
+  router.get('/:tenant/v2.0/.well-known/openid-configuration', (req, res) => {
+    const base = `${req.protocol}://${req.get('host')}/${encodeURIComponent(String(req.params.tenant))}`;
+    res.json({
+      issuer: `${base}/v2.0`, authorization_endpoint: `${base}/oauth2/v2.0/authorize`,
+      token_endpoint: `${base}/oauth2/v2.0/token`, jwks_uri: `${base}/discovery/v2.0/keys`,
+      userinfo_endpoint: `${req.protocol}://${req.get('host')}/oidc/userinfo`,
+      response_types_supported: ['code'], subject_types_supported: ['public'],
+      id_token_signing_alg_values_supported: ['RS256'], code_challenge_methods_supported: ['S256'],
+      token_endpoint_auth_methods_supported: ['client_secret_basic', 'client_secret_post'],
+    });
+  });
+  router.get('/:tenant/discovery/v2.0/keys', (_req, res) => res.json(entraJwks()));
+  router.get('/oidc/userinfo', (req, res) => {
+    core.authenticate(String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, ''));
+    res.json({ ...core.signedInUser, sub: core.signedInUser.id });
+  });
+
   router.get('/:tenant/oauth2/v2.0/authorize', (req, res) => {
     const clientId = String(req.query.client_id ?? '');
     const redirectUri = String(req.query.redirect_uri ?? '');
@@ -93,8 +111,11 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
       throw new GraphApiError(400, { error: 'invalid_client' });
     }
     const code = core.authorize(clientId, redirectUri, {
+      authorityTenant: String(req.params.tenant),
       nonce: req.query.nonce ? String(req.query.nonce) : undefined,
       scope: req.query.scope ? String(req.query.scope) : undefined,
+      codeChallenge: req.query.code_challenge ? String(req.query.code_challenge) : undefined,
+      codeChallengeMethod: req.query.code_challenge_method ? String(req.query.code_challenge_method) : undefined,
     });
     const callback = new URL(redirectUri);
     callback.searchParams.set('code', code);
@@ -115,6 +136,7 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
         ...clientSecretBasicCredentials(req),
         ...req.body,
         authorityTenant: String(req.params.tenant),
+        oidcIssuer: `${req.protocol}://${req.get('host')}/${encodeURIComponent(String(req.params.tenant))}/v2.0`,
       }),
     );
   });
