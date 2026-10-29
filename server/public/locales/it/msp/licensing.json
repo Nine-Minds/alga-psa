@@ -538,7 +538,7 @@
       "revoke": "Revoca",
       "sponsorIntro": "{{customer}} ti ha autorizzato a modificare i record seguenti.",
       "targetChanged": "Il record è cambiato. Aggiorna e riprova.",
-      "target": "Record",
+      "target": "Elemento",
       "technician": "Tecnico",
       "unavailable": "Non più disponibile",
       "userProfile": "Profilo utente"

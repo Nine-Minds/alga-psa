@@ -505,7 +505,7 @@
       "empty": "Es sind keine Co-Managed-Workspaces zur Verwaltung vorhanden.",
       "heading": "Co-Managed-Administration",
       "loadError": "Co-Managed-Workspaces konnten nicht geladen werden.",
-      "workspace": "Workspace"
+      "workspace": "Arbeitsbereich"
     },
     "customerTickets": {
       "board": "Board",
@@ -577,7 +577,7 @@
       "notAvailable": "Dies ist nicht mehr verfügbar.",
       "optionsError": "Die Auswahlmöglichkeiten konnten nicht geladen werden.",
       "permissionDenied": "Ihre Rolle enthält keine Berechtigung, den Co-Managed-Zugriff anzuzeigen. Bitten Sie einen Administrator um die Leseberechtigung für Co-Management.",
-      "person": "Person",
+      "person": "Benutzer",
       "previous": "Zurück",
       "project": "Projekt",
       "projects": "Projekte",
