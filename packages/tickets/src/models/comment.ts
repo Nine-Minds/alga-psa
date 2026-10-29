@@ -296,7 +296,7 @@ const Comment = {
     try {
       // Get existing comment first
       const existingComment = await tenantScopedTable<IComment>(trx, 'comments', tenant)
-        .select('comment_id', 'parent_comment_id', 'thread_id', 'user_id', 'actor_reference_id')
+        .select('comment_id', 'parent_comment_id', 'thread_id', 'user_id')
         .where('comment_id', id)
         .first();
 
@@ -304,7 +304,7 @@ const Comment = {
         throw new Error(`Comment with id ${id} not found`);
       }
 
-      if (existingComment.actor_reference_id) throw new Error('Qualified comment authors require a collaboration command');
+      // No foreign-authored comment exists in L2 (no comments.actor_reference_id column; see L4a), so no author-column read here.
       assertNoQualifiedAuthorFields(comment);
 
       // If user_id is being updated, verify user exists and get their type
@@ -370,7 +370,6 @@ const Comment = {
         return;
       }
 
-      if (existingComment.actor_reference_id) throw new Error('Qualified comment authors require a collaboration command');
 
       await withdrawCommentAttachments(trx, tenant, id);
 
