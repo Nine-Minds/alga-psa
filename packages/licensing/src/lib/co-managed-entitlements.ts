@@ -38,7 +38,7 @@ function signedCapacity(row: any, sponsor: string, now: Date): { capacity: numbe
 
 /** Caller holds the sponsor entitlement row lock. Expiry is evaluated on demand
  * so delayed webhooks/workers cannot extend a customer's grace period. */
-async function materializeState(trx: Knex.Transaction, sponsor: string, row: any, now: Date,
+export async function materializeState(trx: Knex.Transaction, sponsor: string, row: any, now: Date,
   inactiveSince?: Date): Promise<CoManagedEntitlementState> {
   const allocated = await allocatedSeats(trx, sponsor);
   const owner = await tenantDb(trx, sponsor).table('tenants').forShare().first('product_code', 'plan', 'suspended_at');

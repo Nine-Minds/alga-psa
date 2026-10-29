@@ -13,6 +13,8 @@ export * from './lib/license-types';
 export * from './lib/co-managed-license';
 export * from './lib/co-managed-reservation';
 export * from './lib/co-managed-entitlements';
+export * from './lib/co-managed-purchases';
+export * from './lib/co-managed-hosted-reconcile';
 export * from './lib/co-managed-admission';
 export * from './lib/co-managed-admission-permissions';
 export { coManagedLifecycleProvider, invalidateCoManagedAwaitingAcceptance, resetCoManagedAwaitingAcceptanceCache } from './lib/co-managed-lifecycle';
