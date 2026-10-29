@@ -819,7 +819,8 @@
       "notAllowed": "Een van de waarden van de contractregel is niet toegestaan. Controleer het formulier en probeer het opnieuw.",
       "missingField": "Er ontbreekt een verplicht veld van de contractregel.",
       "missingFieldNamed": "Er ontbreekt een verplicht veld van de contractregel: {{field}}.",
-      "advanceTimingNotAllowed": "Vooraf factureren is alleen beschikbaar voor vaste contractregels. Uren- en verbruiksregels worden altijd achteraf gefactureerd, nadat het werk is uitgevoerd."
+      "advanceTimingNotAllowed": "Vooraf factureren is alleen beschikbaar voor vaste contractregels. Uren- en verbruiksregels worden altijd achteraf gefactureerd, nadat het werk is uitgevoerd.",
+      "versionConflict": "This contract line was changed by someone else since you started editing. Reload it and re-apply your edit."
     },
     "templateLine": {
       "unavailable": "De geselecteerde sjabloonregel is niet meer beschikbaar. Vernieuw de pagina en probeer het opnieuw."

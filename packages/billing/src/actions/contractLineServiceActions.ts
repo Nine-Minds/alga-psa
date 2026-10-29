@@ -855,6 +855,38 @@ export const removeServiceFromContractLine = withAuth(async (
 });
 
 /**
+ * Removals then additions on a caller-owned transaction. Writes only; callers own
+ * validation, permission checks and rematerialization.
+ *
+ * LEVERAGE: friction in-transaction-helpers-in-use-server — this file is 'use server', so
+ * exporting a trx-taking helper exposes it as an action endpoint (same as
+ * upsertBucketOverlayInTransaction). It needs a non-action module for trx-level helpers.
+ */
+export async function applyContractLineServiceMembershipChangesInTransaction(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+  changes: ContractLineServiceMembershipChanges,
+): Promise<void> {
+  for (const serviceId of changes.removals) {
+    await removeServiceFromContractLineInTransaction(trx, tenant, contractLineId, serviceId);
+  }
+  for (const addition of changes.additions) {
+    await addServiceToContractLineInTransaction(
+      trx,
+      tenant,
+      contractLineId,
+      addition.serviceId,
+      addition.quantity,
+      addition.customRate,
+      addition.configurationType,
+      addition.typeConfig,
+      addition.rateTiers,
+    );
+  }
+}
+
+/**
  * Apply all staged membership changes from the contract-line editor in one
  * transaction. The editor intentionally calls this only from its outer Save
  * action; opening the picker or pressing Remove never mutates persisted data.
@@ -889,22 +921,7 @@ export const applyContractLineServiceMembershipChanges = withAuth(async (
 
     const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      for (const serviceId of changes.removals) {
-        await removeServiceFromContractLineInTransaction(trx, tenant, contractLineId, serviceId);
-      }
-      for (const addition of changes.additions) {
-        await addServiceToContractLineInTransaction(
-          trx,
-          tenant,
-          contractLineId,
-          addition.serviceId,
-          addition.quantity,
-          addition.customRate,
-          addition.configurationType,
-          addition.typeConfig,
-          addition.rateTiers,
-        );
-      }
+      await applyContractLineServiceMembershipChangesInTransaction(trx, tenant, contractLineId, changes);
       return true;
     });
   } catch (error) {
