@@ -11,6 +11,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { type TenantTier, resolveTier } from '@alga-psa/types';
 import { getLicenseStateRow, resolveSelfHostTier } from './license-state';
+import { getTenantOwnLicenseInput } from './tenant-license-state';
 
 export function hasActiveSoloProTrial(value?: string | null): boolean {
   if (!value) return false;
@@ -30,7 +31,13 @@ export async function resolveTenantTier(tenantId: string): Promise<TenantTier> {
     // Pass the request's tenant so a tenant-bound license that was issued for a
     // different install resolves to essentials (license_wrong_tenant) instead of
     // unlocking its tier here.
-    const selfHost = resolveSelfHostTier(await getLicenseStateRow(), tenantId);
+    const installation = await getLicenseStateRow();
+    // A tenant's own signed claim (self-host only, config-gated) outranks the installation token.
+    // This lookup is strictly additive: hosted tenants (no installation row) issue no extra query,
+    // and ANY failure of it is "no claim", leaving resolution exactly as it was. It must never
+    // become a catch-all downgrade to 'essentials' (DO-NOT-PORT #14).
+    const own = installation ? await getTenantOwnLicenseInput(tenantId, await getAdminConnection()).catch(() => null) : null;
+    const selfHost = resolveSelfHostTier(own ?? installation, tenantId);
     if (selfHost !== null) {
       return selfHost.tier;
     }
