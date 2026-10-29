@@ -59,35 +59,35 @@ exports.up = async function up(knex) {
     WHERE r.tenant = numbered.tenant AND r.rma_id = numbered.rma_id
   `);
 
-  // One RMA counter row per tenant that lacks one, seeded at the highest number in use.
-  await drain(knex, `
-    INSERT INTO next_number (tenant, entity_type, last_number, initial_value, prefix, padding_length)
-    SELECT t.tenant, 'RMA',
-           COALESCE((SELECT MAX(NULLIF(regexp_replace(r.rma_number, '\\D', '', 'g'), '')::bigint)
-                     FROM rma_cases r WHERE r.tenant = t.tenant), 0),
-           1, 'RMA-', 5
-    FROM tenants t
-    WHERE NOT EXISTS (SELECT 1 FROM next_number n WHERE n.tenant = t.tenant AND n.entity_type = 'RMA')
-    ORDER BY t.tenant
-    LIMIT ${BATCH}
-    ON CONFLICT (tenant, entity_type) DO NOTHING
-  `);
-  // A counter that already existed must still clear the backfilled maximum.
-  await drain(knex, `
-    UPDATE next_number n SET last_number = m.max_n
-    FROM (
-      SELECT n2.tenant, mx.max_n
-      FROM next_number n2
-      JOIN LATERAL (
-        SELECT MAX(NULLIF(regexp_replace(r.rma_number, '\\D', '', 'g'), '')::bigint) AS max_n
-        FROM rma_cases r WHERE r.tenant = n2.tenant
-      ) mx ON true
-      WHERE n2.entity_type = 'RMA' AND mx.max_n > n2.last_number
-      ORDER BY n2.tenant
-      LIMIT ${BATCH}
-    ) m
-    WHERE n.tenant = m.tenant AND n.entity_type = 'RMA'
-  `);
+  // RMA counter per tenant, seeded at (never below) the highest number in use. Citus rejects any statement that
+  // joins the reference table `tenants` with distributed tables (next_number, rma_cases), so tenant ids are read
+  // on their own, keyset-paged, and each tenant is then handled by single-tenant statements that touch only
+  // distributed tables filtered on the literal tenant (router-executable, co-located on `tenant`).
+  const maxRmaNumber = `SELECT MAX(NULLIF(regexp_replace(rma_number, '\\D', '', 'g'), '')::bigint) FROM rma_cases WHERE tenant = ?`;
+  let after = null;
+  for (;;) {
+    const page = after === null
+      ? await knex.raw(`SELECT tenant FROM tenants ORDER BY tenant LIMIT ${BATCH}`)
+      : await knex.raw(`SELECT tenant FROM tenants WHERE tenant > ? ORDER BY tenant LIMIT ${BATCH}`, [after]);
+    const tenantIds = page.rows.map((row) => row.tenant);
+    if (tenantIds.length === 0) break;
+    for (const tenant of tenantIds) {
+      await knex.raw(
+        `INSERT INTO next_number (tenant, entity_type, last_number, initial_value, prefix, padding_length)
+         SELECT ?::uuid, 'RMA', COALESCE((${maxRmaNumber}), 0), 1, 'RMA-', 5
+         ON CONFLICT (tenant, entity_type) DO NOTHING`,
+        [tenant, tenant]
+      );
+      // A counter that already existed must still clear the backfilled maximum.
+      await knex.raw(
+        `UPDATE next_number SET last_number = m.max_n
+         FROM (${maxRmaNumber}) AS m(max_n)
+         WHERE next_number.tenant = ? AND next_number.entity_type = 'RMA' AND m.max_n > next_number.last_number`,
+        [tenant, tenant]
+      );
+    }
+    after = tenantIds[tenantIds.length - 1];
+  }
 
   // Every row is numbered now. Added NOT VALID (validated, then promoted to NOT NULL, by step 3).
   await knex.raw('ALTER TABLE rma_cases DROP CONSTRAINT IF EXISTS rma_cases_rma_number_present_check');

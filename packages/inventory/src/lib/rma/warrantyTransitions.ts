@@ -352,7 +352,7 @@ export async function shipToVendorCore(
 /** Bring the device back into the office after the vendor returns it. Advance-track cases never left, so there is nothing to receive. */
 async function receiveBackIfWithVendor(
   trx: Knex.Transaction, tenant: string, actor: string, rma: IRmaCase,
-  input: { location_id: string | null; bin: string | null; occurred_at?: string; note?: string | null; inbound_carrier: string | null; inbound_tracking_number: string | null }
+  input: { location_id?: string | null; bin?: string | null; occurred_at?: string; note?: string | null; inbound_carrier?: string | null; inbound_tracking_number?: string | null }
 ): Promise<WarrantyCustodyEffect[]> {
   const custody = await loadOpenCustody(trx, tenant, rma);
   if (!custody || custody.state !== 'with_vendor') return [];
@@ -364,7 +364,7 @@ async function receiveBackIfWithVendor(
   const received = await recordCustodyEvent(trx, tenant, actor, custody.custody_id, {
     event_type: 'received',
     location_id: input.location_id,
-    bin: input.bin,
+    bin: input.bin ?? null,
     holder_user_id: actor,
     occurred_at: input.occurred_at,
     note,

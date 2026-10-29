@@ -38,7 +38,8 @@ vi.mock('@alga-psa/authorization/kernel', async (orig) => ({
   createAuthorizationKernel: () => ({ authorizeResource: async () => ({ allowed: true }) }),
 }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
-vi.mock('@alga-psa/inventory/actions', () => ({ getRmaCase: async () => holder.rma, openWarrantyClaim: vi.fn() }));
+vi.mock('@alga-psa/inventory/actions/rmaActions', () => ({ getRmaCase: async () => holder.rma }));
+vi.mock('@alga-psa/inventory/actions/rmaWarrantyActions', () => ({ openWarrantyClaim: vi.fn() }));
 
 import { getMirroredVendorCaseSystem, mirrorRmaToTicketLinks } from '../rmaTicketActions';
 
