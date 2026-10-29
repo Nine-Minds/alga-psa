@@ -71,8 +71,14 @@ COPY ./ee/packages/workflows/ ./ee/packages/workflows/
 COPY ./scripts ./scripts
 COPY ./shared/workflow/ ./shared/workflow/
 
-# Copy core package.json for version info
-COPY packages/core/package.json /app/packages/core/package.json
+# Copy the workspace packages with their pre-built dist directories, as the
+# enterprise image does. npm links @alga-psa/* into node_modules from the
+# lockfile whether or not the directories exist, so without them every runtime
+# import of a workspace package (the file-system secret provider that the
+# server, workers and email service share, the admin scripts) fails with
+# "Cannot find package" while the webpack bundle, which compiled them in, runs.
+COPY ./packages/ ./packages/
+RUN test -f /app/packages/core/dist/index.js
 
 # Copy entrypoint
 COPY server/entrypoint.sh /app/entrypoint.sh
