@@ -33,7 +33,7 @@ describe('Contact summary email compatibility', () => {
     expect(contactPickerSource).toContain("(contact.email ?? '').toLowerCase().includes(lowerSearchTerm)");
     // The row's secondary line now carries the primary-location hint after the email, so the email
     // is no longer the last node in that div — it is still the field rendered there.
-    expect(contactPickerSource).toMatch(/\{contact\.email\}\s+\{contactLocationHint\(contact\) \?/);
+    expect(contactPickerSource).toMatch(/\{contact\.email\}\s+\{contactLocationHint\(contact, remoteLabel\) \?/);
     expect(contactPickerDialogSource).toContain("(contact.email?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)");
   });
 });

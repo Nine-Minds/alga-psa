@@ -17,9 +17,18 @@ describe('Contacts sorting contracts', () => {
     expect(contactsListSource).toContain("title: t('contactsPage.table.client', { defaultValue: 'Client' })");
     expect(contactsListSource).toContain("dataIndex: 'client_name'");
     expect(contactQueryActionsSource).toContain("client_name: 'clients.client_name'");
-    expect(contactQueryActionsSource).toContain("['full_name', 'created_at', 'email', 'client_name', 'phone_number']");
+    expect(contactQueryActionsSource).toContain("['full_name', 'created_at', 'email', 'client_name', 'phone_number', 'primaryLocation']");
     expect(contactQueryActionsSource).toContain("const dbSortBy = safeSortBy === 'client_name'");
     expect(contactQueryActionsSource).toContain("? 'full_name'");
+  });
+
+  // The Location column is sortable, and its value is not a column of `contacts`: the order is
+  // applied in TypeScript once the links have been attached.
+  it('sorts the location column by the primary location name', () => {
+    expect(contactsListSource).toContain("title: t('contactsPage.table.location', { defaultValue: 'Location' })");
+    expect(contactsListSource).toContain("dataIndex: 'primaryLocation'");
+    expect(contactQueryActionsSource).toContain('primaryLocation: contactLocationSortKey');
+    expect(contactQueryActionsSource).toContain("safeSortBy === 'primaryLocation' ? sortContacts(withLocations");
   });
 
   it('disables sorting for non-data contacts table columns', () => {

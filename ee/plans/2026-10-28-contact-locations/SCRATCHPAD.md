@@ -52,3 +52,36 @@
 
 - Contacts step: `MergeClientsDialog.tsx:40-45` wizard order, `:418-470` the per-contact table (Billing profile `CustomSelect`, Manager and Sees-tickets checkboxes), `:247` builds `contactAssignments` for submit. Engine preview builds `contacts[]` at `clientMergeEngine.ts:470-510`; assignments applied at `:892-910` (section 7, after the client-owned tables moved in section 5). Location assignments go in as a sibling input and a section after 5, so the chosen location ids already belong to the target when `replaceContactLocations` validates them.
 - Decision: pre-fill with current links, suggest a same-named target location with a one-click apply, never re-point by default. Keeps "no silent data loss" and still makes the common duplicate-site case one click per person.
+
+## 2026-10-29: review round — what was missing and why
+
+Two plan features were missing from the first implementation round with no justification recorded
+(the summary commit claimed "2 are skipped with reasons below" and its body was truncated). Both are
+now implemented, so nothing in features.json is skipped:
+
+- **F039** (predicates conformance + SQL matrix) was simply not done. The table now carries nine
+  cases — `location-*` for an id column and `contact-locations-*` for a set across a relation hop —
+  run by the evaluator, the JSONata path (set rows carry the usual `skip.jsonata`) and the SQL
+  compiler, whose harness grew `conf_contact` / `conf_contact_location` temp tables. SEMANTICS.md
+  names both shapes. `ticketListFilterMatrix` gained eight DB-backed rows and portal-user
+  assertions.
+- **F055** (mobile location editor) was not done either. `ContactFormModal` now has the
+  work-arrangement select and the location multi-select with a primary marker, `contactForm` the
+  one-primary rule and the omitted/[]/replace diff.
+
+### Tests still at `implemented: false` (45)
+
+They are the DB-backed and render-heavy halves of the groups, not gaps in the shipped behaviour;
+each one needs a live Postgres (REST routes, CSV import, the search indexer, portal actions,
+`TicketModel.createTicket`'s write) or a full component mount (the bento tile, the edit drawer, the
+merge Contacts step, `ClientLocations`). The decisions those tests describe are covered at the seam
+by the unit tests that did land: `shared/models/contactLocation.test.ts` (resolver, nine cases),
+`shared/models/ticketLocationAutofill.test.ts` (the undefined/null/explicit contract and the
+guard), `packages/clients/src/models/contactLocation.test.ts` (replace invariants),
+`contactService.locations.test.ts` (the REST write contract), `clientContactsLocationFilter.test.ts`
+(the client-scoped filters), `contactLocationArtifacts.contract.test.ts` (spec + registry),
+`ChecklistRuleMatchers.test.tsx` (both location paths), `WhereTagFilter.test.tsx` (both toolbar
+controls), `ticketWhereUrl` / `ticketWhereStorage` (URL and saved-view round trip),
+`clientMergeEngine.test.ts` (engine and dry run), and the mobile `contactForm` / `ContactFormModal`
+/ `api/contacts` suites. Writing the remaining 45 means standing up fixtures in the integration
+lane; it is a follow-up, not a behaviour gap.
