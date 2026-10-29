@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import YAML from 'yaml';
 
-import { applyAllow, nonAdditiveChanges, readAllow, repoRoot } from '../ci/artifact-drift.mjs';
+import { applyAllow, formatReport, nonAdditiveChanges, readAllow, repoRoot } from '../ci/artifact-drift.mjs';
 import { writeDocument } from '../../sdk/scripts/lib/write-openapi-document.mjs';
 
 test('OpenAPI artifacts are identical for shared and copied schema values and preserve their data', (t) => {
@@ -172,4 +172,29 @@ test('committed allowlist covers the schedules query narrowing and nothing else'
     const left = applyAllow(nonAdditiveChanges(after, unrelated), docPath, allow).left;
     assert.deepEqual(left.map((c) => c.kind), ['param-removed']);
   }
+});
+
+test('stdout is a pure path list: attribute-card --stdin sees only drifted files and broken docs', () => {
+  const doc = 'sdk/docs/openapi/alga-openapi.ce.json';
+  const report = formatReport({
+    base: 'origin/main',
+    drift: ['server/public/locales/xx/msp/settings.json', 'server/src/lib/mcp/registry.generated.ts'],
+    breaks: [
+      { doc, left: [{ pointer: '/paths/~1x/get', kind: 'removed', message: 'get removed' }], used: new Set() },
+      { doc: 'sdk/docs/openapi/alga-openapi.ee.json', left: [], used: new Set() },
+    ],
+  });
+  assert.equal(report.exit, 1);
+  assert.deepEqual(report.stdout, ['server/public/locales/xx/msp/settings.json', 'server/src/lib/mcp/registry.generated.ts', doc]);
+  // The same first-token parse attribute-card.mjs --stdin applies to each line.
+  const parsed = report.stdout.map((l) => /^([^\s:]+)/.exec(l)?.[1]).filter(Boolean);
+  assert.deepEqual(parsed, report.stdout);
+  assert.ok(report.stderr.some((l) => l.startsWith('artifact-drift: generated artifacts differ')));
+});
+
+test('a clean run prints nothing on stdout', () => {
+  const report = formatReport({ base: 'HEAD', drift: [], breaks: [{ doc: 'x.json', left: [], used: new Set() }] });
+  assert.equal(report.exit, 0);
+  assert.deepEqual(report.stdout, []);
+  assert.match(report.stderr.at(-1), /^artifact-drift: clean/);
 });

@@ -57,6 +57,7 @@ export const userWithRolesSchema = z.object({
 export const teamResponseSchema = z.object({
   team_id: uuidSchema,
   team_name: z.string(),
+  description: z.string().nullable().optional(),
   manager_id: uuidSchema.nullable(),
   created_at: z.string().datetime().optional(),
   updated_at: z.string().datetime().optional(),
@@ -67,6 +68,7 @@ export const teamResponseSchema = z.object({
 // Create team schema
 export const createTeamSchema = z.object({
   team_name: z.string().min(1, 'Team name is required').max(255),
+  description: z.string().max(1000).nullable().optional(),
   manager_id: uuidSchema.optional(),
   members: z.array(userWithRolesSchema).optional()
 });
@@ -350,6 +352,7 @@ export const teamAnalyticsQuerySchema = z.object({
 // Team filter schema
 export const teamFilterSchema = baseFilterSchema.extend({
   team_name: z.string().optional(),
+  description: z.string().optional(),
   manager_id: uuidSchema.optional(),
   member_count_min: z.string().transform(val => parseInt(val)).optional(),
   member_count_max: z.string().transform(val => parseInt(val)).optional(),

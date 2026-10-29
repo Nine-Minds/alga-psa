@@ -492,7 +492,8 @@
       "ticketClosed": "⟦Ŧīƈķḗŧ ƈŀȯşḗḓ⟧",
       "ticketOpened": "⟦Ŧīƈķḗŧ ȯƥḗƞḗḓ⟧",
       "unitDelivered": "⟦Ḗʠŭīƥḿḗƞŧ ḓḗŀīṽḗřḗḓ⟧"
-    }
+    },
+    "discardFeatureMessage": "⟦Ẏȯŭ ħȧṽḗ ŭƞşȧṽḗḓ ƈħȧƞɠḗş īƞ ŧħīş ṽīḗẇ. Ƈŀȯşḗ ȧƞḓ ḓīşƈȧřḓ ŧħḗḿ?⟧"
   },
   "quickAddClient": {
     "lifecycleStatus": "⟦Ŀīƒḗƈẏƈŀḗ⟧",

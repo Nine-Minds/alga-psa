@@ -88,6 +88,9 @@ vi.mock('@/components/product/ProductRouteBoundary', () => ({
 vi.mock('@/components/co-managed/CoManagedFeatureBoundary', () => ({
   CoManagedWorkspaceBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
+vi.mock('@/components/co-managed/CoManagedWorkspaceNotice', () => ({
+  default: ({ notice }: { notice: unknown }) => (notice ? <div data-testid="workspace-notice" /> : null),
+}));
 vi.mock('@/components/co-managed/CoManagedCustomerShell', () => ({
   default: ({ children }: { children: React.ReactNode }) => <div data-testid="customer-shell">{children}</div>,
 }));
@@ -179,6 +182,30 @@ describe('MspLayoutClient product shell behavior', () => {
 
     expect(screen.getByTestId('psa-default-layout')).toBeInTheDocument();
     expect(screen.queryByTestId('algadesk-shell')).not.toBeInTheDocument();
+  });
+
+  it('co_managed: renders the ended notice inside the customer shell and the boundary on a denied route', () => {
+    mockUsePathname.mockReturnValue('/msp/billing');
+    render(<MspLayoutClient session={null} productCode="co_managed" needsOnboarding={false} initialSidebarCollapsed={false}
+      workspaceNotice={{ kind: 'ended', endedAt: '2026-10-01T00:00:00.000Z', sponsorName: 'Northwind' }}>
+      <div>billing page</div>
+    </MspLayoutClient>);
+    expect(screen.getByTestId('customer-shell')).toBeInTheDocument();
+    expect(screen.getByTestId('workspace-notice')).toBeInTheDocument();
+    expect(screen.getByTestId('product-route-boundary')).toBeInTheDocument();
+    expect(screen.queryByText('billing page')).not.toBeInTheDocument();
+  });
+
+  it('psa and algadesk never mount the customer shell or the notice, even if one were passed', () => {
+    for (const product of ['psa', 'algadesk'] as const) {
+      const { unmount } = render(<MspLayoutClient session={null} productCode={product} needsOnboarding={false} initialSidebarCollapsed={false}
+        workspaceNotice={{ kind: 'ended', endedAt: '2026-10-01T00:00:00.000Z', sponsorName: 'x' }}>
+        <div>content</div>
+      </MspLayoutClient>);
+      expect(screen.queryByTestId('customer-shell')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('workspace-notice')).not.toBeInTheDocument();
+      unmount();
+    }
   });
 
   it('RT006: renders an onboarding redirect fallback instead of a blank screen', () => {

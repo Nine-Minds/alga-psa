@@ -245,6 +245,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'tag_references',
   'tag_display_rules',
   'ticket_resources',
+  'ticket_watchers',
   'client_portal_visibility_group_boards',
   'import_job_items',
   'import_jobs',
@@ -452,6 +453,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_managed_allocations',
   'co_managed_entitlements',
   'co_managed_provisioning_operations',
+  'co_managed_meeting_creation_operations',
   'co_management_relationship_events',
   'co_management_relationships',
 
@@ -588,6 +590,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'tag_definitions',
   'custom_task_types',
   'tenant_time_period_settings',
+  'time_period_calendar_locks',
   'time_periods',
   'time_period_types',
   'time_period_settings',

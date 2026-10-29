@@ -414,17 +414,21 @@
       "cancel": "Annulla",
       "delete": "Elimina",
       "placeholder": "Inserisci il nome del nuovo team",
+      "descriptionPlaceholder": "Inserisci una descrizione facoltativa del team",
       "selectManager": "Seleziona un responsabile"
     },
     "details": {
       "loading": "Caricamento dettagli del team...",
       "notFound": "Nessun team trovato",
+      "noDescription": "Nessuna descrizione",
       "fields": {
         "teamLead": "Responsabile del team",
+        "description": "Descrizione",
         "addMember": "Aggiungi membro"
       },
       "placeholders": {
         "teamName": "Inserisci il nome del team",
+        "description": "Inserisci la descrizione del team",
         "selectTeamLead": "Seleziona un responsabile del team",
         "selectUserToAdd": "Seleziona un utente da aggiungere",
         "noTeamLead": "Non assegnato"
@@ -436,8 +440,10 @@
         "discard": "Annulla modifiche",
         "saveChanges": "Salva modifiche",
         "saveName": "Salva nome",
+        "saveDescription": "Salva descrizione",
         "cancel": "Annulla",
         "editName": "Modifica nome",
+        "editDescription": "Modifica descrizione",
         "remove": "Rimuovi"
       },
       "table": {
@@ -462,6 +468,7 @@
         "createFailed": "Impossibile creare il team: {{error}}",
         "deleteFailed": "Impossibile eliminare il team",
         "updateName": "Impossibile aggiornare il nome del team",
+        "updateDescription": "Impossibile aggiornare la descrizione del team",
         "saveChanges": "Impossibile salvare le modifiche. Riprova."
       }
     }
@@ -4033,5 +4040,12 @@
     "moveDown": "Sposta giù",
     "remove": "Rimuovi",
     "addTag": "Aggiungi un tag…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Torna alle impostazioni email",
+      "title": "Provider di email e identità",
+      "description": "Registra la tua applicazione Google o Microsoft per le email in arrivo e l'accesso del personale. Queste credenziali appartengono al tuo spazio di lavoro."
+    }
   }
 }

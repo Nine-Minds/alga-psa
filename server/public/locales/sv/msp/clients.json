@@ -492,7 +492,8 @@
       "ticketClosed": "Ärende stängt",
       "ticketOpened": "Ärende öppnat",
       "unitDelivered": "Utrustning levererad"
-    }
+    },
+    "discardFeatureMessage": "Du har osparade ändringar i den här vyn. Stänga och förkasta dem?"
   },
   "quickAddClient": {
     "lifecycleStatus": "Livscykel",

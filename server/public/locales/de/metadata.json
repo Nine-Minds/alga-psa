@@ -524,7 +524,10 @@
       "title": "Co-Managed-IT"
     },
     "coManagement": {
-      "title": "Co-Managed-Zugriff"
+      "title": "Co-Managed-Zugriff",
+      "providers": {
+        "title": "E-Mail- und Identitätsanbieter"
+      }
     }
   },
   "auth": {

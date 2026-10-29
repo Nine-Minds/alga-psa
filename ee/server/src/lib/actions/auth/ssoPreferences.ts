@@ -130,6 +130,12 @@ export const updateSsoPreferencesAction = withAuth(async (
   return nextPreferences;
 });
 
+/** Whether the caller may configure the tenant's own Google / Microsoft
+ * application (the provider actions require system_settings:update), so the
+ * profile can offer setup instead of only "ask your administrator". */
+export const canConfigureSsoProvidersAction = withAuth(async (user) =>
+  hasPermission(user, 'system_settings', 'update'));
+
 export interface LinkedSsoAccount {
   provider: string;
   provider_account_id: string;
