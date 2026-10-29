@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { assertBundlePropagationAuthority } from './ticketBundleUtils';
+import { assertBundlePropagationAuthority } from '../lib/ticketBundlePropagation';
 
 const repoRoot = path.resolve(__dirname, '../../../..');
 const read = (relativePath: string) => fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');

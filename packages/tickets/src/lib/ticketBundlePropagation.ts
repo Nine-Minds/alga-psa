@@ -89,3 +89,17 @@ export class BundlePropagationConfirmationRequiredError extends Error {
     this.details = preview;
   }
 }
+
+/**
+ * A co-managed collaborator is admitted to the master ticket, not to the
+ * bundle. Propagating its status would write rows on children the collaborator
+ * may never have been admitted to, so the whole edit is refused rather than
+ * silently narrowed to the visible children. Called before any child write on
+ * either propagation path. Native callers (including master closes and the
+ * auto-close engine) never set `collaborator`, so they are never refused.
+ */
+export function assertBundlePropagationAuthority(ctx: Pick<BundleStatusPropagationContext, 'collaborator'>): void {
+  if (ctx.collaborator) {
+    throw new Error('Shared bundle workflow edits require authority for every child ticket');
+  }
+}
