@@ -2613,7 +2613,6 @@ export async function updateTicketInTransaction(
 ): Promise<'success'> {
     try {
       // Validate update data
-      const requestedFields = Object.keys(data);
       const validatedData = validateData(ticketUpdateSchema, data);
       const suppressContactNotifications = options?.suppressContactNotifications === true;
       const suppressInternalNotifications = options?.suppressInternalNotifications === true;
@@ -2636,7 +2635,7 @@ export async function updateTicketInTransaction(
     const collaborator = collaboration ? await resolveTicketMutationCollaborator(trx, tenant, user, collaboration) : null;
     if (collaboration) {
       const allowed = new Set(['title', 'url', 'status_id', 'priority_id', 'due_date', 'response_state', 'category_id', 'subcategory_id', 'attributes']);
-      if (requestedFields.some((key) => !allowed.has(key))) throw new Error('Unsupported shared ticket edit fields');
+      if (Object.keys(data).some((key) => !allowed.has(key))) throw new Error('Unsupported shared ticket edit fields');
       await collaboration.assertWriteAuthority(trx);
     }
 
@@ -3271,7 +3270,8 @@ export async function updateTicketInTransaction(
           ctx: {
             tenantId: tenant,
             occurredAt,
-            actor: workflowCtx.actor,
+            // Native callers (including systemActor, e.g. auto-close) keep the USER actor they always had.
+            actor: collaborator ? workflowCtx.actor : { actorType: 'USER', actorUserId: user.user_id },
           },
         }),
         `TICKET_RESPONSE_STATE_CHANGED ticket=${id}`
