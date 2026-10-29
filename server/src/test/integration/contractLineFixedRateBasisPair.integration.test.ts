@@ -11,10 +11,11 @@ import {
   tenantTable,
 } from '../../../test-utils/perSeatFixtures';
 
-// "Reset to standard" (rate review) clears a bundle's stored rate so it follows
-// the catalog again. On a mixed line it must reprice the bundle members only:
-// a per-seat member's unit rate, seat count and scheduled revisions are
-// standing commitments that change through dated revisions, never in place.
+// alga-2026-0002714: a Products member is stored NULL rate / NULL basis
+// (catalog-priced). Saving its line used to write base_rate_basis='per_unit'
+// alone and trip the pair CHECK (base_rate IS NULL) = (base_rate_basis IS NULL).
+// Every layer is exercised against the real constraint: model, service,
+// server action and the public API.
 
 let db: Knex;
 let tenantId: string;
@@ -22,6 +23,7 @@ let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/con
 let updateContractLine: typeof import('@alga-psa/billing/actions/contractLineAction').updateContractLine;
 let updateConfiguration: typeof import('@alga-psa/billing/actions/contractLineServiceConfigurationActions').updateConfiguration;
 let FixedConfigModel: typeof import('@alga-psa/billing/models/contractLineServiceFixedConfig').default;
+let ContractLineService: typeof import('../../lib/api/services/ContractLineService').ContractLineService;
 
 // LEVERAGE: pattern per-seat-test-mocks — the same auth/db/tenant mock preamble is repeated in every contractServicesPerSeat* integration file; it belongs in test-utils.
 vi.mock('server/src/lib/db', async () => {
@@ -119,6 +121,7 @@ describe('Products contract line save never splits base_rate / base_rate_basis',
     ({ updateContractLine } = await import('@alga-psa/billing/actions/contractLineAction'));
     ({ updateConfiguration } = await import('@alga-psa/billing/actions/contractLineServiceConfigurationActions'));
     FixedConfigModel = (await import('@alga-psa/billing/models/contractLineServiceFixedConfig')).default;
+    ({ ContractLineService } = await import('../../lib/api/services/ContractLineService'));
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
@@ -153,6 +156,8 @@ describe('Products contract line save never splits base_rate / base_rate_basis',
     // The exact old write: base_rate_basis='per_unit' with the rate absent from the patch.
     const error: any = await model.update(configId, { base_rate_basis: 'per_unit' }).catch((e) => e);
     expect(error).toBeInstanceOf(Error);
+    expect(error.name).toBe('FixedMemberRatePairError');
+    expect(error.statusCode).toBe(400);
     expect(error.message).toBe(NAMED_ERROR);
     expect(error.code).not.toBe('23514');
     expect(String(error.message)).not.toContain(CONSTRAINT);
@@ -197,5 +202,94 @@ describe('Products contract line save never splits base_rate / base_rate_basis',
     const after = await fixedRow(configId);
     expect(after).toMatchObject({ base_rate: null, base_rate_basis: null, rate_provenance: 'inherited', pricing_basis: 'unit' });
     expect(after.base_rate).toBe(before.base_rate);
+  }, HOOK_TIMEOUT);
+  it('service: the exact pre-fix editor payload (same quantity, null rate, invented basis) saves cleanly', async () => {
+    const { lineId, configId } = await createProductsLine();
+    const before = await fixedRow(configId);
+    // What a stale browser bundle still sends on every Save of a Products line.
+    const saved: any = await updateConfiguration(configId, { quantity: 2 } as any,
+      { base_rate: null, base_rate_basis: 'per_unit' } as any);
+    expect(saved, JSON.stringify(saved)).not.toHaveProperty('actionError');
+
+    const after = await fixedRow(configId);
+    expect(after).toMatchObject({ base_rate: null, base_rate_basis: null, pricing_basis: 'unit', rate_provenance: 'inherited' });
+    expect(after.base_rate).toBe(before.base_rate);
+    const line: any = await tenantTable(db, tenantId, 'contract_lines').where({ tenant: tenantId, contract_line_id: lineId }).first();
+    expect(line).toBeTruthy();
+  }, HOOK_TIMEOUT);
+
+  it('action: a refused split pair comes back as an action error, not a thrown exception', async () => {
+    const { configId } = await createProductsLine();
+    const before = await fixedRow(configId);
+    // No rate or quantity edit, so this skips the revision path and reaches the model.
+    const result: any = await updateConfiguration(configId, {}, { base_rate_basis: 'per_unit' } as any);
+    expect(result).toHaveProperty('actionError');
+    expect(await fixedRow(configId)).toEqual(before);
+  }, HOOK_TIMEOUT);
+
+  it('api: a PATCH stating a basis for a catalog-priced member is a 400, and nothing changes', async () => {
+    const { lineId, configId, serviceId } = await createProductsLine();
+    const before = await fixedRow(configId);
+    const service = new ContractLineService();
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: tenantId });
+    const error: any = await service
+      .updatePlanService(lineId, serviceId, { type_config: { base_rate_basis: 'per_unit' } } as any,
+        { tenant: tenantId, userId: 'per-seat-test-user' } as any)
+      .catch((e: unknown) => e);
+    expect(error?.statusCode).toBe(400);
+    expect(error?.message).toBe(NAMED_ERROR);
+    expect(await fixedRow(configId)).toEqual(before);
+  }, HOOK_TIMEOUT);
+
+  it('inverse: a basis with a valid rate still saves, and clearing the basis alone keeps the rate', async () => {
+    const { configId } = await createProductsLine();
+    const model = new FixedConfigModel(db, tenantId);
+    await tenantTable(db, tenantId, 'contract_line_service_fixed_config').where({ tenant: tenantId, config_id: configId })
+      .update({ pricing_basis: 'bundle' });
+
+    // Rate and basis together on a bundle member.
+    expect(await model.update(configId, { base_rate: 2500, base_rate_basis: 'share' })).toBe(true);
+    let row = await fixedRow(configId);
+    expect(Number(row.base_rate)).toBe(2500);
+    expect(row).toMatchObject({ base_rate_basis: 'share', rate_provenance: 'custom' });
+
+    // A new rate with no stated basis keeps the stored meaning.
+    await model.update(configId, { base_rate: 3000 } as any);
+    row = await fixedRow(configId);
+    expect(Number(row.base_rate)).toBe(3000);
+    expect(row.base_rate_basis).toBe('share');
+
+    // Clearing the basis alone must not drop the rate (nor split the pair).
+    await model.update(configId, { base_rate_basis: null } as any);
+    row = await fixedRow(configId);
+    expect(Number(row.base_rate)).toBe(3000);
+    expect(row.base_rate_basis).toBe('share');
+
+    // Clearing the rate clears the pair and returns the member to the catalog.
+    await model.update(configId, { base_rate: null, base_rate_basis: 'share' } as any);
+    row = await fixedRow(configId);
+    expect(row).toMatchObject({ base_rate: null, base_rate_basis: null, rate_provenance: 'inherited' });
+  }, HOOK_TIMEOUT);
+
+  it('wizard: a seat is written with its rate, per_unit basis and custom provenance together', async () => {
+    const [seat] = await createSeatCatalog(db, tenantId, [{ name: 'Seat', rateCents: 900 }]);
+    const client = await createSeatClient(db, tenantId);
+    const result: any = await createClientContractFromWizard({
+      contract_name: `Seats ${uuidv4().slice(0, 6)}`,
+      client_id: client.clientId,
+      start_date: '2024-12-01',
+      end_date: '2099-12-31',
+      billing_frequency: 'monthly',
+      enable_proration: false,
+      fixed_services: [{ service_id: seat.serviceId, pricing_basis: 'unit', quantity: 3, unit_rate: 900 }],
+      hourly_services: [],
+      usage_services: [],
+    } as any);
+    expect(result, JSON.stringify(result)).toHaveProperty('contract_line_id');
+    const config: any = await tenantTable(db, tenantId, 'contract_line_service_configuration')
+      .where({ tenant: tenantId, contract_line_id: result.contract_line_id, service_id: seat.serviceId }).first();
+    const row = await fixedRow(config.config_id);
+    expect(Number(row.base_rate)).toBe(900);
+    expect(row).toMatchObject({ base_rate_basis: 'per_unit', pricing_basis: 'unit', rate_provenance: 'custom' });
   }, HOOK_TIMEOUT);
 });
