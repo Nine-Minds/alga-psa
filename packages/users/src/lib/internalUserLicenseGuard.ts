@@ -4,7 +4,7 @@ import type { Knex } from 'knex';
 export type InternalUserLicenseLimitCode = 'SOLO_PLAN_LIMIT' | 'LICENSE_LIMIT_REACHED';
 
 export type InternalUserLicenseLimitResult =
-  | { ok: true }
+  | { ok: true; coManaged?: boolean }
   | { ok: false; code: InternalUserLicenseLimitCode; error: string };
 
 // ee/server typechecks this package's sources with strictNullChecks off, where
@@ -55,14 +55,15 @@ export async function countPendingInvitationSeats(
 export async function checkInternalUserLicenseLimit(
   trx: Knex.Transaction | Knex,
   tenant: string,
-  options?: { reservedSeats?: number }
+  options?: { reservedSeats?: number; deferCoManaged?: boolean }
 ): Promise<InternalUserLicenseLimitResult> {
   const tenantRow = await tenantDb(trx, tenant).table('tenants')
-    .first('licensed_user_count', 'plan');
+    .first('licensed_user_count', 'plan', 'product_code');
 
   if (!tenantRow) {
     throw new Error(`Tenant not found: ${tenant}`);
   }
+  if (options?.deferCoManaged && tenantRow.product_code === 'co_managed') return { ok: true, coManaged: true };
 
   const usedResult = await tenantDb(trx, tenant).table('users')
     .where({

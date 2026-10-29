@@ -4,16 +4,24 @@ import {
   computeBucketPeriodState,
   computeDiscountsAndAdjustments,
   computeFixedCharges,
+  computeHourBlockDrawCharges,
+  computeCadencePrepaidBlockCharges,
+  computePrepaidBlockCharges,
   computeRecurringQuantityCharges,
   computeTimeBasedCharges,
   computeUsageBasedCharges,
   type BucketChargeComputeInputs,
   type BucketChargeComputeResult,
+  type CadencePrepaidBlockChargeComputeInputs,
   type ChargeComputeTaxContext,
   type DiscountsAndAdjustmentsComputeInputs,
   type DiscountsAndAdjustmentsComputeResult,
   type FixedChargeComputeInputs,
   type FixedChargeComputeResult,
+  type HourBlockDrawChargeComputeInputs,
+  type HourBlockDrawChargeComputeResult,
+  type PrepaidBlockChargeComputeInputs,
+  type PrepaidBlockChargeComputeResult,
   type RecurringQuantityChargeComputeInputs,
   type RecurringQuantityChargeComputeResult,
   type TimeBasedChargeComputeInputs,
@@ -63,6 +71,21 @@ export type ResolvedContractChargeObligation = {
       inputs: RecurringQuantityChargeComputeInputs;
       taxContext: ChargeComputeTaxContext;
     }
+  | {
+      kind: "prepaidBlock";
+      inputs: PrepaidBlockChargeComputeInputs;
+      taxContext: ChargeComputeTaxContext;
+    }
+  | {
+      kind: "cadencePrepaidBlock";
+      inputs: CadencePrepaidBlockChargeComputeInputs;
+      taxContext: ChargeComputeTaxContext;
+    }
+  | {
+      kind: "hourBlockDraw";
+      inputs: HourBlockDrawChargeComputeInputs;
+      taxContext: ChargeComputeTaxContext;
+    }
 );
 
 /** Shared multi-period allowance transition used while normalizing bucket facts. */
@@ -95,12 +118,21 @@ export function lineFacts(
   };
 }
 
+/**
+ * The legacy loaded forms. Prepaid-block families have none: the resolver
+ * builds their facts directly.
+ */
+export type LoadedContractChargeObligation = Exclude<
+  ResolvedContractChargeObligation,
+  { kind: "prepaidBlock" | "cadencePrepaidBlock" | "hourBlockDraw" }
+>;
+
 /** Adapter-only bridge from loaded production data into the public fact model. */
 export function normalizeResolvedContractCharge(input: {
   obligationId: string;
   tenantId: string;
   contractLineId?: string;
-  charge: ResolvedContractChargeObligation;
+  charge: LoadedContractChargeObligation;
   taxContextKey?: string;
   metadata?: UnpricedContractBillingObligation["metadata"];
 }): {
@@ -341,6 +373,9 @@ export type ContractChargeCalculationResult = {
   | ({ kind: "usage" } & UsageBasedChargeComputeResult)
   | ({ kind: "bucket" } & BucketChargeComputeResult)
   | ({ kind: "product" | "license" } & RecurringQuantityChargeComputeResult)
+  | ({ kind: "prepaidBlock" } & PrepaidBlockChargeComputeResult)
+  | ({ kind: "cadencePrepaidBlock" } & PrepaidBlockChargeComputeResult)
+  | ({ kind: "hourBlockDraw" } & HourBlockDrawChargeComputeResult)
 );
 
 function computeLine(facts: ResolvedContractLineFacts) {
@@ -434,6 +469,7 @@ export function calculateNormalizedContractCharge(
           clientContractLine,
           timing: facts.timing!,
           client,
+          ...(facts.overPrepaidBlock ? { overPrepaidBlock: true } : {}),
           plan: {
             enable_overtime: facts.overtime.enabled,
             overtime_threshold: facts.overtime.threshold,
@@ -591,6 +627,48 @@ export function calculateNormalizedContractCharge(
         },
       };
       break;
+    case "cadencePrepaidBlock":
+      obligation = {
+        kind: "cadencePrepaidBlock",
+        executionMode,
+        taxContext,
+        inputs: {
+          client,
+          block: facts.block,
+          billingProfile: facts.billingProfile,
+        },
+      };
+      break;
+    case "prepaidBlock":
+      obligation = {
+        kind: "prepaidBlock",
+        executionMode,
+        taxContext,
+        inputs: {
+          client,
+          issuance: facts.issuance,
+          billingProfile: facts.billingProfile,
+        },
+      };
+      break;
+    case "hourBlockDraw":
+      obligation = {
+        kind: "hourBlockDraw",
+        executionMode,
+        taxContext,
+        inputs: {
+          period: facts.period,
+          allocations: facts.allocations,
+          clientContractLine: {
+            client_contract_line_id: clientContractLine.client_contract_line_id,
+            client_contract_id: clientContractLine.client_contract_id,
+            contract_name: clientContractLine.contract_name,
+            location_id: clientContractLine.location_id,
+          },
+          billingProfile: facts.billingProfile,
+        },
+      };
+      break;
     case "product":
     case "license":
       obligation = {
@@ -646,6 +724,15 @@ export function calculateContractCharge(
     { kind: "product" | "license" }
   >,
 ): Extract<ContractChargeCalculationResult, { kind: "product" | "license" }>;
+export function calculateContractCharge(
+  obligation: Extract<ResolvedContractChargeObligation, { kind: "prepaidBlock" }>,
+): Extract<ContractChargeCalculationResult, { kind: "prepaidBlock" }>;
+export function calculateContractCharge(
+  obligation: Extract<ResolvedContractChargeObligation, { kind: "cadencePrepaidBlock" }>,
+): Extract<ContractChargeCalculationResult, { kind: "cadencePrepaidBlock" }>;
+export function calculateContractCharge(
+  obligation: Extract<ResolvedContractChargeObligation, { kind: "hourBlockDraw" }>,
+): Extract<ContractChargeCalculationResult, { kind: "hourBlockDraw" }>;
 export function calculateContractCharge(
   obligation: ResolvedContractChargeObligation,
 ): ContractChargeCalculationResult;
@@ -708,6 +795,28 @@ function calculateContractChargeImpl(
         ...associate(
           computeBucketCharges(obligation.inputs, obligation.taxContext),
         ),
+      };
+    case "prepaidBlock":
+      return {
+        kind: obligation.kind,
+        executionMode: obligation.executionMode,
+        ...associate(
+          computePrepaidBlockCharges(obligation.inputs, obligation.taxContext),
+        ),
+      };
+    case "cadencePrepaidBlock":
+      return {
+        kind: obligation.kind,
+        executionMode: obligation.executionMode,
+        ...associate(
+          computeCadencePrepaidBlockCharges(obligation.inputs, obligation.taxContext),
+        ),
+      };
+    case "hourBlockDraw":
+      return {
+        kind: obligation.kind,
+        executionMode: obligation.executionMode,
+        ...associate(computeHourBlockDrawCharges(obligation.inputs)),
       };
     case "product":
     case "license":

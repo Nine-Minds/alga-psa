@@ -30,7 +30,8 @@
     "status": "Statut",
     "expiration": "Expiration",
     "source": "Source",
-    "actions": "Actions"
+    "actions": "Actions",
+    "validFrom": "Valide à partir du {{date}}"
   },
   "status": {
     "pending": "En attente",
@@ -129,7 +130,9 @@
     "voidedLabel": "Annulé",
     "purchaseReversed": "Achat annulé (facture définalisée)",
     "unknownUser": "Système",
-    "sourceContract": "Contrat : {{contract}}"
+    "sourceContract": "Contrat : {{contract}}",
+    "remainingValue": "Valeur des heures restantes : {{value}}",
+    "validFrom": "Valide à partir du {{date}}"
   },
   "expire": {
     "error": "Impossible de faire expirer le bloc d'heures.",

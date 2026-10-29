@@ -43,28 +43,17 @@ import {
   getDraftTabBadgeCount,
   normalizeContractSubtab,
 } from './contractsTabs';
-import { toPlainDate } from '@alga-psa/core';
-
-// start_date/end_date are calendar dates. Parsing them with `new Date()` reads a
-// date-only/UTC-midnight value as UTC, so `.toLocaleDateString()` renders the
-// previous day in negative-offset timezones. Pin to noon UTC to stay on the
-// intended calendar day regardless of the viewer's timezone.
-// Module scope has no hook to read the locale from, so it is passed in rather
-// than omitted — omitting it silently means the browser's, not the app's.
-const formatCalendarDate = (value: unknown, locale: string): string | null => {
-  if (value === null || value === undefined || value === '') return null;
-  try {
-    const plainDate = toPlainDate(value as string | Date);
-    const displayDate = new Date(Date.UTC(plainDate.year, plainDate.month - 1, plainDate.day, 12));
-    return displayDate.toLocaleDateString(locale);
-  } catch {
-    return null;
-  }
-};
+import { toCalendarDisplayDate } from '@alga-psa/core';
 
 const Contracts: React.FC = () => {
   const { t } = useTranslation('msp/contracts');
-  const { locale, formatDate } = useFormatters();
+  const { formatDate } = useFormatters();
+  // start_date/end_date are calendar days in timestamp columns, so they must not be
+  // formatted as instants: toCalendarDisplayDate pins the day, formatDate renders it.
+  const formatCalendarDate = (value: unknown): string | null => {
+    const displayDate = toCalendarDisplayDate(value as string | Date | null | undefined);
+    return displayDate ? formatDate(displayDate) : null;
+  };
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -433,13 +422,13 @@ const Contracts: React.FC = () => {
       title: t('contractsList.columns.startDate', { defaultValue: 'Start Date' }),
       dataIndex: 'start_date',
       render: (value: any) =>
-        formatCalendarDate(value, locale) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
+        formatCalendarDate(value) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
     },
     {
       title: t('contractsList.columns.endDate', { defaultValue: 'End Date' }),
       dataIndex: 'end_date',
       render: (value: any) =>
-        formatCalendarDate(value, locale) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
+        formatCalendarDate(value) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
     },
     {
       title: t('contractsList.columns.status', { defaultValue: 'Status' }),
@@ -514,7 +503,7 @@ const Contracts: React.FC = () => {
               <DropdownMenuItem id="scheduled-start-menu-item" disabled>
                 {t('status.startsOn', {
                   defaultValue: 'Starts {{date}}',
-                  date: formatCalendarDate(record.start_date, locale) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
+                  date: formatCalendarDate(record.start_date) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
                 })}
               </DropdownMenuItem>
             )}

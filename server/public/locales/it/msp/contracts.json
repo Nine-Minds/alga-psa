@@ -2011,7 +2011,9 @@
       "blockSummary": "{{hours}} ore per {{price}}",
       "expiresAfter_one": "scade dopo {{count}} mese",
       "expiresAfter_other": "scade dopo {{count}} mesi",
-      "neverExpires": "non scade mai"
+      "neverExpires": "non scade mai",
+      "cadenceSummary": "{{hours}} h per ogni periodo di fatturazione a {{price}}",
+      "overageRate": "eccedenza {{rate}}/h"
     }
   },
   "wizardTemplateLines": {
@@ -2313,7 +2315,8 @@
       "period": "Periodo: {{period}}"
     },
     "prepaid": {
-      "blockSummaryNeutral": "{{hours}} ore per {{price}} (nella valuta del cliente)"
+      "blockSummaryNeutral": "{{hours}} ore per {{price}} (nella valuta del cliente)",
+      "cadenceSummaryNeutral": "{{hours}} h per ogni periodo di fatturazione a {{price}} (nella valuta del cliente)"
     }
   },
   "templatePreview": {
@@ -2778,7 +2781,7 @@
     "done": "Fine"
   },
   "sellHourBlockNote": {
-    "text": "Un plafond di ore del contratto fattura solo l'eccedenza. Per addebitare in anticipo un blocco di ore, aggiungi a questo contratto una linea Blocco prepagato."
+    "text": "Un monte ore del contratto fattura solo l'eccedenza. Per addebitare un blocco di ore in anticipo, aggiungi al contratto una riga Blocco prepagato ed emettila a ogni periodo di fatturazione."
   },
   "review": {
     "saveTemplateRates": "Salva queste tariffe in {{currency}} nel modello",
@@ -2960,7 +2963,17 @@
       "tier": "Fattura successiva",
       "tierDraft": "Crea una bozza da rivedere",
       "tierAutoIssue": "Finalizza e invia automaticamente",
-      "blockPriceNeutral": "Prezzo del blocco (nella valuta del cliente)"
+      "blockPriceNeutral": "Prezzo del blocco (nella valuta del cliente)",
+      "ratePerHour": "Equivale a {{rate}} per ora del blocco.",
+      "issueMode": "Emetti blocchi",
+      "issueModeCadence": "Ogni periodo di fatturazione",
+      "blockFeeInAdvance": "La riga è fatturata in posticipo; il costo del blocco è fatturato in anticipo.",
+      "issueModeConsumption": "Quando il blocco corrente si esaurisce o scade",
+      "rolloverPeriods": "Ore non utilizzate",
+      "rolloverNone": "Scadono alla fine del periodo",
+      "cadenceNote": "Fatturato in anticipo a ogni periodo. Le ore oltre il blocco sono fatturate alla tariffa oraria della riga nella fattura successiva.",
+      "rolloverCarry_one": "Riporta {{count}} periodo",
+      "rolloverCarry_other": "Riporta {{count}} periodi"
     },
     "status": {
       "pending": "In sospeso",

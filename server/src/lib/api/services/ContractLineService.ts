@@ -95,6 +95,8 @@ function normalizeContractLineCompatibility<T extends { service_category?: unkno
 }
 
 const PREPAID_BLOCK_API_COLUMNS = [
+  'issue_mode',
+  'rollover_periods',
   'block_minutes',
   'block_price',
   'sold_as_service_id',

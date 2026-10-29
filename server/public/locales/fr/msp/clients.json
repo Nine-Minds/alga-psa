@@ -1948,6 +1948,7 @@
       "sourceAlreadyMerged": "Ce client a déjà été fusionné dans un autre client.",
       "targetAlreadyMerged": "Le client de destination a lui-même été fusionné dans un autre client. Fusionnez vers celui-ci à la place.",
       "sourceIsTenantDefault": "La fiche de votre propre organisation ne peut pas être fusionnée dans un client.",
+      "sourceHasCoManagement": "Ce client dispose d’un espace de travail d’informatique cogérée. Annulez sa configuration ou mettez fin à la cogestion avant de le fusionner.",
       "parentLinkCycle": "Ce client est enregistré comme enfant de celui que vous fusionnez ; la fusion inverserait la hiérarchie.",
       "invalidContractCutover": "L'une des dates de bascule se situe en dehors de la durée de son contrat."
     },

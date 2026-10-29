@@ -2011,7 +2011,9 @@
       "blockSummary": "{{hours}} timmar för {{price}}",
       "expiresAfter_one": "upphör efter {{count}} månad",
       "expiresAfter_other": "upphör efter {{count}} månader",
-      "neverExpires": "upphör aldrig"
+      "neverExpires": "upphör aldrig",
+      "cadenceSummary": "{{hours}} h varje faktureringsperiod för {{price}}",
+      "overageRate": "överuttag {{rate}}/h"
     }
   },
   "wizardTemplateLines": {
@@ -2313,7 +2315,8 @@
       "period": "Period: {{period}}"
     },
     "prepaid": {
-      "blockSummaryNeutral": "{{hours}} timmar för {{price}} (i kundens valuta)"
+      "blockSummaryNeutral": "{{hours}} timmar för {{price}} (i kundens valuta)",
+      "cadenceSummaryNeutral": "{{hours}} h varje faktureringsperiod för {{price}} (i kundens valuta)"
     }
   },
   "templatePreview": {
@@ -2778,7 +2781,7 @@
     "done": "Klar"
   },
   "sellHourBlockNote": {
-    "text": "En timpott i avtalet fakturerar bara överförbrukning. Om du vill ta betalt för ett timblock i förskott lägger du till en rad för Förbetalt block i det här avtalet."
+    "text": "En avtalad timbank fakturerar bara överuttaget. Om du vill debitera ett block timmar i förskott lägger du till en Förbetalt block-rad i avtalet och utfärdar den varje faktureringsperiod."
   },
   "review": {
     "saveTemplateRates": "Spara dessa {{currency}}-priser i mallen",
@@ -2960,7 +2963,17 @@
       "tier": "Uppföljningsfaktura",
       "tierDraft": "Skapa ett utkast för granskning",
       "tierAutoIssue": "Slutför och skicka automatiskt",
-      "blockPriceNeutral": "Blockpris (i kundens valuta)"
+      "blockPriceNeutral": "Blockpris (i kundens valuta)",
+      "ratePerHour": "Motsvarar {{rate}} per timme i blocket.",
+      "issueMode": "Utfärda block",
+      "issueModeCadence": "Varje faktureringsperiod",
+      "blockFeeInAdvance": "Raden faktureras i efterskott; blockavgiften faktureras i förskott.",
+      "issueModeConsumption": "När det aktuella blocket är slut eller har gått ut",
+      "rolloverPeriods": "Oanvända timmar",
+      "rolloverNone": "Förfaller i slutet av perioden",
+      "cadenceNote": "Faktureras i förskott varje period. Timmar utöver blocket faktureras till radens timpris på nästa faktura.",
+      "rolloverCarry_one": "För över {{count}} period",
+      "rolloverCarry_other": "För över {{count}} perioder"
     },
     "status": {
       "pending": "Väntande",

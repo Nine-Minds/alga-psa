@@ -28,7 +28,7 @@ import { toISODate, toPlainDate } from "@alga-psa/core";
 import { tenantDb } from "@alga-psa/db";
 import { resolveCadenceOwner } from "@alga-psa/shared/billingClients/recurringTiming";
 import { resolveEffectiveBillingTiming } from "@alga-psa/shared/billingClients/contractLineTimingRule";
-import { getClientBillingCycleAnchor } from "@alga-psa/shared/billingClients/billingSchedule";
+import { loadClientInvoiceSchedule } from "./clientInvoiceSchedule";
 import { simulationRefusal } from "./simulationRefusal";
 import { normalizeAnchorSettingsForCycle } from "@alga-psa/shared/billingClients/billingCycleAnchors";
 import {
@@ -154,6 +154,8 @@ interface PrepaidBlockRow {
   trigger_on_expiry: boolean | null;
   trigger_on_renewal: boolean | null;
   replenishment_tier: string | null;
+  issue_mode?: string | null;
+  rollover_periods?: number | string | null;
 }
 
 /**
@@ -174,6 +176,8 @@ function toScenarioPrepaidBlock(row: PrepaidBlockRow | undefined): ScenarioPrepa
     trigger_on_expiry: Boolean(row.trigger_on_expiry),
     trigger_on_renewal: Boolean(row.trigger_on_renewal),
     replenishment_tier: row.replenishment_tier === "auto_issue" ? "auto_issue" : "draft",
+    issue_mode: row.issue_mode === "cadence" ? "cadence" : "consumption",
+    rollover_periods: row.rollover_periods != null ? Number(row.rollover_periods) : 0,
   };
 }
 
@@ -1368,23 +1372,6 @@ async function resolveClientBinding(
     contractStartDate: null,
     contractEndDate: null,
     invoiceSchedule: buildDefaultInvoiceSchedule(contract.billing_frequency),
-  };
-}
-
-async function loadClientInvoiceSchedule(
-  knex: Knex,
-  tenant: string,
-  clientId: string,
-): Promise<ScenarioBillingSchedule> {
-  const schedule = await getClientBillingCycleAnchor(knex, tenant, clientId);
-  return {
-    billing_cycle: schedule.billingCycle,
-    anchor: {
-      day_of_month: schedule.anchor.dayOfMonth,
-      month_of_year: schedule.anchor.monthOfYear,
-      day_of_week: schedule.anchor.dayOfWeek,
-      reference_date: schedule.anchor.referenceDate,
-    },
   };
 }
 

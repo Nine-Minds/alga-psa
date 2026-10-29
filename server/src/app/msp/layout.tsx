@@ -8,6 +8,7 @@ import { getWorkspaceSetupAccess } from "@alga-psa/onboarding/actions/onboarding
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale";
 import { MspLayoutClient } from "./MspLayoutClient";
 import { getCurrentTenantProduct } from "@/lib/productAccess";
+import { productUsesWorkspaceOnboarding } from '@/lib/workspaceOnboardingPolicy';
 import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingCurrencyActions";
 import { getDateFormatPreference } from "@alga-psa/clients/actions/countryActions";
 import { SYSTEM_DATE_FORMAT } from "@alga-psa/core/i18n/countryDateFormat";
@@ -97,16 +98,22 @@ export default async function MspLayout({
     redirect('/auth/msp/signin');
   }
 
+  const productCode = await getCurrentTenantProduct();
+
   const cookieStore = await cookies();
   const sidebarCookie = cookieStore.get('sidebar_collapsed')?.value;
   const initialSidebarCollapsed = sidebarCookie === 'true';
   let needsOnboarding = false;
   let onboardingResolvedServerSide = false;
   try {
-    const tenantSettings = await getTenantSettings();
-    if (tenantSettings) {
-      needsOnboarding = !tenantSettings.onboarding_completed && !tenantSettings.onboarding_skipped;
+    if (!productUsesWorkspaceOnboarding(productCode)) {
       onboardingResolvedServerSide = true;
+    } else {
+      const tenantSettings = await getTenantSettings();
+      if (tenantSettings) {
+        needsOnboarding = !tenantSettings.onboarding_completed && !tenantSettings.onboarding_skipped;
+        onboardingResolvedServerSide = true;
+      }
     }
   } catch (error) {
     console.error('Failed to load tenant settings for onboarding check:', error);
@@ -114,12 +121,11 @@ export default async function MspLayout({
   // Only an administrator is sent to workspace setup; other users work in the
   // workspace as configured so far instead of being stuck on a wizard they
   // cannot complete.
-  const canRunOnboarding = await getWorkspaceSetupAccess().then(access => access.canRun).catch(() => false);
+  const canRunOnboarding = productUsesWorkspaceOnboarding(productCode) && await getWorkspaceSetupAccess().then(access => access.canRun).catch(() => false);
   needsOnboarding = needsOnboarding && canRunOnboarding;
 
   const locale = await getHierarchicalLocaleAction();
   const preloadedLocaleResources = await preloadLocaleResources(locale).catch(() => undefined);
-  const productCode = await getCurrentTenantProduct();
   // Only self-host installs carry a license_state row; gate the trial/expiry
   // banner here so it never mounts (or calls getLicenseStatus) on hosted/SaaS.
   const selfHostLicensing = await isSelfHostLicensing();

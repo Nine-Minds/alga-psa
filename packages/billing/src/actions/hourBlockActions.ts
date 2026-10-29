@@ -20,6 +20,7 @@ import {
   getContractLineCoverageForClient,
   getContractLineCoverageRowsForClient,
   classifyContractLineCoverageForWindow,
+  computeRemainingBlockValueMinor,
 } from '@alga-psa/shared/billingClients/hourBlockService';
 import { toCalendarDateString } from '@alga-psa/core';
 import { generateInvoiceNumber } from './invoiceGeneration';
@@ -802,7 +803,8 @@ export const listHourBlocks = withAuth(async (
           scope_services: scopesByBlock.get(row.block_id) ?? [],
           has_allocations: Boolean(row.has_allocations),
           expiration_date: toCalendarDateString(row.expiration_date),
-          remaining_value: Math.round((Number(row.remaining_minutes) / 60) * Number(row.hourly_rate)),
+          valid_from: toCalendarDateString(row.valid_from),
+          remaining_value: computeRemainingBlockValueMinor({ remaining_minutes: row.remaining_minutes, hourly_rate: row.hourly_rate }),
         };
         if (coverageRows && isCoverageEligibleBlock(row)) {
           // Same window rule as the single-block helper: tenant today .. expiry
@@ -922,7 +924,8 @@ export const getHourBlockDetail = withAuth(async (
         block: {
           ...block,
           expiration_date: toCalendarDateString(block.expiration_date),
-          remaining_value: Math.round((Number(block.remaining_minutes) / 60) * Number(block.hourly_rate)),
+          valid_from: toCalendarDateString(block.valid_from),
+          remaining_value: computeRemainingBlockValueMinor(block),
           ...(contractCoverage ? { contract_coverage: contractCoverage } : {}),
         } as IHourBlock,
         scopes: scopes as IHourBlockServiceScope[],

@@ -62,7 +62,7 @@ import PricingSchedules from './PricingSchedules';
 import ContractDiscounts from './ContractDiscounts';
 import InvoicePreviewPanel from '../invoicing/InvoicePreviewPanel';
 import { Temporal } from '@js-temporal/polyfill';
-import { toPlainDate, toISODate } from '@alga-psa/core';
+import { toPlainDate, toISODate, toCalendarDisplayDate } from '@alga-psa/core';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
@@ -110,21 +110,6 @@ const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBil
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
-
-const formatDate = (value?: string | Date | null): string => {
-  if (!value) {
-    return '—';
-  }
-
-  try {
-    const plainDate = toPlainDate(value);
-    const displayDate = new Date(Date.UTC(plainDate.year, plainDate.month - 1, plainDate.day, 12));
-    return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(displayDate);
-  } catch (error) {
-    console.error('Error formatting date:', error);
-    return '—';
-  }
-};
 
 const normalizeRenewalMode = (value: unknown): 'none' | 'manual' | 'auto' | undefined => {
   return value === 'none' || value === 'manual' || value === 'auto' ? value : undefined;
@@ -291,7 +276,15 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   renderClientDetails
 }) => {
   const { t } = useTranslation('msp/contracts');
-  const { formatCurrency } = useFormatters();
+  const { formatCurrency, formatDate: formatInstant } = useFormatters();
+  // Calendar days (assignment/invoice dates in timestamp columns) are pinned with
+  // toCalendarDisplayDate; created_at/updated_at are true instants and use formatInstant.
+  const formatDate = (value?: string | Date | null): string => {
+    const displayDate = toCalendarDisplayDate(value);
+    return displayDate ? formatInstant(displayDate, { dateStyle: 'medium' }) : '—';
+  };
+  const formatTimestamp = (value?: string | Date | null): string =>
+    value ? formatInstant(value, { dateStyle: 'medium' }) : '—';
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -1904,11 +1897,11 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                     </div>
                     <div className="flex items-center justify-between">
                       <span>{t('common.labels.created', { defaultValue: 'Created' })}</span>
-                      <span className="font-medium">{formatDate(contract.created_at)}</span>
+                      <span className="font-medium">{formatTimestamp(contract.created_at)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>{t('common.labels.lastUpdated', { defaultValue: 'Last Updated' })}</span>
-                      <span className="font-medium">{formatDate(contract.updated_at)}</span>
+                      <span className="font-medium">{formatTimestamp(contract.updated_at)}</span>
                     </div>
                     {primaryAssignment && (
                       <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-3 space-y-1.5">

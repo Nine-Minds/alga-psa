@@ -30,7 +30,8 @@
     "status": "Status",
     "expiration": "Utgångsdatum",
     "source": "Källa",
-    "actions": "Åtgärder"
+    "actions": "Åtgärder",
+    "validFrom": "Giltig från {{date}}"
   },
   "status": {
     "pending": "Väntande",
@@ -129,7 +130,9 @@
     "voidedLabel": "Makulerat",
     "purchaseReversed": "Köp återfört (fakturans fastställande har hävts)",
     "unknownUser": "System",
-    "sourceContract": "Avtal: {{contract}}"
+    "sourceContract": "Avtal: {{contract}}",
+    "remainingValue": "Värde på återstående timmar: {{value}}",
+    "validFrom": "Giltig från {{date}}"
   },
   "expire": {
     "error": "Det gick inte att låta timblocket löpa ut.",

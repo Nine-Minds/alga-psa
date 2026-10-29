@@ -34,6 +34,7 @@ import { withAuth } from '@alga-psa/auth';
 import { scheduleInvoiceEmailAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { JobStatus } from '@alga-psa/types';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+import { computeRemainingBlockValueMinor } from '@alga-psa/shared/billingClients/hourBlockService';
 import { getAvailableCredit } from '@alga-psa/billing/lib/creditBalance';
 import { onQuoteAccepted } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 import {
@@ -1455,6 +1456,16 @@ export interface ClientPortalHourBlock {
   expiration_date: string | null;
   status: string;
   currency_code: string | null;
+  /** The block's hourly rate in minor units of `currency_code`; null when it carries none. */
+  hourly_rate: number | null;
+  /**
+   * Value of the remaining hours in minor units of `currency_code` (remaining hours x the
+   * block's hourly rate), rounded once here so the portal only formats it. 0 when the block
+   * carries no rate.
+   */
+  remaining_value: number;
+  /** First day the block can be drawn (cadence blocks); null when it has no lower bound. */
+  valid_from: string | null;
   /** Owning contract's name for contract-issued (Prepaid Block) blocks; null for ad-hoc blocks. */
   contract_name: string | null;
   expiring_soon_days: number | null;
@@ -1511,6 +1522,8 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
           'hb.total_minutes',
           'hb.remaining_minutes',
           'hb.expiration_date',
+          'hb.valid_from',
+          'hb.hourly_rate',
           'hb.status',
           'hb.currency_code',
           { service_name: 'sc.service_name' },
@@ -1547,6 +1560,12 @@ export const getClientHourBlocks = withAuth(async (user, { tenant }): Promise<Cl
           expiration_date: expirationDate,
           status: String(row.status),
           currency_code: (row.currency_code as string) ?? null,
+          hourly_rate: row.hourly_rate == null ? null : Number(row.hourly_rate),
+          remaining_value: computeRemainingBlockValueMinor({
+            remaining_minutes: remaining,
+            hourly_rate: row.hourly_rate as number | string | null,
+          }),
+          valid_from: toCalendarDateString(row.valid_from as string | Date | null),
           contract_name: (row.contract_name as string | null) ?? null,
           expiring_soon_days: expiringSoonDays,
         };

@@ -30,7 +30,8 @@
     "status": "Status",
     "expiration": "Vervaldatum",
     "source": "Bron",
-    "actions": "Acties"
+    "actions": "Acties",
+    "validFrom": "Geldig vanaf {{date}}"
   },
   "status": {
     "pending": "In afwachting",
@@ -129,7 +130,9 @@
     "voidedLabel": "Ongeldig gemaakt",
     "purchaseReversed": "Aankoop teruggedraaid (factuur ondefinitief gemaakt)",
     "unknownUser": "Systeem",
-    "sourceContract": "Contract: {{contract}}"
+    "sourceContract": "Contract: {{contract}}",
+    "remainingValue": "Waarde van resterende uren: {{value}}",
+    "validFrom": "Geldig vanaf {{date}}"
   },
   "expire": {
     "error": "Kan het urenblok niet laten vervallen.",

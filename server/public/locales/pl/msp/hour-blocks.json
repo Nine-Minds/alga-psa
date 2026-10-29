@@ -30,7 +30,8 @@
     "status": "Status",
     "expiration": "Wygaśnięcie",
     "source": "Źródło",
-    "actions": "Działania"
+    "actions": "Działania",
+    "validFrom": "Obowiązuje od {{date}}"
   },
   "status": {
     "pending": "Oczekujący",
@@ -129,7 +130,9 @@
     "voidedLabel": "Unieważniono",
     "purchaseReversed": "Zakup cofnięty (faktura cofnięta do wersji roboczej)",
     "unknownUser": "System",
-    "sourceContract": "Umowa: {{contract}}"
+    "sourceContract": "Umowa: {{contract}}",
+    "remainingValue": "Wartość pozostałych godzin: {{value}}",
+    "validFrom": "Obowiązuje od {{date}}"
   },
   "expire": {
     "error": "Nie udało się wygasić pakietu godzin.",

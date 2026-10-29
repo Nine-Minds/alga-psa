@@ -30,7 +30,8 @@
     "status": "Stato",
     "expiration": "Scadenza",
     "source": "Origine",
-    "actions": "Azioni"
+    "actions": "Azioni",
+    "validFrom": "Valido dal {{date}}"
   },
   "status": {
     "pending": "In sospeso",
@@ -129,7 +130,9 @@
     "voidedLabel": "Annullato",
     "purchaseReversed": "Acquisto annullato (fattura non finalizzata)",
     "unknownUser": "Sistema",
-    "sourceContract": "Contratto: {{contract}}"
+    "sourceContract": "Contratto: {{contract}}",
+    "remainingValue": "Valore delle ore residue: {{value}}",
+    "validFrom": "Valido dal {{date}}"
   },
   "expire": {
     "error": "Impossibile far scadere il blocco ore.",

@@ -107,7 +107,9 @@
     "ticketsRecurring": "Återkommande ärenden",
     "ticketsTemplates": "Ärendemallar",
     "assetsCustody": "Utrustning i förvar",
-    "ticketsCannedResponses": "Färdiga svar"
+    "ticketsCannedResponses": "Färdiga svar",
+    "profile": "Profil",
+    "signOut": "Logga ut"
   },
   "marketing": {
     "dialogs": {
@@ -846,5 +848,10 @@
     "errors": {
       "enterpriseOnly": "Chattfunktionerna är endast tillgängliga i Enterprise Edition"
     }
+  },
+  "coManagedWorkspace": {
+    "loading": "Läser in arbetsytan…",
+    "navigation": "Kundens arbetsyta",
+    "passwordError": "Det gick inte att kontrollera lösenordsstatus. Läs in sidan igen."
   }
 }

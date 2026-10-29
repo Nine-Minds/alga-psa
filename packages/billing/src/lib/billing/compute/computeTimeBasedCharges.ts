@@ -157,6 +157,11 @@ export interface TimeBasedChargeComputeInputs {
   serviceConfigMap: Map<string, HourlyServiceConfigEntry>;
   timeEntries: TimeEntryComputeRow[];
   contractCurrency: string;
+  /**
+   * The line carries a cadence Prepaid Block, so the time left here is what
+   * the block did not cover: the charges are marked as over the block.
+   */
+  overPrepaidBlock?: boolean;
   /** Contract-line/contract/client-default profile assignments (F016–F024). */
   billingProfile?: ChargeProfileAssignments | null;
   /** Project-billing hooks; production wires these to ProjectBillingContext, the simulator passes null. */
@@ -483,6 +488,7 @@ export function computeTimeBasedCharges(
         total,
         type: "time",
         ...(segment.kind ? { timeSegment: segment.kind } : {}),
+        ...(inputs.overPrepaidBlock ? { overPrepaidBlock: true } : {}),
         workItemSnapshot: buildTimeEntryWorkItemSnapshot(entry, {
           billedMinutes: segment.minutes,
           rateKind: 'uniform',

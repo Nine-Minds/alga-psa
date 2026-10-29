@@ -30,7 +30,8 @@
     "status": "Estado",
     "expiration": "Vencimiento",
     "source": "Origen",
-    "actions": "Acciones"
+    "actions": "Acciones",
+    "validFrom": "Válido desde {{date}}"
   },
   "status": {
     "pending": "Pendiente",
@@ -129,7 +130,9 @@
     "voidedLabel": "Anulado",
     "purchaseReversed": "Compra revertida (factura desfinalizada)",
     "unknownUser": "Sistema",
-    "sourceContract": "Contrato: {{contract}}"
+    "sourceContract": "Contrato: {{contract}}",
+    "remainingValue": "Valor de las horas restantes: {{value}}",
+    "validFrom": "Válido desde {{date}}"
   },
   "expire": {
     "error": "No se pudo caducar el bloque de horas.",
