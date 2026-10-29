@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'path';
 import { globSync } from 'tinyglobby';
 import { environmentProjects, partitionByEnvironment } from '../scripts/lib/jsdom-test-globs.mjs';
+import { onUnhandledError } from '../scripts/lib/vitest-unhandled-errors.mjs';
 
 fs.mkdirSync(path.resolve(__dirname, './coverage/.tmp'), { recursive: true });
 
@@ -11,12 +12,12 @@ fs.mkdirSync(path.resolve(__dirname, './coverage/.tmp'), { recursive: true });
 // exercise another zone.
 process.env.TZ = process.env.TZ || 'UTC';
 
-// Vitest only forwards a whitelist of CLI options into project configs, and
-// `poolOptions` is not on it — so `--poolOptions.forks.singleFork=false` stops
-// reaching the workers the moment a lane declares projects (the jsdom/node
-// split below). The shard runner's fresh-fork-per-file guarantee therefore
-// travels in the environment instead, where every project can read it.
-const singleFork = process.env.VITEST_RECYCLE_FORKS !== '1';
+// With `isolate: true` vitest 4 gives every file a fresh fork. Lanes that run
+// without VITEST_RECYCLE_FORKS (the DB-backed integration lanes) are capped at
+// one worker in config, where a CLI --maxWorkers cannot lift it into the jsdom/
+// node projects; VITEST_RECYCLE_FORKS=1 lanes (unit shards, `npm test`) leave
+// the worker count to their CLI --maxWorkers/--fileParallelism.
+const recycleForks = process.env.VITEST_RECYCLE_FORKS === '1';
 
 const SERVER_UNIT_INCLUDE = [
   '../ee/temporal-workflows/src/__tests__/integration/**/*.test.ts',
@@ -106,10 +107,9 @@ export default defineConfig({
     isolate: true,
     maxConcurrency: 1,
     // Integration suites share one test_database and drop/recreate it in
-    // beforeAll; parallel files corrupt each other's bootstrap. Vitest 4
-    // removed singleFork/singleThread, so state serialization explicitly —
-    // fileParallelism is honored by both v3 and v4.
+    // beforeAll; parallel files corrupt each other's bootstrap.
     fileParallelism: false,
+    ...(recycleForks ? {} : { maxWorkers: 1 }),
     sequence: {
       concurrent: false,
       shuffle: true,
@@ -117,14 +117,6 @@ export default defineConfig({
       seed: process.env.VITEST_SEED ? Number(process.env.VITEST_SEED) : undefined
     },
     pool: 'forks',
-    poolOptions: {
-      threads: {
-        singleThread: singleFork
-      },
-      forks: {
-        singleFork
-      }
-    },
     logHeapUsage: true,
     testTimeout: 20000,
     hookTimeout: 120000,
@@ -133,16 +125,15 @@ export default defineConfig({
     // config dumps, workflow loggers) accumulate into the multi-GB range and
     // OOM the orchestrator at report time. Keep logs for failures only.
     silent: 'passed-only',
+    // A console line emitted while a fork drains its RPC channel has its delivery
+    // rejected at teardown, and vitest 4 counts that as an unhandled error that
+    // fails an all-green shard. Only that rejection is dropped; see the helper.
+    onUnhandledError,
     coverage: {
       // Opt-in via --coverage; always-on coverage made every local run pay the
       // instrumentation cost. CI enables it where reports are collected.
       enabled: false,
       provider: 'v8',
-      // AST-aware remapping (vitest 4's default): the classic sourcemap remap
-      // of the full package/shared file set blows the 14GB heap at report
-      // time ("Ineffective mark-compacts near heap limit"); this path uses a
-      // fraction of the memory.
-      experimentalAstAwareRemapping: true,
       // Coverage reports are skipped on failing runs by default; red runs
       // are exactly the ones the metrics sheet needs coverage rows for.
       reportOnFailure: true,
@@ -150,10 +141,11 @@ export default defineConfig({
       // package and shared sources are measured alongside server/src.
       // allowExternal admits files outside server/ into the report — and it
       // switches include/exclude matching to absolute paths, so these
-      // patterns must be absolute. Two limits of the v8 provider here:
-      // untested-file discovery never leaves the vitest root, so package and
-      // shared files the suite never loads are absent from the report (their
-      // percentages read optimistic), while server/src gets true 0% entries.
+      // patterns must be absolute. One limit of the v8 provider here: untested
+      // files are only transformed when they sit under a project root, so
+      // package and shared files the suite never loads fail to parse as raw TS
+      // and are dropped from the report (their percentages read optimistic),
+      // while server/src gets true 0% entries.
       allowExternal: true,
       include: [
         path.resolve(__dirname, './src') + '/**/*.{js,ts,jsx,tsx}',
@@ -161,7 +153,18 @@ export default defineConfig({
         path.resolve(__dirname, '../shared') + '/**/*.{js,ts,jsx,tsx}',
       ],
       exclude: [
+        // Vitest 4 ships an empty default exclude list and no longer appends
+        // the test include globs, so test, mock and config files must be
+        // excluded here or the untested-file scan reports them as sources.
         ...coverageConfigDefaults.exclude,
+        '**/*.{test,spec}.?(c|m)[jt]s?(x)',
+        '**/*{.,-}{test,spec}?(-d).?(c|m)[jt]s?(x)',
+        '**/__tests__/**',
+        '**/__mocks__/**',
+        '**/*.d.ts',
+        '**/test-utils/**',
+        path.resolve(__dirname, './src/test') + '/**',
+        '**/{vite,vitest,tsup,eslint,prettier,jest,babel}.config.*',
         '**/dist/**',
         '**/node_modules/**',
         '**/migrations/**',
@@ -212,6 +215,9 @@ export default defineConfig({
       // Workspace packages are not guaranteed to be linked into node_modules in all dev/test setups.
       // Explicitly alias the most common @alga-psa/* modules to their source entrypoints for Vitest.
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../packages/core/src/index.ts') },
+      { find: /^@alga-psa\/core\/capability$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/capability.ts') },
+      { find: /^@alga-psa\/core\/capability\/server$/, replacement: path.resolve(__dirname, '../packages/core/src/capability/server.ts') },
+      { find: /^@alga-psa\/core\/capability\/testing$/, replacement: path.resolve(__dirname, '../packages/core/src/capability/testing.ts') },
       { find: /^@alga-psa\/core\/formatters$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/formatters.ts') },
       { find: /^@alga-psa\/core\/lib\/(.*)$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/$1') },
       { find: /^@alga-psa\/core\/logger$/, replacement: path.resolve(__dirname, '../packages/core/src/lib/logger.ts') },
@@ -224,7 +230,9 @@ export default defineConfig({
       { find: /^@alga-psa\/core\/context\/(.*)$/, replacement: path.resolve(__dirname, '../packages/core/src/context/$1') },
 
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../packages/db/src/index.ts') },
-      { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/admin.ts') },
+      { find: /^@alga-psa\/db\/admin(?:\.js)?$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/admin.ts') },
+      { find: /^@alga-psa\/db\/tenantTableManifest$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/tenantTableManifest.ts') },
+      { find: /^@alga-psa\/db\/commentEventRegistry$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/commentEventRegistry.ts') },
       { find: /^@alga-psa\/db\/tenant$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/tenant.ts') },
       { find: /^@alga-psa\/db\/connection$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/connection.ts') },
       { find: /^@alga-psa\/db\/models$/, replacement: path.resolve(__dirname, '../packages/db/src/models/index.ts') },
@@ -232,6 +240,14 @@ export default defineConfig({
       // db's ./workDate export maps to src/lib/workDate (names don't mirror the
       // src layout), so a prefix alias can't reach it — alias it explicitly.
       { find: /^@alga-psa\/db\/workDate$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/workDate.ts') },
+      // Same as workDate: ./tenantDb maps to src/lib, not a mirror path. The
+      // client-creation seam (shared/models/clientCreation.ts) imports this
+      // subpath directly to dodge the barrel's turbopack shim; without this
+      // alias Vite falls through to the real package "exports" map, which
+      // only resolves once packages/db has a built dist — not guaranteed in
+      // every CI lane (e.g. workspace-unit never builds it).
+      { find: /^@alga-psa\/db\/tenantDb$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/tenantDb.ts') },
+      { find: /^@alga-psa\/db\/writeAdmission$/, replacement: path.resolve(__dirname, '../packages/db/src/writeAdmission.ts') },
       // Same as workDate: ./reassignTicketResources maps to src/lib, not a mirror path.
       { find: /^@alga-psa\/db\/reassignTicketResources$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/reassignTicketResources.ts') },
 
@@ -244,6 +260,8 @@ export default defineConfig({
       { find: /^@alga-psa\/workflow-streams$/, replacement: path.resolve(__dirname, '../packages/workflow-streams/src/streams/index.ts') },
       { find: /^@alga-psa\/workflow-streams\/(.*)$/, replacement: path.resolve(__dirname, '../packages/workflow-streams/src/streams/$1') },
       { find: /^@alga-psa\/validation$/, replacement: path.resolve(__dirname, '../packages/validation/src/index.ts') },
+      { find: /^@alga-psa\/co-managed$/, replacement: path.resolve(__dirname, '../packages/co-managed/src/index.ts') },
+      { find: /^@alga-psa\/co-managed\/(.*)$/, replacement: path.resolve(__dirname, '../packages/co-managed/src/$1') },
       { find: /^@alga-psa\/licensing$/, replacement: path.resolve(__dirname, '../packages/licensing/src/index.ts') },
       { find: /^@alga-psa\/licensing\/actions$/, replacement: path.resolve(__dirname, '../packages/licensing/src/actions/index.ts') },
       { find: /^@alga-psa\/licensing\/actions\/(.*)$/, replacement: path.resolve(__dirname, '../packages/licensing/src/actions/$1') },
@@ -285,6 +303,9 @@ export default defineConfig({
       { find: /^@alga-psa\/marketing\/(.*)$/, replacement: path.resolve(__dirname, '../packages/marketing/src/$1') },
       { find: /^@alga-psa\/inventory$/, replacement: path.resolve(__dirname, '../packages/inventory/src/index.ts') },
       { find: /^@alga-psa\/inventory\/(.*)$/, replacement: path.resolve(__dirname, '../packages/inventory/src/$1') },
+      { find: /^@alga-psa\/predicates$/, replacement: path.resolve(__dirname, '../packages/predicates/src/index.ts') },
+      { find: /^@alga-psa\/predicates\/sql$/, replacement: path.resolve(__dirname, '../packages/predicates/src/sql/index.ts') },
+      { find: /^@alga-psa\/predicates\/(.*)$/, replacement: path.resolve(__dirname, '../packages/predicates/src/$1') },
       { find: /^@alga-psa\/formatting$/, replacement: path.resolve(__dirname, '../packages/formatting/src/index.ts') },
       { find: /^@alga-psa\/formatting\/(.*)$/, replacement: path.resolve(__dirname, '../packages/formatting/src/$1') },
       { find: /^@alga-psa\/projects$/, replacement: path.resolve(__dirname, '../packages/projects/src/index.ts') },

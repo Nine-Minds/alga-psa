@@ -881,6 +881,7 @@
       "add": "Add",
       "remove": "Remove",
       "empty": "No mappings yet.",
+      "nameRequired": "Enter a name for this mapping.",
       "expressionLabel": "Expression"
     },
     "schemaForm": {

@@ -1,6 +1,7 @@
 // @ts-nocheck
 'use server'
 
+import { transitionQuoteStatus } from '@alga-psa/shared/lib/quotes/quoteLifecycleEvents';
 import { loadInvoiceChargeLineIds } from '../services/invoiceChargeLineage';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -99,13 +100,13 @@ export async function activateHourBlocksForFinalizedInvoice(
 /**
  * Unfinalize hook for ad-hoc prepaid hour blocks. Runs inside the unfinalize
  * transaction so the invoice and its blocks move together or not at all:
- *   - an ACTIVE block that was never used (immutable `first_allocated_at`
+ *   - an ACTIVE or EXPIRED block that was never used (immutable `first_allocated_at`
  *     marker null, no live allocation rows) returns to `pending` so FIFO burn
  *     can no longer select it, with a `purchase_reversal` audit row;
- *   - an ACTIVE block that has been used blocks unfinalization with an
+ *   - an ACTIVE or EXPIRED block that has been used blocks unfinalization with an
  *     actionable error naming the block and its usage (v1 answer: reject, never
  *     half-reverse);
- *   - terminal states (expired/voided) and already-pending blocks are left as-is.
+ *   - voided and already-pending blocks are left as-is.
  */
 async function deactivateHourBlocksForUnfinalizedInvoice(
   trx: Knex.Transaction,
@@ -130,7 +131,7 @@ async function deactivateHourBlocksForUnfinalizedInvoice(
     .select('block_id', 'status', 'total_minutes', 'remaining_minutes', 'first_allocated_at', 'contract_line_id');
 
   for (const block of linkedBlocks) {
-    if (block.status !== 'active') {
+    if (block.status !== 'active' && block.status !== 'expired') {
       continue;
     }
 
@@ -150,7 +151,9 @@ async function deactivateHourBlocksForUnfinalizedInvoice(
       const usedHours = (usedMinutes / 60).toFixed(1);
       const totalHours = (Number(block.total_minutes) / 60).toFixed(1);
       throw expectedInvoiceActionError(
-        `Cannot unfinalize this invoice: its hour block ${block.block_id} has already been used (${usedHours} of ${totalHours} hrs). Expire or adjust the hour block instead of unfinalizing the invoice.`,
+        `Cannot unfinalize this invoice: its hour block ${block.block_id} has already been used (${usedHours} of ${totalHours} hrs). Consider a separate adjustment or credit note to correct the invoice.`,
+        'msp/invoicing:errors.invoice.usedHourBlockUnfinalize',
+        { blockId: block.block_id, usedHours, totalHours },
       );
     }
 
@@ -740,13 +743,13 @@ export type FinalizeInvoiceActionResult =
   | InvoiceActionError;
 export type InvoiceManualItemsUpdateActionResult = InvoiceViewModel | InvoiceActionError | ManualInvoiceFailure;
 
-function expectedInvoiceActionError(message: string, i18nKey?: string): ExpectedInvoiceActionError {
-  return new ExpectedInvoiceActionError(message, i18nKey);
+function expectedInvoiceActionError(message: string, i18nKey?: string, messageParams?: Record<string, string | number>): ExpectedInvoiceActionError {
+  return new ExpectedInvoiceActionError(message, i18nKey, messageParams);
 }
 
 function toInvoiceActionError(error: unknown): InvoiceActionError | null {
   if (error instanceof ExpectedInvoiceActionError) {
-    return actionError(error.message, error.i18nKey);
+    return actionError(error.message, error.i18nKey, error.messageParams);
   }
 
   return null;
@@ -2580,11 +2583,20 @@ async function releaseQuoteConversionForDeletedInvoice(
   const nowIso = new Date().toISOString();
   for (const quote of quotes) {
     const revertToAccepted = quote.status === 'converted' && !quote.converted_contract_id;
+    if (revertToAccepted) {
+      await transitionQuoteStatus(trx, tenant, quote.quote_id, 'accepted', {
+        system: true, reason: 'Converted draft invoice deleted; quote returned to accepted',
+        activity: { activity_type: QUOTE_ACTIVITY_TYPES.convertedInvoiceDeleted, metadata: { invoice_id: invoiceId, previous_status: quote.status, status_reverted: true } },
+        actor: userId ? { actorType: 'USER', actorUserId: userId } : { actorType: 'SYSTEM' },
+        details: { releasedInvoiceId: invoiceId },
+        patch: { converted_invoice_id: null, converted_at: null, updated_by: userId },
+      });
+      continue;
+    }
     await tenantScopedTable(trx, tenant, 'quotes')
       .where({ quote_id: quote.quote_id })
       .update({
         converted_invoice_id: null,
-        ...(revertToAccepted ? { status: 'accepted', converted_at: null } : {}),
         updated_by: userId,
         updated_at: nowIso,
       });

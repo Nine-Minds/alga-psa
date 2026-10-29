@@ -99,11 +99,15 @@ export const createTaskComment = withAuth(async (
  * Get all comments for a task
  */
 export const getTaskComments = withAuth(async (
-  _user,
+  user,
   { tenant },
   taskId: string
 ): Promise<IProjectTaskCommentWithUser[] | ProjectTaskCommentActionError> => {
   try {
+    if (!await hasPermission(user, 'project_task', 'read')) {
+      throw new Error('Permission denied: cannot read task comments');
+    }
+
     const { knex: db } = await createTenantKnex();
     return await listTaskCommentsWithDb(db, tenant, taskId);
   } catch (error) {

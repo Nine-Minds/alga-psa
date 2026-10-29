@@ -12,7 +12,7 @@ import { Switch } from "@alga-psa/ui/components/Switch";
 import RichTextEditorSkeleton from "@alga-psa/ui/components/skeletons/RichTextEditorSkeleton";
 import { hasEditorContent } from "@alga-psa/ui/editor/hasEditorContent";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
-import { searchUsersForMentions } from "@alga-psa/user-composition/actions";
+import { useTicketDataSource } from "./TicketDataSourceContext";
 import { createTicketRichTextParagraph } from "../../lib/ticketRichText";
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
@@ -98,6 +98,7 @@ export default function TicketResolutionDialog({
   resolveTicketAttachmentViewUrl,
 }: TicketResolutionDialogProps) {
   const { t } = useTranslation("features/tickets");
+  const { searchUsersForMentions } = useTicketDataSource().viewer;
   const [statusId, setStatusId] = useState<string | null>(null);
   const [content, setContent] = useState<PartialBlock[]>(
     DEFAULT_RESOLUTION_BLOCK,

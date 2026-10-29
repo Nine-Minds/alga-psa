@@ -19,6 +19,8 @@ test('workspace DB runner collects and executes outbound diagnostics with its is
     cpSync(path.join(repository, file), path.join(root, file));
   }
   symlinkSync(path.join(repository, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
+  // The runner launches the hoisted root vitest, as every other lane does.
+  symlinkSync(path.join(repository, 'node_modules'), path.join(root, 'node_modules'), 'dir');
   writeFileSync(path.join(root, '.gitignore'), 'node_modules/\ntest-results/\n');
   writeFileSync(path.join(root, 'server/vitest.workspace-db.config.ts'), `export default ${JSON.stringify({
     test: { include: ['../packages/**/*.db.test.ts'], globals: true, environment: 'node', maxWorkers: 1 },
@@ -33,7 +35,9 @@ test('workspace DB runner collects and executes outbound diagnostics with its is
         expect(process.env.OUTBOUND_DIAG_DB_PORT).toBe('15432');
         expect(process.env.OUTBOUND_DIAG_DB_USER).toBe('fixture_app');
         expect(process.env.OUTBOUND_DIAG_DB_PASSWORD).toBe('fixture_password');
-        expect(process.env.OUTBOUND_DIAG_DB_NAME).toBe('test_database');
+        expect(process.env.OUTBOUND_DIAG_DB_NAME).toBe('fixture_database');
+        expect(process.env.HOUR_BLOCK_DB_NAME).toBe('fixture_database');
+        expect(process.env.TEST_DB_NAME).toBe('fixture_database');
       });
     });
   `);
@@ -46,7 +50,7 @@ test('workspace DB runner collects and executes outbound diagnostics with its is
   const result = spawnSync(process.execPath, ['scripts/run-workspace-db-tests.mjs'], {
     cwd: root, encoding: 'utf8', timeout: 30000,
     env: { ...process.env, CI: '1', DB_HOST: '127.0.0.2', DB_PORT: '15432',
-      DB_USER_SERVER: 'fixture_app', DB_PASSWORD_SERVER: 'fixture_password',
+      DB_USER_SERVER: 'fixture_app', DB_PASSWORD_SERVER: 'fixture_password', TEST_DB_NAME: 'fixture_database',
       // Stale local opt-ins must never redirect a CI suite outside its database.
       OUTBOUND_DIAG_DB_TESTS: '0', OUTBOUND_DIAG_DB_HOST: 'stale-host',
       OUTBOUND_DIAG_DB_PORT: '5472', OUTBOUND_DIAG_DB_USER: 'stale-user',

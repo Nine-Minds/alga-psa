@@ -222,8 +222,8 @@ jobs:
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=8192'
-      - name: Verify per-file worker isolation
-        run: node --test scripts/tests/vitest-worker-isolation.test.mjs
+      - name: Verify per-file worker isolation and late console-log teardown
+        run: node --test scripts/tests/vitest-worker-isolation.test.mjs scripts/tests/vitest-late-console-log.test.mjs
       # Timezone-sensitive files run once; they are independent of the partition.
       - name: Exercise calendar boundaries in non-UTC timezones
         if: matrix.shard == 1
@@ -245,10 +245,8 @@ jobs:
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
           SKIP_DB_TESTS: '1'
-          # A fresh fork per file. Passing --poolOptions.forks.singleFork=false
-          # on the CLI stopped working when the config grew projects (vitest
-          # forwards only a whitelist of CLI options into them); the config
-          # reads this instead.
+          # Lifts server/vitest.config.ts's one-worker cap so --maxWorkers=2
+          # reaches the jsdom/node projects.
           VITEST_RECYCLE_FORKS: '1'
           DB_USER_ADMIN: ''
           DB_PASSWORD_ADMIN: ''

@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Sneltoetsen",
     "mcpServer": "MCP-server",
     "opportunities": "Verkoopkansen",
-    "settingsFallback": "Instellingen"
+    "settingsFallback": "Instellingen",
+    "tags": "Labels"
   },
   "unsavedChanges": {
     "title": "Niet-opgeslagen wijzigingen",
@@ -413,17 +414,21 @@
       "cancel": "Annuleren",
       "delete": "Verwijderen",
       "placeholder": "Nieuwe teamnaam invoeren",
+      "descriptionPlaceholder": "Optionele teambeschrijving invoeren",
       "selectManager": "Selecteer een manager"
     },
     "details": {
       "loading": "Teamgegevens laden...",
       "notFound": "Geen team gevonden",
+      "noDescription": "Geen beschrijving",
       "fields": {
         "teamLead": "Teamleider",
+        "description": "Beschrijving",
         "addMember": "Lid toevoegen"
       },
       "placeholders": {
         "teamName": "Teamnaam invoeren",
+        "description": "Teambeschrijving invoeren",
         "selectTeamLead": "Selecteer een teamleider",
         "selectUserToAdd": "Selecteer een gebruiker om toe te voegen",
         "noTeamLead": "Niet toegewezen"
@@ -435,8 +440,10 @@
         "discard": "Verwerpen",
         "saveChanges": "Wijzigingen opslaan",
         "saveName": "Naam opslaan",
+        "saveDescription": "Beschrijving opslaan",
         "cancel": "Annuleren",
         "editName": "Naam bewerken",
+        "editDescription": "Beschrijving bewerken",
         "remove": "Verwijderen"
       },
       "table": {
@@ -461,6 +468,7 @@
         "createFailed": "Kan team niet aanmaken: {{error}}",
         "deleteFailed": "Kan team niet verwijderen",
         "updateName": "Kan teamnaam niet bijwerken",
+        "updateDescription": "Kan teambeschrijving niet bijwerken",
         "saveChanges": "Kan wijzigingen niet opslaan. Probeer het opnieuw."
       }
     }
@@ -710,7 +718,8 @@
         "importNewName": "Importeren met een andere naam:",
         "importWithResolutions": "Importeren met oplossingen",
         "orderConflict": "Volgorde {{order}} is al in gebruik",
-        "importWithOrder": "Importeren met volgorde {{order}}"
+        "importWithOrder": "Importeren met volgorde {{order}}",
+        "removesIntro": "Als u dit bord verwijdert, wordt ook het volgende verwijderd:"
       },
       "importTable": {
         "active": "Actief"
@@ -779,7 +788,9 @@
           "deleteFailed": "Bord kon niet worden verwijderd",
           "importFailed": "Borden konden niet worden geïmporteerd",
           "updateStatusFailed": "Bordstatus kon niet worden bijgewerkt",
-          "updateDefaultFailed": "Standaardbord kon niet worden bijgewerkt"
+          "updateDefaultFailed": "Standaardbord kon niet worden bijgewerkt",
+          "hasEmailSenderRoute": "Dit bord kan niet worden verwijderd: het heeft een eigen route voor uitgaande e-mailafzenders. Verwijder eerst de ticketafzender in de bordeditor.",
+          "referencedByAutomations": "Dit bord kan niet worden verwijderd: er verwijzen nog andere instellingen naar. Richt deze eerst op een ander bord of verwijder ze."
         }
       },
       "closeRules": {
@@ -893,6 +904,48 @@
         "displayName": "Weergavenaam",
         "save": "Afzender opslaan",
         "saved": "Afzender opgeslagen"
+      },
+      "deleteDependencies": {
+        "categories_one": "categorie",
+        "categories_other": "categorieën",
+        "categories_few": "categorieën",
+        "categories_many": "categorieën",
+        "statuses_one": "ticketstatus",
+        "statuses_other": "ticketstatussen",
+        "statuses_few": "ticketstatussen",
+        "statuses_many": "ticketstatussen",
+        "autoCloseRules_one": "automatisch-sluitenregel",
+        "autoCloseRules_other": "automatisch-sluitenregels",
+        "autoCloseRules_few": "automatisch-sluitenregels",
+        "autoCloseRules_many": "automatisch-sluitenregels",
+        "notificationRules_one": "meldingsregel",
+        "notificationRules_other": "meldingsregels",
+        "notificationRules_few": "meldingsregels",
+        "notificationRules_many": "meldingsregels",
+        "portalVisibility_one": "zichtbaarheidstoewijzing in het klantenportaal",
+        "portalVisibility_other": "zichtbaarheidstoewijzingen in het klantenportaal",
+        "portalVisibility_few": "zichtbaarheidstoewijzingen in het klantenportaal",
+        "portalVisibility_many": "zichtbaarheidstoewijzingen in het klantenportaal",
+        "emailSenderRoutes_one": "uitgaande afzenderroute",
+        "emailSenderRoutes_other": "uitgaande afzenderroutes",
+        "emailSenderRoutes_few": "uitgaande afzenderroutes",
+        "emailSenderRoutes_many": "uitgaande afzenderroutes",
+        "ticketTemplates_one": "ticketsjabloon",
+        "ticketTemplates_other": "ticketsjablonen",
+        "ticketTemplates_few": "ticketsjablonen",
+        "ticketTemplates_many": "ticketsjablonen",
+        "recurringTickets_one": "planning voor terugkerende tickets",
+        "recurringTickets_other": "planningen voor terugkerende tickets",
+        "recurringTickets_few": "planningen voor terugkerende tickets",
+        "recurringTickets_many": "planningen voor terugkerende tickets",
+        "checklistRules_one": "controlelijstregel",
+        "checklistRules_other": "controlelijstregels",
+        "checklistRules_few": "controlelijstregels",
+        "checklistRules_many": "controlelijstregels",
+        "cannedResponses_one": "standaardantwoord van het bord",
+        "cannedResponses_other": "standaardantwoorden van het bord",
+        "cannedResponses_few": "standaardantwoorden van het bord",
+        "cannedResponses_many": "standaardantwoorden van het bord"
       }
     },
     "priorities": {
@@ -1108,6 +1161,50 @@
         "client": "Klant",
         "allClients": "Alle klanten",
         "clear": "Filter wissen"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Bord",
+          "category_id": "Categorie",
+          "subcategory_id": "Subcategorie",
+          "priority_id": "Prioriteit",
+          "client_id": "Klant",
+          "client_tags": "Klantlabels",
+          "contact_tags": "Contactlabels",
+          "ticket_origin": "Ticketbron",
+          "title_folded": "Titel",
+          "description_folded": "Beschrijving",
+          "from_service_request": "Uit serviceaanvraag",
+          "service_request_definition_id": "Serviceaanvraag"
+        },
+        "operators": {
+          "equals": "Is gelijk aan",
+          "not_equals": "Is niet gelijk aan",
+          "in": "Bevat een van",
+          "not_in": "Bevat geen van",
+          "contains": "Bevat",
+          "starts_with": "Begint met",
+          "ends_with": "Eindigt op",
+          "is_empty": "Is leeg",
+          "is_not_empty": "Is niet leeg"
+        },
+        "conditions": "Voorwaarden",
+        "match": "Overeenkomst",
+        "and": "Alle voorwaarden",
+        "or": "Een van de voorwaarden",
+        "field": "Veld",
+        "operator": "Voorwaarde",
+        "value": "Waarde",
+        "yes": "Ja",
+        "no": "Nee",
+        "advanced": "Deze regel bevat gegroepeerde of geavanceerde voorwaarden en is alleen-lezen in deze editor.",
+        "add": "Voorwaarde toevoegen",
+        "save": "Voorwaarden opslaan",
+        "enabled": "Ingeschakeld",
+        "matchesAll": "Komt overeen met alle tickets binnen het bereik van de sjabloon.",
+        "matchesNone": "Komt met geen enkel ticket overeen.",
+        "tagsFailed": "De labelopties konden niet worden geladen. Opgeslagen selecties blijven behouden.",
+        "retry": "Opnieuw proberen"
       }
     },
     "externalSystems": {
@@ -3926,6 +4023,29 @@
       "default": "Standaard",
       "empty": "Geen standaardstatussen beschikbaar om te importeren",
       "importSelected": "Selectie importeren ({{count}})"
+    }
+  },
+  "tagDisplay": {
+    "title": "Weergeven op chips",
+    "subtitle": "Tags die naast contactpersonen en klanten worden getoond in ticketlijsten, ticketkoppen en keuzelijsten.",
+    "loading": "Laden…",
+    "description": "Kies welke tags als badges naast contactpersonen en klanten worden getoond en in welke volgorde. Een lijst zonder tags toont geen badges voor dat publiek.",
+    "contacts": "Contactpersonen",
+    "clients": "Klanten",
+    "audienceInternal": "Interne gebruikers",
+    "audienceClient": "Klantenportaal",
+    "clientNote": "Begint leeg. Tags in deze lijst zijn zichtbaar voor de eigen gebruikers van de klant in het klantenportaal.",
+    "noneSelected": "Geen tags getoond.",
+    "moveUp": "Omhoog",
+    "moveDown": "Omlaag",
+    "remove": "Verwijderen",
+    "addTag": "Tag toevoegen…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Terug naar e-mailinstellingen",
+      "title": "E-mail- en identiteitsproviders",
+      "description": "Registreer uw eigen Google- of Microsoft-applicatie voor inkomende e-mail en aanmelding door medewerkers. Deze inloggegevens horen bij uw werkruimte."
     }
   }
 }

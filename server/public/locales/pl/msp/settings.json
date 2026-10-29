@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Skróty klawiaturowe",
     "mcpServer": "Serwer MCP",
     "opportunities": "Szanse sprzedaży",
-    "settingsFallback": "Ustawienia"
+    "settingsFallback": "Ustawienia",
+    "tags": "Tagi"
   },
   "unsavedChanges": {
     "title": "Niezapisane zmiany",
@@ -413,17 +414,21 @@
       "cancel": "Anuluj",
       "delete": "Usuń",
       "placeholder": "Wprowadź nazwę nowego zespołu",
+      "descriptionPlaceholder": "Wprowadź opcjonalny opis zespołu",
       "selectManager": "Wybierz kierownika"
     },
     "details": {
       "loading": "Ładowanie szczegółów zespołu...",
       "notFound": "Nie znaleziono zespołu",
+      "noDescription": "Brak opisu",
       "fields": {
         "teamLead": "Lider zespołu",
+        "description": "Opis",
         "addMember": "Dodaj członka"
       },
       "placeholders": {
         "teamName": "Wprowadź nazwę zespołu",
+        "description": "Wprowadź opis zespołu",
         "selectTeamLead": "Wybierz lidera zespołu",
         "selectUserToAdd": "Wybierz użytkownika do dodania",
         "noTeamLead": "Nieprzypisany"
@@ -435,8 +440,10 @@
         "discard": "Odrzuć",
         "saveChanges": "Zapisz zmiany",
         "saveName": "Zapisz nazwę",
+        "saveDescription": "Zapisz opis",
         "cancel": "Anuluj",
         "editName": "Edytuj nazwę",
+        "editDescription": "Edytuj opis",
         "remove": "Usuń"
       },
       "table": {
@@ -461,6 +468,7 @@
         "createFailed": "Nie udało się utworzyć zespołu: {{error}}",
         "deleteFailed": "Nie udało się usunąć zespołu",
         "updateName": "Nie udało się zaktualizować nazwy zespołu",
+        "updateDescription": "Nie udało się zaktualizować opisu zespołu",
         "saveChanges": "Nie udało się zapisać zmian. Spróbuj ponownie."
       }
     }
@@ -710,7 +718,8 @@
         "importNewName": "Importuj z inną nazwą:",
         "importWithResolutions": "Importuj z rozwiązaniami",
         "orderConflict": "Kolejność {{order}} jest już zajęta",
-        "importWithOrder": "Importuj z kolejnością {{order}}"
+        "importWithOrder": "Importuj z kolejnością {{order}}",
+        "removesIntro": "Usunięcie tej tablicy spowoduje również usunięcie:"
       },
       "importTable": {
         "active": "Aktywna"
@@ -779,7 +788,9 @@
           "deleteFailed": "Nie udało się usunąć tablicy",
           "importFailed": "Nie udało się zaimportować tablic",
           "updateStatusFailed": "Nie udało się zaktualizować statusu tablicy",
-          "updateDefaultFailed": "Nie udało się zaktualizować domyślnej tablicy"
+          "updateDefaultFailed": "Nie udało się zaktualizować domyślnej tablicy",
+          "hasEmailSenderRoute": "Nie można usunąć tablicy: ma własną trasę nadawcy wiadomości wychodzących. Najpierw usuń nadawcę zgłoszeń w edytorze tablicy.",
+          "referencedByAutomations": "Nie można usunąć tablicy: nadal wskazują na nią inne ustawienia. Najpierw przekieruj je na inną tablicę lub usuń."
         }
       },
       "closeRules": {
@@ -893,6 +904,48 @@
         "displayName": "Nazwa wyświetlana",
         "save": "Zapisz nadawcę",
         "saved": "Zapisano nadawcę"
+      },
+      "deleteDependencies": {
+        "categories_one": "kategoria",
+        "categories_other": "kategorii",
+        "categories_few": "kategorie",
+        "categories_many": "kategorii",
+        "statuses_one": "status zgłoszenia",
+        "statuses_other": "statusów zgłoszeń",
+        "statuses_few": "statusy zgłoszeń",
+        "statuses_many": "statusów zgłoszeń",
+        "autoCloseRules_one": "reguła automatycznego zamknięcia",
+        "autoCloseRules_other": "reguł automatycznego zamknięcia",
+        "autoCloseRules_few": "reguły automatycznego zamknięcia",
+        "autoCloseRules_many": "reguł automatycznego zamknięcia",
+        "notificationRules_one": "reguła powiadomień",
+        "notificationRules_other": "reguł powiadomień",
+        "notificationRules_few": "reguły powiadomień",
+        "notificationRules_many": "reguł powiadomień",
+        "portalVisibility_one": "przypisanie widoczności w portalu klienta",
+        "portalVisibility_other": "przypisań widoczności w portalu klienta",
+        "portalVisibility_few": "przypisania widoczności w portalu klienta",
+        "portalVisibility_many": "przypisań widoczności w portalu klienta",
+        "emailSenderRoutes_one": "trasa nadawcy wychodzącego",
+        "emailSenderRoutes_other": "tras nadawcy wychodzącego",
+        "emailSenderRoutes_few": "trasy nadawcy wychodzącego",
+        "emailSenderRoutes_many": "tras nadawcy wychodzącego",
+        "ticketTemplates_one": "szablon zgłoszenia",
+        "ticketTemplates_other": "szablonów zgłoszeń",
+        "ticketTemplates_few": "szablony zgłoszeń",
+        "ticketTemplates_many": "szablonów zgłoszeń",
+        "recurringTickets_one": "harmonogram cyklicznych zgłoszeń",
+        "recurringTickets_other": "harmonogramów cyklicznych zgłoszeń",
+        "recurringTickets_few": "harmonogramy cyklicznych zgłoszeń",
+        "recurringTickets_many": "harmonogramów cyklicznych zgłoszeń",
+        "checklistRules_one": "reguła stosowania listy kontrolnej",
+        "checklistRules_other": "reguł stosowania listy kontrolnej",
+        "checklistRules_few": "reguły stosowania listy kontrolnej",
+        "checklistRules_many": "reguł stosowania listy kontrolnej",
+        "cannedResponses_one": "gotowa odpowiedź tablicy",
+        "cannedResponses_other": "gotowych odpowiedzi tablicy",
+        "cannedResponses_few": "gotowe odpowiedzi tablicy",
+        "cannedResponses_many": "gotowych odpowiedzi tablicy"
       }
     },
     "priorities": {
@@ -1108,6 +1161,50 @@
         "client": "Klient",
         "allClients": "Wszyscy klienci",
         "clear": "Wyczyść filtr"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Tablica",
+          "category_id": "Kategoria",
+          "subcategory_id": "Podkategoria",
+          "priority_id": "Priorytet",
+          "client_id": "Klient",
+          "client_tags": "Tagi klienta",
+          "contact_tags": "Tagi kontaktu",
+          "ticket_origin": "Źródło zgłoszenia",
+          "title_folded": "Tytuł",
+          "description_folded": "Opis",
+          "from_service_request": "Z wniosku o usługę",
+          "service_request_definition_id": "Wniosek o usługę"
+        },
+        "operators": {
+          "equals": "Jest równe",
+          "not_equals": "Nie jest równe",
+          "in": "Zawiera dowolną z wartości",
+          "not_in": "Nie zawiera żadnej z wartości",
+          "contains": "Zawiera",
+          "starts_with": "Zaczyna się od",
+          "ends_with": "Kończy się na",
+          "is_empty": "Jest puste",
+          "is_not_empty": "Nie jest puste"
+        },
+        "conditions": "Warunki",
+        "match": "Dopasowanie",
+        "and": "Wszystkie warunki",
+        "or": "Dowolny warunek",
+        "field": "Pole",
+        "operator": "Warunek",
+        "value": "Wartość",
+        "yes": "Tak",
+        "no": "Nie",
+        "advanced": "Ta reguła zawiera zgrupowane lub zaawansowane warunki i jest w tym edytorze tylko do odczytu.",
+        "add": "Dodaj warunek",
+        "save": "Zapisz warunki",
+        "enabled": "Włączona",
+        "matchesAll": "Pasuje do wszystkich zgłoszeń w zakresie szablonu.",
+        "matchesNone": "Nie pasuje do żadnego zgłoszenia.",
+        "tagsFailed": "Nie udało się wczytać opcji tagów. Zapisane wybory zostały zachowane.",
+        "retry": "Spróbuj ponownie"
       }
     },
     "externalSystems": {
@@ -3926,6 +4023,29 @@
       "default": "Domyślny",
       "empty": "Brak standardowych statusów do zaimportowania",
       "importSelected": "Importuj wybrane ({{count}})"
+    }
+  },
+  "tagDisplay": {
+    "title": "Wyświetlaj na chipach",
+    "subtitle": "Tagi wyświetlane obok kontaktów i klientów na listach zgłoszeń, w nagłówkach zgłoszeń i w selektorach.",
+    "loading": "Ładowanie…",
+    "description": "Wybierz, które tagi są wyświetlane jako odznaki obok kontaktów i klientów oraz w jakiej kolejności. Lista bez tagów nie pokazuje odznak dla tej grupy odbiorców.",
+    "contacts": "Kontakty",
+    "clients": "Klienci",
+    "audienceInternal": "Użytkownicy wewnętrzni",
+    "audienceClient": "Portal klienta",
+    "clientNote": "Domyślnie pusta. Tagi z tej listy są widoczne dla użytkowników klienta w portalu klienta.",
+    "noneSelected": "Nie wyświetlono żadnych tagów.",
+    "moveUp": "Przenieś w górę",
+    "moveDown": "Przenieś w dół",
+    "remove": "Usuń",
+    "addTag": "Dodaj tag…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Wróć do ustawień e-mail",
+      "title": "Dostawcy poczty e-mail i tożsamości",
+      "description": "Zarejestruj własną aplikację Google lub Microsoft do obsługi przychodzących wiadomości e-mail i logowania pracowników. Te poświadczenia należą do Twojego obszaru roboczego."
     }
   }
 }

@@ -107,7 +107,11 @@
     "ticketsRecurring": "⟦Řḗƈŭřřīƞɠ Ŧīƈķḗŧş⟧",
     "ticketsTemplates": "⟦Ŧīƈķḗŧ Ŧḗḿƥŀȧŧḗş⟧",
     "assetsCustody": "⟦Ḗʠŭīƥḿḗƞŧ īƞ ƈŭşŧȯḓẏ⟧",
-    "ticketsCannedResponses": "⟦Ƈȧƞƞḗḓ Řḗşƥȯƞşḗş⟧"
+    "ticketsCannedResponses": "⟦Ƈȧƞƞḗḓ Řḗşƥȯƞşḗş⟧",
+    "profile": "⟦Ƥřȯƒīŀḗ⟧",
+    "signOut": "⟦Şīɠƞ ȯŭŧ⟧",
+    "coManaged": "⟦Ƈȯ-ḿȧƞȧɠḗḓ ĪŦ⟧",
+    "coManagedAdministration": "⟦Ȧƈƈḗşş & ȧḓḿīƞīşŧřȧŧīȯƞ⟧"
   },
   "marketing": {
     "dialogs": {
@@ -508,7 +512,8 @@
       "extensions": "⟦Ḗẋŧḗƞşīȯƞş⟧",
       "experimentalFeatures": "⟦Ḗẋƥḗřīḿḗƞŧȧŀ Ƒḗȧŧŭřḗş⟧",
       "profile": "⟦Ƥřȯƒīŀḗ⟧",
-      "security": "⟦Şḗƈŭřīŧẏ⟧"
+      "security": "⟦Şḗƈŭřīŧẏ⟧",
+      "tags": "⟦Ŧȧɠş⟧"
     }
   },
   "dashboard": {
@@ -845,5 +850,10 @@
     "errors": {
       "enterpriseOnly": "⟦Ƈħȧŧ ƒḗȧŧŭřḗş ȧřḗ ȯƞŀẏ ȧṽȧīŀȧƀŀḗ īƞ Ḗƞŧḗřƥřīşḗ Ḗḓīŧīȯƞ⟧"
     }
+  },
+  "coManagedWorkspace": {
+    "loading": "⟦Ŀȯȧḓīƞɠ ẇȯřķşƥȧƈḗ…⟧",
+    "navigation": "⟦Ƈŭşŧȯḿḗř ẇȯřķşƥȧƈḗ⟧",
+    "passwordError": "⟦Ŭƞȧƀŀḗ ŧȯ ƈħḗƈķ ƥȧşşẇȯřḓ şŧȧŧŭş. Ƥŀḗȧşḗ řḗŀȯȧḓ ŧħīş ƥȧɠḗ.⟧"
   }
 }

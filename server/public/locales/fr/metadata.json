@@ -519,6 +519,24 @@
     },
     "layout": {
       "defaultTitle": "Tableau de bord | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "Informatique cogérée"
+    },
+    "coManagement": {
+      "title": "Accès cogéré",
+      "administration": {
+        "title": "Administration cogérée"
+      },
+      "customerTickets": {
+        "title": "Tickets clients"
+      },
+      "sharedTicket": {
+        "title": "Ticket partagé"
+      },
+      "providers": {
+        "title": "Fournisseurs d'e-mail et d'identité"
+      }
     }
   },
   "auth": {

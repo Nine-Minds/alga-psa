@@ -9,18 +9,21 @@ import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { ticketUpdateStamp } from '../lib/tickets/ticketUpdateStamp';
 import { tenantDb } from '@alga-psa/db';
+import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
 import { assertHumanWorkAssignee } from '../lib/humanWork/assertHumanWorkAssignee';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
 import { resolveTicketEventActor } from '@alga-psa/event-schemas';
 import { isSilentTicketCreation, isTicketCreationWithPayloadExtras, type TicketCreationEvents } from '../lib/tickets/ticketLifecycleEvents';
-import { applyMatchingChecklistTemplates, ticketDescriptionToPlainText, type TicketServiceRequestContext } from '../lib/ticketChecklists';
+import { applyMatchingChecklistTemplates } from '../lib/ticketChecklists';
 import { ticketStatusClockPatch } from '../lib/ticketStatusClock';
 import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipients';
 import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
 import { SharedNumberingService } from '../services/numberingService';
 import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
+import { TicketWatcherService } from '../services/tickets/ticketWatcherService';
+import { parseTicketWatchListAttributes } from '../lib/tickets/watchList';
 import { resolveAssetBillingProfileId } from './assetBillingProfileModel';
 import { buildTicketCommentAddedPayload, buildTicketModelChanges } from '../lib/tickets/ticketWorkflowEventPayloads';
 
@@ -156,14 +159,9 @@ export const createCommentSchema = z.object({
 // INTERFACES
 // =============================================================================
 
-/**
- * Create-time context that is not ticket data. `serviceRequest` marks a ticket
- * being created from a service request: the submission row cannot link to the
- * ticket yet (created_ticket_id is written afterwards), so checklist auto-apply
- * must be told explicitly instead of looking it up.
- */
+/** A submission to link after ticket insertion, in the ticket creation transaction. */
 export interface CreateTicketOptions {
-  serviceRequest?: TicketServiceRequestContext;
+  serviceRequestSubmissionId?: string;
 }
 
 export interface CreateTicketInput {
@@ -1040,22 +1038,25 @@ export class TicketModel {
     // Insert the ticket
     await tenantDb(trx, tenant).table('tickets').insert(dbData);
 
-    // Auto-apply matching checklist templates (idempotent; null matcher =
-    // match any). Failure here must not break ticket creation.
+    // Bring ticket_watchers in line with the initial attributes.watch_list (inbound To/Cc,
+    // board defaults); the mirror is then rewritten from the table.
+    // Skipped when the ticket was created without one (the common case).
+    if (parseTicketWatchListAttributes(completeValidation.attributes).length > 0) {
+      await TicketWatcherService.seedFromAttributes(trx, tenant, ticketId);
+    }
+
+    if (options?.serviceRequestSubmissionId) {
+      const updated = await tenantDb(trx, tenant).table('service_request_submissions')
+        .where({ submission_id: options.serviceRequestSubmissionId })
+        .update({ created_ticket_id: ticketId });
+      if (!updated) throw new Error('Service request submission not found');
+    }
+
+    // Auto-apply predicates against the inserted ticket in this transaction.
+    // Application is idempotent; validation failures are logged without a fallback.
     try {
       await applyMatchingChecklistTemplates(trx, tenant, {
         ticket_id: ticketId,
-        board_id: cleanedInput.board_id,
-        category_id: cleanedInput.category_id ?? null,
-        subcategory_id: cleanedInput.subcategory_id ?? null,
-        priority_id: cleanedInput.priority_id ?? null,
-        client_id: cleanedInput.client_id ?? null,
-        ticket_origin: cleanedInput.ticket_origin || TICKET_ORIGINS.INTERNAL,
-        title: cleanedInput.title,
-        description: ticketDescriptionToPlainText(cleanedInput.description),
-        // null (not undefined) skips the submissions lookup: a ticket that was
-        // just inserted can only be service-request-backed if the caller says so.
-        serviceRequest: options?.serviceRequest ?? null,
       });
     } catch (error) {
       console.error('Failed to auto-apply checklist templates:', error);
@@ -1702,16 +1703,26 @@ export class TicketModel {
             author: authorName
           }
         };
-        if ((eventPublisher as any).__inboundOutboxPublisher === true) {
-          // The inbound publisher writes its durable outbox in this transaction.
-          await eventPublisher.publishCommentCreated(event);
-        } else {
-          await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: buildTicketCommentAddedPayload({
-            tenantId: tenant, occurredAt: new Date().toISOString(), ticketId: validatedData.ticket_id, commentId, actor,
-            comment: { content: validatedData.content, author: authorName,
-              isInternal: commentIsInternal, authorType: dbAuthorType },
-          }) });
-        }
+        await publishCommentEvent(trx, 'ticket', {
+          tenantId: tenant,
+          ticketId: validatedData.ticket_id,
+          commentId,
+          userId: event.userId,
+          actor: event.actor,
+          metadata: event.metadata,
+          eventType: 'TICKET_COMMENT_ADDED',
+        }, async () => {
+          if ((eventPublisher as any).__inboundOutboxPublisher === true) {
+            // The inbound publisher writes its durable outbox in this transaction.
+            await eventPublisher.publishCommentCreated(event);
+          } else {
+            await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: buildTicketCommentAddedPayload({
+              tenantId: tenant, occurredAt: new Date().toISOString(), ticketId: validatedData.ticket_id, commentId, actor,
+              comment: { content: validatedData.content, author: authorName,
+                isInternal: commentIsInternal, authorType: dbAuthorType },
+            }) });
+          }
+        });
       } catch (error) {
         console.error('Failed to publish comment created event:', error);
         throw error;

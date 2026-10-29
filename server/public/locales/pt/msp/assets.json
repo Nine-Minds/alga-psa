@@ -949,12 +949,6 @@
       "type": "Tipo",
       "status": "Status"
     },
-    "assetStatuses": {
-      "active": "Ativo",
-      "inactive": "Inativo",
-      "maintenance": "Manutenção",
-      "held_by_msp": "Em posse do MSP"
-    },
     "assetTypes": {
       "workstation": "Estação de trabalho",
       "server": "Servidor",
@@ -1297,7 +1291,10 @@
       "frequency": "Frequência *",
       "interval": "Intervalo *",
       "nextMaintenanceDate": "Próxima data de manutenção *",
-      "active": "Ativo"
+      "active": "Ativo",
+      "recurrenceUnit": "Unidade *",
+      "onWeekdays": "Nos dias da semana (opcional)",
+      "onDayOfMonth": "No dia do mês (opcional)"
     },
     "placeholders": {
       "scheduleName": "por exemplo, manutenção mensal do servidor",
@@ -1312,7 +1309,8 @@
       "weekly": "Semanalmente",
       "monthly": "Mensal",
       "quarterly": "Trimestral",
-      "yearly": "Anual"
+      "yearly": "Anual",
+      "custom": "Personalizada"
     },
     "errors": {
       "scheduleNameRequired": "O nome do agendamento é obrigatório",
@@ -1321,6 +1319,18 @@
       "nextMaintenanceRequired": "A próxima data de manutenção é obrigatória",
       "frequencyIntervalMin": "O intervalo de frequência deve ser de pelo menos 1",
       "saveFailed": "Falha ao criar cronograma de manutenção"
+    },
+    "recurrenceUnits": {
+      "days": "Dias",
+      "weeks": "Semanas",
+      "months": "Meses",
+      "years": "Anos"
+    },
+    "dayOfMonthOptions": {
+      "any": "Qualquer dia"
+    },
+    "hints": {
+      "selectors": "Sem seleção, a repetição parte da data de conclusão."
     }
   },
   "maintenanceSchedulesTab": {
@@ -1372,6 +1382,36 @@
         "yearly_other": "anos",
         "yearly_few": "anos",
         "yearly_many": "anos"
+      },
+      "customUnconfigured": "Personalizada (não configurada)",
+      "onWeekdays": "{{cadence}} em {{days}}",
+      "onDaysOfMonth": "{{cadence}} no dia {{days}}",
+      "weekdays": {
+        "sun": "dom",
+        "mon": "seg",
+        "tue": "ter",
+        "wed": "qua",
+        "thu": "qui",
+        "fri": "sex",
+        "sat": "sáb"
+      },
+      "customUnits": {
+        "days_one": "dia",
+        "days_other": "dias",
+        "days_few": "dias",
+        "days_many": "dias",
+        "weeks_one": "semana",
+        "weeks_other": "semanas",
+        "weeks_few": "semanas",
+        "weeks_many": "semanas",
+        "months_one": "mês",
+        "months_other": "meses",
+        "months_few": "meses",
+        "months_many": "meses",
+        "years_one": "ano",
+        "years_other": "anos",
+        "years_few": "anos",
+        "years_many": "anos"
       }
     },
     "status": {
@@ -1813,8 +1853,8 @@
     "in_stock": "Em estoque",
     "maintenance": "Em manutenção",
     "inactive": "Inativo",
-    "held_by_msp": "Em posse do MSP",
-    "retired": "Desativado"
+    "retired": "Desativado",
+    "held_by_msp": "Em posse do MSP"
   },
   "assetStatusKinds": {
     "deployable": "Implantável",
@@ -2078,7 +2118,12 @@
       "doneBody": "{{name}} ({{tag}}) está agora sob custódia do MSP.",
       "printLabel": "Imprimir etiqueta do ativo",
       "openAsset": "Abrir ativo",
-      "close": "Fechar"
+      "close": "Fechar",
+      "inCustodyOption": "{{asset}} — Sob custódia: {{location}}"
+    },
+    "photos": {
+      "limit": "Até 20 fotos, 10 MB no total. As fotos ficam ocultas para os clientes.",
+      "tooLarge": "Selecione no máximo 20 fotos com um total de até 10 MB."
     }
   }
 }

@@ -217,9 +217,10 @@ async function writeFixedLineMembers(
         },
         {
           pricing_basis: 'unit',
-          base_rate: service.unit_rate as number,
+          // A seat rate is per unit. The fixed-config model derives the pair and
+          // provenance: a null rate is catalog-priced (inherited) with no basis.
+          base_rate: service.unit_rate ?? null,
           base_rate_basis: 'per_unit',
-          rate_provenance: 'custom',
         },
       );
       continue;
@@ -1054,8 +1055,8 @@ export const createContractTemplateFromWizard = withAuth(async (
           tenant,
           config_id: configId,
           hourly_rate: normalizedHourlyRate ?? null,
-          minimum_billable_time: submission.minimum_billable_time ?? 0,
-          round_up_to_nearest: submission.round_up_to_nearest ?? 0,
+          minimum_billable_time: submission.minimum_billable_time ?? 15,
+          round_up_to_nearest: submission.round_up_to_nearest ?? 15,
           enable_overtime: false,
           overtime_rate: null,
           overtime_threshold: null,
@@ -1092,8 +1093,9 @@ export const createContractTemplateFromWizard = withAuth(async (
             ? `${submission.contract_name} - Prepaid Block ${blockIndex + 1}`
             : `${submission.contract_name} - Prepaid Block`),
         billing_frequency: submission.billing_frequency ?? 'monthly',
-        billing_timing: recurringAuthoringPolicy.billingTiming,
-        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
+        // Line stays arrears; the block fee goes in advance via its prepaid_block charge stream.
+        billing_timing: arrearsOnlyLinePolicy.billingTiming,
+        cadence_owner: arrearsOnlyLinePolicy.cadenceOwner,
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Hourly',
@@ -1141,8 +1143,8 @@ export const createContractTemplateFromWizard = withAuth(async (
           tenant,
           config_id: configId,
           hourly_rate: normalizedHourlyRate ?? null,
-          minimum_billable_time: submission.minimum_billable_time ?? 0,
-          round_up_to_nearest: submission.round_up_to_nearest ?? 0,
+          minimum_billable_time: submission.minimum_billable_time ?? 15,
+          round_up_to_nearest: submission.round_up_to_nearest ?? 15,
           enable_overtime: false,
           overtime_rate: null,
           overtime_threshold: null,
@@ -2138,8 +2140,8 @@ export const createClientContractFromWizard = withAuth(async (
 
         await planServiceConfigService.upsertPlanServiceHourlyConfiguration(hourlyPlanId, service.service_id, {
           hourly_rate: normalizedHourlyRate,
-          minimum_billable_time: submission.minimum_billable_time ?? 0,
-          round_up_to_nearest: submission.round_up_to_nearest ?? 0,
+          minimum_billable_time: submission.minimum_billable_time ?? 15,
+          round_up_to_nearest: submission.round_up_to_nearest ?? 15,
         });
 
         if (service.bucket_overlay) {
@@ -2235,8 +2237,9 @@ export const createClientContractFromWizard = withAuth(async (
         contract_id: contractId,
         display_order: nextDisplayOrder,
         custom_rate: null,
-        billing_timing: recurringAuthoringPolicy.billingTiming,
-        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
+        // Line stays arrears; the block fee goes in advance via its prepaid_block charge stream.
+        billing_timing: arrearsOnlyLinePolicy.billingTiming,
+        cadence_owner: arrearsOnlyLinePolicy.cadenceOwner,
         is_template: false,
       } as any);
       const blockLineId = blockLine.contract_line_id!;
@@ -2259,8 +2262,8 @@ export const createClientContractFromWizard = withAuth(async (
         });
         await planServiceConfigService.upsertPlanServiceHourlyConfiguration(blockLineId, service.service_id, {
           hourly_rate: normalizedHourlyRate,
-          minimum_billable_time: submission.minimum_billable_time ?? 0,
-          round_up_to_nearest: submission.round_up_to_nearest ?? 0,
+          minimum_billable_time: submission.minimum_billable_time ?? 15,
+          round_up_to_nearest: submission.round_up_to_nearest ?? 15,
         });
       }
 
@@ -2871,6 +2874,8 @@ export const getDraftContractForResume = withAuth(async (
           ),
         })),
         block: {
+          issue_mode: prepaidConfig.issue_mode ?? 'consumption',
+          rollover_periods: Number(prepaidConfig.rollover_periods ?? 0),
           block_minutes: Number(prepaidConfig.block_minutes),
           block_price: Number(prepaidConfig.block_price),
           sold_as_service_id: prepaidConfig.sold_as_service_id ?? null,

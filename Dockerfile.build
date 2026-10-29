@@ -50,9 +50,15 @@ RUN rm -f /app/server/src/scripts/check-extension.ts
 
 RUN npm install --include=optional
 
+# PREBUILT_NEXT=true means the caller already ran scripts/build-production-server.sh
+# on the host and the context carries server/.next and the packages' dist
+# directories (.dockerignore admits them). CI does this so the webpack and Nx
+# caches survive between builds; inside this stage they would start empty.
+ARG PREBUILT_NEXT=false
+
 # Build all upstream packages (shared + pre-built) via Nx (handles dependency ordering)
 WORKDIR /app
-RUN npx nx build-deps server
+RUN if [ "$PREBUILT_NEXT" != true ]; then npx nx build-deps server; else test -f packages/core/dist/index.js && test -d shared/dist; fi
 ENV USE_PREBUILT="true"
 
 # Set edition to community for proper module resolution
@@ -60,10 +66,12 @@ ENV EDITION="ce"
 ENV NEXT_PUBLIC_EDITION="community"
 
 WORKDIR /app/server
-RUN NEXTAUTH_SECRET="${NEXTAUTH_SECRET_BUILD}" \
-    AUTH_SECRET="${NEXTAUTH_SECRET_BUILD}" \
-    NODE_ENV=production \
-    npm exec -- next build --webpack
+RUN if [ "$PREBUILT_NEXT" != true ]; then \
+      NEXTAUTH_SECRET="${NEXTAUTH_SECRET_BUILD}" \
+      AUTH_SECRET="${NEXTAUTH_SECRET_BUILD}" \
+      NODE_ENV=production \
+      npm exec -- next build --webpack; \
+    else test -f .next/BUILD_ID; fi
 
 # Create secrets directory and populate with secure placeholder values
 RUN mkdir -p /app/secrets && \

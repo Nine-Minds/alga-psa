@@ -34,7 +34,7 @@ vi.mock('@alga-psa/ui/components/Tooltip', () => ({
 }));
 
 const translate = (key: string, options?: Record<string, unknown>) => String(options?.defaultValue ?? key);
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: translate }) }));
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: translate }), useFormatters: () => ({ locale: 'en' }) }));
 
 import HourBlocksSection from '../src/components/hour-blocks/HourBlocksSection';
 

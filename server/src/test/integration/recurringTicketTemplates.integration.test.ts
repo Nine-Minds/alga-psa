@@ -456,7 +456,7 @@ describe('recurring tickets on ticket templates (integration)', () => {
     const checklistId = uuidv4();
     await scoped.table('checklist_templates').insert({ tenant: f.tenant, template_id: checklistId, name: 'Steps', is_active: true });
     await scoped.table('checklist_template_items').insert({ tenant: f.tenant, template_item_id: uuidv4(), template_id: checklistId, item_name: 'Step 1', order_number: 0, is_required: true });
-    await scoped.table('checklist_template_apply_rules').insert({ tenant: f.tenant, apply_rule_id: uuidv4(), template_id: checklistId, board_id: f.boardId, is_enabled: true });
+    await scoped.table('checklist_template_apply_rules').insert({ tenant: f.tenant, apply_rule_id: uuidv4(), template_id: checklistId, where: JSON.stringify({ join: 'and', clauses: [{ path: 'board_id', operator: 'equals', value: f.boardId }] }), is_enabled: true });
     const templateId = await insertTemplate(f, {}, [{ item_name: 'Step 1', checklist_template_id: checklistId }, { item_name: 'Own item' }]);
     const { definitionClientId } = await insertDefinition(f, templateId);
     await sweep(f, '2026-03-01T14:00:00Z');

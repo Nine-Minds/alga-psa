@@ -43,6 +43,15 @@ let durableConsumerTask: Promise<void> | undefined;
 
 async function start() {
   try {
+    // CM L0c: install the co-managed write-admission resolver. Fails open: an image
+    // whose co-managed packages do not resolve must still boot and write.
+    try {
+      const { installCoManagedWriteAdmission } = await import('@alga-psa/licensing/co-managed-write-admission');
+      installCoManagedWriteAdmission();
+    } catch (error) {
+      logger.error('Failed to install co-managed write admission:', error);
+    }
+
     // Metrics: install the sink before anything can record. Only this process
     // gets a real registry; server/temporal-worker keep the shared no-op.
     const metrics = createInboundEmailMetrics({ durableMode: getInboundDurableMode() });

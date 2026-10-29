@@ -175,6 +175,15 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  const ticketNotificationSuppressionProperties = {
+    suppressContactNotifications: zOpenApi.boolean().optional().describe(
+      'When true, suppresses customer-facing email and portal notifications for this operation.',
+    ),
+    suppressInternalNotifications: zOpenApi.boolean().optional().describe(
+      'When true, also suppresses agent and watcher notifications. Requires suppressContactNotifications=true.',
+    ),
+  };
+
   const CreateTicketBody = registry.registerSchema(
     'WorkV1CreateTicketBody',
     zOpenApi.object({
@@ -198,17 +207,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
         actor: zOpenApi.record(zOpenApi.unknown()).nullable().optional(),
         external_status: zOpenApi.string().nullable().optional(),
       })).optional().describe('Ticket-level external references written in the same transaction as the ticket. A conflicting link rolls back the create.'),
-    }),
+      ...ticketNotificationSuppressionProperties,
+    }).describe('Ticket fields to create. Notification suppression applies only to this operation.'),
   );
-
-  const ticketNotificationSuppressionProperties = {
-    suppressContactNotifications: zOpenApi.boolean().optional().describe(
-      'When true, suppresses customer-facing email and portal notifications for this operation.',
-    ),
-    suppressInternalNotifications: zOpenApi.boolean().optional().describe(
-      'When true, also suppresses agent and watcher notifications. Requires suppressContactNotifications=true.',
-    ),
-  };
 
   const TicketUpdateBody = registry.registerSchema(
     'WorkV1TicketUpdateBody',
@@ -385,9 +386,9 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'put', path: '/api/v1/projects/{id}/phases/{phaseId}', summary: 'Update project phase', description: 'Updates phase UUID under project UUID.', family: 'project' },
     { method: 'get', path: '/api/v1/projects/{id}/tickets', summary: 'List project tickets', description: 'Lists tickets linked to project UUID.', family: 'project' },
 
-    { method: 'get', path: '/api/v1/schedules', summary: 'List schedule entries', description: 'Lists schedule entries via ApiTimeSheetController.listScheduleEntries().', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/schedules', summary: 'List schedule entries', description: 'Lists schedule entries via ApiTimeSheetController.listScheduleEntries(). Returns every entry visible to the caller under shared-calendar rules (unpaginated), filtered by start_date, end_date (ISO 8601 date or date-time) and user_id. Date bounds are UTC: a date-only start_date means 00:00:00Z that day, a date-only end_date includes that whole day (entries ending before 00:00:00Z the next day), and date-time values are exact, inclusive bounds. Returns 400 for invalid dates or start_date after end_date.', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/schedules', summary: 'Create schedule entry', description: 'Creates schedule entry via ApiTimeSheetController.createScheduleEntry().', family: 'time_sheet' },
-    { method: 'get', path: '/api/v1/schedules/search', summary: 'Search schedules', description: 'Current route delegates to ApiTimeSheetController.list() (time sheet list path), not schedule-specific search.', family: 'time_sheet' },
+    { method: 'get', path: '/api/v1/schedules/search', summary: 'Search schedules', description: 'Searches schedule entries via ApiTimeSheetController.searchScheduleEntries(). Returns entries visible to the caller under shared-calendar rules, filtered by start_date, end_date (ISO 8601 date or date-time) and user_id, paginated with page/limit. Date bounds are UTC: a date-only start_date means 00:00:00Z that day, a date-only end_date includes that whole day (entries ending before 00:00:00Z the next day), and date-time values are exact, inclusive bounds. Returns 400 for invalid dates or start_date after end_date.', family: 'time_sheet' },
     { method: 'delete', path: '/api/v1/schedules/{id}', summary: 'Delete schedule entry', description: 'Deletes schedule entry via ApiTimeSheetController.deleteScheduleEntry().', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/schedules/{id}', summary: 'Get schedule entry', description: 'Current route delegates to ApiTimeSheetController.getById() (time sheet read path), not schedule-specific getter.', family: 'time_sheet' },
     { method: 'put', path: '/api/v1/schedules/{id}', summary: 'Update schedule entry', description: 'Updates schedule entry via ApiTimeSheetController.updateScheduleEntry(). `calendar_id`: omit to leave the calendar unchanged; a group calendar uuid moves the entry onto that group calendar (edit access required); `null` moves it back to a personal calendar (the entry stays on its assignees\' personal calendars). Requires edit access to the existing entry (403 read-only, 404 no access).', family: 'time_sheet' },
@@ -414,7 +415,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'put', path: '/api/v1/tags/{id}/text', summary: 'Update tag text', description: 'Updates tag display text.', family: 'tag' },
 
     { method: 'get', path: '/api/v1/tickets', summary: 'List tickets', description: 'Lists tickets via ApiTicketController.list() with authorization-aware pagination. `sort` is validated against an allowlist (unknown values return 400) and supports latest_activity_at, which is also selectable through `fields`.', family: 'ticket' },
-    { method: 'post', path: '/api/v1/tickets', summary: 'Create ticket', description: 'Creates ticket via ApiTicketController.create().', family: 'ticket' },
+    { method: 'post', path: '/api/v1/tickets', summary: 'Create ticket', description: 'Creates ticket via ApiTicketController.create(). Optional suppression flags make this operation silent for customer notifications or for all human notifications while preserving audit, workflow, and webhook records.', family: 'ticket' },
     { method: 'post', path: '/api/v1/tickets/from-asset', summary: 'Create ticket from asset', description: 'Creates ticket from asset context via ApiTicketController.createFromAsset().', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/search', summary: 'Search tickets', description: 'Searches tickets via ApiTicketController.search().', family: 'ticket' },
     { method: 'get', path: '/api/v1/tickets/stats', summary: 'Get ticket stats', description: 'Returns ticket aggregate stats for authorized tickets.', family: 'ticket' },
@@ -481,7 +482,6 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   ];
 
   const mismatchOps = new Set([
-    'get /api/v1/schedules/search',
     'get /api/v1/schedules/{id}',
     'get /api/v1/schedules/{id}/conflicts',
     'post /api/v1/time-sheets/bulk',
@@ -515,6 +515,25 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'put /api/v1/time-periods/{id}',
     'delete /api/v1/time-periods/{id}',
   ]);
+
+  // GET /api/v1/schedules (unpaginated) and /schedules/search (paginated) share the same filters.
+  const scheduleEntryFilterShape = {
+    start_date: zOpenApi.string().optional().openapi({ description: 'ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day.' }),
+    end_date: zOpenApi.string().optional().openapi({ description: 'ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day).' }),
+    user_id: zOpenApi.string().uuid().optional(),
+  };
+  const ScheduleEntryListQuery = registry.registerSchema(
+    'WorkV1ScheduleEntryListQuery',
+    zOpenApi.object(scheduleEntryFilterShape),
+  );
+  const ScheduleEntrySearchQuery = registry.registerSchema(
+    'WorkV1ScheduleEntrySearchQuery',
+    zOpenApi.object({
+      page: zOpenApi.string().optional(),
+      limit: zOpenApi.string().optional(),
+      ...scheduleEntryFilterShape,
+    }),
+  );
 
   // Real read contracts for the per-sheet and search routes (derived from the
   // same zod schemas the controller/service use, so docs cannot drift).
@@ -581,6 +600,12 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
 
     if (def.method === 'get' && def.path === '/api/v1/tickets') {
       req.query = TicketListQuery;
+    }
+    if (def.method === 'get' && def.path === '/api/v1/schedules') {
+      req.query = ScheduleEntryListQuery;
+    }
+    if (def.method === 'get' && def.path === '/api/v1/schedules/search') {
+      req.query = ScheduleEntrySearchQuery;
     }
     if (def.method === 'get' && def.path === '/api/v1/time-sheets') {
       req.query = TimeSheetListQuery;
@@ -1331,7 +1356,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
   registry.registerRoute({
     method: 'post', path: '/api/v1/tickets/{id}/agents',
     summary: 'Add a ticket additional agent',
-    description: 'Adds a user as an additional agent on the ticket and publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI unless suppressed. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.',
+    description: 'Internal staff only: adds a user as an additional agent on the ticket (external people, client contacts and bare emails go to POST /api/v1/tickets/{id}/watchers; a one-off comment copy uses comment cc/bcc). Publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI unless suppressed. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.',
     tags: [tag], security: [{ ApiKeyAuth: [] }],
     request: { params: IdParam, body: { schema: TicketAgentBody } },
     responses: {
@@ -1355,6 +1380,77 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
       404: { description: 'Ticket or additional agent not found.', schema: ApiError },
       500: { description: 'Unexpected controller/service failure.', schema: ApiError },
     },
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  const TicketWatcherBody = registry.registerSchema(
+    'WorkV1TicketWatcherBody',
+    zOpenApi.object({
+      contact_id: zOpenApi.string().uuid().optional().describe('Client contact to watch; resolved to the contact email and name. Exactly one of contact_id, user_id, email.'),
+      user_id: zOpenApi.string().uuid().optional().describe('Internal user to watch; resolved to the user email and name. Exactly one of contact_id, user_id, email.'),
+      email: zOpenApi.string().email().optional().describe('Any bare email address (external mailbox). Exactly one of contact_id, user_id, email.'),
+      name: zOpenApi.string().min(1).max(255).optional().describe('Display name; only used when the watcher has no name yet.'),
+      active: zOpenApi.boolean().optional().describe('Whether the watcher receives updates; defaults to true.'),
+      silent: zOpenApi.boolean().optional().describe('Request-scoped, never stored. When true the write emits no customer or internal notification.'),
+    }),
+  );
+  const TicketWatcherActiveBody = registry.registerSchema(
+    'WorkV1TicketWatcherActiveBody',
+    zOpenApi.object({
+      email: zOpenApi.string().email().describe('Email of an existing watcher (case-insensitive).'),
+      active: zOpenApi.boolean().describe('true to resume updates, false to pause them without removing the watcher.'),
+      silent: zOpenApi.boolean().optional().describe('Request-scoped, never stored. Suppresses notifications for this change.'),
+    }),
+  );
+  const TicketWatcherRemoveQuery = registry.registerSchema(
+    'WorkV1TicketWatcherRemoveQuery',
+    zOpenApi.object({
+      email: zOpenApi.string().email().describe('Email of the watcher to remove (case-insensitive).'),
+      silent: zOpenApi.enum(['true', 'false']).optional().describe('Request-scoped. "true" suppresses notifications for this removal.'),
+    }),
+  );
+  const watcherNote = 'Watchers are persistent (contacts, users or any email) and are copied on ticket updates; they are distinct from additional agents (internal staff, /agents) and from a comment cc (one-off, never joins the watch list). Unless silent=true the write emits one TICKET_UPDATED event; silent=true sets suppressContactNotifications and suppressInternalNotifications on it. The response is the full watcher list: {email, name, active, entity_type, entity_id, source}.';
+
+  registry.registerRoute({
+    method: 'get', path: '/api/v1/tickets/{id}/watchers',
+    summary: 'List ticket watchers',
+    description: `Returns everyone on the ticket watch list. ${watcherNote}`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam },
+    responses: ticketStdResponses({ code: 200, description: 'Watcher list.' }),
+    extensions: ticketExt('read'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'post', path: '/api/v1/tickets/{id}/watchers',
+    summary: 'Add a ticket watcher',
+    description: `Idempotent set-add of a watcher by exactly one of contact_id, user_id or email; an existing email is re-activated, not duplicated. An unknown or other-tenant contact/user, or one without an email, returns 422. ${watcherNote}`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: TicketWatcherBody } },
+    responses: {
+      ...ticketStdResponses({ code: 200, description: 'Watcher added (or already present); full list returned.' }),
+      422: { description: 'Contact or user not found in this tenant, or has no email.', schema: ApiError },
+    },
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'patch', path: '/api/v1/tickets/{id}/watchers',
+    summary: 'Pause or resume a ticket watcher',
+    description: `Sets active on an existing watcher identified by email; the watcher stays on the list. ${watcherNote}`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, body: { schema: TicketWatcherActiveBody } },
+    responses: ticketStdResponses({ code: 200, description: 'Watcher updated; full list returned.' }),
+    extensions: ticketExt('update'), edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'delete', path: '/api/v1/tickets/{id}/watchers',
+    summary: 'Remove a ticket watcher',
+    description: `Removes the watcher with the given ?email=. Returns 404 when that email is not a watcher. ${watcherNote}`,
+    tags: [tag], security: [{ ApiKeyAuth: [] }],
+    request: { params: IdParam, query: TicketWatcherRemoveQuery },
+    responses: ticketStdResponses({ code: 200, description: 'Watcher removed; full list returned.' }),
     extensions: ticketExt('update'), edition: 'both',
   });
 

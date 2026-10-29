@@ -297,7 +297,7 @@
         "description": "Configurar opções avançadas de processamento de e-mail",
         "folderFiltersLabel": "Filtros de pasta",
         "folderFiltersPlaceholder": "Caixa de entrada, suporte, pasta personalizada",
-        "folderFiltersHelp": "Lista separada por vírgulas de pastas a serem monitoradas (padrão: Caixa de entrada)",
+        "folderFiltersHelp": "Lista separada por vírgulas de pastas a serem monitoradas (padrão: Caixa de entrada). Use o nome exato da pasta como aparece no Outlook e escreva as pastas aninhadas como Caixa de entrada/Subpasta.",
         "maxEmailsPerSync": "Máximo de e-mails por sincronização"
       },
       "readiness": {

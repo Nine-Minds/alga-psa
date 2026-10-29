@@ -1,13 +1,16 @@
 'use server';
 
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import type { WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import { Knex } from 'knex';
 import { releaseStagingForTask } from '@alga-psa/inventory/lib';
 import ProjectTaskModel from '../models/projectTask';
 import ProjectModel from '@alga-psa/projects/models/project';
 import TaskTypeModel from '../models/taskType';
 import TaskDependencyModel from '../models/taskDependency';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+// Aliased on purpose: inside a withTransaction callback only the destructured
+// projectEventsAfterCommit(trx) names may publish; a mismatched destructure then fails to compile.
+import { publishEvent as publishEventNow, publishWorkflowEvent as publishWorkflowEventNow } from '@alga-psa/event-bus/publishers';
 import type {
   DependencyType,
   ICustomTaskType,
@@ -36,7 +39,7 @@ import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { omit } from 'lodash';
 import { getScopedProjectStatusMappings, ProjectStatusMappingDetails } from '../lib/projectStatusMappingUtils';
 import {
@@ -48,8 +51,7 @@ import {
 import { OrderingService } from '../lib/orderingUtils';
 import { buildProjectTaskWebhookChanges } from '../lib/projectTaskWebhookChanges';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
-import { validateAndFixOrderKeys } from './regenerateOrderKeys';
-import { isProjectOrderKeyActionError } from './projectOrderKeyActionErrors';
+import { repairTaskOrderKeys } from '../services/projectOrderingService';
 import {
   buildProjectTaskAssignedPayload,
   buildProjectTaskCompletedPayload,
@@ -94,6 +96,7 @@ const EXPECTED_PROJECT_TASK_ERROR_PREFIXES = [
     'Target phase not found',
     'Target status not found',
     'Task not found',
+    'Task reorder neighbor must belong to the same phase and status',
     'Team lead not found',
     'Team not found',
 ];
@@ -153,6 +156,25 @@ async function withProjectTaskActionErrors<T>(work: () => Promise<T>): Promise<T
         }
         throw error;
     }
+}
+
+/** Capture event payloads during the write, publish only after its outer commit. */
+function projectEventsAfterCommit(trx: Knex.Transaction) {
+    return {
+        publishEvent: async <E extends Parameters<typeof publishEventNow>[0]>(
+            event: E,
+            options?: Parameters<typeof publishEventNow>[1],
+        ): Promise<void> => {
+            registerAfterCommit(trx, () => publishEventNow(event, options), event.eventType);
+        },
+        // Generic over the event type so the builder-minted payload contract holds.
+        publishWorkflowEvent: async <T extends WorkflowCatalogEventType>(
+            params: Parameters<typeof publishWorkflowEventNow<T>>[0],
+            options?: Parameters<typeof publishWorkflowEventNow<T>>[1],
+        ): Promise<void> => {
+            registerAfterCommit(trx, () => publishWorkflowEventNow<T>(params, options), params.eventType);
+        },
+    };
 }
 
 function tenantScopedTable(
@@ -217,6 +239,7 @@ async function resolveProjectStatusInfo(
 }
 
 
+// LEVERAGE: pattern project-effective-status-scope — shared task choices must preserve this phase-over-project fallback rule.
 async function getEffectiveProjectStatusMappings(
   trx: Knex.Transaction,
   tenant: string,
@@ -587,6 +610,7 @@ export const updateTaskWithChecklist = withAuth(async (
         const {knex: db} = await createTenantKnex();
 
         return await withTransaction(db, async (trx: Knex.Transaction) => {
+            const { publishWorkflowEvent, publishEvent } = projectEventsAfterCommit(trx);
             await checkPermission(user, 'project', 'update', trx);
 
             const existingTask = await ProjectTaskModel.getTaskById(trx, tenant, taskId);
@@ -725,6 +749,7 @@ export const addTaskToPhase = withAuth(async (
         const {knex: db} = await createTenantKnex();
 
         return await withTransaction(db, async (trx: Knex.Transaction) => {
+            const { publishWorkflowEvent } = projectEventsAfterCommit(trx);
             await checkPermission(user, 'project', 'update', trx);
             const projectId = await resolveProjectIdForPhase(trx, tenant, phaseId);
             if (!projectId) {
@@ -804,6 +829,7 @@ export const updateTaskStatus = withAuth(async (
         const {knex: db} = await createTenantKnex();
 
         return await withTransaction(db, async (trx: Knex.Transaction) => {
+            const { publishWorkflowEvent } = projectEventsAfterCommit(trx);
             await checkPermission(user, 'project', 'update', trx);
 
         try {
@@ -1060,6 +1086,7 @@ export const deleteTask = withAuth(async (
         const {knex: db} = await createTenantKnex();
 
         await withTransaction(db, async (trx: Knex.Transaction) => {
+            const { publishEvent } = projectEventsAfterCommit(trx);
             await checkPermission(user, 'project', 'delete', trx);
             const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
             if (!projectId) {
@@ -1435,6 +1462,7 @@ export const addTaskResourceAction = withAuth(async (
     try {
         const {knex: db} = await createTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
+            const { publishWorkflowEvent } = projectEventsAfterCommit(trx);
             await checkPermission(user, 'project', 'update', trx);
             const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
             if (!projectId) {
@@ -1536,7 +1564,7 @@ export const addTaskResourcesAction = withAuth(async (
 
         // Emit per-agent events after commit so subscribers see the committed rows.
         for (const userId of added) {
-            await publishWorkflowEvent({
+            await publishWorkflowEventNow({
                 eventType: 'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
                 payload: buildProjectTaskAdditionalAgentAssignedPayload({
                     projectId,
@@ -1671,7 +1699,7 @@ export const assignTeamToProjectTask = withAuth(async (
         // Emit event after transaction commits so subscribers can see the data
         if (eventData?.projectId) {
             const occurredAt = new Date();
-            await publishWorkflowEvent({
+            await publishWorkflowEventNow({
                 eventType: 'PROJECT_TASK_ASSIGNED',
                 ctx: {
                     tenantId: tenant,
@@ -1908,6 +1936,7 @@ export const moveTaskToPhase = withAuth(async (
         const {knex: db} = await createTenantKnex();
 
         return await withTransaction(db, async (trx: Knex.Transaction) => {
+            const { publishWorkflowEvent } = projectEventsAfterCommit(trx);
             await checkPermission(user, 'project', 'update', trx);
 
             // Get the existing task to preserve its data
@@ -2074,6 +2103,7 @@ export const moveTaskToPhase = withAuth(async (
                 updated_at: trx.fn.now()
             };
 
+
             const [updatedTask] = await tenantScopedTable(trx, 'project_tasks', tenant)
                 .where('task_id', taskId)
                 .update(updateData)
@@ -2153,6 +2183,7 @@ export const duplicateTaskToPhase = withAuth(async (
         const {knex: db} = await createTenantKnex();
 
         return await withTransaction(db, async (trx: Knex.Transaction) => {
+            const { publishWorkflowEvent } = projectEventsAfterCommit(trx);
             // Use 'create' permission as we are creating a new task entity
             await checkPermission(user, 'project', 'create', trx);
 
@@ -2487,70 +2518,45 @@ export const reorderTask = withAuth(async (
         await withTransaction(db, async (trx: Knex.Transaction) => {
             await checkPermission(user, 'project', 'update', trx);
 
-        // Get the task being moved
-        const task = await tenantScopedTable(trx, 'project_tasks', tenant)
-            .where({ task_id: taskId })
-            .select('phase_id', 'project_status_mapping_id')
-            .first();
-
-        if (!task) {
-            throw new Error('Task not found');
-        }
-        const projectId = await resolveProjectIdForPhase(trx, tenant, task.phase_id);
-        if (!projectId) {
-            throw new Error('Project not found for task');
-        }
-        await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
-
-        // Get order keys for positioning
-        let beforeKey: string | null = null;
-        let afterKey: string | null = null;
-
-        if (beforeTaskId) {
-            const beforeTask = await tenantScopedTable(trx, 'project_tasks', tenant)
-                .where({ task_id: beforeTaskId })
-                .select('order_key')
+            // Get the task being moved
+            const task = await tenantScopedTable(trx, 'project_tasks', tenant)
+                .where({ task_id: taskId })
+                .select('phase_id', 'project_status_mapping_id')
                 .first();
-            beforeKey = beforeTask?.order_key || null;
-        }
 
-        if (afterTaskId) {
-            const afterTask = await tenantScopedTable(trx, 'project_tasks', tenant)
-                .where({ task_id: afterTaskId })
-                .select('order_key')
-                .first();
-            afterKey = afterTask?.order_key || null;
-        }
+            if (!task) {
+                throw new Error('Task not found');
+            }
+            const projectId = await resolveProjectIdForPhase(trx, tenant, task.phase_id);
+            if (!projectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
-        try {
-            const newOrderKey = OrderingService.generateKeyForPosition(beforeKey, afterKey);
-
+            const loadNeighborKey = async (neighborId?: string | null) => {
+                if (!neighborId) return null;
+                const neighbor = await tenantScopedTable(trx, 'project_tasks', tenant)
+                    .where({ task_id: neighborId, phase_id: task.phase_id,
+                        project_status_mapping_id: task.project_status_mapping_id })
+                    .select('order_key').first();
+                if (!neighbor || neighborId === taskId) throw new Error('Task reorder neighbor must belong to the same phase and status');
+                return neighbor.order_key || null;
+            };
+            const generateKey = async () => OrderingService.generateKeyForPosition(
+                await loadNeighborKey(beforeTaskId), await loadNeighborKey(afterTaskId));
+            let newOrderKey: string;
+            try {
+                newOrderKey = await generateKey();
+            } catch (error) {
+                // Repair and retry once on this connection; a nested action would
+                // wait on the lifecycle lock already held by this transaction.
+                const wasFixed = await repairTaskOrderKeys(trx, tenant, task.phase_id, task.project_status_mapping_id);
+                if (!wasFixed) throw error;
+                newOrderKey = await generateKey();
+            }
             await tenantScopedTable(trx, 'project_tasks', tenant)
                 .where({ task_id: taskId })
-                .update({
-                    order_key: newOrderKey,
-                    updated_at: trx.fn.now()
-                });
-        } catch (error) {
-            console.error('Error generating order key, attempting to fix order keys for status', error);
-
-            // If order key generation fails, try to fix the order keys for this status
-            const wasFixed = await validateAndFixOrderKeys(
-                task.phase_id,
-                task.project_status_mapping_id
-            );
-
-            if (isProjectOrderKeyActionError(wasFixed)) {
-                throw wasFixed;
-            }
-
-            if (wasFixed) {
-                // Retry the reorder after fixing
-                await reorderTask(taskId, beforeTaskId, afterTaskId);
-            } else {
-                throw error;
-            }
-        }
+                .update({ order_key: newOrderKey, updated_at: trx.fn.now() });
         });
     } catch (error) {
         const expected = projectTaskActionErrorFrom(error);
@@ -2631,10 +2637,7 @@ export const cleanupOrderKeysForStatus = withAuth(async (
             }
             await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
-            const wasFixed = await validateAndFixOrderKeys(phaseId, statusId);
-            if (isProjectOrderKeyActionError(wasFixed)) {
-                throw wasFixed;
-            }
+            const wasFixed = await repairTaskOrderKeys(trx, tenant, phaseId, statusId);
 
             if (wasFixed) {
                 return {
@@ -2719,6 +2722,7 @@ export const addTaskDependency = withAuth(async (
         const { knex: db } = await createTenantKnex();
 
         return await withTransaction(db, async (trx) => {
+            const { publishWorkflowEvent } = projectEventsAfterCommit(trx);
             await checkPermission(user, 'project', 'update', trx);
             const [predecessorProjectId, successorProjectId] = await Promise.all([
                 resolveProjectIdForTask(trx as Knex.Transaction, tenant, predecessorTaskId),
@@ -2841,6 +2845,7 @@ export const removeTaskDependency = withAuth(async (
         const {knex: db} = await createTenantKnex();
 
         await withTransaction(db, async (trx) => {
+            const { publishWorkflowEvent } = projectEventsAfterCommit(trx);
             await checkPermission(user, 'project', 'update', trx);
 
         const dependency = await tenantScopedTable(trx, 'project_task_dependencies', tenant)

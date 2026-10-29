@@ -11,6 +11,11 @@ export interface CustodyLabelFacts {
   custodyLocation: string | null;
   /** "Follow up Oct 29" or "Waiting on client", or null. */
   nextAction: string | null;
+  /**
+   * The raw `YYYY-MM-DD` follow-up date behind `nextAction`. Carried only so a several-items summary can pick the
+   * earliest date; it is never printed directly (the printed form is `nextAction`).
+   */
+  followUpOn: string | null;
 }
 
 const PARTY_LABEL = { msp: 'Our turn', client: 'Waiting on client', vendor: 'Waiting on vendor' } as const;
@@ -40,15 +45,30 @@ export function formatCustodyForLabel(
         ? `Follow up ${followUp}`
         : null;
   if (!custodyLocation && !nextAction) return null;
-  return { custodyLocation, nextAction };
+  return { custodyLocation, nextAction, followUpOn: followUp ? custody.follow_up_on : null };
 }
 
 /**
- * A ticket with several held items prints a count only (and no next action), never a list (the label has a fixed
- * line budget). `facts` is in the order the caller wants them to win.
+ * The custody line for ONE label (the rule is pure; the caller does the reads).
+ *  - `pick` non-null: the picked item decides, verbatim (`pick.facts`). A picked item with no open custody has
+ *    `facts: null` and prints no line - it never falls back to the ticket-level count.
+ *  - no pick, nothing held: no line. One held item: that item. Several: "<n> items held" plus the earliest
+ *    follow-up date across them, worded without a party (the line summarises items with different parties).
+ * `held` is every readable held item on the ticket, in caller order.
  */
-export function formatCustodyForLabelMulti(facts: ReadonlyArray<CustodyLabelFacts>): CustodyLabelFacts | null {
-  if (facts.length === 0) return null;
-  if (facts.length === 1) return facts[0];
-  return { custodyLocation: `${facts.length} items held`, nextAction: null };
+export function formatCustodyForLabelSubject(
+  held: ReadonlyArray<CustodyLabelFacts>,
+  pick: { facts: CustodyLabelFacts | null } | null
+): CustodyLabelFacts | null {
+  if (pick) return pick.facts;
+  if (held.length === 0) return null;
+  if (held.length === 1) return held[0];
+  // ISO date-only strings sort lexicographically.
+  const earliest = held.map((h) => h.followUpOn).filter((d): d is string => Boolean(d)).sort()[0] ?? null;
+  const formatted = earliest ? formatFollowUpDate(earliest) : null;
+  return {
+    custodyLocation: `${held.length} items held`,
+    nextAction: formatted ? `Follow up ${formatted}` : null,
+    followUpOn: formatted ? earliest : null,
+  };
 }

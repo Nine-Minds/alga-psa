@@ -1577,6 +1577,10 @@
       "inProgress": "Rebuilding…"
     },
     "receive": {
+      "searchProducts": "Search products or SKU...",
+      "noProductsFound": "No products found",
+      "searchLocations": "Search locations...",
+      "noLocationsFound": "No locations found",
       "costNonNegative": "Unit cost can't be negative.",
       "failed": "Couldn't receive stock.",
       "inProgress": "Receiving…",

@@ -310,7 +310,9 @@
       "hourlyRate": "⟦Řȧŧḗ / ħř⟧",
       "expirationDate": "⟦Ḗẋƥīřḗş⟧",
       "neverExpires": "⟦Ƞḗṽḗř⟧",
-      "adhocBlock": "⟦Ȧḓ-ħȯƈ⟧"
+      "adhocBlock": "⟦Ȧḓ-ħȯƈ⟧",
+      "remainingValue": "⟦Řḗḿȧīƞīƞɠ ṽȧŀŭḗ⟧",
+      "validFrom": "⟦Ṽȧŀīḓ ƒřȯḿ⟧"
     },
     "statusValues": {
       "active": "⟦Ȧƈŧīṽḗ⟧",

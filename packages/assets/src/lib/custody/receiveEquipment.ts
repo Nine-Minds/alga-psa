@@ -13,7 +13,7 @@ import { openCustody } from './openCustody';
  * record check and the asset record check.
  *
  * NEVER writes stock, money or time. It writes assets (new item only), asset_associations,
- * asset_custody, asset_custody_events and asset_history, nothing else. It deliberately does not
+ * asset_custody, asset_custody_events, asset_history and document associations. It deliberately does not
  * import @alga-psa/inventory or @alga-psa/billing, and does not call `createAssetAssociation`.
  */
 
@@ -154,6 +154,14 @@ export async function receiveEquipmentForTicket(
     occurred_at: input.occurred_at,
     note: input.note,
   });
+
+  if (opened.event.document_ids.length) {
+    await db.table('document_associations').insert(
+      opened.event.document_ids.map((document_id) => ({
+        tenant, document_id, entity_id: assetId!, entity_type: 'asset',
+      }))
+    ).onConflict(['tenant', 'document_id', 'entity_id', 'entity_type']).ignore();
+  }
 
   if (!assetSummary) {
     const existing = await db

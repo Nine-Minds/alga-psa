@@ -107,7 +107,11 @@
     "ticketsRecurring": "Tickets recorrentes",
     "ticketsTemplates": "Modelos de tickets",
     "assetsCustody": "Equipamento sob custódia",
-    "ticketsCannedResponses": "Respostas prontas"
+    "ticketsCannedResponses": "Respostas prontas",
+    "profile": "Perfil",
+    "signOut": "Sair",
+    "coManaged": "TI cogerida",
+    "coManagedAdministration": "Acesso e administração"
   },
   "sidebar": {
     "backToMain": "Voltar ao principal",
@@ -156,7 +160,8 @@
       "extensions": "Extensões",
       "experimentalFeatures": "Recursos experimentais",
       "profile": "Perfil",
-      "security": "Segurança"
+      "security": "Segurança",
+      "tags": "Etiquetas"
     }
   },
   "dashboard": {
@@ -845,5 +850,10 @@
     "errors": {
       "enterpriseOnly": "Os recursos de bate-papo estão disponíveis apenas na Enterprise Edition"
     }
+  },
+  "coManagedWorkspace": {
+    "loading": "Carregando espaço de trabalho…",
+    "navigation": "Espaço de trabalho do cliente",
+    "passwordError": "Não foi possível verificar o status da senha. Recarregue esta página."
   }
 }

@@ -1,7 +1,13 @@
 import { defineConfig } from 'tsup';
+import { SOURCE_ONLY_ALGA_IMPORTS } from './tsup.sourceOnlyImports';
 
 export default defineConfig({
   entry: {
+    'lib/quotes/quoteStatusTransitions': 'lib/quotes/quoteStatusTransitions.ts',
+    'workflow/streams/domainEventBuilders/quoteEventBuilders': 'workflow/streams/domainEventBuilders/quoteEventBuilders.ts',
+    'lib/quotes/quoteLifecycleEvents': 'lib/quotes/quoteLifecycleEvents.ts',
+    'lib/ticketQuery/ticketQuerySchema': 'lib/ticketQuery/ticketQuerySchema.ts',
+    'lib/ticketQuery/ticketSlaSql': 'lib/ticketQuery/ticketSlaSql.ts',
     'lib/ticketCommentAttachments': 'lib/ticketCommentAttachments.ts',
     'lib/ticketCommentAttachmentToken': 'lib/ticketCommentAttachmentToken.ts',
     'index': 'index.ts',
@@ -84,6 +90,7 @@ export default defineConfig({
     'models/assetGroupContactModel': 'models/assetGroupContactModel.ts',
     'models/assetTicketContactModel': 'models/assetTicketContactModel.ts',
     'models/assetBillingProfileModel': 'models/assetBillingProfileModel.ts',
+    'models/clientCreation': 'models/clientCreation.ts',
     'models/clientModel': 'models/clientModel.ts',
     'models/contactModel': 'models/contactModel.ts',
     'models/kbArticleModel': 'models/kbArticleModel.ts',
@@ -160,5 +167,8 @@ export default defineConfig({
   ],
   noExternal: [
     /^@shared\//,
+    // Pure and sandbox-safe; bundled so the worker image needs no extra package dist.
+    /^@alga-psa\/predicates/,
+    ...SOURCE_ONLY_ALGA_IMPORTS,
   ],
 });

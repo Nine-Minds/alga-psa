@@ -1,3 +1,4 @@
+import { coManagedWorkspaceDenial } from '@/lib/api/coManagedWorkspaceDenial';
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
 import { tenantDb, withTransaction } from '@alga-psa/db';
@@ -61,7 +62,9 @@ export async function GET(
           .first();
 
         const commentAttachment = await tenantScopedAdminDb.table('ticket_comment_attachments').where({ document_id: documentRecord.document_id }).first();
-        if (tenantLogoAssoc && !commentAttachment) {
+        const assetAssociation = await tenantScopedAdminDb.table('document_associations')
+          .where({ document_id: documentRecord.document_id, entity_type: 'asset' }).first();
+        if (tenantLogoAssoc && !commentAttachment && !assetAssociation) {
           isTenantLogo = true;
           // Public access granted for tenant logo
         }
@@ -141,6 +144,8 @@ export async function GET(
       if (!user || !tenant) {
         return new NextResponse('Unauthorized', { status: 401 });
       }
+      const denial = await coManagedWorkspaceDenial(tenant);
+      if (denial) return denial;
       const authorizedDocument = await withTransaction(knex, async (trx) =>
         getAuthorizedDocumentByFileId(trx, tenant, user, fileRecord.file_id)
       );

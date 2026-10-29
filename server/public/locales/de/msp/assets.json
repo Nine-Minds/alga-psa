@@ -949,12 +949,6 @@
       "type": "Typ",
       "status": "Status"
     },
-    "assetStatuses": {
-      "active": "Aktiv",
-      "inactive": "Inaktiv",
-      "maintenance": "Wartung",
-      "held_by_msp": "Vom MSP verwahrt"
-    },
     "assetTypes": {
       "workstation": "Arbeitsplatz",
       "server": "Server",
@@ -1297,7 +1291,10 @@
       "frequency": "Häufigkeit *",
       "interval": "Intervall *",
       "nextMaintenanceDate": "Nächster Wartungstermin *",
-      "active": "Aktiv"
+      "active": "Aktiv",
+      "recurrenceUnit": "Einheit *",
+      "onWeekdays": "An Wochentagen (optional)",
+      "onDayOfMonth": "Am Monatstag (optional)"
     },
     "placeholders": {
       "scheduleName": "z. B. monatliche Serverwartung",
@@ -1312,7 +1309,8 @@
       "weekly": "Wöchentlich",
       "monthly": "Monatlich",
       "quarterly": "Vierteljährlich",
-      "yearly": "Jährlich"
+      "yearly": "Jährlich",
+      "custom": "Benutzerdefiniert"
     },
     "errors": {
       "scheduleNameRequired": "Zeitplanname ist erforderlich",
@@ -1321,6 +1319,18 @@
       "nextMaintenanceRequired": "Der nächste Wartungstermin ist erforderlich",
       "frequencyIntervalMin": "Das Frequenzintervall muss mindestens 1 betragen",
       "saveFailed": "Fehler beim Erstellen des Wartungsplans"
+    },
+    "recurrenceUnits": {
+      "days": "Tage",
+      "weeks": "Wochen",
+      "months": "Monate",
+      "years": "Jahre"
+    },
+    "dayOfMonthOptions": {
+      "any": "Beliebiger Tag"
+    },
+    "hints": {
+      "selectors": "Ohne Auswahl wird ab dem Abschlussdatum wiederholt."
     }
   },
   "maintenanceSchedulesTab": {
@@ -1372,6 +1382,36 @@
         "yearly_other": "Jahre",
         "yearly_few": "Jahre",
         "yearly_many": "Jahre"
+      },
+      "customUnconfigured": "Benutzerdefiniert (nicht konfiguriert)",
+      "onWeekdays": "{{cadence}} am {{days}}",
+      "onDaysOfMonth": "{{cadence}} am Tag {{days}}",
+      "weekdays": {
+        "sun": "So",
+        "mon": "Mo",
+        "tue": "Di",
+        "wed": "Mi",
+        "thu": "Do",
+        "fri": "Fr",
+        "sat": "Sa"
+      },
+      "customUnits": {
+        "days_one": "Tag",
+        "days_other": "Tage",
+        "days_few": "Tage",
+        "days_many": "Tage",
+        "weeks_one": "Woche",
+        "weeks_other": "Wochen",
+        "weeks_few": "Wochen",
+        "weeks_many": "Wochen",
+        "months_one": "Monat",
+        "months_other": "Monate",
+        "months_few": "Monate",
+        "months_many": "Monate",
+        "years_one": "Jahr",
+        "years_other": "Jahre",
+        "years_few": "Jahre",
+        "years_many": "Jahre"
       }
     },
     "status": {
@@ -1813,8 +1853,8 @@
     "in_stock": "Auf Lager",
     "maintenance": "In Wartung",
     "inactive": "Inaktiv",
-    "held_by_msp": "Vom MSP verwahrt",
-    "retired": "Ausgemustert"
+    "retired": "Ausgemustert",
+    "held_by_msp": "Vom MSP verwahrt"
   },
   "assetStatusKinds": {
     "deployable": "Einsetzbar",
@@ -2078,7 +2118,12 @@
       "doneBody": "{{name}} ({{tag}}) befindet sich jetzt in MSP-Verwahrung.",
       "printLabel": "Asset-Etikett drucken",
       "openAsset": "Asset öffnen",
-      "close": "Schließen"
+      "close": "Schließen",
+      "inCustodyOption": "{{asset}} — In Verwahrung: {{location}}"
+    },
+    "photos": {
+      "limit": "Bis zu 20 Fotos, insgesamt 10 MB. Fotos sind für Kunden nicht sichtbar.",
+      "tooLarge": "Wählen Sie höchstens 20 Fotos mit insgesamt maximal 10 MB aus."
     }
   }
 }

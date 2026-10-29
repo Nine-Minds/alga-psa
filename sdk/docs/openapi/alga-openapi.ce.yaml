@@ -824,6 +824,8 @@ components:
             - desc
         team_name:
           type: string
+        description:
+          type: string
         manager_id:
           type: string
           format: uuid
@@ -1106,6 +1108,11 @@ components:
       properties:
         team_name:
           type: string
+        description:
+          type:
+            - string
+            - "null"
+          maxLength: 1000
         manager_id:
           type: string
           format: uuid
@@ -1121,6 +1128,11 @@ components:
       properties:
         team_name:
           type: string
+        description:
+          type:
+            - string
+            - "null"
+          maxLength: 1000
         manager_id:
           type: string
           format: uuid
@@ -2266,14 +2278,25 @@ components:
     AssetMaintenanceScheduleUpdateRequest:
       type: object
       properties:
-        schedule_type:
+        schedule_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Name displayed in the asset maintenance UI.
+        description:
+          type:
+            - string
+            - "null"
+          description: Optional maintenance instructions.
+        maintenance_type:
           type: string
           enum:
             - preventive
+            - corrective
             - inspection
             - calibration
             - replacement
-          description: Type of maintenance schedule.
+          description: Maintenance type stored by the UI and database.
         frequency:
           type: string
           enum:
@@ -2283,35 +2306,72 @@ components:
             - quarterly
             - yearly
             - custom
-          description: Recurrence frequency. Changing this triggers next_maintenance
-            recalculation.
+          description: Recurrence frequency, multiplied by frequency_interval. Does not
+            change the explicit next_maintenance timestamp. `custom` takes its
+            rule from schedule_config.recurrence.
         frequency_interval:
-          type: number
+          type: integer
           minimum: 1
-          description: Frequency multiplier used when calculating the next maintenance date.
-        start_date:
+          description: Positive integer frequency multiplier; monthly with 6 means every
+            six months.
+        next_maintenance:
           type: string
           format: date-time
-          description: Schedule start date/time. Changing this triggers next_maintenance
-            recalculation.
-        end_date:
-          type: string
-          format: date-time
-          description: Optional schedule end date/time.
-        notes:
-          type: string
-          description: Free-text schedule notes.
-        assigned_to:
-          type: string
-          format: uuid
-          description: Assigned user UUID from users.user_id.
+          description: Explicit next due timestamp, used unchanged for the initial open
+            occurrence. Must be an ISO 8601 UTC timestamp with a `Z` suffix
+            (e.g. 2026-11-01T13:00:00.000Z); values with a numeric offset such
+            as -04:00 are rejected.
         is_active:
           type: boolean
           description: Whether the schedule is active.
         schedule_config:
           type: object
+          properties:
+            recurrence:
+              type: object
+              properties:
+                unit:
+                  type: string
+                  enum:
+                    - days
+                    - weeks
+                    - months
+                    - years
+                  description: Unit multiplied by frequency_interval.
+                weekdays:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 0
+                    maximum: 6
+                  minItems: 1
+                  description: Weeks only. 0 = Sunday … 6 = Saturday. The next due date is the
+                    next listed weekday in the current week (weeks start on
+                    Sunday); after the last one it jumps frequency_interval
+                    weeks to the first listed weekday.
+                days_of_month:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 1
+                    maximum: 31
+                  minItems: 1
+                  description: Months only. The next due date is the next listed day in the
+                    current month; after the last one it jumps
+                    frequency_interval months to the first listed day. Days are
+                    clamped to the month length (31 in February becomes 28/29).
+              required:
+                - unit
+              additionalProperties: false
+              description: 'Required when frequency is `custom`; ignored for the fixed
+                frequencies. Example: frequency_interval 2 with { "unit":
+                "weeks", "weekdays": [1, 4] } is every other week on Monday and
+                Thursday.'
           additionalProperties: {}
-          description: Custom scheduling configuration.
+          description: Scheduling configuration. Use {} for the fixed frequencies.
+            `recurrence` is required for `custom`; other keys such as
+            `checklist` are stored as-is.
+      additionalProperties: false
     AssetMaintenanceScheduleResource:
       type: object
       properties:
@@ -2323,55 +2383,55 @@ components:
           type: string
           format: uuid
           description: Asset UUID from asset_maintenance_schedules.asset_id.
-        schedule_type:
+        schedule_name:
           type: string
-          description: Maintenance schedule type as used by ApiAssetController.
+          description: Maintenance schedule name.
+        description:
+          type:
+            - string
+            - "null"
+          description: Maintenance instructions.
+        maintenance_type:
+          type: string
+          enum:
+            - preventive
+            - corrective
+            - inspection
+            - calibration
+            - replacement
         frequency:
           type: string
           description: Recurrence frequency.
         frequency_interval:
-          type:
-            - number
-            - "null"
+          type: integer
           description: Frequency multiplier.
-        start_date:
-          type:
-            - string
-            - "null"
-          description: Schedule start date/time.
-        end_date:
-          type:
-            - string
-            - "null"
-          description: Schedule end date/time.
         last_maintenance:
           type:
             - string
             - "null"
           description: Last recorded maintenance date/time.
         next_maintenance:
-          type:
-            - string
-            - "null"
-          description: Next calculated maintenance date/time.
-        notes:
-          type:
-            - string
-            - "null"
-          description: Free-text schedule notes.
-        assigned_to:
-          type:
-            - string
-            - "null"
+          type: string
+          format: date-time
+          description: Next due date/time.
+        created_by:
+          type: string
           format: uuid
-          description: Assigned user UUID.
+          description: Authenticated caller who created the schedule; not a writable
+            assignee.
+        created_by_name:
+          type: string
+          description: Creator display name included in list results.
+        archived_at:
+          type:
+            - string
+            - "null"
+          description: Archive timestamp.
         is_active:
           type: boolean
           description: Whether the schedule is active.
         schedule_config:
-          type:
-            - object
-            - "null"
+          type: object
           additionalProperties: {}
           description: Custom scheduling configuration.
         created_at:
@@ -2389,6 +2449,15 @@ components:
       required:
         - schedule_id
         - asset_id
+        - schedule_name
+        - description
+        - maintenance_type
+        - frequency
+        - frequency_interval
+        - next_maintenance
+        - created_by
+        - is_active
+        - schedule_config
         - tenant
     AssetMaintenanceSchedulePayload:
       type: object
@@ -2396,8 +2465,9 @@ components:
         data:
           allOf:
             - $ref: "#/components/schemas/AssetMaintenanceScheduleResource"
-            - description: Updated schedule row. Undefined when the schedule ID does not exist
-                or belongs to another tenant.
+            - description: Created or updated schedule row.
+      required:
+        - data
     AssetMaintenanceScheduleResponse:
       type: object
       properties:
@@ -2416,14 +2486,25 @@ components:
     AssetMaintenanceScheduleCreateRequest:
       type: object
       properties:
-        schedule_type:
+        schedule_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Name displayed in the asset maintenance UI.
+        description:
+          type:
+            - string
+            - "null"
+          description: Optional maintenance instructions.
+        maintenance_type:
           type: string
           enum:
             - preventive
+            - corrective
             - inspection
             - calibration
             - replacement
-          description: Required type of maintenance schedule.
+          description: Maintenance type stored by the UI and database.
         frequency:
           type: string
           enum:
@@ -2433,37 +2514,80 @@ components:
             - quarterly
             - yearly
             - custom
-          description: Required recurrence frequency used to calculate next_maintenance.
+          description: Recurrence frequency, multiplied by frequency_interval. Does not
+            change the explicit next_maintenance timestamp. `custom` takes its
+            rule from schedule_config.recurrence.
         frequency_interval:
-          type: number
+          type: integer
           minimum: 1
-          description: Frequency multiplier. Defaults to service logic when absent.
-        start_date:
+          description: Positive integer frequency multiplier; monthly with 6 means every
+            six months.
+        next_maintenance:
           type: string
           format: date-time
-          description: Schedule start date/time. The current schema makes this optional;
-            the service falls back to now when absent.
-        end_date:
-          type: string
-          format: date-time
-          description: Optional schedule end date/time.
-        notes:
-          type: string
-          description: Free-text schedule notes.
-        assigned_to:
-          type: string
-          format: uuid
-          description: Assigned user UUID from users.user_id.
+          description: Explicit next due timestamp, used unchanged for the initial open
+            occurrence. Must be an ISO 8601 UTC timestamp with a `Z` suffix
+            (e.g. 2026-11-01T13:00:00.000Z); values with a numeric offset such
+            as -04:00 are rejected.
         is_active:
           type: boolean
-          description: Whether the schedule is active. Defaults to true in validation.
+          default: true
+          description: Whether the schedule is active; defaults to true.
         schedule_config:
           type: object
+          properties:
+            recurrence:
+              type: object
+              properties:
+                unit:
+                  type: string
+                  enum:
+                    - days
+                    - weeks
+                    - months
+                    - years
+                  description: Unit multiplied by frequency_interval.
+                weekdays:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 0
+                    maximum: 6
+                  minItems: 1
+                  description: Weeks only. 0 = Sunday … 6 = Saturday. The next due date is the
+                    next listed weekday in the current week (weeks start on
+                    Sunday); after the last one it jumps frequency_interval
+                    weeks to the first listed weekday.
+                days_of_month:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 1
+                    maximum: 31
+                  minItems: 1
+                  description: Months only. The next due date is the next listed day in the
+                    current month; after the last one it jumps
+                    frequency_interval months to the first listed day. Days are
+                    clamped to the month length (31 in February becomes 28/29).
+              required:
+                - unit
+              additionalProperties: false
+              description: 'Required when frequency is `custom`; ignored for the fixed
+                frequencies. Example: frequency_interval 2 with { "unit":
+                "weeks", "weekdays": [1, 4] } is every other week on Monday and
+                Thursday.'
           additionalProperties: {}
-          description: Custom scheduling configuration.
+          description: Scheduling configuration. Use {} for the fixed frequencies.
+            `recurrence` is required for `custom`; other keys such as
+            `checklist` are stored as-is.
       required:
-        - schedule_type
+        - schedule_name
+        - maintenance_type
         - frequency
+        - frequency_interval
+        - next_maintenance
+        - schedule_config
+      additionalProperties: false
     AssetMaintenanceScheduleListPayload:
       type: object
       properties:
@@ -3590,6 +3714,119 @@ components:
             - "true"
             - "false"
           description: true also returns archived (is_active false) statuses.
+    AssetCustodyEnvelope:
+      type: object
+      properties:
+        data:
+          type: object
+          additionalProperties: {}
+      required:
+        - data
+      description: Custody data wrapped in the standard envelope.
+    OpenAssetCustodyRequest:
+      type: object
+      properties:
+        ticket_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+          description: Ticket the equipment was received for; its client must match the
+            asset.
+        location_id:
+          type: string
+          format: uuid
+          description: Active stock location the item is shelved at.
+        bin:
+          type: string
+          maxLength: 64
+          description: Free-text bin or shelf label.
+        purpose:
+          type: string
+          enum:
+            - repair
+            - warranty_evaluation
+            - loaner_prep
+            - staging
+        next_action_party:
+          type: string
+          enum:
+            - msp
+            - client
+            - vendor
+        next_action_note:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+        follow_up_on:
+          type:
+            - string
+            - "null"
+          description: Date only, YYYY-MM-DD.
+        condition_note:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+      required:
+        - location_id
+        - bin
+        - purpose
+    AssetCustodyEventRequest:
+      type: object
+      properties:
+        event_type:
+          type: string
+          enum:
+            - moved
+            - handed_off
+            - shipped
+            - received
+            - returned
+      required:
+        - event_type
+      description: "Fields depend on event_type: moved {location_id?, bin?},
+        handed_off {to_holder_user_id}, shipped {counterparty}, received
+        {location_id, bin}, returned {counterparty?}."
+    AssetCustodyQueueQuery:
+      type: object
+      properties:
+        tab:
+          type: string
+        client_id:
+          type: string
+          format: uuid
+        location_id:
+          type: string
+          format: uuid
+        holder_user_id:
+          type: string
+          format: uuid
+        purpose:
+          type: string
+          enum:
+            - repair
+            - warranty_evaluation
+            - loaner_prep
+            - staging
+        next_action_party:
+          type: string
+          enum:
+            - msp
+            - client
+            - vendor
+        mine:
+          type: string
+          enum:
+            - "true"
+            - "false"
+        page:
+          type: string
+        pageSize:
+          type: string
+      required:
+        - purpose
     AssetGroupListQuery:
       type: object
       properties:
@@ -4290,6 +4527,11 @@ components:
             - prospect
             - active
             - former
+          description: Relationship lifecycle (default active on create). The Clients list
+            shows only active clients by default, so prospect and former clients
+            are hidden there until the user changes the Lifecycle filter. Only
+            send prospect or former when the user explicitly asks for that
+            status.
         tags:
           type: array
           items:
@@ -12890,11 +13132,21 @@ components:
         - client_location.updated
         - client_location.deactivated
         - client_location.deleted
+        - quote.sent
+        - quote.viewed
+        - quote.approved
+        - quote.accepted
+        - quote.rejected
+        - quote.expired
+        - quote.converted
+        - quote.conversion_reverted
+        - quote.superseded
+        - quote.cancelled
       description: Public webhook event name from the single event registry (ticket.*,
-        project.*, client.*, contact.*, client_location.*). Webhooks created
-        earlier may still store retired names (time.entry.*, invoice.*, asset.*,
-        system.*, workflow.*, custom.event); those are returned as stored, never
-        deliver, and are rejected when newly added.
+        project.*, client.*, contact.*, client_location.*, quote.*). Webhooks
+        created earlier may still store retired names (time.entry.*, invoice.*,
+        asset.*, system.*, workflow.*, custom.event); those are returned as
+        stored, never deliver, and are rejected when newly added.
     CreateWebhookBodyV1:
       type: object
       properties:
@@ -13048,6 +13300,45 @@ components:
                 enum:
                   - client_id
                   - changed_fields
+            quote:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+                enum:
+                  - client_id
+                  - quote_number
+                  - version
+                  - contact_id
+                  - opportunity_id
+                  - previous_status
+                  - new_status
+                  - currency_code
+                  - total_amount
+                  - performed_by_type
+                  - performed_by_id
+                  - sent_at
+                  - viewed_at
+                  - approved_at
+                  - accepted_at
+                  - rejected_at
+                  - expired_at
+                  - converted_at
+                  - conversion_reverted_at
+                  - superseded_at
+                  - cancelled_at
+                  - accepted_by_name
+                  - accepted_on_behalf
+                  - selected_optional_item_ids
+                  - rejection_reason
+                  - conversion_targets
+                  - contract_id
+                  - invoice_id
+                  - sales_order_id
+                  - released_invoice_id
+                  - superseded_by_quote_id
+                  - next_version
           description: "Per-entity payload allowlist. null/{} = full payload everywhere. {
             ticket: null } = full ticket payload. { ticket: [] } =
             required-only. { ticket: [a,b] } = explicit allowlist plus required
@@ -13068,7 +13359,15 @@ components:
             phase_id, phase_name, task_name, estimated_hours, actual_hours,
             due_date, priority_id, priority_name, tags; client: changed_fields;
             contact: client_id, changed_fields; client_location: client_id,
-            changed_fields."
+            changed_fields; quote: client_id, quote_number, version, contact_id,
+            opportunity_id, previous_status, new_status, currency_code,
+            total_amount, performed_by_type, performed_by_id, sent_at,
+            viewed_at, approved_at, accepted_at, rejected_at, expired_at,
+            converted_at, conversion_reverted_at, superseded_at, cancelled_at,
+            accepted_by_name, accepted_on_behalf, selected_optional_item_ids,
+            rejection_reason, conversion_targets, contract_id, invoice_id,
+            sales_order_id, released_invoice_id, superseded_by_quote_id,
+            next_version."
         payload_transformation:
           type: object
           additionalProperties: {}
@@ -13384,6 +13683,45 @@ components:
                 enum:
                   - client_id
                   - changed_fields
+            quote:
+              type:
+                - array
+                - "null"
+              items:
+                type: string
+                enum:
+                  - client_id
+                  - quote_number
+                  - version
+                  - contact_id
+                  - opportunity_id
+                  - previous_status
+                  - new_status
+                  - currency_code
+                  - total_amount
+                  - performed_by_type
+                  - performed_by_id
+                  - sent_at
+                  - viewed_at
+                  - approved_at
+                  - accepted_at
+                  - rejected_at
+                  - expired_at
+                  - converted_at
+                  - conversion_reverted_at
+                  - superseded_at
+                  - cancelled_at
+                  - accepted_by_name
+                  - accepted_on_behalf
+                  - selected_optional_item_ids
+                  - rejection_reason
+                  - conversion_targets
+                  - contract_id
+                  - invoice_id
+                  - sales_order_id
+                  - released_invoice_id
+                  - superseded_by_quote_id
+                  - next_version
           description: "Per-entity payload allowlist. null/{} = full payload everywhere. {
             ticket: null } = full ticket payload. { ticket: [] } =
             required-only. { ticket: [a,b] } = explicit allowlist plus required
@@ -13404,7 +13742,15 @@ components:
             phase_id, phase_name, task_name, estimated_hours, actual_hours,
             due_date, priority_id, priority_name, tags; client: changed_fields;
             contact: client_id, changed_fields; client_location: client_id,
-            changed_fields."
+            changed_fields; quote: client_id, quote_number, version, contact_id,
+            opportunity_id, previous_status, new_status, currency_code,
+            total_amount, performed_by_type, performed_by_id, sent_at,
+            viewed_at, approved_at, accepted_at, rejected_at, expired_at,
+            converted_at, conversion_reverted_at, superseded_at, cancelled_at,
+            accepted_by_name, accepted_on_behalf, selected_optional_item_ids,
+            rejection_reason, conversion_targets, contract_id, invoice_id,
+            sales_order_id, released_invoice_id, superseded_by_quote_id,
+            next_version."
         payload_transformation:
           type:
             - object
@@ -16472,6 +16818,16 @@ components:
               - external_id
           description: Ticket-level external references written in the same transaction as
             the ticket. A conflicting link rolls back the create.
+        suppressContactNotifications:
+          type: boolean
+          description: When true, suppresses customer-facing email and portal
+            notifications for this operation.
+        suppressInternalNotifications:
+          type: boolean
+          description: When true, also suppresses agent and watcher notifications.
+            Requires suppressContactNotifications=true.
+      description: Ticket fields to create. Notification suppression applies only to
+        this operation.
     WorkV1TicketUpdateBody:
       type: object
       properties:
@@ -17162,6 +17518,40 @@ components:
       required:
         - data
         - pagination
+    WorkV1ScheduleEntryListQuery:
+      type: object
+      properties:
+        start_date:
+          type: string
+          description: ISO 8601 date or date-time; entries starting at or after. A
+            date-only value means 00:00:00Z that day.
+        end_date:
+          type: string
+          description: ISO 8601 date or date-time; entries ending at or before. A
+            date-only value includes the whole UTC day (entries ending before
+            00:00:00Z the next day).
+        user_id:
+          type: string
+          format: uuid
+    WorkV1ScheduleEntrySearchQuery:
+      type: object
+      properties:
+        page:
+          type: string
+        limit:
+          type: string
+        start_date:
+          type: string
+          description: ISO 8601 date or date-time; entries starting at or after. A
+            date-only value means 00:00:00Z that day.
+        end_date:
+          type: string
+          description: ISO 8601 date or date-time; entries ending at or before. A
+            date-only value includes the whole UTC day (entries ending before
+            00:00:00Z the next day).
+        user_id:
+          type: string
+          format: uuid
     WorkV1TimeSheetEntriesResponse:
       type: object
       properties:
@@ -17306,6 +17696,11 @@ components:
                   - string
                   - "null"
                 format: uuid
+              billing_mode:
+                type: string
+                enum:
+                  - commercial
+                  - operational
             required:
               - tenant
               - entry_id
@@ -17333,6 +17728,7 @@ components:
               - contract_line_unresolved_reason
               - catalog_pricing_acknowledged_at
               - catalog_pricing_acknowledged_by
+              - billing_mode
       required:
         - data
     WorkV1TimeSheetSummaryResponse:
@@ -17446,6 +17842,10 @@ components:
                   - string
                   - "null"
                 format: uuid
+              notes:
+                type:
+                  - string
+                  - "null"
               user_name:
                 type: string
               time_entries:
@@ -17589,6 +17989,11 @@ components:
                         - string
                         - "null"
                       format: uuid
+                    billing_mode:
+                      type: string
+                      enum:
+                        - commercial
+                        - operational
                   required:
                     - tenant
                     - entry_id
@@ -17616,6 +18021,7 @@ components:
                     - contract_line_unresolved_reason
                     - catalog_pricing_acknowledged_at
                     - catalog_pricing_acknowledged_by
+                    - billing_mode
             required:
               - tenant
               - id
@@ -17625,6 +18031,7 @@ components:
               - submitted_at
               - approved_at
               - approved_by
+              - notes
               - user_name
       required:
         - data
@@ -18295,6 +18702,69 @@ components:
             format: uuid
           description: "Required with mode=selective: the team members to keep as
             additional agents."
+    WorkV1TicketWatcherBody:
+      type: object
+      properties:
+        contact_id:
+          type: string
+          format: uuid
+          description: Client contact to watch; resolved to the contact email and name.
+            Exactly one of contact_id, user_id, email.
+        user_id:
+          type: string
+          format: uuid
+          description: Internal user to watch; resolved to the user email and name.
+            Exactly one of contact_id, user_id, email.
+        email:
+          type: string
+          format: email
+          description: Any bare email address (external mailbox). Exactly one of
+            contact_id, user_id, email.
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Display name; only used when the watcher has no name yet.
+        active:
+          type: boolean
+          description: Whether the watcher receives updates; defaults to true.
+        silent:
+          type: boolean
+          description: Request-scoped, never stored. When true the write emits no customer
+            or internal notification.
+    WorkV1TicketWatcherActiveBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email of an existing watcher (case-insensitive).
+        active:
+          type: boolean
+          description: true to resume updates, false to pause them without removing the
+            watcher.
+        silent:
+          type: boolean
+          description: Request-scoped, never stored. Suppresses notifications for this
+            change.
+      required:
+        - email
+        - active
+    WorkV1TicketWatcherRemoveQuery:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          description: Email of the watcher to remove (case-insensitive).
+        silent:
+          type: string
+          enum:
+            - "true"
+            - "false"
+          description: Request-scoped. "true" suppresses notifications for this removal.
+      required:
+        - email
     QuoteIdParamV1:
       type: object
       properties:
@@ -23265,6 +23735,11 @@ paths:
           in: query
         - schema:
             type: string
+          required: false
+          name: description
+          in: query
+        - schema:
+            type: string
             format: uuid
           required: false
           name: manager_id
@@ -27198,14 +27673,16 @@ paths:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
     put:
       summary: Update asset maintenance schedule
-      description: Updates a maintenance schedule by
-        asset_maintenance_schedules.schedule_id for the authenticated tenant.
-        All request fields are optional because updateMaintenanceScheduleSchema
-        is a partial form of the create schema. If frequency,
-        frequency_interval, or start_date are supplied, the service loads the
-        existing schedule for the tenant and recalculates next_maintenance.
-        Missing or cross-tenant schedule IDs result in a 200 response with an
-        undefined nested data value rather than 404.
+      description: "Updates existing maintenance schedule columns for the
+        authenticated tenant. All fields are optional; unknown and legacy fields
+        are rejected. Response-only fields (schedule_id, asset_id, tenant,
+        created_by, created_by_name, created_at, updated_at, last_maintenance,
+        archived_at) are accepted and ignored so a row read from GET can be sent
+        back as-is. next_maintenance is explicit: changing frequency alone
+        preserves the current due date. Due-date changes synchronize the open
+        occurrence and unsent notifications. Disabling cancels the open
+        occurrence; re-enabling an unarchived schedule opens one. All writes are
+        transactional. Missing or cross-tenant schedule IDs return 404."
       tags:
         - Assets
       security:
@@ -27216,8 +27693,8 @@ paths:
         x-current-auth-wiring-missing: true
         x-rbac-resource: asset
         x-rbac-action: update
-        x-recalculates-next-maintenance: true
-        x-no-not-found-on-missing-id: true
+        x-recalculates-next-maintenance: false
+        x-no-not-found-on-missing-id: false
       x-alga-products:
         - psa
       parameters:
@@ -27232,17 +27709,18 @@ paths:
           name: scheduleId
           in: path
       requestBody:
-        description: Partial maintenance schedule update data.
+        description: Partial maintenance schedule update data. Response-only fields are
+          ignored; legacy and unknown fields return 400.
         required: true
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/AssetMaintenanceScheduleUpdateRequest"
-            description: Partial maintenance schedule update data.
+            description: Partial maintenance schedule update data. Response-only fields are
+              ignored; legacy and unknown fields return 400.
       responses:
         "200":
-          description: Maintenance schedule updated successfully. If the ID is not found,
-            the nested data field may be absent.
+          description: Maintenance schedule updated successfully.
           content:
             application/json:
               schema:
@@ -27262,6 +27740,12 @@ paths:
         "403":
           description: Authenticated request context lacks permission to update asset
             maintenance schedules when auth wiring is present.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "404":
+          description: Schedule not found in the authenticated tenant.
           content:
             application/json:
               schema:
@@ -27995,6 +28479,330 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/assets/{id}/custody:
+    get:
+      summary: Get asset custody
+      description: Returns the open custody episode (if any), the episode history and
+        the append-only event timeline of the asset. An asset the caller cannot
+        read answers 404 with no data.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: read
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Asset UUID from assets.asset_id.
+          required: true
+          description: Asset UUID from assets.asset_id.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Custody returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetCustodyEnvelope"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Caller lacks asset read permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "404":
+          description: Asset not found or not readable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+    post:
+      summary: Receive an asset into custody
+      description: Opens a custody episode for the asset. Never touches stock, billing
+        or time. 409 when an episode is already open.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Asset UUID from assets.asset_id.
+          required: true
+          description: Asset UUID from assets.asset_id.
+          name: id
+          in: path
+      requestBody:
+        description: Where the item is shelved and who acts next.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OpenAssetCustodyRequest"
+            description: Where the item is shelved and who acts next.
+      responses:
+        "201":
+          description: Custody episode opened.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetCustodyEnvelope"
+        "400":
+          description: Validation failed (inactive location, client mismatch, invalid date).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Caller lacks asset update permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "404":
+          description: Asset not found or not readable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "409":
+          description: An episode is already open for this asset.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/assets/{id}/custody/events:
+    post:
+      summary: Record a custody step
+      description: Appends a moved, handed_off, shipped, received or returned step to
+        the asset’s open episode. Invalid transitions answer 409.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: Asset UUID from assets.asset_id.
+          required: true
+          description: Asset UUID from assets.asset_id.
+          name: id
+          in: path
+      requestBody:
+        description: The step to record.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssetCustodyEventRequest"
+            description: The step to record.
+      responses:
+        "201":
+          description: Step recorded.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetCustodyEnvelope"
+        "400":
+          description: Validation failed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Caller lacks asset update permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "404":
+          description: Asset not found or not readable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "409":
+          description: The asset is not in custody, or the step is not allowed from the
+            current state.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+  /api/v1/asset-custody:
+    get:
+      summary: List equipment in custody
+      description: The custody queue. Rows and tab counts exclude assets the caller
+        cannot read.
+      tags:
+        - Assets
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-request-context-required: true
+        x-current-auth-wiring-missing: true
+        x-rbac-resource: asset
+        x-rbac-action: read
+        x-no-asset-existence-check: true
+        x-not-paginated: true
+      x-alga-products:
+        - psa
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: tab
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: client_id
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: location_id
+          in: query
+        - schema:
+            type: string
+            format: uuid
+          required: false
+          name: holder_user_id
+          in: query
+        - schema:
+            type: string
+            enum:
+              - repair
+              - warranty_evaluation
+              - loaner_prep
+              - staging
+          required: true
+          name: purpose
+          in: query
+        - schema:
+            type: string
+            enum:
+              - msp
+              - client
+              - vendor
+          required: false
+          name: next_action_party
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          required: false
+          name: mine
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: page
+          in: query
+        - schema:
+            type: string
+          required: false
+          name: pageSize
+          in: query
+      responses:
+        "200":
+          description: Queue returned successfully.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetCustodyEnvelope"
+        "400":
+          description: Invalid filter.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "401":
+          description: x-api-key is missing at middleware.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetMiddlewareUnauthorizedResponse"
+        "403":
+          description: Caller lacks asset read permission.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "500":
+          description: Unexpected error.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
   /api/v1/asset-groups:
     get:
       summary: List asset groups for a client
@@ -28625,12 +29433,12 @@ paths:
   /api/v1/assets/{id}/maintenance:
     get:
       summary: List asset maintenance schedules
-      description: Returns maintenance schedule rows for the path asset ID in the
-        authenticated tenant. The service filters asset_maintenance_schedules by
-        asset_id and context.tenant and joins users to add assigned_user_name.
-        It performs no asset existence check, so nonexistent or cross-tenant
-        asset IDs return 200 with an empty array. Response links currently point
-        at /api/v2/assets paths.
+      description: Returns maintenance schedule rows using the existing UI/database
+        columns for the path asset ID in the authenticated tenant. The service
+        filters asset_maintenance_schedules by asset_id and context.tenant and
+        joins users to add created_by_name. It performs no asset existence
+        check, so nonexistent or cross-tenant asset IDs return 200 with an empty
+        array. Response links currently point at /api/v2/assets paths.
       tags:
         - Assets
       security:
@@ -28682,14 +29490,15 @@ paths:
                 $ref: "#/components/schemas/AssetApiErrorEnvelope"
     post:
       summary: Create asset maintenance schedule
-      description: Creates a maintenance schedule for the path asset ID in the
-        authenticated tenant. The request body is validated with
-        createMaintenanceScheduleSchema; schedule_type and frequency are
-        required, while start_date is optional in the current shared date schema
-        and the service falls back to now when absent. The service inserts
-        asset_id from the path, tenant from context, timestamps, and a
-        calculated next_maintenance value. It does not verify asset existence,
-        does not set created_by, and publishes no event.
+      description: "Creates a maintenance schedule using the existing UI/database
+        columns: schedule_name, description, maintenance_type, frequency,
+        frequency_interval, schedule_config, next_maintenance, and is_active.
+        The asset must belong to the authenticated tenant. asset_id comes from
+        the path; tenant and created_by come from authentication.
+        next_maintenance is stored unchanged. The schedule, upcoming
+        notification, and initial open occurrence (if active) are created in one
+        transaction. Legacy schedule_type, notes, start_date, end_date, and
+        assigned_to fields are rejected. No database migration is required."
       tags:
         - Assets
       security:
@@ -28700,9 +29509,9 @@ paths:
         x-current-auth-wiring-missing: true
         x-rbac-resource: asset
         x-rbac-action: update
-        x-no-asset-existence-check: true
-        x-calculates-next-maintenance: true
-        x-created-by-set: false
+        x-no-asset-existence-check: false
+        x-calculates-next-maintenance: false
+        x-created-by-set: true
         x-no-event-published: true
       x-alga-products:
         - psa
@@ -28746,6 +29555,12 @@ paths:
         "403":
           description: Authenticated request context lacks permission to create or update
             asset maintenance schedules when auth wiring is present.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssetApiErrorEnvelope"
+        "404":
+          description: Asset not found in the authenticated tenant.
           content:
             application/json:
               schema:
@@ -30929,6 +31744,11 @@ paths:
                     - prospect
                     - active
                     - former
+                  description: Relationship lifecycle (default active on create). The Clients list
+                    shows only active clients by default, so prospect and former
+                    clients are hidden there until the user changes the
+                    Lifecycle filter. Only send prospect or former when the user
+                    explicitly asks for that status.
                 tags:
                   type: array
                   items:
@@ -56327,7 +57147,7 @@ paths:
       summary: List available webhook events
       description: Returns the supported webhook event types from
         webhookEventTypeSchema (ticket.*, project.*, client.*, contact.*,
-        client_location.*).
+        client_location.*, quote.*).
       tags:
         - Webhooks
       security:
@@ -62091,7 +62911,15 @@ paths:
   /api/v1/schedules:
     get:
       summary: List schedule entries
-      description: Lists schedule entries via ApiTimeSheetController.listScheduleEntries().
+      description: "Lists schedule entries via
+        ApiTimeSheetController.listScheduleEntries(). Returns every entry
+        visible to the caller under shared-calendar rules (unpaginated),
+        filtered by start_date, end_date (ISO 8601 date or date-time) and
+        user_id. Date bounds are UTC: a date-only start_date means 00:00:00Z
+        that day, a date-only end_date includes that whole day (entries ending
+        before 00:00:00Z the next day), and date-time values are exact,
+        inclusive bounds. Returns 400 for invalid dates or start_date after
+        end_date."
       tags:
         - Work Management v1
       security:
@@ -62107,41 +62935,24 @@ paths:
       parameters:
         - schema:
             type: string
+            description: ISO 8601 date or date-time; entries starting at or after. A
+              date-only value means 00:00:00Z that day.
           required: false
-          name: page
+          name: start_date
           in: query
         - schema:
             type: string
+            description: ISO 8601 date or date-time; entries ending at or before. A
+              date-only value includes the whole UTC day (entries ending before
+              00:00:00Z the next day).
           required: false
-          name: limit
+          name: end_date
           in: query
         - schema:
             type: string
+            format: uuid
           required: false
-          name: sort
-          in: query
-        - schema:
-            type: string
-            enum:
-              - asc
-              - desc
-          required: false
-          name: order
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: fields
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: search
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: query
+          name: user_id
           in: query
       responses:
         "200":
@@ -62235,8 +63046,15 @@ paths:
   /api/v1/schedules/search:
     get:
       summary: Search schedules
-      description: Current route delegates to ApiTimeSheetController.list() (time
-        sheet list path), not schedule-specific search.
+      description: "Searches schedule entries via
+        ApiTimeSheetController.searchScheduleEntries(). Returns entries visible
+        to the caller under shared-calendar rules, filtered by start_date,
+        end_date (ISO 8601 date or date-time) and user_id, paginated with
+        page/limit. Date bounds are UTC: a date-only start_date means 00:00:00Z
+        that day, a date-only end_date includes that whole day (entries ending
+        before 00:00:00Z the next day), and date-time values are exact,
+        inclusive bounds. Returns 400 for invalid dates or start_date after
+        end_date."
       tags:
         - Work Management v1
       security:
@@ -62247,7 +63065,6 @@ paths:
           controller-specific equivalent
         x-tenant-header: x-tenant-id (optional; inferred from API key when omitted)
         x-rbac-resource: time_sheet
-        x-route-controller-mismatch: true
       x-alga-products:
         - psa
       parameters:
@@ -62263,31 +63080,24 @@ paths:
           in: query
         - schema:
             type: string
+            description: ISO 8601 date or date-time; entries starting at or after. A
+              date-only value means 00:00:00Z that day.
           required: false
-          name: sort
+          name: start_date
           in: query
         - schema:
             type: string
-            enum:
-              - asc
-              - desc
+            description: ISO 8601 date or date-time; entries ending at or before. A
+              date-only value includes the whole UTC day (entries ending before
+              00:00:00Z the next day).
           required: false
-          name: order
+          name: end_date
           in: query
         - schema:
             type: string
+            format: uuid
           required: false
-          name: fields
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: search
-          in: query
-        - schema:
-            type: string
-          required: false
-          name: query
+          name: user_id
           in: query
       responses:
         "200":
@@ -64080,7 +64890,10 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     post:
       summary: Create ticket
-      description: Creates ticket via ApiTicketController.create().
+      description: Creates ticket via ApiTicketController.create(). Optional
+        suppression flags make this operation silent for customer notifications
+        or for all human notifications while preserving audit, workflow, and
+        webhook records.
       tags:
         - Work Management v1
       security:
@@ -70715,11 +71528,13 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     post:
       summary: Add a ticket additional agent
-      description: Adds a user as an additional agent on the ticket and publishes
-        TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the
-        UI unless suppressed. A ticket with no primary agent promotes the user
-        to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a
-        duplicate returns 409.
+      description: "Internal staff only: adds a user as an additional agent on the
+        ticket (external people, client contacts and bare emails go to POST
+        /api/v1/tickets/{id}/watchers; a one-off comment copy uses comment
+        cc/bcc). Publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications
+        fire as they do in the UI unless suppressed. A ticket with no primary
+        agent promotes the user to primary instead (TICKET_ASSIGNED). Returns
+        the updated agent list; a duplicate returns 409."
       tags:
         - Work Management v1
       security:
@@ -70846,6 +71661,315 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
         "404":
           description: Ticket or additional agent not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+  /api/v1/tickets/{id}/watchers:
+    get:
+      summary: List ticket watchers
+      description: "Returns everyone on the ticket watch list. Watchers are persistent
+        (contacts, users or any email) and are copied on ticket updates; they
+        are distinct from additional agents (internal staff, /agents) and from a
+        comment cc (one-off, never joins the watch list). Unless silent=true the
+        write emits one TICKET_UPDATED event; silent=true sets
+        suppressContactNotifications and suppressInternalNotifications on it.
+        The response is the full watcher list: {email, name, active,
+        entity_type, entity_id, source}."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: read
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Watcher list.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket or sub-resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    post:
+      summary: Add a ticket watcher
+      description: "Idempotent set-add of a watcher by exactly one of contact_id,
+        user_id or email; an existing email is re-activated, not duplicated. An
+        unknown or other-tenant contact/user, or one without an email, returns
+        422. Watchers are persistent (contacts, users or any email) and are
+        copied on ticket updates; they are distinct from additional agents
+        (internal staff, /agents) and from a comment cc (one-off, never joins
+        the watch list). Unless silent=true the write emits one TICKET_UPDATED
+        event; silent=true sets suppressContactNotifications and
+        suppressInternalNotifications on it. The response is the full watcher
+        list: {email, name, active, entity_type, entity_id, source}."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TicketWatcherBody"
+      responses:
+        "200":
+          description: Watcher added (or already present); full list returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket or sub-resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "422":
+          description: Contact or user not found in this tenant, or has no email.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    patch:
+      summary: Pause or resume a ticket watcher
+      description: "Sets active on an existing watcher identified by email; the
+        watcher stays on the list. Watchers are persistent (contacts, users or
+        any email) and are copied on ticket updates; they are distinct from
+        additional agents (internal staff, /agents) and from a comment cc
+        (one-off, never joins the watch list). Unless silent=true the write
+        emits one TICKET_UPDATED event; silent=true sets
+        suppressContactNotifications and suppressInternalNotifications on it.
+        The response is the full watcher list: {email, name, active,
+        entity_type, entity_id, source}."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkV1TicketWatcherActiveBody"
+      responses:
+        "200":
+          description: Watcher updated; full list returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket or sub-resource not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "500":
+          description: Unexpected controller/service failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+    delete:
+      summary: Remove a ticket watcher
+      description: "Removes the watcher with the given ?email=. Returns 404 when that
+        email is not a watcher. Watchers are persistent (contacts, users or any
+        email) and are copied on ticket updates; they are distinct from
+        additional agents (internal staff, /agents) and from a comment cc
+        (one-off, never joins the watch list). Unless silent=true the write
+        emits one TICKET_UPDATED event; silent=true sets
+        suppressContactNotifications and suppressInternalNotifications on it.
+        The response is the full watcher list: {email, name, active,
+        entity_type, entity_id, source}."
+      tags:
+        - Work Management v1
+      security:
+        - ApiKeyAuth: []
+      extensions:
+        x-tenant-scoped: true
+        x-rbac-resource: ticket
+        x-rbac-action: update
+      x-alga-products:
+        - psa
+        - algadesk
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+            description: UUID path identifier from underlying resource tables.
+          required: true
+          description: UUID path identifier from underlying resource tables.
+          name: id
+          in: path
+        - schema:
+            type: string
+            format: email
+            description: Email of the watcher to remove (case-insensitive).
+          required: true
+          description: Email of the watcher to remove (case-insensitive).
+          name: email
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+            description: Request-scoped. "true" suppresses notifications for this removal.
+          required: false
+          description: Request-scoped. "true" suppresses notifications for this removal.
+          name: silent
+          in: query
+      responses:
+        "200":
+          description: Watcher removed; full list returned.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiSuccess"
+        "400":
+          description: Validation or request parsing failure.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "401":
+          description: API key missing/invalid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "403":
+          description: RBAC denied for ticket resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "404":
+          description: Ticket or sub-resource not found.
           content:
             application/json:
               schema:
@@ -92190,10 +93314,11 @@ webhooks:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
           description: Public webhook event name from the single event registry (ticket.*,
-            project.*, client.*, contact.*, client_location.*). Webhooks created
-            earlier may still store retired names (time.entry.*, invoice.*,
-            asset.*, system.*, workflow.*, custom.event); those are returned as
-            stored, never deliver, and are rejected when newly added.
+            project.*, client.*, contact.*, client_location.*, quote.*).
+            Webhooks created earlier may still store retired names
+            (time.entry.*, invoice.*, asset.*, system.*, workflow.*,
+            custom.event); those are returned as stored, never deliver, and are
+            rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
@@ -92264,10 +93389,11 @@ webhooks:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
           description: Public webhook event name from the single event registry (ticket.*,
-            project.*, client.*, contact.*, client_location.*). Webhooks created
-            earlier may still store retired names (time.entry.*, invoice.*,
-            asset.*, system.*, workflow.*, custom.event); those are returned as
-            stored, never deliver, and are rejected when newly added.
+            project.*, client.*, contact.*, client_location.*, quote.*).
+            Webhooks created earlier may still store retired names
+            (time.entry.*, invoice.*, asset.*, system.*, workflow.*,
+            custom.event); those are returned as stored, never deliver, and are
+            rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
@@ -92337,10 +93463,11 @@ webhooks:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
           description: Public webhook event name from the single event registry (ticket.*,
-            project.*, client.*, contact.*, client_location.*). Webhooks created
-            earlier may still store retired names (time.entry.*, invoice.*,
-            asset.*, system.*, workflow.*, custom.event); those are returned as
-            stored, never deliver, and are rejected when newly added.
+            project.*, client.*, contact.*, client_location.*, quote.*).
+            Webhooks created earlier may still store retired names
+            (time.entry.*, invoice.*, asset.*, system.*, workflow.*,
+            custom.event); those are returned as stored, never deliver, and are
+            rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
@@ -92410,10 +93537,11 @@ webhooks:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
           description: Public webhook event name from the single event registry (ticket.*,
-            project.*, client.*, contact.*, client_location.*). Webhooks created
-            earlier may still store retired names (time.entry.*, invoice.*,
-            asset.*, system.*, workflow.*, custom.event); those are returned as
-            stored, never deliver, and are rejected when newly added.
+            project.*, client.*, contact.*, client_location.*, quote.*).
+            Webhooks created earlier may still store retired names
+            (time.entry.*, invoice.*, asset.*, system.*, workflow.*,
+            custom.event); those are returned as stored, never deliver, and are
+            rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
@@ -92484,10 +93612,11 @@ webhooks:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
           description: Public webhook event name from the single event registry (ticket.*,
-            project.*, client.*, contact.*, client_location.*). Webhooks created
-            earlier may still store retired names (time.entry.*, invoice.*,
-            asset.*, system.*, workflow.*, custom.event); those are returned as
-            stored, never deliver, and are rejected when newly added.
+            project.*, client.*, contact.*, client_location.*, quote.*).
+            Webhooks created earlier may still store retired names
+            (time.entry.*, invoice.*, asset.*, system.*, workflow.*,
+            custom.event); those are returned as stored, never deliver, and are
+            rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
@@ -92559,10 +93688,11 @@ webhooks:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
           description: Public webhook event name from the single event registry (ticket.*,
-            project.*, client.*, contact.*, client_location.*). Webhooks created
-            earlier may still store retired names (time.entry.*, invoice.*,
-            asset.*, system.*, workflow.*, custom.event); those are returned as
-            stored, never deliver, and are rejected when newly added.
+            project.*, client.*, contact.*, client_location.*, quote.*).
+            Webhooks created earlier may still store retired names
+            (time.entry.*, invoice.*, asset.*, system.*, workflow.*,
+            custom.event); those are returned as stored, never deliver, and are
+            rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
@@ -92634,10 +93764,11 @@ webhooks:
             $ref: "#/components/schemas/WebhookEventTypeV1"
           required: true
           description: Public webhook event name from the single event registry (ticket.*,
-            project.*, client.*, contact.*, client_location.*). Webhooks created
-            earlier may still store retired names (time.entry.*, invoice.*,
-            asset.*, system.*, workflow.*, custom.event); those are returned as
-            stored, never deliver, and are rejected when newly added.
+            project.*, client.*, contact.*, client_location.*, quote.*).
+            Webhooks created earlier may still store retired names
+            (time.entry.*, invoice.*, asset.*, system.*, workflow.*,
+            custom.event); those are returned as stored, never deliver, and are
+            rejected when newly added.
           name: x-alga-event-type
           in: header
         - schema:
