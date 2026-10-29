@@ -1408,7 +1408,10 @@
         "setDefault": "Ustaw jako domyślny",
         "shippingTag": "Wysyłka",
         "unnamed": "Nienazwana lokalizacja",
-        "contactCount": "{{count}} kontakty",
+        "contactCount_one": "1 kontakt",
+        "contactCount_few": "{{count}} kontakty",
+        "contactCount_many": "{{count}} kontaktów",
+        "contactCount_other": "{{count}} kontaktów",
         "contactPrimary": "Główny"
       },
       "dialog": {
@@ -2005,7 +2008,8 @@
       "targetAlreadyMerged": "Klient docelowy sam został scalony z innym klientem. Scal z tamtym klientem.",
       "sourceIsTenantDefault": "Rekordu własnej organizacji nie można scalić z klientem.",
       "parentLinkCycle": "Ten klient jest zapisany jako podrzędny wobec scalanego, więc scalenie odwróciłoby hierarchię.",
-      "invalidContractCutover": "Jedna z dat granicznych wykracza poza okres obowiązywania swojej umowy."
+      "invalidContractCutover": "Jedna z dat granicznych wykracza poza okres obowiązywania swojej umowy.",
+      "invalidContactLocation": "Wybrana lokalizacja nie należy do żadnego ze scalanych klientów."
     },
     "profileContacts": {
       "duplicateManager": "Profil rozliczeniowy może mieć tylko jednego kierownika.",

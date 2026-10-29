@@ -862,6 +862,7 @@
   },
   "contactLocations": {
     "locations": "Sites",
+    "addLocation": "Ajouter un site",
     "workArrangement": "Organisation du travail",
     "primary": "Principal",
     "none": "Aucun site",

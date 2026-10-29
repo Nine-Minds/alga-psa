@@ -862,6 +862,7 @@
   },
   "contactLocations": {
     "locations": "Locations",
+    "addLocation": "Add location",
     "workArrangement": "Work arrangement",
     "primary": "Primary",
     "none": "No locations",

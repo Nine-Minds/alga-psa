@@ -16,6 +16,7 @@ import { hasPermissionAsync } from '../lib/authHelpers';
 import { withClientSinceDateString } from '../lib/clientSince';
 import { attachDisplayTags } from '../lib/displayTags';
 import { attachContactLocations } from '../lib/contactLocations';
+import { contactLocationSortKey } from '../lib/contactLocationDisplay';
 import InteractionModel from '../models/interactions';
 import {
   actionError,
@@ -300,17 +301,17 @@ function getDefaultPhoneNumber(contact: Pick<IContact, 'default_phone_number' | 
     || '';
 }
 
+/** Sorts in TypeScript, for the columns whose value is not a column of `contacts`. */
+const CONTACT_SORT_VALUE: Record<string, (contact: IContact) => string> = {
+  phone_number: getDefaultPhoneNumber,
+  // The Location column: primary location name, then 'Remote', with the unlinked last.
+  primaryLocation: contactLocationSortKey,
+};
+
 function sortContacts(contacts: IContact[], sortBy: string, sortDirection: 'asc' | 'desc'): IContact[] {
   const direction = sortDirection === 'desc' ? -1 : 1;
-  return [...contacts].sort((left, right) => {
-    const leftValue = sortBy === 'phone_number'
-      ? getDefaultPhoneNumber(left)
-      : String((left as any)[sortBy] ?? '');
-    const rightValue = sortBy === 'phone_number'
-      ? getDefaultPhoneNumber(right)
-      : String((right as any)[sortBy] ?? '');
-    return leftValue.localeCompare(rightValue) * direction;
-  });
+  const valueOf = CONTACT_SORT_VALUE[sortBy] ?? ((contact: IContact) => String((contact as any)[sortBy] ?? ''));
+  return [...contacts].sort((left, right) => valueOf(left).localeCompare(valueOf(right)) * direction);
 }
 
 export type ContactFilterStatus = 'active' | 'inactive' | 'all';
@@ -332,7 +333,7 @@ export const getContactsByClient = withAuth(async (
       throw new Error('VALIDATION_ERROR: Client ID is required');
     }
 
-    const allowedSortBy = ['full_name', 'created_at', 'email', 'client_name', 'phone_number'];
+    const allowedSortBy = ['full_name', 'created_at', 'email', 'client_name', 'phone_number', 'primaryLocation'];
     const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'full_name';
     const safeSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
 
@@ -375,7 +376,9 @@ export const getContactsByClient = withAuth(async (
     }));
 
     const tagged = await attachDisplayTags(db, tenant, user, 'contact', contactsWithAvatars, (contact: IContact) => contact.contact_name_id);
-    return (await attachContactLocations(db, tenant, tagged, (contact) => contact.contact_name_id)) as IContact[];
+    const withLocations = (await attachContactLocations(db, tenant, tagged, (contact) => contact.contact_name_id)) as IContact[];
+    // The links only exist once they are attached, so that one column is ordered here.
+    return safeSortBy === 'primaryLocation' ? sortContacts(withLocations, safeSortBy, safeSortDirection) : withLocations;
   } catch (err) {
     console.error('Error fetching contacts for client:', err);
 
@@ -439,7 +442,7 @@ export const getAllContacts = withAuth(async (
       throw new Error('VALIDATION_ERROR: Invalid status filter provided');
     }
 
-    const allowedSortBy = ['full_name', 'created_at', 'email', 'client_name', 'phone_number'];
+    const allowedSortBy = ['full_name', 'created_at', 'email', 'client_name', 'phone_number', 'primaryLocation'];
     const safeSortBy = allowedSortBy.includes(sortBy) ? sortBy : 'full_name';
     const safeSortDirection = sortDirection === 'desc' ? 'desc' : 'asc';
 
@@ -514,7 +517,9 @@ export const getAllContacts = withAuth(async (
     }));
 
     const tagged = await attachDisplayTags(db, tenant, user, 'contact', contactsWithAvatars, (contact: IContact) => contact.contact_name_id);
-    return (await attachContactLocations(db, tenant, tagged, (contact) => contact.contact_name_id)) as IContact[];
+    const withLocations = (await attachContactLocations(db, tenant, tagged, (contact) => contact.contact_name_id)) as IContact[];
+    // The links only exist once they are attached, so that one column is ordered here.
+    return safeSortBy === 'primaryLocation' ? sortContacts(withLocations, safeSortBy, safeSortDirection) : withLocations;
   } catch (err) {
     console.error('Error fetching all contacts:', err);
 

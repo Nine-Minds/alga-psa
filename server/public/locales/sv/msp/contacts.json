@@ -862,6 +862,7 @@
   },
   "contactLocations": {
     "locations": "Platser",
+    "addLocation": "Lägg till plats",
     "workArrangement": "Arbetsform",
     "primary": "Primär",
     "none": "Inga platser",

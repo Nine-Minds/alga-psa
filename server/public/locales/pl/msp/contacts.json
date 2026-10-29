@@ -862,6 +862,7 @@
   },
   "contactLocations": {
     "locations": "Lokalizacje",
+    "addLocation": "Dodaj lokalizację",
     "workArrangement": "Tryb pracy",
     "primary": "Główna",
     "none": "Brak lokalizacji",

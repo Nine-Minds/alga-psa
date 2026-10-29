@@ -9,10 +9,15 @@ import type { IContact, IContactLocation } from '@alga-psa/types';
  * someone"), and a contact with neither reads as empty rather than as the client's head office.
  */
 export interface ContactLocationCell {
-  /** Primary location name, or 'Remote', or null when there is nothing to show. */
+  /** Primary location name, or null when there is no link to name. */
   label: string | null;
   /** How many further links there are beyond the primary. */
   extraCount: number;
+  /**
+   * The person works remotely. With no `label` this is the whole answer to "where do I send
+   * someone", and the caller renders its own translated "Remote" — this module never returns
+   * display English.
+   */
   isRemote: boolean;
 }
 
@@ -31,7 +36,7 @@ export function contactLocationCell(contact: ContactLike): ContactLocationCell {
       : null);
 
   if (!primary) {
-    return { label: isRemote ? 'Remote' : null, extraCount: 0, isRemote };
+    return { label: null, extraCount: 0, isRemote };
   }
 
   return {
@@ -41,8 +46,11 @@ export function contactLocationCell(contact: ContactLike): ContactLocationCell {
   };
 }
 
-/** The sort key for the Location column: primary name, then 'Remote', then nothing. */
+/**
+ * The sort key for the Location column: primary name, then 'Remote', with the contacts that have
+ * neither last in ascending order (an empty cell is not a place, so it does not sort among them).
+ */
 export function contactLocationSortKey(contact: ContactLike): string {
   const cell = contactLocationCell(contact);
-  return cell.label ?? '';
+  return cell.label ? `0${cell.label}` : cell.isRemote ? '1' : '2';
 }

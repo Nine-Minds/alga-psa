@@ -156,7 +156,8 @@
     "unnamedUser": "Användare utan namn",
     "unnamedTeam": "Team utan namn",
     "userPicker": "Användarväljare",
-    "noUsersFound": "Inga användare hittades"
+    "noUsersFound": "Inga användare hittades",
+    "contactRemoteLocation": "Distans"
   },
   "serviceTypeSelect": {
     "placeholder": "Välj tjänstetyp…",

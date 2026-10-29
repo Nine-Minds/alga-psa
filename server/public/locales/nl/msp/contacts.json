@@ -862,6 +862,7 @@
   },
   "contactLocations": {
     "locations": "Locaties",
+    "addLocation": "Locatie toevoegen",
     "workArrangement": "Werkvorm",
     "primary": "Primair",
     "none": "Geen locaties",

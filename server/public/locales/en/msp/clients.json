@@ -1381,7 +1381,8 @@
         "setDefault": "Set as default",
         "shippingTag": "Shipping",
         "unnamed": "Unnamed Location",
-        "contactCount": "{{count}} contacts",
+        "contactCount_one": "1 contact",
+        "contactCount_other": "{{count}} contacts",
         "contactPrimary": "Primary"
       },
       "dialog": {
@@ -1978,7 +1979,8 @@
       "targetAlreadyMerged": "The destination client has itself been merged into another client. Merge into that one instead.",
       "sourceIsTenantDefault": "Your own organisation record cannot be merged into a client.",
       "parentLinkCycle": "That client is recorded as a child of the one you are merging, so merging this way would invert the hierarchy.",
-      "invalidContractCutover": "One of the cutover dates falls outside its contract term."
+      "invalidContractCutover": "One of the cutover dates falls outside its contract term.",
+      "invalidContactLocation": "A chosen location belongs to neither client being merged."
     },
     "profileContacts": {
       "duplicateManager": "A billing profile can only have one manager.",

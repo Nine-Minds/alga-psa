@@ -10,6 +10,7 @@ import {
   suggestCutoverDate,
   type ClientOwnedMoveTable,
   type ContractDecision,
+  evaluateContactLocationChoices,
   type MergeBlocker,
   type MergeClientFacts,
   type MergeableContract,
@@ -490,18 +491,17 @@ async function applyContactLocationAssignments(
       .pluck<string[]>('location_id'),
   );
 
+  // The same guard the dry run evaluates, so the two can never disagree about what is allowed.
+  const [refused] = evaluateContactLocationChoices({
+    assignments: args.assignments,
+    sourceContactIds: sourceContacts,
+    allowedLocationIds: allowed,
+  });
+  if (refused) throw new Error(refused.message);
+
   let repointed = 0;
   for (const assignment of args.assignments) {
     if (!sourceContacts.has(assignment.contactNameId)) continue;
-    for (const choice of assignment.locations) {
-      if (!allowed.has(choice.locationId)) {
-        throw new Error(
-          'CLIENT_MERGE_ERROR: contact '
-          + `${assignment.contactNameId} cannot be linked to location ${choice.locationId}: `
-          + 'it belongs to neither the source nor the destination client',
-        );
-      }
-    }
 
     const before = args.linksBeforeByContact.get(assignment.contactNameId) ?? new Set<string>();
     repointed += assignment.locations.filter((choice) => !before.has(choice.locationId)).length;
@@ -664,7 +664,16 @@ function planVisibilityGroupRenames(
 export async function previewClientMerge(
   trx: Knex.Transaction,
   tenant: string,
-  input: { sourceClientId: string; targetClientId: string },
+  input: {
+    sourceClientId: string;
+    targetClientId: string;
+    /**
+     * The location sets the operator has chosen so far. Supplying them makes the dry run check
+     * them with the engine's own guard, so an impossible choice reads as a blocker on the step
+     * rather than as a failed merge.
+     */
+    contactLocationAssignments?: readonly ContactLocationAssignment[];
+  },
 ): Promise<ClientMergePreview> {
   const source = await readClientFacts(trx, tenant, input.sourceClientId);
   const target = await readClientFacts(trx, tenant, input.targetClientId);
@@ -736,6 +745,11 @@ export async function previewClientMerge(
   const unrestrictedPortalUserIds = await findUnrestrictedPortalUsers(trx, tenant, contactIds);
   counts['contact location'] = await countContactLocationLinks(trx, tenant, contactIds);
   const locationPreview = await readContactLocationPreview(trx, tenant, source.clientId, target.clientId, contactIds);
+  blockers.push(...evaluateContactLocationChoices({
+    assignments: input.contactLocationAssignments ?? [],
+    sourceContactIds: new Set(contactIds),
+    allowedLocationIds: new Set(locationPreview.locationsAfterMerge.map((row) => row.locationId)),
+  }));
 
   const externalMappings = await readExternalMappings(trx, tenant, source.clientId, target.clientId);
   const assets = await readMergeAssetsPreview(trx, tenant, source.clientId);

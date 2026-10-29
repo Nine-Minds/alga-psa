@@ -1354,7 +1354,8 @@
         "setDefault": "Als standaard instellen",
         "shippingTag": "Verzending",
         "unnamed": "Naamloze locatie",
-        "contactCount": "Contactpersonen: {{count}}",
+        "contactCount_one": "1 contactpersoon",
+        "contactCount_other": "{{count}} contactpersonen",
         "contactPrimary": "Primair"
       },
       "dialog": {
@@ -1951,7 +1952,8 @@
       "targetAlreadyMerged": "De doelklant is zelf met een andere klant samengevoegd. Voeg met die klant samen.",
       "sourceIsTenantDefault": "Het record van uw eigen organisatie kan niet met een klant worden samengevoegd.",
       "parentLinkCycle": "Die klant staat geregistreerd als onderliggend aan de klant die u samenvoegt; zo zou de hiërarchie worden omgedraaid.",
-      "invalidContractCutover": "Een van de overstapdatums valt buiten de looptijd van het bijbehorende contract."
+      "invalidContractCutover": "Een van de overstapdatums valt buiten de looptijd van het bijbehorende contract.",
+      "invalidContactLocation": "Een gekozen locatie hoort bij geen van de samengevoegde klanten."
     },
     "profileContacts": {
       "duplicateManager": "Een facturatieprofiel kan maar één beheerder hebben.",

@@ -1372,7 +1372,8 @@
         "setDefault": "Ange som standard",
         "shippingTag": "Leverans",
         "unnamed": "Plats utan namn",
-        "contactCount": "{{count}} kontakter",
+        "contactCount_one": "1 kontakt",
+        "contactCount_other": "{{count}} kontakter",
         "contactPrimary": "Primär"
       },
       "dialog": {
@@ -1969,7 +1970,8 @@
       "targetAlreadyMerged": "Målkunden har själv slagits samman med en annan kund. Slå samman med den i stället.",
       "sourceIsTenantDefault": "Din egen organisationspost kan inte slås samman med en kund.",
       "parentLinkCycle": "Den kunden är registrerad som underordnad den du slår samman, så en sammanslagning i den riktningen skulle vända hierarkin upp och ner.",
-      "invalidContractCutover": "Ett av övergångsdatumen ligger utanför avtalets löptid."
+      "invalidContractCutover": "Ett av övergångsdatumen ligger utanför avtalets löptid.",
+      "invalidContactLocation": "En vald plats hör inte till någon av de kunder som slås samman."
     },
     "profileContacts": {
       "duplicateManager": "En faktureringsprofil kan bara ha en ansvarig.",

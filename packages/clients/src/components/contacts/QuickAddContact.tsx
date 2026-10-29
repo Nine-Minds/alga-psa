@@ -29,6 +29,7 @@ import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import type { PendingTag } from '@alga-psa/types';
 import ContactLocationsEditor from './ContactLocationsEditor';
+import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { createTagsForEntity } from '@alga-psa/tags/actions/tagActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { parseContactActionError } from '../../lib/contactActionErrorCodes';
@@ -127,6 +128,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [workArrangement, setWorkArrangement] = useState<ContactWorkArrangement | null>(null);
   const [locationLinks, setLocationLinks] = useState<ContactLocationInput[]>([]);
+  const [isLocationsOpen, setIsLocationsOpen] = useState(false);
 
   useEffect(() => {
     if (selectedClientId) {
@@ -685,16 +687,32 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
                 <p className="text-sm text-red-600 mt-1">{fieldErrors.notes}</p>
               )}
             </div>
+            {/* Collapsed by default: most quick adds are a name and an email, and the editor needs
+                a client before it can offer anything. The count rides on the toggle so a filled
+                set is visible without opening it. */}
             <div>
-              <ContactLocationsEditor
-                id="quick-add-contact-locations-editor"
-                clientId={clientId}
-                workArrangement={workArrangement}
-                onWorkArrangementChange={setWorkArrangement}
-                value={locationLinks}
-                onChange={setLocationLinks}
-                disabled={isSubmitting}
-              />
+              <CollapseToggleButton
+                id="quick-add-contact-locations-toggle"
+                isCollapsed={!isLocationsOpen}
+                collapsedLabel={t('contactLocations.locations', { defaultValue: 'Locations' })}
+                expandedLabel={t('contactLocations.locations', { defaultValue: 'Locations' })}
+                tone="ghost"
+                onClick={() => setIsLocationsOpen((open) => !open)}
+              >
+                {t('contactLocations.locations', { defaultValue: 'Locations' })}
+                {locationLinks.length > 0 ? ` (${locationLinks.length})` : ''}
+              </CollapseToggleButton>
+              {isLocationsOpen && (
+                <ContactLocationsEditor
+                  id="quick-add-contact-locations-editor"
+                  clientId={clientId}
+                  workArrangement={workArrangement}
+                  onWorkArrangementChange={setWorkArrangement}
+                  value={locationLinks}
+                  onChange={setLocationLinks}
+                  disabled={isSubmitting}
+                />
+              )}
             </div>
             <QuickAddTagPicker
               id="quick-add-contact-tags"

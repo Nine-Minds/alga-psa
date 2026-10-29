@@ -1354,7 +1354,8 @@
         "setDefault": "Imposta come predefinito",
         "shippingTag": "Spedizione",
         "unnamed": "Posizione senza nome",
-        "contactCount": "{{count}} contatti",
+        "contactCount_one": "1 contatto",
+        "contactCount_other": "{{count}} contatti",
         "contactPrimary": "Principale"
       },
       "dialog": {
@@ -1951,7 +1952,8 @@
       "targetAlreadyMerged": "Il cliente di destinazione è stato a sua volta unito a un altro cliente. Unisci a quello.",
       "sourceIsTenantDefault": "La scheda della tua organizzazione non può essere unita a un cliente.",
       "parentLinkCycle": "Quel cliente risulta figlio di quello che stai unendo, quindi l'unione invertirebbe la gerarchia.",
-      "invalidContractCutover": "Una delle date di subentro è al di fuori della durata del relativo contratto."
+      "invalidContractCutover": "Una delle date di subentro è al di fuori della durata del relativo contratto.",
+      "invalidContactLocation": "Una sede scelta non appartiene a nessuno dei clienti uniti."
     },
     "profileContacts": {
       "duplicateManager": "Un profilo di fatturazione può avere un solo responsabile.",

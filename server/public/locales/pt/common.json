@@ -156,7 +156,8 @@
     "unnamedUser": "Usuário sem nome",
     "unnamedTeam": "Equipe sem nome",
     "userPicker": "Seletor de usuários",
-    "noUsersFound": "Nenhum usuário encontrado"
+    "noUsersFound": "Nenhum usuário encontrado",
+    "contactRemoteLocation": "Remoto"
   },
   "serviceTypeSelect": {
     "placeholder": "Selecione um tipo de serviço...",

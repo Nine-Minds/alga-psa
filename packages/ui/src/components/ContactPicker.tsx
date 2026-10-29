@@ -18,10 +18,14 @@ import { withDataAutomationId } from '../ui-reflection/withDataAutomationId';
 
 /**
  * Where the person works, as secondary text beside the tag badges. A remote worker with no links
- * reads "Remote"; a contact with neither reads as nothing rather than borrowing the client's
- * default location, which is what the dispatcher is about to decide for themselves.
+ * reads "Remote" (translated by the caller); a contact with neither reads as nothing rather than
+ * borrowing the client's default location, which is what the dispatcher is about to decide for
+ * themselves.
  */
-function contactLocationHint(contact: IContact): string | null {
+function contactLocationHint(
+  contact: IContact,
+  remoteLabel: string,
+): string | null {
   const locations = contact.locations ?? [];
   const primary = locations.find((location) => location.is_primary)
     ?? (locations.length === 1 ? locations[0] : null)
@@ -29,7 +33,7 @@ function contactLocationHint(contact: IContact): string | null {
     ?? null;
   const name = primary?.location_name?.trim();
   if (name) return locations.length > 1 ? `${name} +${locations.length - 1}` : name;
-  return contact.work_arrangement === 'remote' ? 'Remote' : null;
+  return contact.work_arrangement === 'remote' ? remoteLabel : null;
 }
 
 interface ContactPickerProps {
@@ -114,6 +118,7 @@ export const ContactPicker = ({
   "data-automation-type": dataAutomationType = 'picker',
 }: ContactPickerProps & AutomationProps) => {
   const { t } = useTranslation('common');
+  const remoteLabel = t('pickers.contactRemoteLocation', { defaultValue: 'Remote' });
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -348,8 +353,8 @@ export const ContactPicker = ({
                       </div>
                       <div className={`text-xs ${contact.is_inactive ? 'text-gray-400' : 'text-gray-500'}`}>
                         {contact.email}
-                        {contactLocationHint(contact) ? (
-                          <span data-contact-location={contact.contact_name_id}> · {contactLocationHint(contact)}</span>
+                        {contactLocationHint(contact, remoteLabel) ? (
+                          <span data-contact-location={contact.contact_name_id}> · {contactLocationHint(contact, remoteLabel)}</span>
                         ) : null}
                       </div>
                     </div>
@@ -496,9 +501,9 @@ export const ContactPicker = ({
               )}
               <span className={!selectedContact ? 'text-gray-400' : ''}>{selectedContact ? selectedContact.full_name : placeholder}</span>
               {selectedContact && <EntityTagBadges tags={selectedContact.displayTags} maxBadges={2} />}
-              {selectedContact && contactLocationHint(selectedContact) ? (
+              {selectedContact && contactLocationHint(selectedContact, remoteLabel) ? (
                 <span className="text-xs text-gray-500" data-contact-location-selected>
-                  {contactLocationHint(selectedContact)}
+                  {contactLocationHint(selectedContact, remoteLabel)}
                 </span>
               ) : null}
             </div>

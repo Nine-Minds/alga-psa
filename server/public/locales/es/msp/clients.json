@@ -1354,7 +1354,8 @@
         "setDefault": "Establecer como predeterminado",
         "shippingTag": "Envío",
         "unnamed": "Ubicación sin nombre",
-        "contactCount": "{{count}} contactos",
+        "contactCount_one": "1 contacto",
+        "contactCount_other": "{{count}} contactos",
         "contactPrimary": "Principal"
       },
       "dialog": {
@@ -1951,7 +1952,8 @@
       "targetAlreadyMerged": "El cliente de destino se ha fusionado a su vez en otro cliente. Fusione en ese en su lugar.",
       "sourceIsTenantDefault": "El registro de su propia organización no puede fusionarse en un cliente.",
       "parentLinkCycle": "Ese cliente figura como hijo del que está fusionando, por lo que la fusión invertiría la jerarquía.",
-      "invalidContractCutover": "Una de las fechas de corte queda fuera de la vigencia de su contrato."
+      "invalidContractCutover": "Una de las fechas de corte queda fuera de la vigencia de su contrato.",
+      "invalidContactLocation": "Una ubicación elegida no pertenece a ninguno de los clientes que se fusionan."
     },
     "profileContacts": {
       "duplicateManager": "Un perfil de facturación solo puede tener un responsable.",

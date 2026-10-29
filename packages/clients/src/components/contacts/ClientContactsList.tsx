@@ -235,16 +235,19 @@ const ClientContactsList: React.FC<ClientContactsListProps> = ({ clientId, clien
     },
     {
       title: t('clientContactsList.table.location', { defaultValue: 'Location' }),
-      dataIndex: 'primaryLocation',
+      // The nested name, so the table sorts the column by it rather than by the object.
+      dataIndex: ['primaryLocation', 'location_name'],
       width: '15%',
       render: (value, record): React.ReactNode => {
         const cell = contactLocationCell(record);
-        if (!cell.label) return '';
+        if (!cell.label) {
+          return cell.isRemote
+            ? t('contactLocations.arrangement.remote', { defaultValue: 'Remote' })
+            : '';
+        }
         return (
           <span className="truncate">
-            {cell.label === 'Remote'
-              ? t('contactLocations.arrangement.remote', { defaultValue: 'Remote' })
-              : cell.label}
+            {cell.label}
             {cell.extraCount > 0 ? (
               <span className="text-gray-500">
                 {' '}

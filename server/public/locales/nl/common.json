@@ -1410,7 +1410,8 @@
     "unnamedUser": "Naamloze gebruiker",
     "unnamedTeam": "Naamloos team",
     "userPicker": "Gebruikerskiezer",
-    "noUsersFound": "Geen gebruikers gevonden"
+    "noUsersFound": "Geen gebruikers gevonden",
+    "contactRemoteLocation": "Op afstand"
   },
   "serviceTypeSelect": {
     "placeholder": "Servicetype selecteren...",

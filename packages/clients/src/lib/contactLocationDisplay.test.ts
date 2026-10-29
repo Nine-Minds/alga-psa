@@ -19,9 +19,10 @@ describe('contactLocationCell', () => {
       .toEqual({ label: 'Warehouse', extraCount: 0, isRemote: false });
   });
 
-  it('reads as Remote for a remote contact with no links', () => {
+  // No display English in the helper: the remote case is a flag the caller translates.
+  it('reads as the remote flag with no label for a remote contact with no links', () => {
     expect(contactLocationCell({ work_arrangement: 'remote', locations: [] }))
-      .toEqual({ label: 'Remote', extraCount: 0, isRemote: true });
+      .toEqual({ label: null, extraCount: 0, isRemote: true });
   });
 
   it('shows the link, not Remote, when a remote contact does have one', () => {
@@ -43,13 +44,20 @@ describe('contactLocationCell', () => {
     })).toEqual({ label: 'Warehouse', extraCount: 0, isRemote: false });
   });
 
-  it('sorts by the primary name, with the unlinked last', () => {
+  it('sorts by the primary name, then Remote, with the unlinked last', () => {
     const rows = [
       { work_arrangement: null, locations: [] },
       { work_arrangement: 'on_site' as const, locations: [location('w', 'Warehouse', true)] },
+      { work_arrangement: 'remote' as const, locations: [] },
       { work_arrangement: 'on_site' as const, locations: [location('h', 'Head office', true)] },
     ];
-    expect([...rows].sort((left, right) => contactLocationSortKey(left).localeCompare(contactLocationSortKey(right)))
-      .map((row) => contactLocationSortKey(row))).toEqual(['', 'Head office', 'Warehouse']);
+    const ascending = [...rows]
+      .sort((left, right) => contactLocationSortKey(left).localeCompare(contactLocationSortKey(right)))
+      .map((row) => {
+        const cell = contactLocationCell(row);
+        return cell.label ?? (cell.isRemote ? 'remote' : null);
+      });
+    // Named places in order, then the remote workers, then the contacts with neither.
+    expect(ascending).toEqual(['Head office', 'Warehouse', 'remote', null]);
   });
 });

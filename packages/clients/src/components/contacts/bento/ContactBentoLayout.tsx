@@ -773,13 +773,13 @@ export function ContactBentoLayout({
       </BentoTile>
   );
 
-  const workArrangementLabel = contact.work_arrangement === 'on_site'
-    ? 'On site'
-    : contact.work_arrangement === 'hybrid'
-      ? 'Hybrid'
-      : contact.work_arrangement === 'remote'
-        ? 'Remote'
-        : null;
+  const workArrangementLabel = contact.work_arrangement
+    ? t(`contactLocations.arrangement.${contact.work_arrangement}`, {
+        defaultValue: contact.work_arrangement === 'on_site'
+          ? 'On site'
+          : contact.work_arrangement === 'hybrid' ? 'Hybrid' : 'Remote',
+      })
+    : null;
 
   // Locations are a reference to the client's sites, so the tile reads them through and the edit
   // drawer is the only way to change the set. Remote with no links still says Remote: that is the
@@ -787,9 +787,15 @@ export function ContactBentoLayout({
   const locationsTile = (
       <BentoTile
         id={`${id}-locations`}
-        title="Locations"
+        title={t('contactLocations.locations', { defaultValue: 'Locations' })}
         icon={<MapPin className="h-4 w-4" />}
-        action={<BentoTileAddButton id={`${id}-locations-add`} label="Add location" onClick={openEditDrawer} />}
+        action={
+          <BentoTileAddButton
+            id={`${id}-locations-add`}
+            label={t('contactLocations.addLocation', { defaultValue: 'Add location' })}
+            onClick={openEditDrawer}
+          />
+        }
       >
         {workArrangementLabel ? (
           <div className="mb-2">
@@ -804,19 +810,27 @@ export function ContactBentoLayout({
                 primary={location.location_name || location.address_line1 || '—'}
                 meta={[
                   [location.address_line1, location.city, location.postal_code].filter(Boolean).join(', ') || null,
-                  location.is_primary ? 'Primary' : null,
-                  location.is_active === false ? 'Inactive' : null,
+                  location.is_primary ? t('contactLocations.primary', { defaultValue: 'Primary' }) : null,
+                  location.is_active === false
+                    ? t('contactLocations.inactiveMarker', { defaultValue: '(inactive)' })
+                    : null,
                 ].filter(Boolean).join(' · ')}
                 emphasize={location.is_primary}
               />
             ))}
           </TileRows>
         ) : contact.work_arrangement === 'remote' ? (
-          <BentoTileEmpty id={`${id}-locations-remote`}>Remote</BentoTileEmpty>
+          <BentoTileEmpty id={`${id}-locations-remote`}>
+            {t('contactLocations.arrangement.remote', { defaultValue: 'Remote' })}
+          </BentoTileEmpty>
         ) : (
           <>
-            <BentoTileEmpty id={`${id}-locations-empty`}>No locations</BentoTileEmpty>
-            <BentoTileEmptyAction id={`${id}-locations-add-first`} onClick={openEditDrawer}>Add a location</BentoTileEmptyAction>
+            <BentoTileEmpty id={`${id}-locations-empty`}>
+              {t('contactLocations.none', { defaultValue: 'No locations' })}
+            </BentoTileEmpty>
+            <BentoTileEmptyAction id={`${id}-locations-add-first`} onClick={openEditDrawer}>
+              {t('contactLocations.addLocation', { defaultValue: 'Add location' })}
+            </BentoTileEmptyAction>
           </>
         )}
       </BentoTile>

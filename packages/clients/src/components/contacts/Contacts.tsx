@@ -794,12 +794,14 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
       width: '12%',
       render: (value, record): React.ReactNode => {
         const cell = contactLocationCell(record);
-        if (!cell.label) return t('common.states.na', { defaultValue: 'N/A' });
+        if (!cell.label) {
+          return cell.isRemote
+            ? t('contactLocations.arrangement.remote', { defaultValue: 'Remote' })
+            : t('common.states.na', { defaultValue: 'N/A' });
+        }
         return (
           <span className="truncate">
-            {cell.label === 'Remote'
-              ? t('contactLocations.arrangement.remote', { defaultValue: 'Remote' })
-              : cell.label}
+            {cell.label}
             {cell.extraCount > 0 ? (
               <span className="text-gray-500">
                 {' '}

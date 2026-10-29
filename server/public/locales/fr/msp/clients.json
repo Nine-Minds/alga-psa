@@ -1354,7 +1354,8 @@
         "setDefault": "Définir par défaut",
         "shippingTag": "Expédition",
         "unnamed": "Emplacement sans nom",
-        "contactCount": "{{count}} contacts",
+        "contactCount_one": "1 contact",
+        "contactCount_other": "{{count}} contacts",
         "contactPrimary": "Principal"
       },
       "dialog": {
@@ -1951,7 +1952,8 @@
       "targetAlreadyMerged": "Le client de destination a lui-même été fusionné dans un autre client. Fusionnez vers celui-ci à la place.",
       "sourceIsTenantDefault": "La fiche de votre propre organisation ne peut pas être fusionnée dans un client.",
       "parentLinkCycle": "Ce client est enregistré comme enfant de celui que vous fusionnez ; la fusion inverserait la hiérarchie.",
-      "invalidContractCutover": "L'une des dates de bascule se situe en dehors de la durée de son contrat."
+      "invalidContractCutover": "L'une des dates de bascule se situe en dehors de la durée de son contrat.",
+      "invalidContactLocation": "Un site choisi n'appartient à aucun des clients fusionnés."
     },
     "profileContacts": {
       "duplicateManager": "Un profil de facturation ne peut avoir qu'un seul responsable.",

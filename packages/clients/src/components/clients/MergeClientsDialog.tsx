@@ -144,6 +144,39 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
     ? clients.find((client) => client.client_id === recordedParentId) ?? null
     : null;
 
+  /** The per-contact location sets as they stand, in the shape both the dry run and the merge take. */
+  const locationAssignments = useCallback(
+    () => Object.entries(contactLocations).map(([contactNameId, locations]) => ({ contactNameId, locations })),
+    [contactLocations],
+  );
+
+  /**
+   * Re-runs the dry run with the chosen location sets and keeps only its blockers: the operator's
+   * own choices are not reset, so this cannot be folded into loadPreview.
+   */
+  const revalidatePreview = useCallback(async () => {
+    if (!sourceClientId || !targetClientId) return true;
+    setIsLoadingPreview(true);
+    try {
+      const result = await previewClientMerge({
+        sourceClientId,
+        targetClientId,
+        contactLocationAssignments: locationAssignments(),
+      });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return false;
+      }
+      setPreview(result);
+      return result.blockers.length === 0;
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+      return false;
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  }, [locationAssignments, sourceClientId, targetClientId]);
+
   const loadPreview = useCallback(async () => {
     if (!sourceClientId || !targetClientId) return;
     setIsLoadingPreview(true);
@@ -271,6 +304,9 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
       setStep('contacts');
       return;
     }
+    // Leaving the Contacts step, the chosen location sets go through the engine's own guard before
+    // the operator is allowed any further; a refusal shows as a blocker on this step.
+    if (step === 'contacts' && !(await revalidatePreview())) return;
     const index = STEP_ORDER.indexOf(step);
     setStep(STEP_ORDER[Math.min(index + 1, STEP_ORDER.length - 1)]);
   };
@@ -298,10 +334,7 @@ export const MergeClientsDialog: React.FC<MergeClientsDialogProps> = ({
           choice: choice.choice,
           cutoverDate: choice.choice === 'cutover' ? choice.cutoverDate : null,
         })),
-        contactLocationAssignments: Object.entries(contactLocations).map(([contactNameId, locations]) => ({
-          contactNameId,
-          locations,
-        })),
+        contactLocationAssignments: locationAssignments(),
         pinPortalGrants,
         billingStrategy,
         // Accounting is a separate, post-merge confirmation (Q8): nothing is

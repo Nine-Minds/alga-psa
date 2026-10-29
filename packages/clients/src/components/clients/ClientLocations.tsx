@@ -59,6 +59,11 @@ function isClientLocationActionError(value: unknown): value is ClientLocationAct
 interface ClientLocationsProps {
   clientId: string;
   isEditing: boolean;
+  /**
+   * Show who works at each location, each name linking to its MSP contact page. MSP-only: the
+   * client portal has no such page and its users are not entitled to the client's contact list.
+   */
+  showContacts?: boolean;
 }
 
 /**
@@ -242,7 +247,8 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
                   onClick={() => setAreContactsExpanded((previous) => !previous)}
                 >
                   {t('clients.locations.card.contactCount', {
-                    defaultValue: '{{count}} contacts',
+                    defaultValue_one: '1 contact',
+                    defaultValue_other: '{{count}} contacts',
                     count: contacts.length,
                   })}
                 </button>
@@ -348,7 +354,7 @@ const initialFormData: LocationFormData = {
 
 const loadClientBillingProfiles = (clientId: string) => getClientBillingProfiles(clientId);
 
-export default function ClientLocations({ clientId, isEditing }: ClientLocationsProps) {
+export default function ClientLocations({ clientId, isEditing, showContacts = true }: ClientLocationsProps) {
   const { t } = useTranslation('msp/clients');
   const [locations, setLocations] = useState<IClientLocation[]>([]);
   const [contactsByLocation, setContactsByLocation] = useState<Record<string, ClientLocationContact[]>>({});
@@ -554,9 +560,12 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
       setLocations(fetchedLocations);
 
       // One batched read for the whole tab; a failure leaves the cards without chips rather than
-      // failing the tab, because the chip is informational.
-      const fetchedContacts = await getClientLocationContacts(clientId);
-      setContactsByLocation(isClientLocationActionError(fetchedContacts) ? {} : fetchedContacts);
+      // failing the tab, because the chip is informational. Not read at all where the chip is not
+      // shown, so the portal never asks for the client's contact names.
+      if (showContacts) {
+        const fetchedContacts = await getClientLocationContacts(clientId);
+        setContactsByLocation(isClientLocationActionError(fetchedContacts) ? {} : fetchedContacts);
+      }
     } catch (error) {
       console.error('Error loading locations:', error);
       toast({
@@ -849,7 +858,7 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
             onSetDefault={() => {}} // No-op in read-only mode
             formatAddress={formatAddress}
             showActions={false}
-            contacts={contactsByLocation[location.location_id] ?? []}
+            contacts={showContacts ? contactsByLocation[location.location_id] ?? [] : []}
           />
         ))}
       </div>
@@ -1190,7 +1199,7 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
                 onDelete={handleDeleteLocation}
                 onSetDefault={handleSetDefault}
                 formatAddress={formatAddress}
-                contacts={contactsByLocation[location.location_id] ?? []}
+                contacts={showContacts ? contactsByLocation[location.location_id] ?? [] : []}
               />
             ))}
 

@@ -6,7 +6,7 @@ import { withAuth } from '@alga-psa/auth';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
-import { assertMspOrClientPortalOwnClientPermission } from '../lib/authHelpers';
+import { assertMspOrClientPortalOwnClientPermission, assertMspPermission } from '../lib/authHelpers';
 import {
   createLocation,
   deleteLocation,
@@ -161,6 +161,10 @@ export interface ClientLocationContact {
 /**
  * Who works at each of a client's locations, in one batched read for the whole Locations tab, so
  * the count chip on every card costs a single query rather than one per card.
+ *
+ * Reading it is reading the client's contact list, so it asks for contact read on top of client
+ * read, and only an MSP user may: a portal user has no business with a roster of their colleagues'
+ * names, and the links the chip expands to are MSP pages.
  */
 export const getClientLocationContacts = withAuth(async (
   user,
@@ -171,13 +175,18 @@ export const getClientLocationContacts = withAuth(async (
 
   try {
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      await assertMspOrClientPortalOwnClientPermission(
+      await assertMspPermission(
         user,
-        tenant,
-        clientId,
         'client',
         'read',
         'Permission denied: Cannot read client locations',
+        trx
+      );
+      await assertMspPermission(
+        user,
+        'contact',
+        'read',
+        'Permission denied: Cannot read contacts',
         trx
       );
 

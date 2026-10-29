@@ -1354,7 +1354,8 @@
         "setDefault": "Definir como padrão",
         "shippingTag": "Envio",
         "unnamed": "Localização sem nome",
-        "contactCount": "{{count}} contatos",
+        "contactCount_one": "1 contato",
+        "contactCount_other": "{{count}} contatos",
         "contactPrimary": "Principal"
       },
       "dialog": {
@@ -1951,7 +1952,8 @@
       "targetAlreadyMerged": "O cliente de destino foi ele próprio mesclado em outro cliente. Mescle naquele.",
       "sourceIsTenantDefault": "O registro da sua própria organização não pode ser mesclado em um cliente.",
       "parentLinkCycle": "Esse cliente está registrado como filho do que você está mesclando, então a mesclagem inverteria a hierarquia.",
-      "invalidContractCutover": "Uma das datas de virada está fora da vigência do contrato correspondente."
+      "invalidContractCutover": "Uma das datas de virada está fora da vigência do contrato correspondente.",
+      "invalidContactLocation": "Uma localização escolhida não pertence a nenhum dos clientes mesclados."
     },
     "profileContacts": {
       "duplicateManager": "Um perfil de faturamento só pode ter um responsável.",

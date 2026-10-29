@@ -1354,7 +1354,8 @@
         "setDefault": "Als Standard festlegen",
         "shippingTag": "Versand",
         "unnamed": "Unbenannter Standort",
-        "contactCount": "{{count}} Kontakte",
+        "contactCount_one": "1 Kontakt",
+        "contactCount_other": "{{count}} Kontakte",
         "contactPrimary": "Primär"
       },
       "dialog": {
@@ -1951,7 +1952,8 @@
       "targetAlreadyMerged": "Der Zielkunde wurde selbst in einen anderen Kunden zusammengeführt. Führen Sie stattdessen dorthin zusammen.",
       "sourceIsTenantDefault": "Der Datensatz Ihrer eigenen Organisation kann nicht in einen Kunden zusammengeführt werden.",
       "parentLinkCycle": "Dieser Kunde ist als untergeordneter Kunde des zusammenzuführenden Kunden hinterlegt; die Zusammenführung würde die Hierarchie umkehren.",
-      "invalidContractCutover": "Einer der Stichtage liegt außerhalb der Laufzeit seines Vertrags."
+      "invalidContractCutover": "Einer der Stichtage liegt außerhalb der Laufzeit seines Vertrags.",
+      "invalidContactLocation": "Ein gewählter Standort gehört zu keinem der beiden zusammengeführten Kunden."
     },
     "profileContacts": {
       "duplicateManager": "Ein Abrechnungsprofil kann nur eine Leitung haben.",

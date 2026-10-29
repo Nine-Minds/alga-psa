@@ -806,6 +806,34 @@ describe('executeClientMerge', () => {
       })).rejects.toThrow(/ada cannot be linked to location third-depot/);
     });
 
+    it('the dry run refuses the same third-client location the engine does, as a blocker', async () => {
+      const preview = await previewClientMerge(fakeTrx, TENANT, {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        contactLocationAssignments: [{ contactNameId: 'ada', locations: [{ locationId: 'third-depot' }] }],
+      });
+
+      expect(preview.blockers).toEqual([expect.objectContaining({
+        code: 'INVALID_CONTACT_LOCATION',
+        message: expect.stringMatching(/ada cannot be linked to location third-depot/),
+      })]);
+    });
+
+    it('the dry run passes a source or target location, and ignores an unmoved contact', async () => {
+      const preview = await previewClientMerge(fakeTrx, TENANT, {
+        sourceClientId: 'source',
+        targetClientId: 'target',
+        contactLocationAssignments: [
+          { contactNameId: 'ada', locations: [{ locationId: 'tgt-head', isPrimary: true }] },
+          { contactNameId: 'bob', locations: [{ locationId: 'src-head' }] },
+          // Not a contact of the source: nothing to refuse, because nothing will be applied.
+          { contactNameId: 'stranger', locations: [{ locationId: 'third-depot' }] },
+        ],
+      });
+
+      expect(preview.blockers).toEqual([]);
+    });
+
     it('suggests the target location whose name matches, case- and whitespace-insensitively', async () => {
       const preview = await previewClientMerge(fakeTrx, TENANT, {
         sourceClientId: 'source',
