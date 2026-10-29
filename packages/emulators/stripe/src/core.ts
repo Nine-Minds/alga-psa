@@ -314,6 +314,8 @@ export class StripeEmulatorCore implements EmulatorCore {
       object: 'price',
       unit_amount: Math.round(input.unitAmount),
       currency: (input.currency ?? 'usd').toLowerCase(),
+      type: input.interval ? 'recurring' : 'one_time',
+      billing_scheme: 'per_unit',
       recurring: input.interval ? { interval: input.interval, interval_count: 1, usage_type: 'licensed' } : null,
       product: input.product ?? this.newId('prod'),
       active: true,
