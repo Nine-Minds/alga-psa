@@ -108,11 +108,19 @@ export const BillingTermsSection: React.FC<BillingTermsSectionProps> = ({
         terms: termsLabel(profile.terms.value),
         dueDate: profile.terms.dueDateExample.dueDate,
       };
-      const landing = t('contractOverview.billing.invoiceLanding.notBilledSeparately', {
-        ...params,
-        defaultValue:
-          'Attributed to {{attributed}}; invoiced on {{invoice}} ({{attributed}} does not bill separately) — {{terms}}, due {{dueDate}}',
-      });
+      // An inactive profile rolls up to the default whatever its bills-separately
+      // setting says, so name the actual reason.
+      const landing = profile.isActive
+        ? t('contractOverview.billing.invoiceLanding.notBilledSeparately', {
+            ...params,
+            defaultValue:
+              'Attributed to {{attributed}}; invoiced on {{invoice}} ({{attributed}} does not bill separately) — {{terms}}, due {{dueDate}}',
+          })
+        : t('contractOverview.billing.invoiceLanding.inactiveProfile', {
+            ...params,
+            defaultValue:
+              'Attributed to {{attributed}}; invoiced on {{invoice}} ({{attributed}} is inactive, so it has no invoice of its own) — {{terms}}, due {{dueDate}}',
+          });
       return `${landing}.`;
     }
     return plainDueSentence(profile.terms, caveat);
@@ -161,7 +169,7 @@ export const BillingTermsSection: React.FC<BillingTermsSectionProps> = ({
         return t('contractOverview.billing.warnings.inactiveProfile', {
           name: warning.profileName,
           defaultValue:
-            '{{name}} is inactive but still bills this contract. Charges stay on it; they are not moved to the default profile.',
+            '{{name}} is inactive. Charges stay attributed to it, but they are invoiced on the default profile with its payment terms.',
         });
       case 'mixed_profiles':
         // "Each invoice uses its own terms" is only true when there is more than one invoice.

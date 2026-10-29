@@ -433,7 +433,7 @@
         "profile_billing_cycle_unapplied": "Profilens faktureringscykel (tillämpas ännu inte)"
       },
       "warnings": {
-        "inactiveProfile": "{{name}} är inaktiv men fakturerar fortfarande detta avtal. Avgifter ligger kvar på den; de flyttas inte till standardprofilen.",
+        "inactiveProfile": "{{name}} är inaktiv. Avgifter förblir kopplade till den, men faktureras på standardprofilen med dess betalningsvillkor.",
         "mixedProfiles": "Det här avtalet faktureras via {{count}} olika profiler, så ingen enskild profil täcker det. Varje faktura använder betalningsvillkoren för den profil den utfärdas på.",
         "lineOverride": "Raden \"{{line}}\" faktureras via {{name}} i stället för avtalets profil.",
         "workItemOverride": "Tid på ett ärende eller projekt faktureras via det arbetsobjektets profil om det har en. Annars gäller kundens standardprofil.",
@@ -445,7 +445,8 @@
       "dueSentenceWorkItem": "En faktura daterad {{invoiceDate}} förfaller {{dueDate}} — {{terms}} {{source}}, om inte ärendet eller projektet faktureras via en annan profil",
       "workItemProfileLine": "Om ärendet eller projektet faktureras via {{name}}:",
       "invoiceLanding": {
-        "notBilledSeparately": "Hänförd till {{attributed}}; faktureras på {{invoice}} ({{attributed}} faktureras inte separat) — {{terms}}, förfaller {{dueDate}}"
+        "notBilledSeparately": "Hänförd till {{attributed}}; faktureras på {{invoice}} ({{attributed}} faktureras inte separat) — {{terms}}, förfaller {{dueDate}}",
+        "inactiveProfile": "Kopplad till {{attributed}}; fakturerad på {{invoice}} ({{attributed}} är inaktiv och har därför ingen egen faktura) — {{terms}}, förfaller {{dueDate}}"
       }
     }
   },

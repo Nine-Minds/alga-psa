@@ -433,7 +433,7 @@
         "profile_billing_cycle_unapplied": "Ciclo di fatturazione del profilo (non ancora applicato)"
       },
       "warnings": {
-        "inactiveProfile": "{{name}} è inattivo ma fattura ancora questo contratto. Gli addebiti restano su di esso; non vengono spostati sul profilo predefinito.",
+        "inactiveProfile": "{{name}} è inattivo. Gli addebiti restano attribuiti a esso, ma vengono fatturati sul profilo predefinito con i relativi termini di pagamento.",
         "mixedProfiles": "Questo contratto fattura tramite {{count}} profili diversi, quindi nessun profilo singolo lo copre. Ogni fattura usa le condizioni di pagamento del profilo su cui è emessa.",
         "lineOverride": "La riga \"{{line}}\" fattura su {{name}} anziché sul profilo del contratto.",
         "workItemOverride": "Il tempo registrato su un ticket o progetto viene fatturato con il profilo di quell'elemento di lavoro, se ne ha uno. In caso contrario si usa il profilo predefinito del cliente.",
@@ -445,7 +445,8 @@
       "dueSentenceWorkItem": "Una fattura del {{invoiceDate}} scade il {{dueDate}}: — {{terms}} {{source}}, a meno che il ticket o il progetto sia fatturato con un altro profilo",
       "workItemProfileLine": "Se il ticket o progetto è fatturato con {{name}}:",
       "invoiceLanding": {
-        "notBilledSeparately": "Attribuito a {{attributed}}; fatturato su {{invoice}} ({{attributed}} non fattura separatamente) — {{terms}}, scadenza {{dueDate}}"
+        "notBilledSeparately": "Attribuito a {{attributed}}; fatturato su {{invoice}} ({{attributed}} non fattura separatamente) — {{terms}}, scadenza {{dueDate}}",
+        "inactiveProfile": "Attribuito a {{attributed}}; fatturato su {{invoice}} ({{attributed}} è inattivo, quindi non ha una fattura propria) — {{terms}}, scadenza {{dueDate}}"
       }
     }
   },

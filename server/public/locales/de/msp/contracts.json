@@ -433,7 +433,7 @@
         "profile_billing_cycle_unapplied": "Abrechnungszyklus des Profils (noch nicht angewendet)"
       },
       "warnings": {
-        "inactiveProfile": "{{name}} ist inaktiv, rechnet diesen Vertrag aber weiterhin ab. Positionen bleiben dort; sie werden nicht auf das Standardprofil verschoben.",
+        "inactiveProfile": "{{name}} ist inaktiv. Positionen bleiben diesem Profil zugeordnet, werden aber über das Standardprofil mit dessen Zahlungsbedingungen abgerechnet.",
         "mixedProfiles": "Dieser Vertrag wird über {{count}} verschiedene Profile abgerechnet, daher deckt kein einzelnes Profil ihn ab. Jede Rechnung verwendet die Zahlungsbedingungen des Profils, auf dem sie ausgestellt wird.",
         "lineOverride": "Die Linie „{{line}}\" wird über {{name}} statt über das Profil des Vertrags abgerechnet.",
         "workItemOverride": "Zeit auf einem Ticket oder Projekt wird über das Profil dieses Arbeitselements abgerechnet, sofern es eines hat. Ohne Profil gilt das Standardprofil des Kunden.",
@@ -445,7 +445,8 @@
       "dueSentenceWorkItem": "Eine Rechnung vom {{invoiceDate}} ist am {{dueDate}} fällig — {{terms}} {{source}}, sofern das Ticket oder Projekt nicht über ein anderes Profil abgerechnet wird",
       "workItemProfileLine": "Wenn das Ticket oder Projekt über {{name}} abgerechnet wird:",
       "invoiceLanding": {
-        "notBilledSeparately": "Zugeordnet zu {{attributed}}; abgerechnet auf {{invoice}} ({{attributed}} rechnet nicht separat ab) — {{terms}}, fällig am {{dueDate}}"
+        "notBilledSeparately": "Zugeordnet zu {{attributed}}; abgerechnet auf {{invoice}} ({{attributed}} rechnet nicht separat ab) — {{terms}}, fällig am {{dueDate}}",
+        "inactiveProfile": "Zugeordnet zu {{attributed}}; abgerechnet über {{invoice}} ({{attributed}} ist inaktiv und hat daher keine eigene Rechnung) — {{terms}}, fällig am {{dueDate}}"
       }
     }
   },

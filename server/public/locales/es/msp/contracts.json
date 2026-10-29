@@ -433,7 +433,7 @@
         "profile_billing_cycle_unapplied": "Ciclo de facturación del perfil (aún no aplicado)"
       },
       "warnings": {
-        "inactiveProfile": "{{name}} está inactivo pero sigue facturando este contrato. Los cargos permanecen en él; no se mueven al perfil predeterminado.",
+        "inactiveProfile": "{{name}} está inactivo. Los cargos siguen atribuidos a él, pero se facturan en el perfil predeterminado con sus condiciones de pago.",
         "mixedProfiles": "Este contrato se factura a través de {{count}} perfiles distintos, por lo que ningún perfil único lo cubre. Cada factura usa las condiciones de pago del perfil en el que se emite.",
         "lineOverride": "La línea \"{{line}}\" factura a {{name}} en lugar del perfil del contrato.",
         "workItemOverride": "El tiempo registrado en un ticket o proyecto se factura con el perfil de ese elemento de trabajo si tiene uno. Si no, se usa el perfil predeterminado del cliente.",
@@ -445,7 +445,8 @@
       "dueSentenceWorkItem": "Una factura del {{invoiceDate}} vence el {{dueDate}}: — {{terms}} {{source}}, salvo que el ticket o proyecto se facture con otro perfil",
       "workItemProfileLine": "Si el ticket o proyecto se factura con {{name}}:",
       "invoiceLanding": {
-        "notBilledSeparately": "Atribuido a {{attributed}}; facturado en {{invoice}} ({{attributed}} no factura por separado) — {{terms}}, vence el {{dueDate}}"
+        "notBilledSeparately": "Atribuido a {{attributed}}; facturado en {{invoice}} ({{attributed}} no factura por separado) — {{terms}}, vence el {{dueDate}}",
+        "inactiveProfile": "Atribuido a {{attributed}}; facturado en {{invoice}} ({{attributed}} está inactivo, por lo que no tiene factura propia) — {{terms}}, vence el {{dueDate}}"
       }
     }
   },

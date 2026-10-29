@@ -160,7 +160,9 @@ describe('ContractOverview billing terms section', () => {
     expect(screen.queryByTestId('billing-terms-value')).toBeNull();
 
     expect(screen.getByTestId('billing-warning-mixed_profiles')).toHaveTextContent('2 different profiles');
-    expect(screen.getByTestId('billing-warning-inactive_profile')).toHaveTextContent('North Plant is inactive but still bills');
+    expect(screen.getByTestId('billing-warning-inactive_profile')).toHaveTextContent(
+      'North Plant is inactive. Charges stay attributed to it, but they are invoiced on the default profile',
+    );
     expect(screen.getByTestId('billing-warning-line_override')).toHaveTextContent('Line "Hosting" bills Acme Corp');
   });
 
@@ -180,6 +182,26 @@ describe('ContractOverview billing terms section', () => {
     expect(await screen.findByTestId('billing-due-sentence')).toHaveTextContent(
       'Attributed to North Plant; invoiced on Acme Corp (North Plant does not bill separately) — Net 30, due 2026-11-21',
     );
+  });
+
+  it('names inactivity, not bills-separately, as the reason an inactive profile lands on the default invoice', async () => {
+    const archived: ContractBillingTrace = {
+      ...singleTrace,
+      profiles: [
+        {
+          ...singleTrace.profiles[0],
+          billingProfileId: 'p-north', name: 'North Plant', source: 'contract', isDefault: false, isActive: false,
+          invoiceProfile: self('p-default', 'Acme Corp', true), invoiceReason: 'not_billed_separately',
+        },
+      ],
+    };
+    actionMocks.getContractOverview.mockResolvedValue(overviewWith(archived));
+    render(<ContractOverview contractId="c1" />);
+    const sentence = await screen.findByTestId('billing-due-sentence');
+    expect(sentence).toHaveTextContent(
+      'Attributed to North Plant; invoiced on Acme Corp (North Plant is inactive, so it has no invoice of its own) — Net 30, due 2026-11-21',
+    );
+    expect(sentence).not.toHaveTextContent('does not bill separately');
   });
 
   it('uses the single-invoice mixed_profiles text when every profile lands on one invoice', async () => {

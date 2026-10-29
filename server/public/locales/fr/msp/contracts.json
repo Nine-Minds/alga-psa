@@ -433,7 +433,7 @@
         "profile_billing_cycle_unapplied": "Cycle de facturation du profil (pas encore appliqué)"
       },
       "warnings": {
-        "inactiveProfile": "{{name}} est inactif mais facture toujours ce contrat. Les frais y restent ; ils ne sont pas déplacés vers le profil par défaut.",
+        "inactiveProfile": "{{name}} est inactif. Les frais lui restent attribués, mais ils sont facturés sur le profil par défaut, avec ses conditions de paiement.",
         "mixedProfiles": "Ce contrat est facturé via {{count}} profils différents ; aucun profil unique ne le couvre. Chaque facture applique les conditions de paiement du profil sur lequel elle est émise.",
         "lineOverride": "La ligne « {{line}} » est facturée via {{name}} au lieu du profil du contrat.",
         "workItemOverride": "Le temps saisi sur un ticket ou un projet est facturé via le profil de cet élément de travail s'il en a un. Sinon, c'est le profil par défaut du client qui s'applique.",
@@ -445,7 +445,8 @@
       "dueSentenceWorkItem": "Une facture du {{invoiceDate}} est due le {{dueDate}} — {{terms}} {{source}}, sauf si le ticket ou le projet est facturé via un autre profil",
       "workItemProfileLine": "Si le ticket ou le projet est facturé via {{name}} :",
       "invoiceLanding": {
-        "notBilledSeparately": "Attribué à {{attributed}} ; facturé sur {{invoice}} ({{attributed}} ne facture pas séparément) — {{terms}}, échéance le {{dueDate}}"
+        "notBilledSeparately": "Attribué à {{attributed}} ; facturé sur {{invoice}} ({{attributed}} ne facture pas séparément) — {{terms}}, échéance le {{dueDate}}",
+        "inactiveProfile": "Attribué à {{attributed}} ; facturé sur {{invoice}} ({{attributed}} est inactif et n'a donc pas de facture propre) — {{terms}}, échéance le {{dueDate}}"
       }
     }
   },

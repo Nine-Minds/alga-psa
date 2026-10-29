@@ -433,7 +433,7 @@
         "profile_billing_cycle_unapplied": "Cykl rozliczeniowy profilu (jeszcze niezastosowany)"
       },
       "warnings": {
-        "inactiveProfile": "Profil {{name}} jest nieaktywny, ale nadal rozlicza tę umowę. Opłaty pozostają na nim; nie są przenoszone do profilu domyślnego.",
+        "inactiveProfile": "Profil {{name}} jest nieaktywny. Opłaty pozostają do niego przypisane, ale są fakturowane na profilu domyślnym z jego warunkami płatności.",
         "mixedProfiles": "Ta umowa jest rozliczana przez {{count}} różne profile, więc żaden pojedynczy profil jej nie obejmuje. Każda faktura stosuje warunki płatności profilu, na którym jest wystawiona.",
         "lineOverride": "Pozycja „{{line}}\" jest rozliczana przez {{name}} zamiast profilu umowy.",
         "workItemOverride": "Czas zapisany w zgłoszeniu lub projekcie jest rozliczany przez profil tego elementu pracy, jeśli go ma. W przeciwnym razie obowiązuje domyślny profil klienta.",
@@ -445,7 +445,8 @@
       "dueSentenceWorkItem": "Faktura z dnia {{invoiceDate}} jest płatna do {{dueDate}} — {{terms}} {{source}}, chyba że zgłoszenie lub projekt jest rozliczane przez inny profil",
       "workItemProfileLine": "Jeśli zgłoszenie lub projekt jest rozliczane przez {{name}}:",
       "invoiceLanding": {
-        "notBilledSeparately": "Przypisano do {{attributed}}; zafakturowano na {{invoice}} ({{attributed}} nie rozlicza osobno) — {{terms}}, termin {{dueDate}}"
+        "notBilledSeparately": "Przypisano do {{attributed}}; zafakturowano na {{invoice}} ({{attributed}} nie rozlicza osobno) — {{terms}}, termin {{dueDate}}",
+        "inactiveProfile": "Przypisano do {{attributed}}; zafakturowano na {{invoice}} ({{attributed}} jest nieaktywny, więc nie ma własnej faktury) — {{terms}}, termin {{dueDate}}"
       }
     }
   },
