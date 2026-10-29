@@ -3486,7 +3486,8 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       tenantId,
       ticket.ticket_id,
       ticket.client_id,
-      emailTimeZone
+      emailTimeZone,
+      emailLocale
     );
 
     const externalContext = {

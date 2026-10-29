@@ -2946,8 +2946,8 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
           {
             "path": "ticket.materialsTotal",
             "type": "string",
-            "description": "Currency-formatted total of all material line amounts on the ticket (e.g. '$145.00'); '$0.00' when there are no materials.",
-            "example": "$145.00",
+            "description": "Currency-formatted total of all material line amounts on the ticket, using the tenant email locale and material currency; zero when there are no materials.",
+            "example": "145.00 USD",
             "availability": "available-unused"
           },
           {

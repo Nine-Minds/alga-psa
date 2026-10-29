@@ -64,6 +64,10 @@ describe('formatCentsAmount', () => {
     expect(formatCentsAmount(2500, 'EUR')).toBe('€25.00');
   });
 
+  it('uses the supplied email locale for money formatting', () => {
+    expect(formatCentsAmount(123456, 'EUR', 'de-DE')).toBe('1.234,56\u00a0€');
+  });
+
   it('defaults to USD when currency code missing', () => {
     expect(formatCentsAmount(990, null)).toBe('$9.90');
     expect(formatCentsAmount(990, '  ')).toBe('$9.90');
@@ -145,6 +149,19 @@ describe('buildTicketEmailDetailBlocks', () => {
     expect(blocks.materialsHtml).toContain('$4.50'); // cable amount 3 * 150 cents
     expect(blocks.materialsHtml).toContain('Yes');
     expect(blocks.materialsHtml).toContain('No');
+  });
+
+  it('uses the supplied locale throughout the rendered blocks', async () => {
+    runtime.materials = [
+      { item_name: 'SSD', quantity: 2, rate: 7500, currency_code: 'EUR', is_billed: false },
+    ];
+    runtime.timeEntries = [
+      { entry_id: 'e1', start_time: '2026-02-03T10:00:00Z', end_time: '2026-02-03T11:00:00Z', billable_duration: 60 },
+    ];
+    const blocks = await buildTicketEmailDetailBlocks(fakeDb, tenantId, ticketId, clientId, 'UTC', 'de-DE');
+    expect(blocks.materialsTotal).toBe('150,00\u00a0€');
+    expect(blocks.materialsHtml).toContain('75,00\u00a0€');
+    expect(blocks.timeHtml).toContain('3. Feb. 2026');
   });
 
   it('sums worked vs billable minutes across time entries', async () => {

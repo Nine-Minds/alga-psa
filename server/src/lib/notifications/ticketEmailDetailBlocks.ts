@@ -109,10 +109,10 @@ function renderTable(headers: string[], rows: string[][]): string {
 /**
  * Format a money amount stored in cents with the row's currency code.
  */
-export function formatCentsAmount(cents: number, currencyCode: string | null | undefined): string {
+export function formatCentsAmount(cents: number, currencyCode: string | null | undefined, locale: string = 'en'): string {
   const code = safeString(currencyCode) || 'USD';
   try {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: code,
     }).format(cents / 100);
@@ -123,7 +123,7 @@ export function formatCentsAmount(cents: number, currencyCode: string | null | u
   }
 }
 
-function formatEntryDate(value: Date | string | null, timeZone: string): string {
+function formatEntryDate(value: Date | string | null, timeZone: string, locale: string): string {
   if (!value) {
     return '';
   }
@@ -131,7 +131,7 @@ function formatEntryDate(value: Date | string | null, timeZone: string): string 
   if (Number.isNaN(date.getTime())) {
     return '';
   }
-  return date.toLocaleString('en-US', {
+  return date.toLocaleString(locale, {
     timeZone,
     month: 'short',
     day: 'numeric',
@@ -209,7 +209,7 @@ function renderAssetsTable(rows: AssetRow[]): string {
   );
 }
 
-function renderMaterialsTable(rows: MaterialRow[]): string {
+function renderMaterialsTable(rows: MaterialRow[], locale: string): string {
   return renderTable(
     ['Item', 'Qty', 'Rate', 'Amount', 'Billed'],
     rows.map((row) => {
@@ -220,8 +220,8 @@ function renderMaterialsTable(rows: MaterialRow[]): string {
       return [
         escapeHtml(label),
         escapeHtml(String(quantity)),
-        escapeHtml(formatCentsAmount(rate, currency)),
-        escapeHtml(formatCentsAmount(rate * quantity, currency)),
+        escapeHtml(formatCentsAmount(rate, currency, locale)),
+        escapeHtml(formatCentsAmount(rate * quantity, currency, locale)),
         escapeHtml(row.is_billed ? 'Yes' : 'No'),
       ];
     }),
@@ -242,12 +242,12 @@ function materialsTotalCents(rows: MaterialRow[]): { cents: number; currencyCode
   return { cents, currencyCode };
 }
 
-function renderTimeTable(rows: TimeEntryRow[], timeZone: string): string {
+function renderTimeTable(rows: TimeEntryRow[], timeZone: string, locale: string): string {
   return renderTable(
     ['Technician', 'Date', 'Worked', 'Billable'],
     rows.map((row) => [
       escapeHtml(safeString(row.technician_name) || 'Unknown'),
-      escapeHtml(formatEntryDate(row.start_time, timeZone) || '—'),
+      escapeHtml(formatEntryDate(row.start_time, timeZone, locale) || '—'),
       escapeHtml(formatMinutesAsHoursAndMinutes(workedMinutes(row))),
       escapeHtml(formatMinutesAsHoursAndMinutes(toNumberOrNull(row.billable_duration) ?? 0)),
     ]),
@@ -267,6 +267,7 @@ export async function buildTicketEmailDetailBlocks(
   ticketId: string,
   clientId: string | null | undefined,
   timeZone: string = 'UTC',
+  locale: string = 'en',
 ): Promise<TicketEmailDetailBlocks> {
   if (!ticketId) {
     throw new Error('buildTicketEmailDetailBlocks: ticketId is required');
@@ -289,9 +290,9 @@ export async function buildTicketEmailDetailBlocks(
 
   return {
     assetsHtml: renderAssetsTable(assetRows),
-    materialsHtml: renderMaterialsTable(materialRows),
-    materialsTotal: formatCentsAmount(cents, currencyCode),
-    timeHtml: renderTimeTable(timeRows, timeZone),
+    materialsHtml: renderMaterialsTable(materialRows, locale),
+    materialsTotal: formatCentsAmount(cents, currencyCode, locale),
+    timeHtml: renderTimeTable(timeRows, timeZone, locale),
     totalTimeWorked: formatMinutesAsHoursAndMinutes(totalMinutes),
     totalTimeBillable: formatMinutesAsHoursAndMinutes(billableMinutes),
     remainingBlockHours: formatMinutesAsHoursAndMinutes(remainingMinutes),
