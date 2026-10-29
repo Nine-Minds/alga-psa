@@ -346,8 +346,9 @@ that the application journey itself passed.
 
 The browser lane runs its suites as parallel shards of one job definition:
 per edition several `browser-<n>` shards (Playwright journeys), an `api` shard,
-and for enterprise an `upgrades` shard (supported PostgreSQL and Citus
-upgrades) and an `integrations` shard (Teams development, Microsoft callback).
+and for enterprise an `upgrade` shard (supported PostgreSQL upgrade), a
+`citus` shard (supported Citus upgrade) and an `integrations` shard (Teams
+development, Microsoft callback).
 Every shard installs the same candidate images and verifies them against the
 build records.
 

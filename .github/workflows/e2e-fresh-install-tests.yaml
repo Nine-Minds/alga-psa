@@ -379,8 +379,13 @@ jobs:
           - edition: enterprise
             server_archive: server-ee
             compose_suffix: ':docker-compose.e2e-ee.yaml'
-            lane: upgrades
-            suites: upgrade citus
+            lane: upgrade
+            suites: upgrade
+          - edition: enterprise
+            server_archive: server-ee
+            compose_suffix: ':docker-compose.e2e-ee.yaml'
+            lane: citus
+            suites: citus
           - edition: enterprise
             server_archive: server-ee
             compose_suffix: ':docker-compose.e2e-ee.yaml'
