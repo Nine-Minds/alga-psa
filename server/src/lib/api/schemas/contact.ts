@@ -134,7 +134,7 @@ export const createContactSchema = z.object({
   notes: z.string().optional(),
   is_inactive: z.boolean().optional().default(false),
   work_arrangement: contactWorkArrangementSchema.nullish(),
-  /** Omitted leaves the links untouched; [] removes them all. */
+  /** The links to make. On update, omitted leaves them untouched and [] removes them all. */
   locations: z.array(contactLocationInputSchema).optional(),
   tags: z.array(z.string()).optional()
 }).strict();

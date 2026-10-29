@@ -604,7 +604,7 @@
     "featureIds": [
       "F044"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "GET /api/v1/contacts/{id} returns work_arrangement and locations[] with address fields and is_primary; unlinked contact returns []"
   },
   {
@@ -613,7 +613,7 @@
     "featureIds": [
       "F045"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "POST /api/v1/contacts with locations creates links; PUT with [] removes them; PUT without the field leaves them"
   },
   {
@@ -640,7 +640,7 @@
     "featureIds": [
       "F046"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "GET /api/v1/contacts?location_id= returns contacts linked to that location in any role; ?work_arrangement=remote returns remote contacts; same on the client-scoped route"
   },
   {
@@ -830,7 +830,7 @@
       "F048",
       "F062"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Generated OpenAPI and MCP registry include locations, work_arrangement, the contact filters and contact_count; the generated files are committed and the CI drift check passes"
   },
   {

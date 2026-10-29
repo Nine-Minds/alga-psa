@@ -17,6 +17,7 @@ import {
   clientMergeRequestSchema,
   setBillingProfileContactsSchema
 } from '../schemas/client';
+import { contactFilterSchema } from '../schemas/contact';
 import { 
   runWithTenant 
 } from '../../db';
@@ -104,12 +105,28 @@ export class ApiClientController extends ApiBaseController {
           const page = parseInt(url.searchParams.get('page') || '1');
           const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
 
+          // The client-scoped list accepts the contact filters that make sense inside one client,
+          // validated by the same schema /api/v1/contacts uses; client_id stays ours, so a query
+          // string cannot widen the scope past the client in the path.
+          let filters: Record<string, unknown>;
+          try {
+            const { client_id: _scoped, ...parsed } = contactFilterSchema
+              .partial()
+              .parse(Object.fromEntries(url.searchParams.entries()));
+            filters = parsed;
+          } catch (error) {
+            if (error instanceof ZodError) {
+              throw new ValidationError('Validation failed', error.errors);
+            }
+            throw error;
+          }
+
           // Use ContactService to get contacts for this client
           const contacts = await this.contactService.list(
-            { 
-              page, 
+            {
+              page,
               limit,
-              filters: { client_id: clientId } 
+              filters: { ...filters, client_id: clientId }
             },
             apiRequest.context!
           );

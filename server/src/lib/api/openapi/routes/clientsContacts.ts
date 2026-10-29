@@ -147,6 +147,9 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       is_inactive: zOpenApi.enum(['true', 'false']).optional(),
       has_client: zOpenApi.enum(['true', 'false']).optional(),
       client_name: zOpenApi.string().optional(),
+      location_id: zOpenApi.string().uuid().optional()
+        .describe('Contacts linked to this client location in any role, primary or not.'),
+      work_arrangement: zOpenApi.enum(['on_site', 'hybrid', 'remote']).optional(),
     }),
   );
 
@@ -225,6 +228,26 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     }),
   );
 
+  // The client locations a person works at, primary first. Address fields are read through from the
+  // client location, so a caller never has to fetch it separately.
+  const ContactLocationLink = registry.registerSchema(
+    'ContactLocationLink',
+    zOpenApi.object({
+      location_id: zOpenApi.string().uuid(),
+      location_name: zOpenApi.string().nullable(),
+      is_primary: zOpenApi.boolean(),
+      is_active: zOpenApi.boolean(),
+      address_line1: zOpenApi.string().nullable().optional(),
+      address_line2: zOpenApi.string().nullable().optional(),
+      address_line3: zOpenApi.string().nullable().optional(),
+      city: zOpenApi.string().nullable().optional(),
+      state_province: zOpenApi.string().nullable().optional(),
+      postal_code: zOpenApi.string().nullable().optional(),
+      country_code: zOpenApi.string().nullable().optional(),
+      country_name: zOpenApi.string().nullable().optional(),
+    }),
+  );
+
   const ContactResource = registry.registerSchema(
     'ContactResource',
     zOpenApi.object({
@@ -270,6 +293,8 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       primary_email_custom_type_id: zOpenApi.string().uuid().nullable().optional(),
       primary_email_type: zOpenApi.string().nullable().optional(),
       notes: zOpenApi.string().nullable().optional(),
+      work_arrangement: zOpenApi.enum(['on_site', 'hybrid', 'remote']).nullable().optional(),
+      locations: zOpenApi.array(ContactLocationLink).optional(),
       avatarUrl: zOpenApi.string().nullable().optional(),
       tags: zOpenApi.array(zOpenApi.string()).optional(),
       client_name: zOpenApi.string().nullable().optional(),
@@ -317,6 +342,10 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
       client_name: zOpenApi.string().nullable(),
       default_phone_number: zOpenApi.string().nullable(),
       default_phone_type: zOpenApi.string().nullable(),
+      work_arrangement: zOpenApi.string().nullable().optional(),
+      // `format=json` returns the links; `format=csv` flattens them into the Locations and
+      // Primary Location columns ("Warehouse; Head office").
+      locations: zOpenApi.array(ContactLocationLink).optional(),
     }),
   );
 
@@ -468,10 +497,10 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     method: 'get',
     path: '/api/v1/clients/{id}/contacts',
     summary: 'List contacts for client',
-    description: 'Returns paginated contacts filtered by client_id after client existence check. Each row carries work_arrangement and locations[]; accepts the same location_id and work_arrangement filters as /api/v1/contacts.',
+    description: 'Returns paginated contacts filtered by client_id after client existence check. Each row carries work_arrangement and locations[]; accepts the same location_id and work_arrangement filters as /api/v1/contacts (a client_id in the query is ignored — the path wins).',
     tags: [clientTag],
     security: [{ ApiKeyAuth: [] }],
-    request: { params: ClientIdParam },
+    request: { params: ClientIdParam, query: ContactListQuery },
     responses: {
       200: { description: 'Client contacts returned.', schema: PaginatedContactEnvelope },
       400: { description: 'Invalid client id format.', schema: ApiError },

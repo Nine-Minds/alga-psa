@@ -6431,6 +6431,19 @@
           },
           "client_name": {
             "type": "string"
+          },
+          "location_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Contacts linked to this client location in any role, primary or not."
+          },
+          "work_arrangement": {
+            "type": "string",
+            "enum": [
+              "on_site",
+              "hybrid",
+              "remote"
+            ]
           }
         }
       },
@@ -7210,6 +7223,81 @@
           "error"
         ]
       },
+      "ContactLocationLink": {
+        "type": "object",
+        "properties": {
+          "location_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "location_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_primary": {
+            "type": "boolean"
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "address_line1": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "address_line2": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "address_line3": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "city": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "state_province": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "postal_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "country_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "country_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "location_id",
+          "location_name",
+          "is_primary",
+          "is_active"
+        ]
+      },
       "ContactResource": {
         "type": "object",
         "properties": {
@@ -7391,6 +7479,24 @@
               "null"
             ]
           },
+          "work_arrangement": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "on_site",
+              "hybrid",
+              "remote",
+              null
+            ]
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContactLocationLink"
+            }
+          },
           "avatarUrl": {
             "type": [
               "string",
@@ -7568,6 +7674,18 @@
               "string",
               "null"
             ]
+          },
+          "work_arrangement": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContactLocationLink"
+            }
           }
         },
         "required": [
@@ -44737,7 +44855,7 @@
     "/api/v1/clients/{id}/contacts": {
       "get": {
         "summary": "List contacts for client",
-        "description": "Returns paginated contacts filtered by client_id after client existence check. Each row carries work_arrangement and locations[]; accepts the same location_id and work_arrangement filters as /api/v1/contacts.",
+        "description": "Returns paginated contacts filtered by client_id after client existence check. Each row carries work_arrangement and locations[]; accepts the same location_id and work_arrangement filters as /api/v1/contacts (a client_id in the query is ignored — the path wins).",
         "tags": [
           "Clients"
         ],
@@ -44764,6 +44882,183 @@
             "required": true,
             "name": "id",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            },
+            "required": false,
+            "name": "order",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "search",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "created_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "created_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "updated_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "updated_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "full_name",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "email",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "phone_number",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "client_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "role",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "is_inactive",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            },
+            "required": false,
+            "name": "has_client",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "client_name",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contacts linked to this client location in any role, primary or not."
+            },
+            "required": false,
+            "description": "Contacts linked to this client location in any role, primary or not.",
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "on_site",
+                "hybrid",
+                "remote"
+              ]
+            },
+            "required": false,
+            "name": "work_arrangement",
+            "in": "query"
           }
         ],
         "responses": {
@@ -46268,6 +46563,30 @@
             },
             "required": false,
             "name": "client_name",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Contacts linked to this client location in any role, primary or not."
+            },
+            "required": false,
+            "description": "Contacts linked to this client location in any role, primary or not.",
+            "name": "location_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "on_site",
+                "hybrid",
+                "remote"
+              ]
+            },
+            "required": false,
+            "name": "work_arrangement",
             "in": "query"
           }
         ],
