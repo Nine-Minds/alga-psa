@@ -304,8 +304,14 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
+  # One job definition, run once per shard. Every shard installs the same
+  # candidate stack from the same images and then runs only the suites its
+  # matrix entry names, so the suites that used to run back to back in one
+  # job run side by side. The shard whose lane is `browser` keeps the name the
+  # browser-metrics layer matches ("Production browser (<edition>)") and is the
+  # only one that runs Playwright journeys and records journey readiness.
   production-browser:
-    name: Production browser (${{ matrix.edition }})
+    name: Production ${{ matrix.lane }} (${{ matrix.edition }})
     needs: [changes, browser-collection, build-images]
     if: always()
     # Pinned: `ubuntu-latest` rolled to ubuntu-26.04 on 2026-10-21, whose
@@ -320,13 +326,39 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # `lane` names the shard (job title, log artifact); `suites` lists what
+        # it runs, resolved by the "Resolve this shard's suites" step below.
         include:
           - edition: community
             server_archive: server
             compose_suffix: ''
+            lane: browser
+            suites: browser
+          - edition: community
+            server_archive: server
+            compose_suffix: ''
+            lane: api
+            suites: api
           - edition: enterprise
             server_archive: server-ee
             compose_suffix: ':docker-compose.e2e-ee.yaml'
+            lane: browser
+            suites: browser
+          - edition: enterprise
+            server_archive: server-ee
+            compose_suffix: ':docker-compose.e2e-ee.yaml'
+            lane: api
+            suites: api
+          - edition: enterprise
+            server_archive: server-ee
+            compose_suffix: ':docker-compose.e2e-ee.yaml'
+            lane: upgrades
+            suites: upgrade citus
+          - edition: enterprise
+            server_archive: server-ee
+            compose_suffix: ':docker-compose.e2e-ee.yaml'
+            lane: integrations
+            suites: teams microsoft
     env:
       COMPOSE_FILE: docker-compose.base.yaml:docker-compose.ce.yaml:docker-compose.prod.yaml:docker-compose.setup-ubuntu.override.yaml:docker-compose.imap-test.yaml:docker-compose.e2e-emulators.yaml${{ matrix.compose_suffix }}
       IMAGE_TRANSPORT: ${{ needs.changes.outputs.image_transport }}
@@ -347,6 +379,38 @@ jobs:
           else
             echo "No application files were modified; skipping fresh-install tests."
           fi
+
+      # Turns the shard's suite list into one output per suite, so steps gate on
+      # `steps.shard.outputs.<suite> == 'true'` and each suite's step chain then
+      # skips as a whole through the existing step-outcome conditions.
+      - name: Resolve this shard's suites
+        id: shard
+        env:
+          LANE: ${{ matrix.lane }}
+          SUITES: ${{ matrix.suites }}
+        run: |
+          known="browser api upgrade citus teams microsoft"
+          for suite in $SUITES; do
+            case " $known " in
+              *" $suite "*) ;;
+              *) echo "::error::Shard $LANE names an unknown suite: $suite"; exit 1 ;;
+            esac
+          done
+          playwright=false
+          {
+            for suite in $known; do
+              case " $SUITES " in
+                *" $suite "*) echo "$suite=true" ;;
+                *) echo "$suite=false" ;;
+              esac
+            done
+            # Only suites that drive a browser need Playwright installed.
+            case " $SUITES " in
+              *" browser "*|*" upgrade "*|*" citus "*|*" teams "*) playwright=true ;;
+            esac
+            echo "playwright=$playwright"
+          } >> "$GITHUB_OUTPUT"
+          echo "Shard $LANE runs: $SUITES (playwright=$playwright)"
 
       - name: Record browser tests not selected
         if: needs.changes.outputs.run_tests == 'false'
@@ -950,7 +1014,7 @@ jobs:
 
       - name: Install Playwright npm packages
         id: browser_packages
-        if: ${{ !cancelled() && steps.browser_node.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.browser_node.outcome == 'success' && steps.shard.outputs.playwright == 'true' }}
         working-directory: ./e2e-tests
         run: npm ci
         shell: bash
@@ -1055,7 +1119,7 @@ jobs:
       - name: Run Playwright E2E tests
         # A diagnostic-policy failure must still fail the job, but should not
         # prevent collecting independent customer-journey evidence.
-        if: ${{ !cancelled() && steps.provider_topology.outcome == 'success' && steps.capture_creds.outcome == 'success' && steps.browser_ready.outcome == 'success' && (steps.browser_policy.outcome == 'success' || steps.browser_policy.outcome == 'failure') }}
+        if: ${{ !cancelled() && steps.shard.outputs.browser == 'true' && steps.provider_topology.outcome == 'success' && steps.capture_creds.outcome == 'success' && steps.browser_ready.outcome == 'success' && (steps.browser_policy.outcome == 'success' || steps.browser_policy.outcome == 'failure') }}
         working-directory: ./e2e-tests
         env:
           E2E_BASE_URL: http://localhost:3000
@@ -1085,7 +1149,7 @@ jobs:
       # Keep the browser-stage server and worker output next to the Playwright
       # report while it still exists.
       - name: Preserve browser-stage service logs
-        if: always() && steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        if: always() && steps.shard.outputs.browser == 'true' && steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         timeout-minutes: 3
         run: |
           mkdir -p e2e-tests/test-results/browser-stage-logs
@@ -1096,7 +1160,7 @@ jobs:
 
       # Publish completed browser evidence before the independent API lane.
       - name: Upload Playwright diagnostics
-        if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
+        if: always() && steps.shard.outputs.browser == 'true' && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
         uses: actions/upload-artifact@v4
         with:
           name: fresh-install-playwright-${{ matrix.edition }}
@@ -1117,7 +1181,7 @@ jobs:
       # publishes nothing and the weekly report spends no API budget on it; the
       # always-written document rides along in the diagnostics artifact above.
       - name: Upload browser flaky-test evidence
-        if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
+        if: always() && steps.shard.outputs.browser == 'true' && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
         uses: actions/upload-artifact@v4
         with:
           name: flaky-tests-browser-${{ matrix.edition }}
@@ -1126,7 +1190,7 @@ jobs:
           retention-days: 30
 
       - name: Record browser journey readiness
-        if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
+        if: always() && steps.shard.outputs.browser == 'true' && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
         continue-on-error: true
         run: node scripts/record-browser-metrics.mjs
         env:
@@ -1149,7 +1213,7 @@ jobs:
 
       - name: Install API test dependencies
         id: api_dependencies
-        if: ${{ !cancelled() && steps.wait_for_setup.outputs.status == 'success' }}
+        if: ${{ !cancelled() && steps.shard.outputs.api == 'true' && steps.wait_for_setup.outputs.status == 'success' }}
         timeout-minutes: 10
         run: node scripts/install-api-test-dependencies.mjs
 
@@ -1203,7 +1267,7 @@ jobs:
 
       - name: Prepare populated v1.5.0 upgrade
         id: upgrade_schema
-        if: ${{ !cancelled() && matrix.edition == 'enterprise' && steps.api_database.outcome == 'success' && steps.capture_creds.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.shard.outputs.upgrade == 'true' && steps.capture_creds.outcome == 'success' }}
         timeout-minutes: 10
         env:
           DB_HOST: 127.0.0.1
@@ -1326,7 +1390,7 @@ jobs:
 
       - name: Start isolated Citus upgrade service
         id: citus_upgrade_service
-        if: ${{ !cancelled() && matrix.edition == 'enterprise' && steps.api_database.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.shard.outputs.citus == 'true' && steps.capture_creds.outcome == 'success' }}
         timeout-minutes: 5
         run: |
           set -euo pipefail
@@ -1437,7 +1501,7 @@ jobs:
       # Teams verdict as quarantined-failing and re-arms when the entry expires.
       - name: Start explicit Teams development configuration
         id: teams_development_server
-        if: ${{ !cancelled() && matrix.edition == 'enterprise' && steps.api_database.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.shard.outputs.teams == 'true' && steps.capture_creds.outcome == 'success' }}
         continue-on-error: true
         timeout-minutes: 10
         run: |
@@ -1594,7 +1658,7 @@ jobs:
 
       - name: Run actual Microsoft callback against isolated authority
         id: microsoft_callback
-        if: ${{ !cancelled() && matrix.edition == 'enterprise' && steps.api_database.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.shard.outputs.microsoft == 'true' && steps.capture_creds.outcome == 'success' }}
         timeout-minutes: 9
         env:
           NATIVE_MICROSOFT_OIDC_SOURCE_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
@@ -1662,7 +1726,7 @@ jobs:
         if: always() && steps.install_docker_compose.outcome == 'success' && github.actor != 'nektos/act'
         uses: actions/upload-artifact@v4
         with:
-          name: container-logs-${{ matrix.edition }}
+          name: container-logs-${{ matrix.edition }}-${{ matrix.lane }}
           path: logs/
           retention-days: 7
 
@@ -1688,7 +1752,9 @@ jobs:
           fi
         shell: bash
 
-  # Preserve the required check name while requiring both edition jobs and builds.
+  # Preserve the required check name while requiring every shard of both
+  # editions and the builds. The shards publish disjoint artifacts, so the
+  # evidence below still arrives once per edition.
   fresh-install-e2e:
     needs: [changes, browser-collection, build-images, production-browser]
     if: always()

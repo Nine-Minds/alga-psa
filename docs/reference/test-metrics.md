@@ -22,7 +22,7 @@ append after an uncertain response could duplicate rows. This follows Google's
 | `integration-tier1` | `integration-tests.yml` | Selected integration lane on push |
 | `integration-full` | `integration-tests.yml` | Selected full integration lane |
 | `infrastructure-full` | `integration-tests.yml` | Selected full infrastructure lane |
-| Browser readiness | `e2e-fresh-install-tests.yaml` | After successful installation setup, including failed browser execution; excluded under ACT |
+| Browser readiness | `e2e-fresh-install-tests.yaml` | In each edition's `browser` shard, after successful installation setup, including failed browser execution; excluded under ACT |
 
 Credentials must be available for an external write; fork PRs generally cannot
 access them. Unit and integration recording use `always()` so failed or incomplete
