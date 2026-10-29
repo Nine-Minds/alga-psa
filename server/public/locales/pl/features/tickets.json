@@ -446,6 +446,19 @@
       "organizationPrivate": "Prywatne dla organizacji",
       "placeholder": "Kto może to zobaczyć?",
       "required": "Wybierz, kto może zobaczyć ten komentarz, zanim go opublikujesz."
+    },
+    "shared": {
+      "loading": "Wczytywanie wspólnej rozmowy...",
+      "loadError": "Nie udało się wczytać wspólnej rozmowy.",
+      "reload": "Wczytaj ponownie",
+      "errors": {
+        "forbidden": "Nie masz uprawnień do publikowania dla tych odbiorców.",
+        "invalid": "Tego komentarza nie można opublikować.",
+        "readOnly": "Ta przestrzeń robocza jest obecnie tylko do odczytu.",
+        "operationConflict": "Ten komentarz koliduje z wcześniejszą próbą. Wczytaj ponownie i spróbuj jeszcze raz.",
+        "audienceUnresolved": "Wybierz, kto może zobaczyć ten komentarz, zanim go opublikujesz.",
+        "unknownOutcome": "Nie udało się potwierdzić opublikowania komentarza. Sprawdź rozmowę, zanim wyślesz go ponownie."
+      }
     }
   },
   "responseState": {

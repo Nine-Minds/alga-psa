@@ -446,6 +446,19 @@
       "organizationPrivate": "Privé à l'organisation",
       "placeholder": "Qui peut voir ceci ?",
       "required": "Choisissez qui peut voir ce commentaire avant de le publier."
+    },
+    "shared": {
+      "loading": "Chargement de la conversation partagée...",
+      "loadError": "La conversation partagée n'a pas pu être chargée.",
+      "reload": "Recharger",
+      "errors": {
+        "forbidden": "Vous n'êtes pas autorisé à publier pour cette audience.",
+        "invalid": "Ce commentaire ne peut pas être publié.",
+        "readOnly": "Cet espace de travail est actuellement en lecture seule.",
+        "operationConflict": "Ce commentaire entre en conflit avec une tentative précédente. Rechargez et réessayez.",
+        "audienceUnresolved": "Choisissez qui peut voir ce commentaire avant de le publier.",
+        "unknownOutcome": "Nous n'avons pas pu confirmer la publication du commentaire. Vérifiez la conversation avant de le renvoyer."
+      }
     }
   },
   "responseState": {

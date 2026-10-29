@@ -454,6 +454,19 @@
       "organizationPrivate": "Privat för organisationen",
       "placeholder": "Vem kan se detta?",
       "required": "Välj vem som kan se kommentaren innan du publicerar den."
+    },
+    "shared": {
+      "loading": "Läser in den delade konversationen...",
+      "loadError": "Den delade konversationen kunde inte läsas in.",
+      "reload": "Läs in igen",
+      "errors": {
+        "forbidden": "Du har inte behörighet att publicera till den här målgruppen.",
+        "invalid": "Den här kommentaren kan inte publiceras.",
+        "readOnly": "Den här arbetsytan är skrivskyddad just nu.",
+        "operationConflict": "Den här kommentaren krockar med ett tidigare försök. Läs in igen och försök på nytt.",
+        "audienceUnresolved": "Välj vem som kan se den här kommentaren innan du publicerar den.",
+        "unknownOutcome": "Vi kunde inte bekräfta att kommentaren publicerades. Kontrollera konversationen innan du skickar den igen."
+      }
     }
   },
   "responseState": {

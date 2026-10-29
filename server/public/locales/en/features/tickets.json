@@ -454,6 +454,19 @@
       "organizationPrivate": "Organization private",
       "placeholder": "Who can see this?",
       "required": "Choose who can see this comment before posting it."
+    },
+    "shared": {
+      "loading": "Loading the shared conversation...",
+      "loadError": "The shared conversation could not be loaded.",
+      "reload": "Reload",
+      "errors": {
+        "forbidden": "You are not allowed to post to this audience.",
+        "invalid": "This comment cannot be posted.",
+        "readOnly": "This workspace is read-only right now.",
+        "operationConflict": "This comment conflicts with an earlier attempt. Reload and try again.",
+        "audienceUnresolved": "Choose who can see this comment before posting it.",
+        "unknownOutcome": "We could not confirm the comment was posted. Check the conversation before sending it again."
+      }
     }
   },
   "responseState": {

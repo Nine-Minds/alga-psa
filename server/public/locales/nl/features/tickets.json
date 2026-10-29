@@ -446,6 +446,19 @@
       "organizationPrivate": "Privé voor organisatie",
       "placeholder": "Wie kan dit zien?",
       "required": "Kies wie deze opmerking kan zien voordat je deze plaatst."
+    },
+    "shared": {
+      "loading": "De gedeelde conversatie wordt geladen...",
+      "loadError": "De gedeelde conversatie kon niet worden geladen.",
+      "reload": "Opnieuw laden",
+      "errors": {
+        "forbidden": "U mag niet naar dit publiek posten.",
+        "invalid": "Deze opmerking kan niet worden geplaatst.",
+        "readOnly": "Deze werkruimte is momenteel alleen-lezen.",
+        "operationConflict": "Deze opmerking botst met een eerdere poging. Laad opnieuw en probeer het nog eens.",
+        "audienceUnresolved": "Kies wie deze opmerking kan zien voordat u hem plaatst.",
+        "unknownOutcome": "We konden niet bevestigen dat de opmerking is geplaatst. Controleer de conversatie voordat u hem opnieuw verstuurt."
+      }
     }
   },
   "responseState": {
