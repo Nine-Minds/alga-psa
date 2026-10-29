@@ -802,8 +802,6 @@
       "title": "Anbieter verbinden",
       "description": "Wählen Sie einen Anbieter aus, um die SSO-Verknüpfung abzuschließen. Sie werden durch den Anmeldevorgang des Anbieters geleitet.",
       "noneConfigured": "Für diese Umgebung sind keine SSO-Anbieter konfiguriert. Bitten Sie Ihren Administrator, Google- oder Microsoft-Anmeldedaten zu konfigurieren.",
-      "noneConfiguredAdmin": "No SSO providers are configured yet. Set up your organization's Google or Microsoft application first.",
-      "openProviderSetup": "Set up an SSO provider",
       "notConfigured": "Nicht konfiguriert",
       "branding": {
         "google": "Mit Google fortfahren",

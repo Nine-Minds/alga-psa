@@ -4033,12 +4033,5 @@
     "moveDown": "Flytta ned",
     "remove": "Ta bort",
     "addTag": "Lägg till en tagg…"
-  },
-  "coManaged": {
-    "providers": {
-      "backToEmail": "Back to Email settings",
-      "title": "Email and identity providers",
-      "description": "Register your own Google or Microsoft application for inbound email, and staff sign-in. These credentials belong to your workspace."
-    }
   }
 }

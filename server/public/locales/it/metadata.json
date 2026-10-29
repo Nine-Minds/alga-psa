@@ -524,10 +524,7 @@
       "title": "IT cogestita"
     },
     "coManagement": {
-      "title": "Accesso cogestito",
-      "providers": {
-        "title": "Email and Identity Providers"
-      }
+      "title": "Accesso cogestito"
     }
   },
   "auth": {

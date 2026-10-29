@@ -802,8 +802,6 @@
       "title": "Anslut en identitetsleverantör",
       "description": "Välj en identitetsleverantör för att slutföra SSO-kopplingen. Du omdirigeras till identitetsleverantörens inloggningsflöde.",
       "noneConfigured": "Inga SSO-leverantörer har konfigurerats för denna miljö. Be din administratör konfigurera autentiseringsuppgifter för Google eller Microsoft.",
-      "noneConfiguredAdmin": "No SSO providers are configured yet. Set up your organization's Google or Microsoft application first.",
-      "openProviderSetup": "Set up an SSO provider",
       "notConfigured": "Inte konfigurerad",
       "branding": {
         "google": "Fortsätt med Google",

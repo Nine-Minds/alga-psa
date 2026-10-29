@@ -524,10 +524,7 @@
       "title": "Współzarządzane IT"
     },
     "coManagement": {
-      "title": "Dostęp do współzarządzania",
-      "providers": {
-        "title": "Email and Identity Providers"
-      }
+      "title": "Dostęp do współzarządzania"
     }
   },
   "auth": {

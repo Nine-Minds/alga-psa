@@ -802,8 +802,6 @@
       "title": "Een provider koppelen",
       "description": "Kies een provider om de SSO-koppeling te voltooien. U wordt doorgestuurd via de aanmeldingsflow van de provider.",
       "noneConfigured": "Er zijn geen SSO-providers geconfigureerd voor deze omgeving. Vraag uw beheerder om Google- of Microsoft-inloggegevens te configureren.",
-      "noneConfiguredAdmin": "No SSO providers are configured yet. Set up your organization's Google or Microsoft application first.",
-      "openProviderSetup": "Set up an SSO provider",
       "notConfigured": "Niet geconfigureerd",
       "branding": {
         "google": "Doorgaan met Google",
