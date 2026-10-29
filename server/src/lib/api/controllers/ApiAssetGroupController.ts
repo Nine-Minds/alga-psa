@@ -117,7 +117,7 @@ export class ApiAssetGroupController {
 
     const parsed = createAssetGroupSchema.safeParse(await req.json());
     if (!parsed.success) {
-      return createErrorResponse('Validation failed', 400, 'VALIDATION_ERROR', parsed.error.errors);
+      return createErrorResponse('Validation failed', 400, 'VALIDATION_ERROR', parsed.error.issues);
     }
 
     return this.run(context, async (trx) => {
@@ -161,7 +161,7 @@ export class ApiAssetGroupController {
 
     const parsed = updateAssetGroupSchema.safeParse(await req.json());
     if (!parsed.success) {
-      return createErrorResponse('Validation failed', 400, 'VALIDATION_ERROR', parsed.error.errors);
+      return createErrorResponse('Validation failed', 400, 'VALIDATION_ERROR', parsed.error.issues);
     }
 
     return this.run(context, async (trx) => {
@@ -194,7 +194,7 @@ export class ApiAssetGroupController {
 
     const parsed = assetGroupMembersSchema.safeParse(await req.json());
     if (!parsed.success) {
-      return createErrorResponse('Validation failed', 400, 'VALIDATION_ERROR', parsed.error.errors);
+      return createErrorResponse('Validation failed', 400, 'VALIDATION_ERROR', parsed.error.issues);
     }
 
     return this.run(context, async (trx) => {
@@ -230,7 +230,7 @@ export class ApiAssetGroupController {
 
     const parsed = assetGroupContactSchema.safeParse(await req.json());
     if (!parsed.success) {
-      return createErrorResponse('Validation failed', 400, 'VALIDATION_ERROR', parsed.error.errors);
+      return createErrorResponse('Validation failed', 400, 'VALIDATION_ERROR', parsed.error.issues);
     }
 
     return this.run(context, async (trx) => {

@@ -400,7 +400,7 @@ export class ApiFinancialController extends ApiBaseController {
 
           const body = await apiRequest.json();
           const taxCalculationSchema = z.object({
-            client_id: z.string().uuid(),
+            client_id: z.string().guid(),
             amount: z.number().min(0),
             tax_region: z.string(),
             date: z.string().optional()

@@ -8,10 +8,10 @@ import { webhookModel, type WebhookDeliveryRecord } from './webhookModel';
 export const SUPPORTED_WEBHOOK_EVENTS = WEBHOOK_EVENT_NAMES;
 
 export const deliveryEnvelopeSchema = z.object({
-  event_id: z.string().uuid(),
+  event_id: z.string().guid(),
   event_type: z.enum(SUPPORTED_WEBHOOK_EVENTS),
   occurred_at: z.string().datetime(),
-  tenant_id: z.string().uuid(),
+  tenant_id: z.string().guid(),
   data: z.unknown(),
 });
 

@@ -73,7 +73,7 @@ const valueTypeSchema = z.enum(['string', 'number', 'boolean', 'json']).default(
 const cursorSchema = z.union([z.number().int().nonnegative(), z.string().trim().min(1)]).optional();
 
 const storeRecordOutputSchema = z.object({
-  store_id: z.string().uuid(),
+  store_id: z.string().guid(),
   namespace: z.string(),
   key: z.string(),
   value: z.any(),

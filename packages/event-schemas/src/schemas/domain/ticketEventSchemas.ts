@@ -52,7 +52,7 @@ export const ticketCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.exte
   createdAt: z.string().optional().describe('Created timestamp (ISO 8601)'),
   updatedFields: updatedFieldsSchema,
   changes: changesSchema,
-  externalLinks: z.array(z.record(z.unknown())).optional()
+  externalLinks: z.array(z.record(z.string(), z.unknown())).optional()
     .describe('Ticket-level external links created with the ticket'),
   ...notificationSuppressionPayloadFields,
 }).describe('Payload for TICKET_CREATED');
@@ -183,8 +183,8 @@ export type TicketSplitEventPayload = z.infer<typeof ticketSplitEventPayloadSche
 
 export const ticketTagsChangedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  addedTagIds: z.array(z.string().uuid()).optional(),
-  removedTagIds: z.array(z.string().uuid()).optional(),
+  addedTagIds: z.array(z.string().guid()).optional(),
+  removedTagIds: z.array(z.string().guid()).optional(),
   changedAt: z.string().datetime().optional(),
 }).describe('Payload for TICKET_TAGS_CHANGED');
 
@@ -201,8 +201,8 @@ export type TicketQueueChangedEventPayload = z.infer<typeof ticketQueueChangedEv
 
 export const ticketEscalatedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  fromQueueId: z.string().uuid().optional(),
-  toQueueId: z.string().uuid().optional(),
+  fromQueueId: z.string().guid().optional(),
+  toQueueId: z.string().guid().optional(),
   escalatedAt: z.string().datetime().optional(),
   reason: z.string().optional(),
 }).describe('Payload for TICKET_ESCALATED');
@@ -217,7 +217,7 @@ export const ticketMessageAddedEventPayloadSchema = BaseDomainEventPayloadSchema
   ticketId: ticketIdSchema,
   messageId: messageIdSchema,
   visibility: visibilitySchema,
-  authorId: z.string().uuid().describe('Author ID (user/contact)'),
+  authorId: z.string().guid().describe('Author ID (user/contact)'),
   authorType: authorTypeSchema,
   channel: messageChannelSchema,
   createdAt: z.string().datetime().optional(),
@@ -261,7 +261,7 @@ const slaStageSchema = z.enum(['response', 'resolution', 'custom']).describe('SL
 
 export const ticketSlaStageEnteredEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  slaPolicyId: z.string().uuid(),
+  slaPolicyId: z.string().guid(),
   stage: slaStageSchema,
   enteredAt: z.string().datetime().optional(),
   targetAt: z.string().datetime().optional(),
@@ -271,7 +271,7 @@ export type TicketSlaStageEnteredEventPayload = z.infer<typeof ticketSlaStageEnt
 
 export const ticketSlaStageMetEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  slaPolicyId: z.string().uuid(),
+  slaPolicyId: z.string().guid(),
   stage: slaStageSchema,
   metAt: z.string().datetime().optional(),
   targetAt: z.string().datetime().optional(),
@@ -281,7 +281,7 @@ export type TicketSlaStageMetEventPayload = z.infer<typeof ticketSlaStageMetEven
 
 export const ticketSlaStageBreachedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  slaPolicyId: z.string().uuid(),
+  slaPolicyId: z.string().guid(),
   stage: slaStageSchema,
   breachedAt: z.string().datetime().optional(),
   targetAt: z.string().datetime().optional(),
@@ -294,7 +294,7 @@ export type TicketSlaStageBreachedEventPayload = z.infer<
 
 export const ticketApprovalRequestedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  approvalRequestId: z.string().uuid(),
+  approvalRequestId: z.string().guid(),
   approvalType: z.string().min(1),
   requestedByUserId: userIdSchema.optional(),
   requestedAt: z.string().datetime().optional(),
@@ -305,7 +305,7 @@ export type TicketApprovalRequestedEventPayload = z.infer<typeof ticketApprovalR
 
 export const ticketApprovalGrantedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  approvalRequestId: z.string().uuid(),
+  approvalRequestId: z.string().guid(),
   approvedByUserId: userIdSchema.optional(),
   approvedAt: z.string().datetime().optional(),
   conditions: z.unknown().optional(),
@@ -315,7 +315,7 @@ export type TicketApprovalGrantedEventPayload = z.infer<typeof ticketApprovalGra
 
 export const ticketApprovalRejectedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  approvalRequestId: z.string().uuid(),
+  approvalRequestId: z.string().guid(),
   rejectedByUserId: userIdSchema.optional(),
   rejectedAt: z.string().datetime().optional(),
   reason: z.string().optional(),
@@ -329,9 +329,9 @@ export type TicketApprovalRejectedEventPayload = z.infer<typeof ticketApprovalRe
 
 export const ticketCommentAddedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
-  commentId: z.string().uuid().optional(),
+  commentId: z.string().guid().optional(),
   visibility: z.enum(['public', 'internal']).optional(),
-  authorId: z.string().uuid().optional(),
+  authorId: z.string().guid().optional(),
   authorType: z.enum(['user', 'contact']).optional(),
   createdAt: z.string().datetime().optional(),
 }).describe('Payload for TICKET_COMMENT_ADDED');

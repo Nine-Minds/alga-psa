@@ -19,7 +19,7 @@ const baseSchema = z.object({
 const putSchema = baseSchema.extend({
   key: z.string().min(1).max(256),
   value: z.any(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   ttlSeconds: z.number().int().positive().optional(),
   ifRevision: z.number().int().nonnegative().optional(),
   schemaVersion: z.number().int().positive().optional(),
@@ -49,7 +49,7 @@ const bulkPutSchema = baseSchema.extend({
       z.object({
         key: z.string().min(1).max(256),
         value: z.any(),
-        metadata: z.record(z.any()).optional(),
+        metadata: z.record(z.string(), z.any()).optional(),
         ttlSeconds: z.number().int().positive().optional(),
         ifRevision: z.number().int().nonnegative().optional(),
         schemaVersion: z.number().int().positive().optional(),

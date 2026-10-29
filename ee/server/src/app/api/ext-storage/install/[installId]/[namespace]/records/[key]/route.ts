@@ -13,7 +13,7 @@ import type { Knex } from 'knex';
 
 const putSchema = z.object({
   value: z.any(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
   ttlSeconds: z.number().int().positive().optional(),
   ifRevision: z.number().int().nonnegative().optional(),
   schemaVersion: z.number().int().positive().optional(),

@@ -17,7 +17,7 @@ const RMM_COMMAND_PERMISSION = { resource: 'rmm', action: 'execute_command' } as
 
 const agentSchema = z.object({
   agent_id: z.string(),
-  asset_id: z.string().uuid().nullable(),
+  asset_id: z.string().guid().nullable(),
   hostname: z.string().nullable(),
   organization_id: z.string().nullable(),
   agent_online: z.boolean().nullable(),
@@ -161,7 +161,7 @@ export function registerTacticalRmmWorkflowActionsV2(): void {
     idempotency: { mode: 'engineProvided' },
     inputSchema: z.object({
       agent_id: z.string().trim().min(1).optional(),
-      asset_id: z.string().uuid().optional(),
+      asset_id: z.string().guid().optional(),
       query: z.string().trim().min(1).optional(),
       live: z.boolean().default(false),
       limit: z.number().int().min(1).max(200).default(50)

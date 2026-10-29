@@ -607,7 +607,7 @@ export type TemplateAstValidationResult =
       errors: TemplateAstValidationError[];
     };
 
-const issuePathToString = (path: (string | number)[]): string => path.map(String).join('.');
+const issuePathToString = (path: ReadonlyArray<PropertyKey>): string => path.map(String).join('.');
 
 const toValidationError = (issue: z.ZodIssue): TemplateAstValidationError => ({
   code: issue.code,
