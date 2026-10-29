@@ -14,6 +14,7 @@ import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEd
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import CommentThreadDrawer from '@alga-psa/ui/components/CommentThreadDrawer';
 import InlineReplyComposer from '@alga-psa/ui/components/InlineReplyComposer';
+import { COMPOSER_MAX_HEIGHT } from '@alga-psa/ui/components/composerSizing';
 import StickyComposerDock from '@alga-psa/ui/components/StickyComposerDock';
 import { CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@alga-psa/ui/components';
 
@@ -947,6 +948,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             searchMentions={searchUsersForMentions}
             uploadFile={composeUploadSession.uploadFile}
             snippets={cannedResponseSnippets}
+            maxHeight={COMPOSER_MAX_HEIGHT}
             footerActions={showEmailRecipients ? (
               <CommentEmailRecipientsControl
                 idPrefix={compId}
