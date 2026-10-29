@@ -61,6 +61,14 @@
       "types": "./src/schemas/appointmentSchemas.ts",
       "import": "./src/schemas/appointmentSchemas.ts"
     },
+    "./lib/scheduleMeetingSynchronization": {
+      "types": "./src/lib/scheduleMeetingSynchronization.ts",
+      "import": "./src/lib/scheduleMeetingSynchronization.ts"
+    },
+    "./lib/appointmentMeetingCreation": {
+      "types": "./src/lib/appointmentMeetingCreation.ts",
+      "import": "./src/lib/appointmentMeetingCreation.ts"
+    },
     "./context/*": {
       "import": "./src/context/*.tsx",
       "types": "./src/context/*.tsx"

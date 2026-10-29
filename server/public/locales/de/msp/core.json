@@ -110,7 +110,8 @@
     "ticketsCannedResponses": "Textbausteine",
     "profile": "Profil",
     "signOut": "Abmelden",
-    "coManaged": "Gemeinsam verwaltete IT"
+    "coManaged": "Gemeinsam verwaltete IT",
+    "coManagedAdministration": "Zugriff & Administration"
   },
   "sidebar": {
     "backToMain": "Zurück zur Hauptansicht",

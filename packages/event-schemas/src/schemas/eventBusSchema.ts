@@ -11,6 +11,8 @@ import {
   quoteCancelledEventPayloadSchema,
 } from './domain/quoteEventSchemas';
 import { z } from 'zod';
+import { collaborationActorPayloadIssue, collaborationActorReferenceSchema } from './collaborationActorSchemas';
+import { actorTypeSchema } from './domain/commonEventPayloadSchemas';
 import {
   EXTENSION_EVENT_TYPES,
   EXTENSION_PAYLOAD_SCHEMAS,
@@ -594,6 +596,8 @@ export type EventType = z.infer<typeof EventTypeEnum>;
 
 // Base payload schema with tenant information
 export const BasePayloadSchema = z.object({
+  actorType: actorTypeSchema.optional(),
+  actorReference: collaborationActorReferenceSchema.optional(),
   tenantId: z.string().guid(),
 });
 
@@ -618,7 +622,7 @@ export const TicketEventPayloadSchema = BasePayloadSchema.extend({
   userId: z.string().guid().optional(),
   assignedByUserId: z.string().guid().optional(), // The user who performed the action
   // Declared so the legacy branch keeps them: consumers receive the parsed object.
-  actorType: z.enum(['USER', 'CONTACT', 'SYSTEM']).optional(),
+  actorType: actorTypeSchema.optional(),
   actorUserId: z.string().guid().optional(),
   actorContactId: z.string().guid().optional(),
   occurredAt: z.string().optional(),
@@ -1659,10 +1663,13 @@ if (missingPayloadSchemas.length > 0) {
 export const EventSchemas = Object.entries(EventPayloadSchemas).reduce(
   (schemas, [eventType, payloadSchema]) => ({
     ...schemas,
-    [eventType]: BaseEventSchema.extend({
+    [eventType]: BaseEventSchema.superRefine((event, context) => {
+      const issue = collaborationActorPayloadIssue(event.payload);
+      if (issue) context.addIssue({ code: z.ZodIssueCode.custom, path: ['payload', 'actorReference'], message: issue });
+    }).pipe(BaseEventSchema.extend({
       eventType: z.literal(eventType as EventType),
       payload: payloadSchema,
-    }),
+    })),
   }),
   {} as Record<EventType, z.ZodType<any, any>>
 );

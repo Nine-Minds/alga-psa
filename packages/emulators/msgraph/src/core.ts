@@ -127,6 +127,8 @@ export interface GraphCalendarEvent {
   sensitivity?: unknown;
   isAllDay?: unknown;
   singleValueExtendedProperties?: unknown;
+  /** Client-supplied idempotency key; a repeat create by the same organizer returns the first event. */
+  transactionId?: string | null;
   lastModifiedDateTime?: string;
   recurrence?: unknown;
   categories?: string[];
@@ -1063,6 +1065,12 @@ export class MsGraphCore implements EmulatorCore {
   }
 
   createCalendarEvent(organizerUserId: string, body: Record<string, unknown>): GraphCalendarEvent {
+    const transactionId = typeof body.transactionId === 'string' && body.transactionId ? body.transactionId : null;
+    if (transactionId) {
+      for (const existing of this.calendarEvents.values()) {
+        if (existing.organizerUserId === organizerUserId && existing.transactionId === transactionId) return existing;
+      }
+    }
     this.validateCalendarBoundaries(body);
     const isOnlineMeeting = body.isOnlineMeeting === true;
     const subject = typeof body.subject === 'string' ? body.subject : null;
@@ -1091,6 +1099,7 @@ export class MsGraphCore implements EmulatorCore {
       sensitivity: body.sensitivity,
       isAllDay: body.isAllDay,
       singleValueExtendedProperties: body.singleValueExtendedProperties,
+      ...(transactionId ? { transactionId } : {}),
       recurrence: body.recurrence,
       categories: Array.isArray(body.categories) ? body.categories.map(String) : [],
       lastModifiedDateTime: this.env.clock.now().toISOString(),

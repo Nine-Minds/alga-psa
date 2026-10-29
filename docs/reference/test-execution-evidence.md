@@ -352,12 +352,27 @@ development, Microsoft callback).
 Every shard installs the same candidate images and verifies them against the
 build records.
 
-The two server candidates are compiled on the build runner rather than inside
-their Dockerfiles: `scripts/build-production-server.sh <edition>` runs the
-same recipe as the builder stages (assemblyscript templates, `nx build-deps
-server`, `next build --webpack`), and the Dockerfiles are then built with
-`PREBUILT_NEXT=true`, which makes them package `server/.next` and the
-packages' `dist` directories from the context instead of rebuilding them.
+The two server candidates are the production images. `scripts/build-production-server.sh
+<edition>` compiles the application on the build runner (assemblyscript
+templates, `nx build-deps server`, `next build --webpack`, the recipe of the
+`Dockerfile.build` artifact builders), and the production Dockerfiles
+(`Dockerfile`, `ee/server/Dockerfile`, the one runtime image definition per
+edition) package `server/.next` and the packages' `dist` directories from the
+context, exactly as the Argo build packages them for deployment. The candidate
+under test is therefore the image that ships, including its Alpine base and
+its production-only dependency set.
+
+That dependency set cannot compile the application: `npm install --omit=dev`
+links only the workspaces that production dependencies reach, so `next dev`
+inside the candidate cannot resolve packages such as `@product/chat` or
+`@alga-psa/migration-spec`. The two development-mode checks, the Teams
+development server and the Microsoft callback, therefore run in the
+development runtime defined by `docker-compose.e2e-development.yaml`: a plain
+pinned Node image (`scripts/lib/development-runtime.mjs`) with the checkout
+mounted at `/app` and the `node_modules` the shard installed from the
+lockfile. Their evidence binds to that runtime image and the mounted checkout,
+and the wrapper proves the source clean before and after, which covers what
+the development server writes into the checkout (all of it ignored by Git).
 Building on the runner is what lets the webpack filesystem cache
 (`server/node_modules/.cache/webpack`, configured in `next.config.mjs`) and
 the Nx cache survive between runs: `scripts/build-cache-snapshot.mjs` pulls a
@@ -366,6 +381,12 @@ build and, on runs of `main` only, pushes the new state afterwards. A pull
 request never writes a snapshot, because a cache can shape build output. A
 missing or unreadable snapshot is a cold build, not a failure. The daily
 candidate-image cleanup removes the superseded, untagged snapshot versions.
+Two details make the restored cache usable at all: the candidates build with
+a fixed, test-only `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`, because Next folds
+that key into the webpack cache version and generates a new one per build
+when it is unset; and `next.config.mjs` makes production builds validate
+webpack snapshots by content hash, because a fresh checkout gives every file a
+new mtime and the timestamp-only default would invalidate every module.
 
 The journeys are partitioned across the `browser-<n>` shards by the runner
 itself. Each shard lists the whole collection, then takes its share

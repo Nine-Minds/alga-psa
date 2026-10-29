@@ -2009,8 +2009,12 @@
     "total": {
       "title": "Szacowana suma miesięczna",
       "description": "Produkty i opłaty stałe są wliczone w tę sumę. Usługi godzinowe i rozliczane według zużycia są rozliczane według rzeczywistych wartości.",
-      "perMonth": "miesięcznie",
-      "savedDraftValue": "Zapisana wartość wersji roboczej: {{amount}}"
+      "savedDraftValue": "Zapisana wartość wersji roboczej: {{amount}}",
+      "titleCadence": "Szacowana suma",
+      "mixedFrequencyTitle": "Szacowana suma według częstotliwości rozliczeń",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "ok. {{amount}} miesięcznie",
+      "savedDraftValueMonthly": "Zapisana wartość wersji roboczej: {{amount}} miesięcznie"
     },
     "finalChecklist": {
       "title": "Zanim zakończysz:",

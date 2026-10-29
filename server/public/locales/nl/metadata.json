@@ -525,6 +525,15 @@
     },
     "coManagement": {
       "title": "Toegang voor gezamenlijk beheer",
+      "administration": {
+        "title": "Co-managed beheer"
+      },
+      "customerTickets": {
+        "title": "Klanttickets"
+      },
+      "sharedTicket": {
+        "title": "Gedeeld ticket"
+      },
       "providers": {
         "title": "E-mail- en identiteitsproviders"
       }

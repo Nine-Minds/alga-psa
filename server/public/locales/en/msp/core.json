@@ -110,7 +110,8 @@
     "ticketsCannedResponses": "Canned Responses",
     "profile": "Profile",
     "signOut": "Sign out",
-    "coManaged": "Co-managed IT"
+    "coManaged": "Co-managed IT",
+    "coManagedAdministration": "Access & administration"
   },
   "marketing": {
     "dialogs": {
