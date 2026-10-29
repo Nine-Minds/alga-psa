@@ -59,7 +59,7 @@ import { loadPermissionUtils, loadServerMigration } from '../test-utils/serverMi
 import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 const { DEFAULT_ROLES, syncPermissionCatalog } = loadPermissionUtils();
-const warrantyMigration = loadServerMigration<any>('20261028140400_add_warranty_permissions.cjs');
+const warrantyMigration = loadServerMigration<any>('20261029130400_add_warranty_permissions.cjs');
 
 let knex: Knex;
 let LOCATION: string;

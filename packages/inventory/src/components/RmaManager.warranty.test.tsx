@@ -62,8 +62,7 @@ vi.mock('./rma/RmaWarrantyPanel', () => ({ RmaWarrantyPanel: () => null }));
 vi.mock('./rma/NewWarrantyClaimDialog', () => ({ NewWarrantyClaimDialog: () => null }));
 
 const migrationDir = path.resolve(__dirname, '../../../../server/migrations');
-const migrationFile = fs.readdirSync(migrationDir).find((f) => f.startsWith('20261028140000'))!;
-const migrationSrc = fs.readFileSync(path.join(migrationDir, migrationFile), 'utf8');
+const migrationSrc = fs.readFileSync(path.join(migrationDir, '20261029130000_add_warranty_review_to_rma_cases.cjs'), 'utf8');
 const DB_STATUSES: string[] = (() => {
   const body = /const STATUSES = \[([\s\S]*?)\];/.exec(migrationSrc)![1];
   return [...body.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]);
