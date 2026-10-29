@@ -6,7 +6,7 @@
 
 import { z } from 'zod';
 import type { ClientLifecycleStatus } from '@alga-psa/types';
-import { partialWithoutDefaults } from '@alga-psa/validation';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 export const ClientLifecycleStatusSchema: z.ZodType<ClientLifecycleStatus> = z.enum([
   'prospect',

@@ -8,7 +8,7 @@ import type {
   OpportunityStatus,
   OpportunityType,
 } from '@alga-psa/types';
-import { partialWithoutDefaults } from '@alga-psa/validation';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 export const opportunityStatusSchema: z.ZodType<OpportunityStatus> = z.enum(['open', 'won', 'lost']);
 export const opportunityTypeSchema: z.ZodType<OpportunityType> = z.enum(['new_logo', 'expansion', 'renewal', 'project']);

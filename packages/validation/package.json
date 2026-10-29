@@ -17,6 +17,10 @@
     "./schemas": {
       "import": "./src/lib/schemas/index.ts",
       "types": "./src/lib/schemas/index.ts"
+    },
+    "./lib/partialWithoutDefaults": {
+      "import": "./src/lib/partialWithoutDefaults.ts",
+      "types": "./src/lib/partialWithoutDefaults.ts"
     }
   },
   "scripts": {

@@ -102,4 +102,3 @@ export {
   getSlugParts,
   TENANT_SLUG_REGEX
 } from './lib/tenantSlug';
-export * from './lib/partialWithoutDefaults';

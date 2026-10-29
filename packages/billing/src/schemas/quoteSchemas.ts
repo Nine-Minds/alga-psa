@@ -1,7 +1,7 @@
 import { canTransitionQuoteStatus } from '@alga-psa/shared/lib/quotes/quoteStatusTransitions';
 import { z } from 'zod';
 import { isUnitOfMeasureCode } from '@alga-psa/core/unitOfMeasure';
-import { partialWithoutDefaults } from '@alga-psa/validation';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 export const quoteStatusSchema = z.enum([
   'draft',

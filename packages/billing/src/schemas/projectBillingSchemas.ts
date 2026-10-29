@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { partialWithoutDefaults } from '@alga-psa/validation';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 export const projectBillingModelSchema = z.enum(['fixed_price', 'time_and_materials']);
 export const projectBillingInvoiceModeSchema = z.enum(['recurring', 'standalone']);

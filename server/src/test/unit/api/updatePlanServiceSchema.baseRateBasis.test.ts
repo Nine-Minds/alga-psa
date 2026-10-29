@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { partialWithoutDefaults } from '@alga-psa/validation';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 import {
   updatePlanServiceSchema,
   createPlanServiceFixedConfigSchema,

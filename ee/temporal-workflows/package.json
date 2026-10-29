@@ -80,7 +80,6 @@
     "googleapis": "^152.0.0",
     "jsonata": "^2.1.0",
     "nodemailer": "^10.1.4",
-    "openai": "^4.104.0",
     "posthog-node": "^4.18.0",
     "rrule": "^2.8.1",
     "sharp": "^0.35.5",

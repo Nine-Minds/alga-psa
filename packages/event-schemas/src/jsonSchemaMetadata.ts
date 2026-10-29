@@ -422,7 +422,21 @@ const convert = (
     // occurrence as an unresolved ref (shown as a bare "string").
     reused: 'inline',
     override: ({ zodSchema, jsonSchema }) => {
-      const def = zodSchema._zod.def as { type: string; innerType?: z.ZodType; defaultValue?: unknown };
+      const def = zodSchema._zod.def as {
+        type: string;
+        innerType?: z.ZodType;
+        defaultValue?: unknown;
+        shape?: Record<string, z.ZodType>;
+      };
+      // zod-to-json-schema required a key unless its schema accepted undefined, so z.unknown()
+      // and z.any() fields were optional. Zod 4 lists them as required; keep the old rule.
+      if (def.type === 'object' && def.shape) {
+        const required = Object.entries(def.shape)
+          .filter(([, field]) => !field.safeParse(undefined).success)
+          .map(([key]) => key);
+        if (required.length > 0) jsonSchema.required = required;
+        else delete jsonSchema.required;
+      }
       // zod-to-json-schema represented dates as date-time strings; Zod 4 has no mapping.
       if (def.type === 'date') {
         jsonSchema.type = 'string';

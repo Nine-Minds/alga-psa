@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { partialWithoutDefaults } from '@alga-psa/validation';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 export const marketingCampaignStatusSchema = z.enum(['draft', 'active', 'completed', 'archived']);
 export const socialPostStatusSchema = z.enum(['draft', 'scheduled', 'awaiting-manual-publish', 'published', 'expired']);

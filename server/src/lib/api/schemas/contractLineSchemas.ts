@@ -15,7 +15,7 @@ import {
   bulkDeleteSchema,
   bulkUpdateSchema
 } from './common';
-import { partialWithoutDefaults } from '@alga-psa/validation';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 // ============================================================================
 // ENUMS AND CONSTANTS

@@ -8,7 +8,7 @@ import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
 
 // Zod 4 instances only carry .openapi() if the extension ran before they were created.
 extendZodWithOpenApi(z);
-import { partialWithoutDefaults } from '@alga-psa/validation';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 // Common field types
 export const uuidSchema = z.string().guid();

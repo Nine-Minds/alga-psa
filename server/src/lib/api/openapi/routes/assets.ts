@@ -1,5 +1,5 @@
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
-import { partialWithoutDefaults } from '@alga-psa/validation';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 export function registerAssetRoutes(registry: ApiOpenApiRegistry) {
   const tag = 'Assets';

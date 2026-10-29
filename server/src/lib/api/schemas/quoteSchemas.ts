@@ -8,7 +8,7 @@ import {
   uuidSchema,
   booleanTransform,
 } from './common';
-import { partialWithoutDefaults } from '@alga-psa/validation';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 // ============================================================================
 // Enums

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { tenantSchema } from '@alga-psa/validation';
 import { clientPortalConfigSchema } from './project.schemas';
-import { partialWithoutDefaults } from '@alga-psa/validation';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 export const projectTemplateSchema = tenantSchema.extend({
   template_id: z.string().guid(),

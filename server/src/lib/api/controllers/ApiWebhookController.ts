@@ -66,7 +66,7 @@ import {
 import { performWebhookDeliveryRequest } from '../../webhooks/delivery';
 import { getTenantProduct, ProductAccessError } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
-import { partialWithoutDefaults } from '@alga-psa/validation';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 export class ApiWebhookController {
   private webhookService: WebhookService;

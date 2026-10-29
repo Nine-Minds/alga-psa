@@ -21,7 +21,7 @@ import {
   clientLocationCoreFieldsSchema,
   emailFieldSchema
 } from '@alga-psa/validation';
-import { partialWithoutDefaults } from '@alga-psa/validation';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 // Structural rules for name/email/url/phone come from @alga-psa/validation so the
 // REST API and the server actions accept and reject exactly the same inputs.

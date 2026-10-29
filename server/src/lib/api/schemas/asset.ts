@@ -13,7 +13,7 @@ import {
   booleanTransform,
   dateSchema
 } from './common';
-import { partialWithoutDefaults } from '@alga-psa/validation';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 // Asset type schema — any registry slug (built-in or custom tenant type), not a
 // fixed enum. Validation against the tenant's asset_type_registry happens in
