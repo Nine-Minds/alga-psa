@@ -588,7 +588,8 @@
       "failedToResetRate": "Zurücksetzen des Positionspreises fehlgeschlagen",
       "protectedStartDate": "Das Startdatum muss am oder vor dem {{boundary}} liegen, damit geschützte Leistungszeiträume enthalten bleiben.",
       "protectedEndDate": "Das Enddatum muss am oder nach dem {{boundary}} liegen, damit geschützte Leistungszeiträume enthalten bleiben.",
-      "cannotEditWithInvoices": "Vertragslinie kann nicht bearbeitet werden: Zu diesem Vertrag gibt es zugeordnete Rechnungen. Vertragslinien können nicht mehr bearbeitet werden, sobald Rechnungen erstellt wurden."
+      "cannotEditWithInvoices": "Vertragslinie kann nicht bearbeitet werden: Zu diesem Vertrag gibt es zugeordnete Rechnungen. Vertragslinien können nicht mehr bearbeitet werden, sobald Rechnungen erstellt wurden.",
+      "reloadLatest": "Aktuelle Version laden"
     },
     "loading": {
       "contractLines": "Vertragslinien werden geladen",

@@ -588,7 +588,8 @@
       "failedToResetRate": "Nie udało się przywrócić stawki pozycji",
       "protectedStartDate": "Data rozpoczęcia musi przypadać {{boundary}} lub wcześniej, aby uwzględnić chronioną historię usług.",
       "protectedEndDate": "Data zakończenia musi przypadać {{boundary}} lub później, aby uwzględnić chronioną historię usług.",
-      "cannotEditWithInvoices": "Nie można edytować linii kontraktowej: ta umowa ma powiązane faktury. Linii kontraktowych nie można edytować po wygenerowaniu faktur."
+      "cannotEditWithInvoices": "Nie można edytować linii kontraktowej: ta umowa ma powiązane faktury. Linii kontraktowych nie można edytować po wygenerowaniu faktur.",
+      "reloadLatest": "Wczytaj najnowszą wersję"
     },
     "loading": {
       "contractLines": "Ładowanie linii kontraktowych",

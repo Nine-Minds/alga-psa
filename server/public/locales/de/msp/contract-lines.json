@@ -820,7 +820,7 @@
       "missingField": "Erforderliches Feld der Vertragslinie fehlt.",
       "missingFieldNamed": "Erforderliches Feld der Vertragslinie fehlt: {{field}}.",
       "advanceTimingNotAllowed": "Abrechnung im Voraus ist nur für Festpreispositionen verfügbar. Stunden- und Nutzungspositionen werden immer nachträglich abgerechnet, nachdem die Arbeit erbracht wurde.",
-      "versionConflict": "This contract line was changed by someone else since you started editing. Reload it and re-apply your edit."
+      "versionConflict": "Diese Vertragsposition wurde von jemand anderem geändert, seit Sie mit der Bearbeitung begonnen haben. Laden Sie sie neu und wenden Sie Ihre Änderung erneut an."
     },
     "templateLine": {
       "unavailable": "Die ausgewählte Vorlagenzeile ist nicht mehr verfügbar. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."

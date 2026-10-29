@@ -588,7 +588,8 @@
       "failedToResetRate": "No se pudo restablecer el precio de la línea",
       "protectedStartDate": "La fecha de inicio debe ser el {{boundary}} o anterior para incluir el historial protegido.",
       "protectedEndDate": "La fecha de fin debe ser el {{boundary}} o posterior para incluir el historial protegido.",
-      "cannotEditWithInvoices": "No se puede editar la línea de contrato: este contrato tiene facturas asociadas. Las líneas de contrato no se pueden editar una vez que se han generado facturas."
+      "cannotEditWithInvoices": "No se puede editar la línea de contrato: este contrato tiene facturas asociadas. Las líneas de contrato no se pueden editar una vez que se han generado facturas.",
+      "reloadLatest": "Cargar la última versión"
     },
     "loading": {
       "contractLines": "Cargando líneas de contrato",

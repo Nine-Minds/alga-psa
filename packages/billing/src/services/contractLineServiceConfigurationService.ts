@@ -321,9 +321,9 @@ export class ContractLineServiceConfigurationService {
     /**
      * Compare-and-set expectation for a recurring-unit revision at the boundary.
      * Default `null` = create-only at an empty boundary (the legacy inline
-     * editor). `undefined` = unconditional upsert with an audit-history row; the
-     * single-transaction contract-line save passes that after verifying its own
-     * line version token under the tenant billing lock.
+     * editor). A number = replace only the revision at that version (the
+     * single-transaction contract-line save reads it under the billing lock).
+     * `undefined` = unconditional upsert with an audit-history row; avoid it.
      * Callers wanting this to run on a caller-owned transaction construct the
      * service with that trx: `this.knex.transaction` then nests as a savepoint.
      */
@@ -401,8 +401,8 @@ export class ContractLineServiceConfigurationService {
               pricePolicy, unitRateCents, effectivePeriodStart: boundary,
               // Default (null): create-only at an empty boundary; replacing a
               // scheduled change then goes through the scheduling panel's
-              // compare-and-set. The transactional line save passes undefined
-              // after checking its line version token (which covers revisions).
+              // compare-and-set. The transactional line save passes the version
+              // it read under the billing lock.
               expectedVersion: expectedRevisionVersion,
             });
             if (scheduled.ok === false) throw new Error(scheduled.error);

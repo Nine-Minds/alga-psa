@@ -231,6 +231,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   const [contractLines, setContractLines] = useState<DetailedContractLineMapping[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Set when a save was refused because the line changed underneath the editor.
+  const [conflictLineId, setConflictLineId] = useState<string | null>(null);
   const [expandedLines, setExpandedLines] = useState<Record<string, boolean>>({});
   useEffect(() => {
     if (!focusContractLineId || !contractLines.some((line) => line.contract_line_id === focusContractLineId)) return;
@@ -690,8 +692,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     }
   };
 
-  const handleEditContractLine = async (line: DetailedContractLineMapping) => {
+  const handleEditContractLine = async (line: DetailedContractLineMapping, forceServiceReload = false) => {
     if (!contract.contract_id) return;
+    setConflictLineId(null);
 
     try {
       // Use line-level claimed/invoiced history to decide whether ordinary
@@ -705,7 +708,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         return;
       }
 
-      const services = await loadServicesForLine(line.contract_line_id);
+      const services = await loadServicesForLine(line.contract_line_id, forceServiceReload);
       setPricingOnly(Boolean(hasInvoices));
       const boundary = await getNextContractServiceBoundary(line.contract_line_id);
       if (isReturnedActionError(boundary)) { setError(getErrorMessage(boundary)); return; }
@@ -881,6 +884,35 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     });
   };
 
+  // Conflict recovery: reload the line, its services and the version token, then
+  // re-enter edit mode on the fresh state. The stale draft is discarded; the
+  // user re-applies their edit against what is actually stored.
+  const handleReloadAfterConflict = async () => {
+    const lineId = conflictLineId;
+    if (!lineId || !contract.contract_id) return;
+    setError(null);
+    setConflictLineId(null);
+    try {
+      const latest = await getDetailedContractLines(contract.contract_id);
+      if (isReturnedActionError(latest)) {
+        setError(getErrorMessage(latest));
+        return;
+      }
+      setContractLines(latest);
+      const line = latest.find((l) => l.contract_line_id === lineId);
+      if (!line) return;
+      setLineServices((prev) => {
+        const next = { ...prev };
+        delete next[lineId];
+        return next;
+      });
+      await handleEditContractLine(line, true);
+    } catch (err) {
+      console.error('Error reloading contract line after conflict:', err);
+      setError(t('contractLines.errors.failedToLoad', { defaultValue: 'Failed to load contract lines' }));
+    }
+  };
+
   const handleSaveContractLine = async (contractLineId: string) => {
     if (requiresEffectiveBoundary && !effectiveBoundary) return;
     if (!editLineVersion) {
@@ -1008,6 +1040,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       // draft intact and say why. No reload, no partial-failure path.
       if (isContractLineConflict(result)) {
         setError(t(result.messageKey, { defaultValue: result.message }));
+        setConflictLineId(contractLineId);
         return;
       }
       if (isReturnedActionError(result)) {
@@ -1050,6 +1083,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   };
 
   const handleCancelEdit = () => {
+    setConflictLineId(null);
     setEditingLineId(null);
     setEditLineData({});
     setEditLineVersion(null);
@@ -1252,7 +1286,20 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>
+              {error}
+              {conflictLineId && (
+                <Button
+                  id="contract-line-conflict-reload"
+                  variant="outline"
+                  size="sm"
+                  className="ml-3"
+                  onClick={() => { void handleReloadAfterConflict(); }}
+                >
+                  {t('contractLines.errors.reloadLatest', { defaultValue: 'Reload latest' })}
+                </Button>
+              )}
+            </AlertDescription>
           </Alert>
         )}
 

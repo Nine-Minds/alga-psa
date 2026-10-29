@@ -18,15 +18,15 @@ import {
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
 import { syncPrepaidBlockIssuancesForContractLine } from '../services/prepaidBlockIssuanceSync';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
-import {
-  applyContractLineServiceMembershipChangesInTransaction,
-  type ContractLineServiceMembershipAddition,
-} from './contractLineServiceActions';
+import type { ContractLineServiceMembershipAddition } from './contractLineServiceActions';
+import { applyContractLineServiceMembershipChangesInTransaction } from '../lib/billing/contractLineMembership';
 import {
   deleteBucketOverlayInTransaction,
   upsertBucketOverlayInTransaction,
   type BucketOverlayInput,
 } from './bucketOverlayActions';
+import { planExistingMemberWrite } from '../lib/billing/contractLineMemberDiff';
+import { resolveNextUnbilledSeatBoundary } from '../lib/billing/seatRevisions';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 
 /**
@@ -127,6 +127,7 @@ type PlannedMemberUpdate = {
   base: Record<string, unknown>;
   type: Record<string, unknown>;
   rateTiers?: IContractLineServiceRateTier[];
+  expectedRevisionVersion?: number | null;
 };
 
 /**
@@ -204,6 +205,7 @@ export const saveContractLineEdit = withAuth(async (
       }
 
       const boundary = draft.effective_boundary || undefined;
+      const configService = new ContractLineServiceConfigurationService(trx, tenant);
       const planned: PlannedMemberUpdate[] = [];
       const additions: ContractLineServiceMembershipAddition[] = [];
 
@@ -255,41 +257,41 @@ export const saveContractLineEdit = withAuth(async (
         }
         if (removedIds.includes(config.service_id) || draft.removed_config_ids.includes(config.config_id)) continue;
 
-        const base: Record<string, unknown> = {};
-        const type: Record<string, unknown> = {};
-        if (config.configuration_type === 'Hourly') {
-          if (member.quantity !== undefined) base.quantity = member.quantity;
-          if (member.custom_rate !== undefined) base.custom_rate = member.custom_rate;
-          if (member.hourly_rate !== undefined) type.hourly_rate = member.hourly_rate;
-        } else if (config.configuration_type === 'Usage') {
-          // setUsageMeasurementModeInTransaction owns the effective-period
-          // transition, preserving historical measurement and pricing together.
-          base.custom_rate = member.base_rate;
-          type.measurement_mode = member.measurement_mode;
-          type.minimum_usage = member.minimum_usage;
-          type.enable_tiered_pricing = member.enable_tiered_pricing;
-          if (member.base_rate !== undefined) type.base_rate = member.base_rate;
-          if (member.unit_of_measure !== undefined) type.unit_of_measure = member.unit_of_measure;
-          if (boundary) type.effective_period_start = boundary;
-        } else if (config.configuration_type === 'Fixed') {
-          const stored = fixedByConfig.get(config.config_id);
-          if (member.quantity !== undefined) base.quantity = member.quantity;
-          if (member.custom_rate !== undefined) base.custom_rate = member.custom_rate;
-          if (member.base_rate !== undefined) {
-            // The edit keeps what the stored number means (share vs per unit); a
-            // rate on a member that had none is a unit price. A null rate is the
-            // catalog price and carries no basis. Derived here, never sent.
-            Object.assign(type, resolveFixedMemberRatePair({
-              base_rate: member.base_rate,
-              base_rate_basis: stored?.base_rate_basis ?? 'per_unit',
-              pricing_basis: stored?.pricing_basis,
-            }));
+        // Plan a write only for what the user changed, comparing with the values
+        // the editor was showing: effective-at-boundary for unit-priced Fixed and
+        // Usage members, stored otherwise. An untouched member produces no write
+        // and no revision, so a revision already scheduled for it is never replaced.
+        const stored = fixedByConfig.get(config.config_id);
+        const showsEffective = config.configuration_type === 'Usage'
+          || (config.configuration_type === 'Fixed' && stored?.pricing_basis === 'unit');
+        const current = await configService.getConfigurationWithDetails(
+          config.config_id,
+          showsEffective ? boundary : undefined,
+        );
+        const write = planExistingMemberWrite({
+          configurationType: config.configuration_type,
+          member,
+          current: current as any,
+          storedFixed: stored,
+        });
+        if (!write) continue;
+
+        let expectedRevisionVersion: number | null | undefined;
+        if (config.configuration_type === 'Fixed') {
+          // A changed unit member may land on a boundary that already holds a
+          // scheduled revision. Replace it only if it is still the one read here
+          // (under the billing lock): compare-and-set, never an unconditional upsert.
+          const revisionBoundary = boundary
+            ?? await resolveNextUnbilledSeatBoundary({ trx, tenant, contractLineId });
+          if (revisionBoundary) {
+            if (stored?.pricing_basis === 'unit') write.type.effective_period_start = revisionBoundary;
+            const existingRevision = await db.table('contract_line_unit_pricing_revisions')
+              .where({ config_id: config.config_id, effective_period_start: revisionBoundary })
+              .first('version');
+            expectedRevisionVersion = existingRevision ? Number(existingRevision.version ?? 1) : null;
           }
-          if (boundary && stored?.pricing_basis === 'unit') type.effective_period_start = boundary;
-        } else {
-          continue;
         }
-        planned.push({ configId: config.config_id, base, type, rateTiers: config.configuration_type === 'Usage' ? member.rateTiers : undefined });
+        planned.push({ configId: config.config_id, ...write, expectedRevisionVersion });
       }
 
       for (const entry of draft.bucket_overlays) {
@@ -320,7 +322,6 @@ export const saveContractLineEdit = withAuth(async (
 
       // 3. Member and configuration edits (the service is bound to `trx`, so its
       //    own transactions nest as savepoints).
-      const configService = new ContractLineServiceConfigurationService(trx, tenant);
       for (const update of planned) {
         if (Object.keys(update.base).length === 0 && Object.keys(update.type).length === 0 && !update.rateTiers) continue;
         await configService.updateConfiguration(
@@ -328,9 +329,9 @@ export const saveContractLineEdit = withAuth(async (
           update.base as any,
           update.type as any,
           update.rateTiers,
-          // Safe: the line version token — which fingerprints revisions — was
-          // verified under the billing lock above, so replacing is not a lost update.
-          undefined,
+          // Compare-and-set against the revision read under the lock (null = the
+          // boundary was empty). Never an unconditional upsert.
+          update.expectedRevisionVersion === undefined ? null : update.expectedRevisionVersion,
         );
       }
       for (const configId of draft.removed_config_ids) {

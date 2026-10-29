@@ -69,6 +69,7 @@ const SNAPSHOT_TABLES = [
   'contract_line_buckets',
   'contract_line_bucket_services',
   'contract_line_unit_pricing_revisions',
+  'contract_line_unit_pricing_revision_history',
 ] as const;
 
 interface Seed {
@@ -100,6 +101,7 @@ describe.runIf(enabled)('saveContractLineEdit: one transaction per edit', () => 
 
   async function cleanupTenantRows() {
     for (const table of [
+      'contract_line_unit_pricing_revision_history',
       'contract_line_unit_pricing_revisions',
       'contract_line_bucket_services',
       'contract_line_buckets',
@@ -290,5 +292,80 @@ describe.runIf(enabled)('saveContractLineEdit: one transaction per edit', () => 
     expect(isContractLineConflict(second)).toBe(true);
     expect(await snapshot()).toBe(after);
     expect(syncSpy).not.toHaveBeenCalled();
+  });
+
+  it('a later member update that throws rolls back the line, the earlier member and everything else', async () => {
+    const before = await snapshot();
+    const original = ContractLineServiceConfigurationService.prototype.updateConfiguration;
+    let calls = 0;
+    const spy = vi.spyOn(ContractLineServiceConfigurationService.prototype, 'updateConfiguration')
+      .mockImplementation(async function (this: ContractLineServiceConfigurationService, ...args: any[]) {
+        calls += 1;
+        if (calls === 2) throw new Error('Configuration with ID later-member not found');
+        return (original as any).apply(this, args);
+      });
+    try {
+      const result = await saveContractLineEdit(seed.lineId, draft(await version(), {
+        line: { billing_timing: 'advance' },
+        members: [
+          { config_id: seed.fixedConfigId, service_id: seed.fixedServiceId, quantity: 6 },
+          { config_id: seed.hourlyConfigId, service_id: seed.hourlyServiceId, hourly_rate: 8000 },
+        ],
+      }));
+      expect(calls).toBe(2); // the first member really was written before the second failed
+      expect(result).toHaveProperty('actionError');
+    } finally {
+      spy.mockRestore();
+    }
+    expect(await snapshot()).toBe(before);
+    expect(syncSpy).not.toHaveBeenCalled();
+  });
+
+  describe('a revision already scheduled at the boundary', () => {
+    const BOUNDARY = '2027-01-01';
+    async function seedScheduledRevision() {
+      await db('contract_line_service_fixed_config').where({ tenant, config_id: seed.fixedConfigId })
+        .update({ pricing_basis: 'unit' });
+      await db('contract_line_unit_pricing_revisions').insert({
+        tenant, contract_line_id: seed.lineId, service_id: seed.fixedServiceId, config_id: seed.fixedConfigId,
+        quantity: 9, unit_rate_cents: 1700, effective_period_start: BOUNDARY, price_policy: 'override', version: 3,
+      });
+    }
+    const revisionRows = () => db('contract_line_unit_pricing_revisions').where({ tenant }).select('*');
+
+    it('is left untouched by a description-only edit that re-sends the displayed values', async () => {
+      await seedScheduledRevision();
+      const beforeRows = await revisionRows();
+      const result = await saveContractLineEdit(seed.lineId, draft(await version(), {
+        line: { invoice_line_description: 'Support and monitoring' },
+        // Exactly what the editor shows at the boundary: the scheduled values.
+        members: [
+          { config_id: seed.fixedConfigId, service_id: seed.fixedServiceId, quantity: 9, custom_rate: null, base_rate: 1700 },
+          { config_id: seed.hourlyConfigId, service_id: seed.hourlyServiceId, quantity: 1, custom_rate: null, hourly_rate: 9000 },
+        ],
+        effective_boundary: BOUNDARY,
+      }));
+      expect(result).toMatchObject({ status: 'saved', rematerialized: false });
+      const afterRows = await revisionRows();
+      expect(afterRows).toHaveLength(1);
+      expect(afterRows[0]).toEqual(beforeRows[0]); // same row, same version, same updated_at
+      expect(Number(afterRows[0].version)).toBe(3);
+      expect(await db('contract_line_unit_pricing_revision_history').where({ tenant }).count('* as n').first())
+        .toMatchObject({ n: '0' });
+      expect((await db('contract_lines').where({ tenant, contract_line_id: seed.lineId }).first()).invoice_line_description)
+        .toBe('Support and monitoring');
+    });
+
+    it('is replaced (compare-and-set on its version) when the user changed that member', async () => {
+      await seedScheduledRevision();
+      const result = await saveContractLineEdit(seed.lineId, draft(await version(), {
+        members: [{ config_id: seed.fixedConfigId, service_id: seed.fixedServiceId, quantity: 12, custom_rate: null, base_rate: 1700 }],
+        effective_boundary: BOUNDARY,
+      }));
+      expect(result).toMatchObject({ status: 'saved' });
+      const rows = await revisionRows();
+      expect(rows).toHaveLength(1);
+      expect([rows[0].quantity, Number(rows[0].version)]).toEqual([12, 4]);
+    });
   });
 });
