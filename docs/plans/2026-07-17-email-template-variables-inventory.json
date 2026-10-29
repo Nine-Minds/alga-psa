@@ -816,9 +816,9 @@
     {
      "templateName": "portal-invitation",
      "sourceFile": "server/migrations/utils/templates/email/auth/portalInvitation.cjs",
-     "subject": "Portal Invitation - {{clientName}}",
+     "subject": "Portal Invitation - {{tenantName}}",
      "conditionals": [
-      "clientName"
+      "tenantName"
      ],
      "variables": [
       {
@@ -832,10 +832,18 @@
       {
        "path": "clientName",
        "type": "string",
-       "description": "The client/company whose customer portal the recipient is being invited to.",
+       "description": "The recipient's own client company, named in the invitation intro.",
        "example": "Acme Corporation",
        "availability": "used",
-       "notes": "Used in subject, intro, and footer copyright. Also an {{#if clientName}} condition in the Polish subject."
+       "notes": "Used only in the intro sentence ('invited to access the customer portal for <clientName>'). Falls back to tenantName when the contact has no client."
+      },
+      {
+       "path": "tenantName",
+       "type": "string",
+       "description": "The MSP sending the invitation, shown in the subject and footer copyright.",
+       "example": "Northwind Managed Services",
+       "availability": "used",
+       "notes": "Assembled from the tenant's default client name. Used in subject, footer copyright, and the {{#if tenantName}} condition in the Polish subject."
       },
       {
        "path": "portalLink",
@@ -854,20 +862,36 @@
        "notes": "Used in the time-sensitive warning box and its text equivalent."
       },
       {
+       "path": "supportEmail",
+       "type": "string",
+       "description": "The MSP's support email, shown in the Need Assistance box and footer (also the email Reply-To).",
+       "example": "support@northwind.example",
+       "availability": "used",
+       "notes": "Assembled from tenant_settings.settings.supportEmail, falling back to the default client's location email. Defaults to 'Not provided' when neither is set. Used in contact-info Email, footerUnexpected, and text. Also passed as replyTo."
+      },
+      {
+       "path": "supportPhone",
+       "type": "string",
+       "description": "The MSP's support phone number, shown in the Need Assistance box.",
+       "example": "+1 (555) 010-1234",
+       "availability": "used",
+       "notes": "Assembled from tenant_settings.settings.supportPhone, falling back to the default client's location phone. Defaults to 'Not provided' when neither is set. Used in contact-info Phone and text."
+      },
+      {
        "path": "clientLocationEmail",
        "type": "string",
-       "description": "The client location's contact email, shown in the Need Assistance box and footer (also the email Reply-To).",
-       "example": "support@acme.com",
-       "availability": "used",
-       "notes": "Defaults to 'Not provided' when the caller omits it. Used in contact-info Email, footerUnexpected, and text. Also passed as replyTo."
+       "description": "Legacy alias of supportEmail, kept for template rows that predate the rename.",
+       "example": "support@northwind.example",
+       "availability": "available-unused",
+       "notes": "Still supplied with the same value as supportEmail so un-migrated template rows keep rendering, but no current template references it."
       },
       {
        "path": "clientLocationPhone",
        "type": "string",
-       "description": "The client location's contact phone number, shown in the Need Assistance box.",
+       "description": "Legacy alias of supportPhone, kept for template rows that predate the rename.",
        "example": "+1 (555) 010-1234",
-       "availability": "used",
-       "notes": "Defaults to 'Not provided' when the caller omits it. Used in contact-info Phone and text."
+       "availability": "available-unused",
+       "notes": "Still supplied with the same value as supportPhone so un-migrated template rows keep rendering, but no current template references it."
       },
       {
        "path": "currentYear",
@@ -3288,6 +3312,55 @@
        "description": "Subcategory; template uses categoryDetails instead.",
        "example": "Printer",
        "availability": "available-unused"
+      },
+      {
+       "path": "ticket.assetsHtml",
+       "type": "raw-html",
+       "description": "Pre-rendered HTML table of assets associated with the ticket (Asset Tag, Name, Serial #, Status, Relationship). Empty string when the ticket has no linked assets; guard with {{#if ticket.assetsHtml}}.",
+       "example": "<table style=\"border-collapse:collapse;width:100%;margin:0;font-size:13px;\"><thead><tr><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Asset Tag</th></tr></thead><tbody><tr><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">AST-0042</td></tr></tbody></table>",
+       "availability": "available-unused"
+      },
+      {
+       "path": "ticket.materialsHtml",
+       "type": "raw-html",
+       "description": "Pre-rendered HTML table of materials/services recorded on the ticket (Item, Qty, Rate, Amount, Billed). Empty string when none; guard with {{#if ticket.materialsHtml}}.",
+       "example": "<table style=\"border-collapse:collapse;width:100%;margin:0;font-size:13px;\"><thead><tr><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Item</th></tr></thead><tbody><tr><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">Toner cartridge</td></tr></tbody></table>",
+       "availability": "available-unused"
+      },
+      {
+       "path": "ticket.materialsTotal",
+       "type": "string",
+       "description": "Currency-formatted total of all material line amounts on the ticket (e.g. '$145.00'); '$0.00' when there are no materials.",
+       "example": "$145.00",
+       "availability": "available-unused"
+      },
+      {
+       "path": "ticket.timeHtml",
+       "type": "raw-html",
+       "description": "Pre-rendered HTML table of the ticket's time entries (Technician, Date in the tenant timezone, Worked, Billable). Empty string when none; guard with {{#if ticket.timeHtml}}.",
+       "example": "<table style=\"border-collapse:collapse;width:100%;margin:0;font-size:13px;\"><thead><tr><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Technician</th></tr></thead><tbody><tr><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">Jane Smith</td></tr></tbody></table>",
+       "availability": "available-unused"
+      },
+      {
+       "path": "ticket.totalTimeWorked",
+       "type": "string",
+       "description": "Total time worked on the ticket across all time entries (end-start interval), formatted like '3 hrs 30 min'.",
+       "example": "3 hrs 30 min",
+       "availability": "available-unused"
+      },
+      {
+       "path": "ticket.totalTimeBillable",
+       "type": "string",
+       "description": "Total billable time recorded on the ticket (sum of billable durations, which is 0 for non-billable entries), formatted like '2 hrs 15 min'.",
+       "example": "2 hrs 15 min",
+       "availability": "available-unused"
+      },
+      {
+       "path": "ticket.remainingBlockHours",
+       "type": "string",
+       "description": "The client's remaining prepaid hour-block balance at send time (active, non-expired blocks; already-allocated even time deducted), formatted like '12 hrs 45 min'. '0 hrs' when the client has no blocks.",
+       "example": "12 hrs 45 min",
+       "availability": "available-unused"
       }
      ]
     },
@@ -5156,7 +5229,7 @@
       "description": "Name shown as the sending organization in the footer / header.",
       "example": "Wolf River IT",
       "availability": "used",
-      "notes": "VARIANTS for the same slot: tenantClientName (auth email-verification, from tenants.client_name), clientName (auth password-reset footer, from the passed org), tenant_name (surveys, tenant.client_name||tenant.name, default 'Your Team'), company.name (invoices/billing MSP sender). These are NOT interchangeable across categories - see client block for the client-vs-MSP-company collision."
+      "notes": "VARIANTS for the same slot: tenantClientName (auth email-verification, from tenants.client_name), clientName (auth password-reset footer, from the passed org), tenantName (auth portal-invitation subject + footer, from the tenant's default client), tenant_name (surveys, tenant.client_name||tenant.name, default 'Your Team'), company.name (invoices/billing MSP sender). These are NOT interchangeable across categories - see client block for the client-vs-MSP-company collision."
      },
      {
       "path": "platformName",
@@ -5182,7 +5255,7 @@
       "description": "Support email address the recipient can reach out to (often also set as Reply-To).",
       "example": "support@acme-it.com",
       "availability": "used",
-      "notes": "VARIANTS: supportEmail (auth password-reset, also replyTo), clientLocationEmail (auth portal-invitation, defaults 'Not provided', also replyTo). Assembled-but-unused in new-appointment-request (staff template)."
+      "notes": "VARIANT: supportEmail (auth password-reset and auth portal-invitation, defaults 'Not provided', also replyTo). Assembled-but-unused in new-appointment-request (staff template)."
      },
      {
       "path": "contactPhone",
@@ -5190,7 +5263,7 @@
       "description": "Support phone number, shown only when provided.",
       "example": "+1 (555) 010-1234",
       "availability": "used",
-      "notes": "Optional; every appointment template guards it with {{#if contactPhone}}. VARIANT: clientLocationPhone (auth portal-invitation, defaults 'Not provided')."
+      "notes": "Optional; every appointment template guards it with {{#if contactPhone}}. VARIANT: supportPhone (auth portal-invitation, defaults 'Not provided')."
      }
     ]
    },

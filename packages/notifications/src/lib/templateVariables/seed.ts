@@ -2928,6 +2928,55 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "description": "Subcategory; template uses categoryDetails instead.",
             "example": "Printer",
             "availability": "available-unused"
+          },
+          {
+            "path": "ticket.assetsHtml",
+            "type": "raw-html",
+            "description": "Pre-rendered HTML table of assets associated with the ticket (Asset Tag, Name, Serial #, Status, Relationship). Empty string when the ticket has no linked assets; guard with {{#if ticket.assetsHtml}}.",
+            "example": "<table style=\"border-collapse:collapse;width:100%;margin:0;font-size:13px;\"><thead><tr><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Asset Tag</th></tr></thead><tbody><tr><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">AST-0042</td></tr></tbody></table>",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.materialsHtml",
+            "type": "raw-html",
+            "description": "Pre-rendered HTML table of materials/services recorded on the ticket (Item, Qty, Rate, Amount, Billed). Empty string when none; guard with {{#if ticket.materialsHtml}}.",
+            "example": "<table style=\"border-collapse:collapse;width:100%;margin:0;font-size:13px;\"><thead><tr><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Item</th></tr></thead><tbody><tr><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">Toner cartridge</td></tr></tbody></table>",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.materialsTotal",
+            "type": "string",
+            "description": "Currency-formatted total of all material line amounts on the ticket (e.g. '$145.00'); '$0.00' when there are no materials.",
+            "example": "$145.00",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.timeHtml",
+            "type": "raw-html",
+            "description": "Pre-rendered HTML table of the ticket's time entries (Technician, Date in the tenant timezone, Worked, Billable). Empty string when none; guard with {{#if ticket.timeHtml}}.",
+            "example": "<table style=\"border-collapse:collapse;width:100%;margin:0;font-size:13px;\"><thead><tr><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Technician</th></tr></thead><tbody><tr><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">Jane Smith</td></tr></tbody></table>",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.totalTimeWorked",
+            "type": "string",
+            "description": "Total time worked on the ticket across all time entries (end-start interval), formatted like '3 hrs 30 min'.",
+            "example": "3 hrs 30 min",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.totalTimeBillable",
+            "type": "string",
+            "description": "Total billable time recorded on the ticket (sum of billable durations, which is 0 for non-billable entries), formatted like '2 hrs 15 min'.",
+            "example": "2 hrs 15 min",
+            "availability": "available-unused"
+          },
+          {
+            "path": "ticket.remainingBlockHours",
+            "type": "string",
+            "description": "The client's remaining prepaid hour-block balance at send time (active, non-expired blocks; already-allocated even time deducted), formatted like '12 hrs 45 min'. '0 hrs' when the client has no blocks.",
+            "example": "12 hrs 45 min",
+            "availability": "available-unused"
           }
         ]
       },
