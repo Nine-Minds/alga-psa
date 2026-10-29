@@ -137,6 +137,30 @@ export function normalizeToMonthlyCents(amountCents: number, billingFrequency: s
   }
 }
 
+export type CanonicalRecurringFrequency = 'weekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
+
+/**
+ * Canonical cadence name, with the same cases {@link normalizeToMonthlyCents}
+ * recognises; null and unknown cadences are monthly (the storage default).
+ */
+export function canonicalRecurringFrequency(
+  billingFrequency: string | null | undefined,
+): CanonicalRecurringFrequency {
+  switch (billingFrequency) {
+    case 'weekly':
+      return 'weekly';
+    case 'quarterly':
+      return 'quarterly';
+    case 'semi-annually':
+    case 'semi_annually':
+      return 'semi-annually';
+    case 'annually':
+      return 'annually';
+    default:
+      return 'monthly';
+  }
+}
+
 /**
  * Un-normalized recurring amount of ONE billing period of a Fixed line that
  * holds product members: the effective line override when there is a real one,
@@ -204,7 +228,7 @@ export interface RecurringSummary {
 export function summarizeRecurringAmounts(amounts: ReadonlyArray<RecurringPeriodAmount>): RecurringSummary {
   const byFrequency = new Map<string, RecurringFrequencyGroup>();
   for (const amount of amounts) {
-    const frequency = amount.frequency || 'monthly';
+    const frequency = canonicalRecurringFrequency(amount.frequency);
     const group = byFrequency.get(frequency) ?? { frequency, periodCents: 0, monthlyCents: 0 };
     group.periodCents += amount.periodCents;
     group.monthlyCents += normalizeToMonthlyCents(amount.periodCents, frequency);

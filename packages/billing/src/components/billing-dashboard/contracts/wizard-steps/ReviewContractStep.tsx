@@ -29,7 +29,7 @@ import { FirstInvoiceNotice } from './FirstInvoiceNotice';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { meaningfulFixedLines } from '../../../../lib/contractWizardFixedLines';
 import {
-  fixedServicesRecurringTotalCents,
+  fixedLinePeriodCents,
   hasBundleFixedService,
   isUnitFixedService,
   unitFixedServiceAmountCents,
@@ -243,10 +243,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
   const recurringSummary = summarizeRecurringAmounts([
     ...fixedLines.map(
       (line): RecurringPeriodAmount => ({
-        periodCents:
-          line.services.length === 0
-            ? Number(line.base_rate ?? 0)
-            : fixedServicesRecurringTotalCents(line.services, line.base_rate),
+        periodCents: fixedLinePeriodCents(line),
         frequency: line.billing_frequency ?? data.billing_frequency,
       }),
     ),
@@ -281,12 +278,11 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
     monthly: 'per month',
     quarterly: 'per quarter',
     'semi-annually': 'per half-year',
-    semi_annually: 'per half-year',
     annually: 'per year',
   };
   const periodSuffix = (frequency: string) =>
     frequency in PERIOD_DEFAULTS
-      ? t(`wizardReview.total.perPeriod.${frequency.replace('_', '-')}`, { defaultValue: PERIOD_DEFAULTS[frequency] })
+      ? t(`wizardReview.total.perPeriod.${frequency}`, { defaultValue: PERIOD_DEFAULTS[frequency] })
       : formatBillingFrequency(frequency) || frequency;
   const perFrequencyText = (periodCents: number, frequency: string) =>
     t('wizardReview.total.perFrequency', {

@@ -56,6 +56,24 @@ describe('summarizeRecurringAmounts', () => {
     expect(s.groups).toEqual([{ frequency: 'monthly', periodCents: 600, monthlyCents: 600 }]);
   });
 
+  it('folds semi_annually and semi-annually into one group', () => {
+    const s = summarizeRecurringAmounts([
+      { periodCents: 600, frequency: 'semi_annually' },
+      { periodCents: 1200, frequency: 'semi-annually' },
+    ]);
+    expect(s.groups).toEqual([{ frequency: 'semi-annually', periodCents: 1800, monthlyCents: 300 }]);
+    expect(s.singleFrequency).toBe('semi-annually');
+  });
+
+  it('an unknown cadence joins the monthly group', () => {
+    const s = summarizeRecurringAmounts([
+      { periodCents: 100, frequency: 'biweekly-ish' },
+      { periodCents: 200, frequency: 'monthly' },
+    ]);
+    expect(s.groups).toEqual([{ frequency: 'monthly', periodCents: 300, monthlyCents: 300 }]);
+    expect(s.monthlyCents).toBe(100 + 200);
+  });
+
   it('drops zero-amount groups', () => {
     const s = summarizeRecurringAmounts([
       { periodCents: 0, frequency: 'annually' },
