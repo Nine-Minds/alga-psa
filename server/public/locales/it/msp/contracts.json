@@ -1695,6 +1695,9 @@
       "label": "Profilo di fatturazione",
       "none": "Usa il profilo predefinito del cliente",
       "hint": "Gli addebiti di questo contratto vengono fatturati a questo profilo, salvo override di una riga."
+    },
+    "billingTiming": {
+      "label": "Tempistica di fatturazione"
     }
   },
   "wizardFixed": {
@@ -1744,7 +1747,8 @@
       "recurringQuantityLabel": "Quantità ricorrente",
       "allocationQuantityLabel": "Quantità di allocazione",
       "noCurrencyPrice": "Nessun prezzo in {{currency}} nel catalogo. Inserisci una tariffa unitaria."
-    }
+    },
+    "billingTimingLabel": "Tempistica di fatturazione"
   },
   "wizardProducts": {
     "actions": {
@@ -1767,7 +1771,8 @@
       "productMissingPrice": "Questo prodotto non ha un prezzo predefinito né un override. Non può essere fatturato finché non inserisci un prezzo unitario.",
       "noCurrencyPriceEnterUnitPrice": "Nessun prezzo in {{currency}} nel catalogo. Inserisci un prezzo unitario.",
       "noCurrencyPriceWithLegacyHint": "Nessun prezzo in {{currency}} nel catalogo. Tariffa predefinita precedente: {{rate}}. Inserisci un prezzo unitario in {{currency}}."
-    }
+    },
+    "billingTimingLabel": "Tempistica di fatturazione"
   },
   "wizardHourly": {
     "actions": {
@@ -1825,7 +1830,8 @@
         "rolloverDisabled": "Disabilitato",
         "rolloverEnabled": "Abilitato"
       }
-    }
+    },
+    "billingTimingLabel": "Tempistica di fatturazione"
   },
   "wizardUsage": {
     "actions": {
@@ -1863,7 +1869,8 @@
     },
     "values": {
       "defaultUnit": "unità"
-    }
+    },
+    "billingTimingLabel": "Tempistica di fatturazione"
   },
   "wizardReview": {
     "heading": "Rivedi contratto",
@@ -2014,6 +2021,13 @@
       "neverExpires": "non scade mai",
       "cadenceSummary": "{{hours}} h per ogni periodo di fatturazione a {{price}}",
       "overageRate": "eccedenza {{rate}}/h"
+    },
+    "billingTiming": {
+      "label": "Tempistica di fatturazione:",
+      "advance": "Anticipata",
+      "arrears": "Posticipata",
+      "advanceInherited": "Anticipata (predefinito del contratto)",
+      "arrearsInherited": "Posticipata (predefinito del contratto)"
     }
   },
   "wizardTemplateLines": {
@@ -2795,7 +2809,11 @@
     "options": {
       "advance": "Anticipata (fattura a inizio periodo)",
       "arrears": "Posticipata (fattura a fine periodo)"
-    }
+    },
+    "inheritWithValue": "Usa il valore predefinito del contratto — {{timing}}",
+    "inheritedAdvance": "anticipata",
+    "inheritedArrears": "posticipata",
+    "contractDefaultHelp": "Valore predefinito per le righe a canone fisso, che possono essere fatturate in anticipo. Le righe a ore e a consumo sono sempre fatturate in posticipo, qualunque cosa scegli qui."
   },
   "contractDiscounts": {
     "title": "Sconti",

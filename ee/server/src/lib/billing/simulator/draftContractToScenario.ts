@@ -297,6 +297,8 @@ export async function draftContractToScenario(
             base_rate: null,
           }),
         ),
+        null,
+        { billing_timing: draft.product_billing_timing },
       ),
     );
   }

@@ -1695,6 +1695,9 @@
       "label": "Profil de facturation",
       "none": "Utiliser le profil par défaut du client",
       "hint": "Les charges de ce contrat sont facturées à ce profil, sauf si une ligne le remplace."
+    },
+    "billingTiming": {
+      "label": "Moment de facturation"
     }
   },
   "wizardFixed": {
@@ -1744,7 +1747,8 @@
       "recurringQuantityLabel": "Quantité récurrente",
       "allocationQuantityLabel": "Quantité d’allocation",
       "noCurrencyPrice": "Aucun prix en {{currency}} dans le catalogue. Saisissez un tarif unitaire."
-    }
+    },
+    "billingTimingLabel": "Moment de facturation"
   },
   "wizardProducts": {
     "actions": {
@@ -1767,7 +1771,8 @@
       "productMissingPrice": "Ce produit n'a ni prix par défaut ni prix de remplacement. Il ne peut pas être facturé tant que vous n'avez pas saisi de prix unitaire.",
       "noCurrencyPriceEnterUnitPrice": "Aucun prix en {{currency}} dans le catalogue. Saisissez un prix unitaire.",
       "noCurrencyPriceWithLegacyHint": "Aucun prix en {{currency}} dans le catalogue. Tarif par défaut hérité : {{rate}}. Saisissez un prix unitaire en {{currency}}."
-    }
+    },
+    "billingTimingLabel": "Moment de facturation"
   },
   "wizardHourly": {
     "actions": {
@@ -1825,7 +1830,8 @@
         "rolloverDisabled": "Désactivé",
         "rolloverEnabled": "Activé"
       }
-    }
+    },
+    "billingTimingLabel": "Moment de facturation"
   },
   "wizardUsage": {
     "actions": {
@@ -1863,7 +1869,8 @@
     },
     "values": {
       "defaultUnit": "unité"
-    }
+    },
+    "billingTimingLabel": "Moment de facturation"
   },
   "wizardReview": {
     "heading": "Vérifier le contrat",
@@ -2014,6 +2021,13 @@
       "neverExpires": "n'expire jamais",
       "cadenceSummary": "{{hours}} h par période de facturation pour {{price}}",
       "overageRate": "dépassement {{rate}}/h"
+    },
+    "billingTiming": {
+      "label": "Moment de facturation :",
+      "advance": "À l'avance",
+      "arrears": "À terme échu",
+      "advanceInherited": "À l'avance (valeur par défaut du contrat)",
+      "arrearsInherited": "À terme échu (valeur par défaut du contrat)"
     }
   },
   "wizardTemplateLines": {
@@ -2795,7 +2809,11 @@
     "options": {
       "advance": "À l’avance (facturer au début de la période)",
       "arrears": "À terme échu (facturer à la fin de la période)"
-    }
+    },
+    "inheritWithValue": "Utiliser la valeur par défaut du contrat — {{timing}}",
+    "inheritedAdvance": "à l'avance",
+    "inheritedArrears": "à terme échu",
+    "contractDefaultHelp": "Valeur par défaut pour les lignes forfaitaires, qui peuvent être facturées à l'avance. Les lignes horaires et d'utilisation sont toujours facturées à terme échu, quel que soit votre choix ici."
   },
   "contractDiscounts": {
     "title": "Remises",

@@ -9,6 +9,7 @@ import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContai
 import { getCurrencySymbol } from '@alga-psa/core';
 import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../ServiceCatalogPicker';
 import type { ContractWizardData } from '../ContractWizard';
+import { BillingTimingField } from '../BillingTimingField';
 import { Plus, X, Package } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -270,6 +271,24 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
             <Plus className="h-4 w-4" />
             {t('wizardProducts.actions.addProduct', { defaultValue: 'Add Product' })}
           </Button>
+
+          {data.product_services.length > 0 ? (
+            <div className="space-y-2">
+              <Label htmlFor="products-billing-timing" className="text-sm">
+                {t('wizardProducts.billingTimingLabel', { defaultValue: 'Billing Timing' })}
+              </Label>
+              <BillingTimingField
+                id="products-billing-timing"
+                lineType="Product"
+                value={data.product_billing_timing}
+                allowInherit
+                inheritedValue={data.billing_timing ?? 'arrears'}
+                onChange={(value) => updateData({ product_billing_timing: value })}
+                onInherit={() => updateData({ product_billing_timing: undefined })}
+                hideHelp
+              />
+            </div>
+          ) : null}
         </div>
       </div>
     </ReflectionContainer>

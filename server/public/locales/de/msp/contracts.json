@@ -1695,6 +1695,9 @@
       "label": "Abrechnungsprofil",
       "none": "Standardprofil des Kunden verwenden",
       "hint": "Positionen dieses Vertrags werden diesem Profil zugeordnet, sofern keine Vertragsposition dies überschreibt."
+    },
+    "billingTiming": {
+      "label": "Abrechnungszeitpunkt"
     }
   },
   "wizardFixed": {
@@ -1744,7 +1747,8 @@
       "recurringQuantityLabel": "Wiederkehrende Menge",
       "allocationQuantityLabel": "Zuordnungsmenge",
       "noCurrencyPrice": "Kein Preis in {{currency}} im Katalog. Geben Sie einen Stückpreis ein."
-    }
+    },
+    "billingTimingLabel": "Abrechnungszeitpunkt"
   },
   "wizardProducts": {
     "actions": {
@@ -1767,7 +1771,8 @@
       "productMissingPrice": "Dieses Produkt hat keinen Standardpreis und keine Überschreibung. Es kann nicht abgerechnet werden, bis Sie einen Einheitspreis eingeben.",
       "noCurrencyPriceEnterUnitPrice": "Kein {{currency}}-Preis im Katalog. Geben Sie einen Einzelpreis ein.",
       "noCurrencyPriceWithLegacyHint": "Kein {{currency}}-Preis im Katalog. Bisheriger Standardsatz: {{rate}}. Geben Sie einen Einzelpreis in {{currency}} ein."
-    }
+    },
+    "billingTimingLabel": "Abrechnungszeitpunkt"
   },
   "wizardHourly": {
     "actions": {
@@ -1825,7 +1830,8 @@
         "rolloverDisabled": "Deaktiviert",
         "rolloverEnabled": "Aktiviert"
       }
-    }
+    },
+    "billingTimingLabel": "Abrechnungszeitpunkt"
   },
   "wizardUsage": {
     "actions": {
@@ -1863,7 +1869,8 @@
     },
     "values": {
       "defaultUnit": "Einheit"
-    }
+    },
+    "billingTimingLabel": "Abrechnungszeitpunkt"
   },
   "wizardReview": {
     "heading": "Vertrag überprüfen",
@@ -2014,6 +2021,13 @@
       "neverExpires": "läuft nie ab",
       "cadenceSummary": "{{hours}} Std. je Abrechnungszeitraum für {{price}}",
       "overageRate": "Mehrverbrauch {{rate}}/Std."
+    },
+    "billingTiming": {
+      "label": "Abrechnungszeitpunkt:",
+      "advance": "Im Voraus",
+      "arrears": "Nachträglich",
+      "advanceInherited": "Im Voraus (Vertragsstandard)",
+      "arrearsInherited": "Nachträglich (Vertragsstandard)"
     }
   },
   "wizardTemplateLines": {
@@ -2795,7 +2809,11 @@
     "options": {
       "advance": "Im Voraus (zu Beginn des Zeitraums abrechnen)",
       "arrears": "Nachträglich (am Ende des Zeitraums abrechnen)"
-    }
+    },
+    "inheritWithValue": "Vertragsstandard verwenden — {{timing}}",
+    "inheritedAdvance": "Im Voraus",
+    "inheritedArrears": "Nachträglich",
+    "contractDefaultHelp": "Standard für Festpreispositionen, die im Voraus abgerechnet werden können. Stunden- und Nutzungspositionen werden unabhängig von dieser Auswahl immer nachträglich abgerechnet."
   },
   "contractDiscounts": {
     "title": "Rabatte",

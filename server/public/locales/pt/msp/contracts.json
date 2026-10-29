@@ -1695,6 +1695,9 @@
       "label": "Perfil de faturação",
       "none": "Utilizar o perfil predefinido do cliente",
       "hint": "Os encargos deste contrato são faturados neste perfil, salvo se uma linha o substituir."
+    },
+    "billingTiming": {
+      "label": "Momento de faturamento"
     }
   },
   "wizardFixed": {
@@ -1744,7 +1747,8 @@
       "recurringQuantityLabel": "Quantidade recorrente",
       "allocationQuantityLabel": "Quantidade de alocação",
       "noCurrencyPrice": "Sem preço em {{currency}} no catálogo. Informe uma tarifa unitária."
-    }
+    },
+    "billingTimingLabel": "Momento de faturamento"
   },
   "wizardProducts": {
     "actions": {
@@ -1767,7 +1771,8 @@
       "productMissingPrice": "Este produto não tem preço padrão nem substituição. Ele não pode ser cobrado até que você insira um preço unitário.",
       "noCurrencyPriceEnterUnitPrice": "Nenhum preço {{currency}} no catálogo. Insira um preço unitário.",
       "noCurrencyPriceWithLegacyHint": "Nenhum preço {{currency}} no catálogo. Taxa padrão herdada: {{rate}}. Insira um preço unitário em {{currency}}."
-    }
+    },
+    "billingTimingLabel": "Momento de faturamento"
   },
   "wizardHourly": {
     "actions": {
@@ -1825,7 +1830,8 @@
         "rolloverDisabled": "Desabilitado",
         "rolloverEnabled": "Habilitado"
       }
-    }
+    },
+    "billingTimingLabel": "Momento de faturamento"
   },
   "wizardUsage": {
     "actions": {
@@ -1863,7 +1869,8 @@
     },
     "values": {
       "defaultUnit": "unidade"
-    }
+    },
+    "billingTimingLabel": "Momento de faturamento"
   },
   "wizardReview": {
     "heading": "Revise o contrato",
@@ -2014,6 +2021,13 @@
       "neverExpires": "nunca expira",
       "cadenceSummary": "{{hours}} h por período de faturação por {{price}}",
       "overageRate": "excedente {{rate}}/h"
+    },
+    "billingTiming": {
+      "label": "Momento de faturamento:",
+      "advance": "Antecipado",
+      "arrears": "Pós-pago",
+      "advanceInherited": "Antecipado (padrão do contrato)",
+      "arrearsInherited": "Pós-pago (padrão do contrato)"
     }
   },
   "wizardTemplateLines": {
@@ -2795,7 +2809,11 @@
     "options": {
       "advance": "Antecipado (faturar no início do período)",
       "arrears": "Após o período (faturar no fim do período)"
-    }
+    },
+    "inheritWithValue": "Usar o padrão do contrato — {{timing}}",
+    "inheritedAdvance": "antecipado",
+    "inheritedArrears": "pós-pago",
+    "contractDefaultHelp": "Padrão para linhas fixas, que podem ser faturadas antecipadamente. Linhas por hora e de uso são sempre faturadas após o período, independentemente do que escolher aqui."
   },
   "contractDiscounts": {
     "title": "Descontos",

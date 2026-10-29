@@ -1699,6 +1699,9 @@
       "label": "Profil rozliczeniowy",
       "none": "Użyj domyślnego profilu klienta",
       "hint": "Opłaty z tej umowy są rozliczane w tym profilu, chyba że pozycja go zastąpi."
+    },
+    "billingTiming": {
+      "label": "Moment rozliczenia"
     }
   },
   "wizardFixed": {
@@ -1748,7 +1751,8 @@
       "recurringQuantityLabel": "Ilość cykliczna",
       "allocationQuantityLabel": "Ilość alokacji",
       "noCurrencyPrice": "Brak ceny w walucie {{currency}} w katalogu. Podaj stawkę jednostkową."
-    }
+    },
+    "billingTimingLabel": "Moment rozliczenia"
   },
   "wizardProducts": {
     "actions": {
@@ -1771,7 +1775,8 @@
       "productMissingPrice": "Ten produkt nie ma ceny domyślnej ani nadpisania. Nie można go rozliczać, dopóki nie wprowadzisz ceny jednostkowej.",
       "noCurrencyPriceEnterUnitPrice": "Brak ceny w {{currency}} w katalogu. Wprowadź cenę jednostkową.",
       "noCurrencyPriceWithLegacyHint": "Brak ceny w {{currency}} w katalogu. Starsza domyślna stawka: {{rate}}. Wprowadź cenę jednostkową w {{currency}}."
-    }
+    },
+    "billingTimingLabel": "Moment rozliczenia"
   },
   "wizardHourly": {
     "actions": {
@@ -1829,7 +1834,8 @@
         "rolloverDisabled": "Wyłączone",
         "rolloverEnabled": "Włączone"
       }
-    }
+    },
+    "billingTimingLabel": "Moment rozliczenia"
   },
   "wizardUsage": {
     "actions": {
@@ -1867,7 +1873,8 @@
     },
     "values": {
       "defaultUnit": "jednostka"
-    }
+    },
+    "billingTimingLabel": "Moment rozliczenia"
   },
   "wizardReview": {
     "heading": "Przejrzyj umowę",
@@ -2022,6 +2029,13 @@
       "expiresAfter_many": "wygasa po {{count}} miesiącach",
       "cadenceSummary": "{{hours}} godz. w każdym okresie rozliczeniowym za {{price}}",
       "overageRate": "nadwyżka {{rate}}/godz."
+    },
+    "billingTiming": {
+      "label": "Moment rozliczenia:",
+      "advance": "Z góry",
+      "arrears": "Z dołu",
+      "advanceInherited": "Z góry (domyślnie z umowy)",
+      "arrearsInherited": "Z dołu (domyślnie z umowy)"
     }
   },
   "wizardTemplateLines": {
@@ -2805,7 +2819,11 @@
     "options": {
       "advance": "Z góry (rozlicz na początku okresu)",
       "arrears": "Z dołu (rozlicz na końcu okresu)"
-    }
+    },
+    "inheritWithValue": "Użyj domyślnej wartości umowy — {{timing}}",
+    "inheritedAdvance": "z góry",
+    "inheritedArrears": "z dołu",
+    "contractDefaultHelp": "Domyślna wartość dla pozycji stałych, które mogą być rozliczane z góry. Pozycje godzinowe i według zużycia zawsze są rozliczane z dołu, niezależnie od tego wyboru."
   },
   "contractDiscounts": {
     "title": "Rabaty",

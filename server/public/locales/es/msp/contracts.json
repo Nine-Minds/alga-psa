@@ -1695,6 +1695,9 @@
       "label": "Perfil de facturación",
       "none": "Usar el perfil predeterminado del cliente",
       "hint": "Los cargos de este contrato se facturan a este perfil, salvo que una línea lo sustituya."
+    },
+    "billingTiming": {
+      "label": "Momento de facturación"
     }
   },
   "wizardFixed": {
@@ -1744,7 +1747,8 @@
       "recurringQuantityLabel": "Cantidad recurrente",
       "allocationQuantityLabel": "Cantidad de asignación",
       "noCurrencyPrice": "No hay precio en {{currency}} en el catálogo. Introduzca una tarifa unitaria."
-    }
+    },
+    "billingTimingLabel": "Momento de facturación"
   },
   "wizardProducts": {
     "actions": {
@@ -1767,7 +1771,8 @@
       "productMissingPrice": "Este producto no tiene precio predeterminado ni anulación. No se puede facturar hasta que ingrese un precio unitario.",
       "noCurrencyPriceEnterUnitPrice": "No hay precio en {{currency}} en el catálogo. Introduzca un precio unitario.",
       "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca un precio unitario en {{currency}}."
-    }
+    },
+    "billingTimingLabel": "Momento de facturación"
   },
   "wizardHourly": {
     "actions": {
@@ -1825,7 +1830,8 @@
         "rolloverDisabled": "Deshabilitado",
         "rolloverEnabled": "Habilitado"
       }
-    }
+    },
+    "billingTimingLabel": "Momento de facturación"
   },
   "wizardUsage": {
     "actions": {
@@ -1863,7 +1869,8 @@
     },
     "values": {
       "defaultUnit": "unidad"
-    }
+    },
+    "billingTimingLabel": "Momento de facturación"
   },
   "wizardReview": {
     "heading": "Revisar contrato",
@@ -2014,6 +2021,13 @@
       "neverExpires": "no caduca",
       "cadenceSummary": "{{hours}} h cada periodo de facturación por {{price}}",
       "overageRate": "exceso {{rate}}/h"
+    },
+    "billingTiming": {
+      "label": "Momento de facturación:",
+      "advance": "Por adelantado",
+      "arrears": "Por periodo vencido",
+      "advanceInherited": "Por adelantado (valor predeterminado del contrato)",
+      "arrearsInherited": "Por periodo vencido (valor predeterminado del contrato)"
     }
   },
   "wizardTemplateLines": {
@@ -2795,7 +2809,11 @@
     "options": {
       "advance": "Por adelantado (facturar al inicio del periodo)",
       "arrears": "Al vencimiento (facturar al final del periodo)"
-    }
+    },
+    "inheritWithValue": "Usar el valor predeterminado del contrato — {{timing}}",
+    "inheritedAdvance": "por adelantado",
+    "inheritedArrears": "por periodo vencido",
+    "contractDefaultHelp": "Valor predeterminado para las líneas fijas, que pueden facturarse por adelantado. Las líneas por horas y de uso siempre se facturan por periodo vencido, elijas lo que elijas aquí."
   },
   "contractDiscounts": {
     "title": "Descuentos",

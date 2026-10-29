@@ -1695,6 +1695,9 @@
       "label": "Facturatieprofiel",
       "none": "Standaardprofiel van de klant gebruiken",
       "hint": "Kosten uit dit contract worden aan dit profiel toegerekend, tenzij een regel dit overschrijft."
+    },
+    "billingTiming": {
+      "label": "Factureringsmoment"
     }
   },
   "wizardFixed": {
@@ -1744,7 +1747,8 @@
       "recurringQuantityLabel": "Terugkerende hoeveelheid",
       "allocationQuantityLabel": "Toewijzingshoeveelheid",
       "noCurrencyPrice": "Geen prijs in {{currency}} in de catalogus. Voer een eenheidstarief in."
-    }
+    },
+    "billingTimingLabel": "Factureringsmoment"
   },
   "wizardProducts": {
     "actions": {
@@ -1767,7 +1771,8 @@
       "productMissingPrice": "Dit product heeft geen standaardprijs en geen override. Het kan niet worden gefactureerd totdat u een prijs per eenheid invoert.",
       "noCurrencyPriceEnterUnitPrice": "Geen {{currency}}-prijs in de catalogus. Voer een eenheidsprijs in.",
       "noCurrencyPriceWithLegacyHint": "Geen {{currency}}-prijs in de catalogus. Verouderd standaardtarief: {{rate}}. Voer een eenheidsprijs in {{currency}} in."
-    }
+    },
+    "billingTimingLabel": "Factureringsmoment"
   },
   "wizardHourly": {
     "actions": {
@@ -1825,7 +1830,8 @@
         "rolloverDisabled": "Uitgeschakeld",
         "rolloverEnabled": "Ingeschakeld"
       }
-    }
+    },
+    "billingTimingLabel": "Factureringsmoment"
   },
   "wizardUsage": {
     "actions": {
@@ -1863,7 +1869,8 @@
     },
     "values": {
       "defaultUnit": "eenheid"
-    }
+    },
+    "billingTimingLabel": "Factureringsmoment"
   },
   "wizardReview": {
     "heading": "Contract controleren",
@@ -2014,6 +2021,13 @@
       "neverExpires": "verloopt nooit",
       "cadenceSummary": "{{hours}} u per factuurperiode voor {{price}}",
       "overageRate": "meerverbruik {{rate}}/u"
+    },
+    "billingTiming": {
+      "label": "Factureringsmoment:",
+      "advance": "Vooraf",
+      "arrears": "Achteraf",
+      "advanceInherited": "Vooraf (contractstandaard)",
+      "arrearsInherited": "Achteraf (contractstandaard)"
     }
   },
   "wizardTemplateLines": {
@@ -2795,7 +2809,11 @@
     "options": {
       "advance": "Vooraf (factureer aan het begin van de periode)",
       "arrears": "Achteraf (factureer aan het einde van de periode)"
-    }
+    },
+    "inheritWithValue": "Contractstandaard gebruiken — {{timing}}",
+    "inheritedAdvance": "vooraf",
+    "inheritedArrears": "achteraf",
+    "contractDefaultHelp": "Standaard voor vaste regels, die vooraf gefactureerd kunnen worden. Uren- en gebruiksregels worden altijd achteraf gefactureerd, wat je hier ook kiest."
   },
   "contractDiscounts": {
     "title": "Kortingen",

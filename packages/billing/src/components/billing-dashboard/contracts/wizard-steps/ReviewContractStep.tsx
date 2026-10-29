@@ -35,6 +35,7 @@ import {
   unitFixedServiceAmountCents,
 } from '../../../../lib/fixedServiceBasis';
 import { resolveFixedLineRecurringTotal } from '../../../../lib/billing/compute/recurringMemberRate';
+import { isAdvanceTimingAllowedForLineType, resolveEffectiveBillingTiming } from '@shared/billingClients/contractLineTimingRule';
 import { getServiceCatalogRatesForCurrency } from '@alga-psa/billing/actions/serviceActions';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
@@ -113,6 +114,21 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
       billingFrequency: line.billing_frequency ?? data.billing_frequency,
       enableProration: line.enable_proration,
     }, t);
+
+  // Same resolver the server uses. Hourly/usage lines are always arrears (never "inherited");
+  // others show where the value came from when the line has no timing of its own.
+  const reviewTimingLabel = (lineType: string, ownTiming: 'arrears' | 'advance' | undefined) => {
+    const effective = resolveEffectiveBillingTiming(lineType, ownTiming ?? data.billing_timing);
+    const inherited = ownTiming === undefined && isAdvanceTimingAllowedForLineType(lineType);
+    if (effective === 'advance') {
+      return inherited
+        ? t('wizardReview.billingTiming.advanceInherited', { defaultValue: 'In advance (contract default)' })
+        : t('wizardReview.billingTiming.advance', { defaultValue: 'In advance' });
+    }
+    return inherited
+      ? t('wizardReview.billingTiming.arrearsInherited', { defaultValue: 'In arrears (contract default)' })
+      : t('wizardReview.billingTiming.arrears', { defaultValue: 'In arrears' });
+  };
 
   const formatMinorCurrency = (minorUnits: number | null | undefined) => {
     const amount = minorUnits == null ? 0 : minorUnits;
@@ -595,6 +611,10 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
                     <strong>{t('wizardReview.recurring.cadenceOwner.label', { defaultValue: 'Cadence owner:' })}</strong>{' '}
                     {recurringCadenceOwnerLabel}
                   </p>
+                  <p>
+                    <strong>{t('wizardReview.billingTiming.label', { defaultValue: 'Billing timing:' })}</strong>{' '}
+                    {reviewTimingLabel('Fixed', line.billing_timing)}
+                  </p>
                   <FirstInvoiceNotice
                     id={lineIndex === 0 ? "contract-wizard-review-first-invoice" : `contract-wizard-review-first-invoice-${lineIndex}`}
                     cadenceOwner={data.cadence_owner}
@@ -697,6 +717,10 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
               </li>
             ))}
           </ul>
+          <p className="text-sm text-[rgb(var(--color-text-500))] mt-3" id="contract-wizard-review-products-timing">
+            <strong>{t('wizardReview.billingTiming.label', { defaultValue: 'Billing timing:' })}</strong>{' '}
+            {reviewTimingLabel('Product', data.product_billing_timing)}
+          </p>
         </Card>
       )}
 
@@ -725,6 +749,10 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             </Badge>
           </div>
           <div className="space-y-2 text-sm">
+            <p id="contract-wizard-review-hourly-timing" className="text-[rgb(var(--color-text-500))]">
+              <strong>{t('wizardReview.billingTiming.label', { defaultValue: 'Billing timing:' })}</strong>{' '}
+              {reviewTimingLabel('Hourly', undefined)}
+            </p>
             <div>
               <p className="text-[rgb(var(--color-text-500))] mb-1">
                 {t('wizardReview.hourly.servicesAndRates', { defaultValue: 'Services and Rates' })}
@@ -895,6 +923,10 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             </Badge>
           </div>
           <div className="space-y-2 text-sm">
+            <p id="contract-wizard-review-usage-timing" className="text-[rgb(var(--color-text-500))]">
+              <strong>{t('wizardReview.billingTiming.label', { defaultValue: 'Billing timing:' })}</strong>{' '}
+              {reviewTimingLabel('Usage', undefined)}
+            </p>
             <ul className="list-disc list-inside space-y-1 ml-2">
               {(data.usage_services || []).map((service, idx) => (
                 <li key={idx} className="space-y-1">

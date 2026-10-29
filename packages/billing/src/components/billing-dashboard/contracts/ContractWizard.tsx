@@ -203,6 +203,8 @@ export interface ContractWizardData {
   fixed_lines: ContractWizardFixedLine[];
   /** Server monthly fixed value of the saved draft being resumed; acknowledged on finalize if it changes. */
   recurring_baseline?: { monthly_cents: number };
+  /** The products line's own billing timing; undefined inherits `billing_timing`. */
+  product_billing_timing?: "arrears" | "advance";
   product_services: Array<{
     service_id: string;
     service_name?: string;
@@ -754,6 +756,7 @@ export function ContractWizard({
         // In template mode the template's lines are cloned server-side.
         fixed_lines: wizardData.template_id ? [] : projectFixedLinesForSubmission(wizardData.fixed_lines ?? []),
         product_services: wizardData.product_services ?? [],
+        product_billing_timing: wizardData.product_billing_timing,
         usage_services: (wizardData.usage_services ?? []).map(withoutLegacyBucketOverlay),
         usage_billing_frequency: wizardData.usage_billing_frequency,
         minimum_billable_time: wizardData.minimum_billable_time,
@@ -807,7 +810,7 @@ export function ContractWizard({
         ? getUnsupportedRecurringAuthoringCombination({
             lineType: "Product",
             cadenceOwner: wizardData.cadence_owner,
-            billingTiming: wizardData.billing_timing,
+            billingTiming: wizardData.product_billing_timing ?? wizardData.billing_timing,
             billingFrequency: wizardData.billing_frequency,
           })
         : null,
