@@ -447,7 +447,14 @@
     "bcc": "Hemlig kopia",
     "ccBccInvalid": "Rätta de markerade adresserna innan du skickar.",
     "ccBccTooMany": "Högst {{max}} mottagare med kopia och hemlig kopia kan kopieras på en kommentar.",
-    "ccBccNotSentOnInternal": "Kopia och hemlig kopia skickas inte med en intern anteckning. Stäng av Intern för att använda dem."
+    "ccBccNotSentOnInternal": "Kopia och hemlig kopia skickas inte med en intern anteckning. Stäng av Intern för att använda dem.",
+    "audience": {
+      "requester": "Beställare",
+      "sharedIt": "Delad IT",
+      "organizationPrivate": "Privat för organisationen",
+      "placeholder": "Vem kan se detta?",
+      "required": "Välj vem som kan se kommentaren innan du publicerar den."
+    }
   },
   "responseState": {
     "awaitingYourResponse": "Väntar på ditt svar",
@@ -1731,6 +1738,9 @@
       "templateRulesTargetOtherClients": "Några av mallens regler för automatisk tillämpning riktar sig mot andra kunder. Ta bort de kunderna från reglerna innan du kopplar mallen till en kund.",
       "predicateClientOutsideScope": "Kunden {{client}} ligger utanför mallens omfattning.",
       "predicateInvalid": "Ogiltig checklistregel: {{detail}}"
+    },
+    "comment": {
+      "audienceRequired": "Välj vem som kan se kommentaren innan du publicerar den."
     }
   },
   "ticketSection": {

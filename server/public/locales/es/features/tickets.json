@@ -439,7 +439,14 @@
     "bcc": "Cco",
     "ccBccInvalid": "Corrige las direcciones resaltadas antes de enviar.",
     "ccBccTooMany": "Como máximo se pueden copiar {{max}} destinatarios Cc y Cco en un comentario.",
-    "ccBccNotSentOnInternal": "Cc y Cco no se envían con una nota interna. Desactiva Interna para usarlos."
+    "ccBccNotSentOnInternal": "Cc y Cco no se envían con una nota interna. Desactiva Interna para usarlos.",
+    "audience": {
+      "requester": "Solicitante",
+      "sharedIt": "TI compartida",
+      "organizationPrivate": "Privado de la organización",
+      "placeholder": "¿Quién puede ver esto?",
+      "required": "Elige quién puede ver este comentario antes de publicarlo."
+    }
   },
   "responseState": {
     "awaitingYourResponse": "Esperando su respuesta",
@@ -1723,6 +1730,9 @@
       "templateRulesTargetOtherClients": "Algunas reglas de aplicación automática de esta plantilla se dirigen a otros clientes. Quite esos clientes de las reglas antes de asignar la plantilla a un cliente.",
       "predicateClientOutsideScope": "El cliente {{client}} está fuera del alcance de esta plantilla.",
       "predicateInvalid": "Regla de lista de verificación no válida: {{detail}}"
+    },
+    "comment": {
+      "audienceRequired": "Elige quién puede ver este comentario antes de publicarlo."
     }
   },
   "ticketSection": {

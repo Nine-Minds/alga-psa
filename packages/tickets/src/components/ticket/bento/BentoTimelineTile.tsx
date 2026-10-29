@@ -1,5 +1,7 @@
 'use client';
 
+import { useCapability } from '@alga-psa/ui/hooks/useCapability';
+import { CommentAudienceSelect, audienceIsInternal, type ComposerAudience } from '../CommentAudienceControl';
 import React, { use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { PartialBlock } from '@blocknote/core';
@@ -103,6 +105,7 @@ interface BentoTimelineTileProps {
     options?: TicketNotificationSuppressionValue,
     schedule?: { publishAt: string; timeZone: string } | null,
     emailRecipients?: CommentEmailRecipientsPayload,
+    audienceId?: ComposerAudience | null,
   ) => Promise<boolean>;
   closedStatusOptions?: { value: string; label: string }[];
   /** Threaded reply pipeline (same handler the conversation view gets). */
@@ -476,6 +479,15 @@ export function BentoTimelineTile({
   // Visibility and resolution are independent, same as the legacy composer: an
   // internal note can also be the resolution.
   const [composerVisibility, setComposerVisibility] = useState<'client' | 'internal'>(defaultReplyInternal ? 'internal' : 'client');
+  // Co-managed workspaces replace the Client/Internal lane switch with a required audience
+  // choice (no default; send stays blocked until the author picks one).
+  const { enabled: coManagedEnabled } = useCapability('co-managed');
+  const [composerAudience, setComposerAudience] = useState<ComposerAudience | null>(null);
+  const audienceMissing = coManagedEnabled && composerAudience == null;
+  const handleAudienceChange = useCallback((next: ComposerAudience) => {
+    setComposerAudience(next);
+    setComposerVisibility(audienceIsInternal(next) ? 'internal' : 'client');
+  }, []);
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
   const [isScheduleToggle, setIsScheduleToggle] = useState(false);
   const [scheduledPublishAt, setScheduledPublishAt] = useState<Date | undefined>(undefined);
@@ -528,10 +540,12 @@ export function BentoTimelineTile({
   }, []);
 
   const openComposer = useCallback((placement: 'top' | 'bottom') => {
-    if (!showComposer && defaultReplyInternal) setComposerVisibility('internal');
+    if (coManagedEnabled) {
+      if (!showComposer) { setComposerAudience(null); setComposerVisibility('client'); }
+    } else if (!showComposer && defaultReplyInternal) setComposerVisibility('internal');
     setComposerPlacement(placement);
     setShowComposer(true);
-  }, [showComposer, defaultReplyInternal]);
+  }, [showComposer, defaultReplyInternal, coManagedEnabled]);
 
   const { deleteDocument } = useDocumentsCrossFeature();
   const composeUploadSession = useTicketRichTextUploadSession({
@@ -771,6 +785,8 @@ export function BentoTimelineTile({
         ? resolutionCloseStatusId
         : null;
     if (composeUploadSession.isUploading) return;
+    // Fail closed: a co-managed comment with no audience is never sent.
+    if (audienceMissing) return false;
     const success = await onAddNewComment(
       composerVisibility === 'internal',
       isResolution,
@@ -783,8 +799,11 @@ export function BentoTimelineTile({
         : null,
       // Never sent with an internal note, even though the draft is kept.
       allowEmailRecipients && composerVisibility !== 'internal' ? emailRecipients.payload : undefined,
+      ...(coManagedEnabled ? [composerAudience] as const : []),
     );
+    // An unconfirmed publish (false) leaves the composer, draft and audience untouched.
     if (success) {
+      setComposerAudience(null);
       emailRecipients.reset();
       setHasDraft(false);
       setComposeHasContent(false);
@@ -797,7 +816,7 @@ export function BentoTimelineTile({
       composeUploadSession.resetDraftTracking();
     }
     return success;
-  }, [composeUploadSession.isUploading, onAddNewComment, composerVisibility, isResolutionToggle, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession, allowEmailRecipients, emailRecipients]);
+  }, [composeUploadSession.isUploading, onAddNewComment, composerVisibility, audienceMissing, coManagedEnabled, composerAudience, isResolutionToggle, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession, allowEmailRecipients, emailRecipients]);
 
   // The composer remounts empty after a successful submit (editorKey bump).
   useEffect(() => {
@@ -932,6 +951,14 @@ export function BentoTimelineTile({
         autoFocus
       />
       <div className="flex items-center gap-2 mt-2">
+        {coManagedEnabled ? (
+          <CommentAudienceSelect
+            id={`${id}-composer-audience`}
+            value={composerAudience}
+            onChange={handleAudienceChange}
+            disabled={isSubmitting}
+          />
+        ) : (
         <div
           role="group"
           aria-label={t('bento.timeline.replyVisibility', 'Reply visibility')}
@@ -959,6 +986,7 @@ export function BentoTimelineTile({
             </button>
           ))}
         </div>
+        )}
         <div className="flex items-center gap-2">
           <Switch
             id={`${id}-composer-resolution-toggle`}
@@ -990,6 +1018,7 @@ export function BentoTimelineTile({
             || composeUploadSession.isUploading
             || !hasDraft
             || !scheduleIsValid
+            || audienceMissing
             || (allowEmailRecipients && composerVisibility !== 'internal' && emailRecipients.hasErrors)
           }
         >

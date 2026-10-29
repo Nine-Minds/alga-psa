@@ -439,7 +439,14 @@
     "bcc": "Cci",
     "ccBccInvalid": "Corrigez les adresses signalées avant d’envoyer.",
     "ccBccTooMany": "Au maximum {{max}} destinataires Cc et Cci peuvent être copiés sur un commentaire.",
-    "ccBccNotSentOnInternal": "Cc et Cci ne sont pas envoyés avec une note interne. Désactivez Interne pour les utiliser."
+    "ccBccNotSentOnInternal": "Cc et Cci ne sont pas envoyés avec une note interne. Désactivez Interne pour les utiliser.",
+    "audience": {
+      "requester": "Demandeur",
+      "sharedIt": "Informatique partagée",
+      "organizationPrivate": "Privé à l'organisation",
+      "placeholder": "Qui peut voir ceci ?",
+      "required": "Choisissez qui peut voir ce commentaire avant de le publier."
+    }
   },
   "responseState": {
     "awaitingYourResponse": "En attente de votre réponse",
@@ -1723,6 +1730,9 @@
       "templateRulesTargetOtherClients": "Certaines règles d'application automatique de ce modèle ciblent d'autres clients. Retirez ces clients des règles avant d'attribuer le modèle à un client.",
       "predicateClientOutsideScope": "Le client {{client}} est hors du périmètre de ce modèle.",
       "predicateInvalid": "Règle de liste de contrôle non valide : {{detail}}"
+    },
+    "comment": {
+      "audienceRequired": "Choisissez qui peut voir ce commentaire avant de le publier."
     }
   },
   "ticketSection": {

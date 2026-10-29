@@ -439,7 +439,14 @@
     "bcc": "Bcc",
     "ccBccInvalid": "Korrigieren Sie die markierten Adressen, bevor Sie senden.",
     "ccBccTooMany": "Es können höchstens {{max}} Cc- und Bcc-Empfänger pro Kommentar kopiert werden.",
-    "ccBccNotSentOnInternal": "Cc und Bcc werden bei einer internen Notiz nicht gesendet. Deaktivieren Sie „Intern“, um sie zu verwenden."
+    "ccBccNotSentOnInternal": "Cc und Bcc werden bei einer internen Notiz nicht gesendet. Deaktivieren Sie „Intern“, um sie zu verwenden.",
+    "audience": {
+      "requester": "Anfragender",
+      "sharedIt": "Gemeinsame IT",
+      "organizationPrivate": "Nur Organisation",
+      "placeholder": "Wer kann das sehen?",
+      "required": "Wählen Sie vor dem Senden aus, wer diesen Kommentar sehen kann."
+    }
   },
   "responseState": {
     "awaitingYourResponse": "Warten auf Ihre Antwort",
@@ -1723,6 +1730,9 @@
       "templateRulesTargetOtherClients": "Einige Regeln für automatische Anwendung dieser Vorlage zielen auf andere Kunden. Entfernen Sie diese Kunden aus den Regeln, bevor Sie die Vorlage einem Kunden zuordnen.",
       "predicateClientOutsideScope": "Kunde {{client}} liegt außerhalb des Geltungsbereichs dieser Vorlage.",
       "predicateInvalid": "Ungültige Checklistenregel: {{detail}}"
+    },
+    "comment": {
+      "audienceRequired": "Wählen Sie vor dem Senden aus, wer diesen Kommentar sehen kann."
     }
   },
   "ticketSection": {

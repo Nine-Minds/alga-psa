@@ -447,7 +447,14 @@
     "bcc": "Bcc",
     "ccBccInvalid": "Fix the highlighted addresses before sending.",
     "ccBccTooMany": "At most {{max}} Cc and Bcc recipients can be copied on one comment.",
-    "ccBccNotSentOnInternal": "Cc and Bcc are not sent with an internal note. Turn Internal off to use them."
+    "ccBccNotSentOnInternal": "Cc and Bcc are not sent with an internal note. Turn Internal off to use them.",
+    "audience": {
+      "requester": "Requester",
+      "sharedIt": "Shared IT",
+      "organizationPrivate": "Organization private",
+      "placeholder": "Who can see this?",
+      "required": "Choose who can see this comment before posting it."
+    }
   },
   "responseState": {
     "awaitingYourResponse": "Awaiting Your Response",
@@ -1731,6 +1738,9 @@
       "templateRulesTargetOtherClients": "Some of this template's auto-apply rules target other clients. Remove those clients from the rules before assigning the template to one client.",
       "predicateClientOutsideScope": "Client {{client}} is outside this template’s ownership.",
       "predicateInvalid": "Invalid checklist rule: {{detail}}"
+    },
+    "comment": {
+      "audienceRequired": "Choose who can see this comment before posting it."
     }
   },
   "ticketSection": {
