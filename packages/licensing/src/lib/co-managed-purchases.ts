@@ -82,6 +82,7 @@ export async function runCoManagedPurchase(db: Knex, input: {
       if (input.quantity < await allocatedSeats(trx, input.sponsorTenant)) {
         throw new CoManagedPurchaseError('ALLOCATED_CAPACITY_REQUIRED');
       }
+      // write-admission: exempt — sponsor purchase operation lifecycle owned by licensing
       await scoped.table('co_managed_purchase_operations').insert({ tenant: input.sponsorTenant,
         operation_id: input.operationId, quantity: input.quantity, state: 'preparing' });
     });
@@ -120,6 +121,7 @@ export async function runCoManagedPurchase(db: Knex, input: {
           revision: trx.raw('revision + 1'), updated_at: trx.fn.now() });
       }
     }
+    // write-admission: exempt — sponsor purchase operation lifecycle owned by licensing
     await scoped.table('co_managed_purchase_operations').where('operation_id', input.operationId).update({
       state: result.kind === 'checkout' ? 'checkout' : result.kind === 'expired' ? 'expired' : 'completed',
       provider_reference: result.kind === 'checkout' ? result.sessionId : result.kind === 'updated' ? result.subscriptionId : null,
