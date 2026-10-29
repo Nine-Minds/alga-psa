@@ -2893,6 +2893,10 @@ export class TicketService extends BaseService<ITicket> {
         throw new ValidationError('System-generated comments cannot be edited');
       }
 
+      if (comment.actor_reference_id) {
+        throw new ValidationError('Qualified comment authors require a collaboration command');
+      }
+
       let operatorRepair = false;
       if (comment.user_id !== context.userId) {
         // Fail closed: the operator path requires a loaded caller user record

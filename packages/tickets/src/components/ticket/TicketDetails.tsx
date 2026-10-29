@@ -91,6 +91,7 @@ import type { TicketDetailLayout } from '../../actions/ticketLayoutPreference';
 import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTicketLiveContext } from './TicketLiveProvider';
+import type { TicketLiveRemoteUpdate } from '../../hooks/useTicketLive';
 import { runTicketRefresh, useTicketDataSource } from './TicketDataSourceContext';
 import { resolveTicketFrozenFields, resolveTicketTimeWorkItem } from '../../lib/ticketDataSource';
 import { buildTicketTimeEntryContext } from '../../lib/timeEntryContext';
@@ -910,11 +911,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const ticketInfoDirtyFieldsRef = useRef<string[]>([]);
     const ticketPropertiesDirtyFieldsRef = useRef<string[]>([]);
     const pendingLiveNetworkFieldsRef = useRef<Set<string>>(new Set());
-    const pendingRemoteUpdateRef = useRef<{
-        updatedFields: string[];
-        updatedBy: { userId: string; displayName: string };
-        updatedAt: string;
-    } | null>(null);
+    const pendingRemoteUpdateRef = useRef<TicketLiveRemoteUpdate | null>(null);
     const remoteUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
     const liveHighlightTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
 
@@ -1262,7 +1259,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     }, [getLiveFieldLabel, highlightLiveFields, refreshTicketSnapshot, t]);
 
-    const queueRemoteUpdate = useCallback((update: { updatedFields: string[]; updatedBy: { userId: string; displayName: string }; updatedAt: string }) => {
+    const queueRemoteUpdate = useCallback((update: TicketLiveRemoteUpdate) => {
         const currentPendingUpdate = pendingRemoteUpdateRef.current;
 
         pendingRemoteUpdateRef.current = currentPendingUpdate

@@ -1,5 +1,7 @@
 import { isInteractiveUserType } from '@alga-psa/types';
 
+import { readTicketNotificationActor, resolveTicketNotificationActorNames, userDisplayName } from '../../notifications/ticketNotificationContext';
+
 import { readAssignedTeamId } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getEventBus } from '../index';
@@ -78,19 +80,6 @@ function shouldCreateTicketCommentNotification(
   return recipientType === 'internal'
     ? shouldCreateStaffTicketNotification(suppression)
     : shouldCreateContactPortalTicketNotification(suppression);
-}
-
-/**
- * Display name for a users row, or `fallback` when the row is missing or has no
- * usable name (a null first/last name must not render as "null null").
- */
-// LEVERAGE: pattern user-display-name — `${u.first_name} ${u.last_name}` is repeated across handlers in this file
-function userDisplayName(
-  user: { first_name?: string | null; last_name?: string | null } | null | undefined,
-  fallback: string
-): string {
-  const name = user ? `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() : '';
-  return name || fallback;
 }
 
 /**
@@ -908,7 +897,7 @@ async function handleProjectTaskAdditionalAgentAssigned(
  */
 async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
   const { payload } = event;
-  const { tenantId, ticketId, userId, changes } = payload;
+  const { tenantId, ticketId, changes } = payload;
   const suppression = resolveTicketNotificationSuppression(payload);
 
   try {
@@ -924,23 +913,20 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
       return;
     }
 
-    // Get user who made the change. userId is absent when nobody acted (system/contact
-    // actor); an undefined .where() value throws, so only look it up when present.
-    const performedByUser = userId
-      ? await tenantScopedTable(db, 'users', tenantId)
-          .select('user_id', 'first_name', 'last_name')
-          .where('user_id', userId)
-          .first()
-      : null;
-
-    const performedByName = userDisplayName(performedByUser, userId ? 'Someone' : 'System');
+    // userId is absent when nobody acted (system/contact actor) or a co-managed
+    // collaborator acted; the actor's snapshot then names them, never a local lookup.
+    const actor = readTicketNotificationActor(payload, tenantId, payload.userId);
+    const userId = actor.userId;
+    const [performedByName] = await resolveTicketNotificationActorNames(db, tenantId, [actor],
+      userId || actor.actorReference ? 'Someone' : 'System');
 
     // Build metadata with change details
     const metadata: Record<string, any> = {
       ticketId: ticket.ticket_number || 'New Ticket',
       ticketTitle: ticket.title,
       performedByName,
-      ...(userId ? { performedById: userId } : {})
+      ...(userId ? { performedById: userId } : {}),
+      ...(actor.actorReference ? { performedByActorReference: actor.actorReference } : {})
     };
 
     // Process changes to get human-readable names
@@ -1129,16 +1115,9 @@ async function handleTicketClosed(event: TicketClosedEvent, opts?: InternalNotif
       return;
     }
 
-    // Get user who closed the ticket
-    const userId = payload.userId || '';
-
-    // Get user who closed it for the notification
-    const performedByUser = userId ? await tenantScopedTable(db, 'users', tenantId)
-      .select('first_name', 'last_name')
-      .where('user_id', userId)
-      .first() : null;
-
-    const performedByName = userDisplayName(performedByUser, 'Someone');
+    const actor = readTicketNotificationActor(payload, tenantId, payload.userId);
+    const userId = actor.userId;
+    const [performedByName] = await resolveTicketNotificationActorNames(db, tenantId, [actor], 'Someone');
 
     // Resolve links for both MSP and client portal
     const { internalUrl, portalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -1169,7 +1148,8 @@ async function handleTicketClosed(event: TicketClosedEvent, opts?: InternalNotif
             data: {
               ticketId: ticket.ticket_number || 'New Ticket',
               ticketTitle: ticket.title,
-              closedByName: performedByName
+              closedByName: performedByName,
+              ...(actor.actorReference ? { closedByActorReference: actor.actorReference } : {})
             }
           });
           notifiedUserIds.add(assigneeId);
@@ -1753,7 +1733,9 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
  */
 async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
   const { payload } = event;
-  const { tenantId, ticketId, userId, comment } = payload;
+  const { tenantId, ticketId, comment } = payload;
+  const actor = readTicketNotificationActor(payload, tenantId, payload.userId);
+  const userId = actor.userId;
   const suppression = resolveTicketNotificationSuppression(payload);
 
   console.log('[InternalNotificationSubscriber] handleTicketCommentAdded START', {
@@ -1777,17 +1759,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
       return;
     }
 
-    // Get author name. userId is absent for inbound-email/system comments.
-    const author = userId
-      ? await tenantScopedTable(db, 'users', tenantId)
-          .select('first_name', 'last_name')
-          .where('user_id', userId)
-          .first()
-      : null;
-
     // No user row means a system/contact actor (inbound email); the payload
     // already carries the real sender identity, so prefer it over 'Someone'.
-    const authorName = userDisplayName(author, usableDisplayName(comment?.author) || (userId ? 'Someone' : 'System'));
+    const [authorName] = await resolveTicketNotificationActorNames(db, tenantId, [actor],
+      usableDisplayName(comment?.author) || (userId || actor.actorReference ? 'Someone' : 'System'));
 
     // Extract comment text preview from BlockNote content
     let commentPreview = '';
@@ -1868,6 +1843,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
                 commentPreview: commentPreview,
                 commentAuthor: authorName,
                 ...(userId ? { commentAuthorId: userId } : {}),
+                ...(actor.actorReference ? { commentActorReference: actor.actorReference } : {}),
                 contextType: 'ticket',
                 contextId: ticketId
               }
@@ -1919,6 +1895,8 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
                 text: commentPreview,
                 author: authorName,
                 ...(userId ? { authorId: userId } : {}),
+              ...(actor.actorReference ? { actorReference: actor.actorReference } : {}),
+                ...(actor.actorReference ? { actorReference: actor.actorReference } : {}),
                 isInternal: false
               }
             }

@@ -46,6 +46,7 @@ import {
   getCommentsReactionsBatch,
 } from '../../../actions/comment-actions/commentReactionActions';
 import { resolveCommentAuthor, type CommentUserAuthor, type CommentContactAuthor } from '../../../lib/commentAuthorResolution';
+import { ticketActivityAttribution } from '../../../lib/ticketActivityAttribution';
 import type { TicketReactionsBootstrap } from '../../../lib/ticketScreenBootstrap';
 import { filterHiddenNoiseComments } from '../../../lib/commentNoise';
 import { BentoTile, BentoTileEmpty, BentoTileEmptyScope } from '@alga-psa/ui/components/bento/BentoTile';
@@ -248,7 +249,7 @@ function eventLabel(eventType: string, t: Translator): string {
 export function describeSystemEntry(entry: TicketTimelineEntry, t: Translator): string {
   const activity = entry.activity;
   if (!activity) return t('bento.timeline.ticketUpdated', 'Ticket updated');
-  const actor = activity.actor_display_name || t('bento.timeline.systemActor', 'System');
+  const actor = ticketActivityAttribution(activity) || t('bento.timeline.systemActor', 'System');
 
   // Bundle propagation carries its own outcome in `details`; a bare event label
   // ("bundle status propagated") cannot say whether children were touched.

@@ -37,6 +37,7 @@ import type { BoardCategoryData } from '../../../actions/ticketCategoryActions';
 import { useRegisterUnsavedChanges, useOptionalActivityCrossFeature } from '@alga-psa/ui/context';
 import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
 import { buildTicketAssignmentKey } from '../../../lib/ticketAssignmentKey';
+import { unresolvedAssigneeLabel } from '../../../lib/assigneeDisplay';
 import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
@@ -1096,7 +1097,12 @@ export function BentoHero({
                 buttonWidth="full"
                 className="min-w-0 flex-1"
                 size="sm"
-                placeholder={t('bento.hero.notAssigned', 'Not assigned')}
+                placeholder={unresolvedAssigneeLabel({
+                  savedAssigneeId: ticket.assigned_to,
+                  savedAssigneeName: ticket.assigned_to_name,
+                  currentValue: displayValue('assigned_to'),
+                  selectableUserIds: availableAgents.map((user) => user.user_id),
+                }) ?? t('bento.hero.notAssigned', 'Not assigned')}
                 disabled={workflowLocked || isFrozen('assigned_to')}
               />
               {assignedTeam ? (
