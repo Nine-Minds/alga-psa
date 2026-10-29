@@ -115,9 +115,9 @@ Ticket webhooks support these event types in v1:
 
 ### Notification Suppression
 
-`ticket.updated`, `ticket.assigned`, and `ticket.closed` payloads carry two
-boolean flags that reflect whether notifications were suppressed when the
-operation was performed:
+`ticket.created`, `ticket.updated`, `ticket.assigned`, and `ticket.closed`
+payloads carry two boolean flags that reflect whether notifications were
+suppressed when the operation was performed:
 
 | Field | Type | Default | Meaning |
 | --- | --- | --- | --- |
@@ -190,6 +190,8 @@ Every outbound webhook is delivered as JSON:
     "priority_name": "High",
     "client_name": "Acme Manufacturing",
     "tags": [],
+    "suppress_contact_notifications": false,
+    "suppress_internal_notifications": false,
     "url": "https://algapsa.com/msp/tickets/22222222-2222-2222-2222-222222222222"
   }
 }
