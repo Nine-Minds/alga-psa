@@ -1996,7 +1996,18 @@
       "title": "Estimated Monthly Total",
       "description": "Products and fixed charges are included in this total. Hourly and usage services are billed on actuals.",
       "perMonth": "per month",
-      "savedDraftValue": "Saved draft value: {{amount}}"
+      "savedDraftValue": "Saved draft value: {{amount}}",
+      "titleCadence": "Estimated Total",
+      "mixedFrequencyTitle": "Estimated Total by Billing Frequency",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "about {{amount}} a month",
+      "perPeriod": {
+        "weekly": "per week",
+        "monthly": "per month",
+        "quarterly": "per quarter",
+        "semi-annually": "per half-year",
+        "annually": "per year"
+      }
     },
     "finalChecklist": {
       "title": "Before you finish:",

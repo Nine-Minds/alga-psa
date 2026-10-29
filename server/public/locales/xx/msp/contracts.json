@@ -1996,7 +1996,18 @@
       "title": "⟦Ḗşŧīḿȧŧḗḓ Ḿȯƞŧħŀẏ Ŧȯŧȧŀ⟧",
       "description": "⟦Ƥřȯḓŭƈŧş ȧƞḓ ƒīẋḗḓ ƈħȧřɠḗş ȧřḗ īƞƈŀŭḓḗḓ īƞ ŧħīş ŧȯŧȧŀ. Ħȯŭřŀẏ ȧƞḓ ŭşȧɠḗ şḗřṽīƈḗş ȧřḗ ƀīŀŀḗḓ ȯƞ ȧƈŧŭȧŀş.⟧",
       "perMonth": "⟦ƥḗř ḿȯƞŧħ⟧",
-      "savedDraftValue": "⟦Şȧṽḗḓ ḓřȧƒŧ ṽȧŀŭḗ: {{amount}}⟧"
+      "savedDraftValue": "⟦Şȧṽḗḓ ḓřȧƒŧ ṽȧŀŭḗ: {{amount}}⟧",
+      "titleCadence": "⟦Ḗşŧīḿȧŧḗḓ Ŧȯŧȧŀ⟧",
+      "mixedFrequencyTitle": "⟦Ḗşŧīḿȧŧḗḓ Ŧȯŧȧŀ ƀẏ Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ⟧",
+      "perFrequency": "⟦{{amount}} {{period}}⟧",
+      "perMonthEquivalent": "⟦ȧƀȯŭŧ {{amount}} ȧ ḿȯƞŧħ⟧",
+      "perPeriod": {
+        "weekly": "⟦ƥḗř ẇḗḗķ⟧",
+        "monthly": "⟦ƥḗř ḿȯƞŧħ⟧",
+        "quarterly": "⟦ƥḗř ʠŭȧřŧḗř⟧",
+        "semi-annually": "⟦ƥḗř ħȧŀƒ-ẏḗȧř⟧",
+        "annually": "⟦ƥḗř ẏḗȧř⟧"
+      }
     },
     "finalChecklist": {
       "title": "⟦Ɓḗƒȯřḗ ẏȯŭ ƒīƞīşħ:⟧",

@@ -1996,7 +1996,18 @@
       "title": "Total Mensal Estimado",
       "description": "Produtos e cobranças fixas estão incluídos neste total. Serviços por hora e de uso são faturados com base no consumo real.",
       "perMonth": "por mês",
-      "savedDraftValue": "Valor do rascunho guardado: {{amount}}"
+      "savedDraftValue": "Valor do rascunho guardado: {{amount}}",
+      "titleCadence": "Total estimado",
+      "mixedFrequencyTitle": "Total estimado por frequência de faturamento",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "cerca de {{amount}} por mês",
+      "perPeriod": {
+        "weekly": "por semana",
+        "monthly": "por mês",
+        "quarterly": "por trimestre",
+        "semi-annually": "por semestre",
+        "annually": "por ano"
+      }
     },
     "finalChecklist": {
       "title": "Antes de terminar:",

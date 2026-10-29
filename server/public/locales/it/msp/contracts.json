@@ -1996,7 +1996,18 @@
       "title": "Totale mensile stimato",
       "description": "Prodotti e addebiti fissi sono inclusi in questo totale. I servizi orari e a consumo vengono fatturati a consuntivo.",
       "perMonth": "al mese",
-      "savedDraftValue": "Valore della bozza salvata: {{amount}}"
+      "savedDraftValue": "Valore della bozza salvata: {{amount}}",
+      "titleCadence": "Totale stimato",
+      "mixedFrequencyTitle": "Totale stimato per frequenza di fatturazione",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "circa {{amount}} al mese",
+      "perPeriod": {
+        "weekly": "a settimana",
+        "monthly": "al mese",
+        "quarterly": "a trimestre",
+        "semi-annually": "a semestre",
+        "annually": "all'anno"
+      }
     },
     "finalChecklist": {
       "title": "Prima di terminare:",

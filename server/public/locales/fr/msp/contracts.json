@@ -1996,7 +1996,18 @@
       "title": "Total mensuel estimé",
       "description": "Les produits et les frais fixes sont inclus dans ce total. Les services horaires et à l'usage sont facturés selon le réel.",
       "perMonth": "par mois",
-      "savedDraftValue": "Valeur du brouillon enregistré : {{amount}}"
+      "savedDraftValue": "Valeur du brouillon enregistré : {{amount}}",
+      "titleCadence": "Total estimé",
+      "mixedFrequencyTitle": "Total estimé par fréquence de facturation",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "environ {{amount}} par mois",
+      "perPeriod": {
+        "weekly": "par semaine",
+        "monthly": "par mois",
+        "quarterly": "par trimestre",
+        "semi-annually": "par semestre",
+        "annually": "par an"
+      }
     },
     "finalChecklist": {
       "title": "Avant de terminer :",

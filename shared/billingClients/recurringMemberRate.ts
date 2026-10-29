@@ -167,3 +167,57 @@ export function resolveFixedLineRecurringTotal(
   if (amount === null) return null;
   return normalizeToMonthlyCents(amount, line.billing_frequency ?? frequency);
 }
+
+export interface RecurringPeriodAmount {
+  /** Amount for one billing period, in minor units. */
+  periodCents: number;
+  /** The cadence that amount is billed on. */
+  frequency: string | null | undefined;
+}
+
+export interface RecurringFrequencyGroup {
+  /** Canonical cadence as stored ('monthly' | 'annually' | …). */
+  frequency: string;
+  /** Sum of the group's per-period amounts. */
+  periodCents: number;
+  /** Σ normalizeToMonthlyCents(entry) over the group's entries (per-entry, not per-group). */
+  monthlyCents: number;
+}
+
+export interface RecurringSummary {
+  /** Largest monthlyCents first; ties keep first-seen order. */
+  groups: RecurringFrequencyGroup[];
+  /** Σ group.periodCents when every group shares one frequency; else null. */
+  singleFrequencyPeriodCents: number | null;
+  singleFrequency: string | null;
+  /** Σ group.monthlyCents — the comparable figure the stored value keeps using. */
+  monthlyCents: number;
+}
+
+/**
+ * Groups per-period recurring amounts by cadence, keeping the cadence the
+ * contract actually bills on. `monthlyCents` is normalized per ENTRY and then
+ * summed — exactly the "normalize each line, sum" rule the wizard total, the
+ * stored value and the invoice engine already use — so weekly rounding cannot
+ * drift between surfaces. A null/unknown cadence counts as monthly.
+ */
+export function summarizeRecurringAmounts(amounts: ReadonlyArray<RecurringPeriodAmount>): RecurringSummary {
+  const byFrequency = new Map<string, RecurringFrequencyGroup>();
+  for (const amount of amounts) {
+    const frequency = amount.frequency || 'monthly';
+    const group = byFrequency.get(frequency) ?? { frequency, periodCents: 0, monthlyCents: 0 };
+    group.periodCents += amount.periodCents;
+    group.monthlyCents += normalizeToMonthlyCents(amount.periodCents, frequency);
+    byFrequency.set(frequency, group);
+  }
+  const groups = [...byFrequency.values()]
+    .filter((group) => group.periodCents !== 0)
+    .sort((a, b) => b.monthlyCents - a.monthlyCents);
+  const single = groups.length > 0 && groups.every((group) => group.frequency === groups[0].frequency);
+  return {
+    groups,
+    singleFrequency: single ? groups[0].frequency : null,
+    singleFrequencyPeriodCents: single ? groups.reduce((sum, group) => sum + group.periodCents, 0) : null,
+    monthlyCents: groups.reduce((sum, group) => sum + group.monthlyCents, 0),
+  };
+}
