@@ -38,6 +38,13 @@ describe('co-managed Stripe entitlement adapter', () => {
     expect(coManagedSnapshotFromStripe(fixture)).toEqual({ capacity: 5, active: true, validUntil: new Date((end - 60) * 1000) });
   });
 
+  it('carries the purchase operation id so reconciliation can close only that operation', () => {
+    const snapshot = coManagedSnapshotFromStripe(input(subscription({
+      metadata: { tenant_id: 'sponsor', subscription_kind: 'co_managed', operation_id: 'op-1' } })));
+    expect(snapshot.operationId).toBe('op-1');
+    expect(coManagedSnapshotFromStripe(input()).operationId).toBeUndefined();
+  });
+
   it.each([
     { customer: 'another-customer' }, { metadata: {} },
     { metadata: { tenant_id: 'another-tenant', subscription_kind: 'co_managed' } },

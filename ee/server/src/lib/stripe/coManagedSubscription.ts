@@ -82,6 +82,7 @@ export function coManagedSnapshotFromStripe(input: {
   return {
     capacity: item.quantity!, active,
     validUntil: new Date(Math.min(periodEnd, baseExpiry?.getTime() ?? now.getTime())),
+    ...(subscription.metadata?.operation_id ? { operationId: subscription.metadata.operation_id } : {}),
     ...(subscription.ended_at ? { lapseSince: new Date(subscription.ended_at * 1000) } : {}),
   };
 }

@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { materializeState, type CoManagedEntitlementState } from './co-managed-entitlements';
+import { materializeState, neverActivated, type CoManagedEntitlementState } from './co-managed-entitlements';
 
 /** The Stripe adapter must validate customer, product, price, payment state and the sponsoring
  * PSA Pro subscription before returning this snapshot. */
@@ -9,6 +9,8 @@ export interface HostedCoManagedSnapshot {
   validUntil: Date;
   active: boolean;
   lapseSince?: Date;
+  /** `metadata.operation_id` of the subscription: binds a checkout-created subscription to its operation. */
+  operationId?: string;
 }
 
 async function databaseNow(trx: Knex.Transaction): Promise<Date> {
@@ -58,12 +60,23 @@ export async function reconcileHostedCoManagedEntitlement(
       snapshot.lapseSince?.getTime() ?? now.getTime(),
       new Date(row.valid_until).getTime() <= now.getTime() ? new Date(row.valid_until).getTime() : now.getTime(),
     ));
-    const state = await materializeState(trx, sponsor, { ...row, ...update }, now, earlierLapse);
+    // Judged on the row BEFORE this observation: an unpaid brand-new subscription never opened a
+    // pool, so it must not start a grace clock; a pool that WAS active and lapses still does.
+    const neverActive = !snapshot.active && neverActivated(row);
+    const state = await materializeState(trx, sponsor, { ...row, ...update }, now, earlierLapse, neverActive);
     if (snapshot.active) {
-      // A verified, paid reconciliation closes the in-flight purchase for this subscription.
+      // A verified, paid reconciliation closes ONLY the in-flight purchase it proves: same
+      // subscription (provider_reference) or, for a checkout-created subscription, the operation id
+      // in its metadata, AND the purchased pool target equals the reconciled capacity. An unrelated
+      // in-flight operation (e.g. one opened while a base-Pro renewal event reconciles) stays open.
       // write-admission: exempt — purchase bookkeeping owned by licensing
       await scoped.table('co_managed_purchase_operations')
         .whereIn('state', ['preparing', 'checkout', 'payment_failed'])
+        .where('quantity', snapshot.capacity)
+        .where((match) => {
+          match.where('provider_reference', subscriptionId);
+          if (snapshot.operationId) match.orWhere('operation_id', snapshot.operationId);
+        })
         .update({ state: 'completed', provider_reference: subscriptionId, updated_at: now });
     }
     return state;
