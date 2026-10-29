@@ -108,8 +108,9 @@ export interface CoManagedCollaborationPolicy extends CoManagedCustomerScope {
   redactedFields: string[];
 }
 export class CoManagedPolicyError extends Error {
-  constructor(public readonly code: 'FORBIDDEN' | 'INVALID_POLICY' | 'POLICY_CHANGED' | 'RESOURCE_NOT_FOUND') {
+  constructor(public readonly code: 'FORBIDDEN' | 'PERMISSION_DENIED' | 'INVALID_POLICY' | 'POLICY_CHANGED' | 'RESOURCE_NOT_FOUND') {
     super({ FORBIDDEN: 'This co-management policy is not available to this actor.',
+      PERMISSION_DENIED: 'Your role does not include permission to view or change co-management access.',
       INVALID_POLICY: 'Provide a valid co-management policy.', POLICY_CHANGED: 'The policy changed. Refresh it before saving.',
       RESOURCE_NOT_FOUND: 'A selected resource or principal is not available in its owning workspace.',
     }[code]);
@@ -120,7 +121,13 @@ const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(valu
 
 /** No cached roles or caller-provided user type; retain current permission rows. */
 async function requirePolicyAdministrator(trx: Knex.Transaction, actor: CoManagedHomeActor): Promise<void> {
-  if (!await hasCoManagedLocalPermission(trx, actor, 'co_management', 'manage', true)) throw new CoManagedPolicyError('FORBIDDEN');
+  if (!await hasCoManagedLocalPermission(trx, actor, 'co_management', 'manage', true)) throw new CoManagedPolicyError('PERMISSION_DENIED');
+}
+/** Reading a policy (and explaining access) needs `co_management:read` or `:manage`; changing it still needs `:manage`.
+ * Checked against the actor's current home permission rows, never a caller-supplied user type. */
+export async function requireCoManagedPolicyReader(trx: Knex.Transaction, actor: CoManagedHomeActor): Promise<void> {
+  if (await hasCoManagedLocalPermission(trx, actor, 'co_management', 'read', true)) return;
+  await requirePolicyAdministrator(trx, actor);
 }
 
 /** Lock order is fixed everywhere: entitlement -> sponsor -> relationship -> customer. */
@@ -141,7 +148,7 @@ async function lockPolicy(trx: Knex.Transaction, actor: CoManagedHomeActor, targ
   const owner = await customer.table('tenants').forShare().first('product_code', 'suspended_at');
   if (!relationship || relationship.state !== 'active' || relationship.ended_at || relationship.sponsor_tenant !== found.sponsor_tenant ||
       owner?.product_code !== 'co_managed' || owner.suspended_at || sponsor?.product_code !== 'psa' || sponsor.suspended_at) throw new CoManagedPolicyError('FORBIDDEN');
-  await requirePolicyAdministrator(trx, actor);
+  if (write) await requirePolicyAdministrator(trx, actor); else await requireCoManagedPolicyReader(trx, actor);
   return { customer, relationship, lifecycle };
 }
 
@@ -301,5 +308,29 @@ export async function replaceCoManagedRedactedFields(db: Knex, actor: CoManagedH
     // write-admission: exempt — co-managed policy/delegation state, written under the relationship lock after lifecycle admission (lockPolicy / getCoManagedOperationalState)
     await customer.table('co_management_relationships').where('relationship_id', target.relationshipId).update({ redacted_fields: desired });
     return recordCoManagedPolicyChange(trx, actor, target, relationship.revision, 'redacted_fields_changed', { redactedFields: desired });
+  });
+}
+
+/** Every live relationship this sponsor holds, for the Effective access view. Independent of delegated grants:
+ * it needs the actor's own `co_management:read` or `:manage` (checked here, against current rows) and nothing else.
+ * Each relationship is re-checked in its owning workspace, so an ended or paused one never appears. */
+export async function listCoManagedLiveSponsoredRelationships(db: Knex, actor: CoManagedHomeActor): Promise<{ relationshipId: string; customerTenant: string; name: string }[]> {
+  if (![actor.tenant, actor.userId].every(isCoManagedUuid)) throw new CoManagedPolicyError('INVALID_POLICY');
+  return withTransaction(db, async trx => {
+    await requireCoManagedPolicyReader(trx, actor);
+    const home = tenantDb(trx, actor.tenant);
+    if (!await home.table('tenants').where({ product_code: 'psa' }).whereNull('suspended_at').first('tenant')) throw new CoManagedPolicyError('FORBIDDEN');
+    const operations = await home.table('co_managed_provisioning_operations').whereNotNull('relationship_id').select('relationship_id', 'customer_tenant');
+    const seen = new Set<string>(), result: { relationshipId: string; customerTenant: string; name: string }[] = [];
+    for (const operation of operations) {
+      if (seen.has(operation.relationship_id) || !isCoManagedUuid(operation.customer_tenant)) continue;
+      seen.add(operation.relationship_id);
+      const customer = tenantDb(trx, operation.customer_tenant as string);
+      const relationship = await customer.table('co_management_relationships')
+        .where({ relationship_id: operation.relationship_id, sponsor_tenant: actor.tenant, state: 'active' }).whereNull('ended_at').first('relationship_id');
+      const owner = relationship ? await customer.table('tenants').whereNull('suspended_at').where({ product_code: 'co_managed' }).first('client_name') : null;
+      if (owner) result.push({ relationshipId: operation.relationship_id, customerTenant: operation.customer_tenant, name: owner.client_name ?? '' });
+    }
+    return result.sort((a, b) => a.name.localeCompare(b.name));
   });
 }

@@ -39,7 +39,7 @@ import {
 } from '../CommentEmailRecipientsControl';
 import { useTicketRichTextUploadSession } from '../useTicketRichTextUploadSession';
 import type { TicketTimelineEntry } from '@alga-psa/shared/lib/ticketActivity';
-import { getTicketTimelineEntries } from '../../../actions/ticketActivityActions';
+import { useTicketDataSource } from '../TicketDataSourceContext';
 import { setTicketLayoutPreference } from '../../../actions/ticketLayoutPreference';
 import {
   toggleCommentReaction,
@@ -438,6 +438,10 @@ export function BentoTimelineTile({
   const { t } = useTranslation('features/tickets');
   const { t: tCommon } = useTranslation('common');
   const cannedResponseSnippets = useCannedResponseSnippets(ticketId, true);
+  const dataSource = useTicketDataSource();
+  // The timeline reads through the data source (a shared ticket never reads the home tenant) and a read-only screen has no composer.
+  const { getTicketTimelineEntries } = dataSource.activity;
+  const readOnly = dataSource.screen.readOnly === true;
   const { locale } = useFormatters();
   // dayLabel runs at module scope: without these it formats in the browser's
   // locale and hardcodes an English "Today".
@@ -675,7 +679,7 @@ export function BentoTimelineTile({
     return () => {
       cancelled = true;
     };
-  }, [ticketId, refreshKey]);
+  }, [ticketId, refreshKey, getTicketTimelineEntries]);
 
   // ---- Threading: nested threads anchored at their root on the spine ----
   // Same noise suppression as the conversation view: empty / reply-token-only
@@ -853,7 +857,7 @@ export function BentoTimelineTile({
           onEdit={() => onEditComment(comment)}
           onDelete={onDeleteComment}
           onReply={
-            onAddReplyComment && commentId
+            !readOnly && onAddReplyComment && commentId
               ? () => setReplyingToCommentId(commentId)
               : undefined
           }
@@ -1120,7 +1124,7 @@ export function BentoTimelineTile({
           the docked composer), not as a competing primary button. It sits at the
           newest end of the history: here for newest-first, docked at the bottom
           for oldest-first. */}
-      {!showComposer && order === 'desc' && (
+      {!readOnly && !showComposer && order === 'desc' && (
         <button
           id={`${id}-add-comment-btn`}
           type="button"
@@ -1137,7 +1141,7 @@ export function BentoTimelineTile({
       <StickyComposerDock
         id={`${id}-composer-top`}
         side="top"
-        visible={showComposer && composerPlacement === 'top'}
+        visible={!readOnly && showComposer && composerPlacement === 'top'}
         expanded
       >
         {composer}
@@ -1229,7 +1233,7 @@ export function BentoTimelineTile({
         </ClampedContent>
       )}
 
-      {replyTargetComment && replyingToCommentId && (
+      {!readOnly && replyTargetComment && replyingToCommentId && (
         <div id={`${id}-reply-dock`} className="sticky bottom-2 z-20 pt-3">
           <div className="rounded-lg bg-[rgb(var(--color-card))] shadow-lg">
             <p className="px-3 pt-2 text-xs font-medium text-[rgb(var(--color-text-500))]">
@@ -1295,7 +1299,7 @@ export function BentoTimelineTile({
 
       <StickyComposerDock
         id={`${id}-composer-dock`}
-        visible={!replyingToCommentId && (showComposer ? composerPlacement === 'bottom' : order === 'asc' || !headerAnchorVisible)}
+        visible={!readOnly && !replyingToCommentId && (showComposer ? composerPlacement === 'bottom' : order === 'asc' || !headerAnchorVisible)}
         expanded={showComposer && composerPlacement === 'bottom'}
         placeholder={
           contactFirstName

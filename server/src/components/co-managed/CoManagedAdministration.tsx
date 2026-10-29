@@ -24,6 +24,8 @@ export default function CoManagedAdministration({ initialRelationshipId }: { ini
     }, () => setError(true));
   }, []);
 
+  const current = workspaces?.find(w => w.relationshipId === selected);
+
   return <div id="co-managed-administration" className="min-w-0 space-y-4">
     <header>
       <h1 className="text-3xl font-bold text-[rgb(var(--color-text-900))]">{t('coManaged.administration.heading', { defaultValue: 'Co-Managed Administration' })}</h1>
@@ -38,14 +40,14 @@ export default function CoManagedAdministration({ initialRelationshipId }: { ini
       <CustomSelect id="co-managed-administration-workspace" label={t('coManaged.administration.workspace', { defaultValue: 'Workspace' })}
         value={selected} options={workspaces.map(w => ({ value: w.relationshipId, label: w.name }))} onValueChange={setSelected} />
       {selected && <>
-        <section aria-labelledby="co-managed-effective-access-heading" className="space-y-2">
+        {current?.effective !== false && <section aria-labelledby="co-managed-effective-access-heading" className="space-y-2">
           <h2 id="co-managed-effective-access-heading" className="text-xl font-semibold">{t('coManaged.administration.effective', { defaultValue: 'Effective access' })}</h2>
           <CoManagedPolicyPanel key={`policy-${selected}`} relationshipId={selected} />
-        </section>
-        <section aria-labelledby="co-managed-delegation-heading" className="space-y-2">
+        </section>}
+        {current?.delegated !== false && <section aria-labelledby="co-managed-delegation-heading" className="space-y-2">
           <h2 id="co-managed-delegation-heading" className="text-xl font-semibold">{t('coManaged.administration.delegation', { defaultValue: 'Delegated administration' })}</h2>
           <CoManagedDelegatedAdministration key={`delegation-${selected}`} relationshipId={selected} />
-        </section>
+        </section>}
       </>}
     </>}
   </div>;

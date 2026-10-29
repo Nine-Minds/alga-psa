@@ -11,6 +11,7 @@ import { createTestDbConnection, wireLocalTestDbEnv } from '../../../../../serve
 import { bootstrapCoManagedCustomer } from '../../activities/co-managed-provisioning-activities';
 import { acceptCoManagedRelationship, getCoManagedAcceptanceState } from '../../../../../packages/co-managed/src/acceptance';
 import { replaceCoManagedCustomerScope, replaceCoManagedStaffAssignments, getCoManagedCollaborationPolicy,
+  listCoManagedLiveSponsoredRelationships, CoManagedPolicyError,
   type CoManagedPolicyTarget } from '../../../../../packages/co-managed/src/policy';
 import { withCoManagedSharedWork, CoManagedSharedWorkError } from '../../../../../packages/co-managed/src/sharedWork';
 import { getCoManagedSharedWorkSummary, listCoManagedCustomerTickets } from '../../../../../packages/co-managed/src/sharedWorkRead';
@@ -186,6 +187,37 @@ describe.sequential('L2 access matrix against real rows', () => {
     await replaceCoManagedCustomerScope(db, w.customerAdmin, w.target, await w.revision(),
       { visibilityMode: 'board_scope', boards: [{ id: w.boardId, canCollaborate: true }], projects: [] });
     expect(await listed(w, w.MT.actor)).toEqual([w.ticketId]);
+  });
+});
+
+describe.sequential('sponsor administration: read vs manage', () => {
+  it('lists the live sponsored relationship for read or manage, independent of delegated grants; policy reads need read, writes need manage', async () => {
+    const w = await world();
+    const reader = await w.session(w.sponsorTenant, (await (async () => {
+      const userId = randomUUID();
+      await w.sponsor.table('users').insert({ tenant: w.sponsorTenant, user_id: userId, username: `reader-${userId}`, email: `reader-${userId}@example.test`,
+        first_name: 'Rea', last_name: 'Der', hashed_password: 'x', user_type: 'internal', is_inactive: false });
+      const roleId = randomUUID(), permissionId = randomUUID();
+      await w.sponsor.table('roles').insert({ tenant: w.sponsorTenant, role_id: roleId, role_name: `Reader ${roleId}`, description: 't', msp: true, client: false });
+      await w.sponsor.table('permissions').insert({ tenant: w.sponsorTenant, permission_id: permissionId, resource: 'co_management', action: 'read', msp: true, client: false });
+      await w.sponsor.table('role_permissions').insert({ tenant: w.sponsorTenant, role_id: roleId, permission_id: permissionId });
+      await w.sponsor.table('user_roles').insert({ tenant: w.sponsorTenant, user_id: userId, role_id: roleId });
+      return userId;
+    })()));
+    // No delegated grant exists anywhere, yet both the manager and the read-only user see the workspace.
+    for (const who of [w.admin, reader]) {
+      expect(await listCoManagedLiveSponsoredRelationships(db, who)).toEqual([expect.objectContaining({ relationshipId: w.relationshipId, customerTenant: w.customerTenant })]);
+    }
+    expect((await getCoManagedCollaborationPolicy(db, reader, w.target)).revision).toBeGreaterThan(0);
+    const writeError = await replaceCoManagedStaffAssignments(db, reader, w.target, await w.revision(), []).then(() => null, caught => caught);
+    expect(writeError).toBeInstanceOf(CoManagedPolicyError);
+    expect(writeError.code).toBe('PERMISSION_DENIED');
+    // A technician without any co-management permission is told so, and sees no workspaces.
+    const noRead = await listCoManagedLiveSponsoredRelationships(db, w.MT.actor).then(() => null, caught => caught);
+    expect(noRead).toBeInstanceOf(CoManagedPolicyError);
+    expect(noRead.code).toBe('PERMISSION_DENIED');
+    const readDenied = await getCoManagedCollaborationPolicy(db, w.MT.actor, w.target).then(() => null, caught => caught);
+    expect(readDenied?.code).toBe('PERMISSION_DENIED');
   });
 });
 

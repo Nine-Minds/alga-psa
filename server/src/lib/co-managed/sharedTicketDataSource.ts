@@ -40,6 +40,8 @@ export function sharedTicketRecord(summary: CoManagedSharedWorkSummary) {
     priority_id: priority?.id ?? null, priority_name: priority?.name ?? undefined,
     entered_at: str(fields.entered_at), updated_at: str(fields.updated_at), closed_at: str(fields.closed_at),
     attributes: {},
+    // The creator's attributed display name (a person in the customer's workspace), never an id.
+    created_by_display_name: str(fields.opened_by),
   };
 }
 

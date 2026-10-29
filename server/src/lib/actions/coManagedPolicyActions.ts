@@ -3,7 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
-import { CoManagedPolicyError, evaluateCoManagedAccess, getCoManagedCollaborationPolicy, hasCoManagedLocalPermission,
+import { CoManagedPolicyError, coManagedDisplayName, requireCoManagedPolicyReader, evaluateCoManagedAccess, getCoManagedCollaborationPolicy, hasCoManagedLocalPermission,
   loadCoManagedLifecycleFacts, loadCoManagedStaffRoles, replaceCoManagedCustomerScope, replaceCoManagedStaffAssignments,
   type CoManagedCustomerScope, type CoManagedStaffAssignment } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
@@ -14,7 +14,7 @@ import { resolveCoManagedRelationshipTarget } from '../co-managed/relationshipTa
 // its grants, the sponsor edits staff assignments), so each action gates on
 // `admits` and the access-policy library decides which side may do what.
 
-type Failure = { ok: false; errorCode: 'FORBIDDEN' | 'INVALID_POLICY' | 'POLICY_CHANGED' | 'RESOURCE_NOT_FOUND' };
+type Failure = { ok: false; errorCode: 'FORBIDDEN' | 'PERMISSION_DENIED' | 'INVALID_POLICY' | 'POLICY_CHANGED' | 'RESOURCE_NOT_FOUND' };
 const refusal = (error: unknown): Failure => {
   // Named refusals are expected outcomes the screen must show; a thrown error would reach the client redacted.
   if (error instanceof CoManagedPolicyError) return { ok: false, errorCode: error.code };
@@ -44,11 +44,13 @@ export const getCoManagedPolicyAction = withAuth(async (user, { tenant }, relati
     };
     const userIds = policy.assignments.filter(a => a.kind === 'user').map(a => a.principalId);
     const teamIds = policy.assignments.filter(a => a.kind === 'team').map(a => a.principalId);
-    return { ok: true as const, side: target.side, policy,
+    // The caller's own current permission, for enabling the editors. The write actions re-check it; this only avoids offering a dead end.
+    const canManage = await hasCoManagedLocalPermission(knex, actor, 'co_management', 'manage');
+    return { ok: true as const, side: target.side, policy, canManage,
       names: {
         boards: await names(customer, 'boards', 'board_id', r => r.board_name, policy.boards.map(b => b.id)),
         projects: await names(customer, 'projects', 'project_id', r => r.project_name, policy.projects.map(p => p.id)),
-        users: await names(home, 'users', 'user_id', r => `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim() || r.username, userIds),
+        users: await names(home, 'users', 'user_id', r => coManagedDisplayName(r, r.username), userIds),
         teams: await names(home, 'teams', 'team_id', r => r.team_name, teamIds),
       } };
   } catch (error) { return refusal(error); }
@@ -72,10 +74,40 @@ export const replaceCoManagedStaffAssignmentsAction = withAuth(async (user, { te
 
 /** Sponsor-side candidates for the "why can't X see this" question: the workspace's active technicians. */
 export const listCoManagedExplanationUsersAction = withAuth(async (user, { tenant }, relationshipId: string) => {
-  const { knex, target } = await setup(user, tenant, relationshipId);
+  const { knex, actor, target } = await setup(user, tenant, relationshipId);
   if (target.side !== 'sponsor') return [];
+  await withTransaction(knex, trx => requireCoManagedPolicyReader(trx, actor));
   const rows = await tenantDb(knex, tenant).table('users').where({ user_type: 'internal', is_inactive: false }).orderBy('first_name').orderBy('last_name').limit(500);
-  return rows.map((row: any) => ({ userId: row.user_id as string, name: `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim() || (row.username as string) }));
+  return rows.map((row: any) => ({ userId: row.user_id as string, name: coManagedDisplayName(row, row.username as string) }));
+});
+
+export type CoManagedPolicyOptionKind = 'board' | 'project' | 'user' | 'team';
+const OPTION_PAGE = 25;
+
+/**
+ * Candidates for the policy editors, as display names only. Boards and projects come from the customer's own
+ * workspace (customer side only); users and teams from the sponsor's (sponsor side only). Searched and paged on the server.
+ */
+export const listCoManagedPolicyOptionsAction = withAuth(async (user, { tenant }, relationshipId: string, kind: CoManagedPolicyOptionKind,
+  search: string = '', page: number = 0) => {
+  try {
+    const { knex, actor, target } = await setup(user, tenant, relationshipId);
+    const customerKind = kind === 'board' || kind === 'project';
+    if (!['board', 'project', 'user', 'team'].includes(kind) || target.side !== (customerKind ? 'customer' : 'sponsor') ||
+        typeof search !== 'string' || search.length > 100 || !Number.isSafeInteger(page) || page < 0 || page > 10000) throw new CoManagedPolicyError('INVALID_POLICY');
+    await withTransaction(knex, trx => requireCoManagedPolicyReader(trx, actor));
+    const db = tenantDb(knex, tenant);
+    const term = `%${search.trim().replace(/[\\%_]/g, c => `\\${c}`)}%`;
+    const query = kind === 'board' ? db.table('boards').select('board_id as id', 'board_name as name').where('board_name', 'ilike', term).orderBy('board_name')
+      : kind === 'project' ? db.table('projects').select('project_id as id', 'project_name as name').where('project_name', 'ilike', term).orderBy('project_name')
+      : kind === 'team' ? db.table('teams').select('team_id as id', 'team_name as name').where('team_name', 'ilike', term).orderBy('team_name')
+      : db.table('users').select('user_id as id', 'first_name', 'last_name', 'username').where({ user_type: 'internal', is_inactive: false })
+        .where(q => q.where('first_name', 'ilike', term).orWhere('last_name', 'ilike', term)).orderBy('first_name').orderBy('last_name');
+    const rows = await query.limit(OPTION_PAGE + 1).offset(page * OPTION_PAGE);
+    const options = rows.slice(0, OPTION_PAGE).map((row: any) => ({ id: row.id as string,
+      name: kind === 'user' ? coManagedDisplayName(row, row.username as string) : (row.name as string) }));
+    return { ok: true as const, options, hasMore: rows.length > OPTION_PAGE };
+  } catch (error) { return refusal(error); }
 });
 
 /**
@@ -85,9 +117,10 @@ export const listCoManagedExplanationUsersAction = withAuth(async (user, { tenan
  */
 export const explainCoManagedAccessAction = withAuth(async (user, { tenant }, relationshipId: string, subjectUserId: string, boardId: string) => {
   try {
-    const { knex, target } = await setup(user, tenant, relationshipId);
+    const { knex, actor, target } = await setup(user, tenant, relationshipId);
     if (target.side !== 'sponsor') throw new CoManagedPolicyError('FORBIDDEN');
     return await withTransaction(knex, async trx => {
+      await requireCoManagedPolicyReader(trx, actor);
       const home = tenantDb(trx, tenant);
       const subject = await home.table('users').where({ user_id: subjectUserId, user_type: 'internal' }).first('user_id');
       if (!subject) throw new CoManagedPolicyError('RESOURCE_NOT_FOUND');

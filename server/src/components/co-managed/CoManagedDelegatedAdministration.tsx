@@ -52,14 +52,15 @@ export default function CoManagedDelegatedAdministration({ relationshipId }: { r
   const load = useCallback(async () => {
     setScreen(null);
     const result = await getCoManagedDelegatedScreenAction(relationshipId).catch(() => null);
-    if (result?.ok) { setScreen(result.screen); setMessage(null); } else setMessage(refusalText(result?.errorCode ?? 'NOT_AVAILABLE'));
+    // A refusal from a failed save must survive the reload that follows it: only a dialog opening or a successful save clears the message.
+    if (result?.ok) setScreen(result.screen); else setMessage(refusalText(result?.errorCode ?? 'NOT_AVAILABLE'));
   }, [relationshipId, refusalText]);
   useEffect(() => { void load(); }, [load]);
 
   const revoke = async (grant: Grant) => {
     if (!screen) return;
     const result = await revokeCoManagedDelegatedGrantAction(relationshipId, screen.revision, grant.grantId).catch(() => null);
-    if (!result?.ok) setMessage(refusalText(result?.errorCode ?? 'NOT_AVAILABLE'));
+    setMessage(result?.ok ? null : refusalText(result?.errorCode ?? 'NOT_AVAILABLE'));
     await load();
   };
 
@@ -78,8 +79,13 @@ export default function CoManagedDelegatedAdministration({ relationshipId }: { r
       render: (_v, row) => screen?.side === 'customer'
         ? <Button id={`co-managed-delegation-revoke-${row.grantId}`} variant="outline" size="sm" onClick={() => void revoke(row)}>
             {t('coManaged.delegation.revoke', { defaultValue: 'Revoke' })}</Button>
-        : <Button id={`co-managed-delegation-edit-${row.grantId}`} variant="outline" size="sm" disabled={!row.available || !screen?.canWrite} onClick={() => setEditing(row)}>
-            {t('coManaged.delegation.edit', { defaultValue: 'Edit' })}</Button> },
+        : <div className="flex flex-col items-start gap-1">
+            <Button id={`co-managed-delegation-edit-${row.grantId}`} variant="outline" size="sm"
+              disabled={!row.available || !screen?.canWrite || !('canEdit' in row && row.canEdit)} onClick={() => { setMessage(null); setEditing(row); }}>
+              {t('coManaged.delegation.edit', { defaultValue: 'Edit' })}</Button>
+            {row.available && screen?.canWrite && !('canEdit' in row && row.canEdit) && <span id={`co-managed-delegation-edit-unavailable-${row.grantId}`} className="text-xs text-[rgb(var(--color-text-500))]">
+              {t('coManaged.delegation.noPermission', { defaultValue: 'Your role does not include permission to make this change in your workspace.' })}</span>}
+          </div> },
   ];
 
   return <div id="co-managed-delegated-administration" className="space-y-4">
@@ -90,7 +96,7 @@ export default function CoManagedDelegatedAdministration({ relationshipId }: { r
         <p className="text-sm">{screen.side === 'customer'
           ? t('coManaged.delegation.customerIntro', { sponsor: screen.sponsorName, defaultValue: 'Choose what technicians from {{sponsor}} may edit in your workspace.' })
           : t('coManaged.delegation.sponsorIntro', { customer: screen.workspaceName, defaultValue: '{{customer}} has approved you to edit the records below.' })}</p>
-        {screen.side === 'customer' && <Button id="co-managed-delegation-approve" disabled={!screen.canWrite} onClick={() => setApproving(true)}>
+        {screen.side === 'customer' && <Button id="co-managed-delegation-approve" disabled={!screen.canWrite} onClick={() => { setMessage(null); setApproving(true); }}>
           {t('coManaged.delegation.approve', { defaultValue: 'Approve access' })}</Button>}
       </div>
       {screen.grants.length
@@ -98,9 +104,9 @@ export default function CoManagedDelegatedAdministration({ relationshipId }: { r
         : <p id="co-managed-delegation-empty">{t('coManaged.delegation.empty', { defaultValue: 'No delegated access has been approved.' })}</p>}
     </>}
     {screen && approving && <ApproveDialog relationshipId={relationshipId} revision={screen.revision} operationName={operationName}
-      onClose={() => setApproving(false)} onDone={async (error) => { setApproving(false); setMessage(error ? refusalText(error) : null); await load(); }} />}
+      onClose={() => setApproving(false)} onDone={async (error) => { setApproving(false); if (error) setMessage(refusalText(error)); else setMessage(null); await load(); }} />}
     {editing && <EditDialog relationshipId={relationshipId} grant={editing} operationName={operationName}
-      onClose={() => setEditing(null)} onDone={async (error) => { setEditing(null); setMessage(error ? refusalText(error) : null); await load(); }} />}
+      onClose={() => setEditing(null)} onDone={async (error) => { setEditing(null); if (error) setMessage(refusalText(error)); else setMessage(null); await load(); }} />}
   </div>;
 }
 

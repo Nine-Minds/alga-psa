@@ -76,7 +76,7 @@ interface BentoHeroProps {
   id: string;
   /** Observed by TicketDetails' sticky header to float the title on scroll. */
   titleRef?: React.Ref<HTMLHeadingElement>;
-  ticket: ITicket & TicketSlaFields & { source?: string | null; escalated?: boolean; escalation_level?: number | null };
+  ticket: ITicket & TicketSlaFields & { source?: string | null; created_by_display_name?: string | null; escalated?: boolean; escalation_level?: number | null };
   statusOptions: HeroSelectOption[];
   priorityOptions: HeroSelectOption[];
   boardOptions: HeroSelectOption[];
@@ -229,6 +229,10 @@ export function BentoHero({
   const { getTicketStatuses, getTicketCategoriesByBoard } = dataSource.options;
   const { searchUsersForMentions } = dataSource.viewer;
   const activityCrossFeature = useOptionalActivityCrossFeature();
+  // A local creator is a user row; a shared ticket's creator arrives as an attributed display name (null-safe either way).
+  const openedByName = createdByUser
+    ? [createdByUser.first_name, createdByUser.last_name].map(part => part?.trim()).filter(Boolean).join(' ') || null
+    : (typeof ticket.created_by_display_name === 'string' && ticket.created_by_display_name.trim()) || null;
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -1004,8 +1008,8 @@ export function BentoHero({
         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
           <div id={`${id}-meta-line`} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[rgb(var(--color-text-500))]">
             <p>
-              {createdByUser
-                ? t('bento.tiles.openedBy', 'Opened by {{name}}', { name: `${createdByUser.first_name} ${createdByUser.last_name}` })
+              {openedByName
+                ? t('bento.tiles.openedBy', 'Opened by {{name}}', { name: openedByName })
                 : t('bento.tiles.opened', 'Opened')}
               {ticket.source ? ` ${t('bento.tiles.viaSource', 'via {{source}}', { source: String(ticket.source).replace(/_/g, ' ') })}` : ''}
             </p>
@@ -1276,7 +1280,7 @@ export function BentoHero({
                 </button>
               ) : null}
             </>
-          ) : (
+          ) : isFrozen('description') ? null : (
             <button
               id={`${id}-description-empty`}
               type="button"

@@ -69,6 +69,14 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'upgrade_boundary', co_managed: 'not_found' },
   },
   {
+    // The one sponsor-prefix screen a co_managed customer also uses: its own Effective access and delegated
+    // administration. Listed BEFORE the sponsor rule so the rest of the prefix stays closed to co_managed;
+    // the page and its actions still decide, per side, what the caller may see.
+    group: 'msp_co_managed_administration',
+    staticPrefixes: ['/msp/co-management/administration'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
+  },
+  {
     // Sponsor-side co-managed management. Only a PSA sponsor has these screens;
     // the capability gate in each page decides whether a PSA tenant sees them.
     group: 'msp_co_managed_sponsor',

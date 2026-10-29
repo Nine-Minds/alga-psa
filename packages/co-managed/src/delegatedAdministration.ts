@@ -4,6 +4,7 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import { getCoManagedOperationalState, assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
 import { lockCoManagedLocalAuthentication } from './localAuthentication';
 import { coManagedDisplayName } from './actorReferences';
+import { hasCoManagedLocalPermission } from './localPermission';
 import { authorizeCoManagedLocalRecord, snapshotCoManagedSessionActor, isCoManagedUuid,
   CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 
@@ -187,12 +188,17 @@ export async function getCoManagedDelegatedScreen(db: Knex, actor: CoManagedSess
     const side = actor.tenant === target.customerTenant ? 'customer' : 'sponsor';
     const rows = await context.owner.table(GRANTS).where('relationship_id',target.relationshipId).whereNull('revoked_at').orderBy('grant_id').forShare();
     const grants: any[] = [];
+    // The delegate's own home permission for each operation, read server-side so the screen can say why Edit is unavailable.
+    const canUpdate: Record<string, boolean> = {};
+    if (side === 'sponsor') for (const operation of operations) {
+      canUpdate[operation] = await hasCoManagedLocalPermission(context.trx, actor, spec[operation].resource, 'update');
+    }
     for (const row of rows) {
       try {
         const selected = side === 'customer' ? await customerTarget(context,row.operation,row.target_id) : await admitGrant(context,row,false);
         const principalName = await assignedPrincipal(context,row.principal_type,row.principal_id);
         grants.push({ grantId: row.grant_id, operation: row.operation, targetId: row.target_id, principalName, label: selected.label, values: selected.values,
-          version: hash(selected.values), available: true });
+          version: hash(selected.values), available: true, canEdit: side === 'sponsor' && canUpdate[row.operation] === true });
       } catch (error) { if (!(error instanceof CoManagedSharedWorkError)) throw error;
         if (side === 'customer') grants.push({ grantId: row.grant_id, operation: row.operation, targetId: row.target_id, available: false }); }
     }

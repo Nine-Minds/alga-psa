@@ -10,7 +10,8 @@ export { CoManagedSharedWorkError, isCoManagedSharedWorkError, assertCoManagedSe
 
 // Access policy: the single matrix evaluator and policy administration.
 export { evaluateCoManagedAccess, effectiveCoManagedGrant, getCoManagedCollaborationPolicy, replaceCoManagedCustomerScope,
-  replaceCoManagedStaffAssignments, replaceCoManagedRedactedFields, lockCoManagedCustomerPolicy, CoManagedPolicyError } from './policy';
+  replaceCoManagedStaffAssignments, replaceCoManagedRedactedFields, lockCoManagedCustomerPolicy, CoManagedPolicyError,
+  requireCoManagedPolicyReader, listCoManagedLiveSponsoredRelationships } from './policy';
 export type { CoManagedAccessFacts, CoManagedAccessDecision, CoManagedAccessLayer, CoManagedDenyReason, CoManagedVisibilityMode,
   CoManagedStaffRole, CoManagedCollaborationPolicy, CoManagedCustomerScope, CoManagedStaffAssignment, CoManagedResourceGrant,
   CoManagedPolicyTarget } from './policy';

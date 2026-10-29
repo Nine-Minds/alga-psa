@@ -7,6 +7,7 @@ import { withCoManagedSharedWork, CoManagedSharedWorkError, loadCoManagedHomeFac
   loadCoManagedStaffRoles, type CoManagedSessionActor, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { withCoManagedCustomerTicket } from './customerWork';
 import { isCoManagedUuid } from './sharedWorkIdentity';
+import { coManagedDisplayName } from './actorReferences';
 
 export interface CoManagedDisplayReference {
   tenant: string;
@@ -55,17 +56,23 @@ export function ticketSummaryCandidates(tenant: string, row: any): Record<string
     entered_at: { value: date(row.entered_at), sources: ['tickets.entered_at'] },
     updated_at: { value: date(row.updated_at), sources: ['tickets.updated_at'] },
     closed_at: { value: date(row.closed_at), sources: ['tickets.closed_at'] },
+    // The creator's display name only (null-safe, never an id); hidden together with its source column.
+    opened_by: { value: openedByName(row), sources: ['tickets.entered_by', 'users'] },
   };
+}
+function openedByName(row: any): string | null {
+  return coManagedDisplayName({ first_name: row.opened_by_first_name, last_name: row.opened_by_last_name }, '') || null;
 }
 const TICKET_COLUMNS = ['tickets.ticket_id', 'tickets.ticket_number', 'tickets.title', 'tickets.board_id', 'boards.board_name',
   'tickets.status_id', 'statuses.name as status_name', 'statuses.is_closed', 'tickets.priority_id', 'priorities.priority_name',
-  'tickets.entered_at', 'tickets.updated_at', 'tickets.closed_at'];
+  'tickets.entered_at', 'tickets.updated_at', 'tickets.closed_at', 'opener.first_name as opened_by_first_name', 'opener.last_name as opened_by_last_name'];
 function ticketQuery(trx: Knex.Transaction, tenant: string) {
   const owner = tenantDb(trx, tenant);
   const query = owner.table('tickets');
   owner.tenantJoin(query, 'boards', 'tickets.board_id', 'boards.board_id', { type: 'left' });
   owner.tenantJoin(query, 'statuses', 'tickets.status_id', 'statuses.status_id', { type: 'left' });
   owner.tenantJoin(query, 'priorities', 'tickets.priority_id', 'priorities.priority_id', { type: 'left' });
+  owner.tenantJoin(query, 'users as opener', 'tickets.entered_by', 'opener.user_id', { type: 'left' });
   return query;
 }
 
