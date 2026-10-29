@@ -352,12 +352,17 @@ development, Microsoft callback).
 Every shard installs the same candidate images and verifies them against the
 build records.
 
-The two server candidates are compiled on the build runner rather than inside
-their Dockerfiles: `scripts/build-production-server.sh <edition>` runs the
-same recipe as the builder stages (assemblyscript templates, `nx build-deps
-server`, `next build --webpack`), and the Dockerfiles are then built with
-`PREBUILT_NEXT=true`, which makes them package `server/.next` and the
-packages' `dist` directories from the context instead of rebuilding them.
+The two server candidates are the production images. `scripts/build-production-server.sh
+<edition>` compiles the application on the build runner (assemblyscript
+templates, `nx build-deps server`, `next build --webpack`, the recipe of the
+`Dockerfile.build` artifact builders), and the production Dockerfiles
+(`Dockerfile`, `ee/server/Dockerfile`, the one runtime image definition per
+edition) package `server/.next` and the packages' `dist` directories from the
+context, exactly as the Argo build packages them for deployment. The candidate
+under test is therefore the image that ships, including its Alpine base and
+its production-only dependency set; the Teams development chain, which runs
+`next dev` inside the candidate, relies on `typescript` and the `@types`
+packages being regular dependencies of `server`.
 Building on the runner is what lets the webpack filesystem cache
 (`server/node_modules/.cache/webpack`, configured in `next.config.mjs`) and
 the Nx cache survive between runs: `scripts/build-cache-snapshot.mjs` pulls a

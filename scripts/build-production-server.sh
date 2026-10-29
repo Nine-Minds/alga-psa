@@ -10,10 +10,12 @@
 #   scripts/build-production-server.sh community|enterprise
 #
 # Expects `npm install` to have run at the repository root. Produces
-# server/.next plus the packages' dist directories, which the Dockerfiles copy
-# in when built with PREBUILT_NEXT=true. For the community edition the caller
-# removes ee/server and server/src/scripts/check-extension.ts first, as the
-# community Dockerfile.build does, so no proprietary module can be resolved.
+# server/.next plus the packages' dist directories, which the production
+# Dockerfiles (Dockerfile, ee/server/Dockerfile) package from the context.
+# The application version baked into the bundle comes from
+# packages/core/package.json through next.config.mjs, the same file the Argo
+# build reads for its NEXT_PUBLIC_APP_VERSION, so both pipelines agree without
+# passing it; set NEXT_PUBLIC_APP_VERSION to override.
 set -euo pipefail
 
 edition="${1:?usage: build-production-server.sh community|enterprise}"
@@ -47,6 +49,11 @@ npm run build:assemblyscript
 
 phase "upstream packages (nx build-deps server)"
 npx nx build-deps server
+# ee/server/Dockerfile refuses to package without the runtime exports that the
+# appliance onboarding seeds import (@alga-psa/db, which imports @alga-psa/core).
+if [ ! -f packages/db/dist/index.js ]; then (cd packages/db && npm run build); fi
+test -f packages/core/dist/index.js
+test -f packages/db/dist/index.js
 export USE_PREBUILT=true
 
 phase "next build --webpack ($edition)"

@@ -118,14 +118,16 @@ jobs:
       fail-fast: false
       matrix:
         # `prebuild` services compile the application on the runner first (see
-        # the "production build" steps below); `node` is the version their
-        # Dockerfile.build compiles with.
+        # the "production build" steps below) and are packaged by the production
+        # Dockerfiles, the one runtime image definition per edition, exactly as
+        # the Argo build packages them for deployment; `node` is the version
+        # those images run on.
         include:
           - service: server
             edition: community
             prebuild: true
-            node: '24'
-            dockerfile: Dockerfile.build
+            node: '26.1.0'
+            dockerfile: Dockerfile
             image: alga-e2e-test_server_ce_local:latest
             artifact: fresh-install-server-community
             cache: false
@@ -133,7 +135,7 @@ jobs:
             edition: enterprise
             prebuild: true
             node: '26.1.0'
-            dockerfile: ee/server/Dockerfile.build
+            dockerfile: ee/server/Dockerfile
             image: alga-e2e-test_server_ee_local:latest
             artifact: fresh-install-server-enterprise
             cache: false
@@ -228,13 +230,15 @@ jobs:
           free -h
 
       # The server images are compiled on the runner (scripts/build-production-server.sh,
-      # the same recipe as the Dockerfiles' builder stages) and the Dockerfiles
-      # then only package the result (PREBUILT_NEXT=true). Outside the image
-      # the webpack filesystem cache and the Nx cache can be carried between
-      # runs: a snapshot of both travels through the registry like the candidate
-      # images do, under one moving tag per edition. Only runs of main write it,
-      # because a cache shapes build output; pull requests only read it. A
-      # missing or unreadable snapshot means a cold build, never a failure.
+      # the recipe of the Dockerfile.build artifact builders) and packaged by
+      # the production Dockerfiles from the context, the same way the Argo
+      # build packages them for deployment, so the candidate under test is the
+      # image that ships. Outside the image the webpack filesystem cache and the
+      # Nx cache can be carried between runs: a snapshot of both travels through
+      # the registry like the candidate images do, under one moving tag per
+      # edition. Only runs of main write it, because a cache shapes build
+      # output; pull requests only read it. A missing or unreadable snapshot
+      # means a cold build, never a failure.
       - name: Set up Node.js for the production build
         if: matrix.prebuild
         uses: actions/setup-node@v4
@@ -245,15 +249,6 @@ jobs:
       - name: Install oras for build-cache snapshots
         if: matrix.prebuild
         uses: oras-project/setup-oras@v2
-
-      - name: Remove the proprietary server tree from the community build
-        if: matrix.prebuild && matrix.edition == 'community'
-        run: |
-          # Mirrors Dockerfile.build: community resolution is owned by the Next
-          # aliases and checked-in fallback modules, and no proprietary module
-          # may be resolvable while the community application compiles.
-          rm -rf ee/server
-          rm -f server/src/scripts/check-extension.ts
 
       - name: Install repository dependencies for the production build
         if: matrix.prebuild
@@ -289,7 +284,6 @@ jobs:
             org.opencontainers.image.revision=${{ github.sha }}
           build-args: |
             NEXT_BUILD_MAX_OLD_SPACE_SIZE=12288
-            PREBUILT_NEXT=${{ matrix.prebuild && 'true' || 'false' }}
           outputs: ${{ env.IMAGE_TRANSPORT == 'registry' && 'type=image,push=true' || format('type=docker,dest={0}/{1}.tar', runner.temp, matrix.service) }}
           # One plain manifest per image, never an index with attestations: the
           # consumer pulls exactly one digest and the build record binds that

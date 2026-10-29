@@ -98,10 +98,11 @@ test('appliance temporal-worker hashing matches the appliance app without changi
   assert.match(appDefaults, /crypto:[\s\S]*iteration: 1000/);
 });
 
-test('app images package the production appliance admin reset entrypoint', () => {
-  const prebuilt = read('ee/server/Dockerfile');
-  const built = read('ee/server/Dockerfile.build');
-  assert.match(prebuilt, /COPY \.\/server\/scripts\/ \.\/server\/scripts\//);
-  assert.match(built, /COPY --from=builder \/app\/server\/scripts\/ \.\/server\/scripts\//);
+test('the app image packages the production appliance admin reset entrypoint', () => {
+  // ee/server/Dockerfile is the one runtime image definition; Dockerfile.build
+  // only produces its build artifacts and runs nothing.
+  const runtime = read('ee/server/Dockerfile');
+  assert.match(runtime, /COPY \.\/server\/scripts\/ \.\/server\/scripts\//);
+  assert.doesNotMatch(read('ee/server/Dockerfile.build'), /^ENTRYPOINT/m);
   assert.match(read('server/scripts/appliance-reset-admin-password.mjs'), /resetInitialAdminPassword/);
 });

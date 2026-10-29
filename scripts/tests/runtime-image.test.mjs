@@ -1,0 +1,66 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import yaml from 'js-yaml';
+
+// One runtime image definition per edition: Dockerfile (community) and
+// ee/server/Dockerfile (enterprise). Everything that runs the application in a
+// container, from the browser lane's candidates to the published images and
+// the compose stack, is built from them; Dockerfile.build only produces the
+// build artifacts they package. These checks keep a second runtime image from
+// creeping back in.
+const read = file => readFileSync(file, 'utf8');
+// The compose files use Compose's `!reset` tag, which js-yaml does not know.
+const composeSchema = yaml.DEFAULT_SCHEMA.extend(['sequence', 'mapping', 'scalar'].map(kind => new yaml.Type('!reset', { kind, construct: data => data })));
+const stages = text => [...text.matchAll(/^FROM\s+(\S+)(?:\s+AS\s+(\S+))?/gm)].map(([, image, name]) => ({ image, name }));
+
+test('the browser lane tests the production Dockerfiles, compiled on the runner', () => {
+  const workflow = yaml.load(read('.github/workflows/e2e-fresh-install-tests.yaml'));
+  const servers = workflow.jobs['build-images'].strategy.matrix.include.filter(entry => entry.prebuild);
+  assert.deepEqual(servers.map(entry => [entry.service, entry.edition, entry.dockerfile]),
+    [['server', 'community', 'Dockerfile'], ['server-ee', 'enterprise', 'ee/server/Dockerfile']]);
+  const steps = workflow.jobs['build-images'].steps;
+  const build = steps.find(step => step.name === 'Build the production application on the runner');
+  assert.ok(build && build.if === 'matrix.prebuild', 'the application is compiled on the runner before packaging');
+  assert.ok(steps.indexOf(build) < steps.findIndex(step => step.name?.startsWith('Build and export')));
+  for (const entry of servers) {
+    const runtime = stages(read(entry.dockerfile)).at(-1).image;
+    assert.match(runtime, /^node:(\d+\.\d+\.\d+)-alpine$/, `${entry.dockerfile} runs on a pinned Alpine Node image`);
+    assert.equal(entry.node, runtime.match(/^node:([\d.]+)-alpine$/)[1], `${entry.service} compiles on the Node version its image runs on`);
+  }
+});
+
+test('the artifact builders build and export, and never run', () => {
+  for (const file of ['Dockerfile.build', 'ee/server/Dockerfile.build']) {
+    const text = read(file);
+    const last = stages(text).at(-1);
+    assert.deepEqual(last, { image: 'scratch', name: 'artifacts' }, `${file} ends in the artifacts stage`);
+    assert.doesNotMatch(text, /^(ENTRYPOINT|CMD|EXPOSE)\b/m, `${file} defines no runtime`);
+    assert.match(text, /COPY --from=builder \/artifacts \//);
+    assert.match(text, /cp -R \/app\/server\/\.next \/artifacts\/server\/\.next/);
+  }
+  const exporter = read('scripts/export-production-artifacts.sh');
+  assert.match(exporter, /--target artifacts/);
+  assert.match(exporter, /--output "type=local,dest=\."/);
+});
+
+test('the compose stack and the local tag script build the runtime image, not a second one', () => {
+  const compose = yaml.load(read('docker-compose.prod.yaml'), { schema: composeSchema });
+  assert.equal(compose.services.server.build.dockerfile, 'Dockerfile');
+  assert.equal(compose.services.server.build.args, undefined, 'the production Dockerfile takes no build arguments');
+  const tagScript = read('scripts/set-image-tag.sh');
+  assert.match(tagScript, /export-production-artifacts\.sh" community/);
+  assert.match(tagScript, /-f Dockerfile \\/);
+  assert.doesNotMatch(tagScript, /-f Dockerfile\.build/, 'the artifact builder is never tagged as a runnable image');
+});
+
+test('the production image can run the development server the Teams chain starts inside it', () => {
+  // Next's TypeScript setup requires these next to `typescript`; absent, the
+  // dev server tries to npm-install them at startup inside the container.
+  const server = JSON.parse(read('server/package.json'));
+  for (const name of ['typescript', '@types/react', '@types/react-dom', '@types/node', 'tailwindcss', 'postcss', '@tailwindcss/postcss']) {
+    assert.ok(server.dependencies[name], `${name} is a regular dependency of server`);
+    assert.equal(server.devDependencies?.[name], undefined, `${name} is not also a devDependency`);
+  }
+  assert.match(read('ee/server/Dockerfile'), /npm install --omit=dev/);
+});
