@@ -30,7 +30,13 @@ export async function GET(
 
   const productCode = await getCurrentTenantProduct();
   const destination = resolveProductNavDestination(target, productCode);
-  return NextResponse.redirect(new URL(destination, request.nextUrl.origin), {
+  const url = new URL(destination, request.nextUrl.origin);
+  // Carry the caller's query (e.g. the Microsoft email-setup outcome) onto the
+  // destination. The destination's own params stay authoritative on collision.
+  request.nextUrl.searchParams.forEach((value, key) => {
+    if (!url.searchParams.has(key)) url.searchParams.append(key, value);
+  });
+  return NextResponse.redirect(url, {
     status: 307,
     headers: { 'Cache-Control': 'no-store' },
   });

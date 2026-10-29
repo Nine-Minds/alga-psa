@@ -11,6 +11,7 @@ const hoisted = vi.hoisted(() => ({
   complete: vi.fn(),
   recordConsent: vi.fn(),
   realValidate: null as null | ((input: any) => unknown),
+  product: 'psa' as string,
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
@@ -39,6 +40,10 @@ vi.mock('@alga-psa/integrations/utils/microsoftEmailSetupStateStore', () => ({
   consumeMicrosoftEmailSetupState: (...args: unknown[]) => hoisted.consumeState(...args),
 }));
 
+vi.mock('@/lib/productAccess', () => ({
+  getCurrentTenantProduct: vi.fn(async () => hoisted.product),
+}));
+import { GET as dispatchProductNav } from '../../../app/msp/go/[target]/route';
 import { createMicrosoftEmailSetupState } from '@alga-psa/integrations/lib/microsoftEmailSetup';
 const realValidateState = (input: any) => hoisted.realValidate!(input) as ReturnType<typeof import('@alga-psa/integrations/lib/microsoftEmailSetup').validateMicrosoftEmailSetupState>;
 import { GET } from '../../../app/api/auth/microsoft/email-setup/callback/route';
@@ -474,6 +479,32 @@ describe('Microsoft email setup callback', () => {
       expect(target.toString()).not.toContain('signed-state-token');
       expect(html).not.toContain('signed-state-token');
       expect(allAtobLiterals(html).join('\n')).not.toContain('signed-state-token');
+    });
+
+    it.each([
+      ['psa', '/msp/settings/integrations', 'category'],
+      ['co_managed', '/msp/co-management/providers', null],
+    ])('the no-opener redirect survives the /msp/go dispatcher round trip (%s)', async (product, path, category) => {
+      hoisted.product = product;
+      hoisted.validateState.mockReturnValue({
+        ...adminConsentState,
+        returnTo: `https://psa.example.com${PROVIDER_SETUP_ENTRY_PATH}`,
+      });
+      const html = await (await GET(new NextRequest(
+        'https://psa.example.com/api/auth/microsoft/email-setup/callback?error=access_denied&error_description=AADSTS53003%3A%20blocked&correlation_id=0b9a1f4e-3c2d-4e5f-8a6b-7c8d9e0f1a2b&state=signed-state-token'
+      ))).text();
+      const { replace } = runPageScript(html, null);
+      const hop = new URL(replace.mock.calls[0][0]);
+      expect(hop.pathname).toBe(PROVIDER_SETUP_ENTRY_PATH);
+
+      const res = await dispatchProductNav(new NextRequest(hop), { params: Promise.resolve({ target: 'providers' }) });
+      const landed = new URL(res.headers.get('location')!);
+      expect(landed.pathname).toBe(path);
+      if (category) expect(landed.searchParams.get('category')).toBe('providers');
+      expect(landed.searchParams.get('microsoft_email_setup')).toBe('error');
+      expect(landed.searchParams.get('error_code')).toBe('policy_blocked');
+      expect(landed.searchParams.get('aadsts')).toBe('53003');
+      expect(landed.searchParams.get('correlation_id')).toBe('0b9a1f4e-3c2d-4e5f-8a6b-7c8d9e0f1a2b');
     });
 
     it('redirects with microsoft_email_setup=ok on success and posts nothing', async () => {
