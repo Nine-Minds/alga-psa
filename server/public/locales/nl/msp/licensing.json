@@ -519,7 +519,7 @@
     "checkoutExpired": "Deze checkout is verlopen. Start een nieuwe aankoop om verder te gaan.",
     "grace": "Verleng uw licentie of los het capaciteitstekort op vóór {{date}} om klantwerkruimtes beschrijfbaar te houden.",
     "readOnly": "De coulanceperiode eindigde op {{date}}. Herstel de gelicentieerde capaciteit om wijzigingen in klantwerkruimtes te hervatten.",
-    "accountTitle": "Co-managed IT",
+    "accountTitle": "Gezamenlijk beheerde IT",
     "checkoutUnavailable": "Ingebedde checkout is niet beschikbaar. Probeer het opnieuw nadat de betalingsconfiguratie is hersteld.",
     "pendingCapacity_one": "Een aankoop van {{count}} plaats is in behandeling.",
     "pendingCapacity_other": "Een aankoop van {{count}} plaatsen is in behandeling.",
