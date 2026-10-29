@@ -15,10 +15,12 @@ import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '.
 
 const REPO = path.resolve(__dirname, '../../../..');
 const MIGRATIONS = [
-  '20261025130000_add_warranty_review_to_rma_cases.cjs',
-  '20261025130100_create_rma_events.cjs',
-  '20261025130200_add_warranty_permissions.cjs',
-  '20261025130300_upsert_inventory_rma_updated_event_catalog.cjs',
+  '20261029100000_add_warranty_review_to_rma_cases.cjs',
+  '20261029100100_backfill_rma_case_warranty_review.cjs',
+  '20261029100200_validate_rma_case_constraints.cjs',
+  '20261029100300_create_rma_events.cjs',
+  '20261029100400_add_warranty_permissions.cjs',
+  '20261029100500_upsert_inventory_rma_updated_event_catalog.cjs',
 ].map((f) => loadServerMigration<{ up: (k: Knex) => Promise<void>; down: (k: Knex) => Promise<void> }>(f));
 
 const NEW_COLUMNS = [

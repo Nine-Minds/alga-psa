@@ -12,15 +12,19 @@
  *   shipping, return_by, return_ship_to, replacement fields
  * - status CHECK re-stated with `warranty_review` and `repaired` (`dead_unit_returned` stays out: the
  *   hardening migration 20260701092000 already stopped accepting it)
- * - rma_number backfilled per tenant (RMA-00001 ...), NOT NULL, unique per tenant, and `next_number`
- *   for entity type RMA seeded at the backfilled maximum so a new claim never collides
+ * - rma_number NOT NULL, unique per tenant, and `next_number` for entity type RMA seeded at the backfilled
+ *   maximum so a new claim never collides
  * - closed cases backfill closed_reason = 'resolved'
  *
- * Numbering note: ordered after 20261025080000 (the newest migration on main when C5 was built).
- * Idempotent; safe to re-run. Fails on the asset_custody FK when C4 is absent, on purpose.
+ * Split in three so each step is safe on a live table (migration-lint rules 1, 2, 3, 5):
+ *   1. this file: nullable columns, and every CHECK re-stated NOT VALID (plus rma_number IS NOT NULL)
+ *   2. 20261029100100: batched backfill of closed_reason, rma_number and next_number
+ *   3. 20261029100200 (transaction: false): VALIDATE the CHECKs, build the indexes CONCURRENTLY,
+ *      SET NOT NULL on rma_number, add the composite FKs
+ *
+ * Numbering note: ordered after 20261028134000 (the newest migration on main when C5 was rebased).
+ * Idempotent; safe to re-run. Step 3 fails on the asset_custody FK when C4 is absent, on purpose.
  */
-
-const { ensureCompositeFk } = require('./utils/citusDistribution.cjs');
 
 const STATUSES = [
   'open', 'awaiting_return', 'returned', 'sent_to_vendor', 'replacement_received', 'replacement_deployed',
@@ -59,64 +63,24 @@ exports.up = async function up(knex) {
 
   // --- status / outcome / reason CHECKs ---
   await knex.raw('ALTER TABLE rma_cases DROP CONSTRAINT IF EXISTS rma_cases_status_check');
-  await knex.raw(`ALTER TABLE rma_cases ADD CONSTRAINT rma_cases_status_check CHECK (status = ANY (ARRAY[${list(STATUSES)}]))`);
+  await knex.raw(`ALTER TABLE rma_cases ADD CONSTRAINT rma_cases_status_check CHECK (status = ANY (ARRAY[${list(STATUSES)}])) NOT VALID`);
   await knex.raw('ALTER TABLE rma_cases DROP CONSTRAINT IF EXISTS rma_cases_warranty_outcome_check');
   await knex.raw(
-    `ALTER TABLE rma_cases ADD CONSTRAINT rma_cases_warranty_outcome_check CHECK (warranty_outcome IS NULL OR warranty_outcome IN (${list(OUTCOMES)}))`
+    `ALTER TABLE rma_cases ADD CONSTRAINT rma_cases_warranty_outcome_check CHECK (warranty_outcome IS NULL OR warranty_outcome IN (${list(OUTCOMES)})) NOT VALID`
   );
   await knex.raw('ALTER TABLE rma_cases DROP CONSTRAINT IF EXISTS rma_cases_closed_reason_check');
   await knex.raw(
-    `ALTER TABLE rma_cases ADD CONSTRAINT rma_cases_closed_reason_check CHECK (closed_reason IS NULL OR closed_reason IN (${list(CLOSED_REASONS)}))`
+    `ALTER TABLE rma_cases ADD CONSTRAINT rma_cases_closed_reason_check CHECK (closed_reason IS NULL OR closed_reason IN (${list(CLOSED_REASONS)})) NOT VALID`
   );
   await knex.raw('ALTER TABLE rma_cases DROP CONSTRAINT IF EXISTS rma_cases_denial_reason_check');
   await knex.raw(
-    `ALTER TABLE rma_cases ADD CONSTRAINT rma_cases_denial_reason_check CHECK (warranty_outcome IS DISTINCT FROM 'not_covered' OR (denial_reason IS NOT NULL AND length(btrim(denial_reason)) > 0))`
+    `ALTER TABLE rma_cases ADD CONSTRAINT rma_cases_denial_reason_check CHECK (warranty_outcome IS DISTINCT FROM 'not_covered' OR (denial_reason IS NOT NULL AND length(btrim(denial_reason)) > 0)) NOT VALID`
   );
 
-  // --- backfill ---
-  await knex.raw(`
-    UPDATE rma_cases SET closed_reason = 'resolved'
-    WHERE closed_reason IS NULL AND (closed_at IS NOT NULL OR status = 'closed')
-  `);
-  await knex.raw(`
-    WITH numbered AS (
-      SELECT tenant, rma_id,
-             ROW_NUMBER() OVER (PARTITION BY tenant ORDER BY opened_at NULLS FIRST, created_at NULLS FIRST, rma_id) AS n
-      FROM rma_cases
-      WHERE rma_number IS NULL
-    ), base AS (
-      SELECT tenant, COALESCE(MAX(NULLIF(regexp_replace(rma_number, '\\D', '', 'g'), '')::bigint), 0) AS max_n
-      FROM rma_cases WHERE rma_number IS NOT NULL GROUP BY tenant
-    )
-    UPDATE rma_cases r
-    SET rma_number = 'RMA-' || LPAD((COALESCE(b.max_n, 0) + numbered.n)::text, 5, '0')
-    FROM numbered
-    LEFT JOIN base b ON b.tenant = numbered.tenant
-    WHERE r.tenant = numbered.tenant AND r.rma_id = numbered.rma_id
-  `);
-  // next_number for RMA continues above the highest number in use (and never moves backwards).
-  await knex.raw(`
-    INSERT INTO next_number (tenant, entity_type, last_number, initial_value, prefix, padding_length)
-    SELECT t.tenant, 'RMA',
-           COALESCE((SELECT MAX(NULLIF(regexp_replace(r.rma_number, '\\D', '', 'g'), '')::bigint)
-                     FROM rma_cases r WHERE r.tenant = t.tenant), 0),
-           1, 'RMA-', 5
-    FROM tenants t
-    ON CONFLICT (tenant, entity_type) DO UPDATE
-      SET last_number = GREATEST(next_number.last_number, EXCLUDED.last_number)
-  `);
-
-  await knex.raw('ALTER TABLE rma_cases ALTER COLUMN rma_number SET NOT NULL');
-  await knex.raw('CREATE UNIQUE INDEX IF NOT EXISTS rma_cases_tenant_rma_number_unique ON rma_cases (tenant, rma_number)');
-  await knex.raw('CREATE INDEX IF NOT EXISTS idx_rma_cases_ticket ON rma_cases (tenant, ticket_id)');
-  await knex.raw('CREATE INDEX IF NOT EXISTS idx_rma_cases_asset ON rma_cases (tenant, asset_id)');
-  await knex.raw('CREATE INDEX IF NOT EXISTS idx_rma_cases_status_return_by ON rma_cases (tenant, status, return_by)');
-
-  const fk = (constraint, columns, referencedTable, referencedColumns) =>
-    ensureCompositeFk(knex, { table: 'rma_cases', constraint, columns, referencedTable, referencedColumns });
-  await fk('rma_cases_ticket_fk', ['tenant', 'ticket_id'], 'tickets', ['tenant', 'ticket_id']);
-  await fk('rma_cases_custody_fk', ['tenant', 'custody_id'], 'asset_custody', ['tenant', 'custody_id']);
-  await fk('rma_cases_warranty_decided_by_fk', ['tenant', 'warranty_decided_by'], 'users', ['tenant', 'user_id']);
+  // Proves rma_number is never NULL once the backfill has run; validated, then promoted to a real NOT NULL
+  // by 20261029100200 (the validated CHECK lets SET NOT NULL skip its table scan).
+  await knex.raw('ALTER TABLE rma_cases DROP CONSTRAINT IF EXISTS rma_cases_rma_number_present_check');
+  await knex.raw('ALTER TABLE rma_cases ADD CONSTRAINT rma_cases_rma_number_present_check CHECK (rma_number IS NOT NULL) NOT VALID');
 };
 
 exports.down = async function down(knex) {
@@ -130,6 +94,7 @@ exports.down = async function down(knex) {
   }
   for (const constraint of [
     'rma_cases_warranty_outcome_check', 'rma_cases_closed_reason_check', 'rma_cases_denial_reason_check',
+    'rma_cases_rma_number_present_check',
   ]) {
     await knex.raw(`ALTER TABLE rma_cases DROP CONSTRAINT IF EXISTS ${constraint}`);
   }
@@ -138,6 +103,7 @@ exports.down = async function down(knex) {
   await knex.raw(`UPDATE rma_cases SET status = 'replaced' WHERE status = 'repaired'`);
   await knex.raw('ALTER TABLE rma_cases DROP CONSTRAINT IF EXISTS rma_cases_status_check');
   await knex.raw(`ALTER TABLE rma_cases ADD CONSTRAINT rma_cases_status_check CHECK (status = ANY (ARRAY[${list(OLD_STATUSES)}]))`);
+  await knex.raw('ALTER TABLE rma_cases ALTER COLUMN rma_number DROP NOT NULL');
   await knex('next_number').where({ entity_type: 'RMA' }).del();
   const columns = [
     'rma_number', 'ticket_id', 'custody_id', 'warranty_decided_by', 'return_by', ...TEXT_COLUMNS, ...TIMESTAMP_COLUMNS,

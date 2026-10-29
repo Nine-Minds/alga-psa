@@ -25,6 +25,6 @@ export const NUMBERING_DEFAULTS: Record<
   // Matches the seed in migration 20260626100200 so existing tenants see no change.
   PURCHASE_ORDER: { prefix: 'PO', padding_length: 5, initial_value: 1 },
   OPPORTUNITY: { prefix: 'OPP-', padding_length: 4, initial_value: 1 },
-  // Warranty/RMA case number (C5). Seeded per tenant by migration 20261025130000.
+  // Warranty/RMA case number (C5). Seeded per tenant by migration 20261029100100.
   RMA: { prefix: 'RMA-', padding_length: 5, initial_value: 1 },
 };

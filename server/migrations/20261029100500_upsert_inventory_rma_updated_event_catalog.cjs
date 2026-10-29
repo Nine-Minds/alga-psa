@@ -13,6 +13,7 @@ exports.up = async function up(knex) {
   if (!(await knex.schema.hasTable('system_event_catalog'))) return;
   if (!(await knex.schema.hasColumn('system_event_catalog', 'payload_schema_ref'))) return;
   const now = new Date().toISOString();
+  // migration-lint: allow 5 - upserts exactly one fixed event-catalog row (ON CONFLICT on event_type); the write is bounded by the literal EVENT, not by table size
   await knex.raw(
     `
       INSERT INTO system_event_catalog (event_id, event_type, name, description, category, payload_schema_ref, created_at, updated_at)

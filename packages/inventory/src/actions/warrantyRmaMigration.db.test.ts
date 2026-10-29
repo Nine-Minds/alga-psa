@@ -9,10 +9,12 @@ import { loadServerMigration } from '../test-utils/serverMigrations';
 import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 const MIGRATIONS = [
-  '20261025130000_add_warranty_review_to_rma_cases.cjs',
-  '20261025130100_create_rma_events.cjs',
-  '20261025130200_add_warranty_permissions.cjs',
-  '20261025130300_upsert_inventory_rma_updated_event_catalog.cjs',
+  '20261029100000_add_warranty_review_to_rma_cases.cjs',
+  '20261029100100_backfill_rma_case_warranty_review.cjs',
+  '20261029100200_validate_rma_case_constraints.cjs',
+  '20261029100300_create_rma_events.cjs',
+  '20261029100400_add_warranty_permissions.cjs',
+  '20261029100500_upsert_inventory_rma_updated_event_catalog.cjs',
 ].map((f) => loadServerMigration<{ up: (k: Knex) => Promise<void>; down: (k: Knex) => Promise<void> }>(f));
 
 const NEW_COLUMNS = [
@@ -64,10 +66,12 @@ describe('T011 migration cycle on a scratch database (up, down, up)', () => {
   }, 60_000);
 
   const up = async () => { for (const m of MIGRATIONS) await m.up(scratch); };
-  // 130200 (permissions) is deliberately irreversible per repo policy: its down() throws and is asserted as such.
+  // 100400 (permissions) is deliberately irreversible per repo policy: its down() throws and is asserted as such.
   const down = async () => {
+    await MIGRATIONS[5].down(scratch);
+    await expect(MIGRATIONS[4].down(scratch)).rejects.toThrow(/irreversible/);
     await MIGRATIONS[3].down(scratch);
-    await expect(MIGRATIONS[2].down(scratch)).rejects.toThrow(/irreversible/);
+    await MIGRATIONS[2].down(scratch);
     await MIGRATIONS[1].down(scratch);
     await MIGRATIONS[0].down(scratch);
   };

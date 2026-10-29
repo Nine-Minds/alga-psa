@@ -9,6 +9,7 @@
 const { reconcileAllTenants } = require('./utils/permissions/reconcileTenants.cjs');
 
 exports.up = async function up(knex) {
+  // migration-lint: allow 8 - reconcileAllTenants is the repo-standard, additive, per-tenant-idempotent way to provision a catalog permission (server/migrations/utils/permissions/README.md, "Adding a permission"); the warranty entries are declared in catalog.cjs
   await reconcileAllTenants(knex, { label: 'add_warranty_permissions' });
 };
 
