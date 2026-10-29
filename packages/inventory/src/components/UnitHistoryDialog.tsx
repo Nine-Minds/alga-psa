@@ -72,7 +72,7 @@ export function UnitHistoryDialog({
       setPrintError(null);
       const outcome = await print({
         labelClass: 'stock-unit-identity',
-        ids: [detail.unit.unit_id],
+        labels: [{ recordId: detail.unit.unit_id }],
         ...(templateCode ? { templateId: templateCode } : {}),
       });
       if (outcome.status === 'printed') {

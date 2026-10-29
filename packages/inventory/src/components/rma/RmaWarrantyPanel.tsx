@@ -276,7 +276,7 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
   };
 
   const printTag = async () => {
-    const outcome = await print({ labelClass: RMA_TAG_CLASS, ids: [rma.rma_id] });
+    const outcome = await print({ labelClass: RMA_TAG_CLASS, labels: [{ recordId: rma.rma_id }] });
     if (outcome.status === 'failed') {
       toast.error(outcome.message || t('rma.warranty.printTagFailed', "Couldn't print the RMA tag."));
     } else if (outcome.popupBlocked) {

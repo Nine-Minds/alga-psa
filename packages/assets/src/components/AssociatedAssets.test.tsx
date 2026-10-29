@@ -248,6 +248,9 @@ describe('AssociatedAssets shared SWR key', () => {
     expect(entityAssetsCacheKey('ticket', 't1')).toEqual(['entity-assets', 'ticket', 't1']);
     expect(matchEntityAssetsCacheKeys('ticket', 't1')(['entity-assets', 'ticket', 't1'])).toBe(true);
     expect(matchEntityAssetsCacheKeys('ticket', 't1')(['entity-assets', 'project', 't1'])).toBe(false);
+  });
+});
+
 describe('AssociatedAssets custody and RMA chips', () => {
   const asset = { asset_id: 'a1', asset_type: 'workstation', name: 'Dell dock', status: 'active', asset_tag: 'QA-1', client_id: 'c1' } as any;
   const renderIt = () => render(<AssociatedAssets id="ticket-assets" entityId="ticket-1" entityType="ticket" clientId="c1" initialAssets={Promise.resolve([asset])} />);
