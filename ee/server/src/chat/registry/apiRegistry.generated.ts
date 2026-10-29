@@ -1740,6 +1740,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
+        "name": "description",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
         "name": "manager_id",
         "in": "query",
         "required": false,
@@ -1826,6 +1834,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "team_name": {
           "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
         },
         "manager_id": {
           "type": "string",
@@ -2252,6 +2267,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "team_name": {
           "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
         },
         "manager_id": {
           "type": "string",

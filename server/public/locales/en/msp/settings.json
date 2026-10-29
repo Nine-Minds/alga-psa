@@ -414,17 +414,21 @@
       "cancel": "Cancel",
       "delete": "Delete",
       "placeholder": "Enter new team name",
+      "descriptionPlaceholder": "Enter an optional team description",
       "selectManager": "Select a manager"
     },
     "details": {
       "loading": "Loading team details...",
       "notFound": "No team found",
+      "noDescription": "No description",
       "fields": {
         "teamLead": "Team Lead",
+        "description": "Description",
         "addMember": "Add Member"
       },
       "placeholders": {
         "teamName": "Enter team name",
+        "description": "Enter team description",
         "selectTeamLead": "Select a team lead",
         "selectUserToAdd": "Select a user to add",
         "noTeamLead": "Not assigned"
@@ -436,8 +440,10 @@
         "discard": "Discard",
         "saveChanges": "Save Changes",
         "saveName": "Save name",
+        "saveDescription": "Save description",
         "cancel": "Cancel",
         "editName": "Edit name",
+        "editDescription": "Edit description",
         "remove": "Remove"
       },
       "table": {
@@ -462,6 +468,7 @@
         "createFailed": "Failed to create team: {{error}}",
         "deleteFailed": "Failed to delete team",
         "updateName": "Failed to update team name",
+        "updateDescription": "Failed to update team description",
         "saveChanges": "Failed to save changes. Please try again."
       }
     }
