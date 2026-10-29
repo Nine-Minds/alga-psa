@@ -30,6 +30,7 @@ import type { PartyDisplayTags } from '../../lib/partyDisplayTags';
 import { getUserTimeZone } from '@alga-psa/core';
 import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
 import { formatTicketLocationDisplay } from '../../lib/formatTicketLocation';
+import { requesterLocationLine } from '../../lib/requesterLocation';
 import type { TicketWatchListEntry } from '@shared/lib/tickets/watchList';
 import TicketMaterialsCard from './TicketMaterialsCard';
 import TicketWatchListCard from './TicketWatchListCard';
@@ -238,6 +239,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [selectedTeamMemberIds, setSelectedTeamMemberIds] = useState<string[]>([]);
   const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
   const [pendingSwitchTeamId, setPendingSwitchTeamId] = useState<string | null>(null);
+
+  // Where the ticket's requester works, shown under their name.
+  const requesterLocation = requesterLocationLine(contactInfo, t('bento.tiles.remote', 'Remote'));
 
   // Register unsaved changes for contact, client, and location pickers
   // Popup triggers if picker is open AND a different selection is made (but not yet saved)
@@ -721,6 +725,12 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 </div>
               )}
             </div>
+            {/* Where this person works, the same line the grid layout's contact tile shows. */}
+            {requesterLocation ? (
+              <p id={`${id}-contact-location`} className="mt-1 text-sm text-gray-600">
+                {requesterLocation.name}
+              </p>
+            ) : null}
             {getEditingCaption('contact_name_id') ? (
               <p className="mt-2 text-xs text-slate-500">{getEditingCaption('contact_name_id')}</p>
             ) : null}

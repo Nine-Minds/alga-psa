@@ -63,6 +63,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import { attachContactLocations } from '@alga-psa/shared/models/contactLocation';
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import { resolveLatestActivityActor, type LatestActivityNames } from '../lib/latestActivityActor';
@@ -759,6 +760,16 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           contact_name_id: ticket.contact_name_id
         })
         .first();
+    }
+
+    // Where these people work, in one batched read for the whole page: the requester tile shows
+    // the ticket's contact location (and offers it when the ticket sits elsewhere), and the
+    // contact picker rows carry the same secondary line as everywhere else.
+    if (contacts.length > 0) {
+      contacts = await attachContactLocations(trx, tenant, contacts, (contact) => contact.contact_name_id) as IContact[];
+    }
+    if (contactInfo) {
+      [contactInfo] = await attachContactLocations(trx, tenant, [contactInfo], (contact) => contact.contact_name_id);
     }
 
     const displayTags = {
