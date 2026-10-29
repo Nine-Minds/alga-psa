@@ -397,6 +397,7 @@ jobs:
             esac
           done
           playwright=false
+          workspace_dependencies=false
           {
             for suite in $known; do
               case " $SUITES " in
@@ -409,8 +410,14 @@ jobs:
               *" browser "*|*" upgrade "*|*" citus "*|*" teams "*) playwright=true ;;
             esac
             echo "playwright=$playwright"
+            # The API suite runs from the repository's own node_modules, and so
+            # does the upgrade preparation (tsx, knex) and the Citus probe (pg).
+            case " $SUITES " in
+              *" api "*|*" upgrade "*|*" citus "*) workspace_dependencies=true ;;
+            esac
+            echo "workspace_dependencies=$workspace_dependencies"
           } >> "$GITHUB_OUTPUT"
-          echo "Shard $LANE runs: $SUITES (playwright=$playwright)"
+          echo "Shard $LANE runs: $SUITES (playwright=$playwright, workspace_dependencies=$workspace_dependencies)"
 
       - name: Record browser tests not selected
         if: needs.changes.outputs.run_tests == 'false'
@@ -1211,15 +1218,15 @@ jobs:
           if [ "$EDITION" = enterprise ]; then workers="$workers temporal-worker"; fi
           docker-compose -p alga-e2e-test stop $workers
 
-      - name: Install API test dependencies
+      - name: Install repository test dependencies
         id: api_dependencies
-        if: ${{ !cancelled() && steps.shard.outputs.api == 'true' && steps.wait_for_setup.outputs.status == 'success' }}
+        if: ${{ !cancelled() && steps.shard.outputs.workspace_dependencies == 'true' && steps.wait_for_setup.outputs.status == 'success' }}
         timeout-minutes: 10
         run: node scripts/install-api-test-dependencies.mjs
 
       - name: Attest ownership of the fresh-install API database
         id: api_database
-        if: ${{ !cancelled() && steps.api_dependencies.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.shard.outputs.api == 'true' && steps.api_dependencies.outcome == 'success' }}
         timeout-minutes: 2
         shell: bash
         run: |
@@ -1257,7 +1264,7 @@ jobs:
         run: node scripts/run-additional-workspace-tests.mjs api-e2e
 
       - name: Upload API execution evidence
-        if: ${{ always() && steps.api_dependencies.outcome == 'success' && !env.ACT }}
+        if: ${{ always() && steps.api_database.outcome != 'skipped' && !env.ACT }}
         uses: actions/upload-artifact@v4
         with:
           name: fresh-install-api-${{ matrix.edition }}

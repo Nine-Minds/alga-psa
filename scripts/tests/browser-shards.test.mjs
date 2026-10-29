@@ -48,7 +48,7 @@ test('each suite chain starts at a step gated on its resolved suite', () => {
   for (const [step, suite] of [
     [byName('Run Playwright E2E tests'), 'browser'], [byName('Record browser journey readiness'), 'browser'],
     [byName('Upload Playwright diagnostics'), 'browser'], [byName('Upload browser flaky-test evidence'), 'browser'],
-    [byId('api_dependencies'), 'api'], [byId('upgrade_schema'), 'upgrade'], [byId('citus_upgrade_service'), 'citus'],
+    [byId('api_database'), 'api'], [byId('upgrade_schema'), 'upgrade'], [byId('citus_upgrade_service'), 'citus'],
     [byId('teams_development_server'), 'teams'], [byId('microsoft_callback'), 'microsoft'],
   ]) {
     assert.ok(step, `step for ${suite} exists`);
@@ -56,6 +56,10 @@ test('each suite chain starts at a step gated on its resolved suite', () => {
   }
   assert.match(byId('browser_packages').if, /steps\.shard\.outputs\.playwright == 'true'/, 'Playwright installs only where a suite drives a browser');
   assert.ok(resolve.run.includes('*" browser "*|*" upgrade "*|*" citus "*|*" teams "*) playwright=true'), 'the browser-driving suites are the ones that install Playwright');
+  // The upgrade preparation runs tsx and knex and the Citus probe imports pg
+  // from the repository's node_modules; the first sharded run failed there.
+  assert.match(byId('api_dependencies').if, /steps\.shard\.outputs\.workspace_dependencies == 'true'/);
+  assert.ok(resolve.run.includes('*" api "*|*" upgrade "*|*" citus "*) workspace_dependencies=true'), 'suites that run from root node_modules install them');
 });
 
 test('artifacts that every shard uploads carry the lane in their name', () => {
