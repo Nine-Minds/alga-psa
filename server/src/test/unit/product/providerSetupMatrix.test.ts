@@ -21,9 +21,8 @@ const MATRIX: ReadonlyArray<[route: string, expected: Record<ProductCode, Behavi
   ['/msp/integrations/rmm', { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' }],
   ['/msp/integrations/accounting', { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' }],
   ['/msp/integrations/payments', { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' }],
-  // The sponsor surface beside it stays PSA-only; mailbox setup stays reachable.
-  ['/msp/co-management', { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' }],
-  ['/msp/co-managed', { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' }],
+  // The side-aware co-managed root beside it is unchanged; mailbox setup stays reachable.
+  ['/msp/co-managed', { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' }],
   ['/msp/settings/email', { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' }],
 ];
 
@@ -42,10 +41,13 @@ describe('provider setup allow/deny matrix (L9 A1)', () => {
     expect(rule.staticPrefixes).toEqual(['/msp/co-management/providers']);
   });
 
-  it('only that rule opens a /msp/co-management path to co_managed', () => {
+  it('the removed /msp/co-management root stays unruled; only providers is opened beneath it', () => {
+    for (const product of ['psa', 'algadesk', 'co_managed'] as ProductCode[]) {
+      expect(resolveProductRouteBehavior(product, '/msp/co-management'), product)
+        .toBe(resolveProductRouteBehavior(product, '/msp/not-a-real-route'));
+    }
     const opened = MSP_ROUTE_RULES.filter((rule) =>
-      rule.behaviorByProduct.co_managed === 'allowed'
-      && rule.staticPrefixes?.some((prefix) => prefix.startsWith('/msp/co-manag')));
+      rule.staticPrefixes?.some((prefix) => prefix.startsWith('/msp/co-management')));
     expect(opened.map((rule) => rule.group)).toEqual(['msp_co_management_providers']);
   });
 });

@@ -435,7 +435,8 @@
       "unnamed": "Klant",
       "workspace": "Werkruimte",
       "capacity": "{{allocated}} van {{count}} co-managed plekken toegewezen.",
-      "openClient": "Co-managed IT instellen voor deze klant"
+      "openClient": "Co-managed IT instellen voor deze klant",
+      "readOnly": "Co-managed IT is alleen-lezen voor deze werkruimte. Bestaande relaties worden getoond; nieuwe configuratie is niet beschikbaar."
     },
     "provisioning": {
       "administrator": "Beheerder",
@@ -497,6 +498,35 @@
     "workspaceUnavailable": {
       "description": "Deze werkruimte is momenteel niet beschikbaar. Neem contact op met uw IT-leverancier als u deze verwachtte te gebruiken.",
       "title": "Co-managed IT is niet beschikbaar"
+    },
+    "history": {
+      "title": "Relatiegeschiedenis",
+      "event": "Gebeurtenis",
+      "revision": "Revisie",
+      "when": "Wanneer",
+      "by": "Door",
+      "you": "U",
+      "provider": "Aanbieder",
+      "empty": "Nog geen relatiegebeurtenissen.",
+      "error": "De relatiegeschiedenis kon niet worden geladen.",
+      "events": {
+        "requested": "Aangevraagd",
+        "prepared": "Werkruimte voorbereid",
+        "accepted": "Geaccepteerd",
+        "declined": "Geweigerd",
+        "terminated": "Beëindigd",
+        "staff_assignments_changed": "Personeelstoewijzingen gewijzigd",
+        "customer_scope_changed": "Klantbereik gewijzigd",
+        "delegation_granted": "Delegatie verleend",
+        "delegation_revoked": "Delegatie ingetrokken"
+      }
+    },
+    "workspace": {
+      "title": "Gezamenlijk beheerde IT",
+      "sponsor": "Beheerd door",
+      "none": "Deze werkruimte heeft geen co-managed IT-relatie.",
+      "loading": "Laden…",
+      "error": "Co-managed IT kon niet worden geladen."
     }
   }
 }

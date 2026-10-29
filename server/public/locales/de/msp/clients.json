@@ -492,7 +492,8 @@
       "ticketClosed": "Ticket geschlossen",
       "ticketOpened": "Ticket eröffnet",
       "unitDelivered": "Ausstattung geliefert"
-    }
+    },
+    "discardFeatureMessage": "Sie haben nicht gespeicherte Änderungen in dieser Ansicht. Schließen und verwerfen?"
   },
   "quickAddClient": {
     "lifecycleStatus": "Lebenszyklus",

@@ -2,6 +2,7 @@
 // TODO: This file needs refactoring - TimePeriod model method signatures have changed
 'use server'
 
+import { delegateToTimeSource } from '../lib/timeSource';
 import { revalidatePath } from 'next/cache'
 import { TimePeriod } from '../models/timePeriod'
 import { TimePeriodSettings } from '../models/timePeriodSettings';
@@ -178,6 +179,9 @@ export const getTimePeriodCapabilities = withAuth(async (user): Promise<TimePeri
 });
 
 export const getLatestTimePeriod = withAuth(async (user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodView | null>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.readLatest(ctx));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex } = await createTenantKnex();
     const denied = await timePeriodPermissionError(user, 'read', knex);
@@ -203,6 +207,9 @@ export const getLatestTimePeriod = withAuth(async (user, { tenant }): Promise<Ti
 });
 
 export const getTimePeriodSettings = withAuth(async (user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodSettings[]>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.readSettings(ctx));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex } = await createTenantKnex();
     const denied = await timePeriodPermissionError(user, 'read', knex);
@@ -227,6 +234,9 @@ export const createTimePeriod = withAuth(async (
   { tenant },
   input: TimePeriodInput
 ): Promise<TimePeriodActionResult<ITimePeriodView>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.create(ctx, input));
+  if (delegated.handled) return delegated.value;
   // Convert string dates to Temporal.PlainDate (Next.js server actions can't receive Temporal objects)
   let timePeriodData: { start_date: Temporal.PlainDate; end_date: Temporal.PlainDate };
   try {
@@ -278,6 +288,9 @@ export const createTimePeriod = withAuth(async (
 });
 
 export const fetchAllTimePeriods = withAuth(async (user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodView[]>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.read(ctx));
+  if (delegated.handled) return delegated.value;
   try {
     console.log('Fetching all time periods...');
 
@@ -323,6 +336,9 @@ function getCurrentDate(timeZone: string): Temporal.PlainDate {
 }
 
 export const getCurrentTimePeriod = withAuth(async (user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodView | null>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.readCurrent(ctx));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex } = await createTenantKnex();
 
@@ -519,6 +535,9 @@ function alignToMonthDay(dateStr: string, targetDay: number): string {
 }
 
 export const deleteTimePeriod = withAuth(async (user, { tenant }, periodId: string): Promise<TimePeriodActionResult<void>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.remove(ctx, periodId));
+  if (delegated.handled) return delegated.value;
   try {
     const { knex } = await createTenantKnex();
     const denied = await timePeriodPermissionError(user, 'delete', knex);
@@ -575,6 +594,9 @@ export const deleteTimePeriods = withAuth(async (
   { tenant },
   periodIds: string[]
 ): Promise<{ deletedIds: string[]; failed: Array<{ periodId: string; message: string }> }> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.removeMany(ctx, periodIds));
+  if (delegated.handled) return delegated.value;
   const { knex } = await createTenantKnex();
 
   // Manager gate: mirrors how the Time Entry page derives isManager (manages any team).
@@ -651,6 +673,9 @@ export const updateTimePeriod = withAuth(async (
   periodId: string,
   input: Partial<TimePeriodInput>
 ): Promise<TimePeriodActionResult<ITimePeriodView>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.update(ctx, periodId, input));
+  if (delegated.handled) return delegated.value;
   // Convert string dates to Temporal.PlainDate (Next.js server actions can't receive Temporal objects)
   const updates: Partial<Omit<ITimePeriod, 'period_id' | 'tenant'>> = {};
   try {
@@ -723,6 +748,9 @@ export const updateTimePeriod = withAuth(async (
 });
 
 export const generateAndSaveTimePeriods = withAuth(async (user, { tenant }, startDate: ISO8601String, endDate: ISO8601String): Promise<TimePeriodActionResult<ITimePeriodView[]>> => {
+  // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+  const delegated = await delegateToTimeSource({ tenant, userId: user.user_id }, (source, ctx) => source.periods.generate(ctx, startDate, endDate));
+  if (delegated.handled) return delegated.value;
   const { knex: db } = await createTenantKnex();
   const denied = await timePeriodPermissionError(user, 'create', db);
   if (denied) {

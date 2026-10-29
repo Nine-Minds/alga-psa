@@ -5,6 +5,7 @@ import { AppSessionProvider } from "@alga-psa/auth/client";
 import DefaultLayout from "@/components/layout/DefaultLayout";
 import AlgaDeskMspShell from "@/components/layout/AlgaDeskMspShell";
 import CoManagedCustomerShell from '@/components/co-managed/CoManagedCustomerShell';
+import CoManagedWorkspaceNotice, { type CoManagedWorkspaceNoticeState } from '@/components/co-managed/CoManagedWorkspaceNotice';
 import { TagProvider } from "@alga-psa/tags/context";
 import { PostHogUserIdentifier } from "@alga-psa/ui/components/analytics/PostHogUserIdentifier";
 import { ClientUIStateProvider } from "@alga-psa/ui/ui-reflection/ClientUIStateProvider";
@@ -40,6 +41,8 @@ import {
 
 interface Props {
   children: React.ReactNode;
+  /** Ended-relationship notice for a customer workspace; null for every other product. */
+  workspaceNotice?: CoManagedWorkspaceNoticeState;
   session: Session | null;
   /** Tenant default currency (default_billing_settings) for CurrencyFormatProvider. */
   currencyCode?: string;
@@ -104,6 +107,7 @@ export function MspLayoutClient({
   onboardingResolvedServerSide = false,
   selfHostLicensing = false,
   mspBranding = null,
+  workspaceNotice = null,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -238,7 +242,7 @@ export function MspLayoutClient({
                   }}
                 >
                   {productCode === 'co_managed' ? (
-                    <CoManagedCustomerShell>{routeBehavior === 'allowed' ? children : <ProductRouteBoundary behavior={routeBehavior} scope="msp" />}</CoManagedCustomerShell>
+                    <CoManagedCustomerShell><CoManagedWorkspaceNotice notice={workspaceNotice} />{routeBehavior === 'allowed' ? children : <ProductRouteBoundary behavior={routeBehavior} scope="msp" />}</CoManagedCustomerShell>
                   ) : isAlgaDesk ? (
                     routeBehavior === 'allowed' ? (
                       <AlgaDeskMspShell initialSidebarCollapsed={initialSidebarCollapsed}>
