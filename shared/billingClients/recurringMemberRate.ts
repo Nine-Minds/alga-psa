@@ -116,23 +116,47 @@ export function productMembersRecurringTotalCents(members: ReadonlyArray<FixedLi
   }, 0);
 }
 
+export type CanonicalRecurringFrequency = 'weekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
+
+/**
+ * Canonical cadence name. The one place stored cadence spellings are read:
+ * `semi_annually` folds into `semi-annually`, and null and unknown cadences are
+ * monthly (the storage default). {@link normalizeToMonthlyCents} and
+ * {@link summarizeRecurringAmounts} both key off this.
+ */
+export function canonicalRecurringFrequency(
+  billingFrequency: string | null | undefined,
+): CanonicalRecurringFrequency {
+  switch (billingFrequency) {
+    case 'weekly':
+      return 'weekly';
+    case 'quarterly':
+      return 'quarterly';
+    case 'semi-annually':
+    case 'semi_annually':
+      return 'semi-annually';
+    case 'annually':
+      return 'annually';
+    default:
+      return 'monthly';
+  }
+}
+
 /**
  * Cadence normalization used by every recurring-value read path (monthly
  * cents). Lives here so client and server code share one implementation.
  */
 export function normalizeToMonthlyCents(amountCents: number, billingFrequency: string | null | undefined): number {
-  switch (billingFrequency) {
+  switch (canonicalRecurringFrequency(billingFrequency)) {
     case 'weekly':
       return Math.round(amountCents * 4.33);
     case 'quarterly':
       return Math.round(amountCents / 3);
     case 'semi-annually':
-    case 'semi_annually':
       return Math.round(amountCents / 6);
     case 'annually':
       return Math.round(amountCents / 12);
-    default:
-      // monthly (and unknown cadences, which are stored monthly by default)
+    case 'monthly':
       return Math.round(amountCents);
   }
 }
@@ -166,4 +190,58 @@ export function resolveFixedLineRecurringTotal(
   const amount = resolveFixedLinePeriodTotal(line);
   if (amount === null) return null;
   return normalizeToMonthlyCents(amount, line.billing_frequency ?? frequency);
+}
+
+export interface RecurringPeriodAmount {
+  /** Amount for one billing period, in minor units. */
+  periodCents: number;
+  /** The cadence that amount is billed on. */
+  frequency: string | null | undefined;
+}
+
+export interface RecurringFrequencyGroup {
+  /** Canonical cadence as stored ('monthly' | 'annually' | …). */
+  frequency: CanonicalRecurringFrequency;
+  /** Sum of the group's per-period amounts. */
+  periodCents: number;
+  /** Σ normalizeToMonthlyCents(entry) over the group's entries (per-entry, not per-group). */
+  monthlyCents: number;
+}
+
+export interface RecurringSummary {
+  /** Largest monthlyCents first; ties keep first-seen order. */
+  groups: RecurringFrequencyGroup[];
+  /** Σ group.periodCents when every group shares one frequency; else null. */
+  singleFrequencyPeriodCents: number | null;
+  singleFrequency: CanonicalRecurringFrequency | null;
+  /** Σ group.monthlyCents — the comparable figure the stored value keeps using. */
+  monthlyCents: number;
+}
+
+/**
+ * Groups per-period recurring amounts by cadence, keeping the cadence the
+ * contract actually bills on. `monthlyCents` is normalized per ENTRY and then
+ * summed — exactly the "normalize each line, sum" rule the wizard total, the
+ * stored value and the invoice engine already use — so weekly rounding cannot
+ * drift between surfaces. A null/unknown cadence counts as monthly.
+ */
+export function summarizeRecurringAmounts(amounts: ReadonlyArray<RecurringPeriodAmount>): RecurringSummary {
+  const byFrequency = new Map<CanonicalRecurringFrequency, RecurringFrequencyGroup>();
+  for (const amount of amounts) {
+    const frequency = canonicalRecurringFrequency(amount.frequency);
+    const group = byFrequency.get(frequency) ?? { frequency, periodCents: 0, monthlyCents: 0 };
+    group.periodCents += amount.periodCents;
+    group.monthlyCents += normalizeToMonthlyCents(amount.periodCents, frequency);
+    byFrequency.set(frequency, group);
+  }
+  const groups = [...byFrequency.values()]
+    .filter((group) => group.periodCents !== 0)
+    .sort((a, b) => b.monthlyCents - a.monthlyCents);
+  const single = groups.length > 0 && groups.every((group) => group.frequency === groups[0].frequency);
+  return {
+    groups,
+    singleFrequency: single ? groups[0].frequency : null,
+    singleFrequencyPeriodCents: single ? groups.reduce((sum, group) => sum + group.periodCents, 0) : null,
+    monthlyCents: groups.reduce((sum, group) => sum + group.monthlyCents, 0),
+  };
 }

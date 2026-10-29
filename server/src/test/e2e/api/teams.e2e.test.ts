@@ -84,6 +84,36 @@ describe('Teams API E2E Tests', () => {
         assertError(response, 400, 'VALIDATION_ERROR');
       });
 
+      it('should round-trip the team description through create, get and update', async () => {
+        const newTeam = createTeamTestData({
+          manager_id: env.userId,
+          description: 'Handles escalations for the east region'
+        });
+
+        const createResponse = await env.apiClient.post(API_BASE, newTeam);
+        assertSuccess(createResponse, 201);
+        expect(createResponse.data.data.description).toBe(newTeam.description);
+
+        const teamId = createResponse.data.data.team_id;
+        const getResponse = await env.apiClient.get(`${API_BASE}/${teamId}`);
+        assertSuccess(getResponse);
+        expect(getResponse.data.data.description).toBe(newTeam.description);
+
+        const updateResponse = await env.apiClient.put(`${API_BASE}/${teamId}`, {
+          description: 'Handles escalations for the west region'
+        });
+        assertSuccess(updateResponse);
+        expect(updateResponse.data.data).toMatchObject({
+          team_id: teamId,
+          team_name: newTeam.team_name,
+          description: 'Handles escalations for the west region'
+        });
+
+        const clearResponse = await env.apiClient.put(`${API_BASE}/${teamId}`, { description: null });
+        assertSuccess(clearResponse);
+        expect(clearResponse.data.data.description).toBeNull();
+      });
+
       it('should validate manager_id is a valid user', async () => {
         const teamWithInvalidManager = createTeamTestData({ 
           manager_id: uuidv4() // Random UUID that doesn't exist
