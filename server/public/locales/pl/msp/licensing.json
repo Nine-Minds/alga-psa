@@ -435,7 +435,8 @@
       "unnamed": "Klient",
       "workspace": "Obszar roboczy",
       "capacity": "Przydzielono {{allocated}} z {{count}} stanowisk współzarządzania.",
-      "openClient": "Skonfiguruj współzarządzane IT dla tego klienta"
+      "openClient": "Skonfiguruj współzarządzane IT dla tego klienta",
+      "readOnly": "Współzarządzane IT jest w tym obszarze roboczym tylko do odczytu. Wyświetlane są istniejące relacje; nowa konfiguracja jest niedostępna."
     },
     "provisioning": {
       "administrator": "Administrator",
@@ -497,6 +498,35 @@
     "workspaceUnavailable": {
       "description": "Ten obszar roboczy jest obecnie niedostępny. Skontaktuj się ze swoim dostawcą IT, jeśli zamierzałeś z niego korzystać.",
       "title": "Współzarządzane IT jest niedostępne"
+    },
+    "history": {
+      "title": "Historia relacji",
+      "event": "Zdarzenie",
+      "revision": "Rewizja",
+      "when": "Kiedy",
+      "by": "Przez",
+      "you": "Ty",
+      "provider": "Dostawca",
+      "empty": "Brak zdarzeń relacji.",
+      "error": "Nie udało się wczytać historii relacji.",
+      "events": {
+        "requested": "Zgłoszono",
+        "prepared": "Przygotowano obszar roboczy",
+        "accepted": "Zaakceptowano",
+        "declined": "Odrzucono",
+        "terminated": "Zakończona",
+        "staff_assignments_changed": "Zmieniono przypisania pracowników",
+        "customer_scope_changed": "Zmieniono zakres klienta",
+        "delegation_granted": "Przyznano delegowanie",
+        "delegation_revoked": "Cofnięto delegowanie"
+      }
+    },
+    "workspace": {
+      "title": "IT w współzarządzaniu",
+      "sponsor": "Zarządzane przez",
+      "none": "Ten obszar roboczy nie ma relacji IT w współzarządzaniu.",
+      "loading": "Ładowanie…",
+      "error": "Nie udało się wczytać IT w współzarządzaniu."
     }
   }
 }

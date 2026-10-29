@@ -109,7 +109,8 @@
     "assetsCustody": "Equipment in Verwahrung",
     "ticketsCannedResponses": "Textbausteine",
     "profile": "Profil",
-    "signOut": "Abmelden"
+    "signOut": "Abmelden",
+    "coManaged": "Gemeinsam verwaltete IT"
   },
   "sidebar": {
     "backToMain": "Zurück zur Hauptansicht",

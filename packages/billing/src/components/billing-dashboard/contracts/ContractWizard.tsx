@@ -212,10 +212,8 @@ export interface ContractWizardData {
     quantity: number;
     /** Optional per-unit override in cents (contract currency). */
     custom_rate?: number;
-    /** Catalog price in the contract currency (cents); null when the catalog has none. Display-only, never persisted. */
-    currency_rate?: number | null;
-    /** Legacy currency-untagged catalog default rate (cents). Display-only, never persisted. */
-    default_rate?: number | null;
+    // No catalog price here: it is derived per (contract currency, service id) by
+    // useProductCatalogRates, so a currency change or a resumed draft cannot carry a stale one.
   }>;
   enable_proration: boolean;
   hourly_services: Array<{

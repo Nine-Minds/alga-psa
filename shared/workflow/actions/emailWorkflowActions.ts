@@ -4,7 +4,6 @@
  * using shared database patterns to avoid cross-package dependencies.
  */
 
-import { ticketUpdateStamp } from '../../lib/tickets/ticketUpdateStamp';
 import { ticketCreationWithActor } from '../../lib/tickets/ticketLifecycleEvents';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -18,9 +17,7 @@ import { ContactModel } from '../../models/contactModel';
 import { createClientWithDefaults } from '../../models/clientCreation';
 import { buildContactCreatedPayload } from '../streams/domainEventBuilders/contactEventBuilders';
 import {
-  mergeTicketWatchListRecipients,
   parseTicketWatchListAttributes,
-  setTicketWatchListOnAttributes,
   type TicketWatchListRecipientInput,
 } from '../../lib/tickets/watchList';
 
@@ -212,29 +209,6 @@ export interface SaveEmailClientAssociationOutput {
   associationId: string;
   email: string;
   client_id: string;
-}
-
-function parseTicketAttributes(raw: unknown): Record<string, unknown> {
-  if (!raw) {
-    return {};
-  }
-
-  if (typeof raw === 'string') {
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        return parsed as Record<string, unknown>;
-      }
-    } catch {
-      return {};
-    }
-  }
-
-  if (typeof raw === 'object' && !Array.isArray(raw)) {
-    return { ...(raw as Record<string, unknown>) };
-  }
-
-  return {};
 }
 
 export type InboundDestinationResolutionSource =
@@ -1523,38 +1497,30 @@ export async function upsertTicketWatchListRecipients(
 ): Promise<{ updated: boolean; watchList: ReturnType<typeof parseTicketWatchListAttributes> }> {
   const { withAdminTransaction } = await import('@alga-psa/db');
 
+  const { TicketWatcherService, TicketWatcherError } = await import('../../services/tickets/ticketWatcherService');
+
   return withAdminTransaction(async (trx: Knex.Transaction) => {
-    const db = tenantDb(trx, tenant);
-    const ticket = await db.table('tickets')
-      .select('attributes')
-      .where({
-        ticket_id: params.ticketId,
-      })
-      .first<{ attributes?: unknown }>();
-
-    if (!ticket) {
-      return { updated: false, watchList: [] };
+    // The watcher table is the source of truth; the service also rewrites the
+    // attributes.watch_list mirror in this transaction.
+    try {
+      const result = await TicketWatcherService.addRecipients(trx, tenant, params.ticketId, params.recipients ?? [], null);
+      return {
+        updated: result.changed,
+        watchList: result.watchers.map((watcher) => ({
+          email: watcher.email,
+          active: watcher.active,
+          ...(watcher.name ? { name: watcher.name } : {}),
+          ...(watcher.source ? { source: watcher.source } : {}),
+          ...(watcher.entity_type ? { entity_type: watcher.entity_type } : {}),
+          ...(watcher.entity_id ? { entity_id: watcher.entity_id } : {}),
+        })),
+      };
+    } catch (error) {
+      if (error instanceof TicketWatcherError && error.kind === 'ticket_not_found') {
+        return { updated: false, watchList: [] };
+      }
+      throw error;
     }
-
-    const currentAttributes = parseTicketAttributes(ticket.attributes);
-    const currentWatchList = parseTicketWatchListAttributes(currentAttributes);
-    const mergedWatchList = mergeTicketWatchListRecipients(currentWatchList, params.recipients ?? []);
-
-    if (JSON.stringify(currentWatchList) === JSON.stringify(mergedWatchList)) {
-      return { updated: false, watchList: currentWatchList };
-    }
-
-    const nextAttributes = setTicketWatchListOnAttributes(currentAttributes, mergedWatchList);
-    await db.table('tickets')
-      .where({
-        ticket_id: params.ticketId,
-      })
-      .update({
-        attributes: nextAttributes ? JSON.stringify(nextAttributes) : null,
-        ...ticketUpdateStamp(trx, null),
-      });
-
-    return { updated: true, watchList: mergedWatchList };
   }, existingConnection);
 }
 

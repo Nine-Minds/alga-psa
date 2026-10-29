@@ -50,6 +50,12 @@ type ContractLineServiceWithConfiguration = {
   userTypeRates?: IUserTypeRate[];
   rateTiers?: IContractLineServiceRateTier[];
   bucketConfig?: IContractLineServiceBucketConfig | null;
+  /**
+   * Legacy `contract_line_services.custom_rate` (minor units). The invoice engine's
+   * recurring-member chain reads it after the configuration override, so a reader
+   * that resolves a member's effective rate needs it too.
+   */
+  service_line_custom_rate?: number | null;
 };
 
 type TemplateLineServiceWithConfiguration = {
@@ -1007,6 +1013,14 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
   // Build result with merged bucket configs
   const result: ContractLineServiceWithConfiguration[] = [];
 
+  const serviceLineCustomRates = new Map<string, number | null>();
+  const membershipRows = await tenantScopedTable(trx, tenant, 'contract_line_services')
+    .where({ contract_line_id: contractLineId })
+    .select('service_id', 'custom_rate') as Array<{ service_id: string; custom_rate: number | string | null }>;
+  for (const row of membershipRows) {
+    serviceLineCustomRates.set(row.service_id, row.custom_rate == null ? null : Number(row.custom_rate));
+  }
+
   for (const [serviceId, serviceConfigs] of configsByService.entries()) {
     // Find primary config (Hourly, Usage, or Fixed) and bucket config
     const primaryConfig = serviceConfigs.find(c => c.configuration_type !== 'Bucket');
@@ -1064,7 +1078,8 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
       typeConfig: configDetails.typeConfig,
       rateTiers: configDetails.rateTiers,
       userTypeRates: userTypeRates,
-      bucketConfig: bucketConfigDetails // Add the merged bucket config
+      bucketConfig: bucketConfigDetails, // Add the merged bucket config
+      service_line_custom_rate: serviceLineCustomRates.get(serviceId) ?? null,
       });
     }
 

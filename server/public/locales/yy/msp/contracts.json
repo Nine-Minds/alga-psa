@@ -698,6 +698,13 @@
       "statusSuperseded": "〖Şŭƥḗřşḗḓḗḓ ····〗",
       "supersededHistory": "〖Şŭƥḗřşḗḓḗḓ ƥḗƞḓīƞɠ ḗḓīŧş ({{count}}) ···············〗",
       "supersededBy": "〖Şŭƥḗřşḗḓḗḓ ƀẏ ······〗"
+    },
+    "pricing": {
+      "catalog": "〖ƈȧŧȧŀȯɠ ···〗",
+      "override": "〖ȯṽḗřřīḓḗ ····〗",
+      "cost": "〖Ƈȯşŧ: {{cost}} ······〗",
+      "costInCurrency": "〖Ƈȯşŧ īƞ {{currency}}: {{cost}} ············〗",
+      "margin": "〖Ḿȧřɠīƞ: {{margin}} ƥḗř ŭƞīŧ ···········〗"
     }
   },
   "contractLineEdit": {
@@ -1979,7 +1986,10 @@
         "one": "〖{{count}} ƥřȯḓŭƈŧ ·······〗",
         "other": "〖{{count}} ƥřȯḓŭƈŧş ········〗"
       },
-      "overrideRate": "〖- ȯṽḗřřīḓḗ {{rate}}/{{currencyCode}} ···············〗"
+      "overrideRate": "〖- ȯṽḗřřīḓḗ {{rate}}/{{currencyCode}} ···············〗",
+      "cost": "〖Ƈȯşŧ: {{cost}} ······〗",
+      "costInCurrency": "〖Ƈȯşŧ īƞ {{currency}}: {{cost}} ············〗",
+      "margin": "〖Ḿȧřɠīƞ: {{margin}} ƥḗř ŭƞīŧ ···········〗"
     },
     "hourly": {
       "badgeCount": {

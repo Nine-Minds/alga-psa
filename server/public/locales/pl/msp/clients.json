@@ -544,7 +544,8 @@
       "ticketClosed": "Zamknięto zgłoszenie",
       "ticketOpened": "Otwarto zgłoszenie",
       "unitDelivered": "Dostarczono sprzęt"
-    }
+    },
+    "discardFeatureMessage": "W tym widoku są niezapisane zmiany. Zamknąć i odrzucić je?"
   },
   "quickAddClient": {
     "lifecycleStatus": "Cykl życia",

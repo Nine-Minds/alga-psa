@@ -24,6 +24,9 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
   const [selectedRelationshipId, setSelectedRelationshipId] = useState<string | null>(relationshipId ?? null);
   const generation = useRef(0);
   const viewRef = useRef<View | null>(null);
+  // The setup draft lives in the tab; the command center asks before discarding it.
+  const dirtyRef = useRef(false);
+  const [resetKey, setResetKey] = useState(0);
 
   // A client switch resets the slots and shows loading. A manual refresh keeps
   // the current slots so the registered tab survives; only a first-load failure
@@ -82,6 +85,8 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
     tab: {
       id: 'co-managed',
       label: t('coManaged.client.tab', { defaultValue: 'Co-managed IT' }),
+      hasUnsavedChanges: () => dirtyRef.current,
+      onDiscardUnsavedChanges: () => { dirtyRef.current = false; setResetKey((key) => key + 1); },
       content: (
         <CoManagedClientView
           view={view}
@@ -91,6 +96,8 @@ export default function ClientCoManagedIntegration({ clientId, clientName, idPre
           relationshipId={selectedRelationshipId}
           onSelectRelationship={selectRelationship}
           onReload={reload}
+          resetKey={resetKey}
+          onDirtyChange={(dirty) => { dirtyRef.current = dirty; }}
         />
       ),
     },

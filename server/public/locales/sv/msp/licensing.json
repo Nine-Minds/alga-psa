@@ -435,7 +435,8 @@
       "unnamed": "Kund",
       "workspace": "Arbetsyta",
       "capacity": "{{allocated}} av {{count}} samhanterade platser tilldelade.",
-      "openClient": "Konfigurera samhanterad IT för den här kunden"
+      "openClient": "Konfigurera samhanterad IT för den här kunden",
+      "readOnly": "Samhanterad IT är skrivskyddad för den här arbetsytan. Befintliga relationer visas; ny konfiguration är inte tillgänglig."
     },
     "provisioning": {
       "administrator": "Administratör",
@@ -497,6 +498,35 @@
     "workspaceUnavailable": {
       "description": "Den här arbetsytan är inte tillgänglig just nu. Kontakta din IT-leverantör om du räknade med att använda den.",
       "title": "Samförvaltad IT är inte tillgänglig"
+    },
+    "history": {
+      "title": "Relationshistorik",
+      "event": "Händelse",
+      "revision": "Revision",
+      "when": "När",
+      "by": "Av",
+      "you": "Du",
+      "provider": "Leverantör",
+      "empty": "Inga relationshändelser ännu.",
+      "error": "Relationshistoriken kunde inte läsas in.",
+      "events": {
+        "requested": "Begärd",
+        "prepared": "Arbetsyta förberedd",
+        "accepted": "Accepterad",
+        "declined": "Avvisad",
+        "terminated": "Avslutad",
+        "staff_assignments_changed": "Personaltilldelningar ändrade",
+        "customer_scope_changed": "Kundomfattning ändrad",
+        "delegation_granted": "Delegering beviljad",
+        "delegation_revoked": "Delegering återkallad"
+      }
+    },
+    "workspace": {
+      "title": "Samförvaltad IT",
+      "sponsor": "Förvaltas av",
+      "none": "Den här arbetsytan har ingen relation för samförvaltad IT.",
+      "loading": "Läser in…",
+      "error": "Samförvaltad IT kunde inte läsas in."
     }
   }
 }

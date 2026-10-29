@@ -69,7 +69,7 @@ try {
           const temporary = mkdtempSync(path.join(tmpdir(), 'alga-gate-affected-'));
           try {
             const collectedPath = path.join(temporary, 'files.json');
-            const collection = spawnSync(process.execPath, [path.join(root, 'server/node_modules/vitest/vitest.mjs'),
+            const collection = spawnSync(process.execPath, [path.join(root, 'node_modules/vitest/vitest.mjs'),
               'list', '--filesOnly', '--changed', base, 'src/test/integration',
               '../ee/temporal-workflows/src/__tests__/integration', `--json=${collectedPath}`],
             { cwd: path.join(root, 'server'), encoding: 'utf8', timeout: 120_000 });

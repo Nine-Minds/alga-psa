@@ -109,7 +109,8 @@
     "assetsCustody": "Apparecchiature in custodia",
     "ticketsCannedResponses": "Risposte predefinite",
     "profile": "Profilo",
-    "signOut": "Esci"
+    "signOut": "Esci",
+    "coManaged": "IT in co-gestione"
   },
   "sidebar": {
     "backToMain": "Torna al principale",

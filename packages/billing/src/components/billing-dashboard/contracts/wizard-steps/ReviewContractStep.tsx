@@ -37,7 +37,7 @@ import {
 } from '../../../../lib/fixedServiceBasis';
 import { resolveFixedLineRecurringTotal } from '../../../../lib/billing/compute/recurringMemberRate';
 import { isAdvanceTimingAllowedForLineType, resolveEffectiveBillingTiming } from '@shared/billingClients/contractLineTimingRule';
-import { getServiceCatalogRatesForCurrency } from '@alga-psa/billing/actions/serviceActions';
+import { useProductCatalogRates } from '../../../../hooks/useProductCatalogRates';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   useBillingFrequencyOptions,
@@ -223,27 +223,14 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
     return formatDateInLocale(local);
   };
 
-  // Products resumed from a saved draft carry no catalog price; look it up in
-  // the contract currency so the total prices them like the engine does.
-  const [resumedCatalogRates, setResumedCatalogRates] = useState<Record<string, number | null>>({});
-  const unpricedProductIds = data.product_services
-    .filter((product) => product.service_id && product.currency_rate === undefined)
-    .map((product) => product.service_id)
-    .join(',');
-  useEffect(() => {
-    if (!unpricedProductIds) return;
-    let cancelled = false;
-    getServiceCatalogRatesForCurrency(unpricedProductIds.split(','), currencyCode)
-      .then((rates) => {
-        if (!cancelled && rates && !isActionMessageError(rates) && !isActionPermissionError(rates)) {
-          setResumedCatalogRates(rates as Record<string, number | null>);
-        }
-      })
-      .catch((error) => console.error('Error loading product catalog prices:', error));
-    return () => {
-      cancelled = true;
-    };
-  }, [unpricedProductIds, currencyCode]);
+  // Products are priced through the same shared (contract currency, service id)
+  // lookup the Products step uses, so the two steps cannot disagree — whether
+  // the product was just picked, resumed from a saved draft, or the contract
+  // currency changed after it was picked.
+  const { rates: productCatalogRates } = useProductCatalogRates(
+    currencyCode,
+    data.product_services.map((product) => product.service_id),
+  );
 
   // Per line: unit members bill quantity × unit rate; the base rate is the
   // bundle total and counts only when an allocation member exists. Lines are
@@ -268,8 +255,8 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             item_kind: 'product',
             quantity: product.quantity,
             configuration_custom_rate: product.custom_rate,
-            price_rate: product.currency_rate ?? resumedCatalogRates[product.service_id] ?? null,
-            default_rate: product.default_rate,
+            price_rate: productCatalogRates[product.service_id]?.currency_rate ?? null,
+            default_rate: productCatalogRates[product.service_id]?.default_rate ?? null,
           })),
       },
       data.billing_frequency,

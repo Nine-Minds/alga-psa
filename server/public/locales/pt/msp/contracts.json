@@ -698,6 +698,13 @@
       "statusSuperseded": "Substituído",
       "supersededHistory": "Edições pendentes substituídas ({{count}})",
       "supersededBy": "Substituído por"
+    },
+    "pricing": {
+      "catalog": "catálogo",
+      "override": "personalizado",
+      "cost": "Custo: {{cost}}",
+      "costInCurrency": "Custo em {{currency}}: {{cost}}",
+      "margin": "Margem: {{margin}} por unidade"
     }
   },
   "contractLineEdit": {
@@ -1979,7 +1986,10 @@
         "one": "Produto {{count}}",
         "other": "Produtos {{count}}"
       },
-      "overrideRate": "- substituir {{rate}}/{{currencyCode}}"
+      "overrideRate": "- substituir {{rate}}/{{currencyCode}}",
+      "cost": "Custo: {{cost}}",
+      "costInCurrency": "Custo em {{currency}}: {{cost}}",
+      "margin": "Margem: {{margin}} por unidade"
     },
     "hourly": {
       "badgeCount": {

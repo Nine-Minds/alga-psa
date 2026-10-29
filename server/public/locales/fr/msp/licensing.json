@@ -435,7 +435,8 @@
       "unnamed": "Client",
       "workspace": "Espace de travail",
       "capacity": "{{allocated}} sur {{count}} postes cogérés alloués.",
-      "openClient": "Configurer l’informatique cogérée pour ce client"
+      "openClient": "Configurer l’informatique cogérée pour ce client",
+      "readOnly": "La cogestion informatique est en lecture seule pour cet espace de travail. Les relations existantes sont affichées ; une nouvelle configuration n'est pas disponible."
     },
     "provisioning": {
       "administrator": "Administrateur",
@@ -497,6 +498,35 @@
     "workspaceUnavailable": {
       "description": "Cet espace de travail n’est pas disponible pour le moment. Contactez votre prestataire informatique si vous comptiez l’utiliser.",
       "title": "L’informatique cogérée n’est pas disponible"
+    },
+    "history": {
+      "title": "Historique de la relation",
+      "event": "Événement",
+      "revision": "Révision",
+      "when": "Quand",
+      "by": "Par",
+      "you": "Vous",
+      "provider": "Prestataire",
+      "empty": "Aucun événement de relation pour le moment.",
+      "error": "L'historique de la relation n'a pas pu être chargé.",
+      "events": {
+        "requested": "Demandée",
+        "prepared": "Espace de travail préparé",
+        "accepted": "Acceptée",
+        "declined": "Refusée",
+        "terminated": "Terminée",
+        "staff_assignments_changed": "Affectations du personnel modifiées",
+        "customer_scope_changed": "Périmètre client modifié",
+        "delegation_granted": "Délégation accordée",
+        "delegation_revoked": "Délégation révoquée"
+      }
+    },
+    "workspace": {
+      "title": "IT cogérée",
+      "sponsor": "Géré par",
+      "none": "Cet espace de travail n'a aucune relation d'IT cogérée.",
+      "loading": "Chargement…",
+      "error": "L'IT cogérée n'a pas pu être chargée."
     }
   }
 }

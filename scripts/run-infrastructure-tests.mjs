@@ -28,7 +28,7 @@ resetFlakyPublication(flakyUpload);
 const env = { ...process.env, REQUIRE_DB: '1', SKIP_DB_TESTS: '', REAL_REDIS: '1',
   FLAKY_TESTS_PATH: files['flaky-tests'], FLAKY_SUITE: 'infrastructure',
   FLAKY_JOB: `infrastructure shard ${index}/${total}`, FLAKY_SHARD_INDEX: String(index), FLAKY_SHARD_TOTAL: String(total) };
-const run = args => spawnSync(process.execPath, [path.join(cwd, 'node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
+const run = args => spawnSync(process.execPath, [path.join(root, 'node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
 let before;
 let evidence;
 let allFiles = [];

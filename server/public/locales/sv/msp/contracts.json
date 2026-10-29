@@ -698,6 +698,13 @@
       "statusSuperseded": "Ersatt",
       "supersededHistory": "Ersatta väntande ändringar ({{count}})",
       "supersededBy": "Ersatt av"
+    },
+    "pricing": {
+      "catalog": "katalog",
+      "override": "åsidosatt",
+      "cost": "Kostnad: {{cost}}",
+      "costInCurrency": "Kostnad i {{currency}}: {{cost}}",
+      "margin": "Marginal: {{margin}} per enhet"
     }
   },
   "contractLineEdit": {
@@ -1979,7 +1986,10 @@
         "one": "{{count}} produkt",
         "other": "{{count}} produkter"
       },
-      "overrideRate": "- anpassat pris {{rate}}/{{currencyCode}}"
+      "overrideRate": "- anpassat pris {{rate}}/{{currencyCode}}",
+      "cost": "Kostnad: {{cost}}",
+      "costInCurrency": "Kostnad i {{currency}}: {{cost}}",
+      "margin": "Marginal: {{margin}} per enhet"
     },
     "hourly": {
       "badgeCount": {

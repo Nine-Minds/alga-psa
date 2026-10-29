@@ -24,7 +24,9 @@ const repoRoot = path.resolve(__dirname, '../../../../..');
 
 // Mock Stripe before any imports that use it
 vi.mock('stripe', () => {
-  const mockStripe = vi.fn().mockImplementation(() => ({
+  // vitest 4 calls mock implementations with `new`; arrow functions cannot be constructed.
+  const mockStripe = vi.fn().mockImplementation(function () {
+    return {
     customers: {
       create: vi.fn().mockResolvedValue({ id: 'cus_mock123' }),
       retrieve: vi.fn().mockResolvedValue({ id: 'cus_mock123', deleted: false }),
@@ -72,7 +74,8 @@ vi.mock('stripe', () => {
         return JSON.parse(payload);
       }),
     },
-  }));
+    };
+  });
 
   return { default: mockStripe, Stripe: mockStripe };
 });

@@ -328,10 +328,12 @@ export const timeSheetEntryRowSchema = z.object({
   contract_line_unresolved_reason: z.enum(['ambiguous', 'no_match', 'error']).nullable(),
   catalog_pricing_acknowledged_at: z.string().datetime().nullable(),
   catalog_pricing_acknowledged_by: uuidSchema.nullable(),
+  // NOT NULL DEFAULT 'commercial' (20261028135000); CHECK limits it to these values.
+  billing_mode: z.enum(['commercial', 'operational']),
 });
 
 // One row of GET /time-sheets/search: exactly time_sheets.* plus the joined user_name.
-// (time_sheets has no notes/created_at/updated_at columns, so this is not timeSheetResponseSchema.)
+// (time_sheets has no created_at/updated_at columns, so this is not timeSheetResponseSchema.)
 export const timeSheetSearchRowSchema = z.object({
   tenant: uuidSchema,
   id: uuidSchema,
@@ -341,6 +343,7 @@ export const timeSheetSearchRowSchema = z.object({
   submitted_at: z.string().datetime().nullable(),
   approved_at: z.string().datetime().nullable(),
   approved_by: uuidSchema.nullable(),
+  notes: z.string().nullable(),
   user_name: z.string(),
   time_entries: z.array(timeSheetEntryRowSchema).optional(),
 });

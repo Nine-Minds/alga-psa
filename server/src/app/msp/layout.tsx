@@ -7,6 +7,8 @@ import { getTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-act
 import { getWorkspaceSetupAccess } from "@alga-psa/onboarding/actions/onboarding-actions/onboardingActions";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale";
 import { MspLayoutClient } from "./MspLayoutClient";
+import { getCoManagedWorkspaceState } from "@/lib/actions/coManagedWorkspaceActions";
+import type { CoManagedWorkspaceNoticeState } from "@/components/co-managed/CoManagedWorkspaceNotice";
 import { getCurrentTenantProduct } from "@/lib/productAccess";
 import { productUsesWorkspaceOnboarding } from '@/lib/workspaceOnboardingPolicy';
 import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingCurrencyActions";
@@ -100,6 +102,14 @@ export default async function MspLayout({
 
   const productCode = await getCurrentTenantProduct();
 
+  // Only a customer workspace has a relationship notice; psa and algadesk read nothing.
+  // A failed or gated read is no notice: the shell must never block on it.
+  const workspaceNotice: CoManagedWorkspaceNoticeState = productCode === 'co_managed'
+    ? await getCoManagedWorkspaceState()
+        .then((state) => (state.kind === 'ended' ? { kind: 'ended' as const, endedAt: state.endedAt, sponsorName: state.sponsorName } : null))
+        .catch(() => null)
+    : null;
+
   const cookieStore = await cookies();
   const sidebarCookie = cookieStore.get('sidebar_collapsed')?.value;
   const initialSidebarCollapsed = sidebarCookie === 'true';
@@ -146,6 +156,7 @@ export default async function MspLayout({
       currencyCode={currencyCode}
       dateFormat={dateFormat}
       productCode={productCode}
+      workspaceNotice={workspaceNotice}
       needsOnboarding={needsOnboarding}
       canRunOnboarding={canRunOnboarding}
       initialSidebarCollapsed={initialSidebarCollapsed}

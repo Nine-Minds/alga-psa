@@ -606,7 +606,10 @@
       "title": "Co-Managed IT"
     },
     "coManagement": {
-      "title": "Co-Managed Access"
+      "title": "Co-Managed Access",
+      "providers": {
+        "title": "Email and Identity Providers"
+      }
     }
   },
   "share": {

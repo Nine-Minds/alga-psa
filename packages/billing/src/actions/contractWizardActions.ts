@@ -217,9 +217,10 @@ async function writeFixedLineMembers(
         },
         {
           pricing_basis: 'unit',
-          base_rate: service.unit_rate as number,
+          // A seat rate is per unit. The fixed-config model derives the pair and
+          // provenance: a null rate is catalog-priced (inherited) with no basis.
+          base_rate: service.unit_rate ?? null,
           base_rate_basis: 'per_unit',
-          rate_provenance: 'custom',
         },
       );
       continue;
