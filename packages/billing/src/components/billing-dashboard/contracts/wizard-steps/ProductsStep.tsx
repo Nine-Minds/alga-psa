@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { getCurrencySymbol } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { useProductCatalogRates } from '../../../../hooks/useProductCatalogRates';
+import { productUnitMarginCents } from '../../../../lib/productUnitMargin';
 import { ServiceCatalogPicker, ServiceCatalogPickerItem } from '../ServiceCatalogPicker';
 import type { ContractWizardData } from '../ContractWizard';
 import { Plus, X, Package } from 'lucide-react';
@@ -19,21 +22,38 @@ interface ProductsStepProps {
 
 export function ProductsStep({ data, updateData }: ProductsStepProps) {
   const { t } = useTranslation('msp/contracts');
-  const [rateInputs, setRateInputs] = useState<Record<number, string>>({});
-  // Catalog price in the contract currency (from service_prices). null when no row exists for this currency.
-  const [currencyRates, setCurrencyRates] = useState<Record<number, number | null>>({});
-  // Legacy default_rate (untagged). Shown as a fallback hint only when no currency-specific price exists.
-  const [legacyDefaultRates, setLegacyDefaultRates] = useState<Record<number, number>>({});
+  const { money } = useCurrencyFormat();
+  // Rate inputs are keyed by row key (not array index) so removing a row cannot shift them.
+  const [rateInputs, setRateInputs] = useState<Record<string, string>>({});
+
+  // Stable per-row key: the product id (plus an occurrence count when the same product is
+  // attached twice); rows that have no product yet fall back to their position.
+  const rowKeys = useMemo(() => {
+    const seen = new Map<string, number>();
+    return data.product_services.map((line, index) => {
+      if (!line.service_id) return `new-${index}`;
+      const occurrence = seen.get(line.service_id) ?? 0;
+      seen.set(line.service_id, occurrence + 1);
+      return `${line.service_id}:${occurrence}`;
+    });
+  }, [data.product_services]);
+
+  // The draft is the only price state. Rows that carry no catalog price (resumed drafts) and
+  // every row's cost come from the shared lookup that the Review step also uses.
+  const { rates: catalogRates, canViewCost } = useProductCatalogRates(
+    data.currency_code,
+    data.product_services.map((line) => line.service_id),
+  );
 
   useEffect(() => {
-    const next: Record<number, string> = {};
+    const next: Record<string, string> = {};
     data.product_services.forEach((line, index) => {
       if (line.custom_rate !== undefined) {
-        next[index] = (line.custom_rate / 100).toFixed(2);
+        next[rowKeys[index]] = (line.custom_rate / 100).toFixed(2);
       }
     });
     setRateInputs(next);
-  }, [data.product_services]);
+  }, [data.product_services, rowKeys]);
 
   const currencySymbol = getCurrencySymbol(data.currency_code);
 
@@ -64,12 +84,8 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
     };
     updateData({ product_services: next });
 
-    const currencyRate = item.currency_rate ?? null;
-    setCurrencyRates((prev) => ({ ...prev, [index]: currencyRate }));
-    setLegacyDefaultRates((prev) => ({ ...prev, [index]: item.default_rate }));
-
     setRateInputs((prev) => {
-      const { [index]: _, ...rest } = prev;
+      const { [rowKeys[index]]: _, ...rest } = prev;
       return rest;
     });
   };
@@ -85,19 +101,20 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
     const sanitized = value.replace(/[^0-9.]/g, '');
     const decimalCount = (sanitized.match(/\./g) || []).length;
     if (decimalCount <= 1) {
-      setRateInputs((prev) => ({ ...prev, [index]: sanitized }));
+      setRateInputs((prev) => ({ ...prev, [rowKeys[index]]: sanitized }));
     }
   };
 
   const commitRate = (index: number) => {
-    const input = (rateInputs[index] ?? '').trim();
+    const rowKey = rowKeys[index];
+    const input = (rateInputs[rowKey] ?? '').trim();
     const next = [...data.product_services];
 
     if (!input || input === '.') {
       next[index] = { ...next[index], custom_rate: undefined };
       updateData({ product_services: next });
       setRateInputs((prev) => {
-        const { [index]: _, ...rest } = prev;
+        const { [rowKey]: _, ...rest } = prev;
         return rest;
       });
       return;
@@ -107,7 +124,7 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
     const cents = Number.isFinite(dollars) ? Math.round(dollars * 100) : 0;
     next[index] = { ...next[index], custom_rate: cents };
     updateData({ product_services: next });
-    setRateInputs((prev) => ({ ...prev, [index]: (cents / 100).toFixed(2) }));
+    setRateInputs((prev) => ({ ...prev, [rowKey]: (cents / 100).toFixed(2) }));
   };
 
   return (
@@ -137,15 +154,26 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
           </Label>
 
           {data.product_services.map((line, index) => {
-            const currencyRate = currencyRates[index] ?? null;
-            const legacyDefaultRate = legacyDefaultRates[index] ?? null;
+            const lookup = line.service_id ? catalogRates[line.service_id] : undefined;
+            // undefined = not known yet (resumed draft still resolving): show no warning meanwhile.
+            const currencyRate: number | null | undefined =
+              line.currency_rate !== undefined ? line.currency_rate : lookup?.currency_rate;
+            const legacyDefaultRate = line.default_rate ?? lookup?.default_rate ?? null;
             const isMissingPrice = Boolean(
               line.service_id && currencyRate === null && line.custom_rate == null,
             );
+            const effectiveUnitPrice =
+              line.custom_rate ?? (currencyRate != null && currencyRate > 0 ? currencyRate : null);
+            const showCost = canViewCost && lookup?.cost != null;
+            const costCurrency = lookup?.cost_currency ?? null;
+            const costInOtherCurrency = Boolean(costCurrency && costCurrency !== data.currency_code);
+            const margin = showCost
+              ? productUnitMarginCents(effectiveUnitPrice, lookup?.cost, costCurrency, data.currency_code)
+              : null;
 
             return (
               <div
-                key={index}
+                key={rowKeys[index]}
                 className="flex items-start gap-3 p-4 border border-[rgb(var(--color-border-200))] rounded-md bg-[rgb(var(--color-border-50))]"
               >
                 <div className="flex-1 space-y-3">
@@ -200,23 +228,22 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
                           id={`product-rate-${index}`}
                           type="text"
                           inputMode="decimal"
-                          value={rateInputs[index] ?? ''}
+                          value={rateInputs[rowKeys[index]] ?? ''}
                           onChange={(event) => handleRateInputChange(index, event.target.value)}
                           onBlur={() => commitRate(index)}
                           placeholder=""
                           className="pl-10"
                         />
                       </div>
-                      {currencyRate !== null && currencyRate > 0 ? (
-                        <div className="text-xs text-muted-foreground">
+                      {currencyRate != null && currencyRate > 0 ? (
+                        <div className="text-xs text-muted-foreground" data-testid={`product-catalog-price-${index}`}>
                           {t('wizardProducts.labels.catalogPriceInCurrency', {
                             defaultValue: 'Catalog price in {{currency}}:',
                             currency: data.currency_code,
                           })}{' '}
-                          {currencySymbol}
-                          {(currencyRate / 100).toFixed(2)}
+                          {money(currencyRate, data.currency_code)}
                         </div>
-                      ) : line.service_id ? (
+                      ) : currencyRate === null && line.service_id ? (
                         <div className="text-xs text-amber-700">
                           {legacyDefaultRate !== null && legacyDefaultRate > 0
                             ? t('wizardProducts.validation.noCurrencyPriceWithLegacyHint', {
@@ -230,6 +257,29 @@ export function ProductsStep({ data, updateData }: ProductsStepProps) {
                                   'No {{currency}} price in the catalog. Enter a unit price.',
                                 currency: data.currency_code,
                               })}
+                        </div>
+                      ) : null}
+                      {showCost ? (
+                        <div className="text-xs text-muted-foreground" data-testid={`product-cost-${index}`}>
+                          {costInOtherCurrency
+                            ? t('wizardReview.products.costInCurrency', {
+                                defaultValue: 'Cost in {{currency}}: {{cost}}',
+                                currency: costCurrency,
+                                cost: money(lookup?.cost ?? 0, costCurrency ?? data.currency_code),
+                              })
+                            : t('wizardReview.products.cost', {
+                                defaultValue: 'Cost: {{cost}}',
+                                cost: money(lookup?.cost ?? 0, data.currency_code),
+                              })}
+                          {margin !== null ? (
+                            <>
+                              {' · '}
+                              {t('wizardReview.products.margin', {
+                                defaultValue: 'Margin: {{margin}} per unit',
+                                margin: money(margin, data.currency_code),
+                              })}
+                            </>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
