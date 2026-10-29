@@ -67,7 +67,7 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
             )}
           </div>
           <div className="flex items-end gap-2">
-            {hasLiveRelationship && (view.selectionRequired ? view.relationships.length > 0 : view.relationships.length > 1) && (
+            {(hasLiveRelationship || hasRetainedRelationship) && (view.selectionRequired ? view.relationships.length > 0 : view.relationships.length > 1) && (
               <div className="min-w-64">
                 <CustomSelect
                   id={`${idPrefix}-relationship`}

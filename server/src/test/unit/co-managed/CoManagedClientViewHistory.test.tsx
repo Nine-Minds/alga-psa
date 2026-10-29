@@ -2,7 +2,7 @@
 import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
-import { HEADER_CASES } from './fixtures';
+import { HEADER_CASES, relationship, view } from './fixtures';
 
 const history = vi.hoisted(() => vi.fn());
 
@@ -68,11 +68,27 @@ describe('sponsor-side relationship history', () => {
     await waitFor(() => expect(screen.getByText('Some new event')).toBeInTheDocument());
   });
 
-  it('relationship chooser: absent for cancelled-only, present for several live', () => {
-    const cancelled = render(<CoManagedClientView view={HEADER_CASES.cancelledOnly} clientId="client-1" clientName="Acme" idPrefix="c" />);
-    expect(cancelled.container.querySelector('#c-relationship')).toBeNull();
-    cleanup();
-    const several = render(<CoManagedClientView view={HEADER_CASES.severalLive} clientId="client-1" clientName="Acme" idPrefix="s" />);
-    expect(several.container.querySelector('#s-relationship')).not.toBeNull();
+  describe('relationship chooser', () => {
+    beforeEach(() => history.mockResolvedValue({ entries: [] }));
+    const chooser = (v: any, prefix: string) =>
+      render(<CoManagedClientView view={v} clientId="client-1" clientName="Acme" idPrefix={prefix} />).container.querySelector(`#${prefix}-relationship`);
+    const ended = (id: string, endedAt: string) =>
+      relationship({ relationshipId: id, state: 'terminated', ended: true, retained: true, endedAt, usedSeats: null });
+
+    it('cancelled-only with selectionRequired (what managementPolicy produces): no chooser', () => {
+      expect(chooser({ ...HEADER_CASES.cancelledOnly, selectionRequired: true }, 'a')).toBeNull();
+    });
+
+    it('two retained/ended relationships, none live, one selected: chooser present', () => {
+      const v = view({
+        selectionRequired: false, canSetUp: false, selectedRelationshipId: 'rel-2',
+        relationships: [ended('rel-2', '2026-10-01T00:00:00.000Z'), ended('rel-1', '2026-01-01T00:00:00.000Z')],
+      });
+      expect(chooser(v, 'b')).not.toBeNull();
+    });
+
+    it('several live with selectionRequired: chooser present', () => {
+      expect(chooser(HEADER_CASES.severalLive, 'c')).not.toBeNull();
+    });
   });
 });
