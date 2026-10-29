@@ -83,13 +83,20 @@ test('a restored webpack cache is actually reusable on a fresh checkout', () => 
   assert.match(read('scripts/build-production-server.sh'), /^export NX_REJECT_UNKNOWN_LOCAL_CACHE=0$/m);
 });
 
-test('the production image can run the development server the Teams chain starts inside it', () => {
-  // Next's TypeScript setup requires these next to `typescript`; absent, the
-  // dev server tries to npm-install them at startup inside the container.
-  const server = JSON.parse(read('server/package.json'));
-  for (const name of ['typescript', '@types/react', '@types/react-dom', '@types/node', 'tailwindcss', 'postcss', '@tailwindcss/postcss']) {
-    assert.ok(server.dependencies[name], `${name} is a regular dependency of server`);
-    assert.equal(server.devDependencies?.[name], undefined, `${name} is not also a devDependency`);
+test('development-mode checks compile in the development runtime, never in the production candidate', () => {
+  // The production image carries production dependencies only; `next dev`
+  // needs every workspace package, so the Teams development server and the
+  // Microsoft callback run from the checkout in docker-compose.e2e-development.yaml
+  // with the node_modules the shard installed from the lockfile.
+  const workflow = yaml.load(read('.github/workflows/e2e-fresh-install-tests.yaml'));
+  const steps = workflow.jobs['production-browser'].steps;
+  const resolve = steps.find(step => step.id === 'shard');
+  assert.ok(resolve.run.includes('*" api "*|*" upgrade "*|*" citus "*|*" teams "*|*" microsoft "*) workspace_dependencies=true'), 'teams and microsoft install the repository dependencies');
+  for (const name of ['Start explicit Teams development configuration', 'Run actual Microsoft callback against isolated authority']) {
+    const step = steps.find(entry => entry.name === name);
+    assert.match(step.run, /export E2E_DEVELOPMENT_WORKSPACE="\$GITHUB_WORKSPACE"/, `${name} mounts the checkout`);
+    assert.match(step.run, /COMPOSE_FILE="\$COMPOSE_FILE:docker-compose\.e2e-development\.yaml/, `${name} layers the development runtime`);
   }
   assert.match(read('ee/server/Dockerfile'), /npm install --omit=dev/);
+  assert.match(read('Dockerfile'), /npm install --omit=dev/);
 });

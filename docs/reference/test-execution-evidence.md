@@ -360,9 +360,19 @@ templates, `nx build-deps server`, `next build --webpack`, the recipe of the
 edition) package `server/.next` and the packages' `dist` directories from the
 context, exactly as the Argo build packages them for deployment. The candidate
 under test is therefore the image that ships, including its Alpine base and
-its production-only dependency set; the Teams development chain, which runs
-`next dev` inside the candidate, relies on `typescript` and the `@types`
-packages being regular dependencies of `server`.
+its production-only dependency set.
+
+That dependency set cannot compile the application: `npm install --omit=dev`
+links only the workspaces that production dependencies reach, so `next dev`
+inside the candidate cannot resolve packages such as `@product/chat` or
+`@alga-psa/migration-spec`. The two development-mode checks, the Teams
+development server and the Microsoft callback, therefore run in the
+development runtime defined by `docker-compose.e2e-development.yaml`: a plain
+pinned Node image (`scripts/lib/development-runtime.mjs`) with the checkout
+mounted at `/app` and the `node_modules` the shard installed from the
+lockfile. Their evidence binds to that runtime image and the mounted checkout,
+and the wrapper proves the source clean before and after, which covers what
+the development server writes into the checkout (all of it ignored by Git).
 Building on the runner is what lets the webpack filesystem cache
 (`server/node_modules/.cache/webpack`, configured in `next.config.mjs`) and
 the Nx cache survive between runs: `scripts/build-cache-snapshot.mjs` pulls a
