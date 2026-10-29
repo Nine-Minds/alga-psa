@@ -615,7 +615,7 @@
       },
       "sharedTicket": {
         "title": "Shared Ticket"
-        },
+      },
       "providers": {
         "title": "Email and Identity Providers"
       }

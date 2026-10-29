@@ -533,7 +533,7 @@
       },
       "sharedTicket": {
         "title": "Geteiltes Ticket"
-        },
+      },
       "providers": {
         "title": "E-Mail- und Identitätsanbieter"
       }
