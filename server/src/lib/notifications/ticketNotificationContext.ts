@@ -1,5 +1,3 @@
-import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
 import { collaborationActorPayloadIssue, collaborationActorReferenceSchema, formatCollaborationActorName,
   type CollaborationActorReference } from '@alga-psa/event-schemas/collaboration';
 
@@ -22,18 +20,18 @@ export function readTicketNotificationActor(payload: Record<string, unknown>, te
   return { userId: legacyUserId || '' };
 }
 
-/** One owner-local lookup for a batch; foreign snapshots never enter the local directory. */
-export async function resolveTicketNotificationActorNames(db: Knex, tenantId: string, actors: readonly TicketNotificationActor[],
-  missingUser: string = 'System'): Promise<string[]> {
-  for (const actor of actors) {
-    if (actor.actorReference && (actor.userId || actor.actorReference.ownerTenantId !== tenantId)) {
+/**
+ * Collaborator actors are named from their event snapshot only. Every other (psa/local) actor is
+ * resolved by the caller's own `resolveLocal`, so psa notification text and queries stay exactly
+ * what they were before co-management; no co-managed query is ever issued for a psa actor.
+ */
+export async function resolveTicketNotificationActorName(tenantId: string, actor: TicketNotificationActor,
+  resolveLocal: () => Promise<string>): Promise<string> {
+  if (actor.actorReference) {
+    if (actor.userId || actor.actorReference.ownerTenantId !== tenantId) {
       throw new Error('Invalid notification actor attribution');
     }
+    return formatCollaborationActorName(actor.actorReference);
   }
-  const userIds = [...new Set(actors.filter(actor => !actor.actorReference && actor.userId).map(actor => actor.userId))];
-  const rows = userIds.length ? await tenantDb(db, tenantId).table('users').whereIn('user_id', userIds)
-    .select('user_id', 'first_name', 'last_name') : [];
-  const names = new Map<string, string>(rows.map(row => [row.user_id, `${row.first_name ?? ''} ${row.last_name ?? ''}`.trim()]));
-  return actors.map(actor => actor.actorReference ? formatCollaborationActorName(actor.actorReference)
-    : names.get(actor.userId) || missingUser);
+  return resolveLocal();
 }

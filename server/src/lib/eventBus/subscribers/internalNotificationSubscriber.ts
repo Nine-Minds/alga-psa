@@ -1,6 +1,6 @@
 import { isInteractiveUserType } from '@alga-psa/types';
 
-import { readTicketNotificationActor, resolveTicketNotificationActorNames } from '../../notifications/ticketNotificationContext';
+import { readTicketNotificationActor, resolveTicketNotificationActorName } from '../../notifications/ticketNotificationContext';
 
 import { readAssignedTeamId } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
@@ -930,8 +930,16 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
     // collaborator acted; the actor's snapshot then names them, never a local lookup.
     const actor = readTicketNotificationActor(payload, tenantId, payload.userId);
     const userId = actor.userId;
-    const [performedByName] = await resolveTicketNotificationActorNames(db, tenantId, [actor],
-      userId || actor.actorReference ? 'Someone' : 'System');
+    const performedByName = await resolveTicketNotificationActorName(tenantId, actor, async () => {
+      // userId is absent when nobody acted; an undefined .where() value throws.
+      const performedByUser = userId
+        ? await tenantScopedTable(db, 'users', tenantId)
+            .select('user_id', 'first_name', 'last_name')
+            .where('user_id', userId)
+            .first()
+        : null;
+      return userDisplayName(performedByUser, userId ? 'Someone' : 'System');
+    });
 
     // Build metadata with change details
     const metadata: Record<string, any> = {
@@ -1130,7 +1138,13 @@ async function handleTicketClosed(event: TicketClosedEvent, opts?: InternalNotif
 
     const actor = readTicketNotificationActor(payload, tenantId, payload.userId);
     const userId = actor.userId;
-    const [performedByName] = await resolveTicketNotificationActorNames(db, tenantId, [actor], 'Someone');
+    const performedByName = await resolveTicketNotificationActorName(tenantId, actor, async () => {
+      const performedByUser = userId ? await tenantScopedTable(db, 'users', tenantId)
+        .select('first_name', 'last_name')
+        .where('user_id', userId)
+        .first() : null;
+      return userDisplayName(performedByUser, 'Someone');
+    });
 
     // Resolve links for both MSP and client portal
     const { internalUrl, portalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -1774,8 +1788,16 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
 
     // No user row means a system/contact actor (inbound email); the payload
     // already carries the real sender identity, so prefer it over 'Someone'.
-    const [authorName] = await resolveTicketNotificationActorNames(db, tenantId, [actor],
-      usableDisplayName(comment?.author) || (userId || actor.actorReference ? 'Someone' : 'System'));
+    const authorName = await resolveTicketNotificationActorName(tenantId, actor, async () => {
+      // userId is absent for inbound-email/system comments.
+      const author = userId
+        ? await tenantScopedTable(db, 'users', tenantId)
+            .select('first_name', 'last_name')
+            .where('user_id', userId)
+            .first()
+        : null;
+      return userDisplayName(author, usableDisplayName(comment?.author) || (userId ? 'Someone' : 'System'));
+    });
 
     // Extract comment text preview from BlockNote content
     let commentPreview = '';

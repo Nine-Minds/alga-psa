@@ -2,7 +2,7 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BentoHero } from './BentoHero';
 import { TicketDataSourceProvider } from '../TicketDataSourceContext';
@@ -322,17 +322,23 @@ describe('BentoHero read-only data source', () => {
     <TicketDataSourceProvider dataSource={source}><BentoHero id="ticket-bento" ticket={ticket} statusOptions={[]} priorityOptions={[]} boardOptions={[]}
       agentOptions={[]} availableAgents={[]} liveFrozenFields={resolveTicketFrozenFields(source.screen)} onSelectChange={vi.fn()} onBatchSelectChange={vi.fn()} onOpenAllFields={vi.fn()} onLiveDirtyFieldsChange={vi.fn()} /></TicketDataSourceProvider>);
 
-  it('offers no "add a description" affordance when the source is read-only, but does natively', () => {
+  // The native source forwards each action through a lazy import(); settle those inside the test (in act, so the
+  // resulting state updates are flushed) rather than leaving them pending for the file's teardown.
+  const settleLazyActions = () => act(async () => { await vi.dynamicImportSettled(); });
+
+  it('offers no "add a description" affordance when the source is read-only, but does natively', async () => {
     const ticket = { ...baseTicket, attributes: {} };
     const { unmount } = renderIn(readOnlySource, ticket);
     expect(document.getElementById('ticket-bento-description-empty')).toBeNull();
     unmount();
     renderIn(nativeTicketDataSource, ticket);
     expect(document.getElementById('ticket-bento-description-empty')).not.toBeNull();
+    await settleLazyActions();
   });
 
-  it('shows the attributed creator display name for "Opened by" when there is no local user record', () => {
+  it('shows the attributed creator display name for "Opened by" when there is no local user record', async () => {
     renderIn(readOnlySource, { ...baseTicket, created_by_display_name: 'Piet de Vries' });
     expect(screen.getByText(/Opened by Piet de Vries/)).toBeInTheDocument();
+    await settleLazyActions();
   });
 });
