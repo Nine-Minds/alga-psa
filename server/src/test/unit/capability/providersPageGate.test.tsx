@@ -23,7 +23,7 @@ vi.mock('@alga-psa/ui/lib/i18n/serverOnly', () => ({
 vi.mock('@/components/co-managed/CoManagedProviderSetup', () => ({ default: () => null }));
 
 import { requireCapabilityForPage } from '@alga-psa/core/capability/server';
-import CoManagedProvidersPage from '../../../app/msp/co-management/providers/page';
+import CoManagedProvidersPage, { generateMetadata } from '../../../app/msp/co-management/providers/page';
 
 describe('/msp/co-management/providers gate (L9 A2)', () => {
   beforeEach(() => {
@@ -48,5 +48,17 @@ describe('/msp/co-management/providers gate (L9 A2)', () => {
     hoisted.session = null;
     await expect(CoManagedProvidersPage()).rejects.toBeInstanceOf(NotFound);
     expect(requireCapabilityForPage).not.toHaveBeenCalled();
+  });
+
+  it('emits the page title only when the tenant is served', async () => {
+    await expect(generateMetadata()).resolves.toEqual({ title: 'Email and Identity Providers' });
+  });
+
+  it('emits no title on the unserved path: generateMetadata gets the standard not-found, like the page', async () => {
+    hoisted.served = false;
+    await expect(generateMetadata()).rejects.toBeInstanceOf(NotFound);
+    hoisted.session = null;
+    hoisted.served = true;
+    await expect(generateMetadata()).rejects.toBeInstanceOf(NotFound);
   });
 });

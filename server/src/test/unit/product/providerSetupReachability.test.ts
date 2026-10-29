@@ -100,6 +100,12 @@ describe('provider setup reachability', () => {
     ).toEqual([]);
   });
 
+  it('resolves the entry path per product through the /msp/go dispatcher', () => {
+    expect(PROVIDER_SETUP_ENTRY_PATH).toBe('/msp/go/providers');
+    expect(resolveProductNavDestination('providers', 'co_managed')).toBe('/msp/co-management/providers');
+    expect(resolveProductNavDestination('providers', 'psa')).toBe('/msp/settings/integrations?category=providers');
+  });
+
   it('keeps the co-managed destination capability-scoped instead of exempting the integrations page', () => {
     // The whole integrations page also hosts accounting, RMM, payments and the
     // other categories the co-managed capability boundary excludes. Allowing it
@@ -157,7 +163,9 @@ describe('provider setup reachability', () => {
   it('gates the provider route through the L0 serving adapter, never a raw flag read', () => {
     // The route admits only workspaces the capability serves (sticky, so a flag
     // flip never strands a participating customer) and 404s everyone else.
+    // The gate lives in one helper that both the page and generateMetadata call.
     const page = code('server/src/app/msp/co-management/providers/page.tsx');
+    expect(page.match(/requireServedTenant\(\)/g)?.length).toBe(3); // declaration + metadata + page
     expect(page).toContain("requireCapabilityForPage('co-managed', tenant, 'serves')");
     expect(page).toContain("from '@alga-psa/core/capability/server'");
     for (const rawRead of ['useFeatureFlag', 'release-v2-0-feature', 'release-v1-6-feature']) {

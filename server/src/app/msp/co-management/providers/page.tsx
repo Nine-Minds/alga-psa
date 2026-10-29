@@ -5,7 +5,21 @@ import { requireCapabilityForPage } from '@alga-psa/core/capability/server';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import CoManagedProviderSetup from '@/components/co-managed/CoManagedProviderSetup';
 
+/**
+ * The single gate for this route, shared by the page and `generateMetadata`: a
+ * session tenant the co-managed capability serves, else the standard not-found.
+ * An unserved tenant (Kansas, Emerald without entitlement,
+ * `FORCE_CAPABILITIES=co-managed:off`) therefore never sees the page title.
+ */
+async function requireServedTenant(): Promise<void> {
+  const session = await getSession();
+  const tenant = session?.user?.tenant;
+  if (!tenant) notFound();
+  await requireCapabilityForPage('co-managed', tenant, 'serves');
+}
+
 export async function generateMetadata(): Promise<Metadata> {
+  await requireServedTenant();
   const { t } = await getServerTranslation(undefined, 'metadata');
 
   return {
@@ -23,9 +37,6 @@ export async function generateMetadata(): Promise<Metadata> {
  * tenant ownership and secret redaction stay inside the provider actions.
  */
 export default async function CoManagedProvidersPage() {
-  const session = await getSession();
-  const tenant = session?.user?.tenant;
-  if (!tenant) notFound();
-  await requireCapabilityForPage('co-managed', tenant, 'serves');
+  await requireServedTenant();
   return <CoManagedProviderSetup />;
 }
