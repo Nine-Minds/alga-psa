@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -29,6 +29,8 @@ const state = vi.hoisted(() => ({
   tenant: '',
   userId: '',
   allow: true,
+  kernelAllow: true,
+  product: 'psa' as 'psa' | 'algadesk',
   fetchCalls: [] as string[],
   fetchBody: new Uint8Array(),
 }));
@@ -41,11 +43,15 @@ vi.mock('../../lib/db/db', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../lib/db/db')>()),
   getConnection: vi.fn(async () => state.knex),
 }));
+vi.mock('@/lib/productAccess', async (importOriginal) => ({
+  ...(await importOriginal<any>()),
+  getTenantProduct: vi.fn(async () => state.product),
+}));
 vi.mock('../../lib/auth/rbac', () => ({
   hasPermission: vi.fn(async () => state.allow),
 }));
 vi.mock('../../lib/api/controllers/authorizationKernel', () => ({
-  authorizeApiResourceRead: vi.fn(async () => ({ allowed: true })),
+  authorizeApiResourceRead: vi.fn(async () => state.kernelAllow),
 }));
 vi.mock('../../lib/api/controllers/ApiBaseController', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../lib/api/controllers/ApiBaseController')>();
@@ -181,6 +187,51 @@ async function storedBytes(documentId: string): Promise<Buffer> {
 }
 
 describe('POST /api/v1/documents', () => {
+  afterEach(() => {
+    state.allow = true;
+    state.kernelAllow = true;
+    state.product = 'psa';
+  });
+
+  it('returns 403 (parity with GET /tickets/:id) when the read-authorization kernel denies the ticket', async () => {
+    state.kernelAllow = false;
+    const { status, json } = await post({
+      entity_type: 'ticket',
+      entity_id: ids.ticket,
+      source: { type: 'base64', content: Buffer.from('x').toString('base64') },
+      file_name: 'x.txt',
+    });
+    expect(status).toBe(403);
+    expect(json.error.message).toMatch(/Cannot read ticket/);
+  }, HOOK_TIMEOUT);
+
+  it('returns 404 for a missing ticket', async () => {
+    const { status } = await post({
+      entity_type: 'ticket',
+      entity_id: uuidv4(),
+      source: { type: 'base64', content: Buffer.from('x').toString('base64') },
+      file_name: 'x.txt',
+    });
+    expect(status).toBe(404);
+  }, HOOK_TIMEOUT);
+
+  it('algadesk tenant: ticket attach works, PSA-only entities get 403 PRODUCT_ACCESS_DENIED', async () => {
+    state.product = 'algadesk';
+    const content = Buffer.from('helpdesk note').toString('base64');
+    const ok = await post({
+      entity_type: 'ticket', entity_id: ids.ticket, source: { type: 'base64', content }, file_name: 'n.txt',
+    });
+    expect(ok.status, JSON.stringify(ok.json)).toBe(201);
+
+    for (const entity_type of ['project_task', 'asset']) {
+      const denied = await post({
+        entity_type, entity_id: uuidv4(), source: { type: 'base64', content }, file_name: 'n.txt',
+      });
+      expect(denied.status).toBe(403);
+      expect(denied.json.error.code).toBe('PRODUCT_ACCESS_DENIED');
+    }
+  }, HOOK_TIMEOUT);
+
   it('attaches base64 content to a ticket: document, association, stored bytes, activity row', async () => {
     state.allow = true;
     const text = Buffer.from('printer logs: paper jam on tray 2');

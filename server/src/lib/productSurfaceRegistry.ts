@@ -176,6 +176,15 @@ export const API_RULES: readonly ApiRule[] = [
     visibleInMetadataByProduct: { psa: true, algadesk: true },
   },
   {
+    // Exact path only (POST /api/v1/documents attach endpoint, used by MCP attach_file).
+    // Deliberately a dynamic pattern: a static prefix would also open /api/v1/documents/*.
+    // Per-entity availability (PSA-only entities) is enforced by the entity adapters.
+    group: 'api_document_attach',
+    dynamicPatterns: [/^\/api\/v1\/documents$/],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
+    visibleInMetadataByProduct: { psa: true, algadesk: true },
+  },
+  {
     group: 'api_psa_only',
     staticPrefixes: [
       '/api/v1/billing',

@@ -36466,6 +36466,7 @@ paths:
         x-rbac-action: create
       x-alga-products:
         - psa
+        - algadesk
       requestBody:
         required: true
         content:
@@ -36523,6 +36524,7 @@ paths:
         x-namespace-root: true
       x-alga-products:
         - psa
+        - algadesk
       responses:
         "401":
           description: API key missing/invalid.

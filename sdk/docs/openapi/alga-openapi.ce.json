@@ -52581,7 +52581,8 @@
           "x-rbac-action": "create"
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "algadesk"
         ],
         "requestBody": {
           "required": true,
@@ -52671,7 +52672,8 @@
           "x-namespace-root": true
         },
         "x-alga-products": [
-          "psa"
+          "psa",
+          "algadesk"
         ],
         "responses": {
           "401": {

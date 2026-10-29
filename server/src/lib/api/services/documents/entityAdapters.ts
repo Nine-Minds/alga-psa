@@ -18,6 +18,8 @@ import { ATTACHABLE_ENTITY_TYPES } from '../../schemas/documentAttach';
 import { hasPermission } from '../../../auth/rbac';
 import { authorizeApiResourceRead } from '../../controllers/authorizationKernel';
 import { buildProjectRecordContext, buildTicketRecordContext } from '../../controllers/recordContexts';
+import { ProductAccessError, getTenantProduct } from '@/lib/productAccess';
+import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 import {
   ForbiddenError,
   NotFoundError,
@@ -49,6 +51,12 @@ export interface EntityAdapter {
   entityType: AttachableEntityType;
   /** RBAC resource whose `update` permission is required to attach to this entity. */
   rbacResource: string;
+  /**
+   * API surface that represents this entity in the product-surface registry. The entity is
+   * attachable for a tenant's product iff the registry allows this path for that product, so
+   * availability follows the registry (algadesk: tickets/clients/contacts; PSA-only: the rest).
+   */
+  productApiPath: string;
   /** Throws NotFoundError / ForbiddenError. */
   assertCanAttach(apiRequest: AuthenticatedApiRequest, entityId: string, knex: Knex): Promise<void>;
   /** Folder the document is filed in, or undefined for none. */
@@ -57,6 +65,20 @@ export interface EntityAdapter {
   documentOverrides?(options: AttachHookOptions): Partial<IDocument> & { is_client_visible?: boolean };
   /** Runs inside the document transaction, after the document and association rows are inserted. */
   inTransaction?(args: InTransactionArgs): Promise<void>;
+}
+
+/**
+ * Rejects an entity that the tenant's product does not expose, with the same error the
+ * product gate raises elsewhere (403 PRODUCT_ACCESS_DENIED).
+ */
+export async function assertEntityAvailableForProduct(
+  adapter: EntityAdapter,
+  tenant: string,
+): Promise<void> {
+  const productCode = await getTenantProduct(tenant);
+  if (resolveProductApiBehavior(productCode, adapter.productApiPath) === 'denied') {
+    throw new ProductAccessError(`api_route:${adapter.productApiPath}`, productCode);
+  }
 }
 
 async function assertRbacUpdate(
@@ -103,6 +125,7 @@ async function firstEntityFolder(
 function simpleAdapter(
   entityType: AttachableEntityType,
   rbacResource: string,
+  productApiPath: string,
   table: string,
   idColumn: string,
   label: string,
@@ -110,6 +133,7 @@ function simpleAdapter(
   return {
     entityType,
     rbacResource,
+    productApiPath,
     async assertCanAttach(apiRequest, entityId, knex) {
       await assertRbacUpdate(apiRequest, rbacResource, knex);
       await assertRowExists(knex, apiRequest.context.tenant, table, idColumn, entityId, label);
@@ -121,6 +145,7 @@ function simpleAdapter(
 const ticketAdapter: EntityAdapter = {
   entityType: 'ticket',
   rbacResource: 'ticket',
+  productApiPath: '/api/v1/tickets',
   async assertCanAttach(apiRequest, ticketId, knex) {
     await assertRbacUpdate(apiRequest, 'ticket', knex);
     const ticket = await tenantDb(knex, apiRequest.context.tenant)
@@ -184,6 +209,7 @@ const ticketAdapter: EntityAdapter = {
 const projectTaskAdapter: EntityAdapter = {
   entityType: 'project_task',
   rbacResource: 'project',
+  productApiPath: '/api/v1/projects',
   async assertCanAttach(apiRequest, taskId, knex) {
     await assertRbacUpdate(apiRequest, 'project', knex);
     const db = tenantDb(knex, apiRequest.context.tenant);
@@ -213,8 +239,8 @@ const projectTaskAdapter: EntityAdapter = {
 export const ENTITY_ADAPTERS: Record<AttachableEntityType, EntityAdapter> = {
   ticket: ticketAdapter,
   project_task: projectTaskAdapter,
-  client: simpleAdapter('client', 'client', 'clients', 'client_id', 'Client'),
-  contact: simpleAdapter('contact', 'contact', 'contacts', 'contact_name_id', 'Contact'),
-  asset: simpleAdapter('asset', 'asset', 'assets', 'asset_id', 'Asset'),
+  client: simpleAdapter('client', 'client', '/api/v1/clients', 'clients', 'client_id', 'Client'),
+  contact: simpleAdapter('contact', 'contact', '/api/v1/contacts', 'contacts', 'contact_name_id', 'Contact'),
+  asset: simpleAdapter('asset', 'asset', '/api/v1/assets', 'assets', 'asset_id', 'Asset'),
 };
 

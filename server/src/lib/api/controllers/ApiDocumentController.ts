@@ -11,7 +11,7 @@ import { ZodError } from 'zod';
 import { ApiBaseController } from './ApiBaseController';
 import { ApiDocumentService } from '../services/ApiDocumentService';
 import { attachDocumentSchema } from '../schemas/documentAttach';
-import { ENTITY_ADAPTERS } from '../services/documents/entityAdapters';
+import { ENTITY_ADAPTERS, assertEntityAvailableForProduct } from '../services/documents/entityAdapters';
 import { attachDocumentFromBytes } from '../services/documents/attachDocument';
 import { resolveSource } from '../services/documents/resolveSource';
 import { runWithTenant } from '../../db';
@@ -58,6 +58,7 @@ export class ApiDocumentController extends ApiBaseController {
 
           // Existence (404), `<resource>:update` (403) and the kernel read check.
           const adapter = ENTITY_ADAPTERS[input.entity_type];
+          await assertEntityAvailableForProduct(adapter, apiRequest.context.tenant);
           await adapter.assertCanAttach(apiRequest, input.entity_id, knex);
 
           const file = await resolveSource({
