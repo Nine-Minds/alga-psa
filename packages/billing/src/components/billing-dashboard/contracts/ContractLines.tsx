@@ -57,6 +57,7 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './BucketOverlayFields';
 import { BucketOverlayInput } from './ContractWizard';
 import { getCurrencySymbol } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { toast } from 'react-hot-toast';
 import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
 import {
@@ -73,6 +74,9 @@ import {
 } from '@shared/billingClients/contractLineTimingRule';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useClientBillingSchedule } from '../../../hooks/useClientBillingSchedule';
+import { useProductCatalogRates } from '../../../hooks/useProductCatalogRates';
+import { hasRecurringMemberRate, resolveRecurringMemberRate } from '../../../lib/billing/compute/recurringMemberRate';
+import { productUnitMarginCents } from '../../../lib/productUnitMargin';
 import { ArrearsFirstInvoiceHint } from './ArrearsFirstInvoiceHint';
 
 interface ContractLinesProps {
@@ -172,6 +176,8 @@ interface ServiceConfiguration {
   typeConfig: any;
   rateTiers?: IContractLineServiceRateTier[];
   bucketConfig?: any; // Add bucketConfig property for merged bucket data
+  /** Legacy `contract_line_services.custom_rate`; second link of the engine's member-rate chain. */
+  service_line_custom_rate?: number | null;
 }
 
 interface PendingServiceAddition {
@@ -1079,6 +1085,94 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       return t('common.empty.notAvailable', { defaultValue: 'N/A' });
     }
     return formatCurrency(rate / 100, contract.currency_code || 'USD');
+  };
+
+  // Catalog-priced recurring product members have no stored rate; their effective unit price
+  // comes from the shared resolver (the invoice engine's chain) fed by the shared catalog lookup.
+  const { money: formatMinorMoney } = useCurrencyFormat();
+  const recurringProductIds = useMemo(
+    () => Object.values(lineServices)
+      .flat()
+      .filter((member) => member.service.item_kind === 'product')
+      .map((member) => member.service.service_id),
+    [lineServices],
+  );
+  const { rates: productCatalogRates, canViewCost: canViewProductCost } = useProductCatalogRates(
+    contract.currency_code,
+    recurringProductIds,
+  );
+
+  /** Read-only unit price of a recurring product member: price, catalog/override label, cost. */
+  const renderRecurringProductRate = (serviceConfig: ServiceConfiguration) => {
+    const currencyCode = contract.currency_code;
+    const lookup = productCatalogRates[serviceConfig.service.service_id];
+    // Exactly the engine's inputs (computeRecurringQuantityCharges): the fixed config's
+    // base_rate is not one of them — the engine never reads it for a product member.
+    const member = {
+      configuration_custom_rate: serviceConfig.configuration.custom_rate,
+      service_line_custom_rate: serviceConfig.service_line_custom_rate,
+      price_rate: lookup?.currency_rate,
+      default_rate: lookup?.default_rate,
+    };
+    if (!currencyCode) {
+      return formatRate(null);
+    }
+    if (!hasRecurringMemberRate(member)) {
+      // Still loading: claim nothing. Loaded with no rate anywhere in the chain: the engine
+      // cannot bill this member, so say so instead of showing an amount it will not charge.
+      return lookup
+        ? (
+          <span className="text-amber-700" data-testid={`recurring-product-missing-price-${serviceConfig.configuration.config_id}`}>
+            {t('wizardProducts.validation.noCurrencyPriceEnterUnitPrice', {
+              defaultValue: 'No {{currency}} price in the catalog. Enter a unit price.',
+              currency: currencyCode,
+            })}
+          </span>
+        )
+        : formatRate(null);
+    }
+    const { rateCents, source } = resolveRecurringMemberRate(member);
+    const isOverride = source !== 'currency catalog price';
+    const showCost = canViewProductCost && lookup?.cost != null;
+    const costCurrency = lookup?.cost_currency || currencyCode;
+    const margin = showCost
+      ? productUnitMarginCents(rateCents, lookup?.cost, lookup?.cost_currency, currencyCode)
+      : null;
+    return (
+      <>
+        <span data-testid={`recurring-product-price-${serviceConfig.configuration.config_id}`}>
+          {formatMinorMoney(rateCents, currencyCode)}
+        </span>{' '}
+        <span className="text-xs text-muted-foreground">
+          ({isOverride
+            ? t('contractLines.pricing.override', { defaultValue: 'override' })
+            : t('contractLines.pricing.catalog', { defaultValue: 'catalog' })})
+        </span>
+        {showCost ? (
+          <span
+            className="block text-xs text-muted-foreground"
+            data-testid={`recurring-product-cost-${serviceConfig.configuration.config_id}`}
+          >
+            {costCurrency !== currencyCode
+              ? t('contractLines.pricing.costInCurrency', {
+                  defaultValue: 'Cost in {{currency}}: {{cost}}',
+                  currency: costCurrency,
+                  cost: formatMinorMoney(lookup?.cost ?? 0, costCurrency),
+                })
+              : t('contractLines.pricing.cost', {
+                  defaultValue: 'Cost: {{cost}}',
+                  cost: formatMinorMoney(lookup?.cost ?? 0, currencyCode),
+                })}
+            {margin !== null
+              ? ` · ${t('contractLines.pricing.margin', {
+                  defaultValue: 'Margin: {{margin}} per unit',
+                  margin: formatMinorMoney(margin, currencyCode),
+                })}`
+              : ''}
+          </span>
+        ) : null}
+      </>
+    );
   };
 
   const editingLine = editingLineId
@@ -2055,7 +2149,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                             />
                                           ) : (
                                             <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
-                                              {formatRate(serviceConfig.typeConfig?.hourly_rate || serviceConfig.typeConfig?.base_rate)}
+                                              {isRecurringProduct
+                                                ? renderRecurringProductRate(serviceConfig)
+                                                : formatRate(serviceConfig.typeConfig?.hourly_rate || serviceConfig.typeConfig?.base_rate)}
                                             </p>
                                           )}
                                         </div>
