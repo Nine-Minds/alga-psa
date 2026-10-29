@@ -22,6 +22,8 @@ let tenantId: string;
 let createClientContractFromWizard: typeof import('@alga-psa/billing/actions/contractWizardActions').createClientContractFromWizard;
 let updateContractLine: typeof import('@alga-psa/billing/actions/contractLineAction').updateContractLine;
 let updateConfiguration: typeof import('@alga-psa/billing/actions/contractLineServiceConfigurationActions').updateConfiguration;
+let getConfigurationWithDetails: typeof import('@alga-psa/billing/actions/contractLineServiceConfigurationActions').getConfigurationWithDetails;
+let buildFixedMemberRatePatch: typeof import('@alga-psa/billing/components/billing-dashboard/contracts/fixedMemberRatePatch').buildFixedMemberRatePatch;
 let FixedConfigModel: typeof import('@alga-psa/billing/models/contractLineServiceFixedConfig').default;
 let ContractLineService: typeof import('../../lib/api/services/ContractLineService').ContractLineService;
 
@@ -120,6 +122,8 @@ describe('Products contract line save never splits base_rate / base_rate_basis',
     ({ createClientContractFromWizard } = await import('@alga-psa/billing/actions/contractWizardActions'));
     ({ updateContractLine } = await import('@alga-psa/billing/actions/contractLineAction'));
     ({ updateConfiguration } = await import('@alga-psa/billing/actions/contractLineServiceConfigurationActions'));
+    ({ getConfigurationWithDetails } = await import('@alga-psa/billing/actions/contractLineServiceConfigurationActions'));
+    ({ buildFixedMemberRatePatch } = await import('@alga-psa/billing/components/billing-dashboard/contracts/fixedMemberRatePatch'));
     FixedConfigModel = (await import('@alga-psa/billing/models/contractLineServiceFixedConfig')).default;
     ({ ContractLineService } = await import('../../lib/api/services/ContractLineService'));
   }, HOOK_TIMEOUT);
@@ -127,6 +131,43 @@ describe('Products contract line save never splits base_rate / base_rate_basis',
   afterAll(async () => {
     await db?.destroy();
   }, HOOK_TIMEOUT);
+
+  it('model: getByConfigId returns base_rate as a number for a stored decimal, null for NULL', async () => {
+    const { configId } = await createProductsLine();
+    const model = new FixedConfigModel(db, tenantId);
+    expect((await model.getByConfigId(configId))!.base_rate).toBeNull();
+    await tenantTable(db, tenantId, 'contract_line_service_fixed_config').where({ tenant: tenantId, config_id: configId })
+      .update({ pricing_basis: 'bundle', base_rate: '1500.00', base_rate_basis: 'share', rate_provenance: 'custom' });
+    expect((await model.getByConfigId(configId))!.base_rate).toBe(1500);
+  }, HOOK_TIMEOUT);
+
+  it.each(['share', 'bundle-per-unit'] as const)(
+    'inline Save of an untouched %s member keeps its stored 1500.00 price and basis',
+    async (kind) => {
+      const { configId, serviceId } = await createProductsLine();
+      // A bundle/share member is a plain service: no recurring-unit revision resolves
+      // its price, so the string base_rate reaches the client unconverted without the fix.
+      await tenantTable(db, tenantId, 'service_catalog').where({ tenant: tenantId, service_id: serviceId })
+        .update({ item_kind: 'service' });
+      const basis = kind === 'share' ? 'share' : 'per_unit';
+      await tenantTable(db, tenantId, 'contract_line_service_fixed_config').where({ tenant: tenantId, config_id: configId })
+        .update({ pricing_basis: 'bundle', base_rate: '1500.00', base_rate_basis: basis, rate_provenance: 'custom' });
+
+      // handleSaveContractLine: read -> seed editData -> build patch -> updateConfiguration.
+      const details: any = await getConfigurationWithDetails(configId);
+      expect(details, JSON.stringify(details)).not.toHaveProperty('actionError');
+      const typeConfig = details.typeConfig;
+      expect(typeof typeConfig.base_rate).toBe('number');
+      const patch = buildFixedMemberRatePatch(typeConfig.base_rate, typeConfig.base_rate_basis);
+      const saved: any = await updateConfiguration(configId, {} as any, patch as any);
+      expect(saved, JSON.stringify(saved)).not.toHaveProperty('actionError');
+
+      const after = await fixedRow(configId);
+      expect(Number(after.base_rate)).toBe(1500);
+      expect(after).toMatchObject({ base_rate_basis: basis, rate_provenance: 'custom' });
+    },
+    HOOK_TIMEOUT,
+  );
 
   it('model: a basis-only update on a NULL-rate member throws the named error and leaves the row unchanged', async () => {
     const { configId } = await createProductsLine();

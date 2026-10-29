@@ -7,6 +7,7 @@ import type {
   IContractLineServiceFixedConfig,
 } from '@alga-psa/types';
 import {
+  coerceFixedMemberRate,
   FixedMemberRatePairError,
   fixedMemberRateProvenance,
   resolveFixedMemberRatePair,
@@ -76,7 +77,8 @@ export default class ContractLineServiceFixedConfig {
       })
       .first();
     
-    return config || null;
+    // `numeric` arrives as a string; clients get number | null (see coerceFixedMemberRate).
+    return config ? { ...config, base_rate: coerceFixedMemberRate(config.base_rate) } : null;
   }
 
   /**

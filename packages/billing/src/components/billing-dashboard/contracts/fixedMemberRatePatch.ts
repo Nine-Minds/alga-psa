@@ -1,4 +1,5 @@
 import type { FixedBaseRateBasis } from '@alga-psa/types';
+import { FixedMemberRatePairError } from '@alga-psa/shared/billingClients/fixedMemberRate';
 
 /**
  * The rate columns of a Fixed member patch. A number states what it means
@@ -8,11 +9,16 @@ import type { FixedBaseRateBasis } from '@alga-psa/types';
  * to be NULL together.
  */
 export function buildFixedMemberRatePatch(
-  baseRate: number | null,
+  baseRate: number | string | null | undefined,
   storedBasis: FixedBaseRateBasis | null | undefined,
 ): { base_rate: number | null; base_rate_basis?: FixedBaseRateBasis } {
-  if (typeof baseRate !== 'number') {
+  // Only an empty value means "catalog price"; anything else must be a number.
+  if (baseRate === null || baseRate === undefined || baseRate === '') {
     return { base_rate: null };
   }
-  return { base_rate: baseRate, base_rate_basis: storedBasis ?? 'per_unit' };
+  const rate = typeof baseRate === 'number' ? baseRate : Number(baseRate);
+  if (!Number.isFinite(rate)) {
+    throw new FixedMemberRatePairError(`A fixed member base_rate must be a number (got ${JSON.stringify(baseRate)}).`);
+  }
+  return { base_rate: rate, base_rate_basis: storedBasis ?? 'per_unit' };
 }

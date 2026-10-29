@@ -129,6 +129,15 @@ export function resolveFixedMemberRatePair(input: {
 }
 
 /**
+ * `contract_line_service_fixed_config.base_rate` is `numeric`, which the pg
+ * driver returns as a string (`'1500.00'`). Every reader hands clients a
+ * `number | null` through this one rule: null/undefined → null, else Number().
+ */
+export function coerceFixedMemberRate(value: number | string | null | undefined): number | null {
+  return value === null || value === undefined ? null : Number(value);
+}
+
+/**
  * Resolve a patch against the stored row. A patch that states only a basis
  * re-states it for the stored rate (a legitimate per_unit ↔ share change) and
  * is refused on a NULL-rate row, where a basis has nothing to describe.
@@ -143,7 +152,7 @@ export function resolveFixedMemberRatePatch(
   const statesBasis = patch.base_rate_basis !== undefined;
   if (!statesRate && !statesBasis) return undefined;
 
-  const storedRate = stored?.base_rate === null || stored?.base_rate === undefined ? null : Number(stored.base_rate);
+  const storedRate = coerceFixedMemberRate(stored?.base_rate);
   const rate = statesRate ? patch.base_rate ?? null : storedRate;
   if (!statesRate && rate === null && patch.base_rate_basis !== null) {
     throw new FixedMemberRatePairError('A fixed member base_rate_basis requires base_rate');
