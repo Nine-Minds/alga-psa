@@ -29,6 +29,7 @@ const INTENTIONALLY_UNLINKED: Record<string, string> = {
   '/msp/add-ons': 'reached via add-on notices and paywall CTAs, not the sidebar',
   '/msp/co-managed': 'capability-gated sponsor overview reached from the client record co-managed tab; sidebar entry arrives with L1b',
   '/msp/co-management': 'capability-gated legacy entry that redirects to /msp/co-managed',
+  '/msp/co-management/providers': 'capability-gated provider setup reached through the product-neutral /msp/go/providers entry (Open Providers in email setup, profile SSO)',
   '/msp/create-opportunity': 'reached via the Quick Create button in the header, not the sidebar',
   '/msp/create-ticket': 'reached via the Quick Create button in the header, not the sidebar',
   '/msp/integrations': 'legacy path kept routable; the user-facing entry is /msp/settings/integrations',

@@ -11,6 +11,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { PROVIDER_SETUP_ENTRY_PATH } from '@alga-psa/types';
 import {
   getErrorMessage,
   handleError,
@@ -585,7 +586,7 @@ function EmailProviderConfigurationContent({
                     type="button"
                     variant="link"
                     className="h-auto p-0"
-                    onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
+                    onClick={() => window.location.assign(PROVIDER_SETUP_ENTRY_PATH)}
                   >
                     {t('configuration.setup.microsoft.openProviders', { defaultValue: 'Open Providers' })}
                   </Button>
