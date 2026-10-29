@@ -2814,7 +2814,7 @@
     "inheritWithValue": "Contractstandaard gebruiken — {{timing}}",
     "inheritedAdvance": "vooraf",
     "inheritedArrears": "achteraf",
-    "contractDefaultHelp": "Standaard voor vaste regels, die vooraf gefactureerd kunnen worden. Uren- en gebruiksregels worden altijd achteraf gefactureerd, wat je hier ook kiest."
+    "contractDefaultHelp": "Standaard voor vaste regels, die vooraf gefactureerd kunnen worden. Uren- en gebruiksregels worden altijd achteraf gefactureerd, wat u hier ook kiest."
   },
   "contractDiscounts": {
     "title": "Kortingen",
