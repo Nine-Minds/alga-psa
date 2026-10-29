@@ -4033,5 +4033,12 @@
     "moveDown": "Descendre",
     "remove": "Retirer",
     "addTag": "Ajouter une étiquette…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Retour aux paramètres e-mail",
+      "title": "Fournisseurs d'e-mail et d'identité",
+      "description": "Enregistrez votre propre application Google ou Microsoft pour les e-mails entrants et la connexion du personnel. Ces identifiants appartiennent à votre espace de travail."
+    }
   }
 }

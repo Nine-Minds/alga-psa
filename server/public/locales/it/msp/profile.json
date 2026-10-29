@@ -802,6 +802,8 @@
       "title": "Collega un provider",
       "description": "Scegli un provider per completare il collegamento SSO. Verrai reindirizzato attraverso il flusso di accesso del provider.",
       "noneConfigured": "Nessun provider SSO è configurato per questo ambiente. Chiedi al tuo amministratore di configurare le credenziali Google o Microsoft.",
+      "noneConfiguredAdmin": "Nessun provider SSO è ancora configurato. Configura prima l'applicazione Google o Microsoft della tua organizzazione.",
+      "openProviderSetup": "Configura un provider SSO",
       "notConfigured": "Non configurato",
       "branding": {
         "google": "Continua con Google",

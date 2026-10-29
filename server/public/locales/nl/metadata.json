@@ -524,7 +524,10 @@
       "title": "Gezamenlijk beheerde IT"
     },
     "coManagement": {
-      "title": "Toegang voor gezamenlijk beheer"
+      "title": "Toegang voor gezamenlijk beheer",
+      "providers": {
+        "title": "E-mail- en identiteitsproviders"
+      }
     }
   },
   "auth": {

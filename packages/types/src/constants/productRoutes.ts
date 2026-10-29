@@ -39,8 +39,7 @@ export function productNavHref(target: ProductNavTarget): string {
 /**
  * Where each target resolves per product.
  *
- * `co_managed` lands on its relationship home (`/msp/co-managed`) until the
- * capability-scoped provider page ships. It deliberately does
+ * `co_managed` gets a capability-scoped provider route. It deliberately does
  * not get `/msp/settings/integrations`: that page also hosts accounting, RMM,
  * payments and the other categories the co-managed capability boundary
  * excludes, so allowing the route would widen the boundary well past the
@@ -51,9 +50,7 @@ export const PRODUCT_NAV_DESTINATIONS: Record<ProductNavTarget, Record<ProductCo
   providers: {
     psa: '/msp/settings/integrations?category=providers',
     algadesk: '/msp/settings/integrations?category=providers',
-    // The single co-managed root renders the customer's relationship home, which
-    // shows the provider. The capability-scoped providers page ships in L9.
-    co_managed: '/msp/co-managed',
+    co_managed: '/msp/co-management/providers',
   },
   // Connecting a mailbox to the configured application. PSA reaches the inbound
   // provider list through Integrations -> Communication; the restricted

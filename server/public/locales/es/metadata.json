@@ -524,7 +524,10 @@
       "title": "TI cogestionada"
     },
     "coManagement": {
-      "title": "Acceso cogestionado"
+      "title": "Acceso cogestionado",
+      "providers": {
+        "title": "Proveedores de correo electrónico e identidad"
+      }
     }
   },
   "auth": {
