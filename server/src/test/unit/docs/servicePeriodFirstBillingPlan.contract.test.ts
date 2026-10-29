@@ -373,8 +373,10 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/src/services/invoiceAutomaticAdjustments.ts',
   'packages/billing/src/components/billing-dashboard/ManualInvoices.tsx',
   // The same card's line-window guard, protected-history check and partial-period
-  // descriptions read persisted charge periods; their tests assert them.
-  'packages/billing/src/actions/contractLineAction.ts',
+  // descriptions read persisted charge periods; their tests assert them. The
+  // protected-history check moved into the transaction-scoped update module
+  // with the single-transaction contract line save (alga-2026-0002714).
+  'packages/billing/src/lib/billing/contractLineUpdate.ts',
   'packages/billing/src/actions/invoiceActions.ts',
   'packages/billing/src/lib/billing/compute/contractInvoiceAdjustments.ts',
   'packages/billing/src/lib/billing/compute/contractInvoiceAdjustments.test.ts',
