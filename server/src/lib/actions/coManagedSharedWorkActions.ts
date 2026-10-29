@@ -19,21 +19,18 @@ export const getSharedWorkSummaryAction = withAuth(async (user, { tenant }, reso
 });
 
 /**
- * A handoff command's gate is side-aware, like L2's `withCoManagedHeld`: the customer side (session tenant ===
- * resource.tenant) is never entitled and only ever `serves`; the sponsor side must still be `admits`-ted.
- * The side comes from the resource and the session tenant alone, so a forced-off or flag-off tenant is refused
- * here, before any co-managed table is read.
+ * Handoff commands are two-sided, so their gate is side-aware (like L2's `withCoManagedHeld`): the customer side
+ * (session tenant === resource.tenant) is never entitled and only ever `serves`; the sponsor side must still be
+ * `admits`-ted. The side comes from the resource and the session tenant alone, so a forced-off or flag-off tenant
+ * is refused before any co-managed table is read. The adapter is called inline: its tenant must be the session's.
  */
-async function requireHandoffCapability(tenant: string, resource: CoManagedSharedResource, customerSideOnly: boolean): Promise<void> {
-  // LEVERAGE: pattern capability-either-mode — second two-sided action; the adapter should land next to requireCapabilityForAction (see withCoManagedHeld in coManagedPolicyActions.ts).
-  const customerSide = typeof resource?.tenant === 'string' && resource.tenant === tenant;
-  // Escalation is the customer's act; a sponsor-side caller has no such command to start.
-  if (customerSideOnly && !customerSide) throw new CapabilityUnavailableError();
-  await requireCapabilityForAction('co-managed', tenant, customerSide ? 'serves' : 'admits');
-}
+const isCustomerSide = (tenant: string, resource: CoManagedSharedResource) =>
+  typeof resource?.tenant === 'string' && resource.tenant === tenant;
 
 export const escalateSharedTicketAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, request: CoManagedTicketHandoffRequest) => {
-  await requireHandoffCapability(tenant, resource, true);
+  // Escalation is the customer's act; a sponsor-side caller has no such command to start.
+  if (!isCustomerSide(tenant, resource)) throw new CapabilityUnavailableError();
+  await requireCapabilityForAction('co-managed', tenant, 'serves');
   const actor = await browserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
   // LEVERAGE: friction shared-ticket-sla — the SLA setup-required result returns with L6b.
@@ -41,7 +38,9 @@ export const escalateSharedTicketAction = withAuth(async (user, { tenant }, reso
 });
 
 export const handBackSharedTicketAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, request: CoManagedTicketHandoffRequest) => {
-  await requireHandoffCapability(tenant, resource, false);
+  // LEVERAGE: pattern capability-either-mode — second two-sided action; the adapter should land next to requireCapabilityForAction (see withCoManagedHeld in coManagedPolicyActions.ts).
+  // Customer side = take-back (`serves`); sponsor side = hand-back (`admits`).
+  await requireCapabilityForAction('co-managed', tenant, isCustomerSide(tenant, resource) ? 'serves' : 'admits');
   const actor = await browserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
   return handBackCoManagedTicket(knex, actor, resource, request);
