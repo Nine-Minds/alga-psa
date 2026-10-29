@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { formatCalendarDate, formatDateOnly } from '@alga-psa/core';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { formatCalendarDate, formatCurrencyFromMinorUnits, formatDateOnly } from '@alga-psa/core';
 import type { IHourBlock, IHourBlockAllocation, IHourBlockAuditEntry } from '@alga-psa/types';
 import HourBlockCoverageNotice from './HourBlockCoverageNotice';
 import { getHourBlockDetail } from '@alga-psa/billing/actions/hourBlockActions';
@@ -42,6 +42,7 @@ function auditLabel(t: TranslateFn, entry: IHourBlockAuditEntry): string {
 
 export default function HourBlockDetailDrawer({ block, onClose }: HourBlockDetailDrawerProps) {
   const { t } = useTranslation('msp/hour-blocks');
+  const { locale } = useFormatters();
 
   const [data, setData] = useState<{
     block: IHourBlock;
@@ -137,6 +138,19 @@ export default function HourBlockDetailDrawer({ block, onClose }: HourBlockDetai
                     : data.scopes.map((scope) => scope.service_name ?? scope.service_id).join(', ')}
                 </span>
               </p>
+              {data.block.remaining_value != null && data.block.currency_code && (
+                <p id="hb-detail-remaining-value" className="text-[rgb(var(--color-text-500))]">
+                  {t('detail.remainingValue', {
+                    value: formatCurrencyFromMinorUnits(data.block.remaining_value, locale, data.block.currency_code),
+                    defaultValue: 'Value of remaining hours: {{value}}',
+                  })}
+                </p>
+              )}
+              {data.block.valid_from && (
+                <p id="hb-detail-valid-from" className="text-[rgb(var(--color-text-500))]">
+                  {t('detail.validFrom', { date: formatCalendarDate(data.block.valid_from) ?? '', defaultValue: 'Valid from {{date}}' })}
+                </p>
+              )}
               {data.block.expiration_date && (
                 <p className="text-[rgb(var(--color-text-500))]">
                   {t('detail.expires', { date: formatCalendarDate(data.block.expiration_date) ?? '', defaultValue: 'Expires {{date}}' })}

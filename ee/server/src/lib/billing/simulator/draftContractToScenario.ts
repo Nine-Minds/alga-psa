@@ -14,7 +14,7 @@ import type {
 } from "@alga-psa/types";
 import { tenantDb } from "@alga-psa/db";
 import { toISODate, toPlainDate } from "@alga-psa/core";
-import { getClientBillingCycleAnchor } from "@alga-psa/shared/billingClients/billingSchedule";
+import { loadClientInvoiceSchedule } from "./clientInvoiceSchedule";
 import { resolveUnitOfMeasure } from "@alga-psa/core/unitOfMeasure";
 import { resolveEffectiveBillingTiming } from "@alga-psa/shared/billingClients/contractLineTimingRule";
 import { assumptionKey } from "./syntheticActivity";
@@ -387,11 +387,13 @@ export async function draftContractToScenario(
         trigger_on_expiry: expiryMonths === null ? false : Boolean(block.trigger_on_expiry),
         trigger_on_renewal: Boolean(block.trigger_on_renewal),
         replenishment_tier: block.replenishment_tier === "auto_issue" ? "auto_issue" : "draft",
+        issue_mode: block.issue_mode === "cadence" ? "cadence" : "consumption",
+        rollover_periods: block.rollover_periods ?? 0,
       },
     });
   });
 
-  const schedule = await getClientBillingCycleAnchor(
+  const invoiceSchedule = await loadClientInvoiceSchedule(
     knex,
     tenant,
     client.client_id,
@@ -422,15 +424,7 @@ export async function draftContractToScenario(
       client_id: client.client_id,
       client_name: client.client_name,
     },
-    invoice_schedule: {
-      billing_cycle: schedule.billingCycle,
-      anchor: {
-        day_of_month: schedule.anchor.dayOfMonth,
-        month_of_year: schedule.anchor.monthOfYear,
-        day_of_week: schedule.anchor.dayOfWeek,
-        reference_date: schedule.anchor.referenceDate,
-      },
-    },
+    invoice_schedule: invoiceSchedule,
     billing_frequency: draft.billing_frequency,
     contract_start_date: draft.start_date ? midnight(draft.start_date) : null,
     contract_end_date: draft.end_date ? midnight(draft.end_date) : null,

@@ -2011,7 +2011,9 @@
       "blockSummary": "{{hours}} uur voor {{price}}",
       "expiresAfter_one": "verloopt na {{count}} maand",
       "expiresAfter_other": "verloopt na {{count}} maanden",
-      "neverExpires": "verloopt nooit"
+      "neverExpires": "verloopt nooit",
+      "cadenceSummary": "{{hours}} u per factuurperiode voor {{price}}",
+      "overageRate": "meerverbruik {{rate}}/u"
     }
   },
   "wizardTemplateLines": {
@@ -2313,7 +2315,8 @@
       "period": "Periode: {{period}}"
     },
     "prepaid": {
-      "blockSummaryNeutral": "{{hours}} uur voor {{price}} (in de valuta van de klant)"
+      "blockSummaryNeutral": "{{hours}} uur voor {{price}} (in de valuta van de klant)",
+      "cadenceSummaryNeutral": "{{hours}} u per factuurperiode voor {{price}} (in de valuta van de klant)"
     }
   },
   "templatePreview": {
@@ -2778,7 +2781,7 @@
     "done": "Klaar"
   },
   "sellHourBlockNote": {
-    "text": "Een urenbundel in het contract factureert alleen het meerverbruik. Wilt u een blok uren vooraf in rekening brengen, voeg dan een regel Vooruitbetaald blok toe aan dit contract."
+    "text": "Een contracturenbundel factureert alleen het meerverbruik. Om een blok uren vooraf in rekening te brengen, voegt u een Prepaid blok-regel aan het contract toe en geeft u die elke factuurperiode uit."
   },
   "review": {
     "saveTemplateRates": "Deze {{currency}}-tarieven opslaan in de sjabloon",
@@ -2960,7 +2963,17 @@
       "tier": "Vervolgfactuur",
       "tierDraft": "Een concept ter controle aanmaken",
       "tierAutoIssue": "Automatisch afronden en verzenden",
-      "blockPriceNeutral": "Blokprijs (in de valuta van de klant)"
+      "blockPriceNeutral": "Blokprijs (in de valuta van de klant)",
+      "ratePerHour": "Komt neer op {{rate}} per uur van het blok.",
+      "issueMode": "Blokken uitgeven",
+      "issueModeCadence": "Elke factuurperiode",
+      "blockFeeInAdvance": "De regel wordt achteraf gefactureerd; de blokvergoeding wordt vooraf gefactureerd.",
+      "issueModeConsumption": "Wanneer het huidige blok op is of verloopt",
+      "rolloverPeriods": "Ongebruikte uren",
+      "rolloverNone": "Verlopen aan het einde van de periode",
+      "cadenceNote": "Per periode vooraf gefactureerd. Uren boven het blok worden op de volgende factuur tegen het uurtarief van de regel gefactureerd.",
+      "rolloverCarry_one": "{{count}} periode doorschuiven",
+      "rolloverCarry_other": "{{count}} periodes doorschuiven"
     },
     "status": {
       "pending": "In behandeling",

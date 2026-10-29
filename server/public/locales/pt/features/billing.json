@@ -445,7 +445,13 @@
     "expires": "Expira em {{date}}",
     "recentBurn": "Uso recente",
     "timeEntry": "Lançamento de horas",
-    "contractLabel": "Contrato: {{contract}}"
+    "contractLabel": "Contrato: {{contract}}",
+    "hoursLeftValue": "{{hours}} h restantes · {{value}}",
+    "validFrom": "Válido a partir de {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — bloco pré-pago, {{hours}} h",
+    "overPrepaidBlock": "{{name}} (acima do bloco pré-pago)"
   },
   "bucketUsage": {
     "contractLine": "Linha de contrato de banco de horas",
