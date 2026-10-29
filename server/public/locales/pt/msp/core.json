@@ -110,7 +110,8 @@
     "ticketsCannedResponses": "Respostas prontas",
     "profile": "Perfil",
     "signOut": "Sair",
-    "coManaged": "TI cogerida"
+    "coManaged": "TI cogerida",
+    "coManagedAdministration": "Acesso e administração"
   },
   "sidebar": {
     "backToMain": "Voltar ao principal",

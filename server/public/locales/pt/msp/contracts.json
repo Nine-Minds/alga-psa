@@ -698,6 +698,13 @@
       "statusSuperseded": "Substituído",
       "supersededHistory": "Edições pendentes substituídas ({{count}})",
       "supersededBy": "Substituído por"
+    },
+    "pricing": {
+      "catalog": "catálogo",
+      "override": "personalizado",
+      "cost": "Custo: {{cost}}",
+      "costInCurrency": "Custo em {{currency}}: {{cost}}",
+      "margin": "Margem: {{margin}} por unidade"
     }
   },
   "contractLineEdit": {
@@ -1972,7 +1979,10 @@
         "one": "Produto {{count}}",
         "other": "Produtos {{count}}"
       },
-      "overrideRate": "- substituir {{rate}}/{{currencyCode}}"
+      "overrideRate": "- substituir {{rate}}/{{currencyCode}}",
+      "cost": "Custo: {{cost}}",
+      "costInCurrency": "Custo em {{currency}}: {{cost}}",
+      "margin": "Margem: {{margin}} por unidade"
     },
     "hourly": {
       "badgeCount": {
@@ -1995,8 +2005,12 @@
     "total": {
       "title": "Total Mensal Estimado",
       "description": "Produtos e cobranças fixas estão incluídos neste total. Serviços por hora e de uso são faturados com base no consumo real.",
-      "perMonth": "por mês",
-      "savedDraftValue": "Valor do rascunho guardado: {{amount}}"
+      "savedDraftValue": "Valor do rascunho guardado: {{amount}}",
+      "titleCadence": "Total estimado",
+      "mixedFrequencyTitle": "Total estimado por frequência de faturamento",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "cerca de {{amount}} por mês",
+      "savedDraftValueMonthly": "Valor do rascunho guardado: {{amount}} por mês"
     },
     "finalChecklist": {
       "title": "Antes de terminar:",

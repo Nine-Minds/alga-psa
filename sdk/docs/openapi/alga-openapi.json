@@ -1285,6 +1285,9 @@
           "team_name": {
             "type": "string"
           },
+          "description": {
+            "type": "string"
+          },
           "manager_id": {
             "type": "string",
             "format": "uuid"
@@ -1693,6 +1696,13 @@
           "team_name": {
             "type": "string"
           },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000
+          },
           "manager_id": {
             "type": "string",
             "format": "uuid"
@@ -1714,6 +1724,13 @@
         "properties": {
           "team_name": {
             "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000
           },
           "manager_id": {
             "type": "string",
@@ -25644,6 +25661,83 @@
           }
         }
       },
+      "WorkV1TicketWatcherBody": {
+        "type": "object",
+        "properties": {
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Client contact to watch; resolved to the contact email and name. Exactly one of contact_id, user_id, email."
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Internal user to watch; resolved to the user email and name. Exactly one of contact_id, user_id, email."
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Any bare email address (external mailbox). Exactly one of contact_id, user_id, email."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Display name; only used when the watcher has no name yet."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the watcher receives updates; defaults to true."
+          },
+          "silent": {
+            "type": "boolean",
+            "description": "Request-scoped, never stored. When true the write emits no customer or internal notification."
+          }
+        }
+      },
+      "WorkV1TicketWatcherActiveBody": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email of an existing watcher (case-insensitive)."
+          },
+          "active": {
+            "type": "boolean",
+            "description": "true to resume updates, false to pause them without removing the watcher."
+          },
+          "silent": {
+            "type": "boolean",
+            "description": "Request-scoped, never stored. Suppresses notifications for this change."
+          }
+        },
+        "required": [
+          "email",
+          "active"
+        ]
+      },
+      "WorkV1TicketWatcherRemoveQuery": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Email of the watcher to remove (case-insensitive)."
+          },
+          "silent": {
+            "type": "string",
+            "enum": [
+              "true",
+              "false"
+            ],
+            "description": "Request-scoped. \"true\" suppresses notifications for this removal."
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
       "QuoteIdParamV1": {
         "type": "object",
         "properties": {
@@ -32700,6 +32794,14 @@
             },
             "required": false,
             "name": "team_name",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "description",
             "in": "query"
           },
           {
@@ -104593,7 +104695,7 @@
       },
       "post": {
         "summary": "Add a ticket additional agent",
-        "description": "Adds a user as an additional agent on the ticket and publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI unless suppressed. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.",
+        "description": "Internal staff only: adds a user as an additional agent on the ticket (external people, client contacts and bare emails go to POST /api/v1/tickets/{id}/watchers; a one-off comment copy uses comment cc/bcc). Publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI unless suppressed. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.",
         "tags": [
           "Work Management v1"
         ],
@@ -104789,6 +104891,447 @@
           },
           "404": {
             "description": "Ticket or additional agent not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{id}/watchers": {
+      "get": {
+        "summary": "List ticket watchers",
+        "description": "Returns everyone on the ticket watch list. Watchers are persistent (contacts, users or any email) and are copied on ticket updates; they are distinct from additional agents (internal staff, /agents) and from a comment cc (one-off, never joins the watch list). Unless silent=true the write emits one TICKET_UPDATED event; silent=true sets suppressContactNotifications and suppressInternalNotifications on it. The response is the full watcher list: {email, name, active, entity_type, entity_id, source}.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Watcher list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add a ticket watcher",
+        "description": "Idempotent set-add of a watcher by exactly one of contact_id, user_id or email; an existing email is re-activated, not duplicated. An unknown or other-tenant contact/user, or one without an email, returns 422. Watchers are persistent (contacts, users or any email) and are copied on ticket updates; they are distinct from additional agents (internal staff, /agents) and from a comment cc (one-off, never joins the watch list). Unless silent=true the write emits one TICKET_UPDATED event; silent=true sets suppressContactNotifications and suppressInternalNotifications on it. The response is the full watcher list: {email, name, active, entity_type, entity_id, source}.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkV1TicketWatcherBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Watcher added (or already present); full list returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Contact or user not found in this tenant, or has no email.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Pause or resume a ticket watcher",
+        "description": "Sets active on an existing watcher identified by email; the watcher stays on the list. Watchers are persistent (contacts, users or any email) and are copied on ticket updates; they are distinct from additional agents (internal staff, /agents) and from a comment cc (one-off, never joins the watch list). Unless silent=true the write emits one TICKET_UPDATED event; silent=true sets suppressContactNotifications and suppressInternalNotifications on it. The response is the full watcher list: {email, name, active, entity_type, entity_id, source}.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkV1TicketWatcherActiveBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Watcher updated; full list returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected controller/service failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove a ticket watcher",
+        "description": "Removes the watcher with the given ?email=. Returns 404 when that email is not a watcher. Watchers are persistent (contacts, users or any email) and are copied on ticket updates; they are distinct from additional agents (internal staff, /agents) and from a comment cc (one-off, never joins the watch list). Unless silent=true the write emits one TICKET_UPDATED event; silent=true sets suppressContactNotifications and suppressInternalNotifications on it. The response is the full watcher list: {email, name, active, entity_type, entity_id, source}.",
+        "tags": [
+          "Work Management v1"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "ticket",
+          "x-rbac-action": "update"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "UUID path identifier from underlying resource tables."
+            },
+            "required": true,
+            "description": "UUID path identifier from underlying resource tables.",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "email",
+              "description": "Email of the watcher to remove (case-insensitive)."
+            },
+            "required": true,
+            "description": "Email of the watcher to remove (case-insensitive).",
+            "name": "email",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ],
+              "description": "Request-scoped. \"true\" suppresses notifications for this removal."
+            },
+            "required": false,
+            "description": "Request-scoped. \"true\" suppresses notifications for this removal.",
+            "name": "silent",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Watcher removed; full list returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiSuccess"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation or request parsing failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "RBAC denied for ticket resource action.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkV1ApiError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Ticket or sub-resource not found.",
             "content": {
               "application/json": {
                 "schema": {

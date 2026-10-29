@@ -507,6 +507,13 @@ export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: str
       + 'was discarded for this specific client. It has no live write path, and re-stamping it would '
       + 'misattribute the record (and collide with the target\'s own row on the per-client unique key).',
   },
+  {
+    table: 'co_managed_participation_evidence',
+    reason:
+      'Append-only audit of who touched shared work for this client, kept so access reduction cannot '
+      + 'erase history. participationEvidenceStore exports no update or delete and refuses a replay whose '
+      + 'content hash differs, so re-pointing client_id would break its immutability; it stays pinned to the original client.',
+  },
   // These columns are OAuth application identifiers (varchar/text, no foreign
   // key to `clients`). Re-stamping one would break the integration outright.
   { table: 'google_calendar_provider_config', reason: 'OAuth client id, not an Alga client.' },

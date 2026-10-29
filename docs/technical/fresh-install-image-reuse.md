@@ -66,7 +66,10 @@ closed on a malformed or foreign record):
 - the browser job's load step (`verifyLoadedDockerImage`)
 - the provider topology check (`e2e-tests/harness/check-provider-topology.mjs`)
 - the supported-upgrade and Citus-upgrade switches (`scripts/expected-image-revision.mjs`)
-- the Microsoft callback stage (`imageBuildRevision` in its runtime binding)
+
+The Teams development server and the Microsoft callback run in the pinned
+development runtime with the checkout mounted, not in a candidate image, so
+they inspect no revision label.
 
 The `UPGRADE_APPLICATION_REVISION` claim stays the candidate revision: the
 running application is byte-identical to the candidate's build by the input

@@ -698,6 +698,13 @@
       "statusSuperseded": "Ersetzt",
       "supersededHistory": "Ersetzte ausstehende Änderungen ({{count}})",
       "supersededBy": "Ersetzt durch"
+    },
+    "pricing": {
+      "catalog": "Katalog",
+      "override": "überschrieben",
+      "cost": "Kosten: {{cost}}",
+      "costInCurrency": "Kosten in {{currency}}: {{cost}}",
+      "margin": "Marge: {{margin}} pro Einheit"
     }
   },
   "contractLineEdit": {
@@ -1972,7 +1979,10 @@
         "one": "{{count}} Produkt",
         "other": "{{count}} Produkte"
       },
-      "overrideRate": "- überschreiben {{rate}}/{{currencyCode}}"
+      "overrideRate": "- überschreiben {{rate}}/{{currencyCode}}",
+      "cost": "Kosten: {{cost}}",
+      "costInCurrency": "Kosten in {{currency}}: {{cost}}",
+      "margin": "Marge: {{margin}} pro Einheit"
     },
     "hourly": {
       "badgeCount": {
@@ -1995,8 +2005,12 @@
     "total": {
       "title": "Geschätzte monatliche Summe",
       "description": "Produkte und feste Gebühren sind in dieser Summe enthalten. Stunden- und nutzungsbasierte Services werden nach tatsächlichem Aufwand abgerechnet.",
-      "perMonth": "pro Monat",
-      "savedDraftValue": "Gespeicherter Entwurfswert: {{amount}}"
+      "savedDraftValue": "Gespeicherter Entwurfswert: {{amount}}",
+      "titleCadence": "Geschätzte Gesamtsumme",
+      "mixedFrequencyTitle": "Geschätzte Gesamtsumme nach Abrechnungshäufigkeit",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "ca. {{amount}} pro Monat",
+      "savedDraftValueMonthly": "Gespeicherter Entwurfswert: {{amount}} pro Monat"
     },
     "finalChecklist": {
       "title": "Bevor Sie abschließen:",

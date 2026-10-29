@@ -698,6 +698,13 @@
       "statusSuperseded": "Remplacé",
       "supersededHistory": "Modifications en attente remplacées ({{count}})",
       "supersededBy": "Remplacé par"
+    },
+    "pricing": {
+      "catalog": "catalogue",
+      "override": "remplacé",
+      "cost": "Coût : {{cost}}",
+      "costInCurrency": "Coût en {{currency}} : {{cost}}",
+      "margin": "Marge : {{margin}} par unité"
     }
   },
   "contractLineEdit": {
@@ -1972,7 +1979,10 @@
         "one": "{{count}} produit",
         "other": "{{count}} produits"
       },
-      "overrideRate": "- remplacement {{rate}}/{{currencyCode}}"
+      "overrideRate": "- remplacement {{rate}}/{{currencyCode}}",
+      "cost": "Coût : {{cost}}",
+      "costInCurrency": "Coût en {{currency}} : {{cost}}",
+      "margin": "Marge : {{margin}} par unité"
     },
     "hourly": {
       "badgeCount": {
@@ -1995,8 +2005,12 @@
     "total": {
       "title": "Total mensuel estimé",
       "description": "Les produits et les frais fixes sont inclus dans ce total. Les services horaires et à l'usage sont facturés selon le réel.",
-      "perMonth": "par mois",
-      "savedDraftValue": "Valeur du brouillon enregistré : {{amount}}"
+      "savedDraftValue": "Valeur du brouillon enregistré : {{amount}}",
+      "titleCadence": "Total estimé",
+      "mixedFrequencyTitle": "Total estimé par fréquence de facturation",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "environ {{amount}} par mois",
+      "savedDraftValueMonthly": "Valeur du brouillon enregistré : {{amount}} par mois"
     },
     "finalChecklist": {
       "title": "Avant de terminer :",

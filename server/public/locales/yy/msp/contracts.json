@@ -698,6 +698,13 @@
       "statusSuperseded": "〖Şŭƥḗřşḗḓḗḓ ····〗",
       "supersededHistory": "〖Şŭƥḗřşḗḓḗḓ ƥḗƞḓīƞɠ ḗḓīŧş ({{count}}) ···············〗",
       "supersededBy": "〖Şŭƥḗřşḗḓḗḓ ƀẏ ······〗"
+    },
+    "pricing": {
+      "catalog": "〖ƈȧŧȧŀȯɠ ···〗",
+      "override": "〖ȯṽḗřřīḓḗ ····〗",
+      "cost": "〖Ƈȯşŧ: {{cost}} ······〗",
+      "costInCurrency": "〖Ƈȯşŧ īƞ {{currency}}: {{cost}} ············〗",
+      "margin": "〖Ḿȧřɠīƞ: {{margin}} ƥḗř ŭƞīŧ ···········〗"
     }
   },
   "contractLineEdit": {
@@ -1972,7 +1979,10 @@
         "one": "〖{{count}} ƥřȯḓŭƈŧ ·······〗",
         "other": "〖{{count}} ƥřȯḓŭƈŧş ········〗"
       },
-      "overrideRate": "〖- ȯṽḗřřīḓḗ {{rate}}/{{currencyCode}} ···············〗"
+      "overrideRate": "〖- ȯṽḗřřīḓḗ {{rate}}/{{currencyCode}} ···············〗",
+      "cost": "〖Ƈȯşŧ: {{cost}} ······〗",
+      "costInCurrency": "〖Ƈȯşŧ īƞ {{currency}}: {{cost}} ············〗",
+      "margin": "〖Ḿȧřɠīƞ: {{margin}} ƥḗř ŭƞīŧ ···········〗"
     },
     "hourly": {
       "badgeCount": {
@@ -1995,8 +2005,12 @@
     "total": {
       "title": "〖Ḗşŧīḿȧŧḗḓ Ḿȯƞŧħŀẏ Ŧȯŧȧŀ ··········〗",
       "description": "〖Ƥřȯḓŭƈŧş ȧƞḓ ƒīẋḗḓ ƈħȧřɠḗş ȧřḗ īƞƈŀŭḓḗḓ īƞ ŧħīş ŧȯŧȧŀ. Ħȯŭřŀẏ ȧƞḓ ŭşȧɠḗ şḗřṽīƈḗş ȧřḗ ƀīŀŀḗḓ ȯƞ ȧƈŧŭȧŀş. ··········································〗",
-      "perMonth": "〖ƥḗř ḿȯƞŧħ ····〗",
-      "savedDraftValue": "〖Şȧṽḗḓ ḓřȧƒŧ ṽȧŀŭḗ: {{amount}} ············〗"
+      "savedDraftValue": "〖Şȧṽḗḓ ḓřȧƒŧ ṽȧŀŭḗ: {{amount}} ············〗",
+      "titleCadence": "〖Ḗşŧīḿȧŧḗḓ Ŧȯŧȧŀ ······〗",
+      "mixedFrequencyTitle": "〖Ḗşŧīḿȧŧḗḓ Ŧȯŧȧŀ ƀẏ Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ ···············〗",
+      "perFrequency": "〖{{amount}} {{period}} ·········〗",
+      "perMonthEquivalent": "〖ȧƀȯŭŧ {{amount}} ȧ ḿȯƞŧħ ··········〗",
+      "savedDraftValueMonthly": "〖Şȧṽḗḓ ḓřȧƒŧ ṽȧŀŭḗ: {{amount}} ƥḗř ḿȯƞŧħ ················〗"
     },
     "finalChecklist": {
       "title": "〖Ɓḗƒȯřḗ ẏȯŭ ƒīƞīşħ: ········〗",

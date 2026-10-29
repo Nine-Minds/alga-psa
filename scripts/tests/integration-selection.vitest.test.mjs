@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
 
 const repository = fileURLToPath(new URL('../../', import.meta.url));
-const vitest = path.join(repository, 'server/node_modules/vitest/vitest.mjs');
+const vitest = path.join(repository, 'node_modules/vitest/vitest.mjs');
 
 test('workflow selector and real integration runner agree on git changes and widen on graph failure', (t) => {
   const root = mkdtempSync(path.join(tmpdir(), 'alga-selection-'));
@@ -23,7 +23,7 @@ test('workflow selector and real integration runner agree on git changes and wid
     write(file, '');
     copyFileSync(path.join(repository, file), path.join(root, file));
   }
-  write('server/node_modules/vitest/vitest.mjs', `
+  write('node_modules/vitest/vitest.mjs', `
 import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 const args = process.argv.slice(2);

@@ -64,7 +64,7 @@ RUN test -f /app/packages/core/dist/index.js \
 
 # Copy pre-built Next.js artifacts (must exist locally with EE features)
 # server/dist is no longer required here; workflow-worker is built/deployed separately
-COPY ./server/.next ./server/.next
+COPY --chown=1000:1000 ./server/.next ./server/.next
 
 # Copy runtime files
 COPY ./server/public ./server/public
@@ -92,6 +92,14 @@ COPY packages/core/package.json /app/packages/core/package.json
 # Copy the entrypoint with its runtime mode already set. Keeping this as image
 # metadata avoids starting a throwaway build container solely to run chmod.
 COPY --chmod=0755 server/entrypoint.sh /app/entrypoint.sh
+
+# The image must also run as a non-root user (the browser lane runs it as
+# 1000:1000; hardened deployments may too). At runtime the server creates
+# logs/ in its working directory for winston's file transport and .next/cache
+# for the image optimizer, and Next may rewrite tsconfig.json; a page render
+# that cannot create logs/ throws. Give that user the directory, as the old
+# test image did.
+RUN chown 1000:1000 /app/server /app/server/tsconfig.json
 
 EXPOSE 3000
 ENV NODE_ENV=production

@@ -698,6 +698,13 @@
       "statusSuperseded": "Ersatt",
       "supersededHistory": "Ersatta väntande ändringar ({{count}})",
       "supersededBy": "Ersatt av"
+    },
+    "pricing": {
+      "catalog": "katalog",
+      "override": "åsidosatt",
+      "cost": "Kostnad: {{cost}}",
+      "costInCurrency": "Kostnad i {{currency}}: {{cost}}",
+      "margin": "Marginal: {{margin}} per enhet"
     }
   },
   "contractLineEdit": {
@@ -1972,7 +1979,10 @@
         "one": "{{count}} produkt",
         "other": "{{count}} produkter"
       },
-      "overrideRate": "- anpassat pris {{rate}}/{{currencyCode}}"
+      "overrideRate": "- anpassat pris {{rate}}/{{currencyCode}}",
+      "cost": "Kostnad: {{cost}}",
+      "costInCurrency": "Kostnad i {{currency}}: {{cost}}",
+      "margin": "Marginal: {{margin}} per enhet"
     },
     "hourly": {
       "badgeCount": {
@@ -1995,8 +2005,12 @@
     "total": {
       "title": "Uppskattat månadsbelopp",
       "description": "Produkter och fasta avgifter ingår i denna summa. Timdebiterade och förbrukningsbaserade tjänster faktureras efter faktiskt utfall.",
-      "perMonth": "per månad",
-      "savedDraftValue": "Sparat utkastvärde: {{amount}}"
+      "savedDraftValue": "Sparat utkastvärde: {{amount}}",
+      "titleCadence": "Beräknad summa",
+      "mixedFrequencyTitle": "Beräknad summa per faktureringsfrekvens",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "cirka {{amount}} per månad",
+      "savedDraftValueMonthly": "Sparat utkastvärde: {{amount}} per månad"
     },
     "finalChecklist": {
       "title": "Innan du slutför:",

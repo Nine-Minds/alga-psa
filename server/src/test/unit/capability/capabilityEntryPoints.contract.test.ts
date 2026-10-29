@@ -66,9 +66,9 @@ export const ENTRY_POINT_GLOBS: readonly string[] = ENTRY_POINT_FAMILIES.map((f)
  * updates the count in the same diff.
  */
 export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string; files: number }>> = {
-  'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 3 },
+  'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 7 },
   'rest-routes': { glob: 'server/src/app/api/**/co-management/**', files: 0 },
-  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 3 },
+  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 6 },
   'package-actions': { glob: 'packages/co-managed/src/**/actions*', files: 0 },
   'user-invitation-actions': { glob: 'packages/users/src/actions/user-actions/userInvitationActions.ts', files: 1 },
   'user-invitation-service': { glob: 'packages/users/src/services/UserInvitationService.ts', files: 1 },
@@ -81,7 +81,7 @@ export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string
   'temporal-workflows-kebab': { glob: 'ee/temporal-workflows/src/workflows/co-managed*', files: 1 },
   'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 1 },
   'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
-  'server-ui': { glob: 'server/src/components/co-managed/**', files: 18 },
+  'server-ui': { glob: 'server/src/components/co-managed/**', files: 24 },
   'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
 };
 

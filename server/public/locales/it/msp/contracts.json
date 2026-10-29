@@ -698,6 +698,13 @@
       "statusSuperseded": "Sostituito",
       "supersededHistory": "Modifiche in sospeso sostituite ({{count}})",
       "supersededBy": "Sostituito da"
+    },
+    "pricing": {
+      "catalog": "listino",
+      "override": "personalizzato",
+      "cost": "Costo: {{cost}}",
+      "costInCurrency": "Costo in {{currency}}: {{cost}}",
+      "margin": "Margine: {{margin}} per unità"
     }
   },
   "contractLineEdit": {
@@ -1972,7 +1979,10 @@
         "one": "{{count}} prodotto",
         "other": "{{count}} prodotti"
       },
-      "overrideRate": "– sovrascrivi {{rate}}/{{currencyCode}}"
+      "overrideRate": "– sovrascrivi {{rate}}/{{currencyCode}}",
+      "cost": "Costo: {{cost}}",
+      "costInCurrency": "Costo in {{currency}}: {{cost}}",
+      "margin": "Margine: {{margin}} per unità"
     },
     "hourly": {
       "badgeCount": {
@@ -1995,8 +2005,12 @@
     "total": {
       "title": "Totale mensile stimato",
       "description": "Prodotti e addebiti fissi sono inclusi in questo totale. I servizi orari e a consumo vengono fatturati a consuntivo.",
-      "perMonth": "al mese",
-      "savedDraftValue": "Valore della bozza salvata: {{amount}}"
+      "savedDraftValue": "Valore della bozza salvata: {{amount}}",
+      "titleCadence": "Totale stimato",
+      "mixedFrequencyTitle": "Totale stimato per frequenza di fatturazione",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "circa {{amount}} al mese",
+      "savedDraftValueMonthly": "Valore della bozza salvata: {{amount}} al mese"
     },
     "finalChecklist": {
       "title": "Prima di terminare:",

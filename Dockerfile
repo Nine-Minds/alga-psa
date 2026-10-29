@@ -56,7 +56,7 @@ COPY ./shared/package.json ./shared/package.json
 
 # Copy pre-built Next.js artifacts (must exist locally)
 # server/dist is no longer required here; workflow-worker is built/deployed separately
-COPY ./server/.next ./server/.next
+COPY --chown=1000:1000 ./server/.next ./server/.next
 
 # Copy runtime files
 COPY ./server/public ./server/public
@@ -71,12 +71,26 @@ COPY ./ee/packages/workflows/ ./ee/packages/workflows/
 COPY ./scripts ./scripts
 COPY ./shared/workflow/ ./shared/workflow/
 
-# Copy core package.json for version info
-COPY packages/core/package.json /app/packages/core/package.json
+# Copy the workspace packages with their pre-built dist directories, as the
+# enterprise image does. npm links @alga-psa/* into node_modules from the
+# lockfile whether or not the directories exist, so without them every runtime
+# import of a workspace package (the file-system secret provider that the
+# server, workers and email service share, the admin scripts) fails with
+# "Cannot find package" while the webpack bundle, which compiled them in, runs.
+COPY ./packages/ ./packages/
+RUN test -f /app/packages/core/dist/index.js
 
 # Copy entrypoint
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
+
+# The image must also run as a non-root user (the browser lane runs it as
+# 1000:1000; hardened deployments may too). At runtime the server creates
+# logs/ in its working directory for winston's file transport and .next/cache
+# for the image optimizer, and Next may rewrite tsconfig.json; a page render
+# that cannot create logs/ throws. Give that user the directory, as the old
+# test image did.
+RUN chown 1000:1000 /app/server /app/server/tsconfig.json
 
 # Create build timestamp for verification
 RUN echo "BUILD_TIME=$(date)" > /app/build-info.txt && \

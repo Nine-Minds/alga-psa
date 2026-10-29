@@ -1,5 +1,6 @@
 'use client';
 
+import { ticketCreatorName } from './ticketCreatorName';
 import React, { useState, useEffect, useRef } from 'react';
 import { fromZonedTime } from 'date-fns-tz';
 import { useTicketDataSource } from './TicketDataSourceContext';
@@ -30,7 +31,7 @@ import type { PartyDisplayTags } from '../../lib/partyDisplayTags';
 import { getUserTimeZone } from '@alga-psa/core';
 import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
 import { formatTicketLocationDisplay } from '../../lib/formatTicketLocation';
-import type { TicketWatchListEntry } from '@shared/lib/tickets/watchList';
+import type { AddTicketWatcherInput } from '@shared/services/tickets/ticketWatcherService';
 import TicketMaterialsCard from './TicketMaterialsCard';
 import TicketWatchListCard from './TicketWatchListCard';
 import TicketTimeEntries from './TicketTimeEntries';
@@ -97,7 +98,9 @@ interface TicketPropertiesProps {
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
   onItilFieldChange?: (field: string, value: any) => void;
-  onUpdateWatchList?: (watchList: TicketWatchListEntry[]) => Promise<boolean>;
+  onAddWatchers?: (inputs: AddTicketWatcherInput[]) => Promise<boolean>;
+  onSetWatcherActive?: (email: string, active: boolean) => Promise<boolean>;
+  onRemoveWatcher?: (email: string) => Promise<boolean>;
   watchListSaving?: boolean;
   allContactsForWatchList?: IContact[];
   allContactsForWatchListLoading?: boolean;
@@ -172,7 +175,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   allTagTexts = [],
   onTagsChange,
   onItilFieldChange,
-  onUpdateWatchList,
+  onAddWatchers,
+  onSetWatcherActive,
+  onRemoveWatcher,
   watchListSaving = false,
   allContactsForWatchList = [],
   allContactsForWatchListLoading = false,
@@ -757,7 +762,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           <div>
             <h5 className="font-bold">{t('properties.createdBy', 'Created By')}</h5>
             <p className="text-sm">
-              {createdByUser ? `${createdByUser.first_name} ${createdByUser.last_name}` : t('properties.notAvailable', 'N/A')}
+              {ticketCreatorName(createdByUser, ticket) ?? t('properties.notAvailable', 'N/A')}
             </p>
           </div>
           <div>
@@ -1336,7 +1341,9 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       {!isFieldFrozen('watch_list') && <TicketWatchListCard
         id={`${id}-watch-list`}
         attributes={ticket.attributes}
-        onUpdateWatchList={onUpdateWatchList}
+        onAddWatchers={onAddWatchers}
+        onSetWatcherActive={onSetWatcherActive}
+        onRemoveWatcher={onRemoveWatcher}
         watchListSaving={watchListSaving}
         internalUsers={availableAgents}
         clientContacts={contacts}

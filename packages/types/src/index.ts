@@ -169,7 +169,19 @@ export interface TenantScopedEntity extends AuditFields {
 export type WorkflowActor =
   | { actorType: 'USER'; actorUserId: string }
   | { actorType: 'CONTACT'; actorContactId: string }
-  | { actorType: 'SYSTEM' };
+  | { actorType: 'SYSTEM' }
+  | { actorType: 'COLLABORATOR'; actorReference: WorkflowCollaborationActorReference };
+
+/** A co-managed collaborator from another tenant. Structurally identical to
+ * `CollaborationActorReference` in `@alga-psa/event-schemas`. */
+export type WorkflowCollaborationActorReference = {
+  ownerTenantId: string;
+  referenceId: string;
+  tenantId: string;
+  userId: string;
+  displayName: string;
+  organizationName: string;
+};
 
 /**
  * Interface for event publishing using dependency injection pattern

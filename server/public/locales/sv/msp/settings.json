@@ -414,17 +414,21 @@
       "cancel": "Avbryt",
       "delete": "Radera",
       "placeholder": "Ange nytt teamnamn",
+      "descriptionPlaceholder": "Ange en valfri teambeskrivning",
       "selectManager": "Välj en chef"
     },
     "details": {
       "loading": "Läser in teamuppgifter…",
       "notFound": "Inget team hittades",
+      "noDescription": "Ingen beskrivning",
       "fields": {
         "teamLead": "Teamledare",
+        "description": "Beskrivning",
         "addMember": "Lägg till medlem"
       },
       "placeholders": {
         "teamName": "Ange teamnamn",
+        "description": "Ange teambeskrivning",
         "selectTeamLead": "Välj en teamledare",
         "selectUserToAdd": "Välj en användare att lägga till",
         "noTeamLead": "Inte tilldelad"
@@ -436,8 +440,10 @@
         "discard": "Kasta",
         "saveChanges": "Spara ändringar",
         "saveName": "Spara namn",
+        "saveDescription": "Spara beskrivning",
         "cancel": "Avbryt",
         "editName": "Redigera namn",
+        "editDescription": "Redigera beskrivning",
         "remove": "Ta bort"
       },
       "table": {
@@ -462,6 +468,7 @@
         "createFailed": "Det gick inte att skapa teamet: {{error}}",
         "deleteFailed": "Det gick inte att radera teamet",
         "updateName": "Det gick inte att uppdatera teamnamnet",
+        "updateDescription": "Det gick inte att uppdatera teambeskrivningen",
         "saveChanges": "Det gick inte att spara ändringarna. Försök igen."
       }
     }
