@@ -524,7 +524,16 @@
       "title": "Współzarządzane IT"
     },
     "coManagement": {
-      "title": "Dostęp do współzarządzania"
+      "title": "Dostęp do współzarządzania",
+      "administration": {
+        "title": "Administracja współzarządzana"
+      },
+      "customerTickets": {
+        "title": "Zgłoszenia klientów"
+      },
+      "sharedTicket": {
+        "title": "Udostępnione zgłoszenie"
+      }
     }
   },
   "auth": {

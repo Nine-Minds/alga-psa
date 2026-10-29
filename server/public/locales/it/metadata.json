@@ -524,7 +524,16 @@
       "title": "IT cogestita"
     },
     "coManagement": {
-      "title": "Accesso cogestito"
+      "title": "Accesso cogestito",
+      "administration": {
+        "title": "Amministrazione cogestita"
+      },
+      "customerTickets": {
+        "title": "Ticket dei clienti"
+      },
+      "sharedTicket": {
+        "title": "Ticket condiviso"
+      }
     }
   },
   "auth": {

@@ -524,7 +524,16 @@
       "title": "Co-Managed-IT"
     },
     "coManagement": {
-      "title": "Co-Managed-Zugriff"
+      "title": "Co-Managed-Zugriff",
+      "administration": {
+        "title": "Co-Managed-Administration"
+      },
+      "customerTickets": {
+        "title": "Kundentickets"
+      },
+      "sharedTicket": {
+        "title": "Geteiltes Ticket"
+      }
     }
   },
   "auth": {

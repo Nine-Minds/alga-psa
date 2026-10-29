@@ -606,7 +606,16 @@
       "title": "Co-Managed IT"
     },
     "coManagement": {
-      "title": "Co-Managed Access"
+      "title": "Co-Managed Access",
+      "administration": {
+        "title": "Co-Managed Administration"
+      },
+      "customerTickets": {
+        "title": "Customer Tickets"
+      },
+      "sharedTicket": {
+        "title": "Shared Ticket"
+      }
     }
   },
   "share": {

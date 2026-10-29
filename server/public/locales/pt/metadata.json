@@ -524,7 +524,16 @@
       "title": "TI cogerida"
     },
     "coManagement": {
-      "title": "Acesso cogerido"
+      "title": "Acesso cogerido",
+      "administration": {
+        "title": "Administração cogerida"
+      },
+      "customerTickets": {
+        "title": "Tickets de clientes"
+      },
+      "sharedTicket": {
+        "title": "Ticket compartilhado"
+      }
     }
   },
   "auth": {
