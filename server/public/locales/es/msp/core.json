@@ -110,7 +110,8 @@
     "ticketsCannedResponses": "Respuestas predefinidas",
     "profile": "Perfil",
     "signOut": "Cerrar sesión",
-    "coManaged": "TI cogestionada"
+    "coManaged": "TI cogestionada",
+    "coManagedAdministration": "Acceso y administración"
   },
   "sidebar": {
     "backToMain": "Volver al inicio",

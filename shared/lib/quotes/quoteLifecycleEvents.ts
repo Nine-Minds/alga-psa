@@ -72,7 +72,7 @@ export function queueQuoteLifecycleEvent(
     quoteId: string;
     activityId?: string;
     occurredAt: string;
-    actor: import('@alga-psa/types').WorkflowActor;
+    actor: QuoteActor;
   }
 ): void {
   if (!params.tenant || !params.quoteId)
@@ -93,7 +93,7 @@ function registerQuoteAfterCommit(
     tenant: string;
     quoteId: string;
     occurredAt: string;
-    actor: import('@alga-psa/types').WorkflowActor;
+    actor: QuoteActor;
   },
   idempotencyKey: string
 ): void {
@@ -171,9 +171,12 @@ function registerQuoteAfterCommit(
   );
 }
 
+/** A quote is never acted on by a co-managed collaborator, so its events carry only the three local actor kinds. */
+export type QuoteActor = Exclude<WorkflowActor, { actorType: 'COLLABORATOR' }>;
+
 /** Metadata that cannot be inferred from a persisted quote (portal actor, revisions, reversals). */
 export interface QuoteLifecycleOptions {
-  actor?: WorkflowActor;
+  actor?: QuoteActor;
   acceptedOnBehalf?: boolean;
   activity?: Pick<IQuoteActivity, 'activity_type' | 'metadata'>;
   system?: boolean;

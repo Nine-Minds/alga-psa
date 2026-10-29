@@ -15,6 +15,10 @@
       "types": "./src/schemas/index.ts",
       "import": "./dist/schemas/index.js",
       "require": "./dist/schemas/index.cjs"
+    },
+    "./collaboration": {
+      "types": "./src/collaboration.ts",
+      "import": "./dist/collaboration.js"
     }
   },
   "scripts": {

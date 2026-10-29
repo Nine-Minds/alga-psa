@@ -3,6 +3,7 @@
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
+import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResolution';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { resolveCommentMergeTokens } from '../lib/cannedResponses/commentMerge';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
@@ -801,7 +802,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     const pickerUserIds = new Set((users as Array<{ user_id: string }>).map((agent) => agent.user_id));
     const extraAuthorIds = Array.from(
       new Set(
-        (comments as Array<{ user_id?: string | null }>)
+        (comments as Array<{ user_id?: string | null; actor_reference_id?: string | null; actor_display_name?: string | null; actor_organization_name?: string | null }>)
+          .filter((comment) => !hasCommentCollaborationAttribution(comment))
           .map((comment) => comment.user_id)
           .filter((userId): userId is string => Boolean(userId))
       )

@@ -525,6 +525,15 @@
     },
     "coManagement": {
       "title": "Acesso cogerido",
+      "administration": {
+        "title": "Administração cogerida"
+      },
+      "customerTickets": {
+        "title": "Tickets de clientes"
+      },
+      "sharedTicket": {
+        "title": "Ticket compartilhado"
+      },
       "providers": {
         "title": "Provedores de email e identidade"
       }
