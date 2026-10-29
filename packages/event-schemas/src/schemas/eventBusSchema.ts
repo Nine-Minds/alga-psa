@@ -639,6 +639,39 @@ export const TicketEventPayloadSchema = BasePayloadSchema.extend({
   }).optional(),
 });
 
+export const COMMENT_AUDIENCE_VALUES = ['requester', 'shared_it', 'organization_private'] as const;
+const commentAudienceSchema = z.enum(COMMENT_AUDIENCE_VALUES);
+
+/**
+ * TICKET_COMMENT_ADDED. Additive: `collaboration_audience`, `thread_id` and `comment.audience`
+ * are optional and absent on native comments, so ordinary producers validate exactly as
+ * before (no author requirement is added). When an audience IS present it must agree with
+ * `isInternal`: only `requester` is public, so a non-requester audience can never reach a
+ * requester-email filter as a public comment.
+ */
+export const TicketCommentAddedPayloadSchema = TicketEventPayloadSchema.extend({
+  thread_id: z.string().uuid().optional(),
+  parent_comment_id: z.string().uuid().nullable().optional(),
+  is_reply: z.boolean().optional(),
+  collaboration_audience: commentAudienceSchema.optional(),
+  comment: TicketEventPayloadSchema.shape.comment.unwrap().extend({
+    audience: commentAudienceSchema.optional(),
+    thread_id: z.string().uuid().optional(),
+    parent_comment_id: z.string().uuid().nullable().optional(),
+    is_reply: z.boolean().optional(),
+  }).optional(),
+}).superRefine((payload, context) => {
+  const audience = payload.collaboration_audience ?? payload.comment?.audience;
+  if (!audience) return;
+  const fail = (message: string) => context.addIssue({ code: z.ZodIssueCode.custom, message });
+  if (payload.collaboration_audience && payload.comment?.audience && payload.collaboration_audience !== payload.comment.audience) {
+    fail('Comment audiences must agree');
+  }
+  if (payload.comment?.isInternal !== undefined && payload.comment.isInternal !== (audience !== 'requester')) {
+    fail('Comment visibility must match its explicit audience');
+  }
+});
+
 // Ticket additional agent event payload schema
 export const TicketAdditionalAgentPayloadSchema = BasePayloadSchema.extend({
   ticketId: z.string().uuid(),
@@ -1299,7 +1332,7 @@ export const CorePayloadSchemas = {
   TICKET_DELETED: TicketEventPayloadSchema,
   TICKET_ASSIGNED: TicketAssignedPayloadSchema,
   TICKET_ADDITIONAL_AGENT_ASSIGNED: TicketAdditionalAgentPayloadSchema,
-  TICKET_COMMENT_ADDED: TicketEventPayloadSchema,
+  TICKET_COMMENT_ADDED: TicketCommentAddedPayloadSchema,
   TICKET_COMMENT_UPDATED: TicketCommentUpdatedPayloadSchema,
   TICKET_COMMENT_DELETED: TicketCommentDeletedPayloadSchema,
   TICKET_RESPONSE_STATE_CHANGED: TicketResponseStateChangedPayloadSchemaV2,

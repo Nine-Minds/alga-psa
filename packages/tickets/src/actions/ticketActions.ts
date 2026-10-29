@@ -5,6 +5,7 @@ import { isMspPrincipalUserType } from '@alga-psa/types';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
+import { nativeThreadAudience, type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -2122,6 +2123,7 @@ export const addTicketComment = withAuth(async (
   comment: string,
   isInternal: boolean,
   emailRecipients?: CommentEmailRecipientsInput | null,
+  audienceId?: NativeCommentAudience | null,
 ): Promise<void | TicketActionError> => {
   try {
     const {knex: db} = await createTenantKnex();
@@ -2161,6 +2163,9 @@ export const addTicketComment = withAuth(async (
         isInternal,
       });
 
+      // Authored by staff here; `{}` with zero SQL natively, fail-closed in a co-managed workspace.
+      const threadAudience = await nativeThreadAudience(trx, tenant, { isInternal, authorType: 'internal', audience: audienceId });
+
       await tenantScopedTable(trx, 'comment_threads', tenant).insert({
         tenant,
         thread_id: generatedIds.thread_id,
@@ -2168,6 +2173,7 @@ export const addTicketComment = withAuth(async (
         project_task_id: null,
         root_comment_id: generatedIds.comment_id,
         is_internal: isInternal,
+        ...threadAudience,
         reply_count: 0,
         last_activity_at: nowIso,
         created_at: nowIso,
@@ -2203,7 +2209,10 @@ export const addTicketComment = withAuth(async (
             content: comment,
             author: `${user.first_name} ${user.last_name}`,
             isInternal
-          }
+          },
+          ...(threadAudience.collaboration_audience
+            ? { collaboration_audience: threadAudience.collaboration_audience, thread_id: generatedIds.thread_id }
+            : {}),
         })
       }, publishStoredWorkflowEvent);
 

@@ -12,6 +12,7 @@ import {
   buildTicketUpdatedPayload,
 } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
+import { assertReplyAudience, lockLabelledThreadAudience, nativeThreadAudience } from '@alga-psa/shared/lib/commentAudience';
 import { applyCommentResponseState, publishResponseStateChange, resolveCommentAuthor } from '@alga-psa/shared/lib/tickets/responseState';
 /**
  * Ticket Service
@@ -2696,6 +2697,11 @@ export class TicketService extends BaseService<ITicket> {
       let apiCommentId: string;
       let apiThreadId: string;
       let apiIsInternal: boolean;
+      let apiThreadAudience: { collaboration_audience?: 'requester' | 'organization_private' | 'shared_it' } = {};
+
+      // author_type comes from the authenticated key's user, via the same
+      // resolver the UI action uses; a client user also records its contact.
+      const apiAuthor = await resolveCommentAuthor(trx, context.tenant, context.userId);
 
       if (apiIsReply) {
         // Reply: attach to the parent's existing thread and inherit its
@@ -2711,7 +2717,8 @@ export class TicketService extends BaseService<ITicket> {
             'parent.ticket_id',
             'parent.thread_id',
             'parent.deleted_at',
-            'thread.is_internal as thread_is_internal'
+            'thread.is_internal as thread_is_internal',
+            'thread.collaboration_audience as thread_audience'
           )
           .where('parent.comment_id', apiParentCommentId)
           .first();
@@ -2735,6 +2742,16 @@ export class TicketService extends BaseService<ITicket> {
         apiCommentId = replyGeneratedId;
         apiThreadId = parent.thread_id;
         apiIsInternal = Boolean(parent.thread_is_internal);
+        if (parent.thread_audience != null) {
+          // Labelled thread: serialise against an audience change; the reply inherits it.
+          await lockLabelledThreadAudience(trx, context.tenant, { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience });
+          apiThreadAudience = {
+            collaboration_audience: assertReplyAudience(
+              { collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
+              { audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null },
+            ),
+          };
+        }
       } else {
         // comments.thread_id is NOT NULL — generate IDs and create the thread row first.
         const apiCommentIds = await trx.raw(
@@ -2750,6 +2767,12 @@ export class TicketService extends BaseService<ITicket> {
         apiCommentId = apiGeneratedIds.comment_id;
         apiThreadId = apiGeneratedIds.thread_id;
         apiIsInternal = data.is_internal || false;
+        // `{}` with zero SQL natively; fails closed for requester-visible staff comments in co-managed.
+        apiThreadAudience = await nativeThreadAudience(trx, context.tenant, {
+          isInternal: apiIsInternal,
+          authorType: apiAuthor.authorType,
+          audience: (data as { collaboration_audience?: string | null }).collaboration_audience ?? null,
+        });
 
         await tenantScopedTable(trx, 'comment_threads', context.tenant).insert({
           tenant: context.tenant,
@@ -2758,6 +2781,7 @@ export class TicketService extends BaseService<ITicket> {
           project_task_id: null,
           root_comment_id: apiCommentId,
           is_internal: apiIsInternal,
+          ...apiThreadAudience,
           reply_count: 0,
           last_activity_at: apiNowIso,
           created_at: apiNowIso,
@@ -2788,9 +2812,6 @@ export class TicketService extends BaseService<ITicket> {
         throw error;
       }
 
-      // author_type comes from the authenticated key's user, via the same
-      // resolver the UI action uses; a client user also records its contact.
-      const apiAuthor = await resolveCommentAuthor(trx, context.tenant, context.userId);
       if (apiIsInternal && apiAuthor.authorType !== 'internal') {
         throw new ForbiddenError('Only MSP users can create internal comments');
       }
@@ -2898,8 +2919,17 @@ export class TicketService extends BaseService<ITicket> {
         tenantId: context.tenant, occurredAt: new Date().toISOString(), ticketId, commentId: comment.comment_id, userId: context.userId,
         comment: { content: comment.note, author: authorName, isInternal: comment.is_internal },
         ...notificationSuppression,
+        ...(apiThreadAudience.collaboration_audience
+          ? { collaboration_audience: apiThreadAudience.collaboration_audience, thread_id: apiThreadId }
+          : {}),
       });
       if (scheduledPublication) {
+        if (apiThreadAudience.collaboration_audience) {
+          // Keep the audience with the durable intent so the scheduled dispatch cannot widen it.
+          await tenantScopedTable(trx, 'comments', context.tenant)
+            .where({ comment_id: comment.comment_id })
+            .update({ comment_publication_payload: JSON.stringify({ ...eventPayload, commentId: comment.comment_id }) });
+        }
         // Never arm the worker before the row is committed; the boot
         // reconciler repairs a post-commit scheduling failure.
         registerAfterCommit(trx, async () => {

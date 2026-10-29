@@ -57,6 +57,7 @@ export {
   hasWriteAdmissionResolver,
   invalidateWriteAdmission,
   isTenantWriteGuarded,
+  isCoManagedWorkspace,
   registerWriteAdmissionResolver,
   resetWriteAdmissionResolver,
 } from './lib/writeAdmission';

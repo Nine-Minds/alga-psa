@@ -4,6 +4,9 @@ import type { IComment } from '@alga-psa/types';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { isInteractiveUserType, isMspPrincipalUserType } from '@alga-psa/types';
+import {
+  CommentAudienceError, assertReplyAudience, isCommentAudience, lockLabelledThreadAudience, nativeThreadAudience,
+} from '@alga-psa/shared/lib/commentAudience';
 import { HumanWorkOwnerRequiredError } from '@alga-psa/shared/lib/humanWork/HumanWorkOwnerRequiredError';
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(
@@ -57,6 +60,17 @@ async function collaborationAttribution(trx: Knex.Transaction, tenant: string, c
     .where({ actor_reference_id: context.actorReferenceId, actor_tenant: context.actorTenant, actor_user_id: context.actorUserId }).forShare().first();
   if (!reference) throw new Error('Invalid foreign collaboration author');
   return { actor_reference_id: reference.actor_reference_id, actor_display_name: reference.display_name, actor_organization_name: reference.organization_name };
+}
+
+/**
+ * Thread audience for a collaboration command. The command must name it. A foreign MSP
+ * author may speak to the requester or to both IT teams, never to the owner's private
+ * audience; the audience must agree with the visibility flag.
+ */
+function collaborationThreadAudience(isInternal: boolean, audience: string | undefined, context: CommentCollaborationContext, tenant: string) {
+  if (!isCommentAudience(audience) || isInternal !== (audience !== 'requester')) throw new CommentAudienceError();
+  if (context.actorTenant !== tenant && audience === 'organization_private') throw new CommentAudienceError();
+  return { collaboration_audience: audience };
 }
 
 const Comment = {
@@ -175,6 +189,10 @@ const Comment = {
       let isReply = Boolean(parentCommentId);
       let commentId = comment.comment_id;
       let threadId = comment.thread_id;
+      // Write intent only: audience lives on the thread, never on a comments row.
+      const requestedAudience = comment.collaboration_audience ?? undefined;
+      delete (comment as { collaboration_audience?: unknown }).collaboration_audience;
+      delete (comment as { audience?: unknown }).audience;
 
       if (isReply) {
         const parent = await tenantDb(trx, tenant)
@@ -189,7 +207,8 @@ const Comment = {
             'parent.ticket_id',
             'parent.thread_id',
             'parent.deleted_at',
-            'thread.is_internal as thread_is_internal'
+            'thread.is_internal as thread_is_internal',
+            'thread.collaboration_audience as thread_audience'
           )
           .where('parent.comment_id', parentCommentId)
           .first();
@@ -224,6 +243,14 @@ const Comment = {
             throw new Error('Reply visibility must match the thread root visibility');
           }
           threadId = parent.thread_id;
+          // Replies inherit a labelled thread's audience; legacy threads cost nothing extra.
+          if (parent.thread_audience != null) {
+            await lockLabelledThreadAudience(trx, tenant, { thread_id: parent.thread_id, collaboration_audience: parent.thread_audience });
+            assertReplyAudience(
+              { collaboration_audience: parent.thread_audience, is_internal: parent.thread_is_internal },
+              { isInternal: comment.is_internal, audience: requestedAudience },
+            );
+          }
         }
       }
 
@@ -236,6 +263,13 @@ const Comment = {
         commentId = commentId || generatedIds?.comment_id;
         threadId = threadId || generatedIds?.thread_id;
 
+        // {} with zero SQL for internal notes, plain authors and PSA tenants; fails closed in a
+        // co-managed workspace when staff post a requester-visible comment without an audience.
+        const threadAudience = collaboration
+          ? collaborationThreadAudience(Boolean(comment.is_internal), requestedAudience, collaboration, tenant)
+          : await nativeThreadAudience(trx, tenant, {
+              isInternal: Boolean(comment.is_internal), authorType: comment.author_type, audience: requestedAudience,
+            });
         await tenantScopedTable(trx, 'comment_threads', tenant).insert({
           tenant,
           thread_id: threadId,
@@ -243,6 +277,7 @@ const Comment = {
           project_task_id: null,
           root_comment_id: commentId,
           is_internal: Boolean(comment.is_internal),
+          ...threadAudience,
           reply_count: 0,
           last_activity_at: now,
           created_at: now,
@@ -342,6 +377,9 @@ const Comment = {
       // bundle_mirror_source is read-time provenance from ticket_bundle_mirrors,
       // not a comments column; strip it so a smuggled payload can never be written.
       delete (updateData as { bundle_mirror_source?: unknown }).bundle_mirror_source;
+      // Audience lives on the thread; a native text edit can never relabel it.
+      delete (updateData as { collaboration_audience?: unknown }).collaboration_audience;
+      delete (updateData as { audience?: unknown }).audience;
 
       logger.info('Updating comment with data:', {
         ...updateData,

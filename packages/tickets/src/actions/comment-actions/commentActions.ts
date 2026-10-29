@@ -2,6 +2,7 @@
 // TODO: Comment model method signature changes
 'use server'
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
+import { assertNativeEditKeepsAudience } from '@alga-psa/shared/lib/commentAudience';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -267,6 +268,7 @@ export const createComment = withAuth(async (
       // A reply inherits its thread's visibility (Comment.insert enforces it),
       // so resolve the effective visibility before validating one-off Cc/Bcc.
       let effectiveIsInternal = Boolean(commentToInsert.is_internal);
+      let labelledAudience: string | null = null;
       if (commentToInsert.parent_comment_id) {
         const parentThread = await tenantDb(trx, commentTenant!)
           .tenantJoin(
@@ -275,11 +277,13 @@ export const createComment = withAuth(async (
             'parent.thread_id',
             'thread.thread_id'
           )
-          .select('thread.is_internal as thread_is_internal')
+          .select('thread.is_internal as thread_is_internal', 'thread.collaboration_audience as thread_audience')
           .where('parent.comment_id', commentToInsert.parent_comment_id)
           .first();
         if (parentThread) {
           effectiveIsInternal = Boolean(parentThread.thread_is_internal);
+          // Replies inherit a labelled thread's audience; Comment.insert asserts it against the parent.
+          labelledAudience = parentThread.thread_audience ?? null;
         }
       }
 
@@ -297,6 +301,17 @@ export const createComment = withAuth(async (
 
       const commentId = await Comment.insert(trx, commentTenant!, commentToInsert);
       console.log(`[createComment] Comment inserted with ID:`, commentId);
+
+      // A named audience on a root comment is only stored for co-managed workspaces. Read back what
+      // was actually applied so the payload never advertises an audience the thread does not have.
+      // (Native callers name no audience, so this costs them nothing.)
+      if (!commentToInsert.parent_comment_id && commentToInsert.collaboration_audience) {
+        const applied = await tenantDb(trx, commentTenant!).table('comments as c')
+          .join('comment_threads as t', function () { this.on('t.tenant', 'c.tenant').andOn('t.thread_id', 'c.thread_id'); })
+          .where('c.comment_id', commentId)
+          .first('t.collaboration_audience as audience');
+        labelledAudience = applied?.audience ?? null;
+      }
 
       // Verify the comment was inserted correctly
       const insertedComment = await Comment.get(trx, commentTenant!, commentId);
@@ -360,7 +375,10 @@ export const createComment = withAuth(async (
                   thread_id: eventComment?.thread_id,
                   parent_comment_id: eventComment?.parent_comment_id ?? null,
                   is_reply: Boolean(eventComment?.parent_comment_id)
-                }
+                },
+                ...(labelledAudience
+                  ? { collaboration_audience: labelledAudience as 'requester' | 'shared_it' | 'organization_private' }
+                  : {}),
               })
             }, publishStoredWorkflowEvent);
           });
@@ -417,6 +435,28 @@ export const createComment = withAuth(async (
       // Never arm a worker while the row is uncommitted: a near-term worker
       // could otherwise run, see nothing, and be lost forever. The boot
       // reconciler repairs a post-commit scheduling failure.
+      if (isScheduled && labelledAudience && commentTenant && comment.ticket_id) {
+        // Keep the audience with the durable intent so the scheduled dispatch cannot widen it.
+        const scheduledComment = await Comment.get(trx, commentTenant, commentId);
+        await tenantDb(trx, commentTenant).table('comments').where({ comment_id: commentId }).update({
+          comment_publication_payload: JSON.stringify({
+            ...buildTicketCommentAddedPayload({
+              tenantId: commentTenant,
+              occurredAt: new Date().toISOString(),
+              ticketId: comment.ticket_id,
+              commentId,
+              userId: comment.user_id ?? undefined,
+              thread_id: scheduledComment?.thread_id,
+              parent_comment_id: scheduledComment?.parent_comment_id ?? null,
+              is_reply: Boolean(scheduledComment?.parent_comment_id),
+              comment: { content: comment.note!, author: 'Unknown User', isInternal: effectiveIsInternal, authorType: comment.author_type },
+              collaboration_audience: labelledAudience as 'requester' | 'shared_it' | 'organization_private',
+            }),
+            commentId,
+          }),
+        });
+      }
+
       if (isScheduled && commentTenant && comment.ticket_id && comment.scheduled_publish_at) {
         const publishAt = new Date(comment.scheduled_publish_at);
         registerAfterCommit(trx, async () => {
@@ -584,6 +624,13 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, reque
       // A client can never make a comment internal, nor change an internal one.
       if (requested.is_internal !== undefined) {
         if (isMspPrincipalUserType(user.user_type)) {
+          if (requested.is_internal !== Boolean(existingComment.is_internal)) {
+            // A native text edit can never relabel a labelled thread, nor publish a legacy note in
+            // a co-managed workspace. Only a real visibility change pays for the lookup.
+            const editedThread = await tenantDb(trx, commentTenant).table('comment_threads')
+              .where({ thread_id: existingComment.thread_id }).first('collaboration_audience');
+            await assertNativeEditKeepsAudience(trx, commentTenant, editedThread, { isInternal: requested.is_internal });
+          }
           comment.is_internal = requested.is_internal;
         } else if (requested.is_internal !== Boolean(existingComment.is_internal)) {
           throw new Error('Only MSP users can set comments as internal');

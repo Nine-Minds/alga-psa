@@ -78,7 +78,10 @@ export async function dispatchCommentPublication(conn: Connection, tenant: strin
   const actor = resolveTicketEventActor({ userId: persistedUserId ?? comment.user_id, contactId: comment.contact_id });
   await publish({ eventType: 'TICKET_COMMENT_ADDED', payload: { ...persisted,
     ...ticketEventActorFields(actor),
-    comment: { ...payload.comment, content: comment.note, isInternal: comment.is_internal, author },
+    // The persisted audience (set only on shared-work threads) survives into the published
+    // event; a non-requester audience can never be republished as public.
+    comment: { ...payload.comment, content: comment.note,
+      isInternal: payload.comment?.audience && payload.comment.audience !== 'requester' ? true : comment.is_internal, author },
   } }, { eventId: comment.scheduled_publish_event_id, strict: true });
   await db.table('comments').where({ comment_id: commentId, scheduled_publish_event_id: comment.scheduled_publish_event_id })
     .whereNull('scheduled_publish_dispatched_at').update({ scheduled_publish_dispatched_at: conn.fn.now() });

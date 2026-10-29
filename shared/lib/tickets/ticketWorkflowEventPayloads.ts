@@ -505,6 +505,12 @@ export type TicketCommentAddedInput = {
   thread_id?: string | null;
   parent_comment_id?: string | null;
   is_reply?: boolean;
+  /**
+   * Shared-work audience of the comment's thread; omitted for native comments. Every
+   * non-`requester` audience goes with `comment.isInternal: true`, so the existing
+   * requester-email filters suppress it.
+   */
+  collaboration_audience?: 'requester' | 'shared_it' | 'organization_private';
   suppressContactNotifications?: boolean;
   suppressInternalNotifications?: boolean;
 };
@@ -526,8 +532,16 @@ export function buildTicketCommentAddedPayload(input: TicketCommentAddedInput) {
       thread_id: input.thread_id,
       parent_comment_id: input.parent_comment_id,
       is_reply: input.is_reply,
+      collaboration_audience: input.collaboration_audience,
     }),
-    comment: { id: input.commentId, ...withDefined(input.comment) },
+    comment: {
+      id: input.commentId,
+      ...withDefined(input.comment),
+      // The audience decides visibility: every non-requester audience is internal, whatever the caller passed.
+      ...(input.collaboration_audience
+        ? { audience: input.collaboration_audience, isInternal: input.collaboration_audience !== 'requester' }
+        : {}),
+    },
     ...withDefined({
       suppressContactNotifications: input.suppressContactNotifications,
       suppressInternalNotifications: input.suppressInternalNotifications,

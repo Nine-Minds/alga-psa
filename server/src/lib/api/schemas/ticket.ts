@@ -436,6 +436,8 @@ export const createTicketCommentSchema = z.object({
       `Comment text is too long (max ${MAX_TICKET_COMMENT_LENGTH} characters)`
     ),
   is_internal: z.boolean().optional().default(false),
+  /** Audience for a co-managed workspace; ignored natively. Must agree with is_internal. */
+  collaboration_audience: z.enum(['requester', 'organization_private']).optional(),
   is_resolution: z.boolean().optional().default(false),
   time_spent: z.number().min(0).optional(),
   metadata: z.record(z.unknown()).optional(),
