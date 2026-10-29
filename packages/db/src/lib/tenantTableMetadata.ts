@@ -22,6 +22,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   co_managed_provisioning_operations: { scope: 'tenant' },
   co_managed_purchase_operations: { scope: 'tenant' },
   tenant_license_state: { scope: 'tenant' },
+  co_managed_meeting_creation_operations: { scope: 'tenant' },
   co_management_relationship_events: { scope: 'tenant' },
   co_management_relationships: { scope: 'tenant' },
   assets: { scope: 'tenant' },

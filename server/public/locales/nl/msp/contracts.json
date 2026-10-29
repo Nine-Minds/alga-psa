@@ -2005,8 +2005,12 @@
     "total": {
       "title": "Geschat maandtotaal",
       "description": "Producten en vaste kosten zijn in dit totaal opgenomen. Uur- en verbruiksservices worden op basis van werkelijk gebruik gefactureerd.",
-      "perMonth": "per maand",
-      "savedDraftValue": "Opgeslagen conceptwaarde: {{amount}}"
+      "savedDraftValue": "Opgeslagen conceptwaarde: {{amount}}",
+      "titleCadence": "Geschat totaal",
+      "mixedFrequencyTitle": "Geschat totaal per factureringsfrequentie",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "ongeveer {{amount}} per maand",
+      "savedDraftValueMonthly": "Opgeslagen conceptwaarde: {{amount}} per maand"
     },
     "finalChecklist": {
       "title": "Voor u afrondt:",
