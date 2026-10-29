@@ -4,7 +4,7 @@
 import '@testing-library/jest-dom/vitest';
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import TaskForm from '../TaskForm';
 import type { IProjectPhase, IProjectTask, ProjectStatus } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
@@ -34,6 +34,13 @@ const getTaskTypesMock = vi.fn();
 const getProjectDetailsMock = vi.fn();
 const getEffectiveTaskServiceMock = vi.fn();
 const launchTimeEntryMock = vi.fn();
+
+// TaskForm takes useTranslation from react-i18next directly, and without an
+// i18next instance the hook hands back a new t on every render. Its project
+// tree effect is keyed on t, so the fallback branch would refetch forever.
+const translate = (key: string, options?: string | { defaultValue?: string }) =>
+  typeof options === 'string' ? options : options?.defaultValue ?? key;
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: translate }) }));
 
 vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
   useDocumentsCrossFeature: () => ({
@@ -155,7 +162,13 @@ vi.mock('@alga-psa/ui/components/DatePicker', () => ({
   ),
 }));
 
-afterEach(() => {
+afterEach(async () => {
+  // The form's initial-data effects keep resolving their mocked actions after
+  // the assertion that ends each test. Drain them before unmounting so nothing
+  // logs once the worker starts tearing the environment down.
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
   cleanup();
   vi.clearAllMocks();
 });

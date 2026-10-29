@@ -414,17 +414,21 @@
       "cancel": "Abbrechen",
       "delete": "Löschen",
       "placeholder": "Neuen Teamnamen eingeben",
+      "descriptionPlaceholder": "Optionale Teambeschreibung eingeben",
       "selectManager": "Vorgesetzten auswählen"
     },
     "details": {
       "loading": "Teamdetails werden geladen...",
       "notFound": "Kein Team gefunden",
+      "noDescription": "Keine Beschreibung",
       "fields": {
         "teamLead": "Teamleiter",
+        "description": "Beschreibung",
         "addMember": "Mitglied hinzufügen"
       },
       "placeholders": {
         "teamName": "Teamname eingeben",
+        "description": "Teambeschreibung eingeben",
         "selectTeamLead": "Teamleiter auswählen",
         "selectUserToAdd": "Benutzer zum Hinzufügen auswählen",
         "noTeamLead": "Nicht zugewiesen"
@@ -436,8 +440,10 @@
         "discard": "Verwerfen",
         "saveChanges": "Änderungen speichern",
         "saveName": "Name speichern",
+        "saveDescription": "Beschreibung speichern",
         "cancel": "Abbrechen",
         "editName": "Name bearbeiten",
+        "editDescription": "Beschreibung bearbeiten",
         "remove": "Entfernen"
       },
       "table": {
@@ -462,6 +468,7 @@
         "createFailed": "Team konnte nicht erstellt werden: {{error}}",
         "deleteFailed": "Team konnte nicht gelöscht werden",
         "updateName": "Teamname konnte nicht aktualisiert werden",
+        "updateDescription": "Teambeschreibung konnte nicht aktualisiert werden",
         "saveChanges": "Änderungen konnten nicht gespeichert werden. Bitte versuche es erneut."
       }
     }
