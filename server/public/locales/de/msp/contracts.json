@@ -2773,6 +2773,7 @@
   "wizardFirstInvoice": {
     "loading": "Abrechnungsplan des Kunden wird geprüft…",
     "arrearsPreviewNote": "Bis dahin zeigt eine Rechnungsvorschau für diesen Kunden nichts zum Abrechnen für diese Position.",
+    "arrearsPreviewNoteMany": "Bis dahin zeigt eine Rechnungsvorschau für diesen Kunden nichts zum Abrechnen für diese Positionen.",
     "unavailable": {
       "missingStartDate": "Wählen Sie ein Startdatum, um zu sehen, wann dieser Vertrag erstmals abgerechnet wird.",
       "unsupportedFrequency": "Es wird kein Datum für die erste Rechnung angezeigt, da die Abrechnung nach Vertragsrhythmus diese Häufigkeit nicht unterstützt. Wählen Sie eine unterstützte Häufigkeit oder rechnen Sie nach dem Plan des Kunden ab.",

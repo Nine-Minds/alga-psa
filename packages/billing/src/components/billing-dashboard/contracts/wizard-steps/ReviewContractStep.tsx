@@ -26,6 +26,7 @@ import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/bi
 import { useClientBillingProfiles } from '@alga-psa/ui/hooks/useClientBillingProfiles';
 import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';
 import { FirstInvoiceNotice } from './FirstInvoiceNotice';
+import { fixedLineDisplayName } from './firstInvoiceLines';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { meaningfulFixedLines } from '../../../../lib/contractWizardFixedLines';
 import {
@@ -529,13 +530,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             <div className="flex items-center gap-2">
               <Package className="h-5 w-5 text-[rgb(var(--color-status-success))]" />
               <h4 className="font-semibold">
-                {line.contract_line_name?.trim() ||
-                  (fixedLines.length > 1
-                    ? t('wizardReview.sections.fixedFeeServicesNumbered', {
-                        defaultValue: 'Fixed Fee Services ({{number}})',
-                        number: lineIndex + 1,
-                      })
-                    : t('wizardReview.sections.fixedFeeServices', { defaultValue: 'Fixed Fee Services' }))}
+                {fixedLineDisplayName(line, lineIndex, fixedLines.length, t)}
               </h4>
             </div>
             <Badge
@@ -721,6 +716,15 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             <strong>{t('wizardReview.billingTiming.label', { defaultValue: 'Billing timing:' })}</strong>{' '}
             {reviewTimingLabel('Product', data.product_billing_timing)}
           </p>
+          <FirstInvoiceNotice
+            id="contract-wizard-review-products-first-invoice"
+            cadenceOwner={data.cadence_owner}
+            billingTiming={resolveEffectiveBillingTiming('Product', data.product_billing_timing ?? data.billing_timing)}
+            billingFrequency={data.billing_frequency}
+            startDate={data.start_date}
+            clientId={data.client_id}
+            className="space-y-1 text-sm text-[rgb(var(--color-text-500))] mt-2"
+          />
         </Card>
       )}
 

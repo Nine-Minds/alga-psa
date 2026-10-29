@@ -2773,6 +2773,7 @@
   "wizardFirstInvoice": {
     "loading": "Factureringsschema van de klant controleren…",
     "arrearsPreviewNote": "Tot die tijd valt er in een factuurvoorbeeld voor deze klant niets te factureren voor deze regel.",
+    "arrearsPreviewNoteMany": "Tot die tijd valt er in een factuurvoorbeeld voor deze klant niets te factureren voor deze regels.",
     "unavailable": {
       "missingStartDate": "Kies een startdatum om te zien wanneer dit contract voor het eerst wordt gefactureerd.",
       "unsupportedFrequency": "Er wordt geen datum voor de eerste factuur getoond omdat facturering volgens het contractritme deze frequentie niet ondersteunt. Kies een ondersteunde frequentie of factureer volgens het schema van de klant.",

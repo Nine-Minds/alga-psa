@@ -2773,6 +2773,7 @@
   "wizardFirstInvoice": {
     "loading": "Kontrollerar kundens faktureringsschema…",
     "arrearsPreviewNote": "Fram till dess finns det inget att fakturera för den här raden i en förhandsgranskning av fakturan för kunden.",
+    "arrearsPreviewNoteMany": "Fram till dess finns det inget att fakturera för de här raderna i en förhandsgranskning av fakturan för kunden.",
     "unavailable": {
       "missingStartDate": "Välj ett startdatum för att se när avtalet faktureras första gången.",
       "unsupportedFrequency": "Inget datum för första fakturan visas eftersom fakturering enligt avtalets intervall inte stöder den här frekvensen. Välj en frekvens som stöds eller fakturera enligt kundens schema.",

@@ -2773,6 +2773,7 @@
   "wizardFirstInvoice": {
     "loading": "Checking the client's billing schedule…",
     "arrearsPreviewNote": "Until then, an invoice preview for this client has nothing to bill for this line.",
+    "arrearsPreviewNoteMany": "Until then, an invoice preview for this client has nothing to bill for these lines.",
     "unavailable": {
       "missingStartDate": "Choose a start date to see when this contract first invoices.",
       "unsupportedFrequency": "No first invoice date is shown because contract-cadence billing doesn't support this frequency. Pick a supported frequency or bill on the client's schedule.",

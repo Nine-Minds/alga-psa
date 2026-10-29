@@ -35,6 +35,7 @@ import { UsageBasedServicesStep } from "./wizard-steps/UsageBasedServicesStep";
 import { ReviewContractStep } from "./wizard-steps/ReviewContractStep";
 import { ContractDiscountsPanel } from "./wizard-steps/ContractDiscountsPanel";
 import { ContractCreatedConfirmation } from "./wizard-steps/ContractCreatedConfirmation";
+import { hasFirstInvoiceLines } from "./wizard-steps/firstInvoiceLines";
 import {
   TemplateLinesStep,
   TemplateLinesReview,
@@ -398,7 +399,7 @@ export function ContractWizard({
   // Set when Save as Draft is pressed while wizard discounts are authored.
   const [showDraftDiscountsDialog, setShowDraftDiscountsDialog] =
     useState(false);
-  // Set once a contract with fixed-fee lines is created; the wizard then shows
+  // Set once a contract with fixed-fee or product lines is created; the wizard then shows
   // when it first invoices and only reports completion when that is dismissed.
   const [createdContract, setCreatedContract] =
     useState<ContractWizardData | null>(null);
@@ -1284,7 +1285,7 @@ export function ContractWizard({
       };
 
       setWizardData(completedData);
-      if (meaningfulFixedLines(completedData.fixed_lines).length > 0) {
+      if (hasFirstInvoiceLines(completedData)) {
         setCreatedContract(completedData);
         return;
       }

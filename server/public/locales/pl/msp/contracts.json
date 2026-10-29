@@ -2783,6 +2783,7 @@
   "wizardFirstInvoice": {
     "loading": "Sprawdzanie harmonogramu rozliczeń klienta…",
     "arrearsPreviewNote": "Do tego czasu podgląd faktur tego klienta nie zawiera nic do rozliczenia dla tej pozycji.",
+    "arrearsPreviewNoteMany": "Do tego czasu podgląd faktur tego klienta nie zawiera nic do rozliczenia dla tych pozycji.",
     "unavailable": {
       "missingStartDate": "Wybierz datę rozpoczęcia, aby zobaczyć, kiedy ta umowa zostanie po raz pierwszy zafakturowana.",
       "unsupportedFrequency": "Data pierwszej faktury nie jest wyświetlana, ponieważ rozliczanie według cyklu umowy nie obsługuje tej częstotliwości. Wybierz obsługiwaną częstotliwość lub rozliczaj według harmonogramu klienta.",

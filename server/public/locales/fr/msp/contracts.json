@@ -2773,6 +2773,7 @@
   "wizardFirstInvoice": {
     "loading": "Vérification du calendrier de facturation du client…",
     "arrearsPreviewNote": "D'ici là, un aperçu des factures de ce client n'a rien à facturer pour cette ligne.",
+    "arrearsPreviewNoteMany": "D'ici là, un aperçu des factures de ce client n'a rien à facturer pour ces lignes.",
     "unavailable": {
       "missingStartDate": "Choisissez une date de début pour voir quand ce contrat sera facturé pour la première fois.",
       "unsupportedFrequency": "Aucune date de première facture n'est affichée, car la facturation selon le rythme du contrat ne prend pas en charge cette fréquence. Choisissez une fréquence prise en charge ou facturez selon le calendrier du client.",

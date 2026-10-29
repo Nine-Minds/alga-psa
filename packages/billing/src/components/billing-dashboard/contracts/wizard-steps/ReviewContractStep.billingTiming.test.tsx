@@ -80,6 +80,15 @@ describe('ReviewContractStep billing timing', () => {
     expect(allText()).not.toContain('In arrears (contract default)');
   });
 
+  it('the products line states its own first invoice, following its resolved timing', () => {
+    renderStep({ fixed_lines: [], billing_frequency: 'annually' });
+    expect(text('contract-wizard-review-products-first-invoice')).toContain('Billed in advance');
+    expect(text('contract-wizard-review-products-first-invoice')).toContain('2026-01-01');
+    cleanup();
+    renderStep({ fixed_lines: [], billing_frequency: 'annually', product_billing_timing: 'arrears' });
+    expect(text('contract-wizard-review-products-first-invoice')).toContain('Billed in arrears');
+  });
+
   it('hourly and usage lines are In arrears under an advance default, never marked inherited', () => {
     renderStep();
     expect(text('contract-wizard-review-hourly-timing')).toContain('In arrears');
