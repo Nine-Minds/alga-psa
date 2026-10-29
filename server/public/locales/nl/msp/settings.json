@@ -4033,5 +4033,12 @@
     "moveDown": "Omlaag",
     "remove": "Verwijderen",
     "addTag": "Tag toevoegen…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Terug naar e-mailinstellingen",
+      "title": "E-mail- en identiteitsproviders",
+      "description": "Registreer uw eigen Google- of Microsoft-applicatie voor inkomende e-mail en aanmelding door medewerkers. Deze inloggegevens horen bij uw werkruimte."
+    }
   }
 }

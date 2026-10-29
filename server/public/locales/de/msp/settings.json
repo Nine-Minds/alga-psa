@@ -4033,5 +4033,12 @@
     "moveDown": "Nach unten",
     "remove": "Entfernen",
     "addTag": "Tag hinzufügen…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Zurück zu den E-Mail-Einstellungen",
+      "title": "E-Mail- und Identitätsanbieter",
+      "description": "Registrieren Sie Ihre eigene Google- oder Microsoft-Anwendung für eingehende E-Mails und die Anmeldung von Mitarbeitern. Diese Anmeldedaten gehören zu Ihrem Arbeitsbereich."
+    }
   }
 }

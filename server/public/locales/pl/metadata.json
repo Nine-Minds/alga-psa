@@ -524,7 +524,10 @@
       "title": "Współzarządzane IT"
     },
     "coManagement": {
-      "title": "Dostęp do współzarządzania"
+      "title": "Dostęp do współzarządzania",
+      "providers": {
+        "title": "Dostawcy poczty e-mail i tożsamości"
+      }
     }
   },
   "auth": {
