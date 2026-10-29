@@ -1915,6 +1915,9 @@
           "team_name": {
             "type": "string"
           },
+          "description": {
+            "type": "string"
+          },
           "manager_id": {
             "type": "string",
             "format": "uuid"
@@ -2323,6 +2326,13 @@
           "team_name": {
             "type": "string"
           },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000
+          },
           "manager_id": {
             "type": "string",
             "format": "uuid"
@@ -2344,6 +2354,13 @@
         "properties": {
           "team_name": {
             "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000
           },
           "manager_id": {
             "type": "string",
@@ -32850,6 +32867,14 @@
             },
             "required": false,
             "name": "team_name",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "description",
             "in": "query"
           },
           {

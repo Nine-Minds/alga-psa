@@ -148,6 +148,7 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
       sort: zOpenApi.string().optional(),
       order: zOpenApi.enum(['asc', 'desc']).optional(),
       team_name: zOpenApi.string().optional(),
+      description: zOpenApi.string().optional(),
       manager_id: zOpenApi.string().guid().optional(),
       fields: zOpenApi.string().optional(),
     }),
@@ -302,6 +303,7 @@ export function registerAccessControlUserRoutes(registry: ApiOpenApiRegistry) {
     'AccessCreateTeamBodyV1',
     zOpenApi.object({
       team_name: zOpenApi.string(),
+      description: zOpenApi.string().max(1000).nullable().optional(),
       manager_id: zOpenApi.string().guid().optional(),
       members: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())).optional(),
     }),
