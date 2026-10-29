@@ -38,7 +38,8 @@ vi.mock('@alga-psa/billing/actions/billingProfileActions', () => ({
   getClientBillingProfilesForBilling: vi.fn(async () => []),
 }));
 vi.mock('@alga-psa/billing/actions/serviceActions', () => ({
-  getServiceCatalogRatesForCurrency: vi.fn(async () => ({})),
+  getServiceCatalogRatesForCurrency: vi.fn(async () => ({ m365: 16098, defender: 18000, backup: 9000 })),
+  getServiceCatalogCostInfo: vi.fn(async () => ({ canViewCost: false, items: {} })),
 }));
 
 import type { ContractWizardData } from '../src/components/billing-dashboard/contracts/ContractWizard';
@@ -78,16 +79,16 @@ const fixedLine = (billing_frequency: string | undefined, unit_rate: number, qua
 describe('Review step total cadence', () => {
   afterEach(cleanup);
 
-  it('annual AUD products-only: headline is the annual amount with a monthly equivalent', () => {
+  it('annual AUD products-only: headline is the annual amount with a monthly equivalent', async () => {
     render(<ReviewContractStep data={build({ billing_frequency: 'annually', product_services: lyndasProducts })} />);
-    expect(screen.getByText('A$1,723.92')).toBeInTheDocument();
+    expect(await screen.findByText('A$1,723.92')).toBeInTheDocument();
     expect(screen.getByText('per year')).toBeInTheDocument();
     expect(screen.getByText('about A$143.66 a month')).toBeInTheDocument();
     expect(screen.getByText('Estimated Total')).toBeInTheDocument();
     expect(screen.queryByText('per month')).not.toBeInTheDocument();
   });
 
-  it('mixed monthly fixed + annual products: one row per frequency and the legacy monthly total', () => {
+  it('mixed monthly fixed + annual products: one row per frequency and the legacy monthly total', async () => {
     render(
       <ReviewContractStep
         data={build({
@@ -97,6 +98,7 @@ describe('Review step total cadence', () => {
         })}
       />,
     );
+    expect(await screen.findByText('about A$593.66 a month')).toBeInTheDocument();
     expect(screen.getByTestId('review-total-row-monthly')).toHaveTextContent('A$450.00 per month');
     expect(screen.getByTestId('review-total-row-annually')).toHaveTextContent('A$1,723.92 per year');
     // legacy calculateTotalMonthly: 45000 + round(172392 / 12) = 59366
@@ -112,7 +114,7 @@ describe('Review step total cadence', () => {
     expect(screen.queryByText(/a month$/)).not.toBeInTheDocument();
   });
 
-  it('saved draft value keeps saying per month on an annual contract', () => {
+  it('saved draft value keeps saying per month on an annual contract', async () => {
     render(
       <ReviewContractStep
         data={build({
@@ -122,6 +124,7 @@ describe('Review step total cadence', () => {
         })}
       />,
     );
+    await screen.findByText('per year');
     expect(document.getElementById('review-saved-draft-value')).toHaveTextContent(
       'Saved draft value: A$143.66 per month',
     );

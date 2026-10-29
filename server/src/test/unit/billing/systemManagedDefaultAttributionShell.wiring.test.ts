@@ -50,9 +50,14 @@ const usageActionsSource = readFileSync(
   resolve(__dirname, '../../../../../packages/billing/src/actions/usageActions.ts'),
   'utf8',
 );
-// Contract line resolution lives in the shared time-entry write core (saveTimeEntry delegates to it).
-const timeEntryCrudActionsSource = readFileSync(
+// Contract line resolution: the shared time-entry write core (saveTimeEntry
+// delegates to it) calls `resolveTimeEntryContract`, which owns the selection.
+const timeEntryWriteCoreSource = readFileSync(
   resolve(__dirname, '../../../../../packages/scheduling/src/lib/timeEntryWriteCore.ts'),
+  'utf8',
+);
+const timeEntryContractSource = readFileSync(
+  resolve(__dirname, '../../../../../packages/scheduling/src/lib/timeEntryContract.ts'),
   'utf8',
 );
 const contractLinesUiSource = readFileSync(
@@ -98,8 +103,11 @@ describe('system-managed default attribution-shell cutover wiring', () => {
     // disambiguation module with the same system-managed exclusion, which
     // additionally reports *why* it could not pick a line. Both entry points
     // still go through that module and nowhere else.
-    expect(timeEntryCrudActionsSource).toContain('resolveContractLineSelection');
-    expect(timeEntryCrudActionsSource).toContain("from '../lib/contractLineDisambiguation'");
+    expect(timeEntryWriteCoreSource).toContain('resolveTimeEntryContract(');
+    expect(timeEntryWriteCoreSource).toContain("from './timeEntryContract'");
+    expect(timeEntryWriteCoreSource).not.toContain('getEligibleContractLines');
+    expect(timeEntryContractSource).toContain('resolveContractLineSelection(');
+    expect(timeEntryContractSource).toContain("from './contractLineDisambiguation'");
   });
 
   it('F073/F074: contract line and pricing schedule UI surfaces become read-only with attribution-only guidance', () => {

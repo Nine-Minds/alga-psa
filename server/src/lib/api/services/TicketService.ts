@@ -73,11 +73,18 @@ import {
   persistExternalLinksForCreate,
   publishExternalLinkEvent,
 } from '@alga-psa/tickets/actions/externalLinks/externalLinkPersistence';
-import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '../middleware/apiMiddleware';
+import { NotFoundError, ValidationError, ConflictError, ForbiddenError, UnprocessableEntityError } from '../middleware/apiMiddleware';
 import { locationAddressSql } from './locationAddressSql';
 import { inboundSenderLabel } from './ticketCommentAuthor';
 import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
+import { preserveStoredWatchList } from '@shared/lib/tickets/watchList';
+import {
+  TicketWatcherError,
+  TicketWatcherService,
+  type TicketWatcher,
+  type TicketWatcherWriteResult,
+} from '@shared/services/tickets/ticketWatcherService';
 import { resolveAssetTicketContactOptions } from '@alga-psa/shared/models/assetTicketContactModel';
 import { ticketStatusClockPatch } from '@shared/lib/ticketStatusClock';
 import {
@@ -107,6 +114,8 @@ import {
   TicketSearchData,
   CreateTicketFromAssetData,
   AddTicketAgentData,
+  AddTicketWatcherData,
+  UpdateTicketWatcherData,
   TicketAgentsResponse,
   AssignTicketTeamData,
   RemoveTicketTeamData
@@ -1061,6 +1070,106 @@ export class TicketService extends BaseService<ITicket> {
     return response;
   }
 
+  /** List a ticket's watchers (persistent copy-on-updates recipients). */
+  async listWatchers(ticketId: string, context: ServiceContext): Promise<TicketWatcher[]> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+    try {
+      return await withTransaction(knex, (trx) =>
+        TicketWatcherService.list(trx, context.tenant, ticketId));
+    } catch (error) {
+      throw this.mapTicketWatcherError(error);
+    }
+  }
+
+  /** Idempotent add by contact_id, user_id or bare email. */
+  async addWatcher(ticketId: string, data: AddTicketWatcherData, context: ServiceContext): Promise<TicketWatcher[]> {
+    return this.writeWatchers(ticketId, data.silent, context, (trx) =>
+      TicketWatcherService.add(trx, context.tenant, ticketId, {
+        contact_id: data.contact_id,
+        user_id: data.user_id,
+        email: data.email,
+        name: data.name,
+        active: data.active,
+        source: 'manual',
+      }, context.userId));
+  }
+
+  async setWatcherActive(
+    ticketId: string,
+    data: UpdateTicketWatcherData,
+    context: ServiceContext
+  ): Promise<TicketWatcher[]> {
+    return this.writeWatchers(ticketId, data.silent, context, (trx) =>
+      TicketWatcherService.setActive(trx, context.tenant, ticketId, data.email, data.active, context.userId));
+  }
+
+  async removeWatcher(
+    ticketId: string,
+    email: string,
+    silent: boolean | undefined,
+    context: ServiceContext
+  ): Promise<TicketWatcher[]> {
+    return this.writeWatchers(ticketId, silent, context, (trx) =>
+      TicketWatcherService.remove(trx, context.tenant, ticketId, email, context.userId));
+  }
+
+  /**
+   * Watcher writes run in one transaction (ticket row lock, table write, mirror
+   * sync). A real change publishes TICKET_UPDATED after commit, the same event
+   * the UI watcher save produces; `silent` sets both suppression flags on that
+   * event (the suppressContactNotifications / suppressInternalNotifications
+   * mechanism) and is never stored.
+   *
+   * What the event does: it carries empty `changes`. The email subscriber's
+   * accumulator skips updates with no changes, so no watcher/agent/contact email
+   * is sent for the watch-list change itself; the internal-notification subscriber
+   * still creates the generic 'ticket updated' in-app notification for assigned
+   * agents and the client-portal contact unless `silent` suppresses it. The new
+   * watcher is copied on later updates, not on this one.
+   */
+  private async writeWatchers(
+    ticketId: string,
+    silent: boolean | undefined,
+    context: ServiceContext,
+    write: (trx: Knex.Transaction) => Promise<TicketWatcherWriteResult>
+  ): Promise<TicketWatcher[]> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    let result: TicketWatcherWriteResult;
+    try {
+      result = await withTransaction(knex, write);
+    } catch (error) {
+      throw this.mapTicketWatcherError(error);
+    }
+
+    if (result.changed) {
+      await this.safePublishEvent('TICKET_UPDATED', context, buildTicketUpdatedPayload({
+        ticketId,
+        updatedByUserId: context.userId,
+        changes: {},
+        suppressContactNotifications: silent === true,
+        suppressInternalNotifications: silent === true,
+      }));
+    }
+    return result.watchers;
+  }
+
+  private mapTicketWatcherError(error: unknown): unknown {
+    if (!(error instanceof TicketWatcherError)) {
+      return error;
+    }
+    switch (error.kind) {
+      case 'ticket_not_found':
+      case 'watcher_not_found':
+        return new NotFoundError(error.message);
+      default:
+        // Unknown / other-tenant contact or user, no email, malformed email.
+        return new UnprocessableEntityError(error.message);
+    }
+  }
+
   /**
    * Remove an additional agent from a ticket by user id. The primary agent is
    * changed through the assignment endpoint, not here.
@@ -1871,9 +1980,13 @@ export class TicketService extends BaseService<ITicket> {
 
     return withTransaction(knex, async (trx) => {
       // Get current ticket for event comparison
-      const currentTicket = await tenantScopedTable(trx, 'tickets', context.tenant)
-        .where({ ticket_id: id })
-        .first();
+      // An update that carries `attributes` re-writes the stored watch_list mirror, so it
+      // takes the same row lock as watcher writes (TicketWatcherService).
+      const currentTicketQuery = tenantScopedTable(trx, 'tickets', context.tenant).where({ ticket_id: id });
+      if ((data as any).attributes !== undefined) {
+        currentTicketQuery.forUpdate();
+      }
+      const currentTicket = await currentTicketQuery.first();
 
       if (!currentTicket) {
         throw new NotFoundError('Ticket not found');
@@ -1899,6 +2012,15 @@ export class TicketService extends BaseService<ITicket> {
       // Create-only field: never a `tickets` column, so it must not reach the
       // UPDATE statement. Inline links are written by the create paths only.
       delete (cleanedData as any).external_links;
+      // `attributes.watch_list` is a derived mirror of `ticket_watchers`, written only
+      // by TicketWatcherService. A generic update ignores whatever it sends for that
+      // key and keeps the stored mirror (use /tickets/{id}/watchers instead).
+      if ((cleanedData as any).attributes !== undefined) {
+        (cleanedData as any).attributes = preserveStoredWatchList(
+          (currentTicket as any).attributes,
+          (cleanedData as any).attributes
+        );
+      }
 
       // A bundled child's workflow fields are locked only while its master is
       // in sync_updates mode (the master pushes status, assignment and priority
