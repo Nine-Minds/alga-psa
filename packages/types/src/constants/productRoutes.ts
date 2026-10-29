@@ -50,7 +50,7 @@ export const PRODUCT_NAV_DESTINATIONS: Record<ProductNavTarget, Record<ProductCo
   providers: {
     psa: '/msp/settings/integrations?category=providers',
     algadesk: '/msp/settings/integrations?category=providers',
-    co_managed: '/msp/co-management/providers',
+    co_managed: '/msp/co-managed/providers',
   },
   // Connecting a mailbox to the configured application. PSA reaches the inbound
   // provider list through Integrations -> Communication; the restricted

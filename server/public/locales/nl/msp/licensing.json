@@ -497,6 +497,30 @@
     "workspaceUnavailable": {
       "description": "Deze werkruimte is momenteel niet beschikbaar. Neem contact op met uw IT-leverancier als u deze verwachtte te gebruiken.",
       "title": "Co-managed IT is niet beschikbaar"
+    },
+    "history": {
+      "title": "Relatiegeschiedenis",
+      "event": "Gebeurtenis",
+      "revision": "Revisie",
+      "when": "Wanneer",
+      "by": "Door",
+      "you": "Jij",
+      "provider": "Aanbieder",
+      "empty": "Nog geen relatiegebeurtenissen.",
+      "error": "De relatiegeschiedenis kon niet worden geladen.",
+      "events": {
+        "requested": "Aangevraagd",
+        "prepared": "Werkruimte voorbereid",
+        "accepted": "Geaccepteerd",
+        "declined": "Geweigerd"
+      }
+    },
+    "workspace": {
+      "title": "Co-managed IT",
+      "sponsor": "Beheerd door",
+      "none": "Deze werkruimte heeft geen co-managed IT-relatie.",
+      "loading": "Laden…",
+      "error": "Co-managed IT kon niet worden geladen."
     }
   }
 }

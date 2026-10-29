@@ -497,6 +497,30 @@
     "workspaceUnavailable": {
       "description": "Este espaço de trabalho não está disponível no momento. Entre em contato com seu provedor de TI se você esperava usá-lo.",
       "title": "TI cogerenciada não está disponível"
+    },
+    "history": {
+      "title": "Histórico da relação",
+      "event": "Evento",
+      "revision": "Revisão",
+      "when": "Quando",
+      "by": "Por",
+      "you": "Você",
+      "provider": "Provedor",
+      "empty": "Ainda não há eventos da relação.",
+      "error": "Não foi possível carregar o histórico da relação.",
+      "events": {
+        "requested": "Solicitada",
+        "prepared": "Espaço de trabalho preparado",
+        "accepted": "Aceita",
+        "declined": "Recusada"
+      }
+    },
+    "workspace": {
+      "title": "TI cogerida",
+      "sponsor": "Gerenciado por",
+      "none": "Este espaço de trabalho não tem relação de TI cogerida.",
+      "loading": "Carregando…",
+      "error": "Não foi possível carregar a TI cogerida."
     }
   }
 }

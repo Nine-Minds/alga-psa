@@ -497,6 +497,30 @@
     "workspaceUnavailable": {
       "description": "This workspace is not available right now. Contact your IT provider if you expected to use it.",
       "title": "Co-managed IT is not available"
+    },
+    "history": {
+      "title": "Relationship history",
+      "event": "Event",
+      "revision": "Revision",
+      "when": "When",
+      "by": "By",
+      "you": "You",
+      "provider": "Provider",
+      "empty": "No relationship events yet.",
+      "error": "Relationship history could not be loaded.",
+      "events": {
+        "requested": "Requested",
+        "prepared": "Workspace prepared",
+        "accepted": "Accepted",
+        "declined": "Declined"
+      }
+    },
+    "workspace": {
+      "title": "Co-managed IT",
+      "sponsor": "Managed by",
+      "none": "This workspace has no co-managed IT relationship.",
+      "loading": "Loading…",
+      "error": "Co-managed IT could not be loaded."
     }
   }
 }

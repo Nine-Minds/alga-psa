@@ -5,6 +5,7 @@ import type { CoManagedClientManagementView, CoManagedClientRelationshipView } f
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { resolveClientRelationshipSummary } from '@/lib/co-managed/clientRelationshipSummary';
 import CoManagedClientSetup from './CoManagedClientSetup';
 import CoManagedClientRecovery from './CoManagedClientRecovery';
 
@@ -33,6 +34,7 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
   // A cancelled setup stays listed as history and does not stop the client from
   // being set up again. A departed workspace's history is retained, so the client
   // shows that ended relationship instead of offering setup.
+  const phase = resolveClientRelationshipSummary(view);
   const hasLiveRelationship = view.relationships.some((entry) => !entry.ended);
   const hasRetainedRelationship = view.relationships.some((entry) => entry.retained);
   const endedOn = selected?.ended && selected.endedAt
@@ -48,15 +50,13 @@ export default function CoManagedClientView({ view, clientId, clientName, idPref
           <div>
             <p className="text-sm text-[rgb(var(--color-text-500))]">{t('coManaged.client.forClient', { defaultValue: 'Co-managed IT for {{name}}', name: clientName })}</p>
             <h3 className="text-lg font-semibold">
-              {selected
-                ? t(`coManaged.provisioning.states.${selected.state}`, { defaultValue: selected.state })
-                : view.inconsistent && !hasLiveRelationship
+              {phase.kind === 'live' || phase.kind === 'ended'
+                ? t(`coManaged.provisioning.states.${phase.relationship.state}`, { defaultValue: phase.relationship.state })
+                : phase.kind === 'attention'
                   ? t('coManaged.client.inconsistent', { defaultValue: 'Co-managed record needs attention' })
-                : view.selectionRequired
-                  ? (hasLiveRelationship
+                  : phase.kind === 'selection_required' && phase.multiple
                     ? t('coManaged.client.selectionRequired', { defaultValue: 'Select a co-managed relationship' })
-                    : t('coManaged.client.notEnabled', { defaultValue: 'Co-managed IT not enabled' }))
-                  : t('coManaged.client.notEnabled', { defaultValue: 'Co-managed IT not enabled' })}
+                    : t('coManaged.client.notEnabled', { defaultValue: 'Co-managed IT not enabled' })}
             </h3>
             {endedOn && <p id={`${idPrefix}-ended-on`} className="text-sm text-[rgb(var(--color-text-600))]">{endedOn}</p>}
             {!selected && view.inconsistent && !hasLiveRelationship && (

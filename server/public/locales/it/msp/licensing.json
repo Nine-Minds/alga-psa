@@ -497,6 +497,30 @@
     "workspaceUnavailable": {
       "description": "Questo spazio di lavoro non è disponibile al momento. Contatta il tuo fornitore IT se prevedevi di usarlo.",
       "title": "L’IT in co-gestione non è disponibile"
+    },
+    "history": {
+      "title": "Cronologia della relazione",
+      "event": "Evento",
+      "revision": "Revisione",
+      "when": "Quando",
+      "by": "Da",
+      "you": "Tu",
+      "provider": "Fornitore",
+      "empty": "Ancora nessun evento della relazione.",
+      "error": "Impossibile caricare la cronologia della relazione.",
+      "events": {
+        "requested": "Richiesta",
+        "prepared": "Area di lavoro preparata",
+        "accepted": "Accettata",
+        "declined": "Rifiutata"
+      }
+    },
+    "workspace": {
+      "title": "IT in co-gestione",
+      "sponsor": "Gestito da",
+      "none": "Quest'area di lavoro non ha alcuna relazione di IT in co-gestione.",
+      "loading": "Caricamento…",
+      "error": "Impossibile caricare l'IT in co-gestione."
     }
   }
 }

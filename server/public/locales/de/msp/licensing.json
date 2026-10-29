@@ -497,6 +497,30 @@
     "workspaceUnavailable": {
       "description": "Dieser Arbeitsbereich ist derzeit nicht verfügbar. Wenden Sie sich an Ihren IT-Dienstleister, wenn Sie ihn nutzen wollten.",
       "title": "Co-Managed IT ist nicht verfügbar"
+    },
+    "history": {
+      "title": "Beziehungsverlauf",
+      "event": "Ereignis",
+      "revision": "Revision",
+      "when": "Wann",
+      "by": "Von",
+      "you": "Sie",
+      "provider": "Anbieter",
+      "empty": "Noch keine Beziehungsereignisse.",
+      "error": "Der Beziehungsverlauf konnte nicht geladen werden.",
+      "events": {
+        "requested": "Angefragt",
+        "prepared": "Arbeitsbereich vorbereitet",
+        "accepted": "Angenommen",
+        "declined": "Abgelehnt"
+      }
+    },
+    "workspace": {
+      "title": "Co-managed IT",
+      "sponsor": "Verwaltet von",
+      "none": "Dieser Arbeitsbereich hat keine Co-managed-IT-Beziehung.",
+      "loading": "Wird geladen…",
+      "error": "Co-managed IT konnte nicht geladen werden."
     }
   }
 }

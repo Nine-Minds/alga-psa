@@ -497,6 +497,30 @@
     "workspaceUnavailable": {
       "description": "Den här arbetsytan är inte tillgänglig just nu. Kontakta din IT-leverantör om du räknade med att använda den.",
       "title": "Samförvaltad IT är inte tillgänglig"
+    },
+    "history": {
+      "title": "Relationshistorik",
+      "event": "Händelse",
+      "revision": "Revision",
+      "when": "När",
+      "by": "Av",
+      "you": "Du",
+      "provider": "Leverantör",
+      "empty": "Inga relationshändelser ännu.",
+      "error": "Relationshistoriken kunde inte läsas in.",
+      "events": {
+        "requested": "Begärd",
+        "prepared": "Arbetsyta förberedd",
+        "accepted": "Accepterad",
+        "declined": "Avvisad"
+      }
+    },
+    "workspace": {
+      "title": "Samförvaltad IT",
+      "sponsor": "Förvaltas av",
+      "none": "Den här arbetsytan har ingen relation för samförvaltad IT.",
+      "loading": "Läser in…",
+      "error": "Samförvaltad IT kunde inte läsas in."
     }
   }
 }
