@@ -1,7 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
-import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
+import { requireCapabilityForAction, CapabilityUnavailableError } from '@alga-psa/core/capability/server';
 import { coManagedBrowserActor as browserActor } from '../co-managed/browserActor';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { getCoManagedSharedTicketDetails, getCoManagedTicketEditor, searchCoManagedTicketEditOptions } from '@alga-psa/co-managed';
@@ -18,8 +18,22 @@ export const getSharedWorkSummaryAction = withAuth(async (user, { tenant }, reso
   return getCoManagedSharedWorkSummary(knex, actor, resource);
 });
 
+/**
+ * A handoff command's gate is side-aware, like L2's `withCoManagedHeld`: the customer side (session tenant ===
+ * resource.tenant) is never entitled and only ever `serves`; the sponsor side must still be `admits`-ted.
+ * The side comes from the resource and the session tenant alone, so a forced-off or flag-off tenant is refused
+ * here, before any co-managed table is read.
+ */
+async function requireHandoffCapability(tenant: string, resource: CoManagedSharedResource, customerSideOnly: boolean): Promise<void> {
+  // LEVERAGE: pattern capability-either-mode — second two-sided action; the adapter should land next to requireCapabilityForAction (see withCoManagedHeld in coManagedPolicyActions.ts).
+  const customerSide = typeof resource?.tenant === 'string' && resource.tenant === tenant;
+  // Escalation is the customer's act; a sponsor-side caller has no such command to start.
+  if (customerSideOnly && !customerSide) throw new CapabilityUnavailableError();
+  await requireCapabilityForAction('co-managed', tenant, customerSide ? 'serves' : 'admits');
+}
+
 export const escalateSharedTicketAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, request: CoManagedTicketHandoffRequest) => {
-  await requireCapabilityForAction('co-managed', tenant, 'admits');
+  await requireHandoffCapability(tenant, resource, true);
   const actor = await browserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
   // LEVERAGE: friction shared-ticket-sla — the SLA setup-required result returns with L6b.
@@ -27,7 +41,7 @@ export const escalateSharedTicketAction = withAuth(async (user, { tenant }, reso
 });
 
 export const handBackSharedTicketAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, request: CoManagedTicketHandoffRequest) => {
-  await requireCapabilityForAction('co-managed', tenant, 'admits');
+  await requireHandoffCapability(tenant, resource, false);
   const actor = await browserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
   return handBackCoManagedTicket(knex, actor, resource, request);

@@ -43,7 +43,7 @@ export type CoManagedTicketHandoffErrorCode =
 const MESSAGES: Record<CoManagedTicketHandoffErrorCode, string> = {
   INVALID_HANDOFF: 'Provide a valid handoff with a shared IT note.',
   HANDOFF_CHANGED: 'This handoff or its work revision changed. Refresh the ticket before trying again.',
-  ALREADY_RESPONSIBLE: 'This organization is already responsible for the ticket.',
+  ALREADY_RESPONSIBLE: 'Responsibility for this ticket is already as requested. Refresh the ticket to see who is responsible now.',
   ALREADY_REVOKED: 'This explicit ticket grant has already been revoked.',
   DESTINATION_UNAVAILABLE: 'The approved MSP destination is not available.',
 };
