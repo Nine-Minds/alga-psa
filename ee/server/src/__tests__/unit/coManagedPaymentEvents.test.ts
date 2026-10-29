@@ -2,12 +2,12 @@ import type Stripe from 'stripe';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const gate = vi.hoisted(() => ({ admits: vi.fn(async () => ({ admitted: false })) }));
-vi.mock('@alga-psa/core/capability', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@alga-psa/core/capability')>()),
+vi.mock('@alga-psa/core/capability', async (importOriginal: () => Promise<Record<string, unknown>>) => ({
+  ...(await importOriginal()),
   admits: gate.admits,
 }));
-vi.mock('@alga-psa/licensing', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@alga-psa/licensing')>()),
+vi.mock('@alga-psa/licensing', async (importOriginal: () => Promise<Record<string, unknown>>) => ({
+  ...(await importOriginal()),
   recordCoManagedPaymentFailure: vi.fn(async () => undefined),
 }));
 
@@ -21,7 +21,7 @@ const coManaged = event('customer.subscription.updated', { id: 'sub_cm', metadat
 const coManagedInvoice = event('invoice.paid', { subscription_details: { metadata: { subscription_kind: 'co_managed' } }, lines: { data: [] } });
 
 /** A connection that fails the test on any use: proves a path issued no query at all. */
-const forbiddenKnex = new Proxy(function () {}, {
+const forbiddenKnex = new Proxy((() => undefined) as (...args: unknown[]) => unknown, {
   get() { throw new Error('unexpected database access on the webhook path'); },
   apply() { throw new Error('unexpected database access on the webhook path'); },
 }) as never;
