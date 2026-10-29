@@ -143,3 +143,25 @@ and `formatMinorCurrency`; no hardcoded currency (contract currency only) and no
 1. Shared resolver + unit tests (no UI risk, and it pins the numbers).
 2. Review step rendering + i18n keys in every pack.
 3. Component test, then `nx affected -t typecheck test build` for billing and shared.
+
+## Decisions taken in implementation
+
+- **Monthly equivalent is normalized per line, then summed** (the Risks section's fallback). Groups carry
+  the summed per-period amount; `monthlyCents` is `Σ normalizeToMonthlyCents(entry)`. That is the rule
+  `contractMonthlyValue` and the engine already apply, so the wizard figure cannot drift from the stored
+  value by a weekly rounding cent. A unit test pins it against `resolveFixedLineRecurringTotal`.
+- **One cadence table.** `canonicalRecurringFrequency` (shared) is the single reader of stored cadence
+  spellings (`semi_annually` → `semi-annually`, null/unknown → `monthly`); `normalizeToMonthlyCents` now
+  switches on it instead of keeping its own copy of the cases.
+- **The "per year" suffix lives in the billing enum layer, not the wizard.** `formatBillingFrequency`
+  returns the adjective ("Annually"), which cannot follow an amount. `useFormatBillingPeriod` sits next to
+  it in `useBillingEnumOptions`, keyed by the canonical cadence, with English defaults in
+  `BILLING_PERIOD_LABEL_DEFAULTS` and translations under `features/billing` `enums.billingPeriod.*`. The
+  monthly headline uses the same formatter, so `wizardReview.total.perMonth` is retired.
+- **Saved draft value says "per month" on its own** whenever the headline is not monthly
+  (`wizardReview.total.savedDraftValueMonthly`); under a monthly headline it reads as before.
+- **Contracts list and contract Overview stay monthly here — follow-up.** Both read
+  `contractMonthlyValue`, which is a stored monthly figure that reporting and renewal generation also
+  consume. Giving them per-period presentation means carrying per-line period amounts and cadence through
+  that read model, not relabelling a scalar; that is its own change. `summarizeRecurringAmounts` and
+  `useFormatBillingPeriod` are the pieces it will reuse.

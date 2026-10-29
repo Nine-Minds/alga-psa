@@ -116,32 +116,13 @@ export function productMembersRecurringTotalCents(members: ReadonlyArray<FixedLi
   }, 0);
 }
 
-/**
- * Cadence normalization used by every recurring-value read path (monthly
- * cents). Lives here so client and server code share one implementation.
- */
-export function normalizeToMonthlyCents(amountCents: number, billingFrequency: string | null | undefined): number {
-  switch (billingFrequency) {
-    case 'weekly':
-      return Math.round(amountCents * 4.33);
-    case 'quarterly':
-      return Math.round(amountCents / 3);
-    case 'semi-annually':
-    case 'semi_annually':
-      return Math.round(amountCents / 6);
-    case 'annually':
-      return Math.round(amountCents / 12);
-    default:
-      // monthly (and unknown cadences, which are stored monthly by default)
-      return Math.round(amountCents);
-  }
-}
-
 export type CanonicalRecurringFrequency = 'weekly' | 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
 
 /**
- * Canonical cadence name, with the same cases {@link normalizeToMonthlyCents}
- * recognises; null and unknown cadences are monthly (the storage default).
+ * Canonical cadence name. The one place stored cadence spellings are read:
+ * `semi_annually` folds into `semi-annually`, and null and unknown cadences are
+ * monthly (the storage default). {@link normalizeToMonthlyCents} and
+ * {@link summarizeRecurringAmounts} both key off this.
  */
 export function canonicalRecurringFrequency(
   billingFrequency: string | null | undefined,
@@ -158,6 +139,25 @@ export function canonicalRecurringFrequency(
       return 'annually';
     default:
       return 'monthly';
+  }
+}
+
+/**
+ * Cadence normalization used by every recurring-value read path (monthly
+ * cents). Lives here so client and server code share one implementation.
+ */
+export function normalizeToMonthlyCents(amountCents: number, billingFrequency: string | null | undefined): number {
+  switch (canonicalRecurringFrequency(billingFrequency)) {
+    case 'weekly':
+      return Math.round(amountCents * 4.33);
+    case 'quarterly':
+      return Math.round(amountCents / 3);
+    case 'semi-annually':
+      return Math.round(amountCents / 6);
+    case 'annually':
+      return Math.round(amountCents / 12);
+    case 'monthly':
+      return Math.round(amountCents);
   }
 }
 
@@ -201,7 +201,7 @@ export interface RecurringPeriodAmount {
 
 export interface RecurringFrequencyGroup {
   /** Canonical cadence as stored ('monthly' | 'annually' | …). */
-  frequency: string;
+  frequency: CanonicalRecurringFrequency;
   /** Sum of the group's per-period amounts. */
   periodCents: number;
   /** Σ normalizeToMonthlyCents(entry) over the group's entries (per-entry, not per-group). */
@@ -213,7 +213,7 @@ export interface RecurringSummary {
   groups: RecurringFrequencyGroup[];
   /** Σ group.periodCents when every group shares one frequency; else null. */
   singleFrequencyPeriodCents: number | null;
-  singleFrequency: string | null;
+  singleFrequency: CanonicalRecurringFrequency | null;
   /** Σ group.monthlyCents — the comparable figure the stored value keeps using. */
   monthlyCents: number;
 }
@@ -226,7 +226,7 @@ export interface RecurringSummary {
  * drift between surfaces. A null/unknown cadence counts as monthly.
  */
 export function summarizeRecurringAmounts(amounts: ReadonlyArray<RecurringPeriodAmount>): RecurringSummary {
-  const byFrequency = new Map<string, RecurringFrequencyGroup>();
+  const byFrequency = new Map<CanonicalRecurringFrequency, RecurringFrequencyGroup>();
   for (const amount of amounts) {
     const frequency = canonicalRecurringFrequency(amount.frequency);
     const group = byFrequency.get(frequency) ?? { frequency, periodCents: 0, monthlyCents: 0 };

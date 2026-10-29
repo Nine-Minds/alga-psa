@@ -1995,19 +1995,12 @@
     "total": {
       "title": "Uppskattat månadsbelopp",
       "description": "Produkter och fasta avgifter ingår i denna summa. Timdebiterade och förbrukningsbaserade tjänster faktureras efter faktiskt utfall.",
-      "perMonth": "per månad",
       "savedDraftValue": "Sparat utkastvärde: {{amount}}",
       "titleCadence": "Beräknad summa",
       "mixedFrequencyTitle": "Beräknad summa per faktureringsfrekvens",
       "perFrequency": "{{amount}} {{period}}",
       "perMonthEquivalent": "cirka {{amount}} per månad",
-      "perPeriod": {
-        "weekly": "per vecka",
-        "monthly": "per månad",
-        "quarterly": "per kvartal",
-        "semi-annually": "per halvår",
-        "annually": "per år"
-      }
+      "savedDraftValueMonthly": "Sparat utkastvärde: {{amount}} per månad"
     },
     "finalChecklist": {
       "title": "Innan du slutför:",

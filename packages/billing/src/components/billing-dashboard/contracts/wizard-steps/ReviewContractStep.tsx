@@ -44,6 +44,7 @@ import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/
 import {
   useBillingFrequencyOptions,
   useFormatBillingFrequency,
+  useFormatBillingPeriod,
 } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
 const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
@@ -57,6 +58,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
   const { formatCurrency, formatNumber, formatDate: formatDateInLocale } = useFormatters();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const formatBillingFrequency = useFormatBillingFrequency();
+  const formatBillingPeriod = useFormatBillingPeriod();
   const notSelectedLabel = t('wizardReview.fallback.notSelected', { defaultValue: 'Not selected' });
   // `client_id` is the single canonical identity for the chosen client;
   // `clientName` only ever holds a resolved display value. It is empty while the
@@ -233,8 +235,10 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
   }, [unpricedProductIds, currencyCode]);
 
   // Per line: unit members bill quantity × unit rate; the base rate is the
-  // bundle total and counts only when an allocation member exists. Lines are
-  // normalized to a monthly amount by their own billing frequency.
+  // bundle total and counts only when an allocation member exists. Each line
+  // contributes one billing period's amount on its own billing frequency; the
+  // shared summary groups them by cadence and derives the monthly equivalent
+  // with the same per-line normalization the stored value and the engine use.
   // Products are priced by the shared resolver (the invoice engine's rate
   // chain: product override, then the contract-currency catalog price, then
   // the legacy default rate) — never a parallel copy of the rule here.
@@ -271,25 +275,16 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
   ]);
   const isMixedFrequency = recurringSummary.groups.length > 1;
   const headlineFrequency = recurringSummary.singleFrequency ?? 'monthly';
-  // "per year", "per quarter", … — the cadence as a suffix to an amount. A cadence without a
-  // suffix phrase falls back to the shared billing-frequency label.
-  const PERIOD_DEFAULTS: Record<string, string> = {
-    weekly: 'per week',
-    monthly: 'per month',
-    quarterly: 'per quarter',
-    'semi-annually': 'per half-year',
-    annually: 'per year',
-  };
-  const periodSuffix = (frequency: string) =>
-    frequency in PERIOD_DEFAULTS
-      ? t(`wizardReview.total.perPeriod.${frequency}`, { defaultValue: PERIOD_DEFAULTS[frequency] })
-      : formatBillingFrequency(frequency) || frequency;
   const perFrequencyText = (periodCents: number, frequency: string) =>
     t('wizardReview.total.perFrequency', {
       defaultValue: '{{amount}} {{period}}',
       amount: formatMinorCurrency(periodCents),
-      period: periodSuffix(frequency),
+      period: formatBillingPeriod(frequency),
     });
+  const monthlyEquivalentText = t('wizardReview.total.perMonthEquivalent', {
+    defaultValue: 'about {{amount}} a month',
+    amount: formatMinorCurrency(recurringSummary.monthlyCents),
+  });
 
   const hasFixedServices = fixedLines.length > 0;
   const hasProducts = data.product_services.length > 0;
@@ -1001,10 +996,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
                   </p>
                 ))}
                 <p id="review-total-monthly-equivalent" className="text-xs text-[rgb(var(--color-text-500))]">
-                  {t('wizardReview.total.perMonthEquivalent', {
-                    defaultValue: 'about {{amount}} a month',
-                    amount: formatMinorCurrency(recurringSummary.monthlyCents),
-                  })}
+                  {monthlyEquivalentText}
                 </p>
               </>
             ) : (
@@ -1016,26 +1008,28 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
                   {formatMinorCurrency(recurringSummary.singleFrequencyPeriodCents ?? 0)}
                 </p>
                 <p className="text-xs text-[rgb(var(--color-text-500))]">
-                  {headlineFrequency === 'monthly'
-                    ? t('wizardReview.total.perMonth', { defaultValue: 'per month' })
-                    : periodSuffix(headlineFrequency)}
+                  {formatBillingPeriod(headlineFrequency)}
                 </p>
                 {headlineFrequency !== 'monthly' && (
                   <p id="review-total-monthly-equivalent" className="text-xs text-[rgb(var(--color-text-500))]">
-                    {t('wizardReview.total.perMonthEquivalent', {
-                      defaultValue: 'about {{amount}} a month',
-                      amount: formatMinorCurrency(recurringSummary.monthlyCents),
-                    })}
+                    {monthlyEquivalentText}
                   </p>
                 )}
               </>
             )}
             {data.recurring_baseline && (
               <p id="review-saved-draft-value" className="text-xs text-[rgb(var(--color-text-500))]">
-                {t('wizardReview.total.savedDraftValue', {
-                  defaultValue: 'Saved draft value: {{amount}}',
-                  amount: formatMinorCurrency(data.recurring_baseline.monthly_cents),
-                })}
+                {/* A stored monthly value: under a monthly headline the cadence is already
+                    stated; under any other headline it must say "per month" itself. */}
+                {isMixedFrequency || headlineFrequency !== 'monthly'
+                  ? t('wizardReview.total.savedDraftValueMonthly', {
+                      defaultValue: 'Saved draft value: {{amount}} per month',
+                      amount: formatMinorCurrency(data.recurring_baseline.monthly_cents),
+                    })
+                  : t('wizardReview.total.savedDraftValue', {
+                      defaultValue: 'Saved draft value: {{amount}}',
+                      amount: formatMinorCurrency(data.recurring_baseline.monthly_cents),
+                    })}
               </p>
             )}
           </div>

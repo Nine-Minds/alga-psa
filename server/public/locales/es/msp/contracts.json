@@ -1995,19 +1995,12 @@
     "total": {
       "title": "Total mensual estimado",
       "description": "Los productos y los cargos fijos están incluidos en este total. Los servicios por hora y de uso se facturan según el consumo real.",
-      "perMonth": "por mes",
       "savedDraftValue": "Valor del borrador guardado: {{amount}}",
       "titleCadence": "Total estimado",
       "mixedFrequencyTitle": "Total estimado por frecuencia de facturación",
       "perFrequency": "{{amount}} {{period}}",
       "perMonthEquivalent": "unos {{amount}} al mes",
-      "perPeriod": {
-        "weekly": "por semana",
-        "monthly": "por mes",
-        "quarterly": "por trimestre",
-        "semi-annually": "por semestre",
-        "annually": "por año"
-      }
+      "savedDraftValueMonthly": "Valor del borrador guardado: {{amount}} por mes"
     },
     "finalChecklist": {
       "title": "Antes de finalizar:",

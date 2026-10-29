@@ -40,10 +40,6 @@ vi.mock('@alga-psa/billing/actions/billingProfileActions', () => ({
 vi.mock('@alga-psa/billing/actions/serviceActions', () => ({
   getServiceCatalogRatesForCurrency: vi.fn(async () => ({})),
 }));
-vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
-  useBillingFrequencyOptions: () => [],
-  useFormatBillingFrequency: () => (value: string) => value,
-}));
 
 import type { ContractWizardData } from '../src/components/billing-dashboard/contracts/ContractWizard';
 import { ReviewContractStep } from '../src/components/billing-dashboard/contracts/wizard-steps/ReviewContractStep';
@@ -126,7 +122,25 @@ describe('Review step total cadence', () => {
         })}
       />,
     );
-    expect(document.getElementById('review-saved-draft-value')).toHaveTextContent('Saved draft value: A$143.66');
+    expect(document.getElementById('review-saved-draft-value')).toHaveTextContent(
+      'Saved draft value: A$143.66 per month',
+    );
     expect(screen.getByText('per year')).toBeInTheDocument();
+  });
+
+  it('saved draft value on a monthly contract reads as before (the headline already says per month)', () => {
+    render(
+      <ReviewContractStep
+        data={build({ fixed_lines: [fixedLine(undefined, 45000)], recurring_baseline: { monthly_cents: 45000 } })}
+      />,
+    );
+    expect(document.getElementById('review-saved-draft-value')).toHaveTextContent(/^Saved draft value: A\$450\.00$/);
+  });
+
+  it('a line on its own stored semi_annually cadence is shown per half-year', () => {
+    render(<ReviewContractStep data={build({ fixed_lines: [fixedLine('semi_annually', 60000)] })} />);
+    expect(screen.getByText('A$600.00')).toBeInTheDocument();
+    expect(screen.getByText('per half-year')).toBeInTheDocument();
+    expect(screen.getByText('about A$100.00 a month')).toBeInTheDocument();
   });
 });

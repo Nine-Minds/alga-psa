@@ -1995,19 +1995,12 @@
     "total": {
       "title": "Geschätzte monatliche Summe",
       "description": "Produkte und feste Gebühren sind in dieser Summe enthalten. Stunden- und nutzungsbasierte Services werden nach tatsächlichem Aufwand abgerechnet.",
-      "perMonth": "pro Monat",
       "savedDraftValue": "Gespeicherter Entwurfswert: {{amount}}",
       "titleCadence": "Geschätzte Gesamtsumme",
       "mixedFrequencyTitle": "Geschätzte Gesamtsumme nach Abrechnungshäufigkeit",
       "perFrequency": "{{amount}} {{period}}",
       "perMonthEquivalent": "ca. {{amount}} pro Monat",
-      "perPeriod": {
-        "weekly": "pro Woche",
-        "monthly": "pro Monat",
-        "quarterly": "pro Quartal",
-        "semi-annually": "pro Halbjahr",
-        "annually": "pro Jahr"
-      }
+      "savedDraftValueMonthly": "Gespeicherter Entwurfswert: {{amount}} pro Monat"
     },
     "finalChecklist": {
       "title": "Bevor Sie abschließen:",
