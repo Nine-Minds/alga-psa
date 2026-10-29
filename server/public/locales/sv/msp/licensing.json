@@ -497,6 +497,35 @@
     "workspaceUnavailable": {
       "description": "Den här arbetsytan är inte tillgänglig just nu. Kontakta din IT-leverantör om du räknade med att använda den.",
       "title": "Samförvaltad IT är inte tillgänglig"
-    }
+    },
+    "capacity": "Köpta platser",
+    "allocated": "Tilldelade kunder",
+    "available": "Tillgängliga platser",
+    "seatPool": "Teknikerplatser för kunder",
+    "seatDescription": "Tilldela platser från denna delade pool. Beställare är gratis och dina MSP-tekniker använder inte kundplatser.",
+    "quantity": "Totalt antal platser i din pool",
+    "reviewPurchase": "Granska köp",
+    "resumePurchase": "Återuppta köp",
+    "confirmTitle": "Granska köp av kundplatser",
+    "monthlyTotal_one": "{{count}} plats · {{amount}} per månad",
+    "monthlyTotal_other": "{{count}} platser · {{amount}} per månad",
+    "dueNow": "Beräknat belopp att betala nu: {{amount}}",
+    "confirmPurchase": "Bekräfta köp",
+    "checkoutTitle": "Slutför platsköp",
+    "manageLicense": "Hantera din egenhostade licens",
+    "proRequired": "En Pro PSA-prenumeration krävs för att sponsra kunders arbetsytor.",
+    "loadError": "Det gick inte att läsa in kapaciteten för kundplatser. Försök igen.",
+    "purchaseError": "Det gick inte att slutföra platsköpet. Du kan säkert återuppta det.",
+    "checkoutExpired": "Den här betalningen har gått ut. Starta ett nytt köp för att fortsätta.",
+    "grace": "Förnya din licens eller åtgärda kapacitetsbristen före {{date}} för att hålla kunders arbetsytor skrivbara.",
+    "readOnly": "Anståndet tog slut den {{date}}. Återställ den licensierade kapaciteten för att återuppta ändringar i kunders arbetsytor.",
+    "accountTitle": "Samförvaltad IT",
+    "checkoutUnavailable": "Inbäddad betalning är inte tillgänglig. Försök igen när betalningsinställningen är reparerad.",
+    "pendingCapacity_one": "Ett köp av {{count}} plats väntar.",
+    "pendingCapacity_other": "Ett köp av {{count}} platser väntar.",
+    "previewError": "Det gick inte att prissätta ändringen. Uppdatera och försök igen.",
+    "purchaseNeedsAdmin": "En kontoadministratör måste lägga till samförvaltad kapacitet.",
+    "purchaseProviderUnconfigured": "Betalningsleverantören är inte konfigurerad.",
+    "purchaseUnavailable": "Värdbaserat samförvaltat köp är inte tillgängligt i den här driftsättningen."
   }
 }

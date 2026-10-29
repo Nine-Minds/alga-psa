@@ -497,6 +497,35 @@
     "workspaceUnavailable": {
       "description": "Este espacio de trabajo no está disponible en este momento. Póngase en contacto con su proveedor de TI si esperaba usarlo.",
       "title": "TI cogestionada no está disponible"
-    }
+    },
+    "capacity": "Puestos comprados",
+    "allocated": "Asignados a clientes",
+    "available": "Puestos disponibles",
+    "seatPool": "Puestos de técnico para clientes",
+    "seatDescription": "Asigne puestos de este grupo compartido. Los solicitantes son gratuitos y sus técnicos del MSP no usan puestos de clientes.",
+    "quantity": "Total de puestos en su grupo",
+    "reviewPurchase": "Revisar compra",
+    "resumePurchase": "Reanudar compra",
+    "confirmTitle": "Revisar la compra de puestos para clientes",
+    "monthlyTotal_one": "{{count}} puesto · {{amount}} al mes",
+    "monthlyTotal_other": "{{count}} puestos · {{amount}} al mes",
+    "dueNow": "Importe estimado a pagar ahora: {{amount}}",
+    "confirmPurchase": "Confirmar compra",
+    "checkoutTitle": "Completar la compra de puestos",
+    "manageLicense": "Administrar su licencia autoalojada",
+    "proRequired": "Se requiere una suscripción Pro de PSA para patrocinar espacios de trabajo de clientes.",
+    "loadError": "No se pudo cargar la capacidad de puestos de clientes. Inténtelo de nuevo.",
+    "purchaseError": "No se pudo completar la compra de puestos. Puede reanudarla con seguridad.",
+    "checkoutExpired": "Este pago caducó. Inicie una nueva compra para continuar.",
+    "grace": "Renueve su licencia o resuelva el déficit de capacidad antes del {{date}} para mantener los espacios de trabajo de clientes editables.",
+    "readOnly": "El período de gracia terminó el {{date}}. Restablezca la capacidad con licencia para reanudar los cambios en los espacios de trabajo de clientes.",
+    "accountTitle": "TI cogestionada",
+    "checkoutUnavailable": "El pago integrado no está disponible. Reintente después de reparar la configuración de pago.",
+    "pendingCapacity_one": "Hay una compra de {{count}} puesto pendiente.",
+    "pendingCapacity_other": "Hay una compra de {{count}} puestos pendiente.",
+    "previewError": "No se pudo calcular el precio de este cambio. Actualice e inténtelo de nuevo.",
+    "purchaseNeedsAdmin": "Un administrador de la cuenta debe añadir capacidad de cogestión.",
+    "purchaseProviderUnconfigured": "El proveedor de pagos no está configurado.",
+    "purchaseUnavailable": "La compra de cogestión alojada no está disponible en esta implementación."
   }
 }

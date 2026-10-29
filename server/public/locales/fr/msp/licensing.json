@@ -497,6 +497,35 @@
     "workspaceUnavailable": {
       "description": "Cet espace de travail n’est pas disponible pour le moment. Contactez votre prestataire informatique si vous comptiez l’utiliser.",
       "title": "L’informatique cogérée n’est pas disponible"
-    }
+    },
+    "capacity": "Postes achetés",
+    "allocated": "Attribués aux clients",
+    "available": "Postes disponibles",
+    "seatPool": "Postes de technicien clients",
+    "seatDescription": "Attribuez des postes depuis ce pool partagé. Les demandeurs sont gratuits et vos techniciens MSP n'utilisent pas de postes clients.",
+    "quantity": "Total de postes dans votre pool",
+    "reviewPurchase": "Vérifier l'achat",
+    "resumePurchase": "Reprendre l'achat",
+    "confirmTitle": "Vérifier l'achat de postes clients",
+    "monthlyTotal_one": "{{count}} poste · {{amount}} par mois",
+    "monthlyTotal_other": "{{count}} postes · {{amount}} par mois",
+    "dueNow": "Montant estimé dû maintenant : {{amount}}",
+    "confirmPurchase": "Confirmer l'achat",
+    "checkoutTitle": "Finaliser l'achat de postes",
+    "manageLicense": "Gérer votre licence auto-hébergée",
+    "proRequired": "Un abonnement PSA Pro est requis pour parrainer des espaces de travail clients.",
+    "loadError": "Impossible de charger la capacité de postes clients. Veuillez réessayer.",
+    "purchaseError": "Impossible de finaliser l'achat de postes. Vous pouvez le reprendre en toute sécurité.",
+    "checkoutExpired": "Ce paiement a expiré. Lancez un nouvel achat pour continuer.",
+    "grace": "Renouvelez votre licence ou résolvez le déficit de capacité avant le {{date}} pour que les espaces de travail clients restent modifiables.",
+    "readOnly": "La période de grâce s'est terminée le {{date}}. Rétablissez la capacité sous licence pour reprendre les modifications des espaces de travail clients.",
+    "accountTitle": "Informatique cogérée",
+    "checkoutUnavailable": "Le paiement intégré n'est pas disponible. Réessayez après la réparation de la configuration de paiement.",
+    "pendingCapacity_one": "Un achat de {{count}} poste est en attente.",
+    "pendingCapacity_other": "Un achat de {{count}} postes est en attente.",
+    "previewError": "Impossible de chiffrer cette modification. Actualisez et réessayez.",
+    "purchaseNeedsAdmin": "Un administrateur du compte doit ajouter de la capacité de cogestion.",
+    "purchaseProviderUnconfigured": "Le fournisseur de paiement n'est pas configuré.",
+    "purchaseUnavailable": "L'achat de cogestion hébergée n'est pas disponible dans ce déploiement."
   }
 }

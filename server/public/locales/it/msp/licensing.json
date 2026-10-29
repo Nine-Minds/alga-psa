@@ -497,6 +497,35 @@
     "workspaceUnavailable": {
       "description": "Questo spazio di lavoro non è disponibile al momento. Contatta il tuo fornitore IT se prevedevi di usarlo.",
       "title": "L’IT in co-gestione non è disponibile"
-    }
+    },
+    "capacity": "Postazioni acquistate",
+    "allocated": "Assegnate ai clienti",
+    "available": "Postazioni disponibili",
+    "seatPool": "Postazioni tecnico per i clienti",
+    "seatDescription": "Assegna le postazioni da questo pool condiviso. I richiedenti sono gratuiti e i tecnici del tuo MSP non usano postazioni dei clienti.",
+    "quantity": "Totale postazioni nel tuo pool",
+    "reviewPurchase": "Rivedi acquisto",
+    "resumePurchase": "Riprendi acquisto",
+    "confirmTitle": "Rivedi l'acquisto di postazioni cliente",
+    "monthlyTotal_one": "{{count}} postazione · {{amount}} al mese",
+    "monthlyTotal_other": "{{count}} postazioni · {{amount}} al mese",
+    "dueNow": "Importo stimato dovuto ora: {{amount}}",
+    "confirmPurchase": "Conferma acquisto",
+    "checkoutTitle": "Completa l'acquisto delle postazioni",
+    "manageLicense": "Gestisci la tua licenza self-hosted",
+    "proRequired": "Per sponsorizzare gli spazi di lavoro dei clienti è richiesto un abbonamento PSA Pro.",
+    "loadError": "Impossibile caricare la capacità delle postazioni cliente. Riprova.",
+    "purchaseError": "Impossibile completare l'acquisto delle postazioni. Puoi riprenderlo in sicurezza.",
+    "checkoutExpired": "Questo checkout è scaduto. Avvia un nuovo acquisto per continuare.",
+    "grace": "Rinnova la licenza o risolvi la carenza di capacità entro il {{date}} per mantenere modificabili gli spazi di lavoro dei clienti.",
+    "readOnly": "Il periodo di tolleranza è terminato il {{date}}. Ripristina la capacità in licenza per riprendere le modifiche agli spazi di lavoro dei clienti.",
+    "accountTitle": "IT co-gestito",
+    "checkoutUnavailable": "Il checkout integrato non è disponibile. Riprova dopo aver ripristinato la configurazione dei pagamenti.",
+    "pendingCapacity_one": "È in sospeso un acquisto di {{count}} postazione.",
+    "pendingCapacity_other": "È in sospeso un acquisto di {{count}} postazioni.",
+    "previewError": "Impossibile calcolare il prezzo di questa modifica. Aggiorna e riprova.",
+    "purchaseNeedsAdmin": "Un amministratore dell'account deve aggiungere capacità co-gestita.",
+    "purchaseProviderUnconfigured": "Il fornitore di pagamenti non è configurato.",
+    "purchaseUnavailable": "L'acquisto di co-gestione ospitata non è disponibile in questa distribuzione."
   }
 }
