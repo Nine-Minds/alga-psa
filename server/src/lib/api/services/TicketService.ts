@@ -2768,6 +2768,7 @@ export class TicketService extends BaseService<ITicket> {
         apiThreadId = apiGeneratedIds.thread_id;
         apiIsInternal = data.is_internal || false;
         // `{}` with zero SQL natively; fails closed for requester-visible staff comments in co-managed.
+        // LEVERAGE: pattern thread-audience-insert — nativeThreadAudience + spread into the comment_threads insert + label the publication payload is repeated at 5 sites (ticketModel, Comment.insert, optimizedTicketActions, ticketActions, TicketService); a single 'insertCommentThread' write path below would own it
         apiThreadAudience = await nativeThreadAudience(trx, context.tenant, {
           isInternal: apiIsInternal,
           authorType: apiAuthor.authorType,

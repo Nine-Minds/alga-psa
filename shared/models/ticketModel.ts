@@ -1615,6 +1615,7 @@ export class TicketModel {
 
     // Audience of a NEW thread: {} (no SQL) for internal notes, plain authors and PSA tenants;
     // fails closed in a co-managed workspace when a staff comment names no audience.
+    // LEVERAGE: pattern thread-audience-insert — nativeThreadAudience + spread into the comment_threads insert + label the publication payload is repeated at 5 sites (ticketModel, Comment.insert, optimizedTicketActions, ticketActions, TicketService); a single 'insertCommentThread' write path below would own it
     const threadAudience = parentCommentId ? {} : await nativeThreadAudience(trx, tenant, {
       isInternal: commentIsInternal,
       authorType: dbAuthorType,

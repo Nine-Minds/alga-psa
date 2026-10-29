@@ -265,6 +265,7 @@ const Comment = {
 
         // {} with zero SQL for internal notes, plain authors and PSA tenants; fails closed in a
         // co-managed workspace when staff post a requester-visible comment without an audience.
+        // LEVERAGE: pattern thread-audience-insert — nativeThreadAudience + spread into the comment_threads insert + label the publication payload is repeated at 5 sites (ticketModel, Comment.insert, optimizedTicketActions, ticketActions, TicketService); a single 'insertCommentThread' write path below would own it
         const threadAudience = collaboration
           ? collaborationThreadAudience(Boolean(comment.is_internal), requestedAudience, collaboration, tenant)
           : await nativeThreadAudience(trx, tenant, {

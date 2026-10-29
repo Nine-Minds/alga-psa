@@ -2164,6 +2164,7 @@ export const addTicketComment = withAuth(async (
       });
 
       // Authored by staff here; `{}` with zero SQL natively, fail-closed in a co-managed workspace.
+      // LEVERAGE: pattern thread-audience-insert — nativeThreadAudience + spread into the comment_threads insert + label the publication payload is repeated at 5 sites (ticketModel, Comment.insert, optimizedTicketActions, ticketActions, TicketService); a single 'insertCommentThread' write path below would own it
       const threadAudience = await nativeThreadAudience(trx, tenant, { isInternal, authorType: 'internal', audience: audienceId });
 
       await tenantScopedTable(trx, 'comment_threads', tenant).insert({
