@@ -29,7 +29,7 @@ export function registerMetaUtilityV1Routes(registry: ApiOpenApiRegistry) {
   const ApiError = registry.registerSchema(
     'MetaUtilityApiErrorV1',
     zOpenApi.object({
-      error: zOpenApi.unknown(),
+      error: zOpenApi.unknown().optional(),
       message: zOpenApi.string().optional(),
       details: zOpenApi.unknown().optional(),
       success: zOpenApi.boolean().optional(),

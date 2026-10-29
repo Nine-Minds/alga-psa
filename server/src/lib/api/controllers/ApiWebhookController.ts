@@ -1210,7 +1210,7 @@ export class ApiWebhookController {
               conditions: z.array(z.object({
                 field: z.string(),
                 operator: z.enum(['equals', 'not_equals', 'contains', 'not_contains', 'greater_than', 'less_than', 'in', 'not_in']),
-                value: z.any()
+                value: z.any().optional()
               })).optional(),
               tags: z.array(z.string()).optional()
             }).optional()
@@ -1271,7 +1271,7 @@ export class ApiWebhookController {
               conditions: z.array(z.object({
                 field: z.string(),
                 operator: z.enum(['equals', 'not_equals', 'contains', 'not_contains', 'greater_than', 'less_than', 'in', 'not_in']),
-                value: z.any()
+                value: z.any().optional()
               })).optional(),
               tags: z.array(z.string()).optional()
             }).optional()

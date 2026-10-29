@@ -607,7 +607,7 @@ export const BaseEventSchema = z.object({
   id: z.string().guid(),
   eventType: EventTypeEnum,
   timestamp: z.string().datetime(),
-  payload: z.unknown(),
+  payload: z.unknown().optional(),
 });
 
 // Ticket event payload schema

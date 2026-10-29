@@ -289,7 +289,7 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
       event_id: zOpenApi.string(),
       event_type: zOpenApi.string(),
       request_headers: zOpenApi.record(zOpenApi.string(), zOpenApi.string()).nullable(),
-      request_body: zOpenApi.unknown().nullable(),
+      request_body: zOpenApi.unknown().optional().nullable(),
       response_status_code: zOpenApi.number().int().nullable(),
       response_headers: zOpenApi.record(zOpenApi.string(), zOpenApi.string()).nullable(),
       response_body: zOpenApi.string().nullable(),
@@ -545,8 +545,8 @@ export function registerWebhookRoutes(registry: ApiOpenApiRegistry) {
   const TicketChangeEntry = registry.registerSchema(
     'TicketWebhookChangeEntryV1',
     zOpenApi.object({
-      previous: zOpenApi.unknown().nullable(),
-      new: zOpenApi.unknown().nullable(),
+      previous: zOpenApi.unknown().optional().nullable(),
+      new: zOpenApi.unknown().optional().nullable(),
     }),
   );
 

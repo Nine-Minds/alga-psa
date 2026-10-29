@@ -288,7 +288,7 @@ export function registerTacticalRmmWorkflowActionsV2(): void {
       run_requested: z.boolean(),
       agent_id: z.string(),
       output: z.string().nullable(),
-      vendor_response: z.unknown().nullable()
+      vendor_response: z.unknown().optional().nullable()
     }),
     ui: {
       label: 'Run script',
@@ -332,7 +332,7 @@ export function registerTacticalRmmWorkflowActionsV2(): void {
       run_requested: z.boolean(),
       agent_id: z.string(),
       output: z.string().nullable(),
-      vendor_response: z.unknown().nullable()
+      vendor_response: z.unknown().optional().nullable()
     }),
     ui: {
       label: 'Run command',

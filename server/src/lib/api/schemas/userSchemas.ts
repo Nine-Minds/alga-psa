@@ -155,14 +155,14 @@ export const userWithTeamsResponseSchema = userWithRolesResponseSchema.extend({
 // User preferences schemas
 export const userPreferenceSchema = z.object({
   setting_name: z.string().min(1, 'Setting name is required').max(100),
-  setting_value: z.any(),
+  setting_value: z.any().optional(),
   updated_at: dateSchema.optional()
 });
 
 export const createUserPreferenceSchema = z.object({
   user_id: uuidSchema,
   setting_name: z.string().min(1, 'Setting name is required').max(100),
-  setting_value: z.any()
+  setting_value: z.any().optional()
 });
 
 export const bulkUpdateUserPreferencesSchema = z.object({
@@ -173,7 +173,7 @@ export const bulkUpdateUserPreferencesSchema = z.object({
 export const userPreferenceResponseSchema = z.object({
   user_id: uuidSchema,
   setting_name: z.string(),
-  setting_value: z.any(),
+  setting_value: z.any().optional(),
   updated_at: dateSchema,
   tenant: uuidSchema
 });
@@ -342,7 +342,7 @@ export const userStatsResponseSchema = z.object({
 // Avatar management schemas
 export const uploadAvatarSchema = z.object({
   user_id: uuidSchema.optional(), // Optional for self-upload
-  avatar: z.any() // File will be validated separately
+  avatar: z.any().optional() // File will be validated separately
 });
 
 export const deleteAvatarSchema = z.object({
@@ -437,7 +437,7 @@ export const userBulkActionResultSchema = z.object({
   errors: z.array(z.object({
     index: z.number(),
     error: z.string(),
-    data: z.any()
+    data: z.any().optional()
   })).optional(),
   results: z.array(z.any()).optional()
 });

@@ -111,7 +111,7 @@ export const scheduledServicePriceInputSchema = z
   .object({
     currency_code: currencyCodeSchema,
     rate: minorUnitRateSchema,
-    effective_date: z.unknown(),
+    effective_date: z.unknown().optional(),
     ...echoShape,
   })
   .strict()

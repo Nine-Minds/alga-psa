@@ -39,7 +39,7 @@ export const baseFilterSchema = z.object({
 
 // Response schemas
 export const successResponseSchema = z.object({
-  data: z.any(),
+  data: z.any().optional(),
   meta: z.object({}).optional()
 });
 

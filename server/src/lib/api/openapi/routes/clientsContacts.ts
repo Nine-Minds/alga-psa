@@ -767,8 +767,8 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
     'ClientNotesResponse',
     zOpenApi.object({
       data: zOpenApi.object({
-        document: zOpenApi.unknown().nullable().describe('The linked notes document row, or null when the client has no notes.'),
-        blockData: zOpenApi.unknown().nullable().describe('BlockNote block array for the notes body, or null.'),
+        document: zOpenApi.unknown().optional().nullable().describe('The linked notes document row, or null when the client has no notes.'),
+        blockData: zOpenApi.unknown().optional().nullable().describe('BlockNote block array for the notes body, or null.'),
         lastUpdated: zOpenApi.string().nullable().describe('ISO timestamp of the last notes update, or null.'),
       }),
     }),
@@ -776,7 +776,7 @@ export function registerClientContactRoutes(registry: ApiOpenApiRegistry) {
   const ClientNotesUpdateBody = registry.registerSchema(
     'ClientNotesUpdateBody',
     zOpenApi.object({
-      blockData: zOpenApi.unknown().describe('Full BlockNote block array (or its JSON string). Replaces the existing notes document.'),
+      blockData: zOpenApi.unknown().optional().describe('Full BlockNote block array (or its JSON string). Replaces the existing notes document.'),
     }),
   );
   const clientNotesErrs = {

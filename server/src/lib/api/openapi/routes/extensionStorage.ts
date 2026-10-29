@@ -10,7 +10,7 @@ export function registerStorageRoutes(
   const StoragePutRequest = registry.registerSchema(
     'StoragePutRequest',
     zOpenApi.object({
-      value: zOpenApi.any(),
+      value: zOpenApi.any().optional(),
       metadata: zOpenApi.record(zOpenApi.string(), zOpenApi.any()).optional(),
       ttlSeconds: zOpenApi.number().int().positive().optional(),
       ifRevision: zOpenApi.number().int().nonnegative().optional(),
@@ -36,7 +36,7 @@ export function registerStorageRoutes(
       namespace: zOpenApi.string(),
       key: zOpenApi.string(),
       revision: zOpenApi.number().int().positive(),
-      value: zOpenApi.any(),
+      value: zOpenApi.any().optional(),
       metadata: zOpenApi.record(zOpenApi.string(), zOpenApi.any()),
       ttlExpiresAt: zOpenApi.string().datetime().nullable(),
       createdAt: zOpenApi.string().datetime(),
@@ -83,7 +83,7 @@ export function registerStorageRoutes(
       items: zOpenApi.array(
         zOpenApi.object({
           key: zOpenApi.string().min(1).max(256),
-          value: zOpenApi.any(),
+          value: zOpenApi.any().optional(),
           metadata: zOpenApi.record(zOpenApi.string(), zOpenApi.any()).optional(),
           ttlSeconds: zOpenApi.number().int().positive().optional(),
           ifRevision: zOpenApi.number().int().nonnegative().optional(),

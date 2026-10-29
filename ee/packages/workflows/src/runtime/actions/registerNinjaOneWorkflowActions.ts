@@ -317,7 +317,7 @@ export function registerNinjaOneWorkflowActionsV2(): void {
     outputSchema: z.object({
       run_requested: z.boolean(),
       external_device_id: z.string(),
-      vendor_response: z.unknown().nullable()
+      vendor_response: z.unknown().optional().nullable()
     }),
     ui: {
       label: 'Run script',

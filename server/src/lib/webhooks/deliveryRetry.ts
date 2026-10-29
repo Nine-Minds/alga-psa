@@ -12,7 +12,7 @@ export const deliveryEnvelopeSchema = z.object({
   event_type: z.enum(SUPPORTED_WEBHOOK_EVENTS),
   occurred_at: z.string().datetime(),
   tenant_id: z.string().guid(),
-  data: z.unknown(),
+  data: z.unknown().optional(),
 });
 
 export const RETRY_FAILED_DEFAULT_LIMIT = 500;

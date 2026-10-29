@@ -118,7 +118,7 @@ export const eventFilterSchema = z.object({
   conditions: z.array(z.object({
     field: z.string(),
     operator: z.enum(['equals', 'not_equals', 'contains', 'not_contains', 'greater_than', 'less_than', 'in', 'not_in']),
-    value: z.any()
+    value: z.any().optional()
   })).optional(),
   tags: z.array(z.string()).optional()
 }).optional();
@@ -404,8 +404,8 @@ export const webhookEventSchema = z.object({
   previous_data: z.record(z.string(), z.any()).optional(), // Previous state (for updates)
   changes: z.array(z.object({
     field: z.string(),
-    old_value: z.any(),
-    new_value: z.any()
+    old_value: z.any().optional(),
+    new_value: z.any().optional()
   })).optional(),
   
   // Context

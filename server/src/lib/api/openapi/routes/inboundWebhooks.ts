@@ -66,7 +66,7 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
       idempotencyWindowSeconds: zOpenApi.number().int(),
       handlerType: zOpenApi.enum(['direct_action', 'workflow']),
       handlerConfig: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
-      samplePayload: zOpenApi.unknown().nullable(),
+      samplePayload: zOpenApi.unknown().optional().nullable(),
       sampleCaptureExpiresAt: zOpenApi.string().datetime().nullable(),
       isActive: zOpenApi.boolean(),
       rateLimitPerMinute: zOpenApi.number().int(),
@@ -87,7 +87,7 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
       requestMethod: zOpenApi.string(),
       requestPath: zOpenApi.string(),
       requestHeaders: zOpenApi.record(zOpenApi.string(), zOpenApi.union([zOpenApi.string(), zOpenApi.array(zOpenApi.string())])),
-      requestBody: zOpenApi.unknown().nullable(),
+      requestBody: zOpenApi.unknown().optional().nullable(),
       sourceIp: zOpenApi.string().nullable(),
       userAgent: zOpenApi.string().nullable(),
       authStatus: zOpenApi.enum([
@@ -100,7 +100,7 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
       dispatchStatus: zOpenApi.enum(['pending', 'dispatched', 'duplicate', 'failed']),
       handlerOutcome: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable(),
       responseStatus: zOpenApi.number().int().nullable(),
-      responseBody: zOpenApi.unknown().nullable(),
+      responseBody: zOpenApi.unknown().optional().nullable(),
       durationMs: zOpenApi.number().int().nullable(),
       retryCount: zOpenApi.number().int(),
       isReplay: zOpenApi.boolean(),
@@ -245,7 +245,7 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
     'WorkflowWebhookEnvelope',
     zOpenApi.object({
       source: zOpenApi.string().describe('Inbound webhook slug.'),
-      body: zOpenApi.unknown().describe('Parsed JSON request body as received.'),
+      body: zOpenApi.unknown().optional().describe('Parsed JSON request body as received.'),
       headers: zOpenApi
         .record(zOpenApi.string(), zOpenApi.union([zOpenApi.string(), zOpenApi.array(zOpenApi.string())]))
         .describe('Filtered safe request headers.'),
@@ -452,7 +452,7 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
       params: ReceiverParams,
       headers: ReceiverHeaders,
       body: {
-        schema: zOpenApi.unknown(),
+        schema: zOpenApi.unknown().optional(),
         description: 'Source-specific JSON payload. Shape varies per inbound webhook configuration.',
       },
     },

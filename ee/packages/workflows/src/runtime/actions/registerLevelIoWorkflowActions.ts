@@ -434,7 +434,7 @@ export function registerLevelIoWorkflowActionsV2(): void {
     outputSchema: z.object({
       triggered: z.boolean(),
       webhook_token: z.string(),
-      vendor_response: z.unknown().nullable()
+      vendor_response: z.unknown().optional().nullable()
     }),
     ui: {
       label: 'Trigger automation',
@@ -474,7 +474,7 @@ export function registerLevelIoWorkflowActionsV2(): void {
     }),
     outputSchema: z.object({
       run: runSchema,
-      steps: z.unknown().nullable()
+      steps: z.unknown().optional().nullable()
     }),
     ui: {
       label: 'Get automation run',

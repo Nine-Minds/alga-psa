@@ -45,8 +45,8 @@ export const updatedFieldsSchema = z.array(z.string()).describe('Dot-paths of up
 export const changesSchema = z
   .record(z.string(), 
     z.object({
-      previous: z.unknown(),
-      new: z.unknown(),
+      previous: z.unknown().optional(),
+      new: z.unknown().optional(),
     })
   )
   .describe('Map of dot-path -> { previous, new }')

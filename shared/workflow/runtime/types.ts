@@ -508,7 +508,7 @@ export const envelopeSchema = z.object({
     workflowVersion: z.number(),
     startedAt: z.string()
   }).strict(),
-  payload: z.unknown(),
+  payload: z.unknown().optional(),
   meta: z.object({
     state: z.string().optional(),
     traceId: z.string().optional(),
