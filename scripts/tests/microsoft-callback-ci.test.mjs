@@ -39,6 +39,9 @@ test('the compose override leaves the image to the development runtime file and 
   assert.equal(server.environment.NATIVE_MICROSOFT_OIDC_SOURCE_EMAIL, 'synthetic@example.invalid');
   for (const target of ['/callback-output', '/app/server/.next/microsoft-oidc-callback', '/app/server/node_modules/.cache/webpack']) assert.ok(server.volumes.find(v => v.target === target && v.read_only !== true));
   assert.equal(server.volumes.find(v => v.target === DEVELOPMENT_RUNTIME_WORKSPACE_TARGET), undefined, 'the checkout mount belongs to the development runtime file');
+  // A mount point directly under the mounted checkout would be materialised
+  // there as an untracked path and fail the wrapper's clean-source check.
+  assert.ok(server.volumes.every(v => !/^\/app\/[^/]+$/.test(v.target)), 'nothing is mounted directly under the checkout');
 });
 test('the development runtime compose file mounts the checkout into the pinned image', () => {
   const compose = yaml.load(readFileSync(DEVELOPMENT_RUNTIME_COMPOSE_FILE, 'utf8'));

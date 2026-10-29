@@ -99,4 +99,11 @@ test('development-mode checks compile in the development runtime, never in the p
   }
   assert.match(read('ee/server/Dockerfile'), /npm install --omit=dev/);
   assert.match(read('Dockerfile'), /npm install --omit=dev/);
+  // /app is the mounted checkout: a mount point directly under it would be
+  // materialised as an untracked file in the checkout and fail the wrapper's
+  // clean-source check, which is exactly what happened to the callback once.
+  const teams = steps.find(entry => entry.id === 'teams_development_server');
+  assert.doesNotMatch(teams.run, /target: '\/app\/[^/']+'/, 'the Teams override mounts nothing directly under the checkout');
+  assert.doesNotMatch(teams.run, /\/app\/(start-teams-development-ci|check-teams-development-auth|capture-teams-static-chunks)\.mjs/, 'the Teams harness runs from its checkout paths');
+  assert.match(steps.find(entry => entry.id === 'teams_auth_preflight').run, /\/app\/e2e-tests\/harness\/check-teams-development-auth\.mjs/);
 });
