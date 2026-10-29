@@ -25,6 +25,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   co_management_relationships: { scope: 'tenant' },
   co_management_project_scopes: { scope: 'tenant' },
   co_management_staff_assignments: { scope: 'tenant' },
+  co_managed_project_task_references: { scope: 'tenant' },
   collaboration_actor_references: { scope: 'tenant' },
   co_managed_participation_evidence: { scope: 'tenant' },
   co_management_delegated_grants: { scope: 'tenant' },

@@ -689,6 +689,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'co_management_delegated_grants', deletion: 'ordered' },
   { table: 'co_management_project_scopes', deletion: 'ordered' },
   { table: 'co_management_staff_assignments', deletion: 'ordered' },
+  { table: 'co_managed_project_task_references', deletion: 'ordered', clientKeyed: true },
   { table: 'collaboration_actor_references', deletion: 'ordered' },
   { table: 'co_managed_participation_evidence', deletion: 'ordered', clientKeyed: true },
   { table: 'co_management_relationships', deletion: 'ordered' },
