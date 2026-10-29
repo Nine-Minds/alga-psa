@@ -83,3 +83,33 @@ describe('time source registry contract (A6)', () => {
     expect(r).toEqual({ handled: true, value: 'commercial' });
   });
 });
+
+describe('time source registry is shared across module instances', () => {
+  afterEach(() => resetTimeSourcesForTests());
+
+  it('a provider registered through one module instance is seen and cleared through another', async () => {
+    const a = await import('../lib/timeSource');
+    vi.resetModules();
+    const b = await import('../lib/timeSource');
+    expect(b).not.toBe(a);
+
+    a.resetTimeSourcesForTests();
+    a.registerTimeSource('co-managed', () => fakeSource(true), { rowMarkers: ['cm'] });
+
+    expect(b.hasRegisteredTimeSources()).toBe(true);
+    const src = await b.resolveTimeSource({ tenant: 't1', rowMarker: 'cm' });
+    expect(src.kind).toBe('co-managed');
+    const out = await b.delegateToTimeSource({ tenant: 't1', rowMarker: 'cm' }, (s, c) =>
+      (s.entries as any).list(c),
+    );
+    expect(out).toMatchObject({ handled: true, value: [{ entry_id: 'fake' }] });
+
+    b.resetTimeSourcesForTests();
+    expect(a.hasRegisteredTimeSources()).toBe(false);
+
+    b.registerTimeSource('co-managed', () => fakeSource(true));
+    expect(a.hasRegisteredTimeSources()).toBe(true);
+    a.resetTimeSourcesForTests();
+    expect(b.hasRegisteredTimeSources()).toBe(false);
+  });
+});

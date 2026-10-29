@@ -17,6 +17,12 @@
  * answering `handled: true` owns authorization for that call (see the
  * contract on `TimeSource`).
  *
+ * REGISTRY IDENTITY: the registry lives on `globalThis` (not in module scope)
+ * because Next bundles this module more than once. Registration therefore must
+ * not depend on module identity: providers are keyed by `kind`, and resolution
+ * compares `source.kind`, never object identity against `nativeTimeSource` or a
+ * factory reference. A duplicate `kind` still throws (see `registerTimeSource`).
+ *
  * `delegateToTimeSource(ctx, call)` is what call sites use. It returns
  * `{ handled: false }` without invoking anything when the resolved source is
  * native, so the call site then runs today's body verbatim.
@@ -41,7 +47,12 @@ interface Registration {
   instance?: TimeSource;
 }
 
-const registry = new Map<TimeSourceKind, Registration>();
+// One registry per process. It lives on globalThis because Next bundles this module
+// more than once; a module-level Map would give each bundle its own copy.
+const REGISTRY_KEY = Symbol.for('alga.timeSource.registry');
+type RegistryHost = typeof globalThis & { [REGISTRY_KEY]?: Map<TimeSourceKind, Registration> };
+
+const registry: Map<TimeSourceKind, Registration> = ((globalThis as RegistryHost)[REGISTRY_KEY] ??= new Map());
 
 export function registerTimeSource(
   kind: TimeSourceKind,
