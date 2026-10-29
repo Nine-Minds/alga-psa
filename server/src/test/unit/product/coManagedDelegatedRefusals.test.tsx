@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CoManagedDelegatedAdministration from '../../../components/co-managed/CoManagedDelegatedAdministration';
 import CoManagedAdministration from '../../../components/co-managed/CoManagedAdministration';
@@ -28,8 +28,15 @@ describe('delegated administration refusals', () => {
       mocks.screen.mockResolvedValue(customerScreen()); mocks.revoke.mockResolvedValue({ ok: false, errorCode: code });
       render(<CoManagedDelegatedAdministration relationshipId="r1" />);
       fireEvent.click(await screen.findByRole('button', { name: 'Revoke' }));
-      await waitFor(() => expect(mocks.screen).toHaveBeenCalledTimes(2));
+      // The refusal shows, and once the post-revoke reload lands the grant (and its Revoke button) is back beside it.
       expect(await screen.findByText(text)).toBeTruthy();
+      await waitFor(() => expect(mocks.screen).toHaveBeenCalledTimes(2));
+      expect(await screen.findByRole('button', { name: 'Revoke' })).toBeTruthy();
+      // Let any further renders settle: the translation mock hands out a fresh `t` on every render, so a fetch
+      // that depended on `t` would keep reloading here. Exactly the initial load plus the post-revoke reload.
+      await act(async () => { await new Promise(resolve => setTimeout(resolve, 50)); });
+      expect(mocks.screen).toHaveBeenCalledTimes(2);
+      expect(screen.getByText(text)).toBeTruthy();
       expect(screen.getByRole('button', { name: 'Revoke' })).toBeTruthy();
     });
 
