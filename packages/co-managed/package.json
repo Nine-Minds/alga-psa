@@ -53,6 +53,30 @@
     "./sharedWorkRedaction": {
       "types": "./src/sharedWorkRedaction.ts",
       "import": "./src/sharedWorkRedaction.ts"
+    },
+    "./policy": {
+      "types": "./src/policy.ts",
+      "import": "./src/policy.ts"
+    },
+    "./sharedWork": {
+      "types": "./src/sharedWork.ts",
+      "import": "./src/sharedWork.ts"
+    },
+    "./sharedWorkRead": {
+      "types": "./src/sharedWorkRead.ts",
+      "import": "./src/sharedWorkRead.ts"
+    },
+    "./customerWork": {
+      "types": "./src/customerWork.ts",
+      "import": "./src/customerWork.ts"
+    },
+    "./delegatedAdministration": {
+      "types": "./src/delegatedAdministration.ts",
+      "import": "./src/delegatedAdministration.ts"
+    },
+    "./participationEvidence": {
+      "types": "./src/participationEvidence.ts",
+      "import": "./src/participationEvidence.ts"
     }
   },
   "scripts": {
