@@ -18,7 +18,6 @@ const KNOWN_UNLINKED_ROUTES: Record<string, string> = {
   '/msp/assets/imports': 'FeaturePlaceholder stub; link it when the feature ships',
   '/msp/assets/integrations': 'FeaturePlaceholder stub; link it when the feature ships',
   '/msp/assets/policies': 'FeaturePlaceholder stub; link it when the feature ships',
-  '/msp/co-management': 'capability-gated (co-managed admits) entry that redirects to /msp/co-managed; no nav item until L1b adds the sponsor navigation',
   '/msp/chat': 'chat ships as the right-sidebar overlay, not as a route',
   // TODO: real gap — the KB review queue (KnowledgeBasePage activeTab="review")
   // has no entry point anywhere in the app. Add one, then drop this entry.

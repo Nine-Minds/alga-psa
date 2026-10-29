@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   session: { user: { user_type: 'internal', tenant: 'tenant-1' } } as { user: { user_type: string; tenant: string } } | null,
   // Like Next's redirect, it never returns: the layout stops where it is called.
   redirect: vi.fn((url: string) => { throw new Error(`NEXT_REDIRECT ${url}`); }),
+  productCode: 'psa' as string,
+  getCoManagedWorkspaceState: vi.fn(async (): Promise<any> => ({ kind: 'none' })),
 }));
 
 vi.mock('react', async (importOriginal) => ({ ...await importOriginal<typeof import('react')>(), cache: (fn: unknown) => fn }));
@@ -30,7 +32,8 @@ vi.mock('@alga-psa/onboarding/actions/onboarding-actions/onboardingActions', () 
 }));
 vi.mock('@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale', () => ({ getHierarchicalLocaleAction: vi.fn(async () => 'en') }));
 vi.mock('server/src/app/msp/MspLayoutClient', () => ({ MspLayoutClient: () => null }));
-vi.mock('@/lib/productAccess', () => ({ getCurrentTenantProduct: vi.fn(async () => 'psa') }));
+vi.mock('@/lib/productAccess', () => ({ getCurrentTenantProduct: vi.fn(async () => mocks.productCode) }));
+vi.mock('@/lib/actions/coManagedWorkspaceActions', () => ({ getCoManagedWorkspaceState: mocks.getCoManagedWorkspaceState }));
 vi.mock('@alga-psa/billing/actions/billingCurrencyActions', () => ({ getTenantDefaultCurrencyCode: vi.fn(async () => 'USD') }));
 vi.mock('@alga-psa/clients/actions/countryActions', () => ({ getDateFormatPreference: vi.fn(async () => 'ymd') }));
 vi.mock('@alga-psa/core/i18n/countryDateFormat', () => ({ SYSTEM_DATE_FORMAT: 'ymd' }));
@@ -46,7 +49,7 @@ const { default: MspLayout } = await import('../../../../../app/msp/layout');
 
 async function layoutProps() {
   const element: any = await MspLayout({ children: null, modal: null });
-  return element.props as { needsOnboarding: boolean; canRunOnboarding: boolean };
+  return element.props as { needsOnboarding: boolean; canRunOnboarding: boolean; workspaceNotice: unknown };
 }
 
 beforeEach(() => {
@@ -54,6 +57,9 @@ beforeEach(() => {
   mocks.onboardingCompleted = false;
   mocks.session = { user: { user_type: 'internal', tenant: 'tenant-1' } };
   mocks.redirect.mockClear();
+  mocks.productCode = 'psa';
+  mocks.getCoManagedWorkspaceState.mockReset();
+  mocks.getCoManagedWorkspaceState.mockResolvedValue({ kind: 'none' });
 });
 
 describe('MSP layout sign-in redirects', () => {
@@ -93,5 +99,27 @@ describe('MSP layout onboarding gate', () => {
   it('does not force setup on a finished tenant, even for an administrator', async () => {
     mocks.onboardingCompleted = true;
     expect(await layoutProps()).toMatchObject({ needsOnboarding: false, canRunOnboarding: true });
+  });
+});
+
+describe('MSP layout co-managed workspace notice', () => {
+  it('never reads relationship state outside a customer workspace', async () => {
+    expect(await layoutProps()).toMatchObject({ workspaceNotice: null });
+    expect(mocks.getCoManagedWorkspaceState).not.toHaveBeenCalled();
+  });
+
+  it('shows an ended notice in a customer workspace whose relationship ended', async () => {
+    mocks.productCode = 'co_managed';
+    mocks.getCoManagedWorkspaceState.mockResolvedValue({ kind: 'ended', endedAt: '2026-10-01T00:00:00Z', sponsorName: 'Acme MSP' });
+    expect(await layoutProps()).toMatchObject({
+      workspaceNotice: { kind: 'ended', endedAt: '2026-10-01T00:00:00Z', sponsorName: 'Acme MSP' },
+    });
+  });
+
+  it('renders the shell without a notice when the relationship read fails', async () => {
+    mocks.productCode = 'co_managed';
+    mocks.getCoManagedWorkspaceState.mockRejectedValue(new Error('gated'));
+    expect(await layoutProps()).toMatchObject({ workspaceNotice: null });
+    expect(mocks.redirect).not.toHaveBeenCalled();
   });
 });

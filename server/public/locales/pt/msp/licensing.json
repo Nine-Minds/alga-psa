@@ -435,7 +435,8 @@
       "unnamed": "Cliente",
       "workspace": "Espaço de trabalho",
       "capacity": "{{allocated}} de {{count}} lugares cogeridos atribuídos.",
-      "openClient": "Configurar TI cogerida para este cliente"
+      "openClient": "Configurar TI cogerida para este cliente",
+      "readOnly": "A TI cogerenciada é somente leitura para este espaço de trabalho. As relações existentes são exibidas; a nova configuração não está disponível."
     },
     "provisioning": {
       "administrator": "Administrador",
@@ -497,6 +498,35 @@
     "workspaceUnavailable": {
       "description": "Este espaço de trabalho não está disponível no momento. Entre em contato com seu provedor de TI se você esperava usá-lo.",
       "title": "TI cogerenciada não está disponível"
+    },
+    "history": {
+      "title": "Histórico da relação",
+      "event": "Evento",
+      "revision": "Revisão",
+      "when": "Quando",
+      "by": "Por",
+      "you": "Você",
+      "provider": "Provedor",
+      "empty": "Ainda não há eventos da relação.",
+      "error": "Não foi possível carregar o histórico da relação.",
+      "events": {
+        "requested": "Solicitada",
+        "prepared": "Espaço de trabalho preparado",
+        "accepted": "Aceita",
+        "declined": "Recusada",
+        "terminated": "Encerrada",
+        "staff_assignments_changed": "Atribuições de equipe alteradas",
+        "customer_scope_changed": "Escopo do cliente alterado",
+        "delegation_granted": "Delegação concedida",
+        "delegation_revoked": "Delegação revogada"
+      }
+    },
+    "workspace": {
+      "title": "TI cogerida",
+      "sponsor": "Gerenciado por",
+      "none": "Este espaço de trabalho não tem relação de TI cogerida.",
+      "loading": "Carregando…",
+      "error": "Não foi possível carregar a TI cogerida."
     }
   }
 }
