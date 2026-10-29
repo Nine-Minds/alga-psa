@@ -38,7 +38,7 @@ import { TicketExternalLinksSection } from "./TicketExternalLinksSection";
 import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import type { CommentEmailRecipientsPayload } from "./CommentEmailRecipientsControl";
-import type { ComposerAudience } from "./CommentAudienceControl";
+import type { ComposerAudience, NativeComposerAudience } from "./CommentAudienceControl";
 import { TicketActivityTimeline } from "./TicketActivityTimeline";
 import { useInboundEmailViewPreference } from "../../hooks/useInboundEmailViewPreference";
 import { useSession } from 'next-auth/react';
@@ -702,6 +702,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         suppression: TicketNotificationSuppressionValue,
         isInternal: boolean = false,
         emailRecipients?: CommentEmailRecipientsPayload,
+        audienceId?: NativeComposerAudience | null,
     ): Promise<boolean> => {
         const ticketId = ticket.ticket_id;
         if (!ticketId) {
@@ -723,6 +724,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         // The close email carries these; see the email
                         // subscriber's closes_ticket handling.
                         emailRecipients,
+                        audienceId,
                     );
                     if (isReturnedActionError(result)) {
                         throw result;
@@ -2980,6 +2982,7 @@ const handleClose = () => {
         suppression: TicketNotificationSuppressionValue,
         isInternal: boolean = false,
         emailRecipients?: CommentEmailRecipientsPayload,
+        audienceId?: NativeComposerAudience | null,
     ) => {
         if (!ticket.ticket_id || !closedStatusOptions.some((option) => option.value === statusId)) {
             toast.error(t('messages.closeFailed', 'Failed to close ticket'));
@@ -3000,6 +3003,7 @@ const handleClose = () => {
                     suppression,
                     isInternal,
                     emailRecipients,
+                    audienceId,
                 );
                 if (!resolutionAdded) {
                     return false;

@@ -5,6 +5,9 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BentoTimelineTile } from './BentoTimelineTile';
+import { TicketDataSourceProvider } from '../TicketDataSourceContext';
+import { nativeTicketDataSource } from '../../../lib/nativeTicketDataSource';
+import { composeTicketDataSource, type TicketConversationConfig } from '../../../lib/ticketDataSource';
 
 /**
  * The bento composer has its own editor and its own submit path, so the Cc/Bcc
@@ -224,8 +227,15 @@ const defaultProps: BentoTimelineTileProps = {
   onDeleteComment: vi.fn(),
 };
 
+// The composer is driven by the data source's conversation config, never by the capability.
+let conversationConfig: TicketConversationConfig = { audiences: ['requester', 'organization_private'] };
+
 function renderTimeline(overrides: Partial<BentoTimelineTileProps> = {}) {
-  const result = render(<BentoTimelineTile {...defaultProps} {...overrides} />);
+  const result = render(
+    <TicketDataSourceProvider dataSource={composeTicketDataSource(nativeTicketDataSource, { conversation: conversationConfig })}>
+      <BentoTimelineTile {...defaultProps} {...overrides} />
+    </TicketDataSourceProvider>,
+  );
   fireEvent.click(document.getElementById('ticket-timeline-add-comment-btn')!);
   return result;
 }
@@ -238,6 +248,7 @@ describe('BentoTimelineTile audience composer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     capability.enabled = true;
+    conversationConfig = { audiences: ['requester', 'organization_private'] };
   });
 
   it('fails closed: send is disabled until an audience is chosen, then sends it', async () => {
@@ -297,8 +308,9 @@ describe('BentoTimelineTile audience composer', () => {
     expect(onAddReplyComment.mock.calls[0]).toHaveLength(4);
   });
 
-  it('renders the legacy Client/Internal toggle and sends no audience when the capability is off', async () => {
-    capability.enabled = false;
+  it('an entitled sponsor on an ordinary (native config) ticket keeps the legacy toggle and no audience select', async () => {
+    capability.enabled = true;
+    conversationConfig = {};
     const onAddNewComment = vi.fn().mockResolvedValue(true);
     renderTimeline({ onAddNewComment });
     fireEvent.click(screen.getByTestId('composer-editor'));
@@ -307,5 +319,24 @@ describe('BentoTimelineTile audience composer', () => {
     fireEvent.click(send());
     await waitFor(() => expect(onAddNewComment).toHaveBeenCalledTimes(1));
     expect(onAddNewComment).toHaveBeenCalledWith(false, false, null, undefined, null, undefined);
+  });
+
+  it('offers Shared IT only when the config says so', () => {
+    const options = () => Array.from((byId(AUDIENCE) as HTMLSelectElement).options).map(option => option.value);
+    renderTimeline();
+    fireEvent.click(screen.getByTestId('composer-editor'));
+    expect(options()).toEqual(['', 'requester', 'organization_private']);
+  });
+
+  it('sends shared_it when the config offers it and it is chosen', async () => {
+    conversationConfig = { audiences: ['requester', 'shared_it', 'organization_private'] };
+    const onAddNewComment = vi.fn().mockResolvedValue(true);
+    renderTimeline({ onAddNewComment });
+    fireEvent.click(screen.getByTestId('composer-editor'));
+    expect(Array.from((byId(AUDIENCE) as HTMLSelectElement).options).map(option => option.value)).toContain('shared_it');
+    fireEvent.change(byId(AUDIENCE)!, { target: { value: 'shared_it' } });
+    fireEvent.click(send());
+    await waitFor(() => expect(onAddNewComment).toHaveBeenCalledTimes(1));
+    expect(onAddNewComment.mock.calls[0][6]).toBe('shared_it');
   });
 });

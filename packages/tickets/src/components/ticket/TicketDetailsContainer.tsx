@@ -285,7 +285,8 @@ export default function TicketDetailsContainer({
         undefined,
         schedule,
         emailRecipients,
-        audienceId ?? undefined,
+        // LEVERAGE: friction comment-audience-seam — the seam types this param as the native audience, but a shared-ticket source accepts `shared_it` too.
+        (audienceId ?? undefined) as Parameters<typeof addTicketCommentWithCacheForCurrentUser>[8],
       );
       if (isReturnedActionError(newComment)) {
         throw newComment;

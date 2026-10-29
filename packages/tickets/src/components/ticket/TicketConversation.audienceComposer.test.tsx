@@ -4,6 +4,9 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import TicketConversation from './TicketConversation';
+import { TicketDataSourceProvider } from './TicketDataSourceContext';
+import { nativeTicketDataSource } from '../../lib/nativeTicketDataSource';
+import { composeTicketDataSource, type TicketConversationConfig } from '../../lib/ticketDataSource';
 
 type TicketConversationProps = React.ComponentProps<typeof TicketConversation>;
 
@@ -169,12 +172,17 @@ const defaultProps: TicketConversationProps = {
   onContentChange: vi.fn(),
 };
 
+// The composer is driven by the data source's conversation config, never by the capability.
+let conversationConfig: TicketConversationConfig = { audiences: ['requester', 'organization_private'] };
+
 function renderConversation(overrides: Partial<TicketConversationProps> = {}) {
   return render(
-    <TicketConversation
-      {...defaultProps}
-      {...overrides}
-    />
+    <TicketDataSourceProvider dataSource={composeTicketDataSource(nativeTicketDataSource, { conversation: conversationConfig })}>
+      <TicketConversation
+        {...defaultProps}
+        {...overrides}
+      />
+    </TicketDataSourceProvider>
   );
 }
 
@@ -192,6 +200,7 @@ describe('TicketConversation audience composer', () => {
       configurable: true,
     });
     capability.enabled = true;
+    conversationConfig = { audiences: ['requester', 'organization_private'] };
     vi.clearAllMocks();
   });
 
@@ -240,8 +249,21 @@ describe('TicketConversation audience composer', () => {
     expect(onAddNewComment.mock.calls[1][6]).toBe('requester');
   });
 
-  it('renders the legacy Internal toggle and sends no audience when the capability is off', async () => {
-    capability.enabled = false;
+  it('offers Shared IT only when the config says so, and sends it', async () => {
+    conversationConfig = { audiences: ['requester', 'shared_it', 'organization_private'] };
+    const onAddNewComment = vi.fn().mockResolvedValue(true);
+    const { container } = renderConversation({ onAddNewComment });
+    open(container);
+    expect(Array.from(audienceSelect(container).options).map((o) => o.value)).toEqual(['', 'requester', 'shared_it', 'organization_private']);
+    fireEvent.change(audienceSelect(container), { target: { value: 'shared_it' } });
+    fireEvent.click(submit(container));
+    await waitFor(() => expect(onAddNewComment).toHaveBeenCalledTimes(1));
+    expect(onAddNewComment.mock.calls[0][6]).toBe('shared_it');
+  });
+
+  it('an entitled sponsor on an ordinary (native config) ticket keeps the Internal toggle and no audience select', async () => {
+    capability.enabled = true;
+    conversationConfig = {};
     const onAddNewComment = vi.fn().mockResolvedValue(true);
     const { container } = renderConversation({ onAddNewComment });
     open(container);

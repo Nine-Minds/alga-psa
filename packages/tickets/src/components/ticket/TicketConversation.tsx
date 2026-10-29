@@ -5,8 +5,7 @@ import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
-import { useCapability } from '@alga-psa/ui/hooks/useCapability';
-import { CommentAudienceSelect, audienceIsInternal, type ComposerAudience } from './CommentAudienceControl';
+import { CommentAudienceSelect, audienceIsInternal, nativeComposerAudiences, useComposerAudiences, type ComposerAudience } from './CommentAudienceControl';
 import { ArrowUpDown } from 'lucide-react';
 import { IComment, ITicket } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
@@ -213,17 +212,21 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [editorPlacement, setEditorPlacement] = useState<'top' | 'bottom'>('top');
   const [reverseOrder, setReverseOrder] = useState(defaultNewestFirst);
   const [isInternalToggle, setIsInternalToggle] = useState(false);
-  // Co-managed workspaces replace the Internal toggle with a required audience choice.
+  // Shared tickets and co_managed workspaces replace the Internal toggle with a required audience
+  // choice, driven by the data source's conversation config (never by a tenant-wide capability).
   // There is deliberately no default: submit stays blocked until the author picks one.
-  const { enabled: coManagedEnabled } = useCapability('co-managed');
-  const useAudienceComposer = coManagedEnabled && !hideInternalTab;
+  const configuredAudiences = useComposerAudiences();
+  const useAudienceComposer = configuredAudiences != null && !hideInternalTab;
   const [composerAudience, setComposerAudience] = useState<ComposerAudience | null>(null);
-  const audienceMissing = useAudienceComposer && composerAudience == null;
+  const [isResolutionToggle, setIsResolutionToggle] = useState(false);
+  // A resolution closes the ticket through the native path, so it never offers `shared_it`.
+  const offeredAudiences = configuredAudiences == null ? [] : isResolutionToggle ? nativeComposerAudiences(configuredAudiences) : configuredAudiences;
+  const chosenAudience = composerAudience != null && offeredAudiences.includes(composerAudience) ? composerAudience : null;
+  const audienceMissing = useAudienceComposer && chosenAudience == null;
   const handleAudienceChange = (next: ComposerAudience) => {
     setComposerAudience(next);
     setIsInternalToggle(audienceIsInternal(next));
   };
-  const [isResolutionToggle, setIsResolutionToggle] = useState(false);
   // One-off Cc/Bcc for the comment being composed. Separate drafts for the main
   // composer and the reply composer so one never leaks into the other.
   const emailRecipients = useCommentEmailRecipientsDraft();
@@ -389,7 +392,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             : null,
           // Never sent with an internal note, even though the draft is kept.
           showEmailRecipients && !isInternalToggle ? emailRecipients.payload : undefined,
-          ...(useAudienceComposer ? [composerAudience] as const : []),
+          ...(useAudienceComposer ? [chosenAudience] as const : []),
         );
         if (success) {
           emailRecipients.reset();
@@ -862,7 +865,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           {useAudienceComposer && (
             <CommentAudienceSelect
               id={`${compId}-audience-select`}
-              value={composerAudience}
+              audiences={offeredAudiences}
+              value={chosenAudience}
               onChange={handleAudienceChange}
               disabled={isSubmitting}
             />

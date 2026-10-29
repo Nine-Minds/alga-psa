@@ -5,13 +5,24 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import type { CommentAudience } from '@alga-psa/types';
+import { useTicketDataSource } from './TicketDataSourceContext';
 
+/** Any audience a composer may name; which ones are offered is the data source's `conversation.audiences`. */
+export type ComposerAudience = CommentAudience;
 /**
- * Audiences the native composer may name. `shared_it` needs the co-managed command's
- * authority, so it is never selectable here (it still renders as a badge).
+ * Audiences the NATIVE write path accepts. `shared_it` needs the co-managed command's
+ * authority, so a native write (and the close-with-resolution flow) never carries it.
  */
-export type ComposerAudience = Extract<CommentAudience, 'requester' | 'organization_private'>;
-export const COMPOSER_AUDIENCES: readonly ComposerAudience[] = ['requester', 'organization_private'];
+export type NativeComposerAudience = Extract<CommentAudience, 'requester' | 'organization_private'>;
+
+/** The composer's audience choices from the data source; null means the legacy Internal toggle. */
+export function useComposerAudiences(): readonly ComposerAudience[] | null {
+  const audiences = useTicketDataSource().conversation.audiences;
+  return audiences && audiences.length > 0 ? audiences : null;
+}
+
+export const nativeComposerAudiences = (audiences: readonly ComposerAudience[]): NativeComposerAudience[] =>
+  audiences.filter((audience): audience is NativeComposerAudience => audience !== 'shared_it');
 
 export const audienceIsInternal = (audience: CommentAudience | null | undefined): boolean =>
   audience != null && audience !== 'requester';
@@ -47,13 +58,14 @@ export function CommentAudienceBadge({ audience, id }: { audience: CommentAudien
 
 interface CommentAudienceSelectProps {
   id: string;
+  audiences: readonly ComposerAudience[];
   value: ComposerAudience | null;
   onChange: (audience: ComposerAudience) => void;
   disabled?: boolean;
 }
 
 /** Audience picker for the composer. No default: the author must choose (fail-closed). */
-export function CommentAudienceSelect({ id, value, onChange, disabled }: CommentAudienceSelectProps) {
+export function CommentAudienceSelect({ id, audiences, value, onChange, disabled }: CommentAudienceSelectProps) {
   const { t } = useTranslation('features/tickets');
   const labelOf = useAudienceLabels();
   return (
@@ -62,9 +74,9 @@ export function CommentAudienceSelect({ id, value, onChange, disabled }: Comment
         id={id}
         value={value ?? ''}
         onValueChange={(next: string) => {
-          if ((COMPOSER_AUDIENCES as readonly string[]).includes(next)) onChange(next as ComposerAudience);
+          if ((audiences as readonly string[]).includes(next)) onChange(next as ComposerAudience);
         }}
-        options={COMPOSER_AUDIENCES.map((audience) => ({ value: audience, label: labelOf(audience) }))}
+        options={audiences.map((audience) => ({ value: audience, label: labelOf(audience) }))}
         placeholder={t('conversation.audience.placeholder', 'Who can see this?')}
         disabled={disabled}
       />
