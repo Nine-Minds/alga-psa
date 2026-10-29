@@ -17684,6 +17684,11 @@ components:
                   - string
                   - "null"
                 format: uuid
+              billing_mode:
+                type: string
+                enum:
+                  - commercial
+                  - operational
             required:
               - tenant
               - entry_id
@@ -17711,6 +17716,7 @@ components:
               - contract_line_unresolved_reason
               - catalog_pricing_acknowledged_at
               - catalog_pricing_acknowledged_by
+              - billing_mode
       required:
         - data
     WorkV1TimeSheetSummaryResponse:
@@ -17824,6 +17830,10 @@ components:
                   - string
                   - "null"
                 format: uuid
+              notes:
+                type:
+                  - string
+                  - "null"
               user_name:
                 type: string
               time_entries:
@@ -17967,6 +17977,11 @@ components:
                         - string
                         - "null"
                       format: uuid
+                    billing_mode:
+                      type: string
+                      enum:
+                        - commercial
+                        - operational
                   required:
                     - tenant
                     - entry_id
@@ -17994,6 +18009,7 @@ components:
                     - contract_line_unresolved_reason
                     - catalog_pricing_acknowledged_at
                     - catalog_pricing_acknowledged_by
+                    - billing_mode
             required:
               - tenant
               - id
@@ -18003,6 +18019,7 @@ components:
               - submitted_at
               - approved_at
               - approved_by
+              - notes
               - user_name
       required:
         - data

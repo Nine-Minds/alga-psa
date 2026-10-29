@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useFeatureFlag, useCapability } from '@alga-psa/ui/hooks';
+import { useCapability, useFeatureFlag } from '@alga-psa/ui/hooks';
+import { resolveUiSlots } from '@alga-psa/ui/capability/uiSlotRegistry';
+import '@/config/coManagedMenu';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import Sidebar from './Sidebar';
 import {
@@ -211,9 +213,15 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
 
   // Filter and modify menu items based on permissions
   const menuSections = useMemo<NavigationSection[]>(() => {
+    // Capability-gated contributions join before the edition → tier →
+    // permission → product chain, which then filters them like any menu item.
+    const contributedSections = resolveUiSlots<NavigationSection>(
+      'msp.navigation.group',
+      new Set(coManagedServed ? ['co-managed' as const] : []),
+    ).flatMap((slot) => (slot.props ? [slot.props] : []));
     const baseSections = useNavigationSections
-      ? originalSections
-      : [{ title: '', items: legacyMenuItems } satisfies NavigationSection];
+      ? [...originalSections, ...contributedSections]
+      : [{ title: '', items: legacyMenuItems } satisfies NavigationSection, ...contributedSections];
 
     const filteredSections = baseSections.map((section) => ({
       ...section,
