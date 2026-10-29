@@ -3,7 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import type { IContact } from '@alga-psa/types';
 import type { ContactFilterStatus } from './types';
 import { ContactModel } from '../models/contactModel';
-import { getContactLocationsForContacts } from '../models/contactLocation';
+import { attachContactLocations } from '../models/contactLocation';
 
 type ContactSortBy = 'full_name' | 'created_at' | 'email' | 'phone_number';
 
@@ -49,29 +49,12 @@ function tenantScopedTable(
  * Attaches `locations` and `primaryLocation` in one batched read, the same pass the display tags
  * take, so a picker page costs one extra query rather than one per row.
  */
-async function withLocations<T extends { contact_name_id: string }>(
+function withLocations<T extends { contact_name_id: string }>(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   contacts: T[],
 ): Promise<T[]> {
-  if (contacts.length === 0) return contacts;
-  const byContact = await getContactLocationsForContacts(
-    knexOrTrx,
-    tenant,
-    contacts.map((contact) => contact.contact_name_id),
-  );
-  return contacts.map((contact) => {
-    const locations = byContact.get(contact.contact_name_id) ?? [];
-    const primary = locations.find((location) => location.is_primary)
-      ?? (locations.length === 1 ? locations[0] : null);
-    return {
-      ...contact,
-      locations,
-      primaryLocation: primary
-        ? { location_id: primary.location_id, location_name: primary.location_name }
-        : null,
-    };
-  });
+  return attachContactLocations(knexOrTrx, tenant, contacts, (contact) => contact.contact_name_id) as Promise<T[]>;
 }
 
 export async function getContactByContactNameId(

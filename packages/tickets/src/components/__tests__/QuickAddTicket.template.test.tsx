@@ -76,7 +76,8 @@ vi.mock('../../actions/ticketFormActions', () => ({
 
 vi.mock('../../actions/clientLookupActions', () => ({
   getContactsByClient: (...args: unknown[]) => getContactsByClientMock(...args),
-  getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args)
+  getClientLocations: (...args: unknown[]) => getClientLocationsMock(...args),
+  getContactEffectiveLocation: vi.fn().mockResolvedValue({ locationId: null, locations: [], workArrangement: null }),
 }));
 
 // Lightweight non-modal Dialog: the real radix-based Dialog aria-hides sibling

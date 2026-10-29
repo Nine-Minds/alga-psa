@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 /**
  * The tri-state location contract, as the form boundary expresses it.
@@ -11,7 +11,19 @@ import { describe, expect, it } from 'vitest';
  * The resolution itself is covered by shared/models/contactLocation.test.ts; this pins the parse
  * that decides whether resolution happens at all, because that is where the bug would live: before
  * this change an omitted field arrived as `null` and would have suppressed the autofill entirely.
+ *
+ * The guard is imported, not re-implemented: a copy of it here is exactly how the field-name bug
+ * (`contact_name_id` on an input that carries `contact_id`) survived a green suite.
  */
+
+// The guard is pure; the module's reads are covered by contactLocation.test.ts.
+vi.mock('@alga-psa/db', () => ({
+  tenantDb: () => {
+    throw new Error('ticketLocationAutofill.test.ts exercises the pure guard only');
+  },
+}));
+
+import { shouldResolveContactLocation } from './contactLocation';
 
 /** Mirrors the parse in packages/tickets/src/actions/ticketActions.ts. */
 function parseFormLocationId(value: FormDataEntryValue | null): string | null | undefined {
@@ -20,14 +32,6 @@ function parseFormLocationId(value: FormDataEntryValue | null): string | null | 
     : value === 'none'
       ? null
       : (value as string);
-}
-
-/** Mirrors the guard in TicketModel.createTicket. */
-function shouldResolveFromContact(input: {
-  location_id?: string | null;
-  contact_name_id?: string | null;
-}): boolean {
-  return input.location_id === undefined && Boolean(input.contact_name_id);
 }
 
 describe('ticket location form parse', () => {
@@ -57,19 +61,19 @@ describe('ticket location form parse', () => {
 
 describe('createTicket autofill guard', () => {
   it('resolves only when nobody said and a contact is set', () => {
-    expect(shouldResolveFromContact({ contact_name_id: 'ada' })).toBe(true);
+    expect(shouldResolveContactLocation({ contact_id: 'ada' })).toBe(true);
   });
 
   it('keeps an explicit None rather than filling it in', () => {
-    expect(shouldResolveFromContact({ location_id: null, contact_name_id: 'ada' })).toBe(false);
+    expect(shouldResolveContactLocation({ location_id: null, contact_id: 'ada' })).toBe(false);
   });
 
   it('keeps a chosen location', () => {
-    expect(shouldResolveFromContact({ location_id: 'loc-1', contact_name_id: 'ada' })).toBe(false);
+    expect(shouldResolveContactLocation({ location_id: 'loc-1', contact_id: 'ada' })).toBe(false);
   });
 
   it('does nothing without a contact', () => {
-    expect(shouldResolveFromContact({})).toBe(false);
-    expect(shouldResolveFromContact({ contact_name_id: null })).toBe(false);
+    expect(shouldResolveContactLocation({})).toBe(false);
+    expect(shouldResolveContactLocation({ contact_id: null })).toBe(false);
   });
 });

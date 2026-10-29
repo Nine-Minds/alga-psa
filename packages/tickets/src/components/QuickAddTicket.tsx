@@ -319,7 +319,14 @@ export function QuickAddTicket({
   const [locationId, setLocationId] = useState<string | null>(null);
   // Who put the location there. A location the dispatcher chose by hand is never replaced when the
   // contact changes; one the contact filled is replaced, or cleared when the contact is cleared.
-  const [locationSource, setLocationSource] = useState<'user' | 'contact' | null>(null);
+  // A ref, not state: the duplicate/prefill sequence reads it in the same pass that writes it, and
+  // a state value would still be the pre-render one there (the bug that left a prefilled contact's
+  // location unresolved). Nothing renders from it.
+  const locationSourceRef = useRef<'user' | 'contact' | null>(null);
+  const applyLocation = (nextLocationId: string | null, source: 'user' | 'contact' | null) => {
+    locationSourceRef.current = source;
+    setLocationId(nextLocationId);
+  };
   const [contactLocationIds, setContactLocationIds] = useState<string[]>([]);
   const [contactPrimaryLocationId, setContactPrimaryLocationId] = useState<string | null>(null);
   const [isPrefilledClient, setIsPrefilledClient] = useState(false);
@@ -484,6 +491,15 @@ export function QuickAddTicket({
           } else {
             applyTemplateSource(templateResult);
           }
+        }
+
+        // Last, so a duplicate's own location (hand-picked) still wins: a contact that arrived
+        // prefilled fills the Location select exactly as picking that contact here would.
+        const effectiveContactId = duplicateResult && !isReturnedActionError(duplicateResult)
+          ? duplicateResult.contact?.id ?? null
+          : prefilledContact?.id ?? null;
+        if (effectiveContactId) {
+          await loadContactLocations(effectiveContactId);
         }
       } catch (error) {
         console.error('Error fetching form data:', error);
@@ -720,8 +736,7 @@ export function QuickAddTicket({
     setExtraAssetIds([]);
     setContactId(null);
     // The location belongs to the client that was selected before.
-    setLocationId(null);
-    setLocationSource(null);
+    applyLocation(null, null);
     setContactLocationIds([]);
     setContactPrimaryLocationId(null);
     clearErrorIfSubmitted();
@@ -834,9 +849,8 @@ export function QuickAddTicket({
     setClientId(source.client.id);
     setSelectedClientType((source.client.type as 'company' | 'individual' | null) ?? null);
     setContactId(source.contact?.id ?? null);
-    setLocationId(source.location_id ?? null);
     // A duplicate carries the original's location deliberately; treat it as a hand-picked value.
-    setLocationSource(source.location_id ? 'user' : null);
+    applyLocation(source.location_id ?? null, source.location_id ? 'user' : null);
     setAssignedTo(source.assigned_to ?? '');
     setAssignedTeamId(source.assigned_team_id ?? null);
     setTempAdditionalAgents(
@@ -850,36 +864,40 @@ export function QuickAddTicket({
   }
 
   /**
-   * Picking a contact fills the Location select with where that person works (the same rule the
-   * model applies on save), but only when the field is empty or the previous contact filled it.
-   * Clearing the contact clears a contact-filled location and leaves a hand-picked one alone.
+   * Where this person works, marked in the select and filled in when the field is empty or the
+   * previous contact filled it — the same rule the model applies on save. Used both when the
+   * dispatcher picks a contact and when one arrives prefilled (the contact page's Create Ticket,
+   * an interaction), because to the operator those are the same thing.
    */
+  const loadContactLocations = async (contactIdToLoad: string) => {
+    try {
+      const effective = await getContactEffectiveLocation(contactIdToLoad);
+      setContactLocationIds(effective.locations.map((location) => location.location_id));
+      setContactPrimaryLocationId(
+        effective.locations.find((location) => location.is_primary)?.location_id ?? null,
+      );
+      if (locationSourceRef.current !== 'user') {
+        applyLocation(effective.locationId, effective.locationId ? 'contact' : null);
+      }
+    } catch (error) {
+      console.error('Error resolving the contact effective location:', error);
+    }
+  };
+
+  /** Clearing the contact clears a contact-filled location and leaves a hand-picked one alone. */
   const handleContactSelect = async (nextContactId: string | null) => {
     setContactId(nextContactId);
 
     if (!nextContactId) {
       setContactLocationIds([]);
       setContactPrimaryLocationId(null);
-      if (locationSource === 'contact') {
-        setLocationId(null);
-        setLocationSource(null);
+      if (locationSourceRef.current === 'contact') {
+        applyLocation(null, null);
       }
       return;
     }
 
-    try {
-      const effective = await getContactEffectiveLocation(nextContactId);
-      setContactLocationIds(effective.locations.map((location) => location.location_id));
-      setContactPrimaryLocationId(
-        effective.locations.find((location) => location.is_primary)?.location_id ?? null,
-      );
-      if (locationSource !== 'user') {
-        setLocationId(effective.locationId);
-        setLocationSource(effective.locationId ? 'contact' : null);
-      }
-    } catch (error) {
-      console.error('Error resolving the contact effective location:', error);
-    }
+    await loadContactLocations(nextContactId);
   };
 
   // The contact's own sites first and marked, then everything else the client has.
@@ -1026,7 +1044,10 @@ export function QuickAddTicket({
     setPriorityId('');
     setClientId(prefilledClient?.id || '');
     setContactId(prefilledContact?.id || null);
-    setLocationId(null);
+    // Nobody has said anything about the location yet, so the next contact may fill it again.
+    applyLocation(null, null);
+    setContactLocationIds([]);
+    setContactPrimaryLocationId(null);
     setLocations([]);
     setContacts([]);
     // Reset isPrefilledClient - it will be set to true again if there's a prefilled client
@@ -1273,7 +1294,7 @@ export function QuickAddTicket({
 
       if (locationId) {
         formData.append('location_id', locationId);
-      } else if (locationSource === 'user') {
+      } else if (locationSourceRef.current === 'user') {
         // An explicit None, not an untouched field: the model must keep null rather than resolve.
         formData.append('location_id', 'none');
       }
@@ -1765,9 +1786,8 @@ export function QuickAddTicket({
                       id={`${id}-location`}
                       value={locationId || ''}
                       onValueChange={(value) => {
-                        setLocationId(value === 'none' ? null : value || null);
                         // Including an explicit None: the dispatcher said it, so nothing overwrites it.
-                        setLocationSource('user');
+                        applyLocation(value === 'none' ? null : value || null, 'user');
                         clearErrorIfSubmitted();
                       }}
                       options={locationOptions}

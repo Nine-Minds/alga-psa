@@ -413,7 +413,7 @@
     "featureIds": [
       "F031"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "QuickAddTicket: selecting a contact with a primary location fills the Location select and marks the source as contact"
   },
   {
@@ -422,7 +422,7 @@
     "featureIds": [
       "F031"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "QuickAddTicket: a location chosen by hand is not replaced when a contact is picked afterwards"
   },
   {
@@ -431,7 +431,7 @@
     "featureIds": [
       "F031"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "QuickAddTicket: switching contacts replaces a contact-filled location with the new contact's; clearing the contact clears it; changing the client clears both"
   },
   {
@@ -440,7 +440,7 @@
     "featureIds": [
       "F032"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "QuickAddTicket: the Location select groups the contact's locations first with the primary marked; explicit None submits null and an untouched field omits location_id"
   },
   {

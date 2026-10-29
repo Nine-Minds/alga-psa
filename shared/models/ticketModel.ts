@@ -23,7 +23,7 @@ import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib
 import { SharedNumberingService } from '../services/numberingService';
 import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
 import { resolveAssetBillingProfileId } from './assetBillingProfileModel';
-import { resolveContactLocationId } from './contactLocation';
+import { resolveContactLocationId, shouldResolveContactLocation } from './contactLocation';
 import { buildTicketCommentAddedPayload, buildTicketModelChanges } from '../lib/tickets/ticketWorkflowEventPayloads';
 
 // LEVERAGE: pattern ticket-origins-duplicate — copy of TICKET_ORIGINS in @alga-psa/types (shared cannot import types); keep both in sync
@@ -961,8 +961,8 @@ export class TicketModel {
     // `undefined` means "nobody said", so the requester's own location answers it; `null` means the
     // operator chose None and is kept. The same-client check below then runs on the resolved value,
     // so a contact at another client still fails rather than quietly attaching a foreign site.
-    if (cleanedInput.location_id === undefined && cleanedInput.contact_name_id) {
-      const resolvedLocationId = await resolveContactLocationId(trx, tenant, cleanedInput.contact_name_id);
+    if (shouldResolveContactLocation(cleanedInput)) {
+      const resolvedLocationId = await resolveContactLocationId(trx, tenant, cleanedInput.contact_id as string);
       if (resolvedLocationId) {
         cleanedInput.location_id = resolvedLocationId;
       }
