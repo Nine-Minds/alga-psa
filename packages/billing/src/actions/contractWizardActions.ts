@@ -1092,8 +1092,9 @@ export const createContractTemplateFromWizard = withAuth(async (
             ? `${submission.contract_name} - Prepaid Block ${blockIndex + 1}`
             : `${submission.contract_name} - Prepaid Block`),
         billing_frequency: submission.billing_frequency ?? 'monthly',
-        billing_timing: recurringAuthoringPolicy.billingTiming,
-        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
+        // Line stays arrears; the block fee goes in advance via its prepaid_block charge stream.
+        billing_timing: arrearsOnlyLinePolicy.billingTiming,
+        cadence_owner: arrearsOnlyLinePolicy.cadenceOwner,
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Hourly',
@@ -2235,8 +2236,9 @@ export const createClientContractFromWizard = withAuth(async (
         contract_id: contractId,
         display_order: nextDisplayOrder,
         custom_rate: null,
-        billing_timing: recurringAuthoringPolicy.billingTiming,
-        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
+        // Line stays arrears; the block fee goes in advance via its prepaid_block charge stream.
+        billing_timing: arrearsOnlyLinePolicy.billingTiming,
+        cadence_owner: arrearsOnlyLinePolicy.cadenceOwner,
         is_template: false,
       } as any);
       const blockLineId = blockLine.contract_line_id!;
@@ -2871,6 +2873,8 @@ export const getDraftContractForResume = withAuth(async (
           ),
         })),
         block: {
+          issue_mode: prepaidConfig.issue_mode ?? 'consumption',
+          rollover_periods: Number(prepaidConfig.rollover_periods ?? 0),
           block_minutes: Number(prepaidConfig.block_minutes),
           block_price: Number(prepaidConfig.block_price),
           sold_as_service_id: prepaidConfig.sold_as_service_id ?? null,

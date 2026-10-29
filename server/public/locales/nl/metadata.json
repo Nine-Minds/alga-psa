@@ -519,6 +519,15 @@
     },
     "layout": {
       "defaultTitle": "Dashboard | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "Gezamenlijk beheerde IT"
+    },
+    "coManagement": {
+      "title": "Toegang voor gezamenlijk beheer",
+      "providers": {
+        "title": "E-mail- en identiteitsproviders"
+      }
     }
   },
   "auth": {

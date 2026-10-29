@@ -70,6 +70,8 @@ export interface Relation {
   local: string;
   /** Column on `table` that matches `local`. */
   foreign: string;
+  /** Additional equality keys relating this row to its parent. */
+  correlate?: ReadonlyArray<{ local: string; foreign: string }>;
   where?: Record<string, string | number | boolean>;
   attributes: Record<string, Attribute>;
   relations?: Record<string, Relation>;

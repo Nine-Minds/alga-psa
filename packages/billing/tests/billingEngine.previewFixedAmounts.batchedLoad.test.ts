@@ -283,7 +283,8 @@ async function priceLinesIndividually(engine: any) {
   const amounts = new Map<string, number>();
   for (const line of lines) {
     if (String(line.contract_line_type ?? '').toLowerCase() !== 'fixed') continue;
-    const selection = selections?.[line.client_contract_line_id];
+    // Selections are keyed by recurring stream; a fixed line prices its `line` stream.
+    const selection = selections?.[line.client_contract_line_id]?.line;
     if (!selection) continue;
     const charges = await engine.calculateFixedPriceCharges(
       CLIENT_ID,

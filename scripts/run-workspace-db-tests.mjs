@@ -16,6 +16,7 @@ const reportPath = path.join(output, 'results.json');
 const testsPath = path.join(output, 'collected-tests.json');
 const evidencePath = path.join(output, 'evidence.json');
 const discoveryPath = path.join(output, 'discovery.json');
+const databaseName = process.env.TEST_DB_NAME || process.env.DB_NAME_SERVER || 'test_database';
 // Remove stale evidence even if the next process cannot start.
 for (const file of [collectedPath, testsPath, reportPath, evidencePath, discoveryPath]) writeFileSync(file, 'null\n');
 const env = {
@@ -31,27 +32,27 @@ const env = {
   // lack CREATE on public in CI; normal action tests still use app_user.
   HOUR_BLOCK_DB_USER: process.env.DB_USER_ADMIN || 'postgres',
   HOUR_BLOCK_DB_PASSWORD: process.env.DB_PASSWORD_ADMIN || '',
-  HOUR_BLOCK_DB_NAME: 'test_database',
-  TEST_DB_NAME: 'test_database',
-  DB_NAME_SERVER: 'test_database',
+  HOUR_BLOCK_DB_NAME: databaseName,
+  TEST_DB_NAME: databaseName,
+  DB_NAME_SERVER: databaseName,
   ACCOUNTING_SYNC_DB_TESTS: '1',
   ACCOUNTING_SYNC_DB_HOST: process.env.DB_HOST || '127.0.0.1',
   ACCOUNTING_SYNC_DB_PORT: process.env.DB_PORT || '5432',
   ACCOUNTING_SYNC_DB_USER: process.env.DB_USER_SERVER || 'app_user',
   ACCOUNTING_SYNC_DB_PASSWORD: process.env.DB_PASSWORD_SERVER || '',
-  ACCOUNTING_SYNC_DB_NAME: 'test_database',
+  ACCOUNTING_SYNC_DB_NAME: databaseName,
   OUTBOUND_DIAG_DB_TESTS: '1',
   OUTBOUND_DIAG_DB_HOST: process.env.DB_HOST || '127.0.0.1',
   OUTBOUND_DIAG_DB_PORT: process.env.DB_PORT || '5432',
   OUTBOUND_DIAG_DB_USER: process.env.DB_USER_SERVER || 'app_user',
   OUTBOUND_DIAG_DB_PASSWORD: process.env.DB_PASSWORD_SERVER || '',
-  OUTBOUND_DIAG_DB_NAME: 'test_database',
+  OUTBOUND_DIAG_DB_NAME: databaseName,
   INVOICE_LIFECYCLE_DB_TESTS: '1',
   INVOICE_LIFECYCLE_DB_HOST: process.env.DB_HOST || '127.0.0.1',
   INVOICE_LIFECYCLE_DB_PORT: process.env.DB_PORT || '5432',
   INVOICE_LIFECYCLE_DB_USER: process.env.DB_USER_SERVER || 'app_user',
   INVOICE_LIFECYCLE_DB_PASSWORD: process.env.DB_PASSWORD_SERVER || '',
-  INVOICE_LIFECYCLE_DB_NAME: 'test_database',
+  INVOICE_LIFECYCLE_DB_NAME: databaseName,
 };
 const args = ['--config', 'vitest.workspace-db.config.ts', ...process.argv.slice(2)];
 const run = (args) => spawnSync(process.execPath, [path.join(cwd, 'node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });

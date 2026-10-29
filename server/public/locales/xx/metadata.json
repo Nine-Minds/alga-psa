@@ -601,6 +601,15 @@
     },
     "layout": {
       "defaultTitle": "⟦Ḓȧşħƀȯȧřḓ | ȦŀɠȧƤŞȦ⟧"
+    },
+    "coManaged": {
+      "title": "⟦Ƈȯ-Ḿȧƞȧɠḗḓ ĪŦ⟧"
+    },
+    "coManagement": {
+      "title": "⟦Ƈȯ-Ḿȧƞȧɠḗḓ Ȧƈƈḗşş⟧",
+      "providers": {
+        "title": "⟦Ḗḿȧīŀ ȧƞḓ Īḓḗƞŧīŧẏ Ƥřȯṽīḓḗřş⟧"
+      }
     }
   },
   "share": {

@@ -42,4 +42,18 @@ describe('contract line API prepaid_block overlay', () => {
     expect(shape.prepaid_block).toBeDefined();
     expect(shape.display_kind).toBeDefined();
   });
+
+  it('accepts a cadence block with rollover and rejects conflicting terms', () => {
+    const ok = { block_minutes: 600, block_price: 150000, issue_mode: 'cadence', rollover_periods: 2 };
+    expect(prepaidBlockConfigSchema.safeParse(ok).success).toBe(true);
+    for (const bad of [
+      { ...ok, rollover_periods: 13 },
+      { ...ok, expiry_months: 6 },
+      { ...ok, trigger_threshold_percent: 20 },
+      { block_minutes: 600, block_price: 1, issue_mode: 'consumption', rollover_periods: 1 },
+      { block_minutes: 600, block_price: 1, rollover_periods: 1 },
+    ]) {
+      expect(prepaidBlockConfigSchema.safeParse(bad).success, JSON.stringify(bad)).toBe(false);
+    }
+  });
 });

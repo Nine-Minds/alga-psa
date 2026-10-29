@@ -11,9 +11,13 @@ vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: async () 
 vi.mock('@alga-psa/auth', async importOriginal => ({ ...await importOriginal<typeof import('@alga-psa/auth')>(),
   withAuth: (fn: any) => (...args: any[]) => fn(routeSession.user, { tenant: routeSession.user?.tenant }, ...args),
   hasPermission: async (_user: unknown, resource: string) => routeSession.permitted && (resource !== 'document' || routeSession.documentsPermitted),
+  checkMultiplePermissions: async (_user: unknown, checks: { resource: string; action: string }[]) => checks.map(check =>
+    ({ ...check, granted: routeSession.permitted && (check.resource !== 'document' || routeSession.documentsPermitted) })),
 }));
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: async (_user: unknown, resource: string) => routeSession.permitted && (resource !== 'document' || routeSession.documentsPermitted),
+  checkMultiplePermissions: async (_user: unknown, checks: { resource: string; action: string }[]) => checks.map(check =>
+    ({ ...check, granted: routeSession.permitted && (check.resource !== 'document' || routeSession.documentsPermitted) })),
 }));
 vi.mock('@/lib/auth/rbac', () => ({ hasPermission: async () => routeSession.permitted }));
 import { createTestDbConnection } from '../../../test-utils/dbConfig';

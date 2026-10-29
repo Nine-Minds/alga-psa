@@ -24,8 +24,13 @@ permissions:
   contents: read
 
 env:
-  # Baseline for every gate: the PR's merge base, or the previous tip on push.
-  BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+  # Inputs to scripts/ci/resolve-base.mjs, which sets BASE_SHA for every gate: the base
+  # branch tip the PR merge ref was built on (pull_request.base.sha goes stale when main
+  # moves without a PR push), or the previous tip on push.
+  EVENT_NAME: ${{ github.event_name }}
+  PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+  PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+  PUSH_BEFORE_SHA: ${{ github.event.before }}
 
 jobs:
   images:
@@ -53,6 +58,11 @@ jobs:
 
       - name: Lint rules self-tests (fixtures, meta-test, newest-30 audit)
         run: npm run test:migration-lint
+
+      - name: Resolve baseline
+        run: |
+          base="$(node scripts/ci/resolve-base.mjs)"
+          echo "BASE_SHA=$base" >> "$GITHUB_ENV"
 
       - name: Lint migrations added in this change
         run: |
@@ -91,6 +101,11 @@ jobs:
 
       - name: Drift tool self-tests
         run: node --test scripts/tests/artifact-drift.test.mjs scripts/tests/attribute-card.test.mjs
+
+      - name: Resolve baseline
+        run: |
+          base="$(node scripts/ci/resolve-base.mjs)"
+          echo "BASE_SHA=$base" >> "$GITHUB_ENV"
 
       - name: Regenerate artifacts, fail on drift or non-additive OpenAPI change
         run: |
@@ -150,9 +165,14 @@ jobs:
       - name: Install poppler-utils (pdftotext, used by smoke suites)
         run: sudo apt-get update && sudo apt-get install -y poppler-utils
 
+      - name: Resolve baseline
+        run: |
+          base="$(node scripts/ci/resolve-base.mjs)"
+          echo "BASE_SHA=$base" >> "$GITHUB_ENV"
+
       - name: Baseline schema + seed, apply PR migrations, N-1 assertions, release-tree smoke
         run: |
-          if [ -n "$BASE_SHA" ] && [ "$BASE_SHA" != "0000000000000000000000000000000000000000" ]; then
+          if [ -n "$BASE_SHA" ]; then
             node scripts/ci/upgrade-order.mjs --base "$BASE_SHA" --main-ref origin/main
           else
             node scripts/ci/upgrade-order.mjs --main-ref origin/main

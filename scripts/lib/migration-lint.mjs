@@ -225,6 +225,10 @@ function classifyAlterAction(table, action) {
   if (/^RENAME\s+(?:TO|COLUMN)\b/i.test(a) || new RegExp(String.raw`^RENAME\s+${IDENT}\s+TO\b`, 'i').test(a)) {
     return [{ type: 'rename', table }];
   }
+  // Citus refuses to rename constraints on distributed tables; drop and re-add under the wanted name instead.
+  if ((m = new RegExp(String.raw`^RENAME\s+CONSTRAINT\s+(${IDENT})\s+TO\b`, 'i').exec(a))) {
+    return [{ type: 'rename-constraint', table, name: normalizeName(m[1]) }];
+  }
   return [];
 }
 
@@ -1084,6 +1088,9 @@ export function lintMigrationSet(files, ctx) {
           break;
         case 'rename':
           if (existing(ev.table)) add(3, ev, `RENAME on existing table "${ev.table}"`);
+          break;
+        case 'rename-constraint':
+          if (existing(ev.table)) add(3, ev, `RENAME CONSTRAINT ${ev.name} on existing table "${ev.table}" (unsupported on Citus distributed tables; drop and re-add it under the wanted name)`);
           break;
         case 'set-not-null':
           if (existing(ev.table)) add(3, ev, `SET NOT NULL on existing table "${ev.table}"`);

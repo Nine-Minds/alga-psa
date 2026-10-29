@@ -410,7 +410,7 @@ export const TENANT_TABLE_FOREIGN_KEYS: readonly TenantTableForeignKey[] = [
   { child: 'hour_block_time_allocations', parent: 'time_entries', column: 'time_entry_id', deleteRule: 'CASCADE', name: 'hour_block_allocations_entry_fkey' },
   { child: 'hour_blocks', parent: 'client_contracts', column: 'client_contract_id', deleteRule: 'NO ACTION', name: 'hour_blocks_client_contract_fkey' },
   { child: 'hour_blocks', parent: 'clients', column: 'client_id', deleteRule: 'CASCADE', name: 'hour_blocks_client_fkey' },
-  { child: 'hour_blocks', parent: 'contract_line_block_issuances', column: 'issuance_id', deleteRule: 'SET NULL', name: 'hour_blocks_issuance_fkey' },
+  { child: 'hour_blocks', parent: 'contract_line_block_issuances', column: 'issuance_id', deleteRule: 'NO ACTION', name: 'hour_blocks_issuance_fkey' },
   { child: 'hour_blocks', parent: 'contract_lines', column: 'contract_line_id', deleteRule: 'NO ACTION', name: 'hour_blocks_contract_line_fkey' },
   { child: 'hour_blocks', parent: 'invoice_charges', column: 'source_invoice_charge_id', deleteRule: 'SET NULL', name: 'hour_blocks_source_charge_fkey' },
   { child: 'hour_blocks', parent: 'invoices', column: 'source_invoice_id', deleteRule: 'SET NULL', name: 'hour_blocks_invoice_fkey' },

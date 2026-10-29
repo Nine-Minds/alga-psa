@@ -508,6 +508,15 @@ vi.mock('@alga-psa/auth', async () => {
   const getCurrentUser = vi.fn(async () => getApiKeyUserOverride() ?? defaultUser);
   const getCurrentUserWithRevocationCheck = vi.fn(async () => getApiKeyUserOverride() ?? defaultUser);
   const hasPermission = vi.fn().mockResolvedValue(true);
+  // Mirrors packages/auth rbac: one PermissionResult per check, in order.
+  // Delegates to hasPermission so per-test permission overrides apply to both.
+  const checkMultiplePermissions = vi.fn(async (user: any, checks: Array<{ resource: string; action: string }>, knex?: any) =>
+    Promise.all(checks.map(async ({ resource, action }) => ({
+      resource,
+      action,
+      granted: Boolean(await hasPermission(user, resource, action, knex)),
+    }))),
+  );
 
   const resolveTenant = async (user: any): Promise<string> => {
     try {
@@ -576,6 +585,7 @@ vi.mock('@alga-psa/auth', async () => {
     getCurrentUser,
     getCurrentUserWithRevocationCheck,
     hasPermission,
+    checkMultiplePermissions,
     withAuth,
     withAuthCheck,
     withOptionalAuth,

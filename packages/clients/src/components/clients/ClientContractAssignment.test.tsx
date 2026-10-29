@@ -20,6 +20,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createInstance } from 'i18next';
+import { normalizeClientContract } from '@alga-psa/shared/billingClients/clientContracts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -64,11 +65,23 @@ vi.mock('@alga-psa/clients/context/ClientCrossFeatureContext', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({
-    t: translateMock,
-  }),
-}));
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  // The real formatter, so the assertions cover the calendar-date rule rather than a stub.
+  const { formatDateValue } = await import('@alga-psa/ui/lib/i18n/formatDateValue');
+  return {
+    useTranslation: () => ({
+      t: translateMock,
+    }),
+    useFormatters: () => ({
+      locale: 'en',
+      formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) =>
+        formatDateValue(date, 'en', options),
+    }),
+  };
+});
+
+// normalizeClientContract is pure; its module only needs the db facade to exist.
+vi.mock('@alga-psa/db', () => ({ tenantDb: vi.fn() }));
 
 vi.mock('react-hot-toast', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
@@ -276,5 +289,82 @@ describe('ClientContractAssignment contract-detail navigation', () => {
       'view-client-contract-details-menu-item-cc-2',
     ]);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+  describe('calendar dates', () => {
+    const originalTz = process.env.TZ;
+
+    afterEach(() => {
+      process.env.TZ = originalTz;
+    });
+
+    const mockAssignment = (overrides: Record<string, unknown>) =>
+      getClientContractsMock.mockResolvedValue([
+        {
+          client_contract_id: 'cc-1',
+          client_id: 'client-1',
+          contract_id: 'contract-1',
+          start_date: '2026-04-01',
+          end_date: null,
+          is_active: true,
+          ...overrides,
+        },
+      ]);
+
+    it('renders a date-only start date as 04/01/2026 (4/1) under TZ=America/Los_Angeles', async () => {
+      process.env.TZ = 'America/Los_Angeles';
+      mockAssignment({ start_date: '2026-04-01' });
+
+      render(<ClientContractAssignment clientId="client-1" />);
+
+      expect(await screen.findByText('04/01/2026')).toBeInTheDocument();
+      expect(screen.queryByText('03/31/2026')).toBeNull();
+    });
+
+    it('renders a local-midnight Date from the pg driver as 04/01/2026 (4/1) once it crosses the read boundary', async () => {
+      process.env.TZ = 'America/Los_Angeles';
+      const normalized = normalizeClientContract({
+        client_contract_id: 'cc-1',
+        client_id: 'client-1',
+        contract_id: 'contract-1',
+        start_date: new Date(2026, 3, 1), // pg DATE column: server-local midnight
+        end_date: null,
+        is_active: true,
+      });
+      getClientContractsMock.mockResolvedValue([normalized]);
+
+      render(<ClientContractAssignment clientId="client-1" />);
+
+      expect(await screen.findByText('04/01/2026')).toBeInTheDocument();
+      expect(screen.queryByText('03/31/2026')).toBeNull();
+    });
+
+    it('renders the end date as 12/31/2026 at UTC+13 (Pacific/Auckland)', async () => {
+      process.env.TZ = 'Pacific/Auckland';
+      mockAssignment({ start_date: '2026-01-01', end_date: '2026-12-31' });
+
+      render(<ClientContractAssignment clientId="client-1" />);
+
+      expect(await screen.findByText('12/31/2026')).toBeInTheDocument();
+      expect(screen.queryByText('12/30/2026')).toBeNull();
+    });
+
+    it('shows Ongoing in the end column and the renewal summary when there is no end date', async () => {
+      mockAssignment({ start_date: '2026-01-01', end_date: null });
+
+      render(<ClientContractAssignment clientId="client-1" />);
+
+      await screen.findByTestId('client-contract-name-cc-1');
+      // End Date column and Renewal summary.
+      expect(screen.getAllByText('Ongoing')).toHaveLength(2);
+    });
+
+    it('shows Ongoing in the start column when the start date is missing', async () => {
+      mockAssignment({ start_date: null, end_date: null });
+
+      render(<ClientContractAssignment clientId="client-1" />);
+
+      await screen.findByTestId('client-contract-name-cc-1');
+      expect(screen.getAllByText('Ongoing')).toHaveLength(3);
+    });
   });
 });

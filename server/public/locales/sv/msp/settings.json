@@ -4033,5 +4033,12 @@
     "moveDown": "Flytta ned",
     "remove": "Ta bort",
     "addTag": "Lägg till en tagg…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Tillbaka till e-postinställningar",
+      "title": "E-post- och identitetsleverantörer",
+      "description": "Registrera din egen Google- eller Microsoft-applikation för inkommande e-post och inloggning för personal. Dessa autentiseringsuppgifter tillhör din arbetsyta."
+    }
   }
 }

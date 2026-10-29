@@ -494,6 +494,61 @@ export class ApiTimeEntryController extends ApiBaseController {
   }
 
   /**
+   * Cancel (abandon) the caller's own tracking session without writing a time entry.
+   * Requires `time_entry:update`, like stop-tracking.
+   */
+  cancelTracking() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiKey = req.headers.get('x-api-key');
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        assertInternalApiUser(user);
+        await this.assertManualProductAccess(req, keyRecord, user);
+
+        const pathParts = new URL(req.url).pathname.split('/');
+        const sessionId = pathParts[pathParts.indexOf('cancel-tracking') + 1];
+
+        // RBAC: cancelling a timer mutates the caller's time tracking, so it needs time_entry:update.
+        const db = await getConnection(tenantId!);
+        const hasUpdatePermission = await hasPermission(user, 'time_entry', 'update', db);
+        if (!hasUpdatePermission) {
+          throw new ForbiddenError('Permission denied: Cannot update time entries');
+        }
+
+        const result = await runWithTenant(tenantId!, async () => {
+          return await this.timeEntryService.cancelTimeTracking(sessionId, {
+            userId: user.user_id,
+            user,
+            tenant: tenantId!,
+          });
+        });
+
+        return createSuccessResponse(result);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
    * Get active tracking session
    */
   getActiveSession() {

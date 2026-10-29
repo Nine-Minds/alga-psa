@@ -9,6 +9,7 @@ import { USER_ATTRIBUTES, TICKET_ATTRIBUTES } from '../lib/attributes/EntityAttr
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '../lib/withAuth';
+import { filterPermissionsByServedCapabilities } from '../lib/permissionCapabilities';
 import { hasPermission } from '../lib/rbac';
 import { isBuiltInRoleName } from '../lib/policy/builtInRoles';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
@@ -687,7 +688,7 @@ export async function evaluateAccess(user: IUserWithRoles, resource: any, action
 export const getRolePermissions = withAuth(async (_user, { tenant }, roleId: string): Promise<IPermission[]> => {
     try {
         const { knex: db } = await createTenantKnex();
-        return withTransaction(db, async (trx: Knex.Transaction) => {
+        const granted = await withTransaction(db, async (trx: Knex.Transaction) => {
             const scopedDb = tenantDb(trx, tenant);
             const query = scopedDb.table('role_permissions');
             scopedDb.tenantJoin(query, 'permissions', 'role_permissions.permission_id', 'permissions.permission_id');
@@ -698,6 +699,7 @@ export const getRolePermissions = withAuth(async (_user, { tenant }, roleId: str
                 })
                 .select('permissions.permission_id', 'permissions.resource', 'permissions.action', 'permissions.tenant', 'permissions.msp', 'permissions.client', 'permissions.description');
         });
+        return filterPermissionsByServedCapabilities(tenant, granted);
     } catch (error) {
         console.error('Error fetching role permissions:', error);
         throw error;
@@ -707,11 +709,12 @@ export const getRolePermissions = withAuth(async (_user, { tenant }, roleId: str
 export const getPermissions = withAuth(async (_user, { tenant }): Promise<IPermission[]> => {
     try {
         const { knex: db } = await createTenantKnex();
-        return withTransaction(db, async (trx: Knex.Transaction) => {
-            const permissions = await tenantScopedTable(trx, 'permissions', tenant)
+        const permissions = await withTransaction(db, async (trx: Knex.Transaction) => {
+            return tenantScopedTable(trx, 'permissions', tenant)
                 .select('permission_id', 'resource', 'action', 'tenant', 'msp', 'client', 'description');
-            return permissions;
         });
+        // The role editor never lists a capability the tenant is not served for.
+        return filterPermissionsByServedCapabilities(tenant, permissions);
     } catch (error) {
         console.error('Error fetching permissions:', error);
         throw error;
