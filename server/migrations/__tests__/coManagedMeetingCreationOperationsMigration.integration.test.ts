@@ -61,6 +61,7 @@ describe('co-managed meeting creation operations migration', () => {
   });
 
   it('rolls back and re-applies inside single transactions', async () => {
+    await db(TABLE).del();
     await db.transaction(trx => MIGRATION.down(trx));
     expect(await db.schema.hasTable(TABLE)).toBe(false);
     await db.transaction(trx => MIGRATION.up(trx));
