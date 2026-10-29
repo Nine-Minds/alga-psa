@@ -34,7 +34,12 @@ export const contractStatusSchema = z.enum(['active', 'draft', 'terminated', 'ex
 
 // Prepaid Block config overlay for Hourly lines (contract_line_prepaid_blocks).
 // block_price is in minor units of the contract's currency.
+// issue_mode 'cadence' bills one block per service period, in advance; rollover_periods (0..12)
+// is how many further periods unused hours stay valid and applies to cadence only. The
+// consumption triggers and expiry_months cannot be combined with cadence.
 export const prepaidBlockConfigSchema = z.object({
+  issue_mode: z.enum(['consumption', 'cadence']).optional(),
+  rollover_periods: z.number().int().min(0).max(12).optional(),
   block_minutes: z.number().int().min(1),
   block_price: z.number().int().min(0),
   sold_as_service_id: uuidSchema.nullable().optional(),
@@ -44,6 +49,27 @@ export const prepaidBlockConfigSchema = z.object({
   trigger_on_expiry: z.boolean().optional(),
   trigger_on_renewal: z.boolean().optional(),
   replenishment_tier: z.enum(['draft', 'auto_issue']).optional(),
+}).superRefine((block, ctx) => {
+  if (block.issue_mode === 'cadence') {
+    const conflicting = block.trigger_on_exhaustion === true
+      || block.trigger_on_expiry === true
+      || block.trigger_on_renewal === true
+      || block.trigger_threshold_percent != null
+      || block.expiry_months != null;
+    if (conflicting) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Blocks issued every billing period cannot use the exhaustion, threshold, expiry or renewal triggers or expiry_months; use rollover_periods',
+        path: ['issue_mode'],
+      });
+    }
+  } else if ((block.rollover_periods ?? 0) !== 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'rollover_periods applies only when issue_mode is cadence',
+      path: ['rollover_periods'],
+    });
+  }
 });
 
 // Base contract line schema (without refinements)

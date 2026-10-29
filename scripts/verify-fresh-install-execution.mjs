@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { browserArtifact } from './lib/browser-artifact-files.mjs';
 import { readCandidateExecutionBundle } from './lib/candidate-execution-artifacts.mjs';
 import { evaluateCandidateExecution } from './lib/candidate-execution-gate.mjs';
 import { repositoryTestFiles, isAdditionalWorkspaceTest } from './lib/test-discovery.mjs';
@@ -35,26 +36,6 @@ const criticalBrowserFiles = [
   'e2e-tests/tests/usage-invoice-preview.spec.ts',
   'e2e-tests/tests/xero-export.spec.ts',
 ];
-
-function browserArtifact(directory, filename) {
-  const found = [];
-  // upload-artifact preserves the common ancestor of the workspace and runner
-  // temp paths. Only these producer-owned suffixes identify primary evidence;
-  // harness-results contains intentional failure/skip reports with the same names.
-  const suffix = filename === 'browser-artifact-manifest.json'
-    ? ['_temp', filename] : ['e2e-tests', 'execution-evidence', filename];
-  const visit = current => {
-    for (const entry of readdirSync(current, { withFileTypes: true })) {
-      const target = path.join(current, entry.name);
-      if (entry.isDirectory()) visit(target);
-      else if (entry.isFile() && entry.name === filename
-        && path.relative(directory, target).split(path.sep).slice(-suffix.length).join('/') === suffix.join('/')) found.push(target);
-    }
-  };
-  visit(directory);
-  if (found.length !== 1) throw new Error(`Expected one ${filename} browser artifact, received ${found.length}`);
-  return found[0];
-}
 
 export function verifyFreshInstallExecution({ root, revision, input, sourceRoot = root, candidates, jobResults, shouldRun, runId, runAttempt }) {
   const failures = [], requirements = [], bundles = [], providerReadiness = [];

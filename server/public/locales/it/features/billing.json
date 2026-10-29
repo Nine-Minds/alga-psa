@@ -445,7 +445,13 @@
     "expires": "Scade il {{date}}",
     "recentBurn": "Utilizzo recente",
     "timeEntry": "Inserimento ore",
-    "contractLabel": "Contratto: {{contract}}"
+    "contractLabel": "Contratto: {{contract}}",
+    "hoursLeftValue": "{{hours}} h rimaste · {{value}}",
+    "validFrom": "Valido dal {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — blocco prepagato, {{hours}} h",
+    "overPrepaidBlock": "{{name}} (oltre il blocco prepagato)"
   },
   "bucketUsage": {
     "contractLine": "Linea contrattuale per pacchetto ore",

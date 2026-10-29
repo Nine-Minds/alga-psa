@@ -4033,5 +4033,12 @@
     "moveDown": "Sposta giù",
     "remove": "Rimuovi",
     "addTag": "Aggiungi un tag…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Torna alle impostazioni email",
+      "title": "Provider di email e identità",
+      "description": "Registra la tua applicazione Google o Microsoft per le email in arrivo e l'accesso del personale. Queste credenziali appartengono al tuo spazio di lavoro."
+    }
   }
 }

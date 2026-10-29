@@ -107,7 +107,10 @@
     "ticketsRecurring": "Tickets récurrents",
     "ticketsTemplates": "Modèles de tickets",
     "assetsCustody": "Matériel sous garde",
-    "ticketsCannedResponses": "Réponses prédéfinies"
+    "ticketsCannedResponses": "Réponses prédéfinies",
+    "profile": "Profil",
+    "signOut": "Se déconnecter",
+    "coManaged": "IT cogérée"
   },
   "sidebar": {
     "backToMain": "Retour au principal",
@@ -846,5 +849,10 @@
     "errors": {
       "enterpriseOnly": "Les fonctionnalités de chat sont uniquement disponibles dans Enterprise Edition"
     }
+  },
+  "coManagedWorkspace": {
+    "loading": "Chargement de l’espace de travail…",
+    "navigation": "Espace de travail client",
+    "passwordError": "Impossible de vérifier l’état du mot de passe. Veuillez recharger cette page."
   }
 }

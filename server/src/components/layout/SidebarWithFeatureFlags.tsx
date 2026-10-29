@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useCapability, useFeatureFlag } from '@alga-psa/ui/hooks';
+import { resolveUiSlots } from '@alga-psa/ui/capability/uiSlotRegistry';
+import '@/config/coManagedMenu';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import Sidebar from './Sidebar';
 import {
@@ -160,6 +162,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const credentialsVaultEnabled = hasFeature(TIER_FEATURES.CREDENTIALS);
   const { productCode, edition } = useProduct();
   const isAlgaDesk = productCode === 'algadesk';
+  const coManagedServed = useCapability('co-managed').enabled;
 
   useEffect(() => {
     let isMounted = true;
@@ -207,9 +210,15 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
 
   // Filter and modify menu items based on permissions
   const menuSections = useMemo<NavigationSection[]>(() => {
+    // Capability-gated contributions join before the edition → tier →
+    // permission → product chain, which then filters them like any menu item.
+    const contributedSections = resolveUiSlots<NavigationSection>(
+      'msp.navigation.group',
+      new Set(coManagedServed ? ['co-managed' as const] : []),
+    ).flatMap((slot) => (slot.props ? [slot.props] : []));
     const baseSections = useNavigationSections
-      ? originalSections
-      : [{ title: '', items: legacyMenuItems } satisfies NavigationSection];
+      ? [...originalSections, ...contributedSections]
+      : [{ title: '', items: legacyMenuItems } satisfies NavigationSection, ...contributedSections];
 
     const filteredSections = baseSections.map((section) => ({
       ...section,
@@ -238,7 +247,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
         userPermissions,
       ),
     );
-  }, [canWorkflowAdmin, userPermissions, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled]);
+  }, [canWorkflowAdmin, userPermissions, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled, coManagedServed]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     const editionSections = filterNavigationSectionsByEdition(settingsNavigationSections, edition);

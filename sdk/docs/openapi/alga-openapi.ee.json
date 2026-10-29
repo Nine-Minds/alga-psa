@@ -24042,6 +24042,46 @@
           "pagination"
         ]
       },
+      "WorkV1ScheduleEntryListQuery": {
+        "type": "object",
+        "properties": {
+          "start_date": {
+            "type": "string",
+            "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day."
+          },
+          "end_date": {
+            "type": "string",
+            "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day)."
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "WorkV1ScheduleEntrySearchQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "start_date": {
+            "type": "string",
+            "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day."
+          },
+          "end_date": {
+            "type": "string",
+            "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day)."
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
       "WorkV1TimeSheetEntriesResponse": {
         "type": "object",
         "properties": {
@@ -24235,6 +24275,13 @@
                     "null"
                   ],
                   "format": "uuid"
+                },
+                "billing_mode": {
+                  "type": "string",
+                  "enum": [
+                    "commercial",
+                    "operational"
+                  ]
                 }
               },
               "required": [
@@ -24263,7 +24310,8 @@
                 "contract_line_source",
                 "contract_line_unresolved_reason",
                 "catalog_pricing_acknowledged_at",
-                "catalog_pricing_acknowledged_by"
+                "catalog_pricing_acknowledged_by",
+                "billing_mode"
               ]
             }
           }
@@ -24419,6 +24467,12 @@
                     "null"
                   ],
                   "format": "uuid"
+                },
+                "notes": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "user_name": {
                   "type": "string"
@@ -24613,6 +24667,13 @@
                           "null"
                         ],
                         "format": "uuid"
+                      },
+                      "billing_mode": {
+                        "type": "string",
+                        "enum": [
+                          "commercial",
+                          "operational"
+                        ]
                       }
                     },
                     "required": [
@@ -24641,7 +24702,8 @@
                       "contract_line_source",
                       "contract_line_unresolved_reason",
                       "catalog_pricing_acknowledged_at",
-                      "catalog_pricing_acknowledged_by"
+                      "catalog_pricing_acknowledged_by",
+                      "billing_mode"
                     ]
                   }
                 }
@@ -24655,6 +24717,7 @@
                 "submitted_at",
                 "approved_at",
                 "approved_by",
+                "notes",
                 "user_name"
               ]
             }
@@ -91277,7 +91340,7 @@
     "/api/v1/schedules": {
       "get": {
         "summary": "List schedule entries",
-        "description": "Lists schedule entries via ApiTimeSheetController.listScheduleEntries().",
+        "description": "Lists schedule entries via ApiTimeSheetController.listScheduleEntries(). Returns every entry visible to the caller under shared-calendar rules (unpaginated), filtered by start_date, end_date (ISO 8601 date or date-time) and user_id. Date bounds are UTC: a date-only start_date means 00:00:00Z that day, a date-only end_date includes that whole day (entries ending before 00:00:00Z the next day), and date-time values are exact, inclusive bounds. Returns 400 for invalid dates or start_date after end_date.",
         "tags": [
           "Work Management v1"
         ],
@@ -91298,62 +91361,29 @@
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day."
             },
             "required": false,
-            "name": "page",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "limit",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "sort",
+            "name": "start_date",
             "in": "query"
           },
           {
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day)."
             },
             "required": false,
-            "name": "order",
+            "name": "end_date",
             "in": "query"
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             },
             "required": false,
-            "name": "fields",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "search",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "query",
+            "name": "user_id",
             "in": "query"
           }
         ],
@@ -91507,7 +91537,7 @@
     "/api/v1/schedules/search": {
       "get": {
         "summary": "Search schedules",
-        "description": "Current route delegates to ApiTimeSheetController.list() (time sheet list path), not schedule-specific search.",
+        "description": "Searches schedule entries via ApiTimeSheetController.searchScheduleEntries(). Returns entries visible to the caller under shared-calendar rules, filtered by start_date, end_date (ISO 8601 date or date-time) and user_id, paginated with page/limit. Date bounds are UTC: a date-only start_date means 00:00:00Z that day, a date-only end_date includes that whole day (entries ending before 00:00:00Z the next day), and date-time values are exact, inclusive bounds. Returns 400 for invalid dates or start_date after end_date.",
         "tags": [
           "Work Management v1"
         ],
@@ -91520,8 +91550,7 @@
           "x-tenant-scoped": true,
           "x-auth-mechanism": "x-api-key validated in ApiBaseController.authenticate() or controller-specific equivalent",
           "x-tenant-header": "x-tenant-id (optional; inferred from API key when omitted)",
-          "x-rbac-resource": "time_sheet",
-          "x-route-controller-mismatch": true
+          "x-rbac-resource": "time_sheet"
         },
         "x-alga-products": [
           "psa"
@@ -91545,46 +91574,29 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day."
             },
             "required": false,
-            "name": "sort",
+            "name": "start_date",
             "in": "query"
           },
           {
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
+              "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day)."
             },
             "required": false,
-            "name": "order",
+            "name": "end_date",
             "in": "query"
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             },
             "required": false,
-            "name": "fields",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "search",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "query",
+            "name": "user_id",
             "in": "query"
           }
         ],

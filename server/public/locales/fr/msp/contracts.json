@@ -2011,7 +2011,9 @@
       "blockSummary": "{{hours}} heures pour {{price}}",
       "expiresAfter_one": "expire après {{count}} mois",
       "expiresAfter_other": "expire après {{count}} mois",
-      "neverExpires": "n'expire jamais"
+      "neverExpires": "n'expire jamais",
+      "cadenceSummary": "{{hours}} h par période de facturation pour {{price}}",
+      "overageRate": "dépassement {{rate}}/h"
     }
   },
   "wizardTemplateLines": {
@@ -2313,7 +2315,8 @@
       "period": "Période : {{period}}"
     },
     "prepaid": {
-      "blockSummaryNeutral": "{{hours}} heures pour {{price}} (dans la devise du client)"
+      "blockSummaryNeutral": "{{hours}} heures pour {{price}} (dans la devise du client)",
+      "cadenceSummaryNeutral": "{{hours}} h par période de facturation pour {{price}} (dans la devise du client)"
     }
   },
   "templatePreview": {
@@ -2778,7 +2781,7 @@
     "done": "Terminé"
   },
   "sellHourBlockNote": {
-    "text": "Un forfait d'heures de contrat ne facture que le dépassement. Pour facturer d'avance un bloc d'heures, ajoutez une ligne Bloc prépayé à ce contrat."
+    "text": "Un forfait d'heures de contrat ne facture que le dépassement. Pour facturer un bloc d'heures d'avance, ajoutez une ligne Bloc prépayé au contrat et émettez-la à chaque période de facturation."
   },
   "review": {
     "saveTemplateRates": "Enregistrer ces tarifs en {{currency}} dans le modèle",
@@ -2960,7 +2963,17 @@
       "tier": "Facture suivante",
       "tierDraft": "Créer un brouillon à vérifier",
       "tierAutoIssue": "Finaliser et envoyer automatiquement",
-      "blockPriceNeutral": "Prix du bloc (dans la devise du client)"
+      "blockPriceNeutral": "Prix du bloc (dans la devise du client)",
+      "ratePerHour": "Soit {{rate}} par heure du bloc.",
+      "issueMode": "Émettre les blocs",
+      "issueModeCadence": "Chaque période de facturation",
+      "blockFeeInAdvance": "La ligne est facturée à terme échu ; les frais du bloc sont facturés d’avance.",
+      "issueModeConsumption": "Quand le bloc en cours est épuisé ou expiré",
+      "rolloverPeriods": "Heures non utilisées",
+      "rolloverNone": "Expirent à la fin de la période",
+      "cadenceNote": "Facturé d'avance à chaque période. Les heures au-delà du bloc sont facturées au taux horaire de la ligne sur la facture suivante.",
+      "rolloverCarry_one": "Reporter {{count}} période",
+      "rolloverCarry_other": "Reporter {{count}} périodes"
     },
     "status": {
       "pending": "En attente",

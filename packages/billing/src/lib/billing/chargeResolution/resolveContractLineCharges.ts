@@ -38,6 +38,29 @@ export function chargeObligationId(
   return `${family}:${clientContractLineId}:${qualifier}`;
 }
 
+/**
+ * The order a document lists charges in: every line's timed charges in line
+ * order, then the block draws of all lines, then the block issuances (each in
+ * the order the sources supplied them). Stable.
+ */
+// LEVERAGE: friction line-major-emission — the resolver emits line by line, but
+// the invoice has always listed block charges after every line's own charges; a
+// document-level merge step (not a rank here) would own that order.
+const INVOICE_TAIL_RANK: Partial<Record<string, number>> = {
+  hourBlockDraw: 1,
+  prepaidBlock: 2,
+};
+
+export function orderChargesForInvoice<T extends { family: string }>(
+  charges: readonly T[],
+): T[] {
+  const rank = (charge: T) => INVOICE_TAIL_RANK[charge.family] ?? 0;
+  return charges
+    .map((charge, index) => ({ charge, index }))
+    .sort((a, b) => rank(a.charge) - rank(b.charge) || a.index - b.index)
+    .map(({ charge }) => charge);
+}
+
 export async function resolveContractLineCharges(
   source: ContractChargeSource,
   options: ResolveContractLineChargesOptions = {},
@@ -69,14 +92,15 @@ export async function resolveContractLineChargesWithDiagnostics(
   const collected = await Promise.all(
     entries.map(async (entry) => {
       if (entry.requiresPools && pools.length === 0) return [];
-      const resolution: TimingResolution = await source.resolveTiming(
-        entry.timing,
-      );
-      if (resolution.status === "not-due") return [];
-      if (resolution.status === "untimed" && !entry.allowsUntimed) return [];
+      // A window-driven family (timing null) does not ask for a service period.
+      const resolution: TimingResolution | null = entry.timing
+        ? await source.resolveTiming(entry.timing)
+        : null;
+      if (resolution?.status === "not-due") return [];
+      if (resolution?.status === "untimed" && !entry.allowsUntimed) return [];
       const context: FamilyContext = {
         source,
-        timing: resolution.status === "due" ? resolution.timing : undefined,
+        timing: resolution?.status === "due" ? resolution.timing : undefined,
         pools: entry.family === "bucket" ? pools : [],
         pooledServiceIds,
       };

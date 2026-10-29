@@ -1,20 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 import tsconfigPaths from 'vite-tsconfig-paths';
-import { readFileSync } from 'fs';
-
-/** Exact-match source aliases for every subpath a workspace package exports, read from its own `exports` map
- * (each entry's `types` is its source file). Tests then resolve a subpath exactly as the package publishes it,
- * instead of through a guessed directory pattern that silently misses entries living elsewhere. */
-function exportedSourceAliases(packageName: string, packageDir: string) {
-  const manifest = JSON.parse(readFileSync(path.join(packageDir, 'package.json'), 'utf8')) as { exports?: Record<string, { types?: string }> };
-  return Object.entries(manifest.exports ?? {})
-    .filter(([subpath, entry]) => subpath !== '.' && typeof entry?.types === 'string' && entry.types.startsWith('./src/'))
-    .map(([subpath, entry]) => ({
-      find: new RegExp(`^${`${packageName}${subpath.slice(1)}`.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}$`),
-      replacement: path.resolve(packageDir, entry.types!),
-    }));
-}
+import { exportedSourceAliases } from '../../scripts/lib/vitest-exported-source-aliases.mjs';
 
 export default defineConfig({
   plugins: [

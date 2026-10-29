@@ -78,6 +78,8 @@ vi.mock('@alga-psa/auth', async (importOriginal) => {
   return {
     ...actual,
     hasPermission: vi.fn().mockResolvedValue(true),
+    checkMultiplePermissions: vi.fn(async (_user: unknown, checks: { resource: string; action: string }[]) =>
+      checks.map(check => ({ ...check, granted: true }))),
     withAuth: (action: any) => async (...args: unknown[]) =>
       (await import('@alga-psa/db')).runWithTenant(actionAuth.tenant, () =>
         action({ user_id: actionAuth.userId, user_type: actionAuth.userType, clientId: actionAuth.clientId, roles: [] }, { tenant: actionAuth.tenant }, ...args)),
@@ -89,7 +91,9 @@ vi.mock('@alga-psa/authorization/rbac', () => ({
 }));
 vi.mock('@alga-psa/auth/rbac', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/auth/rbac')>();
-  return { ...actual, hasPermission: vi.fn().mockResolvedValue(true) };
+  return { ...actual, hasPermission: vi.fn().mockResolvedValue(true),
+    checkMultiplePermissions: vi.fn(async (_user: unknown, checks: { resource: string; action: string }[]) =>
+      checks.map(check => ({ ...check, granted: true }))) };
 });
 vi.mock('@alga-psa/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/db')>();

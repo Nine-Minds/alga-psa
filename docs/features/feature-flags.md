@@ -6,6 +6,55 @@ AlgaPSA uses PostHog for feature flag management, allowing tenant-based feature 
 
 ## Current Feature Flags
 
+### Server tenant targeting (any flag)
+
+Operators can target any flag to specific tenants with a runtime, server-only
+environment variable, with no rebuild and no `NEXT_PUBLIC_*` value:
+
+```
+FEATURE_FLAG_TENANTS__<KEY>=<tenant-uuid>[,<tenant-uuid>...]
+```
+
+`<KEY>` is the flag key upper-cased with each run of non-alphanumeric characters
+replaced by `_` (`release-v2-0-feature` becomes `RELEASE_V2_0_FEATURE`).
+
+- Unset: not targeted; PostHog (or the existing evaluator) decides.
+- Set and valid: authoritative for that flag only. On for the listed tenants, off
+  for every other tenant, and not openable by `DISABLE_FEATURE_FLAGS`.
+- Set but empty or containing any malformed entry: off for everyone (the whole
+  value is rejected, never partly applied). There is no wildcard.
+- A tenant id is required; a user id is never treated as a tenant.
+
+The same source is applied by `isFeatureFlagEnabled` (server admission, the
+capability probe and the browser bootstrap) and by the `FeatureFlags` runtime
+(direct callers and `/api/v1/feature-flags`), so they cannot disagree. It is
+separate from the in-process `FeatureFlags.setOverride`, which is untenanted,
+set from code and cannot be configured by an operator.
+
+#### Co-managed review: only `release-v2-0-feature` is needed
+
+Co-managed is gated by `release-v2-0-feature` AND a durable entitlement. To run
+the production review:
+
+1. Set `FEATURE_FLAG_TENANTS__RELEASE_V2_0_FEATURE=<oz-uuid>,<emerald-uuid>` on
+   the server, using the fixture uuidv5 tenant IDs (never names: the wired
+   database has two tenants named "Oz"). Leave Kansas out.
+2. Restart the server only after the Temporal worker reports the deployed SHA.
+3. Keep `FORCE_CAPABILITIES` unset (`co-managed:on` bypasses eligibility).
+
+Oz (flag on plus the fixture `admin_grant` entitlement) is admitted and served.
+Emerald (flag on, no entitlement) sees no co-managed UI. Kansas (flag off) is
+closed. Existing participants remain served independently of the flag. Workers
+use participation and never evaluate targeting.
+
+Kill switch: `FORCE_CAPABILITIES=co-managed:off` closes admission and service for
+every tenant, listed or not, and overrides targeting and participation. To stop
+new admission only, set the variable to an empty value and restart; to return to
+PostHog, remove it and restart.
+
+This does not prove PostHog targeting is configured; that remains an accepted
+limitation.
+
 ### 1. `billing-enabled`
 Controls access to billing-related features across the application.
 

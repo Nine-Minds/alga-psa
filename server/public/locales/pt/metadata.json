@@ -519,6 +519,15 @@
     },
     "layout": {
       "defaultTitle": "Painel | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "TI cogerida"
+    },
+    "coManagement": {
+      "title": "Acesso cogerido",
+      "providers": {
+        "title": "Provedores de email e identidade"
+      }
     }
   },
   "auth": {
