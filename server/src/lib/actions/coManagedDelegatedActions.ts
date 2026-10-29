@@ -1,6 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
 import { CoManagedDelegationError, CoManagedPolicyError, listCoManagedLiveSponsoredRelationships, executeCoManagedDelegatedCommand, getCoManagedDelegatedScreen, isCoManagedSharedWorkError,
@@ -21,8 +22,15 @@ function refusal(error: unknown): Refusal {
   throw error;
 }
 
+/** The gate runs inside the withAuth callback so the tenant handed to the adapter is the session's (the entry-point contract checks this). */
+function withCoManagedServes<A extends unknown[], R>(work: (user: IUserWithRoles, ctx: { tenant: string }, ...args: A) => Promise<R>) {
+  return withAuth(async (user, { tenant }, ...args: A) => {
+    await requireCapabilityForAction('co-managed', tenant, 'serves');
+    return work(user, { tenant }, ...args);
+  });
+}
+
 async function setup(user: { user_id: string; user_type?: string }, tenant: string, relationshipId: string) {
-  await requireCapabilityForAction('co-managed', tenant, 'serves');
   const actor = await coManagedBrowserActor(user, tenant);
   const { knex } = await createTenantKnex(tenant);
   const { customerTenant } = await resolveCoManagedRelationshipTarget(knex, tenant, relationshipId);
@@ -68,14 +76,14 @@ export const listCoManagedAdministrationWorkspacesAction = withAuth(async (user,
   return result.sort((a, b) => a.name.localeCompare(b.name));
 });
 
-export const getCoManagedDelegatedScreenAction = withAuth(async (user, { tenant }, relationshipId: string) => {
+export const getCoManagedDelegatedScreenAction = withCoManagedServes(async (user, { tenant }, relationshipId: string) => {
   try {
     const { knex, actor, target } = await setup(user, tenant, relationshipId);
     return { ok: true as const, screen: await getCoManagedDelegatedScreen(knex, actor, target) };
   } catch (error) { return refusal(error); }
 });
 
-export const saveCoManagedDelegatedGrantAction = withAuth(async (user, { tenant }, relationshipId: string,
+export const saveCoManagedDelegatedGrantAction = withCoManagedServes(async (user, { tenant }, relationshipId: string,
   expectedRevision: number, input: CoManagedDelegatedGrantInput) => {
   try {
     const { knex, actor, target } = await setup(user, tenant, relationshipId);
@@ -83,7 +91,7 @@ export const saveCoManagedDelegatedGrantAction = withAuth(async (user, { tenant 
   } catch (error) { return refusal(error); }
 });
 
-export const revokeCoManagedDelegatedGrantAction = withAuth(async (user, { tenant }, relationshipId: string,
+export const revokeCoManagedDelegatedGrantAction = withCoManagedServes(async (user, { tenant }, relationshipId: string,
   expectedRevision: number, grantId: string) => {
   try {
     const { knex, actor, target } = await setup(user, tenant, relationshipId);
@@ -91,7 +99,7 @@ export const revokeCoManagedDelegatedGrantAction = withAuth(async (user, { tenan
   } catch (error) { return refusal(error); }
 });
 
-export const searchCoManagedDelegatedOptionsAction = withAuth(async (user, { tenant }, relationshipId: string,
+export const searchCoManagedDelegatedOptionsAction = withCoManagedServes(async (user, { tenant }, relationshipId: string,
   input: { kind: 'principal' | CoManagedDelegatedOperation; search?: string; page?: number }) => {
   try {
     const { knex, actor, target } = await setup(user, tenant, relationshipId);
@@ -99,7 +107,7 @@ export const searchCoManagedDelegatedOptionsAction = withAuth(async (user, { ten
   } catch (error) { return refusal(error); }
 });
 
-export const executeCoManagedDelegatedCommandAction = withAuth(async (user, { tenant }, relationshipId: string, input: CoManagedDelegatedCommand) => {
+export const executeCoManagedDelegatedCommandAction = withCoManagedServes(async (user, { tenant }, relationshipId: string, input: CoManagedDelegatedCommand) => {
   try {
     const { knex, actor, target } = await setup(user, tenant, relationshipId);
     return { ok: true as const, ...await executeCoManagedDelegatedCommand(knex, actor, target, input) };

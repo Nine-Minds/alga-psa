@@ -1,6 +1,7 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
+import type { IUserWithRoles } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { CapabilityUnavailableError, requireCapabilityForAction } from '@alga-psa/core/capability/server';
 import { CoManagedPolicyError, coManagedDisplayName, requireCoManagedPolicyReader, evaluateCoManagedAccess, getCoManagedCollaborationPolicy, hasCoManagedLocalPermission,
@@ -24,17 +25,29 @@ const refusal = (error: unknown): Failure => {
   throw error;
 };
 
-async function setup(user: { user_id: string; user_type?: string }, tenant: string, relationshipId: string) {
-  // LEVERAGE: pattern capability-either-mode — a two-sided action needs "whichever mode holds"; a second such action should extract an adapter next to requireCapabilityForAction (and teach the entry-point contract about it).
-  // `admits` first and short-circuiting: an admitted sponsor needs no participation read, and a forced-off or flag-off
-  // non-participating tenant is refused here, before any co-managed table is read.
-  let held: 'admits' | 'serves' = 'admits';
-  try { await requireCapabilityForAction('co-managed', tenant, 'admits'); }
-  catch (error) {
-    if (!(error instanceof CapabilityUnavailableError)) throw error;
-    held = 'serves';
-    await requireCapabilityForAction('co-managed', tenant, 'serves');
-  }
+type Held = 'admits' | 'serves';
+
+/**
+ * A two-sided action's own gate. It runs inside the withAuth callback so the tenant handed to the adapter is the
+ * session's (the entry-point contract checks this).
+ */
+function withCoManagedHeld<A extends unknown[], R>(work: (user: IUserWithRoles, ctx: { tenant: string; held: Held }, ...args: A) => Promise<R>) {
+  return withAuth(async (user, { tenant }, ...args: A) => {
+    // LEVERAGE: pattern capability-either-mode — a two-sided action needs "whichever mode holds"; a second such action should extract an adapter next to requireCapabilityForAction (and teach the entry-point contract about it).
+    // `admits` first and short-circuiting: an admitted sponsor needs no participation read, and a forced-off or flag-off
+    // non-participating tenant is refused here, before any co-managed table is read.
+    let held: Held = 'admits';
+    try { await requireCapabilityForAction('co-managed', tenant, 'admits'); }
+    catch (error) {
+      if (!(error instanceof CapabilityUnavailableError)) throw error;
+      held = 'serves';
+      await requireCapabilityForAction('co-managed', tenant, 'serves');
+    }
+    return work(user, { tenant, held }, ...args);
+  });
+}
+
+async function setup(user: { user_id: string; user_type?: string }, tenant: string, held: Held, relationshipId: string) {
   if (user.user_type !== 'internal') throw new CoManagedPolicyError('FORBIDDEN');
   const { knex } = await createTenantKnex(tenant);
   const target = await resolveCoManagedRelationshipTarget(knex, tenant, relationshipId);
@@ -45,9 +58,9 @@ async function setup(user: { user_id: string; user_type?: string }, tenant: stri
 }
 
 /** The effective access view of one relationship: grants, assignments and display names for each. */
-export const getCoManagedPolicyAction = withAuth(async (user, { tenant }, relationshipId: string) => {
+export const getCoManagedPolicyAction = withCoManagedHeld(async (user, { tenant, held }, relationshipId: string) => {
   try {
-    const { knex, actor, target } = await setup(user, tenant, relationshipId);
+    const { knex, actor, target } = await setup(user, tenant, held, relationshipId);
     const policy = await getCoManagedCollaborationPolicy(knex, actor, target);
     // Boards and projects are the customer's; assignment principals (users, teams) are always the sponsor's, whichever side is asking.
     const customer = tenantDb(knex, target.customerTenant), sponsor = tenantDb(knex, policy.sponsorTenant);
@@ -70,25 +83,25 @@ export const getCoManagedPolicyAction = withAuth(async (user, { tenant }, relati
   } catch (error) { return refusal(error); }
 });
 
-export const replaceCoManagedCustomerScopeAction = withAuth(async (user, { tenant }, relationshipId: string,
+export const replaceCoManagedCustomerScopeAction = withCoManagedHeld(async (user, { tenant, held }, relationshipId: string,
   expectedRevision: number, scope: CoManagedCustomerScope) => {
   try {
-    const { knex, actor, target } = await setup(user, tenant, relationshipId);
+    const { knex, actor, target } = await setup(user, tenant, held, relationshipId);
     return { ok: true as const, revision: await replaceCoManagedCustomerScope(knex, actor, target, expectedRevision, scope) };
   } catch (error) { return refusal(error); }
 });
 
-export const replaceCoManagedStaffAssignmentsAction = withAuth(async (user, { tenant }, relationshipId: string,
+export const replaceCoManagedStaffAssignmentsAction = withCoManagedHeld(async (user, { tenant, held }, relationshipId: string,
   expectedRevision: number, assignments: CoManagedStaffAssignment[]) => {
   try {
-    const { knex, actor, target } = await setup(user, tenant, relationshipId);
+    const { knex, actor, target } = await setup(user, tenant, held, relationshipId);
     return { ok: true as const, revision: await replaceCoManagedStaffAssignments(knex, actor, target, expectedRevision, assignments) };
   } catch (error) { return refusal(error); }
 });
 
 /** Sponsor-side candidates for the "why can't X see this" question: the workspace's active technicians. */
-export const listCoManagedExplanationUsersAction = withAuth(async (user, { tenant }, relationshipId: string) => {
-  const { knex, actor, target } = await setup(user, tenant, relationshipId);
+export const listCoManagedExplanationUsersAction = withCoManagedHeld(async (user, { tenant, held }, relationshipId: string) => {
+  const { knex, actor, target } = await setup(user, tenant, held, relationshipId);
   if (target.side !== 'sponsor') return [];
   await withTransaction(knex, trx => requireCoManagedPolicyReader(trx, actor));
   const rows = await tenantDb(knex, tenant).table('users').where({ user_type: 'internal', is_inactive: false }).orderBy('first_name').orderBy('last_name').limit(500);
@@ -102,10 +115,10 @@ const OPTION_PAGE = 25;
  * Candidates for the policy editors, as display names only. Boards and projects come from the customer's own
  * workspace (customer side only); users and teams from the sponsor's (sponsor side only). Searched and paged on the server.
  */
-export const listCoManagedPolicyOptionsAction = withAuth(async (user, { tenant }, relationshipId: string, kind: CoManagedPolicyOptionKind,
+export const listCoManagedPolicyOptionsAction = withCoManagedHeld(async (user, { tenant, held }, relationshipId: string, kind: CoManagedPolicyOptionKind,
   search: string = '', page: number = 0) => {
   try {
-    const { knex, actor, target } = await setup(user, tenant, relationshipId);
+    const { knex, actor, target } = await setup(user, tenant, held, relationshipId);
     const customerKind = kind === 'board' || kind === 'project';
     if (!['board', 'project', 'user', 'team'].includes(kind) || target.side !== (customerKind ? 'customer' : 'sponsor') ||
         typeof search !== 'string' || search.length > 100 || !Number.isSafeInteger(page) || page < 0 || page > 10000) throw new CoManagedPolicyError('INVALID_POLICY');
@@ -129,9 +142,9 @@ export const listCoManagedPolicyOptionsAction = withAuth(async (user, { tenant }
  * customer board, then hands them to the single evaluator. It combines nothing itself.
  * Sponsor side only: staff assignments and home permissions live in the sponsor workspace.
  */
-export const explainCoManagedAccessAction = withAuth(async (user, { tenant }, relationshipId: string, subjectUserId: string, boardId: string) => {
+export const explainCoManagedAccessAction = withCoManagedHeld(async (user, { tenant, held }, relationshipId: string, subjectUserId: string, boardId: string) => {
   try {
-    const { knex, actor, target } = await setup(user, tenant, relationshipId);
+    const { knex, actor, target } = await setup(user, tenant, held, relationshipId);
     if (target.side !== 'sponsor') throw new CoManagedPolicyError('FORBIDDEN');
     return await withTransaction(knex, async trx => {
       await requireCoManagedPolicyReader(trx, actor);
