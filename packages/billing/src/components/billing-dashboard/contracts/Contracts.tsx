@@ -503,7 +503,7 @@ const Contracts: React.FC = () => {
               <DropdownMenuItem id="scheduled-start-menu-item" disabled>
                 {t('status.startsOn', {
                   defaultValue: 'Starts {{date}}',
-                  date: formatCalendarDate(record.start_date, locale) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
+                  date: formatCalendarDate(record.start_date) ?? t('contractsList.empty.dash', { defaultValue: '—' }),
                 })}
               </DropdownMenuItem>
             )}
