@@ -138,7 +138,7 @@
 
 ## Test status at hand-off (revised after review)
 All 34 tests are now written. T001-T027, T029, T030 and T033 were run and pass; T028/T031/T032/T034 are the Playwright spec (`server/src/test/e2e/warranty-rma.playwright.test.ts`), written but NOT run (no app server) and unverified.
-- DB tests ran against the scratch Postgres `c5_warranty_test` (a copy of the dev DB with other branches' migration rows deleted there only); the migration up/down/up (T011) ran on `c5_migration_test`, created from it and dropped afterwards. `20261025130200_add_warranty_permissions` is deliberately irreversible; the cycle test asserts the throw.
+- DB tests ran against the scratch Postgres `c5_warranty_test` (a copy of the dev DB with other branches' migration rows deleted there only); the migration up/down/up (T011) ran on `c5_migration_test`, created from it and dropped afterwards. `20261028140400_add_warranty_permissions` is deliberately irreversible; the cycle test asserts the throw.
 - bwip-js, jsqr and @zxing/library are declared in packages/billing/package.json and the lockfile; a plain `npm install` installed them (no lockfile churn committed). The earlier 10 label/barcode failures were only these missing modules; the billing suite is now green (T033 and an HTML/PDF render of the RMA tag and return slip pass).
 - Server `tsc --noEmit` is clean and its file list includes packages/msp-composition/src/tickets/rmaTicketActions.ts. `tsc` and `npm run build` pass for types, event-schemas, inventory, assets, billing.
 - Known behaviour: `shipToVendor` with a missing carrier/tracking/return-by throws a ZodError (nothing written) rather than returning `{actionError}`.
