@@ -371,6 +371,12 @@ build and, on runs of `main` only, pushes the new state afterwards. A pull
 request never writes a snapshot, because a cache can shape build output. A
 missing or unreadable snapshot is a cold build, not a failure. The daily
 candidate-image cleanup removes the superseded, untagged snapshot versions.
+Two details make the restored cache usable at all: the candidates build with
+a fixed, test-only `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY`, because Next folds
+that key into the webpack cache version and generates a new one per build
+when it is unset; and `next.config.mjs` makes production builds validate
+webpack snapshots by content hash, because a fresh checkout gives every file a
+new mtime and the timestamp-only default would invalidate every module.
 
 The journeys are partitioned across the `browser-<n>` shards by the runner
 itself. Each shard lists the whole collection, then takes its share

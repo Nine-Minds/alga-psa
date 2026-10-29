@@ -266,6 +266,12 @@ jobs:
         env:
           NEXT_BUILD_MAX_OLD_SPACE_SIZE: '12288'
           EDITION_NAME: ${{ matrix.edition }}
+          # Next folds this key into the webpack cache version and generates a
+          # new one per build when it is unset, which would make every restored
+          # snapshot a miss. The candidates are test images that never serve
+          # traffic, so a fixed, public, test-only key is right for them; the
+          # deployment build (nm-kube-config) must use a secret of its own.
+          NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: OpTnSkDAbqi/eI+2i8Tg20NhJwnUrrgPdz4I4p/3N+0=
         run: |
           scripts/build-production-server.sh "$EDITION_NAME"
           du -sh server/.next server/node_modules/.cache/webpack .nx/cache 2>/dev/null || true
