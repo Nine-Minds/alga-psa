@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Flex, Text, Heading } from '@radix-ui/themes';
-import { updateContact, getContactsByClient, listInboundTicketDestinationOptions, getAllCountries, getTenantDefaultCountry, type ICountry, listContactPhoneTypeSuggestions, getCustomPhoneTypeUsageCount, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
+import { updateContact, getContactsByClient, getContactLocationCount, listInboundTicketDestinationOptions, getAllCountries, getTenantDefaultCountry, type ICountry, listContactPhoneTypeSuggestions, getCustomPhoneTypeUsageCount, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
 import { findTagsByEntityIds, isTagActionError } from '@alga-psa/tags/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
@@ -99,6 +99,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   // A location link only ever points at the contact's own client's locations, so moving the contact
   // removes them all. The count is stated before the save, never discovered after it.
   const [pendingClientChange, setPendingClientChange] = useState<string | null>(null);
+  const [pendingLinkCount, setPendingLinkCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -233,8 +234,23 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
     setLocationLinks(prev => (clientId === contact.client_id ? prev : []));
   }, [contact.client_id]);
 
-  const handleClientSelect = (clientId: string | null) => {
-    if (clientId !== contact.client_id && locationLinks.length > 0) {
+  const handleClientSelect = async (clientId: string | null) => {
+    if (clientId === contact.client_id) {
+      applyClientSelect(clientId);
+      return;
+    }
+    // What the save would drop: the selection on screen, or — when this contact was opened without
+    // its links loaded — the stored count, so nothing disappears unannounced.
+    let count = locationLinks.length;
+    if (count === 0 && initialContact.contact_name_id) {
+      try {
+        count = await getContactLocationCount(initialContact.contact_name_id);
+      } catch {
+        count = 0;
+      }
+    }
+    if (count > 0) {
+      setPendingLinkCount(count);
       setPendingClientChange(clientId ?? '');
       return;
     }
@@ -592,7 +608,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
           title={t('contactLocations.clientChange.title', { defaultValue: 'Change client?' })}
           message={t('contactLocations.clientChange.message', {
             defaultValue: 'This removes {{count}} location link(s). Locations belong to a client, so they cannot follow the contact.',
-            count: locationLinks.length,
+            count: pendingLinkCount,
           })}
           confirmLabel={t('contactLocations.clientChange.confirm', { defaultValue: 'Change client' })}
           cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}

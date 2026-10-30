@@ -13,6 +13,8 @@ import ContactDetailsEdit from './ContactDetailsEdit';
 
 const hoisted = vi.hoisted(() => ({
   updateContact: vi.fn(),
+  getContactLocationCount: vi.fn(),
+  getClientLocations: vi.fn(),
 }));
 
 // `t` must be referentially stable: the form lists it as an effect dependency.
@@ -28,8 +30,12 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => {
 });
 
 // Side-loads the form makes on mount.
+vi.mock('../../actions/clientLocationActions', () => ({
+  getClientLocations: hoisted.getClientLocations,
+}));
 vi.mock('@alga-psa/clients/actions', () => ({
   updateContact: hoisted.updateContact,
+  getContactLocationCount: hoisted.getContactLocationCount,
   listInboundTicketDestinationOptions: vi.fn().mockResolvedValue([]),
   getAllCountries: vi.fn().mockResolvedValue([]),
   getTenantDefaultCountry: vi.fn().mockResolvedValue(null),
@@ -70,6 +76,11 @@ describe('ContactDetailsEdit client change', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hoisted.updateContact.mockImplementation(async (input: any) => input);
+    hoisted.getContactLocationCount.mockResolvedValue(0);
+    hoisted.getClientLocations.mockResolvedValue([
+      { location_id: 'loc-warehouse', location_name: 'Warehouse', is_active: true, is_default: false },
+      { location_id: 'loc-hq', location_name: 'Head office', is_active: true, is_default: true },
+    ]);
   });
 
   it('lists the other clients, including inactive ones, when editing a contact on the triage client', async () => {
@@ -124,5 +135,117 @@ describe('ContactDetailsEdit client change', () => {
       expect.objectContaining({ contact_name_id: 'contact-1', client_id: 'life-id' })
     );
     await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ client_id: 'life-id' })));
+  });
+
+  const linkedContact: any = {
+    ...contact,
+    work_arrangement: 'on_site',
+    locations: [
+      { location_id: 'loc-warehouse', location_name: 'Warehouse', is_primary: true, is_active: true },
+      { location_id: 'loc-hq', location_name: 'Head office', is_primary: false, is_active: true },
+    ],
+  };
+
+  const pickLife = async () => {
+    fireEvent.click(document.querySelector('#contact-edit-client-picker-trigger') as HTMLElement);
+    fireEvent.click(await waitFor(() => {
+      const option = document.querySelector('#contact-edit-client-picker-option-life-id') as HTMLElement | null;
+      expect(option).toBeInTheDocument();
+      return option!;
+    }));
+  };
+
+  it('T029: naming the links a client change would remove, keeping the old client on cancel', async () => {
+    render(
+      <ContactDetailsEdit
+        initialContact={linkedContact}
+        clients={[triage, life, inactive]}
+        onSave={onSave}
+        onCancel={onCancel}
+        isInDrawer
+      />
+    );
+
+    await pickLife();
+
+    expect(await screen.findByText(/This removes 2 location link\(s\)\./)).toBeInTheDocument();
+    // The count comes from what is on screen, so the server is not asked.
+    expect(hoisted.getContactLocationCount).not.toHaveBeenCalled();
+
+    fireEvent.click(document.querySelector('#contact-edit-location-links-confirm-close') as HTMLElement);
+
+    await waitFor(() =>
+      expect(document.querySelector('#contact-edit-client-picker-trigger')).toHaveTextContent('Unmatched Email')
+    );
+  });
+
+  it('T029: confirming the change moves the contact and saves with no location links', async () => {
+    render(
+      <ContactDetailsEdit
+        initialContact={linkedContact}
+        clients={[triage, life, inactive]}
+        onSave={onSave}
+        onCancel={onCancel}
+        isInDrawer
+      />
+    );
+
+    await pickLife();
+
+    fireEvent.click(await waitFor(() => {
+      const confirm = document.querySelector('#contact-edit-location-links-confirm-confirm') as HTMLElement | null;
+      expect(confirm).toBeInTheDocument();
+      return confirm!;
+    }));
+
+    await waitFor(() =>
+      expect(document.querySelector('#contact-edit-client-picker-trigger')).toHaveTextContent('Life Landscaping')
+    );
+
+    fireEvent.click(document.querySelector('#contact-edit-save-button') as HTMLElement);
+
+    await waitFor(() => expect(hoisted.updateContact).toHaveBeenCalledTimes(1));
+    expect(hoisted.updateContact).toHaveBeenCalledWith(
+      expect.objectContaining({ client_id: 'life-id', locations: [] })
+    );
+  });
+
+  it('T030: a contact with no links changes client without a confirmation', async () => {
+    render(
+      <ContactDetailsEdit
+        initialContact={contact}
+        clients={[triage, life, inactive]}
+        onSave={onSave}
+        onCancel={onCancel}
+        isInDrawer
+      />
+    );
+
+    await pickLife();
+
+    await waitFor(() =>
+      expect(document.querySelector('#contact-edit-client-picker-trigger')).toHaveTextContent('Life Landscaping')
+    );
+    // Nothing is loaded locally, so the stored count decides — and it is zero.
+    expect(hoisted.getContactLocationCount).toHaveBeenCalledWith('contact-1');
+    expect(screen.queryByText(/This removes/)).toBeNull();
+  });
+
+  it('confirms with the stored count when the contact was opened without its links', async () => {
+    hoisted.getContactLocationCount.mockResolvedValue(3);
+
+    render(
+      <ContactDetailsEdit
+        initialContact={contact}
+        clients={[triage, life, inactive]}
+        onSave={onSave}
+        onCancel={onCancel}
+        isInDrawer
+      />
+    );
+
+    await pickLife();
+
+    expect(await screen.findByText(/This removes 3 location link\(s\)\./)).toBeInTheDocument();
   });
 });
