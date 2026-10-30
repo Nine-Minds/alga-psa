@@ -19,8 +19,18 @@ import {
 import { assertValidContactManager } from '@shared/models/contactModel';
 import { collectReportContactIds } from '@alga-psa/authorization/portal/visibility.server';
 import { IUser, IRole } from '@shared/interfaces/user.interfaces';
-import type { IUserWithRoles } from '@alga-psa/types';
+import type { ContactWorkArrangement, IContactLocation, IUserWithRoles } from '@alga-psa/types';
 import { isClientUserType } from '@alga-psa/types';
+
+/**
+ * A portal user plus the read-only facts about where their contact works. These live on
+ * `contacts`/`contact_locations`, never on `users`, so they ride alongside `IUser` instead of
+ * widening it; the portal write path rejects both fields.
+ */
+export type ClientUserWithLocations = IUser & {
+  work_arrangement?: ContactWorkArrangement | null;
+  locations?: IContactLocation[];
+};
 
 export type ClientUserActionError =
   | { readonly actionError: string }
@@ -517,7 +527,7 @@ export const getClientUserById = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
   userId: string
-): Promise<IUser | null> => {
+): Promise<ClientUserWithLocations | null> => {
   try {
     const { knex } = await createTenantKnex();
 
@@ -562,14 +572,14 @@ export const getClientUserById = withAuth(async (
           .where({ contact_name_id: contactId })
           .first(['work_arrangement']);
         return {
-          work_arrangement: (contact as { work_arrangement?: string | null })?.work_arrangement ?? null,
+          work_arrangement: (contact as { work_arrangement?: ContactWorkArrangement | null })?.work_arrangement ?? null,
           locations: await getContactLocations(trx, tenant, contactId),
         };
       });
-      return { ...(clientUser as IUser), ...locations } as IUser;
+      return { ...(clientUser as IUser), ...locations };
     }
 
-    return clientUser as IUser;
+    return clientUser as ClientUserWithLocations;
   } catch (error) {
     console.error('Error getting client user:', error);
     throw error;

@@ -5,8 +5,9 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IPermission, IUserWithRoles } from '@alga-psa/types';
 import { IUser, IRole } from '@shared/interfaces/user.interfaces';
 import { getCurrentUser, getUserRolesWithPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
-import { 
-  getClientUserById, 
+import type { ClientUserWithLocations } from '../../actions/client-portal-actions/clientUserActions';
+import {
+  getClientUserById,
   updateClientUser, 
   getClientUserManagerOptions,
   resetClientUserPassword,
@@ -43,7 +44,7 @@ const isReturnedActionError = (value: unknown) =>
 const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate }) => {
   const { t: tProfile } = useTranslation('client-portal');
   const { t: tCommon } = useTranslation('common');
-  const [user, setUser] = useState<IUser | null>(null);
+  const [user, setUser] = useState<ClientUserWithLocations | null>(null);
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -341,7 +342,7 @@ const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate 
               {user?.work_arrangement === 'remote' && (user?.locations?.length ?? 0) === 0 ? (
                 <div>{tProfile('clientSettings.users.remote', { defaultValue: 'Remote' })}</div>
               ) : (
-                (user?.locations ?? []).map((location: { location_id: string; location_name: string | null; is_primary: boolean }) => (
+                (user?.locations ?? []).map((location) => (
                   <div key={location.location_id}>
                     {location.location_name || '—'}
                     {location.is_primary
