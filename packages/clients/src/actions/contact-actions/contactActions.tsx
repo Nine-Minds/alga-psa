@@ -961,7 +961,10 @@ export const updateContact = withAuth(async (
         role: contactData.role ?? undefined,
         notes: contactData.notes ?? undefined,
         is_inactive: contactData.is_inactive ?? undefined,
-        work_arrangement: contactData.work_arrangement ?? undefined,
+        // undefined = leave unchanged; null (the editor's "Not set") clears it. Collapsing null to
+        // undefined here would make "Not set" a silent no-op.
+        work_arrangement:
+          contactData.work_arrangement === undefined ? undefined : (contactData.work_arrangement || null),
       }, tenant, trx);
 
       // ContactModel already dropped every link when the client changed (a link never crosses
@@ -1516,7 +1519,10 @@ export const importContactsFromCSV = withAuth(async (
               is_inactive: contactData.is_inactive ?? undefined,
               role: normalizeOptionalText(contactData.role) ?? existingContact.role ?? undefined,
               notes: normalizeOptionalText(contactData.notes) ?? existingContact.notes ?? undefined,
-              work_arrangement: contactData.work_arrangement ?? undefined,
+              // A mapped but blank cell is an explicit "clear it" (null); an unmapped column leaves
+              // the arrangement alone (undefined).
+              work_arrangement:
+                contactData.work_arrangement === undefined ? undefined : (contactData.work_arrangement || null),
             };
 
             if (contactData.primary_email_canonical_type !== undefined || contactData.primary_email_custom_type !== undefined) {
@@ -1573,7 +1579,7 @@ export const importContactsFromCSV = withAuth(async (
               is_inactive: contactData.is_inactive || false,
               role: normalizeOptionalText(contactData.role),
               notes: normalizeOptionalText(contactData.notes),
-              work_arrangement: contactData.work_arrangement ?? undefined,
+              work_arrangement: contactData.work_arrangement ?? null,
             };
 
             savedContact = await ContactModel.createContact(contactToCreate, tenant, trx);
