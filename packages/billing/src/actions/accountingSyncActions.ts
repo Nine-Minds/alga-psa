@@ -370,10 +370,19 @@ export const getInvoiceSyncStatuses = withAuth(async (
   }
 
   // The Intuit environment only applies to the QBO deep link; Xero has none.
+  // Resolved per realm: the environment stamped on the stored connection, else
+  // the tenant setting, else the deployment default.
   let environment: 'sandbox' | 'production' | undefined;
   if (integrationType === 'quickbooks_online') {
-    const { getQboEnvironment } = await import('@alga-psa/integrations/lib/qbo/qboClientService');
-    environment = getQboEnvironment();
+    const { getStoredQboCredentialsMap, resolveTenantQboEnvironment } = await import(
+      '@alga-psa/integrations/lib/qbo/qboClientService'
+    );
+    const storedCredentials = targetRealm
+      ? await getStoredQboCredentialsMap(tenant).catch(() => ({} as Record<string, { environment?: 'sandbox' | 'production' }>))
+      : {};
+    environment =
+      (targetRealm ? storedCredentials[targetRealm]?.environment : undefined) ??
+      (await resolveTenantQboEnvironment(tenant));
   }
 
   const result: Record<string, InvoiceSyncStatus> = {};
