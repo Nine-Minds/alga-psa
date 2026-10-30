@@ -30,7 +30,7 @@ import type { PartyDisplayTags } from '../../lib/partyDisplayTags';
 import { getUserTimeZone } from '@alga-psa/core';
 import { formatTicketDateTime } from '../../lib/ticketDateTimeFormat';
 import { formatTicketLocationDisplay } from '../../lib/formatTicketLocation';
-import { requesterLocationLine } from '../../lib/requesterLocation';
+import { contactLocationSuggestion, requesterLocationLine } from '../../lib/requesterLocation';
 import type { AddTicketWatcherInput } from '@shared/services/tickets/ticketWatcherService';
 import TicketMaterialsCard from './TicketMaterialsCard';
 import TicketWatchListCard from './TicketWatchListCard';
@@ -284,6 +284,12 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const isFieldFrozen = React.useCallback((field: string) => {
     return frozenFieldSet.has(field) || Boolean(liveFieldConflicts[field]);
   }, [frozenFieldSet, liveFieldConflicts]);
+
+  // The ticket sits somewhere the requester does not work: offer their site, never take it. Same
+  // rule and same one click as the grid layout's contact tile.
+  const suggestedContactLocationId = onChangeLocation && !isFieldFrozen('location_id')
+    ? contactLocationSuggestion(contactInfo, ticket.location_id)
+    : null;
 
   const getFieldContainerClassName = React.useCallback((field: string) => {
     const classes = ['rounded-lg transition-colors duration-[600ms]'];
@@ -734,6 +740,16 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               <p id={`${id}-contact-location`} className="mt-1 text-sm text-gray-600">
                 {requesterLocation.name}
               </p>
+            ) : null}
+            {suggestedContactLocationId ? (
+              <button
+                {...withDataAutomationId({ id: `${id}-contact-use-location` })}
+                type="button"
+                className="mt-1 text-xs text-[rgb(var(--color-primary-600))] hover:underline text-left"
+                onClick={() => onChangeLocation?.(suggestedContactLocationId)}
+              >
+                {t('bento.tiles.useContactLocation', 'Use contact\'s location')}
+              </button>
             ) : null}
             {getEditingCaption('contact_name_id') ? (
               <p className="mt-2 text-xs text-slate-500">{getEditingCaption('contact_name_id')}</p>

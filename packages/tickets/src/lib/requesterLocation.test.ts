@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { contactLocationSuggestion, requesterLocationLine } from './requesterLocation';
 
@@ -79,4 +81,23 @@ describe('contactLocationSuggestion', () => {
     expect(contactLocationSuggestion({ work_arrangement: 'remote', locations: [] }, null)).toBeNull();
     expect(contactLocationSuggestion(null, null)).toBeNull();
   });
+});
+
+describe('both ticket layouts offer the requester site', () => {
+  // FR-C3 names the grid tile and the entry sidebar: the line without the one-click offer leaves
+  // the operator re-picking a location the contact already told us about.
+  const layouts = {
+    'components/ticket/bento/TicketBentoLayout.tsx': 'props.onChangeLocation',
+    'components/ticket/TicketProperties.tsx': 'onChangeLocation',
+  };
+
+  for (const [relativePath, handler] of Object.entries(layouts)) {
+    it(`${relativePath} renders the hint and applies it only on the click`, () => {
+      const source = readFileSync(path.join(__dirname, '..', relativePath), 'utf8');
+      expect(source).toContain('contactLocationSuggestion(');
+      expect(source).toContain('-contact-use-location');
+      expect(source).toContain(`${handler}?.(suggestedContactLocationId)`);
+      expect(source).toContain("'bento.tiles.useContactLocation'");
+    });
+  }
 });
