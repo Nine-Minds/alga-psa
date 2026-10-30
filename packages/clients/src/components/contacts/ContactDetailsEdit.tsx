@@ -96,6 +96,9 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
       is_primary: location.is_primary,
     })),
   );
+  // A contact handed to the form without its links loaded has nothing to send: `locations` omitted
+  // means "unchanged", so only a loaded set, an edit or a client change may speak for them.
+  const [locationsKnown, setLocationsKnown] = useState(initialContact.locations !== undefined);
   // A location link only ever points at the contact's own client's locations, so moving the contact
   // removes them all. The count is stated before the save, never discovered after it.
   const [pendingClientChange, setPendingClientChange] = useState<string | null>(null);
@@ -231,7 +234,11 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
       client_id: clientId || '',
       manager_contact_id: clientId === prev.client_id ? prev.manager_contact_id : null,
     }));
-    setLocationLinks(prev => (clientId === contact.client_id ? prev : []));
+    if (clientId !== contact.client_id) {
+      setLocationLinks([]);
+      // The move itself is the instruction to drop them, loaded or not.
+      setLocationsKnown(true);
+    }
   }, [contact.client_id]);
 
   const handleClientSelect = async (clientId: string | null) => {
@@ -292,7 +299,7 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         ...compactedEmails,
         phone_numbers: compactContactPhoneNumbers(contact.phone_numbers),
         work_arrangement: contact.work_arrangement ?? null,
-        locations: locationLinks,
+        locations: locationsKnown ? locationLinks : undefined,
       });
       if (isReturnedActionError(updatedContact)) {
         setError(getErrorMessage(updatedContact));
@@ -542,7 +549,10 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
                   workArrangement={contact.work_arrangement as ContactWorkArrangement | null | undefined}
                   onWorkArrangementChange={(value) => handleInputChange('work_arrangement', value)}
                   value={locationLinks}
-                  onChange={setLocationLinks}
+                  onChange={(next) => {
+                    setLocationLinks(next);
+                    setLocationsKnown(true);
+                  }}
                 />
               </td>
             </tr>

@@ -277,7 +277,7 @@
     "featureIds": [
       "F020"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "QuickAddContact with a client chosen lets the user pick two locations and a primary; the created contact has both links"
   },
   {

@@ -285,4 +285,43 @@ describe('ContactDetailsEdit client change', () => {
     );
     expect(screen.queryByText(/This removes/)).toBeNull();
   });
+
+  it('says nothing about locations when the contact arrived without them loaded', async () => {
+    // `locations` omitted means unchanged; a form that never saw them must not speak for them.
+    render(
+      <ContactDetailsEdit
+        initialContact={contact}
+        clients={[triage, life, inactive]}
+        onSave={onSave}
+        onCancel={onCancel}
+        isInDrawer
+      />
+    );
+
+    fireEvent.click(document.querySelector('#contact-edit-save-button') as HTMLElement);
+
+    await waitFor(() => expect(hoisted.updateContact).toHaveBeenCalledTimes(1));
+    expect(hoisted.updateContact.mock.calls[0]![0]).not.toHaveProperty('locations', expect.anything());
+    expect(hoisted.updateContact.mock.calls[0]![0].locations).toBeUndefined();
+  });
+
+  it('sends the loaded set untouched when nothing about the links changed', async () => {
+    render(
+      <ContactDetailsEdit
+        initialContact={linkedContact}
+        clients={[triage, life, inactive]}
+        onSave={onSave}
+        onCancel={onCancel}
+        isInDrawer
+      />
+    );
+
+    fireEvent.click(document.querySelector('#contact-edit-save-button') as HTMLElement);
+
+    await waitFor(() => expect(hoisted.updateContact).toHaveBeenCalledTimes(1));
+    expect(hoisted.updateContact.mock.calls[0]![0].locations).toEqual([
+      { location_id: 'loc-warehouse', is_primary: true },
+      { location_id: 'loc-hq', is_primary: false },
+    ]);
+  });
 });

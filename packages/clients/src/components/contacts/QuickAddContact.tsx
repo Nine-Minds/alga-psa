@@ -189,11 +189,20 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       setValidationErrors([]);
       setFieldErrors({});
       setPendingTags([]);
+      setWorkArrangement(null);
+      setLocationLinks([]);
+      setIsLocationsOpen(false);
     }
   }, [isOpen, selectedClientId, initialPhoneNumber]);
 
   const handleClientSelect = (nextClientId: string | null) => {
     if (typeof nextClientId === 'string' || nextClientId === null) {
+      // Links belong to the client that owns them; carrying them across would either invent a link
+      // the operator never chose or leave a cross-client one stranded off-screen (the editor only
+      // lists the new client's sites), which the save can only refuse.
+      if (nextClientId !== clientId) {
+        setLocationLinks([]);
+      }
       setClientId(nextClientId);
     }
   };
@@ -746,7 +755,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
         open={isQuickAddClientOpen}
         onOpenChange={setIsQuickAddClientOpen}
         onClientAdded={(newClient) => {
-          setClientId(newClient.client_id);
+          handleClientSelect(newClient.client_id);
         }}
         skipSuccessDialog
       />
