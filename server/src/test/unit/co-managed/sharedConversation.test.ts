@@ -65,21 +65,21 @@ describe('customer-local authors', () => {
 
 describe('shared ticket data source with a conversation', () => {
   it('is writable for the conversation only, offering exactly the server-resolved audiences', () => {
-    const source = createCoManagedSharedTicketDataSource(summary, '/back', fakeConversation(['requester', 'shared_it', 'organization_private']));
+    const source = createCoManagedSharedTicketDataSource(summary, '/back', { conversation: fakeConversation(['requester', 'shared_it', 'organization_private']) });
     expect(source.screen.readOnly).toBe(false);
     expect(source.conversation.audiences).toEqual(['requester', 'shared_it', 'organization_private']);
     expect(() => (source.ticket.updateTicket as any)()).toThrow(/read-only/);
   });
 
   it('stays read-only when the viewer may write nowhere', () => {
-    const source = createCoManagedSharedTicketDataSource(summary, '/back', fakeConversation([]));
+    const source = createCoManagedSharedTicketDataSource(summary, '/back', { conversation: fakeConversation([]) });
     expect(source.screen.readOnly).toBe(true);
     expect(source.conversation.audiences).toBeUndefined();
   });
 
   it('posts every audience through the writer, never the native action', async () => {
     const conversation = fakeConversation(['requester', 'shared_it', 'organization_private']);
-    const source = createCoManagedSharedTicketDataSource(summary, '/back', conversation);
+    const source = createCoManagedSharedTicketDataSource(summary, '/back', { conversation });
     for (const audience of ['shared_it', 'requester', 'organization_private']) {
       const result = await (source.comments.addTicketCommentWithCacheForCurrentUser as any)('tk1', 'hi', true, false, false, undefined, undefined, undefined, audience);
       expect(result).toMatchObject({ audience });
@@ -89,7 +89,7 @@ describe('shared ticket data source with a conversation', () => {
 
   it('fails closed without an audience, for a resolution, and for an audience the viewer lacks', async () => {
     const conversation = fakeConversation(['requester']);
-    const source = createCoManagedSharedTicketDataSource(summary, '/back', conversation);
+    const source = createCoManagedSharedTicketDataSource(summary, '/back', { conversation });
     const add = source.comments.addTicketCommentWithCache as any;
     expect(await add('tk1', 'hi', true)).toHaveProperty('actionError');
     expect(await add('tk1', 'hi', true, true, false, undefined, undefined, undefined, 'requester')).toHaveProperty('actionError');
@@ -99,13 +99,13 @@ describe('shared ticket data source with a conversation', () => {
 
   it('a reply without an audience inherits the parent thread audience', async () => {
     const conversation = fakeConversation(['requester', 'shared_it']);
-    const source = createCoManagedSharedTicketDataSource(summary, '/back', conversation);
+    const source = createCoManagedSharedTicketDataSource(summary, '/back', { conversation });
     await (source.comments.createComment as any)({ note: 'reply', parent_comment_id: 'c1' });
     expect(conversation.write).toHaveBeenCalledWith({ content: 'reply', audience: 'shared_it', parentCommentId: 'c1' });
   });
 
   it('reads the loaded conversation', async () => {
-    const source = createCoManagedSharedTicketDataSource(summary, '/back', fakeConversation(['requester']));
+    const source = createCoManagedSharedTicketDataSource(summary, '/back', { conversation: fakeConversation(['requester']) });
     expect(await source.comments.findCommentsByTicketId('tk1')).toHaveLength(1);
   });
 });

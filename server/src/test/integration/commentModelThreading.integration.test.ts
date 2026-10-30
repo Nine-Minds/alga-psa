@@ -630,7 +630,10 @@ describe('ticket comment threading model', () => {
       }
     }
   });
-  it('psa comment update and delete work without a comments.actor_reference_id column', async () => {
+  // Behavioural contract only: psa update/delete must not depend on comments.actor_reference_id.
+  // Deliberately schema-agnostic — a later expand-only migration may add the column, and the
+  // upgrade-order smoke replays this test against that newer schema.
+  it('psa comment update and delete do not depend on comments.actor_reference_id', async () => {
     const context = await ticketUserContext();
     expect(context).toBeTruthy();
     // L4a adds the column, so schema-absent neutrality is proven inside a rolled-back

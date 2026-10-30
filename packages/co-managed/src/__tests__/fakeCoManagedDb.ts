@@ -12,6 +12,10 @@ const uniqueKeys: Record<string, string[]> = {
   co_managed_allocations: ['tenant', 'operation_id'],
   co_managed_provisioning_operations: ['tenant', 'operation_id'],
   co_management_relationships: ['tenant', 'relationship_id'],
+  co_management_ticket_work: ['tenant', 'relationship_id', 'ticket_id'],
+  co_management_ticket_handoffs: ['tenant', 'operation_id'],
+  co_management_command_receipts: ['tenant', 'operation_id'],
+  co_managed_ticket_references: ['tenant', 'customer_tenant', 'relationship_id', 'ticket_id'],
 };
 /** jsonb columns come back from Postgres as objects; the domain code writes them as JSON strings. */
 const jsonColumns: Record<string, string[]> = {

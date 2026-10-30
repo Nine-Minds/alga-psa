@@ -156,3 +156,37 @@ test('ticket conversation audience strings use the formal register in es and nl'
     }
   }
 });
+
+// Hour-bucket bans ("bucket" -> prepaid hour pool) must not fire on object-storage
+// copy, where "bucket" is the S3 term and the hour-pool rendering would be wrong.
+const objectStorageEn =
+  'When a document is attached by URL, AlgaPSA only downloads it from the hosts listed here. Prefer bucket-specific hosts like acme-uploads.s3.us-east-1.amazonaws.com over generic ones.';
+const hourBucketEn = 'Bucket hours remaining for this contract line';
+
+for (const locale of ['de', 'es', 'fr', 'it', 'nl', 'pl']) {
+  test(`${locale} hour-bucket bans ignore object-storage buckets but still catch hour buckets`, () => {
+    const config = registry[locale];
+    const glossary = JSON.parse(readFileSync(join(repoRoot, config.dir, config.glossary), 'utf8'));
+    const matchers = forbiddenMatchers(glossary, config.dialect);
+    const value = 'bucket';
+
+    assert.deepEqual(
+      findForbiddenTerms(`acme-uploads ${value}`, matchers, config.dialect, objectStorageEn, 'msp/settings:fixture'),
+      [],
+      `${locale}: storage bucket copy must not trip the hour-bucket ban`,
+    );
+    assert.ok(
+      findForbiddenTerms(`${value} 10h`, matchers, config.dialect, hourBucketEn, 'msp/settings:fixture')
+        .some((item) => item.term === 'bucket'),
+      `${locale}: an untranslated hour bucket must still be flagged`,
+    );
+  });
+}
+
+test('it and pl allowlist the loanword "Host" as a field label', () => {
+  for (const locale of ['it', 'pl']) {
+    const config = registry[locale];
+    const glossary = JSON.parse(readFileSync(join(repoRoot, config.dir, config.glossary), 'utf8'));
+    assert.equal(allowlistMatchers(glossary, config.dialect).isAllowed('Host'), true, `${locale}: Host`);
+  }
+});

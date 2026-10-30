@@ -13,5 +13,5 @@ exports.up = async function up(knex) {
 };
 
 exports.down = async function down() {
-  // Forward-only: a validated constraint is not un-validated. 20261029140500's down removes the constraint.
+  // Forward-only: a validated constraint is not un-validated. 20261030100500's down removes the constraint.
 };

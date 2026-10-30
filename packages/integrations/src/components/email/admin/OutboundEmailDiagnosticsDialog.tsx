@@ -41,6 +41,13 @@ function statusIcon(status: OutboundStep['status']) {
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Provider evidence a support engineer needs from a failed step, without any label text. */
+function errorEvidence(error: { status?: number; code?: string; graphCode?: string; requestId?: string }): string {
+  return [error.status, error.code ?? error.graphCode, error.requestId]
+    .filter((value) => value !== undefined && value !== null && value !== '')
+    .join(' · ');
+}
+
 export function OutboundEmailDiagnosticsDialog({
   isOpen,
   onClose,
@@ -304,7 +311,14 @@ export function OutboundEmailDiagnosticsDialog({
                     {renderStatusBadge(step.status)}
                   </div>
                   {step.detail && <p className="text-sm text-muted-foreground">{step.detail}</p>}
-                  {!step.detail && step.error && <p className="text-sm text-muted-foreground">{step.error.message}</p>}
+                  {step.error && (!step.detail || step.status === 'fail') && step.error.message !== step.detail && (
+                    <p className="text-sm text-red-600 break-words">
+                      {step.error.message}
+                      {errorEvidence(step.error) && (
+                        <span className="text-muted-foreground"> ({errorEvidence(step.error)})</span>
+                      )}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>

@@ -16,9 +16,6 @@ const L4A_SUFFIXES = [
   'create_co_management_private_command_receipts',
   'extend_participation_evidence_conversation_sources',
   'validate_participation_evidence_source_type_check',
-  'create_co_management_command_receipts',
-  'add_ticket_audit_log_actor_reference_columns',
-  'validate_ticket_audit_log_actor_fk',
 ];
 
 const allMigrations = readdirSync(MIGRATIONS_DIR)

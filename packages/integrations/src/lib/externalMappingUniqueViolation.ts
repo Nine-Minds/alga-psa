@@ -51,10 +51,11 @@ export function duplicateMappingError(): ActionMessageError {
  * Returns null when the error is not a unique violation.
  *
  * idx_unique_external_mapping is a partial index on the external target:
- * item-kind rows (and every non-Xero integration) are one-to-one, while Xero
- * revenue-account rows are outside it and may be shared. Tombstoned (unlinked)
- * rows are outside both indexes and reserve nothing. Anything else
- * (idx_unique_alga_mapping) is the same Alga entity mapped twice.
+ * most rows are one-to-one, while Xero revenue-account rows, QuickBooks
+ * Desktop account rows and QuickBooks Online tax codes are outside it and may
+ * be shared. Tombstoned (unlinked) rows are outside it too and reserve
+ * nothing. Anything else (idx_unique_alga_mapping) is the same Alga entity
+ * mapped twice.
  */
 export function mapUniqueViolation(
   error: unknown,

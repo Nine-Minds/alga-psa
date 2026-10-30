@@ -1,7 +1,7 @@
 // CM L4a (1 of 5): conversation audience on the hot comment tables.
 // Expand-only. comment_threads.collaboration_audience and the three comments.actor_*
 // attribution columns are nullable metadata-only adds (NULL = legacy, so N-1 writers never
-// name them). Both CHECKs and the FK are added NOT VALID; 20261029140100 validates them in
+// name them). Both CHECKs and the FK are added NOT VALID; 20261030100100 validates them in
 // a separate non-transactional file. No trigger, no backfill, no default. Each ALTER runs
 // under a 2s lock_timeout and is retried (savepoint-scoped) so a busy comments or
 // comment_threads table never queues writers behind this migration.

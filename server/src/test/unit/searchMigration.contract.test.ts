@@ -11,6 +11,7 @@ const migrationPath = path.resolve(
   '../../../migrations/20260513120000_create_app_search_index.cjs',
 );
 const searchQueryPath = path.resolve(testDir, '../../../../packages/search/src/query.ts');
+const projectSearchAccessPath = path.resolve(testDir, '../../../../packages/search/src/projectSearchAccess.ts');
 const migration = require(migrationPath) as {
   up: (knex: { raw: (sql: string) => Promise<{ rows?: Array<Record<string, unknown>> }> }) => Promise<void>;
   down: (knex: { schema: { dropTableIfExists: (tableName: string) => Promise<void> } }) => Promise<void>;
@@ -200,8 +201,21 @@ describe('app_search_index migration contract', () => {
     expect(migration).toMatch(/ON app_search_index USING gin \(search_vector\)/);
     expect(migration).toMatch(/ON app_search_index USING gin \(title gin_trgm_ops\)/);
     expect(migration).toMatch(/ON app_search_index USING gin \(subtitle gin_trgm_ops\)/);
-    expect(searchQuery).toContain('scopedSearchIndexSql(options.knex, options.tenant)');
+    // Every query path reads the tenant-scoped relation, or the admitted relation a caller
+    // supplies in its place; none bypasses the override.
+    expect(searchQuery).toContain('scopedSearchIndexSql(options.knex, options.tenant, options.searchIndex)');
+    expect(searchQuery).not.toContain('scopedSearchIndexSql(options.knex, options.tenant)');
     expect(searchQuery).toContain("tenantDb(knex, tenant)");
+    // The admitted relations that stand in for the index stay tenant-scoped too.
+    const projectSearchAccess = readFileSync(projectSearchAccessPath, 'utf8');
+    expect(projectSearchAccess).toContain('const owner = tenantDb(trx, tenant)');
+    const indexReads = projectSearchAccess
+      .split('\n')
+      .filter((line) => line.includes('app_search_index'));
+    expect(indexReads.length).toBeGreaterThan(0);
+    for (const line of indexReads) {
+      expect(line).toMatch(/(tenantDb\(trx, tenant\)|owner)\.table\('app_search_index as i'\)/);
+    }
     expect(searchQuery).toContain('FROM ${searchIndex.sql}');
     expect(searchQuery).not.toContain('WHERE s.tenant = ?::uuid');
     expect(searchQuery).toContain('s.search_vector @@ q.tsq');

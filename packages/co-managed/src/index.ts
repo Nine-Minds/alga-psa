@@ -37,6 +37,29 @@ export { retainCoManagedWorkSnapshot } from './workSnapshotEvidence';
 export { retainCoManagedHistoricalWorkEvidence } from './historicalWorkEvidence';
 export { hasCoManagedLocalPermission } from './localPermission';
 export { loadCoManagedLifecycleFacts, loadCoManagedStaffRoles, loadCoManagedGrantFacts, loadCoManagedHomeFacts } from './sharedWork';
+export { listCoManagedSharedProjects, listCoManagedSharedProjectTasks } from './projectTaskQueue';
+export type { CoManagedSharedProjectRow, CoManagedSharedProjectPage, CoManagedSharedTaskRow, CoManagedSharedTaskPage } from './projectTaskQueue';
+export { editCoManagedProjectTask, getCoManagedProjectTaskSnapshot, CoManagedTaskEditError, CO_MANAGED_TASK_EDIT_FIELDS } from './projectTaskEditing';
+export type { CoManagedTaskEditRequest, CoManagedTaskEditReceipt, CoManagedTaskSnapshot, CoManagedTaskWriter, CoManagedTaskEditPatch } from './projectTaskEditing';
+export { assignCoManagedProjectTask } from './projectTaskAssignments';
+export type { CoManagedTaskAssignmentRequest, CoManagedTaskAssignmentReceipt } from './projectTaskAssignments';
+export { admitCoManagedNativeTaskCommentAccess, CO_MANAGED_TASK_LOCATOR_PAGE } from './nativeTaskCommentAccess';
+export type { CoManagedNativeTaskCommentAccess, CoManagedTaskLocator } from './nativeTaskCommentAccess';
+export { listCoManagedAssignedTasks } from './projectTaskQueue';
+export type { CoManagedAssignedTaskRow, CoManagedAssignedTaskPage } from './projectTaskQueue';
+export { listCoManagedProjectTaskHistory } from './projectTaskAudit';
+export type { CoManagedTaskHistoryEntry } from './projectTaskAudit';
+export { countCoManagedNativeTaskComments } from './nativeTaskCommentAccess';
+export { listCoManagedProjectTaskStatusOptions } from './projectTaskEditing';
+export type { CoManagedProjectTaskStatusOption } from './projectTaskEditing';
+// L3b1: shared ticket handoff engine, Working queue and shared-ticket write path.
+export * from './ticketHandoffs';
+export * from './ticketQueue';
+export * from './ticketEditing';
+export * from './ticketAssignments';
+export * from './ticketBulkHandback';
+export * from './ticketCollaboration';
+export * from './sharedTicketDetails';
 
 // Conversation audiences, private threads and shared-ticket comment commands (L4a).
 export { createCoManagedTicketComment, CoManagedCommentCreateError } from './ticketCommentCreation';
