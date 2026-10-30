@@ -158,7 +158,7 @@ function CannedResponseEditorBody({ cannedResponseId }: CannedResponseEditorProp
     editor.focus();
   };
 
-  const issueMessages = (error: { issues: Array<{ message: string; path: (string | number)[]; params?: unknown }> }) =>
+  const issueMessages = (error: { issues: Array<{ message: string; path: ReadonlyArray<PropertyKey>; params?: unknown }> }) =>
     error.issues.map((issue) => {
       const params = issue.params as { messageKey?: string; messageParams?: Record<string, unknown> } | undefined;
       if (params?.messageKey) return t(params.messageKey.replace(MESSAGE_KEY_PREFIX, ''), issue.message, params.messageParams);

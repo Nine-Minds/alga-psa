@@ -1,7 +1,7 @@
 import type { DesignerNode } from '../state/designerStore';
 import { getNodeMetadata } from './nodeProps';
 
-export type DesignerDocumentKind = 'invoice' | 'quote' | 'sales-order' | 'work-tag' | 'staging-manifest';
+export type DesignerDocumentKind = 'invoice' | 'quote' | 'sales-order' | 'work-tag' | 'staging-manifest' | 'rma-return-slip';
 
 // recordUrl + identifier are the label view model's discriminators. Label catalogs also expose
 // clientName / tenantName, which the quote check below would otherwise claim, so this runs first.
@@ -21,6 +21,15 @@ const hasStagingManifestBindingCatalog = (bindings: unknown): boolean => {
   }
   const values = (bindings as { values?: Record<string, unknown> }).values;
   return Boolean(values && typeof values === 'object' && 'boxIdentifier' in values);
+};
+
+// rmaNumber is the RMA return slip's discriminator (C5); it also carries recordUrl, so it runs before the label check.
+const hasRmaReturnSlipBindingCatalog = (bindings: unknown): boolean => {
+  if (!bindings || typeof bindings !== 'object') {
+    return false;
+  }
+  const values = (bindings as { values?: Record<string, unknown> }).values;
+  return Boolean(values && typeof values === 'object' && 'rmaNumber' in values);
 };
 
 const hasSalesOrderBindingCatalog = (bindings: unknown): boolean => {
@@ -82,6 +91,9 @@ export const resolveDocumentKindFromBindingCatalog = (
 ): DesignerDocumentKind => {
   if (hasStagingManifestBindingCatalog(bindings)) {
     return 'staging-manifest';
+  }
+  if (hasRmaReturnSlipBindingCatalog(bindings)) {
+    return 'rma-return-slip';
   }
   if (hasWorkTagBindingCatalog(bindings)) {
     return 'work-tag';

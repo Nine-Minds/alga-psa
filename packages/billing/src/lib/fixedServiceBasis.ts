@@ -65,6 +65,23 @@ export function fixedServicesRecurringTotalCents(
   return unitTotal + (hasBundleFixedService(services) ? Number(bundleBaseRateCents ?? 0) : 0);
 }
 
+export type FixedLinePeriodInput = {
+  billing_frequency?: string | null;
+  base_rate?: number | null;
+  services: ReadonlyArray<FixedServiceBasisFields>;
+};
+
+/**
+ * Un-normalized recurring amount of ONE billing period of a fixed line. A
+ * service-less line contributes only its base rate, matching the stored-contract
+ * valuation.
+ */
+export function fixedLinePeriodCents(line: FixedLinePeriodInput): number {
+  return line.services.length === 0
+    ? Number(line.base_rate ?? 0)
+    : fixedServicesRecurringTotalCents(line.services, line.base_rate);
+}
+
 /**
  * Monthly-normalized sum of {@link fixedServicesRecurringTotalCents} over every
  * fixed line. Each line is normalized by its own billing frequency (falling
@@ -73,20 +90,14 @@ export function fixedServicesRecurringTotalCents(
  * matching the stored-contract valuation.
  */
 export function fixedLinesRecurringTotalCents(
-  lines: ReadonlyArray<{
-    billing_frequency?: string | null;
-    base_rate?: number | null;
-    services: ReadonlyArray<FixedServiceBasisFields>;
-  }>,
+  lines: ReadonlyArray<FixedLinePeriodInput>,
   defaultBillingFrequency?: string | null,
 ): number {
-  return lines.reduce((sum, line) => {
-    const amount =
-      line.services.length === 0
-        ? Number(line.base_rate ?? 0)
-        : fixedServicesRecurringTotalCents(line.services, line.base_rate);
-    return sum + normalizeToMonthlyCents(amount, line.billing_frequency ?? defaultBillingFrequency);
-  }, 0);
+  return lines.reduce(
+    (sum, line) =>
+      sum + normalizeToMonthlyCents(fixedLinePeriodCents(line), line.billing_frequency ?? defaultBillingFrequency),
+    0,
+  );
 }
 
 /**

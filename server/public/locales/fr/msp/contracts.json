@@ -588,7 +588,8 @@
       "failedToResetRate": "Échec de la réinitialisation du tarif de la ligne",
       "protectedStartDate": "La date de début doit être le {{boundary}} ou antérieure pour inclure l’historique protégé.",
       "protectedEndDate": "La date de fin doit être le {{boundary}} ou postérieure pour inclure l’historique protégé.",
-      "cannotEditWithInvoices": "Impossible de modifier la ligne de contrat : ce contrat comporte des factures associées. Les lignes de contrat ne peuvent plus être modifiées une fois les factures générées."
+      "cannotEditWithInvoices": "Impossible de modifier la ligne de contrat : ce contrat comporte des factures associées. Les lignes de contrat ne peuvent plus être modifiées une fois les factures générées.",
+      "reloadLatest": "Recharger la dernière version"
     },
     "loading": {
       "contractLines": "Chargement des lignes de contrat",
@@ -698,6 +699,13 @@
       "statusSuperseded": "Remplacé",
       "supersededHistory": "Modifications en attente remplacées ({{count}})",
       "supersededBy": "Remplacé par"
+    },
+    "pricing": {
+      "catalog": "catalogue",
+      "override": "remplacé",
+      "cost": "Coût : {{cost}}",
+      "costInCurrency": "Coût en {{currency}} : {{cost}}",
+      "margin": "Marge : {{margin}} par unité"
     }
   },
   "contractLineEdit": {
@@ -1695,6 +1703,9 @@
       "label": "Profil de facturation",
       "none": "Utiliser le profil par défaut du client",
       "hint": "Les charges de ce contrat sont facturées à ce profil, sauf si une ligne le remplace."
+    },
+    "billingTiming": {
+      "label": "Moment de facturation"
     }
   },
   "wizardFixed": {
@@ -1744,7 +1755,8 @@
       "recurringQuantityLabel": "Quantité récurrente",
       "allocationQuantityLabel": "Quantité d’allocation",
       "noCurrencyPrice": "Aucun prix en {{currency}} dans le catalogue. Saisissez un tarif unitaire."
-    }
+    },
+    "billingTimingLabel": "Moment de facturation"
   },
   "wizardProducts": {
     "actions": {
@@ -1767,7 +1779,8 @@
       "productMissingPrice": "Ce produit n'a ni prix par défaut ni prix de remplacement. Il ne peut pas être facturé tant que vous n'avez pas saisi de prix unitaire.",
       "noCurrencyPriceEnterUnitPrice": "Aucun prix en {{currency}} dans le catalogue. Saisissez un prix unitaire.",
       "noCurrencyPriceWithLegacyHint": "Aucun prix en {{currency}} dans le catalogue. Tarif par défaut hérité : {{rate}}. Saisissez un prix unitaire en {{currency}}."
-    }
+    },
+    "billingTimingLabel": "Moment de facturation"
   },
   "wizardHourly": {
     "actions": {
@@ -1825,7 +1838,8 @@
         "rolloverDisabled": "Désactivé",
         "rolloverEnabled": "Activé"
       }
-    }
+    },
+    "billingTimingLabel": "Moment de facturation"
   },
   "wizardUsage": {
     "actions": {
@@ -1863,7 +1877,8 @@
     },
     "values": {
       "defaultUnit": "unité"
-    }
+    },
+    "billingTimingLabel": "Moment de facturation"
   },
   "wizardReview": {
     "heading": "Vérifier le contrat",
@@ -1972,7 +1987,10 @@
         "one": "{{count}} produit",
         "other": "{{count}} produits"
       },
-      "overrideRate": "- remplacement {{rate}}/{{currencyCode}}"
+      "overrideRate": "- remplacement {{rate}}/{{currencyCode}}",
+      "cost": "Coût : {{cost}}",
+      "costInCurrency": "Coût en {{currency}} : {{cost}}",
+      "margin": "Marge : {{margin}} par unité"
     },
     "hourly": {
       "badgeCount": {
@@ -1995,8 +2013,12 @@
     "total": {
       "title": "Total mensuel estimé",
       "description": "Les produits et les frais fixes sont inclus dans ce total. Les services horaires et à l'usage sont facturés selon le réel.",
-      "perMonth": "par mois",
-      "savedDraftValue": "Valeur du brouillon enregistré : {{amount}}"
+      "savedDraftValue": "Valeur du brouillon enregistré : {{amount}}",
+      "titleCadence": "Total estimé",
+      "mixedFrequencyTitle": "Total estimé par fréquence de facturation",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "environ {{amount}} par mois",
+      "savedDraftValueMonthly": "Valeur du brouillon enregistré : {{amount}} par mois"
     },
     "finalChecklist": {
       "title": "Avant de terminer :",
@@ -2014,6 +2036,13 @@
       "neverExpires": "n'expire jamais",
       "cadenceSummary": "{{hours}} h par période de facturation pour {{price}}",
       "overageRate": "dépassement {{rate}}/h"
+    },
+    "billingTiming": {
+      "label": "Moment de facturation :",
+      "advance": "À l'avance",
+      "arrears": "À terme échu",
+      "advanceInherited": "À l'avance (valeur par défaut du contrat)",
+      "arrearsInherited": "À terme échu (valeur par défaut du contrat)"
     }
   },
   "wizardTemplateLines": {
@@ -2759,6 +2788,7 @@
   "wizardFirstInvoice": {
     "loading": "Vérification du calendrier de facturation du client…",
     "arrearsPreviewNote": "D'ici là, un aperçu des factures de ce client n'a rien à facturer pour cette ligne.",
+    "arrearsPreviewNoteMany": "D'ici là, un aperçu des factures de ce client n'a rien à facturer pour ces lignes.",
     "unavailable": {
       "missingStartDate": "Choisissez une date de début pour voir quand ce contrat sera facturé pour la première fois.",
       "unsupportedFrequency": "Aucune date de première facture n'est affichée, car la facturation selon le rythme du contrat ne prend pas en charge cette fréquence. Choisissez une fréquence prise en charge ou facturez selon le calendrier du client.",
@@ -2795,7 +2825,11 @@
     "options": {
       "advance": "À l’avance (facturer au début de la période)",
       "arrears": "À terme échu (facturer à la fin de la période)"
-    }
+    },
+    "inheritWithValue": "Utiliser la valeur par défaut du contrat — {{timing}}",
+    "inheritedAdvance": "à l'avance",
+    "inheritedArrears": "à terme échu",
+    "contractDefaultHelp": "Valeur par défaut pour les lignes forfaitaires, qui peuvent être facturées à l'avance. Les lignes horaires et d'utilisation sont toujours facturées à terme échu, quel que soit votre choix ici."
   },
   "contractDiscounts": {
     "title": "Remises",

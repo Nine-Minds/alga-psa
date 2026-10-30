@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'path';
 import { globSync } from 'tinyglobby';
 import { environmentProjects, partitionByEnvironment } from '../scripts/lib/jsdom-test-globs.mjs';
+import { onUnhandledError } from '../scripts/lib/vitest-unhandled-errors.mjs';
 
 fs.mkdirSync(path.resolve(__dirname, './coverage/.tmp'), { recursive: true });
 
@@ -11,12 +12,12 @@ fs.mkdirSync(path.resolve(__dirname, './coverage/.tmp'), { recursive: true });
 // exercise another zone.
 process.env.TZ = process.env.TZ || 'UTC';
 
-// Vitest only forwards a whitelist of CLI options into project configs, and
-// `poolOptions` is not on it — so `--poolOptions.forks.singleFork=false` stops
-// reaching the workers the moment a lane declares projects (the jsdom/node
-// split below). The shard runner's fresh-fork-per-file guarantee therefore
-// travels in the environment instead, where every project can read it.
-const singleFork = process.env.VITEST_RECYCLE_FORKS !== '1';
+// With `isolate: true` vitest 4 gives every file a fresh fork. Lanes that run
+// without VITEST_RECYCLE_FORKS (the DB-backed integration lanes) are capped at
+// one worker in config, where a CLI --maxWorkers cannot lift it into the jsdom/
+// node projects; VITEST_RECYCLE_FORKS=1 lanes (unit shards, `npm test`) leave
+// the worker count to their CLI --maxWorkers/--fileParallelism.
+const recycleForks = process.env.VITEST_RECYCLE_FORKS === '1';
 
 const SERVER_UNIT_INCLUDE = [
   '../ee/temporal-workflows/src/__tests__/integration/**/*.test.ts',
@@ -106,10 +107,9 @@ export default defineConfig({
     isolate: true,
     maxConcurrency: 1,
     // Integration suites share one test_database and drop/recreate it in
-    // beforeAll; parallel files corrupt each other's bootstrap. Vitest 4
-    // removed singleFork/singleThread, so state serialization explicitly —
-    // fileParallelism is honored by both v3 and v4.
+    // beforeAll; parallel files corrupt each other's bootstrap.
     fileParallelism: false,
+    ...(recycleForks ? {} : { maxWorkers: 1 }),
     sequence: {
       concurrent: false,
       shuffle: true,
@@ -117,14 +117,6 @@ export default defineConfig({
       seed: process.env.VITEST_SEED ? Number(process.env.VITEST_SEED) : undefined
     },
     pool: 'forks',
-    poolOptions: {
-      threads: {
-        singleThread: singleFork
-      },
-      forks: {
-        singleFork
-      }
-    },
     logHeapUsage: true,
     testTimeout: 20000,
     hookTimeout: 120000,
@@ -133,16 +125,15 @@ export default defineConfig({
     // config dumps, workflow loggers) accumulate into the multi-GB range and
     // OOM the orchestrator at report time. Keep logs for failures only.
     silent: 'passed-only',
+    // A console line emitted while a fork drains its RPC channel has its delivery
+    // rejected at teardown, and vitest 4 counts that as an unhandled error that
+    // fails an all-green shard. Only that rejection is dropped; see the helper.
+    onUnhandledError,
     coverage: {
       // Opt-in via --coverage; always-on coverage made every local run pay the
       // instrumentation cost. CI enables it where reports are collected.
       enabled: false,
       provider: 'v8',
-      // AST-aware remapping (vitest 4's default): the classic sourcemap remap
-      // of the full package/shared file set blows the 14GB heap at report
-      // time ("Ineffective mark-compacts near heap limit"); this path uses a
-      // fraction of the memory.
-      experimentalAstAwareRemapping: true,
       // Coverage reports are skipped on failing runs by default; red runs
       // are exactly the ones the metrics sheet needs coverage rows for.
       reportOnFailure: true,
@@ -150,10 +141,11 @@ export default defineConfig({
       // package and shared sources are measured alongside server/src.
       // allowExternal admits files outside server/ into the report — and it
       // switches include/exclude matching to absolute paths, so these
-      // patterns must be absolute. Two limits of the v8 provider here:
-      // untested-file discovery never leaves the vitest root, so package and
-      // shared files the suite never loads are absent from the report (their
-      // percentages read optimistic), while server/src gets true 0% entries.
+      // patterns must be absolute. One limit of the v8 provider here: untested
+      // files are only transformed when they sit under a project root, so
+      // package and shared files the suite never loads fail to parse as raw TS
+      // and are dropped from the report (their percentages read optimistic),
+      // while server/src gets true 0% entries.
       allowExternal: true,
       include: [
         path.resolve(__dirname, './src') + '/**/*.{js,ts,jsx,tsx}',
@@ -161,7 +153,18 @@ export default defineConfig({
         path.resolve(__dirname, '../shared') + '/**/*.{js,ts,jsx,tsx}',
       ],
       exclude: [
+        // Vitest 4 ships an empty default exclude list and no longer appends
+        // the test include globs, so test, mock and config files must be
+        // excluded here or the untested-file scan reports them as sources.
         ...coverageConfigDefaults.exclude,
+        '**/*.{test,spec}.?(c|m)[jt]s?(x)',
+        '**/*{.,-}{test,spec}?(-d).?(c|m)[jt]s?(x)',
+        '**/__tests__/**',
+        '**/__mocks__/**',
+        '**/*.d.ts',
+        '**/test-utils/**',
+        path.resolve(__dirname, './src/test') + '/**',
+        '**/{vite,vitest,tsup,eslint,prettier,jest,babel}.config.*',
         '**/dist/**',
         '**/node_modules/**',
         '**/migrations/**',

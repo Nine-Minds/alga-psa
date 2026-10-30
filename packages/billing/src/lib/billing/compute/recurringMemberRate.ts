@@ -12,8 +12,12 @@ export {
   resolveFixedLinePeriodTotal,
   productMembersRecurringTotalCents,
   normalizeToMonthlyCents,
+  summarizeRecurringAmounts,
 } from '@alga-psa/shared/billingClients/recurringMemberRate';
 export type {
+  RecurringPeriodAmount,
+  RecurringFrequencyGroup,
+  RecurringSummary,
   RecurringMemberRateInput,
   ResolvedRecurringMemberRate,
   RecurringMemberRateSource,

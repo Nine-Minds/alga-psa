@@ -588,7 +588,8 @@
       "failedToResetRate": "Det gick inte att återställa radens taxa",
       "protectedStartDate": "Startdatum måste vara senast {{boundary}} för att inkludera skyddad tjänstehistorik.",
       "protectedEndDate": "Slutdatum måste vara tidigast {{boundary}} för att inkludera skyddad tjänstehistorik.",
-      "cannotEditWithInvoices": "Avtalsraden kan inte redigeras: det finns fakturor kopplade till avtalet. Avtalsrader kan inte redigeras när fakturor har skapats."
+      "cannotEditWithInvoices": "Avtalsraden kan inte redigeras: det finns fakturor kopplade till avtalet. Avtalsrader kan inte redigeras när fakturor har skapats.",
+      "reloadLatest": "Ladda senaste versionen"
     },
     "loading": {
       "contractLines": "Läser in avtalsrader",
@@ -698,6 +699,13 @@
       "statusSuperseded": "Ersatt",
       "supersededHistory": "Ersatta väntande ändringar ({{count}})",
       "supersededBy": "Ersatt av"
+    },
+    "pricing": {
+      "catalog": "katalog",
+      "override": "åsidosatt",
+      "cost": "Kostnad: {{cost}}",
+      "costInCurrency": "Kostnad i {{currency}}: {{cost}}",
+      "margin": "Marginal: {{margin}} per enhet"
     }
   },
   "contractLineEdit": {
@@ -1695,6 +1703,9 @@
       "label": "Faktureringsprofil",
       "none": "Använd kundens standardprofil",
       "hint": "Debiteringar från det här avtalet faktureras till den här profilen om inte en avtalsrad åsidosätter den."
+    },
+    "billingTiming": {
+      "label": "Faktureringstidpunkt"
     }
   },
   "wizardFixed": {
@@ -1744,7 +1755,8 @@
       "recurringQuantityLabel": "Återkommande antal",
       "allocationQuantityLabel": "Tilldelningsantal",
       "noCurrencyPrice": "Inget pris i {{currency}} i katalogen. Ange ett enhetspris."
-    }
+    },
+    "billingTimingLabel": "Faktureringstidpunkt"
   },
   "wizardProducts": {
     "actions": {
@@ -1767,7 +1779,8 @@
       "productMissingPrice": "Produkten saknar både standardpris och anpassat pris. Den kan inte debiteras förrän du anger ett enhetspris.",
       "noCurrencyPriceEnterUnitPrice": "Inget pris i {{currency}} finns i katalogen. Ange ett enhetspris.",
       "noCurrencyPriceWithLegacyHint": "Inget pris i {{currency}} finns i katalogen. Äldre standardtaxa: {{rate}}. Ange ett enhetspris i {{currency}}."
-    }
+    },
+    "billingTimingLabel": "Faktureringstidpunkt"
   },
   "wizardHourly": {
     "actions": {
@@ -1825,7 +1838,8 @@
         "rolloverDisabled": "Inaktiverad",
         "rolloverEnabled": "Aktiverad"
       }
-    }
+    },
+    "billingTimingLabel": "Faktureringstidpunkt"
   },
   "wizardUsage": {
     "actions": {
@@ -1863,7 +1877,8 @@
     },
     "values": {
       "defaultUnit": "enhet"
-    }
+    },
+    "billingTimingLabel": "Faktureringstidpunkt"
   },
   "wizardReview": {
     "heading": "Granska avtal",
@@ -1972,7 +1987,10 @@
         "one": "{{count}} produkt",
         "other": "{{count}} produkter"
       },
-      "overrideRate": "- anpassat pris {{rate}}/{{currencyCode}}"
+      "overrideRate": "- anpassat pris {{rate}}/{{currencyCode}}",
+      "cost": "Kostnad: {{cost}}",
+      "costInCurrency": "Kostnad i {{currency}}: {{cost}}",
+      "margin": "Marginal: {{margin}} per enhet"
     },
     "hourly": {
       "badgeCount": {
@@ -1995,8 +2013,12 @@
     "total": {
       "title": "Uppskattat månadsbelopp",
       "description": "Produkter och fasta avgifter ingår i denna summa. Timdebiterade och förbrukningsbaserade tjänster faktureras efter faktiskt utfall.",
-      "perMonth": "per månad",
-      "savedDraftValue": "Sparat utkastvärde: {{amount}}"
+      "savedDraftValue": "Sparat utkastvärde: {{amount}}",
+      "titleCadence": "Beräknad summa",
+      "mixedFrequencyTitle": "Beräknad summa per faktureringsfrekvens",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "cirka {{amount}} per månad",
+      "savedDraftValueMonthly": "Sparat utkastvärde: {{amount}} per månad"
     },
     "finalChecklist": {
       "title": "Innan du slutför:",
@@ -2014,6 +2036,13 @@
       "neverExpires": "upphör aldrig",
       "cadenceSummary": "{{hours}} h varje faktureringsperiod för {{price}}",
       "overageRate": "överuttag {{rate}}/h"
+    },
+    "billingTiming": {
+      "label": "Faktureringstidpunkt:",
+      "advance": "I förskott",
+      "arrears": "I efterskott",
+      "advanceInherited": "I förskott (avtalets standard)",
+      "arrearsInherited": "I efterskott (avtalets standard)"
     }
   },
   "wizardTemplateLines": {
@@ -2759,6 +2788,7 @@
   "wizardFirstInvoice": {
     "loading": "Kontrollerar kundens faktureringsschema…",
     "arrearsPreviewNote": "Fram till dess finns det inget att fakturera för den här raden i en förhandsgranskning av fakturan för kunden.",
+    "arrearsPreviewNoteMany": "Fram till dess finns det inget att fakturera för de här raderna i en förhandsgranskning av fakturan för kunden.",
     "unavailable": {
       "missingStartDate": "Välj ett startdatum för att se när avtalet faktureras första gången.",
       "unsupportedFrequency": "Inget datum för första fakturan visas eftersom fakturering enligt avtalets intervall inte stöder den här frekvensen. Välj en frekvens som stöds eller fakturera enligt kundens schema.",
@@ -2795,7 +2825,11 @@
     "options": {
       "advance": "I förskott (fakturera vid periodens början)",
       "arrears": "I efterskott (fakturera vid periodens slut)"
-    }
+    },
+    "inheritWithValue": "Använd avtalets standard — {{timing}}",
+    "inheritedAdvance": "i förskott",
+    "inheritedArrears": "i efterskott",
+    "contractDefaultHelp": "Standard för fasta rader, som kan faktureras i förskott. Timrader och användningsrader faktureras alltid i efterskott, oavsett vad du väljer här."
   },
   "contractDiscounts": {
     "title": "Rabatter",

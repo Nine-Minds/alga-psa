@@ -53,6 +53,78 @@
     "./sharedWorkRedaction": {
       "types": "./src/sharedWorkRedaction.ts",
       "import": "./src/sharedWorkRedaction.ts"
+    },
+    "./policy": {
+      "types": "./src/policy.ts",
+      "import": "./src/policy.ts"
+    },
+    "./sharedWork": {
+      "types": "./src/sharedWork.ts",
+      "import": "./src/sharedWork.ts"
+    },
+    "./sharedWorkRead": {
+      "types": "./src/sharedWorkRead.ts",
+      "import": "./src/sharedWorkRead.ts"
+    },
+    "./customerWork": {
+      "types": "./src/customerWork.ts",
+      "import": "./src/customerWork.ts"
+    },
+    "./delegatedAdministration": {
+      "types": "./src/delegatedAdministration.ts",
+      "import": "./src/delegatedAdministration.ts"
+    },
+    "./participationEvidence": {
+      "types": "./src/participationEvidence.ts",
+      "import": "./src/participationEvidence.ts"
+    },
+    "./schedulingRegistration": {
+      "types": "./src/schedulingRegistration.ts",
+      "import": "./src/schedulingRegistration.ts"
+    },
+    "./appointmentMeetingCreation": {
+      "types": "./src/appointmentMeetingCreation.ts",
+      "import": "./src/appointmentMeetingCreation.ts"
+    },
+    "./meetingCreationOperation": {
+      "types": "./src/meetingCreationOperation.ts",
+      "import": "./src/meetingCreationOperation.ts"
+    },
+    "./nativeScheduleMeetingSync": {
+      "types": "./src/nativeScheduleMeetingSync.ts",
+      "import": "./src/nativeScheduleMeetingSync.ts"
+    },
+    "./localProjectSearchPolicy": {
+      "types": "./src/localProjectSearchPolicy.ts",
+      "import": "./src/localProjectSearchPolicy.ts"
+    },
+    "./projectTaskQueue": {
+      "types": "./src/projectTaskQueue.ts",
+      "import": "./src/projectTaskQueue.ts"
+    },
+    "./projectTaskEditing": {
+      "types": "./src/projectTaskEditing.ts",
+      "import": "./src/projectTaskEditing.ts"
+    },
+    "./projectTaskAssignments": {
+      "types": "./src/projectTaskAssignments.ts",
+      "import": "./src/projectTaskAssignments.ts"
+    },
+    "./projectTaskGate": {
+      "types": "./src/projectTaskGate.ts",
+      "import": "./src/projectTaskGate.ts"
+    },
+    "./nativeTaskCommentAccess": {
+      "types": "./src/nativeTaskCommentAccess.ts",
+      "import": "./src/nativeTaskCommentAccess.ts"
+    },
+    "./coManagedWorkspace": {
+      "types": "./src/coManagedWorkspace.ts",
+      "import": "./src/coManagedWorkspace.ts"
+    },
+    "./projectTaskAudit": {
+      "types": "./src/projectTaskAudit.ts",
+      "import": "./src/projectTaskAudit.ts"
     }
   },
   "scripts": {

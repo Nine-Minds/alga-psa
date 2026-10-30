@@ -1740,6 +1740,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
+        "name": "description",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
         "name": "manager_id",
         "in": "query",
         "required": false,
@@ -1826,6 +1834,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "team_name": {
           "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
         },
         "manager_id": {
           "type": "string",
@@ -2252,6 +2267,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "team_name": {
           "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
         },
         "manager_id": {
           "type": "string",
@@ -6772,7 +6794,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "location_id",
         "bin",
         "purpose"
-      ]
+      ],
+      "additionalProperties": {}
     },
     "responseBodySchema": {
       "type": "object",
@@ -6829,6 +6852,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "event_type"
       ],
+      "additionalProperties": {},
       "description": "Fields depend on event_type: moved {location_id?, bin?}, handed_off {to_holder_user_id}, shipped {counterparty}, received {location_id, bin}, returned {counterparty?}."
     },
     "responseBodySchema": {
@@ -11185,7 +11209,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   "website": {
-                    "type": "string"
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   },
                   "parent_client_id": {
                     "type": "string",
@@ -11467,8 +11494,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "properties": {
             "tax_id": {
               "type": "string",
-              "description": "Deprecated legacy input. Send tax_id_number instead.",
-              "deprecated": true
+              "deprecated": true,
+              "description": "Deprecated legacy input. Send tax_id_number instead."
             }
           },
           "additionalProperties": {}
@@ -11671,7 +11698,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "string"
                 },
                 "website": {
-                  "type": "string"
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "parent_client_id": {
                   "type": "string",
@@ -11987,7 +12017,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "string"
                 },
                 "website": {
-                  "type": "string"
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "parent_client_id": {
                   "type": "string",
@@ -12224,8 +12257,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "properties": {
             "tax_id": {
               "type": "string",
-              "description": "Deprecated legacy input. Send tax_id_number instead.",
-              "deprecated": true
+              "deprecated": true,
+              "description": "Deprecated legacy input. Send tax_id_number instead."
             }
           },
           "additionalProperties": {}
@@ -12428,7 +12461,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "string"
                 },
                 "website": {
-                  "type": "string"
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "parent_client_id": {
                   "type": "string",
@@ -13744,77 +13780,71 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       }
     ],
     "requestBodySchema": {
-      "allOf": [
-        {
-          "$ref": "#/components/schemas/ClientLocationBody"
+      "type": "object",
+      "properties": {
+        "location_name": {
+          "type": "string"
         },
-        {
-          "properties": {
-            "location_name": {
-              "type": "string"
-            },
-            "address_line1": {
-              "type": "string"
-            },
-            "address_line2": {
-              "type": "string"
-            },
-            "address_line3": {
-              "type": "string"
-            },
-            "city": {
-              "type": "string"
-            },
-            "state_province": {
-              "type": "string"
-            },
-            "postal_code": {
-              "type": "string"
-            },
-            "country_code": {
-              "type": "string",
-              "minLength": 2,
-              "maxLength": 3
-            },
-            "country_name": {
-              "type": "string",
-              "minLength": 1
-            },
-            "region_code": {
-              "type": "string"
-            },
-            "is_billing_address": {
-              "type": "boolean"
-            },
-            "is_shipping_address": {
-              "type": "boolean"
-            },
-            "is_default": {
-              "type": "boolean"
-            },
-            "phone": {
-              "type": "string"
-            },
-            "fax": {
-              "type": "string"
-            },
-            "email": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "format": "email",
-              "description": "null clears the email"
-            },
-            "notes": {
-              "type": "string"
-            },
-            "is_active": {
-              "type": "boolean"
-            }
-          }
+        "address_line1": {
+          "type": "string"
+        },
+        "address_line2": {
+          "type": "string"
+        },
+        "address_line3": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "state_province": {
+          "type": "string"
+        },
+        "postal_code": {
+          "type": "string"
+        },
+        "country_code": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 3
+        },
+        "country_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "region_code": {
+          "type": "string"
+        },
+        "is_billing_address": {
+          "type": "boolean"
+        },
+        "is_shipping_address": {
+          "type": "boolean"
+        },
+        "is_default": {
+          "type": "boolean"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "fax": {
+          "type": "string"
+        },
+        "email": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "email",
+          "description": "null clears the email"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "is_active": {
+          "type": "boolean"
         }
-      ]
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -14173,7 +14203,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "type": "string"
               },
               "extension": {
-                "type": "string",
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "description": "Digits only."
               },
               "canonical_type": {
@@ -14222,7 +14255,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -14236,7 +14270,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -14339,7 +14374,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -14353,7 +14389,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -14501,7 +14538,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "type": "string"
               },
               "extension": {
-                "type": "string",
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "description": "Digits only."
               },
               "canonical_type": {
@@ -14550,7 +14590,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -14564,7 +14605,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -14578,8 +14620,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             ],
             "additionalProperties": false,
             "description": "Each row needs canonical_type (work|mobile|home|fax|other) or custom_type, not both. When any rows are sent, exactly one must have is_default: true. On update, the array replaces all of the contact's phone numbers; include contact_phone_number_id to keep an existing row."
-          },
-          "default": []
+          }
         },
         "email": {
           "type": "string"
@@ -14667,7 +14708,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -14681,7 +14723,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -14695,8 +14738,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             ],
             "additionalProperties": false,
             "description": "Each row needs canonical_type (work|personal|billing|other) or custom_type, not both. On update, the array replaces all of the contact's additional email addresses; include contact_additional_email_address_id to keep an existing row."
-          },
-          "default": []
+          }
         },
         "role": {
           "type": "string",
@@ -14706,8 +14748,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string"
         },
         "is_inactive": {
-          "type": "boolean",
-          "default": false
+          "type": "boolean"
         },
         "tags": {
           "type": "array",
@@ -15640,7 +15681,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15792,7 +15834,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15863,7 +15906,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -16022,7 +16066,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -16122,7 +16167,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -16210,7 +16256,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -16286,7 +16333,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -16361,7 +16409,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -16449,7 +16498,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -16525,7 +16575,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -16605,7 +16656,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -16686,7 +16738,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -16778,7 +16831,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -16849,7 +16903,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -16956,7 +17011,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -17027,7 +17083,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -17118,7 +17175,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -17189,7 +17247,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -17295,7 +17354,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -17377,7 +17437,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -17492,7 +17553,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -17621,7 +17683,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -17753,7 +17816,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -17876,7 +17940,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -18001,6 +18066,153 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional API key fallback for non-browser clients. Used only when no valid session cookie is present."
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_documents",
+    "method": "get",
+    "path": "/api/v1/documents",
+    "displayName": "Documents API namespace root",
+    "summary": "Documents API namespace root",
+    "description": "Namespace root with no resource of its own — it returns 404. Documents are accessed per parent entity, e.g. /api/v1/tickets/{id}/documents.",
+    "tags": [
+      "Documents"
+    ],
+    "approvalRequired": false,
+    "parameters": []
+  },
+  {
+    "id": "post-_api_v1_documents",
+    "method": "post",
+    "path": "/api/v1/documents",
+    "displayName": "Attach File to Record",
+    "summary": "Attach one file to a ticket, project task, client, contact or asset",
+    "description": "Attaches ONE file to a ticket, project_task, client, contact or asset. Prefer source.type=url: give an https URL and the server downloads it (max size is the tenant storage limit). The URL host must be on the workspace's allowed download hosts (a tenant admin manages the list under Settings > MCP Server > Allowed download hosts; the ChatGPT file host is built in). If the call fails with 400 FETCH_HOST_NOT_ALLOWED, nothing was downloaded: tell the user an admin can add that host, and do not retry with other URLs. Use source.type=base64 only for small content you wrote yourself, never to relay a user's file, and file_name is then required. One file per call; make several calls for several files. In an MCP client with the attach_file tool, use that instead. Returns 201 with the stored document; 400 for a disallowed type, oversize file, unfetchable URL or a host that is not allowed (FETCH_HOST_NOT_ALLOWED), 403 without permission, 404 for a missing record.",
+    "tags": [
+      "Documents"
+    ],
+    "rbacResource": "document",
+    "approvalRequired": true,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "entity_type": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "project_task",
+            "client",
+            "contact",
+            "asset"
+          ],
+          "description": "Kind of record the file is attached to."
+        },
+        "entity_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID of the ticket, project task, client, contact or asset."
+        },
+        "source": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "url"
+                  ]
+                },
+                "url": {
+                  "type": "string",
+                  "description": "https URL the server downloads the file from. The host must be on the workspace's allowed download hosts (managed by tenant admins under Settings > MCP Server; the ChatGPT file host is built in), otherwise the call fails with 400 FETCH_HOST_NOT_ALLOWED. Port 443 only, public addresses only, at most 3 redirects (each re-checked against the allowlist), size capped at the storage limit. Signed URLs are used once and never logged."
+                }
+              },
+              "required": [
+                "type",
+                "url"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "base64"
+                  ]
+                },
+                "content": {
+                  "type": "string",
+                  "description": "Standard base64 of the file bytes. Only for small content the caller wrote itself; requires file_name."
+                }
+              },
+              "required": [
+                "type",
+                "content"
+              ]
+            }
+          ],
+          "description": "Where the file bytes come from: an https URL (preferred) or base64."
+        },
+        "file_name": {
+          "type": "string",
+          "description": "File name including extension. Required for base64. For url, defaults to the Content-Disposition name, then the last URL path segment."
+        },
+        "mime_type": {
+          "type": "string",
+          "description": "Declared MIME type. The server sniffs the bytes and a recognised type overrides this; the storage allowlist is applied to the resolved type."
+        }
+      },
+      "required": [
+        "entity_type",
+        "entity_id",
+        "source"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "The created document row (document_id, document_name, mime_type, file_size, folder_path, ...)."
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "examples": [
+      {
+        "name": "Attach a file to a ticket by URL",
+        "request": {
+          "body": {
+            "entity_type": "ticket",
+            "entity_id": "00000000-0000-4000-8000-000000000001",
+            "source": {
+              "type": "url",
+              "url": "https://acme-uploads.s3.us-east-1.amazonaws.com/screenshot.png?X-Amz-Signature=example"
+            }
+          }
+        }
+      },
+      {
+        "name": "Attach small authored text to a contact by base64",
+        "request": {
+          "body": {
+            "entity_type": "contact",
+            "entity_id": "00000000-0000-4000-8000-000000000002",
+            "source": {
+              "type": "base64",
+              "content": "UGhvbmUgbm90ZXM="
+            },
+            "file_name": "notes.txt",
+            "mime_type": "text/plain"
+          }
         }
       }
     ]
@@ -18766,6 +18978,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "responseBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific response relayed from the runner. Status code, content type, and body are controlled by the extension."
     }
   },
@@ -18827,11 +19040,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific request body. The gateway treats this as opaque, enforces a 10 MB limit for non-GET methods, base64-encodes it, and forwards it to the extension runner."
     },
     "responseBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific response relayed from the runner. Status code, content type, and body are controlled by the extension."
     }
   },
@@ -18893,11 +19108,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific request body. The gateway treats this as opaque, enforces a 10 MB limit for non-GET methods, base64-encodes it, and forwards it to the extension runner."
     },
     "responseBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific response relayed from the runner. Status code, content type, and body are controlled by the extension."
     }
   },
@@ -18959,11 +19176,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific request body. The gateway treats this as opaque, enforces a 10 MB limit for non-GET methods, base64-encodes it, and forwards it to the extension runner."
     },
     "responseBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific response relayed from the runner. Status code, content type, and body are controlled by the extension."
     }
   },
@@ -19025,11 +19244,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific request body. The gateway treats this as opaque, enforces a 10 MB limit for non-GET methods, base64-encodes it, and forwards it to the extension runner."
     },
     "responseBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific response relayed from the runner. Status code, content type, and body are controlled by the extension."
     }
   },
@@ -21713,7 +21934,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "default": "1"
         }
       },
       {
@@ -21721,7 +21943,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "default": "25"
         }
       },
       {
@@ -23891,14 +24114,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "max_generations": {
           "type": "number"
         }
-      },
-      "required": [
-        "client_id",
-        "name",
-        "frequency",
-        "start_date",
-        "invoice_template"
-      ]
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -25999,19 +26215,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "description": "Namespace root with no resource of its own — it returns 404. Comments are accessed per ticket: /api/v1/tickets/{id}/comments and its sub-paths.",
     "tags": [
       "Comments"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "get-_api_v1_documents",
-    "method": "get",
-    "path": "/api/v1/documents",
-    "displayName": "Documents API namespace root",
-    "summary": "Documents API namespace root",
-    "description": "Namespace root with no resource of its own — it returns 404. Documents are accessed per parent entity, e.g. /api/v1/tickets/{id}/documents.",
-    "tags": [
-      "Documents"
     ],
     "approvalRequired": false,
     "parameters": []
@@ -29983,20 +30186,84 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       }
     ],
     "requestBodySchema": {
-      "allOf": [
-        {
-          "$ref": "#/components/schemas/InboundWebhookCreateInput"
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
         },
-        {
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "auth_type": {
+          "type": "string",
+          "enum": [
+            "hmac_sha256",
+            "bearer",
+            "ip_allowlist",
+            "path_token"
+          ]
+        },
+        "auth_config": {
           "type": "object",
+          "additionalProperties": {}
+        },
+        "idempotency_source": {
+          "type": [
+            "object",
+            "null"
+          ],
           "properties": {
-            "inbound_webhook_id": {
+            "type": {
               "type": "string",
-              "format": "uuid"
+              "enum": [
+                "header",
+                "jsonata"
+              ]
+            },
+            "value": {
+              "type": "string"
             }
-          }
+          },
+          "required": [
+            "type",
+            "value"
+          ]
+        },
+        "idempotency_window_seconds": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "handler_type": {
+          "type": "string",
+          "enum": [
+            "direct_action",
+            "workflow"
+          ]
+        },
+        "handler_config": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "is_active": {
+          "type": "boolean"
+        },
+        "rate_limit_per_minute": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "inbound_webhook_id": {
+          "type": "string",
+          "format": "uuid"
         }
-      ]
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -37849,9 +38116,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -37863,9 +38127,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -37874,9 +38135,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 2048
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -38074,9 +38332,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -38088,9 +38343,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -38099,9 +38351,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 2048
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -38451,9 +38700,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -38462,9 +38708,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "format": "uuid"
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -38479,9 +38722,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -38490,9 +38730,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 128
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -38507,9 +38744,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -38518,9 +38752,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "number",
               "minimum": 0
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -38536,9 +38767,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -38547,9 +38775,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 255
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -38564,9 +38789,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -38575,9 +38797,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 255
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -38596,9 +38815,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -38607,9 +38823,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 64
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -38807,9 +39020,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -38818,9 +39028,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "format": "uuid"
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -38835,9 +39042,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -38846,9 +39050,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 128
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -38863,9 +39064,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -38874,9 +39072,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "number",
               "minimum": 0
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -38892,9 +39087,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -38903,9 +39095,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 255
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -38920,9 +39109,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -38931,9 +39117,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 255
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -38952,9 +39135,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -38963,9 +39143,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 64
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -40247,12 +40424,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "type": "string"
           }
         }
-      },
-      "required": [
-        "name",
-        "url",
-        "event_types"
-      ]
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -40808,12 +40980,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "type": "string"
           }
         }
-      },
-      "required": [
-        "name",
-        "url",
-        "event_types"
-      ]
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -42205,7 +42372,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "tenant",
               "createdAt",
               "updatedAt"
-            ]
+            ],
+            "additionalProperties": {}
           }
         },
         "pagination": {
@@ -42436,7 +42604,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "tenant",
             "createdAt",
             "updatedAt"
-          ]
+          ],
+          "additionalProperties": {}
         },
         "meta": {}
       },
@@ -42632,7 +42801,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "tenant",
             "createdAt",
             "updatedAt"
-          ]
+          ],
+          "additionalProperties": {}
         },
         "meta": {}
       },
@@ -42834,7 +43004,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "tenant",
             "createdAt",
             "updatedAt"
-          ]
+          ],
+          "additionalProperties": {}
         },
         "meta": {}
       },
@@ -43444,8 +43615,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "uuid"
         },
         "task_type_key": {
-          "type": "string",
-          "default": "general"
+          "type": "string"
         },
         "project_status_mapping_id": {
           "type": "string",
@@ -45684,6 +45854,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "start_date",
         "in": "query",
         "required": false,
+        "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day.",
         "schema": {
           "type": "string",
           "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day."
@@ -45693,6 +45864,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "end_date",
         "in": "query",
         "required": false,
+        "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day).",
         "schema": {
           "type": "string",
           "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day)."
@@ -45896,6 +46068,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "start_date",
         "in": "query",
         "required": false,
+        "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day.",
         "schema": {
           "type": "string",
           "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day."
@@ -45905,6 +46078,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "end_date",
         "in": "query",
         "required": false,
+        "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day).",
         "schema": {
           "type": "string",
           "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day)."
@@ -46096,8 +46270,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string"
         },
         "is_private": {
-          "type": "boolean",
-          "default": false
+          "type": "boolean"
         },
         "is_all_day": {
           "type": "boolean"
@@ -50281,8 +50454,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
                   },
                   "is_billable": {
-                    "type": "boolean",
-                    "default": true
+                    "type": "boolean"
                   }
                 }
               }
@@ -51160,8 +51332,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
         },
         "is_billable": {
-          "type": "boolean",
-          "default": true
+          "type": "boolean"
         }
       }
     },
@@ -54423,12 +54594,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "method": "post",
     "path": "/api/v1/tickets/{id}/documents",
     "displayName": "Upload a ticket document",
-    "summary": "Upload a ticket document",
-    "description": "Uploads a file as a document attachment to a ticket. Send multipart/form-data with a `file` field. Returns the created document.",
+    "summary": "Upload a ticket document (multipart only)",
+    "description": "Multipart/form-data upload only; this endpoint cannot be called through call_api_endpoint, which sends JSON. To attach a file to a ticket, use the attach_file tool or POST /api/v1/documents (entity_type ticket) instead.",
     "tags": [
       "Work Management v1"
     ],
-    "approvalRequired": false,
+    "rbacResource": "ticket",
+    "approvalRequired": true,
     "parameters": [
       {
         "name": "id",
@@ -58520,23 +58692,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "medium",
             "high",
             "committed"
-          ],
-          "default": "medium"
+          ]
         },
         "mrr_cents": {
           "type": "integer",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "nrr_cents": {
           "type": "integer",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "hardware_cents": {
           "type": "integer",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "currency_code": {
           "type": "string",
@@ -58693,23 +58861,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "medium",
             "high",
             "committed"
-          ],
-          "default": "medium"
+          ]
         },
         "mrr_cents": {
           "type": "integer",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "nrr_cents": {
           "type": "integer",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "hardware_cents": {
           "type": "integer",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "currency_code": {
           "type": "string",
@@ -60833,16 +60997,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "body_markdown": {
           "type": "string",
-          "maxLength": 50000,
-          "default": ""
+          "maxLength": 50000
         },
         "channel_variants": {
           "type": "object",
           "additionalProperties": {
             "type": "string",
             "maxLength": 10000
-          },
-          "default": {}
+          }
         },
         "campaign_id": {
           "type": [
@@ -61820,8 +61982,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "subject"
             ]
           },
-          "maxItems": 50,
-          "default": []
+          "maxItems": 50
         }
       }
     },
@@ -62162,7 +62323,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "date-time"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   }
                 ]
               },
@@ -62173,7 +62335,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "date-time"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -62187,7 +62350,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "date-time"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -62482,7 +62646,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 }
               ]
             },
@@ -62493,7 +62658,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
@@ -62507,7 +62673,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
@@ -62711,7 +62878,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 }
               ]
             },
@@ -62722,7 +62890,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
@@ -62736,7 +62905,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
@@ -62957,7 +63127,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 }
               ]
             },
@@ -62968,7 +63139,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
@@ -62982,7 +63154,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
@@ -65791,6 +65964,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Optional future agreement sync flag. Currently ignored by the MVP handlers."
         }
       },
+      "additionalProperties": {},
       "description": "Sync options. The current SoftwareOne MVP handlers parse JSON but ignore all body fields."
     },
     "responseBodySchema": {
@@ -65930,6 +66104,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Optional future agreement sync flag. Currently ignored by the MVP handlers."
         }
       },
+      "additionalProperties": {},
       "description": "Sync options. The current SoftwareOne MVP handlers parse JSON but ignore all body fields."
     },
     "responseBodySchema": {
@@ -66094,6 +66269,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Optional future agreement sync flag. Currently ignored by the MVP handlers."
         }
       },
+      "additionalProperties": {},
       "description": "Sync options. The current SoftwareOne MVP handlers parse JSON but ignore all body fields."
     },
     "responseBodySchema": {
@@ -66522,6 +66698,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Optional future agreement sync flag. Currently ignored by the MVP handlers."
         }
       },
+      "additionalProperties": {},
       "description": "Sync options. The current SoftwareOne MVP handlers parse JSON but ignore all body fields."
     },
     "responseBodySchema": {
@@ -66597,7 +66774,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "responseBodySchema": {
       "type": "object",
-      "properties": {}
+      "properties": {},
+      "additionalProperties": {}
     },
     "playbooks": [
       "storage/list-namespace"
@@ -66640,11 +66818,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "properties": {}
+      "properties": {},
+      "additionalProperties": {}
     },
     "responseBodySchema": {
       "type": "object",
-      "properties": {}
+      "properties": {},
+      "additionalProperties": {}
     },
     "playbooks": [
       "storage/bulk-upsert-records"
@@ -66701,7 +66881,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "responseBodySchema": {
       "type": "object",
-      "properties": {}
+      "properties": {},
+      "additionalProperties": {}
     },
     "playbooks": [
       "storage/get-record"
@@ -66751,11 +66932,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "properties": {}
+      "properties": {},
+      "additionalProperties": {}
     },
     "responseBodySchema": {
       "type": "object",
-      "properties": {}
+      "properties": {},
+      "additionalProperties": {}
     },
     "playbooks": [
       "storage/put-record"

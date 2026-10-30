@@ -13,6 +13,7 @@ import {
   countSearchMatchesByType,
   encodeSearchCursor,
   runSearchQuery,
+  type SearchQueryOptions,
 } from './query';
 import {
   searchAppResultSchema,
@@ -151,6 +152,7 @@ export async function runAppSearch(
   tenant: string,
   user: IUserWithRoles,
   input: SearchAppInput,
+  searchIndex?: SearchQueryOptions['searchIndex'],
 ): Promise<SearchAppResult> {
   const limit = normalizeLimit(input.limit);
   const requestedTypes = resolveAllowedTypes(input.types);
@@ -169,6 +171,7 @@ export async function runAppSearch(
       sort: input.sort,
       includeSnippets: true,
       acl,
+      searchIndex,
     }),
     countSearchMatchesByType({
       knex,
@@ -176,6 +179,7 @@ export async function runAppSearch(
       query: input.query,
       allowedTypes,
       acl,
+      searchIndex,
     }),
   ]);
 

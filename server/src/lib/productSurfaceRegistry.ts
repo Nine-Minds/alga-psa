@@ -69,6 +69,28 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'upgrade_boundary', co_managed: 'not_found' },
   },
   {
+    // The one sponsor-prefix screen a co_managed customer also uses: its own Effective access and delegated
+    // administration. /msp/co-management has no rule of its own, so the rest of that prefix stays closed to
+    // co_managed (unmatched means not_found); the page and its actions still decide, per side, what the caller may see.
+    group: 'msp_co_managed_administration',
+    staticPrefixes: ['/msp/co-management/administration'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
+  },
+  {
+    // Sponsor-only queue of tickets customers shared with the sponsor, and its shared-ticket screen. Only a PSA
+    // sponsor has them; the capability gate in the route layout decides whether a PSA tenant sees them.
+    group: 'msp_co_managed_customer_tickets',
+    staticPrefixes: ['/msp/co-management/customer-tickets'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
+  },
+  {
+    // Sponsor-only Shared Tasks queue and the shared project / task screens for projects customers share with the
+    // sponsor. Only a PSA sponsor has them; the capability gate in each page decides whether a PSA tenant sees them.
+    group: 'msp_co_managed_shared_projects',
+    staticPrefixes: ['/msp/co-management/tasks', '/msp/co-management/projects'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
+  },
+  {
     // Customer-owned Google / Microsoft provider setup. The page itself is
     // gated by the co-managed capability ('serves'), so a co_managed workspace
     // reaches this one capability-scoped page without the wider integrations
@@ -194,6 +216,15 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/interaction-statuses',
       '/api/v1/mobile/me/capabilities',
     ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
+    visibleInMetadataByProduct: { psa: true, algadesk: true, co_managed: false },
+  },
+  {
+    // Exact path only (POST /api/v1/documents attach endpoint, used by MCP attach_file).
+    // Deliberately a dynamic pattern: a static prefix would also open /api/v1/documents/*.
+    // Per-entity availability (PSA-only entities) is enforced by the entity adapters.
+    group: 'api_document_attach',
+    dynamicPatterns: [/^\/api\/v1\/documents$/],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
     visibleInMetadataByProduct: { psa: true, algadesk: true, co_managed: false },
   },

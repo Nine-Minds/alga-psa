@@ -414,17 +414,21 @@
       "cancel": "Cancelar",
       "delete": "Excluir",
       "placeholder": "Digite o novo nome da equipe",
+      "descriptionPlaceholder": "Digite uma descrição opcional da equipe",
       "selectManager": "Selecione um gerente"
     },
     "details": {
       "loading": "Carregando detalhes da equipe...",
       "notFound": "Nenhuma equipe encontrada",
+      "noDescription": "Sem descrição",
       "fields": {
         "teamLead": "Líder de equipe",
+        "description": "Descrição",
         "addMember": "Adicionar membro"
       },
       "placeholders": {
         "teamName": "Digite o nome da equipe",
+        "description": "Digite a descrição da equipe",
         "selectTeamLead": "Selecione um líder de equipe",
         "selectUserToAdd": "Selecione um usuário para adicionar",
         "noTeamLead": "Não atribuído"
@@ -436,8 +440,10 @@
         "discard": "Descartar",
         "saveChanges": "Salvar alterações",
         "saveName": "Salvar nome",
+        "saveDescription": "Salvar descrição",
         "cancel": "Cancelar",
         "editName": "Editar nome",
+        "editDescription": "Editar descrição",
         "remove": "Remover"
       },
       "table": {
@@ -462,6 +468,7 @@
         "createFailed": "Falha ao criar equipe: {{error}}",
         "deleteFailed": "Falha ao excluir equipe",
         "updateName": "Falha ao atualizar o nome da equipe",
+        "updateDescription": "Falha ao atualizar a descrição da equipe",
         "saveChanges": "Falha ao salvar as alterações. Por favor, tente novamente."
       }
     }
@@ -3657,6 +3664,36 @@
         "confirm": "Desconectar",
         "cancel": "Cancelar"
       }
+    },
+    "loading": "Carregando…",
+    "downloadHosts": {
+      "title": "Hosts de download permitidos",
+      "intro": "Quando um documento é anexado por URL, o AlgaPSA só o baixa dos hosts listados aqui. Isso vale para qualquer um que anexe documentos, incluindo agentes de IA, clientes de API e a API REST. Prefira hosts específicos de um bucket, como acme-uploads.s3.us-east-1.amazonaws.com, a hosts genéricos.",
+      "readOnly": "Você pode visualizar esta lista. Para alterá-la, é necessária a permissão \"Gerenciar hosts de download\".",
+      "builtIn": "Integrado",
+      "empty": "Nenhum host personalizado ainda.",
+      "add": "Adicionar host",
+      "addTitle": "Adicionar host de download permitido",
+      "remove": "Remover",
+      "removeTitle": "Remover host?",
+      "removeMessage": "Os downloads de {{host}} deixarão de funcionar até que ele seja adicionado novamente.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "Um nome de host, ou *.example.com para permitir todos os subdomínios.",
+        "note": "Observação (opcional)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Usado para",
+        "allowed": "Permitido",
+        "note": "Observação",
+        "addedBy": "Adicionado por",
+        "addedOn": "Adicionado em"
+      },
+      "errors": {
+        "load": "Não foi possível carregar os hosts de download permitidos.",
+        "save": "Não foi possível salvar a alteração."
+      }
     }
   },
   "errors": {
@@ -3836,7 +3873,8 @@
     }
   },
   "common": {
-    "saving": "A guardar…"
+    "saving": "A guardar…",
+    "cancel": "Cancelar"
   },
   "featureFlags": {
     "categories": {

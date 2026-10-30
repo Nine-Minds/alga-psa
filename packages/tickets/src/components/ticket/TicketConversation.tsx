@@ -14,6 +14,7 @@ import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEd
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import CommentThreadDrawer from '@alga-psa/ui/components/CommentThreadDrawer';
 import InlineReplyComposer from '@alga-psa/ui/components/InlineReplyComposer';
+import { COMPOSER_MAX_HEIGHT } from '@alga-psa/ui/components/composerSizing';
 import StickyComposerDock from '@alga-psa/ui/components/StickyComposerDock';
 import { CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@alga-psa/ui/components';
 
@@ -50,7 +51,7 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useTicketDataSource } from './TicketDataSourceContext';
-import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
+import { hasCommentCollaborationAttribution, type CommentContactAuthor, type CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context/UnsavedChangesContext';
@@ -470,7 +471,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       
       // Find all client users in the conversations
       for (const conversation of conversations) {
-        if (conversation.user_id && userMap[conversation.user_id]?.user_type === 'client') {
+        if (!hasCommentCollaborationAttribution(conversation) && conversation.user_id && userMap[conversation.user_id]?.user_type === 'client') {
           try {
             const contactId = await getUserContactId(conversation.user_id);
             
@@ -947,6 +948,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             searchMentions={searchUsersForMentions}
             uploadFile={composeUploadSession.uploadFile}
             snippets={cannedResponseSnippets}
+            maxHeight={COMPOSER_MAX_HEIGHT}
             footerActions={showEmailRecipients ? (
               <CommentEmailRecipientsControl
                 idPrefix={compId}

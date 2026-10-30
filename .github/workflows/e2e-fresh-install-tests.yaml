@@ -117,14 +117,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # `prebuild` services compile the application on the runner first (see
+        # the "production build" steps below) and are packaged by the production
+        # Dockerfiles, the one runtime image definition per edition, exactly as
+        # the Argo build packages them for deployment; `node` is the version
+        # those images run on.
         include:
           - service: server
-            dockerfile: Dockerfile.build
+            edition: community
+            prebuild: true
+            node: '26.1.0'
+            dockerfile: Dockerfile
             image: alga-e2e-test_server_ce_local:latest
             artifact: fresh-install-server-community
             cache: false
           - service: server-ee
-            dockerfile: ee/server/Dockerfile.build
+            edition: enterprise
+            prebuild: true
+            node: '26.1.0'
+            dockerfile: ee/server/Dockerfile
             image: alga-e2e-test_server_ee_local:latest
             artifact: fresh-install-server-enterprise
             cache: false
@@ -164,6 +175,17 @@ jobs:
             cache: true
     steps:
       - uses: actions/checkout@v4
+
+      # The tree hash names the source irrespective of the commit that carries
+      # it: a pull request's merge commit and the squash commit that lands it
+      # on main have different SHAs and the same tree whenever main did not
+      # move in between. Every candidate is labelled with it, and the server
+      # candidates are also tagged with it, so the Argo deployment build can
+      # recognise an image CI already built from exactly this source and copy
+      # it instead of compiling again.
+      - name: Resolve the source tree
+        id: tree
+        run: echo "tree=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
 
       - name: Ensure build disk headroom
         run: |
@@ -218,6 +240,53 @@ jobs:
           sudo swapon /swapfile-alga-production-build
           free -h
 
+      # The server images are compiled on the runner (scripts/build-production-server.sh,
+      # the recipe of the Dockerfile.build artifact builders) and packaged by
+      # the production Dockerfiles from the context, the same way the Argo
+      # build packages them for deployment, so the candidate under test is the
+      # image that ships. Outside the image the webpack filesystem cache and the
+      # Nx cache can be carried between runs: a snapshot of both travels through
+      # the registry like the candidate images do, under one moving tag per
+      # edition. Only runs of main write it, because a cache shapes build
+      # output; pull requests only read it. A missing or unreadable snapshot
+      # means a cold build, never a failure.
+      - name: Set up Node.js for the production build
+        if: matrix.prebuild
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install oras for build-cache snapshots
+        if: matrix.prebuild
+        uses: oras-project/setup-oras@v2
+
+      - name: Install repository dependencies for the production build
+        if: matrix.prebuild
+        run: npm install --include=optional
+
+      - name: Restore the build-cache snapshot
+        if: matrix.prebuild
+        id: build_cache
+        env:
+          BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}
+        run: node scripts/build-cache-snapshot.mjs restore --reference "$BUILD_CACHE_REFERENCE" --path server/node_modules/.cache/webpack --path .nx/cache
+
+      - name: Build the production application on the runner
+        if: matrix.prebuild
+        env:
+          NEXT_BUILD_MAX_OLD_SPACE_SIZE: '12288'
+          EDITION_NAME: ${{ matrix.edition }}
+          # Next folds this key into the webpack cache version and generates a
+          # new one per build when it is unset, which would make every restored
+          # snapshot a miss. The candidates are test images that never serve
+          # traffic, so a fixed, public, test-only key is right for them; the
+          # deployment build (nm-kube-config) must use a secret of its own.
+          NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: OpTnSkDAbqi/eI+2i8Tg20NhJwnUrrgPdz4I4p/3N+0=
+        run: |
+          scripts/build-production-server.sh "$EDITION_NAME"
+          du -sh server/.next server/node_modules/.cache/webpack .nx/cache 2>/dev/null || true
+
       - name: Build and export ${{ matrix.service }}
         id: export_image
         uses: docker/build-push-action@v6
@@ -230,6 +299,7 @@ jobs:
           tags: ${{ env.IMAGE_TRANSPORT == 'registry' && format('{0}:{1}', env.REGISTRY_REFERENCE, env.REGISTRY_TAG) || matrix.image }}
           labels: |
             org.opencontainers.image.revision=${{ github.sha }}
+            com.nineminds.source-tree=${{ steps.tree.outputs.tree }}
           build-args: |
             NEXT_BUILD_MAX_OLD_SPACE_SIZE=12288
           outputs: ${{ env.IMAGE_TRANSPORT == 'registry' && 'type=image,push=true' || format('type=docker,dest={0}/{1}.tar', runner.temp, matrix.service) }}
@@ -285,6 +355,26 @@ jobs:
           # the builder's own copy: the record proves the push landed.
           docker buildx imagetools inspect "$BUILD_REGISTRY_REFERENCE@$BUILD_REPORTED_DIGEST" --raw > "$BUILD_MANIFEST"
           node scripts/record-docker-registry-build.mjs "$BUILD_MANIFEST" "$BUILD_RECORD"
+
+      # A second tag on the recorded manifest, after the record is written so
+      # the candidate's identity stays bound to the run's own tag and digest.
+      # Same source, same image: the Argo build looks this tag up by the tree
+      # of the commit it is deploying (see nm-kube-config, check-image-exists).
+      - name: Tag the candidate with its source tree
+        if: env.IMAGE_TRANSPORT == 'registry' && matrix.prebuild
+        env:
+          TREE: ${{ steps.tree.outputs.tree }}
+          BUILD_REPORTED_DIGEST: ${{ steps.export_image.outputs.digest }}
+        run: docker buildx imagetools create --tag "$REGISTRY_REFERENCE:tree-$TREE" "$REGISTRY_REFERENCE@$BUILD_REPORTED_DIGEST"
+
+      # Written after the image is published, so a snapshot failure can only
+      # cost the next run its warm start, never this run its candidate.
+      - name: Save the build-cache snapshot
+        if: matrix.prebuild && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.IMAGE_TRANSPORT == 'registry'
+        continue-on-error: true
+        env:
+          BUILD_CACHE_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/build-cache:${{ matrix.edition }}
+        run: node scripts/build-cache-snapshot.mjs save --reference "$BUILD_CACHE_REFERENCE" --path server/node_modules/.cache/webpack --path .nx/cache
 
       - name: Upload image build record
         uses: actions/upload-artifact@v4
@@ -443,9 +533,12 @@ jobs:
             esac
             echo "playwright=$playwright"
             # The API suite runs from the repository's own node_modules, and so
-            # does the upgrade preparation (tsx, knex) and the Citus probe (pg).
+            # do the upgrade preparation (tsx, knex), the Citus probe (pg) and
+            # the development runtime that compiles the application for the
+            # Teams development server and the Microsoft callback
+            # (docker-compose.e2e-development.yaml).
             case " $SUITES " in
-              *" api "*|*" upgrade "*|*" citus "*) workspace_dependencies=true ;;
+              *" api "*|*" upgrade "*|*" citus "*|*" teams "*|*" microsoft "*) workspace_dependencies=true ;;
             esac
             echo "workspace_dependencies=$workspace_dependencies"
           } >> "$GITHUB_OUTPUT"
@@ -1545,34 +1638,35 @@ jobs:
         timeout-minutes: 10
         run: |
           set -euo pipefail
-          # The image's node_modules is root-owned. Give only the development
-          # compiler cache a writable, disk-backed directory for UID 1000.
+          # The development server compiles the application from the checkout
+          # in the development runtime (docker-compose.e2e-development.yaml),
+          # not in the production candidate, which carries no development
+          # dependency tree. Its compiler cache and the static-chunk diagnostics
+          # get disk-backed directories of their own.
           sudo install -d -o 1000 -g 1000 -m 0700 "$RUNNER_TEMP/teams-webpack-cache"
           sudo install -d -o 1000 -g 1000 -m 0700 "$RUNNER_TEMP/teams-static-chunks"
+          export E2E_DEVELOPMENT_WORKSPACE="$GITHUB_WORKSPACE"
           node --input-type=module <<'JS'
           import { writeFileSync } from 'node:fs';
           const workspace = process.env.GITHUB_WORKSPACE;
-          const volumes = ['packages', 'ee'].map(part => ({ type: 'bind', source: `${workspace}/${part}`, target: `/app/${part}`, read_only: true }));
-          // Production images omit CSS compiler configuration. The development
-          // server needs both files to expand Tailwind's directives and scan UI sources.
-          for (const file of ['postcss.config.mjs', 'tailwind.config.ts']) {
-            volumes.push({ type: 'bind', source: `${workspace}/server/${file}`, target: `/app/server/${file}`, read_only: true });
-          }
-          volumes.push({ type: 'bind', source: `${workspace}/e2e-tests/harness/start-teams-development-ci.mjs`, target: '/app/start-teams-development-ci.mjs', read_only: true });
-          volumes.push({ type: 'bind', source: `${workspace}/e2e-tests/harness/check-teams-development-auth.mjs`, target: '/app/check-teams-development-auth.mjs', read_only: true });
-          volumes.push({ type: 'bind', source: `${workspace}/e2e-tests/harness/capture-teams-static-chunks.mjs`, target: '/app/capture-teams-static-chunks.mjs', read_only: true });
-          volumes.push({ type: 'bind', source: `${process.env.RUNNER_TEMP}/teams-static-chunks`, target: '/app/teams-static-chunks' });
+          // /app is the checkout itself, so nothing may be mounted directly under
+          // it: Docker would materialise the mount point as an untracked file or
+          // directory in the checkout and the callback wrapper's clean-source
+          // check would rightly refuse it. The harness scripts run from their
+          // checkout paths; the diagnostics directory lives beside /app.
+          const volumes = [];
+          volumes.push({ type: 'bind', source: `${process.env.RUNNER_TEMP}/teams-static-chunks`, target: '/teams-static-chunks' });
           volumes.push({ type: 'bind', source: `${process.env.RUNNER_TEMP}/teams-webpack-cache`, target: '/app/server/node_modules/.cache/webpack' });
-          const server = { entrypoint: ['node', '/app/start-teams-development-ci.mjs'], command: [], volumes,
+          const server = { entrypoint: ['node', '/app/e2e-tests/harness/start-teams-development-ci.mjs'], command: [], volumes,
             environment: { NODE_ENV: 'development', TEAMS_EMULATOR_MODE: 'true', NEXT_DIST_DIR: '.next/teams-development',
-              E2E_TEAMS_DEVELOPMENT: 'true', E2E_DATABASE_ISOLATED: 'true', E2E_STATIC_CHUNK_DIAGNOSTICS_DIR: '/app/teams-static-chunks',
+              E2E_TEAMS_DEVELOPMENT: 'true', E2E_DATABASE_ISOLATED: 'true', E2E_STATIC_CHUNK_DIAGNOSTICS_DIR: '/teams-static-chunks',
               DB_HOST: 'postgres', DB_PORT: '5432', DB_NAME_SERVER: 'server', REDIS_PREFIX: 'teams-development:',
               TEAMS_BOT_APP_ID: 'e2e-teams-bot', TEAMS_BOT_APP_TENANT_ID: 'e2e-bot-tenant', TEAMS_BOT_APP_PASSWORD: 'synthetic-e2e-teams-bot-secret',
               TEAMS_BOT_OPENID_CONFIG_URL: 'http://algasim:4010/v1/.well-known/openidconfiguration', TEAMS_BOT_SERVICE_URL_ALLOWLIST: 'http://algasim:4010',
-              NEXT_PUBLIC_APP_URL: 'http://localhost:3000', NODE_OPTIONS: '--max-old-space-size=12288 --import=/app/capture-teams-static-chunks.mjs' } };
+              NEXT_PUBLIC_APP_URL: 'http://localhost:3000', NODE_OPTIONS: '--max-old-space-size=12288 --import=/app/e2e-tests/harness/capture-teams-static-chunks.mjs' } };
           writeFileSync(`${process.env.RUNNER_TEMP}/teams-development-compose.json`, JSON.stringify({ services: { server } }));
           JS
-          export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/teams-development-compose.json"
+          export COMPOSE_FILE="$COMPOSE_FILE:docker-compose.e2e-development.yaml:$RUNNER_TEMP/teams-development-compose.json"
           # Earlier production/provider phases have completed. Retain their logs,
           # but release worker memory before compiling the development app.
           # The EE development server still uses Temporal for job initialization.
@@ -1621,7 +1715,7 @@ jobs:
         run: |
           docker-compose -p alga-e2e-test exec -T \
             -e E2E_DATABASE_ISOLATED -e E2E_USER_EMAIL -e E2E_USER_PASSWORD server \
-            node --import /app/node_modules/tsx/dist/loader.mjs /app/check-teams-development-auth.mjs
+            node --import /app/node_modules/tsx/dist/loader.mjs /app/e2e-tests/harness/check-teams-development-auth.mjs
 
       - name: Warm authenticated Teams dashboard
         id: teams_dashboard_ready
@@ -1705,8 +1799,12 @@ jobs:
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/microsoft-callback"
           sudo install -d -o 1000 -g 1000 -m 0700 "$RUNNER_TEMP/microsoft-callback/dist" "$RUNNER_TEMP/microsoft-callback/webpack"
-          # Both the host verifier and image UID write separate evidence files.
+          # Both the host verifier and the container write separate evidence files.
           sudo install -d -o 1000 -g 1000 -m 0777 "$GITHUB_WORKSPACE/test-results/microsoft-callback"
+          # The callback compiles the application with `next dev`, which runs in
+          # the development runtime from the checkout (see the Teams step).
+          export E2E_DEVELOPMENT_WORKSPACE="$GITHUB_WORKSPACE"
+          export COMPOSE_FILE="$COMPOSE_FILE:docker-compose.e2e-development.yaml"
           node scripts/run-microsoft-callback-ci.mjs
 
       - name: Upload Microsoft callback execution

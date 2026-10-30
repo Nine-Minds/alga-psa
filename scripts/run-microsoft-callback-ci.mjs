@@ -5,20 +5,23 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { testRevision } from './lib/test-revision.mjs';
 import { verifyMicrosoftCallbackEvidence } from './lib/microsoft-callback-evidence.mjs';
+import { DEVELOPMENT_RUNTIME_IMAGE, DEVELOPMENT_RUNTIME_WORKSPACE_TARGET } from './lib/development-runtime.mjs';
 
+// The callback compiles the application with `next dev`, so it runs in the
+// development runtime (docker-compose.e2e-development.yaml) with the checkout
+// mounted whole, not in the production candidate. The binding records which
+// image actually ran and that the container's /app is this checkout; the
+// wrapper's clean-source check before and after covers what the development
+// server may write there.
 export function callbackRuntimeBinding({ image, container, root, revision }) {
-  const mountsReadOnly = ['packages', 'ee', 'e2e-tests'].every(part => {
-    const matches = container.Mounts?.filter(mount => mount.Destination === `/app/${part}`) || [];
-    return matches.length === 1 && matches[0].Type === 'bind' && matches[0].RW === false
-      && path.resolve(matches[0].Source) === path.resolve(root, part);
-  });
-  return { imageRevision: image.revision, imageId: image.id, containerImageId: container.Image,
-    mountedSourceRevision: revision, mountsReadOnly };
+  const mounts = container.Mounts?.filter(mount => mount.Destination === DEVELOPMENT_RUNTIME_WORKSPACE_TARGET) || [];
+  const workspaceMounted = mounts.length === 1 && mounts[0].Type === 'bind' && path.resolve(mounts[0].Source) === path.resolve(root);
+  return { runtimeImage: image.reference, imageId: image.id, containerImageId: container.Image,
+    mountedSourceRevision: revision, workspaceMounted };
 }
 
 export function callbackComposeOverride({ root, temporary, output, revision, sourceEmail }) {
   return { services: { server: {
-    image: 'alga-e2e-test_server_ee_local:latest',
     entrypoint: ['node', '/app/packages/auth/test-harness/start-microsoft-callback-ci.mjs'], command: [],
     environment: {
       CI: 'true', NODE_ENV: 'development', NODE_OPTIONS: '--max-old-space-size=12288',
@@ -30,7 +33,6 @@ export function callbackComposeOverride({ root, temporary, output, revision, sou
       NATIVE_MICROSOFT_OIDC_APP_ROOT: '/app', NATIVE_MICROSOFT_OIDC_PLAYWRIGHT_ROOT: '/app/e2e-tests', E2E_TEST_REVISION: revision,
     },
     volumes: [
-      ...['packages', 'ee', 'e2e-tests'].map(part => ({ type: 'bind', source: path.join(root, part), target: `/app/${part}`, read_only: true })),
       { type: 'bind', source: output, target: '/callback-output' },
       { type: 'bind', source: path.join(temporary, 'dist'), target: '/app/server/.next/microsoft-oidc-callback' },
       { type: 'bind', source: path.join(temporary, 'webpack'), target: '/app/server/node_modules/.cache/webpack' },
@@ -57,8 +59,10 @@ export function runMicrosoftCallbackCi({ env = process.env } = {}) {
     assert.equal(runner.source.before.revision, env.GITHUB_SHA);
     assert.equal(runner.source.before.dirty, false, 'Callback CI requires clean source');
     const revision = runner.source.before.revision;
-    const image = JSON.parse(command('docker', ['image', 'inspect', '--format', '{"id":{{json .Id}},"revision":{{json (index .Config.Labels "org.opencontainers.image.revision")}}}', 'alga-e2e-test_server_ee_local:latest']));
-    assert.equal(image.revision, revision, 'Callback image must match tested checkout');
+    assert.ok(env.COMPOSE_FILE.split(':').includes('docker-compose.e2e-development.yaml'), 'Callback CI runs in the development runtime');
+    assert.equal(env.E2E_DEVELOPMENT_WORKSPACE, root, 'The development runtime must mount this checkout');
+    command('docker', ['pull', '--quiet', DEVELOPMENT_RUNTIME_IMAGE], { timeout: 300000 });
+    const image = { reference: DEVELOPMENT_RUNTIME_IMAGE, id: command('docker', ['image', 'inspect', '--format', '{{.Id}}', DEVELOPMENT_RUNTIME_IMAGE]) };
     const overlay = path.join(temporary, 'compose.json');
     writeFileSync(overlay, JSON.stringify(callbackComposeOverride({ root, temporary, output, revision, sourceEmail: env.NATIVE_MICROSOFT_OIDC_SOURCE_EMAIL })));
     const composeEnv = { ...env, COMPOSE_FILE: `${env.COMPOSE_FILE}:${overlay}` };
@@ -68,7 +72,7 @@ export function runMicrosoftCallbackCi({ env = process.env } = {}) {
     command('docker-compose', ['-p', 'alga-e2e-test', 'run', '--no-deps', '-d', '--name', containerName, 'server'], { env: composeEnv });
     const container = JSON.parse(command('docker', ['inspect', '--format', '{"Image":{{json .Image}},"Mounts":{{json .Mounts}}}', containerName]));
     runner.runtimeBinding = callbackRuntimeBinding({ image, container, root, revision });
-    assert.equal(runner.runtimeBinding.mountsReadOnly, true);
+    assert.equal(runner.runtimeBinding.workspaceMounted, true);
     assert.equal(runner.runtimeBinding.containerImageId, image.id);
     const result = command('docker', ['wait', containerName], { timeout: 360000 });
     assert.match(result, /^\d+$/);

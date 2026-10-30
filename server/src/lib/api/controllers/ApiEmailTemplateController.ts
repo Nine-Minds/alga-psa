@@ -51,7 +51,7 @@ export class ApiEmailTemplateController extends ApiBaseController {
     const parsed = emailTemplateNameSchema.safeParse(raw);
 
     if (!parsed.success) {
-      throw new ValidationError('Invalid email template name', parsed.error.errors);
+      throw new ValidationError('Invalid email template name', parsed.error.issues);
     }
 
     return parsed.data;

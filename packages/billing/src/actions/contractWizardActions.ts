@@ -217,9 +217,10 @@ async function writeFixedLineMembers(
         },
         {
           pricing_basis: 'unit',
-          base_rate: service.unit_rate as number,
+          // A seat rate is per unit. The fixed-config model derives the pair and
+          // provenance: a null rate is catalog-priced (inherited) with no basis.
+          base_rate: service.unit_rate ?? null,
           base_rate_basis: 'per_unit',
-          rate_provenance: 'custom',
         },
       );
       continue;
@@ -430,6 +431,8 @@ export type ClientContractWizardSubmission = {
    */
   recurring_change_ack?: { baseline_monthly_cents: number };
   product_services?: ClientProductServiceInput[];
+  /** The products line's own timing; unset inherits `billing_timing` (same rule as a fixed line's `billing_timing`). */
+  product_billing_timing?: 'arrears' | 'advance';
   hourly_services?: ClientHourlyServiceInput[];
   hourly_billing_frequency?: string;
   usage_services?: ClientUsageServiceInput[];
@@ -1861,11 +1864,12 @@ export const createClientContractFromWizard = withAuth(async (
     const usageGroups = groupBySourceLine(filteredUsageServices);
     let nextDisplayOrder = 0;
   const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
-  // Products allow advance, so the contract-wide value applies to them.
+  // Products allow advance: the products line's own timing, else the contract-wide value.
   const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
     lineType: 'Product',
     cadenceOwner: submission.cadence_owner,
     defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+    billingTiming: submission.product_billing_timing,
     contractWideBillingTiming: submission.billing_timing,
     enableProration: submission.enable_proration,
   });
@@ -2708,6 +2712,8 @@ export type DraftContractWizardData = {
   po_amount?: number;
   po_required?: boolean;
   fixed_lines: ContractWizardFixedLine[];
+  /** Set only when the stored products line's timing differs from the contract default; unset = inherit. */
+  product_billing_timing?: 'arrears' | 'advance';
   product_services: Array<{
     service_id: string;
     service_name?: string;
@@ -2799,6 +2805,7 @@ export const getDraftContractForResume = withAuth(async (
   let usageBillingFrequency: string | undefined;
   let cadenceOwner: CadenceOwner = 'client';
   let billingTiming: 'arrears' | 'advance' = 'arrears';
+  let storedProductsTiming: 'arrears' | 'advance' | undefined;
   const servicesByLineId = new Map<
     string,
     Awaited<ReturnType<typeof getContractLineServicesWithConfigurations>>
@@ -2945,6 +2952,9 @@ export const getDraftContractForResume = withAuth(async (
         { missingUnitRate: undefined, includeLocation: true },
       );
       productServices.push(...mapped.products);
+      if (mapped.products.length > 0 && line.billing_timing) {
+        storedProductsTiming = line.billing_timing as 'arrears' | 'advance';
+      }
       if (mapped.fixedLine) {
         fixedLines.push(mapped.fixedLine);
         enableProration = enableProration || mapped.fixedLine.enable_proration;
@@ -3191,6 +3201,9 @@ export const getDraftContractForResume = withAuth(async (
     po_amount: clientContract.po_amount != null ? Number(clientContract.po_amount) : undefined,
     po_required: Boolean(clientContract.po_required),
     fixed_lines: fixedLines,
+    // Explicit only when it differs from the contract default, so an inheriting products line stays inheriting.
+    product_billing_timing:
+      storedProductsTiming && storedProductsTiming !== billingTiming ? storedProductsTiming : undefined,
     product_services: productServices,
     enable_proration: enableProration,
     recurring_baseline: {

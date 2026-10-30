@@ -414,17 +414,21 @@
       "cancel": "Abbrechen",
       "delete": "Löschen",
       "placeholder": "Neuen Teamnamen eingeben",
+      "descriptionPlaceholder": "Optionale Teambeschreibung eingeben",
       "selectManager": "Vorgesetzten auswählen"
     },
     "details": {
       "loading": "Teamdetails werden geladen...",
       "notFound": "Kein Team gefunden",
+      "noDescription": "Keine Beschreibung",
       "fields": {
         "teamLead": "Teamleiter",
+        "description": "Beschreibung",
         "addMember": "Mitglied hinzufügen"
       },
       "placeholders": {
         "teamName": "Teamname eingeben",
+        "description": "Teambeschreibung eingeben",
         "selectTeamLead": "Teamleiter auswählen",
         "selectUserToAdd": "Benutzer zum Hinzufügen auswählen",
         "noTeamLead": "Nicht zugewiesen"
@@ -436,8 +440,10 @@
         "discard": "Verwerfen",
         "saveChanges": "Änderungen speichern",
         "saveName": "Name speichern",
+        "saveDescription": "Beschreibung speichern",
         "cancel": "Abbrechen",
         "editName": "Name bearbeiten",
+        "editDescription": "Beschreibung bearbeiten",
         "remove": "Entfernen"
       },
       "table": {
@@ -462,6 +468,7 @@
         "createFailed": "Team konnte nicht erstellt werden: {{error}}",
         "deleteFailed": "Team konnte nicht gelöscht werden",
         "updateName": "Teamname konnte nicht aktualisiert werden",
+        "updateDescription": "Teambeschreibung konnte nicht aktualisiert werden",
         "saveChanges": "Änderungen konnten nicht gespeichert werden. Bitte versuche es erneut."
       }
     }
@@ -3657,6 +3664,36 @@
         "confirm": "Trennen",
         "cancel": "Abbrechen"
       }
+    },
+    "loading": "Wird geladen…",
+    "downloadHosts": {
+      "title": "Zulässige Download-Hosts",
+      "intro": "Wenn ein Dokument per URL angehängt wird, lädt AlgaPSA es nur von den hier aufgeführten Hosts herunter. Dies gilt für jeden Aufrufer, der Dokumente anhängt, einschließlich KI-Agenten, API-Clients und der REST-API. Bevorzugen Sie Bucket-spezifische Hosts wie acme-uploads.s3.us-east-1.amazonaws.com gegenüber allgemeinen.",
+      "readOnly": "Sie können diese Liste ansehen. Zum Ändern benötigen Sie die Berechtigung „Download-Hosts verwalten“.",
+      "builtIn": "Integriert",
+      "empty": "Noch keine benutzerdefinierten Hosts.",
+      "add": "Host hinzufügen",
+      "addTitle": "Zulässigen Download-Host hinzufügen",
+      "remove": "Entfernen",
+      "removeTitle": "Host entfernen?",
+      "removeMessage": "Downloads von {{host}} funktionieren erst wieder, wenn der Host erneut hinzugefügt wird.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "Ein Hostname oder *.example.com, um alle Subdomains zuzulassen.",
+        "note": "Notiz (optional)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Verwendet für",
+        "allowed": "Zugelassen",
+        "note": "Notiz",
+        "addedBy": "Hinzugefügt von",
+        "addedOn": "Hinzugefügt am"
+      },
+      "errors": {
+        "load": "Zulässige Download-Hosts konnten nicht geladen werden.",
+        "save": "Die Änderung konnte nicht gespeichert werden."
+      }
     }
   },
   "errors": {
@@ -3836,7 +3873,8 @@
     }
   },
   "common": {
-    "saving": "Wird gespeichert…"
+    "saving": "Wird gespeichert…",
+    "cancel": "Abbrechen"
   },
   "featureFlags": {
     "categories": {

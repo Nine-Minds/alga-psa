@@ -588,7 +588,8 @@
       "failedToResetRate": "No se pudo restablecer el precio de la línea",
       "protectedStartDate": "La fecha de inicio debe ser el {{boundary}} o anterior para incluir el historial protegido.",
       "protectedEndDate": "La fecha de fin debe ser el {{boundary}} o posterior para incluir el historial protegido.",
-      "cannotEditWithInvoices": "No se puede editar la línea de contrato: este contrato tiene facturas asociadas. Las líneas de contrato no se pueden editar una vez que se han generado facturas."
+      "cannotEditWithInvoices": "No se puede editar la línea de contrato: este contrato tiene facturas asociadas. Las líneas de contrato no se pueden editar una vez que se han generado facturas.",
+      "reloadLatest": "Cargar la última versión"
     },
     "loading": {
       "contractLines": "Cargando líneas de contrato",
@@ -698,6 +699,13 @@
       "statusSuperseded": "Reemplazado",
       "supersededHistory": "Ediciones pendientes reemplazadas ({{count}})",
       "supersededBy": "Reemplazado por"
+    },
+    "pricing": {
+      "catalog": "catálogo",
+      "override": "personalizado",
+      "cost": "Coste: {{cost}}",
+      "costInCurrency": "Coste en {{currency}}: {{cost}}",
+      "margin": "Margen: {{margin}} por unidad"
     }
   },
   "contractLineEdit": {
@@ -1695,6 +1703,9 @@
       "label": "Perfil de facturación",
       "none": "Usar el perfil predeterminado del cliente",
       "hint": "Los cargos de este contrato se facturan a este perfil, salvo que una línea lo sustituya."
+    },
+    "billingTiming": {
+      "label": "Momento de facturación"
     }
   },
   "wizardFixed": {
@@ -1744,7 +1755,8 @@
       "recurringQuantityLabel": "Cantidad recurrente",
       "allocationQuantityLabel": "Cantidad de asignación",
       "noCurrencyPrice": "No hay precio en {{currency}} en el catálogo. Introduzca una tarifa unitaria."
-    }
+    },
+    "billingTimingLabel": "Momento de facturación"
   },
   "wizardProducts": {
     "actions": {
@@ -1767,7 +1779,8 @@
       "productMissingPrice": "Este producto no tiene precio predeterminado ni anulación. No se puede facturar hasta que ingrese un precio unitario.",
       "noCurrencyPriceEnterUnitPrice": "No hay precio en {{currency}} en el catálogo. Introduzca un precio unitario.",
       "noCurrencyPriceWithLegacyHint": "No hay precio en {{currency}} en el catálogo. Tarifa predeterminada heredada: {{rate}}. Introduzca un precio unitario en {{currency}}."
-    }
+    },
+    "billingTimingLabel": "Momento de facturación"
   },
   "wizardHourly": {
     "actions": {
@@ -1825,7 +1838,8 @@
         "rolloverDisabled": "Deshabilitado",
         "rolloverEnabled": "Habilitado"
       }
-    }
+    },
+    "billingTimingLabel": "Momento de facturación"
   },
   "wizardUsage": {
     "actions": {
@@ -1863,7 +1877,8 @@
     },
     "values": {
       "defaultUnit": "unidad"
-    }
+    },
+    "billingTimingLabel": "Momento de facturación"
   },
   "wizardReview": {
     "heading": "Revisar contrato",
@@ -1972,7 +1987,10 @@
         "one": "{{count}} producto",
         "other": "{{count}} productos"
       },
-      "overrideRate": "- anulación {{rate}}/{{currencyCode}}"
+      "overrideRate": "- anulación {{rate}}/{{currencyCode}}",
+      "cost": "Coste: {{cost}}",
+      "costInCurrency": "Coste en {{currency}}: {{cost}}",
+      "margin": "Margen: {{margin}} por unidad"
     },
     "hourly": {
       "badgeCount": {
@@ -1995,8 +2013,12 @@
     "total": {
       "title": "Total mensual estimado",
       "description": "Los productos y los cargos fijos están incluidos en este total. Los servicios por hora y de uso se facturan según el consumo real.",
-      "perMonth": "por mes",
-      "savedDraftValue": "Valor del borrador guardado: {{amount}}"
+      "savedDraftValue": "Valor del borrador guardado: {{amount}}",
+      "titleCadence": "Total estimado",
+      "mixedFrequencyTitle": "Total estimado por frecuencia de facturación",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "unos {{amount}} al mes",
+      "savedDraftValueMonthly": "Valor del borrador guardado: {{amount}} por mes"
     },
     "finalChecklist": {
       "title": "Antes de finalizar:",
@@ -2014,6 +2036,13 @@
       "neverExpires": "no caduca",
       "cadenceSummary": "{{hours}} h cada periodo de facturación por {{price}}",
       "overageRate": "exceso {{rate}}/h"
+    },
+    "billingTiming": {
+      "label": "Momento de facturación:",
+      "advance": "Por adelantado",
+      "arrears": "Por periodo vencido",
+      "advanceInherited": "Por adelantado (valor predeterminado del contrato)",
+      "arrearsInherited": "Por periodo vencido (valor predeterminado del contrato)"
     }
   },
   "wizardTemplateLines": {
@@ -2759,6 +2788,7 @@
   "wizardFirstInvoice": {
     "loading": "Comprobando el calendario de facturación del cliente…",
     "arrearsPreviewNote": "Hasta entonces, una vista previa de facturas de este cliente no tiene nada que facturar para esta línea.",
+    "arrearsPreviewNoteMany": "Hasta entonces, una vista previa de facturas de este cliente no tiene nada que facturar para estas líneas.",
     "unavailable": {
       "missingStartDate": "Elija una fecha de inicio para ver cuándo se factura por primera vez este contrato.",
       "unsupportedFrequency": "No se muestra la fecha de la primera factura porque la facturación según el ciclo del contrato no admite esta frecuencia. Elija una frecuencia admitida o facture según el calendario del cliente.",
@@ -2795,7 +2825,11 @@
     "options": {
       "advance": "Por adelantado (facturar al inicio del periodo)",
       "arrears": "Al vencimiento (facturar al final del periodo)"
-    }
+    },
+    "inheritWithValue": "Usar el valor predeterminado del contrato — {{timing}}",
+    "inheritedAdvance": "por adelantado",
+    "inheritedArrears": "por periodo vencido",
+    "contractDefaultHelp": "Valor predeterminado para las líneas fijas, que pueden facturarse por adelantado. Las líneas por horas y de uso siempre se facturan por periodo vencido, elijas lo que elijas aquí."
   },
   "contractDiscounts": {
     "title": "Descuentos",

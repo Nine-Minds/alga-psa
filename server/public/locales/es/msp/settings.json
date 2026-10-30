@@ -414,17 +414,21 @@
       "cancel": "Cancelar",
       "delete": "Eliminar",
       "placeholder": "Ingrese el nombre del nuevo equipo",
+      "descriptionPlaceholder": "Ingrese una descripción opcional del equipo",
       "selectManager": "Seleccionar un gerente"
     },
     "details": {
       "loading": "Cargando detalles del equipo...",
       "notFound": "No se encontró el equipo",
+      "noDescription": "Sin descripción",
       "fields": {
         "teamLead": "Líder del equipo",
+        "description": "Descripción",
         "addMember": "Agregar miembro"
       },
       "placeholders": {
         "teamName": "Ingrese el nombre del equipo",
+        "description": "Ingrese la descripción del equipo",
         "selectTeamLead": "Seleccionar un líder de equipo",
         "selectUserToAdd": "Seleccionar un usuario para agregar",
         "noTeamLead": "Sin asignar"
@@ -436,8 +440,10 @@
         "discard": "Descartar",
         "saveChanges": "Guardar cambios",
         "saveName": "Guardar nombre",
+        "saveDescription": "Guardar descripción",
         "cancel": "Cancelar",
         "editName": "Editar nombre",
+        "editDescription": "Editar descripción",
         "remove": "Eliminar"
       },
       "table": {
@@ -462,6 +468,7 @@
         "createFailed": "Error al crear el equipo: {{error}}",
         "deleteFailed": "Error al eliminar el equipo",
         "updateName": "No se pudo actualizar el nombre del equipo",
+        "updateDescription": "No se pudo actualizar la descripción del equipo",
         "saveChanges": "No se pudieron guardar los cambios. Inténtelo de nuevo."
       }
     }
@@ -3657,6 +3664,36 @@
         "confirm": "Desconectar",
         "cancel": "Cancelar"
       }
+    },
+    "loading": "Cargando…",
+    "downloadHosts": {
+      "title": "Hosts de descarga permitidos",
+      "intro": "Cuando se adjunta un documento mediante una URL, AlgaPSA solo lo descarga desde los hosts indicados aquí. Esto se aplica a todos los que adjuntan documentos, incluidos los agentes de IA, los clientes de API y la API REST. Prefiera hosts específicos de un bucket, como acme-uploads.s3.us-east-1.amazonaws.com, en lugar de hosts genéricos.",
+      "readOnly": "Puede ver esta lista. Para modificarla necesita el permiso «Administrar hosts de descarga».",
+      "builtIn": "Integrado",
+      "empty": "Aún no hay hosts personalizados.",
+      "add": "Añadir host",
+      "addTitle": "Añadir host de descarga permitido",
+      "remove": "Eliminar",
+      "removeTitle": "¿Eliminar host?",
+      "removeMessage": "Las descargas desde {{host}} dejarán de funcionar hasta que se vuelva a añadir.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "Un nombre de host, o *.example.com para permitir todos los subdominios.",
+        "note": "Nota (opcional)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Se usa para",
+        "allowed": "Permitido",
+        "note": "Nota",
+        "addedBy": "Añadido por",
+        "addedOn": "Añadido el"
+      },
+      "errors": {
+        "load": "No se pudieron cargar los hosts de descarga permitidos.",
+        "save": "No se pudo guardar el cambio."
+      }
     }
   },
   "errors": {
@@ -3836,7 +3873,8 @@
     }
   },
   "common": {
-    "saving": "Guardando…"
+    "saving": "Guardando…",
+    "cancel": "Cancelar"
   },
   "featureFlags": {
     "categories": {

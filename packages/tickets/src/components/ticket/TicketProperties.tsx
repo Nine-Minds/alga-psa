@@ -1,5 +1,6 @@
 'use client';
 
+import { ticketCreatorName } from './ticketCreatorName';
 import React, { useState, useEffect, useRef } from 'react';
 import { fromZonedTime } from 'date-fns-tz';
 import { useTicketDataSource } from './TicketDataSourceContext';
@@ -761,7 +762,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           <div>
             <h5 className="font-bold">{t('properties.createdBy', 'Created By')}</h5>
             <p className="text-sm">
-              {createdByUser ? `${createdByUser.first_name} ${createdByUser.last_name}` : t('properties.notAvailable', 'N/A')}
+              {ticketCreatorName(createdByUser, ticket) ?? t('properties.notAvailable', 'N/A')}
             </p>
           </div>
           <div>

@@ -414,17 +414,21 @@
       "cancel": "Avbryt",
       "delete": "Radera",
       "placeholder": "Ange nytt teamnamn",
+      "descriptionPlaceholder": "Ange en valfri teambeskrivning",
       "selectManager": "Välj en chef"
     },
     "details": {
       "loading": "Läser in teamuppgifter…",
       "notFound": "Inget team hittades",
+      "noDescription": "Ingen beskrivning",
       "fields": {
         "teamLead": "Teamledare",
+        "description": "Beskrivning",
         "addMember": "Lägg till medlem"
       },
       "placeholders": {
         "teamName": "Ange teamnamn",
+        "description": "Ange teambeskrivning",
         "selectTeamLead": "Välj en teamledare",
         "selectUserToAdd": "Välj en användare att lägga till",
         "noTeamLead": "Inte tilldelad"
@@ -436,8 +440,10 @@
         "discard": "Kasta",
         "saveChanges": "Spara ändringar",
         "saveName": "Spara namn",
+        "saveDescription": "Spara beskrivning",
         "cancel": "Avbryt",
         "editName": "Redigera namn",
+        "editDescription": "Redigera beskrivning",
         "remove": "Ta bort"
       },
       "table": {
@@ -462,6 +468,7 @@
         "createFailed": "Det gick inte att skapa teamet: {{error}}",
         "deleteFailed": "Det gick inte att radera teamet",
         "updateName": "Det gick inte att uppdatera teamnamnet",
+        "updateDescription": "Det gick inte att uppdatera teambeskrivningen",
         "saveChanges": "Det gick inte att spara ändringarna. Försök igen."
       }
     }
@@ -3657,6 +3664,36 @@
         "confirm": "Koppla från",
         "cancel": "Avbryt"
       }
+    },
+    "loading": "Läser in…",
+    "downloadHosts": {
+      "title": "Tillåtna nedladdningsvärdar",
+      "intro": "När ett dokument bifogas via URL hämtar AlgaPSA det bara från värdarna som listas här. Det gäller alla som bifogar dokument, inklusive AI-agenter, API-klienter och REST-API:t. Föredra bucket-specifika värdar som acme-uploads.s3.us-east-1.amazonaws.com framför breda.",
+      "readOnly": "Du kan visa listan. För att ändra den krävs behörigheten ”Hantera nedladdningsvärdar”.",
+      "builtIn": "Inbyggd",
+      "empty": "Inga anpassade värdar ännu.",
+      "add": "Lägg till värd",
+      "addTitle": "Lägg till tillåten nedladdningsvärd",
+      "remove": "Ta bort",
+      "removeTitle": "Ta bort värd?",
+      "removeMessage": "Nedladdningar från {{host}} slutar fungera tills värden läggs till igen.",
+      "fields": {
+        "host": "Värd",
+        "hostHelp": "Ett värdnamn, eller *.example.com för att tillåta alla underdomäner.",
+        "note": "Anteckning (valfritt)"
+      },
+      "table": {
+        "host": "Värd",
+        "used": "Används för",
+        "allowed": "Tillåten",
+        "note": "Anteckning",
+        "addedBy": "Tillagd av",
+        "addedOn": "Tillagd"
+      },
+      "errors": {
+        "load": "Det gick inte att läsa in tillåtna nedladdningsvärdar.",
+        "save": "Det gick inte att spara ändringen."
+      }
     }
   },
   "errors": {
@@ -3836,7 +3873,8 @@
     }
   },
   "common": {
-    "saving": "Sparar…"
+    "saving": "Sparar…",
+    "cancel": "Avbryt"
   },
   "featureFlags": {
     "categories": {
