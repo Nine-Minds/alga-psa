@@ -387,6 +387,8 @@
     },
     "locations": {
       "billing": "Facturatie",
+      "contactCount_one": "1 contactpersoon",
+      "contactCount_other": "{{count}} contactpersonen",
       "manage": "Beheren",
       "more": "+{{count}} meer",
       "none": "Nog geen locaties.",

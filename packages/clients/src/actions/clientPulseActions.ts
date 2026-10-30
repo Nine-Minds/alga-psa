@@ -6,6 +6,7 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { toClientSinceDate } from '../lib/clientSince';
 import { getContactAvatarUrlsBatchAsync } from '../lib/documentsHelpers';
+import { getContactCountsByLocation } from '../models/contactLocation';
 import {
   actionError,
   permissionError,
@@ -288,6 +289,10 @@ async function fetchLocations(
     .orderBy('is_default', 'desc')
     .orderBy('location_name', 'asc');
 
+  // One batched, tenant-scoped count for the page so the tile states who works where without the
+  // reader having to open Manage Locations.
+  const contactCounts = await getContactCountsByLocation(trx, tenant, rows.map((row: any) => row.location_id));
+
   return rows.map((row: any) => ({
     location_id: row.location_id,
     location_name: row.location_name ?? null,
@@ -300,6 +305,7 @@ async function fetchLocations(
     is_default: Boolean(row.is_default),
     is_billing: Boolean(row.is_billing_address),
     is_shipping: Boolean(row.is_shipping_address),
+    contact_count: contactCounts.get(row.location_id) ?? 0,
   }));
 }
 

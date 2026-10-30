@@ -387,6 +387,8 @@
     },
     "locations": {
       "billing": "〖Ɓīŀŀīƞɠ ···〗",
+      "contactCount_one": "〖1 ƈȯƞŧȧƈŧ ····〗",
+      "contactCount_other": "〖{{count}} ƈȯƞŧȧƈŧş ········〗",
       "manage": "〖Ḿȧƞȧɠḗ ···〗",
       "more": "〖+{{count}} ḿȯřḗ ······〗",
       "none": "〖Ƞȯ ŀȯƈȧŧīȯƞş ẏḗŧ. ·······〗",

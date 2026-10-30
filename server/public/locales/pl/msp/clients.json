@@ -435,6 +435,10 @@
     },
     "locations": {
       "billing": "Rozliczenia",
+      "contactCount_few": "{{count}} kontakty",
+      "contactCount_many": "{{count}} kontaktów",
+      "contactCount_one": "1 kontakt",
+      "contactCount_other": "{{count}} kontaktów",
       "manage": "Zarządzaj",
       "more": "+{{count}} więcej",
       "none": "Brak lokalizacji.",

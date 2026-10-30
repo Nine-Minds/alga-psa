@@ -387,6 +387,8 @@
     },
     "locations": {
       "billing": "Fakturering",
+      "contactCount_one": "1 kontakt",
+      "contactCount_other": "{{count}} kontakter",
       "manage": "Hantera",
       "more": "+{{count}} till",
       "none": "Inga platser ännu.",

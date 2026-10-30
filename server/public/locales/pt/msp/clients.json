@@ -387,6 +387,8 @@
     },
     "locations": {
       "billing": "Faturação",
+      "contactCount_one": "1 contato",
+      "contactCount_other": "{{count}} contatos",
       "manage": "Gerir",
       "more": "+{{count}} mais",
       "none": "Ainda não há localizações.",
