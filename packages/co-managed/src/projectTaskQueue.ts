@@ -18,6 +18,8 @@ const pageSize = (limit?: number) => Number.isInteger(limit) && limit! > 0 ? Mat
 
 export interface CoManagedSharedProjectRow {
   customerTenant: string; relationshipId: string; projectId: string; projectName: string; organizationName: string; canCollaborate: boolean;
+  /** The effective read policy (home policy unioned with relationship redactions) admission computed for this project. */
+  redactedFields: readonly string[];
 }
 export interface CoManagedSharedProjectPage { rows: CoManagedSharedProjectRow[]; next: { relationshipId: string; projectId: string } | null }
 
@@ -76,7 +78,7 @@ async function readProject(db: Knex, actor: CoManagedSessionActor, customerTenan
       const scope = await customer.table('co_management_project_scopes').where({ relationship_id: relationshipId, project_id: projectId }).first('can_collaborate');
       const organizationName = await readCoManagedCustomerOrganizationName(context.trx, customerTenant, context.redactedFields);
       if (!project || !scope) return null;
-      return { customerTenant, relationshipId, projectId, projectName: project.project_name, organizationName, canCollaborate: Boolean(scope.can_collaborate) };
+      return { customerTenant, relationshipId, projectId, projectName: project.project_name, organizationName, canCollaborate: Boolean(scope.can_collaborate), redactedFields: [...context.redactedFields] };
     });
   } catch (error) {
     if (isCoManagedSharedWorkError(error)) return null;

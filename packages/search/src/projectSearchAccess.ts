@@ -97,11 +97,11 @@ export async function withProjectSearchAccess<T>(db: Knex, tenant: string, input
  */
 export async function withSharedProjectSearchAccess<T>(db: Knex, actor: CoManagedSessionActor, relationshipId: string,
   work: (knex: Knex, customerTenant: string, searchIndex: NonNullable<SearchQueryOptions['searchIndex']>) => Promise<T>): Promise<T> {
-  const admitted: Array<{ customerTenant: string; projectId: string }> = [];
+  const admitted: Array<{ customerTenant: string; projectId: string; redactedFields: readonly string[] }> = [];
   let after: { relationshipId: string; projectId: string } | undefined;
   for (;;) {
     const page = await listCoManagedSharedProjects(db, actor, { relationshipId, limit: 100, after });
-    admitted.push(...page.rows.map(row => ({ customerTenant: row.customerTenant, projectId: row.projectId })));
+    admitted.push(...page.rows.map(row => ({ customerTenant: row.customerTenant, projectId: row.projectId, redactedFields: row.redactedFields })));
     if (!page.next) break;
     after = page.next;
   }
@@ -114,11 +114,20 @@ export async function withSharedProjectSearchAccess<T>(db: Knex, actor: CoManage
       const none = trx.raw(`(SELECT ${COLUMNS.map(c => `NULL::${noneTypes[c] ?? 'text'} AS ${c}`).join(', ')} WHERE false) s`).toSQL();
       return work(trx, actor.tenant, { sql: none.sql, bindings: [] });
     }
-    const ids = admitted.map(row => row.projectId);
-    const base = tenantDb(trx, customerTenant).table('projects').whereRaw('project_id = ANY(?::uuid[])', [ids])
-      .select('tenant', 'project_id', 'client_id', 'project_name', 'description', 'created_at', 'updated_at');
-    const projects = trx.from(base.as('q')).select('q.*');
-    const relation = trx.unionAll(projectRelation(trx, customerTenant, projects, [], true, { relationshipId }), true).toSQL();
+    // Projects of one relationship can carry different effective policies. Policies are never merged (a union
+    // over-masks, an intersection leaks): one relation per canonical policy key, unioned.
+    const groups = new Map<string, { redactedFields: string[]; ids: string[] }>();
+    for (const row of admitted) {
+      const fields = [...new Set(row.redactedFields)].sort(), key = JSON.stringify(fields);
+      const group = groups.get(key) ?? { redactedFields: fields, ids: [] };
+      group.ids.push(row.projectId); groups.set(key, group);
+    }
+    const branches = [...groups.values()].flatMap(group => {
+      const base = tenantDb(trx, customerTenant).table('projects').whereRaw('project_id = ANY(?::uuid[])', [group.ids])
+        .select('tenant', 'project_id', 'client_id', 'project_name', 'description', 'created_at', 'updated_at');
+      return projectRelation(trx, customerTenant, trx.from(base.as('q')).select('q.*'), group.redactedFields, true, { relationshipId });
+    });
+    const relation = trx.unionAll(branches, true).toSQL();
     return work(trx, customerTenant, { sql: `(${relation.sql}) s`, bindings: [...relation.bindings] as Knex.RawBinding[] });
   });
 }
