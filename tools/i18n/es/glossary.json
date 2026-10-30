@@ -1972,7 +1972,7 @@
     {
       "term": "bucket",
       "preferred": "bolsa de horas",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Anglicismo sin traducir para las bolsas de horas prepagadas."
     },
     {
@@ -2007,13 +2007,13 @@
     {
       "term": "cubo",
       "preferred": "bolsa de horas",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Traducción literal del bucket de horas; el término comercial es bolsa de horas."
     },
     {
       "term": "cubos",
       "preferred": "bolsas de horas",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Plural de la traducción literal del bucket."
     },
     {
