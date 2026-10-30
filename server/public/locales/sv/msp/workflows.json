@@ -1013,6 +1013,26 @@
       "links.list_namespaces": {
         "label": "Lista länknamnrymder",
         "description": "Lista namnrymder för arbetsflödenas entitetslänkar som används av den här organisationen."
+      },
+      "assets.get_maintenance": {
+        "label": "Hämta tillgångsunderhåll",
+        "description": "Hitta plan och tillfälle via plan, tillfälle eller länkat ärende."
+      },
+      "assets.create_maintenance_ticket": {
+        "label": "Skapa underhållsärende",
+        "description": "Skapa och länka ett ärende för ett öppet underhållstillfälle."
+      },
+      "assets.complete_maintenance": {
+        "label": "Slutför tillgångsunderhåll",
+        "description": "Registrera underhåll och öppna nästa tillfälle."
+      },
+      "assets.skip_maintenance": {
+        "label": "Hoppa över tillgångsunderhåll",
+        "description": "Hoppa över ett tillfälle med en orsak och öppna nästa."
+      },
+      "assets.set_maintenance_paused": {
+        "label": "Pausa eller återuppta underhåll",
+        "description": "Pausa eller återuppta en underhållsplan."
       }
     },
     "validation": {
@@ -1168,6 +1188,10 @@
         "data-store": {
           "label": "Datalager",
           "description": "Läs och skriv beständigt arbetsflödestillstånd mellan körningar."
+        },
+        "maintenance": {
+          "label": "Underhåll",
+          "description": "Hitta underhåll, länka ärenden, slutför eller hoppa över tillfällen och pausa eller återuppta planer."
         }
       },
       "noMatches": {

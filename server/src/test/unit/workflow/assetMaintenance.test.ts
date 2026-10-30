@@ -125,6 +125,7 @@ import { registerAssetMaintenanceActions } from '../../../../../shared/workflow/
 import { createTicketWithSideEffects } from '../../../../../shared/services/tickets/createTicketWithSideEffects';
 import { writeRunAudit } from '../../../../../shared/workflow/runtime/actions/businessOperations/shared';
 import { advanceMaintenanceDate } from '../../../../../shared/services/assets/maintenanceRecurrence';
+import { buildWorkflowDesignerActionCatalog } from '../../../../../shared/workflow/runtime/designer/actionCatalog';
 
 const ctx: ActionContext = {
   tenantId: state.tenant, runId: ids.schedule, stepPath: 'root.steps[0]',
@@ -176,9 +177,29 @@ describe('asset maintenance workflow actions and shared lifecycle', () => {
   });
 
   it('registers all five discoverable actions', () => {
+    const catalog = buildWorkflowDesignerActionCatalog(
+      getActionRegistryV2().list().map(({ id, version, ui }) => ({ id, version, ui })),
+    );
+    const group = catalog.find((record) => record.groupKey === 'maintenance');
+    expect(group).toMatchObject({
+      label: 'Maintenance', tileKind: 'core-object', iconToken: 'maintenance',
+      defaultActionId: 'assets.get_maintenance',
+    });
     for (const name of ['get_maintenance', 'create_maintenance_ticket', 'complete_maintenance', 'skip_maintenance', 'set_maintenance_paused']) {
       expect(getActionRegistryV2().get(`assets.${name}`, 1)?.ui?.category).toBe('Business Operations');
+      expect(group?.allowedActionIds).toContain(`assets.${name}`);
     }
+    expect(group?.allowedActionIds).toHaveLength(5);
+    expect(catalog.filter((record) => record.groupKey !== 'maintenance')
+      .flatMap((record) => record.allowedActionIds)).not.toContain('assets.get_maintenance');
+  });
+
+  it('preserves main custom recurrence when a workflow completes maintenance', async () => {
+    schedule().frequency = 'custom';
+    schedule().frequency_interval = 2;
+    schedule().schedule_config = { recurrence: { unit: 'weeks', weekdays: [1, 4] } };
+    const result = await execute('complete_maintenance', { occurrence_id: ids.occurrence, performed_at: '2026-10-26' });
+    expect(result.next_occurrence.due_date).toBe('2026-10-29T00:00:00.000Z');
   });
 
   it('accepts structured completion records and rejects non-record values', () => {

@@ -1067,6 +1067,26 @@
           "label": "Elenca spazi dei nomi dei collegamenti",
           "description": "Elenca gli spazi dei nomi dei collegamenti entità del workflow usati da questo tenant."
         }
+      },
+      "assets.get_maintenance": {
+        "label": "Ottieni manutenzione risorsa",
+        "description": "Trova piano e occorrenza per piano, occorrenza o ticket collegato."
+      },
+      "assets.create_maintenance_ticket": {
+        "label": "Crea ticket di manutenzione",
+        "description": "Crea e collega un ticket per un’occorrenza di manutenzione aperta."
+      },
+      "assets.complete_maintenance": {
+        "label": "Completa manutenzione risorsa",
+        "description": "Registra la manutenzione e apri l’occorrenza successiva."
+      },
+      "assets.skip_maintenance": {
+        "label": "Salta manutenzione risorsa",
+        "description": "Salta un’occorrenza con un motivo e apri la successiva."
+      },
+      "assets.set_maintenance_paused": {
+        "label": "Sospendi o riprendi manutenzione",
+        "description": "Sospendi o riprendi un piano di manutenzione."
       }
     },
     "validation": {
@@ -1290,6 +1310,10 @@
         "data-store": {
           "label": "Archivio dati",
           "description": "Leggi e scrivi lo stato persistente del workflow tra le esecuzioni."
+        },
+        "maintenance": {
+          "label": "Manutenzione",
+          "description": "Trova manutenzioni, collega ticket, completa o salta occorrenze e sospendi o riprendi piani."
         }
       },
       "noMatches": {

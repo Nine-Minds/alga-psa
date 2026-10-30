@@ -1067,6 +1067,26 @@
           "label": "Verknüpfungs-Namespaces auflisten",
           "description": "Namespaces für Workflow-Entitätsverknüpfungen auflisten, die von diesem Mandanten verwendet werden."
         }
+      },
+      "assets.get_maintenance": {
+        "label": "Asset-Wartung abrufen",
+        "description": "Wartungsplan und Vorgang über Plan, Vorgang oder verknüpftes Ticket finden."
+      },
+      "assets.create_maintenance_ticket": {
+        "label": "Asset-Wartungsticket erstellen",
+        "description": "Ein Ticket für einen offenen Wartungsvorgang erstellen und verknüpfen."
+      },
+      "assets.complete_maintenance": {
+        "label": "Asset-Wartung abschließen",
+        "description": "Wartung dokumentieren und den nächsten Vorgang öffnen."
+      },
+      "assets.skip_maintenance": {
+        "label": "Asset-Wartung überspringen",
+        "description": "Einen Vorgang mit Begründung überspringen und den nächsten öffnen."
+      },
+      "assets.set_maintenance_paused": {
+        "label": "Asset-Wartung pausieren oder fortsetzen",
+        "description": "Einen Wartungsplan pausieren oder fortsetzen."
       }
     },
     "validation": {
@@ -1290,6 +1310,10 @@
         "data-store": {
           "label": "Datenspeicher",
           "description": "Dauerhaften Workflow-Status über Ausführungen hinweg lesen und schreiben."
+        },
+        "maintenance": {
+          "label": "Wartung",
+          "description": "Wartungen finden, Tickets verknüpfen, Vorgänge abschließen oder überspringen und Pläne pausieren oder fortsetzen."
         }
       },
       "noMatches": {

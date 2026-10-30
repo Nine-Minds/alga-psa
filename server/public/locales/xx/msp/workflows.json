@@ -1013,6 +1013,26 @@
       "links.list_namespaces": {
         "label": "⟦Ŀīşŧ Ŀīƞķ Ƞȧḿḗşƥȧƈḗş⟧",
         "description": "⟦Ŀīşŧ ẇȯřķƒŀȯẇ ḗƞŧīŧẏ-ŀīƞķ ƞȧḿḗşƥȧƈḗş ŭşḗḓ ƀẏ ŧħīş ŧḗƞȧƞŧ.⟧"
+      },
+      "assets.get_maintenance": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "assets.create_maintenance_ticket": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "assets.complete_maintenance": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "assets.skip_maintenance": {
+        "label": "11111",
+        "description": "11111"
+      },
+      "assets.set_maintenance_paused": {
+        "label": "11111",
+        "description": "11111"
       }
     },
     "validation": {
@@ -1168,6 +1188,10 @@
         "data-store": {
           "label": "⟦Ḓȧŧȧ Şŧȯřḗ⟧",
           "description": "⟦Řḗȧḓ ȧƞḓ ẇřīŧḗ ḓŭřȧƀŀḗ ẇȯřķƒŀȯẇ şŧȧŧḗ ȧƈřȯşş řŭƞş.⟧"
+        },
+        "maintenance": {
+          "label": "11111",
+          "description": "11111"
         }
       },
       "noMatches": {

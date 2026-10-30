@@ -1067,6 +1067,26 @@
           "label": "Wyświetl przestrzenie nazw powiązań",
           "description": "Wyświetl przestrzenie nazw powiązań encji workflow używane przez tego tenanta."
         }
+      },
+      "assets.get_maintenance": {
+        "label": "Pobierz konserwację zasobu",
+        "description": "Znajdź plan i wystąpienie według planu, wystąpienia lub powiązanego zgłoszenia."
+      },
+      "assets.create_maintenance_ticket": {
+        "label": "Utwórz zgłoszenie konserwacji",
+        "description": "Utwórz i powiąż zgłoszenie dla otwartego wystąpienia konserwacji."
+      },
+      "assets.complete_maintenance": {
+        "label": "Zakończ konserwację zasobu",
+        "description": "Zapisz konserwację i otwórz następne wystąpienie."
+      },
+      "assets.skip_maintenance": {
+        "label": "Pomiń konserwację zasobu",
+        "description": "Pomiń wystąpienie z podaniem powodu i otwórz następne."
+      },
+      "assets.set_maintenance_paused": {
+        "label": "Wstrzymaj lub wznów konserwację",
+        "description": "Wstrzymaj lub wznów plan konserwacji."
       }
     },
     "validation": {
@@ -1290,6 +1310,10 @@
         "data-store": {
           "label": "Magazyn danych",
           "description": "Odczytuj i zapisuj trwały stan workflow między uruchomieniami."
+        },
+        "maintenance": {
+          "label": "Konserwacja",
+          "description": "Znajduj konserwacje, łącz zgłoszenia, kończ lub pomijaj wystąpienia oraz wstrzymuj lub wznawiaj plany."
         }
       },
       "noMatches": {

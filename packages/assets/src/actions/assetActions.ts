@@ -68,7 +68,7 @@ import {
     skipMaintenanceOccurrence,
     setMaintenanceSchedulePaused,
 } from '@alga-psa/shared/services/assets/maintenanceLifecycle';
-import { parseCustomRecurrence } from '../lib/maintenanceRecurrence';
+import { advanceMaintenanceDate, parseCustomRecurrence } from '../lib/maintenanceRecurrence';
 import { orderEntityAssetIds, type EntityAssociationRow } from '../lib/entityAssetOrder';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';

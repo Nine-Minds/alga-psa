@@ -1067,6 +1067,26 @@
           "label": "Koppelingsnaamruimten weergeven",
           "description": "Geef de naamruimten van workflow-entiteitskoppelingen weer die door deze tenant worden gebruikt."
         }
+      },
+      "assets.get_maintenance": {
+        "label": "Assetonderhoud ophalen",
+        "description": "Zoek plan en onderhoudsbeurt via plan, beurt of gekoppeld ticket."
+      },
+      "assets.create_maintenance_ticket": {
+        "label": "Onderhoudsticket maken",
+        "description": "Maak en koppel een ticket voor een open onderhoudsbeurt."
+      },
+      "assets.complete_maintenance": {
+        "label": "Assetonderhoud voltooien",
+        "description": "Leg onderhoud vast en open de volgende onderhoudsbeurt."
+      },
+      "assets.skip_maintenance": {
+        "label": "Assetonderhoud overslaan",
+        "description": "Sla een onderhoudsbeurt over met een reden en open de volgende."
+      },
+      "assets.set_maintenance_paused": {
+        "label": "Assetonderhoud pauzeren of hervatten",
+        "description": "Pauzeer of hervat een onderhoudsplan."
       }
     },
     "validation": {
@@ -1290,6 +1310,10 @@
         "data-store": {
           "label": "Gegevensopslag",
           "description": "Duurzame workflow-status lezen en schrijven over uitvoeringen heen."
+        },
+        "maintenance": {
+          "label": "Onderhoud",
+          "description": "Zoek onderhoud, koppel tickets, voltooi of sla onderhoudsbeurten over en pauzeer of hervat plannen."
         }
       },
       "noMatches": {

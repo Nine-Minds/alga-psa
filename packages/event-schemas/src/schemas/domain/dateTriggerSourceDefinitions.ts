@@ -99,6 +99,7 @@ export const dateTriggerSourceDefinitions = [
     recurrence: 'once',
     hasParams: false,
     usesOffset: true,
+    catalogEventType: 'ASSET_MAINTENANCE_DUE',
   },
   {
     id: 'ticket.status_age',

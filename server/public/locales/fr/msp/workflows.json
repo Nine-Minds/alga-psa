@@ -1067,6 +1067,26 @@
           "label": "Lister les espaces de noms de liens",
           "description": "Lister les espaces de noms de liens d'entité utilisés par ce locataire."
         }
+      },
+      "assets.get_maintenance": {
+        "label": "Obtenir la maintenance d’un actif",
+        "description": "Rechercher le plan et l’occurrence par plan, occurrence ou ticket lié."
+      },
+      "assets.create_maintenance_ticket": {
+        "label": "Créer un ticket de maintenance",
+        "description": "Créer et lier un ticket pour une occurrence de maintenance ouverte."
+      },
+      "assets.complete_maintenance": {
+        "label": "Terminer la maintenance d’un actif",
+        "description": "Enregistrer la maintenance et ouvrir l’occurrence suivante."
+      },
+      "assets.skip_maintenance": {
+        "label": "Ignorer la maintenance d’un actif",
+        "description": "Ignorer une occurrence avec un motif et ouvrir la suivante."
+      },
+      "assets.set_maintenance_paused": {
+        "label": "Suspendre ou reprendre la maintenance",
+        "description": "Suspendre ou reprendre un plan de maintenance."
       }
     },
     "validation": {
@@ -1290,6 +1310,10 @@
         "data-store": {
           "label": "Magasin de données",
           "description": "Lire et écrire un état de workflow durable d'une exécution à l'autre."
+        },
+        "maintenance": {
+          "label": "Maintenance",
+          "description": "Rechercher la maintenance, lier des tickets, terminer ou ignorer des occurrences et suspendre ou reprendre des plans."
         }
       },
       "noMatches": {

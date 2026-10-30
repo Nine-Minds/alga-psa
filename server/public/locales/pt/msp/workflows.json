@@ -1013,6 +1013,26 @@
       "links.list_namespaces": {
         "label": "Listar namespaces de link",
         "description": "Listar namespaces de link de entidade de fluxo de trabalho usados ​​por esse locatário."
+      },
+      "assets.get_maintenance": {
+        "label": "Obter manutenção do ativo",
+        "description": "Encontre o plano e a ocorrência por plano, ocorrência ou ticket associado."
+      },
+      "assets.create_maintenance_ticket": {
+        "label": "Criar ticket de manutenção",
+        "description": "Crie e associe um ticket para uma ocorrência de manutenção aberta."
+      },
+      "assets.complete_maintenance": {
+        "label": "Concluir manutenção do ativo",
+        "description": "Registre a manutenção e abra a próxima ocorrência."
+      },
+      "assets.skip_maintenance": {
+        "label": "Ignorar manutenção do ativo",
+        "description": "Ignore uma ocorrência com um motivo e abra a próxima."
+      },
+      "assets.set_maintenance_paused": {
+        "label": "Pausar ou retomar manutenção",
+        "description": "Pause ou retome um plano de manutenção."
       }
     },
     "validation": {
@@ -1168,6 +1188,10 @@
         "data-store": {
           "label": "Armazenamento de dados",
           "description": "Leia e grave o estado do fluxo de trabalho durável em todas as execuções."
+        },
+        "maintenance": {
+          "label": "Manutenção",
+          "description": "Encontre manutenções, associe tickets, conclua ou ignore ocorrências e pause ou retome planos."
         }
       },
       "noMatches": {

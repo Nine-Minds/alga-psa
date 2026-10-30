@@ -1013,6 +1013,26 @@
       "links.list_namespaces": {
         "label": "List Link Namespaces",
         "description": "List workflow entity-link namespaces used by this tenant."
+      },
+      "assets.get_maintenance": {
+        "label": "Get Asset Maintenance",
+        "description": "Find a maintenance plan and occurrence by plan, occurrence, or linked ticket."
+      },
+      "assets.create_maintenance_ticket": {
+        "label": "Create Asset Maintenance Ticket",
+        "description": "Create and link a ticket for an open maintenance occurrence."
+      },
+      "assets.complete_maintenance": {
+        "label": "Complete Asset Maintenance",
+        "description": "Record completed maintenance and open the next occurrence."
+      },
+      "assets.skip_maintenance": {
+        "label": "Skip Asset Maintenance",
+        "description": "Skip an occurrence with a reason and open the next one."
+      },
+      "assets.set_maintenance_paused": {
+        "label": "Pause or Resume Asset Maintenance",
+        "description": "Pause or resume a maintenance plan."
       }
     },
     "validation": {
@@ -1168,6 +1188,10 @@
         "data-store": {
           "label": "Data Store",
           "description": "Read and write durable workflow state across runs."
+        },
+        "maintenance": {
+          "label": "Maintenance",
+          "description": "Find asset maintenance, create linked tickets, complete or skip occurrences, and pause or resume plans."
         }
       },
       "noMatches": {
