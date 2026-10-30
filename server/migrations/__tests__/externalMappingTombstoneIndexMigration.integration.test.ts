@@ -42,6 +42,10 @@ async function makeTenant(label: string): Promise<string> {
   return tenant;
 }
 
+// Rows are QuickBooks Online services: an item target is one-to-one under
+// every version of idx_unique_external_mapping, so these assertions hold on a
+// database that already carries the later shared tax-code migration
+// (20261029160000) as well as before this one runs.
 async function insertMapping(
   tenant: string,
   opts: {
@@ -57,7 +61,7 @@ async function insertMapping(
     id,
     tenant,
     integration_type: 'quickbooks_online',
-    alga_entity_type: opts.type ?? 'tax_code',
+    alga_entity_type: opts.type ?? 'service',
     alga_entity_id: opts.entityId ?? randomUUID(),
     external_entity_id: opts.target,
     external_realm_id: opts.realm === undefined ? 'realm-1' : opts.realm,
@@ -126,7 +130,7 @@ describe('external mapping tombstone partial index (DB-backed)', () => {
         await writer.raw("SET LOCAL lock_timeout = '500ms'");
         await writer(MAPPINGS).insert({
           id: randomUUID(), tenant, integration_type: 'quickbooks_online',
-          alga_entity_type: 'tax_code', alga_entity_id: randomUUID(),
+          alga_entity_type: 'service', alga_entity_id: randomUUID(),
           external_entity_id: 'AVAILABLE', external_realm_id: 'realm-1',
           sync_status: 'manual_link',
         });
@@ -207,7 +211,7 @@ describe('external mapping tombstone partial index (DB-backed)', () => {
 
     const tenant = await makeTenant('up');
 
-    // The unlinked holder of TAX no longer blocks another region.
+    // The unlinked holder of a target no longer blocks another entity.
     await insertMapping(tenant, { target: 'TAX', unlinked: true });
     await insertMapping(tenant, { target: 'TAX' });
     // Two tombstones may even share one target.
@@ -259,7 +263,7 @@ describe('external mapping tombstone partial index (DB-backed)', () => {
     try {
       await writer(MAPPINGS).insert({
         id: randomUUID(), tenant, integration_type: 'quickbooks_online',
-        alga_entity_type: 'tax_code', alga_entity_id: randomUUID(),
+        alga_entity_type: 'service', alga_entity_id: randomUUID(),
         external_entity_id: 'OLDER-WRITER', external_realm_id: 'realm-1',
       });
       // Attach rejection handling immediately so cleanup can always release the writer.
@@ -280,7 +284,7 @@ describe('external mapping tombstone partial index (DB-backed)', () => {
         await inserter.raw("SET LOCAL lock_timeout = '1s'");
         await inserter(MAPPINGS).insert({
           id: randomUUID(), tenant, integration_type: 'quickbooks_online',
-          alga_entity_type: 'tax_code', alga_entity_id: randomUUID(),
+          alga_entity_type: 'service', alga_entity_id: randomUUID(),
           external_entity_id: 'NEW-WRITER', external_realm_id: 'realm-1',
         });
       });
