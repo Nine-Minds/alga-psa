@@ -97,7 +97,7 @@ export async function applyExternalVoidToInvoice(params: ApplyExternalVoidParams
         realm: targetRealm
       }
     });
-    if (!result.ok) {
+    if (result.ok === false) {
       return { status: 'blocked', reason: result.error };
     }
     return { status: 'applied' };

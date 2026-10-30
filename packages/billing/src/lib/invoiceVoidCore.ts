@@ -113,7 +113,7 @@ export async function voidInvoiceLocally(
   // Hour blocks minted by this invoice: pending ones release, unused active
   // ones are voided, a used block refuses the void. Runs before any write.
   const blockOutcome = await voidHourBlocksForVoidedInvoice(trx, tenant, invoiceId, actorUserId, now, reason);
-  if (!blockOutcome.ok) {
+  if (blockOutcome.ok === false) {
     return { ok: false, error: blockOutcome.error };
   }
 
