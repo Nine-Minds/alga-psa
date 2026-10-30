@@ -2117,6 +2117,7 @@
         "credentialSource": {
           "app": "To wdrożenie udostępnia współdzieloną aplikację Intuit, więc możesz połączyć QuickBooks bez rejestrowania własnej. Pomiń tę kartę i kliknij poniżej „Połącz QuickBooks”.",
           "none": "Żadna aplikacja Intuit nie jest jeszcze dostępna. Zarejestruj ją w Intuit, zanim będzie można się połączyć.",
+          "noneSandbox": "Środowisko testowe wymaga własnej aplikacji Intuit. Zarejestruj ją i zapisz jej klucze Development, zanim będzie można się połączyć.",
           "tenant": "Ta organizacja łączy się przez własną aplikację Intuit, używając zapisanych poniżej danych. Aby zmienić klucz, wklej nową wartość i zapisz.",
           "appTitle": "Dane uwierzytelniające nie są potrzebne"
         },

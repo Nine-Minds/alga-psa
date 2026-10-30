@@ -2117,6 +2117,7 @@
         "credentialSource": {
           "app": "Esta implantação fornece um aplicativo Intuit compartilhado, então você pode conectar o QuickBooks sem registrar um. Pule este cartão e clique em «Conectar QuickBooks» abaixo.",
           "none": "Nenhum aplicativo Intuit está disponível ainda. Registre um na Intuit antes de poder conectar.",
+          "noneSandbox": "A caixa de areia precisa de um aplicativo da Intuit próprio. Registre um e salve suas chaves Development antes de poder conectar.",
           "tenant": "Este tenant se conecta por meio do seu próprio aplicativo Intuit, usando as credenciais armazenadas abaixo. Para rotacionar uma chave, cole o novo valor e salve.",
           "appTitle": "Nenhuma credencial necessária"
         },

@@ -2117,6 +2117,7 @@
         "credentialSource": {
           "app": "Esta instalación proporciona una aplicación de Intuit compartida, por lo que puede conectar QuickBooks sin registrar una. Omita esta tarjeta y haga clic en «Conectar QuickBooks» más abajo.",
           "none": "Todavía no hay ninguna aplicación de Intuit disponible. Registre una en Intuit antes de poder conectar.",
+          "noneSandbox": "El entorno de pruebas necesita una aplicación de Intuit propia. Registre una y guarde sus claves Development antes de poder conectar.",
           "tenant": "Este inquilino se conecta a través de su propia aplicación de Intuit, usando las credenciales guardadas abajo. Para rotar una clave, pegue el nuevo valor y guarde.",
           "appTitle": "No se necesitan credenciales"
         },

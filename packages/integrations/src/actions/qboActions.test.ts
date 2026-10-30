@@ -30,8 +30,9 @@ const getQboOAuthScopesMock = vi.hoisted(() => vi.fn(() => [
   'phone',
   'address'
 ]));
-const getQboEnvironmentMock = vi.hoisted(() => vi.fn(() => 'sandbox' as const));
+const getQboEnvironmentMock = vi.hoisted(() => vi.fn(() => 'sandbox' as 'sandbox' | 'production'));
 const resolveTenantQboEnvironmentMock = vi.hoisted(() => vi.fn(async () => 'sandbox' as 'sandbox' | 'production'));
+const getExplicitTenantQboEnvironmentMock = vi.hoisted(() => vi.fn(async () => null as 'sandbox' | 'production' | null));
 const qboClientCreateMock = vi.hoisted(() => vi.fn(async (): Promise<any> => ({
   query: vi.fn(async () => [])
 })));
@@ -150,6 +151,7 @@ vi.mock('../lib/qbo/qboClientService', () => ({
   getQboOAuthScopes: getQboOAuthScopesMock,
   getQboEnvironment: getQboEnvironmentMock,
   resolveTenantQboEnvironment: resolveTenantQboEnvironmentMock,
+  getExplicitTenantQboEnvironment: getExplicitTenantQboEnvironmentMock,
   QboClientService: {
     create: qboClientCreateMock
   }
@@ -193,6 +195,7 @@ describe('QBO integration actions', () => {
     ]);
     getQboEnvironmentMock.mockReturnValue('sandbox');
     resolveTenantQboEnvironmentMock.mockResolvedValue('sandbox');
+    getExplicitTenantQboEnvironmentMock.mockResolvedValue(null);
     qboClientCreateMock.mockResolvedValue({
       query: vi.fn(async () => [])
     });
@@ -736,18 +739,33 @@ describe('QBO integration actions', () => {
 
   // --- Intuit environment ---
 
-  it('getQboConnectionStatus: reports the tenant-resolved environment', async () => {
-    resolveTenantQboEnvironmentMock.mockResolvedValue('production');
+  it('getQboConnectionStatus: reports the tenant choice and marks it as the tenant\'s', async () => {
+    getQboEnvironmentMock.mockReturnValue('production');
+    getExplicitTenantQboEnvironmentMock.mockResolvedValue('sandbox');
+    resolveQboOAuthCredentialsMock.mockResolvedValue(null);
+
+    const result = await getQboConnectionStatus();
+
+    expect(result.environment).toBe('sandbox');
+    // The UI gates the Development-keys warning on this: a tenant that asked
+    // for sandbox must bring its own app, a deployment default need not.
+    expect(result.environmentSource).toBe('tenant');
+    expect(getExplicitTenantQboEnvironmentMock).toHaveBeenCalledWith('tenant-1');
+  });
+
+  it('getQboConnectionStatus: with no tenant choice, reports the deployment default as such', async () => {
+    getQboEnvironmentMock.mockReturnValue('production');
+    getExplicitTenantQboEnvironmentMock.mockResolvedValue(null);
     resolveQboOAuthCredentialsMock.mockResolvedValue(null);
 
     const result = await getQboConnectionStatus();
 
     expect(result.environment).toBe('production');
-    expect(resolveTenantQboEnvironmentMock).toHaveBeenCalledWith('tenant-1');
+    expect(result.environmentSource).toBe('deployment');
   });
 
   it('getQboConnectionStatus: a connection keeps the environment it was authorized in', async () => {
-    resolveTenantQboEnvironmentMock.mockResolvedValue('production');
+    getQboEnvironmentMock.mockReturnValue('production');
     tenantSecrets.set('tenant-1:qbo_credentials', JSON.stringify({
       'realm-sandbox': {
         accessToken: 'access-token',

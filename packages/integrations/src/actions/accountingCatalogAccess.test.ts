@@ -54,6 +54,7 @@ vi.mock('../lib/qbo/qboClientService', () => ({
   QBO_CLIENT_SECRET_SECRET_NAME: 'qbo_client_secret',
   getQboEnvironment: () => 'sandbox',
   resolveTenantQboEnvironment: async () => 'sandbox',
+  getExplicitTenantQboEnvironment: async () => null,
   getQboOAuthScopes: () => ['com.intuit.quickbooks.accounting'],
   getQboRedirectUri: async () => 'https://example.test/callback',
   resolveQboOAuthCredentials: async () => null,

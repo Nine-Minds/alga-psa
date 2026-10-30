@@ -2140,6 +2140,7 @@
         "credentialSource": {
           "app": "Den här installationen tillhandahåller en delad Intuit-app så att du kan ansluta QuickBooks utan att registrera en. Hoppa över det här kortet och klicka på Anslut QuickBooks nedan.",
           "none": "Ingen Intuit-app är tillgänglig ännu. Registrera en hos Intuit innan du kan ansluta.",
+          "noneSandbox": "Sandlådan kräver en egen Intuit-app. Registrera en och spara dess Development-nycklar innan du kan ansluta.",
           "tenant": "Din organisation ansluter via sin egen Intuit-app med autentiseringsuppgifterna nedan. Rotera en nyckel genom att klistra in det nya värdet och spara.",
           "appTitle": "Inga autentiseringsuppgifter behövs"
         },

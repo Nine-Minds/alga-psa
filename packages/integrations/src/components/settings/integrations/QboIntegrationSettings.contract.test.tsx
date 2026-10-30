@@ -102,6 +102,7 @@ const disconnectedStatus = {
     'email'
   ],
   environment: 'sandbox' as const,
+  environmentSource: 'deployment' as const,
   credentials: {
     clientIdConfigured: false,
     clientSecretConfigured: false,
@@ -742,10 +743,45 @@ describe('QboIntegrationSettings contracts', () => {
     expect(screen.getByText(/Disconnect QuickBooks before switching environments/i)).toBeInTheDocument();
   });
 
-  it('T079: sandbox on the shared app warns that Development keys of your own app are required', async () => {
+  // The state the server actually produces once a tenant picks sandbox without
+  // its own app: resolveQboOAuthCredentials refuses the shared app, so
+  // credentials.source is null — never 'app'. The warning must key off the
+  // stored tenant keys, not the resolved source.
+  it('T079: a tenant that picked sandbox with no own app is told it needs Development keys', async () => {
     getQboConnectionStatusMock.mockResolvedValue({
       ...disconnectedStatus,
       environment: 'sandbox',
+      environmentSource: 'tenant' as const,
+      credentials: {
+        clientIdConfigured: false,
+        clientSecretConfigured: false,
+        ready: false,
+        source: null
+      }
+    });
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    const alert = await waitFor(() => {
+      const node = document.getElementById('qbo-credential-source-alert');
+      expect(node).not.toBeNull();
+      return node as HTMLElement;
+    });
+    expect(alert.textContent).toMatch(/Development keys/i);
+    // "No Intuit app is available yet" is wrong on a deployment that provides
+    // a shared app — it just cannot be used against a sandbox company.
+    expect(alert.textContent).not.toMatch(/No Intuit app is available yet/i);
+  });
+
+  // Dev, test and self-host deployments resolve sandbox from QBO_ENVIRONMENT /
+  // NODE_ENV without the tenant asking for it, and the server deliberately
+  // lets them use app-level keys. They must not be nagged to register an app.
+  it('T079b: a deployment-wide sandbox default on the shared app shows no Development-keys warning', async () => {
+    getQboConnectionStatusMock.mockResolvedValue({
+      ...disconnectedStatus,
+      environment: 'sandbox',
+      environmentSource: 'deployment' as const,
       credentials: { ...disconnectedStatus.credentials, ready: true, source: 'app' as const }
     });
 
@@ -753,9 +789,38 @@ describe('QboIntegrationSettings contracts', () => {
     render(<QboIntegrationSettings />);
 
     await waitFor(() => {
+      expect(screen.getByTestId('qbo-environment-select')).toHaveValue('sandbox');
+    });
+    expect(document.getElementById('qbo-environment-sandbox-keys-alert')).toBeNull();
+    expect(document.getElementById('qbo-credential-source-alert')?.textContent).not.toMatch(/Development keys/i);
+  });
+
+  it('T079c: picking sandbox on a shared app warns before the save confirms', async () => {
+    getQboConnectionStatusMock.mockResolvedValue({
+      ...disconnectedStatus,
+      environment: 'production',
+      environmentSource: 'deployment' as const,
+      credentials: { ...disconnectedStatus.credentials, ready: true, source: 'app' as const }
+    });
+    // Hold the save open so the optimistic render is observable.
+    let releaseSave: (() => void) | undefined;
+    setQboEnvironmentMock.mockImplementation(
+      () => new Promise((resolve) => {
+        releaseSave = () => resolve({ success: true });
+      })
+    );
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    const select = await screen.findByTestId('qbo-environment-select');
+    fireEvent.change(select, { target: { value: 'sandbox' } });
+
+    await waitFor(() => {
       expect(document.getElementById('qbo-environment-sandbox-keys-alert')).not.toBeNull();
     });
     expect(screen.getByText(/only accept the Development keys/i)).toBeInTheDocument();
+    releaseSave?.();
   });
 
   it('T080: production on the shared app shows no Development-keys warning', async () => {

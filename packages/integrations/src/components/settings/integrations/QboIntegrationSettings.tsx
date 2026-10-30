@@ -311,9 +311,22 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
   // A realm and its tokens exist in one Intuit environment only, so the switch
   // is a disconnect-first operation (the action rejects it too).
   const environmentLocked = (status?.connections.length ?? 0) > 0;
+  // Sandbox is this tenant's own choice when the server says so, or when the
+  // selector was just flipped and the save has not been reloaded yet.
+  const sandboxIsTenantChoice =
+    status?.environmentSource === 'tenant' || selectedEnvironment !== status?.environment;
+  const tenantOwnAppConfigured = Boolean(
+    status?.credentials.clientIdConfigured && status?.credentials.clientSecretConfigured
+  );
   // Intuit only honours an app's Development keys against sandbox companies,
-  // and a deployment's shared app is registered with Production keys.
-  const sandboxNeedsOwnApp = selectedEnvironment === 'sandbox' && credentialSource === 'app';
+  // and a deployment's shared app is registered with Production keys. Keyed off
+  // the stored tenant keys rather than credentials.source, because the server
+  // gate refuses to resolve the shared app at all once a tenant picks sandbox
+  // (source becomes null, not 'app'). A deployment-wide sandbox default — dev,
+  // test, self-host with QBO_ENVIRONMENT=sandbox — is deliberately allowed to
+  // use app-level keys, so it must not trip this warning.
+  const sandboxNeedsOwnApp =
+    selectedEnvironment === 'sandbox' && sandboxIsTenantChoice && !tenantOwnAppConfigured;
 
   // Wait for the capability check to resolve before hiding the panel, so a
   // capable user never sees a brief "no permission" card while it loads.
@@ -429,7 +442,14 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
                 </Alert>
               ) : (
                 <Alert variant="warning" id="qbo-credential-source-alert">
-                  <AlertTitle>{t('integrations.qbo.settings.credentialSource.none', { defaultValue: 'No Intuit app is available yet. Register one with Intuit before you can connect.' })}</AlertTitle>
+                  {/* A deployment may well provide a shared app — it is just
+                      unusable for the sandbox this tenant asked for, so saying
+                      "no app is available" would be wrong. */}
+                  <AlertTitle>
+                    {sandboxNeedsOwnApp
+                      ? t('integrations.qbo.settings.credentialSource.noneSandbox', { defaultValue: 'Sandbox needs an Intuit app of your own. Register one and save its Development keys before you can connect.' })
+                      : t('integrations.qbo.settings.credentialSource.none', { defaultValue: 'No Intuit app is available yet. Register one with Intuit before you can connect.' })}
+                  </AlertTitle>
                   <AlertDescription>
                     <ol className="mt-2 list-decimal space-y-1.5 pl-5" id="qbo-register-app-steps">
                       <li>
@@ -479,7 +499,9 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
                     {t('integrations.qbo.settings.environmentLockedHint', { defaultValue: 'Disconnect QuickBooks before switching environments. The connected company and its tokens exist only in the environment they were authorized in.' })}
                   </p>
                 ) : null}
-                {sandboxNeedsOwnApp ? (
+                {/* Only when the credential-source alert above is not already
+                    carrying this message, so one warning shows, never two. */}
+                {sandboxNeedsOwnApp && credentialSource !== null ? (
                   <Alert variant="warning" id="qbo-environment-sandbox-keys-alert">
                     <AlertTitle>{t('integrations.qbo.settings.environmentSandboxKeysTitle', { defaultValue: 'Sandbox needs your own Intuit app' })}</AlertTitle>
                     <AlertDescription>

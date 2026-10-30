@@ -2117,6 +2117,7 @@
         "credentialSource": {
           "app": "Diese Installation stellt eine gemeinsame Intuit-App bereit, sodass Sie QuickBooks verbinden können, ohne selbst eine zu registrieren. Überspringen Sie diese Karte und klicken Sie unten auf „QuickBooks verbinden“.",
           "none": "Es ist noch keine Intuit-App verfügbar. Registrieren Sie eine bei Intuit, bevor Sie verbinden können.",
+          "noneSandbox": "Die Sandbox benötigt eine eigene Intuit-App. Registrieren Sie eine und speichern Sie deren Development-Schlüssel, bevor Sie verbinden können.",
           "tenant": "Dieser Mandant verbindet sich über seine eigene Intuit-App mit den unten gespeicherten Zugangsdaten. Zum Rotieren eines Schlüssels den neuen Wert einfügen und speichern.",
           "appTitle": "Keine Zugangsdaten erforderlich"
         },

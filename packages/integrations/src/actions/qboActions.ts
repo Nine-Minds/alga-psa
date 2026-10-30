@@ -28,11 +28,11 @@ import {
   QboClientService,
   QBO_CLIENT_ID_SECRET_NAME,
   QBO_CLIENT_SECRET_SECRET_NAME,
+  getExplicitTenantQboEnvironment,
   getQboEnvironment,
   getQboOAuthScopes,
   getQboRedirectUri,
   resolveQboOAuthCredentials,
-  resolveTenantQboEnvironment,
   type QboEnvironment
 } from '../lib/qbo/qboClientService';
 import {
@@ -89,6 +89,16 @@ export interface QboConnectionStatus {
   redirectUri: string;
   scopes: string[];
   environment: QboEnvironment;
+  /**
+   * Where `environment` came from: 'tenant' when this tenant explicitly chose
+   * it, 'deployment' when it is only the deployment-wide default. The two are
+   * not interchangeable — Intuit accepts an app's Development keys only against
+   * sandbox companies, so a tenant that deliberately picked sandbox must bring
+   * its own app, while a deployment-wide sandbox default (dev, self-host) may
+   * legitimately use the shared app. Callers that gate on "needs own keys" must
+   * read this, not `environment` alone.
+   */
+  environmentSource: 'tenant' | 'deployment';
   credentials: QboCredentialStatus;
   /**
    * Durable disconnect state, when a disconnect has been started. Non-null
@@ -126,6 +136,7 @@ function qboConnectionStatusError(
     redirectUri: '',
     scopes: getQboOAuthScopes(),
     environment: getQboEnvironment(),
+    environmentSource: 'deployment',
     credentials: {
       clientIdConfigured: false,
       clientSecretConfigured: false,
@@ -970,11 +981,13 @@ export const getQboConnectionStatus = withAuth(async (
     clientSecretMasked: clientSecret ? maskSecret(clientSecret) : undefined,
     source: resolvedCredentials?.source ?? null
   };
-  const tenantEnvironment = await resolveTenantQboEnvironment(tenant);
+  const explicitEnvironment = await getExplicitTenantQboEnvironment(tenant);
+  const tenantEnvironment = explicitEnvironment ?? getQboEnvironment();
   const baseStatus = {
     redirectUri,
     scopes: getQboOAuthScopes(),
     environment: tenantEnvironment,
+    environmentSource: (explicitEnvironment ? 'tenant' : 'deployment') as 'tenant' | 'deployment',
     credentials: credentialStatus
   };
 

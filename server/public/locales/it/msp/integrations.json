@@ -2117,6 +2117,7 @@
         "credentialSource": {
           "app": "Questa installazione fornisce un'app Intuit condivisa, quindi puoi collegare QuickBooks senza registrarne una. Salta questa scheda e fai clic su «Collega QuickBooks» qui sotto.",
           "none": "Non è ancora disponibile alcuna app Intuit. Registrane una presso Intuit prima di poter collegare.",
+          "noneSandbox": "L’ambiente sandbox richiede una tua app Intuit. Registrane una e salva le sue chiavi Development prima di poter collegare.",
           "tenant": "Questo tenant si collega tramite la propria app Intuit, usando le credenziali salvate qui sotto. Per ruotare una chiave, incolla il nuovo valore e salva.",
           "appTitle": "Nessuna credenziale necessaria"
         },

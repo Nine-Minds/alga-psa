@@ -2117,6 +2117,7 @@
         "credentialSource": {
           "app": "Ce déploiement fournit une application Intuit partagée : vous pouvez donc connecter QuickBooks sans en enregistrer une. Ignorez cette carte et cliquez sur « Connecter QuickBooks » ci-dessous.",
           "none": "Aucune application Intuit n'est encore disponible. Enregistrez-en une auprès d'Intuit avant de pouvoir vous connecter.",
+          "noneSandbox": "Le bac à sable exige votre propre application Intuit. Enregistrez-en une et saisissez ses clés Development avant de pouvoir vous connecter.",
           "tenant": "Ce tenant se connecte via sa propre application Intuit, avec les identifiants enregistrés ci-dessous. Pour renouveler une clé, collez la nouvelle valeur et enregistrez.",
           "appTitle": "Aucun identifiant nécessaire"
         },

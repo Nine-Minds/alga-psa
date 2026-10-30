@@ -2140,6 +2140,7 @@
         "credentialSource": {
           "app": "This deployment provides a shared Intuit app, so you can connect QuickBooks without registering one. Skip this card and click Connect QuickBooks below.",
           "none": "No Intuit app is available yet. Register one with Intuit before you can connect.",
+          "noneSandbox": "Sandbox needs an Intuit app of your own. Register one and save its Development keys before you can connect.",
           "tenant": "This tenant connects through its own Intuit app, using the credentials stored below. To rotate a key, paste the new value and save.",
           "appTitle": "No credentials needed"
         },

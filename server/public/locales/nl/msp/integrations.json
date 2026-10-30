@@ -2117,6 +2117,7 @@
         "credentialSource": {
           "app": "Deze installatie levert een gedeelde Intuit-app, dus u kunt QuickBooks koppelen zonder er zelf een te registreren. Sla deze kaart over en klik hieronder op „QuickBooks koppelen”.",
           "none": "Er is nog geen Intuit-app beschikbaar. Registreer er een bij Intuit voordat u kunt koppelen.",
+          "noneSandbox": "Sandbox vereist een eigen Intuit-app. Registreer er een en sla de Development-sleutels op voordat u kunt koppelen.",
           "tenant": "Deze tenant maakt verbinding via een eigen Intuit-app met de hieronder opgeslagen inloggegevens. Plak een nieuwe waarde en sla op om een sleutel te roteren.",
           "appTitle": "Geen inloggegevens nodig"
         },
