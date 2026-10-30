@@ -34,12 +34,12 @@ export type {
 export const portalUserInputSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
-  contactId: z.string().uuid('Contact ID must be a valid UUID'),
-  clientId: z.string().uuid('Client ID must be a valid UUID'),
-  tenantId: z.string().uuid('Tenant ID must be a valid UUID'),
+  contactId: z.string().guid('Contact ID must be a valid UUID'),
+  clientId: z.string().guid('Client ID must be a valid UUID'),
+  tenantId: z.string().guid('Tenant ID must be a valid UUID'),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
-  roleId: z.string().uuid().optional(),
+  roleId: z.string().guid().optional(),
   isClientAdmin: z.boolean().optional()
 });
 

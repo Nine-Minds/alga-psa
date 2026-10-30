@@ -15,6 +15,8 @@ import {
 import { publishInventoryEvent, recordStockMovement, timestampPayload } from '../lib';
 import { resolveTenantCurrency } from '../lib';
 import { rmaCaseQuery } from '../lib/rmaCaseQuery';
+import { filterReadableRmaCases, resolveRmaReadScope } from '../lib/rma/rmaReadAccess';
+import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 
 /**
  * RMA / return-path lifecycle (design §6.G).
@@ -32,6 +34,12 @@ async function requireInvPerm(user: any, action: 'create' | 'read' | 'update' | 
   if (!(await hasPermission(user, 'inventory', action))) {
     throw new Error(`Permission denied: inventory ${action} required`);
   }
+}
+
+async function requireRmaReadScope(user: any) {
+  const scope = await resolveRmaReadScope(user);
+  if (!scope.allowed) throw new Error('Permission denied: inventory read required');
+  return scope;
 }
 
 export type RmaActionError = ActionMessageError | ActionPermissionError;
@@ -63,6 +71,8 @@ function rmaActionErrorFrom(error: unknown): RmaActionError | null {
         return actionError('Returned stock unit not found. Please refresh and choose another unit.', 'features/inventory:errors.rma.returnedUnitNotFound');
       case 'RMA case has no associated product service_id':
         return actionError('This RMA is missing product details. Please refresh and try again.', 'features/inventory:errors.rma.missingProductDetails');
+      case 'RMA case is a warranty claim':
+        return actionError('This is a warranty claim on client equipment. Use the warranty actions on the RMA.', 'features/inventory:errors.rma.warrantyClaimUnitAction');
       case 'RMA case has no returned unit':
         return actionError('This RMA has no returned unit recorded. Please refresh and try again.', 'features/inventory:errors.rma.noReturnedUnit');
     }
@@ -100,6 +110,9 @@ async function loadRma(trx: Knex.Transaction, tenant: string, rmaId: string): Pr
   // concurrent transitions serialize here and assertStatus() is authoritative (F021).
   const rma = await trx('rma_cases').where({ tenant, rma_id: rmaId }).forUpdate().first();
   if (!rma) throw new Error('RMA case not found');
+  // Every writer in this file moves stock units. A client-asset warranty claim (no returned unit) has its own
+  // actions in rmaWarrantyActions.ts and must never reach these, so the guard sits at the single lock point.
+  if (!rma.returned_unit_id) throw new Error('RMA case is a warranty claim');
   return rma as IRmaCase;
 }
 
@@ -282,6 +295,7 @@ export const openRma = withAuth(
       const [row] = await trx('rma_cases')
         .insert({
           tenant,
+          rma_number: await SharedNumberingService.getNextNumber('RMA', { knex: trx, tenant }),
           rma_type: 'standard',
           returned_unit_id: unit.unit_id,
           service_id: unit.service_id,
@@ -552,6 +566,7 @@ export const openAdvanceRma = withAuth(
       const [row] = await trx('rma_cases')
         .insert({
           tenant,
+          rma_number: await SharedNumberingService.getNextNumber('RMA', { knex: trx, tenant }),
           rma_type: 'advance_replacement',
           returned_unit_id: unit.unit_id,
           service_id: unit.service_id,
@@ -797,16 +812,19 @@ export const listRmaCases = withAuth(
   async (
     user,
     { tenant },
-    filter?: { status?: RmaStatus; rma_type?: IRmaCase['rma_type'] },
+    filter?: { status?: RmaStatus; rma_type?: IRmaCase['rma_type']; asset_id?: string; ticket_id?: string },
   ): Promise<IRmaCase[] | RmaActionError> => {
     return withRmaActionErrors(async () => {
-      await requireInvPerm(user, 'read');
+      const scope = await requireRmaReadScope(user);
       const { knex: db } = await createTenantKnex();
       return withTransaction(db, async (trx: Knex.Transaction) => {
         const query = rmaCaseQuery(trx, tenant);
         if (filter?.status) query.andWhere({ 'r.status': filter.status });
         if (filter?.rma_type) query.andWhere({ 'r.rma_type': filter.rma_type });
-        return (await query.orderBy('r.opened_at', 'desc')) as IRmaCase[];
+        if (filter?.asset_id) query.andWhere({ 'r.asset_id': filter.asset_id });
+        if (filter?.ticket_id) query.andWhere({ 'r.ticket_id': filter.ticket_id });
+        const rows = (await query.orderBy('r.opened_at', 'desc')) as IRmaCase[];
+        return filterReadableRmaCases(trx, tenant, user, rows, scope);
       });
     });
   },
@@ -820,11 +838,14 @@ export const listRmaCases = withAuth(
 export const getRmaCase = withAuth(
   async (user, { tenant }, rmaId: string): Promise<IRmaCase | null | RmaActionError> => {
     return withRmaActionErrors(async () => {
-      await requireInvPerm(user, 'read');
+      const scope = await requireRmaReadScope(user);
       const { knex: db } = await createTenantKnex();
       return withTransaction(db, async (trx: Knex.Transaction) => {
         const row = await rmaCaseQuery(trx, tenant).andWhere({ 'r.rma_id': rmaId }).first();
-        return (row as IRmaCase | undefined) ?? null;
+        if (!row) return null;
+        // A case the caller cannot read looks exactly like a missing one.
+        const [visible] = await filterReadableRmaCases(trx, tenant, user, [row as IRmaCase], scope);
+        return visible ?? null;
       });
     });
   },

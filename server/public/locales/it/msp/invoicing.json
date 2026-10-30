@@ -2552,7 +2552,8 @@
       "packingSlip": "Documento di trasporto",
       "pickList": "Lista di prelievo",
       "workTag": "Etichetta di lavoro / Etichetta",
-      "stagingManifest": "Distinta di imballaggio"
+      "stagingManifest": "Distinta di imballaggio",
+      "rmaReturnSlip": "Bolla di reso RMA"
     }
   },
   "errors": {

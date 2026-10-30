@@ -102,7 +102,10 @@ for that seam instead of copying a long alias inventory into documentation.
    it.
 5. Keep shared code free of cross-edition relative imports.
 6. Type-check and build both CE and EE. Include the CE Webpack build because it
-   is the path used by `Dockerfile.build`.
+   is the path the production images are built from
+   (`scripts/build-production-server.sh`, packaged by `Dockerfile` and
+   `ee/server/Dockerfile`, the one runtime image definition per edition; the
+   `Dockerfile.build` files only produce those build artifacts).
 
 For container setup and deployment commands, see
 [Docker Compose Structure](docker_compose.md). For local development, see the

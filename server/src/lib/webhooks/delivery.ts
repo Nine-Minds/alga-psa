@@ -128,6 +128,7 @@ export async function performWebhookDeliveryRequest(
       });
 
   try {
+    // LEVERAGE: pattern ssrf-guard — check-then-fetch; safeFetch (server/src/lib/net) pins the resolved address instead
     await assertSafeWebhookTarget(request.url);
 
     const response = await fetch(request.url, {

@@ -40,7 +40,7 @@ const addCommentAction: WorkflowDesignerActionRegistryItem = {
   version: 1,
   inputSchema: zodToWorkflowJsonSchema(
     z.object({
-      ticket_id: z.string().uuid().describe('Ticket id'),
+      ticket_id: z.string().guid().describe('Ticket id'),
       body: z.string().min(1).describe('Comment body'),
       visibility: withWorkflowExplicitChoice(
         z.enum(['public', 'internal']).default('public'),

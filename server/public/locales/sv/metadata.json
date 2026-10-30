@@ -607,8 +607,22 @@
     },
     "coManagement": {
       "title": "Samhanterad åtkomst",
+      "administration": {
+        "title": "Samhanterad administration"
+      },
+      "customerTickets": {
+        "title": "Kundärenden"
+      },
+      "sharedTicket": {
+        "title": "Delat ärende"
+      },
       "providers": {
         "title": "E-post- och identitetsleverantörer"
+      },
+      "sharedTasks": {
+        "title": "Delade uppgifter",
+        "taskTitle": "Delad uppgift",
+        "projectTitle": "Delat projekt"
       }
     }
   },

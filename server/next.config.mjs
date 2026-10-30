@@ -590,6 +590,16 @@ const nextConfig = {
         path.resolve(__dirname, '../node_modules'),
       ],
     };
+    // Production builds run from fresh checkouts (CI, the Argo build), where
+    // every file's mtime is new. webpack's default snapshots trust timestamps
+    // alone, so a restored filesystem cache would be invalidated wholesale on
+    // the first build. Check the content hash when the timestamp has moved;
+    // development keeps the cheap timestamp-only default.
+    if (!dev) {
+      const byContent = { timestamp: true, hash: true };
+      config.snapshot = { ...config.snapshot, module: byContent, resolve: byContent,
+        buildDependencies: byContent, resolveBuildDependencies: byContent };
+    }
 
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
@@ -1289,6 +1299,14 @@ const nextConfig = {
     // OOMs in CI.
     cpus: buildCpus,
     ...(memoryBasedWorkersCount ? { memoryBasedWorkersCount: true } : {}),
+    // Compile server, edge and client in separate worker processes, one after
+    // another, so each compiler's module graph and in-memory webpack cache
+    // (production keeps every entry: maxMemoryGenerations Infinity) is freed
+    // before the next starts. Next enables this by default only when the
+    // config has no custom `webpack` function, which ours has; without it all
+    // three compilers stack in one process and a warm cache that a branch
+    // partly invalidates pushed the EE build past CI's runner memory.
+    webpackBuildWorker: true,
     // Disable server source maps (RSC + server actions). Build-only — does
     // not affect production error traces from Sentry or similar tools.
     serverSourceMaps: false,

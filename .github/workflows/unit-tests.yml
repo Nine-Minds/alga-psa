@@ -222,8 +222,8 @@ jobs:
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=8192'
-      - name: Verify per-file worker isolation and the unhandled-error policy
-        run: node --test scripts/tests/vitest-worker-isolation.test.mjs scripts/tests/vitest-unhandled-error-policy.test.mjs
+      - name: Verify per-file worker isolation and late console-log teardown
+        run: node --test scripts/tests/vitest-worker-isolation.test.mjs scripts/tests/vitest-late-console-log.test.mjs
       # Timezone-sensitive files run once; they are independent of the partition.
       - name: Exercise calendar boundaries in non-UTC timezones
         if: matrix.shard == 1
