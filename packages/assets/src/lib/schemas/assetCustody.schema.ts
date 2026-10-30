@@ -11,7 +11,7 @@ import {
 export const CUSTODY_BIN_MAX_LENGTH = 64;
 export const CUSTODY_NOTE_MAX_LENGTH = 2000;
 
-const uuid = z.string().uuid();
+const uuid = z.string().guid();
 
 /** Calendar date, `YYYY-MM-DD`, and a real one (no 2026-02-31). */
 export const calendarDateSchema = z

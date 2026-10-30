@@ -51,7 +51,9 @@
       "replaced": "Vervangen",
       "credited": "Gecrediteerd",
       "charged": "In rekening gebracht",
-      "closed": "Gesloten"
+      "closed": "Gesloten",
+      "warranty_review": "Garantiebeoordeling",
+      "repaired": "Gerepareerd"
     }
   },
   "assetAlertsSection": {
@@ -2124,6 +2126,25 @@
     "photos": {
       "limit": "Maximaal 20 foto’s, samen 10 MB. Foto’s zijn verborgen voor klanten.",
       "tooLarge": "Kies maximaal 20 foto’s van samen niet meer dan 10 MB."
+    }
+  },
+  "warranty": {
+    "card": {
+      "title": "Garantie",
+      "warrantyEnd": "Garantie eindigt",
+      "expired": "Verlopen",
+      "expiringSoon": "Verloopt binnenkort",
+      "vendor": "Leverancier",
+      "ownership": "Eigendom",
+      "ownershipMsp": "Eigendom van MSP",
+      "ownershipClient": "Eigendom van klant",
+      "claims": "Garantieclaims",
+      "noClaims": "Nog geen garantieclaims.",
+      "openRma": "RMA openen",
+      "startClaim": "Garantieclaim starten"
+    },
+    "badge": {
+      "label": "RMA {{number}} · {{status}}"
     }
   }
 }

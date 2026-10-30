@@ -2194,7 +2194,7 @@ export function registerCrmActions(): void {
       created_at: isoDateTimeSchema,
       target_type: z.string(),
       target_id: uuidSchema,
-      target_summary: z.record(z.unknown()).nullable()
+      target_summary: z.record(z.string(), z.unknown()).nullable()
     }),
     sideEffectful: true,
     idempotency: { mode: 'engineProvided' },
@@ -2296,7 +2296,7 @@ export function registerCrmActions(): void {
     outputSchema: z.object({
       activities: z.array(activitySummarySchema),
       count: z.number().int(),
-      matched_filters: z.record(z.unknown()),
+      matched_filters: z.record(z.string(), z.unknown()),
     }),
     sideEffectful: false,
     idempotency: { mode: 'engineProvided' },

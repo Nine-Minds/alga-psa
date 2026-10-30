@@ -2,10 +2,10 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ClientInfoStep } from '../../../../../packages/onboarding/src/components/steps/ClientInfoStep';
 import type { WizardData } from '@alga-psa/types';
@@ -34,6 +34,22 @@ vi.mock('@alga-psa/validation', () => ({
       return typeof translated === 'string' && translated ? translated : defaultValue;
     },
 }));
+
+// ClientInfoStep loads the country list through a server action on mount. Left
+// unmocked it opens a real tenant DB pool whose late log/rejection outlives the
+// test file and tears down the vitest worker mid-RPC.
+const { getAllCountriesMock } = vi.hoisted(() => ({
+  getAllCountriesMock: vi.fn(),
+}));
+
+vi.mock('@alga-psa/clients/actions', () => ({
+  getAllCountries: getAllCountriesMock,
+}));
+
+beforeEach(() => {
+  getAllCountriesMock.mockReset();
+  getAllCountriesMock.mockResolvedValue([]);
+});
 
 afterEach(cleanup);
 
@@ -65,11 +81,18 @@ const makeWizardData = (overrides: Partial<WizardData> = {}): WizardData => ({
   ...overrides,
 });
 
+// Render and let the mount-time country load settle inside act().
+const renderStep = async (ui: React.ReactElement) => {
+  await act(async () => {
+    render(ui);
+  });
+};
+
 describe('ClientInfoStep rendering', () => {
   describe('revisit mode', () => {
-    it('renders only company name field', () => {
+    it('renders only company name field', async () => {
       const data = makeWizardData({ tenantName: 'My MSP' });
-      render(<ClientInfoStep data={data} updateData={vi.fn()} isRevisit />);
+      await renderStep(<ClientInfoStep data={data} updateData={vi.fn()} isRevisit />);
 
       // Should show company name
       expect(screen.getByDisplayValue('My MSP')).toBeInTheDocument();
@@ -84,15 +107,15 @@ describe('ClientInfoStep rendering', () => {
       expect(screen.queryByText('Set Your Password')).not.toBeInTheDocument();
     });
 
-    it('shows reconfigure note', () => {
-      render(<ClientInfoStep data={makeWizardData()} updateData={vi.fn()} isRevisit />);
+    it('shows reconfigure note', async () => {
+      await renderStep(<ClientInfoStep data={makeWizardData()} updateData={vi.fn()} isRevisit />);
 
       expect(screen.getByText(/reconfigure your workspace settings/)).toBeInTheDocument();
     });
 
     it('updates tenantName on input change', async () => {
       const updateData = vi.fn();
-      render(<ClientInfoStep data={makeWizardData()} updateData={updateData} isRevisit />);
+      await renderStep(<ClientInfoStep data={makeWizardData()} updateData={updateData} isRevisit />);
 
       const input = screen.getByPlaceholderText('Acme IT Solutions');
       await userEvent.type(input, 'X');
@@ -102,8 +125,8 @@ describe('ClientInfoStep rendering', () => {
   });
 
   describe('first-time mode', () => {
-    it('renders all identity fields', () => {
-      render(<ClientInfoStep data={makeWizardData()} updateData={vi.fn()} />);
+    it('renders all identity fields', async () => {
+      await renderStep(<ClientInfoStep data={makeWizardData()} updateData={vi.fn()} />);
 
       // Should show first-time heading
       expect(screen.getByText('Your Company & Admin Account')).toBeInTheDocument();
@@ -115,28 +138,28 @@ describe('ClientInfoStep rendering', () => {
       expect(screen.getByPlaceholderText('john@acmeit.com')).toBeInTheDocument();  // email
     });
 
-    it('renders password fields', () => {
-      render(<ClientInfoStep data={makeWizardData()} updateData={vi.fn()} />);
+    it('renders password fields', async () => {
+      await renderStep(<ClientInfoStep data={makeWizardData()} updateData={vi.fn()} />);
 
       expect(screen.getByText('Set Your Password')).toBeInTheDocument();
       expect(screen.getByPlaceholderText('Create a strong password')).toBeInTheDocument();
       expect(screen.getByPlaceholderText('Re-enter your password')).toBeInTheDocument();
     });
 
-    it('shows password reset required warning', () => {
-      render(<ClientInfoStep data={makeWizardData()} updateData={vi.fn()} />);
+    it('shows password reset required warning', async () => {
+      await renderStep(<ClientInfoStep data={makeWizardData()} updateData={vi.fn()} />);
 
       expect(screen.getByText('Password Reset Required')).toBeInTheDocument();
     });
 
-    it('renders pre-filled values', () => {
+    it('renders pre-filled values', async () => {
       const data = makeWizardData({
         firstName: 'Jane',
         lastName: 'Smith',
         tenantName: 'Smith IT',
         email: 'jane@smithit.com',
       });
-      render(<ClientInfoStep data={data} updateData={vi.fn()} />);
+      await renderStep(<ClientInfoStep data={data} updateData={vi.fn()} />);
 
       expect(screen.getByDisplayValue('Jane')).toBeInTheDocument();
       expect(screen.getByDisplayValue('Smith')).toBeInTheDocument();
@@ -144,9 +167,9 @@ describe('ClientInfoStep rendering', () => {
       expect(screen.getByDisplayValue('jane@smithit.com')).toBeInTheDocument();
     });
 
-    it('email field is disabled', () => {
+    it('email field is disabled', async () => {
       const data = makeWizardData({ email: 'jane@example.com' });
-      render(<ClientInfoStep data={data} updateData={vi.fn()} />);
+      await renderStep(<ClientInfoStep data={data} updateData={vi.fn()} />);
 
       const emailInput = screen.getByDisplayValue('jane@example.com');
       expect(emailInput).toBeDisabled();
@@ -154,63 +177,77 @@ describe('ClientInfoStep rendering', () => {
   });
 
   describe('password strength indicator', () => {
-    it('shows weak for short simple password', () => {
+    it('shows weak for short simple password', async () => {
       const data = makeWizardData({ newPassword: 'abc' });
-      render(<ClientInfoStep data={data} updateData={vi.fn()} />);
+      await renderStep(<ClientInfoStep data={data} updateData={vi.fn()} />);
 
       expect(screen.getByText(/Password strength: Weak/)).toBeInTheDocument();
     });
 
-    it('shows medium for moderate password', () => {
+    it('shows medium for moderate password', async () => {
       const data = makeWizardData({ newPassword: 'Abcd1234' });
-      render(<ClientInfoStep data={data} updateData={vi.fn()} />);
+      await renderStep(<ClientInfoStep data={data} updateData={vi.fn()} />);
 
       expect(screen.getByText(/Password strength: Medium/)).toBeInTheDocument();
     });
 
-    it('shows strong for complex password', () => {
+    it('shows strong for complex password', async () => {
       const data = makeWizardData({ newPassword: 'Abcd1234!' });
-      render(<ClientInfoStep data={data} updateData={vi.fn()} />);
+      await renderStep(<ClientInfoStep data={data} updateData={vi.fn()} />);
 
       expect(screen.getByText(/Password strength: Strong/)).toBeInTheDocument();
     });
 
-    it('shows no strength indicator when password is empty', () => {
-      render(<ClientInfoStep data={makeWizardData()} updateData={vi.fn()} />);
+    it('shows no strength indicator when password is empty', async () => {
+      await renderStep(<ClientInfoStep data={makeWizardData()} updateData={vi.fn()} />);
 
       expect(screen.queryByText(/Password strength:/)).not.toBeInTheDocument();
     });
   });
 
   describe('password mismatch', () => {
-    it('shows mismatch warning when passwords differ', () => {
+    it('shows mismatch warning when passwords differ', async () => {
       const data = makeWizardData({
         newPassword: 'Password1!',
         confirmPassword: 'Password2!',
       });
-      render(<ClientInfoStep data={data} updateData={vi.fn()} />);
+      await renderStep(<ClientInfoStep data={data} updateData={vi.fn()} />);
 
       expect(screen.getByText('Passwords do not match')).toBeInTheDocument();
     });
 
-    it('shows no mismatch warning when passwords match', () => {
+    it('shows no mismatch warning when passwords match', async () => {
       const data = makeWizardData({
         newPassword: 'Password1!',
         confirmPassword: 'Password1!',
       });
-      render(<ClientInfoStep data={data} updateData={vi.fn()} />);
+      await renderStep(<ClientInfoStep data={data} updateData={vi.fn()} />);
 
       expect(screen.queryByText('Passwords do not match')).not.toBeInTheDocument();
     });
 
-    it('shows no mismatch warning when confirm is empty', () => {
+    it('shows no mismatch warning when confirm is empty', async () => {
       const data = makeWizardData({
         newPassword: 'Password1!',
         confirmPassword: '',
       });
-      render(<ClientInfoStep data={data} updateData={vi.fn()} />);
+      await renderStep(<ClientInfoStep data={data} updateData={vi.fn()} />);
 
       expect(screen.queryByText('Passwords do not match')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('company country', () => {
+    it('loads countries from the country action and shows the saved selection', async () => {
+      getAllCountriesMock.mockResolvedValue([
+        { code: 'CA', name: 'Canada' },
+        { code: 'NL', name: 'Netherlands' },
+      ]);
+      const data = makeWizardData({ companyCountryCode: 'NL' });
+      await renderStep(<ClientInfoStep data={data} updateData={vi.fn()} />);
+
+      expect(getAllCountriesMock).toHaveBeenCalledTimes(1);
+      expect(screen.getByText('Netherlands (NL)')).toBeInTheDocument();
     });
   });
 });

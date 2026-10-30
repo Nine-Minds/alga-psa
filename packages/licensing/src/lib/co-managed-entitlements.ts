@@ -38,8 +38,15 @@ function signedCapacity(row: any, sponsor: string, now: Date): { capacity: numbe
 
 /** Caller holds the sponsor entitlement row lock. Expiry is evaluated on demand
  * so delayed webhooks/workers cannot extend a customer's grace period. */
-async function materializeState(trx: Knex.Transaction, sponsor: string, row: any, now: Date,
-  inactiveSince?: Date): Promise<CoManagedEntitlementState> {
+/** A hosted row that was never verified active: created at capacity 0 (valid_until == verified_at)
+ * and still without a lapse. A pool that never opened has nothing to lapse, so no grace clock. */
+export function neverActivated(row: { source: string; lapse_started_at?: unknown; valid_until: unknown; verified_at: unknown }): boolean {
+  return row.source === 'hosted' && !row.lapse_started_at &&
+    new Date(row.valid_until as string).getTime() <= new Date(row.verified_at as string).getTime();
+}
+
+export async function materializeState(trx: Knex.Transaction, sponsor: string, row: any, now: Date,
+  inactiveSince?: Date, neverActive: boolean = neverActivated(row)): Promise<CoManagedEntitlementState> {
   const allocated = await allocatedSeats(trx, sponsor);
   const owner = await tenantDb(trx, sponsor).table('tenants').forShare().first('product_code', 'plan', 'suspended_at');
   now = await databaseNow(trx);
@@ -51,7 +58,8 @@ async function materializeState(trx: Knex.Transaction, sponsor: string, row: any
   const eligible = owner?.product_code === 'psa' && !owner.suspended_at && (row.source !== 'hosted' || owner.plan === 'pro');
   const active = eligible && signed.active && expires.getTime() > now.getTime();
   const capacity = active ? signed.capacity : 0;
-  const lapsed = !active || capacity < allocated;
+  // LEVERAGE: friction co-managed-never-active — lapse is derived from row columns, so "never active" must be re-derived from valid_until/verified_at.
+  const lapsed = (!active || capacity < allocated) && !(neverActive && allocated === 0);
   let start: Date | null = null;
   if (lapsed) {
     start = row.lapse_started_at ? new Date(row.lapse_started_at) : new Date(Math.min(

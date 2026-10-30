@@ -6,6 +6,7 @@
 
 import { z } from 'zod';
 import type { ClientLifecycleStatus } from '@alga-psa/types';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 export const ClientLifecycleStatusSchema: z.ZodType<ClientLifecycleStatus> = z.enum([
   'prospect',
@@ -88,15 +89,15 @@ export const CreateClientSchema = z.object({
   default_currency_code: z.string().optional(),
   notes: z.string().optional(),
   properties: ClientPropertiesSchema,
-  parent_client_id: z.string().uuid().optional(),
-  contract_line_id: z.string().uuid().optional(),
+  parent_client_id: z.string().guid().optional(),
+  contract_line_id: z.string().guid().optional(),
   is_default: z.boolean().optional(),
 });
 
 /**
  * Schema for updating an existing client
  */
-export const UpdateClientSchema = CreateClientSchema.partial().extend({
+export const UpdateClientSchema = partialWithoutDefaults(CreateClientSchema).extend({
   is_inactive: z.boolean().optional(),
 });
 

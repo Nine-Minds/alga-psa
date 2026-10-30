@@ -20,7 +20,7 @@ export const recordCustodyEventWithPhotos = withAuth(
       return permissionError('Permission denied: Cannot update asset custody', 'msp/assets:errors.permissions.update');
     }
     return toCustodyResult(async () => {
-      z.string().uuid().parse(custodyId);
+      z.string().guid().parse(custodyId);
       const parsed = custodyEventInputSchema.parse(input);
       if (parsed.document_ids.length)
         throw new CustodyError('permission_denied', 'Existing documents cannot be submitted as custody uploads.');

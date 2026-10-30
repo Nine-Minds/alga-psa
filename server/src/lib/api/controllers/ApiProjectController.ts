@@ -457,7 +457,7 @@ export class ApiProjectController extends ApiBaseController {
             validatedQuery = projectSearchSchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }
@@ -534,7 +534,7 @@ export class ApiProjectController extends ApiBaseController {
             validatedQuery = projectExportQuerySchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }
@@ -2040,7 +2040,7 @@ export class ApiProjectController extends ApiBaseController {
             data = createTaskChecklistItemSchema.parse(await req.json());
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }
@@ -2124,7 +2124,7 @@ export class ApiProjectController extends ApiBaseController {
             data = updateTaskChecklistItemSchema.parse(await req.json());
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }

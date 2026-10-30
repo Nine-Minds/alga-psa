@@ -160,7 +160,7 @@ describe('StockUnitsManager ?unitId=', () => {
     render(<StockUnitsManager initialUnits={[]} />);
     await screen.findByText('Unit SN-OPEN-1');
     fireEvent.click(document.getElementById('unit-detail-print-label')!);
-    await waitFor(() => expect(open).toHaveBeenCalledWith('blob:pdf', '_blank', 'noopener'));
+    await waitFor(() => expect(open).toHaveBeenCalledWith('blob:pdf', '_blank'));
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('/api/labels/pdf');
     expect(JSON.parse(init.body as string)).toEqual({ labelClass: 'stock-unit-identity', labels: [{ recordId: UNIT_ID }] });
@@ -180,7 +180,7 @@ describe('StockUnitsManager ?unitId=', () => {
     await screen.findByText(/Too long for this template/);
     fireEvent.click(document.getElementById('unit-detail-print-suggested')!);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
-    expect(JSON.parse((fetchMock.mock.calls[1] as any)[1].body).templateCode).toBe('compact');
+    expect(JSON.parse((fetchMock.mock.calls[1] as any)[1].body).templateId).toBe('compact');
     await waitFor(() => expect(document.getElementById('unit-detail-print-suggested')).toBeNull());
     vi.unstubAllGlobals();
   });
