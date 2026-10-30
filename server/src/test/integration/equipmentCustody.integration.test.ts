@@ -640,7 +640,8 @@ describe('equipment custody (integration)', () => {
 
   it('keeps the queue keyed off the open episode (closed ticket still listed), with tabs and filters', async () => {
     const fx = await seedFixture();
-    const a = unwrap<any>(await receiveEquipment(intake(fx)));
+    // "a" must never be overdue regardless of the wall clock; "b" is always overdue.
+    const a = unwrap<any>(await receiveEquipment(intake(fx, { follow_up_on: '2999-12-31' })));
     const b = unwrap<any>(await receiveEquipment(intake(fx, { new_asset: { name: 'Laptop' }, next_action_party: 'client', follow_up_on: '2020-01-01', bin: null })));
     // The ticket "closes": the queue must not care, and neither must the status column.
     await table(fx.tenantId, 'assets').where({ asset_id: a.asset.asset_id }).update({ status: 'retired' });
