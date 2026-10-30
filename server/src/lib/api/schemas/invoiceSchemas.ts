@@ -201,8 +201,13 @@ const createInvoiceSchema = baseInvoiceSchema.omit({
   items: z.array(createInvoiceItemSchema).optional()
 });
 
-// Update invoice schema
-const updateInvoiceSchema = createUpdateSchema(createInvoiceSchema);
+// Update invoice schema. tax_source is update-only: a new invoice takes its
+// tax source from the client/tenant default, while an existing one may be
+// switched (any direction on a draft; internal -> pending_external on a
+// finalized invoice that has not been exported).
+const updateInvoiceSchema = createUpdateSchema(createInvoiceSchema).extend({
+  tax_source: z.enum(['internal', 'external', 'pending_external']).optional(),
+});
 
 // Invoice response schema
 const invoiceResponseSchema = baseInvoiceSchema.merge(baseEntitySchema).extend({

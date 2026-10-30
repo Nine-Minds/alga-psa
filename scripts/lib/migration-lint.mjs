@@ -22,7 +22,7 @@ export const RULES = Object.freeze({
   3: 'SET NOT NULL / ALTER COLUMN TYPE / DROP / RENAME on an existing table is refused',
   4: 'CREATE TRIGGER on an existing table, or CREATE OR REPLACE FUNCTION on a function main already defines, is refused',
   5: 'INSERT/UPDATE/DELETE on an existing table needs a batching shape (loop + LIMIT)',
-  6: 'migration timestamp must be later than the newest on the base branch and unique within the change',
+  6: 'migration timestamp must be unique within the change, at most 14 days behind the newest on the base branch, and later than every base migration that touches the same tables',
   7: 'DDL must be idempotent (IF NOT EXISTS / hasTable / hasColumn / DROP CONSTRAINT IF EXISTS before ADD CONSTRAINT)',
   8: 'writes to global reference data (permissions, role_permissions, internal_notification_*) are refused',
 });
@@ -987,6 +987,17 @@ export function timestampOf(fileName) {
 const isReferenceTable = (t) => REFERENCE_TABLES.some((re) => re.test(t));
 const isSystemTable = (t) => /^(pg_|information_schema|knex_migrations)/.test(t);
 
+/** How far behind the newest base migration a new timestamp may sit (rule 6). */
+export const R6_GRACE_DAYS = 14;
+
+/** Move a 14-digit YYYYMMDDHHmmss timestamp by `days` (negative = earlier). */
+export function shiftTimestamp(ts, days) {
+  const n = (a, b) => Number(ts.slice(a, b));
+  const d = new Date(Date.UTC(n(0, 4), n(4, 6) - 1, n(6, 8), n(8, 10), n(10, 12), n(12, 14)));
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().replace(/\D/g, '').slice(0, 14);
+}
+
 /**
  * Lint a set of migration files as one change set.
  *
@@ -1024,12 +1035,28 @@ export function lintMigrationSet(files, ctx) {
     const guardedBefore = (kind, ev) => ev.doGuarded || f.a.guards.some((g) => g.kind === kind && g.top === ev.topId && g.seq < ev.seq);
     const createdEarlier = (ev) => events.some((e) => e.type === 'create-table' && e.table === ev.table && e.seq < ev.seq && (e.ifNotExists || guardedBefore('table', e)));
 
-    // Rule 6 (file-level).
+    // Rule 6 (file-level). knex runs pending migrations in filename order, so a
+    // migration stamped before one already on base runs after it on deployed
+    // databases and before it on fresh ones. That only matters when the two
+    // touch the same table, so an out-of-order stamp is refused only on such a
+    // conflict, plus a floor that still catches stale branches and typos.
     if (ctx.baseMaxTimestamp !== undefined) {
       const at = { line: 1, anchorLine: 1 };
       if (!f.ts) add(6, at, 'filename has no numeric timestamp prefix');
       else {
-        if (!f.skipBaseMax && f.ts <= ctx.baseMaxTimestamp.padEnd(14, '0')) add(6, at, `timestamp ${f.ts} is not later than the newest on base (${ctx.baseMaxTimestamp})`);
+        const baseMax = ctx.baseMaxTimestamp.padEnd(14, '0');
+        if (!f.skipBaseMax && f.ts <= baseMax) {
+          if (f.ts < shiftTimestamp(baseMax, -R6_GRACE_DAYS)) {
+            add(6, at, `timestamp ${f.ts} is more than ${R6_GRACE_DAYS} days behind the newest on base (${ctx.baseMaxTimestamp})`);
+          } else {
+            const tables = [...new Set(events.map((e) => e.table).filter((t) => t && !isSystemTable(t)))];
+            const clashes = ctx.newerTouching?.(f.ts, tables) ?? [];
+            if (clashes.length) {
+              const list = clashes.map((c) => `${c.name.split('/').pop()} (${c.shared.join(', ')})`).join('; ');
+              add(6, at, `timestamp ${f.ts} sorts before a base migration that touches the same table: ${list}; fresh databases would run them in the opposite order to deployed ones, restamp after ${ctx.baseMaxTimestamp}`);
+            }
+          }
+        }
         const other = seenTs.get(f.ts);
         // A collision between two files that were both already on base is inherited, not introduced by this change.
         if (other && other.name !== f.name && !(f.onBase && other.onBase)) add(6, at, `duplicate timestamp ${f.ts} (also ${other.name})`);
@@ -1201,24 +1228,29 @@ export function lintMigrationSet(files, ctx) {
 
 /**
  * Derive what migrations create, from the migration sources alone (no DB).
- * Returns { tables: {name: ts}, functions: {name: ts}, maxTimestamp }.
+ * Returns { tables: {name: ts}, functions: {name: ts}, touches: [{name, ts, tables}], maxTimestamp }.
+ * `touches` lists every table each migration names, for the rule 6 ordering check.
  * Limitation: tables created by setup/create_database.js or seeds are invisible.
  */
 export function deriveSchemaFacts(files) {
   const tables = {};
   const functions = {};
+  const touches = [];
   let maxTimestamp = '';
   for (const f of files) {
     const ts = timestampOf(f.name);
     if (!ts) continue;
     if (ts > maxTimestamp) maxTimestamp = ts;
     const a = analyzeMigration(f.source, f.name);
+    const touched = new Set();
     for (const ev of a.events) {
+      if (ev.table && !isSystemTable(ev.table)) touched.add(ev.table);
       if (ev.type === 'create-table' && !ev.temp && (tables[ev.table] === undefined || ts < tables[ev.table])) tables[ev.table] = ts;
       if (ev.type === 'create-function' && (functions[ev.name] === undefined || ts < functions[ev.name])) functions[ev.name] = ts;
     }
+    touches.push({ name: f.name, ts, tables: [...touched] });
   }
-  return { tables, functions, maxTimestamp };
+  return { tables, functions, touches, maxTimestamp };
 }
 
 /** Build the lint context from facts. `asOf` = per-file temporal view (audit); otherwise "anything in facts exists". */
@@ -1228,6 +1260,13 @@ export function contextFromFacts(facts, { asOf = false, baseMaxTimestamp } = {})
     isExistingTable: (t, ts) => before(facts.tables[t], ts),
     isExistingFunction: (n, ts) => before(facts.functions[n], ts),
     baseMaxTimestamp,
+    /** Base migrations stamped after `ts` that touch any of `tables`, oldest first, each with the shared tables. */
+    newerTouching: (ts, tables) =>
+      (facts.touches ?? [])
+        .filter((m) => m.ts > ts)
+        .map((m) => ({ name: m.name, ts: m.ts, shared: m.tables.filter((t) => tables.includes(t)) }))
+        .filter((m) => m.shared.length)
+        .sort((a, b) => (a.ts < b.ts ? -1 : 1)),
   };
 }
 
