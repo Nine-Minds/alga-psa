@@ -7,23 +7,45 @@ import {
   type AmpEntityType,
   type AmpLocationRecord,
   type AmpOrganizationRecord,
+  type AmpProductRecord,
+  type AmpVendorProductRecord,
+  AMP_ASSUMED_CURRENCY_EXTENSION_KEY,
   type AmpTicketCommentRecord,
   type AmpTicketRecord,
 } from '@alga-psa/migration-spec';
-import { tenantDb } from '@alga-psa/db';
+import { registerAfterCommit, tenantDb } from '@alga-psa/db';
+import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { buildClientCreatedPayload } from '@alga-psa/workflow-streams';
 import { createLocation } from '@alga-psa/clients/models';
+import { queueContactCreated } from '@alga-psa/clients/lib/contactEvents';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
 import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 import { createAssetInTransaction } from '@alga-psa/assets/actions';
 // LEVERAGE: pattern asset-attribute-coercion — same coercion used by planner validation.
 import { coerceAttributeValue } from '@alga-psa/assets/lib/assetTypeAttributes';
+import {
+  createProductCore,
+  findProductBySkuCore,
+  normalizeProductSku,
+} from '@alga-psa/billing/lib/catalog/productCatalogCore';
+import { resolveConfiguredTenantCurrency } from '@alga-psa/inventory/lib/tenantCurrency';
+import { createOrMatchVendorCore } from '@alga-psa/inventory/lib/vendors';
+import { upsertVendorProductCore } from '@alga-psa/inventory/lib/vendorProducts';
+import { isSupportedCurrency } from '@alga-psa/core/formatters';
 import type { ApplierContext } from './context';
+import { SKU_MATCH_WARNING_PREFIX } from '../types';
 
 export interface AppliedTarget {
   targetEntityType: string;
   targetEntityId: string;
   warnings?: string[];
+  /**
+   * The record matched an existing tenant row instead of creating one. The
+   * identity mapping is still written (so references and re-runs resolve), but
+   * the outcome is recorded as `skipped`, never `created`.
+   */
+  matchedExisting?: boolean;
 }
 
 /**
@@ -96,6 +118,20 @@ export class OrganizationMigrationApplier implements EntityApplier {
         ...(record.phone ? { phone: record.phone } : {}),
       },
     }, context.tenant, trx);
+
+    // A migrated organization is a real new client; publish client.created once the batch commits.
+    const occurredAt = new Date().toISOString();
+    registerAfterCommit(trx, () => publishWorkflowEvent({
+      eventType: 'CLIENT_CREATED',
+      payload: buildClientCreatedPayload({
+        clientId: client.client_id,
+        clientName: client.client_name,
+        createdAt: occurredAt,
+        status: client.is_inactive ? 'inactive' : 'active',
+      }),
+      ctx: { tenantId: context.tenant, occurredAt },
+      idempotencyKey: `client_created:${client.client_id}`,
+    }), `CLIENT_CREATED client=${client.client_id}`);
 
     return { targetEntityType: this.targetEntityType, targetEntityId: client.client_id };
   }
@@ -233,6 +269,7 @@ export class ContactMigrationApplier implements EntityApplier {
       context.tenant,
       trx
     );
+    queueContactCreated(trx, context.tenant, contact as any);
 
     return {
       targetEntityType: this.targetEntityType,
@@ -533,6 +570,174 @@ export class AssetMigrationApplier implements EntityApplier {
   }
 }
 
+function readAssumedCurrency(extensionJson: string | null | undefined): string | null {
+  if (!extensionJson) return null;
+  try {
+    const parsed = JSON.parse(extensionJson) as Record<string, unknown>;
+    const value = parsed?.[AMP_ASSUMED_CURRENCY_EXTENSION_KEY];
+    return typeof value === 'string' && value ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The tenant billing currency, strictly: a tenant with none configured fails
+ * the row rather than silently inheriting a hardcoded default.
+ */
+async function requireTenantCurrency(trx: Knex.Transaction, tenant: string): Promise<string> {
+  const currency = await resolveConfiguredTenantCurrency(trx, tenant);
+  if (!currency) {
+    throw new Error(
+      'Money amount has no currency and this tenant has no default billing currency configured; set one in billing settings or add a currency column.'
+    );
+  }
+  return currency;
+}
+
+/**
+ * Resolve the currency of a minor-unit amount. An explicit code must be a
+ * supported ISO 4217 code. A blank code means the tenant currency at apply
+ * time; if the producer parsed the amount against an assumed currency, that
+ * assumption must still equal the tenant currency, because the minor-unit
+ * scale (exponent) is currency-specific and the stored integer would be wrong.
+ */
+async function resolveMoneyCurrency(
+  trx: Knex.Transaction,
+  tenant: string,
+  explicit: string | null | undefined,
+  assumedCurrency: string | null,
+  label: string
+): Promise<string> {
+  if (explicit) {
+    if (!isSupportedCurrency(explicit)) throw new Error(`${label} currency "${explicit}" is not a supported ISO 4217 code.`);
+    return explicit;
+  }
+  const tenantCurrency = await requireTenantCurrency(trx, tenant);
+  if (assumedCurrency && assumedCurrency !== tenantCurrency) {
+    throw new Error(
+      `${label} was converted assuming ${assumedCurrency} but the tenant currency is now ${tenantCurrency}; re-import the sheet with a currency column.`
+    );
+  }
+  return tenantCurrency;
+}
+
+/**
+ * Products go through the transaction-scoped catalog core (never the REST
+ * service or a withAuth action). The SKU is the natural duplicate key: a
+ * product whose trimmed SKU already exists is MATCHED, left unchanged, and
+ * mapped, so a distributor price list can be re-imported safely.
+ */
+export class ProductMigrationApplier implements EntityApplier {
+  readonly entityType = 'products' as const;
+  readonly targetEntityType = 'product';
+
+  async apply(trx: Knex.Transaction, context: ApplierContext, payload: Record<string, unknown>): Promise<AppliedTarget> {
+    const record = payload as unknown as AmpProductRecord;
+    const name = record.name?.trim();
+    if (!name) throw new Error('Product has no name.');
+
+    const sku = normalizeProductSku(record.sku);
+    if (sku) {
+      const existing = await findProductBySkuCore(trx, context.tenant, sku);
+      if (existing) {
+        return {
+          targetEntityType: this.targetEntityType,
+          targetEntityId: existing.service_id,
+          matchedExisting: true,
+          warnings: [`${SKU_MATCH_WARNING_PREFIX}Matched existing product "${existing.service_name}" by SKU ${sku}; it was left unchanged.`],
+        };
+      }
+    }
+
+    const serviceTypeId = context.configuration.products?.serviceTypeId;
+    if (!serviceTypeId) {
+      throw new Error('Product service type is not configured; preflight must pass before applying.');
+    }
+
+    const assumed = readAssumedCurrency(record.extension_json);
+    const hasPrice = record.price_minor !== null && record.price_minor !== undefined;
+    const hasCost = record.cost_minor !== null && record.cost_minor !== undefined;
+    const priceCurrency = hasPrice
+      ? await resolveMoneyCurrency(trx, context.tenant, record.price_currency, assumed, 'Price')
+      : null;
+    // cost_currency is NOT NULL on the catalog row; with no cost it still needs a value.
+    const costCurrency = hasCost
+      ? await resolveMoneyCurrency(trx, context.tenant, record.cost_currency, assumed, 'Cost')
+      : record.cost_currency || (await requireTenantCurrency(trx, context.tenant));
+
+    const created = await createProductCore(trx, context.tenant, {
+      service_name: name,
+      custom_service_type_id: serviceTypeId,
+      sku,
+      description: record.description ?? null,
+      // LEVERAGE: friction product-category-free-text — service_catalog.category_id points at a
+      // service category taxonomy the import must not mutate, so the source category lands in the
+      // free-text product_category column instead of a category row.
+      product_category: record.category_name?.trim() || null,
+      unit_of_measure: record.unit_of_measure?.trim() || undefined,
+      is_active: record.is_active === 0 ? false : true,
+      cost: hasCost ? record.cost_minor : null,
+      cost_currency: costCurrency,
+      ...(hasPrice ? { prices: [{ currency_code: priceCurrency, rate: record.price_minor }] } : {}),
+    });
+
+    return { targetEntityType: this.targetEntityType, targetEntityId: created.serviceId };
+  }
+}
+
+/**
+ * Vendor price-list offers. The vendor is created or matched by trimmed,
+ * case-insensitive name here (there is deliberately no vendors AMP table), and
+ * the offer upsert is keyed by (vendor, product) in the shared inventory core.
+ */
+export class VendorProductMigrationApplier implements EntityApplier {
+  readonly entityType = 'vendor_products' as const;
+  // LEVERAGE: friction vendor-offer-no-surrogate-id — vendor_products is keyed by (vendor, product) with no
+  // uuid, but identity mappings and outcomes need a uuid target. The mapping targets the vendor; the
+  // product side is recoverable through the products mapping.
+  readonly targetEntityType = 'vendor';
+
+  async apply(trx: Knex.Transaction, context: ApplierContext, payload: Record<string, unknown>): Promise<AppliedTarget> {
+    const record = payload as unknown as AmpVendorProductRecord;
+
+    let serviceId: string | null = null;
+    if (record.product_package_record_id) {
+      serviceId = await context.resolveReference(trx, 'products', record.product_package_record_id);
+      if (!serviceId) {
+        throw new Error(`Product ${record.product_package_record_id} has not been applied; the vendor offer cannot be placed.`);
+      }
+    } else if (normalizeProductSku(record.product_sku)) {
+      const match = await findProductBySkuCore(trx, context.tenant, record.product_sku as string);
+      if (!match) throw new Error(`No product with SKU ${normalizeProductSku(record.product_sku)} exists in this tenant.`);
+      serviceId = match.service_id;
+    } else {
+      throw new Error('Vendor offer has neither a product reference nor a product SKU.');
+    }
+
+    const assumed = readAssumedCurrency(record.extension_json);
+    const hasCost = record.unit_cost_minor !== null && record.unit_cost_minor !== undefined;
+    const currency = await resolveMoneyCurrency(trx, context.tenant, record.cost_currency, hasCost ? assumed : null, 'Unit cost');
+
+    const { vendor, created: vendorCreated } = await createOrMatchVendorCore(trx, context.tenant, record.vendor_name);
+    const offer = await upsertVendorProductCore(trx, context.tenant, {
+      vendor_id: vendor.vendor_id,
+      service_id: serviceId,
+      vendor_sku: record.vendor_sku ?? null,
+      unit_cost: hasCost ? record.unit_cost_minor : null,
+      cost_currency: currency,
+      lead_time_days: record.lead_time_days ?? null,
+      is_preferred: record.is_preferred === 1,
+    });
+
+    return {
+      targetEntityType: this.targetEntityType,
+      targetEntityId: offer.vendor_id,
+      warnings: vendorCreated ? [`Created vendor "${vendor.vendor_name}".`] : undefined,
+    };
+  }
+}
+
 export const ENTITY_APPLIERS: Record<AmpEntityType, EntityApplier> = {
   organizations: new OrganizationMigrationApplier(),
   locations: new LocationMigrationApplier(),
@@ -540,4 +745,6 @@ export const ENTITY_APPLIERS: Record<AmpEntityType, EntityApplier> = {
   tickets: new TicketMigrationApplier(),
   ticket_comments: new TicketCommentMigrationApplier(),
   assets: new AssetMigrationApplier(),
+  products: new ProductMigrationApplier(),
+  vendor_products: new VendorProductMigrationApplier(),
 };

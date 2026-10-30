@@ -2347,6 +2347,8 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{from}} → {{to}}",
+      "RMA {{id}}",
       " (Standard)",
       "(optional)",
       "(Standard)",
@@ -2404,6 +2406,7 @@
       "Dashboard",
       "Dashboard | AlgaPSA",
       "Datto",
+      "Datto RMM",
       "Debug",
       "Designer",
       "Details",
@@ -2629,7 +2632,12 @@
       "auto | 50% | 120px",
       "Cc",
       "Bcc",
-      "Cc/Bcc"
+      "Cc/Bcc",
+      "Code 128",
+      "Barcode",
+      "Asset: {{name}}",
+      "Ticket: {{number}}",
+      "RMA {{number}} · {{status}}"
     ],
     "caseInsensitive": [
       "api",

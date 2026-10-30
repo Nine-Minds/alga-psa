@@ -132,12 +132,15 @@
       "billable": "Płatne",
       "notes": "Notatki",
       "deleteTimeEntry": "Usuń wpis czasu",
-      "unsavedChanges": "Niezapisane zmiany"
+      "unsavedChanges": "Niezapisane zmiany",
+      "contractLine": "Pozycja kontraktu"
     },
     "placeholders": {
       "selectService": "Wybierz usługę",
+      "searchServices": "Wyszukaj usługi...",
       "selectDate": "Wybierz datę",
-      "addNotes": "Dodaj notatki"
+      "addNotes": "Dodaj notatki",
+      "selectContractLine": "Wybierz pozycję kontraktu"
     },
     "validation": {
       "startBeforeEnd": "Czas rozpoczęcia musi być wcześniejszy niż czas zakończenia",
@@ -155,6 +158,10 @@
       "task": "Domyślnie z zadania",
       "phase": "Domyślnie z fazy",
       "project": "Domyślnie z projektu"
+    },
+    "options": {
+      "resolveContractLineLater": "Brak pozycji - rozstrzygnij później",
+      "noServicesFound": "Nie znaleziono usług"
     }
   },
   "workItemPicker": {
@@ -401,7 +408,7 @@
     "noContract": "Nie znaleziono pozycji umowy dla tej usługi. Czas zostanie przekierowany do domyślnej umowy zarządzanej przez system.",
     "contract": "Kontrakt: {{name}}",
     "defaultContract": "Domyślna umowa zarządzana przez system",
-    "multipleLines": "Dostępnych jest wiele linii kontraktu - przy użyciu wyboru domyślnego"
+    "multipleEligible": "Dla tej daty kwalifikuje się wiele pozycji kontraktu. Wybierz pozycję kontraktu, aby zapisać przypisanie."
   },
   "billableLegend": {
     "title": "Legenda płatna",

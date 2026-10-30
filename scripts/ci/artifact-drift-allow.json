@@ -1,0 +1,592 @@
+[
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1schedules/get/parameters",
+    "reason": "alga-2026-0002797: GET /api/v1/schedules documented the generic WorkV1ListQuery placeholders (page, limit, sort, order, fields, search, query), which listScheduleEntries() never read; the spec now documents the parsed filters (start_date, end_date, user_id). Clients sending the old params still get 200 (they were and remain ignored)."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1schedules~1search/get/parameters",
+    "reason": "alga-2026-0002797: /api/v1/schedules/search now serves schedule entries (searchScheduleEntries) instead of the time-sheet list, so the time-sheet sort/order/fields/search/query params no longer apply; the spec documents what the handler parses (page, limit, start_date, end_date, user_id)."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1schedules~1search/get/extensions/x-route-controller-mismatch",
+    "reason": "alga-2026-0002797: the route is now wired to the schedule-entry controller, so the documented route/controller mismatch it flagged is fixed."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1schedules/get/parameters",
+    "reason": "alga-2026-0002797: GET /api/v1/schedules documented the generic WorkV1ListQuery placeholders (page, limit, sort, order, fields, search, query), which listScheduleEntries() never read; the spec now documents the parsed filters (start_date, end_date, user_id). Clients sending the old params still get 200 (they were and remain ignored)."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1schedules~1search/get/parameters",
+    "reason": "alga-2026-0002797: /api/v1/schedules/search now serves schedule entries (searchScheduleEntries) instead of the time-sheet list, so the time-sheet sort/order/fields/search/query params no longer apply; the spec documents what the handler parses (page, limit, start_date, end_date, user_id)."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1schedules~1search/get/extensions/x-route-controller-mismatch",
+    "reason": "alga-2026-0002797: the route is now wired to the schedule-entry controller, so the documented route/controller mismatch it flagged is fixed."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1clients~1{id}~1locations~1{locationId}/put/requestBody/content/application~1json/schema/allOf",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 inlines a registered schema that was extended or described in place instead of wrapping it in allOf/$ref; the documented fields are unchanged."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1invoices~1recurring~1{id}/put/requestBody/content/application~1json/schema/$ref",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 inlines a registered schema that was extended or described in place instead of wrapping it in allOf/$ref; the documented fields are unchanged."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1services/post/requestBody/content/application~1json/schema/properties/category_id/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1services/post/requestBody/content/application~1json/schema/properties/tax_rate_id/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1services/post/requestBody/content/application~1json/schema/properties/description/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1services~1{id}/put/requestBody/content/application~1json/schema/properties/category_id/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1services~1{id}/put/requestBody/content/application~1json/schema/properties/tax_rate_id/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1services~1{id}/put/requestBody/content/application~1json/schema/properties/description/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/category_id/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/tax_rate_id/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/description/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/sku/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/barcode/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/cost/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/cost_currency/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/vendor/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/manufacturer/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/product_category/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/license_term/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/license_billing_cadence/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/category_id/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/tax_rate_id/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/description/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/sku/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/barcode/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/cost/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/cost_currency/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/vendor/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/manufacturer/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/product_category/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/license_term/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/license_billing_cadence/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1webhooks~1templates~1{id}/put/requestBody/content/application~1json/schema/$ref",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 inlines a registered schema that was extended or described in place instead of wrapping it in allOf/$ref; the documented fields are unchanged."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/paths/~1api~1v1~1webhooks~1{id}/put/requestBody/content/application~1json/schema/$ref",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 inlines a registered schema that was extended or described in place instead of wrapping it in allOf/$ref; the documented fields are unchanged."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetResource/properties/attributes/allOf",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 inlines a registered schema that was extended or described in place instead of wrapping it in allOf/$ref; the documented fields are unchanged."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/AssetResource/properties/extension_data/allOf",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 inlines a registered schema that was extended or described in place instead of wrapping it in allOf/$ref; the documented fields are unchanged."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/ContactBody/properties/phone_numbers/items/properties/extension/type",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 documents a .nullable() field as nullable; the API already accepted and returned null here."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/ContactUpdateBody/properties/phone_numbers/items/properties/extension/type",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 documents a .nullable() field as nullable; the API already accepted and returned null here."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/ContactUpdateBody/properties/phone_numbers/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/ContactUpdateBody/properties/additional_email_addresses/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/ContactUpdateBody/properties/is_inactive/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/ClientEnvelope/properties/data/properties/properties/properties/website/type",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 documents a .nullable() field as nullable; the API already accepted and returned null here."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/PaginatedClientEnvelope/properties/data/items/properties/properties/properties/website/type",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 documents a .nullable() field as nullable; the API already accepted and returned null here."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/InboundWebhookUpdateInput/allOf",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 inlines a registered schema that was extended or described in place instead of wrapping it in allOf/$ref; the documented fields are unchanged."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/TicketWebhookDataV1/properties/comment/allOf",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 inlines a registered schema that was extended or described in place instead of wrapping it in allOf/$ref; the documented fields are unchanged."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/task_type_key/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/WorkV1UpdateTimeEntryBody/properties/is_billable/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/WorkV1BulkUpdateTimeEntriesBody/properties/entries/items/properties/data/properties/is_billable/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/WorkV1UpdateScheduleEntryBody/properties/is_private/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/UpdateOpportunityBodyV1/properties/confidence/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/UpdateOpportunityBodyV1/properties/mrr_cents/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/UpdateOpportunityBodyV1/properties/nrr_cents/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/UpdateOpportunityBodyV1/properties/hardware_cents/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/UpdateMarketingContentBodyV1/properties/body_markdown/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/UpdateMarketingContentBodyV1/properties/channel_variants/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/UpdateMarketingSequenceBodyV1/properties/steps/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1clients~1{id}~1locations~1{locationId}/put/requestBody/content/application~1json/schema/allOf",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 inlines a registered schema that was extended or described in place instead of wrapping it in allOf/$ref; the documented fields are unchanged."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1invoices~1recurring~1{id}/put/requestBody/content/application~1json/schema/$ref",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 inlines a registered schema that was extended or described in place instead of wrapping it in allOf/$ref; the documented fields are unchanged."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1services/post/requestBody/content/application~1json/schema/properties/category_id/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1services/post/requestBody/content/application~1json/schema/properties/tax_rate_id/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1services/post/requestBody/content/application~1json/schema/properties/description/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1services~1{id}/put/requestBody/content/application~1json/schema/properties/category_id/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1services~1{id}/put/requestBody/content/application~1json/schema/properties/tax_rate_id/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1services~1{id}/put/requestBody/content/application~1json/schema/properties/description/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/category_id/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/tax_rate_id/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/description/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/sku/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/barcode/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/cost/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/cost_currency/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/vendor/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/manufacturer/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/product_category/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/license_term/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products/post/requestBody/content/application~1json/schema/properties/license_billing_cadence/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/category_id/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/tax_rate_id/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/description/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/sku/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/barcode/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/cost/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/cost_currency/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/vendor/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/manufacturer/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/product_category/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/license_term/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1products~1{id}/put/requestBody/content/application~1json/schema/properties/license_billing_cadence/anyOf/2",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 no longer emits the duplicate {type: null} branch that zod 3 produced for .nullable().optional(); the field accepts exactly the same values."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1webhooks~1templates~1{id}/put/requestBody/content/application~1json/schema/$ref",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 inlines a registered schema that was extended or described in place instead of wrapping it in allOf/$ref; the documented fields are unchanged."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/paths/~1api~1v1~1webhooks~1{id}/put/requestBody/content/application~1json/schema/$ref",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 inlines a registered schema that was extended or described in place instead of wrapping it in allOf/$ref; the documented fields are unchanged."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetResource/properties/attributes/allOf",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 inlines a registered schema that was extended or described in place instead of wrapping it in allOf/$ref; the documented fields are unchanged."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/AssetResource/properties/extension_data/allOf",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 inlines a registered schema that was extended or described in place instead of wrapping it in allOf/$ref; the documented fields are unchanged."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/ContactBody/properties/phone_numbers/items/properties/extension/type",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 documents a .nullable() field as nullable; the API already accepted and returned null here."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/ContactUpdateBody/properties/phone_numbers/items/properties/extension/type",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 documents a .nullable() field as nullable; the API already accepted and returned null here."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/ContactUpdateBody/properties/phone_numbers/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/ContactUpdateBody/properties/additional_email_addresses/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/ContactUpdateBody/properties/is_inactive/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/ClientEnvelope/properties/data/properties/properties/properties/website/type",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 documents a .nullable() field as nullable; the API already accepted and returned null here."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/PaginatedClientEnvelope/properties/data/items/properties/properties/properties/website/type",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 documents a .nullable() field as nullable; the API already accepted and returned null here."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/InboundWebhookUpdateInput/allOf",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 inlines a registered schema that was extended or described in place instead of wrapping it in allOf/$ref; the documented fields are unchanged."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/TicketWebhookDataV1/properties/comment/allOf",
+    "reason": "zod 4 migration (security/zod_fixes): zod-to-openapi 9 inlines a registered schema that was extended or described in place instead of wrapping it in allOf/$ref; the documented fields are unchanged."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/ProjectTaskUpdateRequest/properties/task_type_key/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/WorkV1UpdateTimeEntryBody/properties/is_billable/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/WorkV1BulkUpdateTimeEntriesBody/properties/entries/items/properties/data/properties/is_billable/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/WorkV1UpdateScheduleEntryBody/properties/is_private/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/UpdateOpportunityBodyV1/properties/confidence/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/UpdateOpportunityBodyV1/properties/mrr_cents/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/UpdateOpportunityBodyV1/properties/nrr_cents/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/UpdateOpportunityBodyV1/properties/hardware_cents/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/UpdateMarketingContentBodyV1/properties/body_markdown/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/UpdateMarketingContentBodyV1/properties/channel_variants/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/UpdateMarketingSequenceBodyV1/properties/steps/default",
+    "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  }
+]

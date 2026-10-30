@@ -379,7 +379,8 @@
       "missing_email": "Din identitetsleverantör returnerade ingen e-postadress, så inget kundportalskonto kunde matchas. Logga in med ditt lösenord eller kontakta din tjänsteleverantör.",
       "inactive_user": "Kundportalskontot för {{providerEmail}} är inaktivt. Kontakta din tjänsteleverantör för att aktivera det igen.",
       "user_type_mismatch": "{{providerEmail}} är inget kundportalskonto. Kontakta din tjänsteleverantör.",
-      "tenant_mismatch": "{{providerEmail}} tillhör en annan organisations portal. Logga in med ditt lösenord eller kontakta din tjänsteleverantör."
+      "tenant_mismatch": "{{providerEmail}} tillhör en annan organisations portal. Logga in med ditt lösenord eller kontakta din tjänsteleverantör.",
+      "tenant_required": "{{providerEmail}} används i fler än en organisation. Kontakta din tjänsteleverantör för hjälp."
     },
     "configurationTitle": "Inloggningen misslyckades",
     "configurationMessage": "Inloggningen misslyckades. Försök igen eller kontakta din tjänsteleverantör.",
@@ -509,6 +510,15 @@
         "failed": "Det gick inte att spara ditt kort",
         "savedDescription": "Ditt kort är klart för framtida betalningar.",
         "failedDescription": "Det gick inte att verifiera registreringen. Be leverantören om en ny länk."
+      },
+      "payLink": {
+        "heading": "Den här betalningslänken kan inte användas",
+        "expired": "Den här betalningslänken har gått ut.",
+        "invalid": "Den här betalningslänken är ogiltig.",
+        "notPayable": "Den här fakturan kan inte längre betalas med den här länken. Den kan redan vara betald eller inte längre öppen för onlinebetalning.",
+        "unavailable": "Vi kunde inte öppna betalningssidan just nu. Försök igen om några minuter.",
+        "viewInPortal": "Visa fakturan i kundportalen",
+        "contactProvider": "Kontakta din faktureringsleverantör för en ny länk."
       },
       "fields": {
         "cardNumber": "Kortnummer",

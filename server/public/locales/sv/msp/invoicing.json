@@ -98,6 +98,20 @@
         "assignedContractLine": "Tilldelad avtalsrad",
         "assignedWorkItem": "Tilldelad arbetspost",
         "unresolvedWork": "Arbete med olöst koppling"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · förfaller {{date}}",
+        "trigger": {
+          "contract_start": "Förbetalt block: avtalsstart",
+          "exhaustion": "Förbetalt block: förbrukat",
+          "threshold": "Förbetalt block: användningströskel",
+          "expiry": "Förbetalt block: utgång",
+          "renewal": "Förbetalt block: förnyelse",
+          "manual": "Förbetalt block: utfärdat manuellt"
+        },
+        "stalePendingWarning": "{{count}} väntande förbetalda block har väntat på slutförande i mer än 14 dagar och håller kvar tidrapporter. Slutför eller ta bort fakturautkasten så att den kvarhållna tiden kan faktureras.",
+        "stalePendingWarning_one": "{{count}} väntande förbetalt block har väntat på slutförande i mer än 14 dagar och håller kvar tidrapporter. Slutför eller ta bort fakturautkastet så att den kvarhållna tiden kan faktureras.",
+        "stalePendingWarning_other": "{{count}} väntande förbetalda block har väntat på slutförande i mer än 14 dagar och håller kvar tidrapporter. Slutför eller ta bort fakturautkasten så att den kvarhållna tiden kan faktureras."
       }
     },
     "actions": {
@@ -273,7 +287,8 @@
       "fixed": "Fast",
       "hourly": "Löpande",
       "usage": "Förbrukning",
-      "bucket": "Timpott"
+      "bucket": "Timpott",
+      "prepaidBlock": "Förbetalt"
     },
     "summary": {
       "selected": "Markerade: {{count}}",
@@ -308,6 +323,21 @@
       "any": "alla",
       "clear": "Rensa",
       "countSummary": "Grupper: {{groups}} · rader: {{obligations}}"
+    },
+    "lateTime": {
+      "title": "Sent godkänd timtid",
+      "description": "Den här tiden godkändes efter att fakturan för dess tjänsteperiod hade utfärdats. Poster som väntar på fakturering läggs till på nästa faktura en enda gång och markeras som sen tid. Poster utanför tillbakablicksperioden faktureras inte.",
+      "columns": {
+        "client": "Kund",
+        "technician": "Tekniker",
+        "service": "Tjänst",
+        "workDate": "Arbetsdatum",
+        "hours": "Timmar",
+        "closedPeriod": "Stängd tjänsteperiod",
+        "status": "Status"
+      },
+      "nextInvoice": "Faktureras på nästa faktura",
+      "outsideLookback": "Utanför tillbakablicksperioden — faktureras inte"
     }
   },
   "manualInvoices": {
@@ -542,6 +572,17 @@
         "selectedCount": "Markerade: {{count}}",
         "clear": "Rensa"
       }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Fakturan är slutförd, men ett efterföljande steg slutfördes inte: {{steps}}. Fakturan är slutförd; du kan försöka igen med steget.",
+      "steps": {
+        "credit_auto_apply": "automatisk kreditering",
+        "project_deposit_credits": "projektförskottskrediter",
+        "workflow_events": "arbetsflödeshändelser",
+        "accounting_export": "bokföringsexport",
+        "replenishment_status": "status för förbetald påfyllning",
+        "autopay": "autogiro"
+      }
     }
   },
   "finalizedTab": {
@@ -580,7 +621,9 @@
       "bulkPdfFailed": "Det gick inte att skapa PDF-filerna. Försök igen.",
       "unfinalizeFailed": "Det gick inte att återställa fakturan till utkast. Försök igen.",
       "bulkUnfinalizeFailed": "Det gick inte att återställa fakturorna till utkast. Försök igen.",
-      "bulkUnfinalizeInvoiceFailed": "Det gick inte att återställa {{invoiceNumber}} till utkast: {{reason}}"
+      "bulkUnfinalizeInvoiceFailed": "Det gick inte att återställa {{invoiceNumber}} till utkast: {{reason}}",
+      "explainThis": "Visa förklaring",
+      "usedHourBlockExplanation": "När denna faktura fastställdes blev de förbetalda timmarna tillgängliga för tidposter. Sedan dess har tid tilldelats timblocket. Om fakturan återställs till utkast tas blocket bort, trots att tilldelningarna och eventuella senare avgifter fortfarande kan vara beroende av det. För att hålla faktureringen konsekvent kan fakturor för block som någon gång har använts inte återställas till utkast, även om tiden senare har återförts. Överväg en separat justering eller kreditfaktura för att korrigera fakturan."
     },
     "bulk": {
       "actionBar": {
@@ -842,6 +885,19 @@
       "cancel": "Avbryt",
       "confirm": "Makulera faktura",
       "voiding": "Makulerar…"
+    },
+    "history": {
+      "title": "Historik",
+      "empty": "Ingen historik registrerad.",
+      "loadFailed": "Det gick inte att läsa in fakturahistoriken.",
+      "system": "System",
+      "ops": {
+        "invoice_finalized": "Slutförd",
+        "invoice_unfinalized": "Återöppnad",
+        "invoice_deleted": "Borttagen"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "ingen"
     }
   },
   "templateEditor": {
@@ -1362,7 +1418,7 @@
       "mediaSource": "Bildkälla",
       "mediaSourceLogo": "Företagslogotyp",
       "mediaSourceCustom": "Egen bild",
-      "mediaSourceLogoHint": "Visar logotypen från företagets profilinställningar på alla dokument.",
+      "mediaSourceLogoHint": "Visar logotypen från kundposten för ditt eget företag på alla dokument.",
       "mediaSourceUrl": "Käll-URL",
       "renameInner": "Vill du byta namn på {{count}} inre lager också ({{from}} → {{to}}…)?",
       "renameInnerApply": "Byt namn",
@@ -1412,7 +1468,14 @@
           "widthTooltip": "Använd den exakta bredden som anges nedan",
           "heightTooltip": "Använd den exakta höjden som anges nedan"
         }
-      }
+      },
+      "barcode": "Streckkod",
+      "barcodeSymbology": "Typ",
+      "barcodeQr": "QR-kod",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Värde",
+      "barcodeHintWorkTag": "Text, eller ett fält som {{example}} (länken till posten). Håll koden minst cirka 20 mm bred så att den går att skanna.",
+      "barcodeHint": "Texten som ska kodas. Håll koden minst cirka 20 mm bred så att den går att skanna."
     },
     "shell": {
       "selectedLabel": "Markerat:",
@@ -1425,7 +1488,11 @@
       "title": "Sidinställningar",
       "description": "Välj ett förinställt pappersformat och en sidmarginal utan att markera den dolda sidnoden.",
       "paperPreset": "Förinställt pappersformat",
-      "marginMm": "Marginal (mm)"
+      "marginMm": "Marginal (mm)",
+      "customSize": "Anpassad storlek…",
+      "customWidth": "Bredd",
+      "customHeight": "Höjd",
+      "customUnit": "Enhet"
     },
     "breadcrumbs": {
       "emptyHelp": "Välj en komponent på arbetsytan för att visa dess hierarki.",
@@ -1456,7 +1523,13 @@
         "noQuotesFound": "Inga offerter hittades.",
         "selectQuote": "Välj offert",
         "loadingQuoteDetails": "Läser in offertuppgifter…",
-        "loadingDocumentDetails": "Läser in dokumentuppgifter…"
+        "loadingDocumentDetails": "Läser in dokumentuppgifter…",
+        "zoom": {
+          "fit": "Anpassa",
+          "actual": "100 %",
+          "label": "Förhandsgranskningszoom",
+          "fitWithScale": "Anpassa ({{percent}} %)"
+        }
       },
       "tabs": {
         "design": "Design",
@@ -2350,7 +2423,7 @@
     },
     "imagePicker": {
       "browse": "Bläddra bland dokument",
-      "hiddenFromClients": "{{document}} är dolt för kunder. Det visas inte på offerter eller fakturor som öppnas via kundportalen.",
+      "hiddenFromClients": "{{document}} är dolt för kunder, som därför inte kan öppna det i kundportalen. Det visas fortfarande på fakturor och i PDF-filer för offerter som använder det.",
       "updating": "Uppdaterar…",
       "markVisible": "Markera som synlig för kunder",
       "visibleInPortal": "Synlig i kundportalen",
@@ -2399,11 +2472,13 @@
     "description": "Utforma layouterna som används för PDF-filer och förhandsgranskningar av dokumenttypen {{type}}.",
     "availableLayouts": "Tillgängliga layouter",
     "actions": {
-      "newLayout": "Ny layout"
+      "newLayout": "Ny layout",
+      "setDefaultForClass": "Ange som standard för {{class}}"
     },
     "columns": {
       "name": "Namn",
-      "source": "Källa"
+      "source": "Källa",
+      "labelClass": "Klass"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (Standard)",
@@ -2435,7 +2510,10 @@
         "details": "Layoutdetaljer"
       },
       "fields": {
-        "version": "Version"
+        "version": "Version",
+        "labelClass": "Etikettklass",
+        "labelFields": "Fält som visas på etiketten",
+        "labelFieldsHint": "Postlänken (QR-kod) och identifieraren visas alltid."
       },
       "placeholders": {
         "templateName": "Mall – {{type}}"
@@ -2472,7 +2550,10 @@
     "types": {
       "salesOrder": "Försäljningsorder",
       "packingSlip": "Följesedel",
-      "pickList": "Plocklista"
+      "pickList": "Plocklista",
+      "workTag": "Arbetsetikett / Etikett",
+      "stagingManifest": "Packlista",
+      "rmaReturnSlip": "RMA-returfölje"
     }
   },
   "errors": {
@@ -2480,7 +2561,8 @@
       "invoiceUpdate": "Åtkomst nekad: Du saknar behörighet att uppdatera fakturor",
       "invoiceDelete": "Åtkomst nekad: Du saknar behörighet att radera fakturor",
       "invoiceAccess": "Åtkomst nekad: Du saknar behörighet att komma åt fakturor",
-      "otherClientInvoices": "Åtkomst nekad: Du saknar behörighet att komma åt en annan kunds fakturor"
+      "otherClientInvoices": "Åtkomst nekad: Du saknar behörighet att komma åt en annan kunds fakturor",
+      "invoiceRead": "Åtkomst nekad: behörighet att läsa fakturor krävs"
     },
     "invoice": {
       "notFound": "Fakturan hittades inte",
@@ -2494,6 +2576,7 @@
       "onlyDraftEditable": "Endast fakturautkast kan redigeras",
       "numberExists": "Fakturanumret finns redan. Välj ett annat nummer.",
       "notFinalized": "Fakturan är inte fastställd",
+      "usedHourBlockUnfinalize": "Det går inte att återställa denna faktura till utkast: timblocket {{blockId}} har redan använts ({{usedHours}} av {{totalHours}} tim). Överväg en separat justering eller kreditfaktura för att korrigera fakturan.",
       "unfinalizeFailed": "Det gick inte att återställa fakturan till utkast eftersom ett oväntat datafel uppstod. Ladda om sidan och försök igen.",
       "paidOrCancelled": "Det går inte att ändra en betald eller makulerad faktura",
       "syncedVoidInstead": "Den här fakturan är synkroniserad med ett bokföringssystem – makulera den istället för att radera den.",
@@ -2502,7 +2585,9 @@
       "duplicate": "En faktura med motstridiga uppgifter finns redan. Ladda om sidan och försök igen.",
       "missingField": "Ett obligatoriskt fakturafält saknas.",
       "missingFieldNamed": "Ett obligatoriskt fakturafält saknas: {{field}}.",
-      "billingProfileUnavailable": "Den valda faktureringsprofilen är inte tillgänglig för kunden."
+      "billingProfileUnavailable": "Den valda faktureringsprofilen är inte tillgänglig för kunden.",
+      "deleteNotDraft": "Endast fakturautkast kan tas bort; makulera fakturan i stället.",
+      "deleteHasPayments": "Fakturor med registrerade betalningar kan inte tas bort."
     },
     "billingCycle": {
       "notFoundRefresh": "Faktureringscykeln hittades inte. Den kan ha uppdaterats eller raderats. Ladda om sidan och försök igen.",

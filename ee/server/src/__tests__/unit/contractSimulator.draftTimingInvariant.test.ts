@@ -39,6 +39,7 @@ vi.mock('@alga-psa/shared/billingClients/billingSchedule', () => ({
     billingCycle: 'monthly',
     anchor: { dayOfMonth: 1, monthOfYear: null, dayOfWeek: null, referenceDate: null },
   }),
+  loadClientBillingCycleHistory: async () => [],
 }));
 
 import { draftContractToScenario } from '@ee/lib/billing/simulator/draftContractToScenario';
@@ -92,7 +93,7 @@ describe('draftContractToScenario timing invariant', () => {
       invoiceSchedule: schedule,
       contractStartDate: '2026-08-01T00:00:00Z',
       scenarioId: 'scenario-1',
-    });
+    }).flatMap((streamPeriods) => streamPeriods.records);
     const assignments = assignServicePeriodsToInvoicePeriods(
       records,
       buildInvoicePeriods(horizon, schedule),
@@ -115,7 +116,7 @@ describe('draftContractToScenario timing invariant', () => {
       invoiceSchedule: schedule,
       contractStartDate: '2026-08-01T00:00:00Z',
       scenarioId: 's',
-    });
+    }).flatMap((streamPeriods) => streamPeriods.records);
     const assignments = assignServicePeriodsToInvoicePeriods(records, buildInvoicePeriods(horizon, schedule));
     expect(assignments.find((a) => a.periodIndex === 0)).toBeUndefined();
   });

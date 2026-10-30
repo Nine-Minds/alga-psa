@@ -41,6 +41,9 @@
     "errors": {
       "saveClientInfo": "Falha ao salvar informações do cliente",
       "addTeamMembers": "Falha ao adicionar membros da equipe",
+      "unsentInvites": "Envie o convite para cada membro da equipe que você adicionou, ou remova-o, antes de continuar.",
+      "teamMembersNotCreated": "Estes membros da equipe não foram criados. Corrija ou remova cada um antes de continuar:",
+      "teamProgressNotSaved": "Estes membros da equipe foram criados, mas a configuração não conseguiu salvar o progresso: {{users}}. Se você sair da configuração e voltar, eles podem não aparecer como adicionados; as contas já existem, então não os adicione novamente. Selecione Avançar para continuar.",
       "saveClient": "Falha ao salvar o cliente",
       "addContact": "Falha ao adicionar contato",
       "setupBilling": "Falha ao configurar o faturamento",
@@ -414,6 +417,7 @@
       "invalidEmail": "Por favor insira um endereço de e-mail válido",
       "passwordLength": "A senha deve ter pelo menos 8 caracteres",
       "saveFailed": "Falha ao salvar membro da equipe",
+      "progressNotSaved": "{{email}} foi criado, mas a configuração não conseguiu salvar o progresso. Se você sair da configuração e voltar, este membro pode não aparecer como adicionado; a conta já existe, então não o adicione novamente.",
       "inviteFailed": "Falha ao enviar convite",
       "roleRequired": "Selecione uma função",
       "generic": "Ocorreu um erro"

@@ -280,10 +280,11 @@ This document outlines the comprehensive implementation plan for creating REST A
 
 #### Week 7: Scheduling & Time Configuration
 - [x] **API-015**: Schedules API ✅ (Schemas & Service Complete)
+  - ✅ `GET /api/v1/calendars` - List the calendars the caller can see (personal + group, with `access_level`/`can_edit`); group `calendar_id` goes on the entry, personal = `calendar_id: null` + `assigned_user_ids: [owner]`
   - ✅ `GET /api/v1/schedules` - List schedules with filtering
   - ✅ `POST /api/v1/schedules` - Create new schedule entry
   - ✅ `GET /api/v1/schedules/{id}` - Get schedule details
-  - ✅ `PUT /api/v1/schedules/{id}` - Update schedule entry
+  - ✅ `PUT /api/v1/schedules/{id}` - Update schedule entry (`calendar_id`: omit = unchanged, group uuid = move onto that group calendar, `null` = move back to a personal calendar)
   - ✅ `DELETE /api/v1/schedules/{id}` - Delete schedule entry
 
 - [x] **API-016**: Time Configuration APIs ✅ (Schemas & Service Complete)
@@ -480,23 +481,7 @@ This document outlines the comprehensive implementation plan for creating REST A
   - ✅ `GET /api/v1/workflows/analytics` - Workflow analytics
   - ✅ `POST /api/v1/workflows/bulk` - Bulk workflow operations
 
-- [x] **API-028**: Automation API ✅ (Schemas & Service Complete - 20+ endpoints)
-  - ✅ `GET /api/v1/automations/rules` - List automation rules
-  - ✅ `POST /api/v1/automations/rules` - Create automation rule
-  - ✅ `GET /api/v1/automations/rules/{id}` - Get rule details
-  - ✅ `PUT /api/v1/automations/rules/{id}` - Update automation rule
-  - ✅ `DELETE /api/v1/automations/rules/{id}` - Delete automation rule
-  - ✅ `POST /api/v1/automations/rules/{id}/execute` - Execute automation rule
-  - ✅ `GET /api/v1/automations/executions` - List executions
-  - ✅ `GET /api/v1/automations/executions/{id}` - Get execution details
-  - ✅ `POST /api/v1/automations/executions/{id}/retry` - Retry execution
-  - ✅ `GET /api/v1/automations/templates` - List automation templates
-  - ✅ `POST /api/v1/automations/templates` - Create template from rule
-  - ✅ `POST /api/v1/automations/templates/{id}/create-rule` - Create rule from template
-  - ✅ `GET /api/v1/automations/statistics` - Automation statistics
-  - ✅ `GET /api/v1/automations/performance` - Performance metrics
-  - ✅ `POST /api/v1/automations/bulk/status` - Bulk status updates
-  - ✅ `POST /api/v1/automations/bulk/execute` - Bulk execution
+- [x] **API-028**: Automation API — **removed** (alga-2026-0002708). The rules/executions/templates API was never wired to a database or an RBAC resource; workflow definitions are the supported automation surface.
 
 #### Week 14: External Integrations ✅ SERVICE LAYERS COMPLETE
 - [x] **API-029**: QuickBooks Integration API ✅ (Schemas & Service Complete - 25+ endpoints)

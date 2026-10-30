@@ -483,7 +483,7 @@ export class ApiTicketController extends ApiBaseController {
             validatedQuery = ticketSearchSchema.parse(query);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
+              throw new ValidationError('Query validation failed', error.issues);
             }
             throw error;
           }
@@ -1030,7 +1030,7 @@ export class ApiTicketController extends ApiBaseController {
           const body = await req.json();
           const validation = linkTicketAssetSchema.safeParse(body);
           if (!validation.success) {
-            throw new ValidationError('Validation failed', validation.error.errors);
+            throw new ValidationError('Validation failed', validation.error.issues);
           }
 
           const { asset_id, relationship_type, notes } = validation.data;
@@ -1129,7 +1129,7 @@ export class ApiTicketController extends ApiBaseController {
           const body = await req.json();
           const validation = addTicketAgentSchema.safeParse(body);
           if (!validation.success) {
-            throw new ValidationError('Validation failed', validation.error.errors);
+            throw new ValidationError('Validation failed', validation.error.issues);
           }
 
           const agents = await this.ticketService.addTicketAgent(ticketId, validation.data, apiRequest.context!);
@@ -1222,7 +1222,7 @@ export class ApiTicketController extends ApiBaseController {
           const body = await req.json();
           const validation = addTicketWatcherSchema.safeParse(body);
           if (!validation.success) {
-            throw new ValidationError('Validation failed', validation.error.errors);
+            throw new ValidationError('Validation failed', validation.error.issues);
           }
 
           const watchers = await this.ticketService.addWatcher(ticketId, validation.data, apiRequest.context!);
@@ -1254,7 +1254,7 @@ export class ApiTicketController extends ApiBaseController {
           const body = await req.json();
           const validation = updateTicketWatcherSchema.safeParse(body);
           if (!validation.success) {
-            throw new ValidationError('Validation failed', validation.error.errors);
+            throw new ValidationError('Validation failed', validation.error.issues);
           }
 
           const watchers = await this.ticketService.setWatcherActive(ticketId, validation.data, apiRequest.context!);
@@ -1287,7 +1287,7 @@ export class ApiTicketController extends ApiBaseController {
             Object.fromEntries(url.searchParams.entries())
           );
           if (!validation.success) {
-            throw new ValidationError('Validation failed', validation.error.errors);
+            throw new ValidationError('Validation failed', validation.error.issues);
           }
 
           const watchers = await this.ticketService.removeWatcher(
@@ -1323,7 +1323,7 @@ export class ApiTicketController extends ApiBaseController {
           const body = await req.json();
           const validation = assignTicketTeamSchema.safeParse(body);
           if (!validation.success) {
-            throw new ValidationError('Validation failed', validation.error.errors);
+            throw new ValidationError('Validation failed', validation.error.issues);
           }
 
           const ticket = await this.ticketService.assignTeam(ticketId, validation.data, apiRequest.context!);
@@ -1366,7 +1366,7 @@ export class ApiTicketController extends ApiBaseController {
 
           const validation = removeTicketTeamSchema.safeParse(body);
           if (!validation.success) {
-            throw new ValidationError('Validation failed', validation.error.errors);
+            throw new ValidationError('Validation failed', validation.error.issues);
           }
 
           const ticket = await this.ticketService.removeTeam(ticketId, validation.data, apiRequest.context!);
@@ -1681,7 +1681,7 @@ export class ApiTicketController extends ApiBaseController {
             validatedData = createTicketCommentSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }
@@ -1785,7 +1785,7 @@ export class ApiTicketController extends ApiBaseController {
             validatedData = updateTicketCommentSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }
@@ -1874,7 +1874,7 @@ export class ApiTicketController extends ApiBaseController {
             validatedData = updateTicketStatusSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }
@@ -1961,7 +1961,7 @@ export class ApiTicketController extends ApiBaseController {
             validatedData = updateTicketAssignmentSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }
@@ -2103,7 +2103,7 @@ export class ApiTicketController extends ApiBaseController {
             validatedData = createTicketFromAssetSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }
@@ -2276,6 +2276,7 @@ export class ApiTicketController extends ApiBaseController {
             masterTicketId,
             mode: data.mode,
             reopenOnChildReply: data.reopen_on_child_reply,
+            onClosedMaster: data.on_closed_master,
           });
           return createSuccessResponse(result, 200, undefined, apiRequest);
         });

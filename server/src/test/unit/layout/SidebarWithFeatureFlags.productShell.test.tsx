@@ -22,6 +22,7 @@ const getLicenseStatus = vi.fn();
 
 vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: (...args: unknown[]) => useFeatureFlag(...args),
+  useCapability: () => ({ enabled: false, admitted: false, resolved: true }),
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({

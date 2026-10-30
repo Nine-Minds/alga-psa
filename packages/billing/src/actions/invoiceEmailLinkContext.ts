@@ -6,9 +6,12 @@
  */
 
 import logger from '@alga-psa/core/logger';
-import { getPortalDomainStatusForTenant } from '@alga-psa/tenancy/server';
 import { isOfflinePaymentMethod } from '@alga-psa/shared/billingClients/paymentPreferences';
 import { getPaymentService, expireInvoicePaymentLinksForTerminalStatus } from './paymentActions';
+import { buildDurablePaymentUrl, buildPortalInvoiceUrl } from '../lib/payments/invoicePaymentUrls';
+
+// Public API preserved: the builders now live in a worker-safe lib module.
+export { buildDurablePaymentUrl, buildPortalInvoiceUrl };
 
 export interface InvoiceEmailLinkContext {
   paymentUrl?: string;
@@ -61,51 +64,6 @@ export function isInvoiceLinkEligible(invoice: InvoiceLinkEligibilityFields | nu
 }
 
 /**
- * Builds the authenticated client-portal invoices URL for an invoice,
- * preferring an active tenant vanity domain, then the configured public app
- * URLs. Returns null when no valid public base exists (the portal CTA is
- * omitted from the email rather than leaking an internal worker hostname).
- */
-export async function buildPortalInvoiceUrl(tenantId: string, invoiceId: string): Promise<string | null> {
-  let vanityBaseUrl = '';
-  try {
-    const portalDomain = await getPortalDomainStatusForTenant(tenantId);
-    if (portalDomain.status === 'active' && portalDomain.domain) {
-      vanityBaseUrl = `https://${portalDomain.domain}`;
-    }
-  } catch (error) {
-    logger.warn('[billing/invoiceEmailLinkContext] Failed to resolve custom portal domain', {
-      tenantId,
-      error: error instanceof Error ? error.message : String(error),
-    });
-  }
-
-  const baseUrl =
-    vanityBaseUrl ||
-    process.env.NEXT_PUBLIC_BASE_URL ||
-    process.env.NEXTAUTH_URL ||
-    (process.env.HOST ? `https://${process.env.HOST}` : '');
-
-  if (!baseUrl) return null;
-
-  let base: URL;
-  try {
-    base = new URL(baseUrl);
-  } catch {
-    logger.warn('[billing/invoiceEmailLinkContext] Invalid public base URL', { tenantId, baseUrl });
-    return null;
-  }
-  if (base.protocol !== 'http:' && base.protocol !== 'https:') {
-    return null;
-  }
-
-  const url = new URL('/client-portal/billing', base);
-  url.searchParams.set('tab', 'invoices');
-  url.searchParams.set('invoiceId', invoiceId);
-  return url.toString();
-}
-
-/**
  * Retires still-active Checkout sessions when an invoice email is being built
  * for an invoice that already reached a terminal status. The email never
  * carries a payment link for a paid/cancelled invoice; this cleanup additionally
@@ -134,11 +92,14 @@ async function retireLinksForTerminalInvoice(
  * Central link context shared by the direct MSP send action and the scheduled
  * invoice email handler.
  *
- * For an eligible invoice it builds the portal URL first, then requests a
- * Stripe Checkout URL only when a provider is enabled and `paymentLinksInEmails`
- * is true. A disabled/unconfigured provider or a Checkout creation failure
- * yields a portal-only email; the creation failure is retained in
- * `paymentError` for server logging instead of failing delivery.
+ * For an eligible invoice it builds the portal URL first, then, only when a
+ * provider is enabled and `paymentLinksInEmails` is true, a durable signed
+ * `/pay/<token>` URL whose lifetime is the tenant's `paymentLinkExpirationHours`.
+ * No Checkout Session is created here: sessions are minted on click (they only
+ * live 24h), so the email can never carry a dying `session.url`. Eligibility and
+ * provider checks still run. A disabled/unconfigured provider or a token/URL
+ * failure yields a portal-only email; the failure is retained in `paymentError`
+ * for server logging instead of failing delivery.
  */
 export async function getInvoiceEmailLinkContext(
   tenantId: string,
@@ -174,14 +135,18 @@ export async function getInvoiceEmailLinkContext(
 
     if (hasProvider && settings?.paymentLinksInEmails) {
       try {
-        const link = await paymentService.getOrCreatePaymentLink(invoice.invoice_id);
-        if (link?.url) {
-          context.paymentUrl = link.url;
+        const paymentUrl = await buildDurablePaymentUrl(
+          tenantId,
+          invoice.invoice_id,
+          settings.paymentLinkExpirationHours,
+        );
+        if (paymentUrl) {
+          context.paymentUrl = paymentUrl;
         }
       } catch (error) {
         const wrapped = error instanceof Error ? error : new Error(String(error));
         context.paymentError = wrapped;
-        logger.error('[billing/invoiceEmailLinkContext] Failed to create payment link', {
+        logger.error('[billing/invoiceEmailLinkContext] Failed to build durable payment link', {
           tenantId,
           invoiceId: invoice.invoice_id,
           error: wrapped,

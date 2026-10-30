@@ -90,7 +90,8 @@ function createQueryBuilder(rows: Row[]) {
           return subBuilder;
         };
         const addInCheck = (type: 'and' | 'or', column: string, values: any[]) => {
-          const normalized = normalizeColumn(column);
+          // time-entry rows expose the joined owners as ticket_client_id / project_client_id
+          const normalized = normalizeColumn(column.replace(/^tickets\.client_id$/, 'ticket_client_id').replace(/^projects\.client_id$/, 'project_client_id'));
           clauses.push({
             type,
             predicate: (row: Row) => values.includes(row[normalized]),

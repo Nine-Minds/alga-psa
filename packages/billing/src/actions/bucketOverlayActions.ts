@@ -1,5 +1,6 @@
 'use server';
 
+import { assertContractLineHasNoPrepaidBlock } from '../services/prepaidBlockConfigService';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -216,6 +217,7 @@ export const upsertBucketOverlay = withAuth(async (
  *          the pool identity is the successor of the legacy per-service
  *          bucket config_id.
  */
+// LEVERAGE: friction use-server-trx-exports — trx-taking *InTransaction helpers are exported from a 'use server' file (so each is an endpoint); same fix as lib/billing/contractLineMembership.ts — move to a non-server lib module.
 export async function upsertBucketOverlayInTransaction(
   trx: Knex.Transaction,
   tenant: string,
@@ -264,7 +266,9 @@ export async function upsertBucketOverlayInTransaction(
     return member.bucket_id;
   }
 
-  // No pool yet: create a member-scoped single-member 1x pool.
+  // No pool yet: create a member-scoped single-member 1x pool. A Prepaid Block
+  // line carries no bucket pools (plan D1).
+  await assertContractLineHasNoPrepaidBlock(trx, tenant, contractLineId);
   const bucketId = uuidv4();
   await db.table('contract_line_buckets').insert({
     tenant,
@@ -336,6 +340,7 @@ export const deleteBucketOverlay = withAuth(async (
 /**
  * Internal function to delete bucket overlay within a transaction.
  */
+// LEVERAGE: friction use-server-trx-exports — trx-taking *InTransaction helpers are exported from a 'use server' file (so each is an endpoint); same fix as lib/billing/contractLineMembership.ts — move to a non-server lib module.
 export async function deleteBucketOverlayInTransaction(
   trx: Knex.Transaction,
   tenant: string,

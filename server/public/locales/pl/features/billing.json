@@ -67,6 +67,7 @@
     "taxBreakdown": "Rozbicie podatku",
     "manualInvoice": "Faktura ręczna",
     "credits": "Kredyty",
+    "currency": "Waluta",
     "financialArtifactSummary": "Faktura tylko finansowa. Cykliczne okresy usług pojawiają się tylko w cyklicznych wierszach szczegółów.",
     "servicePeriod": "Okres usługi",
     "servicePeriods": "Okresy usług",
@@ -241,7 +242,8 @@
     "contractLineType": {
       "Fixed": "Stała stawka",
       "Hourly": "Godzinowe",
-      "Usage": "Na podstawie zużycia"
+      "Usage": "Na podstawie zużycia",
+      "PrepaidBlock": "Blok przedpłacony"
     },
     "quoteStatus": {
       "draft": "Szkic",
@@ -288,6 +290,13 @@
       "pending": "Faktury oczekujące na zatwierdzenie lub dalsze przetwarzanie",
       "prepayment": "Faktury zaliczkowe lub depozytowe",
       "partially_applied": "Faktury z zastosowanymi częściowymi płatnościami"
+    },
+    "billingPeriod": {
+      "weekly": "tygodniowo",
+      "monthly": "miesięcznie",
+      "quarterly": "kwartalnie",
+      "semi-annually": "półrocznie",
+      "annually": "rocznie"
     }
   },
   "quoteForm": {
@@ -442,7 +451,14 @@
     "hoursLeft": "Pozostało {{hours}} godz.",
     "expires": "Wygasa {{date}}",
     "recentBurn": "Ostatnie wykorzystanie",
-    "timeEntry": "Wpis czasu"
+    "timeEntry": "Wpis czasu",
+    "contractLabel": "Umowa: {{contract}}",
+    "hoursLeftValue": "Pozostało {{hours}} godz. · {{value}}",
+    "validFrom": "Obowiązuje od {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — blok przedpłacony, {{hours}} godz.",
+    "overPrepaidBlock": "{{name}} (ponad blok przedpłacony)"
   },
   "bucketUsage": {
     "contractLine": "Linia umowy z pakietem godzin",
@@ -450,5 +466,20 @@
     "hoursUsed": "Wykorzystane godziny: {{hours}}",
     "hoursTotal": "Łączna liczba godzin: {{hours}}",
     "rolloverHours": "Uwzględnione przeniesione godziny: {{hours}}"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Termin płatności po otrzymaniu",
+      "net14": "Netto 14",
+      "net15": "Netto 15",
+      "net30": "Netto 30",
+      "net7": "Netto 7"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Przelew bankowy",
+      "check": "Sprawdzać",
+      "creditCard": "Karta kredytowa"
+    },
+    "tenantDefault": "Domyślne dla organizacji ({{value}})"
   }
 }

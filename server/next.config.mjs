@@ -282,21 +282,28 @@ const nextConfig = {
       '@alga-psa/opportunities/': '../packages/opportunities/src/',
       '@alga-psa/tenancy': '../packages/tenancy/src',
       '@alga-psa/tenancy/': '../packages/tenancy/src/',
+      '@alga-psa/co-managed': '../packages/co-managed/src',
+      '@alga-psa/co-managed/': '../packages/co-managed/src/',
       '@alga-psa/event-schemas': '../packages/event-schemas/src',
       '@alga-psa/event-schemas/': '../packages/event-schemas/src/',
       // Leaf horizontal packages (resolve to source during local dev)
       '@alga-psa/types': '../packages/types/src',
       '@alga-psa/types/': '../packages/types/src/',
       '@alga-psa/core': '../packages/core/src',
-      // core exports whose name does not mirror src/ (they live in src/lib/) need
-      // an explicit entry: the '@alga-psa/core/' prefix would send them to
-      // src/<name>, and the dist/ fallback is absent wherever packages/ is
-      // mounted from source (e.g. the Teams development browser lane).
+      // Any core export whose source lives under src/lib/ with no same-named
+      // mirror at the src/ root needs an explicit entry: the '@alga-psa/core/'
+      // prefix would send it to src/<name>, and the dist/ fallback is absent
+      // wherever packages/ is mounted from source (e.g. the Teams development
+      // browser lane). nextConfigCoreAliases.contract.test.ts guards this list.
       '@alga-psa/core/rateLimit': '../packages/core/src/lib/rateLimit/index.ts',
       '@alga-psa/core/fileNames': '../packages/core/src/lib/fileNames.ts',
+      '@alga-psa/core/capability': '../packages/core/src/lib/capability.ts',
+      '@alga-psa/core/address': '../packages/core/src/lib/address.ts',
       '@alga-psa/core/': '../packages/core/src/',
       '@alga-psa/validation': '../packages/validation/src',
       '@alga-psa/validation/': '../packages/validation/src/',
+      '@alga-psa/predicates': '../packages/predicates/src',
+      '@alga-psa/predicates/': '../packages/predicates/src/',
       '@alga-psa/formatting': '../packages/formatting/src',
       '@alga-psa/formatting/': '../packages/formatting/src/',
       '@alga-psa/agent-tooling': '../packages/agent-tooling/src',
@@ -507,6 +514,7 @@ const nextConfig = {
     '@alga-psa/email',
     '@alga-psa/teams',
     '@alga-psa/tenancy',
+    '@alga-psa/co-managed',
     '@alga-psa/integrations',
     '@alga-psa/client-portal',
     '@alga-psa/portal-shared',
@@ -582,6 +590,16 @@ const nextConfig = {
         path.resolve(__dirname, '../node_modules'),
       ],
     };
+    // Production builds run from fresh checkouts (CI, the Argo build), where
+    // every file's mtime is new. webpack's default snapshots trust timestamps
+    // alone, so a restored filesystem cache would be invalidated wholesale on
+    // the first build. Check the content hash when the timestamp has moved;
+    // development keeps the cheap timestamp-only default.
+    if (!dev) {
+      const byContent = { timestamp: true, hash: true };
+      config.snapshot = { ...config.snapshot, module: byContent, resolve: byContent,
+        buildDependencies: byContent, resolveBuildDependencies: byContent };
+    }
 
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
@@ -635,6 +653,8 @@ const nextConfig = {
       '@alga-psa/core/': `${prebuiltDirAbs('core')}/`,
       '@alga-psa/validation': prebuiltDirAbs('validation'),
       '@alga-psa/validation/': `${prebuiltDirAbs('validation')}/`,
+      '@alga-psa/predicates': prebuiltDirAbs('predicates'),
+      '@alga-psa/predicates/': `${prebuiltDirAbs('predicates')}/`,
       '@alga-psa/formatting': prebuiltDirAbs('formatting'),
       '@alga-psa/formatting/': `${prebuiltDirAbs('formatting')}/`,
       '@alga-psa/event-schemas': prebuiltDirAbs('event-schemas'),
@@ -1356,6 +1376,8 @@ const nextConfig = {
     'bcryptjs',
     'speakeasy',
     'qrcode',
+    // Barcode node (label rendering): server-only; loaded via bwip-js/node from barcode/encode.server.ts.
+    'bwip-js',
     'pdf-lib',
     'pdf2pic',
     'marked',
@@ -1367,6 +1389,9 @@ const nextConfig = {
     // out of the Turbopack server bundle that every static-gen worker loads.
     'nodemailer',
     'imapflow',
+    // Reached from the ticket email-html route (archived .eml → display HTML);
+    // a CJS Node parser with no business in a bundle.
+    'mailparser',
     'express',
     'fluent-ffmpeg',
     'tar',

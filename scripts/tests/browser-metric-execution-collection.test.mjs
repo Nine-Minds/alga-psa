@@ -113,13 +113,21 @@ for (const defect of ['missing-marker', 'skipped-marker', 'failed-job', 'recorde
   });
 }
 
-test('the browser matrix emits non-selection evidence only for the explicit false filter result', () => {
+test('the per-edition evidence job emits non-selection evidence only for the explicit false filter result', () => {
   const workflow = yaml.load(readFileSync('.github/workflows/e2e-fresh-install-tests.yaml', 'utf8'));
-  const job = Object.values(workflow.jobs).find(job => job.name === 'Production browser (${{ matrix.edition }})');
+  // The collector matches "browser / Production browser (<edition>)" and reads
+  // the marker and the recorder off that one job.
+  const job = workflow.jobs['browser-evidence'];
+  assert.equal(job.name, 'Production browser (${{ matrix.edition }})');
   const markers = job.steps.filter(step => step.name === 'Record browser tests not selected');
   assert.equal(markers.length, 1);
   assert.equal(markers[0].if, "needs.changes.outputs.run_tests == 'false'");
-  assert.ok(job.steps.findIndex(step => step.name === 'Check build results') < job.steps.indexOf(markers[0]));
+  const recorders = job.steps.filter(step => step.name === 'Record browser journey readiness');
+  assert.equal(recorders.length, 1);
+  assert.ok(job.steps.indexOf(markers[0]) < job.steps.indexOf(recorders[0]));
+  for (const other of Object.values(workflow.jobs).filter(candidate => candidate !== job)) {
+    assert.equal((other.steps ?? []).filter(step => ['Record browser tests not selected', 'Record browser journey readiness'].includes(step.name)).length, 0);
+  }
 });
 
 test('collects all current-attempt job pages before matching late browser jobs', async () => {
@@ -540,4 +548,38 @@ test('historical run uses immutable run head while associated PR metadata change
 test('historical pull request run permits absent mutable PR association', async () => {
   const { state, collect } = fixture(); state.run.pull_requests = [];
   assert.equal((await collect()).collectionMetadata.revisionValidation, 'merge-run-head-parent-verified');
+});
+
+test('a pull request from a fork marks its executions as lacking export credentials', async () => {
+  const { state, collect } = fixture();
+  state.run.conclusion = 'success';
+  state.run.head_repository = { full_name: 'Contributor/alga-psa' };
+  for (const job of state.jobs) job.steps = [{ name: 'Record browser journey readiness', status: 'completed', conclusion: 'success' }];
+  state.values.values = [BROWSER_HEADER];
+  const input = await collect();
+  assert.ok(input.expectedExecutions.every(entry => entry.credentialsAvailable === false && entry.credentialsEvidence === 'fork-pull-request'));
+  const result = reconcileBrowserMetricExecutions(input);
+  assert.equal(result.status, 'not-required');
+  assert.ok(result.records.every(record => record.exportStatus === 'credentials-unavailable'));
+});
+
+for (const [name, head_repository, event] of [
+  ['same-repository pull request', { full_name: 'nine-minds/ALGA-PSA' }, 'pull_request'],
+  ['absent head repository', undefined, 'pull_request'],
+  ['fork-looking push', { full_name: 'Contributor/alga-psa' }, 'workflow_dispatch'],
+]) test(`${name} keeps the strict missing-export verdict`, async () => {
+  const { state, collect } = fixture();
+  state.run.conclusion = 'success'; state.run.head_repository = head_repository;
+  if (event !== 'pull_request') { state.run.event = event; state.run.head_sha = revision; state.jobs.forEach(job => { job.head_sha = revision; }); }
+  for (const job of state.jobs) job.steps = [{ name: 'Record browser journey readiness', status: 'completed', conclusion: 'success' }];
+  state.values.values = [BROWSER_HEADER];
+  const input = await collect();
+  assert.ok(input.expectedExecutions.every(entry => entry.credentialsAvailable === undefined));
+  assert.equal(reconcileBrowserMetricExecutions(input).status, 'incomplete');
+});
+
+test('a malformed head repository fails closed', async () => {
+  const { state, collect } = fixture();
+  state.run.head_repository = { full_name: 42 };
+  await assert.rejects(collect(), error => error.diagnostic.code === 'invalid-run-head-repository');
 });

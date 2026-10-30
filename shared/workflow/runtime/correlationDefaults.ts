@@ -12,6 +12,16 @@
 
 export const DEFAULT_WORKFLOW_EVENT_CORRELATION_PATHS: Record<string, string[]> = {
   '*': ['ticketId', 'clientId', 'invoiceId', 'projectId', 'paymentId'],
+  QUOTE_SENT: ['quoteId', 'clientId'],
+  QUOTE_VIEWED: ['quoteId', 'clientId'],
+  QUOTE_APPROVED: ['quoteId', 'clientId'],
+  QUOTE_ACCEPTED: ['quoteId', 'clientId'],
+  QUOTE_REJECTED: ['quoteId', 'clientId'],
+  QUOTE_EXPIRED: ['quoteId', 'clientId'],
+  QUOTE_CONVERTED: ['quoteId', 'clientId'],
+  QUOTE_CONVERSION_REVERTED: ['quoteId', 'clientId'],
+  QUOTE_SUPERSEDED: ['quoteId', 'clientId'],
+  QUOTE_CANCELLED: ['quoteId', 'clientId'],
   TICKET_CREATED: ['ticketId'],
   TICKET_UPDATED: ['ticketId'],
   TICKET_CLOSED: ['ticketId'],

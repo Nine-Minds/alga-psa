@@ -132,12 +132,15 @@
       "billable": "Billable",
       "notes": "Notes",
       "deleteTimeEntry": "Delete Time Entry",
-      "unsavedChanges": "Unsaved changes"
+      "unsavedChanges": "Unsaved changes",
+      "contractLine": "Contract line"
     },
     "placeholders": {
       "selectService": "Select a service",
+      "searchServices": "Search services...",
       "selectDate": "Select date",
-      "addNotes": "Add notes"
+      "addNotes": "Add notes",
+      "selectContractLine": "Select a contract line"
     },
     "validation": {
       "startBeforeEnd": "Start time must be earlier than end time",
@@ -155,6 +158,10 @@
       "task": "Default from task",
       "phase": "Default from phase",
       "project": "Default from project"
+    },
+    "options": {
+      "resolveContractLineLater": "No line - resolve later",
+      "noServicesFound": "No services found"
     }
   },
   "workItemPicker": {
@@ -401,7 +408,7 @@
     "noContract": "No contract line found for this service. Time will be routed to the system-managed default contract.",
     "contract": "Contract: {{name}}",
     "defaultContract": "System-managed default contract",
-    "multipleLines": "Multiple contract lines available - using default selection"
+    "multipleEligible": "Multiple contract lines are eligible for this date. Select a contract line to persist assignment."
   },
   "billableLegend": {
     "title": "Billable Legend",

@@ -132,12 +132,15 @@
       "billable": "Debiterbar",
       "notes": "Anteckningar",
       "deleteTimeEntry": "Radera tidpost",
-      "unsavedChanges": "Osparade ändringar"
+      "unsavedChanges": "Osparade ändringar",
+      "contractLine": "Avtalsrad"
     },
     "placeholders": {
       "selectService": "Välj en tjänst",
+      "searchServices": "Sök tjänster…",
       "selectDate": "Välj datum",
-      "addNotes": "Lägg till anteckningar"
+      "addNotes": "Lägg till anteckningar",
+      "selectContractLine": "Välj en avtalsrad"
     },
     "validation": {
       "startBeforeEnd": "Starttiden måste vara före sluttiden",
@@ -155,6 +158,10 @@
       "task": "Standard från uppgift",
       "phase": "Standard från fas",
       "project": "Standard från projekt"
+    },
+    "options": {
+      "resolveContractLineLater": "Ingen rad - lös senare",
+      "noServicesFound": "Inga tjänster hittades"
     }
   },
   "workItemPicker": {
@@ -401,7 +408,7 @@
     "noContract": "Ingen avtalsrad hittades för den här tjänsten. Tiden kommer att kopplas till standardavtalet som hanteras av systemet.",
     "contract": "Avtal: {{name}}",
     "defaultContract": "Standardavtal som hanteras av systemet",
-    "multipleLines": "Flera avtalsrader är tillgängliga – standardvalet används"
+    "multipleEligible": "Flera avtalsrader är giltiga för detta datum. Välj en avtalsrad för att spara tilldelningen."
   },
   "billableLegend": {
     "title": "Färgförklaring för debiterbar tid",

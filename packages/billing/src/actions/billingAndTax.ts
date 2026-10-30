@@ -4,7 +4,7 @@ import { Knex } from 'knex';
 import { resolveEffectiveBillingTiming } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
-import { ISO8601String } from '@alga-psa/types';
+import { ISO8601String, type ILateHourlyTimeNotice } from '@alga-psa/types';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import { whereLiveClientCadenceRecurringLine } from '@alga-psa/shared/billingClients/liveClientCadenceRecurringLine';
 import { paymentTermDays } from '@alga-psa/shared/billingClients/paymentPreferences';
@@ -15,6 +15,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import {
     IBillingCharge,
     IBucketCharge,
+    IPrepaidBlockCharge,
     IUsageBasedCharge,
     ITimeBasedCharge,
     IFixedPriceCharge,
@@ -25,10 +26,13 @@ import {
     IRecurringDueWorkMaterializationGap,
     IRecurringDueWorkPaginatedResponse,
     IRecurringDueWorkRow,
+    IRecurringScopedDuePeriodSelection,
     RecurringDueWorkChargeType,
     RECURRING_RANGE_SEMANTICS,
 } from '@alga-psa/types';
 import { DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES } from '@alga-psa/types';
+import { fetchPrepaidBlockIssuanceDueWorkRows } from '../lib/prepaidBlockDueWork';
+import { resolvePrepaidBlockBusinessDate } from '../lib/prepaidBlockDates';
 import { TaxService } from '../services/taxService';
 import { fetchStrandedArrearsOnlyLineGaps } from './arrearsOnlyLineGaps';
 import { ITaxCalculationResult } from '@alga-psa/types';
@@ -54,9 +58,11 @@ import {
     isClientCadenceLineExpectedInWindow,
 } from '@alga-psa/shared/billingClients/clientCadenceScheduleRegeneration';
 import { BillingEngine, createFixedChargePreviewSession } from '../lib/billing/billingEngine';
+import { findLateApprovedHourlyTime } from '../lib/billing/lateHourlyTime';
 import {
     detectRecurringApprovalBlockers,
     detectRecurringApprovalWarnings,
+    detectStalePendingPrepaidBlockWarnings,
     formatApprovalBlockedReason,
     type RecurringApprovalBlockerCounts,
     type RecurringApprovalWarnings,
@@ -127,6 +133,7 @@ interface PersistedRecurringDueWorkDbRow {
     contract_line_id?: string | null;
     contract_line_name?: string | null;
     contract_line_type?: string | null;
+    charge_family?: string | null;
     is_system_managed_default?: boolean | null;
     client_contract_id?: string | null;
     po_required?: boolean | null;
@@ -718,6 +725,9 @@ function mapPersistedRecurringDueWorkDbRowsToRows(
                 contractLineId: row.contract_line_id ?? null,
                 windowStart: invoiceWindowStart,
                 windowEnd: invoiceWindowEnd,
+                // The advance block fee shares its window with the previous period's
+                // arrears hourly row of the same line; the stream keeps them distinct.
+                chargeStream: row.charge_family === 'prepaid_block' ? 'prepaid_block' : null,
             })
             : buildClientCadenceDueSelectionInput({
                 clientId: row.client_id,
@@ -755,7 +765,11 @@ function mapPersistedRecurringDueWorkDbRowsToRows(
             attribution,
         });
 
-        const chargeType = normalizeChargeType(row.contract_line_type);
+        // A cadence prepaid-block row (charge_family='prepaid_block') belongs to a line of any
+        // type, so the line type would mislabel it; the family is what it actually bills.
+        const chargeType = row.charge_family === 'prepaid_block'
+            ? 'PrepaidBlock'
+            : normalizeChargeType(row.contract_line_type);
         const rowWithChargeType = (chargeType
             ? { ...dueWorkRow, chargeType }
             : dueWorkRow) as IRecurringDueWorkRow;
@@ -781,6 +795,7 @@ function normalizeChargeType(
         case 'Hourly':
         case 'Usage':
         case 'Bucket':
+        case 'PrepaidBlock':
             return raw;
         default:
             return null;
@@ -943,6 +958,10 @@ async function filterBillingPeriodsWithPotentialUnresolvedWork(
             .where('time_entries.billable_duration', '>', 0)
             .where('time_entries.start_time', '>=', earliestStart)
             .where('time_entries.end_time', '<', latestEnd)
+            // Scope to the listed clients, as the usage read below does, instead of the whole tenant.
+            .where((scope) => scope
+                .whereIn('tickets.client_id', clientIds)
+                .orWhereIn('projects.client_id', clientIds))
             .select(
                 'time_entries.entry_id',
                 'time_entries.start_time',
@@ -1221,6 +1240,101 @@ async function attachFixedContractLineAmountsToRows(
     );
 }
 
+/**
+ * A cadence Prepaid Block bills its configured block price once per service
+ * period, so the listing shows it as a known amount (plan D8) instead of
+ * "Calculated at generation". Proration scales the price by the period's
+ * coverage ratio, which the listing does not carry; so a proration-enabled line
+ * shows the amount only when the contract assignment covers the whole service
+ * period (ratio 1) and otherwise stays pending. Best-effort like the fixed path.
+ */
+async function attachCadencePrepaidBlockAmountsToRows(
+    knex: Knex,
+    tenant: string,
+    rows: IRecurringDueWorkRow[],
+    dbRows: PersistedRecurringDueWorkDbRow[],
+): Promise<void> {
+    const dbRowByRecordId = new Map(
+        dbRows.filter((dbRow) => dbRow.record_id).map((dbRow) => [dbRow.record_id, dbRow] as const),
+    );
+    const candidates = rows.flatMap((row) => {
+        const dbRow = row.recordId ? dbRowByRecordId.get(row.recordId) : undefined;
+        const lineId = row.contractLineId ?? dbRow?.contract_line_id;
+        if (
+            (row as { chargeType?: string | null }).chargeType !== 'PrepaidBlock'
+            || !dbRow
+            || !lineId
+            || dbRow.charge_family !== 'prepaid_block'
+            || typeof (row as { amountCents?: number | null }).amountCents === 'number'
+        ) {
+            return [];
+        }
+        return [{ row, dbRow, lineId: String(lineId) }];
+    });
+    if (candidates.length === 0) {
+        return;
+    }
+
+    try {
+        const lineIds = Array.from(new Set(candidates.map((candidate) => candidate.lineId)));
+        const configs = await knex('contract_line_prepaid_blocks as pb')
+            .join('contract_lines as cl', function () {
+                this.on('cl.tenant', '=', 'pb.tenant').andOn('cl.contract_line_id', '=', 'pb.contract_line_id');
+            })
+            .where('pb.tenant', tenant)
+            .whereIn('pb.contract_line_id', lineIds)
+            .where('pb.issue_mode', 'cadence')
+            .select('pb.contract_line_id', 'pb.block_price', 'cl.enable_proration') as Array<{
+                contract_line_id: string;
+                block_price: string | number | null;
+                enable_proration: boolean | null;
+            }>;
+        const configByLineId = new Map(configs.map((config) => [String(config.contract_line_id), config] as const));
+
+        const prorated = candidates.filter((candidate) => configByLineId.get(candidate.lineId)?.enable_proration);
+        const contractIds = Array.from(
+            new Set(prorated.map((candidate) => candidate.dbRow.contract_id).filter((id): id is string => Boolean(id))),
+        );
+        const assignments = contractIds.length === 0
+            ? []
+            : await knex('client_contracts')
+                .where({ tenant })
+                .whereIn('contract_id', contractIds)
+                .select('contract_id', 'client_id', 'start_date', 'end_date') as Array<{
+                    contract_id: string;
+                    client_id: string;
+                    start_date: string | Date | null;
+                    end_date: string | Date | null;
+                }>;
+
+        for (const { row, dbRow, lineId } of candidates) {
+            const config = configByLineId.get(lineId);
+            const price = config ? Number(config.block_price) : NaN;
+            if (!config || !Number.isFinite(price)) {
+                continue;
+            }
+            if (config.enable_proration) {
+                const periodStart = normalizeDateOnly(dbRow.service_period_start);
+                const periodEnd = normalizeDateOnly(dbRow.service_period_end);
+                const coversWholePeriod = assignments.some((assignment) => {
+                    if (assignment.contract_id !== dbRow.contract_id || assignment.client_id !== dbRow.client_id) {
+                        return false;
+                    }
+                    const start = assignment.start_date ? normalizeDateOnly(assignment.start_date as ISO8601String) : null;
+                    const end = assignment.end_date ? normalizeDateOnly(assignment.end_date as ISO8601String) : null;
+                    return (!start || start <= (periodStart ?? '')) && (!end || end >= (periodEnd ?? ''));
+                });
+                if (!coversWholePeriod) {
+                    continue;
+                }
+            }
+            (row as { amountCents?: number | null }).amountCents = price;
+        }
+    } catch (error) {
+        console.warn('[RecurringDueWork] Cadence prepaid block amount lookup failed.', error);
+    }
+}
+
 function buildRecurringDueWorkInvoiceCandidates(
     rows: IRecurringDueWorkRow[],
     metadataByRecordId: Map<string, RecurringDueWorkGroupingMetadata> = new Map(),
@@ -1235,8 +1349,7 @@ function buildRecurringDueWorkInvoiceCandidates(
         rows.map((row) => [row.executionIdentityKey, row] as const),
     );
 
-    const grouped = groupDueServicePeriodsForInvoiceCandidates(
-        rows.map((row) => ({
+    const toScopedSelection = (row: IRecurringDueWorkRow): IRecurringScopedDuePeriodSelection => ({
             clientId: row.clientId,
             ...(row.recordId ? metadataByRecordId.get(row.recordId) : undefined),
             servicePeriod: {
@@ -1279,8 +1392,26 @@ function buildRecurringDueWorkInvoiceCandidates(
                 (row.recordId ? metadataByRecordId.get(row.recordId)?.exportShapeKey : null)
                 ?? row.exportShapeKey
                 ?? null,
-        })),
-    );
+        });
+
+    // A not-yet-due Prepaid Block member must not hold back the ready members of
+    // its window (e.g. an in-advance Fixed fee): group it into its own candidate,
+    // which reads as "Not yet due" with the block's due date. Other ineligible
+    // members still block their group, unchanged.
+    const isEarlyPrepaidBlockRow = (row: IRecurringDueWorkRow) =>
+        row.chargeType === 'PrepaidBlock' && row.isEarly === true && Boolean(row.blockDueDate);
+    const withKeySuffix = (suffix: string) => (group: ReturnType<typeof groupDueServicePeriodsForInvoiceCandidates>[number]) => ({
+        ...group,
+        groupKey: `${group.groupKey}${suffix}`,
+    });
+    const grouped = [
+        ...groupDueServicePeriodsForInvoiceCandidates(
+            rows.filter((row) => !isEarlyPrepaidBlockRow(row)).map(toScopedSelection),
+        ).map(withKeySuffix('')),
+        ...groupDueServicePeriodsForInvoiceCandidates(
+            rows.filter(isEarlyPrepaidBlockRow).map(toScopedSelection),
+        ).map(withKeySuffix(':prepaid-block-not-yet-due')),
+    ];
 
     const candidates = grouped
         .map((candidate): IRecurringDueWorkInvoiceCandidate | null => {
@@ -1331,8 +1462,14 @@ function buildRecurringDueWorkInvoiceCandidates(
             const everyMemberEarly = members.length > 0 && members.every((member) => member.isEarly === true);
             const anyAttributionIncomplete = members.some((member) => member.attribution?.isComplete === false);
             const notYetDue = !canGenerate && everyMemberEarly && !anyAttributionIncomplete;
+            // A Prepaid Block opens on its issuance due date, which can fall well
+            // after its invoice window starts; other rows open with their window.
             const availableOnDate = notYetDue
-                ? (members.map((member) => member.invoiceWindowStart).sort()[0] ?? null)
+                ? (members
+                    .map((member) => (member.chargeType === 'PrepaidBlock'
+                        ? member.blockDueDate
+                        : undefined) ?? member.invoiceWindowStart)
+                    .sort()[0] ?? null)
                 : null;
             // Month-end early close: every member is a calendar-month arrears
             // period whose final calendar day is TODAY on the account's effective
@@ -1655,18 +1792,24 @@ export async function isBucketCharge(charge: IBillingCharge): Promise<boolean> {
     return charge.type === 'bucket';
 }
 
+export async function isPrepaidBlockCharge(charge: IBillingCharge): Promise<boolean> {
+    return charge.type === 'prepaid_block';
+}
+
 // Charge Helpers
 export async function getChargeQuantity(charge: IBillingCharge): Promise<number> {
     // Need to await the results of the async type guards
     if (await isBucketCharge(charge)) return (charge as IBucketCharge).overageHours;
     if (await isFixedPriceCharge(charge) || await isUsageBasedCharge(charge)) return (charge as IFixedPriceCharge | IUsageBasedCharge).quantity ?? 0; // Handle potential undefined quantity
     if (await isTimeBasedCharge(charge)) return (charge as ITimeBasedCharge).duration ?? 0; // Handle potential undefined duration
+    if (await isPrepaidBlockCharge(charge)) return (charge as IPrepaidBlockCharge).quantity;
     return 1;
 }
 
 export async function getChargeUnitPrice(charge: IBillingCharge): Promise<number> {
     // Need to await the result of the async type guard
     if (await isBucketCharge(charge)) return (charge as IBucketCharge).overageRate;
+    if (await isPrepaidBlockCharge(charge)) return (charge as IPrepaidBlockCharge).rate;
     return charge.rate;
 }
 
@@ -1963,8 +2106,21 @@ export const getAvailableRecurringDueWork = withAuth(async (
             tenant,
             clientMetadataById,
         );
+        // Scheduled Prepaid Block issuances: dated one-off in-advance rows that
+        // share the contract's invoice window (and grouping scope) with its Fixed rows.
+        // Readiness uses the tenant business date (not the user's range end), the same
+        // source as the issuance due dates and the billing engine's not-due-until guard.
+        const prepaidBlockRows = await fetchPrepaidBlockIssuanceDueWorkRows(knex, {
+            tenant,
+            asOf: await resolvePrepaidBlockBusinessDate(knex, tenant) as ISO8601String,
+            clientTaxSourceById: new Map(
+                Array.from(clientMetadataById.entries()).map(([clientId, meta]) => [clientId, meta.taxSource] as const),
+            ),
+            options,
+            groupingMetadataByRecordId,
+        });
         const invoiceCandidates = buildRecurringDueWorkInvoiceCandidates(
-            [...readyPersistedRows, ...unresolvedNonContractRows],
+            [...readyPersistedRows, ...unresolvedNonContractRows, ...prepaidBlockRows],
             groupingMetadataByRecordId,
             asOf,
             monthEndCloseEligibilityDate,
@@ -1976,7 +2132,7 @@ export const getAvailableRecurringDueWork = withAuth(async (
         const approvalBlockedEntryCountsByExecutionIdentityKey = await detectRecurringApprovalBlockers({
             knex,
             tenant,
-            rows: [...readyPersistedRows, ...unresolvedNonContractRows].map((row) => ({
+            rows: [...readyPersistedRows, ...unresolvedNonContractRows, ...prepaidBlockRows].map((row) => ({
                 executionIdentityKey: row.executionIdentityKey,
                 clientId: row.clientId,
                 servicePeriodStart: row.servicePeriodStart,
@@ -1985,18 +2141,28 @@ export const getAvailableRecurringDueWork = withAuth(async (
                 scheduleKey: row.scheduleKey ?? null,
             })),
         });
-        const approvalWarningsByExecutionIdentityKey = await detectRecurringApprovalWarnings({
+        const approvalWarningRows = [...readyPersistedRows, ...unresolvedNonContractRows, ...prepaidBlockRows].map((row) => ({
+                executionIdentityKey: row.executionIdentityKey,
+                clientId: row.clientId,
+                servicePeriodStart: row.servicePeriodStart,
+                servicePeriodEnd: row.servicePeriodEnd,
+                contractLineId: row.contractLineId ?? null,
+                scheduleKey: row.scheduleKey ?? null,
+            }));
+        const projectApprovalWarnings = await detectRecurringApprovalWarnings({
             knex,
             tenant,
-            rows: [...readyPersistedRows, ...unresolvedNonContractRows].map((row) => ({
-                executionIdentityKey: row.executionIdentityKey,
-                clientId: row.clientId,
-                servicePeriodStart: row.servicePeriodStart,
-                servicePeriodEnd: row.servicePeriodEnd,
-                contractLineId: row.contractLineId ?? null,
-                scheduleKey: row.scheduleKey ?? null,
-            })),
+            rows: approvalWarningRows,
         });
+        const stalePrepaidBlockWarnings = await detectStalePendingPrepaidBlockWarnings({
+            knex,
+            tenant,
+            rows: approvalWarningRows,
+        });
+        const approvalWarningsByExecutionIdentityKey = new Map(projectApprovalWarnings);
+        for (const [key, extra] of stalePrepaidBlockWarnings) {
+            approvalWarningsByExecutionIdentityKey.set(key, [...(approvalWarningsByExecutionIdentityKey.get(key) ?? []), ...extra]);
+        }
         const approvalBlockedInvoiceCandidates = applyRecurringApprovalBlocksToInvoiceCandidates(
             blockedInvoiceCandidates,
             approvalBlockedEntryCountsByExecutionIdentityKey,
@@ -2022,6 +2188,12 @@ export const getAvailableRecurringDueWork = withAuth(async (
         // pre-pagination rows are no longer the ones we return. Nothing between
         // candidate building and here reads amountCents.
         await attachFixedContractLineAmountsToRows(
+            visibleInvoiceCandidates.flatMap((candidate) => candidate.members),
+            persistedDbRows,
+        );
+        await attachCadencePrepaidBlockAmountsToRows(
+            knex,
+            tenant,
             visibleInvoiceCandidates.flatMap((candidate) => candidate.members),
             persistedDbRows,
         );
@@ -2258,4 +2430,20 @@ export const getPaymentTermsList = withAuth(async (
     // Returning empty for now to avoid breaking UI if DB call fails
     return [];
   }
+});
+
+/**
+ * Approved hourly time dated inside a service period an issued invoice already
+ * closed: what will bill on the next invoice, and what is outside the lookback.
+ */
+export const getLateApprovedHourlyTime = withAuth(async (
+    user,
+    { tenant },
+    options: { clientId?: string } = {},
+): Promise<ILateHourlyTimeNotice[] | ActionPermissionError> => {
+    if (!await hasPermission(user as any, 'billing', 'read')) {
+        return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
+    }
+    const { knex } = await createTenantKnex();
+    return findLateApprovedHourlyTime(knex, tenant, { clientId: options?.clientId });
 });

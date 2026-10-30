@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PartialBlock } from '@blocknote/core';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
-import { Pencil, Trash, Lock, CheckCircle, Check, Cog, Copy, CornerUpLeft, MessageCircle } from 'lucide-react';
+import { Pencil, Trash, Lock, CheckCircle, Check, Cog, Copy, CornerUpLeft, MessageCircle, SmilePlus } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import SystemAvatar from '@alga-psa/ui/components/SystemAvatar';
@@ -13,12 +13,18 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
 import { ClampedContent } from '@alga-psa/ui/components/ClampedContent';
+import { useInboundEmailView } from '@alga-psa/ui/components/EmailHtmlViewer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
-import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { runTicketRefresh, useTicketDataSource } from './TicketDataSourceContext';
 import { ReactionDisplay } from '@alga-psa/ui/components/ReactionDisplay';
+import { EmojiPickerPopover } from '@alga-psa/ui/components/EmojiPickerPopover';
 import type { IAggregatedReaction } from '@alga-psa/types';
 import { getCommentResponseSource } from '../../lib/responseSource';
+import {
+  originalEmailSourceForComment,
+  originalEmailToggleLabels,
+} from '../../lib/inboundEmailOriginalView';
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { resolveCommentAuthor } from '../../lib/commentAuthorResolution';
 import ResponseSourceBadge from '../ResponseSourceBadge';
@@ -30,7 +36,6 @@ import { extractTicketRichTextPlainText } from '../../lib/ticketRichText';
 import { extractTicketRichTextHtml } from '../../lib/ticketRichTextHtml';
 import { CommentMetadataDebugModal } from './CommentMetadataDebugModal';
 import { isNonEmptyCommentMetadata } from './commentMetadataDebug';
-import { cancelScheduledComment, rescheduleScheduledComment } from '../../actions/comment-actions/commentActions';
 import { dateToWallTimeString, getUserTimeZone, zonedWallTimeToUtc } from '@alga-psa/core';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
@@ -183,6 +188,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
 }) => {
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
+  const { t: tCommon } = useTranslation('common');
+  const dataSource = useTicketDataSource();
+  const { cancelScheduledComment, rescheduleScheduledComment } = dataSource.comments;
+  const { searchUsersForMentions } = dataSource.viewer;
   // toLocaleString() follows the browser; comment timestamps belong to the app locale.
   const { formatDate } = useFormatters();
   const [metadataDebugOpen, setMetadataDebugOpen] = useState(false);
@@ -260,6 +269,11 @@ const CommentItem: React.FC<CommentItemProps> = ({
     () => getCommentResponseSource(conversation),
     [conversation]
   );
+  // Inbound-email comments can also be read as the message the sender wrote.
+  const originalEmailSrc = useMemo(
+    () => originalEmailSourceForComment(ticketId, conversation),
+    [ticketId, conversation]
+  );
   const authorEmail = getAuthorEmail();
 
   // One-off Cc/Bcc for this single comment. Bcc is MSP-only: the client-portal
@@ -278,15 +292,27 @@ const CommentItem: React.FC<CommentItemProps> = ({
     return lines;
   }, [conversation.metadata, t]);
   const isDeleted = Boolean(conversation.deleted_at);
+  const isEditingThisComment = isEditing && currentComment?.comment_id === conversation.comment_id;
+
+  // The switcher joins the badge row beside the "via inbound email" badge that
+  // explains it, instead of spending a line of its own above every message. A
+  // deleted or open-in-the-editor comment has no body to read as mail.
+  const emailView = useInboundEmailView({
+    id: `${commentId}-original-email`,
+    src: isDeleted || isEditingThisComment ? null : originalEmailSrc,
+    labels: originalEmailToggleLabels(t),
+  });
 
   // Only allow users to edit their own comments
   const canEdit = useMemo(() => {
     if (isDeleted) return false;
     if (conversation.is_system_generated) return false;
+    // A co-managed collaborator's comment is owned by the sender's workspace; no local user may edit it.
+    if (resolvedAuthor.source === 'collaborator') return false;
     // No handler means the host is showing the thread read-only.
     if (!onEdit || !onDelete) return false;
-    return currentUserId === conversation.user_id;
-  }, [conversation.user_id, currentUserId, isDeleted, onEdit, onDelete]);
+    return Boolean(currentUserId) && currentUserId === conversation.user_id;
+  }, [conversation.user_id, resolvedAuthor.source, currentUserId, isDeleted, onEdit, onDelete]);
 
   const plainTextForCopy = useMemo(
     () => extractTicketRichTextPlainText(conversation.note),
@@ -326,6 +352,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
         : t('conversation.copyCommentAriaLabel', 'Copy comment text');
 
   const handleSave = () => {
+    if (!canEdit) return;
     const updates: Partial<IComment> = {
       note: JSON.stringify(editedContent),
       is_internal: isInternalToggle,
@@ -340,6 +367,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
     onContentChange(blocks);
   };
   const handleReschedule = async () => {
+    if (!canEdit) return;
     const timeZone = conversation.scheduled_publish_tz || getUserTimeZone();
     let date: Date;
     try {
@@ -351,16 +379,17 @@ const CommentItem: React.FC<CommentItemProps> = ({
       return;
     }
     setIsScheduleMutating(true);
-    try { await rescheduleScheduledComment(commentId, date.toISOString(), timeZone); window.location.reload(); } finally { setIsScheduleMutating(false); }
+    try { await rescheduleScheduledComment(commentId, date.toISOString(), timeZone); runTicketRefresh(dataSource, 'reload'); } finally { setIsScheduleMutating(false); }
   };
   const handleCancelSchedule = async () => {
+    if (!canEdit) return;
     if (!window.confirm(t('conversation.cancelScheduledCommentConfirm', 'Cancel this scheduled comment?'))) return;
     setIsScheduleMutating(true);
-    try { await cancelScheduledComment(commentId); window.location.reload(); } finally { setIsScheduleMutating(false); }
+    try { await cancelScheduledComment(commentId); runTicketRefresh(dataSource, 'reload'); } finally { setIsScheduleMutating(false); }
   };
 
   const editorContent = useMemo(() => {
-    if (!currentComment || !isEditing) return null;
+    if (!currentComment || !isEditing || !canEdit) return null;
 
     return (
       <div className="min-w-0 max-w-full">
@@ -420,6 +449,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   }, [
     currentComment,
     isEditing,
+    canEdit,
     commentId,
     ticketId,
     editedContent,
@@ -436,7 +466,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   // NOTE: Do NOT depend on currentComment values - that would reload unsaved edits after cancel.
   // We intentionally only use conversation values (the persisted values from the database).
   useEffect(() => {
-    if (isEditing && currentComment?.comment_id === conversation.comment_id) {
+    if (canEdit && isEditing && currentComment?.comment_id === conversation.comment_id) {
       // Reset toggles to persisted values
       setIsInternalToggle(conversation.is_internal ?? false);
       setIsResolutionToggle(conversation.is_resolution ?? false);
@@ -445,7 +475,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
         parseCommentNoteContent(conversation.note || '', conversation.comment_id, 'edit')
       );
     }
-  }, [isEditing, currentComment?.comment_id, conversation.comment_id, conversation.note, conversation.is_internal, conversation.is_resolution]);
+  }, [canEdit, isEditing, currentComment?.comment_id, conversation.comment_id, conversation.note, conversation.is_internal, conversation.is_resolution]);
 
   useEffect(() => {
     if (!conversation.comment_id || typeof window === 'undefined') {
@@ -484,11 +514,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
   return (
     <div
       {...withDataAutomationId({ id: commentId })}
-      className={`group/comment w-full max-w-full min-w-0 rounded-lg border ${
+      className={`group/comment w-full max-w-full min-w-0 ${
+        // Compact (timeline) entries are a left accent rule, not a boxed card.
+        isCompact ? 'border-l-2 rounded-r-md pl-3 pr-2 py-1.5 hover:bg-[rgb(var(--color-border-50))]' : 'rounded-lg border bg-white dark:bg-[rgb(var(--color-card))] p-2 mb-2 shadow-sm'
+      } ${
         accentBorderClassName ??
         'border-gray-200 dark:border-[rgb(var(--color-border-200))] hover:border-gray-300 dark:hover:border-[rgb(var(--color-border-300))]'
-      } bg-white dark:bg-[rgb(var(--color-card))] ${
-        isCompact ? 'p-2.5' : 'p-2 mb-2 shadow-sm'
       } ${
         isSearchHighlighted ? 'search-highlight ring-2 ring-yellow-400 bg-yellow-50' : ''
       }`}
@@ -531,7 +562,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
             <UserAvatar
               {...withDataAutomationId({ id: `${commentId}-avatar` })}
               userId={resolvedAuthor.userId || ''}
-              userName={resolvedAuthor.displayName}
+              userName={resolvedAuthor.avatarName ?? resolvedAuthor.displayName}
               avatarUrl={resolvedAuthor.avatarUrl}
               size={isCompact ? 'sm' : 'md'}
             />
@@ -540,8 +571,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
         <div className="flex-grow min-w-0 max-w-full">
           <div className="flex justify-between items-start gap-2 min-w-0 max-w-full">
             <div className="min-w-0 flex-1">
-              <div className={`flex items-center gap-2 min-w-0 flex-wrap ${isCompact ? 'text-sm' : ''}`}>
-                <p {...withDataAutomationId({ id: `${commentId}-author-name` })} className="font-semibold text-gray-800 dark:text-[rgb(var(--color-text-900))] break-words min-w-0">
+              {/* Compact rows keep one header line at every width: name truncates,
+                  the timestamp stays right-aligned. */}
+              <div className={`flex items-center gap-2 min-w-0 ${isCompact ? 'text-sm flex-nowrap' : 'flex-wrap'}`}>
+                <p {...withDataAutomationId({ id: `${commentId}-author-name` })} className={`font-semibold text-gray-800 dark:text-[rgb(var(--color-text-900))] min-w-0 ${isCompact ? 'truncate' : 'break-words'}`}>
                   {getAuthorName()}
                 </p>
                 {isBundleMirror && (
@@ -600,6 +633,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 )}
                 {commentSource && (
                   <ResponseSourceBadge
+                    size={isCompact ? 'icon' : 'sm'}
                     source={commentSource}
                     labels={{
                       clientPortal: t('responseSource.clientPortal', 'Received via Client Portal'),
@@ -607,6 +641,10 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     }}
                   />
                 )}
+                {/* Compact: the Text/Email view switch appears on hover/focus only. */}
+                {emailView.switcher && isCompact ? (
+                  <span className="opacity-0 transition-opacity group-hover/comment:opacity-100 focus-within:opacity-100">{emailView.switcher}</span>
+                ) : emailView.switcher}
                 {externalLinks.map((link) => (
                   <span
                     key={link.link_id}
@@ -656,7 +694,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 {isCompact && conversation.created_at && (
                   <span
                     {...withDataAutomationId({ id: `${commentId}-timestamp` })}
-                    className="text-xs font-normal text-gray-500 dark:text-[rgb(var(--color-text-400))] whitespace-nowrap"
+                    className="ml-auto shrink-0 text-xs font-normal text-gray-500 dark:text-[rgb(var(--color-text-400))] whitespace-nowrap"
                   >
                     {formatDate(new Date(conversation.created_at), {
                       month: 'short',
@@ -708,8 +746,24 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 </div>
               )}
             </div>
-            {(canCopy || (onReply && !isDeleted) || canEdit) && (
+            {(canCopy || (onReply && !isDeleted) || canEdit || (isCompact && onToggleReaction)) && (
               <div className="c-actions space-x-2">
+                {/* Compact: with no reactions yet, React lives in the hover toolbar. */}
+                {isCompact && onToggleReaction && conversation.comment_id && (reactions?.length ?? 0) === 0 ? (
+                  <EmojiPickerPopover
+                    id={`${commentId}-reaction-picker`}
+                    onSelect={(emoji: string) => onToggleReaction(conversation.comment_id!, emoji)}
+                  >
+                    <Button
+                      id={`${commentId}-add-reaction-button`}
+                      variant="ghost"
+                      size="sm"
+                      aria-label={tCommon('reactions.add', 'React')}
+                    >
+                      <SmilePlus className="w-4 h-4" />
+                    </Button>
+                  </EmojiPickerPopover>
+                ) : null}
                 {canCopy && (
                   <Tooltip content={copyCommentLabel}>
                     <Button
@@ -780,7 +834,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
               >
                 [deleted]
               </div>
-            ) : isEditing && currentComment?.comment_id === conversation.comment_id ? (
+            ) : canEdit && isEditingThisComment ? (
               editorContent
             ) : (
               <div
@@ -800,15 +854,17 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     showMoreLabel={t('conversation.showMore', 'Show more')}
                     showLessLabel={t('conversation.showLess', 'Show less')}
                   >
-                    <RichTextViewer
-                      key={`${conversation.comment_id}-${conversation.updated_at || conversation.created_at}`}
-                      content={displayContent as any}
-                      className="w-full min-w-0 max-w-full"
-                    />
+                    {emailView.body(
+                      <RichTextViewer
+                        key={`${conversation.comment_id}-${conversation.updated_at || conversation.created_at}`}
+                        content={displayContent as any}
+                        className="w-full min-w-0 max-w-full"
+                      />
+                    )}
                   </ClampedContent>
               </div>
           )}
-          {reactions && onToggleReaction && (
+          {reactions && onToggleReaction && !(isCompact && reactions.length === 0) && (
             <ReactionDisplay
               id={`${commentId}-reactions`}
               reactions={reactions}
@@ -821,7 +877,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
       </div>
       <Dialog
         id={`reschedule-comment-${commentId}`}
-        isOpen={isRescheduleOpen}
+        isOpen={canEdit && isRescheduleOpen}
         onClose={() => setIsRescheduleOpen(false)}
         title={t('conversation.rescheduleComment', 'Reschedule comment')}
         className="max-w-md"

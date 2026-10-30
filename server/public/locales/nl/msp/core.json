@@ -105,7 +105,13 @@
     "passwords": "Wachtwoorden",
     "ticketsAll": "Alle tickets",
     "ticketsRecurring": "Terugkerende tickets",
-    "ticketsTemplates": "Ticketsjablonen"
+    "ticketsTemplates": "Ticketsjablonen",
+    "assetsCustody": "Apparatuur in bewaring",
+    "ticketsCannedResponses": "Standaardantwoorden",
+    "profile": "Profiel",
+    "signOut": "Afmelden",
+    "coManaged": "Gezamenlijk beheerde IT",
+    "coManagedAdministration": "Toegang en beheer"
   },
   "sidebar": {
     "backToMain": "Terug naar hoofd",
@@ -154,7 +160,8 @@
       "extensions": "Extensies",
       "experimentalFeatures": "Experimentele functies",
       "profile": "Profiel",
-      "security": "Beveiliging"
+      "security": "Beveiliging",
+      "tags": "Labels"
     }
   },
   "dashboard": {
@@ -843,5 +850,10 @@
     "errors": {
       "enterpriseOnly": "Chatfuncties zijn alleen beschikbaar in Enterprise Edition"
     }
+  },
+  "coManagedWorkspace": {
+    "loading": "Werkruimte laden…",
+    "navigation": "Klantwerkruimte",
+    "passwordError": "Kan de wachtwoordstatus niet controleren. Laad deze pagina opnieuw."
   }
 }

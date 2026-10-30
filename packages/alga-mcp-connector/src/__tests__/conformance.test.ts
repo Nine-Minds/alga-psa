@@ -96,5 +96,38 @@ describe('MCP stdio-protocol conformance (T011)', () => {
         });
       }
     }
+
+    const REVERSE_QUERIES = [
+      'add another technician to this ticket',
+      'add a coworker to help on this ticket',
+    ];
+    for (const [edition, registry] of [['ce', ceRegistry], ['ee', eeRegistry]] as const) {
+      for (const query of REVERSE_QUERIES) {
+        it(`[${edition}] "${query}" ranks POST .../agents above POST .../watchers`, async () => {
+          const server = createServer({ registry, client: fakeClient({ status: 200, ok: true, data: {} }) });
+          const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+          const mcpClient = new Client({ name: 'test', version: '0.0.0' }, { capabilities: {} });
+          await Promise.all([server.connect(serverTransport), mcpClient.connect(clientTransport)]);
+
+          const res = await mcpClient.callTool({
+            name: 'search_api_registry',
+            arguments: { query }, // default limit (top 5)
+          });
+          expect(res.isError).toBeFalsy();
+          const content = res.content as Array<{ type: string; text: string }>;
+          const { results } = JSON.parse(content[0].text) as {
+            results: Array<{ entryId: string; method: string; path: string }>;
+          };
+          const rank = (t: { method: string; path: string }) =>
+            results.findIndex((r) => r.method.toLowerCase() === t.method && r.path === t.path);
+          const watcherRank = rank(WATCHER_POST);
+          const agentsRank = rank(AGENTS_POST);
+          console.log(`[ranking:${edition}] "${query}" watchers=${watcherRank < 0 ? 'absent' : watcherRank + 1} agents=${agentsRank < 0 ? 'absent' : agentsRank + 1}`);
+
+          expect(agentsRank).toBeGreaterThanOrEqual(0);
+          if (watcherRank >= 0) expect(agentsRank).toBeLessThan(watcherRank);
+        });
+      }
+    }
   });
 });

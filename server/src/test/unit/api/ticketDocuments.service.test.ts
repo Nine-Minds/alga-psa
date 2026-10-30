@@ -19,6 +19,7 @@ describe('TicketService.getTicketDocuments', () => {
   const context = {
     tenant: 'tenant-1',
     userId: 'user-1',
+    user: { user_type: 'internal' },
   } as any;
 
   it('T010: returns the document list for a ticket', async () => {

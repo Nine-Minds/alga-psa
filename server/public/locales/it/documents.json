@@ -14,6 +14,7 @@
       "semiAnnually": "Semestrale"
     },
     "cadenceTotal": "Totale {{cadence}}",
+    "currency": "Valuta",
     "date": "Data",
     "description": "Descrizione",
     "discounts": "Sconti",
@@ -60,6 +61,7 @@
     "rate": "Tariffa",
     "recurring": "Ricorrente",
     "service": "Servizio",
+    "servicePeriod": "Periodo di servizio",
     "shipDate": "Data di spedizione",
     "shipTo": "Spedire a",
     "shipped": "Spedito",
@@ -83,16 +85,47 @@
       "noLineItems": "Nessuna voce",
       "noMonthlyItems": "Nessuna voce mensile",
       "noOneTimeItems": "Nessuna voce una tantum",
-      "noPhasesDefined": "Nessuna fase definita"
+      "noPhasesDefined": "Nessuna fase definita",
+      "noItemsInBox": "Questo collo è vuoto"
     },
     "note": {
       "billedTimePortalDetail": "Contatta il tuo fornitore per un dettaglio del tempo fatturato.",
       "pickedBy": "Prelevato da: ____________________     Data: ____________",
       "preTaxTotals": "I totali indicati sono al netto delle imposte. L'imposta applicabile viene calcolata sulla fattura.",
-      "thankYouForOrder": "Grazie per il vostro ordine."
+      "thankYouForOrder": "Grazie per il vostro ordine.",
+      "checkedBy": "Verificato da: ____________________     Data: ____________",
+      "releasedBy": "Rilasciato da: ____________________     Firma: ____________________     Data: ____________"
     },
     "serialNumbers": "Numeri di serie",
-    "allocatedSerialsNote": "Numeri di serie assegnati; soggetti a modifica al momento dell’evasione."
+    "allocatedSerialsNote": "Numeri di serie assegnati; soggetti a modifica al momento dell’evasione.",
+    "stagingManifestTitle": "DISTINTA DI IMBALLAGGIO",
+    "boxNumber": "Collo n.",
+    "project": "Progetto",
+    "client": "Cliente",
+    "task": "Attività",
+    "status": "Stato",
+    "sealedOn": "Sigillato",
+    "sealedBy": "Sigillato da",
+    "location": "Ubicazione",
+    "checked": "Verificato",
+    "item": "Articolo",
+    "skuOrTag": "SKU / etichetta",
+    "serialNumber": "Numero di serie",
+    "owner": "Proprietario",
+    "ownerMsp": "MSP",
+    "ownerClient": "Cliente",
+    "statusOpen": "Aperto",
+    "statusSealed": "Sigillato",
+    "rmaReturnSlipTitle": "BOLLA DI RESO RMA",
+    "device": "Dispositivo",
+    "vendor": "Fornitore",
+    "vendorReference": "Riferimento del fornitore",
+    "asset": "Asset",
+    "assetTag": "Tag asset",
+    "replacementSerial": "Numero di serie della sostituzione",
+    "shipping": "Spedizione",
+    "returnBy": "Restituire entro",
+    "returnShipTo": "Spedire il reso a"
   },
   "errors": {
     "permissions": {

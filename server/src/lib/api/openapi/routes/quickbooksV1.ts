@@ -74,7 +74,7 @@ export function registerQuickBooksV1Routes(registry: ApiOpenApiRegistry) {
   const CustomerSyncBody = registry.registerSchema(
     'QuickBooksV1CustomerSyncBody',
     zOpenApi.object({
-      client_id: zOpenApi.string().uuid().optional(),
+      client_id: zOpenApi.string().guid().optional(),
       sync_type: zOpenApi.enum(['create', 'update', 'bidirectional']).optional(),
       force_update: zOpenApi.boolean().optional(),
       include_inactive: zOpenApi.boolean().optional(),
@@ -84,14 +84,14 @@ export function registerQuickBooksV1Routes(registry: ApiOpenApiRegistry) {
   const InvoiceExportBody = registry.registerSchema(
     'QuickBooksV1InvoiceExportBody',
     zOpenApi.object({
-      invoice_id: zOpenApi.string().uuid().optional(),
+      invoice_id: zOpenApi.string().guid().optional(),
       date_range: zOpenApi
         .object({ start_date: zOpenApi.string(), end_date: zOpenApi.string() })
         .optional(),
       status_filter: zOpenApi
         .array(zOpenApi.enum(['draft', 'sent', 'paid', 'overdue', 'cancelled']))
         .optional(),
-      client_id: zOpenApi.string().uuid().optional(),
+      client_id: zOpenApi.string().guid().optional(),
       export_format: zOpenApi.enum(['qbo', 'json']).optional(),
       include_line_items: zOpenApi.boolean().optional(),
       auto_create_items: zOpenApi.boolean().optional(),
@@ -115,8 +115,8 @@ export function registerQuickBooksV1Routes(registry: ApiOpenApiRegistry) {
   const PaymentSyncBody = registry.registerSchema(
     'QuickBooksV1PaymentSyncBody',
     zOpenApi.object({
-      payment_id: zOpenApi.string().uuid().optional(),
-      invoice_id: zOpenApi.string().uuid().optional(),
+      payment_id: zOpenApi.string().guid().optional(),
+      invoice_id: zOpenApi.string().guid().optional(),
       date_range: zOpenApi
         .object({ start_date: zOpenApi.string(), end_date: zOpenApi.string() })
         .optional(),
@@ -188,12 +188,12 @@ export function registerQuickBooksV1Routes(registry: ApiOpenApiRegistry) {
           zOpenApi.object({
             operation_type: zOpenApi
               .enum(['customer_sync', 'invoice_export', 'invoice_import', 'payment_sync', 'item_sync', 'tax_sync', 'full_sync', 'test_connection']),
-            entity_ids: zOpenApi.array(zOpenApi.string().uuid()).optional(),
+            entity_ids: zOpenApi.array(zOpenApi.string().guid()).optional(),
             qbo_entity_ids: zOpenApi.array(zOpenApi.string()).optional(),
             date_range: zOpenApi
               .object({ start_date: zOpenApi.string(), end_date: zOpenApi.string() })
               .optional(),
-            parameters: zOpenApi.record(zOpenApi.unknown()).optional(),
+            parameters: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
           }),
         )
         .min(1)
@@ -209,7 +209,7 @@ export function registerQuickBooksV1Routes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       monitoring_enabled: zOpenApi.boolean().optional(),
       check_interval: zOpenApi.number().int().min(1).optional(),
-      alert_thresholds: zOpenApi.record(zOpenApi.unknown()).optional(),
+      alert_thresholds: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -228,17 +228,17 @@ export function registerQuickBooksV1Routes(registry: ApiOpenApiRegistry) {
     'QuickBooksV1ApiSuccess',
     zOpenApi.object({
       data: zOpenApi.union([
-        zOpenApi.record(zOpenApi.unknown()),
-        zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+        zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
+        zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())),
       ]),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
   const ApiPaginated = registry.registerSchema(
     'QuickBooksV1ApiPaginated',
     zOpenApi.object({
-      data: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+      data: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())),
       pagination: zOpenApi.object({
         page: zOpenApi.number().int(),
         limit: zOpenApi.number().int(),
@@ -247,7 +247,7 @@ export function registerQuickBooksV1Routes(registry: ApiOpenApiRegistry) {
         hasNext: zOpenApi.boolean(),
         hasPrev: zOpenApi.boolean(),
       }),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 

@@ -13,7 +13,7 @@
  * standalone and reused by the evaluator without leaking server concerns.
  */
 
-export type PrepaidAlertType = 'credit' | 'bucket';
+export type PrepaidAlertType = 'credit' | 'bucket' | 'prepaid_block';
 
 export interface CreditPolicySnapshot {
   threshold: number;
@@ -109,6 +109,55 @@ export function creditDedupeKey(clientId: string, currencyCode: string, episode:
 export function bucketDedupeKey(bucketUsageId: string, configuredPercent: number, episode = 1): string {
   const base = `bucket:${bucketUsageId}:${configuredPercent}pct`;
   return episode === 1 ? base : `${base}:ep${episode}`;
+}
+
+/**
+ * Prepaid Block (contract-issued hour block) observation. Capacity is the
+ * block's own total; there is no rollover and no additive hour-block minutes.
+ */
+export interface PrepaidBlockObservationInput {
+  totalMinutes: number;
+  remainingMinutes: number;
+  /** Line config: trigger when the block hits zero. */
+  triggerOnExhaustion: boolean;
+  /** Line config: 1-99, or null when no usage threshold is configured. */
+  thresholdPercent: number | null;
+}
+
+export function prepaidBlockUsedMinutes(input: PrepaidBlockObservationInput): number {
+  return Math.max(0, input.totalMinutes - input.remainingMinutes);
+}
+
+export function hasValidPrepaidBlockCapacity(input: PrepaidBlockObservationInput): boolean {
+  return input.totalMinutes > 0;
+}
+
+/** Exhausted: nothing left in the block and the line asks for an exhaustion follow-on. */
+export function prepaidBlockExhausted(input: PrepaidBlockObservationInput): boolean {
+  return input.triggerOnExhaustion && input.totalMinutes > 0 && input.remainingMinutes <= 0;
+}
+
+/** Exact integer cross-multiplication, equality alerts (same boundary as buckets). */
+export function prepaidBlockThresholdReached(input: PrepaidBlockObservationInput): boolean {
+  if (input.thresholdPercent == null || input.totalMinutes <= 0) return false;
+  return prepaidBlockUsedMinutes(input) * 100 >= input.thresholdPercent * input.totalMinutes;
+}
+
+export type PrepaidBlockAlertKind = 'exhausted' | 'pct';
+
+/**
+ * One alert per block per kind; a new block re-arms naturally because the key
+ * carries the block id. The percentage is part of the `pct` identity so a
+ * changed threshold is a distinct (new) subject, mirroring buckets.
+ */
+export function prepaidBlockDedupeKey(
+  contractLineId: string,
+  blockId: string,
+  kind: PrepaidBlockAlertKind,
+  thresholdPercent?: number | null,
+): string {
+  const suffix = kind === 'exhausted' ? 'exhausted' : `${thresholdPercent ?? 0}pct`;
+  return `prepaid_block:${contractLineId}:${blockId}:${suffix}`;
 }
 
 /** A threshold or currency change resolves the prior episode as policy_changed. */

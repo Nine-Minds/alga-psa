@@ -1,3 +1,6 @@
+import { isInteractiveUserType } from '@alga-psa/types';
+
+import { readTicketNotificationActor, resolveTicketNotificationActorName } from '../../notifications/ticketNotificationContext';
 
 import { readAssignedTeamId } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
@@ -907,7 +910,7 @@ async function handleProjectTaskAdditionalAgentAssigned(
  */
 async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
   const { payload } = event;
-  const { tenantId, ticketId, userId, changes } = payload;
+  const { tenantId, ticketId, changes } = payload;
   const suppression = resolveTicketNotificationSuppression(payload);
 
   try {
@@ -923,23 +926,28 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
       return;
     }
 
-    // Get user who made the change. userId is absent when nobody acted (system/contact
-    // actor); an undefined .where() value throws, so only look it up when present.
-    const performedByUser = userId
-      ? await tenantScopedTable(db, 'users', tenantId)
-          .select('user_id', 'first_name', 'last_name')
-          .where('user_id', userId)
-          .first()
-      : null;
-
-    const performedByName = userDisplayName(performedByUser, userId ? 'Someone' : 'System');
+    // userId is absent when nobody acted (system/contact actor) or a co-managed
+    // collaborator acted; the actor's snapshot then names them, never a local lookup.
+    const actor = readTicketNotificationActor(payload, tenantId, payload.userId);
+    const userId = actor.userId;
+    const performedByName = await resolveTicketNotificationActorName(tenantId, actor, async () => {
+      // userId is absent when nobody acted; an undefined .where() value throws.
+      const performedByUser = userId
+        ? await tenantScopedTable(db, 'users', tenantId)
+            .select('user_id', 'first_name', 'last_name')
+            .where('user_id', userId)
+            .first()
+        : null;
+      return userDisplayName(performedByUser, userId ? 'Someone' : 'System');
+    });
 
     // Build metadata with change details
     const metadata: Record<string, any> = {
       ticketId: ticket.ticket_number || 'New Ticket',
       ticketTitle: ticket.title,
       performedByName,
-      ...(userId ? { performedById: userId } : {})
+      ...(userId ? { performedById: userId } : {}),
+      ...(actor.actorReference ? { performedByActorReference: actor.actorReference } : {})
     };
 
     // Process changes to get human-readable names
@@ -1128,16 +1136,15 @@ async function handleTicketClosed(event: TicketClosedEvent, opts?: InternalNotif
       return;
     }
 
-    // Get user who closed the ticket
-    const userId = payload.userId || '';
-
-    // Get user who closed it for the notification
-    const performedByUser = userId ? await tenantScopedTable(db, 'users', tenantId)
-      .select('first_name', 'last_name')
-      .where('user_id', userId)
-      .first() : null;
-
-    const performedByName = userDisplayName(performedByUser, 'Someone');
+    const actor = readTicketNotificationActor(payload, tenantId, payload.userId);
+    const userId = actor.userId;
+    const performedByName = await resolveTicketNotificationActorName(tenantId, actor, async () => {
+      const performedByUser = userId ? await tenantScopedTable(db, 'users', tenantId)
+        .select('first_name', 'last_name')
+        .where('user_id', userId)
+        .first() : null;
+      return userDisplayName(performedByUser, 'Someone');
+    });
 
     // Resolve links for both MSP and client portal
     const { internalUrl, portalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -1168,7 +1175,8 @@ async function handleTicketClosed(event: TicketClosedEvent, opts?: InternalNotif
             data: {
               ticketId: ticket.ticket_number || 'New Ticket',
               ticketTitle: ticket.title,
-              closedByName: performedByName
+              closedByName: performedByName,
+              ...(actor.actorReference ? { closedByActorReference: actor.actorReference } : {})
             }
           });
           notifiedUserIds.add(assigneeId);
@@ -1752,7 +1760,9 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
  */
 async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
   const { payload } = event;
-  const { tenantId, ticketId, userId, comment } = payload;
+  const { tenantId, ticketId, comment } = payload;
+  const actor = readTicketNotificationActor(payload, tenantId, payload.userId);
+  const userId = actor.userId;
   const suppression = resolveTicketNotificationSuppression(payload);
 
   console.log('[InternalNotificationSubscriber] handleTicketCommentAdded START', {
@@ -1776,17 +1786,18 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
       return;
     }
 
-    // Get author name. userId is absent for inbound-email/system comments.
-    const author = userId
-      ? await tenantScopedTable(db, 'users', tenantId)
-          .select('first_name', 'last_name')
-          .where('user_id', userId)
-          .first()
-      : null;
-
     // No user row means a system/contact actor (inbound email); the payload
     // already carries the real sender identity, so prefer it over 'Someone'.
-    const authorName = userDisplayName(author, usableDisplayName(comment?.author) || (userId ? 'Someone' : 'System'));
+    const authorName = await resolveTicketNotificationActorName(tenantId, actor, async () => {
+      // userId is absent for inbound-email/system comments.
+      const author = userId
+        ? await tenantScopedTable(db, 'users', tenantId)
+            .select('first_name', 'last_name')
+            .where('user_id', userId)
+            .first()
+        : null;
+      return userDisplayName(author, usableDisplayName(comment?.author) || (userId ? 'Someone' : 'System'));
+    });
 
     // Extract comment text preview from BlockNote content
     let commentPreview = '';
@@ -1825,7 +1836,12 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
             db.raw("CONCAT(first_name, ' ', last_name) as display_name"),
           )
           .whereIn('user_id', resolvedMentionedUserIds);
-        const mentionedUsersToNotify = mentionedUsers.filter((mentionedUser) =>
+        // Non-interactive (service) users have no UI inbox, so a mention never notifies them.
+        const mentionedUsersToNotify = mentionedUsers
+          .filter((mentionedUser) => isInteractiveUserType(mentionedUser.user_type) || !mentionedUser.user_type)
+          // An internal note must never reach (or be previewed to) a client/portal user.
+          .filter((mentionedUser) => !comment?.isInternal || mentionedUser.user_type === 'internal')
+          .filter((mentionedUser) =>
           shouldCreateTicketCommentNotification(
             suppression,
             mentionedUser.user_type === 'client' ? 'contact' : 'internal',
@@ -1862,6 +1878,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
                 commentPreview: commentPreview,
                 commentAuthor: authorName,
                 ...(userId ? { commentAuthorId: userId } : {}),
+                ...(actor.actorReference ? { commentActorReference: actor.actorReference } : {}),
                 contextType: 'ticket',
                 contextId: ticketId
               }
@@ -1913,6 +1930,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
                 text: commentPreview,
                 author: authorName,
                 ...(userId ? { authorId: userId } : {}),
+                ...(actor.actorReference ? { actorReference: actor.actorReference } : {}),
                 isInternal: false
               }
             }
@@ -2060,9 +2078,12 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent, opts
         .filter(id => id !== userId);
 
       if (resolvedNewlyMentionedUserIds.length > 0) {
-        const newlyMentionedUsers = await tenantScopedTable(db, 'users', tenantId)
-          .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
+        let newlyMentionedUsersQuery = tenantScopedTable(db, 'users', tenantId)
+          .select('user_id', 'username', 'user_type', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
           .whereIn('user_id', resolvedNewlyMentionedUserIds);
+        // An internal note must never reach (or be previewed to) a client/portal user.
+        if (newComment?.isInternal) newlyMentionedUsersQuery = newlyMentionedUsersQuery.where('user_type', 'internal');
+        const newlyMentionedUsers = await newlyMentionedUsersQuery;
 
         if (newlyMentionedUsers.length > 0) {
           const { internalUrl } = await resolveNotificationLinks(db, tenantId, {

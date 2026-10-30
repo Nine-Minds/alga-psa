@@ -1,0 +1,38 @@
+{
+  "name": "@alga-psa/predicates",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./sql": {
+      "types": "./src/sql/index.ts",
+      "import": "./dist/sql/index.js",
+      "require": "./dist/sql/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "knex": "^3.1.0"
+  },
+  "peerDependenciesMeta": {
+    "knex": { "optional": true }
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0"
+  }
+}

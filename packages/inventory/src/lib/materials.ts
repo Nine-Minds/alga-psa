@@ -1,3 +1,4 @@
+import { admitOperationalWrite } from '@alga-psa/db';
 import { Knex } from 'knex';
 import {
   IProjectMaterial,
@@ -6,9 +7,9 @@ import {
   ITicketMaterial,
   type ProjectMaterialBillingDestination,
 } from '@alga-psa/types';
-import { recordStockConsumption, reverseStockConsumption } from './consume';
+import { recordStockConsumption, reverseStockConsumption, type ConsumeClaimant } from './consume';
 import { publishInventoryEvent } from './inventoryEvents';
-import { collectDefaultLocationStockLowSignalAfterConsume } from './stockLowSignal';
+import { collectDefaultLocationStockLowSignalAfterConsume, collectStockLowSignalAfterConsume } from './stockLowSignal';
 import { resolveTenantCurrency } from './tenantCurrency';
 
 /**
@@ -84,6 +85,26 @@ export interface AddMaterialInput {
   billing_schedule_entry_id?: string | null;
   /** Serialized: the picked stock unit to deliver. Required for serialized tracked products. */
   unit_id?: string | null;
+  /**
+   * Explicitly consume stock soft-reserved for a sales order (non-serialized). Never lets a
+   * hard hold be consumed. Set only after the user confirmed the InsufficientStockError
+   * whose `overrideable` was true.
+   */
+  allow_reserved_override?: boolean;
+}
+
+/**
+ * Server-internal options for addMaterial, never accepted from a client payload (the action
+ * wrappers spread their input into AddMaterialInput, so these live in a separate argument).
+ */
+export interface AddMaterialInternalOptions {
+  /**
+   * Install a project staging line (C6 D7): the line is locked and must be this project's
+   * reserved/staged stock line for this product (and unit); consumption releases the line's own
+   * claim first and draws from the claim's location; the line becomes `installed` and points at
+   * the new material, all in the material's transaction.
+   */
+  fromStagingLineId?: string | null;
 }
 
 export interface UpdateProjectMaterialBillingInput {
@@ -130,7 +151,7 @@ export async function listMaterials(
 ): Promise<MaterialRow[]> {
   const cfg = PARENTS[parentType];
   return runInTransaction(db, async (trx: Knex.Transaction) => {
-    const rows = await trx(`${cfg.table} as m`)
+    const query = trx(`${cfg.table} as m`)
       .leftJoin('service_catalog as sc', function () {
         this.on('m.service_id', '=', 'sc.service_id').andOn('m.tenant', '=', 'sc.tenant');
       })
@@ -143,7 +164,15 @@ export async function listMaterials(
         'sc.cost_currency as catalog_cost_currency',
       )
       .orderBy('m.created_at', 'desc');
-    return rows as MaterialRow[];
+    if (parentType === 'project') {
+      // C6: which materials were installed from staging (the drawer marks them).
+      query
+        .leftJoin('project_staging_lines as psl', function () {
+          this.on('psl.project_material_id', '=', 'm.project_material_id').andOn('psl.tenant', '=', 'm.tenant');
+        })
+        .select('psl.staging_line_id as from_staging_line_id');
+    }
+    return (await query) as MaterialRow[];
   });
 }
 
@@ -152,8 +181,13 @@ export async function addMaterial(
   tenant: string,
   input: AddMaterialInput,
   performedBy: string | null,
+  internal: AddMaterialInternalOptions = {},
 ): Promise<MaterialRow> {
   const cfg = PARENTS[input.parent_type];
+  const fromStagingLineId = internal.fromStagingLineId ?? null;
+  if (fromStagingLineId && input.parent_type !== 'project') {
+    throw new MaterialValidationError('Only project materials can be installed from staging', 'parent_type');
+  }
 
   const quantity = Math.floor(Number(input.quantity));
   if (!Number.isFinite(quantity) || quantity < 1) {
@@ -165,6 +199,7 @@ export async function addMaterial(
   }
 
   const { row, pendingAsset, pendingStockLow } = await runInTransaction(db, async (trx: Knex.Transaction) => {
+    await admitOperationalWrite(trx, tenant, cfg.table, 'add-material');
     const parent = await trx(cfg.parentTable)
       .where({ tenant, [cfg.parentPk]: input.parent_id })
       .select(cfg.parentPk, 'client_id')
@@ -246,6 +281,7 @@ export async function addMaterial(
       }
     }
 
+    await admitOperationalWrite(trx, tenant, cfg.table, 'insert-material');
     const [row] = await trx(cfg.table)
       .insert({
         tenant,
@@ -266,6 +302,37 @@ export async function addMaterial(
       })
       .returning('*');
 
+    // C6: installing a staging line consumes the line's own claim at the claim's location.
+    let claimant: ConsumeClaimant | null = null;
+    let claimLocationId: string | null = null;
+    if (fromStagingLineId) {
+      const line = await trx('project_staging_lines')
+        .where({ tenant, staging_line_id: fromStagingLineId })
+        .forUpdate()
+        .first();
+      if (
+        !line
+        || line.project_id !== input.parent_id
+        || line.kind !== 'stock'
+        || line.service_id !== input.service_id
+        || Number(line.quantity) !== quantity
+        || (line.unit_id ?? null) !== (input.unit_id ?? null)
+      ) {
+        throw new MaterialValidationError('The staging line does not match this material', 'staging_line_id');
+      }
+      if (line.status !== 'reserved' && line.status !== 'staged') {
+        throw new MaterialValidationError('Only reserved or staged lines can be installed', 'staging_line_id');
+      }
+      claimLocationId = line.reserved_location_id ?? null;
+      claimant = {
+        kind: 'staging_line',
+        id: line.staging_line_id,
+        counter: !line.unit_id && line.reserved_location_id
+          ? { column: line.status === 'staged' ? 'held_quantity' : 'reserved_quantity', quantity: Number(line.quantity) }
+          : null,
+      };
+    }
+
     // Inventory: decrement stock for track_stock products (serialized delivers the
     // picked unit). No-op for untracked products. Throws InsufficientStockError
     // rather than going negative (F014).
@@ -277,10 +344,28 @@ export async function addMaterial(
       performed_by: performedBy,
       unit_id: input.unit_id ?? null,
       client_id: clientId,
+      allow_reserved_override: input.allow_reserved_override === true,
+      ...(claimant ? { claimant, location_id: claimLocationId } : {}),
     });
 
+    if (fromStagingLineId) {
+      await trx('project_staging_lines')
+        .where({ tenant, staging_line_id: fromStagingLineId })
+        .update({
+          status: 'installed',
+          project_material_id: row[cfg.pk],
+          installed_at: trx.fn.now(),
+          installed_by: performedBy,
+          updated_at: trx.fn.now(),
+        });
+    }
+
+    // A staging install consumed at the line's claim location, so the low-stock signal is evaluated there
+    // (serialized units have no claim location and never signal). Ordinary materials use the default location.
     const pendingStockLow = consumption.consumed
-      ? await collectDefaultLocationStockLowSignalAfterConsume(trx, tenant, row.service_id, row.quantity)
+      ? (claimLocationId
+        ? await collectStockLowSignalAfterConsume(trx, tenant, row.service_id, claimLocationId, row.quantity)
+        : await collectDefaultLocationStockLowSignalAfterConsume(trx, tenant, row.service_id, row.quantity))
       : null;
 
     return { row, pendingAsset: consumption.pending_asset_link ?? null, pendingStockLow };
@@ -369,6 +454,7 @@ export async function updateProjectMaterialBilling(
       );
     }
 
+    await admitOperationalWrite(trx, tenant, 'project_materials', 'update-project-material');
     const [updated] = await trx('project_materials')
       .where({ tenant, project_material_id: projectMaterialId, is_billed: false })
       .update({
@@ -385,6 +471,59 @@ export async function updateProjectMaterialBilling(
   });
 }
 
+/** What reversing a material restored, for callers that re-claim it (C6 undo install). */
+export interface RemovedMaterial {
+  service_id: string;
+  quantity: number;
+  restored: boolean;
+  location_id: string | null;
+  unit_id: string | null;
+}
+
+/**
+ * Delete an unbilled material and restore the stock it consumed, inside the caller's transaction.
+ * Returns null when the material does not exist; throws on billed materials. Does not touch a
+ * staging line that installed it (callers decide: deleteMaterial releases it, undo install
+ * re-claims it).
+ */
+export async function removeMaterialInTransaction(
+  trx: Knex.Transaction,
+  tenant: string,
+  parentType: MaterialParentType,
+  materialId: string,
+  performedBy: string | null,
+): Promise<RemovedMaterial | null> {
+  const cfg = PARENTS[parentType];
+  await admitOperationalWrite(trx, tenant, cfg.table, 'remove-material');
+  const row = await trx(cfg.table)
+    .where({ tenant, [cfg.pk]: materialId })
+    .select('is_billed', 'service_id', 'quantity')
+    .forUpdate()
+    .first();
+
+  if (!row) return null;
+  if (row.is_billed) {
+    throw new Error('Cannot delete a billed material.');
+  }
+
+  // Inventory: restore stock consumed when this (unbilled) material was added.
+  const restored = await reverseStockConsumption(trx, tenant, {
+    service_id: row.service_id,
+    quantity: row.quantity,
+    source_doc_type: cfg.sourceDocType,
+    source_doc_id: materialId,
+    performed_by: performedBy,
+  });
+
+  return {
+    service_id: row.service_id,
+    quantity: Number(row.quantity),
+    restored: restored.restored,
+    location_id: restored.location_id ?? null,
+    unit_id: restored.unit_id ?? null,
+  };
+}
+
 /** Returns false when the material does not exist. Throws on billed materials. */
 export async function deleteMaterial(
   db: Knex,
@@ -395,25 +534,24 @@ export async function deleteMaterial(
 ): Promise<boolean> {
   const cfg = PARENTS[parentType];
   return runInTransaction(db, async (trx: Knex.Transaction) => {
-    const row = await trx(cfg.table)
-      .where({ tenant, [cfg.pk]: materialId })
-      .select('is_billed', 'service_id', 'quantity')
-      .first();
+    const removed = await removeMaterialInTransaction(trx, tenant, parentType, materialId, performedBy);
+    if (!removed) return false;
 
-    if (!row) return false;
-    if (row.is_billed) {
-      throw new Error('Cannot delete a billed material.');
+    // C6 D8: a material installed from staging releases its line (never back to a claim: the
+    // restored stock is free again, not silently re-reserved).
+    if (parentType === 'project') {
+      await trx('project_staging_lines')
+        .where({ tenant, project_material_id: materialId })
+        .update({
+          status: 'released',
+          project_material_id: null,
+          released_at: trx.fn.now(),
+          released_by: performedBy,
+          updated_at: trx.fn.now(),
+        });
     }
 
-    // Inventory: restore stock consumed when this (unbilled) material was added.
-    await reverseStockConsumption(trx, tenant, {
-      service_id: row.service_id,
-      quantity: row.quantity,
-      source_doc_type: cfg.sourceDocType,
-      source_doc_id: materialId,
-      performed_by: performedBy,
-    });
-
+    await admitOperationalWrite(trx, tenant, cfg.table, 'delete-material');
     await trx(cfg.table).where({ tenant, [cfg.pk]: materialId }).delete();
     return true;
   });
@@ -443,6 +581,7 @@ export interface CatalogPickerQueryRow {
   cost_currency: string | null;
   track_stock?: boolean;
   on_hand_total?: number | null;
+  free_total?: number | null;
   reorder_point?: number | null;
 }
 
@@ -501,6 +640,16 @@ export async function queryCatalogPickerItems(
         `(SELECT COALESCE(SUM(sl.quantity_on_hand), 0) FROM stock_levels sl
           WHERE sl.tenant = sc.tenant AND sl.service_id = sc.service_id) as on_hand_total`
       ),
+      // Free stock at the location recordStockConsumption will lock: the product's default
+      // location, else the tenant default. Same formula as levels.availableQuantity.
+      trx.raw(
+        `(SELECT COALESCE(SUM(sl.quantity_on_hand - sl.reserved_quantity - sl.held_quantity), 0) FROM stock_levels sl
+          WHERE sl.tenant = sc.tenant AND sl.service_id = sc.service_id
+            AND sl.location_id = COALESCE(
+              pis.default_location_id,
+              (SELECT loc.location_id FROM stock_locations loc WHERE loc.tenant = sc.tenant AND loc.is_default = true LIMIT 1)
+            )) as free_total`
+      ),
     )
     .orderBy('sc.service_name', 'asc')
     .limit(limit)
@@ -511,6 +660,7 @@ export async function queryCatalogPickerItems(
       ...r,
       track_stock: !!r.track_stock,
       on_hand_total: r.track_stock ? Number(r.on_hand_total ?? 0) : null,
+      free_total: r.track_stock ? Number(r.free_total ?? 0) : null,
       reorder_point: r.reorder_point ?? null,
     })) as CatalogPickerQueryRow[],
     totalCount,

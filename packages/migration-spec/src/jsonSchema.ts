@@ -52,6 +52,17 @@ const NULLABLE_OPAQUE_ID = {
   maxLength: AMP_LIMITS.opaqueIdBytes,
 } as const;
 
+const FLAG = { type: ['integer', 'null'], enum: [0, 1, null] } as const;
+
+/** Non-negative integer minor units, bounded to JS safe-integer range. */
+const MINOR_UNITS = {
+  type: ['integer', 'null'],
+  minimum: 0,
+  maximum: Number.MAX_SAFE_INTEGER,
+} as const;
+
+const CURRENCY_CODE = { type: ['string', 'null'], pattern: '^[A-Z]{3}$' } as const;
+
 const ENTITY_BASE_PROPERTIES = {
   package_record_id: OPAQUE_ID,
   source_record_id: OPAQUE_ID,
@@ -113,6 +124,28 @@ const ENTITY_EXTRA_PROPERTIES: Record<AmpEntityType, Record<string, unknown>> = 
     manufacturer: BOUNDED_TEXT,
     model: BOUNDED_TEXT,
     purchase_date: DATE_ONLY,
+  },
+  products: {
+    name: REQUIRED_TEXT,
+    sku: BOUNDED_TEXT,
+    category_name: BOUNDED_TEXT,
+    unit_of_measure: BOUNDED_TEXT,
+    price_minor: MINOR_UNITS,
+    price_currency: CURRENCY_CODE,
+    cost_minor: MINOR_UNITS,
+    cost_currency: CURRENCY_CODE,
+    description: BOUNDED_TEXT,
+    is_active: FLAG,
+  },
+  vendor_products: {
+    product_package_record_id: NULLABLE_OPAQUE_ID,
+    product_sku: BOUNDED_TEXT,
+    vendor_name: REQUIRED_TEXT,
+    vendor_sku: BOUNDED_TEXT,
+    unit_cost_minor: MINOR_UNITS,
+    cost_currency: CURRENCY_CODE,
+    lead_time_days: { type: ['integer', 'null'], minimum: 0, maximum: 3650 },
+    is_preferred: FLAG,
   },
 };
 
