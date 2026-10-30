@@ -332,7 +332,7 @@ export async function withTenantTransaction<T>(
   });
 }
 
-export const uuidSchema = z.string().uuid();
+export const uuidSchema = z.string().guid();
 export const isoDateTimeSchema = z.string().datetime();
 
 export const attachmentSourceSchema = z.object({

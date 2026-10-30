@@ -2260,7 +2260,8 @@
       "Compact",
       "Extensions (Pro)",
       "Stable",
-      "Code 128"
+      "Code 128",
+      "RMA {{number}} · {{status}}"
     ],
     "caseInsensitive": [
       "api",

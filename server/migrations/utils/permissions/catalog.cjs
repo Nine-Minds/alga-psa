@@ -389,6 +389,10 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'vendor_bill', action: 'read', msp: true, client: false, description: 'View vendor bills', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'vendor_bill', action: 'update', msp: true, client: false, description: 'Update vendor bills', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
 
+  { resource: 'warranty', action: 'create', msp: true, client: false, description: 'Open warranty claims on client equipment', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
+  { resource: 'warranty', action: 'read', msp: true, client: false, description: 'View warranty claims and RMA cases', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
+  { resource: 'warranty', action: 'update', msp: true, client: false, description: 'Decide, ship, receive and close warranty claims', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
+
   { resource: 'workflow', action: 'admin', msp: true, client: false, description: 'Administer workflows', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
   { resource: 'workflow', action: 'manage', msp: true, client: false, description: 'Manage workflows', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
   { resource: 'workflow', action: 'publish', msp: true, client: false, description: 'Publish workflows', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },

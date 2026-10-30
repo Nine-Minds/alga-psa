@@ -2635,7 +2635,10 @@
       "Bcc",
       "Cc/Bcc",
       "Code 128",
-      "Barcode"
+      "Barcode",
+      "Asset: {{name}}",
+      "Ticket: {{number}}",
+      "RMA {{number}} · {{status}}"
     ],
     "caseInsensitive": [
       "api",

@@ -2356,7 +2356,8 @@
       "Kilogram",
       "Auto",
       "auto | 50% | 120px",
-      "Code 128"
+      "Code 128",
+      "RMA {{number}} · {{status}}"
     ],
     "caseInsensitive": [
       "api",

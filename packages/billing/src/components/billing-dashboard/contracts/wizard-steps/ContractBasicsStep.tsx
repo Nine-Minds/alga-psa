@@ -11,6 +11,7 @@ import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { ContractWizardData } from '../ContractWizard';
+import { BillingTimingField } from '../BillingTimingField';
 import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { CURRENCY_OPTIONS, getCurrencySymbol, currencyFractionDigits } from '@alga-psa/core';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -354,6 +355,26 @@ export function ContractBasicsStep({
         />
         <p className="text-xs text-[rgb(var(--color-text-400))]">
           {t('wizardBasics.billingFrequency.hint', { defaultValue: 'How often should this contract be billed?' })}
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="contract-basics-billing-timing" className="flex items-center gap-2">
+          <Repeat className="h-4 w-4" />
+          {t('wizardBasics.billingTiming.label', { defaultValue: 'Billing Timing' })}
+        </Label>
+        <BillingTimingField
+          id="contract-basics-billing-timing"
+          lineType="Fixed"
+          value={data.billing_timing ?? 'arrears'}
+          onChange={(value) => updateData({ billing_timing: value })}
+          hideHelp
+        />
+        <p className="text-xs text-[rgb(var(--color-text-400))]">
+          {t('billingTimingField.contractDefaultHelp', {
+            defaultValue:
+              'Default for fixed lines, which can bill in advance. Hourly and usage lines always bill in arrears, whatever you choose here.',
+          })}
         </p>
       </div>
 
