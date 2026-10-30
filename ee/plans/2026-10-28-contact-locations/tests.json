@@ -622,7 +622,7 @@
     "featureIds": [
       "F045"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "POST /api/v1/contacts with a location of another client returns 400 contact_location_client_mismatch; two primaries return 400"
   },
   {
@@ -631,7 +631,7 @@
     "featureIds": [
       "F045"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "PUT /api/v1/contacts/{id} changing client_id removes links and the response shows locations []"
   },
   {
@@ -649,7 +649,7 @@
     "featureIds": [
       "F047"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "GET /api/v1/clients/{id}/locations rows carry contact_count matching the links"
   },
   {
@@ -658,7 +658,7 @@
     "featureIds": [
       "F048"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "OpenAPI spec includes the new contact fields and filters; sync script runs clean"
   },
   {
@@ -793,7 +793,7 @@
     "featureIds": [
       "F059"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "GET /api/v1/contacts/search and /api/v1/contacts/export rows include work_arrangement, locations[] and the primary location"
   },
   {

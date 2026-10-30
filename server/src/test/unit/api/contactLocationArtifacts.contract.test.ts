@@ -83,4 +83,25 @@ describe('contact locations in the generated API artifacts', () => {
       expect.objectContaining({ contact_count: expect.anything() }),
     );
   });
+
+  /**
+   * T073: the write half. An agent that can only read the links cannot make them, so both request
+   * bodies have to document the two fields too (the "sync script" half of T073 is the operator's
+   * developer-portal step; CI's artifact-drift check holds the committed spec to a fresh
+   * generation).
+   */
+  it.each(['ce', 'ee'] as const)('documents the two fields on the create and update bodies in %s', (edition) => {
+    const spec = readSpec(edition);
+    for (const schemaName of ['ContactBody', 'ContactUpdateBody']) {
+      const body = spec.components?.schemas?.[schemaName];
+      expect(body?.properties, schemaName).toEqual(expect.objectContaining({
+        work_arrangement: expect.anything(),
+        locations: expect.anything(),
+      }));
+      const link = resolveRef(spec, body.properties.locations.items);
+      expect(Object.keys(link.properties), schemaName).toEqual(
+        expect.arrayContaining(['location_id', 'is_primary']),
+      );
+    }
+  });
 });

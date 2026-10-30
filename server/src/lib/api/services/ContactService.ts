@@ -9,7 +9,11 @@ import { getContactAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { deleteEntityImage, uploadEntityImage } from '@alga-psa/storage';
 import { ContactModel, clearContactLinksBeforeDelete } from '@alga-psa/shared/models/contactModel';
 import { getContactLocationsForContacts } from '@alga-psa/shared/models/contactLocation';
-import { replaceContactLocations } from '@alga-psa/clients/models/contactLocation';
+import {
+  CONTACT_LOCATION_CLIENT_MISMATCH,
+  isContactLocationClientMismatch,
+  replaceContactLocations,
+} from '@alga-psa/clients/models/contactLocation';
 import type { ContactLocationInput, ContactWorkArrangement } from '@alga-psa/types';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { publishNonCatalogWorkflowEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
@@ -114,6 +118,14 @@ function applyDefaultPhoneJoins(query: Knex.QueryBuilder, knex: Knex, tenant: st
 function throwContactModelApiError(error: unknown): never {
   if (!(error instanceof Error)) {
     throw error;
+  }
+
+  // A location of another client is a bad request, not a server fault: it carries a code rather
+  // than a message prefix, so it would otherwise fall through to a 500.
+  if (isContactLocationClientMismatch(error)) {
+    throw new ValidationError('Validation failed', [
+      { path: ['locations'], message: error.message, code: CONTACT_LOCATION_CLIENT_MISMATCH },
+    ]);
   }
 
   const message = error.message;
