@@ -3011,7 +3011,7 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "path": "ticket.materialsHtml",
             "type": "raw-html",
             "description": "Pre-rendered HTML table of materials/services recorded on the ticket (Item, Qty, Rate, Amount, Billed). Empty string when none; guard with {{#if ticket.materialsHtml}}.",
-            "example": "<table style=\"border-collapse:collapse;width:100%;margin:0;font-size:13px;\"><thead><tr><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Item</th></tr></thead><tbody><tr><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">Toner cartridge</td></tr></tbody></table>",
+            "example": "<table style=\"border-collapse:collapse;width:100%;margin:0;font-size:13px;text-align:left;\"><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amount</th><th>Billed</th></tr></thead><tbody><tr><td>Toner cartridge</td><td>1</td><td>145.00 USD</td><td>145.00 USD</td><td>No</td></tr></tbody></table>",
             "availability": "available-unused"
           },
           {
@@ -3025,7 +3025,7 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "path": "ticket.timeHtml",
             "type": "raw-html",
             "description": "Pre-rendered HTML table of the ticket's time entries (Technician, Date in the tenant timezone, Worked, Billable). Empty string when none; guard with {{#if ticket.timeHtml}}.",
-            "example": "<table style=\"border-collapse:collapse;width:100%;margin:0;font-size:13px;\"><thead><tr><th style=\"text-align:left;padding:6px 10px;border-bottom:2px solid rgba(146,64,14,0.25);font-weight:600;color:#1f2933;white-space:nowrap;\">Technician</th></tr></thead><tbody><tr><td style=\"padding:6px 10px;border-bottom:1px solid rgba(146,64,14,0.15);color:#1f2933;word-break:break-word;\">Jane Smith</td></tr></tbody></table>",
+            "example": "<table style=\"border-collapse:collapse;width:100%;margin:0;font-size:13px;text-align:left;\"><thead><tr><th>Technician</th><th>Date</th><th>Worked</th><th>Billable</th></tr></thead><tbody><tr><td>Jane Smith</td><td>Oct 30, 2026, 9:00 AM</td><td>3 hrs 30 min</td><td>2 hrs 15 min</td></tr></tbody></table>",
             "availability": "available-unused"
           },
           {

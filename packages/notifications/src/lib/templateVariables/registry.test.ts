@@ -36,6 +36,13 @@ describe("email template variable registry", () => {
     for (const header of ["Asset Tag", "Name", "Serial #", "Status", "Relationship"]) {
       expect(assetsHtml).toContain(`<th>${header}</th>`);
     }
+    for (const [path, headers] of [
+      ["ticket.materialsHtml", ["Item", "Qty", "Rate", "Amount", "Billed"]],
+      ["ticket.timeHtml", ["Technician", "Date", "Worked", "Billable"]],
+    ] as const) {
+      const sample = entry.variables.find((variable) => variable.path === path)!.example;
+      for (const header of headers) expect(sample).toContain(`<th>${header}</th>`);
+    }
   });
 
   it("records the corrected contracts and inferred templates", () => {

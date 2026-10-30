@@ -30,21 +30,27 @@ export function replaceTemplateVariables(
   // Expand each block once using the registry's per-item examples.
   let result = content.replace(
     /\{\{#each\s+([^{}\s]+)\s*\}\}([\s\S]*?)\{\{\/each\}\}/g,
-    (_match, path, blockContent: string) =>
-      blockContent.replace(
+    (_match, path, blockContent: string) => {
+      const qualified = blockContent.replace(
         /(\{{2,3})(#if\s+)?(?:this\.)?([\w.]+)(\}{2,3})/g,
         (inner, open, ifTag, key, close) => {
           const samplePath = [`${path}[].${key}`, `${path}.${key}`].find((candidate) => candidate in data);
           return samplePath ? `${open}${ifTag ?? ''}${samplePath}${close}` : inner;
         }
-      )
+      );
+      // Resolve row conditionals before the surrounding section's conditionals.
+      return replaceTemplateVariables(qualified, data);
+    }
   );
 
   // Then, process {{#if condition}}...{{/if}} blocks.
-  // For preview, show the block content (with variables replaced) since sample data is available.
+  // Unknown conditions retain the example content; known empty values hide it.
   result = result.replace(
     /\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g,
-    (_match, _condition, blockContent) => blockContent
+    (_match, condition, blockContent) => {
+      const key = condition.trim();
+      return key in data && ['', 'false', '0'].includes(data[key]) ? '' : blockContent;
+    }
   );
 
   // Then replace simple {{variable}} and raw-HTML {{{variable}}} placeholders.

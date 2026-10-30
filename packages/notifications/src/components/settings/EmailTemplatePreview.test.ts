@@ -56,6 +56,14 @@ describe('replaceTemplateVariables #each handling', () => {
     expect(rendered).toBe('<li>Kickoff — May 1</li>');
   });
 
+  it('handles a guarded asset section and hides missing optional row fields', () => {
+    const rendered = replaceTemplateVariables(
+      '{{#if ticket.assets}}<h2>Devices</h2>{{#each ticket.assets}}<div>{{name}}{{#if serialNumber}} Serial: {{serialNumber}}{{/if}}</div>{{/each}}{{/if}}',
+      { 'ticket.assets': 'sample list', 'ticket.assets[].name': 'Printer', 'ticket.assets[].serialNumber': '' },
+    );
+    expect(rendered).toBe('<h2>Devices</h2><div>Printer</div>');
+  });
+
   it('leaves non-each content untouched', () => {
     const rendered = replaceTemplateVariables('Hello {{user.name}}!', { 'user.name': 'Dorothy' });
 
