@@ -10,6 +10,53 @@ The fields below are available for `ticket-closed`, in both client and internal
 emails. They are not automatically available in other ticket notification types.
 Existing templates do not change until you add the variables to their markup.
 
+## Quick start
+
+For the common case, add this fragment to your existing **Ticket Closed** HTML
+template. It includes linked devices, materials/services, time totals, and the
+remaining prepaid balance without rebuilding the email layout:
+
+```handlebars
+{{#if ticket.assetsHtml}}
+<h3>Devices</h3>
+{{{ticket.assetsHtml}}}
+{{/if}}
+{{#if ticket.materialsHtml}}
+<h3>Materials and Services</h3>
+{{{ticket.materialsHtml}}}
+<p>Total: {{ticket.materialsTotal}}</p>
+{{/if}}
+<p>Total Time Worked: {{ticket.totalTimeWorked}}</p>
+<p>Total Billable Time: {{ticket.totalTimeBillable}}</p>
+<p>Remaining Block Hours: {{ticket.remainingBlockHours}}</p>
+```
+
+Remove any section you do not want to share. For optional asset columns rather
+than the fixed device table, use the [selected-column example](#example-omit-fields-from-the-html).
+These variables work in **both client and internal Ticket Closed emails only**.
+
+## Email styles versus application themes
+
+The examples are standalone **outgoing email HTML**, not application UI
+components. Their inline, literal color values are intentional: recipients'
+mail clients do not load AlgaPSA's stylesheets or define its theme CSS variables,
+and CSS custom-property support varies between email clients. The editor
+preview renders that email document inside an iframe; it is not an application
+panel that inherits the surrounding light/dark theme.
+
+Keep inline colors in the delivered email and use the existing
+[Email Branding controls](email-branding.md) / **Apply my palette** action for
+supported template palette changes. These sample colors are illustrative;
+they do not guarantee that every literal or dynamically inserted detail block
+is recolored by branding. The editable tables intentionally match the fixed
+detail renderer's styles.
+
+The application's theme-token rules still apply to the editor controls and any
+native in-app components. Do not copy these email-only literal styles into
+product UI panels. Email-client dark-mode behavior must be checked separately;
+an application theme switch does not establish how Outlook or Gmail will
+transform a delivered message.
+
 ## Fields added for ticket details
 
 | Variable | Content |
