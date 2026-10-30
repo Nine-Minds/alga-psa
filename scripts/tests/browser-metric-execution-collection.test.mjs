@@ -113,13 +113,21 @@ for (const defect of ['missing-marker', 'skipped-marker', 'failed-job', 'recorde
   });
 }
 
-test('the browser matrix emits non-selection evidence only for the explicit false filter result', () => {
+test('the per-edition evidence job emits non-selection evidence only for the explicit false filter result', () => {
   const workflow = yaml.load(readFileSync('.github/workflows/e2e-fresh-install-tests.yaml', 'utf8'));
-  const job = Object.values(workflow.jobs).find(job => job.name === 'Production browser (${{ matrix.edition }})');
+  // The collector matches "browser / Production browser (<edition>)" and reads
+  // the marker and the recorder off that one job.
+  const job = workflow.jobs['browser-evidence'];
+  assert.equal(job.name, 'Production browser (${{ matrix.edition }})');
   const markers = job.steps.filter(step => step.name === 'Record browser tests not selected');
   assert.equal(markers.length, 1);
   assert.equal(markers[0].if, "needs.changes.outputs.run_tests == 'false'");
-  assert.ok(job.steps.findIndex(step => step.name === 'Check build results') < job.steps.indexOf(markers[0]));
+  const recorders = job.steps.filter(step => step.name === 'Record browser journey readiness');
+  assert.equal(recorders.length, 1);
+  assert.ok(job.steps.indexOf(markers[0]) < job.steps.indexOf(recorders[0]));
+  for (const other of Object.values(workflow.jobs).filter(candidate => candidate !== job)) {
+    assert.equal((other.steps ?? []).filter(step => ['Record browser tests not selected', 'Record browser journey readiness'].includes(step.name)).length, 0);
+  }
 });
 
 test('collects all current-attempt job pages before matching late browser jobs', async () => {

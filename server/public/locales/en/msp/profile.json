@@ -285,7 +285,7 @@
     },
     "webhooks": {
       "title": "Outbound Webhooks",
-      "description": "Create signed ticket lifecycle subscriptions, filter them to specific ticket IDs, inspect delivery history, and rotate secrets without leaving settings.",
+      "description": "Create signed subscriptions for ticket, project, client, contact and location events, filter them to specific IDs, inspect delivery history, and rotate secrets without leaving settings.",
       "newWebhook": "New Webhook",
       "tabs": {
         "configuration": "Configuration",
@@ -520,6 +520,43 @@
         "close": "Close",
         "download": "Download as .txt"
       },
+      "quotePayload": {
+        "entity": "Quote",
+        "fields": {
+          "client_id": "Client ID",
+          "quote_number": "Quote number",
+          "version": "Version",
+          "contact_id": "Contact ID",
+          "opportunity_id": "Opportunity ID",
+          "previous_status": "Previous status",
+          "new_status": "New status",
+          "currency_code": "Currency code",
+          "total_amount": "Total amount",
+          "performed_by_type": "Performed by type",
+          "performed_by_id": "Performed by ID",
+          "sent_at": "Sent at",
+          "viewed_at": "Viewed at",
+          "approved_at": "Approved at",
+          "accepted_at": "Accepted at",
+          "rejected_at": "Rejected at",
+          "expired_at": "Expired at",
+          "converted_at": "Converted at",
+          "conversion_reverted_at": "Conversion reverted at",
+          "superseded_at": "Superseded at",
+          "cancelled_at": "Cancelled at",
+          "accepted_by_name": "Accepted by name",
+          "accepted_on_behalf": "Accepted on behalf",
+          "selected_optional_item_ids": "Selected optional item IDs",
+          "rejection_reason": "Rejection reason",
+          "conversion_targets": "Conversion targets",
+          "contract_id": "Contract ID",
+          "invoice_id": "Invoice ID",
+          "sales_order_id": "Sales order ID",
+          "released_invoice_id": "Released invoice ID",
+          "superseded_by_quote_id": "Superseded by quote ID",
+          "next_version": "Next version"
+        }
+      },
       "form": {
         "createTitle": "Create Webhook",
         "editTitle": "Edit Webhook",
@@ -531,8 +568,10 @@
         "events": "Events",
         "customHeaders": "Custom Headers",
         "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
-        "ticketFilter": "Ticket Filter",
-        "ticketFilterPlaceholder": "One ticket UUID per line. Leave blank to receive all matching ticket events.",
+        "ticketFilter": "Entity ID Filter",
+        "ticketFilterPlaceholder": "One UUID per line (ticket, project, client, contact or location). For contacts and locations either the record ID or its client ID matches. Leave blank to receive all matching events.",
+        "legacyEventsHelp": "These event types are no longer supported. They are kept on this webhook but never deliver. Uncheck one to remove it.",
+        "legacyEventLabel": "unsupported",
         "retryConfig": "Retry Config JSON",
         "verifySsl": "Verify SSL certificates",
         "webhookActive": "Webhook is active",
@@ -763,6 +802,8 @@
       "title": "Connect a provider",
       "description": "Choose a provider to finish the SSO link. You'll be redirected through the provider's login flow.",
       "noneConfigured": "No SSO providers are configured for this environment. Ask your administrator to configure Google or Microsoft credentials.",
+      "noneConfiguredAdmin": "No SSO providers are configured yet. Set up your organization's Google or Microsoft application first.",
+      "openProviderSetup": "Set up an SSO provider",
       "notConfigured": "Not configured",
       "branding": {
         "google": "Continue with Google",
@@ -801,6 +842,7 @@
       "deliveryNotFound": "Delivery not found.",
       "testNotRetryable": "Test deliveries cannot be retried.",
       "payloadInvalid": "This delivery cannot be retried because the stored payload is invalid.",
+      "unsupportedEventType": "Unsupported event type: {{eventTypes}}",
       "validation": { "unknownEntity": "Unknown webhook entity \"{{entity}}\".", "unknownField": "Unknown field \"{{field}}\" for webhook entity \"{{entity}}\"." }
     },
     "inboundWebhooks": {

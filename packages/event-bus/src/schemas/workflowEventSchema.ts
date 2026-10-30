@@ -6,8 +6,8 @@ import { z } from 'zod';
 
 // Base workflow event schema
 export const WorkflowEventBaseSchema = z.object({
-  event_id: z.string().uuid(),
-  execution_id: z.string().uuid().optional(),
+  event_id: z.string().guid(),
+  execution_id: z.string().guid().optional(),
   workflow_correlation_key: z.string().min(1).optional(),
   event_name: z.string(),
   event_type: z.string(),
@@ -15,8 +15,8 @@ export const WorkflowEventBaseSchema = z.object({
   timestamp: z.string().datetime(),
   from_state: z.string().optional(),
   to_state: z.string().optional(),
-  user_id: z.string().uuid().optional(),
-  payload: z.record(z.unknown()).optional(),
+  user_id: z.string().guid().optional(),
+  payload: z.record(z.string(), z.unknown()).optional(),
 });
 
 // Schema for workflow event processing status
@@ -31,9 +31,9 @@ export const WorkflowEventProcessingStatusSchema = z.enum([
 
 // Schema for workflow event processing record
 export const WorkflowEventProcessingSchema = z.object({
-  processing_id: z.string().uuid(),
-  event_id: z.string().uuid(),
-  execution_id: z.string().uuid(),
+  processing_id: z.string().guid(),
+  event_id: z.string().guid(),
+  execution_id: z.string().guid(),
   tenant: z.string(),
   status: WorkflowEventProcessingStatusSchema,
   worker_id: z.string().optional(),
@@ -47,7 +47,7 @@ export const WorkflowEventProcessingSchema = z.object({
 // Schema for Redis stream message
 export const RedisStreamMessageSchema = z.object({
   id: z.string(),
-  message: z.record(z.string()),
+  message: z.record(z.string(), z.string()),
 });
 
 // Schema for Redis stream entry with workflow event

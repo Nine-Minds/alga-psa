@@ -84,6 +84,7 @@
     "button": "Filtry",
     "unassigned": "Nieprzypisane",
     "category": "Filtruj według kategorii",
+    "removeFilterChip": "Usuń filtr: {{label}}",
     "assignee": "Przypisany do",
     "allAssignees": "Wszyscy przypisani",
     "responseState": "Stan odpowiedzi",
@@ -110,7 +111,12 @@
     "allResponseStatuses": "Wszystkie statusy odpowiedzi",
     "responseStatus": "Status odpowiedzi",
     "board": "Filtruj według tablicy",
-    "searchSmart": "Szukaj zgłoszeń i komentarzy… Enter dla inteligentnego wyszukiwania"
+    "searchSmart": "Szukaj zgłoszeń i komentarzy… Enter dla inteligentnego wyszukiwania",
+    "requesterTags": "Tagi zgłaszającego",
+    "clientTags": "Tagi klienta",
+    "tagModeAny": "Dowolny z",
+    "tagModeNone": "Żaden z",
+    "droppedFromLink": "Niektóre filtry w tym łączu są nieprawidłowe i zostały zignorowane."
   },
   "create": {
     "title": "Utwórz zgłoszenie wsparcia",
@@ -248,7 +254,9 @@
     "openMenu": "Otwórz menu",
     "moreActions": "Więcej akcji",
     "createTemplate": "Utwórz szablon ze zgłoszenia",
-    "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia"
+    "createWorkflowFromTicket": "Utwórz workflow ze zgłoszenia",
+    "printWorkTag": "Drukuj etykietę roboczą",
+    "retry": "Ponów"
   },
   "messages": {
     "noTickets": "Brak zgłoszeń",
@@ -358,7 +366,8 @@
     "billingProfileUpdated": "Zaktualizowano profil rozliczeniowy",
     "updateBillingProfileFailed": "Nie udało się zaktualizować profilu rozliczeniowego",
     "scheduleOpenFailed": "Nie udało się otworzyć planera",
-    "sharedWorkspaceReadOnly": "Widzisz to zgłoszenie, ponieważ dotyczy urządzenia we wspólnym stanowisku. Tylko osoba, która je zgłosiła, może coś dodać."
+    "sharedWorkspaceReadOnly": "Widzisz to zgłoszenie, ponieważ dotyczy urządzenia we wspólnym stanowisku. Tylko osoba, która je zgłosiła, może coś dodać.",
+    "loadPartyTagsFailed": "Nie udało się załadować tagów zgłaszającego i klienta"
   },
   "conversation": {
     "comments": "Komentarze",
@@ -461,6 +470,14 @@
     "clientPortal": "Otrzymano przez Portal Klienta",
     "inboundEmail": "Otrzymano przez e-mail"
   },
+  "originalEmail": {
+    "text": "Tekst",
+    "original": "Oryginalny e-mail",
+    "emailShort": "E-mail",
+    "loading": "Wczytywanie oryginalnego e-maila…",
+    "error": "Nie można wczytać oryginalnego e-maila.",
+    "group": "Widok wiadomości"
+  },
   "documents": {
     "title": "Dokumenty",
     "noDocuments": "Brak dołączonych dokumentów",
@@ -502,6 +519,7 @@
     },
     "filters": {
       "allAssignees": "Wszyscy przypisani",
+      "allContacts": "Wszystkie kontakty",
       "selectStatus": "Wybierz status",
       "responseState": "Stan odpowiedzi",
       "allResponseStates": "Wszystkie stany odpowiedzi",
@@ -659,7 +677,7 @@
     "bundleMasterLabel": "Wybierz zgłoszenie nadrzędne",
     "bundleMasterPlaceholder": "Wybierz zgłoszenie nadrzędne...",
     "bundleSyncUpdates": "Synchronizuj aktualizacje z nadrzędnego do podrzędnych (publiczne odpowiedzi + zmiany workflow)",
-    "bundleSyncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Następnie zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, a zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są stosowane do podrzędnych. Pola workflow są zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
+    "bundleSyncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Przy włączonej synchronizacji zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są do nich stosowane, a ich pola workflow są zablokowane. Bez synchronizacji zgłoszenia podrzędne same zarządzają swoim statusem, osobą przypisaną i priorytetem. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
     "bundleSelectAtLeastTwo": "Wybierz co najmniej dwa zgłoszenia do połączenia.",
     "bundleSelectMaster": "Wybierz zgłoszenie nadrzędne.",
     "bundleSuccess": "Zgłoszenia połączone",
@@ -732,8 +750,8 @@
       "masterTicket": "Wybierz zgłoszenie nadrzędne",
       "selectMasterTicket": "Wybierz zgłoszenie nadrzędne...",
       "syncUpdates": "Synchronizuj aktualizacje z nadrzędnego do podrzędnych (publiczne odpowiedzi + zmiany workflow)",
-      "syncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Następnie zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, a zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są stosowane do podrzędnych. Pola workflow są zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
-      "childrenDescription": "Podrzędne zachowują swój obecny status; pola workflow są zablokowane na zgłoszeniach podrzędnych. Odpowiedzi przychodzące na podrzędne są wyświetlane poniżej jako tylko do odczytu.",
+      "syncUpdatesHelp": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Przy włączonej synchronizacji zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są do nich stosowane, a ich pola workflow są zablokowane. Bez synchronizacji zgłoszenia podrzędne same zarządzają swoim statusem, osobą przypisaną i priorytetem. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
+      "childrenDescription": "Zgłoszenia podrzędne zachowują obecny status. Pola workflow są zablokowane tylko w trybie Sync Updates. Odpowiedzi przychodzące na zgłoszenia podrzędne są wyświetlane poniżej jako tylko do odczytu.",
       "checkingMasters": "Sprawdzanie istniejących połączeń...",
       "existingMasterSuffix": "(istniejące zgłoszenie nadrzędne)",
       "existingMasterLocked": "Jedno z wybranych zgłoszeń jest już zgłoszeniem nadrzędnym. Zostanie użyte jako nadrzędne; pozostałe zostaną dodane jako podrzędne.",
@@ -784,7 +802,9 @@
       "more": "Więcej",
       "selectedCount_few": "Zaznaczono {{count}}",
       "selectedCount_many": "Zaznaczono {{count}}",
-      "bundleNeedsOne": "Wybierz co najmniej 1 zgłoszenie do połączenia"
+      "bundleNeedsOne": "Wybierz co najmniej 1 zgłoszenie do połączenia",
+      "printLabels": "Drukuj etykiety",
+      "printLabelsLimit": "Jednorazowo można wydrukować co najwyżej {{max}} etykiet"
     },
     "assign": {
       "dialogTitle": "Przypisz wybrane zgłoszenia",
@@ -968,7 +988,22 @@
     "templateReplaceTitle": "Zastąpić wprowadzone zmiany?",
     "templateReplaceMessage": "Zastosowanie szablonu zastąpi tytuł, opis i inne wprowadzone pola.",
     "templateReplaceConfirm": "Zastosuj szablon",
-    "templateTokenHint": "Tytuł uzupełnia się o wybranego klienta, kontakt i termin wykonania, dopóki go nie zmienisz."
+    "templateTokenHint": "Tytuł uzupełnia się o wybranego klienta, kontakt i termin wykonania, dopóki go nie zmienisz.",
+    "assets": {
+      "heading": "Zasoby",
+      "selectClientFirst": "Wybierz klienta, aby powiązać zasoby.",
+      "unavailable": "Zasoby można powiązać ze zgłoszeniem po jego utworzeniu."
+    },
+    "attachments": {
+      "heading": "Załączniki",
+      "add": "Dodaj pliki",
+      "remove": "Usuń {{name}}"
+    },
+    "watchers": {
+      "heading": "Obserwatorzy",
+      "placeholder": "Dodaj obserwatorów..."
+    },
+    "attachmentsPartialFailure": "Zgłoszenie utworzone, ale nie udało się dołączyć tych plików: {{files}}. Dodaj je w zgłoszeniu."
   },
   "itil": {
     "calculatedPriority": "Priorytet (obliczony)",
@@ -1263,6 +1298,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Śledzenie stanu odpowiedzi",
+      "defaultReplyInternalTitle": "Domyślna widoczność odpowiedzi",
+      "defaultReplyInternalDescription": "Rozpoczynaj nowe odpowiedzi na zgłoszenia jako wewnętrzne dla wszystkich członków zespołu. Użytkownicy nadal mogą przełączyć odpowiedź na tryb klienta. Odpowiedzi w portalu klienta i istniejących wątkach pozostają bez zmian.",
+      "defaultReplyInternalLabel": "Domyślnie używaj odpowiedzi wewnętrznych",
       "responseStateTrackingDescription": "Po włączeniu zgłoszenia automatycznie śledzą, kto ma odpowiedzieć jako następny (oczekiwanie na klienta lub na odpowiedź wewnętrzną). Wyłączenie ukrywa znaczniki stanu odpowiedzi, filtry i powiązane opcje wstrzymania SLA.",
       "responseStateTrackingEnabled": "Śledzenie stanu odpowiedzi włączone",
       "responseStateTrackingDisabled": "Śledzenie stanu odpowiedzi wyłączone",
@@ -1397,7 +1435,15 @@
     "selectUnit": "Wybierz jednostkę do dostarczenia...",
     "onHandByLocation": "Stan według lokalizacji",
     "catalogUnitCost": "Katalogowy koszt jednostkowy",
-    "costNotConfigured": "Nie skonfigurowano"
+    "costNotConfigured": "Nie skonfigurowano",
+    "availableBadge": "Dostępne: {{available}}",
+    "availableByLocation": "Wolny zapas według lokalizacji",
+    "freeOfOnHand": "{{free}} wolnych z {{onHand}}",
+    "stockHeld": "Dostępne tylko {{free}}. {{held}} sztuk na stanie jest twardo zablokowanych dla zamówień sprzedaży lub projektów i nie można ich tu użyć.",
+    "stockInsufficient": "Na stanie tylko {{onHand}}, żądano {{requested}}.",
+    "reservedStockTitle": "Zapas jest zarezerwowany dla zamówienia sprzedaży lub projektu",
+    "reservedStockMessage": "Tylko {{free}} sztuk tego produktu jest wolnych. {{reserved}} sztuk na stanie jest zarezerwowanych dla zamówień sprzedaży lub projektów, a żądano {{requested}}. Dodanie ich mimo to zabiera zapas, na który liczy zamówienie sprzedaży lub projekt, i może spowodować braki.",
+    "reservedStockConfirm": "Dodaj mimo to"
   },
   "watchList": {
     "title": "Lista obserwujących",
@@ -1670,7 +1716,13 @@
       "ruleSubcategoryRequiresCategory": "Wybierz kategorię przed wybraniem podkategorii.",
       "ruleTooManyKeywords": "Użyj co najwyżej {{max}} słów kluczowych w jednej regule.",
       "ruleKeywordTooLong": "Każde słowo kluczowe może mieć najwyżej {{max}} znaków.",
-      "ruleOriginInvalid": "Jedno z wybranych źródeł zgłoszenia jest nieprawidłowe."
+      "ruleOriginInvalid": "Jedno z wybranych źródeł zgłoszenia jest nieprawidłowe.",
+      "templateClientMismatch": "Ten szablon listy kontrolnej jest ograniczony do innego klienta niż klient zgłoszenia.",
+      "templateClientInvalid": "Nie znaleziono wybranego klienta.",
+      "ruleClientOutsideTemplateScope": "Ten szablon należy do jednego klienta, więc jego reguły nie mogą dotyczyć innych klientów.",
+      "templateRulesTargetOtherClients": "Niektóre reguły automatycznego stosowania tego szablonu dotyczą innych klientów. Usuń tych klientów z reguł, zanim przypiszesz szablon do jednego klienta.",
+      "predicateClientOutsideScope": "Klient {{client}} jest poza zakresem tego szablonu.",
+      "predicateInvalid": "Nieprawidłowa reguła listy kontrolnej: {{detail}}"
     }
   },
   "ticketSection": {
@@ -1699,9 +1751,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. Następnie zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, a zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są stosowane do podrzędnych. Pola workflow są zablokowane dla zgłoszeń podrzędnych. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
+      "childrenDescription": "Zgłoszenia podrzędne zachowują obecny status po połączeniu. W trybie Sync Updates zamknięcie lub ponowne otwarcie zgłoszenia nadrzędnego zamyka lub ponownie otwiera wszystkie zgłoszenia podrzędne, zmiany statusu, osoby przypisanej i priorytetu w zgłoszeniu nadrzędnym są do nich stosowane, a ich pola workflow są zablokowane. W trybie Link Only zgłoszenia podrzędne same zarządzają swoim statusem, osobą przypisaną i priorytetem. Notatki wewnętrzne pozostają w zgłoszeniu nadrzędnym.",
       "title": "Pakiet",
       "masterBanner": "To zgłoszenie jest nadrzędnym w pakiecie ({{count}} podrzędnych). Tryb: {{mode}}.",
+      "childLockedNotice": "Pola workflow są zablokowane; pracuj w zgłoszeniu nadrzędnym.",
+      "childLinkedNotice": "Jest powiązane ze zgłoszeniem nadrzędnym i zarządzane niezależnie.",
       "multipleClients": "Wielu klientów",
       "mode": "Tryb: {{mode}}",
       "unbundle": "Rozpakuj",
@@ -1737,7 +1791,15 @@
       "applyResolutionHelpNoComment": "Zamyka zgłoszenie podrzędne ze statusem {{status}}. Zgłoszenie nadrzędne nie ma publicznego komentarza z rozwiązaniem do opublikowania.",
       "reopenMasterLabel": "Dodaj i otwórz ponownie zgłoszenie nadrzędne",
       "reopenMasterHelp": "Otwiera ponownie tylko zgłoszenie nadrzędne. Już zamknięte zgłoszenia podrzędne w tym pakiecie pozostają zamknięte; powiadomienia o ponownym otwarciu i SLA dotyczą zgłoszenia nadrzędnego.",
-      "closedMasterGating": "Reguły zamykania tablicy nie zezwalają na otwarte zgłoszenia podrzędne w ramach zamkniętego zgłoszenia nadrzędnego, więc pozostawienie zgłoszenia nadrzędnego zamkniętego nie jest możliwe."
+      "closedMasterGating": "Reguły zamykania tablicy nie zezwalają na otwarte zgłoszenia podrzędne w ramach zamkniętego zgłoszenia nadrzędnego, więc pozostawienie zgłoszenia nadrzędnego zamkniętego nie jest możliwe.",
+      "modeSwitchDialogIntro": "Zgłoszenie nadrzędne jest zamknięte. Wybierz, co ma się stać z otwartymi zgłoszeniami podrzędnymi po przełączeniu pakietu na Sync Updates.",
+      "modeSwitchConfirm": "Przełącz na Sync Updates",
+      "keepClosedSwitchLabel": "Przełącz i pozostaw zgłoszenie nadrzędne zamknięte",
+      "keepClosedSwitchHelp": "Otwarte zgłoszenia podrzędne pozostają otwarte z własnym licznikiem SLA. Pakiet będzie oznaczony jako niespójny, dopóki nie zostaną rozwiązane.",
+      "applyResolutionSwitchLabel": "Przełącz i zastosuj rozwiązanie zgłoszenia nadrzędnego do otwartych zgłoszeń podrzędnych",
+      "applyResolutionSwitchHelp": "Zamyka każde otwarte zgłoszenie podrzędne ze statusem {{status}} i publikuje w nim rozwiązanie zgłoszenia nadrzędnego jako komentarz publiczny.",
+      "applyResolutionSwitchHelpNoComment": "Zamyka każde otwarte zgłoszenie podrzędne ze statusem {{status}}. Zgłoszenie nadrzędne nie ma publicznego komentarza z rozwiązaniem do opublikowania.",
+      "reopenMasterSwitchLabel": "Przełącz i otwórz ponownie zgłoszenie nadrzędne"
     },
     "autoClose": "Zostanie automatycznie zamknięte {{date}}, jeśli nie pojawi się nowa aktywność.",
     "autoCloseWarned": "Klient został powiadomiony.",
@@ -1786,7 +1848,8 @@
     "remoteFieldUpdated": "{{name}} zaktualizował(a) {{field}}",
     "connection": {
       "reconnecting": "Aktualizacje na żywo offline - ponowne łączenie...",
-      "unavailable": "Aktualizacje na żywo niedostępne"
+      "unavailable": "Aktualizacje na żywo niedostępne",
+      "offlineShort": "Offline"
     }
   },
   "delete": {
@@ -1968,7 +2031,10 @@
         "cancelled": "Anulowana"
       },
       "scheduleTime": "Zaplanuj czas",
-      "openScheduleEntry": "Otwórz wpis harmonogramu"
+      "openScheduleEntry": "Otwórz wpis harmonogramu",
+      "addDescriptionPrompt": "Dodaj opis — na czym polega problem i czego potrzebuje klient?",
+      "projectTasks": "Zadania projektu",
+      "timeAndBilling": "Czas i rozliczenia"
     },
     "timeline": {
       "subtitle": "Odpowiedzi, czas i zmiany systemowe w jednym miejscu",
@@ -2064,6 +2130,17 @@
       "collapseActivity": "Zwiń starszą aktywność",
       "replyingToComment": "Odpowiedź dla {{name}}",
       "createdFromTemplate": "{{actor}} utworzył(a) to zgłoszenie z szablonu „{{name}}”"
+    },
+    "board": {
+      "conversation": "Rozmowa",
+      "details": "Szczegóły"
+    },
+    "groups": {
+      "customer": "Klient",
+      "work": "Praca",
+      "who": "Osoby",
+      "linked": "Powiązane elementy",
+      "empty": "Jeszcze nic tu nie ma"
     }
   },
   "notifications": {
@@ -2495,7 +2572,9 @@
     "discard": "Odrzuć stoper",
     "pausedHint": "Wstrzymano. Wznów, aby kontynuować, lub zatrzymaj, aby zapisać czas.",
     "workDescription": "Opis pracy",
-    "whatAreYouWorkingOn": "Nad czym pracujesz?"
+    "whatAreYouWorkingOn": "Nad czym pracujesz?",
+    "chipElsewhere": "Stoper na {{label}}",
+    "title": "Stoper"
   },
   "templates": {
     "loading": "Ładowanie…",
@@ -2619,6 +2698,116 @@
       "hours": "{{hours}} godz.",
       "daysHours": "{{days}} dn. {{hours}} godz.",
       "days": "{{days}} dn."
+    }
+  },
+  "cannedResponses": {
+    "picker": {
+      "button": "Gotowe odpowiedzi",
+      "buttonTooltip": "Wstaw gotową odpowiedź (Ctrl/Cmd+J lub wpisz /)",
+      "title": "Wstaw gotową odpowiedź",
+      "searchPlaceholder": "Szukaj gotowych odpowiedzi…",
+      "searchLabel": "Szukaj gotowych odpowiedzi",
+      "loading": "Ładowanie gotowych odpowiedzi…",
+      "empty": "Nie ma jeszcze gotowych odpowiedzi.",
+      "noResults": "Żadne gotowe odpowiedzi nie pasują do wyszukiwania.",
+      "loadFailed": "Nie udało się załadować gotowych odpowiedzi.",
+      "insertFailed": "Nie udało się wstawić gotowej odpowiedzi.",
+      "favorites": "Ulubione",
+      "recent": "Ostatnio używane",
+      "uncategorized": "Bez kategorii",
+      "slashGroup": "Gotowe odpowiedzi",
+      "slashBrowse": "Gotowe odpowiedzi…",
+      "slashBrowseHint": "Przeglądaj i wstaw zapisaną odpowiedź"
+    },
+    "scope": {
+      "personal": "Osobista",
+      "team": "Zespół",
+      "board": "Tablica",
+      "clientPortal": "Portal klienta",
+      "personalHelp": "Tylko Ty możesz używać tej odpowiedzi.",
+      "teamHelp": "Członkowie wybranego zespołu mogą używać tej odpowiedzi.",
+      "boardHelp": "Każdy, kto odpowiada na zgłoszenia z wybranej tablicy, może używać tej odpowiedzi.",
+      "clientPortalHelp": "Zarezerwowana dla odpowiedzi w portalu klienta. Nie jest oferowana przy odpowiadaniu z portalu MSP."
+    },
+    "list": {
+      "title": "Gotowe odpowiedzi",
+      "new": "Nowa gotowa odpowiedź",
+      "showInactive": "Pokaż nieaktywne",
+      "searchPlaceholder": "Szukaj według nazwy, kategorii lub tekstu…",
+      "searchLabel": "Szukaj gotowych odpowiedzi",
+      "allCategories": "Wszystkie kategorie",
+      "noResults": "Żadne gotowe odpowiedzi nie pasują do filtrów.",
+      "empty": "Brak gotowych odpowiedzi. Utwórz jedną, aby używać jej ponownie w odpowiedziach na zgłoszenia.",
+      "deleteTitle": "Usuń gotową odpowiedź",
+      "deleteMessage": "Usunąć „{{name}}”? Odpowiedzi, które już jej użyły, nie zostaną zmienione.",
+      "deleted": "Gotowa odpowiedź usunięta",
+      "favorite": "Ulubiona",
+      "columns": {
+        "name": "Nazwa",
+        "category": "Kategoria",
+        "scope": "Dostępna dla",
+        "preview": "Podgląd",
+        "status": "Status"
+      }
+    },
+    "status": {
+      "active": "Aktywna",
+      "inactive": "Nieaktywna"
+    },
+    "actions": {
+      "favorite": "Dodaj do ulubionych",
+      "unfavorite": "Usuń z ulubionych",
+      "edit": "Edytuj",
+      "activate": "Aktywuj",
+      "deactivate": "Dezaktywuj",
+      "delete": "Usuń",
+      "cancel": "Anuluj"
+    },
+    "loading": "Ładowanie…",
+    "editor": {
+      "back": "Gotowe odpowiedzi",
+      "newTitle": "Nowa gotowa odpowiedź",
+      "save": "Zapisz",
+      "saving": "Zapisywanie…",
+      "saved": "Gotowa odpowiedź zapisana",
+      "created": "Gotowa odpowiedź utworzona",
+      "viewOnly": "Możesz wyświetlić tę gotową odpowiedź, ale nie możesz jej zmieniać."
+    },
+    "sections": {
+      "details": "Szczegóły",
+      "body": "Odpowiedź"
+    },
+    "fields": {
+      "name": "Nazwa",
+      "category": "Kategoria",
+      "categoryHelp": "Grupuje odpowiedzi w selektorze. Opcjonalne.",
+      "scope": "Dostępna dla",
+      "team": "Zespół",
+      "teamPlaceholder": "Wybierz zespół",
+      "board": "Tablica",
+      "boardPlaceholder": "Wybierz tablicę",
+      "body": "Treść odpowiedzi",
+      "bodyPlaceholder": "Napisz odpowiedź…"
+    },
+    "mergeFields": {
+      "title": "Pola scalania",
+      "help": "Wypełniane po wstawieniu odpowiedzi do wiadomości. Pole bez wartości staje się puste; nierozpoznane pole pozostaje bez zmian.",
+      "descriptions": {
+        "contact_first_name": "Imię kontaktu",
+        "contact_last_name": "Nazwisko kontaktu",
+        "contact_name": "Pełne imię i nazwisko kontaktu",
+        "ticket_number": "Numer zgłoszenia",
+        "ticket_title": "Tytuł zgłoszenia",
+        "agent_name": "Twoje imię i nazwisko (odpowiadający agent)",
+        "client_name": "Nazwa klienta"
+      }
+    },
+    "errors": {
+      "notFound": "Nie znaleziono gotowej odpowiedzi.",
+      "duplicateName": "Gotowa odpowiedź o nazwie „{{name}}” już tu istnieje.",
+      "invalidReferences": "Wybrany zespół lub tablica już nie istnieje.",
+      "notAvailable": "Ta gotowa odpowiedź nie jest dostępna dla tego zgłoszenia.",
+      "notATeamMember": "Możesz zarządzać odpowiedziami zespołu tylko dla zespołów, do których należysz."
     }
   }
 }

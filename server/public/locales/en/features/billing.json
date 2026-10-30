@@ -54,6 +54,7 @@
     "taxBreakdown": "Tax Breakdown",
     "manualInvoice": "Manual Invoice",
     "credits": "Credits",
+    "currency": "Currency",
     "financialArtifactSummary": "Financial-only invoice. Recurring service periods appear only on recurring detail lines.",
     "servicePeriod": "Service Period",
     "servicePeriods": "Service Periods",
@@ -408,6 +409,13 @@
       "pending": "Invoices awaiting approval or additional processing",
       "prepayment": "Advance payment or deposit invoices",
       "partially_applied": "Invoices with partial payments applied"
+    },
+    "billingPeriod": {
+      "weekly": "per week",
+      "monthly": "per month",
+      "quarterly": "per quarter",
+      "semi-annually": "per half-year",
+      "annually": "per year"
     }
   },
   "credits": {
@@ -444,7 +452,13 @@
     "expires": "Expires {{date}}",
     "recentBurn": "Recent usage",
     "timeEntry": "Time entry",
-    "contractLabel": "Contract: {{contract}}"
+    "contractLabel": "Contract: {{contract}}",
+    "hoursLeftValue": "{{hours}}h left · {{value}}",
+    "validFrom": "Valid from {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — prepaid block, {{hours}} h",
+    "overPrepaidBlock": "{{name}} (over prepaid block)"
   },
   "bucketUsage": {
     "contractLine": "Bucket Contract Line",
@@ -452,5 +466,20 @@
     "hoursUsed": "{{hours}} hours used",
     "hoursTotal": "{{hours}} hours total",
     "rolloverHours": "Includes {{hours}} rollover hours"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Due on Receipt",
+      "net14": "Net 14",
+      "net15": "Net 15",
+      "net30": "Net 30",
+      "net7": "Net 7"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Bank Transfer",
+      "check": "Check",
+      "creditCard": "Credit Card"
+    },
+    "tenantDefault": "Tenant default ({{value}})"
   }
 }

@@ -1,7 +1,13 @@
 'use server';
 
+import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
+import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
+import { resolveTicketMutationCollaborator, type TicketMutationCollaborationContext } from '../lib/ticketMutationActor';
+import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaboration';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
+import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResolution';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
+import { resolveCommentMergeTokens } from '../lib/cannedResponses/commentMerge';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -24,7 +30,12 @@ import type {
   ITag,
   IUserWithRoles,
   TicketResponseState,
+  TagDisplayAudience,
+  IDisplayTag,
 } from '@alga-psa/types';
+import { loadDisplayTagsForEntities, displayTagKey } from '@alga-psa/tags/lib/loadDisplayTags';
+import { displayTagsForEntityQuery } from '@alga-psa/tags/lib/displayTagsQuery';
+import { displayAudienceForUser } from '@alga-psa/tags/lib/tagDisplayRules';
 import {
   withTransaction,
   registerAfterCommit,
@@ -55,6 +66,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { withAuth } from '@alga-psa/auth';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
+import { preserveStoredWatchList } from '@alga-psa/shared/lib/tickets/watchList';
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import { resolveLatestActivityActor, type LatestActivityNames } from '../lib/latestActivityActor';
@@ -68,9 +80,10 @@ import {
   hasCuratedChanges,
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
-import { applyMatchingChecklistTemplates, ticketDescriptionFromAttributes } from '@alga-psa/shared/lib/ticketChecklists';
+import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { enforceTicketCloseRules, type CloseRuleBypassSource } from '../lib/validateTicketClosure';
 import { maybeReopenBundleMasterFromChildReply, mirrorCommentToChild } from './ticketBundleUtils';
+import { BUNDLE_CHILD_LOCKED_FIELDS, isChildWorkflowLocked } from '../lib/bundleWorkflowLock';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -84,7 +97,11 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
-import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../lib/ticketSlaSql';
+import { compilePredicateFragment } from '@alga-psa/predicates/sql';
+import type { PredicateGroup } from '@alga-psa/predicates';
+import { resolveTicketTagIdsByText } from '../lib/ticketTagFilter';
+import { createTicketQuerySchema } from '../lib/ticketQuerySchema';
+import { ticketFiltersToPredicates, type TicketFilterCodecContext } from '../lib/ticketFilterPredicates';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import {
@@ -106,8 +123,6 @@ import {
   type BundleStatusPropagationPreview,
 } from '../lib/ticketBundlePropagation';
 import {
-  parseTicketStatusFilterValue,
-  shouldApplyOpenOnlyStatusFilter,
   TICKET_STATUS_FILTER_ALL,
   TICKET_STATUS_FILTER_OPEN,
 } from '../lib/ticketStatusFilter';
@@ -247,7 +262,7 @@ async function resolveClientVisibility(
   tenant: string,
   user: IUserWithRoles
 ): Promise<ContactVisibilityContext | null | undefined> {
-  if (user.user_type !== 'client') return undefined;
+  if (isMspPrincipalUserType(user.user_type)) return undefined;
   if (!user.contact_id) return null;
   try {
     return await getClientContactVisibilityContext(trx, tenant, user.contact_id);
@@ -688,7 +703,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
             tenantScopedTable(trx, 'clients as c', tenant)
               .select(
                 'c.*',
-                'd.file_id'
+                'd.file_id',
+                displayTagsForEntityQuery(trx, tenant, displayAudienceForUser(user), 'client', 'c.client_id').as('displayTags')
               ),
             'document_associations as da',
             'c.client_id',
@@ -706,6 +722,10 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           .first(),
 
         tenantScopedTable(trx, 'contacts', tenant)
+          .select(
+            'contacts.*',
+            displayTagsForEntityQuery(trx, tenant, displayAudienceForUser(user), 'contact', 'contacts.contact_name_id').as('displayTags')
+          )
           .where({
             client_id: ticket.client_id
           })
@@ -735,11 +755,20 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     if (ticket.contact_name_id) {
       contactInfo = await tenantScopedTable(trx, 'contacts', tenant)
+        .select(
+          'contacts.*',
+          displayTagsForEntityQuery(trx, tenant, displayAudienceForUser(user), 'contact', 'contacts.contact_name_id').as('displayTags')
+        )
         .where({
           contact_name_id: ticket.contact_name_id
         })
         .first();
     }
+
+    const displayTags = {
+      contact: contactInfo?.displayTags ?? [],
+      client: client?.displayTags ?? [],
+    };
 
     // Fetch created by user
     const createdByUser = ticket.entered_by ? 
@@ -775,7 +804,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     const pickerUserIds = new Set((users as Array<{ user_id: string }>).map((agent) => agent.user_id));
     const extraAuthorIds = Array.from(
       new Set(
-        (comments as Array<{ user_id?: string | null }>)
+        (comments as Array<{ user_id?: string | null; actor_reference_id?: string | null; actor_display_name?: string | null; actor_organization_name?: string | null }>)
+          .filter((comment) => !hasCommentCollaborationAttribution(comment))
           .map((comment) => comment.user_id)
           .filter((userId): userId is string => Boolean(userId))
       )
@@ -1136,6 +1166,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       client,
       contacts,
       contactInfo,
+      displayTags,
       createdByUser,
       updatedByUser,
       board,
@@ -1173,6 +1204,101 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 });
 
 /**
+ * Chip tags for a ticket's requester and client, for the caller's audience. The ticket page calls
+ * this when the requester or client is changed in place, so the header badges follow the new party.
+ *
+ * The chips are scoped to the caller's own ticket: the ticket must be readable by the caller
+ * (same row-level rules as the detail page), and the requested contact/client must be null or the
+ * ones the ticket row carries. Anything else is refused, never answered with empty arrays.
+ */
+export const getTicketPartyDisplayTags = withAuth(async (
+  user,
+  { tenant },
+  ticketId: string,
+  contactId: string | null,
+  clientId: string | null
+): Promise<{ contact: IDisplayTag[]; client: IDisplayTag[] } | TicketActionError> => {
+  const { knex: db } = await createTenantKnex();
+  try {
+    return await withTransaction(db, async (trx) => {
+      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+        throw new Error('Permission denied: Cannot view ticket');
+      }
+
+      const ticket = await tenantScopedTable(trx, 'tickets as t', tenant)
+        .where({ 't.ticket_id': ticketId })
+        .select(
+          't.ticket_id',
+          't.entered_by',
+          't.assigned_to',
+          't.client_id',
+          't.board_id',
+          't.contact_name_id',
+          't.billing_profile_id',
+          't.attributes',
+          't.assigned_team_id'
+        )
+        .first();
+
+      // Same message for "missing" and "not authorized" so existence is not revealed.
+      if (!ticket) {
+        throw new Error('Permission denied: Cannot view ticket');
+      }
+      const authorizationContext = await createTicketAuthorizationContext(
+        trx,
+        tenant,
+        user as IUserWithRoles
+      );
+      const [authorizedTicket] = await filterAuthorizedTickets(trx, authorizationContext, [ticket]);
+      if (!authorizedTicket) {
+        throw new Error('Permission denied: Cannot view ticket');
+      }
+
+      if (
+        (contactId !== null && contactId !== ticket.contact_name_id) ||
+        (clientId !== null && clientId !== ticket.client_id)
+      ) {
+        throw new Error('Permission denied: Cannot view tags for a party not on this ticket');
+      }
+
+      const chipTags = await loadDisplayTagsForEntities(trx, tenant, displayAudienceForUser(user), [
+        { taggedType: 'contact', ids: [contactId] },
+        { taggedType: 'client', ids: [clientId] },
+      ]);
+      return {
+        contact: contactId ? (chipTags.get(displayTagKey('contact', contactId)) ?? []) : [],
+        client: clientId ? (chipTags.get(displayTagKey('client', clientId)) ?? []) : [],
+      };
+    });
+  } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+/**
+ * Resolves what the pure filter codec cannot know: the clock, the caller's time zone and
+ * `project:read` bypass, and the ticket tag definition ids behind the legacy tag-text filter.
+ */
+async function resolveTicketFilterCodecContext(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: { user_id: string; user_type?: string; clientId?: string | null },
+  filters: ITicketListFilters
+): Promise<TicketFilterCodecContext> {
+  const nowIso = Temporal.Now.instant().toString();
+  const timeZone = filters.dueDateFilter === 'today'
+    ? await resolveUserTimeZone(trx, tenant, user.user_id)
+    : 'UTC';
+  const assignedToMeBypass = filters.assignedToMe
+    ? await hasPermission(user as any, 'project', 'read', trx)
+    : false;
+  const ticketTagIdsByText = await resolveTicketTagIdsByText(trx, tenant, filters.tags);
+  return { nowIso, timeZone, userId: user.user_id, assignedToMeBypass, ticketTagIdsByText };
+}
+
+/**
  * Build the base filtered query for the ticket list.
  * Returns a Knex query builder with all JOINs and WHERE clauses applied,
  * but no SELECT, ORDER BY, LIMIT, or OFFSET.
@@ -1184,7 +1310,6 @@ async function buildTicketListBaseQuery(
   user: { user_id: string; user_type?: string; clientId?: string | null },
   validatedFilters: ITicketListFilters
 ): Promise<{ builder: Knex.QueryBuilder; scopedQuery: TenantScopedQuery }> {
-    const parsedStatusFilter = parseTicketStatusFilterValue(validatedFilters.statusId);
     const scopedQuery = tenantDb(trx, tenant).scoped('tickets as t');
     let baseQuery = scopedQuery.builder;
     tenantLeftJoin(trx, tenant, baseQuery, 'tickets as mt', 't.master_ticket_id', 'mt.ticket_id');
@@ -1200,310 +1325,27 @@ async function buildTicketListBaseQuery(
     tenantLeftJoin(trx, tenant, baseQuery, 'users as au', 't.assigned_to', 'au.user_id');
     tenantLeftJoin(trx, tenant, baseQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id');
 
-    // Bundle view filter: hide children in bundled view
-    if (validatedFilters.bundleView === 'bundled') {
-      baseQuery = baseQuery.whereNull('t.master_ticket_id');
-    }
-
-    // Board include filter. Prefers the multi-select `boardIds`; falls back to the
-    // legacy single `boardId`. An explicit board selection takes precedence over the
-    // active/inactive status restriction (the user has positively chosen boards).
-    const includeBoardIds = (validatedFilters.boardIds && validatedFilters.boardIds.length > 0)
-      ? validatedFilters.boardIds
-      : (validatedFilters.boardId ? [validatedFilters.boardId] : []);
-    const includeNoBoard = includeBoardIds.includes('no-board');
-    const includeRealBoardIds = includeBoardIds.filter(id => id !== 'no-board');
-    if (includeBoardIds.length > 0) {
-      baseQuery = baseQuery.where(function () {
-        if (includeNoBoard && includeRealBoardIds.length > 0) {
-          this.whereNull('t.board_id').orWhereIn('t.board_id', includeRealBoardIds);
-        } else if (includeNoBoard) {
-          this.whereNull('t.board_id');
-        } else {
-          this.whereIn('t.board_id', includeRealBoardIds);
-        }
-      });
-    } else if (validatedFilters.boardFilterState !== 'all') {
-      const boardSubquery = tenantScopedTable(trx, 'boards', tenant)
-        .select('board_id')
-        .where('is_inactive', validatedFilters.boardFilterState === 'inactive');
-
-      baseQuery = baseQuery.whereIn('t.board_id', boardSubquery);
-    }
-
-    // Board exclude filter. Excludes any ticket on an excluded board; the 'no-board'
-    // sentinel excludes tickets that have no board.
-    const excludeBoardIds = validatedFilters.excludeBoardIds ?? [];
-    if (excludeBoardIds.includes('no-board')) {
-      baseQuery = baseQuery.whereNotNull('t.board_id');
-    }
-    const excludeRealBoardIds = excludeBoardIds.filter(id => id !== 'no-board');
-    if (excludeRealBoardIds.length > 0) {
-      baseQuery = baseQuery.where(function () {
-        this.whereNull('t.board_id').orWhereNotIn('t.board_id', excludeRealBoardIds);
-      });
-    }
-
-    if (shouldApplyOpenOnlyStatusFilter(validatedFilters.statusId, validatedFilters.showOpenOnly)) {
-      baseQuery = baseQuery.whereExists(
-        tenantScopedTable(trx, 'statuses', tenant)
-          .select('*')
-          // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
-          .whereRaw('statuses.tenant = t.tenant')
-          .andWhereRaw('statuses.status_id = t.status_id')
-          .andWhere('statuses.is_closed', false)
-      );
-    } else if (parsedStatusFilter.kind === 'name') {
-      baseQuery = baseQuery.where('s.name', parsedStatusFilter.statusName);
-    } else if (parsedStatusFilter.kind === 'id') {
-      baseQuery = baseQuery.where('t.status_id', parsedStatusFilter.statusId);
-    }
-
-    if (validatedFilters.priorityId && validatedFilters.priorityId !== 'all') {
-      baseQuery = baseQuery.where('t.priority_id', validatedFilters.priorityId);
-    }
-
-    // Category include filter. A ticket "has" a category if either its
-    // category_id (parent) or subcategory_id (child) matches the selection, so
-    // selecting a parent matches its subcategorized tickets and selecting a
-    // subcategory matches tickets that reference it via subcategory_id.
-    // Prefers the multi-select `categoryIds`; falls back to legacy single `categoryId`.
-    const includeCategoryIds = (validatedFilters.categoryIds && validatedFilters.categoryIds.length > 0)
-      ? validatedFilters.categoryIds
-      : (validatedFilters.categoryId && validatedFilters.categoryId !== 'all'
-          ? [validatedFilters.categoryId]
-          : []);
-    const includeNoCategory = includeCategoryIds.includes('no-category');
-    const includeRealCategoryIds = includeCategoryIds.filter(id => id !== 'no-category' && id !== 'all');
-    if (includeNoCategory || includeRealCategoryIds.length > 0) {
-      baseQuery = baseQuery.where(function () {
-        if (includeNoCategory && includeRealCategoryIds.length > 0) {
-          this.whereNull('t.category_id').orWhere(function () {
-            this.whereIn('t.category_id', includeRealCategoryIds)
-              .orWhereIn('t.subcategory_id', includeRealCategoryIds);
-          });
-        } else if (includeNoCategory) {
-          this.whereNull('t.category_id');
-        } else {
-          this.whereIn('t.category_id', includeRealCategoryIds)
-            .orWhereIn('t.subcategory_id', includeRealCategoryIds);
-        }
-      });
-    }
-
-    // Category exclude filter. Excludes any ticket whose parent or subcategory is
-    // in the excluded set; null columns are kept (unless 'no-category' is excluded).
-    const excludeCategoryIds = validatedFilters.excludeCategoryIds ?? [];
-    const excludeNoCategory = excludeCategoryIds.includes('no-category');
-    const excludeRealCategoryIds = excludeCategoryIds.filter(id => id !== 'no-category' && id !== 'all');
-    if (excludeNoCategory) {
-      baseQuery = baseQuery.whereNotNull('t.category_id');
-    }
-    if (excludeRealCategoryIds.length > 0) {
-      baseQuery = baseQuery.where(function () {
-        this.where(function () {
-          this.whereNull('t.category_id').orWhereNotIn('t.category_id', excludeRealCategoryIds);
-        }).andWhere(function () {
-          this.whereNull('t.subcategory_id').orWhereNotIn('t.subcategory_id', excludeRealCategoryIds);
-        });
-      });
-    }
-
-    if (validatedFilters.clientId) {
-      if (validatedFilters.bundleView === 'bundled') {
-        baseQuery = baseQuery.where(function(this: any) {
-          this.where('t.client_id', validatedFilters.clientId)
-            .orWhereExists(
-              tenantScopedTable(trx, 'tickets as tc', tenant)
-                .select('*')
-                .whereRaw('tc.tenant = t.tenant')
-                .whereRaw('tc.master_ticket_id = t.ticket_id')
-                // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
-                .andWhereRaw('tc.tenant = t.tenant')
-                .andWhere('tc.client_id', validatedFilters.clientId)
-            );
-        });
-      } else {
-        baseQuery = baseQuery.where('t.client_id', validatedFilters.clientId);
-      }
-    }
-
-    if (validatedFilters.contactId) {
-      if (validatedFilters.bundleView === 'bundled') {
-        baseQuery = baseQuery.where(function(this: any) {
-          this.where('t.contact_name_id', validatedFilters.contactId)
-            .orWhereExists(
-              tenantScopedTable(trx, 'tickets as tc', tenant)
-                .select('*')
-                .whereRaw('tc.tenant = t.tenant')
-                .whereRaw('tc.master_ticket_id = t.ticket_id')
-                // LEVERAGE: pattern tenant-correlated-exists — correlate on the distribution column so Citus can co-locate the subquery
-                .andWhereRaw('tc.tenant = t.tenant')
-                .andWhere('tc.contact_name_id', validatedFilters.contactId)
-            );
-        });
-      } else {
-        baseQuery = baseQuery.where('t.contact_name_id', validatedFilters.contactId);
-      }
+    // Every filter goes through the predicate compiler: the legacy keys are translated by the codec,
+    // `filters.where` is appended, and the group compiles to one tenant-correlated boolean. There is
+    // no hand-written filter SQL here; see lib/ticketQuerySchema.ts for what each path means.
+    const codecContext = await resolveTicketFilterCodecContext(trx, tenant, user, validatedFilters);
+    const filterGroup: PredicateGroup = {
+      join: 'and',
+      clauses: [
+        ticketFiltersToPredicates(validatedFilters, codecContext),
+        ...(validatedFilters.where?.clauses ?? []),
+      ],
+    };
+    const compiled = compilePredicateFragment(
+      createTicketQuerySchema(() => codecContext.nowIso),
+      filterGroup,
+      { rootAlias: 't', selfOrAnyChild: validatedFilters.bundleView === 'bundled' }
+    );
+    if (compiled.sql !== 'TRUE') {
+      baseQuery = baseQuery.whereRaw(compiled.sql, compiled.bindings as Knex.RawBinding[]);
     }
 
     baseQuery = applyTicketListIndexedSearchFilter(trx, baseQuery, tenant, user, validatedFilters);
-
-    // Apply tag filter if provided
-    if (validatedFilters.tags && validatedFilters.tags.length > 0) {
-      const tagSubquery = tenantScopedTable(trx, 'tag_mappings as tm', tenant)
-        .select('tm.tagged_id')
-        .where('tm.tagged_type', 'ticket')
-        .whereIn('td.tag_text', validatedFilters.tags as string[]);
-      tenantDb(trx, tenant).tenantJoin(tagSubquery, 'tag_definitions as td', 'tm.tag_id', 'td.tag_id');
-      baseQuery = baseQuery.whereIn('t.ticket_id', tagSubquery);
-    }
-
-    // Apply assignee filter if provided
-    if (validatedFilters.assignedToIds?.length || validatedFilters.assignedTeamIds?.length || validatedFilters.includeUnassigned) {
-      baseQuery = baseQuery.where(function(this: any) {
-        // Handle specific assignee IDs
-        if (validatedFilters.assignedToIds?.length) {
-          this.whereIn('t.assigned_to', validatedFilters.assignedToIds);
-        }
-
-        if (validatedFilters.assignedTeamIds?.length) {
-          if (validatedFilters.assignedToIds?.length) {
-            this.orWhereIn('t.assigned_team_id', validatedFilters.assignedTeamIds);
-          } else {
-            this.whereIn('t.assigned_team_id', validatedFilters.assignedTeamIds);
-          }
-        }
-
-        // Handle unassigned (OR condition if both specified)
-        if (validatedFilters.includeUnassigned) {
-          if (validatedFilters.assignedToIds?.length || validatedFilters.assignedTeamIds?.length) {
-            this.orWhereNull('t.assigned_to');
-          } else {
-            this.whereNull('t.assigned_to');
-          }
-        }
-      });
-    }
-
-    // Apply due date filters (timezone-aware for 'today' filter)
-    if (validatedFilters.dueDateFilter && validatedFilters.dueDateFilter !== 'all') {
-      const nowInstant = Temporal.Now.instant();
-      const nowIso = nowInstant.toString();
-
-      switch (validatedFilters.dueDateFilter) {
-        case 'overdue':
-          // Due date is in the past
-          baseQuery = baseQuery.where('t.due_date', '<', nowIso);
-          break;
-        case 'upcoming':
-          // Due date is within the next 7 days (not overdue)
-          const weekFromNow = nowInstant.add({ hours: 24 * 7 });
-          baseQuery = baseQuery
-            .where('t.due_date', '>=', nowIso)
-            .where('t.due_date', '<=', weekFromNow.toString());
-          break;
-        case 'today':
-          // Due date is today in user's timezone
-          const userTz = await resolveUserTimeZone(trx, tenant, user.user_id);
-          const zonedNow = nowInstant.toZonedDateTimeISO(userTz);
-          const startOfTodayZoned = zonedNow.startOfDay();
-          const endOfTodayZoned = startOfTodayZoned.add({ days: 1 });
-          baseQuery = baseQuery
-            .where('t.due_date', '>=', startOfTodayZoned.toInstant().toString())
-            .where('t.due_date', '<', endOfTodayZoned.toInstant().toString());
-          break;
-        case 'no_due_date':
-          // No due date set
-          baseQuery = baseQuery.whereNull('t.due_date');
-          break;
-        case 'before':
-          // Due date is before a specific date
-          if (validatedFilters.dueDateTo) {
-            baseQuery = baseQuery.where('t.due_date', '<', validatedFilters.dueDateTo);
-          }
-          break;
-        case 'after':
-          // Due date is after a specific date
-          if (validatedFilters.dueDateFrom) {
-            baseQuery = baseQuery.where('t.due_date', '>', validatedFilters.dueDateFrom);
-          }
-          break;
-        case 'custom':
-          // Custom date range
-          if (validatedFilters.dueDateFrom) {
-            baseQuery = baseQuery.where('t.due_date', '>=', validatedFilters.dueDateFrom);
-          }
-          if (validatedFilters.dueDateTo) {
-            baseQuery = baseQuery.where('t.due_date', '<=', validatedFilters.dueDateTo);
-          }
-          break;
-      }
-    }
-
-    // Apply response state filter if provided (F017-F021)
-    if (validatedFilters.responseState && validatedFilters.responseState !== 'all') {
-      if (validatedFilters.responseState === 'none') {
-        // Filter for tickets with no response state set
-        baseQuery = baseQuery.whereNull('t.response_state');
-      } else {
-        // Filter for specific response state
-        baseQuery = baseQuery.where('t.response_state', validatedFilters.responseState);
-      }
-    }
-
-    // Apply SLA status filter
-    if (validatedFilters.slaStatusFilter && validatedFilters.slaStatusFilter !== 'all') {
-      const nowIso = Temporal.Now.instant().toString();
-
-      switch (validatedFilters.slaStatusFilter) {
-        case 'has_sla':
-          baseQuery = baseQuery.whereNotNull('t.sla_policy_id');
-          break;
-
-        case 'no_sla':
-          baseQuery = baseQuery.whereNull('t.sla_policy_id');
-          break;
-
-        case 'on_track':
-          baseQuery = baseQuery
-            .whereNotNull('t.sla_policy_id')
-            .whereNull('t.sla_paused_at')
-            .where(function() {
-              this.whereNotNull('t.sla_response_at')
-                .orWhereNull('t.sla_response_due_at')
-                .orWhere('t.sla_response_due_at', '>=', nowIso);
-            })
-            .where(function() {
-              this.whereNotNull('t.sla_resolution_at')
-                .orWhereNull('t.sla_resolution_due_at')
-                .orWhere('t.sla_resolution_due_at', '>=', nowIso);
-            })
-            .where(function() {
-              this.whereNull('t.sla_response_met').orWhere('t.sla_response_met', true);
-            })
-            .where(function() {
-              this.whereNull('t.sla_resolution_met').orWhere('t.sla_resolution_met', true);
-            });
-          break;
-
-        case 'breached':
-          // Shared with getBoardListStats' sla_breached aggregate: the board
-          // header's breach count and this filter must describe the same set,
-          // which they can only be relied on to do if they read one predicate.
-          baseQuery = baseQuery.whereRaw(
-            ticketSlaBreachedSql('t'),
-            ticketSlaBreachedBindings(nowIso)
-          );
-          break;
-
-        case 'paused':
-          baseQuery = baseQuery
-            .whereNotNull('t.sla_policy_id')
-            .whereNotNull('t.sla_paused_at');
-          break;
-      }
-    }
 
     // Wrap in object to prevent Promise thenable unwrapping.
     // Knex query builders have .then(), so returning one from an async function
@@ -1617,7 +1459,7 @@ function applyTicketListIndexedSearchFilter(
   const prefixTsquery = buildTicketListSearchPrefixTsquery(rawSearch);
   const identifier = rawSearch.match(TICKET_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN)?.[0]?.toLowerCase() ?? null;
   const includeBundledChildren = validatedFilters.bundleView === 'bundled';
-  const isInternalUser = user.user_type !== 'client';
+  const isInternalUser = isMspPrincipalUserType(user.user_type);
   const clientScopePredicate = isInternalUser
     ? 'TRUE'
     : user.clientId
@@ -1868,7 +1710,8 @@ function cleanFilterValues(validatedFilters: ITicketListFilters): ITicketListFil
 function buildTicketListItemsQuery(
   trx: Knex.Transaction,
   tenant: string,
-  baseQuery: Knex.QueryBuilder
+  baseQuery: Knex.QueryBuilder,
+  audience: TagDisplayAudience
 ): Knex.QueryBuilder {
   const db = tenantDb(trx, tenant);
   const latestActivity = ticketLatestActivitySql(tenant);
@@ -1950,6 +1793,8 @@ function buildTicketListItemsQuery(
       'cat.category_name',
       'comp.client_name',
       'cn.full_name as contact_name',
+      displayTagsForEntityQuery(trx, tenant, audience, 'contact', 't.contact_name_id').as('contact_tags'),
+      displayTagsForEntityQuery(trx, tenant, audience, 'client', 't.client_id').as('client_tags'),
       trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
       trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
       'tm.team_name as assigned_team_name',
@@ -2299,7 +2144,7 @@ export const getTicketsForList = withAuth(async (
         .first();
 
       const pageQuery = applyTicketListSort(
-        buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder),
+        buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user)),
         tenant,
         validatedFilters
       )
@@ -2313,7 +2158,7 @@ export const getTicketsForList = withAuth(async (
       // Future ABAC templates/constraints may not be representable in SQL yet.
       // Fall back to the exact JS kernel path instead of risking overexposure.
       const tickets = await applyTicketListSort(
-        buildTicketListItemsQuery(trx, tenant, baseQuery),
+        buildTicketListItemsQuery(trx, tenant, baseQuery, displayAudienceForUser(user)),
         tenant,
         validatedFilters
       );
@@ -2442,11 +2287,11 @@ export const loadTicketListItemsByIds = withAuth(async (
       const authSqlResult = applyTicketReadAuthorizationSql(scopedBaseQuery, trx, tenant, authorizationContext);
       let rows: any[];
       if (authSqlResult.supported) {
-        rows = await buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder)
+        rows = await buildTicketListItemsQuery(trx, tenant, scopedBaseQuery.builder, displayAudienceForUser(user))
           .whereIn('t.ticket_id', requestedIds)
           .clearOrder();
       } else {
-        const candidates = await buildTicketListItemsQuery(trx, tenant, baseQuery)
+        const candidates = await buildTicketListItemsQuery(trx, tenant, baseQuery, displayAudienceForUser(user))
           .whereIn('t.ticket_id', requestedIds)
           .clearOrder();
         rows = await filterAuthorizedTickets(trx, authorizationContext, candidates);
@@ -2609,6 +2454,35 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .orderBy('td.created_at', 'asc')
     ]);
 
+      // Contact and client tag definitions for the Requester tags / Client tags filters. A definition
+      // is listed when it has a mapping or something refers to it (tag_references), so a referenced tag
+      // (e.g. VIP under a display rule) stays selectable after its last mapping is removed.
+      const partyTagMappings = scopedDb.table('tag_mappings as tm')
+        .select(trx.raw('1'))
+        .whereRaw('?? = ??', ['tm.tag_id', 'td.tag_id']);
+      scopedDb.tenantWhereColumn(partyTagMappings, 'tm.tenant', 'td.tenant');
+      const partyTagRules = scopedDb.table('tag_references as tr')
+        .select(trx.raw('1'))
+        .whereRaw('?? = ??', ['tr.tag_id', 'td.tag_id']);
+      scopedDb.tenantWhereColumn(partyTagRules, 'tr.tenant', 'td.tenant');
+      const partyTagRows = await scopedDb.table('tag_definitions as td')
+        .select('td.tag_id', 'td.tag_text', 'td.tagged_type', 'td.background_color', 'td.text_color')
+        .whereIn('td.tagged_type', ['contact', 'client'])
+        .where((builder) => builder.whereExists(partyTagMappings).orWhereExists(partyTagRules))
+        .orderBy('td.tag_text', 'asc')
+        .orderBy('td.created_at', 'asc');
+      const toPartyTag = (row: any) => ({
+        tag_id: row.tag_id,
+        tag_text: row.tag_text,
+        tagged_id: '',
+        tagged_type: row.tagged_type as 'contact' | 'client',
+        tenant: tenant,
+        background_color: row.background_color,
+        text_color: row.text_color,
+      });
+      const contactTagDefinitions = partyTagRows.filter((row: any) => row.tagged_type === 'contact').map(toPartyTag);
+      const clientTagDefinitions = partyTagRows.filter((row: any) => row.tagged_type === 'client').map(toPartyTag);
+
       // Format options for dropdowns
       const statusOptions = [
         { value: TICKET_STATUS_FILTER_OPEN, label: 'All open statuses' },
@@ -2646,12 +2520,16 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
       const clientIds = clientsData.map((c: IClient) => c.client_id);
       const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
     
+      const clientChipTags = await loadDisplayTagsForEntities(trx, tenant, displayAudienceForUser(user), [
+        { taggedType: 'client', ids: clientIds },
+      ]);
       const clientsWithLogos = clientsData.map((clientData: IClient) => {
         const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
         return {
           ...clientData,
           properties: clientData.properties || {},
           logoUrl,
+          displayTags: clientChipTags.get(displayTagKey('client', clientData.client_id)) ?? [],
         };
       });
       // --- End Logo URL Processing ---
@@ -2666,6 +2544,8 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         categories,
         clients: clientsWithLogos, // Return clients with logos
         users,
+        contactTagDefinitions,
+        clientTagDefinitions,
         tags: (tags || []).map((tag: any) => ({
           tag_id: tag.tag_id,
           tag_text: tag.tag_text,
@@ -2729,6 +2609,7 @@ export async function updateTicketInTransaction(
   id: string,
   data: Partial<ITicket>,
   options?: UpdateTicketInTransactionOptions,
+  collaboration?: TicketMutationCollaborationContext,
 ): Promise<'success'> {
     try {
       // Validate update data
@@ -2740,27 +2621,85 @@ export async function updateTicketInTransaction(
         throw new Error('suppressInternalNotifications requires suppressContactNotifications');
       }
 
+    // Co-managed collaborator edits (admitted by the shared-work domain). Every
+    // statement in this block is conditional on `collaboration`: a native caller
+    // issues exactly the queries it issued before, and takes no additional lock.
+    const isSystemActor = options?.systemActor === true;
+    if (collaboration && (isSystemActor || options?.overrideCloseRules || options?.bypassCloseRules ||
+        suppressContactNotifications || suppressInternalNotifications)) {
+      throw new Error('Shared ticket edits cannot override closure or notification policy');
+    }
+    if (!collaboration && !isSystemActor && user.tenant !== tenant) {
+      throw new Error('A foreign ticket actor requires a collaboration context');
+    }
+    const collaborator = collaboration ? await resolveTicketMutationCollaborator(trx, tenant, user, collaboration) : null;
+    if (collaboration) {
+      const allowed = new Set(['title', 'url', 'status_id', 'priority_id', 'due_date', 'response_state', 'category_id', 'subcategory_id', 'attributes']);
+      if (Object.keys(data).some((key) => !allowed.has(key))) throw new Error('Unsupported shared ticket edit fields');
+      await collaboration.assertWriteAuthority(trx);
+    }
+
     // Get current ticket state before update
-    const currentTicket = await tenantScopedTable(trx, 'tickets', tenant)
-      .where({ ticket_id: id })
-      .first();
+    // An update that carries `attributes` re-writes the stored watch_list mirror, so it
+    // takes the same row lock as watcher writes (TicketWatcherService) to avoid
+    // restoring a stale mirror.
+    const currentTicketQuery = tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id: id });
+    // A shared edit always serializes on the owner row so its baseline cannot move.
+    if ((validatedData as Record<string, unknown>).attributes !== undefined || collaboration) {
+      currentTicketQuery.forUpdate();
+    }
+    const currentTicket = await currentTicketQuery.first();
 
     if (!currentTicket) {
       throw new Error('Ticket not found');
     }
 
-    // Bundled child tickets lock workflow fields by default
-    const isBundledChild = Boolean(currentTicket.master_ticket_id);
-    const lockedFields = new Set(['status_id', 'assigned_to', 'priority_id']);
-    if (isBundledChild) {
-      const attempted = Object.keys(validatedData).filter((k) => lockedFields.has(k));
-      if (attempted.length > 0) {
-        throw new Error(`This ticket is bundled; workflow fields are locked (${attempted.join(', ')}). Update the master ticket instead.`);
+    if (collaboration) {
+      // A shared edit may clear the subcategory and rewrite only the rich-text
+      // description inside attributes; the rest of the document (e.g. the watch
+      // list) is customer-owned and must be carried over unchanged.
+      if ('subcategory_id' in data && data.subcategory_id !== null) throw new Error('Shared ticket edits can only clear the subcategory');
+      if ('attributes' in data) {
+        const { description: _next, ...nextRest } = (data.attributes ?? {}) as Record<string, unknown>;
+        const { description: _current, ...currentRest } = (currentTicket.attributes ?? {}) as Record<string, unknown>;
+        if (JSON.stringify(nextRest) !== JSON.stringify(currentRest)) throw new Error('Shared ticket edits can only change the description attribute');
+      }
+      // A bundle edit must not fan out beyond the ticket admitted by the caller.
+      // Refuse before any write; master closes by native callers never reach here.
+      if (Object.keys(validatedData).some((key) => (BUNDLE_CHILD_LOCKED_FIELDS as readonly string[]).includes(key))) {
+        const bundle = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+          .where({ master_ticket_id: id }).forShare().first();
+        if (bundle?.mode === 'sync_updates') throw new Error('Shared bundle workflow edits require authority for every child ticket');
+      }
+    }
+
+    // A bundled child's workflow fields are locked only while its master is in
+    // sync_updates mode; link_only children manage their own.
+    if (currentTicket.master_ticket_id) {
+      const masterSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+        .where({ master_ticket_id: currentTicket.master_ticket_id })
+        .first();
+      if (isChildWorkflowLocked({ isBundledChild: true, masterSettings })) {
+        const lockedFields = new Set<string>(BUNDLE_CHILD_LOCKED_FIELDS);
+        const attempted = Object.keys(validatedData).filter((k) => lockedFields.has(k));
+        if (attempted.length > 0) {
+          throw new Error(`This ticket is bundled; workflow fields are locked (${attempted.join(', ')}). Update the master ticket instead.`);
+        }
       }
     }
 
     // Clean up the data before update
     const updateData = { ...validatedData };
+
+    // `attributes.watch_list` is a derived mirror of `ticket_watchers`, written only by
+    // TicketWatcherService (see ticketWatcherActions). A general update ignores what it
+    // is given for that key and keeps the stored mirror.
+    if ('attributes' in updateData && updateData.attributes !== undefined) {
+      (updateData as Record<string, unknown>).attributes = preserveStoredWatchList(
+        currentTicket.attributes,
+        updateData.attributes
+      );
+    }
 
     // Handle null values for category and subcategory
     if ('category_id' in updateData && !updateData.category_id) {
@@ -2857,10 +2796,19 @@ export async function updateTicketInTransaction(
       : oldStatus;
     const isClosingTicket = Boolean(newStatus?.is_closed && !oldStatus?.is_closed);
 
-    const isSystemActor = options?.systemActor === true;
-    // Server-owned audit stamp; system actors (auto-close) write NULL explicitly.
+    // Server-owned audit stamp; system actors (auto-close) and co-managed
+    // collaborators (not a local user) write NULL explicitly.
     // Kept out of updateData so it does not show up in the audit field diff.
-    const ticketStamp = ticketUpdateStamp(trx, isSystemActor ? null : user.user_id);
+    const ticketStamp = ticketUpdateStamp(trx, isSystemActor || collaborator ? null : user.user_id);
+    const actorInfo = isSystemActor
+      ? { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM }
+      : collaborator
+        ? { actorType: TICKET_ACTIVITY_ACTOR.USER, actorReferenceId: collaborator.referenceId }
+        : {
+            actorType: TICKET_ACTIVITY_ACTOR.USER,
+            userId: user.user_id,
+            displayName: formatLiveUpdateDisplayName(user),
+          };
 
     // Pre-close validation gates: when this update flips the ticket from an
     // open to a closed status, enforce the board's close rules before any
@@ -2883,13 +2831,7 @@ export async function updateTicketInTransaction(
             ? { requested: true, reason: options?.overrideCloseRulesReason ?? null, user }
             : undefined,
           bypass: options?.bypassCloseRules,
-          actor: isSystemActor
-            ? { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM }
-            : {
-                actorType: TICKET_ACTIVITY_ACTOR.USER,
-                userId: user.user_id,
-                displayName: formatLiveUpdateDisplayName(user),
-              },
+          actor: actorInfo,
           source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
         });
       }
@@ -2925,6 +2867,11 @@ export async function updateTicketInTransaction(
       ) {
         throw new BundlePropagationConfirmationRequiredError(propagationPreview);
       }
+    }
+
+    // Human-work guard: only when this write changes assigned_to (legacy references untouched).
+    if (isChangingAssignment && updateData.assigned_to) {
+      await assertHumanWorkAssignee(trx, tenant, [updateData.assigned_to]);
     }
 
     let updatedTicket;
@@ -3005,7 +2952,9 @@ export async function updateTicketInTransaction(
       tenantId: tenant,
       actor: isSystemActor
         ? { actorType: 'SYSTEM' as const }
-        : { actorType: 'USER' as const, actorUserId: user.user_id },
+        : collaborator
+          ? { actorType: 'COLLABORATOR' as const, actorReference: collaborator }
+          : { actorType: 'USER' as const, actorUserId: user.user_id },
       occurredAt,
     };
 
@@ -3027,7 +2976,7 @@ export async function updateTicketInTransaction(
         boardId: updatedTicket.board_id,
         escalated: updatedTicket.escalated,
       },
-      actorUserId: isSystemActor ? undefined : user.user_id,
+      actorUserId: isSystemActor || collaborator ? undefined : user.user_id,
     });
 
     // Build structured changes object with old/new values
@@ -3102,7 +3051,7 @@ export async function updateTicketInTransaction(
     // System closes (auto-close engine) leave closed_by null — attribution
     // lives in the audit row instead.
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
-      const closedBy = isSystemActor ? null : user.user_id;
+      const closedBy = isSystemActor || collaborator ? null : user.user_id;
       await tenantScopedTable(trx, 'tickets', tenant)
         .where({ ticket_id: id })
         .update({ closed_at: occurredAt, closed_by: closedBy });
@@ -3127,28 +3076,23 @@ export async function updateTicketInTransaction(
       try {
         await applyMatchingChecklistTemplates(trx, tenant, {
           ticket_id: id,
-          board_id: updatedTicket.board_id,
-          category_id: updatedTicket.category_id,
-          subcategory_id: updatedTicket.subcategory_id,
-          priority_id: updatedTicket.priority_id,
-          client_id: updatedTicket.client_id,
-          ticket_origin: updatedTicket.ticket_origin,
-          title: updatedTicket.title,
-          description: ticketDescriptionFromAttributes(updatedTicket.attributes),
         }, isSystemActor
           ? undefined
           : {
-              actor: {
-                actorType: TICKET_ACTIVITY_ACTOR.USER,
-                userId: user.user_id,
-                displayName: formatLiveUpdateDisplayName(user),
-              },
+              actor: actorInfo,
               source: TICKET_ACTIVITY_SOURCE.UI,
             });
       } catch (error) {
+        // A shared edit never half-commits: the collaborator's failure aborts the write.
+        if (collaboration) throw error;
         console.error('Failed to auto-apply checklist templates:', error);
       }
     }
+
+    // Domain events use previous/new for collaborators; native producers keep their contract.
+    const eventChanges = collaborator ? Object.fromEntries(updatedFields
+      .filter((key) => key !== 'updated_by' && key !== 'updated_at')
+      .map((key) => [key, { previous: (currentTicket as Record<string, unknown>)[key], new: (updateData as Record<string, unknown>)[key] }])) : structuredChanges;
 
     // Publish appropriate event based on the update — after the save
     // transaction commits, so subscribers never contend with our row locks.
@@ -3161,11 +3105,11 @@ export async function updateTicketInTransaction(
           eventType: 'TICKET_CLOSED',
           payload: buildTicketClosedPayload({
             ticketId: id,
-            ...(isSystemActor
+            ...(isSystemActor || collaborator
               ? {}
               : { userId: user.user_id, closedByUserId: user.user_id }),
             closedAt: occurredAt,
-            changes: structuredChanges,
+            changes: eventChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
           }),
@@ -3221,9 +3165,8 @@ export async function updateTicketInTransaction(
           eventType: 'TICKET_UPDATED',
           payload: buildTicketUpdatedPayload({
             ticketId: id,
-            userId: user.user_id,
-            updatedByUserId: user.user_id,
-            changes: structuredChanges,
+            ...(collaborator ? {} : { userId: user.user_id, updatedByUserId: user.user_id }),
+            changes: eventChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
           }),
@@ -3241,10 +3184,12 @@ export async function updateTicketInTransaction(
           tenantId: tenant,
           ticketId: id,
           updatedFields,
-          updatedBy: {
-            userId: user.user_id,
-            displayName: formatLiveUpdateDisplayName(user),
-          },
+          updatedBy: collaborator
+            ? { userId: null, displayName: formatCollaborationActorName(collaborator), actorReference: collaborator }
+            : {
+                userId: user.user_id,
+                displayName: formatLiveUpdateDisplayName(user),
+              },
           updatedAt: toIsoTimestamp(updatedTicket.updated_at, occurredAt),
         }),
         `ticket-live-update ticket=${id}`
@@ -3256,13 +3201,6 @@ export async function updateTicketInTransaction(
     // line ("Morgan changed status from New to In Progress") rather than a
     // generic "ticket updated" entry. The curated diff includes resolved
     // labels for IDs where possible.
-    const actorInfo = isSystemActor
-      ? { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM }
-      : {
-          actorType: TICKET_ACTIVITY_ACTOR.USER,
-          userId: user.user_id,
-          displayName: formatLiveUpdateDisplayName(user),
-        };
     const notificationSuppressionDetails = suppressContactNotifications
       ? {
           notification_suppression: {
@@ -3324,7 +3262,7 @@ export async function updateTicketInTransaction(
           eventType: 'TICKET_RESPONSE_STATE_CHANGED',
           payload: buildTicketResponseStateChangedPayload({
             ticketId: id,
-            userId: user.user_id,
+            userId: collaborator ? null : user.user_id,
             previousState: currentTicket.response_state || null,
             newState: updateData.response_state || null,
             trigger: clearsResponseStateOnClose ? 'close' : 'manual',
@@ -3332,7 +3270,8 @@ export async function updateTicketInTransaction(
           ctx: {
             tenantId: tenant,
             occurredAt,
-            actor: { actorType: 'USER', actorUserId: user.user_id },
+            // Native callers (including systemActor, e.g. auto-close) keep the USER actor they always had.
+            actor: collaborator ? workflowCtx.actor : { actorType: 'USER', actorUserId: user.user_id },
           },
         }),
         `TICKET_RESPONSE_STATE_CHANGED ticket=${id}`
@@ -3359,6 +3298,7 @@ export async function updateTicketInTransaction(
         isSystemActor,
         source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
         previousMasterStatusId: currentTicket.status_id,
+        collaborator: Boolean(collaboration),
       },
       id,
       updateData as Record<string, unknown>,
@@ -3458,7 +3398,7 @@ export async function addTicketCommentInTransaction(
 ): Promise<IComment> {
   const {
     ticketId,
-    content,
+    content: rawContent,
     isInternal,
     isResolution,
     closesTicket = false,
@@ -3473,8 +3413,11 @@ export async function addTicketCommentInTransaction(
     throw new Error('suppressInternalNotifications requires suppressContactNotifications');
   }
 
+  // comments.author_type is internal|client|unknown: a service user is MSP-side so it is stored
+  // as 'internal' (kind is recovered from users.user_type); Comment.insert enforces the
+  // internal-only visibility rule for non-interactive authors.
   const authorType: 'internal' | 'client' | 'unknown' =
-    user.user_type === 'client' ? 'client' : 'internal';
+    isClientUserType(user.user_type) ? 'client' : 'internal';
 
   if (isInternal && authorType !== 'internal') {
     throw new Error('Only MSP users can create internal comments');
@@ -3515,6 +3458,10 @@ export async function addTicketCommentInTransaction(
   if (!ticket) {
     throw new Error('Ticket not found');
   }
+
+  // Canned responses: resolve merge fields once, on this trx, before anything reads the content. Every later
+  // use (markdown, insert, bundle mirrors, events) sees only this resolved value. Internal authors only.
+  const content = await resolveCommentMergeTokens(trx, tenant, ticketId, user.user_id, authorType, rawContent);
 
   // Use the centralized utility to convert BlockNote JSON to markdown
   let markdownContent = "";
@@ -3961,7 +3908,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
   user,
   { tenant },
   masterTicketId: string
-): Promise<ITicketListItem[] | TicketActionError> => {
+): Promise<TicketListRowsWithMetadata | TicketActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx) => {
@@ -3985,6 +3932,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
       tenantLeftJoin(trx, tenant, childrenQuery, 'boards as c', 't.board_id', 'c.board_id');
       tenantLeftJoin(trx, tenant, childrenQuery, 'categories as cat', 't.category_id', 'cat.category_id');
       tenantLeftJoin(trx, tenant, childrenQuery, 'clients as comp', 't.client_id', 'comp.client_id');
+      tenantLeftJoin(trx, tenant, childrenQuery, 'contacts as cn', 't.contact_name_id', 'cn.contact_name_id');
       tenantLeftJoin(trx, tenant, childrenQuery, 'users as u', 't.entered_by', 'u.user_id');
       tenantLeftJoin(trx, tenant, childrenQuery, 'users as au', 't.assigned_to', 'au.user_id');
       tenantLeftJoin(trx, tenant, childrenQuery, 'teams as tm', 't.assigned_team_id', 'tm.team_id');
@@ -3998,6 +3946,9 @@ export const fetchBundleChildrenForMaster = withAuth(async (
           'c.board_name',
           'cat.category_name',
           'comp.client_name as client_name',
+          'cn.full_name as contact_name',
+          displayTagsForEntityQuery(trx, tenant, displayAudienceForUser(user), 'contact', 't.contact_name_id').as('contact_tags'),
+          displayTagsForEntityQuery(trx, tenant, displayAudienceForUser(user), 'client', 't.client_id').as('client_tags'),
           trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
           trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name"),
           'tm.team_name as assigned_team_name',
@@ -4008,7 +3959,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
 
       const authorizedRows = await filterAuthorizedTickets(trx, authorizationContext, rows);
 
-      return authorizedRows.map((ticket: any): ITicketListItem => {
+      const mapped = authorizedRows.map((ticket: any): ITicketListItem => {
         const {
           status_id,
           priority_id,
@@ -4021,6 +3972,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
           board_name,
           category_name,
           client_name,
+          contact_name,
           entered_by_name,
           assigned_to_name,
           assigned_team_name,
@@ -4041,6 +3993,7 @@ export const fetchBundleChildrenForMaster = withAuth(async (
           board_name: board_name || 'Unknown',
           category_name: category_name || 'Unknown',
           client_name: client_name || 'Unknown',
+          contact_name: contact_name || null,
           entered_by_name: entered_by_name || 'Unknown',
           assigned_to_name: assigned_to_name || 'Unknown',
           assigned_team_name: assigned_team_name || null,
@@ -4050,6 +4003,10 @@ export const fetchBundleChildrenForMaster = withAuth(async (
           bundle_master_ticket_number: bundle_master_ticket_number ?? null,
         };
       });
+
+      // Same enrichment as the list page: avatars, logos, ticket tags and chip tags, so an expanded
+      // bundle child renders exactly like a top-level row.
+      return enrichTicketListItems(trx, tenant, mapped);
     } catch (error) {
       const expected = ticketListActionErrorFrom(error);
       if (expected) {

@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Atalhos de teclado",
     "opportunities": "Oportunidades",
     "mcpServer": "Servidor MCP",
-    "settingsFallback": "Configurações"
+    "settingsFallback": "Configurações",
+    "tags": "Etiquetas"
   },
   "unsavedChanges": {
     "title": "Alterações não salvas",
@@ -413,17 +414,21 @@
       "cancel": "Cancelar",
       "delete": "Excluir",
       "placeholder": "Digite o novo nome da equipe",
+      "descriptionPlaceholder": "Digite uma descrição opcional da equipe",
       "selectManager": "Selecione um gerente"
     },
     "details": {
       "loading": "Carregando detalhes da equipe...",
       "notFound": "Nenhuma equipe encontrada",
+      "noDescription": "Sem descrição",
       "fields": {
         "teamLead": "Líder de equipe",
+        "description": "Descrição",
         "addMember": "Adicionar membro"
       },
       "placeholders": {
         "teamName": "Digite o nome da equipe",
+        "description": "Digite a descrição da equipe",
         "selectTeamLead": "Selecione um líder de equipe",
         "selectUserToAdd": "Selecione um usuário para adicionar",
         "noTeamLead": "Não atribuído"
@@ -435,8 +440,10 @@
         "discard": "Descartar",
         "saveChanges": "Salvar alterações",
         "saveName": "Salvar nome",
+        "saveDescription": "Salvar descrição",
         "cancel": "Cancelar",
         "editName": "Editar nome",
+        "editDescription": "Editar descrição",
         "remove": "Remover"
       },
       "table": {
@@ -461,6 +468,7 @@
         "createFailed": "Falha ao criar equipe: {{error}}",
         "deleteFailed": "Falha ao excluir equipe",
         "updateName": "Falha ao atualizar o nome da equipe",
+        "updateDescription": "Falha ao atualizar a descrição da equipe",
         "saveChanges": "Falha ao salvar as alterações. Por favor, tente novamente."
       }
     }
@@ -710,7 +718,8 @@
         "skipItem": "Ignorar este item",
         "importNewName": "Importar com nome diferente:",
         "importWithOrder": "Importar com pedido {{order}}",
-        "importWithResolutions": "Importar com resoluções"
+        "importWithResolutions": "Importar com resoluções",
+        "removesIntro": "Excluir este quadro também remove:"
       },
       "importTable": {
         "active": "Ativo"
@@ -779,7 +788,9 @@
           "deleteFailed": "Falha ao excluir o quadro",
           "importFailed": "Falha ao importar quadros",
           "updateStatusFailed": "Falha ao atualizar o status do quadro",
-          "updateDefaultFailed": "Falha ao atualizar o quadro padrão"
+          "updateDefaultFailed": "Falha ao atualizar o quadro padrão",
+          "hasEmailSenderRoute": "Não é possível excluir o quadro: ele tem uma rota de remetente de saída dedicada. Limpe primeiro o remetente de tickets no editor do quadro.",
+          "referencedByAutomations": "Não é possível excluir o quadro: outras configurações ainda apontam para ele. Direcione-as para outro quadro ou remova-as primeiro."
         }
       },
       "closeRules": {
@@ -893,6 +904,48 @@
         "displayName": "Nome de exibição",
         "save": "Guardar remetente",
         "saved": "Remetente guardado"
+      },
+      "deleteDependencies": {
+        "categories_one": "categoria",
+        "categories_other": "categorias",
+        "categories_few": "categorias",
+        "categories_many": "categorias",
+        "statuses_one": "status de ticket",
+        "statuses_other": "status de ticket",
+        "statuses_few": "status de ticket",
+        "statuses_many": "status de ticket",
+        "autoCloseRules_one": "regra de fechamento automático",
+        "autoCloseRules_other": "regras de fechamento automático",
+        "autoCloseRules_few": "regras de fechamento automático",
+        "autoCloseRules_many": "regras de fechamento automático",
+        "notificationRules_one": "regra de notificação",
+        "notificationRules_other": "regras de notificação",
+        "notificationRules_few": "regras de notificação",
+        "notificationRules_many": "regras de notificação",
+        "portalVisibility_one": "atribuição de visibilidade no portal do cliente",
+        "portalVisibility_other": "atribuições de visibilidade no portal do cliente",
+        "portalVisibility_few": "atribuições de visibilidade no portal do cliente",
+        "portalVisibility_many": "atribuições de visibilidade no portal do cliente",
+        "emailSenderRoutes_one": "rota de remetente de saída",
+        "emailSenderRoutes_other": "rotas de remetente de saída",
+        "emailSenderRoutes_few": "rotas de remetente de saída",
+        "emailSenderRoutes_many": "rotas de remetente de saída",
+        "ticketTemplates_one": "modelo de ticket",
+        "ticketTemplates_other": "modelos de ticket",
+        "ticketTemplates_few": "modelos de ticket",
+        "ticketTemplates_many": "modelos de ticket",
+        "recurringTickets_one": "agenda de tickets recorrentes",
+        "recurringTickets_other": "agendas de tickets recorrentes",
+        "recurringTickets_few": "agendas de tickets recorrentes",
+        "recurringTickets_many": "agendas de tickets recorrentes",
+        "checklistRules_one": "regra de aplicação de lista de verificação",
+        "checklistRules_other": "regras de aplicação de lista de verificação",
+        "checklistRules_few": "regras de aplicação de lista de verificação",
+        "checklistRules_many": "regras de aplicação de lista de verificação",
+        "cannedResponses_one": "resposta pronta do quadro",
+        "cannedResponses_other": "respostas prontas do quadro",
+        "cannedResponses_few": "respostas prontas do quadro",
+        "cannedResponses_many": "respostas prontas do quadro"
       }
     },
     "priorities": {
@@ -984,7 +1037,8 @@
         "description": "Descrição",
         "items": "Unid",
         "status": "Status",
-        "actions": "Ações"
+        "actions": "Ações",
+        "scope": "Disponível para"
       },
       "statusLabels": {
         "active": "Ativo",
@@ -1002,7 +1056,9 @@
         "down": "Abaixo",
         "remove": "Remover",
         "addItem": "Adicionar item",
-        "addRule": "Adicionar regra"
+        "addRule": "Adicionar regra",
+        "duplicateToClient": "Duplicar para cliente…",
+        "duplicate": "Duplicar"
       },
       "fields": {
         "name": {
@@ -1032,8 +1088,10 @@
           "priority": "Prioridade",
           "any": "Qualquer",
           "appliesToAll": "Aplica-se a todos os tickets",
+          "appliesToAllClientTickets": "Aplica-se a todos os tickets de {{client}}",
           "clients": "Clientes",
           "clientsAny": "Qualquer cliente",
+          "clientsFixedByTemplate": "Apenas {{client}} (definido pelo cliente do modelo)",
           "clientsAddAnother": "Adicionar outro cliente",
           "removeClient": "Remover {{name}}",
           "origins": "Origem do ticket",
@@ -1057,7 +1115,13 @@
             "inbound_email": "E-mail recebido",
             "api": "API",
             "recurring": "Agendamento recorrente"
-          }
+          },
+          "clientScopedWarning": "Este modelo está limitado a {{client}}: estas regras só se aplicam a tickets de {{client}}."
+        },
+        "availableTo": {
+          "label": "Disponível para",
+          "clear": "Todos os clientes",
+          "help": "Deixe em Todos os clientes para oferecer este modelo em qualquer ticket, ou escolha um cliente para limitá-lo aos tickets dele."
         }
       },
       "dialog": {
@@ -1065,13 +1129,17 @@
         "editTemplate": "Editar modelo de lista de verificação",
         "createFirstHelp": "Crie o modelo primeiro e, em seguida, adicione itens da lista de verificação e aplique regras automaticamente.",
         "deleteTitle": "Excluir modelo de lista de verificação",
-        "deleteMessage": "Tem certeza de que deseja excluir \"{{name}}\"? As listas de verificação já adicionadas aos tickets não serão afetadas."
+        "deleteMessage": "Tem certeza de que deseja excluir \"{{name}}\"? As listas de verificação já adicionadas aos tickets não serão afetadas.",
+        "duplicateTitle": "Duplicar para cliente",
+        "duplicateHelp": "Copie \"{{name}}\" e seus itens para um novo modelo limitado a um cliente. A cópia é independente: alterações posteriores em um dos modelos não afetam o outro.",
+        "duplicateClientPlaceholder": "Selecione um cliente"
       },
       "messages": {
         "success": {
           "created": "Modelo de lista de verificação criado com sucesso",
           "updated": "Modelo de lista de verificação atualizado com sucesso",
-          "deleted": "Modelo de lista de verificação excluído com sucesso"
+          "deleted": "Modelo de lista de verificação excluído com sucesso",
+          "duplicated": "Modelo de checklist duplicado para o cliente"
         },
         "error": {
           "fetchFailed": "Falha ao buscar modelos de lista de verificação",
@@ -1081,8 +1149,62 @@
           "deleteFailed": "Falha ao excluir modelo de lista de verificação",
           "updateStatusFailed": "Falha ao atualizar o status do modelo",
           "itemSaveFailed": "Falha ao salvar o item da lista de verificação",
-          "ruleSaveFailed": "Falha ao salvar a regra de aplicação automática"
+          "ruleSaveFailed": "Falha ao salvar a regra de aplicação automática",
+          "duplicateFailed": "Falha ao duplicar o modelo de checklist"
         }
+      },
+      "scope": {
+        "allClients": "Todos os clientes",
+        "unknownClient": "Cliente desconhecido"
+      },
+      "filter": {
+        "client": "Cliente",
+        "allClients": "Todos os clientes",
+        "clear": "Limpar filtro"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Quadro",
+          "category_id": "Categoria",
+          "subcategory_id": "Subcategoria",
+          "priority_id": "Prioridade",
+          "client_id": "Cliente",
+          "client_tags": "Tags do cliente",
+          "contact_tags": "Tags do contato",
+          "ticket_origin": "Origem do chamado",
+          "title_folded": "Título",
+          "description_folded": "Descrição",
+          "from_service_request": "De solicitação de serviço",
+          "service_request_definition_id": "Solicitação de serviço"
+        },
+        "operators": {
+          "equals": "É igual a",
+          "not_equals": "É diferente de",
+          "in": "Contém qualquer um de",
+          "not_in": "Não contém nenhum de",
+          "contains": "Contém",
+          "starts_with": "Começa com",
+          "ends_with": "Termina com",
+          "is_empty": "Está vazio",
+          "is_not_empty": "Não está vazio"
+        },
+        "conditions": "Condições",
+        "match": "Corresponder a",
+        "and": "Todas as condições",
+        "or": "Qualquer condição",
+        "field": "Campo",
+        "operator": "Condição",
+        "value": "Valor",
+        "yes": "Sim",
+        "no": "Não",
+        "advanced": "Esta regra contém condições agrupadas ou avançadas e é somente leitura neste editor.",
+        "add": "Adicionar condição",
+        "save": "Salvar condições",
+        "enabled": "Ativada",
+        "matchesAll": "Corresponde a todos os chamados no escopo do modelo.",
+        "matchesNone": "Não corresponde a nenhum chamado.",
+        "tagsFailed": "Não foi possível carregar as opções de tags. As seleções salvas foram preservadas.",
+        "retry": "Tentar novamente"
       }
     },
     "externalSystems": {
@@ -1423,7 +1545,9 @@
         "saveDomain": "Salvar domínio",
         "updateDomain": "Atualizar domínio",
         "submitting": "Enviando…",
-        "cancelEdit": "Cancelar edição"
+        "cancelEdit": "Cancelar edição",
+        "confirmUris": "Já os registrei — confirmar",
+        "confirmingUris": "Confirmando…"
       },
       "form": {
         "label": "Domínio personalizado",
@@ -1461,7 +1585,8 @@
         "deploying": "Implantando",
         "active": "Ativo",
         "disabled": "Desabilitado",
-        "unknown": "Desconhecido"
+        "unknown": "Desconhecido",
+        "pending_redirect_uri": "URIs de redirecionamento pendentes"
       },
       "messages": {
         "requestSubmitted": "Solicitação de domínio personalizado enviada.",
@@ -1473,9 +1598,32 @@
         "registerFailed": "Falha ao registrar o domínio personalizado.",
         "refreshFailed": "Falha ao atualizar o status do domínio.",
         "retryFailed": "Falha na nova tentativa.",
-        "disableFailed": "Falha ao desativar o domínio personalizado."
+        "disableFailed": "Falha ao desativar o domínio personalizado.",
+        "confirmUrisFailed": "Falha ao confirmar os URIs de redirecionamento.",
+        "urisConfirmed": "URIs de redirecionamento confirmados."
       },
-      "hostedTlsNote": "Forneceremos certificados TLS automaticamente assim que o DNS for verificado."
+      "hostedTlsNote": "Forneceremos certificados TLS automaticamente assim que o DNS for verificado.",
+      "surface": {
+        "label": "Atende",
+        "current": "Atende: {{value}}",
+        "updatingSurface": "Salvar mudará o aplicativo atendido por este domínio e reiniciará o provisionamento.",
+        "options": {
+          "client_portal": "Portal do cliente",
+          "msp": "Aplicativo MSP",
+          "both": "Ambos"
+        },
+        "descriptions": {
+          "client_portal": "O domínio abre o portal do cliente. Este é o padrão.",
+          "msp": "O domínio abre o aplicativo MSP (técnicos). Os URIs de redirecionamento do login único precisam ser registrados antes.",
+          "both": "Um domínio atende os dois aplicativos. Caminhos em /msp abrem o aplicativo MSP e caminhos em /client-portal abrem o portal do cliente."
+        }
+      },
+      "redirectUris": {
+        "title": "Os URIs de redirecionamento de SSO precisam ser registrados",
+        "description": "Este domínio atende o aplicativo MSP, então o login único só funcionará depois que os URIs de redirecionamento abaixo forem registrados no seu provedor de SSO. O domínio fica pendente até a confirmação.",
+        "listLabel": "Registre estes URIs de redirecionamento:",
+        "contactSupport": "Peça ao administrador ou entre em contato com o suporte para registrar e confirmar estes URIs de redirecionamento."
+      }
     },
     "yourCompanyName": "Nome da sua empresa",
     "brandingPreviewMode": "Modo de tema de visualização da marca",
@@ -2379,7 +2527,23 @@
         "nothingImportedBody": "Esta execução não criou novos registros. Cada linha correspondeu a algo que já existia, então nada foi alterado.",
         "claimedBySamePackage": "Já migrado por este pacote",
         "claimedByOtherPackage": "Já migrado por {{file}}",
-        "claimedByExistingEntity": "Corresponde a uma entidade existente"
+        "claimedByExistingEntity": "Corresponde a uma entidade existente",
+        "matchedBySku": "Associado a um produto existente por SKU"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Produtos (catálogo / lista de preços)",
+          "vendorProducts": "Lista de preços de fornecedores (custos do distribuidor)"
+        },
+        "productsHint": "Preços e custos são lidos como valores decimais (por exemplo 1,299.50) usando a coluna de moeda, se existir; caso contrário, a moeda do locatário. Valores negativos, não numéricos ou com precisão excessiva são descartados e reportados; a linha é importada mesmo assim. Os produtos são associados aos existentes por SKU; as linhas da lista de fornecedores referenciam um produto por SKU e criam ou associam o fornecedor pelo nome."
+      },
+      "configure": {
+        "products": {
+          "title": "Produtos",
+          "serviceType": "Tipo de serviço para novos produtos",
+          "serviceTypePlaceholder": "Selecione um tipo de serviço",
+          "serviceTypeHelp": "Produtos cujo SKU já existe são associados e mantidos sem alterações; apenas produtos novos são arquivados neste tipo de serviço."
+        }
       }
     },
     "jobDetails": {
@@ -2938,7 +3102,8 @@
     "emptyState": "Nenhum usuário disponível.",
     "roles": {
       "client": "Usuário cliente",
-      "internal": "Usuário Interno"
+      "internal": "Usuário Interno",
+      "service": "Conta de serviço"
     },
     "badge": {
       "inactive": "Inativo"
@@ -3499,6 +3664,36 @@
         "confirm": "Desconectar",
         "cancel": "Cancelar"
       }
+    },
+    "loading": "Carregando…",
+    "downloadHosts": {
+      "title": "Hosts de download permitidos",
+      "intro": "Quando um documento é anexado por URL, o AlgaPSA só o baixa dos hosts listados aqui. Isso vale para qualquer um que anexe documentos, incluindo agentes de IA, clientes de API e a API REST. Prefira hosts específicos de um bucket, como acme-uploads.s3.us-east-1.amazonaws.com, a hosts genéricos.",
+      "readOnly": "Você pode visualizar esta lista. Para alterá-la, é necessária a permissão \"Gerenciar hosts de download\".",
+      "builtIn": "Integrado",
+      "empty": "Nenhum host personalizado ainda.",
+      "add": "Adicionar host",
+      "addTitle": "Adicionar host de download permitido",
+      "remove": "Remover",
+      "removeTitle": "Remover host?",
+      "removeMessage": "Os downloads de {{host}} deixarão de funcionar até que ele seja adicionado novamente.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "Um nome de host, ou *.example.com para permitir todos os subdomínios.",
+        "note": "Observação (opcional)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Usado para",
+        "allowed": "Permitido",
+        "note": "Observação",
+        "addedBy": "Adicionado por",
+        "addedOn": "Adicionado em"
+      },
+      "errors": {
+        "load": "Não foi possível carregar os hosts de download permitidos.",
+        "save": "Não foi possível salvar a alteração."
+      }
     }
   },
   "errors": {
@@ -3669,11 +3864,17 @@
       "noLeadingTrailingDot": "O domínio não pode começar nem terminar com um ponto.",
       "notApplianceHost": "Escolha um domínio diferente do host principal deste servidor. O domínio personalizado do portal deve ser outro nome de host que seu proxy reverso encaminhe para cá.",
       "nothingToRetry": "Não há registro de domínio personalizado com falha para repetir.",
-      "retryOnlyAfterFailure": "A repetição só está disponível após um registro com falha."
+      "retryOnlyAfterFailure": "A repetição só está disponível após um registro com falha.",
+      "alreadyInUse": "Este domínio já está em uso. Escolha outro domínio.",
+      "usedByOtherSurface": "Este domínio já é usado por outro dos seus domínios personalizados. Para servir o portal do cliente e o aplicativo MSP a partir de um único domínio, escolha \"Ambos\".",
+      "invalidSurface": "Escolha o que o domínio personalizado serve: portal do cliente, aplicativo MSP ou ambos.",
+      "redirectUrisHosted": "Os URIs de redirecionamento de domínios hospedados são registrados pelo suporte da plataforma.",
+      "nothingToConfirm": "Não há confirmação de URI de redirecionamento SSO pendente para este domínio."
     }
   },
   "common": {
-    "saving": "A guardar…"
+    "saving": "A guardar…",
+    "cancel": "Cancelar"
   },
   "featureFlags": {
     "categories": {
@@ -3853,6 +4054,29 @@
       "default": "Padrão",
       "empty": "Nenhum status padrão disponível para importação",
       "importSelected": "Importar selecionados ({{count}})"
+    }
+  },
+  "tagDisplay": {
+    "title": "Exibir nos chips",
+    "subtitle": "Tags exibidas ao lado de contatos e clientes em listas de tickets, cabeçalhos de tickets e seletores.",
+    "loading": "Carregando…",
+    "description": "Escolha quais tags aparecem como selos ao lado de contatos e clientes e em que ordem. Uma lista sem tags não mostra selos para esse público.",
+    "contacts": "Contatos",
+    "clients": "Clientes",
+    "audienceInternal": "Usuários internos",
+    "audienceClient": "Portal do cliente",
+    "clientNote": "Começa vazia. As tags listadas aqui ficam visíveis para os próprios usuários do cliente no portal do cliente.",
+    "noneSelected": "Nenhuma tag exibida.",
+    "moveUp": "Mover para cima",
+    "moveDown": "Mover para baixo",
+    "remove": "Remover",
+    "addTag": "Adicionar uma tag…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Voltar às configurações de email",
+      "title": "Provedores de email e identidade",
+      "description": "Registre seu próprio aplicativo do Google ou da Microsoft para emails recebidos e login da equipe. Essas credenciais pertencem ao seu espaço de trabalho."
     }
   }
 }

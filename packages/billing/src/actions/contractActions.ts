@@ -1,6 +1,7 @@
 // @alga-psa/billing/actions.ts
 'use server'
 
+import { resolveEffectiveBillingTiming } from '@alga-psa/shared/billingClients/contractLineTimingRule';
 import { randomUUID } from 'node:crypto';
 
 import { resolveContractLineDisplayKinds, resolveTemplateLineDisplayKinds } from '../services/prepaidBlockConfigService';
@@ -233,10 +234,9 @@ const mapTemplateToContract = (template: IContractTemplate): IContract => ({
   contract_name: template.template_name,
   contract_description: template.template_description ?? undefined,
   billing_frequency: template.default_billing_frequency,
-  // currency_code removed from templates - templates are now currency-neutral
-  // When converting to contract, we use USD as default. Actual contract currency
-  // is set from client's default_currency_code when creating a real contract.
-  currency_code: 'USD',
+  // The template's base currency. A contract created from it takes the client's
+  // currency, not this one.
+  currency_code: template.currency_code,
   is_active: template.template_status === 'published',
   status: template.template_status,
   is_template: true,
@@ -641,8 +641,8 @@ export const updateContract = withAuth(async (
       if (typeof updateData.billing_frequency === 'string') {
         templateUpdates.default_billing_frequency = updateData.billing_frequency;
       }
-      // currency_code removed from templates - templates are now currency-neutral
-      // Currency is inherited from the client when a contract is created
+      // The base currency is not changed here: relabelling goes through
+      // updateContractTemplateCurrency, which also guards the per-currency price sets.
       if (updateData.status && ['draft', 'published', 'archived'].includes(updateData.status)) {
         templateUpdates.template_status = updateData.status as IContractTemplate['template_status'];
       }
@@ -1113,12 +1113,25 @@ export interface IContractLineOverview {
   /** Derived label kind ('PrepaidBlock' for Hourly lines with a block config); the stored type is untouched. */
   display_kind?: string;
   billing_frequency: string;
+  /** Effective timing (Hourly/Usage always resolve to arrears); never the raw column. */
+  billing_timing: 'advance' | 'arrears';
   base_rate: number | null;  // For fixed lines - in cents
+  /**
+   * Effective recurring amount of one billing period (cents) for a Fixed line
+   * that holds product members, computed by the shared contract valuation so
+   * the header can never disagree with the contract total. A zero line rate is
+   * a historical placeholder, not a price, so `base_rate` must not be printed
+   * for such a line. Null when the line has no product members (the line's own
+   * `base_rate` is then the amount) and for templates.
+   */
+  recurring_amount: number | null;
   display_order: number;
   services: {
     service_id: string;
     service_name: string;
     billing_method: string;
+    /** Catalog item kind ('product' members are billed quantity x rate, never as a bundle share). */
+    item_kind: string | null;
     custom_rate: number | null;  // In cents
     /**
      * Fixed-allocation quantity. Always null for Usage lines: usage billing is
@@ -1180,8 +1193,8 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
 
     const isTemplate = Boolean(templateRecord);
 
-    // Get currency code - templates default to USD, contracts have their own currency
-    let currencyCode = 'USD';
+    // Templates carry their own base currency; contracts have theirs.
+    let currencyCode = templateRecord?.currency_code ?? 'USD';
     let clientId: string | null = null;
     if (!isTemplate) {
       const contractRecord = await tenantScopedTable(knex, tenant, 'contracts')
@@ -1209,6 +1222,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           'ctl.template_line_name as contract_line_name',
           'ctl.line_type as contract_line_type',
           'ctl.billing_frequency',
+          'ctl.billing_timing',
           'ctl.display_order',
           'tfc.base_rate'
         ])
@@ -1225,6 +1239,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
             'ctls.service_id',
             's.service_name',
             's.billing_method',
+            's.item_kind',
             'ctls.custom_rate',
             'ctls.quantity'
           ]);
@@ -1253,7 +1268,9 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           contract_line_name: line.contract_line_name,
           contract_line_type: (line.contract_line_type || 'Fixed') as 'Fixed' | 'Hourly' | 'Usage',
           billing_frequency: line.billing_frequency || 'monthly',
+          billing_timing: resolveEffectiveBillingTiming(line.contract_line_type || 'Fixed', line.billing_timing),
           base_rate: line.base_rate ? Number(line.base_rate) : null,
+          recurring_amount: null,
           display_order: line.display_order ?? 0,
           services: (services as any[]).map((svc: any) => {
             const config = configMap.get(svc.service_id);
@@ -1263,6 +1280,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
               service_id: svc.service_id,
               service_name: svc.service_name || 'Unknown Service',
               billing_method: svc.billing_method || 'fixed',
+              item_kind: svc.item_kind ?? null,
               custom_rate: config?.custom_rate ? Number(config.custom_rate) : (svc.custom_rate ? Number(svc.custom_rate) : null),
               // Usage lines bill recorded usage only; legacy configured
               // quantities are audit metadata and must not read as billable.
@@ -1297,6 +1315,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           'cl.contract_line_name',
           'cl.contract_line_type',
           'cl.billing_frequency',
+          'cl.billing_timing',
           'cl.display_order',
           'cl.custom_rate as base_rate'
         ])
@@ -1410,10 +1429,13 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
         const catalogRateByConfig = new Map<string, number | null>();
         const inheritingUnitConfigs = (configs as any[]).filter((config: any) => {
           const fixed = fixedSemanticsMap.get(config.config_id);
-          const unitValued = fixed?.pricing_basis === 'unit' || effectiveUnitConfigIds.has(config.config_id);
+          const isProduct = itemKindByService.get(config.service_id) === 'product';
+          // A product is always quantity x rate (the engine never reads its
+          // pricing_basis), and its fixed base_rate is never a unit rate.
+          const unitValued = isProduct || fixed?.pricing_basis === 'unit' || effectiveUnitConfigIds.has(config.config_id);
           if (!unitValued) return false;
           return catalogPolicyConfigIds.has(config.config_id)
-            || (fixed?.base_rate == null && config.custom_rate == null);
+            || ((isProduct || fixed?.base_rate == null) && config.custom_rate == null);
         });
         if (inheritingUnitConfigs.length > 0) {
           const inheritingServiceIds = inheritingUnitConfigs.map((config: any) => config.service_id);
@@ -1455,18 +1477,22 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           contract_line_name: line.contract_line_name,
           contract_line_type: (line.contract_line_type || 'Fixed') as 'Fixed' | 'Hourly' | 'Usage',
           billing_frequency: line.billing_frequency || 'monthly',
+          billing_timing: resolveEffectiveBillingTiming(line.contract_line_type || 'Fixed', line.billing_timing),
           base_rate: line.base_rate ? Number(line.base_rate) : null,
+          recurring_amount: null,
           display_order: line.display_order ?? 0,
           services: (services as any[]).map((svc: any) => {
             const config = configMap.get(svc.service_id);
             const semantics = fixedSemanticsMap.get(config?.config_id);
             const isScheduledUnit = effectiveUnitConfigIds.has(config?.config_id);
             const isCatalogPolicy = catalogPolicyConfigIds.has(config?.config_id);
-            const isUnitValued = semantics?.pricing_basis === 'unit' || isScheduledUnit;
+            const isProduct = svc.item_kind === 'product';
+            const isUnitValued = semantics?.pricing_basis === 'unit' || isScheduledUnit || isProduct;
             return {
               service_id: svc.service_id,
               service_name: svc.service_name || 'Unknown Service',
               billing_method: svc.billing_method || 'fixed',
+              item_kind: svc.item_kind ?? null,
               custom_rate: config?.custom_rate ? Number(config.custom_rate) : null,
               // Usage lines bill recorded usage only; legacy configured
               // quantities are audit metadata and must not read as billable.
@@ -1485,7 +1511,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
                 ? null
                 : catalogRateByConfig.has(config?.config_id)
                   ? catalogRateByConfig.get(config?.config_id) ?? null
-                  : (semantics?.base_rate != null
+                  : (semantics?.base_rate != null && !isProduct
                       ? Number(semantics.base_rate)
                       : (config?.custom_rate != null ? Number(config.custom_rate) : null))
             };
@@ -1514,13 +1540,26 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
     // show the fixed portion; hourly/usage revenue is variable).
     let totalEstimatedMonthlyValue: number | null = null;
 
-    if (hasFixedServices && !isTemplate) {
+    // A cadence Prepaid Block lives on an Hourly line but bills a fixed fee every period, so a
+    // contract with only such lines still has a fixed monthly value.
+    const contractValues = !isTemplate && (hasFixedServices || hasHourlyServices)
+      ? await getContractMonthlyFixedValuesByContract(knex, tenant, [contractId])
+      : null;
+    if (contractValues && (hasFixedServices || contractValues.get(contractId)?.hasCadencePrepaidBlock)) {
       // Real contracts use the canonical shared valuation so the overview,
       // contract reports, and the summary MRR cannot disagree: unit-priced
       // lines are quantity × unit rate (revision-aware), bundles keep their
       // line rate, and every line is cadence-normalized.
-      const contractValues = await getContractMonthlyFixedValuesByContract(knex, tenant, [contractId]);
       totalEstimatedMonthlyValue = contractValues.get(contractId)?.monthlyValueCents ?? 0;
+      // A Fixed line holding product members is billed quantity x rate, so
+      // its header amount comes from the same valuation as the total (a line
+      // `custom_rate` of 0 is a legacy placeholder and must not be printed).
+      const linePeriodCents = contractValues.get(contractId)?.linePeriodCentsByLine;
+      for (const line of contractLines) {
+        if (line.contract_line_type !== 'Fixed') continue;
+        if (!line.services.some((service) => service.item_kind === 'product')) continue;
+        line.recurring_amount = linePeriodCents?.get(line.contract_line_id) ?? null;
+      }
     } else if (hasFixedServices) {
       // Templates have no contract rows for the shared valuation; keep the
       // template-line normalization. Per-seat members add quantity × default

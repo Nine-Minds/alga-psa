@@ -96,6 +96,10 @@ test('the React import rule reads value imports only', () => {
     "// react is not imported here\nimport { it } from 'vitest';",
     "import { reactive } from 'reactive-store';",
     "import { buildReactionSummary } from './reactions';",
+    // A type query names the module's type; it loads nothing at runtime. Server
+    // suites mock React's `cache` with exactly this shape.
+    "vi.mock('react', async (orig) => ({ ...(await orig<typeof import('react')>()), cache: (fn) => fn }));",
+    "type Nav = typeof import('next/navigation');",
   ]) assert.equal(importsReact(source), false, source);
 });
 

@@ -23,11 +23,13 @@ describe('ticket service documents and materials tenant-scoped query contract', 
     const materialsSection = sectionBetween('async getTicketMaterials', '  async addTicketMaterial');
     const addMaterialSection = sectionBetween('async addTicketMaterial', '  private async getDocumentById');
     const getDocumentSection = sectionBetween('private async getDocumentById', '  private async getTicketMaterialById');
-    const getMaterialSection = sectionBetween('private async getTicketMaterialById', '  private async getDocumentTypeIdForMime');
-    const documentTypeSection = sectionBetween('private async getDocumentTypeIdForMime', '  private assertValidTicketId');
+    const getMaterialSection = sectionBetween('private async getTicketMaterialById', '  private assertValidTicketId');
+    // The type lookup and folder lookup moved onto the shared upload core (documents/attachDocument.ts, entityAdapters.ts).
+    const documentTypeSection = readFileSync(resolve(__dirname, '../../../lib/api/services/documents/attachDocument.ts'), 'utf8');
+    const folderSource = readFileSync(resolve(__dirname, '../../../lib/api/services/documents/entityAdapters.ts'), 'utf8');
 
     expect(uploadSection).toContain("tenantScopedTable(knex, 'tickets', context.tenant)");
-    expect(uploadSection).toContain("tenantScopedTable(knex, 'document_folders', context.tenant)");
+    expect(folderSource).toContain(".table('document_folders')");
     expect(uploadSection).not.toContain('.where({ ticket_id: ticketId, tenant: context.tenant })');
     expect(uploadSection).not.toMatch(/tenant:\s*context\.tenant,\s*entity_id:\s*ticketId,\s*entity_type:\s*'ticket',\s*folder_path:\s*'\/Tickets\/Attachments'/s);
 
@@ -64,7 +66,7 @@ describe('ticket service documents and materials tenant-scoped query contract', 
     expect(getMaterialSection).toContain("tenantScopedTable(knex, 'ticket_materials as tm', context.tenant)");
     expect(getMaterialSection).not.toContain("'tm.tenant': context.tenant");
 
-    expect(documentTypeSection).toContain("tenantScopedTable(knex, 'document_types', tenant)");
+    expect(documentTypeSection).toContain("db.table('document_types')");
     expect(documentTypeSection).not.toContain('.where({ tenant, type_name: mimeType })');
     expect(documentTypeSection).not.toContain('.where({ tenant, type_name: generalType })');
   });

@@ -51,7 +51,9 @@
       "replaced": "Replaced",
       "credited": "Credited",
       "charged": "Charged",
-      "closed": "Closed"
+      "closed": "Closed",
+      "warranty_review": "Warranty review",
+      "repaired": "Repaired"
     }
   },
   "assetAlertsSection": {
@@ -192,7 +194,17 @@
         "managed": "RMM Managed",
         "unmanaged": "Not Managed"
       },
-      "allGroups": "All groups"
+      "allGroups": "All groups",
+      "ownership": {
+        "any": "Any ownership",
+        "client": "Client-owned",
+        "msp": "MSP-owned"
+      },
+      "custody": {
+        "any": "Any custody",
+        "inCustody": "In MSP custody",
+        "notInCustody": "Not in MSP custody"
+      }
     },
     "activeFilters": {
       "status": "Status: {{value}}",
@@ -246,7 +258,9 @@
         "setLocation": "Set location",
         "setStatus": "Set status",
         "assignContact": "Assign to contact",
-        "addToGroup": "Add to group"
+        "addToGroup": "Add to group",
+        "printLabels": "Print labels",
+        "printLabelsLimit": "You can print at most {{max}} labels at a time"
       },
       "actions": {
         "apply": "Apply",
@@ -446,7 +460,9 @@
       "rebootDevice": "Reboot Device",
       "rebooting": "Rebooting...",
       "editAsset": "Edit Asset",
-      "deleteAsset": "Delete Asset"
+      "deleteAsset": "Delete Asset",
+      "printLabel": "Print asset label",
+      "printPage": "Print page"
     },
     "values": {
       "unknownClient": "Unknown Client"
@@ -663,7 +679,8 @@
       "vendor": "Vendor",
       "purchaseCost": "Purchase cost",
       "orderNumber": "Order no.",
-      "billingProfile": "Billing profile"
+      "billingProfile": "Billing profile",
+      "ownership": "Ownership"
     },
     "placeholders": {
       "loadingClients": "Loading clients…",
@@ -718,6 +735,10 @@
     "additionalFields": "Additional fields",
     "help": {
       "assignedTo": "In the client portal, people with limited visibility see this device only if it is assigned to them or to someone who reports to them."
+    },
+    "ownership": {
+      "client": "Client-owned",
+      "msp": "MSP-owned"
     }
   },
   "assetFormClient": {
@@ -930,11 +951,6 @@
       "type": "Type",
       "status": "Status"
     },
-    "assetStatuses": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "maintenance": "Maintenance"
-    },
     "assetTypes": {
       "workstation": "Workstation",
       "server": "Server",
@@ -1041,7 +1057,8 @@
       "manufacturer": "Manufacturer",
       "vendor": "Vendor",
       "purchaseCost": "Purchase cost",
-      "orderNumber": "Order no."
+      "orderNumber": "Order no.",
+      "ownership": "Ownership"
     },
     "placeholders": {
       "workstationOsType": "e.g., Windows, macOS, Linux",
@@ -1276,7 +1293,10 @@
       "frequency": "Frequency *",
       "interval": "Interval *",
       "nextMaintenanceDate": "Next Maintenance Date *",
-      "active": "Active"
+      "active": "Active",
+      "recurrenceUnit": "Unit *",
+      "onWeekdays": "On weekdays (optional)",
+      "onDayOfMonth": "On day of the month (optional)"
     },
     "placeholders": {
       "scheduleName": "e.g., Monthly Server Maintenance",
@@ -1291,7 +1311,8 @@
       "weekly": "Weekly",
       "monthly": "Monthly",
       "quarterly": "Quarterly",
-      "yearly": "Yearly"
+      "yearly": "Yearly",
+      "custom": "Custom"
     },
     "errors": {
       "scheduleNameRequired": "Schedule name is required",
@@ -1300,6 +1321,18 @@
       "nextMaintenanceRequired": "Next maintenance date is required",
       "frequencyIntervalMin": "Frequency interval must be at least 1",
       "saveFailed": "Failed to create maintenance schedule"
+    },
+    "recurrenceUnits": {
+      "days": "Days",
+      "weeks": "Weeks",
+      "months": "Months",
+      "years": "Years"
+    },
+    "dayOfMonthOptions": {
+      "any": "Any day"
+    },
+    "hints": {
+      "selectors": "Leave unselected to repeat from the completion date."
     }
   },
   "maintenanceSchedulesTab": {
@@ -1351,6 +1384,36 @@
         "yearly_other": "years",
         "yearly_few": "years",
         "yearly_many": "years"
+      },
+      "customUnconfigured": "Custom (not configured)",
+      "onWeekdays": "{{cadence}} on {{days}}",
+      "onDaysOfMonth": "{{cadence}} on day {{days}}",
+      "weekdays": {
+        "sun": "Sun",
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat"
+      },
+      "customUnits": {
+        "days_one": "day",
+        "days_other": "days",
+        "days_few": "days",
+        "days_many": "days",
+        "weeks_one": "week",
+        "weeks_other": "weeks",
+        "weeks_few": "weeks",
+        "weeks_many": "weeks",
+        "months_one": "month",
+        "months_other": "months",
+        "months_few": "months",
+        "months_many": "months",
+        "years_one": "year",
+        "years_other": "years",
+        "years_few": "years",
+        "years_many": "years"
       }
     },
     "status": {
@@ -1483,6 +1546,8 @@
       "installDate": "Install Date"
     },
     "empty": "No software found matching your search.",
+    "noInventory": "No software inventory has been collected for this device yet.",
+    "loadError": "Could not load software inventory.",
     "totalItems": "Total Items: {{count}}",
     "values": {
       "unknown": "Unknown"
@@ -1628,6 +1693,30 @@
       "rmm_linked": "RMM linked",
       "hardware_upgrade": "Hardware upgraded",
       "warranty_updated": "Warranty updated"
+    },
+    "custody": {
+      "unknownPlace": "an unknown location",
+      "ticket": "Ticket {{ticket}}",
+      "receivedBack": "Received back at {{place}}",
+      "received": "Received into custody at {{place}}",
+      "moved": "Moved from {{from}} to {{to}}",
+      "movedTo": "Moved to {{to}}",
+      "handedOff": "Handed off from {{from}} to {{to}}",
+      "handedOffTo": "Handed off to {{to}}",
+      "aColleague": "a colleague",
+      "shipped": "Shipped to {{counterparty}}",
+      "shippedVendor": "Shipped to vendor",
+      "returnedTo": "Returned to client ({{counterparty}})",
+      "returned": "Returned to client",
+      "updated": "Custody details updated",
+      "fields": {
+        "purpose": "purpose",
+        "next_action_party": "next action",
+        "next_action_note": "next action note",
+        "follow_up_on": "follow-up date",
+        "condition_note": "condition",
+        "accessories": "accessories"
+      }
     }
   },
   "assetSignals": {
@@ -1766,7 +1855,8 @@
     "in_stock": "In stock",
     "maintenance": "In maintenance",
     "inactive": "Inactive",
-    "retired": "Retired"
+    "retired": "Retired",
+    "held_by_msp": "Held by MSP"
   },
   "assetStatusKinds": {
     "deployable": "Deployable",
@@ -1857,6 +1947,204 @@
     "errors": {
       "createFailed": "Unable to create the group.",
       "addFailed": "Unable to add the selected assets."
+    }
+  },
+  "custody": {
+    "purpose": {
+      "repair": "Repair",
+      "warranty_evaluation": "Warranty evaluation",
+      "loaner_prep": "Loaner preparation",
+      "staging": "Staging"
+    },
+    "party": {
+      "msp": "Us (MSP)",
+      "client": "Client",
+      "vendor": "Vendor"
+    },
+    "fields": {
+      "location": "Location",
+      "keepLocation": "Keep current location",
+      "selectLocation": "Select a location",
+      "bin": "Bin or shelf",
+      "binPlaceholder": "e.g. Shelf B3",
+      "purpose": "Purpose",
+      "nextActionParty": "Next action is with",
+      "followUpOn": "Follow up on",
+      "followUpPlaceholder": "Select a date",
+      "nextActionNote": "Next action note",
+      "internalNote": "Internal. Never printed on a label or shown to the client.",
+      "conditionNote": "Condition",
+      "conditionPlaceholder": "Scratches, missing screws, damage on arrival",
+      "accessories": "Accessories received",
+      "accessoryPlaceholder": "e.g. Power adapter",
+      "accessoryQuantity": "Quantity",
+      "removeAccessory": "Remove accessory",
+      "addAccessory": "Add accessory",
+      "note": "Note (optional)"
+    },
+    "errors": {
+      "generic": "Something went wrong."
+    },
+    "actions": {
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "move": "Move",
+      "handOff": "Hand off",
+      "ship": "Ship to vendor",
+      "receiveBack": "Receive back",
+      "returnToClient": "Return to client",
+      "edit": "Edit details",
+      "receiveIntoCustody": "Receive into custody"
+    },
+    "move": {
+      "title": "Move equipment",
+      "submit": "Move",
+      "toLocation": "Move to"
+    },
+    "handOff": {
+      "title": "Hand off to a colleague",
+      "submit": "Hand off",
+      "newHolder": "New holder",
+      "selectHolder": "Select a person"
+    },
+    "ship": {
+      "title": "Ship to vendor",
+      "description": "The item leaves the office. It stays in custody and shows as with the vendor.",
+      "submit": "Ship",
+      "counterparty": "Vendor or carrier",
+      "counterpartyPlaceholder": "e.g. Dell RMA depot"
+    },
+    "receiveBack": {
+      "title": "Receive back from vendor",
+      "submit": "Receive back",
+      "holder": "Holder (defaults to you)",
+      "me": "Me"
+    },
+    "return": {
+      "title": "Return to client",
+      "description": "This ends the custody episode. The item is no longer listed as in custody.",
+      "submit": "Return to client",
+      "collectedBy": "Collected by (optional)"
+    },
+    "edit": {
+      "title": "Edit custody details",
+      "submit": "Save"
+    },
+    "open": {
+      "title": "Receive into custody",
+      "description": "Record that the MSP now holds this equipment. This does not create stock or touch billing.",
+      "submit": "Receive",
+      "holder": "Holder (defaults to you)"
+    },
+    "card": {
+      "withVendor": "With vendor",
+      "title": "Custody",
+      "location": "Location",
+      "holder": "Holder",
+      "purpose": "Purpose",
+      "nextAction": "Next action",
+      "followUp": "Follow up",
+      "overdue": "overdue",
+      "daysHeld": "Days held",
+      "ticket": "Ticket",
+      "openTicket": "Open ticket",
+      "condition": "Condition",
+      "accessories": "Accessories",
+      "notInCustody": "Not currently in MSP custody.",
+      "hideHistory": "Hide custody history",
+      "showHistoryWithPast": "Custody history ({{count}} past episodes)",
+      "showHistory": "Custody history",
+      "noEvents": "No custody events recorded."
+    },
+    "state": {
+      "with_vendor": "With vendor",
+      "in_office": "In office"
+    },
+    "badge": {
+      "withVendor": "With vendor",
+      "inOfficeAt": "In office - {{location}}",
+      "inOffice": "In office"
+    },
+    "queue": {
+      "columns": {
+        "asset": "Asset",
+        "client": "Client",
+        "location": "Location",
+        "holder": "Holder",
+        "purpose": "Purpose",
+        "nextAction": "Next action",
+        "followUp": "Follow up",
+        "daysHeld": "Days held",
+        "ticket": "Ticket",
+        "actions": "Actions"
+      },
+      "openMenu": "Open menu",
+      "tabs": {
+        "all_open": "All open",
+        "in_office": "In office",
+        "waiting_on_vendor": "Waiting on vendor",
+        "waiting_on_client": "Waiting on client",
+        "overdue": "Overdue"
+      },
+      "title": "Equipment in custody",
+      "filters": {
+        "client": "Client",
+        "allLocations": "All locations",
+        "holder": "Holder",
+        "allPurposes": "All purposes",
+        "mine": "Mine"
+      },
+      "empty": "No equipment is in custody for this view."
+    },
+    "receiveEquipment": {
+      "button": "Receive equipment",
+      "title": "Receive equipment",
+      "description": "Record client equipment dropped off for this ticket. This does not create stock or touch billing or time.",
+      "submit": "Receive",
+      "modeExisting": "Existing asset",
+      "modeNew": "New item",
+      "search": "Search client assets",
+      "asset": "Asset",
+      "assetPlaceholder": "Select an asset",
+      "fields": {
+        "name": "Name",
+        "type": "Type",
+        "manufacturer": "Manufacturer",
+        "model": "Model",
+        "serial": "Serial number",
+        "assetTag": "Asset tag (optional)"
+      },
+      "photos": "Photos (optional)",
+      "photosHint": "Photos are attached to this ticket and are not visible to the client.",
+      "doneTitle": "Equipment received",
+      "doneBody": "{{name}} ({{tag}}) is now in MSP custody.",
+      "printLabel": "Print asset label",
+      "openAsset": "Open asset",
+      "close": "Close",
+      "inCustodyOption": "{{asset}} — In custody: {{location}}"
+    },
+    "photos": {
+      "limit": "Up to 20 photos, 10 MB total. Photos are hidden from clients.",
+      "tooLarge": "Choose at most 20 photos totalling no more than 10 MB."
+    }
+  },
+  "warranty": {
+    "card": {
+      "title": "Warranty",
+      "warrantyEnd": "Warranty ends",
+      "expired": "Expired",
+      "expiringSoon": "Expiring soon",
+      "vendor": "Vendor",
+      "ownership": "Ownership",
+      "ownershipMsp": "MSP-owned",
+      "ownershipClient": "Client-owned",
+      "claims": "Warranty claims",
+      "noClaims": "No warranty claims yet.",
+      "openRma": "Open RMA",
+      "startClaim": "Start warranty claim"
+    },
+    "badge": {
+      "label": "RMA {{number}} · {{status}}"
     }
   }
 }

@@ -643,6 +643,7 @@ function numberOrNull(value: unknown): number | null {
 }
 
 function buildProjectUrl(projectId: string): string {
+  // LEVERAGE: pattern tenant-link-context — hand-built tenant-facing base URL (webhook payload; left canonical).
   const baseUrl = (process.env.NEXTAUTH_URL || 'http://localhost:3000').replace(/\/+$/, '');
   return `${baseUrl}/msp/projects/${projectId}`;
 }

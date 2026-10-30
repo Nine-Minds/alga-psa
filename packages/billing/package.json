@@ -33,6 +33,14 @@
       "types": "./src/lib/catalog/serviceCatalogPricing.ts",
       "import": "./dist/lib/catalog/serviceCatalogPricing.mjs"
     },
+    "./lib/catalog/productCatalogCore": {
+      "types": "./src/lib/catalog/productCatalogCore.ts",
+      "import": "./dist/lib/catalog/productCatalogCore.mjs"
+    },
+    "./lib/payments/invoicePaymentUrls": {
+      "types": "./src/lib/payments/invoicePaymentUrls.ts",
+      "import": "./dist/lib/payments/invoicePaymentUrls.mjs"
+    },
     "./services": {
       "types": "./src/services/index.ts",
       "import": "./dist/services/index.mjs"
@@ -62,13 +70,14 @@
     "@alga-psa/types": "*",
     "@alga-psa/ui": "*",
     "@alga-psa/event-bus": "*",
+    "@alga-psa/event-schemas": "*",
     "@alga-psa/integrations": "*",
     "@alga-psa/validation": "*",
     "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
     "bwip-js": "^4.11.4",
     "qrcode": "^1.5.4",
-    "zod": "^3.22.4",
+    "zod": "^4.6.7",
     "@alga-psa/sla": "*"
   },
   "peerDependencies": {

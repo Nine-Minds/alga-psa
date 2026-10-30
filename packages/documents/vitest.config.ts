@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
+import { exportedSourceAliases } from '../../scripts/lib/vitest-exported-source-aliases.mjs';
 
 // Shared aliases so component tests resolve workspace packages from source
 // instead of built dist output.
@@ -15,6 +16,9 @@ const workspaceAliases = [
   { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../ui/src/index.ts') },
   { find: /^@alga-psa\/ui\/(.*)$/, replacement: `${path.resolve(__dirname, '../ui/src')}/$1` },
   { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../db/src/lib/admin.ts') },
+  // Published @alga-psa/core subpaths come from its exports map (capability
+  // and config/deletion live outside src/lib).
+  ...exportedSourceAliases('@alga-psa/core', path.resolve(__dirname, '../core')),
   // @alga-psa/core's i18n exports live under src/lib rather than src.
   {
     find: /^@alga-psa\/core\/i18n\/(.*)$/,
@@ -119,6 +123,7 @@ export default defineConfig({
           include: [
             'src/components/DocumentUpload.test.tsx',
             'src/components/Documents.uploadBatch.test.tsx',
+            'src/components/Documents.drawer.test.tsx',
           ],
           setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
           sequence: { concurrent: false, shuffle: false },

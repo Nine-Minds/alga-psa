@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Tastenkürzel",
     "mcpServer": "MCP-Server",
     "opportunities": "Verkaufschancen",
-    "settingsFallback": "Einstellungen"
+    "settingsFallback": "Einstellungen",
+    "tags": "Tags"
   },
   "unsavedChanges": {
     "title": "Ungespeicherte Änderungen",
@@ -413,17 +414,21 @@
       "cancel": "Abbrechen",
       "delete": "Löschen",
       "placeholder": "Neuen Teamnamen eingeben",
+      "descriptionPlaceholder": "Optionale Teambeschreibung eingeben",
       "selectManager": "Vorgesetzten auswählen"
     },
     "details": {
       "loading": "Teamdetails werden geladen...",
       "notFound": "Kein Team gefunden",
+      "noDescription": "Keine Beschreibung",
       "fields": {
         "teamLead": "Teamleiter",
+        "description": "Beschreibung",
         "addMember": "Mitglied hinzufügen"
       },
       "placeholders": {
         "teamName": "Teamname eingeben",
+        "description": "Teambeschreibung eingeben",
         "selectTeamLead": "Teamleiter auswählen",
         "selectUserToAdd": "Benutzer zum Hinzufügen auswählen",
         "noTeamLead": "Nicht zugewiesen"
@@ -435,8 +440,10 @@
         "discard": "Verwerfen",
         "saveChanges": "Änderungen speichern",
         "saveName": "Name speichern",
+        "saveDescription": "Beschreibung speichern",
         "cancel": "Abbrechen",
         "editName": "Name bearbeiten",
+        "editDescription": "Beschreibung bearbeiten",
         "remove": "Entfernen"
       },
       "table": {
@@ -461,6 +468,7 @@
         "createFailed": "Team konnte nicht erstellt werden: {{error}}",
         "deleteFailed": "Team konnte nicht gelöscht werden",
         "updateName": "Teamname konnte nicht aktualisiert werden",
+        "updateDescription": "Teambeschreibung konnte nicht aktualisiert werden",
         "saveChanges": "Änderungen konnten nicht gespeichert werden. Bitte versuche es erneut."
       }
     }
@@ -710,7 +718,8 @@
         "importNewName": "Mit anderem Namen importieren:",
         "importWithResolutions": "Mit Auflösungen importieren",
         "orderConflict": "Reihenfolge {{order}} wird bereits verwendet",
-        "importWithOrder": "Mit Reihenfolge {{order}} importieren"
+        "importWithOrder": "Mit Reihenfolge {{order}} importieren",
+        "removesIntro": "Beim Löschen dieses Boards wird außerdem Folgendes entfernt:"
       },
       "importTable": {
         "active": "Aktiv"
@@ -779,7 +788,9 @@
           "deleteFailed": "Board konnte nicht gelöscht werden",
           "importFailed": "Boards konnten nicht importiert werden",
           "updateStatusFailed": "Boardstatus konnte nicht aktualisiert werden",
-          "updateDefaultFailed": "Standard-Board konnte nicht aktualisiert werden"
+          "updateDefaultFailed": "Standard-Board konnte nicht aktualisiert werden",
+          "hasEmailSenderRoute": "Board kann nicht gelöscht werden: Es hat eine eigene Route für ausgehende E-Mail-Absender. Entfernen Sie zuerst den Ticket-Absender im Board-Editor.",
+          "referencedByAutomations": "Board kann nicht gelöscht werden: Andere Einstellungen verweisen weiterhin darauf. Richten Sie diese zuerst auf ein anderes Board aus oder entfernen Sie sie."
         }
       },
       "closeRules": {
@@ -893,6 +904,48 @@
         "displayName": "Anzeigename",
         "save": "Absender speichern",
         "saved": "Absender gespeichert"
+      },
+      "deleteDependencies": {
+        "categories_one": "Kategorie",
+        "categories_other": "Kategorien",
+        "categories_few": "Kategorien",
+        "categories_many": "Kategorien",
+        "statuses_one": "Ticketstatus",
+        "statuses_other": "Ticketstatus",
+        "statuses_few": "Ticketstatus",
+        "statuses_many": "Ticketstatus",
+        "autoCloseRules_one": "automatische Abschlussregel",
+        "autoCloseRules_other": "automatische Abschlussregeln",
+        "autoCloseRules_few": "automatische Abschlussregeln",
+        "autoCloseRules_many": "automatische Abschlussregeln",
+        "notificationRules_one": "Benachrichtigungsregel",
+        "notificationRules_other": "Benachrichtigungsregeln",
+        "notificationRules_few": "Benachrichtigungsregeln",
+        "notificationRules_many": "Benachrichtigungsregeln",
+        "portalVisibility_one": "Sichtbarkeitszuweisung im Kundenportal",
+        "portalVisibility_other": "Sichtbarkeitszuweisungen im Kundenportal",
+        "portalVisibility_few": "Sichtbarkeitszuweisungen im Kundenportal",
+        "portalVisibility_many": "Sichtbarkeitszuweisungen im Kundenportal",
+        "emailSenderRoutes_one": "Route für ausgehende Absender",
+        "emailSenderRoutes_other": "Routen für ausgehende Absender",
+        "emailSenderRoutes_few": "Routen für ausgehende Absender",
+        "emailSenderRoutes_many": "Routen für ausgehende Absender",
+        "ticketTemplates_one": "Ticketvorlage",
+        "ticketTemplates_other": "Ticketvorlagen",
+        "ticketTemplates_few": "Ticketvorlagen",
+        "ticketTemplates_many": "Ticketvorlagen",
+        "recurringTickets_one": "Zeitplan für wiederkehrende Tickets",
+        "recurringTickets_other": "Zeitpläne für wiederkehrende Tickets",
+        "recurringTickets_few": "Zeitpläne für wiederkehrende Tickets",
+        "recurringTickets_many": "Zeitpläne für wiederkehrende Tickets",
+        "checklistRules_one": "Checklisten-Zuweisungsregel",
+        "checklistRules_other": "Checklisten-Zuweisungsregeln",
+        "checklistRules_few": "Checklisten-Zuweisungsregeln",
+        "checklistRules_many": "Checklisten-Zuweisungsregeln",
+        "cannedResponses_one": "Board-Textbaustein",
+        "cannedResponses_other": "Board-Textbausteine",
+        "cannedResponses_few": "Board-Textbausteine",
+        "cannedResponses_many": "Board-Textbausteine"
       }
     },
     "priorities": {
@@ -984,7 +1037,8 @@
         "description": "Beschreibung",
         "items": "Elemente",
         "status": "Status",
-        "actions": "Aktionen"
+        "actions": "Aktionen",
+        "scope": "Verfügbar für"
       },
       "statusLabels": {
         "active": "Aktiv",
@@ -1002,7 +1056,9 @@
         "down": "Nach unten",
         "remove": "Entfernen",
         "addItem": "Element hinzufügen",
-        "addRule": "Regel hinzufügen"
+        "addRule": "Regel hinzufügen",
+        "duplicateToClient": "Für Client duplizieren…",
+        "duplicate": "Duplizieren"
       },
       "fields": {
         "name": {
@@ -1032,8 +1088,10 @@
           "priority": "Priorität",
           "any": "Beliebig",
           "appliesToAll": "Gilt für alle Tickets",
+          "appliesToAllClientTickets": "Gilt für alle Tickets von {{client}}",
           "clients": "Kunden",
           "clientsAny": "Beliebiger Kunde",
+          "clientsFixedByTemplate": "Nur {{client}} (durch den Kunden der Vorlage festgelegt)",
           "clientsAddAnother": "Weiteren Kunden hinzufügen",
           "removeClient": "{{name}} entfernen",
           "origins": "Ticketquelle",
@@ -1057,7 +1115,13 @@
             "inbound_email": "Eingehende E-Mail",
             "api": "API",
             "recurring": "Wiederkehrender Zeitplan"
-          }
+          },
+          "clientScopedWarning": "Diese Vorlage ist auf {{client}} beschränkt: Diese Regeln gelten nur für Tickets von {{client}}."
+        },
+        "availableTo": {
+          "label": "Verfügbar für",
+          "clear": "Alle Clients",
+          "help": "Auf „Alle Clients“ belassen, um die Vorlage in jedem Ticket anzubieten, oder einen Client wählen, um sie auf dessen Tickets zu beschränken."
         }
       },
       "dialog": {
@@ -1065,13 +1129,17 @@
         "editTemplate": "Checklisten-Vorlage bearbeiten",
         "createFirstHelp": "Erstellen Sie zuerst die Vorlage, dann fügen Sie Checklisten-Elemente und Regeln für die automatische Anwendung hinzu.",
         "deleteTitle": "Checklisten-Vorlage löschen",
-        "deleteMessage": "Möchten Sie \"{{name}}\" wirklich löschen? Checklisten, die bereits zu Tickets hinzugefügt wurden, sind davon nicht betroffen."
+        "deleteMessage": "Möchten Sie \"{{name}}\" wirklich löschen? Checklisten, die bereits zu Tickets hinzugefügt wurden, sind davon nicht betroffen.",
+        "duplicateTitle": "Für Client duplizieren",
+        "duplicateHelp": "„{{name}}“ samt Punkten in eine neue, auf einen Client beschränkte Vorlage kopieren. Die Kopie ist unabhängig: Spätere Änderungen an einer der Vorlagen wirken sich nicht auf die andere aus.",
+        "duplicateClientPlaceholder": "Client auswählen"
       },
       "messages": {
         "success": {
           "created": "Checklisten-Vorlage erfolgreich erstellt",
           "updated": "Checklisten-Vorlage erfolgreich aktualisiert",
-          "deleted": "Checklisten-Vorlage erfolgreich gelöscht"
+          "deleted": "Checklisten-Vorlage erfolgreich gelöscht",
+          "duplicated": "Checklistenvorlage für Client dupliziert"
         },
         "error": {
           "fetchFailed": "Checklisten-Vorlagen konnten nicht abgerufen werden",
@@ -1081,8 +1149,62 @@
           "deleteFailed": "Checklisten-Vorlage konnte nicht gelöscht werden",
           "updateStatusFailed": "Vorlagenstatus konnte nicht aktualisiert werden",
           "itemSaveFailed": "Checklisten-Element konnte nicht gespeichert werden",
-          "ruleSaveFailed": "Regel für automatische Anwendung konnte nicht gespeichert werden"
+          "ruleSaveFailed": "Regel für automatische Anwendung konnte nicht gespeichert werden",
+          "duplicateFailed": "Checklistenvorlage konnte nicht dupliziert werden"
         }
+      },
+      "scope": {
+        "allClients": "Alle Kunden",
+        "unknownClient": "Unbekannter Kunde"
+      },
+      "filter": {
+        "client": "Kunde",
+        "allClients": "Alle Kunden",
+        "clear": "Filter zurücksetzen"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Board",
+          "category_id": "Kategorie",
+          "subcategory_id": "Unterkategorie",
+          "priority_id": "Priorität",
+          "client_id": "Kunde",
+          "client_tags": "Kunden-Tags",
+          "contact_tags": "Kontakt-Tags",
+          "ticket_origin": "Ticketquelle",
+          "title_folded": "Titel",
+          "description_folded": "Beschreibung",
+          "from_service_request": "Aus Serviceanfrage",
+          "service_request_definition_id": "Serviceanfrage"
+        },
+        "operators": {
+          "equals": "Ist gleich",
+          "not_equals": "Ist ungleich",
+          "in": "Enthält mindestens einen Wert aus",
+          "not_in": "Enthält keinen Wert aus",
+          "contains": "Enthält",
+          "starts_with": "Beginnt mit",
+          "ends_with": "Endet mit",
+          "is_empty": "Ist leer",
+          "is_not_empty": "Ist nicht leer"
+        },
+        "conditions": "Bedingungen",
+        "match": "Übereinstimmung",
+        "and": "Alle Bedingungen",
+        "or": "Mindestens eine Bedingung",
+        "field": "Feld",
+        "operator": "Bedingung",
+        "value": "Wert",
+        "yes": "Ja",
+        "no": "Nein",
+        "advanced": "Diese Regel enthält gruppierte oder erweiterte Bedingungen und kann in diesem Editor nur gelesen werden.",
+        "add": "Bedingung hinzufügen",
+        "save": "Bedingungen speichern",
+        "enabled": "Aktiviert",
+        "matchesAll": "Gilt für alle Tickets im Geltungsbereich der Vorlage.",
+        "matchesNone": "Gilt für keine Tickets.",
+        "tagsFailed": "Die Tag-Auswahl konnte nicht geladen werden. Gespeicherte Auswahlen bleiben erhalten.",
+        "retry": "Erneut versuchen"
       }
     },
     "externalSystems": {
@@ -1423,7 +1545,9 @@
         "saveDomain": "Domain speichern",
         "updateDomain": "Domain aktualisieren",
         "submitting": "Wird gesendet…",
-        "cancelEdit": "Bearbeitung abbrechen"
+        "cancelEdit": "Bearbeitung abbrechen",
+        "confirmUris": "Ich habe diese registriert – bestätigen",
+        "confirmingUris": "Wird bestätigt…"
       },
       "form": {
         "label": "Benutzerdefinierte Domain",
@@ -1461,7 +1585,8 @@
         "deploying": "Wird bereitgestellt",
         "active": "Aktiv",
         "disabled": "Deaktiviert",
-        "unknown": "Unbekannt"
+        "unknown": "Unbekannt",
+        "pending_redirect_uri": "Redirect-URIs ausstehend"
       },
       "messages": {
         "requestSubmitted": "Anfrage für benutzerdefinierte Domain übermittelt.",
@@ -1473,9 +1598,32 @@
         "registerFailed": "Benutzerdefinierte Domain konnte nicht registriert werden.",
         "refreshFailed": "Domain-Status konnte nicht aktualisiert werden.",
         "retryFailed": "Wiederholung fehlgeschlagen.",
-        "disableFailed": "Benutzerdefinierte Domain konnte nicht deaktiviert werden."
+        "disableFailed": "Benutzerdefinierte Domain konnte nicht deaktiviert werden.",
+        "confirmUrisFailed": "Redirect-URIs konnten nicht bestätigt werden.",
+        "urisConfirmed": "Redirect-URIs bestätigt."
       },
-      "hostedTlsNote": "TLS-Zertifikate werden automatisch bereitgestellt, sobald DNS verifiziert ist."
+      "hostedTlsNote": "TLS-Zertifikate werden automatisch bereitgestellt, sobald DNS verifiziert ist.",
+      "surface": {
+        "label": "Bedient",
+        "current": "Bedient: {{value}}",
+        "updatingSurface": "Beim Speichern ändert sich, welche App diese Domain bedient, und die Bereitstellung startet neu.",
+        "options": {
+          "client_portal": "Kundenportal",
+          "msp": "MSP-App",
+          "both": "Beides"
+        },
+        "descriptions": {
+          "client_portal": "Die Domain öffnet Ihr Kundenportal. Dies ist die Standardeinstellung.",
+          "msp": "Die Domain öffnet die MSP-App (Techniker-App). Die Redirect-URIs für Single Sign-on müssen zuerst registriert werden.",
+          "both": "Eine Domain bedient beide Apps. Pfade unter /msp öffnen die MSP-App, Pfade unter /client-portal das Kundenportal."
+        }
+      },
+      "redirectUris": {
+        "title": "SSO-Redirect-URIs müssen registriert werden",
+        "description": "Diese Domain bedient die MSP-App. Single Sign-on funktioniert erst, wenn die folgenden Redirect-URIs bei Ihrem SSO-Anbieter registriert sind. Die Domain bleibt ausstehend, bis sie bestätigt wurden.",
+        "listLabel": "Registrieren Sie diese Redirect-URIs:",
+        "contactSupport": "Bitten Sie Ihre Administratorin bzw. Ihren Administrator oder den Support, diese Redirect-URIs zu registrieren und zu bestätigen."
+      }
     },
     "yourCompanyName": "Name Ihres Unternehmens",
     "brandingPreviewMode": "Branding-Vorschau-Themenmodus",
@@ -2379,7 +2527,23 @@
         "nothingImportedBody": "Dieser Lauf hat keine neuen Datensätze erstellt. Jede Zeile entsprach etwas, das bereits vorhanden war, daher wurde nichts geändert.",
         "claimedBySamePackage": "Bereits durch dieses Paket migriert",
         "claimedByOtherPackage": "Bereits migriert durch {{file}}",
-        "claimedByExistingEntity": "Einer vorhandenen Entität zugeordnet"
+        "claimedByExistingEntity": "Einer vorhandenen Entität zugeordnet",
+        "matchedBySku": "Vorhandenem Produkt per SKU zugeordnet"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Produkte (Katalog / Preisliste)",
+          "vendorProducts": "Lieferantenpreisliste (Distributorkosten)"
+        },
+        "productsHint": "Preise und Kosten werden als Dezimalbeträge gelesen (z. B. 1.299,50 bzw. 1,299.50), mit der Währungsspalte, falls vorhanden, sonst mit der Mandantenwährung. Negative, nicht numerische oder zu genaue Beträge werden verworfen und gemeldet; die Zeile wird trotzdem importiert. Produkte werden über die SKU mit vorhandenen Produkten abgeglichen; Lieferantenpreislisten verweisen per SKU auf ein Produkt und legen den Lieferanten per Name an oder ordnen ihn zu."
+      },
+      "configure": {
+        "products": {
+          "title": "Produkte",
+          "serviceType": "Servicetyp für neue Produkte",
+          "serviceTypePlaceholder": "Servicetyp auswählen",
+          "serviceTypeHelp": "Produkte, deren SKU bereits existiert, werden zugeordnet und nicht verändert; nur neue Produkte werden diesem Servicetyp zugeordnet."
+        }
       }
     },
     "jobDetails": {
@@ -2938,7 +3102,8 @@
     "emptyState": "Keine Benutzer verfügbar.",
     "roles": {
       "client": "Kundenbenutzer",
-      "internal": "Interner Benutzer"
+      "internal": "Interner Benutzer",
+      "service": "Dienstkonto"
     },
     "badge": {
       "inactive": "Inaktiv"
@@ -3499,6 +3664,36 @@
         "confirm": "Trennen",
         "cancel": "Abbrechen"
       }
+    },
+    "loading": "Wird geladen…",
+    "downloadHosts": {
+      "title": "Zulässige Download-Hosts",
+      "intro": "Wenn ein Dokument per URL angehängt wird, lädt AlgaPSA es nur von den hier aufgeführten Hosts herunter. Dies gilt für jeden Aufrufer, der Dokumente anhängt, einschließlich KI-Agenten, API-Clients und der REST-API. Bevorzugen Sie Bucket-spezifische Hosts wie acme-uploads.s3.us-east-1.amazonaws.com gegenüber allgemeinen.",
+      "readOnly": "Sie können diese Liste ansehen. Zum Ändern benötigen Sie die Berechtigung „Download-Hosts verwalten“.",
+      "builtIn": "Integriert",
+      "empty": "Noch keine benutzerdefinierten Hosts.",
+      "add": "Host hinzufügen",
+      "addTitle": "Zulässigen Download-Host hinzufügen",
+      "remove": "Entfernen",
+      "removeTitle": "Host entfernen?",
+      "removeMessage": "Downloads von {{host}} funktionieren erst wieder, wenn der Host erneut hinzugefügt wird.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "Ein Hostname oder *.example.com, um alle Subdomains zuzulassen.",
+        "note": "Notiz (optional)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Verwendet für",
+        "allowed": "Zugelassen",
+        "note": "Notiz",
+        "addedBy": "Hinzugefügt von",
+        "addedOn": "Hinzugefügt am"
+      },
+      "errors": {
+        "load": "Zulässige Download-Hosts konnten nicht geladen werden.",
+        "save": "Die Änderung konnte nicht gespeichert werden."
+      }
     }
   },
   "errors": {
@@ -3669,11 +3864,17 @@
       "noLeadingTrailingDot": "Die Domain darf nicht mit einem Punkt beginnen oder enden.",
       "notApplianceHost": "Wählen Sie eine andere Domain als den primären Host dieses Servers. Die eigene Portal-Domain muss ein anderer Hostname sein, den Ihr Reverse-Proxy hierher weiterleitet.",
       "nothingToRetry": "Es gibt keine fehlgeschlagene Registrierung einer eigenen Domain, die wiederholt werden könnte.",
-      "retryOnlyAfterFailure": "Ein erneuter Versuch ist nur nach einer fehlgeschlagenen Registrierung möglich."
+      "retryOnlyAfterFailure": "Ein erneuter Versuch ist nur nach einer fehlgeschlagenen Registrierung möglich.",
+      "alreadyInUse": "Diese Domain wird bereits verwendet. Wählen Sie eine andere Domain.",
+      "usedByOtherSurface": "Diese Domain wird bereits von einer anderen Ihrer benutzerdefinierten Domains verwendet. Um das Kundenportal und die MSP-App über eine Domain bereitzustellen, wählen Sie „Beide“.",
+      "invalidSurface": "Wählen Sie aus, was die benutzerdefinierte Domain bereitstellt: Kundenportal, MSP-App oder beides.",
+      "redirectUrisHosted": "Weiterleitungs-URIs für gehostete Domains werden vom Plattform-Support registriert.",
+      "nothingToConfirm": "Für diese Domain steht keine Bestätigung von SSO-Weiterleitungs-URIs aus."
     }
   },
   "common": {
-    "saving": "Wird gespeichert…"
+    "saving": "Wird gespeichert…",
+    "cancel": "Abbrechen"
   },
   "featureFlags": {
     "categories": {
@@ -3853,6 +4054,29 @@
       "default": "Standard",
       "empty": "Keine Standardstatus zum Importieren verfügbar",
       "importSelected": "Ausgewählte importieren ({{count}})"
+    }
+  },
+  "tagDisplay": {
+    "title": "Auf Chips anzeigen",
+    "subtitle": "Tags, die neben Kontakten und Kunden in Ticketlisten, Ticketköpfen und Auswahllisten angezeigt werden.",
+    "loading": "Wird geladen…",
+    "description": "Legen Sie fest, welche Tags als Badges neben Kontakten und Kunden angezeigt werden und in welcher Reihenfolge. Eine Liste ohne Tags zeigt für diese Zielgruppe keine Badges.",
+    "contacts": "Kontakte",
+    "clients": "Kunden",
+    "audienceInternal": "Interne Benutzer",
+    "audienceClient": "Kundenportal",
+    "clientNote": "Startet leer. Hier aufgeführte Tags sind für die eigenen Benutzer des Kunden im Kundenportal sichtbar.",
+    "noneSelected": "Keine Tags angezeigt.",
+    "moveUp": "Nach oben",
+    "moveDown": "Nach unten",
+    "remove": "Entfernen",
+    "addTag": "Tag hinzufügen…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Zurück zu den E-Mail-Einstellungen",
+      "title": "E-Mail- und Identitätsanbieter",
+      "description": "Registrieren Sie Ihre eigene Google- oder Microsoft-Anwendung für eingehende E-Mails und die Anmeldung von Mitarbeitern. Diese Anmeldedaten gehören zu Ihrem Arbeitsbereich."
     }
   }
 }

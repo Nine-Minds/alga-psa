@@ -11,6 +11,21 @@
       "import": "./src/index.ts",
       "require": "./src/index.ts"
     },
+    "./lifecycle": {
+      "types": "./src/lifecycle.ts",
+      "import": "./src/lifecycle.ts",
+      "require": "./src/lifecycle.ts"
+    },
+    "./lifecycle-error": {
+      "types": "./src/lifecycle-error.ts",
+      "import": "./src/lifecycle-error.ts",
+      "require": "./src/lifecycle-error.ts"
+    },
+    "./co-managed-write-admission": {
+      "types": "./src/co-managed-write-admission.ts",
+      "import": "./src/co-managed-write-admission.ts",
+      "require": "./src/co-managed-write-admission.ts"
+    },
     "./actions": {
       "types": "./src/actions/index.ts",
       "import": "./src/actions/index.ts",

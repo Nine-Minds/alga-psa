@@ -92,6 +92,7 @@
     "button": "Filters",
     "unassigned": "Unassigned",
     "category": "Filter by category",
+    "removeFilterChip": "Remove filter: {{label}}",
     "assignee": "Assignee",
     "allAssignees": "All Assignees",
     "responseState": "Response State",
@@ -118,7 +119,12 @@
     "allResponseStatuses": "All Response Statuses",
     "responseStatus": "Response Status",
     "board": "Filter by board",
-    "searchSmart": "Search tickets and comments… Enter for smart search"
+    "searchSmart": "Search tickets and comments… Enter for smart search",
+    "requesterTags": "Requester tags",
+    "clientTags": "Client tags",
+    "tagModeAny": "Any of",
+    "tagModeNone": "None of",
+    "droppedFromLink": "Some filters in this link are not valid and were ignored."
   },
   "create": {
     "title": "Create Support Ticket",
@@ -256,7 +262,9 @@
     "openMenu": "Open menu",
     "moreActions": "More actions",
     "createTemplate": "Create template from ticket",
-    "createWorkflowFromTicket": "Create workflow from ticket"
+    "createWorkflowFromTicket": "Create workflow from ticket",
+    "printWorkTag": "Print work tag",
+    "retry": "Retry"
   },
   "messages": {
     "noTickets": "No tickets found",
@@ -366,7 +374,8 @@
     "pastedImagesDeleteFailed_many": "Could not delete {{count}} pasted images.",
     "pastedImagesDeleted_few": "Deleted {{count}} pasted images.",
     "pastedImagesDeleted_many": "Deleted {{count}} pasted images.",
-    "sharedWorkspaceReadOnly": "You can see this ticket because it is about a device in a workspace you share. Only the person who raised it can add to it."
+    "sharedWorkspaceReadOnly": "You can see this ticket because it is about a device in a workspace you share. Only the person who raised it can add to it.",
+    "loadPartyTagsFailed": "Failed to load requester and client tags"
   },
   "conversation": {
     "comments": "Comments",
@@ -469,6 +478,14 @@
     "clientPortal": "Received via Client Portal",
     "inboundEmail": "Received via Inbound Email"
   },
+  "originalEmail": {
+    "text": "Text",
+    "original": "Original email",
+    "emailShort": "Email",
+    "loading": "Loading the original email…",
+    "error": "The original email could not be loaded.",
+    "group": "Message view"
+  },
   "documents": {
     "title": "Documents",
     "noDocuments": "No documents attached",
@@ -510,6 +527,7 @@
     },
     "filters": {
       "allAssignees": "All Assignees",
+      "allContacts": "All Contacts",
       "selectStatus": "Select Status",
       "responseState": "Response State",
       "allResponseStates": "All Response States",
@@ -654,7 +672,9 @@
       "more": "More",
       "bundleNeedsOne": "Select at least 1 ticket to bundle",
       "selectedCount_few": "{{count}} selected",
-      "selectedCount_many": "{{count}} selected"
+      "selectedCount_many": "{{count}} selected",
+      "printLabels": "Print labels",
+      "printLabelsLimit": "You can print at most {{max}} labels at a time"
     },
     "moveDialogTitle": "Move Selected Tickets",
     "moveDialogDescription": "Select a destination board and status, then confirm moving the selected tickets.",
@@ -687,7 +707,7 @@
     "bundleMasterLabel": "Select Master Ticket",
     "bundleMasterPlaceholder": "Select master ticket...",
     "bundleSyncUpdates": "Sync updates from master to children (public replies + workflow changes)",
-    "bundleSyncUpdatesHelp": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
+    "bundleSyncUpdatesHelp": "Children keep their current status when bundled. With sync updates on, closing or reopening the master closes or reopens all children, status, assignee and priority changes on the master apply to them, and their workflow fields are locked. With it off, children manage their own status, assignee and priority. Internal notes stay on the master.",
     "bundleSelectAtLeastTwo": "Select at least two tickets to bundle.",
     "bundleSelectMaster": "Select a master ticket.",
     "bundleSuccess": "Tickets bundled",
@@ -760,8 +780,8 @@
       "masterTicket": "Select Master Ticket",
       "selectMasterTicket": "Select master ticket...",
       "syncUpdates": "Sync updates from master to children (public replies + workflow changes)",
-      "syncUpdatesHelp": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
-      "childrenDescription": "Children keep their current status; workflow fields are locked on children. Inbound child replies are surfaced below as view-only.",
+      "syncUpdatesHelp": "Children keep their current status when bundled. With sync updates on, closing or reopening the master closes or reopens all children, status, assignee and priority changes on the master apply to them, and their workflow fields are locked. With it off, children manage their own status, assignee and priority. Internal notes stay on the master.",
+      "childrenDescription": "Children keep their current status. Workflow fields are locked on children only in Sync Updates mode. Inbound child replies are surfaced below as view-only.",
       "checkingMasters": "Checking existing bundles...",
       "existingMasterSuffix": "(existing master)",
       "existingMasterLocked": "One selected ticket is already a bundle master. It will be used as the master; the others will be added as children.",
@@ -976,7 +996,22 @@
     "tagCreatePartialFailure_few": "{{count}} tags could not be created",
     "tagCreatePartialFailure_many": "{{count}} tags could not be created",
     "tagCreationFailed_few": "{{count}} tags could not be created",
-    "tagCreationFailed_many": "{{count}} tags could not be created"
+    "tagCreationFailed_many": "{{count}} tags could not be created",
+    "assets": {
+      "heading": "Assets",
+      "selectClientFirst": "Select a client to link assets.",
+      "unavailable": "Assets can be linked from the ticket after it is created."
+    },
+    "attachments": {
+      "heading": "Attachments",
+      "add": "Add files",
+      "remove": "Remove {{name}}"
+    },
+    "watchers": {
+      "heading": "Watchers",
+      "placeholder": "Add watchers..."
+    },
+    "attachmentsPartialFailure": "Ticket created, but these files could not be attached: {{files}}. Add them from the ticket."
   },
   "itil": {
     "calculatedPriority": "Priority (Calculated)",
@@ -1271,6 +1306,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Response State Tracking",
+      "defaultReplyInternalTitle": "Default reply visibility",
+      "defaultReplyInternalDescription": "Start new ticket replies as Internal for all team members. Users can still switch a reply to Client. Client portal replies and replies within existing threads are unchanged.",
+      "defaultReplyInternalLabel": "Default ticket replies to Internal",
       "responseStateTrackingDescription": "When enabled, tickets automatically track who needs to respond next (awaiting client or awaiting internal response). Disabling this hides response state badges, filters, and related SLA pause options.",
       "responseStateTrackingEnabled": "Response state tracking enabled",
       "responseStateTrackingDisabled": "Response state tracking disabled",
@@ -1405,7 +1443,15 @@
     "selectUnit": "Select a unit to deliver...",
     "onHandByLocation": "On hand by location",
     "catalogUnitCost": "Catalog unit cost",
-    "costNotConfigured": "Not configured"
+    "costNotConfigured": "Not configured",
+    "availableBadge": "Available: {{available}}",
+    "availableByLocation": "Free stock by location",
+    "freeOfOnHand": "{{free}} free of {{onHand}}",
+    "stockHeld": "Only {{free}} available. {{held}} on hand is on hard hold for sales orders or projects and can't be used here.",
+    "stockInsufficient": "Only {{onHand}} on hand, {{requested}} requested.",
+    "reservedStockTitle": "Stock is reserved for a sales order or project",
+    "reservedStockMessage": "Only {{free}} of this product is free. {{reserved}} on hand is reserved for sales orders or projects, and you asked for {{requested}}. Adding it anyway takes stock a sales order or project is counting on and may leave it short.",
+    "reservedStockConfirm": "Add anyway"
   },
   "watchList": {
     "title": "Watch List",
@@ -1678,7 +1724,13 @@
       "ruleSubcategoryRequiresCategory": "Select a category before choosing a subcategory.",
       "ruleTooManyKeywords": "Use at most {{max}} keywords per rule.",
       "ruleKeywordTooLong": "Keep each keyword to {{max}} characters or fewer.",
-      "ruleOriginInvalid": "One of the selected ticket sources is not valid."
+      "ruleOriginInvalid": "One of the selected ticket sources is not valid.",
+      "templateClientMismatch": "This checklist template is limited to a different client than this ticket's client.",
+      "templateClientInvalid": "The selected client was not found.",
+      "ruleClientOutsideTemplateScope": "This template belongs to one client, so its rules cannot target other clients.",
+      "templateRulesTargetOtherClients": "Some of this template's auto-apply rules target other clients. Remove those clients from the rules before assigning the template to one client.",
+      "predicateClientOutsideScope": "Client {{client}} is outside this template’s ownership.",
+      "predicateInvalid": "Invalid checklist rule: {{detail}}"
     }
   },
   "ticketSection": {
@@ -1707,9 +1759,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Children keep their current status when bundled. Afterwards, closing or reopening the master closes or reopens all children, and status, assignee and priority changes on the master apply to children. Workflow fields are locked on children. Internal notes stay on the master.",
+      "childrenDescription": "Children keep their current status when bundled. In Sync Updates mode, closing or reopening the master closes or reopens all children, status, assignee and priority changes on the master apply to them, and their workflow fields are locked. In Link Only mode, children manage their own status, assignee and priority. Internal notes stay on the master.",
       "title": "Bundle",
       "masterBanner": "This ticket is the master of a bundle ({{count}} children). Mode: {{mode}}.",
+      "childLockedNotice": "Workflow fields are locked; work from the master ticket.",
+      "childLinkedNotice": "It is linked to the master and managed on its own.",
       "multipleClients": "Multiple clients",
       "mode": "Mode: {{mode}}",
       "unbundle": "Unbundle",
@@ -1745,7 +1799,15 @@
       "applyResolutionHelpNoComment": "Closes the child with status {{status}}. The master has no public resolution comment to post.",
       "reopenMasterLabel": "Add and reopen master",
       "reopenMasterHelp": "Reopens only the master. Already-closed children in this bundle stay closed; reopen notifications and SLA apply to the master.",
-      "closedMasterGating": "The board's close rules do not allow open children under a closed master, so keeping the master closed is not an option."
+      "closedMasterGating": "The board's close rules do not allow open children under a closed master, so keeping the master closed is not an option.",
+      "modeSwitchDialogIntro": "The master is closed. Choose what should happen to the open children when the bundle switches to Sync Updates.",
+      "modeSwitchConfirm": "Switch to Sync Updates",
+      "keepClosedSwitchLabel": "Switch and keep master closed",
+      "keepClosedSwitchHelp": "Open children stay open with their own SLA clocks. The bundle will show as inconsistent until they are resolved.",
+      "applyResolutionSwitchLabel": "Switch and apply the master's resolution to open children",
+      "applyResolutionSwitchHelp": "Closes each open child with status {{status}} and posts the master's resolution to it as a public comment.",
+      "applyResolutionSwitchHelpNoComment": "Closes each open child with status {{status}}. The master has no public resolution comment to post.",
+      "reopenMasterSwitchLabel": "Switch and reopen master"
     },
     "autoClose": "Will close automatically on {{date}} unless there's new activity.",
     "autoCloseWarned": "The customer has been warned.",
@@ -1794,7 +1856,8 @@
     "remoteFieldUpdated": "{{name}} updated {{field}}",
     "connection": {
       "reconnecting": "Live updates offline - reconnecting...",
-      "unavailable": "Live updates unavailable"
+      "unavailable": "Live updates unavailable",
+      "offlineShort": "Offline"
     }
   },
   "delete": {
@@ -1976,7 +2039,10 @@
       "openScheduleEntry": "Open schedule entry",
       "acrossEntries_few": "across {{count}} entries",
       "acrossEntries_many": "across {{count}} entries",
-      "changeLocation": "Change location"
+      "changeLocation": "Change location",
+      "addDescriptionPrompt": "Add a description — what is the problem, and what does the customer need?",
+      "projectTasks": "Project tasks",
+      "timeAndBilling": "Time & billing"
     },
     "timeline": {
       "subtitle": "Replies, time, and system changes in one place",
@@ -2072,6 +2138,17 @@
       "collapseActivity": "Collapse older activity",
       "replyingToComment": "Replying to {{name}}",
       "createdFromTemplate": "{{actor}} created this ticket from template \"{{name}}\""
+    },
+    "board": {
+      "conversation": "Conversation",
+      "details": "Details"
+    },
+    "groups": {
+      "customer": "Customer",
+      "work": "Work",
+      "who": "People",
+      "linked": "Linked items",
+      "empty": "Nothing here yet"
     }
   },
   "externalLinks": {
@@ -2495,7 +2572,9 @@
     "discard": "Discard stopwatch",
     "pausedHint": "Paused. Resume to keep tracking, or stop to log the time.",
     "workDescription": "Work description",
-    "whatAreYouWorkingOn": "What are you working on?"
+    "whatAreYouWorkingOn": "What are you working on?",
+    "chipElsewhere": "Timer on {{label}}",
+    "title": "Stopwatch"
   },
   "templates": {
     "loading": "Loading…",
@@ -2619,6 +2698,116 @@
       "hours": "{{hours}}h",
       "daysHours": "{{days}}d {{hours}}h",
       "days": "{{days}}d"
+    }
+  },
+  "cannedResponses": {
+    "picker": {
+      "button": "Canned responses",
+      "buttonTooltip": "Insert a canned response (Ctrl/Cmd+J, or type /)",
+      "title": "Insert a canned response",
+      "searchPlaceholder": "Search canned responses…",
+      "searchLabel": "Search canned responses",
+      "loading": "Loading canned responses…",
+      "empty": "No canned responses are available yet.",
+      "noResults": "No canned responses match your search.",
+      "loadFailed": "Canned responses could not be loaded.",
+      "insertFailed": "The canned response could not be inserted.",
+      "favorites": "Favorites",
+      "recent": "Recently used",
+      "uncategorized": "Uncategorized",
+      "slashGroup": "Canned responses",
+      "slashBrowse": "Canned responses…",
+      "slashBrowseHint": "Browse and insert a saved reply"
+    },
+    "scope": {
+      "personal": "Personal",
+      "team": "Team",
+      "board": "Board",
+      "clientPortal": "Client portal",
+      "personalHelp": "Only you can use this response.",
+      "teamHelp": "Members of the chosen team can use this response.",
+      "boardHelp": "Anyone replying to tickets on the chosen board can use this response.",
+      "clientPortalHelp": "Reserved for client portal replies. It is not offered when replying from the MSP portal."
+    },
+    "list": {
+      "title": "Canned responses",
+      "new": "New canned response",
+      "showInactive": "Show inactive",
+      "searchPlaceholder": "Search name, category or text…",
+      "searchLabel": "Search canned responses",
+      "allCategories": "All categories",
+      "noResults": "No canned responses match your filters.",
+      "empty": "No canned responses yet. Create one to reuse it in ticket replies.",
+      "deleteTitle": "Delete canned response",
+      "deleteMessage": "Delete \"{{name}}\"? Replies that already used it are not changed.",
+      "deleted": "Canned response deleted",
+      "favorite": "Favorite",
+      "columns": {
+        "name": "Name",
+        "category": "Category",
+        "scope": "Available to",
+        "preview": "Preview",
+        "status": "Status"
+      }
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "actions": {
+      "favorite": "Add to favorites",
+      "unfavorite": "Remove from favorites",
+      "edit": "Edit",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "delete": "Delete",
+      "cancel": "Cancel"
+    },
+    "loading": "Loading…",
+    "editor": {
+      "back": "Canned responses",
+      "newTitle": "New canned response",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Canned response saved",
+      "created": "Canned response created",
+      "viewOnly": "You can view this canned response but not change it."
+    },
+    "sections": {
+      "details": "Details",
+      "body": "Response"
+    },
+    "fields": {
+      "name": "Name",
+      "category": "Category",
+      "categoryHelp": "Groups responses in the picker. Optional.",
+      "scope": "Available to",
+      "team": "Team",
+      "teamPlaceholder": "Select a team",
+      "board": "Board",
+      "boardPlaceholder": "Select a board",
+      "body": "Response text",
+      "bodyPlaceholder": "Write the reply…"
+    },
+    "mergeFields": {
+      "title": "Merge fields",
+      "help": "Filled in when the response is inserted into a reply. A field with no value becomes empty; an unrecognized field is left as written.",
+      "descriptions": {
+        "contact_first_name": "The contact's first name",
+        "contact_last_name": "The contact's last name",
+        "contact_name": "The contact's full name",
+        "ticket_number": "The ticket number",
+        "ticket_title": "The ticket title",
+        "agent_name": "Your name (the agent replying)",
+        "client_name": "The client's name"
+      }
+    },
+    "errors": {
+      "notFound": "Canned response not found.",
+      "duplicateName": "A canned response named \"{{name}}\" already exists here.",
+      "invalidReferences": "The selected team or board no longer exists.",
+      "notAvailable": "This canned response is not available for this ticket.",
+      "notATeamMember": "You can only manage team responses for teams you belong to."
     }
   }
 }

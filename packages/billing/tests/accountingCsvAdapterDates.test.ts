@@ -8,6 +8,11 @@ const { resolver } = vi.hoisted(() => ({ resolver: {
   resolveClientMapping: vi.fn(async () => null)
 } }));
 
+const { tenantDefault } = vi.hoisted(() => ({ tenantDefault: { current: 'net_30' as string } }));
+
+vi.mock('@alga-psa/shared/billingClients/tenantPaymentTerms', () => ({
+  resolveTenantDefaultPaymentTerms: vi.fn(async () => tenantDefault.current)
+}));
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: {} })),
   tenantDb: vi.fn(),
@@ -53,7 +58,7 @@ async function exportBytes(adapter: QuickBooksCSVAdapter | XeroCsvAdapter, dates
   return (delivered.artifacts as any).file.content as string;
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => { vi.clearAllMocks(); tenantDefault.current = 'net_30'; });
 
 describe('accounting CSV adapter date artifacts', () => {
   it.each([
@@ -80,5 +85,32 @@ describe('accounting CSV adapter date artifacts', () => {
     const ctx = context('xero_csv', { dateFormat: 'DD/MM/YYYY' });
     const csv = await exportBytes(new XeroCsvAdapter(), invoice(new Date('2026-09-30T00:00:00Z'), '2026-10-23'), ctx);
     expect(csv).toContain('INV-1,invoice-1,30/09/2026,23/10/2026,');
+  });
+});
+
+describe('QuickBooks CSV payment term fallback', () => {
+  async function termIdFor(clientTerms: string | null | undefined, tenantTerms: string) {
+    tenantDefault.current = tenantTerms;
+    const adapter = new QuickBooksCSVAdapter() as any;
+    adapter.loadInvoices = vi.fn(async () => new Map([['invoice-1', invoice('2026-09-22', '2026-10-06')]]));
+    adapter.loadCharges = vi.fn(async () => new Map([['charge-1', {
+      item_id: 'charge-1', invoice_id: 'invoice-1', service_id: 'service-1', description: 'Support',
+      quantity: 1, unit_price: 1250, total_price: 1250, net_amount: 1250, tax_amount: 0
+    }]]));
+    adapter.loadClients = vi.fn(async () => new Map([['client-1', { client_id: 'client-1', client_name: 'Customer', payment_terms: clientTerms }]]));
+    await adapter.transform(context('quickbooks_csv'));
+    return (resolver.resolvePaymentTermMapping.mock.calls as any[][])[0][0].paymentTermId;
+  }
+
+  it('uses the tenant default for unset, empty, or legacy free-text client terms', async () => {
+    expect(await termIdFor(null, 'net_14')).toBe('net_14');
+    resolver.resolvePaymentTermMapping.mockClear();
+    expect(await termIdFor('', 'net_14')).toBe('net_14');
+    resolver.resolvePaymentTermMapping.mockClear();
+    expect(await termIdFor('30 days', 'net_14')).toBe('net_14');
+  });
+
+  it('keeps a recognized client term over the tenant default', async () => {
+    expect(await termIdFor('net_7', 'net_14')).toBe('net_7');
   });
 });

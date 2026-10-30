@@ -322,6 +322,84 @@ describe('ThreecxIntegrationSettings', () => {
     await waitFor(() => expect(container.querySelector('#threecx-template-stale')).toBeTruthy());
   });
 
+  it('a failing sync keeps its error visible after the reload, inside the Extensions section', async () => {
+    mocks.getCardState.mockResolvedValue(cardState({ pbx: connectedPbx() }));
+    mocks.ok.mockResolvedValueOnce({ success: false, error: 'PBX GET /Users failed (403): Forbidden' });
+    const { container } = render(<ThreecxIntegrationSettings />);
+    await screen.findByText('3CX');
+    fireEvent.click(await idleButton('Sync from PBX'));
+    await waitFor(() => expect(container.querySelector('#threecx-extensions-error')).toBeTruthy());
+    // The action's reload ran and succeeded; the error must survive it.
+    await idleButton('Sync from PBX');
+    expect(mocks.getCardState.mock.calls.length).toBeGreaterThanOrEqual(2);
+    const alert = container.querySelector('#threecx-extensions-section #threecx-extensions-error');
+    expect(alert?.textContent).toContain('PBX GET /Users failed (403): Forbidden');
+    expect(alert?.getAttribute('role')).toBe('alert');
+    expect(container.querySelector('#threecx-error-message')).toBeNull();
+    expect(container.querySelector('#threecx-pbx-error')).toBeNull();
+    // A new action in the same section clears it.
+    fireEvent.click(await idleButton('Sync from PBX'));
+    await waitFor(() => expect(container.querySelector('#threecx-extensions-error')).toBeNull());
+  });
+
+  it('shows a getThreecxCardState failure as a state error, not as an action error', async () => {
+    mocks.getCardState.mockResolvedValueOnce(cardState());
+    const { container } = render(<ThreecxIntegrationSettings />);
+    await screen.findByText('3CX');
+    mocks.getCardState.mockResolvedValue(cardState({ success: false, error: 'state load failed' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Rotate' }));
+    await waitFor(() => expect(container.querySelector('#threecx-state-error')?.textContent).toContain('state load failed'));
+  });
+
+  it('says 3CX returned no enabled users after a sync, and keeps the never-synced text distinct', async () => {
+    mocks.getCardState.mockResolvedValue(cardState({ pbx: connectedPbx(), extensionsSyncedAt: '2026-09-15T10:00:00Z' }));
+    const synced = render(<ThreecxIntegrationSettings />);
+    await screen.findByText('3CX');
+    await waitFor(() => expect(synced.container.querySelector('#threecx-extensions-empty-synced')).toBeTruthy());
+    expect(synced.container.querySelector('#threecx-extensions-empty-synced')?.textContent).toContain('3CX returned no enabled users');
+    expect(synced.container.querySelector('#threecx-extensions-empty')).toBeNull();
+    cleanup();
+
+    mocks.getCardState.mockResolvedValue(cardState({ pbx: connectedPbx(), extensionsSyncedAt: null }));
+    const never = render(<ThreecxIntegrationSettings />);
+    await waitFor(() => expect(never.container.querySelector('#threecx-extensions-empty')?.textContent).toBe('No extensions synced yet.'));
+    expect(never.container.querySelector('#threecx-extensions-empty-synced')).toBeNull();
+  });
+
+  it('disables Sync with the users reason and phonebook push with the contacts reason', async () => {
+    const usersReason = "The 3CX API app's role cannot read users. Role fix: Integrations > API > (app) > Role.";
+    const contactsReason = "The 3CX API app's role cannot manage contacts. Role fix: Integrations > API > (app) > Role.";
+    mocks.getCardState.mockResolvedValue(cardState({
+      pbx: {
+        ...connectedPbx(),
+        capabilities: {
+          xapi: true,
+          callControl: true,
+          users: { ok: false, status: 403, reason: usersReason },
+          contacts: { ok: false, status: 403, reason: contactsReason },
+        },
+      },
+    }));
+    const { container } = render(<ThreecxIntegrationSettings />);
+    await screen.findByText('3CX');
+    const sync = await screen.findByRole('button', { name: /Sync from PBX/ });
+    expect((sync as HTMLButtonElement).disabled).toBe(true);
+    expect(container.querySelector('#threecx-extensions-sync-disabled-reason')?.textContent).toBe(usersReason);
+    expect((screen.getByRole('button', { name: /Push now/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect(container.querySelector('#threecx-phonebook-push-disabled-reason')?.textContent).toBe(contactsReason);
+    expect(container.querySelector('#threecx-pbx-capability-users-problem')?.textContent).toContain(usersReason);
+    expect(container.querySelector('#threecx-pbx-capability-contacts-problem')?.textContent).toContain(contactsReason);
+  });
+
+  it('treats state saved before role probing (no users/contacts) as enabled', async () => {
+    mocks.getCardState.mockResolvedValue(cardState({ pbx: connectedPbx() }));
+    const { container } = render(<ThreecxIntegrationSettings />);
+    await screen.findByText('3CX');
+    expect((await idleButton('Sync from PBX')).disabled).toBe(false);
+    expect((await idleButton('Push now')).disabled).toBe(false);
+    expect(container.querySelector('#threecx-extensions-sync-disabled-reason')).toBeNull();
+  });
+
   it('T114: the component source wraps every visible string in t()', () => {
     const source = fs.readFileSync(path.resolve(__dirname, 'ThreecxIntegrationSettings.tsx'), 'utf8');
     // Only inspect the JSX return block, so TS generics above it are ignored.

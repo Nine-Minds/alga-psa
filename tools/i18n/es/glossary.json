@@ -1972,7 +1972,7 @@
     {
       "term": "bucket",
       "preferred": "bolsa de horas",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Anglicismo sin traducir para las bolsas de horas prepagadas."
     },
     {
@@ -2007,13 +2007,13 @@
     {
       "term": "cubo",
       "preferred": "bolsa de horas",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Traducción literal del bucket de horas; el término comercial es bolsa de horas."
     },
     {
       "term": "cubos",
       "preferred": "bolsas de horas",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Plural de la traducción literal del bucket."
     },
     {
@@ -2243,8 +2243,12 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "{{field}}: {{from}} → {{to}}",
+      "{{from}} → {{to}}",
+      "RMA {{id}}",
       "API",
       "CSV",
+      "Datto RMM",
       "Excel",
       "HTML",
       "ID",
@@ -2417,7 +2421,9 @@
       "auto | 50% | 120px",
       "Cc",
       "{{size}} GB",
-      "Code 128"
+      "Code 128",
+      "Ticket: {{number}}",
+      "RMA {{number}} · {{status}}"
     ],
     "caseInsensitive": [
       "api",

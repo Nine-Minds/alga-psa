@@ -1,7 +1,7 @@
 'use server';
 
 import User from '@alga-psa/db/models/user';
-import { IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole } from '@alga-psa/types';
+import { isInteractiveUserType, IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -55,7 +55,8 @@ export const findUserById = withAuth(async (
       assertNotClientPortalCaller(currentUser, 'read user');
 
       const user = await User.getUserWithRoles(trx, id);
-      return user || null;
+      // Non-interactive principals are not managed through user management.
+      return user && isInteractiveUserType(user.user_type) ? user : null;
     });
   } catch (error) {
     logger.error(`Failed to find user with id ${id}:`, error);
@@ -74,7 +75,8 @@ export const getAllUsersBasic = withAuth(async (
   currentUser,
   { tenant },
   includeInactive: boolean = true,
-  userType?: string
+  userType?: string,
+  includeNonInteractive: boolean = false
 ): Promise<IUser[]> => {
   try {
     const {knex} = await createTenantKnex();
@@ -85,7 +87,7 @@ export const getAllUsersBasic = withAuth(async (
       }
       assertNotClientPortalCaller(currentUser, 'read users');
 
-      const users = await User.getAll(trx, includeInactive);
+      const users = await User.getAll(trx, includeInactive, { includeNonInteractive });
 
       // Filter by tenant and optionally by user_type
       return users.filter(user =>
@@ -106,7 +108,8 @@ export const getAllUsers = withAuth(async (
   currentUser,
   { tenant },
   includeInactive: boolean = true,
-  userType?: string
+  userType?: string,
+  includeNonInteractive: boolean = false
 ): Promise<IUserWithRoles[]> => {
   try {
     const {knex} = await createTenantKnex();
@@ -117,7 +120,7 @@ export const getAllUsers = withAuth(async (
       }
       assertNotClientPortalCaller(currentUser, 'read users');
 
-      const users = await User.getAll(trx, includeInactive);
+      const users = await User.getAll(trx, includeInactive, { includeNonInteractive });
 
       // Filter by tenant and optionally by user_type first to reduce role fetching
       const filteredUsers = users.filter(user =>
@@ -353,7 +356,8 @@ export const getUserWithRoles = withAuth(async (
       assertNotClientPortalCaller(currentUser, 'read user with roles');
 
       const user = await User.getUserWithRoles(trx, userId);
-      return user || null;
+      // Non-interactive principals are not managed through user management.
+      return user && isInteractiveUserType(user.user_type) ? user : null;
     });
   } catch (error) {
     logger.error(`Failed to fetch user with roles for id ${userId}:`, error);
@@ -379,7 +383,7 @@ export const getMultipleUsersWithRoles = withAuth(async (
       assertNotClientPortalCaller(currentUser, 'read multiple users with roles');
 
       const users = await Promise.all(userIds.map((id: string): Promise<IUserWithRoles | undefined> => User.getUserWithRoles(trx, id)));
-      return users.filter((user): user is IUserWithRoles => user !== undefined);
+      return users.filter((user): user is IUserWithRoles => user !== undefined && isInteractiveUserType(user.user_type));
     });
   } catch (error) {
     logger.error('Failed to fetch multiple users with roles:', error);

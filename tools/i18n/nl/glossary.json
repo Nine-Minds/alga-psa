@@ -2056,13 +2056,13 @@
     {
       "term": "bucket",
       "preferred": "urenbundel",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Untranslated English leak for prepaid hour pools."
     },
     {
       "term": "buckets",
       "preferred": "urenbundels",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Plural of the untranslated bucket leak."
     },
     {
@@ -2108,7 +2108,7 @@
       "term": "emmer",
       "preferred": "urenbundel",
       "reason": "Literal translation of billing bucket; emmer means a physical pail. Use urenbundel or verbruiksbundel.",
-      "enWhen": "\\bbuckets?\\b"
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b"
     },
     {
       "term": "huurder",
@@ -2218,6 +2218,10 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Stopwatch",
+      "{{field}}: {{from}} → {{to}}",
+      "{{from}} → {{to}}",
+      "RMA {{id}}",
       "({{count}} ticket)",
       "({{count}} tickets)",
       ",",
@@ -2286,6 +2290,7 @@
       "Dashboard | AlgaPSA",
       "date",
       "Datto",
+      "Datto RMM",
       "Deadline",
       "Debug",
       "December",
@@ -2448,6 +2453,7 @@
       "Shift",
       "short-text",
       "Simulator",
+      "Sites",
       "SKU",
       "SLA",
       "Slug",
@@ -2560,7 +2566,11 @@
       "Bcc",
       "Cc/Bcc",
       "Training",
-      "Code 128"
+      "Code 128",
+      "per week",
+      "Asset: {{name}}",
+      "Ticket: {{number}}",
+      "RMA {{number}} · {{status}}"
     ],
     "caseInsensitive": [
       "account",

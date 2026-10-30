@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical } from "lucide-react";
 import { IBoard, IPriority, ITicketCategory, ColumnDefinition } from '@alga-psa/types';
@@ -15,6 +15,7 @@ import {
   createChecklistTemplate,
   updateChecklistTemplate,
   deleteChecklistTemplate,
+  duplicateChecklistTemplateToClient,
   addChecklistTemplateItem,
   updateChecklistTemplateItem,
   deleteChecklistTemplateItem,
@@ -54,11 +55,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { searchClientsForPicker } from '@alga-psa/clients/actions/clientPickerActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import ChecklistRuleMatchers, {
-  ruleHasNoMatchers,
-  type ChecklistRuleMatcherPatch,
-} from './ChecklistRuleMatchers';
+import ChecklistRuleMatchers from './ChecklistRuleMatchers';
+import { findAllTagsByType } from '@alga-psa/tags/actions/tagActions';
+import type { ITag } from '@alga-psa/types';
+import type { PredicateGroup, PredicateNode } from '@alga-psa/predicates';
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -69,6 +72,7 @@ const ChecklistTemplatesSettings: React.FC = () => {
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
+  const deepLinkHandled = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [dialogError, setDialogError] = useState<string | null>(null);
 
@@ -85,10 +89,15 @@ const ChecklistTemplatesSettings: React.FC = () => {
   // State for Add/Edit Dialog
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<IChecklistTemplate | null>(null);
-  const [formData, setFormData] = useState({ name: '', description: '', is_active: true });
+  const [formData, setFormData] = useState<{ name: string; description: string; is_active: boolean; client_id: string | null }>({ name: '', description: '', is_active: true, client_id: null });
+  // Settings list filter: null = every template; otherwise only templates scoped to that client
+  const [clientFilterId, setClientFilterId] = useState<string | null>(null);
+  const [duplicateDialog, setDuplicateDialog] = useState<{ template: IChecklistTemplate | null; clientId: string | null }>({ template: null, clientId: null });
   const [items, setItems] = useState<IChecklistTemplateItem[]>([]);
   const [newItemName, setNewItemName] = useState('');
   const [applyRules, setApplyRules] = useState<IChecklistTemplateApplyRule[]>([]);
+  const [tagOptions, setTagOptions] = useState<Record<'client' | 'contact', ITag[]>>({ client: [], contact: [] });
+  const [tagLoadError, setTagLoadError] = useState(false);
   const [clientNames, setClientNames] = useState<Record<string, string>>({});
   const [serviceRequestDefinitions, setServiceRequestDefinitions] = useState<ChecklistRuleServiceRequestDefinitionOption[]>([]);
 
@@ -105,7 +114,17 @@ const ChecklistTemplatesSettings: React.FC = () => {
     fetchCategories();
     fetchPriorities();
     fetchServiceRequestDefinitions();
+    void loadTagOptions();
   }, []);
+
+  const loadTagOptions = async () => {
+    setTagLoadError(false);
+    try {
+      const [client, contact] = await Promise.all([findAllTagsByType('client'), findAllTagsByType('contact')]);
+      if (!Array.isArray(client) || !Array.isArray(contact)) throw new Error('Tag options unavailable');
+      setTagOptions({ client, contact });
+    } catch { setTagLoadError(true); }
+  };
 
   const fetchServiceRequestDefinitions = async () => {
     try {
@@ -135,6 +154,13 @@ const ChecklistTemplatesSettings: React.FC = () => {
     try {
       const allTemplates = await getChecklistTemplates({ includeInactive: true });
       setTemplates(allTemplates);
+      // Deep link from the client record's Checklists tab: ?template=<id> opens that editor once.
+      const linkedId = new URLSearchParams(window.location.search).get('template');
+      if (linkedId && !deepLinkHandled.current) {
+        deepLinkHandled.current = true;
+        const linked = allTemplates.find((tpl) => tpl.template_id === linkedId);
+        if (linked) void startEditing(linked);
+      }
     } catch (error) {
       console.error('Error fetching checklist templates:', error);
       setError(t('ticketing.checklistTemplates.messages.error.fetchFailed'));
@@ -177,7 +203,7 @@ const ChecklistTemplatesSettings: React.FC = () => {
   const closeDialog = () => {
     setShowAddEditDialog(false);
     setEditingTemplate(null);
-    setFormData({ name: '', description: '', is_active: true });
+    setFormData({ name: '', description: '', is_active: true, client_id: null });
     setItems([]);
     setNewItemName('');
     setApplyRules([]);
@@ -186,7 +212,7 @@ const ChecklistTemplatesSettings: React.FC = () => {
 
   const startAdding = () => {
     setEditingTemplate(null);
-    setFormData({ name: '', description: '', is_active: true });
+    setFormData({ name: '', description: '', is_active: true, client_id: null });
     setItems([]);
     setNewItemName('');
     setApplyRules([]);
@@ -200,6 +226,7 @@ const ChecklistTemplatesSettings: React.FC = () => {
       name: template.name,
       description: template.description || '',
       is_active: template.is_active,
+      client_id: template.client_id ?? null,
     });
     setItems(template.items || []);
     setNewItemName('');
@@ -210,7 +237,14 @@ const ChecklistTemplatesSettings: React.FC = () => {
     try {
       const rules = await getChecklistTemplateApplyRules(template.template_id);
       setApplyRules(rules);
-      void loadClientNames(Array.from(new Set(rules.flatMap((rule) => rule.client_ids ?? []))));
+      void loadClientNames(Array.from(new Set(rules.flatMap((rule) => {
+        const ids: string[] = [];
+        const visit = (node: PredicateNode): void => {
+          if ('clauses' in node) node.clauses.forEach(visit);
+          else if (node.path === 'client.id') (Array.isArray(node.value) ? node.value : [node.value]).forEach((value) => { if (typeof value === 'string') ids.push(value); });
+        };
+        visit(rule.where); return ids;
+      }))));
     } catch (error) {
       console.error('Error fetching apply rules:', error);
       setDialogError(t('ticketing.checklistTemplates.messages.error.fetchRulesFailed'));
@@ -231,6 +265,7 @@ const ChecklistTemplatesSettings: React.FC = () => {
           name: formData.name,
           description: formData.description || null,
           is_active: formData.is_active,
+          client_id: formData.client_id,
         });
         if (isReturnedActionError(result)) {
           setDialogError(getErrorMessage(result));
@@ -243,6 +278,7 @@ const ChecklistTemplatesSettings: React.FC = () => {
           name: formData.name,
           description: formData.description || null,
           is_active: formData.is_active,
+          client_id: formData.client_id,
         });
         if (isReturnedActionError(created)) {
           setDialogError(getErrorMessage(created));
@@ -275,6 +311,22 @@ const ChecklistTemplatesSettings: React.FC = () => {
     } catch (error) {
       handleError(error, t('ticketing.checklistTemplates.messages.error.deleteFailed'));
       setDeleteDialog({ isOpen: false, templateId: '', templateName: '' });
+    }
+  };
+
+  const handleDuplicateToClient = async () => {
+    if (!duplicateDialog.template || !duplicateDialog.clientId) return;
+    try {
+      const result = await duplicateChecklistTemplateToClient(duplicateDialog.template.template_id, duplicateDialog.clientId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      toast.success(t('ticketing.checklistTemplates.messages.success.duplicated'));
+      setDuplicateDialog({ template: null, clientId: null });
+      await fetchTemplates();
+    } catch (error) {
+      handleError(error, t('ticketing.checklistTemplates.messages.error.duplicateFailed'));
     }
   };
 
@@ -382,10 +434,18 @@ const ChecklistTemplatesSettings: React.FC = () => {
 
   // --- Auto-apply rule management ---
 
+  // The persisted owner of the template being edited (the dialog closes on save, so a pending
+  // change of owner in the form never applies to the rules shown here).
+  const ownerClientName: string | null = editingTemplate?.client_id
+    ? templates.find((tpl) => tpl.template_id === editingTemplate.template_id)?.client_name
+      ?? editingTemplate.client_name
+      ?? t('ticketing.checklistTemplates.scope.unknownClient')
+    : null;
+
   const handleAddRule = async () => {
     if (!editingTemplate) return;
     try {
-      const created = await createChecklistTemplateApplyRule(editingTemplate.template_id, {});
+      const created = await createChecklistTemplateApplyRule(editingTemplate.template_id, { where: { join: 'and', clauses: [] }, is_enabled: false });
       if (isReturnedActionError(created)) {
         toast.error(getErrorMessage(created));
         return;
@@ -397,18 +457,7 @@ const ChecklistTemplatesSettings: React.FC = () => {
   };
 
   const ruleToInput = (rule: IChecklistTemplateApplyRule) => ({
-    board_id: rule.board_id,
-    category_id: rule.category_id,
-    subcategory_id: rule.subcategory_id,
-    priority_id: rule.priority_id,
-    client_ids: rule.client_ids,
-    ticket_origins: rule.ticket_origins,
-    from_service_request: rule.from_service_request,
-    service_request_definition_id: rule.service_request_definition_id,
-    keywords: rule.keywords,
-    keyword_mode: rule.keyword_mode,
-    keyword_target: rule.keyword_target,
-    is_enabled: rule.is_enabled,
+    where: rule.where, where_version: rule.where_version, is_enabled: rule.is_enabled,
   });
 
   /** Optimistically apply a rule edit, persist it, and roll back on failure. */
@@ -436,33 +485,6 @@ const ChecklistTemplatesSettings: React.FC = () => {
       ));
       handleError(error, t('ticketing.checklistTemplates.messages.error.ruleSaveFailed'));
     }
-  };
-
-  const handleRuleChange = async (
-    rule: IChecklistTemplateApplyRule,
-    field: 'board_id' | 'category_id' | 'subcategory_id' | 'priority_id',
-    value: string
-  ) => {
-    const nextRule: IChecklistTemplateApplyRule = { ...rule, [field]: value || null };
-    if (field === 'category_id') {
-      nextRule.subcategory_id = null;
-    }
-    if (field === 'board_id' && nextRule.board_id && nextRule.category_id) {
-      // Categories belong to one board; a category from another board could never match this rule.
-      const selectedCategory = categories.find((category) => category.category_id === nextRule.category_id);
-      if (selectedCategory?.board_id && selectedCategory.board_id !== nextRule.board_id) {
-        nextRule.category_id = null;
-        nextRule.subcategory_id = null;
-      }
-    }
-    await persistRule(rule, nextRule);
-  };
-
-  const handleRuleMatcherChange = async (
-    rule: IChecklistTemplateApplyRule,
-    patch: ChecklistRuleMatcherPatch
-  ) => {
-    await persistRule(rule, { ...rule, ...patch });
   };
 
   const handleDeleteRule = async (applyRuleId: string) => {
@@ -553,7 +575,7 @@ const ChecklistTemplatesSettings: React.FC = () => {
     {
       title: t('ticketing.checklistTemplates.table.name'),
       dataIndex: 'name',
-      width: '25%',
+      width: '20%',
       render: (value: string) => (
         <span className="text-gray-700 font-medium">{value}</span>
       ),
@@ -561,9 +583,21 @@ const ChecklistTemplatesSettings: React.FC = () => {
     {
       title: t('ticketing.checklistTemplates.table.description'),
       dataIndex: 'description',
-      width: '35%',
+      width: '25%',
       render: (value: string | null) => (
         <span className="text-gray-600">{value || '-'}</span>
+      ),
+    },
+    {
+      title: t('ticketing.checklistTemplates.table.scope'),
+      dataIndex: 'client_id',
+      width: '12%',
+      render: (_value: string | null, record: IChecklistTemplate) => (
+        <span className="text-gray-600">
+          {record.client_id
+            ? (record.client_name || t('ticketing.checklistTemplates.scope.unknownClient'))
+            : t('ticketing.checklistTemplates.scope.allClients')}
+        </span>
       ),
     },
     {
@@ -617,6 +651,9 @@ const ChecklistTemplatesSettings: React.FC = () => {
             <DropdownMenuItem onClick={() => startEditing(record)}>
               {t('ticketing.checklistTemplates.actions.edit')}
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setDuplicateDialog({ template: record, clientId: null })}>
+              {t('ticketing.checklistTemplates.actions.duplicateToClient')}
+            </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => setDeleteDialog({
                 isOpen: true,
@@ -647,9 +684,25 @@ const ChecklistTemplatesSettings: React.FC = () => {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
+        <div className="mb-4 flex items-center gap-2">
+          <Label htmlFor="checklist-template-client-filter">{t('ticketing.checklistTemplates.filter.client')}</Label>
+          <ClientPicker
+            id="checklist-template-client-filter"
+            searchClients={searchClientsForPicker}
+            selectedClientId={clientFilterId}
+            onSelect={(clientId) => { setClientFilterId(clientId); setCurrentPage(1); }}
+            placeholder={t('ticketing.checklistTemplates.filter.allClients')}
+            fitContent={true}
+          />
+          {clientFilterId && (
+            <Button id="clear-checklist-template-client-filter" variant="ghost" onClick={() => { setClientFilterId(null); setCurrentPage(1); }}>
+              {t('ticketing.checklistTemplates.filter.clear')}
+            </Button>
+          )}
+        </div>
         <DataTable
           id="checklist-templates-table"
-          data={templates}
+          data={clientFilterId ? templates.filter((template) => template.client_id === clientFilterId) : templates}
           columns={columns}
           pagination={true}
           currentPage={currentPage}
@@ -678,6 +731,39 @@ const ChecklistTemplatesSettings: React.FC = () => {
         confirmLabel={t('ticketing.checklistTemplates.actions.delete')}
         cancelLabel={t('ticketing.checklistTemplates.actions.cancel')}
       />
+
+      <Dialog
+        isOpen={!!duplicateDialog.template}
+        onClose={() => setDuplicateDialog({ template: null, clientId: null })}
+        title={t('ticketing.checklistTemplates.dialog.duplicateTitle')}
+        footer={(
+          <div className="flex justify-end space-x-2">
+            <Button id="cancel-duplicate-checklist-template" variant="outline" onClick={() => setDuplicateDialog({ template: null, clientId: null })}>
+              {t('ticketing.checklistTemplates.actions.cancel')}
+            </Button>
+            <Button id="confirm-duplicate-checklist-template" onClick={handleDuplicateToClient} disabled={!duplicateDialog.clientId}>
+              {t('ticketing.checklistTemplates.actions.duplicate')}
+            </Button>
+          </div>
+        )}
+      >
+        <DialogContent>
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600">
+              {t('ticketing.checklistTemplates.dialog.duplicateHelp', { name: duplicateDialog.template?.name ?? '' })}
+            </p>
+            <ClientPicker
+              id="duplicate-checklist-template-client"
+              searchClients={searchClientsForPicker}
+              selectedClientId={duplicateDialog.clientId}
+              onSelect={(clientId) => setDuplicateDialog((prev) => ({ ...prev, clientId }))}
+              placeholder={t('ticketing.checklistTemplates.dialog.duplicateClientPlaceholder')}
+              fitContent={true}
+              modal={true}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Add/Edit Dialog */}
       <Dialog
@@ -737,6 +823,34 @@ const ChecklistTemplatesSettings: React.FC = () => {
                 checked={formData.is_active}
                 onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
               />
+            </div>
+
+            <div>
+              <Label htmlFor="checklist-template-client">{t('ticketing.checklistTemplates.fields.availableTo.label')}</Label>
+              <div className="flex items-center gap-2">
+                <ClientPicker
+                  id="checklist-template-client"
+                  searchClients={searchClientsForPicker}
+                  selectedClientId={formData.client_id}
+                  onSelect={(clientId) => setFormData({ ...formData, client_id: clientId })}
+                  placeholder={t('ticketing.checklistTemplates.scope.allClients')}
+                  fitContent={true}
+                  modal={true}
+                />
+                {formData.client_id && (
+                  <Button
+                    id="clear-checklist-template-client"
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setFormData({ ...formData, client_id: null })}
+                  >
+                    {t('ticketing.checklistTemplates.fields.availableTo.clear')}
+                  </Button>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {t('ticketing.checklistTemplates.fields.availableTo.help')}
+              </p>
             </div>
 
             {!editingTemplate && (
@@ -837,80 +951,41 @@ const ChecklistTemplatesSettings: React.FC = () => {
                   </p>
                 </div>
 
+                {ownerClientName != null && (
+                  <Alert variant="warning">
+                    <AlertDescription>
+                      {t('ticketing.checklistTemplates.fields.rules.clientScopedWarning', { client: ownerClientName })}
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 {applyRules.length === 0 && (
                   <p className="text-sm text-muted-foreground">{t('ticketing.checklistTemplates.fields.rules.empty')}</p>
                 )}
 
                 {applyRules.map((rule, index) => (
                   <div key={rule.apply_rule_id} className="space-y-3 rounded-md border border-gray-200 p-3">
-                  <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_1fr_auto] md:items-end">
-                    <div>
-                      <Label htmlFor={`checklist-template-rule-board-${index}`}>{t('ticketing.checklistTemplates.fields.rules.board')}</Label>
-                      <CustomSelect
-                        id={`checklist-template-rule-board-${index}`}
-                        value={rule.board_id || ''}
-                        onValueChange={(value) => handleRuleChange(rule, 'board_id', value)}
-                        options={boardOptions}
-                        placeholder={t('ticketing.checklistTemplates.fields.rules.any')}
-                        showPlaceholderInDropdown={false}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`checklist-template-rule-category-${index}`}>{t('ticketing.checklistTemplates.fields.rules.category')}</Label>
-                      <CustomSelect
-                        id={`checklist-template-rule-category-${index}`}
-                        value={rule.category_id || ''}
-                        onValueChange={(value) => handleRuleChange(rule, 'category_id', value)}
-                        options={categoryOptionsFor(rule.board_id)}
-                        placeholder={t('ticketing.checklistTemplates.fields.rules.any')}
-                        showPlaceholderInDropdown={false}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`checklist-template-rule-subcategory-${index}`}>{t('ticketing.checklistTemplates.fields.rules.subcategory')}</Label>
-                      <CustomSelect
-                        id={`checklist-template-rule-subcategory-${index}`}
-                        value={rule.subcategory_id || ''}
-                        onValueChange={(value) => handleRuleChange(rule, 'subcategory_id', value)}
-                        options={subcategoryOptionsFor(rule.category_id)}
-                        placeholder={t('ticketing.checklistTemplates.fields.rules.any')}
-                        showPlaceholderInDropdown={false}
-                        disabled={!rule.category_id}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`checklist-template-rule-priority-${index}`}>{t('ticketing.checklistTemplates.fields.rules.priority')}</Label>
-                      <CustomSelect
-                        id={`checklist-template-rule-priority-${index}`}
-                        value={rule.priority_id || ''}
-                        onValueChange={(value) => handleRuleChange(rule, 'priority_id', value)}
-                        options={priorityOptions}
-                        placeholder={t('ticketing.checklistTemplates.fields.rules.any')}
-                        showPlaceholderInDropdown={false}
-                      />
-                    </div>
-                    <Button
-                      id={`remove-checklist-template-rule-${index}`}
-                      type="button"
-                      variant="ghost"
-                      onClick={() => handleDeleteRule(rule.apply_rule_id)}
-                    >
+                  <div className="flex items-center justify-between gap-3">
+                    <Switch id={`checklist-rule-enabled-${index}`} checked={rule.is_enabled}
+                      label={t('ticketing.checklistTemplates.predicate.enabled')}
+                      onCheckedChange={(is_enabled) => void persistRule(rule, { ...rule, is_enabled })} />
+                    <Button id={`remove-checklist-template-rule-${index}`} type="button" variant="ghost" onClick={() => handleDeleteRule(rule.apply_rule_id)}>
                       {t('ticketing.checklistTemplates.actions.remove')}
                     </Button>
                   </div>
-                  <ChecklistRuleMatchers
-                    rule={rule}
-                    index={index}
-                    clientNames={clientNames}
-                    definitions={serviceRequestDefinitions}
+                  {tagLoadError && <Alert variant="destructive"><AlertDescription>
+                    {t('ticketing.checklistTemplates.predicate.tagsFailed')}
+                    <Button id={`retry-rule-tags-${index}`} variant="ghost" onClick={() => void loadTagOptions()}>{t('ticketing.checklistTemplates.predicate.retry')}</Button>
+                  </AlertDescription></Alert>}
+                  <ChecklistRuleMatchers rule={rule} index={index} clientNames={clientNames}
+                    tags={tagOptions} ownerClientName={ownerClientName}
+                    options={{ boards: boardOptions, categories: categoryOptionsFor(null),
+                      subcategories: categories.filter((category) => category.parent_category).map((category) => ({ value: category.category_id, label: category.category_name })),
+                      priorities: priorityOptions,
+                      origins: ['internal', 'client_portal', 'inbound_email', 'api', 'recurring'].map((value) => ({ value, label: t(`ticketing.checklistTemplates.fields.rules.originLabels.${value}`, { defaultValue: value }) })),
+                      definitions: serviceRequestDefinitions.map((definition) => ({ value: definition.definition_id, label: definition.name })) }}
                     onClientPicked={(clientId) => void loadClientNames([clientId])}
-                    onChange={(patch) => handleRuleMatcherChange(rule, patch)}
-                  />
-                  {ruleHasNoMatchers(rule) && (
-                    <p className="text-xs font-medium text-muted-foreground">
-                      {t('ticketing.checklistTemplates.fields.rules.appliesToAll')}
-                    </p>
-                  )}
+                    onChange={(where: PredicateGroup) => persistRule(rule, { ...rule, where })} />
                   </div>
                 ))}
 

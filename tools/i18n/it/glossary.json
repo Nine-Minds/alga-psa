@@ -2032,7 +2032,7 @@
     {
       "term": "bucket",
       "preferred": "pacchetto ore",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Residuo inglese non tradotto per i pacchetti di ore prepagate."
     },
     {
@@ -2146,13 +2146,13 @@
     {
       "term": "secchi",
       "preferred": "pacchetti ore",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Plurale della traduzione letterale del bucket."
     },
     {
       "term": "secchio",
       "preferred": "pacchetto ore",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Traduzione letterale del bucket di ore prepagate; il termine di listino è pacchetto ore."
     },
     {
@@ -2207,6 +2207,10 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Offline",
+      "{{field}}: {{from}} → {{to}}",
+      "{{from}} → {{to}}",
+      "RMA {{id}}",
       "AI",
       "API",
       "Account",
@@ -2234,6 +2238,7 @@
       "Dashboard",
       "Dashboard | AlgaPSA",
       "Datto",
+      "Datto RMM",
       "Email",
       "Email:",
       "Entra ID",
@@ -2250,6 +2255,7 @@
       "HMAC-SHA256",
       "HTML",
       "Hardware",
+      "Host",
       "Hudu",
       "Huntress",
       "Hypervisor",
@@ -2361,7 +2367,10 @@
       "auto | 50% | 120px",
       "Cc",
       "{{size}} GB",
-      "Code 128"
+      "Code 128",
+      "Asset: {{name}}",
+      "Ticket: {{number}}",
+      "RMA {{number}} · {{status}}"
     ],
     "caseInsensitive": [
       "account",

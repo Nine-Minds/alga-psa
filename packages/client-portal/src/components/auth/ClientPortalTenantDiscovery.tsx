@@ -6,17 +6,21 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Mail } from 'lucide-react';
-import { requestTenantLoginLinksAction } from '@alga-psa/client-portal/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import toast from 'react-hot-toast';
 
 interface ClientPortalTenantDiscoveryProps {
+  /** Server action that emails per-organization login links; bound by the page (it needs @alga-psa/email). */
+  requestLoginLinks: (
+    email: string,
+    callbackUrl?: string
+  ) => Promise<{ success: boolean; message?: string; error?: string }>;
   callbackUrl?: string;
   /** Rendered above the card — used to explain a sign-in failure that redirected here. */
   notice?: React.ReactNode;
 }
 
-export default function ClientPortalTenantDiscovery({ callbackUrl, notice }: ClientPortalTenantDiscoveryProps) {
+export default function ClientPortalTenantDiscovery({ requestLoginLinks, callbackUrl, notice }: ClientPortalTenantDiscoveryProps) {
   const { t } = useTranslation('client-portal');
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -32,7 +36,7 @@ export default function ClientPortalTenantDiscovery({ callbackUrl, notice }: Cli
 
     setIsSubmitting(true);
     try {
-      const result = await requestTenantLoginLinksAction(email.trim().toLowerCase(), callbackUrl);
+      const result = await requestLoginLinks(email.trim().toLowerCase(), callbackUrl);
 
       if (result.success) {
         setIsSubmitted(true);

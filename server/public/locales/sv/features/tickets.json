@@ -92,6 +92,7 @@
     "button": "Filter",
     "unassigned": "Ej tilldelat",
     "category": "Filtrera efter kategori",
+    "removeFilterChip": "Ta bort filter: {{label}}",
     "assignee": "Ansvarig",
     "allAssignees": "Alla ansvariga",
     "responseState": "Svarsstatus",
@@ -118,7 +119,12 @@
     "allResponseStatuses": "Alla svarsstatusar",
     "responseStatus": "Svarsstatus",
     "board": "Filtrera efter tavla",
-    "searchSmart": "Sök i ärenden och kommentarer… Tryck på Enter för smart sökning"
+    "searchSmart": "Sök i ärenden och kommentarer… Tryck på Enter för smart sökning",
+    "requesterTags": "Beställarens taggar",
+    "clientTags": "Kundtaggar",
+    "tagModeAny": "Någon av",
+    "tagModeNone": "Ingen av",
+    "droppedFromLink": "Vissa filter i den här länken är ogiltiga och ignorerades."
   },
   "create": {
     "title": "Skapa supportärende",
@@ -256,7 +262,9 @@
     "openMenu": "Öppna meny",
     "moreActions": "Fler åtgärder",
     "createTemplate": "Skapa mall från ärende",
-    "createWorkflowFromTicket": "Skapa arbetsflöde från ärende"
+    "createWorkflowFromTicket": "Skapa arbetsflöde från ärende",
+    "printWorkTag": "Skriv ut arbetsetikett",
+    "retry": "Försök igen"
   },
   "messages": {
     "noTickets": "Inga ärenden hittades",
@@ -366,7 +374,8 @@
     "pastedImagesDeleteFailed_many": "Det gick inte att radera {{count}} inklistrade bilder.",
     "pastedImagesDeleted_few": "{{count}} inklistrade bilder har raderats.",
     "pastedImagesDeleted_many": "{{count}} inklistrade bilder har raderats.",
-    "sharedWorkspaceReadOnly": "Du ser det här ärendet eftersom det gäller en enhet i en delad arbetsplats. Bara den som skapade det kan lägga till något."
+    "sharedWorkspaceReadOnly": "Du ser det här ärendet eftersom det gäller en enhet i en delad arbetsplats. Bara den som skapade det kan lägga till något.",
+    "loadPartyTagsFailed": "Det gick inte att läsa in beställarens och kundens taggar"
   },
   "conversation": {
     "comments": "Kommentarer",
@@ -469,6 +478,14 @@
     "clientPortal": "Mottaget via kundportalen",
     "inboundEmail": "Mottaget via inkommande e-post"
   },
+  "originalEmail": {
+    "text": "Text",
+    "original": "Ursprungligt e-postmeddelande",
+    "emailShort": "E-post",
+    "loading": "Läser in det ursprungliga e-postmeddelandet…",
+    "error": "Det ursprungliga e-postmeddelandet kunde inte läsas in.",
+    "group": "Meddelandevisning"
+  },
   "documents": {
     "title": "Dokument",
     "noDocuments": "Inga bifogade dokument",
@@ -510,6 +527,7 @@
     },
     "filters": {
       "allAssignees": "Alla ansvariga",
+      "allContacts": "Alla kontakter",
       "selectStatus": "Välj status",
       "responseState": "Svarsstatus",
       "allResponseStates": "Alla svarsstatusar",
@@ -654,7 +672,9 @@
       "more": "Mer",
       "bundleNeedsOne": "Markera minst 1 ärende att gruppera",
       "selectedCount_few": "{{count}} markerade",
-      "selectedCount_many": "{{count}} markerade"
+      "selectedCount_many": "{{count}} markerade",
+      "printLabels": "Skriv ut etiketter",
+      "printLabelsLimit": "Du kan skriva ut högst {{max}} etiketter åt gången"
     },
     "moveDialogTitle": "Flytta markerade ärenden",
     "moveDialogDescription": "Välj måltavla och målstatus och bekräfta sedan flytten av de markerade ärendena.",
@@ -687,7 +707,7 @@
     "bundleMasterLabel": "Välj huvudärende",
     "bundleMasterPlaceholder": "Välj huvudärende…",
     "bundleSyncUpdates": "Synkronisera uppdateringar från huvudärendet till underärenden (kundsynliga svar + ändringar i arbetsflödet)",
-    "bundleSyncUpdatesHelp": "Underärenden behåller sin nuvarande status när de grupperas. Om huvudärendet därefter stängs eller öppnas igen gäller det även alla underärenden. Ändringar av huvudärendets status, ansvarig och prioritet tillämpas också på underärendena. Arbetsflödesfält är låsta på underärenden. Interna anteckningar stannar på huvudärendet.",
+    "bundleSyncUpdatesHelp": "Underärenden behåller sin nuvarande status när de grupperas. Med synkronisering aktiverad gäller det även alla underärenden när huvudärendet stängs eller öppnas igen, ändringar av huvudärendets status, ansvarig och prioritet tillämpas på dem, och deras arbetsflödesfält är låsta. Utan synkronisering hanterar underärendena själva sin status, ansvarig och prioritet. Interna anteckningar stannar på huvudärendet.",
     "bundleSelectAtLeastTwo": "Markera minst två ärenden att gruppera.",
     "bundleSelectMaster": "Välj ett huvudärende.",
     "bundleSuccess": "Ärendena har grupperats",
@@ -760,8 +780,8 @@
       "masterTicket": "Välj huvudärende",
       "selectMasterTicket": "Välj huvudärende…",
       "syncUpdates": "Synkronisera uppdateringar från huvudärendet till underärenden (kundsynliga svar + ändringar i arbetsflödet)",
-      "syncUpdatesHelp": "Underärenden behåller sin nuvarande status när de grupperas. Om huvudärendet därefter stängs eller öppnas igen gäller det även alla underärenden. Ändringar av huvudärendets status, ansvarig och prioritet tillämpas också på underärendena. Arbetsflödesfält är låsta på underärenden. Interna anteckningar stannar på huvudärendet.",
-      "childrenDescription": "Underärenden behåller sin nuvarande status. Arbetsflödesfält är låsta på underärenden. Inkommande svar på underärenden visas nedan som skrivskyddade.",
+      "syncUpdatesHelp": "Underärenden behåller sin nuvarande status när de grupperas. Med synkronisering aktiverad gäller det även alla underärenden när huvudärendet stängs eller öppnas igen, ändringar av huvudärendets status, ansvarig och prioritet tillämpas på dem, och deras arbetsflödesfält är låsta. Utan synkronisering hanterar underärendena själva sin status, ansvarig och prioritet. Interna anteckningar stannar på huvudärendet.",
+      "childrenDescription": "Underärenden behåller sin nuvarande status. Arbetsflödesfält är bara låsta i läget Sync Updates. Inkommande svar på underärenden visas nedan som skrivskyddade.",
       "checkingMasters": "Kontrollerar befintliga grupper…",
       "existingMasterSuffix": "(befintligt huvudärende)",
       "existingMasterLocked": "Ett markerat ärende är redan huvudärende i en grupp. Det används som huvudärende och övriga läggs till som underärenden.",
@@ -976,7 +996,22 @@
     "tagCreatePartialFailure_few": "{{count}} taggar kunde inte skapas",
     "tagCreatePartialFailure_many": "{{count}} taggar kunde inte skapas",
     "tagCreationFailed_few": "{{count}} taggar kunde inte skapas",
-    "tagCreationFailed_many": "{{count}} taggar kunde inte skapas"
+    "tagCreationFailed_many": "{{count}} taggar kunde inte skapas",
+    "assets": {
+      "heading": "Tillgångar",
+      "selectClientFirst": "Välj en kund för att länka tillgångar.",
+      "unavailable": "Tillgångar kan länkas från ärendet när det har skapats."
+    },
+    "attachments": {
+      "heading": "Bilagor",
+      "add": "Lägg till filer",
+      "remove": "Ta bort {{name}}"
+    },
+    "watchers": {
+      "heading": "Bevakare",
+      "placeholder": "Lägg till bevakare..."
+    },
+    "attachmentsPartialFailure": "Ärendet skapades, men de här filerna kunde inte bifogas: {{files}}. Lägg till dem från ärendet."
   },
   "itil": {
     "calculatedPriority": "Prioritet (beräknad)",
@@ -1271,6 +1306,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Spårning av svarsstatus",
+      "defaultReplyInternalTitle": "Standardsynlighet för svar",
+      "defaultReplyInternalDescription": "Börja nya ärendesvar som interna för alla teammedlemmar. Användare kan fortfarande ändra ett svar till Kund. Svar i kundportalen och i befintliga trådar förblir oförändrade.",
+      "defaultReplyInternalLabel": "Använd interna ärendesvar som standard",
       "responseStateTrackingDescription": "När funktionen är aktiverad spårar ärenden automatiskt vem som behöver svara härnäst (väntar på svar från kunden eller internt). Om du inaktiverar funktionen döljs svarsstatusmarkeringar, filter och tillhörande alternativ för att pausa SLA.",
       "responseStateTrackingEnabled": "Spårning av svarsstatus har aktiverats",
       "responseStateTrackingDisabled": "Spårning av svarsstatus har inaktiverats",
@@ -1405,7 +1443,15 @@
     "selectUnit": "Välj en enhet att leverera…",
     "onHandByLocation": "Lagerbestånd per plats",
     "catalogUnitCost": "Enhetskostnad i katalogen",
-    "costNotConfigured": "Inte konfigurerad"
+    "costNotConfigured": "Inte konfigurerad",
+    "availableBadge": "Tillgängligt: {{available}}",
+    "availableByLocation": "Fritt lager per plats",
+    "freeOfOnHand": "{{free}} lediga av {{onHand}}",
+    "stockHeld": "Bara {{free}} tillgängliga. {{held}} i lager är hårt spärrade för försäljningsorder eller projekt och kan inte användas här.",
+    "stockInsufficient": "Bara {{onHand}} i lager, {{requested}} begärda.",
+    "reservedStockTitle": "Lagret är reserverat för en försäljningsorder eller ett projekt",
+    "reservedStockMessage": "Bara {{free}} av den här produkten är lediga. {{reserved}} i lager är reserverade för försäljningsorder eller projekt och du begärde {{requested}}. Om du lägger till det ändå tas lager som en försäljningsorder eller ett projekt räknar med, och det kan bli underfyllt.",
+    "reservedStockConfirm": "Lägg till ändå"
   },
   "watchList": {
     "title": "Bevakningslista",
@@ -1678,7 +1724,13 @@
       "ruleSubcategoryRequiresCategory": "Välj en kategori innan du väljer en underkategori.",
       "ruleTooManyKeywords": "Använd högst {{max}} nyckelord per regel.",
       "ruleKeywordTooLong": "Varje nyckelord får vara högst {{max}} tecken långt.",
-      "ruleOriginInvalid": "En av de valda ärendekällorna är ogiltig."
+      "ruleOriginInvalid": "En av de valda ärendekällorna är ogiltig.",
+      "templateClientMismatch": "Den här checklistmallen är begränsad till en annan kund än ärendets kund.",
+      "templateClientInvalid": "Den valda kunden hittades inte.",
+      "ruleClientOutsideTemplateScope": "Den här mallen tillhör en kund, så dess regler kan inte rikta sig mot andra kunder.",
+      "templateRulesTargetOtherClients": "Några av mallens regler för automatisk tillämpning riktar sig mot andra kunder. Ta bort de kunderna från reglerna innan du kopplar mallen till en kund.",
+      "predicateClientOutsideScope": "Kunden {{client}} ligger utanför mallens omfattning.",
+      "predicateInvalid": "Ogiltig checklistregel: {{detail}}"
     }
   },
   "ticketSection": {
@@ -1707,9 +1759,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Underärenden behåller sin nuvarande status när de grupperas. Om huvudärendet därefter stängs eller öppnas igen gäller det även alla underärenden. Ändringar av huvudärendets status, ansvarig och prioritet tillämpas också på underärendena. Arbetsflödesfält är låsta på underärenden. Interna anteckningar stannar på huvudärendet.",
+      "childrenDescription": "Underärenden behåller sin nuvarande status när de grupperas. I läget Sync Updates gäller det även alla underärenden när huvudärendet stängs eller öppnas igen, ändringar av huvudärendets status, ansvarig och prioritet tillämpas på dem, och deras arbetsflödesfält är låsta. I läget Link Only hanterar underärendena själva sin status, ansvarig och prioritet. Interna anteckningar stannar på huvudärendet.",
       "title": "Grupp",
       "masterBanner": "Det här ärendet är huvudärende i en grupp (underärenden: {{count}}). Läge: {{mode}}.",
+      "childLockedNotice": "Arbetsflödesfält är låsta; arbeta från huvudärendet.",
+      "childLinkedNotice": "Det är länkat till huvudärendet och hanteras separat.",
       "multipleClients": "Flera kunder",
       "mode": "Läge: {{mode}}",
       "unbundle": "Lös upp grupp",
@@ -1745,7 +1799,15 @@
       "applyResolutionHelpNoComment": "Stänger underärendet med status {{status}}. Huvudärendet har ingen kundsynlig lösningskommentar att publicera.",
       "reopenMasterLabel": "Lägg till och öppna huvudärendet igen",
       "reopenMasterHelp": "Öppnar endast huvudärendet igen. Redan stängda underärenden i gruppen förblir stängda. Aviseringar om återöppning och SLA gäller huvudärendet.",
-      "closedMasterGating": "Tavlans stängningsregler tillåter inte öppna underärenden under ett stängt huvudärende. Därför går det inte att behålla huvudärendet stängt."
+      "closedMasterGating": "Tavlans stängningsregler tillåter inte öppna underärenden under ett stängt huvudärende. Därför går det inte att behålla huvudärendet stängt.",
+      "modeSwitchDialogIntro": "Huvudärendet är stängt. Välj vad som ska hända med de öppna underärendena när gruppen byter till Sync Updates.",
+      "modeSwitchConfirm": "Byt till Sync Updates",
+      "keepClosedSwitchLabel": "Byt och behåll huvudärendet stängt",
+      "keepClosedSwitchHelp": "Öppna underärenden förblir öppna med sin egen SLA-klocka. Gruppen visas som inkonsekvent tills de är lösta.",
+      "applyResolutionSwitchLabel": "Byt och tillämpa huvudärendets lösning på öppna underärenden",
+      "applyResolutionSwitchHelp": "Stänger varje öppet underärende med status {{status}} och publicerar huvudärendets lösning som en kundsynlig kommentar i det.",
+      "applyResolutionSwitchHelpNoComment": "Stänger varje öppet underärende med status {{status}}. Huvudärendet har ingen offentlig lösningskommentar att publicera.",
+      "reopenMasterSwitchLabel": "Byt och öppna huvudärendet igen"
     },
     "autoClose": "Stängs automatiskt {{date}} om ingen ny aktivitet sker.",
     "autoCloseWarned": "Kunden har varnats.",
@@ -1794,7 +1856,8 @@
     "remoteFieldUpdated": "{{name}} uppdaterade {{field}}",
     "connection": {
       "reconnecting": "Realtidsuppdateringar är frånkopplade – återansluter…",
-      "unavailable": "Realtidsuppdateringar är inte tillgängliga"
+      "unavailable": "Realtidsuppdateringar är inte tillgängliga",
+      "offlineShort": "Offline"
     }
   },
   "delete": {
@@ -1976,7 +2039,10 @@
       "openScheduleEntry": "Öppna schemapost",
       "acrossEntries_few": "fördelat på {{count}} tidposter",
       "acrossEntries_many": "fördelat på {{count}} tidposter",
-      "changeLocation": "Ändra plats"
+      "changeLocation": "Ändra plats",
+      "addDescriptionPrompt": "Lägg till en beskrivning – vad är problemet och vad behöver kunden?",
+      "projectTasks": "Projektuppgifter",
+      "timeAndBilling": "Tid och fakturering"
     },
     "timeline": {
       "subtitle": "Svar, tid och systemändringar på ett ställe",
@@ -2072,6 +2138,17 @@
       "collapseActivity": "Fäll ihop äldre aktivitet",
       "replyingToComment": "Svarar {{name}}",
       "createdFromTemplate": "{{actor}} skapade detta ärende från mallen \"{{name}}\""
+    },
+    "board": {
+      "conversation": "Konversation",
+      "details": "Detaljer"
+    },
+    "groups": {
+      "customer": "Kund",
+      "work": "Arbete",
+      "who": "Personer",
+      "linked": "Länkade objekt",
+      "empty": "Inget här ännu"
     }
   },
   "externalLinks": {
@@ -2495,7 +2572,9 @@
     "discard": "Kassera stoppur",
     "pausedHint": "Pausat. Återuppta för att fortsätta spåra eller stoppa för att logga tiden.",
     "workDescription": "Arbetsbeskrivning",
-    "whatAreYouWorkingOn": "Vad arbetar du med?"
+    "whatAreYouWorkingOn": "Vad arbetar du med?",
+    "chipElsewhere": "Stoppur på {{label}}",
+    "title": "Stoppur"
   },
   "templates": {
     "loading": "Läser in…",
@@ -2619,6 +2698,116 @@
       "hours": "{{hours}} h",
       "daysHours": "{{days}} d {{hours}} h",
       "days": "{{days}} d"
+    }
+  },
+  "cannedResponses": {
+    "picker": {
+      "button": "Färdiga svar",
+      "buttonTooltip": "Infoga ett färdigt svar (Ctrl/Cmd+J, eller skriv /)",
+      "title": "Infoga ett färdigt svar",
+      "searchPlaceholder": "Sök färdiga svar…",
+      "searchLabel": "Sök färdiga svar",
+      "loading": "Läser in färdiga svar…",
+      "empty": "Det finns inga färdiga svar ännu.",
+      "noResults": "Inga färdiga svar matchar din sökning.",
+      "loadFailed": "Det gick inte att läsa in de färdiga svaren.",
+      "insertFailed": "Det gick inte att infoga det färdiga svaret.",
+      "favorites": "Favoriter",
+      "recent": "Nyligen använda",
+      "uncategorized": "Utan kategori",
+      "slashGroup": "Färdiga svar",
+      "slashBrowse": "Färdiga svar…",
+      "slashBrowseHint": "Bläddra bland och infoga ett sparat svar"
+    },
+    "scope": {
+      "personal": "Personligt",
+      "team": "Team",
+      "board": "Tavla",
+      "clientPortal": "Kundportal",
+      "personalHelp": "Bara du kan använda det här svaret.",
+      "teamHelp": "Medlemmar i det valda teamet kan använda det här svaret.",
+      "boardHelp": "Alla som svarar på ärenden på den valda tavlan kan använda det här svaret.",
+      "clientPortalHelp": "Reserverat för svar i kundportalen. Erbjuds inte när du svarar från MSP-portalen."
+    },
+    "list": {
+      "title": "Färdiga svar",
+      "new": "Nytt färdigt svar",
+      "showInactive": "Visa inaktiva",
+      "searchPlaceholder": "Sök på namn, kategori eller text…",
+      "searchLabel": "Sök färdiga svar",
+      "allCategories": "Alla kategorier",
+      "noResults": "Inga färdiga svar matchar dina filter.",
+      "empty": "Inga färdiga svar ännu. Skapa ett för att återanvända det i ärendesvar.",
+      "deleteTitle": "Ta bort färdigt svar",
+      "deleteMessage": "Ta bort ”{{name}}”? Svar som redan har använt det ändras inte.",
+      "deleted": "Färdigt svar borttaget",
+      "favorite": "Favorit",
+      "columns": {
+        "name": "Namn",
+        "category": "Kategori",
+        "scope": "Tillgängligt för",
+        "preview": "Förhandsvisning",
+        "status": "Status"
+      }
+    },
+    "status": {
+      "active": "Aktivt",
+      "inactive": "Inaktivt"
+    },
+    "actions": {
+      "favorite": "Lägg till i favoriter",
+      "unfavorite": "Ta bort från favoriter",
+      "edit": "Redigera",
+      "activate": "Aktivera",
+      "deactivate": "Inaktivera",
+      "delete": "Ta bort",
+      "cancel": "Avbryt"
+    },
+    "loading": "Läser in…",
+    "editor": {
+      "back": "Färdiga svar",
+      "newTitle": "Nytt färdigt svar",
+      "save": "Spara",
+      "saving": "Sparar…",
+      "saved": "Färdigt svar sparat",
+      "created": "Färdigt svar skapat",
+      "viewOnly": "Du kan visa det här färdiga svaret men inte ändra det."
+    },
+    "sections": {
+      "details": "Detaljer",
+      "body": "Svar"
+    },
+    "fields": {
+      "name": "Namn",
+      "category": "Kategori",
+      "categoryHelp": "Grupperar svar i väljaren. Valfritt.",
+      "scope": "Tillgängligt för",
+      "team": "Team",
+      "teamPlaceholder": "Välj ett team",
+      "board": "Tavla",
+      "boardPlaceholder": "Välj en tavla",
+      "body": "Svarstext",
+      "bodyPlaceholder": "Skriv svaret…"
+    },
+    "mergeFields": {
+      "title": "Sammanfogningsfält",
+      "help": "Fylls i när svaret infogas i ett svar. Ett fält utan värde blir tomt; ett okänt fält lämnas som det är.",
+      "descriptions": {
+        "contact_first_name": "Kontaktens förnamn",
+        "contact_last_name": "Kontaktens efternamn",
+        "contact_name": "Kontaktens fullständiga namn",
+        "ticket_number": "Ärendenumret",
+        "ticket_title": "Ärendets titel",
+        "agent_name": "Ditt namn (agenten som svarar)",
+        "client_name": "Kundens namn"
+      }
+    },
+    "errors": {
+      "notFound": "Det färdiga svaret hittades inte.",
+      "duplicateName": "Ett färdigt svar med namnet ”{{name}}” finns redan här.",
+      "invalidReferences": "Det valda teamet eller tavlan finns inte längre.",
+      "notAvailable": "Det här färdiga svaret är inte tillgängligt för det här ärendet.",
+      "notATeamMember": "Du kan bara hantera teamsvar för team som du tillhör."
     }
   }
 }

@@ -84,6 +84,7 @@
     "button": "Filter",
     "unassigned": "Nicht zugewiesen",
     "category": "Nach Kategorie filtern",
+    "removeFilterChip": "Filter entfernen: {{label}}",
     "assignee": "Zuständiger",
     "allAssignees": "Alle Zuständigen",
     "responseState": "Antwortstatus",
@@ -110,7 +111,12 @@
     "allResponseStatuses": "Alle Antwortstatus",
     "responseStatus": "Antwortstatus",
     "board": "Nach Board filtern",
-    "searchSmart": "Tickets und Kommentare durchsuchen… Enter für intelligente Suche"
+    "searchSmart": "Tickets und Kommentare durchsuchen… Enter für intelligente Suche",
+    "requesterTags": "Tags des Anfragenden",
+    "clientTags": "Kunden-Tags",
+    "tagModeAny": "Mindestens eines von",
+    "tagModeNone": "Keines von",
+    "droppedFromLink": "Einige Filter in diesem Link sind ungültig und wurden ignoriert."
   },
   "create": {
     "title": "Support-Ticket erstellen",
@@ -248,7 +254,9 @@
     "openMenu": "Menü öffnen",
     "moreActions": "Weitere Aktionen",
     "createTemplate": "Vorlage aus Ticket erstellen",
-    "createWorkflowFromTicket": "Workflow aus Ticket erstellen"
+    "createWorkflowFromTicket": "Workflow aus Ticket erstellen",
+    "printWorkTag": "Arbeitsetikett drucken",
+    "retry": "Erneut versuchen"
   },
   "messages": {
     "noTickets": "Keine Tickets gefunden",
@@ -358,7 +366,8 @@
     "pastedImagesDeleteFailed_many": "{{count}} eingefügte Bilder konnten nicht gelöscht werden.",
     "pastedImagesDeleted_few": "{{count}} eingefügte Bilder gelöscht.",
     "pastedImagesDeleted_many": "{{count}} eingefügte Bilder gelöscht.",
-    "sharedWorkspaceReadOnly": "Sie sehen dieses Ticket, weil es ein Gerät in einem gemeinsam genutzten Arbeitsplatz betrifft. Nur die Person, die es gemeldet hat, kann etwas hinzufügen."
+    "sharedWorkspaceReadOnly": "Sie sehen dieses Ticket, weil es ein Gerät in einem gemeinsam genutzten Arbeitsplatz betrifft. Nur die Person, die es gemeldet hat, kann etwas hinzufügen.",
+    "loadPartyTagsFailed": "Tags für Anforderer und Kunde konnten nicht geladen werden"
   },
   "conversation": {
     "comments": "Kommentare",
@@ -461,6 +470,14 @@
     "clientPortal": "Empfangen über Kundenportal",
     "inboundEmail": "Empfangen über E-Mail"
   },
+  "originalEmail": {
+    "text": "Text",
+    "original": "Original-E-Mail",
+    "emailShort": "E-Mail",
+    "loading": "Original-E-Mail wird geladen …",
+    "error": "Die Original-E-Mail konnte nicht geladen werden.",
+    "group": "Nachrichtenansicht"
+  },
   "documents": {
     "title": "Dokumente",
     "noDocuments": "Keine Dokumente angehängt",
@@ -502,6 +519,7 @@
     },
     "filters": {
       "allAssignees": "Alle Zuständigen",
+      "allContacts": "Alle Kontakte",
       "selectStatus": "Status auswählen",
       "responseState": "Antwortstatus",
       "allResponseStates": "Alle Antwortstatus",
@@ -659,7 +677,7 @@
     "bundleMasterLabel": "Hauptticket auswählen",
     "bundleMasterPlaceholder": "Hauptticket auswählen...",
     "bundleSyncUpdates": "Synchronisiere Aktualisierungen vom Hauptticket zu den Untertickets (öffentliche Antworten + Workflow-Änderungen)",
-    "bundleSyncUpdatesHelp": "Beim Bündeln behalten untergeordnete Tickets ihren aktuellen Status. Danach schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, und Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf die untergeordneten Tickets angewendet. Workflow-Felder sind bei untergeordneten Tickets gesperrt. Interne Notizen verbleiben am Master.",
+    "bundleSyncUpdatesHelp": "Untergeordnete Tickets behalten beim Bündeln ihren aktuellen Status. Bei aktivierter Synchronisierung schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf sie angewendet, und ihre Workflow-Felder sind gesperrt. Ohne Synchronisierung verwalten untergeordnete Tickets Status, Bearbeiter und Priorität selbst. Interne Notizen verbleiben am Master.",
     "bundleSelectAtLeastTwo": "Wählen Sie mindestens zwei Tickets zum Bündeln aus.",
     "bundleSelectMaster": "Wählen Sie ein Hauptticket aus.",
     "bundleSuccess": "Tickets gebündelt",
@@ -732,8 +750,8 @@
       "masterTicket": "Hauptticket auswählen",
       "selectMasterTicket": "Hauptticket auswählen...",
       "syncUpdates": "Synchronisiere Aktualisierungen vom Hauptticket zu den Untertickets (öffentliche Antworten + Workflow-Änderungen)",
-      "syncUpdatesHelp": "Beim Bündeln behalten untergeordnete Tickets ihren aktuellen Status. Danach schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, und Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf die untergeordneten Tickets angewendet. Workflow-Felder sind bei untergeordneten Tickets gesperrt. Interne Notizen verbleiben am Master.",
-      "childrenDescription": "Untergeordnete behalten ihren aktuellen Status; Workflow-Felder sind bei untergeordneten Tickets gesperrt. Eingehende Antworten auf untergeordnete Tickets werden unten als schreibgeschützt angezeigt.",
+      "syncUpdatesHelp": "Untergeordnete Tickets behalten beim Bündeln ihren aktuellen Status. Bei aktivierter Synchronisierung schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf sie angewendet, und ihre Workflow-Felder sind gesperrt. Ohne Synchronisierung verwalten untergeordnete Tickets Status, Bearbeiter und Priorität selbst. Interne Notizen verbleiben am Master.",
+      "childrenDescription": "Untergeordnete Tickets behalten ihren aktuellen Status. Workflow-Felder sind nur im Modus Sync Updates gesperrt. Eingehende Antworten auf untergeordnete Tickets werden unten schreibgeschützt angezeigt.",
       "checkingMasters": "Vorhandene Bündel werden geprüft...",
       "existingMasterSuffix": "(vorhandenes Hauptticket)",
       "existingMasterLocked": "Ein ausgewähltes Ticket ist bereits ein Hauptticket. Es wird als Hauptticket verwendet; die anderen werden als Untertickets hinzugefügt.",
@@ -784,7 +802,9 @@
       "more": "Mehr",
       "bundleNeedsOne": "Wählen Sie mindestens 1 Ticket zum Bündeln aus",
       "selectedCount_few": "{{count}} ausgewählt",
-      "selectedCount_many": "{{count}} ausgewählt"
+      "selectedCount_many": "{{count}} ausgewählt",
+      "printLabels": "Etiketten drucken",
+      "printLabelsLimit": "Sie können höchstens {{max}} Etiketten auf einmal drucken"
     },
     "assign": {
       "dialogTitle": "Ausgewählte Tickets zuweisen",
@@ -968,7 +988,22 @@
     "tagCreatePartialFailure_few": "{{count}} Tags konnten nicht erstellt werden",
     "tagCreatePartialFailure_many": "{{count}} Tags konnten nicht erstellt werden",
     "tagCreationFailed_few": "{{count}} Tags konnten nicht erstellt werden",
-    "tagCreationFailed_many": "{{count}} Tags konnten nicht erstellt werden"
+    "tagCreationFailed_many": "{{count}} Tags konnten nicht erstellt werden",
+    "assets": {
+      "heading": "Assets",
+      "selectClientFirst": "Wählen Sie einen Kunden aus, um Assets zu verknüpfen.",
+      "unavailable": "Assets können nach dem Erstellen im Ticket verknüpft werden."
+    },
+    "attachments": {
+      "heading": "Anhänge",
+      "add": "Dateien hinzufügen",
+      "remove": "{{name}} entfernen"
+    },
+    "watchers": {
+      "heading": "Beobachter",
+      "placeholder": "Beobachter hinzufügen..."
+    },
+    "attachmentsPartialFailure": "Ticket erstellt, aber diese Dateien konnten nicht angehängt werden: {{files}}. Fügen Sie sie im Ticket hinzu."
   },
   "itil": {
     "calculatedPriority": "Priorität (berechnet)",
@@ -1263,6 +1298,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Antwortstatus-Tracking",
+      "defaultReplyInternalTitle": "Standard-Sichtbarkeit für Antworten",
+      "defaultReplyInternalDescription": "Neue Ticketantworten für alle Teammitglieder als intern beginnen. Benutzer können weiterhin zu einer Kundenantwort wechseln. Antworten im Kundenportal und in bestehenden Threads bleiben unverändert.",
+      "defaultReplyInternalLabel": "Ticketantworten standardmäßig als intern beginnen",
       "responseStateTrackingDescription": "Wenn diese Option aktiviert ist, erfassen Tickets automatisch, wer als Nächstes antworten muss (Kundenantwort oder interne Antwort ausstehend). Wenn Sie sie deaktivieren, werden Antwortstatus-Badges, Filter und zugehörige Optionen zum Pausieren von SLAs ausgeblendet.",
       "responseStateTrackingEnabled": "Antwortstatus-Tracking aktiviert",
       "responseStateTrackingDisabled": "Antwortstatus-Tracking deaktiviert",
@@ -1397,7 +1435,15 @@
     "selectUnit": "Einheit zum Liefern auswählen...",
     "onHandByLocation": "Bestand nach Standort",
     "catalogUnitCost": "Katalogstückkosten",
-    "costNotConfigured": "Nicht konfiguriert"
+    "costNotConfigured": "Nicht konfiguriert",
+    "availableBadge": "Verfügbar: {{available}}",
+    "availableByLocation": "Freier Bestand nach Standort",
+    "freeOfOnHand": "{{free}} frei von {{onHand}}",
+    "stockHeld": "Nur {{free}} verfügbar. {{held}} vorrätige Stück sind für Kundenaufträge oder Projekte fest gesperrt und können hier nicht verwendet werden.",
+    "stockInsufficient": "Nur {{onHand}} auf Lager, {{requested}} angefordert.",
+    "reservedStockTitle": "Bestand ist für einen Kundenauftrag oder ein Projekt reserviert",
+    "reservedStockMessage": "Nur {{free}} dieses Produkts sind frei. {{reserved}} vorrätige Stück sind für Kundenaufträge oder Projekte reserviert, angefordert wurden {{requested}}. Wenn Sie sie trotzdem hinzufügen, entnehmen Sie Bestand, auf den ein Kundenauftrag oder Projekt zählt, und es kann unterversorgt bleiben.",
+    "reservedStockConfirm": "Trotzdem hinzufügen"
   },
   "watchList": {
     "title": "Beobachtungsliste",
@@ -1670,7 +1716,13 @@
       "ruleSubcategoryRequiresCategory": "Wählen Sie eine Kategorie aus, bevor Sie eine Unterkategorie wählen.",
       "ruleTooManyKeywords": "Verwenden Sie höchstens {{max}} Schlüsselwörter pro Regel.",
       "ruleKeywordTooLong": "Jedes Schlüsselwort darf höchstens {{max}} Zeichen lang sein.",
-      "ruleOriginInvalid": "Eine der ausgewählten Ticketquellen ist ungültig."
+      "ruleOriginInvalid": "Eine der ausgewählten Ticketquellen ist ungültig.",
+      "templateClientMismatch": "Diese Checklistenvorlage ist auf einen anderen Client beschränkt als den des Tickets.",
+      "templateClientInvalid": "Der ausgewählte Client wurde nicht gefunden.",
+      "ruleClientOutsideTemplateScope": "Diese Vorlage gehört zu einem Kunden, daher können ihre Regeln keine anderen Kunden ansprechen.",
+      "templateRulesTargetOtherClients": "Einige Regeln für automatische Anwendung dieser Vorlage zielen auf andere Kunden. Entfernen Sie diese Kunden aus den Regeln, bevor Sie die Vorlage einem Kunden zuordnen.",
+      "predicateClientOutsideScope": "Kunde {{client}} liegt außerhalb des Geltungsbereichs dieser Vorlage.",
+      "predicateInvalid": "Ungültige Checklistenregel: {{detail}}"
     }
   },
   "ticketSection": {
@@ -1699,9 +1751,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Beim Bündeln behalten untergeordnete Tickets ihren aktuellen Status. Danach schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, und Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf die untergeordneten Tickets angewendet. Workflow-Felder sind bei untergeordneten Tickets gesperrt. Interne Notizen verbleiben am Master.",
+      "childrenDescription": "Untergeordnete Tickets behalten beim Bündeln ihren aktuellen Status. Im Modus Sync Updates schließt oder öffnet das Schließen bzw. Wiederöffnen des Masters alle untergeordneten Tickets, Status-, Bearbeiter- und Prioritätsänderungen am Master werden auf sie angewendet, und ihre Workflow-Felder sind gesperrt. Im Modus Link Only verwalten untergeordnete Tickets Status, Bearbeiter und Priorität selbst. Interne Notizen verbleiben am Master.",
       "title": "Bündel",
       "masterBanner": "Dieses Ticket ist das Hauptticket eines Bündels ({{count}} Untertickets). Modus: {{mode}}.",
+      "childLockedNotice": "Workflow-Felder sind gesperrt; arbeiten Sie am Master-Ticket.",
+      "childLinkedNotice": "Es ist mit dem Master verknüpft und wird eigenständig verwaltet.",
       "multipleClients": "Mehrere Kunden",
       "mode": "Modus: {{mode}}",
       "unbundle": "Bündel auflösen",
@@ -1737,7 +1791,15 @@
       "applyResolutionHelpNoComment": "Schließt das Unterticket mit dem Status {{status}}. Das Haupt-Ticket hat keinen öffentlichen Lösungskommentar zum Veröffentlichen.",
       "reopenMasterLabel": "Hinzufügen und Haupt-Ticket wieder öffnen",
       "reopenMasterHelp": "Öffnet nur das Haupt-Ticket wieder. Bereits geschlossene Untertickets in diesem Bündel bleiben geschlossen; Benachrichtigungen zur Wiedereröffnung und SLA gelten für das Haupt-Ticket.",
-      "closedMasterGating": "Die Abschlussregeln des Boards lassen keine offenen Untertickets unter einem geschlossenen Haupt-Ticket zu. Daher ist es nicht möglich, das Haupt-Ticket geschlossen zu lassen."
+      "closedMasterGating": "Die Abschlussregeln des Boards lassen keine offenen Untertickets unter einem geschlossenen Haupt-Ticket zu. Daher ist es nicht möglich, das Haupt-Ticket geschlossen zu lassen.",
+      "modeSwitchDialogIntro": "Das Haupt-Ticket ist geschlossen. Wählen Sie, was mit den offenen Untertickets geschehen soll, wenn das Bündel auf Sync Updates umgestellt wird.",
+      "modeSwitchConfirm": "Auf Sync Updates umstellen",
+      "keepClosedSwitchLabel": "Umstellen und Haupt-Ticket geschlossen lassen",
+      "keepClosedSwitchHelp": "Offene Untertickets bleiben mit eigener SLA-Uhr offen. Das Bündel wird als inkonsistent angezeigt, bis sie gelöst sind.",
+      "applyResolutionSwitchLabel": "Umstellen und die Lösung des Haupt-Tickets auf offene Untertickets anwenden",
+      "applyResolutionSwitchHelp": "Schließt jedes offene Unterticket mit dem Status {{status}} und veröffentlicht die Lösung des Haupt-Tickets als öffentlichen Kommentar darin.",
+      "applyResolutionSwitchHelpNoComment": "Schließt jedes offene Unterticket mit dem Status {{status}}. Das Haupt-Ticket hat keinen öffentlichen Lösungskommentar zum Veröffentlichen.",
+      "reopenMasterSwitchLabel": "Umstellen und Haupt-Ticket wieder öffnen"
     },
     "autoClose": "Wird am {{date}} automatisch geschlossen, sofern keine neue Aktivität erfolgt.",
     "autoCloseWarned": "Der Kunde wurde benachrichtigt.",
@@ -1786,7 +1848,8 @@
     "remoteFieldUpdated": "{{name}} hat {{field}} aktualisiert",
     "connection": {
       "reconnecting": "Live-Aktualisierungen offline - Verbindung wird wiederhergestellt...",
-      "unavailable": "Live-Aktualisierungen nicht verfügbar"
+      "unavailable": "Live-Aktualisierungen nicht verfügbar",
+      "offlineShort": "Offline"
     }
   },
   "delete": {
@@ -1968,7 +2031,10 @@
       "openScheduleEntry": "Zeitplaneintrag öffnen",
       "acrossEntries_few": "über {{count}} Einträge",
       "acrossEntries_many": "über {{count}} Einträge",
-      "changeLocation": "Standort ändern"
+      "changeLocation": "Standort ändern",
+      "addDescriptionPrompt": "Beschreibung hinzufügen – worum geht es, und was braucht der Kunde?",
+      "projectTasks": "Projektaufgaben",
+      "timeAndBilling": "Zeit & Abrechnung"
     },
     "timeline": {
       "subtitle": "Antworten, Zeit und Systemänderungen an einem Ort",
@@ -2064,6 +2130,17 @@
       "collapseActivity": "Ältere Aktivitäten einklappen",
       "replyingToComment": "Antwort an {{name}}",
       "createdFromTemplate": "{{actor}} hat dieses Ticket aus der Vorlage „{{name}}“ erstellt"
+    },
+    "board": {
+      "conversation": "Unterhaltung",
+      "details": "Details"
+    },
+    "groups": {
+      "customer": "Kunde",
+      "work": "Arbeit",
+      "who": "Personen",
+      "linked": "Verknüpfte Elemente",
+      "empty": "Noch nichts vorhanden"
     }
   },
   "notifications": {
@@ -2495,7 +2572,9 @@
     "discard": "Stoppuhr verwerfen",
     "pausedHint": "Pausiert. Setzen Sie fort, um weiter zu erfassen, oder stoppen Sie, um die Zeit zu buchen.",
     "workDescription": "Arbeitsbeschreibung",
-    "whatAreYouWorkingOn": "Woran arbeiten Sie?"
+    "whatAreYouWorkingOn": "Woran arbeiten Sie?",
+    "chipElsewhere": "Stoppuhr auf {{label}}",
+    "title": "Stoppuhr"
   },
   "templates": {
     "loading": "Wird geladen …",
@@ -2619,6 +2698,116 @@
       "hours": "{{hours}} Std.",
       "daysHours": "{{days}} T. {{hours}} Std.",
       "days": "{{days}} T."
+    }
+  },
+  "cannedResponses": {
+    "picker": {
+      "button": "Textbausteine",
+      "buttonTooltip": "Textbaustein einfügen (Strg/Cmd+J oder / eingeben)",
+      "title": "Textbaustein einfügen",
+      "searchPlaceholder": "Textbausteine durchsuchen…",
+      "searchLabel": "Textbausteine durchsuchen",
+      "loading": "Textbausteine werden geladen…",
+      "empty": "Es sind noch keine Textbausteine vorhanden.",
+      "noResults": "Keine Textbausteine entsprechen Ihrer Suche.",
+      "loadFailed": "Die Textbausteine konnten nicht geladen werden.",
+      "insertFailed": "Der Textbaustein konnte nicht eingefügt werden.",
+      "favorites": "Favoriten",
+      "recent": "Zuletzt verwendet",
+      "uncategorized": "Ohne Kategorie",
+      "slashGroup": "Textbausteine",
+      "slashBrowse": "Textbausteine…",
+      "slashBrowseHint": "Gespeicherte Antwort durchsuchen und einfügen"
+    },
+    "scope": {
+      "personal": "Persönlich",
+      "team": "Team",
+      "board": "Board",
+      "clientPortal": "Kundenportal",
+      "personalHelp": "Nur Sie können diesen Textbaustein verwenden.",
+      "teamHelp": "Mitglieder des gewählten Teams können diesen Textbaustein verwenden.",
+      "boardHelp": "Alle, die Tickets auf dem gewählten Board beantworten, können diesen Textbaustein verwenden.",
+      "clientPortalHelp": "Für Antworten im Kundenportal reserviert. Wird beim Antworten im MSP-Portal nicht angeboten."
+    },
+    "list": {
+      "title": "Textbausteine",
+      "new": "Neuer Textbaustein",
+      "showInactive": "Inaktive anzeigen",
+      "searchPlaceholder": "Nach Name, Kategorie oder Text suchen…",
+      "searchLabel": "Textbausteine durchsuchen",
+      "allCategories": "Alle Kategorien",
+      "noResults": "Keine Textbausteine entsprechen Ihren Filtern.",
+      "empty": "Noch keine Textbausteine. Erstellen Sie einen, um ihn in Ticketantworten wiederzuverwenden.",
+      "deleteTitle": "Textbaustein löschen",
+      "deleteMessage": "„{{name}}“ löschen? Antworten, die ihn bereits verwendet haben, bleiben unverändert.",
+      "deleted": "Textbaustein gelöscht",
+      "favorite": "Favorit",
+      "columns": {
+        "name": "Name",
+        "category": "Kategorie",
+        "scope": "Verfügbar für",
+        "preview": "Vorschau",
+        "status": "Status"
+      }
+    },
+    "status": {
+      "active": "Aktiv",
+      "inactive": "Inaktiv"
+    },
+    "actions": {
+      "favorite": "Zu Favoriten hinzufügen",
+      "unfavorite": "Aus Favoriten entfernen",
+      "edit": "Bearbeiten",
+      "activate": "Aktivieren",
+      "deactivate": "Deaktivieren",
+      "delete": "Löschen",
+      "cancel": "Abbrechen"
+    },
+    "loading": "Wird geladen…",
+    "editor": {
+      "back": "Textbausteine",
+      "newTitle": "Neuer Textbaustein",
+      "save": "Speichern",
+      "saving": "Wird gespeichert…",
+      "saved": "Textbaustein gespeichert",
+      "created": "Textbaustein erstellt",
+      "viewOnly": "Sie können diesen Textbaustein ansehen, aber nicht ändern."
+    },
+    "sections": {
+      "details": "Details",
+      "body": "Antwort"
+    },
+    "fields": {
+      "name": "Name",
+      "category": "Kategorie",
+      "categoryHelp": "Gruppiert Textbausteine in der Auswahl. Optional.",
+      "scope": "Verfügbar für",
+      "team": "Team",
+      "teamPlaceholder": "Team auswählen",
+      "board": "Board",
+      "boardPlaceholder": "Board auswählen",
+      "body": "Antworttext",
+      "bodyPlaceholder": "Antwort schreiben…"
+    },
+    "mergeFields": {
+      "title": "Platzhalter",
+      "help": "Werden beim Einfügen der Antwort in eine Antwort ausgefüllt. Ein Platzhalter ohne Wert wird leer; ein unbekannter Platzhalter bleibt unverändert.",
+      "descriptions": {
+        "contact_first_name": "Vorname des Kontakts",
+        "contact_last_name": "Nachname des Kontakts",
+        "contact_name": "Vollständiger Name des Kontakts",
+        "ticket_number": "Die Ticketnummer",
+        "ticket_title": "Der Tickettitel",
+        "agent_name": "Ihr Name (der antwortende Agent)",
+        "client_name": "Name des Kunden"
+      }
+    },
+    "errors": {
+      "notFound": "Textbaustein nicht gefunden.",
+      "duplicateName": "Ein Textbaustein mit dem Namen „{{name}}“ existiert hier bereits.",
+      "invalidReferences": "Das gewählte Team oder Board existiert nicht mehr.",
+      "notAvailable": "Dieser Textbaustein ist für dieses Ticket nicht verfügbar.",
+      "notATeamMember": "Sie können Team-Textbausteine nur für Teams verwalten, denen Sie angehören."
     }
   }
 }

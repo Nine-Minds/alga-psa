@@ -323,6 +323,21 @@
       "any": "qualquer",
       "clear": "Limpar",
       "countSummary": "Grupo(s) {{groups}} · Item(s) de linha {{obligations}}"
+    },
+    "lateTime": {
+      "title": "Tempo por hora aprovado com atraso",
+      "description": "Este tempo foi aprovado depois que a fatura do seu período de serviço foi emitida. As entradas aguardando faturamento são adicionadas uma única vez à próxima fatura, marcadas como tempo atrasado. As entradas fora do período de retroação não são faturadas.",
+      "columns": {
+        "client": "Cliente",
+        "technician": "Técnico",
+        "service": "Serviço",
+        "workDate": "Data do trabalho",
+        "hours": "Horas",
+        "closedPeriod": "Período de serviço encerrado",
+        "status": "Status"
+      },
+      "nextInvoice": "Será faturado na próxima fatura",
+      "outsideLookback": "Fora do período de retroação — não faturado"
     }
   },
   "manualInvoices": {
@@ -557,6 +572,17 @@
         "selectedCount": "{{count}} selecionado",
         "clear": "Limpar seleção"
       }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Fatura finalizada, mas uma etapa posterior não foi concluída: {{steps}}. A fatura está finalizada; você pode tentar essa etapa novamente.",
+      "steps": {
+        "credit_auto_apply": "aplicação automática de crédito",
+        "project_deposit_credits": "créditos de depósito de projeto",
+        "workflow_events": "eventos de fluxo de trabalho",
+        "accounting_export": "exportação contábil",
+        "replenishment_status": "status de reposição pré-paga",
+        "autopay": "pagamento automático"
+      }
     }
   },
   "finalizedTab": {
@@ -595,7 +621,9 @@
       "bulkPdfFailed": "Falha ao gerar PDFs. Por favor, tente novamente.",
       "unfinalizeFailed": "Falha ao desfinalizar a fatura. Por favor, tente novamente.",
       "bulkUnfinalizeFailed": "Falha ao desfinalizar faturas. Por favor, tente novamente.",
-      "bulkUnfinalizeInvoiceFailed": "Não foi possível reabrir {{invoiceNumber}}: {{reason}}"
+      "bulkUnfinalizeInvoiceFailed": "Não foi possível reabrir {{invoiceNumber}}: {{reason}}",
+      "explainThis": "Ver explicação",
+      "usedHourBlockExplanation": "A finalização desta fatura disponibilizou as horas pré-pagas para os registos de tempo. Entretanto, foi atribuído tempo ao bloco. Reabrir a fatura anularia o bloco, embora essas atribuições e eventuais cobranças posteriores ainda possam depender dele. Para manter a consistência da faturação, não é possível reverter a finalização de faturas de blocos que já tenham sido utilizados, mesmo que o tempo tenha sido posteriormente revertido. Considere um ajuste separado ou uma nota de crédito para corrigir a fatura."
     },
     "bulk": {
       "actionBar": {
@@ -828,6 +856,7 @@
       "syncNow": "Sincronizar com QuickBooks",
       "viewInQbo": "Ver em QuickBooks",
       "voidInvoice": "Anular fatura",
+      "delegateTax": "Usar o imposto do sistema contábil",
       "viewInXero": "Ver no Xero"
     },
     "loading": "Carregando visualização...",
@@ -850,6 +879,13 @@
     "applyCreditDialog": {
       "title": "Aplicar crédito"
     },
+    "delegateTaxDialog": {
+      "title": "Usar o imposto do sistema contábil",
+      "description": "O sistema contábil calculará o imposto desta fatura na próxima exportação e o AlgaPSA substituirá então o imposto e o total por esse resultado. Números, linhas, preços e pagamentos registrados permanecem como estão.",
+      "cancel": "Cancelar",
+      "confirm": "Mudar para o imposto do sistema contábil",
+      "switching": "Mudando..."
+    },
     "voidDialog": {
       "title": "Anular fatura",
       "description": "A anulação desta fatura é permanente. Forneça um motivo.",
@@ -857,6 +893,19 @@
       "cancel": "Cancelar",
       "confirm": "Anular fatura",
       "voiding": "Anulando..."
+    },
+    "history": {
+      "title": "Histórico",
+      "empty": "Nenhum histórico registrado.",
+      "loadFailed": "Falha ao carregar o histórico da fatura.",
+      "system": "Sistema",
+      "ops": {
+        "invoice_finalized": "Finalizada",
+        "invoice_unfinalized": "Reaberta",
+        "invoice_deleted": "Excluída"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "nenhum"
     }
   },
   "templateEditor": {
@@ -1377,7 +1426,7 @@
       "mediaSource": "Origem da imagem",
       "mediaSourceLogo": "Logotipo da empresa",
       "mediaSourceCustom": "Imagem personalizada",
-      "mediaSourceLogoHint": "Mostra em todos os documentos o logotipo das configurações de marca da sua empresa.",
+      "mediaSourceLogoHint": "Mostra em todos os documentos o logotipo do registro de cliente da sua própria empresa.",
       "mediaSourceUrl": "URL de origem",
       "renameInner": "Renomear também {{count}} camadas internas ({{from}} → {{to}}…)?",
       "renameInnerApply": "Renomear",
@@ -2382,7 +2431,7 @@
     },
     "imagePicker": {
       "browse": "Procurar documentos",
-      "hiddenFromClients": "{{document}} está oculto para os clientes. Ele não aparecerá em cotações ou faturas visualizadas pelo portal do cliente.",
+      "hiddenFromClients": "{{document}} está oculto para os clientes, que não podem abri-lo no portal do cliente. Ele continua aparecendo nas faturas e nos PDFs de cotações que o usam.",
       "updating": "Atualizando...",
       "markVisible": "Marcar como visível para os clientes",
       "visibleInPortal": "Visível no portal do cliente",
@@ -2431,11 +2480,13 @@
     "description": "Crie os layouts usados para gerar PDFs e pré-visualizações de {{type}}.",
     "availableLayouts": "Layouts disponíveis",
     "actions": {
-      "newLayout": "Novo layout"
+      "newLayout": "Novo layout",
+      "setDefaultForClass": "Definir como padrão para {{class}}"
     },
     "columns": {
       "name": "Nome",
-      "source": "Origem"
+      "source": "Origem",
+      "labelClass": "Classe"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (Padrão)",
@@ -2467,7 +2518,10 @@
         "details": "Detalhes do layout"
       },
       "fields": {
-        "version": "Versão"
+        "version": "Versão",
+        "labelClass": "Classe da etiqueta",
+        "labelFields": "Campos exibidos na etiqueta",
+        "labelFieldsHint": "O link do registro (código QR) e o identificador são sempre exibidos."
       },
       "placeholders": {
         "templateName": "Modelo de {{type}}"
@@ -2505,7 +2559,9 @@
       "salesOrder": "Pedido de venda",
       "packingSlip": "Nota de entrega",
       "pickList": "Lista de separação",
-      "workTag": "Etiqueta de trabalho / Etiqueta"
+      "workTag": "Etiqueta de trabalho / Etiqueta",
+      "stagingManifest": "Manifesto de embalagem",
+      "rmaReturnSlip": "Comprovante de devolução de RMA"
     }
   },
   "errors": {
@@ -2513,7 +2569,8 @@
       "invoiceUpdate": "Permissão negada: é necessária permissão de atualização de faturas",
       "invoiceDelete": "Permissão negada: é necessária permissão de exclusão de faturas",
       "invoiceAccess": "Permissão negada: acesso à fatura negado",
-      "otherClientInvoices": "Permissão negada: não é possível acessar as faturas de outro cliente"
+      "otherClientInvoices": "Permissão negada: não é possível acessar as faturas de outro cliente",
+      "invoiceRead": "Permissão negada: leitura de faturas necessária"
     },
     "invoice": {
       "notFound": "Fatura não encontrada",
@@ -2527,6 +2584,7 @@
       "onlyDraftEditable": "Somente faturas em rascunho podem ser editadas",
       "numberExists": "O número da fatura já existe. Escolha um número diferente.",
       "notFinalized": "A fatura não está finalizada",
+      "usedHourBlockUnfinalize": "Não é possível reverter a finalização desta fatura: o bloco de horas {{blockId}} já foi utilizado ({{usedHours}} de {{totalHours}} h). Considere um ajuste separado ou uma nota de crédito para corrigir a fatura.",
       "unfinalizeFailed": "Não foi possível reverter a finalização da fatura devido a um erro inesperado nos dados. Atualize a página e tente novamente.",
       "paidOrCancelled": "Não é possível modificar uma fatura paga ou cancelada",
       "syncedVoidInstead": "Esta fatura está sincronizada com um sistema contábil — anule-a em vez de excluí-la.",
@@ -2535,7 +2593,9 @@
       "duplicate": "Já existe uma fatura conflitante. Atualize a página e tente novamente.",
       "missingField": "Falta um campo obrigatório da fatura.",
       "missingFieldNamed": "Falta um campo obrigatório da fatura: {{field}}.",
-      "billingProfileUnavailable": "O perfil de faturação selecionado não está disponível para este cliente."
+      "billingProfileUnavailable": "O perfil de faturação selecionado não está disponível para este cliente.",
+      "deleteNotDraft": "Só é possível excluir faturas em rascunho; anule a fatura em vez disso.",
+      "deleteHasPayments": "Faturas com pagamentos registrados não podem ser excluídas."
     },
     "billingCycle": {
       "notFoundRefresh": "Ciclo de faturamento não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",

@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Keyboard Shortcuts",
     "opportunities": "Opportunities",
     "mcpServer": "MCP Server",
-    "settingsFallback": "Settings"
+    "settingsFallback": "Settings",
+    "tags": "Tags"
   },
   "unsavedChanges": {
     "title": "Unsaved Changes",
@@ -413,17 +414,21 @@
       "cancel": "Cancel",
       "delete": "Delete",
       "placeholder": "Enter new team name",
+      "descriptionPlaceholder": "Enter an optional team description",
       "selectManager": "Select a manager"
     },
     "details": {
       "loading": "Loading team details...",
       "notFound": "No team found",
+      "noDescription": "No description",
       "fields": {
         "teamLead": "Team Lead",
+        "description": "Description",
         "addMember": "Add Member"
       },
       "placeholders": {
         "teamName": "Enter team name",
+        "description": "Enter team description",
         "selectTeamLead": "Select a team lead",
         "selectUserToAdd": "Select a user to add",
         "noTeamLead": "Not assigned"
@@ -435,8 +440,10 @@
         "discard": "Discard",
         "saveChanges": "Save Changes",
         "saveName": "Save name",
+        "saveDescription": "Save description",
         "cancel": "Cancel",
         "editName": "Edit name",
+        "editDescription": "Edit description",
         "remove": "Remove"
       },
       "table": {
@@ -461,6 +468,7 @@
         "createFailed": "Failed to create team: {{error}}",
         "deleteFailed": "Failed to delete team",
         "updateName": "Failed to update team name",
+        "updateDescription": "Failed to update team description",
         "saveChanges": "Failed to save changes. Please try again."
       }
     }
@@ -710,7 +718,8 @@
         "skipItem": "Skip this item",
         "importNewName": "Import with different name:",
         "importWithOrder": "Import with order {{order}}",
-        "importWithResolutions": "Import with Resolutions"
+        "importWithResolutions": "Import with Resolutions",
+        "removesIntro": "Deleting this board will also remove:"
       },
       "importTable": {
         "active": "Active"
@@ -779,7 +788,9 @@
           "deleteFailed": "Failed to delete board",
           "importFailed": "Failed to import boards",
           "updateStatusFailed": "Failed to update board status",
-          "updateDefaultFailed": "Failed to update default board"
+          "updateDefaultFailed": "Failed to update default board",
+          "hasEmailSenderRoute": "Cannot delete board: it has a dedicated outbound email sender route. Clear the board's ticket sender in the board editor first.",
+          "referencedByAutomations": "Cannot delete board: other settings still target it. Point them at another board (or remove them) first."
         }
       },
       "closeRules": {
@@ -893,6 +904,48 @@
         "useDefault": "Use ticket default",
         "duplicateRoute": "That sender route already exists.",
         "saveFailed": "Could not save sender routing. Please try again."
+      },
+      "deleteDependencies": {
+        "categories_one": "category",
+        "categories_other": "categories",
+        "categories_few": "categories",
+        "categories_many": "categories",
+        "statuses_one": "ticket status",
+        "statuses_other": "ticket statuses",
+        "statuses_few": "ticket statuses",
+        "statuses_many": "ticket statuses",
+        "autoCloseRules_one": "auto-close rule",
+        "autoCloseRules_other": "auto-close rules",
+        "autoCloseRules_few": "auto-close rules",
+        "autoCloseRules_many": "auto-close rules",
+        "notificationRules_one": "notification rule",
+        "notificationRules_other": "notification rules",
+        "notificationRules_few": "notification rules",
+        "notificationRules_many": "notification rules",
+        "portalVisibility_one": "client portal visibility assignment",
+        "portalVisibility_other": "client portal visibility assignments",
+        "portalVisibility_few": "client portal visibility assignments",
+        "portalVisibility_many": "client portal visibility assignments",
+        "emailSenderRoutes_one": "outbound sender route",
+        "emailSenderRoutes_other": "outbound sender routes",
+        "emailSenderRoutes_few": "outbound sender routes",
+        "emailSenderRoutes_many": "outbound sender routes",
+        "ticketTemplates_one": "ticket template",
+        "ticketTemplates_other": "ticket templates",
+        "ticketTemplates_few": "ticket templates",
+        "ticketTemplates_many": "ticket templates",
+        "recurringTickets_one": "recurring ticket schedule",
+        "recurringTickets_other": "recurring ticket schedules",
+        "recurringTickets_few": "recurring ticket schedules",
+        "recurringTickets_many": "recurring ticket schedules",
+        "checklistRules_one": "checklist apply rule",
+        "checklistRules_other": "checklist apply rules",
+        "checklistRules_few": "checklist apply rules",
+        "checklistRules_many": "checklist apply rules",
+        "cannedResponses_one": "board canned response",
+        "cannedResponses_other": "board canned responses",
+        "cannedResponses_few": "board canned responses",
+        "cannedResponses_many": "board canned responses"
       }
     },
     "priorities": {
@@ -984,7 +1037,8 @@
         "description": "Description",
         "items": "Items",
         "status": "Status",
-        "actions": "Actions"
+        "actions": "Actions",
+        "scope": "Available to"
       },
       "statusLabels": {
         "active": "Active",
@@ -1002,7 +1056,9 @@
         "down": "Down",
         "remove": "Remove",
         "addItem": "Add Item",
-        "addRule": "Add Rule"
+        "addRule": "Add Rule",
+        "duplicateToClient": "Duplicate to client…",
+        "duplicate": "Duplicate"
       },
       "fields": {
         "name": {
@@ -1032,8 +1088,10 @@
           "priority": "Priority",
           "any": "Any",
           "appliesToAll": "Applies to all tickets",
+          "appliesToAllClientTickets": "Applies to all {{client}} tickets",
           "clients": "Clients",
           "clientsAny": "Any client",
+          "clientsFixedByTemplate": "{{client}} only (set by the template's client)",
           "clientsAddAnother": "Add another client",
           "removeClient": "Remove {{name}}",
           "origins": "Ticket source",
@@ -1057,7 +1115,13 @@
             "inbound_email": "Inbound email",
             "api": "API",
             "recurring": "Recurring schedule"
-          }
+          },
+          "clientScopedWarning": "This template is scoped to {{client}}: these rules only apply to {{client}} tickets."
+        },
+        "availableTo": {
+          "label": "Available to",
+          "clear": "All clients",
+          "help": "Leave as All clients to offer this template on every ticket, or pick a client to restrict it to that client's tickets."
         }
       },
       "dialog": {
@@ -1065,13 +1129,17 @@
         "editTemplate": "Edit Checklist Template",
         "createFirstHelp": "Create the template first, then add checklist items and auto-apply rules.",
         "deleteTitle": "Delete Checklist Template",
-        "deleteMessage": "Are you sure you want to delete \"{{name}}\"? Checklists already added to tickets will not be affected."
+        "deleteMessage": "Are you sure you want to delete \"{{name}}\"? Checklists already added to tickets will not be affected.",
+        "duplicateTitle": "Duplicate to Client",
+        "duplicateHelp": "Copy \"{{name}}\" and its items into a new template scoped to one client. The copy is independent: later edits to either template do not affect the other.",
+        "duplicateClientPlaceholder": "Select a client"
       },
       "messages": {
         "success": {
           "created": "Checklist template created successfully",
           "updated": "Checklist template updated successfully",
-          "deleted": "Checklist template deleted successfully"
+          "deleted": "Checklist template deleted successfully",
+          "duplicated": "Checklist template duplicated to client"
         },
         "error": {
           "fetchFailed": "Failed to fetch checklist templates",
@@ -1081,8 +1149,62 @@
           "deleteFailed": "Failed to delete checklist template",
           "updateStatusFailed": "Failed to update template status",
           "itemSaveFailed": "Failed to save checklist item",
-          "ruleSaveFailed": "Failed to save auto-apply rule"
+          "ruleSaveFailed": "Failed to save auto-apply rule",
+          "duplicateFailed": "Failed to duplicate checklist template"
         }
+      },
+      "scope": {
+        "allClients": "All clients",
+        "unknownClient": "Unknown client"
+      },
+      "filter": {
+        "client": "Client",
+        "allClients": "All clients",
+        "clear": "Clear filter"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Board",
+          "category_id": "Category",
+          "subcategory_id": "Subcategory",
+          "priority_id": "Priority",
+          "client_id": "Client",
+          "client_tags": "Client tags",
+          "contact_tags": "Contact tags",
+          "ticket_origin": "Ticket source",
+          "title_folded": "Title",
+          "description_folded": "Description",
+          "from_service_request": "From service request",
+          "service_request_definition_id": "Service request"
+        },
+        "operators": {
+          "equals": "Equals",
+          "not_equals": "Does not equal",
+          "in": "Has any of",
+          "not_in": "Has none of",
+          "contains": "Contains",
+          "starts_with": "Starts with",
+          "ends_with": "Ends with",
+          "is_empty": "Is empty",
+          "is_not_empty": "Is not empty"
+        },
+        "conditions": "Conditions",
+        "match": "Match",
+        "and": "All conditions",
+        "or": "Any condition",
+        "field": "Field",
+        "operator": "Condition",
+        "value": "Value",
+        "yes": "Yes",
+        "no": "No",
+        "advanced": "This rule contains grouped or advanced conditions and is read-only in this editor.",
+        "add": "Add condition",
+        "save": "Save conditions",
+        "enabled": "Enabled",
+        "matchesAll": "Matches every ticket within the template’s ownership.",
+        "matchesNone": "Matches no tickets.",
+        "tagsFailed": "Could not load tag choices. Saved tag selections are preserved.",
+        "retry": "Retry"
       }
     },
     "externalSystems": {
@@ -1423,7 +1545,9 @@
         "saveDomain": "Save Domain",
         "updateDomain": "Update Domain",
         "submitting": "Submitting…",
-        "cancelEdit": "Cancel Edit"
+        "cancelEdit": "Cancel Edit",
+        "confirmUris": "I've registered these — confirm",
+        "confirmingUris": "Confirming…"
       },
       "form": {
         "label": "Custom domain",
@@ -1461,7 +1585,8 @@
         "deploying": "Deploying",
         "active": "Active",
         "disabled": "Disabled",
-        "unknown": "Unknown"
+        "unknown": "Unknown",
+        "pending_redirect_uri": "Pending Redirect URIs"
       },
       "messages": {
         "requestSubmitted": "Custom domain request submitted.",
@@ -1473,9 +1598,32 @@
         "registerFailed": "Failed to register custom domain.",
         "refreshFailed": "Failed to refresh domain status.",
         "retryFailed": "Retry failed.",
-        "disableFailed": "Failed to disable custom domain."
+        "disableFailed": "Failed to disable custom domain.",
+        "confirmUrisFailed": "Failed to confirm redirect URIs.",
+        "urisConfirmed": "Redirect URIs confirmed."
       },
-      "hostedTlsNote": "We will provision TLS certificates automatically once DNS is verified."
+      "hostedTlsNote": "We will provision TLS certificates automatically once DNS is verified.",
+      "surface": {
+        "label": "Serves",
+        "current": "Serves: {{value}}",
+        "updatingSurface": "Saving will change which app this domain serves and restart provisioning.",
+        "options": {
+          "client_portal": "Client portal",
+          "msp": "MSP app",
+          "both": "Both"
+        },
+        "descriptions": {
+          "client_portal": "The domain opens your client portal. This is the default.",
+          "msp": "The domain opens the MSP (technician) app. Single sign-on redirect URIs must be registered first.",
+          "both": "One domain serves both apps. Paths under /msp open the MSP app and paths under /client-portal open the client portal."
+        }
+      },
+      "redirectUris": {
+        "title": "SSO redirect URIs need to be registered",
+        "description": "This domain serves the MSP app, so single sign-on will only work once the redirect URIs below are registered with your SSO provider. The domain stays pending until they are confirmed.",
+        "listLabel": "Register these redirect URIs:",
+        "contactSupport": "Ask your administrator or contact support to register and confirm these redirect URIs."
+      }
     },
     "yourCompanyName": "Your Company Name",
     "brandingPreviewMode": "Branding preview theme mode",
@@ -2379,7 +2527,23 @@
         "nothingImportedBody": "This run created no new records. Every row matched something that already existed, so nothing was changed.",
         "claimedBySamePackage": "Already migrated by this package",
         "claimedByOtherPackage": "Already migrated by {{file}}",
-        "claimedByExistingEntity": "Matched to an existing entity"
+        "claimedByExistingEntity": "Matched to an existing entity",
+        "matchedBySku": "Matched existing product by SKU"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Products (catalog / price list)",
+          "vendorProducts": "Vendor price list (distributor costs)"
+        },
+        "productsHint": "Prices and costs are read as decimal amounts (for example 1,299.50) using the currency column when present, otherwise the tenant currency. Negative, non-numeric or over-precise amounts are dropped and reported; the row is still imported. Products match existing products by SKU; vendor price-list rows reference a product by SKU and create or match the vendor by name."
+      },
+      "configure": {
+        "products": {
+          "title": "Products",
+          "serviceType": "Service type for new products",
+          "serviceTypePlaceholder": "Select a service type",
+          "serviceTypeHelp": "Products whose SKU already exists are matched and left unchanged; only new products are filed under this service type."
+        }
       }
     },
     "jobDetails": {
@@ -2938,7 +3102,8 @@
     "emptyState": "No users available.",
     "roles": {
       "client": "Client User",
-      "internal": "Internal User"
+      "internal": "Internal User",
+      "service": "Service"
     },
     "badge": {
       "inactive": "Inactive"
@@ -3499,6 +3664,36 @@
         "confirm": "Disconnect",
         "cancel": "Cancel"
       }
+    },
+    "loading": "Loading…",
+    "downloadHosts": {
+      "title": "Allowed download hosts",
+      "intro": "When a document is attached by URL, AlgaPSA downloads it only from the hosts listed here. This applies to every caller that attaches documents, including AI agents, API clients and the REST API. Prefer bucket-specific hosts such as acme-uploads.s3.us-east-1.amazonaws.com over broad ones.",
+      "readOnly": "You can view this list. Changing it needs the \"Manage download hosts\" permission.",
+      "builtIn": "Built-in",
+      "empty": "No custom hosts yet.",
+      "add": "Add host",
+      "addTitle": "Add allowed download host",
+      "remove": "Remove",
+      "removeTitle": "Remove host?",
+      "removeMessage": "Downloads from {{host}} will stop working until it is added again.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "A hostname, or *.example.com to allow every subdomain.",
+        "note": "Note (optional)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Used for",
+        "allowed": "Allowed",
+        "note": "Note",
+        "addedBy": "Added by",
+        "addedOn": "Added on"
+      },
+      "errors": {
+        "load": "Failed to load allowed download hosts.",
+        "save": "Could not save the change."
+      }
     }
   },
   "errors": {
@@ -3669,11 +3864,17 @@
       "noLeadingTrailingDot": "Domain cannot start or end with a dot.",
       "notApplianceHost": "Choose a domain other than this server's primary host. The custom portal domain must be a different hostname that your reverse proxy forwards here.",
       "nothingToRetry": "No failed custom domain registration to retry.",
-      "retryOnlyAfterFailure": "Retry is only available after a failed registration."
+      "retryOnlyAfterFailure": "Retry is only available after a failed registration.",
+      "alreadyInUse": "This domain is already in use. Choose a different domain.",
+      "usedByOtherSurface": "This domain is already used by another of your custom domains. To serve the client portal and the MSP app from one domain, choose \"Both\".",
+      "invalidSurface": "Choose where the custom domain is served: client portal, MSP app, or both.",
+      "redirectUrisHosted": "Redirect URIs for hosted domains are registered by platform support.",
+      "nothingToConfirm": "No pending SSO redirect URI confirmation for this domain."
     }
   },
   "common": {
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "cancel": "Cancel"
   },
   "featureFlags": {
     "categories": {
@@ -3853,6 +4054,29 @@
       "default": "Default",
       "empty": "No standard statuses available for import",
       "importSelected": "Import Selected ({{count}})"
+    }
+  },
+  "tagDisplay": {
+    "title": "Display on chips",
+    "subtitle": "Tags shown next to contacts and clients in ticket lists, ticket headers and pickers.",
+    "loading": "Loading…",
+    "description": "Choose which tags show as badges next to contacts and clients, and in what order. A list with no tags shows no badges for that audience.",
+    "contacts": "Contacts",
+    "clients": "Clients",
+    "audienceInternal": "Internal users",
+    "audienceClient": "Client portal",
+    "clientNote": "Starts empty. Tags listed here are visible to the client's own users in the client portal.",
+    "noneSelected": "No tags shown.",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Remove",
+    "addTag": "Add a tag…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Back to Email settings",
+      "title": "Email and identity providers",
+      "description": "Register your own Google or Microsoft application for inbound email, and staff sign-in. These credentials belong to your workspace."
     }
   }
 }

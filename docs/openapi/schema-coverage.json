@@ -132,6 +132,36 @@
     "canonical_schemas": []
   },
   {
+    "route_path": "/api/auth/captcha-config",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/auth/client-portal/sso/discover",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/auth/client-portal/sso/resolve",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
     "route_path": "/api/auth/e2e/google/authorize",
     "edition": "CE",
     "methods": [
@@ -203,6 +233,16 @@
   },
   {
     "route_path": "/api/auth/microsoft/callback",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/auth/microsoft/email-setup/callback",
     "edition": "CE",
     "methods": [
       "GET"
@@ -334,10 +374,60 @@
     "canonical_schemas": []
   },
   {
+    "route_path": "/api/billing/complete-reactivation",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
     "route_path": "/api/billing/licence-count",
     "edition": "CE",
     "methods": [
       "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/billing/reactivation-password-reset",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/billing/reactivation-token",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/billing/reactivation-token/session",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/billing/request-reactivation",
+    "edition": "CE",
+    "methods": [
       "POST"
     ],
     "controller_file": "",
@@ -424,6 +514,26 @@
     "edition": "CE",
     "methods": [
       "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/client-portal/documents/{documentId}/export",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/client-portal/documents/{documentId}/file",
+    "edition": "CE",
+    "methods": [
+      "GET"
     ],
     "controller_file": "",
     "schema_imports": [],
@@ -958,6 +1068,28 @@
     "canonical_schemas": []
   },
   {
+    "route_path": "/api/integrations/entra/diagnostics",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "OPTIONS"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/integrations/entra/diagnostics/clients",
+    "edition": "CE",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
     "route_path": "/api/integrations/entra/disconnect",
     "edition": "CE",
     "methods": [
@@ -1073,6 +1205,17 @@
     "methods": [
       "OPTIONS",
       "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/integrations/hudu",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "OPTIONS"
     ],
     "controller_file": "",
     "schema_imports": [],
@@ -1209,6 +1352,149 @@
     "canonical_schemas": []
   },
   {
+    "route_path": "/api/inventory/sales-orders/{id}/document",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/inventory/sales-orders/{id}/email-confirmation",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/marketing/capture/{tenant}/{slug}",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/marketing/track/click/{tenant}/{enrollmentId}/{stepId}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/marketing/track/open/{tenant}/{enrollmentId}/{stepId}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/marketing/unsubscribe/{tenant}/{enrollmentId}",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/mcp",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/mcp/oauth/authorize",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/mcp/oauth/revoke",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/mcp/oauth/token",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/migrations/export",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/migrations/spreadsheet",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/migrations/upload",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/migrations/{jobId}/report",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
     "route_path": "/api/online-meetings/recordings/{artifactId}",
     "edition": "CE",
     "methods": [
@@ -1332,6 +1618,21 @@
     "canonical_schemas": []
   },
   {
+    "route_path": "/api/scim/v2/{connectionId}/{scimPath}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "OPTIONS",
+      "PATCH",
+      "POST",
+      "PUT"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
     "route_path": "/api/secrets",
     "edition": "CE",
     "methods": [
@@ -1370,6 +1671,16 @@
     "edition": "CE",
     "methods": [
       "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/smart-search/{entity}/stream",
+    "edition": "CE",
+    "methods": [
+      "POST"
     ],
     "controller_file": "",
     "schema_imports": [],
@@ -1477,6 +1788,105 @@
     "canonical_schemas": []
   },
   {
+    "route_path": "/api/telephony/3cx/{tenantSlug}/contacts",
+    "edition": "CE",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/telephony/3cx/{tenantSlug}/lookup",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "OPTIONS"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/telephony/3cx/{tenantSlug}/lookup-by-email",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "OPTIONS"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/telephony/3cx/{tenantSlug}/report-call",
+    "edition": "CE",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/telephony/3cx/{tenantSlug}/report-chat",
+    "edition": "CE",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/telephony/3cx/{tenantSlug}/search",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "OPTIONS"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/telephony/call-recordings/{artifactId}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/telephony/webhooks/teams-calls",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "OPTIONS",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/ticket-comment-attachments/download",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
     "route_path": "/api/tickets/{id}/live-token",
     "edition": "CE",
     "methods": [
@@ -1527,6 +1937,78 @@
     "canonical_schemas": []
   },
   {
+    "route_path": "/api/v1/activities",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/activities/ad-hoc",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/activities/ad-hoc/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "PATCH"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/activities/ad-hoc/{id}/done",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/activities/groups",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/activities/groups/items",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/activities/groups/{groupId}/items",
+    "edition": "CE",
+    "methods": [
+      "PATCH"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
     "route_path": "/api/v1/admin/telemetry-settings",
     "edition": "CE",
     "methods": [
@@ -1546,6 +2028,114 @@
     "controller_file": "",
     "schema_imports": [],
     "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "OPTIONS"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs/access",
+    "edition": "CE",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs/{tenantId}",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "OPTIONS"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/asset-groups",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetGroupController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/common.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/common.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/asset-groups/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetGroupController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/common.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/common.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/asset-groups/{id}/contacts",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetGroupController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/common.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/common.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/asset-groups/{id}/members",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetGroupController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/common.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/common.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/asset-statuses",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/asset.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/asset.ts"
+    ]
   },
   {
     "route_path": "/api/v1/assets",
@@ -1682,6 +2272,20 @@
       "DELETE",
       "GET",
       "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/asset.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/asset.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/assets/{id}/assignments",
+    "edition": "CE",
+    "methods": [
+      "GET"
     ],
     "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts",
     "schema_imports": [
@@ -1873,206 +2477,6 @@
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/asset.ts"
-    ]
-  },
-  {
-    "route_path": "/api/v1/automation/executions",
-    "edition": "CE",
-    "methods": [
-      "GET"
-    ],
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
-    "schema_imports": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ],
-    "canonical_schemas": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ]
-  },
-  {
-    "route_path": "/api/v1/automation/executions/{id}",
-    "edition": "CE",
-    "methods": [
-      "GET"
-    ],
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
-    "schema_imports": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ],
-    "canonical_schemas": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ]
-  },
-  {
-    "route_path": "/api/v1/automation/executions/{id}/retry",
-    "edition": "CE",
-    "methods": [
-      "POST"
-    ],
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
-    "schema_imports": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ],
-    "canonical_schemas": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ]
-  },
-  {
-    "route_path": "/api/v1/automation/meta",
-    "edition": "CE",
-    "methods": [
-      "GET"
-    ],
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
-    "schema_imports": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ],
-    "canonical_schemas": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ]
-  },
-  {
-    "route_path": "/api/v1/automation/performance",
-    "edition": "CE",
-    "methods": [
-      "GET"
-    ],
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
-    "schema_imports": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ],
-    "canonical_schemas": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ]
-  },
-  {
-    "route_path": "/api/v1/automation/rules",
-    "edition": "CE",
-    "methods": [
-      "GET",
-      "POST"
-    ],
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
-    "schema_imports": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ],
-    "canonical_schemas": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ]
-  },
-  {
-    "route_path": "/api/v1/automation/rules/bulk-execute",
-    "edition": "CE",
-    "methods": [
-      "POST"
-    ],
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
-    "schema_imports": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ],
-    "canonical_schemas": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ]
-  },
-  {
-    "route_path": "/api/v1/automation/rules/bulk-status",
-    "edition": "CE",
-    "methods": [
-      "POST"
-    ],
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
-    "schema_imports": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ],
-    "canonical_schemas": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ]
-  },
-  {
-    "route_path": "/api/v1/automation/rules/{id}",
-    "edition": "CE",
-    "methods": [
-      "DELETE",
-      "GET",
-      "PUT"
-    ],
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
-    "schema_imports": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ],
-    "canonical_schemas": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ]
-  },
-  {
-    "route_path": "/api/v1/automation/rules/{id}/execute",
-    "edition": "CE",
-    "methods": [
-      "POST"
-    ],
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
-    "schema_imports": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ],
-    "canonical_schemas": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ]
-  },
-  {
-    "route_path": "/api/v1/automation/statistics",
-    "edition": "CE",
-    "methods": [
-      "GET"
-    ],
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
-    "schema_imports": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ],
-    "canonical_schemas": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ]
-  },
-  {
-    "route_path": "/api/v1/automation/templates",
-    "edition": "CE",
-    "methods": [
-      "GET",
-      "POST"
-    ],
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
-    "schema_imports": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ],
-    "canonical_schemas": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ]
-  },
-  {
-    "route_path": "/api/v1/automation/templates/{id}",
-    "edition": "CE",
-    "methods": [
-      "GET"
-    ],
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
-    "schema_imports": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ],
-    "canonical_schemas": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ]
-  },
-  {
-    "route_path": "/api/v1/automation/templates/{id}/use",
-    "edition": "CE",
-    "methods": [
-      "POST"
-    ],
-    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
-    "schema_imports": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
-    ],
-    "canonical_schemas": [
-      "server/src/lib/api/schemas/automationSchemas.ts"
     ]
   },
   {
@@ -2351,6 +2755,21 @@
     ]
   },
   {
+    "route_path": "/api/v1/clients/{id}/billing-profiles/{profileId}/contacts",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiClientController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/client.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/client.ts"
+    ]
+  },
+  {
     "route_path": "/api/v1/clients/{id}/contacts",
     "edition": "CE",
     "methods": [
@@ -2378,6 +2797,61 @@
     "canonical_schemas": [
       "server/src/lib/api/schemas/client.ts"
     ]
+  },
+  {
+    "route_path": "/api/v1/clients/{id}/locations/{locationId}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiClientController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/client.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/client.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/clients/{id}/merge",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiClientController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/client.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/client.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/clients/{id}/merge/preview",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiClientController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/client.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/client.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/clients/{id}/notes",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
   },
   {
     "route_path": "/api/v1/comments",
@@ -2482,6 +2956,21 @@
       "DELETE",
       "GET",
       "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiContactController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/contact.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/contact.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/contacts/{id}/avatar",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "POST"
     ],
     "controller_file": "server/src/lib/api/controllers/ApiContactController.ts",
     "schema_imports": [
@@ -2782,6 +3271,16 @@
     ]
   },
   {
+    "route_path": "/api/v1/countries",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiCountryController.ts",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
     "route_path": "/api/v1/documents",
     "edition": "CE",
     "methods": [
@@ -2800,6 +3299,36 @@
     "controller_file": "",
     "schema_imports": [],
     "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/email/templates",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiEmailTemplateController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/emailTemplateSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/emailTemplateSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/email/templates/{name}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiEmailTemplateController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/emailTemplateSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/emailTemplateSchemas.ts"
+    ]
   },
   {
     "route_path": "/api/v1/extensions/install",
@@ -2983,20 +3512,6 @@
     ]
   },
   {
-    "route_path": "/api/v1/financial/credits/validate",
-    "edition": "CE",
-    "methods": [
-      "POST"
-    ],
-    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
-    "schema_imports": [
-      "server/src/lib/api/schemas/financialSchemas.ts"
-    ],
-    "canonical_schemas": [
-      "server/src/lib/api/schemas/financialSchemas.ts"
-    ]
-  },
-  {
     "route_path": "/api/v1/financial/invoices",
     "edition": "CE",
     "methods": [
@@ -3060,34 +3575,6 @@
       "DELETE",
       "GET",
       "PUT"
-    ],
-    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
-    "schema_imports": [
-      "server/src/lib/api/schemas/financialSchemas.ts"
-    ],
-    "canonical_schemas": [
-      "server/src/lib/api/schemas/financialSchemas.ts"
-    ]
-  },
-  {
-    "route_path": "/api/v1/financial/reconciliation/run",
-    "edition": "CE",
-    "methods": [
-      "POST"
-    ],
-    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
-    "schema_imports": [
-      "server/src/lib/api/schemas/financialSchemas.ts"
-    ],
-    "canonical_schemas": [
-      "server/src/lib/api/schemas/financialSchemas.ts"
-    ]
-  },
-  {
-    "route_path": "/api/v1/financial/reconciliation/{id}/resolve",
-    "edition": "CE",
-    "methods": [
-      "POST"
     ],
     "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
     "schema_imports": [
@@ -3732,6 +4219,343 @@
     ]
   },
   {
+    "route_path": "/api/v1/integrations/rmm",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/integrations/rmm/{provider}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/integrations/rmm/{provider}/device-sync",
+    "edition": "CE",
+    "methods": [
+      "PUT"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/integrations/rmm/{provider}/sync",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/interaction-statuses",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInteractionController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/interactionSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/interactionSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/interaction-types",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInteractionController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/interactionSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/interactionSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/interactions",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInteractionController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/interactionSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/interactionSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/interactions/{id}",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInteractionController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/interactionSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/interactionSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/inventory/adjustments",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInventoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/inventory/counts",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInventoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/inventory/counts/{sessionId}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInventoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/inventory/counts/{sessionId}/cancel",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInventoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/inventory/counts/{sessionId}/records",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInventoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/inventory/counts/{sessionId}/submit",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInventoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/inventory/lookup",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInventoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/inventory/purchase-orders",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInventoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/inventory/purchase-orders/{poId}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInventoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/inventory/purchase-orders/{poId}/lines/{lineId}/receive",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInventoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/inventory/receipts",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInventoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/inventory/stock",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInventoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/inventory/stock-locations",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInventoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/inventory/transfers",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInventoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/inventory/transfers/{transferId}/receive",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInventoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/inventory/units",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInventoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/inventory/units/{unitId}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInventoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/inventorySchemas.ts"
+    ]
+  },
+  {
     "route_path": "/api/v1/invoices",
     "edition": "CE",
     "methods": [
@@ -4204,6 +5028,376 @@
     ]
   },
   {
+    "route_path": "/api/v1/marketing/campaigns",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/marketing/campaigns/{id}",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/marketing/campaigns/{id}/funnel",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/marketing/channels",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/marketing/channels/{id}",
+    "edition": "CE",
+    "methods": [
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/marketing/content",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/marketing/content/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/marketing/forms",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/marketing/forms/{id}",
+    "edition": "CE",
+    "methods": [
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/marketing/posts",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/marketing/posts/awaiting-publish",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/marketing/posts/queue",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/marketing/posts/targets/{targetId}/publish",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/marketing/posts/targets/{targetId}/skip",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/marketing/posts/{id}/reschedule",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/marketing/sequences",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/marketing/sequences/enrollments/{enrollmentId}/unenroll",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/marketing/sequences/{id}",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/marketing/sequences/{id}/enroll",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMarketingController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/marketingSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/mcp/agents",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PATCH",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/mcp/audit",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/mcp/connect/callback",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/mcp/connect/start",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/mcp/connections",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/mcp/idp-providers",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/mcp/idp-suggestions",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/mcp/platform-providers",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/mcp/roles",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
     "route_path": "/api/v1/meta/docs",
     "edition": "CE",
     "methods": [
@@ -4237,6 +5431,22 @@
   },
   {
     "route_path": "/api/v1/meta/health",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/metadataSchemas.ts",
+      "server/src/lib/api/schemas/metadataSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/metadataSchemas.ts",
+      "server/src/lib/api/schemas/metadataSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/meta/mcp-registry",
     "edition": "CE",
     "methods": [
       "GET"
@@ -4454,6 +5664,16 @@
     "canonical_schemas": []
   },
   {
+    "route_path": "/api/v1/mobile/me/capabilities",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMobileCapabilitiesController.ts",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
     "route_path": "/api/v1/mobile/moderation/mutes",
     "edition": "CE",
     "methods": [
@@ -4489,11 +5709,391 @@
     "edition": "CE",
     "methods": [
       "DELETE",
+      "PATCH",
       "PUT"
     ],
     "controller_file": "",
     "schema_imports": [],
     "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/mobile/push-token/test",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/opportunities",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiOpportunityController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/opportunities/calibration",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/opportunities/forecast",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/opportunities/meeting-sessions",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/opportunities/meeting-sessions/active",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/opportunities/meeting-sessions/{sessionId}/reviews",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/opportunities/qbr/yield",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/opportunities/qbr/{clientId}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/opportunities/qbr/{clientId}/opportunities",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/opportunities/rollups",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/opportunities/suggestions",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiOpportunityController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/opportunities/suggestions/{id}/accept",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiOpportunityController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/opportunities/suggestions/{id}/dismiss",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiOpportunityController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/opportunities/suggestions/{id}/snooze",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiOpportunityController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/opportunities/work-queue",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiOpportunityController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/opportunities/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PATCH",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiOpportunityController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/opportunities/{id}/commitments",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/opportunities/{id}/commitments/{commitmentId}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/opportunities/{id}/complete-action",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiOpportunityController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/opportunities/{id}/evidence",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiOpportunityController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/opportunities/{id}/evidence/{evidenceId}/correct",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiOpportunityController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/opportunities/{id}/lose",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiOpportunityController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/opportunities/{id}/quotes/{quoteId}/link",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiOpportunityController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/opportunities/{id}/quotes/{quoteId}/unlink",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiOpportunityController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/opportunities/{id}/stage",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiOpportunityController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/opportunities/{id}/steps",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiOpportunityController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/opportunities/{id}/steps/{stepId}/complete",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiOpportunityController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/opportunities/{id}/timeline",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiOpportunityController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/opportunities/{id}/win",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiOpportunityController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/opportunitySchemas.ts"
+    ]
   },
   {
     "route_path": "/api/v1/permission-checks",
@@ -4921,6 +6521,65 @@
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/project.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects/tasks/{taskId}/checklist/{itemId}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/project.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/project.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects/tasks/{taskId}/comments",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectTaskCommentController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/projectTaskComment.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/projectTaskComment.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects/tasks/{taskId}/comments/{commentId}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectTaskCommentController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/projectTaskComment.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/projectTaskComment.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects/tasks/{taskId}/comments/{commentId}/reactions",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectTaskCommentController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/projectTaskComment.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/projectTaskComment.ts"
     ]
   },
   {
@@ -5807,10 +7466,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -5821,10 +7482,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -5837,10 +7500,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -5851,10 +7516,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -6622,10 +8289,30 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tickets/by-external-link",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6639,10 +8326,12 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6665,10 +8354,12 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6681,10 +8372,12 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6709,10 +8402,49 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tickets/{id}/agents",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tickets/{id}/agents/{userId}",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6726,10 +8458,12 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6742,10 +8476,12 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6758,10 +8494,12 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6776,10 +8514,12 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6792,10 +8532,12 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6808,10 +8550,12 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6824,10 +8568,12 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6840,10 +8586,49 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tickets/{id}/checklist",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tickets/{id}/checklist/{itemId}",
+    "edition": "CE",
+    "methods": [
+      "PATCH"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6857,10 +8642,12 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6873,10 +8660,12 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6891,6 +8680,24 @@
     "canonical_schemas": []
   },
   {
+    "route_path": "/api/v1/tickets/{id}/comments/{commentId}/schedule",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ]
+  },
+  {
     "route_path": "/api/v1/tickets/{id}/documents",
     "edition": "CE",
     "methods": [
@@ -6900,10 +8707,12 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6917,10 +8726,86 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tickets/{id}/documents/{documentId}/preview",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tickets/{id}/documents/{documentId}/thumbnail",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tickets/{id}/external-links",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tickets/{id}/external-links/{linkId}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "PATCH"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6934,10 +8819,12 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6950,10 +8837,31 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tickets/{id}/team",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
+      "server/src/lib/api/schemas/ticketBundle.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -6966,10 +8874,12 @@
     "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
     "schema_imports": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ],
     "canonical_schemas": [
       "server/src/lib/api/schemas/ticket.ts",
+      "server/src/lib/api/schemas/common.ts",
       "server/src/lib/api/schemas/ticketBundle.ts"
     ]
   },
@@ -7155,10 +9065,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7169,10 +9081,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7185,10 +9099,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7199,10 +9115,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7213,10 +9131,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7228,10 +9148,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7242,10 +9164,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7256,10 +9180,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7270,10 +9196,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7286,10 +9214,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7300,10 +9230,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7314,10 +9246,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7328,10 +9262,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7342,10 +9278,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7356,10 +9294,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7370,10 +9310,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7384,10 +9326,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7398,10 +9342,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7412,10 +9358,12 @@
     ],
     "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/timeSheet.ts"
+      "server/src/lib/api/schemas/timeSheet.ts",
+      "server/src/lib/api/schemas/common.ts"
     ]
   },
   {
@@ -7902,6 +9850,20 @@
     ]
   },
   {
+    "route_path": "/api/v1/webhooks/{id}/retry-failed",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
     "route_path": "/api/v1/webhooks/{id}/secret/rotate",
     "edition": "CE",
     "methods": [
@@ -7954,6 +9916,89 @@
     "canonical_schemas": []
   },
   {
+    "route_path": "/api/v1/workflows/tasks",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/workflows/tasks/{id}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/workflows/tasks/{id}/claim",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/workflows/tasks/{id}/complete",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/workflows/tasks/{id}/unclaim",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/webhooks/ai-gateway",
+    "edition": "CE",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/webhooks/alternative-payments",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/webhooks/levelio",
+    "edition": "CE",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
     "route_path": "/api/webhooks/ninjaone",
     "edition": "CE",
     "methods": [
@@ -7969,6 +10014,7 @@
     "route_path": "/api/webhooks/stripe",
     "edition": "CE",
     "methods": [
+      "GET",
       "POST"
     ],
     "controller_file": "",
@@ -7979,6 +10025,7 @@
     "route_path": "/api/webhooks/stripe/payments",
     "edition": "CE",
     "methods": [
+      "GET",
       "POST"
     ],
     "controller_file": "",
@@ -8009,6 +10056,26 @@
   },
   {
     "route_path": "/api/workflow-definitions/import",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/workflow-definitions/simulate",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/workflow-definitions/validate",
     "edition": "CE",
     "methods": [
       "POST"
@@ -8200,36 +10267,6 @@
     "canonical_schemas": []
   },
   {
-    "route_path": "/api/workflow-runs/{runId}/requeue",
-    "edition": "CE",
-    "methods": [
-      "POST"
-    ],
-    "controller_file": "",
-    "schema_imports": [],
-    "canonical_schemas": []
-  },
-  {
-    "route_path": "/api/workflow-runs/{runId}/resume",
-    "edition": "CE",
-    "methods": [
-      "POST"
-    ],
-    "controller_file": "",
-    "schema_imports": [],
-    "canonical_schemas": []
-  },
-  {
-    "route_path": "/api/workflow-runs/{runId}/retry",
-    "edition": "CE",
-    "methods": [
-      "POST"
-    ],
-    "controller_file": "",
-    "schema_imports": [],
-    "canonical_schemas": []
-  },
-  {
     "route_path": "/api/workflow-runs/{runId}/steps",
     "edition": "CE",
     "methods": [
@@ -8311,7 +10348,27 @@
     "canonical_schemas": []
   },
   {
+    "route_path": "/api/workflow/registry/authoring-guide",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
     "route_path": "/api/workflow/registry/designer-catalog",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/workflow/registry/events",
     "edition": "CE",
     "methods": [
       "GET"
@@ -8365,6 +10422,66 @@
     "edition": "EE",
     "methods": [
       "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/billing/check-tenant",
+    "edition": "EE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/billing/complete-reactivation",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/billing/reactivation-password-reset",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/billing/reactivation-token",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/billing/reactivation-token/session",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/billing/request-reactivation",
+    "edition": "EE",
+    "methods": [
+      "POST"
     ],
     "controller_file": "",
     "schema_imports": [],
@@ -8571,6 +10688,26 @@
     "canonical_schemas": []
   },
   {
+    "route_path": "/api/integrations/entra/diagnostics",
+    "edition": "EE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/integrations/entra/diagnostics/clients",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
     "route_path": "/api/integrations/entra/disconnect",
     "edition": "EE",
     "methods": [
@@ -8591,10 +10728,63 @@
     "canonical_schemas": []
   },
   {
+    "route_path": "/api/integrations/entra/filters",
+    "edition": "EE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/integrations/entra/filters/managed",
+    "edition": "EE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/integrations/entra/filters/{managedTenantId}",
+    "edition": "EE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/integrations/entra/mappings",
+    "edition": "EE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
     "route_path": "/api/integrations/entra/mappings/confirm",
     "edition": "EE",
     "methods": [
       "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/integrations/entra/mappings/groups",
+    "edition": "EE",
+    "methods": [
+      "GET"
     ],
     "controller_file": "",
     "schema_imports": [],
@@ -8641,6 +10831,16 @@
     "canonical_schemas": []
   },
   {
+    "route_path": "/api/integrations/entra/reconciliation-queue/dismiss",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
     "route_path": "/api/integrations/entra/reconciliation-queue/resolve-existing",
     "edition": "EE",
     "methods": [
@@ -8661,7 +10861,28 @@
     "canonical_schemas": []
   },
   {
+    "route_path": "/api/integrations/entra/schedule",
+    "edition": "EE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
     "route_path": "/api/integrations/entra/sync",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/integrations/entra/sync/preflight",
     "edition": "EE",
     "methods": [
       "POST"
@@ -8705,6 +10926,16 @@
     "edition": "EE",
     "methods": [
       "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/integrations/hudu",
+    "edition": "EE",
+    "methods": [
+      "GET"
     ],
     "controller_file": "",
     "schema_imports": [],
@@ -8791,6 +11022,31 @@
     "canonical_schemas": []
   },
   {
+    "route_path": "/api/scim/v2/{connectionId}/{scimPath}",
+    "edition": "EE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "OPTIONS",
+      "PATCH",
+      "POST",
+      "PUT"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/smart-search/{entity}/stream",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
     "route_path": "/api/teams/auth/callback/bot",
     "edition": "EE",
     "methods": [
@@ -8865,6 +11121,168 @@
   },
   {
     "route_path": "/api/teams/quick-actions",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs",
+    "edition": "EE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs/access",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs/workflows/{workflowId}",
+    "edition": "EE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs/{tenantId}",
+    "edition": "EE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs/{tenantId}/airgap-key",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs/{tenantId}/appliances/{applianceId}/revoke",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs/{tenantId}/audit",
+    "edition": "EE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs/{tenantId}/billing",
+    "edition": "EE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs/{tenantId}/entitlement",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs/{tenantId}/extend-pro",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs/{tenantId}/pause-billing",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs/{tenantId}/reissue-activation-code",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs/{tenantId}/reissue-install-code",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs/{tenantId}/resume-billing",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs/{tenantId}/revoke",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/appliance-installs/{tenantId}/status",
     "edition": "EE",
     "methods": [
       "POST"
@@ -9202,6 +11620,28 @@
     "route_path": "/api/v1/tenant-management/tenants/{tenantId}/addons",
     "edition": "EE",
     "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/webhooks/ai-gateway",
+    "edition": "EE",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/webhooks/levelio",
+    "edition": "EE",
+    "methods": [
+      "OPTIONS",
       "POST"
     ],
     "controller_file": "",

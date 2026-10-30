@@ -4,6 +4,7 @@ export default defineConfig({
   entry: {
     index: 'src/index.ts',
     StorageService: 'src/StorageService.ts',
+    fileUploadTransaction: 'src/fileUploadTransaction.ts',
     StorageProviderFactory: 'src/StorageProviderFactory.ts',
     'models/storage': 'src/models/storage.ts',
     'types/storage': 'src/types/storage.ts',

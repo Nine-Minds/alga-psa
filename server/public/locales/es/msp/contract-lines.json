@@ -135,7 +135,6 @@
         "overtime": {
           "enableLabel": "Habilitar tarifas de horas extras",
           "rateHelp": "Tarifa aplicada después del umbral.",
-          "rateLabel": "Tarifa de horas extras ($/hora)",
           "thresholdHelp": "Horas antes de que aplique OT.",
           "thresholdLabel": "Umbral de horas extras (horas/período)",
           "thresholdPlaceholder": "40",
@@ -375,7 +374,6 @@
     },
     "hourlyConfig": {
       "labels": {
-        "hourlyRate": "Tarifa por hora ($)",
         "minimumBillableTime": "Tiempo mínimo facturable (minutos)",
         "roundUpToNearest": "Redondear al más cercano (minutos)"
       },
@@ -398,7 +396,6 @@
           "technician": "Técnico"
         },
         "perHourSuffix": "/hora",
-        "rateSrLabel": "Tarifa ($/hora)",
         "selectTypePlaceholder": "Seleccionar tipo",
         "tooltip": "Defina diferentes tarifas por hora para tipos de usuarios específicos que trabajan en este servicio. Estos anulan la tarifa por hora predeterminada del servicio.",
         "userTypeSrLabel": "Tipo de usuario",
@@ -822,7 +819,8 @@
       "notAllowed": "Uno de los valores de la línea de contrato no está permitido. Revise el formulario e inténtelo de nuevo.",
       "missingField": "Falta un campo obligatorio de la línea de contrato.",
       "missingFieldNamed": "Falta un campo obligatorio de la línea de contrato: {{field}}.",
-      "advanceTimingNotAllowed": "La facturación por adelantado solo está disponible para líneas de contrato fijas. Las líneas por horas y por uso siempre se facturan al vencimiento, después de realizar el trabajo."
+      "advanceTimingNotAllowed": "La facturación por adelantado solo está disponible para líneas de contrato fijas. Las líneas por horas y por uso siempre se facturan al vencimiento, después de realizar el trabajo.",
+      "versionConflict": "Esta línea de contrato fue modificada por otra persona desde que empezó a editarla. Vuelva a cargarla y aplique de nuevo su edición."
     },
     "templateLine": {
       "unavailable": "La línea de plantilla seleccionada ya no está disponible. Actualice la página e inténtelo de nuevo."

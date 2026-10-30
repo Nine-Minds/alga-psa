@@ -3,13 +3,13 @@ import { Pressable, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { TicketBundleMember, TicketBundleView } from "../../../api/tickets";
-import type { TicketBundleRole } from "../../../screens/ticketsBundle";
+import { isBundleChildLocked, type TicketBundleRole } from "../../../screens/ticketsBundle";
 import { useTheme } from "../../../ui/ThemeContext";
 
 /**
  * Web parity for bundle membership: children get an amber "bundled under"
- * banner (workflow fields locked), masters get a panel listing their children
- * and the sync mode. Tapping a member opens that ticket.
+ * banner (noting locked workflow fields only under a sync_updates master),
+ * masters get a panel listing their children and the sync mode. Tapping a member opens that ticket.
  */
 export function BundleBanner({
   role,
@@ -33,6 +33,7 @@ export function BundleBanner({
     const masterId = bundle?.master?.ticket_id ?? bundle?.master_ticket_id ?? null;
     const masterNumber = bundle?.master?.ticket_number ?? masterTicketNumber ?? t("detail.bundle.master", "master");
     const palette = colors.badge.warning;
+    const locked = isBundleChildLocked(bundle);
     return (
       <Pressable
         onPress={masterId && onOpenTicket ? () => onOpenTicket(masterId) : undefined}
@@ -57,7 +58,9 @@ export function BundleBanner({
             {t("detail.bundle.childBanner", { number: masterNumber, defaultValue: "This ticket is bundled under {{number}}." })}
           </Text>
           <Text style={{ ...typography.caption, color: palette.text, marginTop: 2 }}>
-            {t("detail.bundle.locked", "Status, priority and assignee are locked; work from the master ticket.")}
+            {locked
+              ? t("detail.bundle.locked", "Status, priority and assignee are locked; work from the master ticket.")
+              : t("detail.bundle.linkOnly", "Linked to the master and managed on its own.")}
           </Text>
         </View>
         {masterId ? <Feather name="chevron-right" size={16} color={palette.text} /> : null}

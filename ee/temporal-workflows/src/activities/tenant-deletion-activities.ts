@@ -13,6 +13,8 @@ import { Client, Connection } from '@temporalio/client';
 import crypto from 'crypto';
 import { getAdminConnection, refreshAdminConnection } from '@alga-psa/db/admin.js';
 import { getTenantTableScope, retryOnReadOnly, tenantDb, type TenantTableScope } from '@alga-psa/db';
+// Subpath import: the activity suites mock the '@alga-psa/db' barrel with a fixed export set.
+import { tenantDeletionOrder } from '@alga-psa/db/tenantTableManifest';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
 import { getSecret } from '@alga-psa/core/secrets';
@@ -53,194 +55,204 @@ export {
  *
  * Synced from cli/cleanup-tenant.nu
  */
-const TENANT_TABLES_DELETION_ORDER: string[] = [
-  // Outbound sender routes reference sender addresses and boards; addresses
-  // also reference email providers. Delete the route rows first, then senders,
-  // before any of those parent tables.
-  'email_sender_routes', 'email_sender_addresses',
-  // === LEVEL 0: Sessions (CRITICAL - must be deleted before users/tenants) ===
+export const TENANT_TABLES_DELETION_ORDER: string[] = [
+  'email_sender_routes',
+  'email_sender_addresses',
+  // rma_cases has a NO ACTION FK to asset_custody (rma_cases_custody_fk) plus FKs to clients/assets/
+  // stock_units/tickets deleted later, so rma_events (FK to rma_cases) then rma_cases precede asset_custody.
+  'rma_events',
+  'rma_cases',
+  'asset_custody_events',
+  'asset_custody',
   'sessions',
-
-  // === Inventory module (children first; parent stock_locations last).
-  // vendors is NOT deleted here even though it is this module's other
-  // top-level parent: 20261009120000 added assets.vendor_id -> vendors
-  // (NO ACTION), and assets sits far below in the Asset details block, so
-  // vendors has to move down with it (see the comment near the assets entry). ===
-  'stock_movements', 'stock_transfer_lines', 'rma_cases', 'kit_components',
-  'stock_levels', 'product_inventory_settings', 'count_lines', 'vendor_bill_lines',
-  'po_landed_costs', 'purchase_order_lines', 'sales_order_lines',
-  'document_template_assignments', 'vendor_products', 'ghost_usage_reviews',
-  'stock_units', 'count_sessions', 'vendor_bills', 'sales_orders',
-  'stock_transfers', 'purchase_orders', 'document_templates',
+  'staging_container_members',
+  'staging_containers',
+  'stock_movements',
+  'stock_transfer_lines',
+  'kit_components',
+  'stock_levels',
+  'product_inventory_settings',
+  'count_lines',
+  'vendor_bill_lines',
+  'po_landed_costs',
+  'purchase_order_lines',
+  'sales_order_lines',
+  'document_template_assignments',
+  'vendor_products',
+  'ghost_usage_reviews',
+  'project_staging_lines',
+  'stock_units',
+  'count_sessions',
+  'vendor_bills',
+  'sales_orders',
+  'stock_transfers',
+  'purchase_orders',
+  'document_templates',
   'stock_locations',
-
-  // === LEVEL 1: Leaf tables with no dependencies ===
-  // Global search index (no FKs, denormalized projection)
   'app_search_index',
-
-  // Workflow task details
-  'workflow_task_history', 'workflow_form_schemas',
-
-  // Workflow runtime V2 (child tables first, then parent)
-  'workflow_run_steps', 'workflow_run_waits', 'workflow_run_snapshots',
-  'workflow_action_invocations', 'workflow_definition_versions',
-  'workflow_run_logs', 'workflow_event_launch_skips', 'workflow_runtime_events',
+  'workflow_task_history',
+  'workflow_form_schemas',
+  'workflow_run_steps',
+  'workflow_run_waits',
+  'workflow_run_snapshots',
+  'workflow_action_invocations',
+  'workflow_definition_versions',
+  'workflow_run_logs',
+  'workflow_event_launch_skips',
+  'workflow_runtime_events',
   'workflow_step_usage_periods',
-  // Workflow data store + entity links (standalone; created_by_run_id is a soft
-  // ref with no FK, so order among these does not matter)
-  'workflow_data_store', 'workflow_entity_links',
-  // Date trigger emission ledger (FK only to tenants)
+  'workflow_data_store',
+  'workflow_entity_links',
   'date_trigger_emissions',
-  'workflow_runs', 'tenant_workflow_schedule', 'workflow_definitions',
-
-  // === Marketing module (children first; campaigns/channels last).
-  // Engagements cascade from interactions, but the whole module block sits
-  // ahead of interactions/contacts/users, which its NO ACTION FKs reference.
-  'marketing_sequence_sends', 'marketing_engagements', 'social_post_targets',
-  'social_posts', 'marketing_sequence_enrollments', 'marketing_sequence_steps',
-  'marketing_sequences', 'marketing_capture_forms', 'marketing_content',
-  'marketing_contact_state', 'marketing_suppressions', 'marketing_channels',
+  'workflow_runs',
+  'tenant_workflow_schedule',
+  'workflow_definitions',
+  'marketing_sequence_sends',
+  'marketing_engagements',
+  'social_post_targets',
+  'social_posts',
+  'marketing_sequence_enrollments',
+  'marketing_sequence_steps',
+  'marketing_sequences',
+  'marketing_capture_forms',
+  'marketing_content',
+  'marketing_contact_state',
+  'marketing_suppressions',
+  'marketing_channels',
   'marketing_campaigns',
-
-  // Interactions reference opportunities, while opportunities can reference
-  // converted contracts. Keep the complete sales chain child-first here.
-  'interactions', 'interaction_types',
-
-  // Task/project details
-  'task_checklist_items', 'project_task_dependencies', 'task_resources',
-  'project_ticket_links', 'project_task_comment_reactions', 'project_task_comments',
-  'project_materials', 'ticket_materials',
-
-  // Project template details
-  'project_template_checklist_items', 'project_template_dependencies',
-  'project_template_task_resources', 'project_template_status_mappings',
-  'project_template_tasks', 'project_template_phases', 'project_templates',
-
-  // Quote details
-  'quote_activities', 'quote_items', 'quote_document_template_assignments',
-  'quote_document_templates', 'standard_quote_document_templates', 'quotes',
-
-  // Opportunity management and core records. Quotes and interactions are
-  // deleted first because both reference opportunities. Reviews depend on
-  // sessions and opportunities; the other detail tables depend on
-  // opportunities. The opportunity_suggestions/opportunities back-reference
-  // is cleared by breakCircularDependencies() before this order runs.
-  // opportunity_steps holds the per-deal plan and references opportunities and
-  // users, so it goes first; opportunity_step_templates is per-tenant stage
-  // config that outlives any single deal, so it is cleared in the same block.
-  'opportunity_meeting_reviews', 'opportunity_commitments',
-  'opportunity_steps', 'opportunity_step_templates',
-  'opportunity_evidence', 'opportunity_qbr_triggers', 'opportunity_suggestions',
-  'opportunity_meeting_sessions', 'opportunity_settings', 'opportunities',
-
-  // Invoice details
-  // invoice_adjustment_operations is a FK-less manual-save idempotency ledger,
-  // so it can drop with the invoice rows it keys.
+  'interactions',
+  'interaction_types',
+  'task_checklist_items',
+  'project_task_dependencies',
+  'task_resources',
+  'project_ticket_links',
+  'project_task_comment_reactions',
+  'project_task_comments',
+  'project_materials',
+  'ticket_materials',
+  'project_template_checklist_items',
+  'project_template_dependencies',
+  'project_template_task_resources',
+  'project_template_status_mappings',
+  'project_template_tasks',
+  'project_template_phases',
+  'project_templates',
+  'quote_activities',
+  'quote_items',
+  'quote_document_template_assignments',
+  'quote_document_templates',
+  'standard_quote_document_templates',
+  'quotes',
+  'opportunity_meeting_reviews',
+  'opportunity_commitments',
+  'opportunity_steps',
+  'opportunity_step_templates',
+  'opportunity_evidence',
+  'opportunity_qbr_triggers',
+  'opportunity_suggestions',
+  'opportunity_meeting_sessions',
+  'opportunity_settings',
+  'opportunities',
   'invoice_adjustment_operations',
-  'invoice_charges', 'invoice_annotations', 'invoice_time_entries', 'invoice_usage_records',
-  'invoice_charge_details', 'invoice_charge_fixed_details', 'invoice_items',
-  'invoice_autopay_attempts', 'billing_profile_autopay', 'invoice_payment_links', 'invoice_payments', 'invoice_template_assignments',
-
-  // Prepaid hour blocks. The three child tables FK to hour_blocks, so they go
-  // first; hour_blocks itself FKs to time_entries, service_catalog, invoices and
-  // clients, so the whole group has to precede time tracking below.
-  // Prepaid Block issuances soft-reference hour_blocks, invoices and alerts
-  // (SET NULL) and hour_blocks references them back (SET NULL), so the ledger
-  // goes with the hour-block group ahead of contract lines.
-  'contract_line_block_issuances',
-  'hour_block_audit', 'hour_block_service_scopes', 'hour_block_time_allocations',
+  'invoice_charges',
+  'invoice_annotations',
+  'invoice_time_entries',
+  'invoice_usage_records',
+  'invoice_charge_details',
+  'invoice_charge_fixed_details',
+  'invoice_items',
+  'invoice_autopay_attempts',
+  'billing_profile_autopay',
+  'invoice_payment_links',
+  'invoice_payments',
+  'payment_confirmation_emails',
+  'invoice_template_assignments',
+  'hour_block_audit',
+  'hour_block_service_scopes',
+  'hour_block_time_allocations',
   'hour_blocks',
-
-  // Time tracking. Stopwatch sessions, their segments and suggestion
-  // dismissals FK only to users (segments cascade from sessions).
-  'time_tracking_session_segments', 'time_tracking_sessions', 'time_entry_suggestion_dismissals',
-  'time_sheet_comments', 'time_entry_change_requests', 'time_entries', 'time_sheets',
+  'contract_line_block_issuances',
+  'time_tracking_session_segments',
+  'time_tracking_sessions',
+  'time_entry_suggestion_dismissals',
+  'time_sheet_comments',
+  'time_entry_change_requests',
+  'time_entries',
+  'time_sheets',
   'user_cost_rates',
-
-  // Document details
-  'document_block_content', 'document_versions', 'document_content',
-  'document_folders', 'document_system_entries',
-
-  // Ticket bundle mirrors (must be before comments due to FK on comments)
+  'document_block_content',
+  'document_versions',
+  'document_content',
+  'document_folders',
+  'document_system_entries',
   'ticket_bundle_mirrors',
-
-  // Ticket comment attachment lifecycle (no FKs; rows reference comments,
-  // documents and tickets by id, so delete them before those tables)
-  'ticket_comment_attachment_challenges', 'ticket_comment_attachments',
+  'ticket_comment_attachment_challenges',
+  'ticket_comment_attachments',
   'ticket_comment_email_deliveries',
-
-  // Messages and comments
-  // vectors and email_reply_tokens reference comments with NO ACTION, so they
-  // must be deleted before comments to avoid FK violations.
-  // comment_threads is the parent of comments.thread_id / project_task_comments.thread_id
-  // (both CASCADE) and email_sending_logs.comment_thread_id (SET NULL); it must be
-  // deleted AFTER comments and project_task_comments (which are removed above).
-  'comment_reactions', 'vectors', 'email_reply_tokens', 'comments', 'comment_threads',
-  'gmail_processed_history', 'email_processed_attachments', 'email_processed_messages',
-  'email_sending_logs', 'email_rate_limits',
-
-  // MSP SSO domain claim lifecycle (dependent challenges before claim rows)
-  'msp_sso_domain_verification_challenges', 'msp_sso_tenant_login_domains',
-
-  // Microsoft profile and Teams observability bindings (dependents before profile definitions)
+  'comment_reactions',
+  'vectors',
+  'email_reply_tokens',
+  'comments',
+  'comment_threads',
+  'gmail_processed_history',
+  'email_processed_attachments',
+  'email_processed_messages',
+  'email_sending_logs',
+  'email_rate_limits',
+  'msp_sso_domain_verification_challenges',
+  'msp_sso_tenant_login_domains',
   'microsoft_profile_consumer_bindings',
-  'teams_notification_deliveries', 'teams_audit_events', 'teams_conversation_references',
-  'teams_integrations', 'microsoft_profiles',
-
-  // Telephony (artifacts hang off call records; providers hold the subscription)
-  'telephony_call_artifacts', 'telephony_call_intents', 'telephony_call_records', 'telephony_chat_records', 'telephony_providers',
-
-  // Authorization bundles
-  // assignments/rules must be deleted before revisions and bundles; revisions and
-  // bundles also form a cycle via authorization_bundles.published_revision_id,
-  // which breakCircularDependencies() clears before deletion.
-  'authorization_bundle_assignments', 'authorization_bundle_rules',
-  'authorization_bundle_revisions', 'authorization_bundles',
-
-  // User related details
-  // SCIM operations/unresolved rows depend on connections; user links also
-  // reference users, so all SCIM records must be removed before users.
-  'scim_operations', 'scim_unresolved_identities', 'scim_user_links',
+  'teams_notification_deliveries',
+  'teams_audit_events',
+  'teams_conversation_references',
+  'teams_integrations',
+  'microsoft_profiles',
+  'telephony_call_artifacts',
+  'telephony_call_intents',
+  'telephony_call_records',
+  'telephony_chat_records',
+  'telephony_providers',
+  'authorization_bundle_assignments',
+  'authorization_bundle_rules',
+  'authorization_bundle_revisions',
+  'authorization_bundles',
+  'scim_operations',
+  'scim_unresolved_identities',
+  'scim_user_links',
   'scim_connections',
-  'user_activity_group_items', 'user_activity_groups',
-  'user_notification_preferences', 'user_internal_notification_preferences', 'user_preferences',
-  'role_permissions', 'user_roles', 'user_auth_accounts',
+  'user_activity_group_items',
+  'user_activity_groups',
+  'user_notification_preferences',
+  'user_internal_notification_preferences',
+  'user_preferences',
+  'role_permissions',
+  'user_roles',
+  'user_auth_accounts',
   'mobile_push_tokens',
-
-  // Content moderation (App Store guideline 1.2). Both reference users via
-  // tenant-scoped columns, so they must be deleted before users.
-  'content_reports', 'user_content_mutes',
-
-  // Apple IAP billing (apple_iap_subscriptions is distributed by tenant;
-  // apple_iap_notifications is a reference table — DELETE WHERE tenant=? still
-  // works, and rows whose tenant never resolved stay as audit history).
-  // apple_user_identities is a reference table (Sign in with Apple sub → user);
-  // DELETE WHERE tenant=? still works for per-tenant cleanup.
-  'apple_iap_subscriptions', 'apple_iap_notifications', 'apple_user_identities',
-
-  // Schedule and team
-  'schedule_entry_assignees', 'schedule_conflicts', 'team_members',
-  'availability_exceptions', 'availability_settings',
-
-  // Calendar
-  'calendar_event_mappings', 'calendar_provider_health',
-  'google_calendar_provider_config', 'microsoft_calendar_provider_config', 'calendar_providers',
-
-  // Tags and resources
-  'tag_mappings', 'ticket_resources',
-
-  // Client portal visibility leaf table (depends on groups and boards)
+  'content_reports',
+  'user_content_mutes',
+  'apple_iap_subscriptions',
+  'apple_iap_notifications',
+  'apple_user_identities',
+  'schedule_entry_assignees',
+  'schedule_conflicts',
+  'team_members',
+  'availability_exceptions',
+  'availability_settings',
+  'calendar_event_mappings',
+  'calendar_provider_health',
+  'google_calendar_provider_config',
+  'microsoft_calendar_provider_config',
+  'calendar_providers',
+  'tag_mappings',
+  'tag_references',
+  'tag_display_rules',
+  'ticket_resources',
+  'ticket_watchers',
+  'document_fetch_hosts',
   'client_portal_visibility_group_boards',
-
-  // Logs and notifications
-  // import_job_items / import_jobs reference jobs with NO ACTION, so they
-  // must be deleted before jobs.
-  'import_job_items', 'import_jobs',
-  // AMP (Alga Migration Package) staging/ledger tables. All FK back to
-  // migration_jobs (or users), so the whole subtree is deleted before jobs and
-  // users. Internal order is dependents-first: record_outcomes references
-  // staged_records; staged_records/job_entities/identity_mappings/reports all
-  // reference migration_jobs; mapping_profiles references users only.
+  'import_job_items',
+  'import_jobs',
   'migration_record_outcomes',
   'migration_staged_records',
   'migration_job_entities',
@@ -248,195 +260,191 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'migration_reports',
   'migration_mapping_profiles',
   'migration_jobs',
-  'job_details', 'jobs', 'audit_logs', 'notification_logs', 'internal_notifications',
+  'job_details',
+  'jobs',
+  'audit_logs',
+  'notification_logs',
+  'internal_notifications',
   'platform_notification_recipients',
-
-  // Extension logs and execution
-  'extension_execution_log', 'extension_execution_log_old',
-  'extension_quota_usage', 'extension_quota_usage_old',
-  'extension_audit_logs', 'extension_event_subscription',
-  'extension_settings', 'extension_storage',
-
-  // Chat and messages
-  'messages', 'chats',
-
-  // Custom reports
+  'extension_execution_log',
+  'extension_execution_log_old',
+  'extension_quota_usage',
+  'extension_quota_usage_old',
+  'extension_audit_logs',
+  'extension_event_subscription',
+  'extension_settings',
+  'extension_storage',
+  'messages',
+  'chats',
   'custom_reports',
-
-  // Inbound webhooks
-  'inbound_webhook_deliveries', 'inbound_webhooks',
-
-  // External entity mappings references assets and import_sources with NO ACTION,
-  // so it must be deleted before both.
+  'inbound_webhook_deliveries',
+  'inbound_webhooks',
   'external_entity_mappings',
-
-  // Import/export
   'import_sources',
-
-  // Recurring tickets. Client asset links FK to definition clients and assets;
-  // definition clients FK to definitions and clients; occurrences FK to
-  // definitions only. All four go before assets and clients. Definitions also hold a
-  // RESTRICT FK to ticket_templates, so they must stay ahead of the template tables below.
-  'recurring_ticket_client_assets', 'recurring_ticket_occurrences',
-  'recurring_ticket_definition_clients', 'recurring_ticket_definitions',
-
-  // Ticket templates. Both FK to tenants; items FK to templates (ON DELETE CASCADE),
-  // so items go first. Neither references tickets or clients. Must come AFTER
-  // recurring_ticket_definitions (ON DELETE RESTRICT on ticket_template_id).
-  'ticket_template_checklist_items', 'ticket_templates',
-
-  // Asset details
+  'recurring_ticket_client_assets',
+  'recurring_ticket_occurrences',
+  'recurring_ticket_definition_clients',
+  'recurring_ticket_definitions',
+  'ticket_template_checklist_items',
+  'ticket_templates',
+  'canned_response_favorites',
+  'canned_responses',
   'asset_remote_access_links',
   'asset_maintenance_occurrences',
-  'asset_maintenance_notifications', 'asset_maintenance_history', 'asset_service_history',
-  'asset_ticket_associations', 'asset_document_associations', 'asset_relationships',
-  'asset_history', 'asset_associations', 'asset_software', 'asset_facts',
-  'workstation_assets', 'server_assets', 'network_device_assets', 'mobile_device_assets', 'printer_assets',
-  // Asset type registry: tenant-scoped lookup, RESTRICT FK to tenants (no FK
-  // to/from assets), so it must be deleted explicitly before tenants.
+  'asset_maintenance_notifications',
+  'asset_maintenance_history',
+  'asset_service_history',
+  'asset_ticket_associations',
+  'asset_document_associations',
+  'asset_relationships',
+  'asset_history',
+  'asset_associations',
+  'asset_software',
+  'asset_facts',
+  'workstation_assets',
+  'server_assets',
+  'network_device_assets',
+  'mobile_device_assets',
+  'printer_assets',
   'asset_type_registry',
-  // Asset status registry: tenant-scoped lookup keyed by slug (no FK to/from
-  // assets — assets.status just stores the slug), same shape as asset_type_registry.
   'asset_statuses',
-  // Assignment history: no FK on asset_id/contact_name_id (see migration
-  // 20261009122000), so position is advisory.
   'asset_assignments',
-  // Asset groups (bundles / shared workspaces). Members and contacts CASCADE
-  // from asset_groups, so their relative order to it is advisory, but
-  // asset_groups itself has restrictive FKs to clients and client_locations
-  // (both far below, LEVEL 6+), so it must be deleted well before this point.
-  'asset_group_members', 'asset_group_contacts', 'asset_groups',
-
-  // Software catalog
+  'asset_group_members',
+  'asset_group_contacts',
+  'asset_groups',
   'software_catalog',
-
-  // RMM
-  'rmm_webhook_events', 'rmm_maintenance_windows', 'rmm_alert_rules', 'rmm_alerts', 'rmm_organization_mappings', 'rmm_integrations',
-
-  // Survey
-  'survey_responses', 'survey_invitations', 'survey_triggers', 'survey_templates',
-
-  // Online meetings (reference interactions / appointment_requests / schedule_entries; artifacts reference meetings)
-  'online_meeting_artifacts', 'online_meetings',
-
-  // Appointment
+  'rmm_webhook_events',
+  'rmm_maintenance_windows',
+  'rmm_alert_rules',
+  'rmm_alerts',
+  'rmm_organization_mappings',
+  'rmm_integrations',
+  'survey_responses',
+  'survey_invitations',
+  'survey_triggers',
+  'survey_templates',
+  'online_meeting_artifacts',
+  'online_meetings',
   'appointment_requests',
-
-  // External references depend on tickets and their creating users. Purge them
-  // explicitly before either parent, along with the tenant's custom systems.
-  'external_entity_links', 'tenant_external_systems',
-
-  // Named list views reference their owning user; purge before users.
+  'external_entity_links',
+  'tenant_external_systems',
   'list_views',
-
-  // SLA leaf tables (must be before tickets, statuses, priorities, boards)
-  // ticket_audit_logs sits with sla_audit_log: same shape, FKs to tickets/users,
-  // delete before ticket/user rows are removed.
-  'sla_notifications_sent', 'sla_audit_log', 'ticket_audit_logs',
-  'sla_notification_thresholds', 'sla_policy_targets',
+  'sla_notifications_sent',
+  'sla_audit_log',
+  'ticket_audit_logs',
+  'sla_notification_thresholds',
+  'sla_policy_targets',
   'status_sla_pause_config',
-  'business_hours_entries', 'holidays',
+  'business_hours_entries',
+  'holidays',
   'escalation_managers',
   'sla_settings',
-
-  // === LEVEL 2: Tables that depend on level 3+ ===
-  // Payment/Stripe
-  'stripe_webhook_events', 'stripe_subscriptions', 'stripe_prices', 'stripe_products',
-  'stripe_customers', 'stripe_accounts',
-  'payment_webhook_events', 'payment_provider_configs', 'client_payment_customers',
-
-  // Tenant reactivation / win-back state (tenant-scoped; FK only to tenants).
-  // Tokens are single-use email-link state and refunds are a manual-review
-  // queue — both are purged with the tenant they belong to.
-  'tenant_reactivation_tokens', 'pending_reactivation_refunds',
-
-  // Billing details
-  // accounting_export_batches is referenced by transactions.accounting_export_batch_id
-  // with NO ACTION, so the accounting_export_* tables must be deleted after transactions.
-  // Low-balance alert ledgers: deliveries FK to alerts, alerts FK to clients,
-  // so deliveries delete before alerts and both before client_billing_settings.
-  'prepaid_balance_alert_deliveries', 'prepaid_balance_alerts',
-  'credit_allocations', 'credit_tracking',
-  // bucket_usage_unmappable_archive is a pure leaf (no FKs in or out — it has to
-  // outlive whatever made a usage row unmappable), so it can drop anywhere.
-  // Usage semantics stores are FK-less leaves (they reference contract lines,
-  // clients, and configs by id only), as are the seat-pricing revision store
-  // and the per-tenant billing-semantics lock row. The seat-pricing revision
-  // history and the mid-period true-up ledger are FK-less leaves too.
-  'usage_period_total_requests', 'usage_period_totals', 'usage_measurement_revisions',
-  'contract_line_unit_pricing_revision_history', 'contract_recurring_unit_adjustments',
-  'contract_line_unit_pricing_revisions', 'billing_semantics_locks',
-  'usage_tracking', 'bucket_usage', 'bucket_usage_unmappable_archive', 'recurring_service_periods', 'transactions',
-  // Artifacts contain adapter-produced financial bytes and have no cascading
-  // FK to the export batch, so remove them explicitly before the batch rows.
-  'accounting_export_artifacts', 'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
-  // Accounting sync engine (leaf tables: nothing references them)
-  'accounting_sync_operations', 'accounting_sync_cycles',
-  'contract_line_bucket_services', 'contract_line_buckets',
+  'stripe_webhook_events',
+  'stripe_subscriptions',
+  'stripe_prices',
+  'stripe_products',
+  'stripe_customers',
+  'stripe_accounts',
+  'payment_webhook_events',
+  'payment_provider_configs',
+  'client_payment_customers',
+  'tenant_reactivation_tokens',
+  'pending_reactivation_refunds',
+  'prepaid_balance_alert_deliveries',
+  'prepaid_balance_alerts',
+  'credit_allocations',
+  'credit_tracking',
+  'usage_period_total_requests',
+  'usage_period_totals',
+  'usage_measurement_revisions',
+  'contract_line_unit_pricing_revision_history',
+  'contract_recurring_unit_adjustments',
+  'contract_line_unit_pricing_revisions',
+  'billing_semantics_locks',
+  'usage_tracking',
+  'bucket_usage',
+  'bucket_usage_unmappable_archive',
+  'recurring_service_periods',
+  'transactions',
+  'accounting_export_artifacts',
+  'accounting_export_errors',
+  'accounting_export_lines',
+  'accounting_export_batches',
+  'accounting_sync_operations',
+  'accounting_sync_cycles',
+  'contract_line_bucket_services',
+  'contract_line_buckets',
   'contract_template_discount_copies',
-  'client_contracts', 'contract_line_service_rate_tiers', 'contract_line_service_bucket_config',
-  'contract_line_service_hourly_config', 'contract_line_service_hourly_configs', 'contract_line_service_usage_config',
-  'contract_line_service_fixed_config', 'contract_line_service_configuration',
-  'contract_line_service_defaults', 'contract_pricing_schedules',
+  'client_contracts',
+  'contract_line_service_rate_tiers',
+  'contract_line_service_bucket_config',
+  'contract_line_service_hourly_config',
+  'contract_line_service_hourly_configs',
+  'contract_line_service_usage_config',
+  'contract_line_service_fixed_config',
+  'contract_line_service_configuration',
+  'contract_line_service_defaults',
+  'contract_pricing_schedules',
   'service_catalog_mode_defaults',
-  'service_rate_tiers', 'service_prices', 'contract_line_discounts', 'contract_discount_assignments', 'discounts',
-  'client_billing_cycles', 'client_billing_settings',
-  'contract_line_prepaid_blocks', 'contract_line_services', 'contract_lines', 'contracts',
-
-  // Contract line presets
-  'contract_line_preset_prepaid_blocks', 'contract_line_preset_fixed_config', 'contract_line_preset_services', 'contract_line_presets',
-
-  // Contract templates (must be deleted before contracts)
-  // Hourly/usage configs reference contract_template_line_service_configuration
-  // with NO ACTION and must be deleted before it.
+  'service_rate_tiers',
+  'service_prices',
+  'contract_line_discounts',
+  'contract_discount_assignments',
+  'discounts',
+  'client_billing_cycles',
+  'client_billing_settings',
+  'contract_line_prepaid_blocks',
+  'contract_line_services',
+  'contract_lines',
+  'contracts',
+  'contract_line_preset_prepaid_blocks',
+  'contract_line_preset_fixed_config',
+  'contract_line_preset_services',
+  'contract_line_presets',
+  'contract_template_prices',
+  'contract_template_price_sets',
   'contract_template_line_defaults',
   'contract_template_line_prepaid_blocks',
-  'contract_template_line_bucket_services', 'contract_template_line_buckets',
-  'contract_template_line_fixed_config', 'contract_template_line_service_bucket_config',
+  'contract_template_line_bucket_services',
+  'contract_template_line_buckets',
+  'contract_template_line_fixed_config',
+  'contract_template_line_service_bucket_config',
   'contract_template_line_service_fixed_config',
   'contract_template_line_service_hourly_config',
   'contract_template_line_service_usage_config',
   'contract_template_line_service_configuration',
   'contract_template_line_services',
-  'contract_template_line_terms', 'contract_template_lines',
-  'contract_template_pricing_schedules', 'contract_template_services', 'contract_templates',
-
-  // Client details (must come before clients)
-  'client_tax_rates', 'client_tax_settings',
-  'client_inbound_email_domains', 'client_name_aliases',
+  'contract_template_line_terms',
+  'contract_template_lines',
+  'contract_template_pricing_schedules',
+  'contract_template_services',
+  'contract_templates',
+  'client_tax_rates',
+  'client_tax_settings',
+  'client_inbound_email_domains',
+  'client_name_aliases',
   'tenant_companies',
-
-  // Entra integration (dependent rows first, then parents)
-  'entra_contact_reconciliation_queue', 'entra_contact_links',
+  'entra_contact_reconciliation_queue',
+  'entra_contact_links',
   'entra_managed_tenant_user_filters',
-  'entra_client_tenant_mappings', 'entra_sync_run_tenants',
-  'entra_sync_runs', 'entra_managed_tenants',
-  'entra_partner_connections', 'entra_sync_settings',
-
-  // Hudu integration: one connection row per tenant (FK to tenants is CASCADE,
-  // but delete it explicitly so cleanup doesn't rely on the cascade). Hudu
-  // mappings live in tenant_external_entity_mappings (deleted below).
+  'entra_client_tenant_mappings',
+  'entra_sync_run_tenants',
+  'entra_sync_runs',
+  'entra_managed_tenants',
+  'entra_partner_connections',
+  'entra_sync_settings',
   'hudu_integrations',
-
-  // Accounting provider disconnect state machine: one row per (tenant, provider)
-  // tracking QBO/Xero revocation progress. A leaf table — its only FK is to
-  // tenants (CASCADE) and nothing references it — so position is free; kept with
-  // the other integration rows for readability.
   'provider_disconnect_records',
-
-  // Project billing: schedule entries and cap usage reference project_billing_configs;
-  // configs reference projects; phase rate overrides reference project_phases and
-  // service_catalog. All must be deleted before those parents.
-  'project_billing_schedule_entries', 'project_billing_cap_usage',
-  'project_billing_configs', 'project_phase_rate_overrides',
-
-  // Project/task entities. projects itself must land here too: it now carries
-  // a restrictive (NO ACTION) FK to service_catalog (default service for the
-  // whole project), so it has to be deleted before service_catalog below.
-  'project_tasks', 'project_phases', 'project_status_mappings', 'projects',
-
-  // Workflow task entities
-  'workflow_tasks', 'workflow_form_definitions',
+  'project_billing_schedule_entries',
+  'project_billing_cap_usage',
+  'project_billing_configs',
+  'project_phase_rate_overrides',
+  'project_tasks',
+  'project_phases',
+  'project_status_mappings',
+  'projects',
+  'workflow_tasks',
+  'workflow_form_definitions',
   'workflow_task_definitions',
 
   // Service request runtime and published snapshots
@@ -445,6 +453,28 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'service_request_answer_mapping_versions', 'service_request_answer_mappings',
   'service_request_submission_attachments', 'service_request_submissions',
   'service_request_definition_versions', 'service_request_definitions',
+  'co_management_board_scopes',
+  'co_managed_allocations',
+  'co_managed_entitlements',
+  'co_managed_provisioning_operations',
+  'co_managed_purchase_operations',
+  'tenant_license_state',
+  'co_managed_meeting_creation_operations',
+  'co_management_relationship_events',
+  'co_management_delegated_receipts',
+  'co_management_delegated_grants',
+  'co_management_project_scopes',
+  'co_management_staff_assignments',
+  'co_managed_project_task_references',
+  'collaboration_actor_references',
+  'co_managed_participation_evidence',
+  // Handoffs FK to ticket work, which FKs to relationships: children first. References and
+  // receipts reference the client/board/relationship rows deleted later.
+  'co_management_ticket_handoffs',
+  'co_management_ticket_work',
+  'co_managed_ticket_references',
+  'co_management_command_receipts',
+  'co_management_relationships',
 
   // === LEVEL 3: Mid-level entities ===
   // Document-related leaf tables (must come before documents)
@@ -452,285 +482,171 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // KB import staging rows: a leaf (article_id / job_id are soft refs, no FK), so
   // it only has to precede tenants. Kept next to kb_articles for readability.
   'kb_import_files',
-  'kb_article_relations', 'kb_article_reviewers', 'kb_article_templates', 'kb_articles',
+  'kb_article_relations',
+  'kb_article_reviewers',
+  'kb_article_templates',
+  'kb_articles',
   'document_default_folders',
-  // Document folder templates: items and init rows reference document_folder_templates
-  // (CASCADE / SET NULL), so we delete the children first for a clean trail.
-  'document_folder_template_items', 'document_entity_folder_init', 'document_folder_templates',
-  // Document associations must come before documents
+  'document_folder_template_items',
+  'document_entity_folder_init',
+  'document_folder_templates',
   'document_associations',
-
-  // Credentials (entity passwords): associations and access grants reference
-  // credentials with CASCADE, so they must be deleted before credentials.
-  // credentials itself references clients (client_id) and users (created_by),
-  // so it must be deleted before both (clients at LEVEL 4, users LAST).
-  'credential_associations', 'credential_access_grants', 'credentials',
-
-  // Assets must come after asset details
-  'asset_maintenance_schedules', 'assets',
-  // vendors: moved out of the inventory module block above because
-  // 20261009120000 added assets.vendor_id -> vendors (NO ACTION), so this
-  // parent now has to be deleted after assets, not before it. The inventory
-  // children that also reference vendors (purchase_orders, vendor_bills,
-  // vendor_products, stock_units, ...) are already deleted earlier up top.
+  'credential_associations',
+  'credential_access_grants',
+  'credentials',
+  'asset_maintenance_schedules',
+  'assets',
   'vendors',
-
-  // Payment methods
   'payment_methods',
-
-  // Schedule entries
   'schedule_entries',
-
-  // Shared calendars (schedule_entries.calendar_id → calendars; shares → calendars;
-  // calendars.owner_user_id → users, so this block precedes users)
-  'calendar_shares', 'calendars',
-
-  // Service catalog
-  'service_catalog', 'service_types', 'service_categories',
-  // Tenant custom units of measure (no FKs; referenced by unit_code text only)
+  'calendar_shares',
+  'calendars',
+  'service_catalog',
+  'service_types',
+  'service_categories',
   'tenant_units_of_measure',
-
-  // Settings that might be referenced
   'approval_thresholds',
-
-  // Conditional display rules must come BEFORE invoice_templates
   'conditional_display_rules',
-
-  // layout_blocks references template_sections and template_sections references
-  // invoice_templates, both with NO ACTION, so they must be deleted before
-  // invoice_templates.
   'layout_blocks',
   'template_sections',
-
-  // === LEVEL 4: Core business entities ===
-  // Invoice templates (after conditional_display_rules, layout_blocks, template_sections)
   'invoice_templates',
-
-  // Invoices (after invoice_templates)
   'invoices',
-
-  // External files and documents
-  'external_files', 'documents', 'document_types',
-
-  // === Ticket close rules (2026-06-10) ===
-  // All seven tables FK to tickets / boards / statuses, so they must be deleted
-  // BEFORE those (tickets at LEVEL 5 below, boards at LEVEL 7, statuses at LEVEL 8).
-  // Internal order follows the FKs among them: ticket_auto_close_state →
-  // board_auto_close_rules, and checklist_template_items / _apply_rules →
-  // checklist_templates. ticket_checklist_items.template_id is a soft ref (no FK),
-  // and board_close_rules only FKs to boards.
-  'ticket_auto_close_state', 'board_auto_close_rules',
+  'file_upload_session_files',
+  'file_upload_sessions',
+  'external_files',
+  'documents',
+  'document_types',
+  'ticket_auto_close_state',
+  'board_auto_close_rules',
   'ticket_checklist_items',
-  'checklist_template_apply_rules', 'checklist_template_items', 'checklist_templates',
+  'checklist_template_apply_rules',
+  'checklist_template_items',
+  'checklist_templates',
   'board_close_rules',
-
-  // === Board notification rules (2026-10-06) ===
-  // Children first; these FK to boards, statuses, users and teams, so they must be
-  // deleted before all of those.
-  'board_notification_rule_recipients', 'board_notification_rule_statuses',
-  'board_notification_rules', 'board_default_watchers',
-
-  // === LEVEL 5: Tickets and related ===
-  // Ticket bundle settings and entity links must be deleted BEFORE tickets.
-  // ticket_bundle_status_propagations FKs to tickets twice (master and child),
-  // so it belongs in the same pre-tickets group.
-  'ticket_bundle_settings', 'ticket_entity_links', 'ticket_bundle_status_propagations',
-
-  // Tickets MUST be deleted BEFORE categories, statuses, etc that it references
-  // AND BEFORE client_locations that tickets reference via location_id
+  'board_notification_rule_recipients',
+  'board_notification_rule_statuses',
+  'board_notification_rules',
+  'board_default_watchers',
+  'ticket_bundle_settings',
+  'ticket_entity_links',
+  'ticket_bundle_status_propagations',
   'tickets',
-
-  // === LEVEL 6: Client locations (referenced by tickets.location_id) ===
-  // Must be deleted AFTER tickets
   'client_locations',
-
-  // === LEVEL 6: Categories ===
-  // References boards via categories.board_id → boards.board_id,
-  // so delete categories BEFORE boards. Tickets reference categories,
-  // so this must also come AFTER tickets.
   'categories',
-
-  // === LEVEL 7: Boards ===
-  // References priorities (boards.default_priority_id → priorities.priority_id)
-  // and statuses (boards.inbound_reply_reopen_status_id → statuses.status_id)
-  // with no ON DELETE rule, so boards must be deleted BEFORE priorities and statuses.
-  //
-  // Note: statuses.board_id → boards is also NO ACTION (reverse direction),
-  // so breakCircularDependencies() NULLs out statuses.board_id for the tenant
-  // before running deletion. The validator exempts that constraint from the
-  // ordering check.
   'boards',
-
-  // === LEVEL 8: Lookup tables previously referenced by boards and tickets ===
-  // Must be deleted AFTER boards (see FK notes above) and AFTER tickets.
-  // standard_statuses is a global reference catalog (no tenant column) and
-  // must never be touched by tenant deletion.
   'statuses',
-  'priorities', 'severities', 'urgencies', 'impacts',
-
-  // === LEVEL 8: Breaking circular dependencies ===
-  // There's a complex circular dependency:
-  // - users.contact_id → contacts (with ON DELETE SET NULL that fails on NOT NULL constraint)
-  // - contacts.client_id → clients
-  // - clients.account_manager → users
-
-  // Tax configuration (no dependencies on core entities)
+  'priorities',
+  'severities',
+  'urgencies',
+  'impacts',
   'tax_components',
-
-  // Permissions and roles (must be deleted before users)
-  'permissions', 'roles', 'teams',
-
-  // Tenant secrets metadata references the creating and updating users. Audit
-  // history deliberately has no FK to the secret so delete it explicitly too.
-  'tenant_secrets_audit_log', 'tenant_secrets',
-
-  // The correct order to avoid constraint violations:
-  // 0. Delete contact child rows first (phones/emails reference contacts)
-  // 1. Delete portal_invitations before contacts (portal_invitations.contact_id → contacts NO ACTION)
-  // 2. Delete clients next (after NULLing account_manager)
-  // 3. Delete contacts after clients (before users that reference them)
-  // 4. Delete contact_email_type_definitions after contacts
-  //    (contacts.primary_email_custom_type_id → contact_email_type_definitions RESTRICT)
-  // 5. Delete password_reset_tokens, resources, user_work_schedules,
-  //    tenant_telemetry_settings before users
-  //    (they all reference users via NO ACTION / RESTRICT / CASCADE)
-  // 6. Delete users last (they have NOT NULL contact_id that references contacts)
-
+  'permissions',
+  'roles',
+  'teams',
+  'tenant_secrets_audit_log',
+  'tenant_secrets',
   'contact_phone_numbers',
   'contact_additional_email_addresses',
   'contact_phone_type_definitions',
-  // Client portal visibility groups depend on clients and are referenced by contacts via ON DELETE SET NULL.
-  // Delete them before clients so tenant cleanup does not leave this table behind.
   'client_portal_visibility_groups',
-  'portal_invitations', // references contacts.contact_id with NO ACTION — must come before contacts
-  'user_invitations', // no DB FK (role_id is unenforced, for CitusDB compatibility); order is advisory
-  // Billing profiles (billing-profiles S1). Referenced by client_contracts,
-  // contract_lines, client_locations, tickets, projects and invoice_charges
-  // (all deleted above), and references clients — so it must go after all of
-  // those and before clients. The portal access grants reference profiles, so
-  // they go first (S12).
+  'portal_invitations',
+  'user_invitations',
   'client_portal_user_billing_profiles',
-  // Profile contacts reference both a profile and a contact; contacts are
-  // deleted after clients, so this has to go before the profiles it hangs off.
   'billing_profile_contacts',
   'client_billing_profiles',
-  // Merge audit rows reference nothing but the tenant, so the position is
-  // advisory — listed beside the clients they describe so the order reads.
   'client_merges',
-  // Tax ID consolidation audit rows store client_id without an FK, so the
-  // position is advisory as well.
   'client_tax_id_migration_conflicts',
-  'clients',   // Delete clients FIRST (after NULLing account_manager references)
-  'contacts',   // Delete contacts SECOND (after clients, before users that have NOT NULL contact_id)
-  'contact_email_type_definitions', // contacts.primary_email_custom_type_id → this table (RESTRICT)
-  'password_reset_tokens',     // password_reset_tokens.user_id → users with NO ACTION
-  'resources',                 // resources.user_id → users with NO ACTION
-  // (tenant, user_id) → users with ON DELETE CASCADE, colocated with users.
-  // Deleted explicitly rather than left to the cascade: the tenant FK on this
-  // table is NO ACTION, so rows surviving until the final `tenants` delete would
-  // block it. Citus also rejects ON DELETE SET NULL on a key containing the
-  // distribution column, so CASCADE is the only automatic rule available here
-  // and an explicit delete is what keeps the order self-describing.
+  'clients',
+  'contacts',
+  'contact_email_type_definitions',
+  'password_reset_tokens',
+  'resources',
   'user_work_schedules',
-  'tenant_telemetry_settings', // tenant_telemetry_settings.updated_by → users with RESTRICT
-
-  // === MCP agent governance (EE) ===
-  // Relations are enforced in application code (no DB FKs), so this order is
-  // advisory. Children first: agent_roles + mcp_agent_audit reference agents
-  // (agent_id); agents.created_by / backing user reference users, so delete the
-  // agent tables before users. agent_idp_providers is independent.
+  'tenant_telemetry_settings',
   'agent_roles',
   'mcp_agent_audit',
   'agent_idp_providers',
   'agents',
-
-  // === MCP OAuth Authorization Server (EE) ===
-  // No DB FKs (relations enforced in app code), so order is advisory. Children
-  // first: auth_codes + refresh_tokens reference grants (grant_id), so delete them
-  // before grants. (mcp_oauth_clients + mcp_oauth_signing_keys are instance-wide —
-  // no tenant column — and are intentionally not tenant-scoped here.)
   'mcp_oauth_auth_codes',
   'mcp_oauth_refresh_tokens',
   'mcp_oauth_grants',
-
-  'users',      // Delete users LAST (they have NOT NULL contact_id → contacts)
-
-  // SLA policies (referenced by clients.sla_policy_id and boards.sla_policy_id - must come after both)
+  'users',
   'sla_policies',
-  // Business hours (referenced by sla_policies.business_hours_schedule_id - must come after sla_policies)
   'business_hours_schedules',
-
-  // === LEVEL 9: Configuration and settings ===
-  // API and auth
-  // webhook_deliveries references webhooks, so it must be deleted before webhooks.
-  'webhook_deliveries', 'webhooks',
-  // api_rate_limit_settings has no FK to api_keys (only a column), but lives
-  // alongside the API key surface logically.
+  // Webhook receipts and deliveries must be deleted before webhooks.
+  'webhook_event_receipts',
+  'webhook_deliveries',
+  'webhooks',
   'api_rate_limit_settings',
-  'mobile_auth_otts', 'mobile_refresh_tokens',
+  'mobile_auth_otts',
+  'mobile_refresh_tokens',
   'api_keys',
-  'portal_domain_session_otts', 'portal_domains',
-
-  // Policies (resources moved earlier, before users)
+  'portal_domain_session_otts',
+  'portal_domains',
   'policies',
-
-  // Email configuration
-  'google_email_provider_config', 'microsoft_email_provider_config', 'imap_email_provider_config',
-  'email_provider_health', 'email_provider_configs', 'email_providers',
-  'email_templates', 'email_domains', 'tenant_email_settings',
-
-  // Storage configuration
-  // provider_events references storage_providers with NO ACTION, so it must be
-  // deleted before storage_providers.
-  'storage_records', 'storage_schemas', 'storage_usage',
+  'google_email_provider_config',
+  'microsoft_email_provider_config',
+  'imap_email_provider_config',
+  'email_provider_health',
+  'email_provider_configs',
+  'email_providers',
+  'email_templates',
+  'email_domains',
+  'tenant_email_settings',
+  'storage_records',
+  'storage_schemas',
+  'storage_usage',
   'storage_configurations',
   'provider_events',
   'storage_providers',
-  'ext_storage_records', 'ext_storage_schemas', 'ext_storage_usage',
-
-  // Templates and layouts
+  'ext_storage_records',
+  'ext_storage_schemas',
+  'ext_storage_usage',
   'tenant_email_templates',
-  'approval_levels',  // After approval_thresholds
-
-  // Custom fields and attributes
-  'attribute_definitions', 'custom_fields',
-  'tag_definitions', 'custom_task_types',
-
-  // Time period settings (tenant_time_period_settings must come BEFORE time_period_types)
+  'approval_levels',
+  'attribute_definitions',
+  'custom_fields',
+  'tag_definitions',
+  'custom_task_types',
   'tenant_time_period_settings',
-  'time_periods', 'time_period_types', 'time_period_settings',
-
-  // External entity mappings and tax
+  'time_period_calendar_locks',
+  'time_periods',
+  'time_period_types',
+  'time_period_settings',
   'external_tax_imports',
-
-  // Tenant notification settings
-  'tenant_internal_notification_category_settings', 'tenant_internal_notification_subtype_settings',
-  'tenant_notification_category_settings', 'tenant_notification_subtype_settings',
-
-  // Other tenant settings (tenant_telemetry_settings moved earlier, before users)
-  'tenant_external_entity_mappings', 'telemetry_consent_log',
-  'default_billing_settings', 'notification_settings',
-  // inbound_email_rules references inbound_ticket_defaults (fallback destination),
-  // so it must be deleted first.
+  'tenant_internal_notification_category_settings',
+  'tenant_internal_notification_subtype_settings',
+  'tenant_notification_category_settings',
+  'tenant_notification_subtype_settings',
+  'tenant_external_entity_mappings',
+  'telemetry_consent_log',
+  'default_billing_settings',
+  'notification_settings',
   'inbound_email_rules',
-  'inbound_ticket_defaults', 'user_type_rates', 'next_number',
+  'inbound_ticket_defaults',
+  'user_type_rates',
+  'next_number',
   'event_catalog',
-  // Durable inbound email family. Deletion order follows the composite FKs:
-  // event_deliveries -> outbox, and effects/artifacts/outbox -> inbox -> ingress.
-  'inbound_email_event_deliveries', 'inbound_email_effects', 'inbound_email_artifacts',
-  'inbound_email_outbox', 'inbound_email_inbox', 'inbound_email_ingress',
-
-  // Extension installation (must come before tenant_settings)
-  'tenant_extension_schedule', 'tenant_extension_install_secrets',
-  'tenant_extension_install_config', 'tenant_extension_install',
+  'inbound_email_event_deliveries',
+  'inbound_email_effects',
+  'inbound_email_artifacts',
+  'inbound_email_outbox',
+  'inbound_email_inbox',
+  'inbound_email_ingress',
+  'tenant_extension_schedule',
+  'tenant_extension_install_secrets',
+  'tenant_extension_install_config',
+  'tenant_extension_install',
   'extensions',
-
-  // Tenant add-ons and settings last (before tenant itself)
   'tenant_addons',
-  'tenant_settings', 'tax_rates', 'tax_regions',
+  'tenant_settings',
+  'tax_rates',
+  'tax_regions',
 ];
 
-const TENANT_TABLES_DELETION_SET = new Set(TENANT_TABLES_DELETION_ORDER);
+// The manifest (packages/db tenantTableManifest) owns membership and order; the array above is its
+// golden projection, asserted element-for-element by tenantTableManifest.golden.test.ts.
+const TENANT_TABLES_DELETION_SET = new Set(tenantDeletionOrder());
 const MANAGEMENT_TENANT_DISCOVERY_CONTEXT = '__tenant_deletion_management_tenant_discovery__';
 
 type TenantColumnName = 'tenant' | 'tenant_id';
@@ -1738,6 +1654,26 @@ async function breakCircularDependencies(
     });
   }
 
+  // Step 6b: NULL out stock_units.allocated_staging_line_id so project_staging_lines
+  // can be deleted. project_staging_lines.unit_id -> stock_units (project_staging_lines_unit_fk)
+  // and stock_units.allocated_staging_line_id -> project_staging_lines
+  // (fk_stock_units_allocated_staging_line) are both NO ACTION and form a restrictive
+  // cycle; the inventory block deletes project_staging_lines before stock_units, which is
+  // only legal once units no longer point at lines (exempted in validate-tenant-management).
+  try {
+    const result6b = await tenantScopedDb.table('stock_units')
+      .whereNotNull('allocated_staging_line_id')
+      .update({ allocated_staging_line_id: null });
+    if (result6b > 0) {
+      log.info('Cleared allocated_staging_line_id references in stock_units', { count: result6b });
+    }
+  } catch (error) {
+    // Ignore if table/column doesn't exist (older schemas or CE without project staging)
+    log.debug('Could not clear allocated_staging_line_id in stock_units (table or column may not exist)', {
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
+  }
+
   // Step 7: NULL out opportunities.suggestion_id so opportunity_suggestions
   // can be deleted before opportunities. The reverse created_opportunity_id FK
   // is then naturally satisfied by the child-first deletion order.
@@ -1860,6 +1796,10 @@ export async function deleteTenantData(
     );
 
     // Step 2: Delete from each table in order
+    // The loop runs the manifest order. The local binding keeps the established loop
+    // shape that source-text contract tests assert; the exported literal above is the
+    // golden copy `tenantTableManifest.golden.test.ts` compares against.
+    const TENANT_TABLES_DELETION_ORDER = tenantDeletionOrder();
     for (const tableName of TENANT_TABLES_DELETION_ORDER) {
       try {
         const tableBoundary = await resolveTenantDeletionTableBoundary(

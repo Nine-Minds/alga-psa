@@ -20,6 +20,7 @@ export interface MaintenanceScheduleRow {
   maintenance_type: string;
   frequency: string;
   frequency_interval: number;
+  schedule_config?: unknown;
   next_maintenance: Date | string;
   last_maintenance: Date | string | null;
   is_active: boolean;
@@ -92,7 +93,7 @@ export async function completeMaintenanceOccurrence(
   const performedDate = toCalendarDateString(input.performed_at || new Date());
   if (!performedDate) throw new Error('A performed date is required');
   const performedAt = toISOTimestamp(toPlainDate(performedDate));
-  const nextDue = advanceMaintenanceDate(performedAt, schedule.frequency, schedule.frequency_interval);
+  const nextDue = advanceMaintenanceDate(performedAt, schedule.frequency, schedule.frequency_interval, schedule.schedule_config);
   const [history] = await db.table('asset_maintenance_history').insert({
     tenant, schedule_id: schedule.schedule_id, asset_id: schedule.asset_id,
     maintenance_type: schedule.maintenance_type, description: input.notes || `${schedule.maintenance_type} maintenance completed`,
@@ -115,7 +116,7 @@ export async function skipMaintenanceOccurrence(trx: Knex.Transaction, tenant: s
   const occurrence = await lockMaintenanceOccurrence(trx, tenant, occurrenceId);
   if (occurrence.status !== 'open') throw new Error('Maintenance occurrence has already been closed');
   const schedule = await activeScheduleForOccurrence(trx, tenant, occurrence);
-  const nextDue = advanceMaintenanceDate(new Date(), schedule.frequency, schedule.frequency_interval);
+  const nextDue = advanceMaintenanceDate(new Date(), schedule.frequency, schedule.frequency_interval, schedule.schedule_config);
   await db.table('asset_maintenance_occurrences').where({ occurrence_id: occurrenceId })
     .update({ status: 'skipped', skip_reason: reason.trim(), closed_at: trx.fn.now(), closed_by: actorUserId, updated_at: trx.fn.now() });
   await db.table('asset_maintenance_schedules').where({ schedule_id: schedule.schedule_id })

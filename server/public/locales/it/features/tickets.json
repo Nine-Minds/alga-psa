@@ -84,6 +84,7 @@
     "button": "Filtri",
     "unassigned": "Non assegnato",
     "category": "Filtra per categoria",
+    "removeFilterChip": "Rimuovi filtro: {{label}}",
     "assignee": "Assegnatario",
     "allAssignees": "Tutti gli assegnatari",
     "responseState": "Stato risposta",
@@ -110,7 +111,12 @@
     "allResponseStatuses": "Tutti gli stati di risposta",
     "responseStatus": "Stato risposta",
     "board": "Filtra per bacheca",
-    "searchSmart": "Cerca ticket e commenti… Invio per la ricerca intelligente"
+    "searchSmart": "Cerca ticket e commenti… Invio per la ricerca intelligente",
+    "requesterTags": "Tag del richiedente",
+    "clientTags": "Tag del cliente",
+    "tagModeAny": "Almeno uno tra",
+    "tagModeNone": "Nessuno tra",
+    "droppedFromLink": "Alcuni filtri di questo link non sono validi e sono stati ignorati."
   },
   "create": {
     "title": "Crea ticket di supporto",
@@ -248,7 +254,9 @@
     "openMenu": "Apri menu",
     "moreActions": "Altre azioni",
     "createTemplate": "Crea modello dal ticket",
-    "createWorkflowFromTicket": "Crea workflow dal ticket"
+    "createWorkflowFromTicket": "Crea workflow dal ticket",
+    "printWorkTag": "Stampa etichetta di lavoro",
+    "retry": "Riprova"
   },
   "messages": {
     "noTickets": "Nessun ticket trovato",
@@ -358,7 +366,8 @@
     "pastedImagesDeleteFailed_many": "Impossibile eliminare {{count}} immagini incollate.",
     "pastedImagesDeleted_few": "{{count}} immagini incollate eliminate.",
     "pastedImagesDeleted_many": "{{count}} immagini incollate eliminate.",
-    "sharedWorkspaceReadOnly": "Vedi questo ticket perché riguarda un dispositivo di una postazione condivisa. Solo chi lo ha aperto può aggiungere contenuti."
+    "sharedWorkspaceReadOnly": "Vedi questo ticket perché riguarda un dispositivo di una postazione condivisa. Solo chi lo ha aperto può aggiungere contenuti.",
+    "loadPartyTagsFailed": "Impossibile caricare i tag del richiedente e del cliente"
   },
   "conversation": {
     "comments": "Commenti",
@@ -461,6 +470,14 @@
     "clientPortal": "Ricevuto tramite Portale Clienti",
     "inboundEmail": "Ricevuto tramite e-mail"
   },
+  "originalEmail": {
+    "text": "Testo",
+    "original": "Email originale",
+    "emailShort": "Email",
+    "loading": "Caricamento dell'email originale…",
+    "error": "Impossibile caricare l'email originale.",
+    "group": "Visualizzazione del messaggio"
+  },
   "documents": {
     "title": "Documenti",
     "noDocuments": "Nessun documento allegato",
@@ -502,6 +519,7 @@
     },
     "filters": {
       "allAssignees": "Tutti gli assegnatari",
+      "allContacts": "Tutti i contatti",
       "selectStatus": "Seleziona stato",
       "responseState": "Stato risposta",
       "allResponseStates": "Tutti gli stati risposta",
@@ -659,7 +677,7 @@
     "bundleMasterLabel": "Seleziona ticket master",
     "bundleMasterPlaceholder": "Seleziona ticket master...",
     "bundleSyncUpdates": "Sincronizza gli aggiornamenti dal master ai figli (risposte pubbliche + modifiche al flusso di lavoro)",
-    "bundleSyncUpdatesHelp": "I ticket figli mantengono lo stato attuale quando vengono raggruppati. Successivamente, la chiusura o riapertura del master chiude o riapre tutti i ticket figli, e le modifiche di stato, assegnatario e priorità sul master si applicano ai figli. I campi del flusso di lavoro sono bloccati sui figli. Le note interne restano sul master.",
+    "bundleSyncUpdatesHelp": "I ticket figli mantengono lo stato attuale quando vengono raggruppati. Con la sincronizzazione attiva, la chiusura o riapertura del master chiude o riapre tutti i figli, le modifiche di stato, assegnatario e priorità sul master si applicano a loro e i loro campi del flusso di lavoro sono bloccati. Senza sincronizzazione, i figli gestiscono autonomamente stato, assegnatario e priorità. Le note interne restano sul master.",
     "bundleSelectAtLeastTwo": "Seleziona almeno due ticket da raggruppare.",
     "bundleSelectMaster": "Seleziona un ticket master.",
     "bundleSuccess": "Ticket raggruppati",
@@ -732,8 +750,8 @@
       "masterTicket": "Seleziona ticket master",
       "selectMasterTicket": "Seleziona ticket master...",
       "syncUpdates": "Sincronizza gli aggiornamenti dal master ai figli (risposte pubbliche + modifiche al flusso di lavoro)",
-      "syncUpdatesHelp": "I ticket figli mantengono lo stato attuale quando vengono raggruppati. Successivamente, la chiusura o riapertura del master chiude o riapre tutti i ticket figli, e le modifiche di stato, assegnatario e priorità sul master si applicano ai figli. I campi del flusso di lavoro sono bloccati sui figli. Le note interne restano sul master.",
-      "childrenDescription": "I secondari mantengono il loro stato attuale; i campi del workflow sono bloccati sui secondari. Le risposte in entrata dei secondari sono mostrate sotto in sola lettura.",
+      "syncUpdatesHelp": "I ticket figli mantengono lo stato attuale quando vengono raggruppati. Con la sincronizzazione attiva, la chiusura o riapertura del master chiude o riapre tutti i figli, le modifiche di stato, assegnatario e priorità sul master si applicano a loro e i loro campi del flusso di lavoro sono bloccati. Senza sincronizzazione, i figli gestiscono autonomamente stato, assegnatario e priorità. Le note interne restano sul master.",
+      "childrenDescription": "I ticket figli mantengono lo stato attuale. I campi del flusso di lavoro sono bloccati solo in modalità Sync Updates. Le risposte in entrata dei figli sono mostrate sotto in sola lettura.",
       "checkingMasters": "Verifica dei raggruppamenti esistenti...",
       "existingMasterSuffix": "(master esistente)",
       "existingMasterLocked": "Un ticket selezionato è già un master di raggruppamento. Verrà usato come master; gli altri saranno aggiunti come figli.",
@@ -784,7 +802,9 @@
       "more": "Altro",
       "bundleNeedsOne": "Seleziona almeno 1 ticket da raggruppare",
       "selectedCount_few": "{{count}} selezionati",
-      "selectedCount_many": "{{count}} selezionati"
+      "selectedCount_many": "{{count}} selezionati",
+      "printLabels": "Stampa etichette",
+      "printLabelsLimit": "Puoi stampare al massimo {{max}} etichette alla volta"
     },
     "assign": {
       "dialogTitle": "Assegna ticket selezionati",
@@ -968,7 +988,22 @@
     "tagCreatePartialFailure_few": "Impossibile creare {{count}} tag",
     "tagCreatePartialFailure_many": "Impossibile creare {{count}} tag",
     "tagCreationFailed_few": "Impossibile creare {{count}} tag",
-    "tagCreationFailed_many": "Impossibile creare {{count}} tag"
+    "tagCreationFailed_many": "Impossibile creare {{count}} tag",
+    "assets": {
+      "heading": "Asset",
+      "selectClientFirst": "Seleziona un cliente per collegare gli asset.",
+      "unavailable": "Gli asset possono essere collegati dal ticket dopo la creazione."
+    },
+    "attachments": {
+      "heading": "Allegati",
+      "add": "Aggiungi file",
+      "remove": "Rimuovi {{name}}"
+    },
+    "watchers": {
+      "heading": "Osservatori",
+      "placeholder": "Aggiungi osservatori..."
+    },
+    "attachmentsPartialFailure": "Ticket creato, ma non è stato possibile allegare questi file: {{files}}. Aggiungili dal ticket."
   },
   "itil": {
     "calculatedPriority": "Priorità (calcolata)",
@@ -1263,6 +1298,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Tracciamento dello stato di risposta",
+      "defaultReplyInternalTitle": "Visibilità predefinita delle risposte",
+      "defaultReplyInternalDescription": "Avviare le nuove risposte ai ticket come interne per tutti i membri del team. Gli utenti possono comunque passare una risposta a Cliente. Le risposte nel portale clienti e nei thread esistenti restano invariate.",
+      "defaultReplyInternalLabel": "Usare risposte interne per impostazione predefinita",
       "responseStateTrackingDescription": "Quando è attivo, i ticket tengono traccia automatica di chi deve rispondere per primo (in attesa del cliente o del team interno). Disattivandolo si nascondono i badge di stato risposta, i filtri e le relative opzioni di pausa SLA.",
       "responseStateTrackingEnabled": "Tracciamento dello stato di risposta attivo",
       "responseStateTrackingDisabled": "Tracciamento dello stato di risposta disattivato",
@@ -1397,7 +1435,15 @@
     "selectUnit": "Seleziona un'unità da consegnare...",
     "onHandByLocation": "Disponibili per ubicazione",
     "catalogUnitCost": "Costo unitario di catalogo",
-    "costNotConfigured": "Non configurato"
+    "costNotConfigured": "Non configurato",
+    "availableBadge": "Disponibile: {{available}}",
+    "availableByLocation": "Scorte libere per ubicazione",
+    "freeOfOnHand": "{{free}} libere su {{onHand}}",
+    "stockHeld": "Solo {{free}} disponibili. {{held}} in giacenza sono bloccate in modo definitivo per ordini di vendita o progetti e non possono essere usate qui.",
+    "stockInsufficient": "Solo {{onHand}} in giacenza, {{requested}} richiesti.",
+    "reservedStockTitle": "Le scorte sono riservate a un ordine di vendita o a un progetto",
+    "reservedStockMessage": "Solo {{free}} di questo prodotto sono libere. {{reserved}} in giacenza sono riservate a ordini di vendita o progetti e ne hai richiesti {{requested}}. Aggiungerlo comunque sottrae scorte su cui conta un ordine di vendita o un progetto e può lasciarlo incompleto.",
+    "reservedStockConfirm": "Aggiungi comunque"
   },
   "watchList": {
     "title": "Elenco osservati",
@@ -1670,7 +1716,13 @@
       "ruleSubcategoryRequiresCategory": "Seleziona una categoria prima di scegliere una sottocategoria.",
       "ruleTooManyKeywords": "Usi al massimo {{max}} parole chiave per regola.",
       "ruleKeywordTooLong": "Ogni parola chiave può avere al massimo {{max}} caratteri.",
-      "ruleOriginInvalid": "Una delle origini ticket selezionate non è valida."
+      "ruleOriginInvalid": "Una delle origini ticket selezionate non è valida.",
+      "templateClientMismatch": "Questo modello di checklist è limitato a un cliente diverso da quello del ticket.",
+      "templateClientInvalid": "Il cliente selezionato non è stato trovato.",
+      "ruleClientOutsideTemplateScope": "Questo modello appartiene a un cliente, quindi le sue regole non possono riguardare altri clienti.",
+      "templateRulesTargetOtherClients": "Alcune regole di applicazione automatica di questo modello riguardano altri clienti. Rimuovi quei clienti dalle regole prima di assegnare il modello a un cliente.",
+      "predicateClientOutsideScope": "Il cliente {{client}} non rientra nell’ambito di questo modello.",
+      "predicateInvalid": "Regola della lista di controllo non valida: {{detail}}"
     }
   },
   "ticketSection": {
@@ -1699,9 +1751,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "I ticket figli mantengono lo stato attuale quando vengono raggruppati. Successivamente, la chiusura o riapertura del master chiude o riapre tutti i ticket figli, e le modifiche di stato, assegnatario e priorità sul master si applicano ai figli. I campi del flusso di lavoro sono bloccati sui figli. Le note interne restano sul master.",
+      "childrenDescription": "I ticket figli mantengono lo stato attuale quando vengono raggruppati. In modalità Sync Updates, la chiusura o riapertura del master chiude o riapre tutti i figli, le modifiche di stato, assegnatario e priorità sul master si applicano a loro e i loro campi del flusso di lavoro sono bloccati. In modalità Link Only, i figli gestiscono autonomamente stato, assegnatario e priorità. Le note interne restano sul master.",
       "title": "Gruppo",
       "masterBanner": "Questo ticket è il principale di un gruppo ({{count}} figli). Modalità: {{mode}}.",
+      "childLockedNotice": "I campi del flusso di lavoro sono bloccati; lavora dal ticket master.",
+      "childLinkedNotice": "È collegato al master e viene gestito in modo autonomo.",
       "multipleClients": "Più clienti",
       "mode": "Modalità: {{mode}}",
       "unbundle": "Separa",
@@ -1737,7 +1791,15 @@
       "applyResolutionHelpNoComment": "Chiude il ticket figlio con lo stato {{status}}. Il ticket principale non ha alcun commento di risoluzione pubblico da pubblicare.",
       "reopenMasterLabel": "Aggiungi e riapri il ticket principale",
       "reopenMasterHelp": "Riapre solo il ticket principale. I ticket figli già chiusi in questo gruppo restano chiusi; le notifiche di riapertura e lo SLA si applicano al ticket principale.",
-      "closedMasterGating": "Le regole di chiusura della bacheca non consentono ticket figli aperti sotto un ticket principale chiuso, quindi non è possibile mantenere chiuso il ticket principale."
+      "closedMasterGating": "Le regole di chiusura della bacheca non consentono ticket figli aperti sotto un ticket principale chiuso, quindi non è possibile mantenere chiuso il ticket principale.",
+      "modeSwitchDialogIntro": "Il ticket principale è chiuso. Scegli cosa deve succedere ai ticket figli aperti quando il gruppo passa a Sync Updates.",
+      "modeSwitchConfirm": "Passa a Sync Updates",
+      "keepClosedSwitchLabel": "Passa e mantieni chiuso il ticket principale",
+      "keepClosedSwitchHelp": "I ticket figli aperti restano aperti con il proprio orologio SLA. Il gruppo risulterà incoerente finché non saranno risolti.",
+      "applyResolutionSwitchLabel": "Passa e applica la risoluzione del ticket principale ai ticket figli aperti",
+      "applyResolutionSwitchHelp": "Chiude ogni ticket figlio aperto con lo stato {{status}} e vi pubblica la risoluzione del ticket principale come commento pubblico.",
+      "applyResolutionSwitchHelpNoComment": "Chiude ogni ticket figlio aperto con lo stato {{status}}. Il ticket principale non ha un commento di risoluzione pubblico da pubblicare.",
+      "reopenMasterSwitchLabel": "Passa e riapri il ticket principale"
     },
     "autoClose": "Verrà chiuso automaticamente il {{date}} salvo nuove attività.",
     "autoCloseWarned": "Il cliente è stato avvisato.",
@@ -1786,7 +1848,8 @@
     "remoteFieldUpdated": "{{name}} ha aggiornato {{field}}",
     "connection": {
       "reconnecting": "Aggiornamenti in tempo reale offline - riconnessione...",
-      "unavailable": "Aggiornamenti in tempo reale non disponibili"
+      "unavailable": "Aggiornamenti in tempo reale non disponibili",
+      "offlineShort": "Offline"
     }
   },
   "delete": {
@@ -1968,7 +2031,10 @@
       "openScheduleEntry": "Apri voce di agenda",
       "acrossEntries_few": "su {{count}} voci",
       "acrossEntries_many": "su {{count}} voci",
-      "changeLocation": "Cambia sede"
+      "changeLocation": "Cambia sede",
+      "addDescriptionPrompt": "Aggiungi una descrizione: qual è il problema e di cosa ha bisogno il cliente?",
+      "projectTasks": "Attività di progetto",
+      "timeAndBilling": "Tempo e fatturazione"
     },
     "timeline": {
       "subtitle": "Risposte, tempo e modifiche di sistema in un unico posto",
@@ -2064,6 +2130,17 @@
       "collapseActivity": "Comprimi attività precedente",
       "replyingToComment": "Rispondendo a {{name}}",
       "createdFromTemplate": "{{actor}} ha creato questo ticket dal modello \"{{name}}\""
+    },
+    "board": {
+      "conversation": "Conversazione",
+      "details": "Dettagli"
+    },
+    "groups": {
+      "customer": "Cliente",
+      "work": "Lavoro",
+      "who": "Persone",
+      "linked": "Elementi collegati",
+      "empty": "Ancora niente qui"
     }
   },
   "notifications": {
@@ -2495,7 +2572,9 @@
     "discard": "Scarta cronometro",
     "pausedHint": "In pausa. Riprendi per continuare a tracciare, oppure ferma per registrare il tempo.",
     "workDescription": "Descrizione del lavoro",
-    "whatAreYouWorkingOn": "Su cosa stai lavorando?"
+    "whatAreYouWorkingOn": "Su cosa stai lavorando?",
+    "chipElsewhere": "Cronometro su {{label}}",
+    "title": "Cronometro"
   },
   "templates": {
     "loading": "Caricamento…",
@@ -2619,6 +2698,116 @@
       "hours": "{{hours}} h",
       "daysHours": "{{days}} g {{hours}} h",
       "days": "{{days}} g"
+    }
+  },
+  "cannedResponses": {
+    "picker": {
+      "button": "Risposte predefinite",
+      "buttonTooltip": "Inserisci una risposta predefinita (Ctrl/Cmd+J, oppure digita /)",
+      "title": "Inserisci una risposta predefinita",
+      "searchPlaceholder": "Cerca risposte predefinite…",
+      "searchLabel": "Cerca risposte predefinite",
+      "loading": "Caricamento delle risposte predefinite…",
+      "empty": "Non ci sono ancora risposte predefinite.",
+      "noResults": "Nessuna risposta predefinita corrisponde alla ricerca.",
+      "loadFailed": "Impossibile caricare le risposte predefinite.",
+      "insertFailed": "Impossibile inserire la risposta predefinita.",
+      "favorites": "Preferite",
+      "recent": "Usate di recente",
+      "uncategorized": "Senza categoria",
+      "slashGroup": "Risposte predefinite",
+      "slashBrowse": "Risposte predefinite…",
+      "slashBrowseHint": "Sfoglia e inserisci una risposta salvata"
+    },
+    "scope": {
+      "personal": "Personale",
+      "team": "Team",
+      "board": "Bacheca",
+      "clientPortal": "Portale clienti",
+      "personalHelp": "Solo tu puoi usare questa risposta.",
+      "teamHelp": "I membri del team scelto possono usare questa risposta.",
+      "boardHelp": "Chiunque risponda ai ticket della bacheca scelta può usare questa risposta.",
+      "clientPortalHelp": "Riservata alle risposte del portale clienti. Non viene proposta quando si risponde dal portale MSP."
+    },
+    "list": {
+      "title": "Risposte predefinite",
+      "new": "Nuova risposta predefinita",
+      "showInactive": "Mostra inattive",
+      "searchPlaceholder": "Cerca per nome, categoria o testo…",
+      "searchLabel": "Cerca risposte predefinite",
+      "allCategories": "Tutte le categorie",
+      "noResults": "Nessuna risposta predefinita corrisponde ai filtri.",
+      "empty": "Ancora nessuna risposta predefinita. Creane una per riutilizzarla nelle risposte ai ticket.",
+      "deleteTitle": "Elimina risposta predefinita",
+      "deleteMessage": "Eliminare «{{name}}»? Le risposte che l'hanno già usata non vengono modificate.",
+      "deleted": "Risposta predefinita eliminata",
+      "favorite": "Preferita",
+      "columns": {
+        "name": "Nome",
+        "category": "Categoria",
+        "scope": "Disponibile per",
+        "preview": "Anteprima",
+        "status": "Stato"
+      }
+    },
+    "status": {
+      "active": "Attiva",
+      "inactive": "Inattiva"
+    },
+    "actions": {
+      "favorite": "Aggiungi ai preferiti",
+      "unfavorite": "Rimuovi dai preferiti",
+      "edit": "Modifica",
+      "activate": "Attiva",
+      "deactivate": "Disattiva",
+      "delete": "Elimina",
+      "cancel": "Annulla"
+    },
+    "loading": "Caricamento…",
+    "editor": {
+      "back": "Risposte predefinite",
+      "newTitle": "Nuova risposta predefinita",
+      "save": "Salva",
+      "saving": "Salvataggio…",
+      "saved": "Risposta predefinita salvata",
+      "created": "Risposta predefinita creata",
+      "viewOnly": "Puoi visualizzare questa risposta predefinita ma non modificarla."
+    },
+    "sections": {
+      "details": "Dettagli",
+      "body": "Risposta"
+    },
+    "fields": {
+      "name": "Nome",
+      "category": "Categoria",
+      "categoryHelp": "Raggruppa le risposte nel selettore. Facoltativo.",
+      "scope": "Disponibile per",
+      "team": "Team",
+      "teamPlaceholder": "Seleziona un team",
+      "board": "Bacheca",
+      "boardPlaceholder": "Seleziona una bacheca",
+      "body": "Testo della risposta",
+      "bodyPlaceholder": "Scrivi la risposta…"
+    },
+    "mergeFields": {
+      "title": "Campi di unione",
+      "help": "Compilati quando la risposta viene inserita in una replica. Un campo senza valore diventa vuoto; un campo non riconosciuto resta invariato.",
+      "descriptions": {
+        "contact_first_name": "Il nome del contatto",
+        "contact_last_name": "Il cognome del contatto",
+        "contact_name": "Il nome completo del contatto",
+        "ticket_number": "Il numero del ticket",
+        "ticket_title": "Il titolo del ticket",
+        "agent_name": "Il tuo nome (l'agente che risponde)",
+        "client_name": "Il nome del cliente"
+      }
+    },
+    "errors": {
+      "notFound": "Risposta predefinita non trovata.",
+      "duplicateName": "Esiste già qui una risposta predefinita chiamata «{{name}}».",
+      "invalidReferences": "Il team o la bacheca selezionati non esistono più.",
+      "notAvailable": "Questa risposta predefinita non è disponibile per questo ticket.",
+      "notATeamMember": "Puoi gestire le risposte di team solo per i team di cui fai parte."
     }
   }
 }

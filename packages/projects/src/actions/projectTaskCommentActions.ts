@@ -3,6 +3,8 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { serves } from '@alga-psa/core/capability';
+import { getApiKeyUserOverride, getSession } from '@alga-psa/auth';
 import type { IProjectTaskComment, IProjectTaskCommentWithUser } from '@alga-psa/types';
 import {
   countTaskCommentsBatchWithDb,
@@ -99,11 +101,15 @@ export const createTaskComment = withAuth(async (
  * Get all comments for a task
  */
 export const getTaskComments = withAuth(async (
-  _user,
+  user,
   { tenant },
   taskId: string
 ): Promise<IProjectTaskCommentWithUser[] | ProjectTaskCommentActionError> => {
   try {
+    if (!await hasPermission(user, 'project_task', 'read')) {
+      throw new Error('Permission denied: cannot read task comments');
+    }
+
     const { knex: db } = await createTenantKnex();
     return await listTaskCommentsWithDb(db, tenant, taskId);
   } catch (error) {
@@ -173,6 +179,27 @@ export const getTaskCommentCount = withAuth(async (
 });
 
 /**
+ * Co-managed workspaces count through L3c's keyset-bounded reader admission. Anything else (flag off, no
+ * participation, kill switch, PSA tenant) returns null before a single statement is issued, so the native
+ * count below is byte-for-byte what it was. The module is imported lazily for the same reason.
+ */
+async function coManagedBoardCommentCounts(db: Parameters<typeof countTaskCommentsBatchWithDb>[0], tenant: string, user: { user_id: string }, taskIds: string[]) {
+  if (!(await serves('co-managed', tenant)).served) return null;
+  const { isCoManagedWorkspace } = await import('@alga-psa/co-managed/coManagedWorkspace');
+  if (!await isCoManagedWorkspace(db, tenant)) return null;
+  const session = await getSession();
+  if (getApiKeyUserOverride() || !session?.session_id || session.user?.tenant !== tenant || session.user?.id !== user.user_id) {
+    throw new Error('Permission denied: cannot read task comments');
+  }
+  const { countCoManagedNativeTaskComments } = await import('@alga-psa/co-managed/nativeTaskCommentAccess');
+  try {
+    return await countCoManagedNativeTaskComments(db, { kind: 'session', tenant, userId: user.user_id, sessionId: session.session_id }, taskIds);
+  } catch {
+    throw new Error('Permission denied: cannot read task comments');
+  }
+}
+
+/**
  * Get comment counts for multiple tasks in a single query
  */
 export const getTaskCommentCountsBatch = withAuth(async (
@@ -188,7 +215,7 @@ export const getTaskCommentCountsBatch = withAuth(async (
     }
 
     const { knex: db } = await createTenantKnex();
-    return await countTaskCommentsBatchWithDb(db, tenant, taskIds);
+    return await coManagedBoardCommentCounts(db, tenant, user, taskIds) ?? await countTaskCommentsBatchWithDb(db, tenant, taskIds);
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;

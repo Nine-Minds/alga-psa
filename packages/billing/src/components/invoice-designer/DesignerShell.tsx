@@ -2028,7 +2028,7 @@ export const DesignerShell: React.FC = () => {
           {metadata.srcBinding === 'tenantLogo' ? (
             <p className="text-[11px] text-slate-500 dark:text-slate-400" data-automation-id="designer-media-logo-hint">
               {t('designer.inspector.mediaSourceLogoHint', {
-                defaultValue: 'Shows the logo from your company branding settings on every document.',
+                defaultValue: "Shows the logo from your own company's client record on every document.",
               })}
             </p>
           ) : (

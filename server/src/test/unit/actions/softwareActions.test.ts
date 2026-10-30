@@ -50,7 +50,7 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 import { createTenantKnex } from '@alga-psa/db';
-import { getCurrentUser } from '@alga-psa/auth';
+import { getCurrentUser, hasPermission } from '@alga-psa/auth';
 import {
   getAssetSoftware,
   getAssetSoftwareSummary,
@@ -78,6 +78,7 @@ function createMockQueryBuilder(returnData: unknown): Partial<Knex.QueryBuilder>
 describe('Software Actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(hasPermission).mockResolvedValue(true);
     (getCurrentUser as ReturnType<typeof vi.fn>).mockResolvedValue({
       user_id: '00000000-0000-0000-0000-000000000001',
       tenant: TEST_TENANT,
@@ -96,6 +97,18 @@ describe('Software Actions', () => {
       await expect(
         getAssetSoftware({ asset_id: TEST_ASSET_ID })
       ).rejects.toThrow();
+    });
+
+    it('should return a permission error without asset:read', async () => {
+      vi.mocked(hasPermission).mockResolvedValue(false);
+      const mockKnex = vi.fn();
+      (createTenantKnex as ReturnType<typeof vi.fn>).mockResolvedValue({ knex: mockKnex, tenant: TEST_TENANT });
+
+      const result = await getAssetSoftware({ asset_id: TEST_ASSET_ID });
+
+      expect(result).toHaveProperty('permissionError');
+      expect(hasPermission).toHaveBeenCalledWith(expect.anything(), 'asset', 'read');
+      expect(mockKnex).not.toHaveBeenCalled();
     });
 
     it('should return paginated software list', async () => {

@@ -51,7 +51,9 @@
       "replaced": "Vervangen",
       "credited": "Gecrediteerd",
       "charged": "In rekening gebracht",
-      "closed": "Gesloten"
+      "closed": "Gesloten",
+      "warranty_review": "Garantiebeoordeling",
+      "repaired": "Gerepareerd"
     }
   },
   "assetAlertsSection": {
@@ -192,7 +194,17 @@
         "managed": "RMM beheerd",
         "unmanaged": "Niet beheerd"
       },
-      "allGroups": "Alle groepen"
+      "allGroups": "Alle groepen",
+      "ownership": {
+        "any": "Elk eigendom",
+        "client": "Eigendom van klant",
+        "msp": "Eigendom van MSP"
+      },
+      "custody": {
+        "any": "Elke bewaring",
+        "inCustody": "In bewaring bij MSP",
+        "notInCustody": "Niet in bewaring bij MSP"
+      }
     },
     "activeFilters": {
       "status": "Status: {{value}}",
@@ -246,7 +258,9 @@
         "setLocation": "Locatie instellen",
         "setStatus": "Status instellen",
         "assignContact": "Aan contact toewijzen",
-        "addToGroup": "Aan groep toevoegen"
+        "addToGroup": "Aan groep toevoegen",
+        "printLabels": "Labels afdrukken",
+        "printLabelsLimit": "U kunt maximaal {{max}} labels tegelijk afdrukken"
       },
       "actions": {
         "apply": "Toepassen",
@@ -446,7 +460,9 @@
       "rebootDevice": "Apparaat opnieuw opstarten",
       "rebooting": "Opnieuw opstarten...",
       "editAsset": "Asset bewerken",
-      "deleteAsset": "Asset verwijderen"
+      "deleteAsset": "Asset verwijderen",
+      "printLabel": "Assetlabel afdrukken",
+      "printPage": "Pagina afdrukken"
     },
     "values": {
       "unknownClient": "Onbekende klant"
@@ -663,7 +679,8 @@
       "vendor": "Leverancier",
       "purchaseCost": "Aanschafkosten",
       "orderNumber": "Ordernr.",
-      "billingProfile": "Factureringsprofiel"
+      "billingProfile": "Factureringsprofiel",
+      "ownership": "Eigendom"
     },
     "placeholders": {
       "loadingClients": "Klanten laden…",
@@ -718,6 +735,10 @@
     "additionalFields": "Extra velden",
     "help": {
       "assignedTo": "In het klantportaal zien personen met beperkte zichtbaarheid dit apparaat alleen als het aan hen of aan iemand die aan hen rapporteert is toegewezen."
+    },
+    "ownership": {
+      "client": "Eigendom van klant",
+      "msp": "Eigendom van MSP"
     }
   },
   "assetFormClient": {
@@ -930,11 +951,6 @@
       "type": "Type",
       "status": "Status"
     },
-    "assetStatuses": {
-      "active": "Actief",
-      "inactive": "Inactief",
-      "maintenance": "Onderhoud"
-    },
     "assetTypes": {
       "workstation": "Werkstation",
       "server": "Server",
@@ -1041,7 +1057,8 @@
       "manufacturer": "Fabrikant",
       "vendor": "Leverancier",
       "purchaseCost": "Aanschafkosten",
-      "orderNumber": "Ordernr."
+      "orderNumber": "Ordernr.",
+      "ownership": "Eigendom"
     },
     "placeholders": {
       "workstationOsType": "bijvoorbeeld Windows, macOS, Linux",
@@ -1276,7 +1293,10 @@
       "frequency": "Frequentie *",
       "interval": "Interval *",
       "nextMaintenanceDate": "Volgende onderhoudsdatum *",
-      "active": "Actief"
+      "active": "Actief",
+      "recurrenceUnit": "Eenheid *",
+      "onWeekdays": "Op weekdagen (optioneel)",
+      "onDayOfMonth": "Op dag van de maand (optioneel)"
     },
     "placeholders": {
       "scheduleName": "bijvoorbeeld maandelijks serveronderhoud",
@@ -1291,7 +1311,8 @@
       "weekly": "Wekelijks",
       "monthly": "Maandelijks",
       "quarterly": "Driemaandelijks",
-      "yearly": "Jaarlijks"
+      "yearly": "Jaarlijks",
+      "custom": "Aangepast"
     },
     "errors": {
       "scheduleNameRequired": "Schemanaam is vereist",
@@ -1300,6 +1321,18 @@
       "nextMaintenanceRequired": "Volgende onderhoudsdatum is vereist",
       "frequencyIntervalMin": "Het frequentie-interval moet minimaal 1 zijn",
       "saveFailed": "Kan onderhoudsschema niet maken"
+    },
+    "recurrenceUnits": {
+      "days": "Dagen",
+      "weeks": "Weken",
+      "months": "Maanden",
+      "years": "Jaren"
+    },
+    "dayOfMonthOptions": {
+      "any": "Elke dag"
+    },
+    "hints": {
+      "selectors": "Zonder selectie wordt herhaald vanaf de voltooiingsdatum."
     }
   },
   "maintenanceSchedulesTab": {
@@ -1351,6 +1384,36 @@
         "yearly_other": "jaren",
         "yearly_few": "jaren",
         "yearly_many": "jaren"
+      },
+      "customUnconfigured": "Aangepast (niet geconfigureerd)",
+      "onWeekdays": "{{cadence}} op {{days}}",
+      "onDaysOfMonth": "{{cadence}} op dag {{days}}",
+      "weekdays": {
+        "sun": "zo",
+        "mon": "ma",
+        "tue": "di",
+        "wed": "wo",
+        "thu": "do",
+        "fri": "vr",
+        "sat": "za"
+      },
+      "customUnits": {
+        "days_one": "dag",
+        "days_other": "dagen",
+        "days_few": "dagen",
+        "days_many": "dagen",
+        "weeks_one": "week",
+        "weeks_other": "weken",
+        "weeks_few": "weken",
+        "weeks_many": "weken",
+        "months_one": "maand",
+        "months_other": "maanden",
+        "months_few": "maanden",
+        "months_many": "maanden",
+        "years_one": "jaar",
+        "years_other": "jaren",
+        "years_few": "jaren",
+        "years_many": "jaren"
       }
     },
     "status": {
@@ -1483,6 +1546,8 @@
       "installDate": "Installatiedatum"
     },
     "empty": "Er is geen software gevonden die voldoet aan uw zoekopdracht.",
+    "noInventory": "Voor dit apparaat is nog geen software-inventaris verzameld.",
+    "loadError": "De software-inventaris kon niet worden geladen.",
     "totalItems": "Totaal aantal artikelen: {{count}}",
     "values": {
       "unknown": "Onbekend"
@@ -1628,6 +1693,30 @@
       "rmm_linked": "RMM gekoppeld",
       "hardware_upgrade": "Hardware geüpgraded",
       "warranty_updated": "Garantie bijgewerkt"
+    },
+    "custody": {
+      "unknownPlace": "een onbekende locatie",
+      "ticket": "Ticket {{ticket}}",
+      "receivedBack": "Terugontvangen op {{place}}",
+      "received": "In bewaring genomen op {{place}}",
+      "moved": "Verplaatst van {{from}} naar {{to}}",
+      "movedTo": "Verplaatst naar {{to}}",
+      "handedOff": "Overgedragen van {{from}} aan {{to}}",
+      "handedOffTo": "Overgedragen aan {{to}}",
+      "aColleague": "een collega",
+      "shipped": "Verzonden naar {{counterparty}}",
+      "shippedVendor": "Verzonden naar leverancier",
+      "returnedTo": "Geretourneerd aan klant ({{counterparty}})",
+      "returned": "Geretourneerd aan klant",
+      "updated": "Bewaringsgegevens bijgewerkt",
+      "fields": {
+        "purpose": "doel",
+        "next_action_party": "volgende actie",
+        "next_action_note": "notitie bij volgende actie",
+        "follow_up_on": "opvolgdatum",
+        "condition_note": "staat",
+        "accessories": "accessoires"
+      }
     }
   },
   "assetSignals": {
@@ -1766,7 +1855,8 @@
     "in_stock": "Op voorraad",
     "maintenance": "In onderhoud",
     "inactive": "Inactief",
-    "retired": "Afgevoerd"
+    "retired": "Afgevoerd",
+    "held_by_msp": "In bewaring bij MSP"
   },
   "assetStatusKinds": {
     "deployable": "Inzetbaar",
@@ -1857,6 +1947,204 @@
     "errors": {
       "createFailed": "Kan de groep niet aanmaken.",
       "addFailed": "Kan de geselecteerde assets niet toevoegen."
+    }
+  },
+  "custody": {
+    "purpose": {
+      "repair": "Reparatie",
+      "warranty_evaluation": "Garantiebeoordeling",
+      "loaner_prep": "Voorbereiding leenapparaat",
+      "staging": "Klaarmaken voor gebruik"
+    },
+    "party": {
+      "msp": "Wij (MSP)",
+      "client": "Klant",
+      "vendor": "Leverancier"
+    },
+    "fields": {
+      "location": "Locatie",
+      "keepLocation": "Huidige locatie behouden",
+      "selectLocation": "Selecteer een locatie",
+      "bin": "Bak of plank",
+      "binPlaceholder": "bijv. Plank B3",
+      "purpose": "Doel",
+      "nextActionParty": "Volgende actie ligt bij",
+      "followUpOn": "Opvolgen op",
+      "followUpPlaceholder": "Selecteer een datum",
+      "nextActionNote": "Notitie bij volgende actie",
+      "internalNote": "Intern. Wordt nooit op een label afgedrukt of aan de klant getoond.",
+      "conditionNote": "Staat",
+      "conditionPlaceholder": "Krassen, ontbrekende schroeven, schade bij aankomst",
+      "accessories": "Ontvangen accessoires",
+      "accessoryPlaceholder": "bijv. Voedingsadapter",
+      "accessoryQuantity": "Aantal",
+      "removeAccessory": "Accessoire verwijderen",
+      "addAccessory": "Accessoire toevoegen",
+      "note": "Notitie (optioneel)"
+    },
+    "errors": {
+      "generic": "Er is iets misgegaan."
+    },
+    "actions": {
+      "cancel": "Annuleren",
+      "saving": "Opslaan...",
+      "move": "Verplaatsen",
+      "handOff": "Overdragen",
+      "ship": "Verzenden naar leverancier",
+      "receiveBack": "Terugontvangen",
+      "returnToClient": "Retourneren aan klant",
+      "edit": "Gegevens bewerken",
+      "receiveIntoCustody": "In bewaring nemen"
+    },
+    "move": {
+      "title": "Apparatuur verplaatsen",
+      "submit": "Verplaatsen",
+      "toLocation": "Verplaatsen naar"
+    },
+    "handOff": {
+      "title": "Overdragen aan een collega",
+      "submit": "Overdragen",
+      "newHolder": "Nieuwe houder",
+      "selectHolder": "Selecteer een persoon"
+    },
+    "ship": {
+      "title": "Verzenden naar leverancier",
+      "description": "Het item verlaat het kantoor. Het blijft in bewaring en wordt getoond als bij de leverancier.",
+      "submit": "Verzenden",
+      "counterparty": "Leverancier of vervoerder",
+      "counterpartyPlaceholder": "bijv. Dell RMA-depot"
+    },
+    "receiveBack": {
+      "title": "Terugontvangen van leverancier",
+      "submit": "Terugontvangen",
+      "holder": "Houder (standaard u)",
+      "me": "Ik"
+    },
+    "return": {
+      "title": "Retourneren aan klant",
+      "description": "Hiermee eindigt de bewaring. Het item staat niet langer vermeld als in bewaring.",
+      "submit": "Retourneren aan klant",
+      "collectedBy": "Opgehaald door (optioneel)"
+    },
+    "edit": {
+      "title": "Bewaringsgegevens bewerken",
+      "submit": "Opslaan"
+    },
+    "open": {
+      "title": "In bewaring nemen",
+      "description": "Leg vast dat de MSP deze apparatuur nu in bezit heeft. Dit maakt geen voorraad aan en raakt de facturatie niet.",
+      "submit": "Ontvangen",
+      "holder": "Houder (standaard u)"
+    },
+    "card": {
+      "withVendor": "Bij leverancier",
+      "title": "Bewaring",
+      "location": "Locatie",
+      "holder": "Houder",
+      "purpose": "Doel",
+      "nextAction": "Volgende actie",
+      "followUp": "Opvolging",
+      "overdue": "achterstallig",
+      "daysHeld": "Dagen in bewaring",
+      "ticket": "Ticket",
+      "openTicket": "Ticket openen",
+      "condition": "Staat",
+      "accessories": "Accessoires",
+      "notInCustody": "Momenteel niet in bewaring van de MSP.",
+      "hideHistory": "Bewaringsgeschiedenis verbergen",
+      "showHistoryWithPast": "Bewaringsgeschiedenis ({{count}} eerdere periodes)",
+      "showHistory": "Bewaringsgeschiedenis",
+      "noEvents": "Geen bewaringsgebeurtenissen vastgelegd."
+    },
+    "state": {
+      "with_vendor": "Bij leverancier",
+      "in_office": "Op kantoor"
+    },
+    "badge": {
+      "withVendor": "Bij leverancier",
+      "inOfficeAt": "Op kantoor - {{location}}",
+      "inOffice": "Op kantoor"
+    },
+    "queue": {
+      "columns": {
+        "asset": "Asset",
+        "client": "Klant",
+        "location": "Locatie",
+        "holder": "Houder",
+        "purpose": "Doel",
+        "nextAction": "Volgende actie",
+        "followUp": "Opvolging",
+        "daysHeld": "Dagen in bewaring",
+        "ticket": "Ticket",
+        "actions": "Acties"
+      },
+      "openMenu": "Menu openen",
+      "tabs": {
+        "all_open": "Alle open",
+        "in_office": "Op kantoor",
+        "waiting_on_vendor": "Wacht op leverancier",
+        "waiting_on_client": "Wacht op klant",
+        "overdue": "Achterstallig"
+      },
+      "title": "Apparatuur in bewaring",
+      "filters": {
+        "client": "Klant",
+        "allLocations": "Alle locaties",
+        "holder": "Houder",
+        "allPurposes": "Alle doelen",
+        "mine": "Van mij"
+      },
+      "empty": "Er is geen apparatuur in bewaring voor deze weergave."
+    },
+    "receiveEquipment": {
+      "button": "Apparatuur ontvangen",
+      "title": "Apparatuur ontvangen",
+      "description": "Leg klantapparatuur vast die voor dit ticket is afgegeven. Dit maakt geen voorraad aan en raakt facturatie of tijd niet.",
+      "submit": "Ontvangen",
+      "modeExisting": "Bestaande asset",
+      "modeNew": "Nieuw item",
+      "search": "Klantassets zoeken",
+      "asset": "Asset",
+      "assetPlaceholder": "Selecteer een asset",
+      "fields": {
+        "name": "Naam",
+        "type": "Type",
+        "manufacturer": "Fabrikant",
+        "model": "Model",
+        "serial": "Serienummer",
+        "assetTag": "Assettag (optioneel)"
+      },
+      "photos": "Foto's (optioneel)",
+      "photosHint": "Foto's worden aan dit ticket gekoppeld en zijn niet zichtbaar voor de klant.",
+      "doneTitle": "Apparatuur ontvangen",
+      "doneBody": "{{name}} ({{tag}}) is nu in bewaring bij de MSP.",
+      "printLabel": "Assetlabel afdrukken",
+      "openAsset": "Asset openen",
+      "close": "Sluiten",
+      "inCustodyOption": "{{asset}} — In bewaring: {{location}}"
+    },
+    "photos": {
+      "limit": "Maximaal 20 foto’s, samen 10 MB. Foto’s zijn verborgen voor klanten.",
+      "tooLarge": "Kies maximaal 20 foto’s van samen niet meer dan 10 MB."
+    }
+  },
+  "warranty": {
+    "card": {
+      "title": "Garantie",
+      "warrantyEnd": "Garantie eindigt",
+      "expired": "Verlopen",
+      "expiringSoon": "Verloopt binnenkort",
+      "vendor": "Leverancier",
+      "ownership": "Eigendom",
+      "ownershipMsp": "Eigendom van MSP",
+      "ownershipClient": "Eigendom van klant",
+      "claims": "Garantieclaims",
+      "noClaims": "Nog geen garantieclaims.",
+      "openRma": "RMA openen",
+      "startClaim": "Garantieclaim starten"
+    },
+    "badge": {
+      "label": "RMA {{number}} · {{status}}"
     }
   }
 }

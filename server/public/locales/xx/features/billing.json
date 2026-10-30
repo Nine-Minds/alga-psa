@@ -54,6 +54,7 @@
     "taxBreakdown": "⟦Ŧȧẋ Ɓřḗȧķḓȯẇƞ⟧",
     "manualInvoice": "⟦Ḿȧƞŭȧŀ Īƞṽȯīƈḗ⟧",
     "credits": "⟦Ƈřḗḓīŧş⟧",
+    "currency": "⟦Ƈŭřřḗƞƈẏ⟧",
     "financialArtifactSummary": "⟦Ƒīƞȧƞƈīȧŀ-ȯƞŀẏ īƞṽȯīƈḗ. Řḗƈŭřřīƞɠ şḗřṽīƈḗ ƥḗřīȯḓş ȧƥƥḗȧř ȯƞŀẏ ȯƞ řḗƈŭřřīƞɠ ḓḗŧȧīŀ ŀīƞḗş.⟧",
     "servicePeriod": "⟦Şḗřṽīƈḗ Ƥḗřīȯḓ⟧",
     "servicePeriods": "⟦Şḗřṽīƈḗ Ƥḗřīȯḓş⟧",
@@ -408,6 +409,13 @@
       "pending": "⟦Īƞṽȯīƈḗş ȧẇȧīŧīƞɠ ȧƥƥřȯṽȧŀ ȯř ȧḓḓīŧīȯƞȧŀ ƥřȯƈḗşşīƞɠ⟧",
       "prepayment": "⟦Ȧḓṽȧƞƈḗ ƥȧẏḿḗƞŧ ȯř ḓḗƥȯşīŧ īƞṽȯīƈḗş⟧",
       "partially_applied": "⟦Īƞṽȯīƈḗş ẇīŧħ ƥȧřŧīȧŀ ƥȧẏḿḗƞŧş ȧƥƥŀīḗḓ⟧"
+    },
+    "billingPeriod": {
+      "weekly": "⟦ƥḗř ẇḗḗķ⟧",
+      "monthly": "⟦ƥḗř ḿȯƞŧħ⟧",
+      "quarterly": "⟦ƥḗř ʠŭȧřŧḗř⟧",
+      "semi-annually": "⟦ƥḗř ħȧŀƒ-ẏḗȧř⟧",
+      "annually": "⟦ƥḗř ẏḗȧř⟧"
     }
   },
   "credits": {
@@ -444,7 +452,13 @@
     "expires": "⟦Ḗẋƥīřḗş {{date}}⟧",
     "recentBurn": "⟦Řḗƈḗƞŧ ŭşȧɠḗ⟧",
     "timeEntry": "⟦Ŧīḿḗ ḗƞŧřẏ⟧",
-    "contractLabel": "⟦Ƈȯƞŧřȧƈŧ: {{contract}}⟧"
+    "contractLabel": "⟦Ƈȯƞŧřȧƈŧ: {{contract}}⟧",
+    "hoursLeftValue": "⟦{{hours}}ħ ŀḗƒŧ · {{value}}⟧",
+    "validFrom": "⟦Ṽȧŀīḓ ƒřȯḿ {{date}}⟧"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "⟦{{name}} — ƥřḗƥȧīḓ ƀŀȯƈķ, {{hours}} ħ⟧",
+    "overPrepaidBlock": "⟦{{name}} (ȯṽḗř ƥřḗƥȧīḓ ƀŀȯƈķ)⟧"
   },
   "bucketUsage": {
     "contractLine": "⟦Ɓŭƈķḗŧ Ƈȯƞŧřȧƈŧ Ŀīƞḗ⟧",
@@ -452,5 +466,20 @@
     "hoursUsed": "⟦{{hours}} ħȯŭřş ŭşḗḓ⟧",
     "hoursTotal": "⟦{{hours}} ħȯŭřş ŧȯŧȧŀ⟧",
     "rolloverHours": "⟦Īƞƈŀŭḓḗş {{hours}} řȯŀŀȯṽḗř ħȯŭřş⟧"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "⟦Ḓŭḗ ȯƞ Řḗƈḗīƥŧ⟧",
+      "net14": "⟦Ƞḗŧ 14⟧",
+      "net15": "⟦Ƞḗŧ 15⟧",
+      "net30": "⟦Ƞḗŧ 30⟧",
+      "net7": "⟦Ƞḗŧ 7⟧"
+    },
+    "paymentMethods": {
+      "bankTransfer": "⟦Ɓȧƞķ Ŧřȧƞşƒḗř⟧",
+      "check": "⟦Ƈħḗƈķ⟧",
+      "creditCard": "⟦Ƈřḗḓīŧ Ƈȧřḓ⟧"
+    },
+    "tenantDefault": "⟦Ŧḗƞȧƞŧ ḓḗƒȧŭŀŧ ({{value}})⟧"
   }
 }

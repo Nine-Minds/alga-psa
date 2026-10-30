@@ -84,6 +84,7 @@
     "button": "Filters",
     "unassigned": "Niet toegewezen",
     "category": "Filter op categorie",
+    "removeFilterChip": "Filter verwijderen: {{label}}",
     "assignee": "Toegewezene",
     "allAssignees": "Alle toegewezen personen",
     "responseState": "Antwoordstatus",
@@ -110,7 +111,12 @@
     "allResponseStatuses": "Alle antwoordstatussen",
     "responseStatus": "Antwoordstatus",
     "board": "Filteren op bord",
-    "searchSmart": "Tickets en opmerkingen doorzoeken… Enter voor slim zoeken"
+    "searchSmart": "Tickets en opmerkingen doorzoeken… Enter voor slim zoeken",
+    "requesterTags": "Tags van aanvrager",
+    "clientTags": "Klanttags",
+    "tagModeAny": "Een van",
+    "tagModeNone": "Geen van",
+    "droppedFromLink": "Sommige filters in deze link zijn ongeldig en zijn genegeerd."
   },
   "create": {
     "title": "Supportticket aanmaken",
@@ -248,7 +254,9 @@
     "openMenu": "Menu openen",
     "moreActions": "Meer acties",
     "createTemplate": "Sjabloon maken van ticket",
-    "createWorkflowFromTicket": "Workflow maken van ticket"
+    "createWorkflowFromTicket": "Workflow maken van ticket",
+    "printWorkTag": "Werklabel afdrukken",
+    "retry": "Opnieuw proberen"
   },
   "messages": {
     "noTickets": "Geen tickets gevonden",
@@ -358,7 +366,8 @@
     "pastedImagesDeleteFailed_many": "{{count}} geplakte afbeeldingen konden niet worden verwijderd.",
     "pastedImagesDeleted_few": "{{count}} geplakte afbeeldingen verwijderd.",
     "pastedImagesDeleted_many": "{{count}} geplakte afbeeldingen verwijderd.",
-    "sharedWorkspaceReadOnly": "U ziet dit ticket omdat het over een apparaat in een gedeelde werkplek gaat. Alleen degene die het heeft gemeld, kan er iets aan toevoegen."
+    "sharedWorkspaceReadOnly": "U ziet dit ticket omdat het over een apparaat in een gedeelde werkplek gaat. Alleen degene die het heeft gemeld, kan er iets aan toevoegen.",
+    "loadPartyTagsFailed": "Kon de tags van aanvrager en klant niet laden"
   },
   "conversation": {
     "comments": "Reacties",
@@ -461,6 +470,14 @@
     "clientPortal": "Ontvangen via Klantenportaal",
     "inboundEmail": "Ontvangen via e-mail"
   },
+  "originalEmail": {
+    "text": "Tekst",
+    "original": "Originele e-mail",
+    "emailShort": "E-mail",
+    "loading": "Originele e-mail wordt geladen…",
+    "error": "De originele e-mail kan niet worden geladen.",
+    "group": "Berichtweergave"
+  },
   "documents": {
     "title": "Documenten",
     "noDocuments": "Geen documenten toegevoegd",
@@ -502,6 +519,7 @@
     },
     "filters": {
       "allAssignees": "Alle toegewezen personen",
+      "allContacts": "Alle contacten",
       "selectStatus": "Status selecteren",
       "responseState": "Reactiestatus",
       "allResponseStates": "Alle reactiestatussen",
@@ -659,7 +677,7 @@
     "bundleMasterLabel": "Hoofdticket selecteren",
     "bundleMasterPlaceholder": "Hoofdticket selecteren...",
     "bundleSyncUpdates": "Wijzigingen synchroniseren van hoofd- naar onderliggende tickets (openbare reacties + workflowwijzigingen)",
-    "bundleSyncUpdatesHelp": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Daarna sluit of heropent het sluiten of heropenen van de master alle kindtickets, en wijzigingen van status, toegewezene en prioriteit op de master worden op de kinderen toegepast. Workflowvelden zijn vergrendeld op kinderen. Interne notities blijven op de master.",
+    "bundleSyncUpdatesHelp": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Als synchronisatie is ingeschakeld, sluit of heropent het sluiten of heropenen van de master alle kindtickets, worden wijzigingen van status, toegewezene en prioriteit op de master op hen toegepast en zijn hun workflowvelden vergrendeld. Zonder synchronisatie beheren kindtickets zelf hun status, toegewezene en prioriteit. Interne notities blijven op de master.",
     "bundleSelectAtLeastTwo": "Selecteer ten minste twee tickets om te bundelen.",
     "bundleSelectMaster": "Selecteer een hoofdticket.",
     "bundleSuccess": "Tickets gebundeld",
@@ -732,8 +750,8 @@
       "masterTicket": "Hoofdticket selecteren",
       "selectMasterTicket": "Hoofdticket selecteren...",
       "syncUpdates": "Wijzigingen synchroniseren van hoofd- naar onderliggende tickets (openbare reacties + workflowwijzigingen)",
-      "syncUpdatesHelp": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Daarna sluit of heropent het sluiten of heropenen van de master alle kindtickets, en wijzigingen van status, toegewezene en prioriteit op de master worden op de kinderen toegepast. Workflowvelden zijn vergrendeld op kinderen. Interne notities blijven op de master.",
-      "childrenDescription": "Onderliggende behouden hun huidige status; workflowvelden zijn vergrendeld op onderliggende tickets. Inkomende reacties op onderliggende tickets worden hieronder als alleen-lezen weergegeven.",
+      "syncUpdatesHelp": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Als synchronisatie is ingeschakeld, sluit of heropent het sluiten of heropenen van de master alle kindtickets, worden wijzigingen van status, toegewezene en prioriteit op de master op hen toegepast en zijn hun workflowvelden vergrendeld. Zonder synchronisatie beheren kindtickets zelf hun status, toegewezene en prioriteit. Interne notities blijven op de master.",
+      "childrenDescription": "Kindtickets behouden hun huidige status. Workflowvelden zijn alleen in de modus Sync Updates vergrendeld. Inkomende reacties op kindtickets worden hieronder als alleen-lezen weergegeven.",
       "checkingMasters": "Bestaande bundels controleren...",
       "existingMasterSuffix": "(bestaand hoofdticket)",
       "existingMasterLocked": "Eén geselecteerd ticket is al een hoofdticket. Dit wordt als hoofdticket gebruikt; de andere worden als onderliggende tickets toegevoegd.",
@@ -784,7 +802,9 @@
       "more": "Meer",
       "bundleNeedsOne": "Selecteer minstens 1 ticket om te bundelen",
       "selectedCount_few": "{{count}} geselecteerd",
-      "selectedCount_many": "{{count}} geselecteerd"
+      "selectedCount_many": "{{count}} geselecteerd",
+      "printLabels": "Labels afdrukken",
+      "printLabelsLimit": "U kunt maximaal {{max}} labels tegelijk afdrukken"
     },
     "assign": {
       "dialogTitle": "Geselecteerde tickets toewijzen",
@@ -968,7 +988,22 @@
     "tagCreatePartialFailure_few": "{{count}} tags konden niet worden aangemaakt",
     "tagCreatePartialFailure_many": "{{count}} tags konden niet worden aangemaakt",
     "tagCreationFailed_few": "{{count}} tags konden niet worden aangemaakt",
-    "tagCreationFailed_many": "{{count}} tags konden niet worden aangemaakt"
+    "tagCreationFailed_many": "{{count}} tags konden niet worden aangemaakt",
+    "assets": {
+      "heading": "Assets",
+      "selectClientFirst": "Selecteer een klant om assets te koppelen.",
+      "unavailable": "Assets kunnen na het aanmaken vanuit het ticket worden gekoppeld."
+    },
+    "attachments": {
+      "heading": "Bijlagen",
+      "add": "Bestanden toevoegen",
+      "remove": "{{name}} verwijderen"
+    },
+    "watchers": {
+      "heading": "Volgers",
+      "placeholder": "Volgers toevoegen..."
+    },
+    "attachmentsPartialFailure": "Ticket aangemaakt, maar deze bestanden konden niet worden bijgevoegd: {{files}}. Voeg ze toe vanuit het ticket."
   },
   "itil": {
     "calculatedPriority": "Prioriteit (berekend)",
@@ -1263,6 +1298,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Reactiestatusbewaking",
+      "defaultReplyInternalTitle": "Standaardzichtbaarheid van antwoorden",
+      "defaultReplyInternalDescription": "Begin nieuwe ticketantwoorden als Intern voor alle teamleden. Gebruikers kunnen een antwoord nog steeds naar Klant wijzigen. Antwoorden in het klantenportaal en bestaande gespreksthreads blijven ongewijzigd.",
+      "defaultReplyInternalLabel": "Ticketantwoorden standaard als Intern beginnen",
       "responseStateTrackingDescription": "Wanneer ingeschakeld, volgen tickets automatisch wie als volgende moet reageren (wachten op klant of wachten op interne reactie). Als u dit uitschakelt, verdwijnen reactiestatusbadges, filters en bijbehorende SLA-pauze-opties.",
       "responseStateTrackingEnabled": "Reactiestatusbewaking ingeschakeld",
       "responseStateTrackingDisabled": "Reactiestatusbewaking uitgeschakeld",
@@ -1397,7 +1435,15 @@
     "selectUnit": "Selecteer een eenheid om te leveren...",
     "onHandByLocation": "Voorraad per locatie",
     "catalogUnitCost": "Cataloguskostprijs per eenheid",
-    "costNotConfigured": "Niet geconfigureerd"
+    "costNotConfigured": "Niet geconfigureerd",
+    "availableBadge": "Beschikbaar: {{available}}",
+    "availableByLocation": "Vrije voorraad per locatie",
+    "freeOfOnHand": "{{free}} vrij van {{onHand}}",
+    "stockHeld": "Slechts {{free}} beschikbaar. {{held}} op voorraad is vastgezet voor verkooporders of projecten en kan hier niet worden gebruikt.",
+    "stockInsufficient": "Slechts {{onHand}} op voorraad, {{requested}} gevraagd.",
+    "reservedStockTitle": "Voorraad is gereserveerd voor een verkooporder of project",
+    "reservedStockMessage": "Slechts {{free}} van dit product is vrij. {{reserved}} op voorraad is gereserveerd voor verkooporders of projecten en u vroeg er {{requested}}. Als u het toch toevoegt, neemt u voorraad af waar een verkooporder of project op rekent en kan die tekortkomen.",
+    "reservedStockConfirm": "Toch toevoegen"
   },
   "watchList": {
     "title": "Volglijst",
@@ -1670,7 +1716,13 @@
       "ruleSubcategoryRequiresCategory": "Selecteer een categorie voordat u een subcategorie kiest.",
       "ruleTooManyKeywords": "Gebruik maximaal {{max}} trefwoorden per regel.",
       "ruleKeywordTooLong": "Elk trefwoord mag maximaal {{max}} tekens bevatten.",
-      "ruleOriginInvalid": "Een van de geselecteerde ticketbronnen is ongeldig."
+      "ruleOriginInvalid": "Een van de geselecteerde ticketbronnen is ongeldig.",
+      "templateClientMismatch": "Dit checklistsjabloon is beperkt tot een andere klant dan die van het ticket.",
+      "templateClientInvalid": "De geselecteerde klant is niet gevonden.",
+      "ruleClientOutsideTemplateScope": "Dit sjabloon hoort bij één klant, dus de regels kunnen geen andere klanten selecteren.",
+      "templateRulesTargetOtherClients": "Sommige regels voor automatisch toepassen van dit sjabloon richten zich op andere klanten. Verwijder die klanten uit de regels voordat u het sjabloon aan één klant toewijst.",
+      "predicateClientOutsideScope": "Klant {{client}} valt buiten het bereik van deze sjabloon.",
+      "predicateInvalid": "Ongeldige checklistregel: {{detail}}"
     }
   },
   "ticketSection": {
@@ -1699,9 +1751,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. Daarna sluit of heropent het sluiten of heropenen van de master alle kindtickets, en wijzigingen van status, toegewezene en prioriteit op de master worden op de kinderen toegepast. Workflowvelden zijn vergrendeld op kinderen. Interne notities blijven op de master.",
+      "childrenDescription": "Kindtickets behouden hun huidige status wanneer ze worden gebundeld. In de modus Sync Updates sluit of heropent het sluiten of heropenen van de master alle kindtickets, worden wijzigingen van status, toegewezene en prioriteit op de master op hen toegepast en zijn hun workflowvelden vergrendeld. In de modus Link Only beheren kindtickets zelf hun status, toegewezene en prioriteit. Interne notities blijven op de master.",
       "title": "Bundel",
       "masterBanner": "Dit ticket is het hoofdticket van een bundel ({{count}} onderliggende tickets). Modus: {{mode}}.",
+      "childLockedNotice": "Workflowvelden zijn vergrendeld; werk vanuit het masterticket.",
+      "childLinkedNotice": "Het is gekoppeld aan de master en wordt zelfstandig beheerd.",
       "multipleClients": "Meerdere klanten",
       "mode": "Modus: {{mode}}",
       "unbundle": "Ontbundelen",
@@ -1737,7 +1791,15 @@
       "applyResolutionHelpNoComment": "Sluit het onderliggende ticket met status {{status}}. Het hoofdticket heeft geen openbare oplossingsopmerking om te plaatsen.",
       "reopenMasterLabel": "Toevoegen en hoofdticket heropenen",
       "reopenMasterHelp": "Heropent alleen het hoofdticket. Al gesloten onderliggende tickets in deze bundel blijven gesloten; heropeningsmeldingen en SLA gelden voor het hoofdticket.",
-      "closedMasterGating": "De sluitregels van het bord staan geen open onderliggende tickets onder een gesloten hoofdticket toe, dus het hoofdticket gesloten houden is geen optie."
+      "closedMasterGating": "De sluitregels van het bord staan geen open onderliggende tickets onder een gesloten hoofdticket toe, dus het hoofdticket gesloten houden is geen optie.",
+      "modeSwitchDialogIntro": "Het hoofdticket is gesloten. Kies wat er met de open onderliggende tickets moet gebeuren wanneer de bundel naar Sync Updates overschakelt.",
+      "modeSwitchConfirm": "Overschakelen naar Sync Updates",
+      "keepClosedSwitchLabel": "Overschakelen en hoofdticket gesloten houden",
+      "keepClosedSwitchHelp": "Open onderliggende tickets blijven open met een eigen SLA-klok. De bundel wordt als inconsistent weergegeven totdat ze zijn opgelost.",
+      "applyResolutionSwitchLabel": "Overschakelen en de oplossing van het hoofdticket op open onderliggende tickets toepassen",
+      "applyResolutionSwitchHelp": "Sluit elk open onderliggend ticket met status {{status}} en plaatst de oplossing van het hoofdticket als openbare opmerking erbij.",
+      "applyResolutionSwitchHelpNoComment": "Sluit elk open onderliggend ticket met status {{status}}. Het hoofdticket heeft geen openbare oplossingsopmerking om te plaatsen.",
+      "reopenMasterSwitchLabel": "Overschakelen en hoofdticket heropenen"
     },
     "autoClose": "Wordt automatisch gesloten op {{date}}, tenzij er nieuwe activiteit is.",
     "autoCloseWarned": "De klant is gewaarschuwd.",
@@ -1786,7 +1848,8 @@
     "remoteFieldUpdated": "{{name}} heeft {{field}} bijgewerkt",
     "connection": {
       "reconnecting": "Live-updates offline - opnieuw verbinden...",
-      "unavailable": "Live-updates niet beschikbaar"
+      "unavailable": "Live-updates niet beschikbaar",
+      "offlineShort": "Offline"
     }
   },
   "delete": {
@@ -1968,7 +2031,10 @@
       "openScheduleEntry": "Agenda-item openen",
       "acrossEntries_few": "over {{count}} registraties",
       "acrossEntries_many": "over {{count}} registraties",
-      "changeLocation": "Locatie wijzigen"
+      "changeLocation": "Locatie wijzigen",
+      "addDescriptionPrompt": "Voeg een beschrijving toe — wat is het probleem en wat heeft de klant nodig?",
+      "projectTasks": "Projecttaken",
+      "timeAndBilling": "Tijd en facturatie"
     },
     "timeline": {
       "subtitle": "Reacties, tijd en systeemwijzigingen op één plek",
@@ -2064,6 +2130,17 @@
       "collapseActivity": "Oudere activiteit inklappen",
       "replyingToComment": "Reageren op {{name}}",
       "createdFromTemplate": "{{actor}} heeft dit ticket gemaakt uit sjabloon \"{{name}}\""
+    },
+    "board": {
+      "conversation": "Gesprek",
+      "details": "Details"
+    },
+    "groups": {
+      "customer": "Klant",
+      "work": "Werk",
+      "who": "Personen",
+      "linked": "Gekoppelde items",
+      "empty": "Nog niets hier"
     }
   },
   "notifications": {
@@ -2495,7 +2572,9 @@
     "discard": "Stopwatch verwijderen",
     "pausedHint": "Gepauzeerd. Hervat om door te gaan, of stop om de tijd te registreren.",
     "workDescription": "Werkbeschrijving",
-    "whatAreYouWorkingOn": "Waar werkt u aan?"
+    "whatAreYouWorkingOn": "Waar werkt u aan?",
+    "chipElsewhere": "Stopwatch op {{label}}",
+    "title": "Stopwatch"
   },
   "templates": {
     "loading": "Laden…",
@@ -2619,6 +2698,116 @@
       "hours": "{{hours}} u",
       "daysHours": "{{days}} d {{hours}} u",
       "days": "{{days}} d"
+    }
+  },
+  "cannedResponses": {
+    "picker": {
+      "button": "Standaardantwoorden",
+      "buttonTooltip": "Standaardantwoord invoegen (Ctrl/Cmd+J, of typ /)",
+      "title": "Standaardantwoord invoegen",
+      "searchPlaceholder": "Standaardantwoorden zoeken…",
+      "searchLabel": "Standaardantwoorden zoeken",
+      "loading": "Standaardantwoorden laden…",
+      "empty": "Er zijn nog geen standaardantwoorden.",
+      "noResults": "Geen standaardantwoorden komen overeen met uw zoekopdracht.",
+      "loadFailed": "De standaardantwoorden konden niet worden geladen.",
+      "insertFailed": "Het standaardantwoord kon niet worden ingevoegd.",
+      "favorites": "Favorieten",
+      "recent": "Recent gebruikt",
+      "uncategorized": "Zonder categorie",
+      "slashGroup": "Standaardantwoorden",
+      "slashBrowse": "Standaardantwoorden…",
+      "slashBrowseHint": "Een opgeslagen antwoord zoeken en invoegen"
+    },
+    "scope": {
+      "personal": "Persoonlijk",
+      "team": "Team",
+      "board": "Bord",
+      "clientPortal": "Klantenportaal",
+      "personalHelp": "Alleen u kunt dit antwoord gebruiken.",
+      "teamHelp": "Leden van het gekozen team kunnen dit antwoord gebruiken.",
+      "boardHelp": "Iedereen die tickets op het gekozen bord beantwoordt, kan dit antwoord gebruiken.",
+      "clientPortalHelp": "Gereserveerd voor antwoorden in het klantenportaal. Wordt niet aangeboden bij antwoorden vanuit het MSP-portaal."
+    },
+    "list": {
+      "title": "Standaardantwoorden",
+      "new": "Nieuw standaardantwoord",
+      "showInactive": "Inactieve tonen",
+      "searchPlaceholder": "Zoek op naam, categorie of tekst…",
+      "searchLabel": "Standaardantwoorden zoeken",
+      "allCategories": "Alle categorieën",
+      "noResults": "Geen standaardantwoorden komen overeen met uw filters.",
+      "empty": "Nog geen standaardantwoorden. Maak er een om het opnieuw te gebruiken in ticketantwoorden.",
+      "deleteTitle": "Standaardantwoord verwijderen",
+      "deleteMessage": "‘{{name}}’ verwijderen? Antwoorden die het al gebruikten, blijven ongewijzigd.",
+      "deleted": "Standaardantwoord verwijderd",
+      "favorite": "Favoriet",
+      "columns": {
+        "name": "Naam",
+        "category": "Categorie",
+        "scope": "Beschikbaar voor",
+        "preview": "Voorbeeld",
+        "status": "Status"
+      }
+    },
+    "status": {
+      "active": "Actief",
+      "inactive": "Inactief"
+    },
+    "actions": {
+      "favorite": "Aan favorieten toevoegen",
+      "unfavorite": "Uit favorieten verwijderen",
+      "edit": "Bewerken",
+      "activate": "Activeren",
+      "deactivate": "Deactiveren",
+      "delete": "Verwijderen",
+      "cancel": "Annuleren"
+    },
+    "loading": "Laden…",
+    "editor": {
+      "back": "Standaardantwoorden",
+      "newTitle": "Nieuw standaardantwoord",
+      "save": "Opslaan",
+      "saving": "Opslaan…",
+      "saved": "Standaardantwoord opgeslagen",
+      "created": "Standaardantwoord aangemaakt",
+      "viewOnly": "U kunt dit standaardantwoord bekijken maar niet wijzigen."
+    },
+    "sections": {
+      "details": "Details",
+      "body": "Antwoord"
+    },
+    "fields": {
+      "name": "Naam",
+      "category": "Categorie",
+      "categoryHelp": "Groepeert antwoorden in de kiezer. Optioneel.",
+      "scope": "Beschikbaar voor",
+      "team": "Team",
+      "teamPlaceholder": "Selecteer een team",
+      "board": "Bord",
+      "boardPlaceholder": "Selecteer een bord",
+      "body": "Antwoordtekst",
+      "bodyPlaceholder": "Schrijf het antwoord…"
+    },
+    "mergeFields": {
+      "title": "Samenvoegvelden",
+      "help": "Worden ingevuld wanneer het antwoord in een reactie wordt ingevoegd. Een veld zonder waarde wordt leeg; een onbekend veld blijft ongewijzigd.",
+      "descriptions": {
+        "contact_first_name": "De voornaam van de contactpersoon",
+        "contact_last_name": "De achternaam van de contactpersoon",
+        "contact_name": "De volledige naam van de contactpersoon",
+        "ticket_number": "Het ticketnummer",
+        "ticket_title": "De tickettitel",
+        "agent_name": "Uw naam (de antwoordende agent)",
+        "client_name": "De naam van de klant"
+      }
+    },
+    "errors": {
+      "notFound": "Standaardantwoord niet gevonden.",
+      "duplicateName": "Er bestaat hier al een standaardantwoord met de naam ‘{{name}}’.",
+      "invalidReferences": "Het geselecteerde team of bord bestaat niet meer.",
+      "notAvailable": "Dit standaardantwoord is niet beschikbaar voor dit ticket.",
+      "notATeamMember": "U kunt teamantwoorden alleen beheren voor teams waartoe u behoort."
     }
   }
 }

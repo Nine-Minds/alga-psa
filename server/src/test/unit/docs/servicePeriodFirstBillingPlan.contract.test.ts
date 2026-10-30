@@ -152,10 +152,20 @@ const billingCycleAlignmentPostInventoryRemovals = new Set([
 // pass-0 inventory snapshot was taken (recurring service-period ledger work
 // landed after the inventory was captured).
 const servicePeriodPostInventoryRefs = new Set([
+  // alga-2026-0002883 (CM T0-2): late approved hourly time loader reads persisted service-period fields.
+  'packages/billing/src/lib/billing/lateHourlyTime.ts',
+  // alga-2026-0002883 (CM T0-2): late approved hourly time integration test seeds persisted service-period fields.
+  'server/src/test/integration/billing/lateApprovedHourlyTime.integration.test.ts',
+  // alga-2026-0002714: products-contract recurring-total unit test builds contract-line fixtures with service-period fields.
+  'packages/billing/src/lib/billing/compute/recurringMemberRate.test.ts',
+  // alga-2026-0002714: products-contract totals integration test seeds and reads persisted service-period fields.
+  'server/src/test/integration/productsContractTotals.integration.test.ts',
   // Workflow event emitter contract fixtures (alga0002106) carry billing event payloads with period fields.
   'server/src/test/unit/workflow-event-contracts/contracts/billing.ts',
   'server/src/test/integration/billing/billingProfileAttribution.integration.test.ts',
   'packages/billing/src/lib/billing/pricing/isPeriodAlreadyInvoiced.ts',
+  // alga-2026-0002684: cadence Prepaid Block reads the client-cadence billed recurring periods.
+  'shared/billingClients/billedClientCadenceRecurringPeriods.ts',
   'shared/billingClients/resolveFixedLineRate.ts',
   // alga-2026-0002499: contract-scoped client-cadence billed-boundary regression test.
   'server/src/test/unit/billing/clientCadenceContractBoundary.regeneration.test.ts',
@@ -169,6 +179,13 @@ const servicePeriodPostInventoryRefs = new Set([
   // alga-2026-0002771: by-ticket plain-text/rounded-hours coverage builds
   // time-charge fixtures with service-period timing after this snapshot.
   'server/src/test/unit/billing/invoiceByTicketPlainText.test.ts',
+  // alga-2026-0002684: shared contract charge resolution (billing engine and
+  // simulator) reads contract-line service-period bounds through charge sources.
+  'packages/billing/src/lib/billing/chargeResolution/databaseChargeSource.ts',
+  'packages/billing/src/lib/billing/chargeResolution/resolveContractLineCharges.ts',
+  'server/src/test/unit/billing/engineUnhandledChargeConfiguration.test.ts',
+  'server/src/test/unit/billing/resolveContractLineCharges.test.ts',
+  'server/src/test/unit/billing/scenarioChargeSource.test.ts',
   // Explicit usage-contract measurement semantics (usage period totals, seat
   // revisions, unit-pricing revisions) added persisted service-period readers
   // and fixtures after the pass-0 snapshot.
@@ -185,6 +202,17 @@ const servicePeriodPostInventoryRefs = new Set([
   'server/src/test/unit/billing/prepaidBlockAcceptance.db.test.ts',
   'packages/billing/tests/prepaidBlockDueWork.db.test.ts',
   'packages/billing/tests/prepaidBlockInvoicing.db.test.ts',
+  // alga-2026-0002684: prepaid-block charge rules and compute (shared by the
+  // billing engine and the simulator) read issuance service-period bounds; the
+  // DB, migration and compute tests seed or assert them.
+  'packages/billing/src/lib/billing/chargeResolution/prepaidBlockRules.ts',
+  'packages/billing/src/lib/billing/compute/computePrepaidBlockCharges.ts',
+  'packages/billing/tests/prepaidBlockDeployFixes.db.test.ts',
+  'packages/billing/tests/prepaidBlockDuplicateGuard.db.test.ts',
+  'packages/client-portal/tests/clientHourBlocks.minorUnits.db.test.ts',
+  'server/migrations/__tests__/prepaidHoursContractsMigration.integration.test.ts',
+  'server/src/test/unit/billing/computeCadencePrepaidBlockCharges.test.ts',
+  'shared/billingClients/__tests__/recurringRunExecutionIdentity.prepaidBlockStream.test.ts',
   // Calendar month-end close and grouped zero-dollar claims added persisted
   // window readers and regression fixtures after the pass-0 snapshot.
   'packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts',
@@ -266,8 +294,10 @@ const servicePeriodPostInventoryRefs = new Set([
   'server/src/test/integration/accounting/xeroInboundReconciliation.integration.test.ts',
   // The contract wizard's first-invoice notice derives the first service
   // period a new contract will bill; it landed after the pass-0 snapshot.
-  'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/firstInvoiceDate.ts',
-  'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/firstInvoiceDate.test.ts',
+  'packages/billing/src/lib/firstInvoiceDate.ts',
+  'packages/billing/src/lib/firstInvoiceDate.test.ts',
+  // The notice renders the first service period resolved by firstInvoiceDate.
+  'packages/billing/src/components/billing-dashboard/contracts/wizard-steps/FirstInvoiceNotice.tsx',
   'server/src/lib/api/services/InvoiceService.ts',
   // seedBillingChargeSources backs fabricated usage charges with usage_tracking
   // rows keyed off the charge's servicePeriodStart.
@@ -343,8 +373,10 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/src/services/invoiceAutomaticAdjustments.ts',
   'packages/billing/src/components/billing-dashboard/ManualInvoices.tsx',
   // The same card's line-window guard, protected-history check and partial-period
-  // descriptions read persisted charge periods; their tests assert them.
-  'packages/billing/src/actions/contractLineAction.ts',
+  // descriptions read persisted charge periods; their tests assert them. The
+  // protected-history check moved into the transaction-scoped update module
+  // with the single-transaction contract line save (alga-2026-0002714).
+  'packages/billing/src/lib/billing/contractLineUpdate.ts',
   'packages/billing/src/actions/invoiceActions.ts',
   'packages/billing/src/lib/billing/compute/contractInvoiceAdjustments.ts',
   'packages/billing/src/lib/billing/compute/contractInvoiceAdjustments.test.ts',

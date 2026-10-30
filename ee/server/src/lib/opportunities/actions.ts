@@ -128,7 +128,7 @@ export const listOpportunityCommitments = withAuth(async (
   opportunityId: string,
 ): Promise<IOpportunityCommitment[]> => {
   await requireManagementAccess(user, 'read');
-  const id = z.string().uuid().parse(opportunityId);
+  const id = z.string().guid().parse(opportunityId);
   const { knex } = await createTenantKnex(tenant);
   return listCommitmentsData(knex, tenant, id);
 });
@@ -140,7 +140,7 @@ export const createOpportunityCommitment = withAuth(async (
   input: unknown,
 ): Promise<IOpportunityCommitment> => {
   await requireManagementAccess(user, 'update');
-  const id = z.string().uuid().parse(opportunityId);
+  const id = z.string().guid().parse(opportunityId);
   const data = createCommitmentSchema.parse(input);
   const { knex } = await createTenantKnex(tenant);
   return withTransaction(knex, (trx) => createCommitmentData(
@@ -160,7 +160,7 @@ export const updateOpportunityCommitment = withAuth(async (
   input: unknown,
 ): Promise<IOpportunityCommitment> => {
   await requireManagementAccess(user, 'update');
-  const [opportunity, commitment] = [opportunityId, commitmentId].map((id) => z.string().uuid().parse(id));
+  const [opportunity, commitment] = [opportunityId, commitmentId].map((id) => z.string().guid().parse(id));
   const data = updateCommitmentSchema.parse(input);
   const { knex } = await createTenantKnex(tenant);
   return withTransaction(knex, (trx) => updateCommitmentData(
@@ -180,7 +180,7 @@ export const deleteOpportunityCommitment = withAuth(async (
   commitmentId: string,
 ): Promise<void> => {
   await requireManagementAccess(user, 'delete');
-  const [opportunity, commitment] = [opportunityId, commitmentId].map((id) => z.string().uuid().parse(id));
+  const [opportunity, commitment] = [opportunityId, commitmentId].map((id) => z.string().guid().parse(id));
   const { knex } = await createTenantKnex(tenant);
   await withTransaction(knex, (trx) => deleteCommitmentData(trx, tenant, opportunity, commitment));
 });
@@ -191,7 +191,7 @@ export const getQbrTriggerPack = withAuth(async (
   clientId: string,
 ): Promise<IOpportunityQbrTriggerPack> => {
   await requireManagementAccess(user, 'read');
-  const id = z.string().uuid().parse(clientId);
+  const id = z.string().guid().parse(clientId);
   const { knex } = await createTenantKnex(tenant);
   return getQbrTriggerPackData(knex, tenant, id);
 });
@@ -203,7 +203,7 @@ export const createOpportunitiesFromTriggers = withAuth(async (
   triggerKeys: string[],
 ): Promise<IOpportunity[]> => {
   await requireManagementAccess(user, 'create');
-  const id = z.string().uuid().parse(clientId);
+  const id = z.string().guid().parse(clientId);
   const data = createQbrOpportunitiesSchema.parse({ trigger_keys: triggerKeys });
   const { knex } = await createTenantKnex(tenant);
   return withTransaction(knex, (trx) => createOpportunitiesFromQbrTriggersData(

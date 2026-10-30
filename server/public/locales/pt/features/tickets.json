@@ -84,6 +84,7 @@
     "button": "Filtros",
     "unassigned": "Não atribuído",
     "category": "Filtrar por categoria",
+    "removeFilterChip": "Remover filtro: {{label}}",
     "assignee": "Responsável",
     "allAssignees": "Todos os responsáveis",
     "responseState": "Estado de resposta",
@@ -110,7 +111,12 @@
     "allResponseStatuses": "Todos os status de resposta",
     "responseStatus": "Status da resposta",
     "board": "Filtrar por quadro",
-    "searchSmart": "Pesquisar tickets e comentários… Enter para pesquisa inteligente"
+    "searchSmart": "Pesquisar tickets e comentários… Enter para pesquisa inteligente",
+    "requesterTags": "Tags do solicitante",
+    "clientTags": "Tags do cliente",
+    "tagModeAny": "Qualquer um de",
+    "tagModeNone": "Nenhum de",
+    "droppedFromLink": "Alguns filtros deste link não são válidos e foram ignorados."
   },
   "create": {
     "title": "Criar ticket de suporte",
@@ -248,7 +254,9 @@
     "openMenu": "Abrir menu",
     "moreActions": "Mais ações",
     "createTemplate": "Criar modelo a partir do ticket",
-    "createWorkflowFromTicket": "Criar fluxo de trabalho a partir do ticket"
+    "createWorkflowFromTicket": "Criar fluxo de trabalho a partir do ticket",
+    "printWorkTag": "Imprimir etiqueta de trabalho",
+    "retry": "Tentar novamente"
   },
   "messages": {
     "noTickets": "Nenhum ticket encontrado",
@@ -358,7 +366,8 @@
     "pastedImagesDeleteFailed_many": "Não foi possível excluir as imagens coladas em {{count}}.",
     "pastedImagesDeleted_few": "Imagens coladas {{count}} excluídas.",
     "pastedImagesDeleted_many": "Imagens coladas {{count}} excluídas.",
-    "sharedWorkspaceReadOnly": "Você vê este chamado porque ele trata de um dispositivo de um espaço compartilhado. Apenas quem o abriu pode adicionar conteúdo."
+    "sharedWorkspaceReadOnly": "Você vê este chamado porque ele trata de um dispositivo de um espaço compartilhado. Apenas quem o abriu pode adicionar conteúdo.",
+    "loadPartyTagsFailed": "Falha ao carregar as etiquetas do solicitante e do cliente"
   },
   "conversation": {
     "comments": "Comentários",
@@ -461,6 +470,14 @@
     "clientPortal": "Recebido via Portal do Cliente",
     "inboundEmail": "Recebido via e-mail de entrada"
   },
+  "originalEmail": {
+    "text": "Texto",
+    "original": "Email original",
+    "emailShort": "Email",
+    "loading": "Carregando o email original…",
+    "error": "Não foi possível carregar o email original.",
+    "group": "Visualização da mensagem"
+  },
   "documents": {
     "title": "Documentos",
     "noDocuments": "Nenhum documento anexado",
@@ -502,6 +519,7 @@
     },
     "filters": {
       "allAssignees": "Todos os responsáveis",
+      "allContacts": "Todos os contatos",
       "selectStatus": "Selecione o status",
       "responseState": "Estado de resposta",
       "allResponseStates": "Todos os estados de resposta",
@@ -646,7 +664,9 @@
       "more": "Mais",
       "bundleNeedsOne": "Selecione pelo menos 1 ticket para agrupar",
       "selectedCount_few": "{{count}} selecionado",
-      "selectedCount_many": "{{count}} selecionado"
+      "selectedCount_many": "{{count}} selecionado",
+      "printLabels": "Imprimir etiquetas",
+      "printLabelsLimit": "Você pode imprimir no máximo {{max}} etiquetas por vez"
     },
     "moveDialogTitle": "Mover tickets selecionados",
     "moveDialogDescription": "Selecione um quadro de destino e status e confirme a movimentação dos tickets selecionados.",
@@ -679,7 +699,7 @@
     "bundleMasterLabel": "Selecione o ticket mestre",
     "bundleMasterPlaceholder": "Selecione o ticket mestre...",
     "bundleSyncUpdates": "Sincronizar atualizações do mestre para os filhos (respostas públicas + alterações no fluxo de trabalho)",
-    "bundleSyncUpdatesHelp": "Os tickets filhos mantêm seu status atual ao serem agrupados. Depois, fechar ou reabrir o mestre fecha ou reabre todos os tickets filhos, e as alterações de status, responsável e prioridade no mestre se aplicam aos filhos. Os campos de fluxo de trabalho ficam bloqueados nos filhos. As notas internas permanecem no mestre.",
+    "bundleSyncUpdatesHelp": "Os tickets filhos mantêm seu status atual ao serem agrupados. Com a sincronização ativada, fechar ou reabrir o mestre fecha ou reabre todos os filhos, as alterações de status, responsável e prioridade no mestre se aplicam a eles e seus campos de fluxo de trabalho ficam bloqueados. Sem a sincronização, os filhos gerenciam por conta própria status, responsável e prioridade. As notas internas permanecem no mestre.",
     "bundleSelectAtLeastTwo": "Selecione pelo menos dois tickets para agrupar.",
     "bundleSelectMaster": "Selecione um ticket mestre.",
     "bundleSuccess": "Tickets agrupados",
@@ -752,8 +772,8 @@
       "masterTicket": "Selecione o ticket mestre",
       "selectMasterTicket": "Selecione o ticket mestre...",
       "syncUpdates": "Sincronizar atualizações do mestre para os filhos (respostas públicas + alterações no fluxo de trabalho)",
-      "syncUpdatesHelp": "Os tickets filhos mantêm seu status atual ao serem agrupados. Depois, fechar ou reabrir o mestre fecha ou reabre todos os tickets filhos, e as alterações de status, responsável e prioridade no mestre se aplicam aos filhos. Os campos de fluxo de trabalho ficam bloqueados nos filhos. As notas internas permanecem no mestre.",
-      "childrenDescription": "As crianças mantêm o seu estado atual; os campos de fluxo de trabalho estão bloqueados para filhos. As respostas derivadas de entrada são exibidas abaixo como somente visualização.",
+      "syncUpdatesHelp": "Os tickets filhos mantêm seu status atual ao serem agrupados. Com a sincronização ativada, fechar ou reabrir o mestre fecha ou reabre todos os filhos, as alterações de status, responsável e prioridade no mestre se aplicam a eles e seus campos de fluxo de trabalho ficam bloqueados. Sem a sincronização, os filhos gerenciam por conta própria status, responsável e prioridade. As notas internas permanecem no mestre.",
+      "childrenDescription": "Os tickets filhos mantêm seu status atual. Os campos de fluxo de trabalho ficam bloqueados somente no modo Sync Updates. As respostas recebidas dos filhos são exibidas abaixo como somente leitura.",
       "checkingMasters": "Verificando pacotes existentes...",
       "existingMasterSuffix": "(mestre existente)",
       "existingMasterLocked": "Um ticket selecionado já é um pacote master. Ele será usado como mestre; os outros serão adicionados como filhos.",
@@ -968,7 +988,22 @@
     "tagCreatePartialFailure_few": "Não foi possível criar tags {{count}}",
     "tagCreatePartialFailure_many": "Não foi possível criar tags {{count}}",
     "tagCreationFailed_few": "Não foi possível criar tags {{count}}",
-    "tagCreationFailed_many": "Não foi possível criar tags {{count}}"
+    "tagCreationFailed_many": "Não foi possível criar tags {{count}}",
+    "assets": {
+      "heading": "Ativos",
+      "selectClientFirst": "Selecione um cliente para associar ativos.",
+      "unavailable": "Os ativos podem ser associados a partir do ticket depois de criado."
+    },
+    "attachments": {
+      "heading": "Anexos",
+      "add": "Adicionar ficheiros",
+      "remove": "Remover {{name}}"
+    },
+    "watchers": {
+      "heading": "Observadores",
+      "placeholder": "Adicionar observadores..."
+    },
+    "attachmentsPartialFailure": "Ticket criado, mas não foi possível anexar estes ficheiros: {{files}}. Adicione-os a partir do ticket."
   },
   "itil": {
     "calculatedPriority": "Prioridade (calculada)",
@@ -1263,6 +1298,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Acompanhamento do estado de resposta",
+      "defaultReplyInternalTitle": "Visibilidade predefinida das respostas",
+      "defaultReplyInternalDescription": "Iniciar novas respostas a tickets como internas para todos os membros da equipa. Os utilizadores podem mudar uma resposta para Cliente. As respostas no portal do cliente e em conversas existentes permanecem inalteradas.",
+      "defaultReplyInternalLabel": "Usar respostas internas por predefinição",
       "responseStateTrackingDescription": "Quando ativado, os tickets rastreiam automaticamente quem precisa responder em seguida (aguardando cliente ou aguardando resposta interna). Desabilitar isso oculta emblemas de estado de resposta, filtros e opções de pausa de SLA relacionadas.",
       "responseStateTrackingEnabled": "Rastreamento de estado de resposta ativado",
       "responseStateTrackingDisabled": "Rastreamento de estado de resposta desativado",
@@ -1397,7 +1435,15 @@
     "selectUnit": "Selecione uma unidade para entregar...",
     "onHandByLocation": "Em estoque por localização",
     "catalogUnitCost": "Custo unitário do catálogo",
-    "costNotConfigured": "Não configurado"
+    "costNotConfigured": "Não configurado",
+    "availableBadge": "Disponível: {{available}}",
+    "availableByLocation": "Estoque livre por local",
+    "freeOfOnHand": "{{free}} livres de {{onHand}}",
+    "stockHeld": "Apenas {{free}} disponíveis. {{held}} em estoque estão em bloqueio firme para pedidos de venda ou projetos e não podem ser usados aqui.",
+    "stockInsufficient": "Apenas {{onHand}} em estoque, {{requested}} solicitados.",
+    "reservedStockTitle": "O estoque está reservado para um pedido de venda ou projeto",
+    "reservedStockMessage": "Apenas {{free}} deste produto estão livres. {{reserved}} em estoque estão reservados para pedidos de venda ou projetos e você solicitou {{requested}}. Adicionar mesmo assim retira estoque com que um pedido de venda ou projeto conta e pode deixá-lo incompleto.",
+    "reservedStockConfirm": "Adicionar mesmo assim"
   },
   "watchList": {
     "title": "Lista de observação",
@@ -1670,7 +1716,13 @@
       "ruleSubcategoryRequiresCategory": "Selecione uma categoria antes de escolher uma subcategoria.",
       "ruleTooManyKeywords": "Use no máximo {{max}} palavras-chave por regra.",
       "ruleKeywordTooLong": "Cada palavra-chave deve ter no máximo {{max}} caracteres.",
-      "ruleOriginInvalid": "Uma das origens de ticket selecionadas não é válida."
+      "ruleOriginInvalid": "Uma das origens de ticket selecionadas não é válida.",
+      "templateClientMismatch": "Este modelo de checklist está limitado a um cliente diferente do cliente do ticket.",
+      "templateClientInvalid": "O cliente selecionado não foi encontrado.",
+      "ruleClientOutsideTemplateScope": "Este modelo pertence a um cliente, por isso as suas regras não podem visar outros clientes.",
+      "templateRulesTargetOtherClients": "Algumas regras de aplicação automática deste modelo visam outros clientes. Remova esses clientes das regras antes de atribuir o modelo a um cliente.",
+      "predicateClientOutsideScope": "O cliente {{client}} está fora do escopo deste modelo.",
+      "predicateInvalid": "Regra de checklist inválida: {{detail}}"
     }
   },
   "ticketSection": {
@@ -1699,9 +1751,11 @@
   },
   "details": {
     "bundle": {
-      "childrenDescription": "Os tickets filhos mantêm seu status atual ao serem agrupados. Depois, fechar ou reabrir o mestre fecha ou reabre todos os tickets filhos, e as alterações de status, responsável e prioridade no mestre se aplicam aos filhos. Os campos de fluxo de trabalho ficam bloqueados nos filhos. As notas internas permanecem no mestre.",
+      "childrenDescription": "Os tickets filhos mantêm seu status atual ao serem agrupados. No modo Sync Updates, fechar ou reabrir o mestre fecha ou reabre todos os filhos, as alterações de status, responsável e prioridade no mestre se aplicam a eles e seus campos de fluxo de trabalho ficam bloqueados. No modo Link Only, os filhos gerenciam por conta própria status, responsável e prioridade. As notas internas permanecem no mestre.",
       "title": "Pacote",
       "masterBanner": "Este ticket é o mestre de um pacote ({{count}} filhos). Modo: {{mode}}.",
+      "childLockedNotice": "Os campos de fluxo de trabalho estão bloqueados; trabalhe a partir do ticket mestre.",
+      "childLinkedNotice": "Ele está vinculado ao mestre e é gerenciado de forma independente.",
       "multipleClients": "Vários clientes",
       "mode": "Modo: {{mode}}",
       "unbundle": "Desagrupar",
@@ -1737,7 +1791,15 @@
       "applyResolutionHelpNoComment": "Fecha o ticket filho com o status {{status}}. O ticket principal não tem nenhum comentário de resolução público para publicar.",
       "reopenMasterLabel": "Adicionar e reabrir o ticket principal",
       "reopenMasterHelp": "Reabre apenas o ticket principal. Os tickets filhos já fechados neste pacote permanecem fechados; as notificações de reabertura e o SLA se aplicam ao ticket principal.",
-      "closedMasterGating": "As regras de fechamento do quadro não permitem tickets filhos abertos sob um ticket principal fechado, portanto manter o ticket principal fechado não é uma opção."
+      "closedMasterGating": "As regras de fechamento do quadro não permitem tickets filhos abertos sob um ticket principal fechado, portanto manter o ticket principal fechado não é uma opção.",
+      "modeSwitchDialogIntro": "O ticket principal está fechado. Escolha o que deve acontecer com os tickets filhos abertos quando o pacote mudar para Sync Updates.",
+      "modeSwitchConfirm": "Mudar para Sync Updates",
+      "keepClosedSwitchLabel": "Mudar e manter o ticket principal fechado",
+      "keepClosedSwitchHelp": "Os tickets filhos abertos permanecem abertos com o próprio cronômetro de SLA. O pacote será exibido como inconsistente até que sejam resolvidos.",
+      "applyResolutionSwitchLabel": "Mudar e aplicar a resolução do ticket principal aos tickets filhos abertos",
+      "applyResolutionSwitchHelp": "Fecha cada ticket filho aberto com o status {{status}} e publica nele a resolução do ticket principal como comentário público.",
+      "applyResolutionSwitchHelpNoComment": "Fecha cada ticket filho aberto com o status {{status}}. O ticket principal não tem um comentário de resolução público para publicar.",
+      "reopenMasterSwitchLabel": "Mudar e reabrir o ticket principal"
     },
     "autoClose": "Será fechado automaticamente em {{date}}, a menos que haja nova atividade.",
     "autoCloseWarned": "O cliente foi avisado.",
@@ -1786,7 +1848,8 @@
     "remoteFieldUpdated": "{{name}} atualizado {{field}}",
     "connection": {
       "reconnecting": "Atualizações ao vivo off-line - reconectando...",
-      "unavailable": "Atualizações ao vivo indisponíveis"
+      "unavailable": "Atualizações ao vivo indisponíveis",
+      "offlineShort": "Offline"
     }
   },
   "delete": {
@@ -1968,7 +2031,10 @@
       "openScheduleEntry": "Abrir entrada de agenda",
       "acrossEntries_few": "em {{count}} entradas",
       "acrossEntries_many": "em {{count}} entradas",
-      "changeLocation": "Alterar localização"
+      "changeLocation": "Alterar localização",
+      "addDescriptionPrompt": "Adicione uma descrição — qual é o problema e do que o cliente precisa?",
+      "projectTasks": "Tarefas do projeto",
+      "timeAndBilling": "Tempo e faturamento"
     },
     "timeline": {
       "subtitle": "Respostas, tempo e alterações do sistema em um só lugar",
@@ -2064,6 +2130,17 @@
       "collapseActivity": "Recolher atividade anterior",
       "replyingToComment": "Respondendo a {{name}}",
       "createdFromTemplate": "{{actor}} criou este ticket a partir do modelo \"{{name}}\""
+    },
+    "board": {
+      "conversation": "Conversa",
+      "details": "Detalhes"
+    },
+    "groups": {
+      "customer": "Cliente",
+      "work": "Trabalho",
+      "who": "Pessoas",
+      "linked": "Itens vinculados",
+      "empty": "Nada aqui ainda"
     }
   },
   "notifications": {
@@ -2495,7 +2572,9 @@
     "discard": "Descartar cronômetro",
     "pausedHint": "Pausado. Retome para continuar registrando ou pare para registrar o tempo.",
     "workDescription": "Descrição do trabalho",
-    "whatAreYouWorkingOn": "No que você está trabalhando?"
+    "whatAreYouWorkingOn": "No que você está trabalhando?",
+    "chipElsewhere": "Cronômetro em {{label}}",
+    "title": "Cronômetro"
   },
   "templates": {
     "loading": "A carregar…",
@@ -2619,6 +2698,116 @@
       "hours": "{{hours}} h",
       "daysHours": "{{days}} d {{hours}} h",
       "days": "{{days}} d"
+    }
+  },
+  "cannedResponses": {
+    "picker": {
+      "button": "Respostas prontas",
+      "buttonTooltip": "Inserir uma resposta pronta (Ctrl/Cmd+J, ou digite /)",
+      "title": "Inserir uma resposta pronta",
+      "searchPlaceholder": "Pesquisar respostas prontas…",
+      "searchLabel": "Pesquisar respostas prontas",
+      "loading": "A carregar respostas prontas…",
+      "empty": "Ainda não há respostas prontas.",
+      "noResults": "Nenhuma resposta pronta corresponde à pesquisa.",
+      "loadFailed": "Não foi possível carregar as respostas prontas.",
+      "insertFailed": "Não foi possível inserir a resposta pronta.",
+      "favorites": "Favoritas",
+      "recent": "Usadas recentemente",
+      "uncategorized": "Sem categoria",
+      "slashGroup": "Respostas prontas",
+      "slashBrowse": "Respostas prontas…",
+      "slashBrowseHint": "Procurar e inserir uma resposta guardada"
+    },
+    "scope": {
+      "personal": "Pessoal",
+      "team": "Equipa",
+      "board": "Quadro",
+      "clientPortal": "Portal do cliente",
+      "personalHelp": "Só você pode usar esta resposta.",
+      "teamHelp": "Os membros da equipa escolhida podem usar esta resposta.",
+      "boardHelp": "Qualquer pessoa que responda a tickets do quadro escolhido pode usar esta resposta.",
+      "clientPortalHelp": "Reservada para respostas no portal do cliente. Não é oferecida ao responder a partir do portal MSP."
+    },
+    "list": {
+      "title": "Respostas prontas",
+      "new": "Nova resposta pronta",
+      "showInactive": "Mostrar inativas",
+      "searchPlaceholder": "Pesquisar por nome, categoria ou texto…",
+      "searchLabel": "Pesquisar respostas prontas",
+      "allCategories": "Todas as categorias",
+      "noResults": "Nenhuma resposta pronta corresponde aos filtros.",
+      "empty": "Ainda não há respostas prontas. Crie uma para a reutilizar nas respostas aos tickets.",
+      "deleteTitle": "Eliminar resposta pronta",
+      "deleteMessage": "Eliminar «{{name}}»? As respostas que já a usaram não são alteradas.",
+      "deleted": "Resposta pronta eliminada",
+      "favorite": "Favorita",
+      "columns": {
+        "name": "Nome",
+        "category": "Categoria",
+        "scope": "Disponível para",
+        "preview": "Pré-visualização",
+        "status": "Estado"
+      }
+    },
+    "status": {
+      "active": "Ativa",
+      "inactive": "Inativa"
+    },
+    "actions": {
+      "favorite": "Adicionar aos favoritos",
+      "unfavorite": "Remover dos favoritos",
+      "edit": "Editar",
+      "activate": "Ativar",
+      "deactivate": "Desativar",
+      "delete": "Eliminar",
+      "cancel": "Cancelar"
+    },
+    "loading": "A carregar…",
+    "editor": {
+      "back": "Respostas prontas",
+      "newTitle": "Nova resposta pronta",
+      "save": "Guardar",
+      "saving": "A guardar…",
+      "saved": "Resposta pronta guardada",
+      "created": "Resposta pronta criada",
+      "viewOnly": "Pode ver esta resposta pronta, mas não a pode alterar."
+    },
+    "sections": {
+      "details": "Detalhes",
+      "body": "Resposta"
+    },
+    "fields": {
+      "name": "Nome",
+      "category": "Categoria",
+      "categoryHelp": "Agrupa as respostas no seletor. Opcional.",
+      "scope": "Disponível para",
+      "team": "Equipa",
+      "teamPlaceholder": "Selecione uma equipa",
+      "board": "Quadro",
+      "boardPlaceholder": "Selecione um quadro",
+      "body": "Texto da resposta",
+      "bodyPlaceholder": "Escreva a resposta…"
+    },
+    "mergeFields": {
+      "title": "Campos de união",
+      "help": "Preenchidos quando a resposta é inserida numa réplica. Um campo sem valor fica vazio; um campo não reconhecido é deixado como está.",
+      "descriptions": {
+        "contact_first_name": "O primeiro nome do contato",
+        "contact_last_name": "O apelido do contato",
+        "contact_name": "O nome completo do contato",
+        "ticket_number": "O número do ticket",
+        "ticket_title": "O título do ticket",
+        "agent_name": "O seu nome (o agente que responde)",
+        "client_name": "O nome do cliente"
+      }
+    },
+    "errors": {
+      "notFound": "Resposta pronta não encontrada.",
+      "duplicateName": "Já existe aqui uma resposta pronta com o nome «{{name}}».",
+      "invalidReferences": "A equipa ou o quadro selecionado já não existe.",
+      "notAvailable": "Esta resposta pronta não está disponível para este ticket.",
+      "notATeamMember": "Só pode gerir respostas de equipa das equipas a que pertence."
     }
   }
 }

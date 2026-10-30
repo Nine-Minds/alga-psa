@@ -2590,10 +2590,15 @@
   ],
   "identicalAllowlist": {
     "exact": [
+      "Offline",
+      "{{field}}: {{from}} → {{to}}",
+      "{{from}} → {{to}}",
+      "RMA {{id}}",
       "AI",
       "API",
       "CSV",
       "Dashboard",
+      "Datto RMM",
       "Email",
       "Excel",
       "HTML",
@@ -2605,6 +2610,7 @@
       "PDF",
       "Portal",
       "Realm",
+      "Sites",
       "SLA",
       "SMS",
       "SSO",
@@ -2722,7 +2728,9 @@
       "auto | 50% | 120px",
       "Cc",
       "{{size}} GB",
-      "Code 128"
+      "Code 128",
+      "Ticket: {{number}}",
+      "RMA {{number}} · {{status}}"
     ],
     "caseInsensitive": [
       "api",

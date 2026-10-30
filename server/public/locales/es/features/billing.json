@@ -67,6 +67,7 @@
     "taxBreakdown": "Desglose de impuestos",
     "manualInvoice": "Factura manual",
     "credits": "Créditos",
+    "currency": "Moneda",
     "financialArtifactSummary": "Factura solo financiera. Los períodos de servicio recurrentes aparecen únicamente en las líneas de detalle recurrentes.",
     "servicePeriod": "Período de servicio",
     "servicePeriods": "Períodos de servicio",
@@ -289,6 +290,13 @@
       "pending": "Facturas en espera de aprobación o procesamiento adicional",
       "prepayment": "Facturas de anticipo o depósito",
       "partially_applied": "Facturas con pagos parciales aplicados"
+    },
+    "billingPeriod": {
+      "weekly": "por semana",
+      "monthly": "por mes",
+      "quarterly": "por trimestre",
+      "semi-annually": "por semestre",
+      "annually": "por año"
     }
   },
   "quoteForm": {
@@ -444,7 +452,13 @@
     "expires": "Vence el {{date}}",
     "recentBurn": "Consumo reciente",
     "timeEntry": "Entrada de tiempo",
-    "contractLabel": "Contrato: {{contract}}"
+    "contractLabel": "Contrato: {{contract}}",
+    "hoursLeftValue": "{{hours}} h restantes · {{value}}",
+    "validFrom": "Válido desde {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — bloque prepago, {{hours}} h",
+    "overPrepaidBlock": "{{name}} (por encima del bloque prepago)"
   },
   "bucketUsage": {
     "contractLine": "Línea de contrato de bolsa de horas",
@@ -452,5 +466,20 @@
     "hoursUsed": "{{hours}} horas utilizadas",
     "hoursTotal": "{{hours}} horas en total",
     "rolloverHours": "Incluye {{hours}} horas transferidas"
+  },
+  "paymentPreferences": {
+    "paymentTerms": {
+      "dueOnReceipt": "Vencimiento al recibir",
+      "net14": "neto 14",
+      "net15": "neto 15",
+      "net30": "neto 30",
+      "net7": "neto 7"
+    },
+    "paymentMethods": {
+      "bankTransfer": "Transferencia bancaria",
+      "check": "Cheque",
+      "creditCard": "Tarjeta de crédito"
+    },
+    "tenantDefault": "Predeterminado del inquilino ({{value}})"
   }
 }
