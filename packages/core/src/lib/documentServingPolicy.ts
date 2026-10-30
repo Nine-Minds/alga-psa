@@ -24,7 +24,7 @@ export interface DocumentServingPolicy {
   headers: Record<string, string>;
 }
 
-const INLINE_CSP = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox";
+const INLINE_CSP = "default-src 'none'; media-src 'self'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox";
 
 function normalizeMimeType(mimeType?: string | null): string {
   return (mimeType || '').split(';')[0].trim().toLowerCase();

@@ -30,6 +30,20 @@ describe('resolveDocumentServingPolicy', () => {
     expect(p.headers['Content-Security-Policy']).toContain('sandbox');
   });
 
+  it.each(['video/webm', 'video/mp4'])('allows same-origin media for %s inline while staying sandboxed', (mime) => {
+    const p = resolveDocumentServingPolicy(mime);
+    const csp = p.headers['Content-Security-Policy'];
+    expect(p.disposition).toBe('inline');
+    expect(csp).toContain("media-src 'self'");
+    expect(csp).toContain("default-src 'none'");
+    expect(csp).toContain('sandbox');
+    expect(p.headers['X-Content-Type-Options']).toBe('nosniff');
+  });
+
+  it('still serves SVG as an attachment', () => {
+    expect(resolveDocumentServingPolicy('image/svg+xml').disposition).toBe('attachment');
+  });
+
   it('keeps the servable set unchanged', () => {
     for (const m of ['text/plain', 'text/html', 'audio/wav', 'application/zip', '', null, undefined]) {
       expect(isPreviewableDocumentMimeType(m)).toBe(false);

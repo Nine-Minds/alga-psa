@@ -74,6 +74,19 @@ describe('documents view route serving policy', () => {
     expect(res.headers.get('Content-Security-Policy')).toContain('sandbox');
   });
 
+  it.each(['video/webm', 'video/mp4'])('allows media-src on full 200 and ranged 206 responses for %s', async (mime) => {
+    state.mime = mime;
+    for (const [headers, status] of [[{}, 200], [{ range: 'bytes=0-9' }, 206]] as const) {
+      const res = await get({ ...headers });
+      expect(res.status).toBe(status);
+      expect(res.headers.get('Content-Disposition')).toMatch(/^inline/);
+      const csp = res.headers.get('Content-Security-Policy') ?? '';
+      expect(csp).toContain("media-src 'self'");
+      expect(csp).toContain('sandbox');
+      expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff');
+    }
+  });
+
   it('still rejects non-servable types with 400', async () => {
     state.mime = 'text/html';
     expect((await get()).status).toBe(400);
