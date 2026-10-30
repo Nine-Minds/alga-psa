@@ -32,7 +32,7 @@ const listInputSchema = z.object({
 })
 
 const getInputSchema = z.object({
-  clientId: z.string().uuid(),
+  clientId: z.string().guid(),
 })
 
 const userSchema = z.object({

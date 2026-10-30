@@ -10,7 +10,7 @@ import {
   quoteSupersededEventPayloadSchema,
   quoteCancelledEventPayloadSchema,
 } from './quoteEventSchemas';
-import { ZodTypeAny } from 'zod';
+import type { ZodType } from 'zod';
 import {
   emailProviderConnectedEventPayloadSchema,
   emailProviderDisconnectedEventPayloadSchema,
@@ -219,7 +219,7 @@ import {
   inventoryTransferReceivedEventPayloadSchema,
 } from './inventoryEventSchemas';
 
-export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
+export const workflowEventPayloadSchemas: Record<string, ZodType<any, any>> = {
   // Existing/already-present
   'payload.TicketCreated.v1': ticketCreatedEventPayloadSchema,
   'payload.TicketUpdated.v1': ticketUpdatedEventPayloadSchema,

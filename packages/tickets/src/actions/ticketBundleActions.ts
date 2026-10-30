@@ -200,8 +200,8 @@ function registerBundlePublications(
 }
 
 const bundleTicketsSchema = z.object({
-  masterTicketId: z.string().uuid(),
-  childTicketIds: z.array(z.string().uuid()).min(1),
+  masterTicketId: z.string().guid(),
+  childTicketIds: z.array(z.string().guid()).min(1),
   mode: z.enum(['link_only', 'sync_updates']).default('sync_updates'),
   onClosedMaster: closedMasterChoiceSchema.optional(),
 });
@@ -302,8 +302,8 @@ export const bundleTicketsAction = withAuth(async (
 });
 
 const addChildrenSchema = z.object({
-  masterTicketId: z.string().uuid(),
-  childTicketIds: z.array(z.string().uuid()).min(1),
+  masterTicketId: z.string().guid(),
+  childTicketIds: z.array(z.string().guid()).min(1),
   onClosedMaster: closedMasterChoiceSchema.optional(),
 });
 
@@ -365,7 +365,7 @@ export const addChildrenToBundleAction = withAuth(async (
 });
 
 const getBundleMasterClosedContextSchema = z.object({
-  masterTicketId: z.string().uuid(),
+  masterTicketId: z.string().guid(),
 });
 
 export type BundleMasterClosedContextActionResult = {
@@ -414,8 +414,8 @@ export const getBundleMasterClosedContextAction = withAuth(async (
 });
 
 const promoteMasterSchema = z.object({
-  oldMasterTicketId: z.string().uuid(),
-  newMasterTicketId: z.string().uuid(),
+  oldMasterTicketId: z.string().guid(),
+  newMasterTicketId: z.string().guid(),
 });
 
 export const promoteBundleMasterAction = withAuth(async (user, { tenant }, input: z.input<typeof promoteMasterSchema>) => {
@@ -529,7 +529,7 @@ export const promoteBundleMasterAction = withAuth(async (user, { tenant }, input
 });
 
 const updateBundleSettingsSchema = z.object({
-  masterTicketId: z.string().uuid(),
+  masterTicketId: z.string().guid(),
   mode: z.enum(['link_only', 'sync_updates']).optional(),
   reopenOnChildReply: z.boolean().optional(),
   /** Required when switching a bundle with a closed master to sync_updates. */
@@ -582,7 +582,7 @@ export const updateBundleSettingsAction = withAuth(async (
 });
 
 const removeChildSchema = z.object({
-  childTicketId: z.string().uuid(),
+  childTicketId: z.string().guid(),
 });
 
 export const removeChildFromBundleAction = withAuth(async (user, { tenant }, input: z.input<typeof removeChildSchema>) => {
@@ -654,11 +654,11 @@ export const removeChildFromBundleAction = withAuth(async (user, { tenant }, inp
 });
 
 const unbundleSchema = z.object({
-  masterTicketId: z.string().uuid(),
+  masterTicketId: z.string().guid(),
 });
 
 const getBundleMasterStatusSchema = z.object({
-  ticketIds: z.array(z.string().uuid()).min(1).max(500),
+  ticketIds: z.array(z.string().guid()).min(1).max(500),
 });
 
 export const getBundleMasterStatusAction = withAuth(async (
@@ -685,9 +685,9 @@ export const getBundleMasterStatusAction = withAuth(async (
 });
 
 const searchEligibleChildTicketsSchema = z.object({
-  boardId: z.string().uuid(),
+  boardId: z.string().guid(),
   searchQuery: z.string().min(1).max(100),
-  excludeTicketId: z.string().uuid().optional(),
+  excludeTicketId: z.string().guid().optional(),
   limit: z.number().int().min(1).max(20).default(10),
 });
 
@@ -827,8 +827,8 @@ export const unbundleMasterTicketAction = withAuth(async (user, { tenant }, inpu
 });
 
 const previewBundleStatusPropagationSchema = z.object({
-  masterTicketId: z.string().uuid(),
-  newStatusId: z.string().uuid(),
+  masterTicketId: z.string().guid(),
+  newStatusId: z.string().guid(),
 });
 
 /**
@@ -858,8 +858,8 @@ export const previewBundleStatusPropagationAction = withAuth(async (
 });
 
 const previewBulkBundleStatusPropagationSchema = z.object({
-  ticketIds: z.array(z.string().uuid()).min(1).max(500),
-  newStatusId: z.string().uuid(),
+  ticketIds: z.array(z.string().guid()).min(1).max(500),
+  newStatusId: z.string().guid(),
 });
 
 /**

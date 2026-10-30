@@ -14,12 +14,12 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
   });
 
   const InboundWebhookIdParam = zOpenApi.object({
-    id: zOpenApi.string().uuid().describe('Inbound webhook UUID.'),
+    id: zOpenApi.string().guid().describe('Inbound webhook UUID.'),
   });
 
   const InboundDeliveryParams = zOpenApi.object({
-    id: zOpenApi.string().uuid().describe('Inbound webhook UUID.'),
-    deliveryId: zOpenApi.string().uuid().describe('Inbound delivery UUID.'),
+    id: zOpenApi.string().guid().describe('Inbound webhook UUID.'),
+    deliveryId: zOpenApi.string().guid().describe('Inbound delivery UUID.'),
   });
 
   const ReceiverParams = zOpenApi.object({
@@ -50,13 +50,13 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
   const InboundWebhookConfig = registry.registerSchema(
     'InboundWebhookConfig',
     zOpenApi.object({
-      inboundWebhookId: zOpenApi.string().uuid(),
-      tenant: zOpenApi.string().uuid(),
+      inboundWebhookId: zOpenApi.string().guid(),
+      tenant: zOpenApi.string().guid(),
       name: zOpenApi.string(),
       slug: zOpenApi.string(),
       description: zOpenApi.string().nullable(),
       authType: zOpenApi.enum(['hmac_sha256', 'bearer', 'ip_allowlist', 'path_token']),
-      authConfig: zOpenApi.record(zOpenApi.unknown()).describe('Redacted auth configuration metadata.'),
+      authConfig: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).describe('Redacted auth configuration metadata.'),
       idempotencySource: zOpenApi
         .object({
           type: zOpenApi.enum(['header', 'jsonata']),
@@ -65,13 +65,13 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
         .nullable(),
       idempotencyWindowSeconds: zOpenApi.number().int(),
       handlerType: zOpenApi.enum(['direct_action', 'workflow']),
-      handlerConfig: zOpenApi.record(zOpenApi.unknown()),
-      samplePayload: zOpenApi.unknown().nullable(),
+      handlerConfig: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
+      samplePayload: zOpenApi.unknown().optional().nullable(),
       sampleCaptureExpiresAt: zOpenApi.string().datetime().nullable(),
       isActive: zOpenApi.boolean(),
       rateLimitPerMinute: zOpenApi.number().int(),
       autoDisabledAt: zOpenApi.string().datetime().nullable(),
-      createdBy: zOpenApi.string().uuid().nullable(),
+      createdBy: zOpenApi.string().guid().nullable(),
       createdAt: zOpenApi.string().datetime(),
       updatedAt: zOpenApi.string().datetime(),
     }),
@@ -79,15 +79,15 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
   const InboundWebhookDelivery = registry.registerSchema(
     'InboundWebhookDelivery',
     zOpenApi.object({
-      tenant: zOpenApi.string().uuid(),
-      deliveryId: zOpenApi.string().uuid(),
-      inboundWebhookId: zOpenApi.string().uuid().nullable(),
+      tenant: zOpenApi.string().guid(),
+      deliveryId: zOpenApi.string().guid(),
+      inboundWebhookId: zOpenApi.string().guid().nullable(),
       idempotencyKey: zOpenApi.string().nullable(),
       receivedAt: zOpenApi.string().datetime(),
       requestMethod: zOpenApi.string(),
       requestPath: zOpenApi.string(),
-      requestHeaders: zOpenApi.record(zOpenApi.union([zOpenApi.string(), zOpenApi.array(zOpenApi.string())])),
-      requestBody: zOpenApi.unknown().nullable(),
+      requestHeaders: zOpenApi.record(zOpenApi.string(), zOpenApi.union([zOpenApi.string(), zOpenApi.array(zOpenApi.string())])),
+      requestBody: zOpenApi.unknown().optional().nullable(),
       sourceIp: zOpenApi.string().nullable(),
       userAgent: zOpenApi.string().nullable(),
       authStatus: zOpenApi.enum([
@@ -98,13 +98,13 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
         'rejected_no_auth',
       ]),
       dispatchStatus: zOpenApi.enum(['pending', 'dispatched', 'duplicate', 'failed']),
-      handlerOutcome: zOpenApi.record(zOpenApi.unknown()).nullable(),
+      handlerOutcome: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).nullable(),
       responseStatus: zOpenApi.number().int().nullable(),
-      responseBody: zOpenApi.unknown().nullable(),
+      responseBody: zOpenApi.unknown().optional().nullable(),
       durationMs: zOpenApi.number().int().nullable(),
       retryCount: zOpenApi.number().int(),
       isReplay: zOpenApi.boolean(),
-      replayedFrom: zOpenApi.string().uuid().nullable(),
+      replayedFrom: zOpenApi.string().guid().nullable(),
       createdAt: zOpenApi.string().datetime(),
       updatedAt: zOpenApi.string().datetime(),
     }),
@@ -137,7 +137,7 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
       slug: zOpenApi.string().regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/),
       description: zOpenApi.string().nullable().optional(),
       auth_type: zOpenApi.enum(['hmac_sha256', 'bearer', 'ip_allowlist', 'path_token']),
-      auth_config: zOpenApi.record(zOpenApi.unknown()),
+      auth_config: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
       idempotency_source: zOpenApi
         .object({
           type: zOpenApi.enum(['header', 'jsonata']),
@@ -147,7 +147,7 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
         .optional(),
       idempotency_window_seconds: zOpenApi.number().int().positive().optional(),
       handler_type: zOpenApi.enum(['direct_action', 'workflow']),
-      handler_config: zOpenApi.record(zOpenApi.unknown()),
+      handler_config: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
       is_active: zOpenApi.boolean().optional(),
       rate_limit_per_minute: zOpenApi.number().int().positive().optional(),
     }),
@@ -194,14 +194,14 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
         handler_config: zOpenApi.object({
           action: zOpenApi.string().describe('Registered inbound action name.'),
           field_mapping: zOpenApi
-            .record(zOpenApi.string())
+            .record(zOpenApi.string(), zOpenApi.string())
             .describe('Map of target field name to JSONata expression evaluated against the request body.'),
         }),
       }),
       zOpenApi.object({
         handler_type: zOpenApi.literal('workflow'),
         handler_config: zOpenApi.object({
-          workflow_id: zOpenApi.string().uuid().describe('Workflow definition to start for verified deliveries.'),
+          workflow_id: zOpenApi.string().guid().describe('Workflow definition to start for verified deliveries.'),
         }),
       }),
     ]),
@@ -209,12 +209,12 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
   const InboundWebhookUpdateInput = registry.registerSchema(
     'InboundWebhookUpdateInput',
     InboundWebhookCreateInput.extend({
-      inbound_webhook_id: zOpenApi.string().uuid().optional(),
+      inbound_webhook_id: zOpenApi.string().guid().optional(),
     }).partial(),
   );
   const SyntheticTestInput = zOpenApi.object({
     body: zOpenApi.unknown().optional(),
-    headers: zOpenApi.record(zOpenApi.union([zOpenApi.string(), zOpenApi.array(zOpenApi.string())])).optional(),
+    headers: zOpenApi.record(zOpenApi.string(), zOpenApi.union([zOpenApi.string(), zOpenApi.array(zOpenApi.string())])).optional(),
   });
 
   const ConfigEnvelope = zOpenApi.object({
@@ -239,18 +239,18 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
     data: zOpenApi.array(InboundActionDefinition),
   });
   const ReceiverAcceptedEnvelope = zOpenApi.object({
-    delivery_id: zOpenApi.string().uuid(),
+    delivery_id: zOpenApi.string().guid(),
   });
   registry.registerSchema(
     'WorkflowWebhookEnvelope',
     zOpenApi.object({
       source: zOpenApi.string().describe('Inbound webhook slug.'),
-      body: zOpenApi.unknown().describe('Parsed JSON request body as received.'),
+      body: zOpenApi.unknown().optional().describe('Parsed JSON request body as received.'),
       headers: zOpenApi
-        .record(zOpenApi.union([zOpenApi.string(), zOpenApi.array(zOpenApi.string())]))
+        .record(zOpenApi.string(), zOpenApi.union([zOpenApi.string(), zOpenApi.array(zOpenApi.string())]))
         .describe('Filtered safe request headers.'),
       verified: zOpenApi.literal(true),
-      delivery_id: zOpenApi.string().uuid(),
+      delivery_id: zOpenApi.string().guid(),
       idempotency_key: zOpenApi.string().nullable(),
       received_at: zOpenApi.string().datetime(),
     }),
@@ -452,7 +452,7 @@ export function registerInboundWebhookRoutes(registry: ApiOpenApiRegistry) {
       params: ReceiverParams,
       headers: ReceiverHeaders,
       body: {
-        schema: zOpenApi.unknown(),
+        schema: zOpenApi.unknown().optional(),
         description: 'Source-specific JSON payload. Shape varies per inbound webhook configuration.',
       },
     },

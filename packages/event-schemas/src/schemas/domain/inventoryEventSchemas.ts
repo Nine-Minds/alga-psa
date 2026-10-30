@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 const tenantSchema = z.string().min(1).describe('Tenant ID');
-const uuidSchema = (label: string) => z.string().uuid().describe(label);
-const optionalUuidSchema = (label: string) => z.string().uuid().nullable().optional().describe(label);
+const uuidSchema = (label: string) => z.string().guid().describe(label);
+const optionalUuidSchema = (label: string) => z.string().guid().nullable().optional().describe(label);
 
 const eventTimestampSchema = z.string().datetime().optional();
 const changedFieldsSchema = z.array(z.string()).optional();
@@ -75,7 +75,7 @@ export type InventoryRmaUpdatedEventPayload = z.infer<typeof inventoryRmaUpdated
 export const inventorySalesOrderSearchEventPayloadSchema = z.object({
   tenant: tenantSchema,
   so_id: uuidSchema('Sales order ID'),
-  user_id: z.string().uuid().optional(),
+  user_id: z.string().guid().optional(),
   changed_fields: changedFieldsSchema,
   timestamp: eventTimestampSchema,
 }).describe('Payload for inventory sales order search events');
@@ -85,7 +85,7 @@ export type InventorySalesOrderSearchEventPayload = z.infer<typeof inventorySale
 export const inventoryPurchaseOrderSearchEventPayloadSchema = z.object({
   tenant: tenantSchema,
   po_id: uuidSchema('Purchase order ID'),
-  user_id: z.string().uuid().optional(),
+  user_id: z.string().guid().optional(),
   changed_fields: changedFieldsSchema,
   timestamp: eventTimestampSchema,
 }).describe('Payload for inventory purchase order search events');
@@ -112,7 +112,7 @@ const inventoryTransferLifecycleEventPayloadSchema = z.object({
   from_location_id: uuidSchema('Source stock location ID'),
   to_location_id: uuidSchema('Destination stock location ID'),
   line_count: z.number().int().nonnegative(),
-  user_id: z.string().uuid().optional(),
+  user_id: z.string().guid().optional(),
   timestamp: eventTimestampSchema,
 });
 
@@ -136,7 +136,7 @@ const inventoryCountLifecycleEventPayloadSchema = z.object({
   counted_line_count: z.number().int().nonnegative(),
   variance_line_count: z.number().int().nonnegative(),
   variance_quantity: z.number().int(),
-  user_id: z.string().uuid().optional(),
+  user_id: z.string().guid().optional(),
   timestamp: eventTimestampSchema,
 });
 
@@ -154,8 +154,8 @@ export type InventoryCountApprovedEventPayload = z.infer<typeof inventoryCountAp
 export const inventoryStockUnitSearchEventPayloadSchema = z.object({
   tenant: tenantSchema,
   unit_id: uuidSchema('Stock unit ID'),
-  service_id: z.string().uuid().optional(),
-  user_id: z.string().uuid().optional(),
+  service_id: z.string().guid().optional(),
+  user_id: z.string().guid().optional(),
   changed_fields: changedFieldsSchema,
   timestamp: eventTimestampSchema,
 }).describe('Payload for inventory stock unit search events');

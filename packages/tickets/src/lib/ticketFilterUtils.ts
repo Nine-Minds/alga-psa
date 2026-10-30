@@ -37,7 +37,7 @@ const ASSIGNEE_UUID_PATTERN =
  * The list serializes the assignee filter as a comma-separated list, but a URL
  * is a public boundary — it can be hand-edited, stale, or shared — and any
  * token that is not an assignee id used to reach ticketListFiltersSchema's
- * `z.string().uuid()` and throw, blanking the list. Parsing here means the
+ * `z.string().guid()` and throw, blanking the list. Parsing here means the
  * schema only ever sees well-formed ids. The `unassigned` pseudo-value is
  * translated to the `includeUnassigned` boolean the list already uses for
  * "no assignee" instead of being dropped.
