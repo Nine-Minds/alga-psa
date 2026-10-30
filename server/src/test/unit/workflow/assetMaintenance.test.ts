@@ -181,6 +181,19 @@ describe('asset maintenance workflow actions and shared lifecycle', () => {
     }
   });
 
+  it('accepts structured completion records and rejects non-record values', () => {
+    const action = getActionRegistryV2().get('assets.complete_maintenance', 1)!;
+    const maintenanceData = { passed: true, readings: { voltage: 12 }, notes: ['Checked'], result: null };
+    expect(action.inputSchema.parse({
+      occurrence_id: ids.occurrence, maintenance_data: maintenanceData,
+    })).toMatchObject({ maintenance_data: maintenanceData });
+    for (const invalid of ['text', [], 42, null]) {
+      expect(action.inputSchema.safeParse({
+        occurrence_id: ids.occurrence, maintenance_data: invalid,
+      }).success).toBe(false);
+    }
+  });
+
   it('requires exactly one lookup identifier and a nonblank skip reason', async () => {
     for (const input of [{}, { ticket_id: ids.ticket, schedule_id: ids.schedule }, { occurrence_id: 'bad' }]) {
       await expect(execute('get_maintenance', input)).rejects.toThrow();

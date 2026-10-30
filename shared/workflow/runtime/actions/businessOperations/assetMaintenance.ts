@@ -253,7 +253,7 @@ export function registerAssetMaintenanceActions(): void {
       occurrence_id: uuidSchema,
       performed_at: z.union([dateOnlySchema('Completion calendar date (YYYY-MM-DD)'), isoDateTimeSchema]).optional().describe('Completion calendar date or ISO timestamp, for example ticket.closed_at; defaults to today'),
       notes: z.string().optional(),
-      maintenance_data: z.record(z.unknown()).optional().describe('Structured completion details from the ticket or workflow'),
+      maintenance_data: z.record(z.string(), z.unknown()).optional().describe('Structured completion details from the ticket or workflow'),
     }),
     outputSchema: z.object({ occurrence_id: uuidSchema, history_id: uuidSchema, next_occurrence: occurrenceSchema.nullable(), already_completed: z.boolean() }),
     sideEffectful: true,
