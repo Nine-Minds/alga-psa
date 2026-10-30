@@ -1,7 +1,7 @@
 /**
  * CM L4a deploy-fix: a FOREIGN actor (a sponsor technician) posts on a customer-owned shared ticket.
  * writeTicketActivity records the actor reference on ticket_audit_logs (actor_reference_id /
- * actor_organization_name); before 20261029120700 that insert failed and rolled the whole post back.
+ * actor_organization_name); before 20261029140700 that insert failed and rolled the whole post back.
  *
  * DB-backed and deliberately NOT mocking writeTicketActivity. Only the admission wrapper, session
  * expiry, lifecycle admission and transport are stand-ins; comment, thread, actor reference, audit row

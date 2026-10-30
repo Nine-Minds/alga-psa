@@ -2,7 +2,7 @@
 // writeTicketActivity writes actor_reference_id / actor_organization_name for a foreign actor;
 // L2 deferred the columns. Expand-only: two nullable metadata-only adds, no default, no backfill,
 // no trigger. The tenant FK to collaboration_actor_references (mirroring comments_collaboration_actor_fk)
-// is added NOT VALID; 20261029120800 validates it in a separate non-transactional file.
+// is added NOT VALID; 20261029140800 validates it in a separate non-transactional file.
 // Each ALTER runs under a 2s lock_timeout and is retried so a busy table never queues writers.
 const LOCK_ATTEMPTS = 3;
 

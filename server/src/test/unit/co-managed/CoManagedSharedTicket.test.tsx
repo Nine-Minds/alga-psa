@@ -14,16 +14,15 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
 vi.mock('@/components/co-managed/sharedConversationSession', () => ({ createSharedConversationSession: () => session }));
 vi.mock('@alga-psa/tickets/components/ticket/TicketDetailsContainer', async () => {
   const { useTicketDataSource } = await import('@alga-psa/tickets/components/ticket/TicketDataSourceContext');
-  return {
-    default: ({ ticketData }: any) => {
-      const source = useTicketDataSource();
-      return <div>
-        <ul>{ticketData.comments.map((c: any) => <li key={c.comment_id}>{c.note}</li>)}</ul>
-        <span data-testid="read-only">{String(source.screen.readOnly)}</span>
-        <span data-testid="audiences">{(source.conversation.audiences ?? []).join(',')}</span>
-      </div>;
-    },
+  const TicketDetailsContainer = ({ ticketData }: any) => {
+    const source = useTicketDataSource();
+    return <div>
+      <ul>{ticketData.comments.map((c: any) => <li key={c.comment_id}>{c.note}</li>)}</ul>
+      <span data-testid="read-only">{String(source.screen.readOnly)}</span>
+      <span data-testid="audiences">{(source.conversation.audiences ?? []).join(',')}</span>
+    </div>;
   };
+  return { default: TicketDetailsContainer };
 });
 
 import CoManagedSharedTicket from '@/components/co-managed/CoManagedSharedTicket';

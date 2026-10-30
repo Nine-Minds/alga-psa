@@ -1,7 +1,7 @@
 // CM L4a (6 of 8): the retained participation evidence store may now hold published shared
 // conversation captures ('conversation') and the author's own organisation-private history
 // ('private_conversation'). Expand-only: the source_type CHECK is replaced by a wider one added
-// NOT VALID; 20261029120501 validates it in a separate non-transactional file. Each ALTER runs
+// NOT VALID; 20261029140501 validates it in a separate non-transactional file. Each ALTER runs
 // under a 2s lock_timeout and is retried. DDL cannot take bind parameters, so the (constant)
 // source list is inlined. Idempotent: a replay finds the widened definition and returns.
 const TABLE = 'co_managed_participation_evidence';
