@@ -42,5 +42,7 @@ describe('buildContentDisposition', () => {
   it('omits filename when absent and escapes when present', () => {
     expect(buildContentDisposition('attachment')).toBe('attachment');
     expect(buildContentDisposition('inline', 'a"b.png')).toContain('filename="a_b.png"');
+    expect(buildContentDisposition('attachment', 'a\\')).toContain('filename="a_"');
+    expect(buildContentDisposition('attachment', 'a\\')).not.toContain('\\"');
   });
 });

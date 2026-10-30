@@ -1,4 +1,15 @@
-import { isInlineTextDocumentMimeType } from './documentMimeType';
+const INLINE_TEXT_MIME_TYPES = new Set(['text/plain', 'text/markdown', 'text/csv']);
+
+/**
+ * Whether a text file's bytes are safe to read back and render as plain text.
+ * Deliberately excludes markup types (`text/html`, `text/xml`, SVG) because
+ * those execute when a browser renders them.
+ */
+export function isInlineTextDocumentMimeType(mimeType?: string | null): boolean {
+  const normalized = (mimeType || '').trim().toLowerCase().split(';')[0].trim();
+  if (!normalized) return false;
+  return INLINE_TEXT_MIME_TYPES.has(normalized);
+}
 
 export type DocumentDisposition = 'inline' | 'attachment';
 
@@ -49,6 +60,6 @@ export function resolveDocumentServingPolicy(mimeType?: string | null): Document
 /** `Content-Disposition` value; with a filename it carries ASCII and RFC 5987 forms. */
 export function buildContentDisposition(disposition: DocumentDisposition, filename?: string | null): string {
   if (!filename) return disposition;
-  const ascii = filename.replace(/[^\x20-\x7e]/g, '_').replace(/["\;]/g, '_').replace(/[\r\n]/g, '_');
+  const ascii = filename.replace(/[^\x20-\x7e]/g, '_').replace(/["\\;]/g, '_').replace(/[\r\n]/g, '_');
   return `${disposition}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }
