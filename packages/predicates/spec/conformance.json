@@ -1372,6 +1372,78 @@
       ]
     },
     {
+      "id": "scalar-not-contains-equals-sign",
+      "description": "the needle is literal: '=' is not an operator or call syntax",
+      "covers": {
+        "operators": [
+          "not_contains"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_contains",
+        "value": "="
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "a=b"
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "ab"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-contains-open-paren",
+      "description": "the needle is literal: '(' is not an operator or call syntax",
+      "covers": {
+        "operators": [
+          "not_contains"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_contains",
+        "value": "("
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "a(b"
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "ab"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        }
+      ]
+    },
+    {
       "id": "hop-not-contains",
       "description": "not_contains across a many-relation hop is NOT EXISTS (a related row that contains the needle): no related rows satisfies it, one matching row among several does not",
       "covers": {
@@ -1680,6 +1752,78 @@
       ]
     },
     {
+      "id": "scalar-not-starts-with-equals-sign",
+      "description": "the needle is literal: '=' is not an operator or call syntax",
+      "covers": {
+        "operators": [
+          "not_starts_with"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_starts_with",
+        "value": "="
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "=b"
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "ab"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-starts-with-open-paren",
+      "description": "the needle is literal: '(' is not an operator or call syntax",
+      "covers": {
+        "operators": [
+          "not_starts_with"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_starts_with",
+        "value": "("
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "(b"
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "ab"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        }
+      ]
+    },
+    {
       "id": "hop-not-starts-with",
       "description": "not_starts_with across a many-relation hop is NOT EXISTS (a related row that starts with the needle): no related rows satisfies it, one matching row among several does not",
       "covers": {
@@ -1970,6 +2114,78 @@
           "id": "match",
           "record": {
             "s": "a\\"
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "ab"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-ends-with-equals-sign",
+      "description": "the needle is literal: '=' is not an operator or call syntax",
+      "covers": {
+        "operators": [
+          "not_ends_with"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_ends_with",
+        "value": "="
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "a="
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "ab"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-ends-with-open-paren",
+      "description": "the needle is literal: '(' is not an operator or call syntax",
+      "covers": {
+        "operators": [
+          "not_ends_with"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_ends_with",
+        "value": "("
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "a("
           },
           "expected": false
         },
