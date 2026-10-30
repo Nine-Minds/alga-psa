@@ -36,6 +36,15 @@
         "suggested": "Suggested",
         "toSave": "{{total}} to save"
       },
+      "customerMapping": {
+        "unlink": "Unlink",
+        "unlinkConfirm": {
+          "title": "Unlink {{client}} from QuickBooks?",
+          "body": "{{client}} stops exporting to QuickBooks customer {{customer}}. Nothing changes in QuickBooks, and you can link it again from this list at any time.",
+          "confirm": "Unlink",
+          "cancel": "Keep link"
+        }
+      },
       "dialog": {
         "cancel": "Cancel",
         "enterPlaceholder": "Enter {{field}}...",

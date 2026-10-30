@@ -36,6 +36,15 @@
         "suggested": "Voorgesteld",
         "toSave": "{{total}} op te slaan"
       },
+      "customerMapping": {
+        "unlink": "Ontkoppelen",
+        "unlinkConfirm": {
+          "title": "{{client}} ontkoppelen van QuickBooks?",
+          "body": "{{client}} wordt niet meer geëxporteerd naar QuickBooks-klant {{customer}}. In QuickBooks verandert niets en u kunt de klant op elk moment opnieuw koppelen via deze lijst.",
+          "confirm": "Ontkoppelen",
+          "cancel": "Koppeling behouden"
+        }
+      },
       "dialog": {
         "cancel": "Annuleren",
         "enterPlaceholder": "{{field}} invoeren...",
