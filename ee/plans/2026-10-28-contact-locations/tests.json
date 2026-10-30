@@ -105,7 +105,7 @@
     "featureIds": [
       "F009"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "addContact with locations and work_arrangement creates the contact and links in one transaction; a mismatch rolls back the contact too"
   },
   {
@@ -114,7 +114,7 @@
     "featureIds": [
       "F010"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "updateContact without locations leaves links unchanged; with [] removes them; with a new set replaces them"
   },
   {
@@ -123,7 +123,7 @@
     "featureIds": [
       "F011"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "updateContact changing client_id removes every link and returns removedLocationCount equal to the prior count"
   },
   {
@@ -132,7 +132,7 @@
     "featureIds": [
       "F011"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "updateContact changing client_id and passing locations of the new client in the same call writes only the new links"
   },
   {
@@ -368,7 +368,7 @@
     "featureIds": [
       "F029"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "TicketModel.createTicket with contact and undefined location_id stores the contact's primary location"
   },
   {
@@ -377,7 +377,7 @@
     "featureIds": [
       "F029"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "TicketModel.createTicket with location_id null keeps null; with an explicit location keeps it; with no contact leaves location untouched"
   },
   {
@@ -386,7 +386,7 @@
     "featureIds": [
       "F029"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "TicketModel.createTicket for a remote contact stores no location; for an unlinked contact at a single-location client stores the client default"
   },
   {
@@ -395,7 +395,7 @@
     "featureIds": [
       "F029"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "TicketModel.createTicket rejects a resolved location whose client differs from the ticket's client (contact at another client) with the existing mismatch error"
   },
   {
@@ -404,7 +404,7 @@
     "featureIds": [
       "F030"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "getContactEffectiveLocation returns resolved location id and the contact's links; permission denied for a user without ticket create"
   },
   {
