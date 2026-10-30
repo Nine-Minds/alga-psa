@@ -128,7 +128,7 @@ The following REST API groups are available in the Community Edition under the b
 
 - [API Rate Limiting and Webhooks](api-rate-limiting-and-webhooks.md)
 - [Unified Full-Text Search](search.md)
-- **Tickets** — Create, read, update, and close service tickets; manage comments, time entries, assignments, and files. Includes ticket bundling, asset links, and agent/team assignment sub-resources (see below). `GET /api/v1/tickets` supports a `fields` query parameter for sparse field sets; pass `fields=tags` to include each ticket's tag array in the response — each entry contains `tag_id`, `tag_text`, `background_color`, and `text_color`. The endpoint also accepts a `sort` query parameter validated against an explicit allowlist; passing an unrecognised sort key returns `400 Bad Request` rather than a database error. Pass `sort=latest_activity_at` (with optional `order=asc` or `order=desc`) to order results by the most recent visible activity on each ticket — the newest of the ticket's own timestamps and its latest non-draft, non-deleted comment. `created_at` is accepted as a sort alias for the underlying `entered_at` column. `latest_activity_at` is also available as a selectable response field (its value is an ISO timestamp string); for client-portal callers the field is computed from non-internal comments only, so internal notes do not expose their timing to portal contacts.
+- **Tickets** — Create, read, update, and close service tickets; manage comments, time entries, assignments, and files. Includes ticket bundling, asset links, agent/team assignment, and watch-list management sub-resources (see below). `GET /api/v1/tickets` supports a `fields` query parameter for sparse field sets; pass `fields=tags` to include each ticket's tag array in the response — each entry contains `tag_id`, `tag_text`, `background_color`, and `text_color`. The endpoint also accepts a `sort` query parameter validated against an explicit allowlist; passing an unrecognised sort key returns `400 Bad Request` rather than a database error. Pass `sort=latest_activity_at` (with optional `order=asc` or `order=desc`) to order results by the most recent visible activity on each ticket — the newest of the ticket's own timestamps and its latest non-draft, non-deleted comment. `created_at` is accepted as a sort alias for the underlying `entered_at` column. `latest_activity_at` is also available as a selectable response field (its value is an ISO timestamp string); for client-portal callers the field is computed from non-internal comments only, so internal notes do not expose their timing to portal contacts.
 - **Opportunities** — Manage sales opportunities from creation through close. Create deals with a required next action, link quotes, record qualification evidence, and mark outcomes won or lost. `PATCH /api/v1/opportunities/{id}` accepts a partial body and is an alias for `PUT`. `POST /api/v1/opportunities/{id}/stage` moves an open deal to a different stage in the same pipeline without closing it. `expected_close_date` is returned as a `YYYY-MM-DD` date string. For opportunities managed by a pipeline automation flow, `pipeline_id`, `stage_id`, and `probability` are flow-owned and are rejected on `PUT`/`PATCH` — use `/stage` to advance flow-managed deals between stages.
 - **Assets** — Register hardware assets, schedule maintenance, map relationships between devices, drive RMM actions, and link assets to tickets (see below).
 - **Users** — Create and administer user accounts, manage passwords and two-factor authentication, and read roles, teams, and effective permissions.
@@ -186,6 +186,23 @@ Beyond the primary assignee set via `PUT /tickets/{id}/assignment`, a ticket can
 **Assignment consistency fix:** `PUT /tickets/{id}/assignment` previously failed with an "Invalid reference" FK error when the ticket already had additional agents. The endpoint now atomically clears and re-keys `ticket_resources` rows before updating `tickets.assigned_to`, making primary-assignee changes reliable regardless of how many additional agents are attached.
 
 **Permissions:** all five routes require `ticket:update`.
+
+#### Ticket Watchers
+
+A ticket can have a watch list — users and external email addresses that receive all non-silent ticket notifications regardless of assignment. The REST API exposes full CRUD access to a ticket's watcher list.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `GET` | `/tickets/{id}/watchers` | List all current watchers on the ticket |
+| `POST` | `/tickets/{id}/watchers` | Add a watcher. Requires `user_id` (internal user UUID) or `email` (external address) |
+| `PATCH` | `/tickets/{id}/watchers/{watcherId}` | Toggle the watcher's `silent` flag; a silent watcher is tracked but excluded from notifications |
+| `DELETE` | `/tickets/{id}/watchers/{watcherId}` | Remove a watcher from the ticket |
+
+**Silent watchers:** set `silent: true` to record a watcher in reporting without delivering notifications to them. Toggle this at any time with `PATCH`.
+
+**Migration note:** the legacy `watch_list` field on the ticket record is deprecated. Both the field and these sub-resource endpoints reflect the same underlying data; prefer the sub-resource for new integrations.
+
+**Permissions:** all four routes require `ticket:update`.
 
 #### Ticket → Project Links
 
@@ -270,6 +287,24 @@ The request body is a JSON array of `{ "labelClass": "ticket" | "asset" | "stock
 Any null, unauthorized, or unrecognized record in the batch returns `404 Not Found` for the entire request. A `labelClass` value outside the three above returns `400 Bad Request`.
 
 **Permissions:** `ticket:read` for ticket labels, `asset:read` for asset labels, and `inventory:read` for stock unit labels. All required permissions must be present for a mixed-type batch.
+
+#### Document Attachments
+
+Structured files can be attached to any AlgaPSA entity — tickets, assets, companies, and more — through a single write endpoint.
+
+| Method | Path | Purpose |
+|--------|------|-------|
+| `POST` | `/api/v1/documents` | Create a document record and attach it to an entity |
+
+Identify the target entity with `entity_type` (e.g. `ticket`, `asset`, `company`) and `entity_id` (UUID). Provide the document content through exactly one of:
+
+- `url` — a publicly reachable URL; AlgaPSA fetches and stores the content
+- `content_base64` — base64-encoded content provided inline
+- `file` — multipart file upload
+
+**Download host allowlist:** when using `url`, the hostname must appear in the tenant's **Allowed download hosts** list under **Settings → MCP Server → Allowed download hosts**. Requests with an unlisted host are rejected with `403 Forbidden`. The allowlist is not checked for `content_base64` or `file` uploads.
+
+**Permissions:** requires `document:create` plus the write permission for the entity type being attached to (e.g. `ticket:update` for a ticket attachment).
 
 ### Enterprise Edition APIs
 - **Tenant Provisioning API:** Enables partner-driven tenant management. See [tenant_provisioning_api.md](tenant_provisioning_api.md) for details.
