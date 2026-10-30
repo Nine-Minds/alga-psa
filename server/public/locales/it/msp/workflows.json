@@ -1069,7 +1069,7 @@
         }
       },
       "assets.get_maintenance": {
-        "label": "Ottieni manutenzione risorsa",
+        "label": "Ottieni manutenzione asset",
         "description": "Trova piano e occorrenza per piano, occorrenza o ticket collegato."
       },
       "assets.create_maintenance_ticket": {
@@ -1077,11 +1077,11 @@
         "description": "Crea e collega un ticket per un’occorrenza di manutenzione aperta."
       },
       "assets.complete_maintenance": {
-        "label": "Completa manutenzione risorsa",
+        "label": "Completa manutenzione asset",
         "description": "Registra la manutenzione e apri l’occorrenza successiva."
       },
       "assets.skip_maintenance": {
-        "label": "Salta manutenzione risorsa",
+        "label": "Salta manutenzione asset",
         "description": "Salta un’occorrenza con un motivo e apri la successiva."
       },
       "assets.set_maintenance_paused": {

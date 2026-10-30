@@ -1312,7 +1312,7 @@
           "description": "Lire et écrire un état de workflow durable d'une exécution à l'autre."
         },
         "maintenance": {
-          "label": "Maintenance",
+          "label": "Entretien",
           "description": "Rechercher la maintenance, lier des tickets, terminer ou ignorer des occurrences et suspendre ou reprendre des plans."
         }
       },
