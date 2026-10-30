@@ -858,6 +858,7 @@
       "syncNow": "Synchroniser avec QuickBooks",
       "viewInQbo": "Afficher dans QuickBooks",
       "voidInvoice": "Annuler la facture",
+      "delegateTax": "Utiliser la taxe du système comptable",
       "viewInXero": "Voir dans Xero"
     },
     "loading": "Chargement de l'aperçu...",
@@ -879,6 +880,13 @@
     },
     "applyCreditDialog": {
       "title": "Appliquer un crédit"
+    },
+    "delegateTaxDialog": {
+      "title": "Utiliser la taxe du système comptable",
+      "description": "Le système comptable calculera la taxe de cette facture lors du prochain export, puis AlgaPSA remplacera la taxe et le total par ce résultat. Les numéros, lignes, prix et paiements enregistrés restent inchangés.",
+      "cancel": "Annuler",
+      "confirm": "Passer à la taxe du système comptable",
+      "switching": "Changement en cours..."
     },
     "voidDialog": {
       "title": "Annuler la facture",
@@ -2554,7 +2562,8 @@
       "packingSlip": "Bon de livraison",
       "pickList": "Liste de prélèvement",
       "workTag": "Étiquette de travail / Label",
-      "stagingManifest": "Manifeste de colisage"
+      "stagingManifest": "Manifeste de colisage",
+      "rmaReturnSlip": "Bordereau de retour RMA"
     }
   },
   "errors": {

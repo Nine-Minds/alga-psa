@@ -1,6 +1,10 @@
 'use server'
 
-import { countBoardChecklistApplyRules } from '@alga-psa/core/config/deletion';
+import {
+  countBoardChecklistApplyRules,
+  countCoManagedBoardScopes,
+  countLiveCoManagedEscalationsForBoard,
+} from '@alga-psa/core/config/deletion';
 
 import { IBoard } from '@alga-psa/types';
 import Board from '../../models/board';
@@ -12,7 +16,7 @@ import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { v4 as uuidv4 } from 'uuid';
 import { BoardTicketStatusInput, saveBoardTicketStatusesForBoard } from './boardTicketStatusActions';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
-import { boardActionErrorFrom, type BoardActionError } from './boardActionErrors';
+import { boardActionErrorFrom, CO_MANAGED_ESCALATION_QUEUE_MESSAGE, CO_MANAGED_SHARED_BOARD_MESSAGE, type BoardActionError } from './boardActionErrors';
 import { parseTicketViewSettings } from './boardViewSettingsSchema';
 import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../../lib/ticketSlaSql';
 import { normalizeBoardStopwatchSetting, resolveBoardStopwatchEnabled } from '../../lib/boardLiveTicketTimer';
@@ -739,6 +743,31 @@ export const deleteBoard = withAuth(async (
       };
     }
 
+    // 3d. Co-management depends on this board while its relationship is live: the
+    // MSP's escalation queue for a customer workspace, or a customer board the MSP
+    // oversees. Deleting it (even with force) would orphan that access. The counters
+    // issue no co-managed query for a tenant that does not participate.
+    const coManagedEscalations = await countLiveCoManagedEscalationsForBoard(trx, { tenant, entityId: boardId });
+    if (coManagedEscalations > 0) {
+      return {
+        success: false,
+        code: 'BOARD_IN_CO_MANAGEMENT',
+        message: 'Cannot delete board: it receives escalated tickets from a co-managed IT workspace that is being set up or is active.',
+        dependencies: ['co_managed_relationship'],
+        counts: { co_managed_relationship: coManagedEscalations }
+      };
+    }
+    const coManagedScopes = await countCoManagedBoardScopes(trx, { tenant, entityId: boardId });
+    if (coManagedScopes > 0) {
+      return {
+        success: false,
+        code: 'BOARD_IN_CO_MANAGEMENT',
+        message: 'Cannot delete board: it is shared with your MSP under co-managed IT while the relationship is active.',
+        dependencies: ['co_managed_relationship'],
+        counts: { co_managed_relationship: coManagedScopes }
+      };
+    }
+
     // 4. Check if this is an ITIL board (categories are shared across ITIL boards)
     const isItilCategoryBoard = board.category_type === 'itil';
 
@@ -1027,6 +1056,17 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
 
       if (!currentBoard) {
         throw new Error('Board not found');
+      }
+
+      // Deactivation hides the board from every co-management read just as
+      // deletion would; refuse it while a live relationship depends on it.
+      if (boardData.is_inactive === true && !currentBoard.is_inactive) {
+        if (await countLiveCoManagedEscalationsForBoard(trx, { tenant, entityId: boardId }) > 0) {
+          throw new Error(CO_MANAGED_ESCALATION_QUEUE_MESSAGE);
+        }
+        if (await countCoManagedBoardScopes(trx, { tenant, entityId: boardId }) > 0) {
+          throw new Error(CO_MANAGED_SHARED_BOARD_MESSAGE);
+        }
       }
 
       // updateBoard is a second write path to the same two columns that

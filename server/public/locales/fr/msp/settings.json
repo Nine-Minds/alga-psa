@@ -414,17 +414,21 @@
       "cancel": "Annuler",
       "delete": "Supprimer",
       "placeholder": "Saisir le nom de la nouvelle équipe",
+      "descriptionPlaceholder": "Saisir une description d'équipe facultative",
       "selectManager": "Sélectionner un responsable"
     },
     "details": {
       "loading": "Chargement des détails de l'équipe...",
       "notFound": "Aucune équipe trouvée",
+      "noDescription": "Aucune description",
       "fields": {
         "teamLead": "Chef d'équipe",
+        "description": "Description",
         "addMember": "Ajouter un membre"
       },
       "placeholders": {
         "teamName": "Saisir le nom de l'équipe",
+        "description": "Saisir la description de l'équipe",
         "selectTeamLead": "Sélectionner un chef d'équipe",
         "selectUserToAdd": "Sélectionner un utilisateur à ajouter",
         "noTeamLead": "Non assigné"
@@ -436,8 +440,10 @@
         "discard": "Abandonner",
         "saveChanges": "Enregistrer les modifications",
         "saveName": "Enregistrer le nom",
+        "saveDescription": "Enregistrer la description",
         "cancel": "Annuler",
         "editName": "Modifier le nom",
+        "editDescription": "Modifier la description",
         "remove": "Supprimer"
       },
       "table": {
@@ -462,6 +468,7 @@
         "createFailed": "Échec de la création de l'équipe : {{error}}",
         "deleteFailed": "Échec de la suppression de l'équipe",
         "updateName": "Échec de la mise à jour du nom de l'équipe",
+        "updateDescription": "Échec de la mise à jour de la description de l'équipe",
         "saveChanges": "Échec de l'enregistrement des modifications. Veuillez réessayer."
       }
     }
@@ -3657,6 +3664,36 @@
         "confirm": "Déconnecter",
         "cancel": "Annuler"
       }
+    },
+    "loading": "Chargement…",
+    "downloadHosts": {
+      "title": "Hôtes de téléchargement autorisés",
+      "intro": "Lorsqu'un document est joint par URL, AlgaPSA ne le télécharge que depuis les hôtes listés ici. Cela s'applique à tout appelant qui joint des documents, y compris les agents IA, les clients API et l'API REST. Privilégiez les hôtes propres à un bucket, comme acme-uploads.s3.us-east-1.amazonaws.com, plutôt que des hôtes génériques.",
+      "readOnly": "Vous pouvez consulter cette liste. Pour la modifier, il faut l'autorisation « Gérer les hôtes de téléchargement ».",
+      "builtIn": "Intégré",
+      "empty": "Aucun hôte personnalisé pour l'instant.",
+      "add": "Ajouter un hôte",
+      "addTitle": "Ajouter un hôte de téléchargement autorisé",
+      "remove": "Supprimer",
+      "removeTitle": "Supprimer l'hôte ?",
+      "removeMessage": "Les téléchargements depuis {{host}} ne fonctionneront plus tant qu'il ne sera pas ajouté à nouveau.",
+      "fields": {
+        "host": "Hôte",
+        "hostHelp": "Un nom d'hôte, ou *.example.com pour autoriser tous les sous-domaines.",
+        "note": "Note (facultatif)"
+      },
+      "table": {
+        "host": "Hôte",
+        "used": "Utilisé pour",
+        "allowed": "Autorisé",
+        "note": "Note",
+        "addedBy": "Ajouté par",
+        "addedOn": "Ajouté le"
+      },
+      "errors": {
+        "load": "Impossible de charger les hôtes de téléchargement autorisés.",
+        "save": "Impossible d'enregistrer la modification."
+      }
     }
   },
   "errors": {
@@ -3836,7 +3873,8 @@
     }
   },
   "common": {
-    "saving": "Enregistrement…"
+    "saving": "Enregistrement…",
+    "cancel": "Annuler"
   },
   "featureFlags": {
     "categories": {

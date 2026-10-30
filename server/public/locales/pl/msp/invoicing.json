@@ -886,6 +886,7 @@
       "syncNow": "Synchronizuj z QuickBooks",
       "viewInQbo": "Zobacz w QuickBooks",
       "voidInvoice": "Anuluj fakturę",
+      "delegateTax": "Użyj podatku z systemu księgowego",
       "viewInXero": "Wyświetl w Xero"
     },
     "loading": "Ładowanie podglądu...",
@@ -907,6 +908,13 @@
     },
     "applyCreditDialog": {
       "title": "Zastosuj kredyt"
+    },
+    "delegateTaxDialog": {
+      "title": "Użyj podatku z systemu księgowego",
+      "description": "System księgowy obliczy podatek dla tej faktury przy następnym eksporcie, a AlgaPSA zastąpi następnie podatek i sumę tym wynikiem. Numery, pozycje, ceny i zarejestrowane płatności pozostają bez zmian.",
+      "cancel": "Anuluj",
+      "confirm": "Przełącz na podatek z systemu księgowego",
+      "switching": "Przełączanie..."
     },
     "voidDialog": {
       "title": "Anuluj fakturę",
@@ -2606,7 +2614,8 @@
       "packingSlip": "Dokument dostawy",
       "pickList": "Lista kompletacyjna",
       "workTag": "Etykieta robocza / Etykieta",
-      "stagingManifest": "Lista pakowa"
+      "stagingManifest": "Lista pakowa",
+      "rmaReturnSlip": "Dokument zwrotu RMA"
     }
   },
   "errors": {

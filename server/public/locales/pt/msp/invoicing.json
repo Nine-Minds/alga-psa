@@ -858,6 +858,7 @@
       "syncNow": "Sincronizar com QuickBooks",
       "viewInQbo": "Ver em QuickBooks",
       "voidInvoice": "Anular fatura",
+      "delegateTax": "Usar o imposto do sistema contábil",
       "viewInXero": "Ver no Xero"
     },
     "loading": "Carregando visualização...",
@@ -879,6 +880,13 @@
     },
     "applyCreditDialog": {
       "title": "Aplicar crédito"
+    },
+    "delegateTaxDialog": {
+      "title": "Usar o imposto do sistema contábil",
+      "description": "O sistema contábil calculará o imposto desta fatura na próxima exportação e o AlgaPSA substituirá então o imposto e o total por esse resultado. Números, linhas, preços e pagamentos registrados permanecem como estão.",
+      "cancel": "Cancelar",
+      "confirm": "Mudar para o imposto do sistema contábil",
+      "switching": "Mudando..."
     },
     "voidDialog": {
       "title": "Anular fatura",
@@ -2554,7 +2562,8 @@
       "packingSlip": "Nota de entrega",
       "pickList": "Lista de separação",
       "workTag": "Etiqueta de trabalho / Etiqueta",
-      "stagingManifest": "Manifesto de embalagem"
+      "stagingManifest": "Manifesto de embalagem",
+      "rmaReturnSlip": "Comprovante de devolução de RMA"
     }
   },
   "errors": {

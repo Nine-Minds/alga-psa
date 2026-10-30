@@ -115,7 +115,7 @@ export function registerEmailActions(): void {
           'Plain-text body. Insert workflow fields directly; any other {{name}} is filled from template_data',
           emailBodyEditorMetadata
         ),
-        template_data: z.record(z.unknown()).optional().describe('Values for {{name}} placeholders in the subject and body (only needed for names that are not workflow fields)'),
+        template_data: z.record(z.string(), z.unknown()).optional().describe('Values for {{name}} placeholders in the subject and body (only needed for names that are not workflow fields)'),
         attachment_file_ids: z.array(uuidSchema).optional().describe('Attachment file ids (external_files.file_id)'),
         provider_id: z.string().optional().describe('Optional provider override (providerId from tenant email settings)'),
         on_no_recipients: withWorkflowJsonSchemaMetadata(

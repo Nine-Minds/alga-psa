@@ -414,17 +414,21 @@
       "cancel": "Annuleren",
       "delete": "Verwijderen",
       "placeholder": "Nieuwe teamnaam invoeren",
+      "descriptionPlaceholder": "Optionele teambeschrijving invoeren",
       "selectManager": "Selecteer een manager"
     },
     "details": {
       "loading": "Teamgegevens laden...",
       "notFound": "Geen team gevonden",
+      "noDescription": "Geen beschrijving",
       "fields": {
         "teamLead": "Teamleider",
+        "description": "Beschrijving",
         "addMember": "Lid toevoegen"
       },
       "placeholders": {
         "teamName": "Teamnaam invoeren",
+        "description": "Teambeschrijving invoeren",
         "selectTeamLead": "Selecteer een teamleider",
         "selectUserToAdd": "Selecteer een gebruiker om toe te voegen",
         "noTeamLead": "Niet toegewezen"
@@ -436,8 +440,10 @@
         "discard": "Verwerpen",
         "saveChanges": "Wijzigingen opslaan",
         "saveName": "Naam opslaan",
+        "saveDescription": "Beschrijving opslaan",
         "cancel": "Annuleren",
         "editName": "Naam bewerken",
+        "editDescription": "Beschrijving bewerken",
         "remove": "Verwijderen"
       },
       "table": {
@@ -462,6 +468,7 @@
         "createFailed": "Kan team niet aanmaken: {{error}}",
         "deleteFailed": "Kan team niet verwijderen",
         "updateName": "Kan teamnaam niet bijwerken",
+        "updateDescription": "Kan teambeschrijving niet bijwerken",
         "saveChanges": "Kan wijzigingen niet opslaan. Probeer het opnieuw."
       }
     }
@@ -3657,6 +3664,36 @@
         "confirm": "Verbinding verbreken",
         "cancel": "Annuleren"
       }
+    },
+    "loading": "Laden…",
+    "downloadHosts": {
+      "title": "Toegestane downloadhosts",
+      "intro": "Wanneer een document via een URL wordt bijgevoegd, downloadt AlgaPSA het alleen van de hosts die hier staan. Dit geldt voor iedereen die documenten bijvoegt, inclusief AI-agents, API-clients en de REST API. Geef de voorkeur aan bucketspecifieke hosts zoals acme-uploads.s3.us-east-1.amazonaws.com boven brede hosts.",
+      "readOnly": "U kunt deze lijst bekijken. Voor wijzigingen is de machtiging 'Downloadhosts beheren' nodig.",
+      "builtIn": "Ingebouwd",
+      "empty": "Nog geen aangepaste hosts.",
+      "add": "Host toevoegen",
+      "addTitle": "Toegestane downloadhost toevoegen",
+      "remove": "Verwijderen",
+      "removeTitle": "Host verwijderen?",
+      "removeMessage": "Downloads van {{host}} werken pas weer als de host opnieuw is toegevoegd.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "Een hostnaam, of *.example.com om alle subdomeinen toe te staan.",
+        "note": "Notitie (optioneel)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Gebruikt voor",
+        "allowed": "Toegestaan",
+        "note": "Notitie",
+        "addedBy": "Toegevoegd door",
+        "addedOn": "Toegevoegd op"
+      },
+      "errors": {
+        "load": "Kan de toegestane downloadhosts niet laden.",
+        "save": "Kan de wijziging niet opslaan."
+      }
     }
   },
   "errors": {
@@ -3836,7 +3873,8 @@
     }
   },
   "common": {
-    "saving": "Opslaan…"
+    "saving": "Opslaan…",
+    "cancel": "Annuleren"
   },
   "featureFlags": {
     "categories": {

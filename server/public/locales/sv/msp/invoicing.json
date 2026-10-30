@@ -858,6 +858,7 @@
       "syncNow": "Synkronisera med QuickBooks",
       "viewInQbo": "Visa i QuickBooks",
       "voidInvoice": "Makulera faktura",
+      "delegateTax": "Använd skatt från bokföringssystemet",
       "viewInXero": "Visa i Xero"
     },
     "loading": "Läser in förhandsgranskning…",
@@ -879,6 +880,13 @@
     },
     "applyCreditDialog": {
       "title": "Avräkna tillgodohavande"
+    },
+    "delegateTaxDialog": {
+      "title": "Använd skatt från bokföringssystemet",
+      "description": "Bokföringssystemet beräknar skatten för den här fakturan vid nästa export, och AlgaPSA ersätter sedan skatt och totalsumma med det resultatet. Nummer, rader, priser och registrerade betalningar förblir oförändrade.",
+      "cancel": "Avbryt",
+      "confirm": "Byt till skatt från bokföringssystemet",
+      "switching": "Byter..."
     },
     "voidDialog": {
       "title": "Makulera faktura",
@@ -2554,7 +2562,8 @@
       "packingSlip": "Följesedel",
       "pickList": "Plocklista",
       "workTag": "Arbetsetikett / Etikett",
-      "stagingManifest": "Packlista"
+      "stagingManifest": "Packlista",
+      "rmaReturnSlip": "RMA-returfölje"
     }
   },
   "errors": {

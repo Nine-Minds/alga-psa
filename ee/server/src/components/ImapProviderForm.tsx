@@ -50,7 +50,7 @@ const eeImapProviderSchema = z.object({
   oauthScopes: z.string().optional(),
   isActive: z.boolean(),
   folderFilters: z.string().optional(),
-  inboundTicketDefaultsId: z.string().uuid().optional()
+  inboundTicketDefaultsId: z.string().guid().optional()
 });
 
 type EEImapProviderFormData = z.infer<typeof eeImapProviderSchema>;

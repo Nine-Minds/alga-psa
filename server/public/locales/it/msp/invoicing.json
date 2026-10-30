@@ -858,6 +858,7 @@
       "syncNow": "Sincronizza con QuickBooks",
       "viewInQbo": "Visualizza in QuickBooks",
       "voidInvoice": "Annulla fattura",
+      "delegateTax": "Usa l'imposta del sistema contabile",
       "viewInXero": "Visualizza in Xero"
     },
     "loading": "Caricamento anteprima...",
@@ -879,6 +880,13 @@
     },
     "applyCreditDialog": {
       "title": "Applica credito"
+    },
+    "delegateTaxDialog": {
+      "title": "Usa l'imposta del sistema contabile",
+      "description": "Il sistema contabile calcolerà l'imposta di questa fattura alla prossima esportazione e AlgaPSA sostituirà poi imposta e totale con quel risultato. Numeri, righe, prezzi e pagamenti registrati restano invariati.",
+      "cancel": "Annulla",
+      "confirm": "Passa all'imposta del sistema contabile",
+      "switching": "Passaggio in corso..."
     },
     "voidDialog": {
       "title": "Annulla fattura",
@@ -2554,7 +2562,8 @@
       "packingSlip": "Documento di trasporto",
       "pickList": "Lista di prelievo",
       "workTag": "Etichetta di lavoro / Etichetta",
-      "stagingManifest": "Distinta di imballaggio"
+      "stagingManifest": "Distinta di imballaggio",
+      "rmaReturnSlip": "Bolla di reso RMA"
     }
   },
   "errors": {

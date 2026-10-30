@@ -858,6 +858,7 @@
       "syncNow": "Synchroniseren met QuickBooks",
       "viewInQbo": "Bekijken in QuickBooks",
       "voidInvoice": "Factuur ongeldig maken",
+      "delegateTax": "Belasting uit het boekhoudsysteem gebruiken",
       "viewInXero": "Bekijken in Xero"
     },
     "loading": "Voorbeeld laden...",
@@ -879,6 +880,13 @@
     },
     "applyCreditDialog": {
       "title": "Tegoed toepassen"
+    },
+    "delegateTaxDialog": {
+      "title": "Belasting uit het boekhoudsysteem gebruiken",
+      "description": "Het boekhoudsysteem berekent de belasting voor deze factuur bij de volgende export, waarna AlgaPSA de belasting en het totaal vervangt door dat resultaat. Nummers, regels, prijzen en geregistreerde betalingen blijven ongewijzigd.",
+      "cancel": "Annuleren",
+      "confirm": "Overschakelen naar belasting uit het boekhoudsysteem",
+      "switching": "Bezig met overschakelen..."
     },
     "voidDialog": {
       "title": "Factuur ongeldig maken",
@@ -2554,7 +2562,8 @@
       "packingSlip": "Pakbon",
       "pickList": "Picklijst",
       "workTag": "Werklabel / Label",
-      "stagingManifest": "Paklijst"
+      "stagingManifest": "Paklijst",
+      "rmaReturnSlip": "RMA-retourbon"
     }
   },
   "errors": {

@@ -35,6 +35,7 @@ export default function CoManagedCustomerShell({ children }: { children: ReactNo
       <Link href="/msp/tickets">{t('nav.tickets', { defaultValue: 'Tickets' })}</Link>
       <Link href="/msp/co-managed">{t('nav.coManaged', { defaultValue: 'Co-managed IT' })}</Link>
       <Link href="/msp/knowledge-base">{t('nav.knowledgeBase', { defaultValue: 'Knowledge base' })}</Link>
+      <Link href="/msp/co-management/administration">{t('nav.coManagedAdministration', { defaultValue: 'Access & administration' })}</Link>
       <Link href="/msp/profile">{t('nav.profile', { defaultValue: 'Profile' })}</Link>
       <button type="button" onClick={() => void signOut({ callbackUrl: '/auth/msp/signin' })}>{t('nav.signOut', { defaultValue: 'Sign out' })}</button>
     </nav>

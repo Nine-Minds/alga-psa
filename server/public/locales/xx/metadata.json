@@ -607,8 +607,22 @@
     },
     "coManagement": {
       "title": "⟦Ƈȯ-Ḿȧƞȧɠḗḓ Ȧƈƈḗşş⟧",
+      "administration": {
+        "title": "⟦Ƈȯ-Ḿȧƞȧɠḗḓ Ȧḓḿīƞīşŧřȧŧīȯƞ⟧"
+      },
+      "customerTickets": {
+        "title": "⟦Ƈŭşŧȯḿḗř Ŧīƈķḗŧş⟧"
+      },
+      "sharedTicket": {
+        "title": "⟦Şħȧřḗḓ Ŧīƈķḗŧ⟧"
+      },
       "providers": {
         "title": "⟦Ḗḿȧīŀ ȧƞḓ Īḓḗƞŧīŧẏ Ƥřȯṽīḓḗřş⟧"
+      },
+      "sharedTasks": {
+        "title": "⟦Şħȧřḗḓ Ŧȧşķş⟧",
+        "taskTitle": "⟦Şħȧřḗḓ Ŧȧşķ⟧",
+        "projectTitle": "⟦Şħȧřḗḓ Ƥřȯĵḗƈŧ⟧"
       }
     }
   },

@@ -110,7 +110,8 @@
     "ticketsCannedResponses": "Gotowe odpowiedzi",
     "profile": "Profil",
     "signOut": "Wyloguj się",
-    "coManaged": "IT w współzarządzaniu"
+    "coManaged": "IT w współzarządzaniu",
+    "coManagedAdministration": "Dostęp i administracja"
   },
   "sidebar": {
     "backToMain": "Powrót do głównego",

@@ -858,6 +858,7 @@
       "syncNow": "Sync to QuickBooks",
       "viewInQbo": "View in QuickBooks",
       "voidInvoice": "Void Invoice",
+      "delegateTax": "Use accounting system tax",
       "viewInXero": "View in Xero"
     },
     "loading": "Loading Preview...",
@@ -879,6 +880,13 @@
     },
     "applyCreditDialog": {
       "title": "Apply Credit"
+    },
+    "delegateTaxDialog": {
+      "title": "Use accounting system tax",
+      "description": "The accounting system will calculate tax for this invoice on its next export, and AlgaPSA will then replace the tax and total with that result. Numbers, lines, prices and recorded payments stay as they are.",
+      "cancel": "Cancel",
+      "confirm": "Switch to accounting system tax",
+      "switching": "Switching..."
     },
     "voidDialog": {
       "title": "Void Invoice",
@@ -2554,7 +2562,8 @@
       "packingSlip": "Packing Slip",
       "pickList": "Pick List",
       "workTag": "Work Tag / Label",
-      "stagingManifest": "Packing Manifest"
+      "stagingManifest": "Packing Manifest",
+      "rmaReturnSlip": "RMA Return Slip"
     }
   },
   "errors": {

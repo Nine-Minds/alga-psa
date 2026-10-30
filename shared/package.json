@@ -56,6 +56,10 @@
     "./models/ticketModel.js": "./dist/models/ticketModel.js",
     "./models/userModel.js": "./dist/models/userModel.js",
     "./utils/recurrenceUtils": "./dist/utils/recurrenceUtils.js",
+    "./utils/sharedWorkSeam": "./dist/utils/sharedWorkSeam.js",
+    "./utils/sharedWorkSeam.js": "./dist/utils/sharedWorkSeam.js",
+    "./utils/appointmentDateTime": "./dist/utils/appointmentDateTime.js",
+    "./utils/appointmentDateTime.js": "./dist/utils/appointmentDateTime.js",
     "./utils/recurrenceUtils.js": "./dist/utils/recurrenceUtils.js",
     "./extensions/domain.js": "./dist/extensions/domain.js",
     "./extensions/installs.js": "./dist/extensions/installs.js",
@@ -124,8 +128,7 @@
     "vitest": "^4.1.12",
     "winston": "^3.13.1",
     "winston-daily-rotate-file": "^5.0.0",
-    "zod": "^3.22.4",
-    "zod-to-json-schema": "^3.24.6"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.7",

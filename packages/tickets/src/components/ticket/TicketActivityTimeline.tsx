@@ -26,6 +26,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
+import { ticketActivityAttribution } from '../../lib/ticketActivityAttribution';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -62,7 +63,8 @@ interface FormattedEntry {
 }
 
 function actorLabel(activity: TicketActivityRow): string {
-  if (activity.actor_display_name) return activity.actor_display_name;
+  const snapshot = ticketActivityAttribution(activity);
+  if (snapshot) return snapshot;
   switch (activity.actor_type) {
     case 'user':
       return 'A user';

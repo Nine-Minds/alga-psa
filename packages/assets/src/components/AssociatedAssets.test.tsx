@@ -15,6 +15,11 @@ vi.mock('./custody/CustodyBadge', () => ({
   useCustodyBadges: () => badges.map,
   CustodyBadge: ({ id }: any) => <span id={id}>In office</span>,
 }));
+const rmaBadgeState = vi.hoisted(() => ({ badges: new Map<string, any>() }));
+vi.mock('./warranty/RmaBadge', () => ({
+  useRmaBadges: () => rmaBadgeState.badges,
+  RmaBadge: ({ id, badge }: any) => (badge ? <a id={id} href={`/msp/inventory/rma?rmaId=${badge.rma_id}`}>RMA {badge.rma_number}</a> : null),
+}));
 vi.mock('../actions/remoteAccessLinkActions', () => ({ hasRemoteAccessLinks: vi.fn(async () => false) }));
 vi.mock('../actions/assetDrawerActions', () => ({ loadAssetDetailDrawerData: vi.fn() }));
 vi.mock('../actions/assetActionErrors', () => ({ unwrapAssetActionResult: (value: any) => value }));
@@ -37,7 +42,7 @@ vi.mock('./shared/useAssetTypeOptions', () => ({ useAssetTypeRegistry: () => [] 
 vi.mock('react-hot-toast', () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({ handleError: vi.fn() }));
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); rmaBadgeState.badges = new Map(); });
 
 describe('AssociatedAssets asset name width', () => {
   it('keeps the asset name flexing with a full-name title and an icon-only remove control', async () => {
@@ -243,5 +248,29 @@ describe('AssociatedAssets shared SWR key', () => {
     expect(entityAssetsCacheKey('ticket', 't1')).toEqual(['entity-assets', 'ticket', 't1']);
     expect(matchEntityAssetsCacheKeys('ticket', 't1')(['entity-assets', 'ticket', 't1'])).toBe(true);
     expect(matchEntityAssetsCacheKeys('ticket', 't1')(['entity-assets', 'project', 't1'])).toBe(false);
+  });
+});
+
+describe('AssociatedAssets custody and RMA chips', () => {
+  const asset = { asset_id: 'a1', asset_type: 'workstation', name: 'Dell dock', status: 'active', asset_tag: 'QA-1', client_id: 'c1' } as any;
+  const renderIt = () => render(<AssociatedAssets id="ticket-assets" entityId="ticket-1" entityType="ticket" clientId="c1" initialAssets={Promise.resolve([asset])} />);
+
+  it('puts the RMA chip on its own wrapping row, away from the status badge and the remove button', async () => {
+    rmaBadgeState.badges = new Map([['a1', { asset_id: 'a1', rma_id: 'r-9', rma_number: 'RMA-9', status: 'sent_to_vendor' }]]);
+    renderIt();
+    const chip = await screen.findByRole('link', { name: 'RMA RMA-9' });
+    expect(chip.getAttribute('href')).toBe('/msp/inventory/rma?rmaId=r-9');
+    const chipRow = chip.parentElement!;
+    expect(chipRow.className).toContain('flex-wrap');
+    expect(chipRow.className).toContain('min-w-0');
+    expect(chipRow.contains(screen.getByRole('button', { name: 'Remove' }))).toBe(false);
+    expect(chipRow.contains(screen.getByRole('button', { name: 'Dell dock' }))).toBe(false);
+  });
+
+  it('renders no RMA chip when the asset has no RMA badge', async () => {
+    rmaBadgeState.badges = new Map();
+    renderIt();
+    await screen.findByRole('button', { name: 'Dell dock' });
+    expect(screen.queryByRole('link', { name: /^RMA / })).toBeNull();
   });
 });

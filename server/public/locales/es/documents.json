@@ -93,7 +93,8 @@
       "pickedBy": "Surtido por: ____________________     Fecha: ____________",
       "preTaxTotals": "Los totales mostrados no incluyen impuestos. El impuesto correspondiente se calcula en su factura.",
       "thankYouForOrder": "Gracias por su pedido.",
-      "checkedBy": "Verificado por: ____________________     Fecha: ____________"
+      "checkedBy": "Verificado por: ____________________     Fecha: ____________",
+      "releasedBy": "Liberado por: ____________________     Firma: ____________________     Fecha: ____________"
     },
     "serialNumbers": "Números de serie",
     "allocatedSerialsNote": "Números de serie asignados; pueden cambiar durante el cumplimiento.",
@@ -114,7 +115,17 @@
     "ownerMsp": "MSP",
     "ownerClient": "Cliente",
     "statusOpen": "Abierta",
-    "statusSealed": "Sellada"
+    "statusSealed": "Sellada",
+    "rmaReturnSlipTitle": "ALBARÁN DE DEVOLUCIÓN RMA",
+    "device": "Dispositivo",
+    "vendor": "Proveedor",
+    "vendorReference": "Referencia del proveedor",
+    "asset": "Activo",
+    "assetTag": "Etiqueta del activo",
+    "replacementSerial": "Número de serie del reemplazo",
+    "shipping": "Envío",
+    "returnBy": "Devolver antes de",
+    "returnShipTo": "Enviar devolución a"
   },
   "errors": {
     "permissions": {
