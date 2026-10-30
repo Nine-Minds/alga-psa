@@ -2,6 +2,7 @@
  * Mock-based unit tests for qboOnboardingActions.
  *
  * Tests cover:
+ *  - linkClientToQboCustomer re-link / idempotency / conflict handling
  *  - bulkLinkHistoricalInvoices idempotency
  *  - backfillPaymentsForLinkedInvoices skip-paid
  */
@@ -58,6 +59,15 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   getQboCustomers: vi.fn(async () => [])
 }));
 
+// The shared, audited mapping update is what a re-link must retarget through.
+vi.mock('@alga-psa/integrations/actions/externalMappingActions', () => ({
+  updateExternalEntityMapping: vi.fn(async (id: string, updates: any) => ({
+    id,
+    external_entity_id: updates.external_entity_id,
+    metadata: updates.metadata
+  }))
+}));
+
 vi.mock('@alga-psa/core/logger', () => ({
   default: {
     info: vi.fn(),
@@ -88,7 +98,13 @@ vi.mock('../services/accountingSync/accountingSync.types', () => ({
 }));
 
 import { createTenantKnex } from '@alga-psa/db';
-import { bulkLinkHistoricalInvoices, backfillPaymentsForLinkedInvoices } from './qboOnboardingActions';
+import {
+  bulkLinkHistoricalInvoices,
+  backfillPaymentsForLinkedInvoices,
+  linkClientToQboCustomer
+} from './qboOnboardingActions';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- mocks the shared mapping action the onboarding actions retarget through
+import { updateExternalEntityMapping } from '@alga-psa/integrations/actions/externalMappingActions';
 import { applyExternalPaymentChange } from '../services/accountingSync/paymentApplier';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- mocks the QuickBooks client the onboarding actions bridge to
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
@@ -127,7 +143,286 @@ function makeKnexQuery(rows: any[]) {
   return q;
 }
 
+type MappingRow = {
+  id: string;
+  tenant: string;
+  integration_type: string;
+  alga_entity_type: string;
+  alga_entity_id: string;
+  external_entity_id: string;
+  external_realm_id: string | null;
+  sync_status: string | null;
+  deleted_at: string | null;
+  metadata: Record<string, unknown> | null;
+};
+
+function mappingRow(overrides: Partial<MappingRow> = {}): MappingRow {
+  return {
+    id: 'map-1',
+    tenant: 'tenant-test',
+    integration_type: 'quickbooks_online',
+    alga_entity_type: 'client',
+    alga_entity_id: 'client-1',
+    external_entity_id: 'qbo-A',
+    external_realm_id: 'realm-1',
+    sync_status: 'synced',
+    deleted_at: null,
+    metadata: { display_name: 'Alpha Corp', linked_via: 'onboarding' },
+    ...overrides
+  };
+}
+
+/**
+ * Mapping table whose predicates are really evaluated, so the deleted_at and
+ * entity scoping the link path depends on is what these assertions exercise —
+ * not a fixture that answers every query the same way.
+ */
+function makeMappingStore(initial: MappingRow[]) {
+  const rows: MappingRow[] = initial.map((row) => ({ ...row }));
+  const updates: Array<Record<string, any>> = [];
+  const inserts: Array<Record<string, any>> = [];
+
+  const makeQuery = () => {
+    const eq: Record<string, unknown> = {};
+    const ne: Record<string, unknown> = {};
+    const isNull: string[] = [];
+    const notNull: string[] = [];
+    let pendingInsert: Record<string, any> | null = null;
+
+    const matches = (row: Record<string, any>) =>
+      Object.entries(eq).every(([column, value]) => row[column] === value) &&
+      Object.entries(ne).every(([column, value]) => row[column] !== value) &&
+      isNull.every((column) => row[column] === null || row[column] === undefined) &&
+      notNull.every((column) => row[column] !== null && row[column] !== undefined);
+
+    const q: any = {
+      where: vi.fn((arg: any) => {
+        if (arg && typeof arg === 'object') Object.assign(eq, arg);
+        return q;
+      }),
+      whereNot: vi.fn((arg: any) => {
+        Object.assign(ne, arg);
+        return q;
+      }),
+      whereNull: vi.fn((column: string) => {
+        isNull.push(column);
+        return q;
+      }),
+      whereNotNull: vi.fn((column: string) => {
+        notNull.push(column);
+        return q;
+      }),
+      // Realm scoping arrives as a grouped callback / whereIn; every fixture row
+      // names the single connected realm, so the group adds nothing here.
+      andWhere: vi.fn(() => q),
+      whereIn: vi.fn(() => q),
+      orderByRaw: vi.fn(() => q),
+      select: vi.fn(() => q),
+      first: vi.fn(async () => rows.find(matches)),
+      update: vi.fn(async (patch: Record<string, any>) => {
+        const affected = rows.filter(matches);
+        updates.push(patch);
+        for (const row of affected) Object.assign(row, patch);
+        return affected.length;
+      }),
+      insert: vi.fn((row: Record<string, any>) => {
+        pendingInsert = row;
+        return q;
+      }),
+      returning: vi.fn(async () => {
+        const inserted = {
+          id: `map-${rows.length + 1}`,
+          deleted_at: null,
+          ...(pendingInsert ?? {})
+        } as MappingRow;
+        inserts.push(inserted);
+        rows.push(inserted);
+        return [inserted];
+      })
+    };
+    return q;
+  };
+
+  const knexMock: any = vi.fn((table: string) => {
+    if (table === 'tenant_external_entity_mappings') return makeQuery();
+    return makeKnexQuery([]);
+  });
+  knexMock.fn = { now: () => new Date().toISOString() };
+
+  return { knexMock, rows, updates, inserts };
+}
+
 // ─── Tests ───────────────────────────────────────────────────────────────────
+
+describe('linkClientToQboCustomer', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(updateExternalEntityMapping).mockImplementation(async (id: any, updates: any) => ({
+      id,
+      external_entity_id: updates.external_entity_id,
+      metadata: updates.metadata
+    }) as any);
+  });
+
+  it('re-links to another customer by retargeting external_entity_id', async () => {
+    const store = makeMappingStore([mappingRow()]);
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex: store.knexMock } as any);
+
+    const result = await linkClientToQboCustomer({
+      clientId: 'client-1',
+      externalId: 'qbo-B',
+      externalName: 'Beta Industries'
+    });
+
+    expect(result).toEqual({ linked: true });
+    expect(updateExternalEntityMapping).toHaveBeenCalledWith('map-1', {
+      external_entity_id: 'qbo-B',
+      metadata: { display_name: 'Beta Industries', linked_via: 'onboarding' }
+    });
+    // The ledger's status-only relink is exactly what used to rename the row
+    // while leaving the old QBO id in place; a re-link must not take it.
+    expect(store.updates).toHaveLength(0);
+  });
+
+  it('rejects a customer another client is live-mapped to', async () => {
+    const store = makeMappingStore([
+      mappingRow(),
+      mappingRow({
+        id: 'map-2',
+        alga_entity_id: 'client-2',
+        external_entity_id: 'qbo-B',
+        metadata: { display_name: 'Beta Industries' }
+      })
+    ]);
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex: store.knexMock } as any);
+
+    const result = await linkClientToQboCustomer({
+      clientId: 'client-1',
+      externalId: 'qbo-B',
+      externalName: 'Beta Industries'
+    });
+
+    expect(result).toEqual({
+      linked: false,
+      error: 'QBO customer qbo-B is already linked to another client.'
+    });
+    expect(updateExternalEntityMapping).not.toHaveBeenCalled();
+    expect(store.rows[0].external_entity_id).toBe('qbo-A');
+  });
+
+  it('allows the re-link when only a tombstoned row still names the customer', async () => {
+    const store = makeMappingStore([
+      mappingRow(),
+      mappingRow({
+        id: 'map-2',
+        alga_entity_id: 'client-2',
+        external_entity_id: 'qbo-B',
+        deleted_at: '2026-10-01T00:00:00.000Z',
+        sync_status: 'unlinked'
+      })
+    ]);
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex: store.knexMock } as any);
+
+    const result = await linkClientToQboCustomer({
+      clientId: 'client-1',
+      externalId: 'qbo-B',
+      externalName: 'Beta Industries'
+    });
+
+    expect(result).toEqual({ linked: true });
+    expect(updateExternalEntityMapping).toHaveBeenCalledWith('map-1', expect.objectContaining({
+      external_entity_id: 'qbo-B'
+    }));
+  });
+
+  it('re-selecting the same customer refreshes status and name only', async () => {
+    const store = makeMappingStore([mappingRow()]);
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex: store.knexMock } as any);
+
+    const result = await linkClientToQboCustomer({
+      clientId: 'client-1',
+      externalId: 'qbo-A',
+      externalName: 'Alpha Corporation'
+    });
+
+    expect(result).toEqual({ linked: true });
+    expect(updateExternalEntityMapping).not.toHaveBeenCalled();
+    expect(store.updates).toHaveLength(1);
+    expect(store.updates[0]).not.toHaveProperty('external_entity_id');
+    expect(store.updates[0].metadata).toEqual({
+      display_name: 'Alpha Corporation',
+      linked_via: 'onboarding'
+    });
+    expect(store.rows[0].external_entity_id).toBe('qbo-A');
+  });
+
+  it('first-time link still inserts a ledger row', async () => {
+    const store = makeMappingStore([]);
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex: store.knexMock } as any);
+
+    const result = await linkClientToQboCustomer({
+      clientId: 'client-9',
+      externalId: 'qbo-C',
+      externalName: 'Gamma Services'
+    });
+
+    expect(result).toEqual({ linked: true });
+    expect(updateExternalEntityMapping).not.toHaveBeenCalled();
+    expect(store.inserts).toHaveLength(1);
+    expect(store.inserts[0]).toMatchObject({
+      alga_entity_type: 'client',
+      alga_entity_id: 'client-9',
+      external_entity_id: 'qbo-C',
+      external_realm_id: 'realm-1'
+    });
+  });
+
+  it('surfaces a refused retarget as a link failure', async () => {
+    const store = makeMappingStore([mappingRow()]);
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex: store.knexMock } as any);
+    vi.mocked(updateExternalEntityMapping).mockResolvedValueOnce({
+      actionError: 'QuickBooks Customer qbo-B does not exist in the connected company.'
+    } as any);
+
+    const result = await linkClientToQboCustomer({
+      clientId: 'client-1',
+      externalId: 'qbo-B',
+      externalName: 'Beta Industries'
+    });
+
+    expect(result).toEqual({
+      linked: false,
+      error: 'QuickBooks Customer qbo-B does not exist in the connected company.'
+    });
+    expect(store.rows[0].external_entity_id).toBe('qbo-A');
+  });
+
+  it('keys a sub-customer re-link on the billing profile, not the client', async () => {
+    const store = makeMappingStore([
+      mappingRow({
+        id: 'map-profile',
+        alga_entity_type: 'billing_profile',
+        alga_entity_id: 'profile-1',
+        external_entity_id: 'qbo-A:Site',
+        metadata: { display_name: 'Alpha Corp:Site A', linked_via: 'onboarding' }
+      })
+    ]);
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex: store.knexMock } as any);
+
+    const result = await linkClientToQboCustomer({
+      clientId: 'client-1',
+      externalId: 'qbo-B:Site',
+      externalName: 'Alpha Corp:Site B',
+      billingProfileId: 'profile-1'
+    });
+
+    expect(result).toEqual({ linked: true });
+    expect(updateExternalEntityMapping).toHaveBeenCalledWith('map-profile', {
+      external_entity_id: 'qbo-B:Site',
+      metadata: { display_name: 'Alpha Corp:Site B', linked_via: 'onboarding' }
+    });
+  });
+});
 
 describe('bulkLinkHistoricalInvoices', () => {
   beforeEach(() => {
