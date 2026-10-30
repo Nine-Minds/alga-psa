@@ -121,7 +121,8 @@ export const createTicketFieldsSchema = z.object({
   url: z.string().url().optional(),
   board_id: uuidSchema,
   client_id: uuidSchema,
-  location_id: uuidSchema.optional(),
+  /** Omitted asks the contact where the ticket belongs; null is "explicitly none" and is kept. */
+  location_id: uuidSchema.nullish(),
   contact_name_id: uuidSchema.optional(),
   status_id: uuidSchema,
   category_id: uuidSchema.optional(),

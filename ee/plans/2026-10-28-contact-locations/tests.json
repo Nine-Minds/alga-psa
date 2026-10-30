@@ -494,7 +494,7 @@
     "featureIds": [
       "F037"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "RecurringClientOverridesDialog pre-fills the location from the contact when empty and keeps a user-set one"
   },
   {
@@ -503,7 +503,7 @@
     "featureIds": [
       "F029"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "REST v1 POST /tickets with contact and no location_id stores the contact's primary location; with location_id null stores none"
   },
   {
