@@ -1,3 +1,4 @@
+import { v5 as uuidv5 } from 'uuid';
 import type { IComment } from '@alga-psa/types';
 import type { CoManagedConversationItem } from '@alga-psa/co-managed';
 
@@ -7,6 +8,17 @@ export interface SharedConversationViewer { tenant: string; userId: string }
 /** An author in the viewer's own tenant resolves through the screen's user/contact maps; a foreign one never does. */
 const isLocalAuthor = (item: CoManagedConversationItem, viewer: SharedConversationViewer) =>
   item.author != null && item.author.tenant === viewer.tenant && item.author.id != null;
+
+// Fixed namespace for opaque references to store-local authors (never reused for anything else).
+const LOCAL_AUTHOR_REFERENCE_NAMESPACE = '6f0c5e0e-3a54-4f0b-9f0d-5b7f2f5a1c11';
+
+/**
+ * A foreign viewer sees a store-local author (a customer user or contact has no actor-reference row) only through a
+ * stable, opaque, non-empty reference: a uuidv5 of store tenant, author kind and author id. The raw id never reaches the
+ * screen, and the same author maps to the same reference on every load.
+ */
+const localAuthorReference = (storeTenant: string, kind: string, id: string) =>
+  uuidv5(`${storeTenant}:${kind}:${id}`, LOCAL_AUTHOR_REFERENCE_NAMESPACE);
 
 /**
  * One admitted conversation item as the native screen's comment. Foreign authors carry only the
@@ -35,7 +47,8 @@ export function mapConversationItem(item: CoManagedConversationItem, ticketId: s
     ...(local && author?.kind === 'user' ? { user_id: author.id } : {}),
     ...(local && author?.kind === 'contact' ? { contact_id: author.id } : {}),
     ...(!local && author && !system ? {
-      actor_reference_id: author.referenceId, actor_display_name: author.displayName, actor_organization_name: author.organizationName,
+      actor_reference_id: author.referenceId
+        ?? (author.id != null && author.tenant === item.storeTenant ? localAuthorReference(item.storeTenant, author.kind, author.id) : author.referenceId), actor_display_name: author.displayName, actor_organization_name: author.organizationName,
     } : {}),
   } as IComment;
 }

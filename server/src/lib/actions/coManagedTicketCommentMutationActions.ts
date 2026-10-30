@@ -2,7 +2,7 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
-import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
+import { requireCapabilityEitherMode } from '@alga-psa/core/capability/server';
 import { CoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 import { CoManagedCommentMutationError, CoManagedSharedWorkError, type CoManagedSharedResource,
   type CoManagedCommentMutationRequest, type CoManagedCommentMutationReceipt } from '@alga-psa/co-managed';
@@ -13,7 +13,7 @@ export type CoManagedCommentMutationResult = { ok: true; receipt: CoManagedComme
   { ok: false; code: 'invalid' | 'conflict' | 'operationConflict' | 'forbidden' | 'readOnly' | 'unknownOutcome' };
 export const mutateCoManagedTicketCommentAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource,
   request: CoManagedCommentMutationRequest): Promise<CoManagedCommentMutationResult> => {
-  await requireCapabilityForAction('co-managed', tenant, 'admits');
+  await requireCapabilityEitherMode('co-managed', tenant);
   try {
     const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
     return { ok: true, receipt: await mutateSharedTicketComment(knex, actor, resource, request) };

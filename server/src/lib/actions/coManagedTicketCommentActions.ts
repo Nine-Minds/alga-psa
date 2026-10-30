@@ -2,7 +2,7 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
-import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
+import { requireCapabilityEitherMode } from '@alga-psa/core/capability/server';
 import { CoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 import { CoManagedCommentCreateError, CoManagedSharedWorkError, type CoManagedSharedResource,
   type CoManagedCommentCreateRequest, type CoManagedCommentCreateReceipt } from '@alga-psa/co-managed';
@@ -12,10 +12,10 @@ import { createSharedTicketComment } from '../co-managed/createTicketComment';
 export type CoManagedCommentCreateResult = { ok: true; receipt: CoManagedCommentCreateReceipt } |
   { ok: false; code: 'invalid' | 'operationConflict' | 'forbidden' | 'readOnly' | 'unknownOutcome' };
 
-// Writing shared work admits a new mutation, so the action gates on `admits`.
+// Both sides write shared work: a sponsor `admits`, a customer co_managed workspace (no entitlement row) `serves`. Side checks stay downstream.
 export const createCoManagedTicketCommentAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource,
   request: CoManagedCommentCreateRequest): Promise<CoManagedCommentCreateResult> => {
-  await requireCapabilityForAction('co-managed', tenant, 'admits');
+  await requireCapabilityEitherMode('co-managed', tenant);
   try {
     const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
     return { ok: true, receipt: await createSharedTicketComment(knex, actor, resource, request) };

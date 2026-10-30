@@ -966,6 +966,7 @@ export const TENANT_TABLE_FOREIGN_KEYS: readonly TenantTableForeignKey[] = [
   { child: 'tenant_telemetry_settings', parent: 'users', column: 'updated_by', deleteRule: 'RESTRICT', name: 'tenant_telemetry_settings_tenant_updated_by_foreign' },
   { child: 'tenant_time_period_settings', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'tenant_time_period_settings_tenant_foreign' },
   { child: 'tenant_time_period_settings', parent: 'time_period_types', column: 'type_id', deleteRule: 'NO ACTION', name: 'tenant_time_period_settings_tenant_type_id_foreign' },
+  { child: 'ticket_audit_logs', parent: 'collaboration_actor_references', column: 'actor_reference_id', deleteRule: 'NO ACTION', name: 'ticket_audit_logs_collaboration_actor_fk' },
   { child: 'ticket_audit_logs', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'ticket_audit_logs_tenant_foreign' },
   { child: 'ticket_audit_logs', parent: 'tickets', column: 'ticket_id', deleteRule: 'NO ACTION', name: 'ticket_audit_logs_ticket_fkey' },
   { child: 'ticket_audit_logs', parent: 'users', column: 'actor_user_id', deleteRule: 'NO ACTION', name: 'ticket_audit_logs_actor_user_fkey' },

@@ -3,7 +3,7 @@ const mocks = vi.hoisted(() => ({ gate: vi.fn(), create: vi.fn(), session: vi.fn
   user: { user_id: 'home-user', tenant: 'home-tenant', user_type: 'internal' }, knex: {},
   Forbidden: class extends Error {}, Lifecycle: class extends Error {}, Command: class extends Error { constructor(public code: string) { super(code); } } }));
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: any) => (...args: any[]) => fn(mocks.user, { tenant: mocks.user.tenant }, ...args), getSession: mocks.session, getApiKeyUserOverride: mocks.override }));
-vi.mock('@alga-psa/core/capability/server', () => ({ requireCapabilityForAction: mocks.gate }));
+vi.mock('@alga-psa/core/capability/server', () => ({ requireCapabilityEitherMode: mocks.gate }));
 vi.mock('@alga-psa/db', () => ({ createTenantKnex: mocks.db }));
 vi.mock('@alga-psa/licensing/lifecycle-error', () => ({ CoManagedLifecycleError: mocks.Lifecycle }));
 vi.mock('@alga-psa/co-managed', () => ({ CoManagedSharedWorkError: mocks.Forbidden, CoManagedCommentCreateError: mocks.Command }));
@@ -36,6 +36,6 @@ it('distinguishes a rejected command from an uncertain commit outcome', async ()
 it('gates on admits before any identity or store work', async () => {
   mocks.gate.mockRejectedValue(new Error('unavailable'));
   await expect(createCoManagedTicketCommentAction(resource, request as any)).rejects.toThrow('unavailable');
-  expect(mocks.gate).toHaveBeenCalledWith('co-managed', 'home-tenant', 'admits');
+  expect(mocks.gate).toHaveBeenCalledWith('co-managed', 'home-tenant');
   expect(mocks.db).not.toHaveBeenCalled(); expect(mocks.create).not.toHaveBeenCalled();
 });
