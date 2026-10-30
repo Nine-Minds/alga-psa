@@ -30,6 +30,9 @@ describe('replaceTemplateVariables #each handling', () => {
     expect(html).toContain('Office Printer');
     expect(html).toContain('Brother HL-L6200DW');
     expect(html).toContain('SN-0042');
+    expect(html).toContain('<table');
+    expect(html.match(/<th /g)).toHaveLength(4);
+    expect(html.match(/<td /g)).toHaveLength(4);
     expect(html).not.toContain('{{');
     expect(html).not.toContain('AST-0042');
     expect(replaceTemplateVariables('{{#each ticket.assets}}{{this.assetTag}}{{/each}}', data)).toBe('AST-0042');

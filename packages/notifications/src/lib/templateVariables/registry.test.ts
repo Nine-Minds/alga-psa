@@ -27,6 +27,9 @@ describe("email template variable registry", () => {
     const example = entry.variables.find((variable) => variable.path === "ticket.assets")!;
     const data = getNestedTemplateExampleData("ticket-closed");
     const html = Handlebars.compile(example.example, { strict: true })(data);
+    expect(html).toContain("<table");
+    expect(html.match(/<th /g)).toHaveLength(4);
+    expect(html.match(/<td /g)).toHaveLength(4);
     expect(html).toContain("Office Printer");
     expect(html).toContain("Printer");
     expect(html).toContain("Brother HL-L6200DW");

@@ -92,19 +92,36 @@ documentation only; normally choose one. The stock template is not replaced.
 
         {{#if ticket.assets}}
         <h2 style="font-size:18px;">Devices: editable fields</h2>
-        {{#each ticket.assets}}
-        <div style="padding:12px;margin:12px 0;background:#f6f6f8;border:1px solid #e5e4ea;">
-          <strong>{{name}}</strong><br>
-          Asset Tag: {{assetTag}}<br>
-          Type: {{assetType}}<br>
-          Manufacturer: {{manufacturer}}<br>
-          Model: {{model}}<br>
-          Serial Number: {{serialNumber}}<br>
-          Status: {{status}}<br>
-          Location: {{location}}<br>
-          Relationship: {{relationship}}
-        </div>
-        {{/each}}
+        <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;font-size:11px;color:#1f2933;">
+          <thead>
+            <tr style="text-align:left;vertical-align:top;">
+              <th style="padding:6px 4px;border-bottom:2px solid #e5e4ea;">Asset Tag</th>
+              <th style="padding:6px 4px;border-bottom:2px solid #e5e4ea;">Name</th>
+              <th style="padding:6px 4px;border-bottom:2px solid #e5e4ea;">Type</th>
+              <th style="padding:6px 4px;border-bottom:2px solid #e5e4ea;">Manufacturer</th>
+              <th style="padding:6px 4px;border-bottom:2px solid #e5e4ea;">Model</th>
+              <th style="padding:6px 4px;border-bottom:2px solid #e5e4ea;">Serial #</th>
+              <th style="padding:6px 4px;border-bottom:2px solid #e5e4ea;">Status</th>
+              <th style="padding:6px 4px;border-bottom:2px solid #e5e4ea;">Location</th>
+              <th style="padding:6px 4px;border-bottom:2px solid #e5e4ea;">Relationship</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each ticket.assets}}
+            <tr style="vertical-align:top;overflow-wrap:anywhere;">
+              <td style="padding:6px 4px;border-bottom:1px solid #e5e4ea;">{{assetTag}}</td>
+              <td style="padding:6px 4px;border-bottom:1px solid #e5e4ea;">{{name}}</td>
+              <td style="padding:6px 4px;border-bottom:1px solid #e5e4ea;">{{assetType}}</td>
+              <td style="padding:6px 4px;border-bottom:1px solid #e5e4ea;">{{manufacturer}}</td>
+              <td style="padding:6px 4px;border-bottom:1px solid #e5e4ea;">{{model}}</td>
+              <td style="padding:6px 4px;border-bottom:1px solid #e5e4ea;">{{serialNumber}}</td>
+              <td style="padding:6px 4px;border-bottom:1px solid #e5e4ea;">{{status}}</td>
+              <td style="padding:6px 4px;border-bottom:1px solid #e5e4ea;">{{location}}</td>
+              <td style="padding:6px 4px;border-bottom:1px solid #e5e4ea;">{{relationship}}</td>
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
         {{/if}}
 
         {{#if ticket.assetsHtml}}
@@ -144,20 +161,33 @@ status, location, and relationship.
 ```html
 {{#if ticket.assets}}
 <h2 style="font-size:18px;">Devices</h2>
-{{#each ticket.assets}}
-<div style="padding:12px;margin:12px 0;background:#f6f6f8;border:1px solid #e5e4ea;">
-  <strong>{{name}}</strong><br>
-  Type: {{assetType}}<br>
-  {{manufacturer}} {{model}}<br>
-  {{#if serialNumber}}Serial Number: {{serialNumber}}{{/if}}
-</div>
-{{/each}}
+<table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;table-layout:fixed;font-size:13px;color:#1f2933;">
+  <thead>
+    <tr style="text-align:left;vertical-align:top;overflow-wrap:anywhere;">
+      <th style="padding:6px 10px;border-bottom:2px solid #e5e4ea;">Name</th>
+      <th style="padding:6px 10px;border-bottom:2px solid #e5e4ea;">Type</th>
+      <th style="padding:6px 10px;border-bottom:2px solid #e5e4ea;">Manufacturer / Model</th>
+      <th style="padding:6px 10px;border-bottom:2px solid #e5e4ea;">Serial #</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{#each ticket.assets}}
+    <tr style="vertical-align:top;overflow-wrap:anywhere;">
+      <td style="padding:6px 10px;border-bottom:1px solid #e5e4ea;">{{name}}</td>
+      <td style="padding:6px 10px;border-bottom:1px solid #e5e4ea;">{{assetType}}</td>
+      <td style="padding:6px 10px;border-bottom:1px solid #e5e4ea;">{{manufacturer}} {{model}}</td>
+      <td style="padding:6px 10px;border-bottom:1px solid #e5e4ea;">{{serialNumber}}</td>
+    </tr>
+    {{/each}}
+  </tbody>
+</table>
 {{/if}}
 ```
 
-To restore the tag, add `Asset Tag: {{assetTag}}<br>` inside the loop.
-To omit another value, remove its line. For a table layout, remove both the
-column's `<th>` and corresponding `<td>`; removing just the value leaves an
+To restore the tag, add an `Asset Tag` header cell and a corresponding
+`<td>{{assetTag}}</td>` inside the row loop, using the same padding and border
+styles as the other cells. To omit any column, remove both the column's `<th>`
+and corresponding `<td>`; removing just the value leaves an
 empty column. You cannot customize columns inside `ticket.assetsHtml` from
 the template: use `ticket.assets` instead.
 
@@ -167,8 +197,10 @@ individual time entries while retaining the time totals. Likewise, remove
 the Remaining Block Hours paragraph if that balance should not be shared.
 Do not merely remove a variable while leaving its label behind.
 
-`{{#if serialNumber}}` hides the label as well as the value when that field is
-missing. `{{#if ticket.assets}}` hides the section for an empty asset list.
+Keep the same number of cells in every row. Do not conditionally remove a
+single `<td>` when its value is missing: leave it empty or put a conditional
+inside it, such as `<td>{{#if serialNumber}}{{serialNumber}}{{else}}Not recorded{{/if}}</td>`.
+`{{#if ticket.assets}}` hides the section for an empty asset list.
 The preview displays registry examples, not real-time account balances; verify
 empty-data cases and actual delivery with a test ticket.
 
