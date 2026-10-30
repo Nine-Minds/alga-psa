@@ -4,11 +4,12 @@ import { withCoManagedSharedWork } from './sharedWork';
 import { snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, isCoManagedUuid, isCoManagedSharedWorkError, CoManagedSharedWorkError,
   type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+import { maskCoManagedSnapshot, CO_MANAGED_TASK_NAME_ALIASES, CO_MANAGED_PROJECT_NAME_ALIASES, CO_MANAGED_ORGANIZATION_NAME_ALIASES, CO_MANAGED_ASSIGNEE_NAME_ALIASES } from './sharedWorkProjection';
 import { assertCoManagedProjectWorkServed } from './projectTaskGate';
 
 /** The customer organization's display name, or '' when redacted. Single source for the project list and the reference snapshot. */
 export async function readCoManagedCustomerOrganizationName(trx: Knex.Transaction, customerTenant: string, redactedFields: Parameters<typeof isCoManagedReadFieldHidden>[0]): Promise<string> {
-  if (isCoManagedReadFieldHidden(redactedFields, ['client_name', 'organizationName', 'tenants'])) return '';
+  if (isCoManagedReadFieldHidden(redactedFields, CO_MANAGED_ORGANIZATION_NAME_ALIASES)) return '';
   const organization = await tenantDb(trx, customerTenant).table('tenants').first('client_name');
   return organization?.client_name ?? '';
 }
@@ -70,7 +71,7 @@ export async function listCoManagedSharedProjects(db: Knex, inputActor: CoManage
 async function readProject(db: Knex, actor: CoManagedSessionActor, customerTenant: string, relationshipId: string, projectId: string): Promise<CoManagedSharedProjectRow | null> {
   try {
     return await withCoManagedSharedWork(db, actor, { tenant: customerTenant, relationshipId, kind: 'project', id: projectId }, 'read', async context => {
-      if (isCoManagedReadFieldHidden(context.redactedFields, ['project_name', 'projectName', 'values.project_name', 'projects.project_name', 'project', 'project_id', 'projects'])) return null;
+      if (isCoManagedReadFieldHidden(context.redactedFields, CO_MANAGED_PROJECT_NAME_ALIASES)) return null;
       const customer = tenantDb(context.trx, customerTenant);
       const project = await customer.table('projects').where('project_id', projectId).first('project_name');
       const scope = await customer.table('co_management_project_scopes').where({ relationship_id: relationshipId, project_id: projectId }).first('can_collaborate');
@@ -99,7 +100,7 @@ export async function listCoManagedSharedProjectTasks(db: Knex, inputActor: CoMa
   await assertCoManagedProjectWorkServed(actor.tenant);
   return withCoManagedSharedWork(db, actor, { tenant: target.customerTenant.toLowerCase(), relationshipId: target.relationshipId.toLowerCase(), kind: 'project', id: target.projectId.toLowerCase() }, 'read', async context => {
     // A redacted task name drops the task row: nothing is inferred from a sibling column.
-    if (isCoManagedReadFieldHidden(context.redactedFields, ['task_name', 'values.task_name', 'project_tasks.task_name', 'project_tasks', 'tasks'])) return { rows: [], nextAfterTaskId: null };
+    if (isCoManagedReadFieldHidden(context.redactedFields, CO_MANAGED_TASK_NAME_ALIASES)) return { rows: [], nextAfterTaskId: null };
     const customer = tenantDb(context.trx, target.customerTenant.toLowerCase());
     const query = customer.table('project_tasks as task').orderBy('task.task_id').limit(limit + 1).where('phase.project_id', target.projectId.toLowerCase());
     customer.tenantJoin(query, 'project_phases as phase', 'task.phase_id', 'phase.phase_id');
@@ -123,7 +124,7 @@ export async function listCoManagedSharedProjectTasks(db: Knex, inputActor: CoMa
 }
 
 export interface CoManagedAssignedTaskRow {
-  customerTenant: string; relationshipId: string; taskId: string; taskName: string; projectName: string; organizationName: string; assigneeName: string;
+  customerTenant: string; relationshipId: string; taskId: string; taskName: string | null; projectName: string | null; organizationName: string | null; assigneeName: string | null;
   assignedToMe: boolean; revision: number;
 }
 export interface CoManagedAssignedTaskPage { rows: CoManagedAssignedTaskRow[]; next: { referenceId: string } | null }
@@ -131,7 +132,8 @@ export interface CoManagedAssignedTaskPage { rows: CoManagedAssignedTaskRow[]; n
 /**
  * The MSP's Shared Tasks queue: participation references this technician (or their teams) holds. The reference
  * nominates; every row is re-admitted through L2 (grant, staff role, home RBAC, lifecycle), so a revoked grant or an
- * ended relationship drops the row. Names come from the reference's own snapshots (no customer-tenant read per row).
+ * ended relationship drops the row. Names come from the reference's own snapshots (no customer-tenant read per row), but every
+ * row is built inside the admission callback and masked by the reader's CURRENT redactions: hidden names are null, the row stays.
  * Not yet built: the working/oversight `view` split and status/due filters (see the L3c plan, step 2).
  */
 export async function listCoManagedAssignedTasks(db: Knex, inputActor: CoManagedSessionActor,
@@ -155,14 +157,19 @@ export async function listCoManagedAssignedTasks(db: Knex, inputActor: CoManaged
     for (const reference of batch) {
       if (rows.length >= limit) return { rows, next: { referenceId: lastReturned! } };
       cursor = reference.reference_id;
+      let row: CoManagedAssignedTaskRow;
       try {
-        await withCoManagedSharedWork(db, actor, { kind: 'project_task', tenant: reference.customer_tenant, relationshipId: reference.relationship_id, id: reference.task_id }, 'read', async () => undefined);
+        row = await withCoManagedSharedWork(db, actor, { kind: 'project_task', tenant: reference.customer_tenant, relationshipId: reference.relationship_id, id: reference.task_id }, 'read', async context =>
+          maskCoManagedSnapshot(context.redactedFields, {
+            customerTenant: reference.customer_tenant, relationshipId: reference.relationship_id, taskId: reference.task_id, taskName: reference.task_name as string,
+            projectName: reference.project_name as string, organizationName: reference.organization_name as string, assigneeName: reference.assignee_name as string,
+            assignedToMe: reference.assigned_to === actor.userId, revision: reference.revision as number,
+          }, { taskName: CO_MANAGED_TASK_NAME_ALIASES, projectName: CO_MANAGED_PROJECT_NAME_ALIASES, organizationName: CO_MANAGED_ORGANIZATION_NAME_ALIASES, assigneeName: CO_MANAGED_ASSIGNEE_NAME_ALIASES }));
       } catch (error) {
         if (isCoManagedSharedWorkError(error)) continue;
         throw error;
       }
-      rows.push({ customerTenant: reference.customer_tenant, relationshipId: reference.relationship_id, taskId: reference.task_id, taskName: reference.task_name,
-        projectName: reference.project_name, organizationName: reference.organization_name, assigneeName: reference.assignee_name, assignedToMe: reference.assigned_to === actor.userId, revision: reference.revision });
+      rows.push(row);
       lastReturned = reference.reference_id;
     }
     if (batch.length < limit) return { rows, next: null };
