@@ -514,6 +514,14 @@ export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: str
       + 'erase history. participationEvidenceStore exports no update or delete and refuses a replay whose '
       + 'content hash differs, so re-pointing client_id would break its immutability; it stays pinned to the original client.',
   },
+  {
+    table: 'co_managed_ticket_references',
+    reason:
+      'MSP-side routing row for a customer\'s shared ticket. Its client_id mirrors the co-management '
+      + 'relationship\'s sponsor_client_id, which the handoff engine and Working queue match it against; '
+      + 'the merge does not re-point relationships, so moving the reference alone would orphan it from '
+      + 'its relationship and drop the ticket from the queue.',
+  },
   // These columns are OAuth application identifiers (varchar/text, no foreign
   // key to `clients`). Re-stamping one would break the integration outright.
   { table: 'google_calendar_provider_config', reason: 'OAuth client id, not an Alga client.' },
