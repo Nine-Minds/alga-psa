@@ -17,6 +17,7 @@ import { formatMinutesAsHoursAndMinutes, workedMinutes } from '@alga-psa/core';
 import { getAvailableHourBlockMinutes } from '@alga-psa/shared/billingClients/hourBlockService';
 
 export interface TicketEmailDetailBlocks {
+  assets: TicketEmailAsset[];
   /** HTML table of associated assets; '' when the ticket has none. */
   assetsHtml: string;
   /** HTML table of materials/services used; '' when none. */
@@ -33,9 +34,25 @@ export interface TicketEmailDetailBlocks {
   remainingBlockHours: string;
 }
 
+export interface TicketEmailAsset {
+  assetTag: string;
+  name: string;
+  assetType: string;
+  manufacturer: string;
+  model: string;
+  serialNumber: string;
+  status: string;
+  location: string;
+  relationship: string;
+}
+
 interface AssetRow {
   asset_tag: string | null;
   name: string | null;
+  asset_type: string | null;
+  asset_type_name: string | null;
+  manufacturer: string | null;
+  model: string | null;
   serial_number: string | null;
   status: string | null;
   location: string | null;
@@ -152,12 +169,17 @@ async function fetchTicketAssets(db: Knex, tenantId: string, ticketId: string): 
     .select(
       'a.asset_tag',
       'a.name',
+      'a.asset_type',
+      'atr.name as asset_type_name',
+      'a.manufacturer',
+      'a.model',
       'a.serial_number',
       'a.status',
       'a.location',
       'aa.relationship_type'
     );
   dbScoped.tenantJoin(query, 'assets as a', 'aa.asset_id', 'a.asset_id');
+  dbScoped.tenantJoin(query, 'asset_type_registry as atr', 'a.asset_type', 'atr.slug', { type: 'left' });
   return query
     .where({ 'aa.entity_id': ticketId, 'aa.entity_type': 'ticket' })
     .orderBy('a.asset_tag', 'asc');
@@ -289,6 +311,17 @@ export async function buildTicketEmailDetailBlocks(
     : 0;
 
   return {
+    assets: assetRows.map((row) => ({
+      assetTag: safeString(row.asset_tag),
+      name: safeString(row.name),
+      assetType: safeString(row.asset_type_name) || safeString(row.asset_type),
+      manufacturer: safeString(row.manufacturer),
+      model: safeString(row.model),
+      serialNumber: safeString(row.serial_number),
+      status: safeString(row.status),
+      location: safeString(row.location),
+      relationship: RELATIONSHIP_LABELS[safeString(row.relationship_type)] || safeString(row.relationship_type),
+    })),
     assetsHtml: renderAssetsTable(assetRows),
     materialsHtml: renderMaterialsTable(materialRows, locale),
     materialsTotal: formatCentsAmount(cents, currencyCode, locale),

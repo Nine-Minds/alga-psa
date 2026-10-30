@@ -27,15 +27,16 @@ export function replaceTemplateVariables(
   content: string,
   data: Record<string, string>
 ): string {
-  // Expand {{#each path}}...{{/each}} blocks once for preview, qualifying
-  // {{this.*}} references (including {{#if this.*}}) against the block's path
-  // so the registry's per-item examples (e.g. credits.items.creditId) resolve.
+  // Expand each block once using the registry's per-item examples.
   let result = content.replace(
     /\{\{#each\s+([^{}\s]+)\s*\}\}([\s\S]*?)\{\{\/each\}\}/g,
     (_match, path, blockContent: string) =>
       blockContent.replace(
-        /(\{{2,3})(#if\s+)?this\.([^{}]+?)(\}{2,3})/g,
-        (_inner, open, ifTag, key, close) => `${open}${ifTag ?? ''}${path}.${key}${close}`
+        /(\{{2,3})(#if\s+)?(?:this\.)?([\w.]+)(\}{2,3})/g,
+        (inner, open, ifTag, key, close) => {
+          const samplePath = [`${path}[].${key}`, `${path}.${key}`].find((candidate) => candidate in data);
+          return samplePath ? `${open}${ifTag ?? ''}${samplePath}${close}` : inner;
+        }
       )
   );
 

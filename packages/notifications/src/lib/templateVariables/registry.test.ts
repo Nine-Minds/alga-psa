@@ -22,6 +22,22 @@ const require = createRequire(import.meta.url);
 const repositoryRoot = path.resolve(__dirname, "../../../../..");
 
 describe("email template variable registry", () => {
+  it("renders the editable asset example with individually selectable fields", () => {
+    const entry = templateVariableRegistry["ticket-closed"];
+    const example = entry.variables.find((variable) => variable.path === "ticket.assets")!;
+    const data = getNestedTemplateExampleData("ticket-closed");
+    const html = Handlebars.compile(example.example, { strict: true })(data);
+    expect(html).toContain("Office Printer");
+    expect(html).toContain("Printer");
+    expect(html).toContain("Brother HL-L6200DW");
+    expect(html).toContain("SN-0042");
+    expect(html).not.toContain("AST-0042");
+    const assetsHtml = entry.variables.find((variable) => variable.path === "ticket.assetsHtml")!.example;
+    for (const header of ["Asset Tag", "Name", "Serial #", "Status", "Relationship"]) {
+      expect(assetsHtml).toContain(`<th>${header}</th>`);
+    }
+  });
+
   it("records the corrected contracts and inferred templates", () => {
     expect(
       Object.values(templateVariableRegistry).filter(

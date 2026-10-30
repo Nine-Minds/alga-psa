@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import Handlebars from 'handlebars';
 
 const runtime = vi.hoisted(() => ({
   assets: [] as Array<Record<string, any>>,
@@ -98,6 +99,7 @@ describe('buildTicketEmailDetailBlocks', () => {
   it('renders empty strings for empty blocks and zero totals', async () => {
     const blocks = await buildTicketEmailDetailBlocks(fakeDb, tenantId, ticketId, clientId, 'UTC');
     expect(blocks.assetsHtml).toBe('');
+    expect(blocks.assets).toEqual([]);
     expect(blocks.materialsHtml).toBe('');
     expect(blocks.timeHtml).toBe('');
     expect(blocks.materialsTotal).toBe('$0.00');
@@ -132,6 +134,44 @@ describe('buildTicketEmailDetailBlocks', () => {
     expect(blocks.assetsHtml).toContain('Related');
     // Null fields render as em-dash placeholders.
     expect(blocks.assetsHtml).toContain('—');
+  });
+
+  it('exposes selectable asset fields without pre-escaping them', async () => {
+    runtime.assets = [
+      {
+        asset_tag: 'PRIVATE-TAG',
+        name: 'Printer <Office>',
+        asset_type: 'printer',
+        asset_type_name: 'Printer',
+        manufacturer: 'A & B',
+        model: 'Model "42"',
+        serial_number: 'SN42',
+        status: 'active',
+        location: 'Reception',
+        relationship_type: 'affected',
+      },
+      { asset_type: 'custom_device', relationship_type: 'related' },
+    ];
+    const blocks = await buildTicketEmailDetailBlocks(fakeDb, tenantId, ticketId, clientId, 'UTC');
+    expect(blocks.assets).toEqual([
+      {
+        assetTag: 'PRIVATE-TAG', name: 'Printer <Office>', assetType: 'Printer',
+        manufacturer: 'A & B', model: 'Model "42"', serialNumber: 'SN42',
+        status: 'active', location: 'Reception', relationship: 'Affected',
+      },
+      {
+        assetTag: '', name: '', assetType: 'custom_device', manufacturer: '',
+        model: '', serialNumber: '', status: '', location: '', relationship: 'Related',
+      },
+    ]);
+    const html = Handlebars.compile(
+      '{{#each ticket.assets}}<div>{{name}} / {{assetType}} / {{manufacturer}} {{model}}{{#if serialNumber}} / {{serialNumber}}{{/if}}</div>{{/each}}',
+      { strict: true },
+    )({ ticket: blocks });
+    expect(html).toContain('Printer &lt;Office&gt; / Printer / A &amp; B Model &quot;42&quot; / SN42');
+    expect(html).not.toContain('PRIVATE-TAG');
+    expect(html).toContain('<div> / custom_device /  </div>');
+    expect(Handlebars.compile('{{#each ticket.assets}}{{assetTag}}{{/each}}')({ ticket: blocks })).toBe('PRIVATE-TAG');
   });
 
   it('computes material amounts and total', async () => {

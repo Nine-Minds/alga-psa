@@ -209,3 +209,32 @@ from milestone 2 onward).
 | Render path (Handlebars) | `packages/notifications/src/notifications/email.ts` |
 | Server actions | `packages/notifications/src/actions/notification-actions/notificationActions.ts` |
 | Coding standards | `docs/AI_coding_standards.md` |
+
+## Addendum: selectable ticket asset fields (2026-10-30)
+
+For `ticket-closed`, `ticket.assets` is an array available to HTML and plain-text
+templates. Each asset exposes `assetTag`, `name`, `assetType`, `manufacturer`,
+`model`, `serialNumber`, `status`, `location`, and `relationship`. Missing values
+are empty strings; an unlinked ticket has an empty list. `assetType` uses the
+tenant's registry display name, or the stored slug when no matching type exists.
+
+Choose any subset of fields in the template. For example, this omits asset tags:
+
+```handlebars
+{{#each ticket.assets}}
+<div>
+  <strong>{{name}}</strong><br>
+  Type: {{assetType}}<br>
+  {{manufacturer}} {{model}}<br>
+  {{#if serialNumber}}Serial: {{serialNumber}}{{/if}}
+</div>
+{{/each}}
+```
+
+Add `{{assetTag}}` inside the loop to show tags, or remove any other line to hide
+that field. Use ordinary double braces for asset values so Handlebars escapes
+HTML. Plain-text templates can use the same loop without the HTML tags.
+The variables panel inserts the loop example for `ticket.assets` and
+`{{this.fieldName}}` for individual fields (insert those inside the loop).
+The existing `ticket.assetsHtml` remains the fixed five-column alternative;
+its preview now shows all five columns rather than only the asset tag.
