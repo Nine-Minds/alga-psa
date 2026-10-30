@@ -26,7 +26,7 @@ export async function runWorkflowV2RouteWithAuth<T>(req: NextRequest, fn: () => 
 
 export function handleWorkflowV2ApiError(error: unknown) {
   if (error instanceof ZodError) {
-    return NextResponse.json({ error: 'Invalid request', details: error.errors }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid request', details: error.issues }, { status: 400 });
   }
 
   const err = error as StatusError;

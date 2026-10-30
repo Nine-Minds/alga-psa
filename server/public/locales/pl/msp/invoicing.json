@@ -2612,7 +2612,8 @@
       "packingSlip": "Dokument dostawy",
       "pickList": "Lista kompletacyjna",
       "workTag": "Etykieta robocza / Etykieta",
-      "stagingManifest": "Lista pakowa"
+      "stagingManifest": "Lista pakowa",
+      "rmaReturnSlip": "Dokument zwrotu RMA"
     }
   },
   "errors": {

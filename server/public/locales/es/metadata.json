@@ -525,8 +525,22 @@
     },
     "coManagement": {
       "title": "Acceso cogestionado",
+      "administration": {
+        "title": "Administración cogestionada"
+      },
+      "customerTickets": {
+        "title": "Tickets de clientes"
+      },
+      "sharedTicket": {
+        "title": "Ticket compartido"
+      },
       "providers": {
         "title": "Proveedores de correo electrónico e identidad"
+      },
+      "sharedTasks": {
+        "title": "Tareas compartidas",
+        "taskTitle": "Tarea compartida",
+        "projectTitle": "Proyecto compartido"
       }
     }
   },

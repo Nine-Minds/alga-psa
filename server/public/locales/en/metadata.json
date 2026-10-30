@@ -607,8 +607,22 @@
     },
     "coManagement": {
       "title": "Co-Managed Access",
+      "administration": {
+        "title": "Co-Managed Administration"
+      },
+      "customerTickets": {
+        "title": "Customer Tickets"
+      },
+      "sharedTicket": {
+        "title": "Shared Ticket"
+      },
       "providers": {
         "title": "Email and Identity Providers"
+      },
+      "sharedTasks": {
+        "title": "Shared Tasks",
+        "taskTitle": "Shared Task",
+        "projectTitle": "Shared Project"
       }
     }
   },

@@ -2560,7 +2560,8 @@
       "packingSlip": "Packing Slip",
       "pickList": "Pick List",
       "workTag": "Work Tag / Label",
-      "stagingManifest": "Packing Manifest"
+      "stagingManifest": "Packing Manifest",
+      "rmaReturnSlip": "RMA Return Slip"
     }
   },
   "errors": {

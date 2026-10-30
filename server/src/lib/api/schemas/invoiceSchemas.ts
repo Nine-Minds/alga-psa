@@ -249,7 +249,7 @@ const invoiceViewModelSchema = z.object({
   invoice_charges: z.array(invoiceItemResponseSchema),
   service_period_start: z.string().nullable().optional(),
   service_period_end: z.string().nullable().optional(),
-  custom_fields: z.record(z.any()).optional(),
+  custom_fields: z.record(z.string(), z.any()).optional(),
   finalized_at: z.string().optional(),
   credit_applied: z.number().default(0),
   billing_cycle_id: uuidSchema.nullable().optional(),
@@ -278,7 +278,7 @@ const layoutBlockSchema = z.object({
   grid_row: z.number().min(1),
   grid_column_span: z.number().min(1),
   grid_row_span: z.number().min(1),
-  styles: z.record(z.string())
+  styles: z.record(z.string(), z.string())
 });
 
 // Template element schemas
@@ -392,7 +392,7 @@ const recurringDueSelectionInputSchema = z.object({
 
 const recurringInvoiceSelectionRequestSchema = z.object({
   selector_input: recurringDueSelectionInputSchema,
-}).strict('Recurring preview and generate requests require selector_input and do not accept billing_cycle_id.');
+}, { error: (issue) => (issue.code === 'unrecognized_keys' ? 'Recurring preview and generate requests require selector_input and do not accept billing_cycle_id.' : undefined) }).strict();
 
 // Generate invoice schema
 const generateInvoiceSchema = recurringInvoiceSelectionRequestSchema;

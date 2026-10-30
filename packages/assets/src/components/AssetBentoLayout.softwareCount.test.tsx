@@ -52,6 +52,10 @@ vi.mock('./custody/CustodyCard', () => ({
   ),
 }));
 
+vi.mock('./warranty/WarrantyCard', () => ({
+  WarrantyCard: ({ id, assetId }: { id: string; assetId: string }) => <div id={id} data-asset-id={assetId} />,
+}));
+
 import { AssetBentoLayout } from './AssetBentoLayout';
 
 const asset: any = {

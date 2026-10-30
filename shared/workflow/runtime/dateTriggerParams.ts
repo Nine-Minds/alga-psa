@@ -11,7 +11,7 @@ import { getDateTriggerSourceDefinition } from '@alga-psa/event-schemas';
  */
 export const ticketStatusAgeParamsSchema = z.object({
   statusName: z.string().trim().min(1, 'statusName is required'),
-  boardId: z.string().uuid('boardId must be a board id').nullish(),
+  boardId: z.string().guid('boardId must be a board id').nullish(),
   days: z.number().int().min(1).max(365),
   repeatEveryDays: z.number().int().min(1).max(365).nullish(),
   requireNoActivity: z.boolean().optional(),

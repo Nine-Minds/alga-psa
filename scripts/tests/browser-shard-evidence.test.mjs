@@ -19,16 +19,17 @@ import { browserArtifactServices, createBrowserArchiveReceipt, buildBrowserArtif
 const repository = fileURLToPath(new URL('../../', import.meta.url));
 const revision = 'a'.repeat(40), runId = '123', runAttempt = 2, edition = 'enterprise', root = '/repo';
 
-// A verifiable candidate manifest, the way the fresh-install gate test builds one.
-const manifest = await (async () => {
-  const context = { revision, edition, runId, runAttempt }, components = [];
+// A verifiable candidate manifest, the way the fresh-install gate test builds
+// one: build records and receipts from the given attempt.
+async function buildManifest(attempt) {
+  const context = { revision, edition, runId, runAttempt: attempt }, components = [];
   const archiveDir = mkdtempSync(path.join(tmpdir(), 'browser-shard-archives-'));
   try {
     for (const service of browserArtifactServices(edition)) {
       const archive = path.join(archiveDir, `${service}.tar.gz`);
       writeFileSync(archive, gzipSync(Buffer.alloc(1024)));
       const id = `sha256:${'1'.repeat(64)}`, digest = `sha256:${'2'.repeat(64)}`;
-      const record = await recordDockerArchiveBuild({ ...context, attempt: runAttempt, service, image: 'candidate:latest',
+      const record = await recordDockerArchiveBuild({ ...context, attempt, service, image: 'candidate:latest',
         dockerfile: 'Dockerfile.build', platform: 'linux/amd64', configImageId: id, buildReportedDigest: digest,
         metadata: { 'containerimage.config.digest': id, 'containerimage.digest': digest } }, archive, path.join(archiveDir, `${service}.json`));
       const receipt = await createBrowserArchiveReceipt(record, archive, context);
@@ -36,7 +37,8 @@ const manifest = await (async () => {
     }
     return buildBrowserArtifactManifest({ ...context, components });
   } finally { rmSync(archiveDir, { recursive: true, force: true }); }
-})();
+}
+const manifest = await buildManifest(runAttempt);
 
 const files = ['login', 'invoice', 'portal', 'calendar'].map(name => `e2e-tests/tests/${name}.spec.ts`);
 const spec = (file, results = [{ retry: 0, status: 'passed', duration: 1000 }], status = 'expected') => ({
@@ -161,11 +163,27 @@ test('a shard that is missing, duplicated, partial or mislabeled fails the merge
   assert.equal(merge([]).metrics.status, 'incomplete');
 });
 
+test('a shard rerun on a later attempt still merges with the shards of the earlier attempt', async () => {
+  // "Re-run failed jobs" republishes only the failed shard: the build records
+  // stay on the attempt that built the images, the rerun shard's manifest and
+  // receipts carry the new attempt, and the other shards keep the old one.
+  const earlier = await buildManifest(1);
+  const later = structuredClone(earlier);
+  later.runAttempt = 2;
+  for (const component of later.components) component.receipt.runAttempt = 2;
+  const merged = merge([shard(1, 2, { mutate: result => { result.manifest = earlier; } }), shard(2, 2, { mutate: result => { result.manifest = later; } })]);
+  assert.equal(merged.evidence.status, 'passed', merged.evidence.failures.join('\n'));
+  assert.equal(merged.metrics.status, 'passed', merged.metrics.failures.join('\n'));
+  assert.ok(merged.manifest, 'one candidate manifest is kept');
+});
+
 test('shards must agree on the collection, the candidate and the checkout, and carry their own failures', () => {
   const differentCollection = merge([shard(1, 2, { mutate: result => { result.collected.suites.pop(); } }), shard(2, 2)]);
   assert.ok(differentCollection.evidence.failures.includes('shard browser-2: collected different journeys'));
 
-  const differentCandidate = merge([shard(1, 2), shard(2, 2, { mutate: result => { result.manifest.components[0].receipt.recordSha256 = `sha256:${'f'.repeat(64)}`; } })]);
+  // A different image behind the same service: the candidate itself differs,
+  // not merely the attempt that verified it.
+  const differentCandidate = merge([shard(1, 2), shard(2, 2, { mutate: result => { result.manifest.components[0].record.configImageId = `sha256:${'f'.repeat(64)}`; } })]);
   assert.ok(differentCandidate.evidence.failures.includes('shard browser-2: verified a different candidate'));
   assert.equal(differentCandidate.manifest, null);
   assert.equal(differentCandidate.metrics.status, 'incomplete');

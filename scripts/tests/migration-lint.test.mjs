@@ -163,6 +163,17 @@ test('annotations: allowed / missing reason / wrong rule', () => {
   assert.equal(wrong.stale.length, 1, 'the mismatched annotation is reported stale');
 });
 
+test('annotations: a finding inside a helper is allowed at its call site, not for every caller', () => {
+  const r = lintDir('annotation/helper-call-site');
+  const file = 'annotation/helper-call-site/001_helper_call_site.cjs';
+  // Both findings sit on the helper's knex.raw line; only the annotated call is allowed.
+  assert.deepEqual(r.allowed.map((a) => [a.file, a.line, a.rule, a.annotationLine]), [[file, 3, 3, 9]]);
+  assert.match(r.allowed[0].message, /time_entries/);
+  assert.deepEqual(r.violations.map((v) => [v.file, v.line, v.rule]), [[file, 3, 3]]);
+  assert.match(r.violations[0].message, /comments/);
+  assert.deepEqual(r.stale, []);
+});
+
 test('annotations: parsing rules', () => {
   const src = [
     '// migration-lint: allow 3 - twelve chars ok',

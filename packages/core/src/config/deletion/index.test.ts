@@ -2,6 +2,11 @@ import type { Knex } from 'knex';
 import { describe, expect, it, vi } from 'vitest';
 import { DELETION_CONFIGS, getDeletionConfig } from './index';
 
+const capabilityServed = vi.hoisted(() => vi.fn(async () => true));
+vi.mock('../../lib/capability', () => ({
+  isCapabilityServed: (...args: unknown[]) => (capabilityServed as any)(...args),
+}));
+
 function makeTrx() {
   const builder = {
     where: vi.fn().mockReturnThis(),
@@ -353,6 +358,18 @@ describe('deletion configs', () => {
     builder.whereNot = vi.fn().mockReturnValue(builder);
     expect(await dep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'board-a' })).toBe(1);
     expect(builder.where).toHaveBeenCalledWith('co_managed_provisioning_operations.escalation_board_id', 'board-a');
+  });
+
+  it('issues no co-managed statement for a tenant that does not participate', async () => {
+    capabilityServed.mockResolvedValueOnce(false).mockResolvedValueOnce(false);
+    const { trx } = makeJoinTrx(1);
+    (trx as any).schema = { hasTable: vi.fn().mockResolvedValue(true) };
+    for (const type of ['co_managed_escalation', 'co_managed_board_scope']) {
+      const dep = DELETION_CONFIGS.board.dependencies.find((d) => d.type === type);
+      expect(await dep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'board-a' })).toBe(0);
+    }
+    expect((trx as any).schema.hasTable).not.toHaveBeenCalled();
+    expect(trx).not.toHaveBeenCalled();
   });
 
   it('allows deletion checks before the co-managed tables exist', async () => {

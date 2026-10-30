@@ -525,9 +525,11 @@ export const createComment = withAuth(async (
 /**
  * Who may change an existing comment, as on the ticket screen: its author. A
  * user who may update tickets may also correct a comment nobody authored (one
- * that arrived by email).
+ * that arrived by email). A co-managed collaborator's comment changes only
+ * through the collaboration commands.
  */
 async function assertMayChangeComment(trx: Knex.Transaction, user: { user_id: string; user_type: string }, existing: IComment): Promise<void> {
+  if (existing.actor_reference_id) throw new Error('This comment belongs to a co-managed collaborator and cannot be changed here.');
   if (existing.user_id === user.user_id) return;
   if (existing.user_id == null && isMspPrincipalUserType(user.user_type) && await hasPermission(user as any, 'ticket', 'update', trx)) return;
   throw new Error('You can only edit your own comments');

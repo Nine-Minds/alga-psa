@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { fixedLineDisplayName } from '../../src/components/billing-dashboard/contracts/wizard-steps/firstInvoiceLines';
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
@@ -64,7 +65,11 @@ describe('ReviewContractStep i18n wiring contract', () => {
   });
 
   it('T054: service summary sections, rate copy, and bucket summary strings use translated keys', () => {
-    const source = read('../../src/components/billing-dashboard/contracts/wizard-steps/ReviewContractStep.tsx');
+    // Fixed-line headings are rendered through firstInvoiceLines' fixedLineDisplayName.
+    const source = [
+      read('../../src/components/billing-dashboard/contracts/wizard-steps/ReviewContractStep.tsx'),
+      read('../../src/components/billing-dashboard/contracts/wizard-steps/firstInvoiceLines.ts'),
+    ].join('\n');
     const en = readJson<Record<string, unknown>>(
       '../../../../server/public/locales/en/msp/contracts.json'
     );
@@ -104,7 +109,12 @@ describe('ReviewContractStep i18n wiring contract', () => {
       'wizardReview.po.amountLabel',
       'wizardReview.total.title',
       'wizardReview.total.description',
-      'wizardReview.total.perMonth',
+      'wizardReview.total.titleCadence',
+      'wizardReview.total.mixedFrequencyTitle',
+      'wizardReview.total.perFrequency',
+      'wizardReview.total.perMonthEquivalent',
+      'wizardReview.total.savedDraftValue',
+      'wizardReview.total.savedDraftValueMonthly',
       'wizardReview.finalChecklist.title',
       'wizardReview.finalChecklist.itemRates',
       'wizardReview.finalChecklist.itemPo',
@@ -123,5 +133,15 @@ describe('ReviewContractStep i18n wiring contract', () => {
       expect(source).toContain(`t('${key}'`);
       expect(getLeaf(en, key)).toBeDefined();
     }
+  });
+
+  it('T054: unnamed fixed lines fall back to the translated Fixed Fee Services heading', () => {
+    const t = (key: string, options?: Record<string, unknown>) =>
+      `${key}${options?.number !== undefined ? `#${options.number}` : ''}`;
+    const line = (name?: string) => ({ contract_line_name: name }) as Parameters<typeof fixedLineDisplayName>[0];
+
+    expect(fixedLineDisplayName(line(), 0, 1, t)).toBe('wizardReview.sections.fixedFeeServices');
+    expect(fixedLineDisplayName(line('  '), 1, 2, t)).toBe('wizardReview.sections.fixedFeeServicesNumbered#2');
+    expect(fixedLineDisplayName(line('Managed Seats'), 0, 2, t)).toBe('Managed Seats');
   });
 });

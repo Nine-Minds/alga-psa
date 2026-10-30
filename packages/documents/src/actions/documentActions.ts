@@ -58,6 +58,7 @@ import {
   type DocumentActionError,
 } from './documentActionErrors';
 import { authorizeAndRedactDocuments as authorizeDocumentRows } from '@shared/lib/documentAuthorization';
+import { admitMeetingDocumentsForBrowser } from '../lib/meetingDocumentAdmission';
 import { getClientLogoUrlsBatch, getContactAvatarUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 
 async function loadSharp() {
@@ -289,7 +290,16 @@ async function ensureEntityFoldersInitializedInternal(
   }
 }
 
-// Preserve the existing server-action entry point for document consumers.
+/**
+ * Preserve the existing server-action entry point for document consumers.
+ *
+ * Authorization itself lives in the shared engine (`@shared/lib/documentAuthorization`), so the
+ * ticket list, the Documents browser and the byte-serving routes make the same decision. This
+ * wrapper only narrows the candidate set first through the deny-only meeting-document admission
+ * (a no-op for tenants the co-managed capability does not serve); it never widens access.
+ *
+ * Must stay `async`: this module is a `'use server'` boundary and Next rejects non-async exports.
+ */
 export async function authorizeAndRedactDocuments<T extends IDocument>(
   trx: Knex.Transaction,
   tenant: string,
@@ -297,7 +307,10 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   documents: T[],
   verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
 ): Promise<T[]> {
-  return authorizeDocumentRows(trx, tenant, user, documents, verifiedRecipientLifecycleAccess);
+  const admitted = await admitMeetingDocumentsForBrowser(trx, tenant, user, documents);
+  const authorized = await authorizeDocumentRows(trx, tenant, user, admitted.documents, verifiedRecipientLifecycleAccess);
+  await admitted.assertCurrent?.();
+  return authorized;
 }
 
 export async function getAuthorizedDocumentByFileId(

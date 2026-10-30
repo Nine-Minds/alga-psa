@@ -33,12 +33,12 @@ describe('asset billing profile reaches tickets from assets', () => {
     );
     expect(text).toContain('billing_profile_id: billingProfileId,');
     // And the field must survive the parse that precedes it.
-    expect(text).toMatch(/createTicketFromAssetSchema = z\.object\(\{[\s\S]*?billing_profile_id: z\.string\(\)\.uuid\(/);
+    expect(text).toMatch(/createTicketFromAssetSchema = z\.object\(\{[\s\S]*?billing_profile_id: z\.string\(\)\.guid\(/);
   });
 
   it('T130: the MSP and REST edge schemas carry the field through', () => {
     expect(source('packages/tickets/src/schemas/ticket.schema.ts'))
-      .toMatch(/createTicketFromAssetSchema = z\.object\(\{[\s\S]*?billing_profile_id: z\.string\(\)\.uuid\(\)\.nullable\(\)\.optional\(\)/);
+      .toMatch(/createTicketFromAssetSchema = z\.object\(\{[\s\S]*?billing_profile_id: z\.string\(\)\.guid\(\)\.nullable\(\)\.optional\(\)/);
     expect(source('server/src/lib/api/schemas/ticket.ts'))
       .toMatch(/createTicketFromAssetSchema = z\.object\(\{[\s\S]*?billing_profile_id: uuidSchema\.nullable\(\)\.optional\(\)/);
     // The REST service must forward it rather than dropping it on the floor.

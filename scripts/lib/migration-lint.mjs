@@ -414,7 +414,7 @@ export function analyzeMigration(source, fileName = 'migration.cjs') {
 
   function push(ev, node, ctx, extra = {}) {
     const line = extra.line ?? lineOf(node.getStart());
-    result.events.push({ ...ev, anchorLine: lineOf(node.getStart()), ...ctxFor(node, ctx), ...extra, line });
+    result.events.push({ ...ev, anchorLine: lineOf(node.getStart()), callLines: ctx.callLines ?? [], ...ctxFor(node, ctx), ...extra, line });
   }
 
   function lineAt(pieces, offset) {
@@ -637,7 +637,10 @@ export function analyzeMigration(source, fileName = 'migration.cjs') {
       if (fv.size && ![...fv].includes(UNK)) env.set(param.name.text, FN_VALUE);
     });
     expanded.add(fn);
-    const inner = { ...ctx, env, stack: [...stack, fn], builder: undefined };
+    // Findings inside the body can be annotated at this call site (innermost call first), so one
+    // reviewed call is allowed without blanket-allowing everything else routed through the helper.
+    const callLines = [lineOf(call.getStart()), ...(ctx.callLines ?? [])];
+    const inner = { ...ctx, env, stack: [...stack, fn], builder: undefined, callLines };
     ts.forEachChild(fn, (c) => visit(c, inner));
     return true;
   }
@@ -957,7 +960,7 @@ function annotationFor(annotations, violation) {
     if (!byLine.has(a.line)) byLine.set(a.line, []);
     byLine.get(a.line).push(a);
   }
-  const candidates = [...new Set([violation.line, violation.anchorLine ?? violation.line])];
+  const candidates = [...new Set([violation.line, violation.anchorLine ?? violation.line, ...(violation.callLines ?? [])])];
   for (const start of candidates) {
     // The offending line, then the contiguous annotation block directly above it.
     let l = start;
@@ -1010,7 +1013,7 @@ export function lintMigrationSet(files, ctx) {
 
   const seenTs = new Map();
   for (const f of analyses) {
-    const add = (rule, ev, message) => raw.push({ file: f.name, line: ev.line, anchorLine: ev.anchorLine, rule, message, table: ev.table });
+    const add = (rule, ev, message) => raw.push({ file: f.name, line: ev.line, anchorLine: ev.anchorLine, callLines: ev.callLines, rule, message, table: ev.table });
 
     if (f.a.parseError) {
       undecided.push({ file: f.name, line: 1, rule: 'PARSE', message: `cannot parse: ${f.a.parseError}` });
@@ -1040,7 +1043,7 @@ export function lintMigrationSet(files, ctx) {
     for (const ev of events) {
       switch (ev.type) {
         case 'unresolved':
-          undecided.push({ file: f.name, line: ev.line, anchorLine: ev.anchorLine, rule: 'UNRESOLVED', message: ev.what });
+          undecided.push({ file: f.name, line: ev.line, anchorLine: ev.anchorLine, callLines: ev.callLines, rule: 'UNRESOLVED', message: ev.what });
           break;
 
         case 'create-index': {
@@ -1137,7 +1140,7 @@ export function lintMigrationSet(files, ctx) {
   // Dedupe (loops over literal arrays repeat identical findings).
   const seen = new Set();
   const unique = raw.filter((v) => {
-    const k = `${v.file}:${v.line}:${v.rule}:${v.message}`;
+    const k = `${v.file}:${v.line}:${v.rule}:${v.message}:${(v.callLines ?? []).join(',')}`;
     if (seen.has(k)) return false;
     seen.add(k);
     return true;
@@ -1172,11 +1175,22 @@ export function lintMigrationSet(files, ctx) {
   }
   violations.push(...invalidAnnotations);
   const order = (a, b) => a.file.localeCompare(b.file) || a.line - b.line || String(a.rule).localeCompare(String(b.rule));
+  // callLines only steers annotation matching (each call path is judged on its own); findings are
+  // reported once per offending line, however many call paths reach it.
+  const report = (list) => {
+    const reported = new Set();
+    return list.map(({ callLines, ...v }) => v).filter((v) => {
+      const k = `${v.file}:${v.line}:${v.rule}:${v.message}`;
+      if (reported.has(k)) return false;
+      reported.add(k);
+      return true;
+    }).sort(order);
+  };
   return {
-    violations: violations.sort(order),
-    allowed: allowed.sort(order),
+    violations: report(violations),
+    allowed: report(allowed),
     stale: stale.sort(order),
-    undecided: [...open, ...parseFailures].sort(order),
+    undecided: report([...open, ...parseFailures]),
     filesScanned: files.length,
   };
 }

@@ -2560,7 +2560,8 @@
       "packingSlip": "Pakbon",
       "pickList": "Picklijst",
       "workTag": "Werklabel / Label",
-      "stagingManifest": "Paklijst"
+      "stagingManifest": "Paklijst",
+      "rmaReturnSlip": "RMA-retourbon"
     }
   },
   "errors": {

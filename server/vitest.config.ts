@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'path';
 import { globSync } from 'tinyglobby';
 import { environmentProjects, partitionByEnvironment } from '../scripts/lib/jsdom-test-globs.mjs';
+import { onUnhandledError } from '../scripts/lib/vitest-unhandled-errors.mjs';
 
 fs.mkdirSync(path.resolve(__dirname, './coverage/.tmp'), { recursive: true });
 
@@ -124,6 +125,10 @@ export default defineConfig({
     // config dumps, workflow loggers) accumulate into the multi-GB range and
     // OOM the orchestrator at report time. Keep logs for failures only.
     silent: 'passed-only',
+    // A console line emitted while a fork drains its RPC channel has its delivery
+    // rejected at teardown, and vitest 4 counts that as an unhandled error that
+    // fails an all-green shard. Only that rejection is dropped; see the helper.
+    onUnhandledError,
     coverage: {
       // Opt-in via --coverage; always-on coverage made every local run pay the
       // instrumentation cost. CI enables it where reports are collected.

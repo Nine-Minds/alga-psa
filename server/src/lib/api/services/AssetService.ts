@@ -51,7 +51,7 @@ function validateExtensionData(assetType: string, data: Record<string, unknown>)
     ]);
   }
   if (!parsed.success) {
-    throw new ValidationError('Invalid extension_data', parsed.error.errors.map((issue) => ({
+    throw new ValidationError('Invalid extension_data', parsed.error.issues.map((issue) => ({
       path: ['extension_data', ...issue.path],
       code: issue.code,
       message: issue.message
