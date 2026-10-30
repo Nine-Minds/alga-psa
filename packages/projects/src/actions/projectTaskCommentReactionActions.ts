@@ -2,11 +2,12 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
-import type { IReactionsBatchResult } from '@alga-psa/types';
+import type { IReactionsBatchResult, IUserWithRoles } from '@alga-psa/types';
 import {
   getTaskCommentsReactionsBatchWithDb,
   toggleTaskCommentReactionWithDb,
 } from '../lib/taskComments/taskCommentService';
+import { withTaskCommentAccess, withTaskCommentBatchReadAccess } from '../lib/taskComments/taskCommentAuthorization';
 
 // Reaction queries live in ../lib/taskComments/taskCommentService, shared with
 // the REST API; these actions only add the web's auth context.
@@ -22,7 +23,8 @@ export const toggleTaskCommentReaction = withAuth(async (
   emoji: string
 ): Promise<{ added: boolean }> => {
   const { knex: db } = await createTenantKnex();
-  return toggleTaskCommentReactionWithDb(db, tenant, user.user_id, taskCommentId, emoji);
+  return withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskCommentId }, 'react', ({ trx }) =>
+    toggleTaskCommentReactionWithDb(trx, tenant, user.user_id, taskCommentId, emoji));
 });
 
 /**
@@ -35,5 +37,6 @@ export const getTaskCommentsReactionsBatch = withAuth(async (
   taskCommentIds: string[]
 ): Promise<IReactionsBatchResult> => {
   const { knex: db } = await createTenantKnex();
-  return getTaskCommentsReactionsBatchWithDb(db, tenant, user.user_id, taskCommentIds);
+  return withTaskCommentBatchReadAccess(db, tenant, user as IUserWithRoles, { taskCommentIds }, 'read', ({ trx, ids }) =>
+    getTaskCommentsReactionsBatchWithDb(trx, tenant, user.user_id, ids));
 });
