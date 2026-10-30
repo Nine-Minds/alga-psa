@@ -912,8 +912,11 @@ export function QuickAddTicket({
           : '')
       + (location.is_default ? ` ${t('quickAdd.defaultSuffix', '(Default)')}` : '');
 
+    const contactLocations = locations.filter((location) => contactLocationIdSet.has(location.location_id));
     const contactsFirst = [
-      ...locations.filter((location) => contactLocationIdSet.has(location.location_id)),
+      // Primary ahead of the contact's other sites, so the row the model would pick reads first.
+      ...contactLocations.filter((location) => location.location_id === contactPrimaryLocationId),
+      ...contactLocations.filter((location) => location.location_id !== contactPrimaryLocationId),
       ...locations.filter((location) => !contactLocationIdSet.has(location.location_id)),
     ];
 

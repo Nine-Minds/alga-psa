@@ -242,7 +242,9 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
     // What the save would drop: the selection on screen, or — when this contact was opened without
     // its links loaded — the stored count, so nothing disappears unannounced.
     let count = locationLinks.length;
-    if (count === 0 && initialContact.contact_name_id) {
+    // The stored links only still stand while the form is on the contact's stored client; after a
+    // confirmed change away they are already slated to go, so a second change must not re-ask.
+    if (count === 0 && initialContact.contact_name_id && contact.client_id === initialContact.client_id) {
       try {
         count = await getContactLocationCount(initialContact.contact_name_id);
       } catch {

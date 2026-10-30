@@ -248,4 +248,41 @@ describe('ContactDetailsEdit client change', () => {
 
     expect(await screen.findByText(/This removes 3 location link\(s\)\./)).toBeInTheDocument();
   });
+
+  it('does not re-ask on a second client change once the links are already dropped', async () => {
+    hoisted.getContactLocationCount.mockResolvedValue(3);
+
+    render(
+      <ContactDetailsEdit
+        initialContact={contact}
+        clients={[triage, life, inactive]}
+        onSave={onSave}
+        onCancel={onCancel}
+        isInDrawer
+      />
+    );
+
+    await pickLife();
+    fireEvent.click(await waitFor(() => {
+      const confirm = document.querySelector('#contact-edit-location-links-confirm-confirm') as HTMLElement | null;
+      expect(confirm).toBeInTheDocument();
+      return confirm!;
+    }));
+    await waitFor(() =>
+      expect(document.querySelector('#contact-edit-client-picker-trigger')).toHaveTextContent('Life Landscaping')
+    );
+
+    // The stored links are already slated to go, so moving on again has nothing left to warn about.
+    fireEvent.click(document.querySelector('#contact-edit-client-picker-trigger') as HTMLElement);
+    fireEvent.click(await waitFor(() => {
+      const option = document.querySelector('#contact-edit-client-picker-option-inactive-id') as HTMLElement | null;
+      expect(option).toBeInTheDocument();
+      return option!;
+    }));
+
+    await waitFor(() =>
+      expect(document.querySelector('#contact-edit-client-picker-trigger')).toHaveTextContent('Dormant Co')
+    );
+    expect(screen.queryByText(/This removes/)).toBeNull();
+  });
 });

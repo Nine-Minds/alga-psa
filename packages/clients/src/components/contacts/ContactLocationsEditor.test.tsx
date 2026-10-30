@@ -36,7 +36,7 @@ const headOffice = {
   location_id: 'head-office', client_id: 'acme', location_name: 'Head office', is_active: true, is_default: true,
 };
 
-function Harness({ clientId, currentLocations = [] as any[] }: { clientId: string | null; currentLocations?: any[] }) {
+function Harness({ clientId, currentLocations = [] as any[], disabled = false }: { clientId: string | null; currentLocations?: any[]; disabled?: boolean }) {
   const [links, setLinks] = React.useState<ContactLocationInput[]>(
     currentLocations.map((location) => ({ location_id: location.location_id, is_primary: location.is_primary })),
   );
@@ -49,6 +49,7 @@ function Harness({ clientId, currentLocations = [] as any[] }: { clientId: strin
       onWorkArrangementChange={setArrangement}
       value={links}
       onChange={setLinks}
+      disabled={disabled}
     />
   );
 }
@@ -72,6 +73,14 @@ describe('ContactLocationsEditor', () => {
     await waitFor(() => expect(screen.getByText('Head office')).toBeInTheDocument());
     expect(screen.getByText('Warehouse')).toBeInTheDocument();
     expect(hoisted.getClientLocations).toHaveBeenCalledWith('acme');
+  });
+
+  it('keeps the list on screen while a submitting form disables it', async () => {
+    // A form that disables the editor mid-save must not ask for a client it already has.
+    render(<Harness clientId="acme" disabled />);
+
+    await waitFor(() => expect(screen.getByLabelText('Warehouse')).toBeDisabled());
+    expect(screen.queryByText('Choose a client first to pick its locations.')).not.toBeInTheDocument();
   });
 
   it('keeps an inactive already-linked location listed and marked', async () => {

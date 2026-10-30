@@ -10,6 +10,9 @@ const withTransactionMock = vi.fn();
 const assertMspPermissionMock = vi.fn();
 const getContactByIdMock = vi.fn();
 const updateContactMock = vi.fn();
+const createContactMock = vi.fn();
+const replaceContactLocationsMock = vi.fn(async () => []);
+const isContactLocationClientMismatchMock = vi.fn((_error: unknown) => false);
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: () => createTenantKnexMock(),
@@ -34,7 +37,7 @@ vi.mock('../../lib/authHelpers', () => ({
 
 vi.mock('@alga-psa/shared/models/contactModel', () => ({
   ContactModel: {
-    createContact: vi.fn(),
+    createContact: (...args: any[]) => createContactMock(...args),
     getContactById: (...args: any[]) => getContactByIdMock(...args),
     updateContact: (...args: any[]) => updateContactMock(...args),
   },
@@ -43,8 +46,8 @@ vi.mock('@alga-psa/shared/models/contactModel', () => ({
 vi.mock('../../models/contactLocation', () => ({
   getContactLocationCount: vi.fn(async () => 0),
   getContactLocations: vi.fn(async () => []),
-  isContactLocationClientMismatch: () => false,
-  replaceContactLocations: vi.fn(async () => undefined),
+  isContactLocationClientMismatch: (error: unknown) => isContactLocationClientMismatchMock(error),
+  replaceContactLocations: (...args: any[]) => replaceContactLocationsMock(...(args as [])),
 }));
 
 vi.mock('../../lib/contactLocations', () => ({
@@ -125,6 +128,9 @@ describe('updateContact work arrangement contract', () => {
     );
     getContactByIdMock.mockResolvedValue({ ...storedContact });
     updateContactMock.mockImplementation(async (_id: string, input: any) => ({ ...storedContact, ...input }));
+    createContactMock.mockImplementation(async (input: any) => ({ ...storedContact, ...input }));
+    replaceContactLocationsMock.mockResolvedValue([] as never);
+    isContactLocationClientMismatchMock.mockReturnValue(false);
   });
 
   it('clears the work arrangement when the editor sends null', async () => {
@@ -162,5 +168,30 @@ describe('updateContact work arrangement contract', () => {
     } as any);
 
     expect(updateContactMock.mock.calls[0][1]).toMatchObject({ work_arrangement: 'hybrid' });
+  });
+
+  /**
+   * The create path has its own error mapper, so the cross-client refusal has to be named there
+   * too — otherwise the operator sees only "Failed to create contact" and no reason.
+   */
+  it('names a cross-client location when creating a contact', async () => {
+    const mismatch = Object.assign(new Error('Location other-location belongs to another client'), {
+      code: 'CONTACT_LOCATION_CLIENT_MISMATCH',
+    });
+    replaceContactLocationsMock.mockRejectedValueOnce(mismatch as never);
+    isContactLocationClientMismatchMock.mockImplementation((error: unknown) => error === mismatch);
+
+    const { addContact } = await import('./contactActions');
+    const result = await addContact({
+      full_name: 'Alice Example',
+      email: 'alice@example.com',
+      client_id: 'client-1',
+      locations: [{ location_id: 'other-location', is_primary: true }],
+    } as any);
+
+    expect(result).toEqual({
+      success: false,
+      error: 'VALIDATION_ERROR: That location belongs to another client.',
+    });
   });
 });

@@ -317,6 +317,12 @@ async function contactActionResultErrorFrom(error: unknown, fallback: string): P
 }
 
 async function prefixedContactActionErrorFrom(error: unknown, fallback: string): Promise<string> {
+  // Create and CSV import go through here, so the cross-client location refusal has to be named
+  // on this path too — otherwise it reaches the caller as the generic "failed to create" fallback.
+  if (isContactLocationClientMismatch(error)) {
+    return `VALIDATION_ERROR: ${await contactText('errors.contact.locationClientMismatch')}`;
+  }
+
   const emailConflict = await contactEmailConflictMessageFrom(error);
   if (emailConflict) {
     return `EMAIL_EXISTS: ${emailConflict}`;

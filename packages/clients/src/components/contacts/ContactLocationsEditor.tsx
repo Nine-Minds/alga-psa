@@ -152,8 +152,6 @@ const ContactLocationsEditor: React.FC<ContactLocationsEditorProps> = ({
     })),
   ]), [t]);
 
-  const isDisabled = disabled || !clientId;
-
   return (
     <div id={id} className="space-y-3">
       <div>
@@ -173,7 +171,7 @@ const ContactLocationsEditor: React.FC<ContactLocationsEditorProps> = ({
         <Text as="label" size="2" weight="medium" className="block mb-1">
           {t('contactLocations.locations', { defaultValue: 'Locations' })}
         </Text>
-        {isDisabled ? (
+        {!clientId ? (
           <Text size="1" className="text-gray-500 block" id={`${id}-no-client-hint`}>
             {t('contactLocations.chooseClientFirst', { defaultValue: 'Choose a client first to pick its locations.' })}
           </Text>
@@ -196,6 +194,7 @@ const ContactLocationsEditor: React.FC<ContactLocationsEditorProps> = ({
                     label={option.location_name}
                     checked={isSelected}
                     onChange={(event) => toggle(option.location_id, event.target.checked)}
+                    disabled={disabled}
                   />
                   {!option.is_active && (
                     <Text size="1" className="text-gray-500">

@@ -446,6 +446,34 @@ describe('QuickAddTicket contact location', () => {
     ]);
   });
 
+  it('puts the contact\'s primary ahead of their other sites', async () => {
+    // The client lists Warehouse first; the contact's primary is Head office, so the row the model
+    // would pick has to read first regardless of the client's own ordering.
+    getContactEffectiveLocationMock.mockImplementation(async () => ({
+      locationId: 'head-office',
+      locations: [
+        { location_id: 'warehouse', location_name: 'Warehouse', is_primary: false, is_active: true },
+        { location_id: 'head-office', location_name: 'Head office', is_primary: true, is_active: true },
+      ],
+      workArrangement: 'hybrid',
+    }));
+    renderQuickAdd({ prefilledContact: { id: 'dorothy', name: 'Dorothy Gale' } });
+
+    const locationSelect = await screen.findByTestId('ticket-quick-add-location');
+    await waitFor(() => {
+      expect(locationSelect).toHaveValue('head-office');
+    });
+
+    const labels = Array.from(locationSelect.querySelectorAll('option'))
+      .map((option) => option.textContent)
+      .filter(Boolean);
+    expect(labels).toEqual([
+      'None',
+      "Head office (contact's primary) (Default)",
+      "Warehouse (contact's location)",
+    ]);
+  });
+
   it('fills the location when a contact is picked here', async () => {
     renderQuickAdd();
 
