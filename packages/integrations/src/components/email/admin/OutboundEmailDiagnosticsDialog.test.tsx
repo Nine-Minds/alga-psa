@@ -309,6 +309,30 @@ describe('OutboundEmailDiagnosticsDialog', () => {
     expect(screen.queryByText('These checks did not send an email.')).not.toBeInTheDocument();
   });
 
+  it('shows the provider error and evidence for a failed test email', async () => {
+    runOutboundEmailDiagnosticsMock.mockResolvedValue({ success: true, report: makeReport({
+      summary: { ...makeReport().summary, liveSendPerformed: true, liveSendRequested: true, overallStatus: 'fail' },
+      steps: [{
+        id: 'live_send_test',
+        title: 'Test email',
+        status: 'fail',
+        durationMs: 1,
+        detail: 'The test email could not be sent.',
+        error: {
+          message: 'Send As not granted for support@example.com via helpdesk@example.com. Verify Exchange Send As permission and Mail.Send.Shared consent.',
+          status: 403,
+          code: 'ErrorSendAsDenied',
+          requestId: 'req-send-403',
+        },
+        data: { definitelyNotSent: true },
+      }],
+    }) });
+    render(<OutboundEmailDiagnosticsDialog isOpen onClose={() => {}} />);
+    expect(await screen.findByText('The test email could not be sent.')).toBeInTheDocument();
+    expect(screen.getByText(/Send As not granted for support@example.com/)).toBeInTheDocument();
+    expect(screen.getByText('(403 · ErrorSendAsDenied · req-send-403)')).toBeInTheDocument();
+  });
+
   it('shows test-email acceptance without expanding technical details', async () => {
     const detail = 'The email service accepted the test email. Check the recipient’s inbox and spam folder to confirm delivery.';
     runOutboundEmailDiagnosticsMock.mockResolvedValue({ success: true, report: makeReport({
