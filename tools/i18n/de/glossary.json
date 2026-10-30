@@ -2169,13 +2169,13 @@
     {
       "term": "bucket",
       "preferred": "Stundenkontingent",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Untranslated English leak for prepaid hour pools."
     },
     {
       "term": "buckets",
       "preferred": "Stundenkontingente",
-      "enWhen": "\\bbuckets?\\b",
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b",
       "reason": "Plural of the untranslated bucket leak."
     },
     {
@@ -2227,7 +2227,7 @@
       "term": "eimer",
       "preferred": "Stundenkontingent",
       "reason": "Literal translation of billing bucket; Eimer means a physical pail. Use Stundenkontingent or Verbrauchskontingent.",
-      "enWhen": "\\bbuckets?\\b"
+      "enWhen": "^(?![\\s\\S]*\\b(?:s3|amazonaws|object storage|storage buckets?)\\b)[\\s\\S]*\\bbuckets?\\b"
     },
     {
       "term": "eintrittskarte",

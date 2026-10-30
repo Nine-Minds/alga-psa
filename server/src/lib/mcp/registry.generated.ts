@@ -16381,6 +16381,153 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ]
   },
   {
+    "id": "get-_api_v1_documents",
+    "method": "get",
+    "path": "/api/v1/documents",
+    "displayName": "Documents API namespace root",
+    "summary": "Documents API namespace root",
+    "description": "Namespace root with no resource of its own — it returns 404. Documents are accessed per parent entity, e.g. /api/v1/tickets/{id}/documents.",
+    "tags": [
+      "Documents"
+    ],
+    "approvalRequired": false,
+    "parameters": []
+  },
+  {
+    "id": "post-_api_v1_documents",
+    "method": "post",
+    "path": "/api/v1/documents",
+    "displayName": "Attach File to Record",
+    "summary": "Attach one file to a ticket, project task, client, contact or asset",
+    "description": "Attaches ONE file to a ticket, project_task, client, contact or asset. Prefer source.type=url: give an https URL and the server downloads it (max size is the tenant storage limit). The URL host must be on the workspace's allowed download hosts (a tenant admin manages the list under Settings > MCP Server > Allowed download hosts; the ChatGPT file host is built in). If the call fails with 400 FETCH_HOST_NOT_ALLOWED, nothing was downloaded: tell the user an admin can add that host, and do not retry with other URLs. Use source.type=base64 only for small content you wrote yourself, never to relay a user's file, and file_name is then required. One file per call; make several calls for several files. In an MCP client with the attach_file tool, use that instead. Returns 201 with the stored document; 400 for a disallowed type, oversize file, unfetchable URL or a host that is not allowed (FETCH_HOST_NOT_ALLOWED), 403 without permission, 404 for a missing record.",
+    "tags": [
+      "Documents"
+    ],
+    "rbacResource": "document",
+    "approvalRequired": true,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "entity_type": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "project_task",
+            "client",
+            "contact",
+            "asset"
+          ],
+          "description": "Kind of record the file is attached to."
+        },
+        "entity_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID of the ticket, project task, client, contact or asset."
+        },
+        "source": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "url"
+                  ]
+                },
+                "url": {
+                  "type": "string",
+                  "description": "https URL the server downloads the file from. The host must be on the workspace's allowed download hosts (managed by tenant admins under Settings > MCP Server; the ChatGPT file host is built in), otherwise the call fails with 400 FETCH_HOST_NOT_ALLOWED. Port 443 only, public addresses only, at most 3 redirects (each re-checked against the allowlist), size capped at the storage limit. Signed URLs are used once and never logged."
+                }
+              },
+              "required": [
+                "type",
+                "url"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "base64"
+                  ]
+                },
+                "content": {
+                  "type": "string",
+                  "description": "Standard base64 of the file bytes. Only for small content the caller wrote itself; requires file_name."
+                }
+              },
+              "required": [
+                "type",
+                "content"
+              ]
+            }
+          ],
+          "description": "Where the file bytes come from: an https URL (preferred) or base64."
+        },
+        "file_name": {
+          "type": "string",
+          "description": "File name including extension. Required for base64. For url, defaults to the Content-Disposition name, then the last URL path segment."
+        },
+        "mime_type": {
+          "type": "string",
+          "description": "Declared MIME type. The server sniffs the bytes and a recognised type overrides this; the storage allowlist is applied to the resolved type."
+        }
+      },
+      "required": [
+        "entity_type",
+        "entity_id",
+        "source"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "The created document row (document_id, document_name, mime_type, file_size, folder_path, ...)."
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "examples": [
+      {
+        "name": "Attach a file to a ticket by URL",
+        "request": {
+          "body": {
+            "entity_type": "ticket",
+            "entity_id": "00000000-0000-4000-8000-000000000001",
+            "source": {
+              "type": "url",
+              "url": "https://acme-uploads.s3.us-east-1.amazonaws.com/screenshot.png?X-Amz-Signature=example"
+            }
+          }
+        }
+      },
+      {
+        "name": "Attach small authored text to a contact by base64",
+        "request": {
+          "body": {
+            "entity_type": "contact",
+            "entity_id": "00000000-0000-4000-8000-000000000002",
+            "source": {
+              "type": "base64",
+              "content": "UGhvbmUgbm90ZXM="
+            },
+            "file_name": "notes.txt",
+            "mime_type": "text/plain"
+          }
+        }
+      }
+    ]
+  },
+  {
     "id": "post-_api_email_oauth_initiate",
     "method": "post",
     "path": "/api/email/oauth/initiate",
@@ -24378,19 +24525,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "description": "Namespace root with no resource of its own — it returns 404. Comments are accessed per ticket: /api/v1/tickets/{id}/comments and its sub-paths.",
     "tags": [
       "Comments"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "get-_api_v1_documents",
-    "method": "get",
-    "path": "/api/v1/documents",
-    "displayName": "Documents API namespace root",
-    "summary": "Documents API namespace root",
-    "description": "Namespace root with no resource of its own — it returns 404. Documents are accessed per parent entity, e.g. /api/v1/tickets/{id}/documents.",
-    "tags": [
-      "Documents"
     ],
     "approvalRequired": false,
     "parameters": []
@@ -52709,12 +52843,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "method": "post",
     "path": "/api/v1/tickets/{id}/documents",
     "displayName": "Upload a ticket document",
-    "summary": "Upload a ticket document",
-    "description": "Uploads a file as a document attachment to a ticket. Send multipart/form-data with a `file` field. Returns the created document.",
+    "summary": "Upload a ticket document (multipart only)",
+    "description": "Multipart/form-data upload only; this endpoint cannot be called through call_api_endpoint, which sends JSON. To attach a file to a ticket, use the attach_file tool or POST /api/v1/documents (entity_type ticket) instead.",
     "tags": [
       "Work Management v1"
     ],
-    "approvalRequired": false,
+    "rbacResource": "ticket",
+    "approvalRequired": true,
     "parameters": [
       {
         "name": "id",

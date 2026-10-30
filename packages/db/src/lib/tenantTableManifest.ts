@@ -476,6 +476,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'tag_display_rules', deletion: 'ordered' },
   { table: 'ticket_resources', deletion: 'ordered', export: { rank: 5 } },
   { table: 'ticket_watchers', deletion: 'ordered' },
+  { table: 'document_fetch_hosts', deletion: 'ordered' },
   { table: 'client_portal_visibility_group_boards', deletion: 'ordered' },
   { table: 'import_job_items', deletion: 'ordered' },
   { table: 'import_jobs', deletion: 'ordered' },
