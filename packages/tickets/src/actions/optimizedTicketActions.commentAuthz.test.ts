@@ -220,11 +220,18 @@ describe('addTicketCommentInTransaction record-level authorization', () => {
     expect(writtenTables()).toEqual([]);
   });
 
-  it('still reports a missing ticket as not found', async () => {
+  it('reports a missing ticket as not found to internal users (404 mapping)', async () => {
+    ticketRow = null;
+    await expect(
+      addTicketCommentInTransaction(makeTrx(), internalUser as any, 'tenant-1', input()),
+    ).rejects.toThrow('Ticket not found');
+  });
+
+  it('does not reveal a missing ticket to a client: same denial as a foreign ticket', async () => {
     ticketRow = null;
     await expect(
       addTicketCommentInTransaction(makeTrx(), currentUser, 'tenant-1', input()),
-    ).rejects.toThrow('Ticket not found');
+    ).rejects.toThrow(/Permission denied/);
   });
 
   it('allows a client to comment on a ticket visible to them', async () => {

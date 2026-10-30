@@ -3457,7 +3457,8 @@ export async function addTicketCommentInTransaction(
     .first();
 
   if (!ticket) {
-    throw new Error('Ticket not found');
+    // Do not let a client principal distinguish "missing" from "not yours".
+    throw new Error(isClientUserType(user.user_type) ? 'Permission denied: Cannot access ticket' : 'Ticket not found');
   }
 
   // Record-level authorization, before any thread/comment/workflow/notification write.
