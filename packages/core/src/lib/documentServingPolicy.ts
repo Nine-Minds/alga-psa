@@ -26,6 +26,12 @@ export interface DocumentServingPolicy {
 
 const INLINE_CSP = "default-src 'none'; media-src 'self'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox";
 
+// A bare `sandbox` gives a top-level media document an opaque origin, so its own
+// Range sub-requests are cross-site and lose the SameSite=Lax session cookie.
+// `allow-same-origin` keeps the origin; scripts stay blocked (no `allow-scripts`),
+// and video bytes are never markup, so nothing can execute.
+const INLINE_VIDEO_CSP = "default-src 'none'; media-src 'self'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox allow-same-origin";
+
 function normalizeMimeType(mimeType?: string | null): string {
   return (mimeType || '').split(';')[0].trim().toLowerCase();
 }
@@ -52,7 +58,7 @@ export function resolveDocumentServingPolicy(mimeType?: string | null): Document
 
   const disposition: DocumentDisposition = inline ? 'inline' : 'attachment';
   const headers: Record<string, string> = { 'X-Content-Type-Options': 'nosniff' };
-  if (disposition === 'inline') headers['Content-Security-Policy'] = INLINE_CSP;
+  if (disposition === 'inline') headers['Content-Security-Policy'] = normalized.startsWith('video/') ? INLINE_VIDEO_CSP : INLINE_CSP;
 
   return { mimeType: normalized, servable, disposition, headers };
 }

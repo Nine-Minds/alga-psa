@@ -36,8 +36,16 @@ describe('resolveDocumentServingPolicy', () => {
     expect(p.disposition).toBe('inline');
     expect(csp).toContain("media-src 'self'");
     expect(csp).toContain("default-src 'none'");
-    expect(csp).toContain('sandbox');
+    expect(csp).toContain('sandbox allow-same-origin');
+    expect(csp).not.toContain('allow-scripts');
     expect(p.headers['X-Content-Type-Options']).toBe('nosniff');
+  });
+
+  it.each(['image/png', 'application/pdf', 'text/plain'])('keeps bare sandbox for %s', (mime) => {
+    const csp = resolveDocumentServingPolicy(mime).headers['Content-Security-Policy'];
+    expect(csp).toContain('sandbox');
+    expect(csp).not.toContain('allow-same-origin');
+    expect(csp).not.toContain('allow-scripts');
   });
 
   it('still serves SVG as an attachment', () => {

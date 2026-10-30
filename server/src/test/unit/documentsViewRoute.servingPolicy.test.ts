@@ -82,7 +82,8 @@ describe('documents view route serving policy', () => {
       expect(res.headers.get('Content-Disposition')).toMatch(/^inline/);
       const csp = res.headers.get('Content-Security-Policy') ?? '';
       expect(csp).toContain("media-src 'self'");
-      expect(csp).toContain('sandbox');
+      expect(csp).toContain('sandbox allow-same-origin');
+      expect(csp).not.toContain('allow-scripts');
       expect(res.headers.get('X-Content-Type-Options')).toBe('nosniff');
     }
   });
