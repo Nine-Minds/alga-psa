@@ -96,6 +96,7 @@ import {
   type RelationshipSqlCompileResult,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { authorizeTicketRecordAccess, type TicketRecordRow } from '../lib/ticketRecordAuthorization';
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
 import { compilePredicateFragment } from '@alga-psa/predicates/sql';
 import type { PredicateGroup } from '@alga-psa/predicates';
@@ -3458,6 +3459,18 @@ export async function addTicketCommentInTransaction(
   if (!ticket) {
     throw new Error('Ticket not found');
   }
+
+  // Record-level authorization, before any thread/comment/workflow/notification write.
+  // Tenant-wide ticket:update RBAC (checked by callers) does not scope a principal to
+  // this specific ticket; evaluate the same per-record policy as the sibling actions.
+  await authorizeTicketRecordAccess({
+    trx,
+    tenant,
+    user,
+    ticketId,
+    action: 'update',
+    ticketRow: ticket as TicketRecordRow,
+  });
 
   // Canned responses: resolve merge fields once, on this trx, before anything reads the content. Every later
   // use (markdown, insert, bundle mirrors, events) sees only this resolved value. Internal authors only.
