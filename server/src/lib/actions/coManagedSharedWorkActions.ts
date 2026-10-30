@@ -8,7 +8,7 @@ import { getCoManagedSharedTicketDetails, getCoManagedTicketEditor, searchCoMana
 import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 import { buildSharedTicketData } from '../co-managed/sharedTicketData';
 import type { SharedTicketDetailsResult, SharedTicketOptionPage } from '../co-managed/sharedTicketDataTypes';
-import { getCoManagedSharedWorkSummary, getCoManagedTicketScreen, getCoManagedTicketHandoffHistory, getCoManagedExplicitTicketGrants, escalateCoManagedTicket, handBackCoManagedTicket, revokeCoManagedTicketGrant, CoManagedSharedWorkError, type CoManagedSharedResource, type CoManagedTicketHandoffRequest } from '@alga-psa/co-managed';
+import { getCoManagedSharedWorkSummary, getCoManagedTicketScreen, getCoManagedTicketHandoffHistory, getCoManagedExplicitTicketGrants, escalateCoManagedTicket, handBackCoManagedTicket, revokeCoManagedTicketGrant, CoManagedSharedWorkError, CoManagedTicketHandoffError, isCoManagedSharedWorkError, type CoManagedSharedResource, type CoManagedTicketHandoffRequest, type CoManagedTicketHandoffReceipt, type CoManagedTicketHandoffErrorCode } from '@alga-psa/co-managed';
 
 
 export const getSharedWorkSummaryAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource) => {
@@ -27,31 +27,56 @@ export const getSharedWorkSummaryAction = withAuth(async (user, { tenant }, reso
 const isCustomerSide = (tenant: string, resource: CoManagedSharedResource) =>
   typeof resource?.tenant === 'string' && resource.tenant === tenant;
 
-export const escalateSharedTicketAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, request: CoManagedTicketHandoffRequest) => {
-  // Escalation is the customer's act; a sponsor-side caller has no such command to start.
-  if (!isCustomerSide(tenant, resource)) throw new CapabilityUnavailableError();
-  await requireCapabilityForAction('co-managed', tenant, 'serves');
-  const actor = await browserActor(user, tenant);
-  const { knex } = await createTenantKnex(tenant);
-  // LEVERAGE: friction shared-ticket-sla — the SLA setup-required result returns with L6b.
-  return escalateCoManagedTicket(knex, actor, resource, request);
+/**
+ * Production builds redact thrown server-action errors, so a handoff refusal is returned, never thrown: the
+ * screen must be able to say why (stale revision, already responsible, capability closed, not shared, read-only).
+ * Anything else is rethrown; every command carries an operationId, so retrying the same request is always safe.
+ */
+export type SharedTicketHandoffRefusalCode =
+  CoManagedTicketHandoffErrorCode | 'CAPABILITY_UNAVAILABLE' | 'NOT_AVAILABLE' | 'READ_ONLY';
+export type SharedTicketHandoffResult =
+  { ok: true; receipt: CoManagedTicketHandoffReceipt } | { ok: false; code: SharedTicketHandoffRefusalCode };
+
+// LEVERAGE: pattern co-managed-action-refusal — 5th error→{ok:false,code} mapper (edit, assignment, delegated, policy, handoff); refusal-coded errors want one action wrapper.
+function handoffRefusal(error: unknown): SharedTicketHandoffResult {
+  if (error instanceof CapabilityUnavailableError) return { ok: false, code: 'CAPABILITY_UNAVAILABLE' };
+  if (error instanceof CoManagedTicketHandoffError) return { ok: false, code: error.code };
+  if (isCoManagedSharedWorkError(error)) return { ok: false, code: 'NOT_AVAILABLE' };
+  if (isCoManagedLifecycleError(error)) return { ok: false, code: 'READ_ONLY' };
+  throw error;
+}
+
+export const escalateSharedTicketAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, request: CoManagedTicketHandoffRequest): Promise<SharedTicketHandoffResult> => {
+  try {
+    // Escalation is the customer's act; a sponsor-side caller has no such command to start.
+    if (!isCustomerSide(tenant, resource)) throw new CapabilityUnavailableError();
+    await requireCapabilityForAction('co-managed', tenant, 'serves');
+    const actor = await browserActor(user, tenant);
+    const { knex } = await createTenantKnex(tenant);
+    // LEVERAGE: friction shared-ticket-sla — the SLA setup-required result returns with L6b.
+    return { ok: true, receipt: await escalateCoManagedTicket(knex, actor, resource, request) };
+  } catch (error) { return handoffRefusal(error); }
 });
 
-export const handBackSharedTicketAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, request: CoManagedTicketHandoffRequest) => {
-  // LEVERAGE: pattern capability-either-mode — second two-sided action; the adapter should land next to requireCapabilityForAction (see withCoManagedHeld in coManagedPolicyActions.ts).
-  // Customer side = take-back (`serves`); sponsor side = hand-back (`admits`).
-  await requireCapabilityForAction('co-managed', tenant, isCustomerSide(tenant, resource) ? 'serves' : 'admits');
-  const actor = await browserActor(user, tenant);
-  const { knex } = await createTenantKnex(tenant);
-  return handBackCoManagedTicket(knex, actor, resource, request);
+export const handBackSharedTicketAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, request: CoManagedTicketHandoffRequest): Promise<SharedTicketHandoffResult> => {
+  try {
+    // LEVERAGE: pattern capability-either-mode — second two-sided action; the adapter should land next to requireCapabilityForAction (see withCoManagedHeld in coManagedPolicyActions.ts).
+    // Customer side = take-back (`serves`); sponsor side = hand-back (`admits`).
+    await requireCapabilityForAction('co-managed', tenant, isCustomerSide(tenant, resource) ? 'serves' : 'admits');
+    const actor = await browserActor(user, tenant);
+    const { knex } = await createTenantKnex(tenant);
+    return { ok: true, receipt: await handBackCoManagedTicket(knex, actor, resource, request) };
+  } catch (error) { return handoffRefusal(error); }
 });
 
 
-export const revokeSharedTicketGrantAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, request: CoManagedTicketHandoffRequest) => {
-  await requireCapabilityForAction('co-managed', tenant, 'serves');
-  const actor = await browserActor(user, tenant);
-  const { knex } = await createTenantKnex(tenant);
-  return revokeCoManagedTicketGrant(knex, actor, resource, request);
+export const revokeSharedTicketGrantAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, request: CoManagedTicketHandoffRequest): Promise<SharedTicketHandoffResult> => {
+  try {
+    await requireCapabilityForAction('co-managed', tenant, 'serves');
+    const actor = await browserActor(user, tenant);
+    const { knex } = await createTenantKnex(tenant);
+    return { ok: true, receipt: await revokeCoManagedTicketGrant(knex, actor, resource, request) };
+  } catch (error) { return handoffRefusal(error); }
 });
 
 

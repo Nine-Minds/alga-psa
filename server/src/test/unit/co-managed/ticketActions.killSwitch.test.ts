@@ -37,7 +37,11 @@ describe('L3b1 actions under FORCE_CAPABILITIES=co-managed:off', () => {
       const actions = Object.entries(mod).filter(([, value]) => typeof value === 'function');
       expect(actions.length).toBeGreaterThan(0);
       for (const [name, action] of actions) {
-        await expect((action as any)({ tenant: 't', relationshipId: 'r', kind: 'ticket', id: 'x' }, {}), name).rejects.toThrow();
+        // Handoff commands return their refusal (production redacts thrown action errors); everything else throws.
+        const outcome = await Promise.resolve((action as any)({ tenant: 't', relationshipId: 'r', kind: 'ticket', id: 'x' }, {}))
+          .then(value => ({ value }), error => ({ error }));
+        if ('value' in outcome) expect(outcome.value, name).toEqual({ ok: false, code: 'CAPABILITY_UNAVAILABLE' });
+        else expect(outcome.error, name).toBeInstanceOf(Error);
       }
       expect(createTenantKnex).not.toHaveBeenCalled();
       expect(browserActor).not.toHaveBeenCalled();
