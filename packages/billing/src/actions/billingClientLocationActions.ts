@@ -8,6 +8,7 @@
 
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { withSerializableAuth } from './serializableAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { IClientLocation } from '@alga-psa/types';
@@ -122,3 +123,6 @@ export const getActiveClientLocationsForBilling = withAuth(async (
       .orderBy('location_name', 'asc');
   });
 });
+
+/** Same location read for draft attribution, with JSON-safe auth recovery. */
+export const getActiveClientLocationsForBillingRecoverable = withSerializableAuth(getActiveClientLocationsForBilling);

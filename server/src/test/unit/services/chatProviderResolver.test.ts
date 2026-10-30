@@ -8,6 +8,7 @@ const googleAccessTokenState = vi.hoisted(() => ({ token: 'adc-token' as string 
 const licensingMocks = vi.hoisted(() => ({
   getLicenseStateRow: vi.fn(),
   isSelfHostLicensing: vi.fn(),
+  assertInstallationAiCredentialAllowed: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('openai', () => {

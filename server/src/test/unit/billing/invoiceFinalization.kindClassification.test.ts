@@ -16,10 +16,16 @@ function createMockDb() {
     let filteredRows = rows;
 
     const builder: any = {
+      join() { return builder; },
       where(criteria: Record<string, any>) {
         filteredRows = rows.filter((row) =>
           Object.entries(criteria).every(([key, expected]) => row[key] === expected),
         );
+        return builder;
+      },
+      // Prepaid Block owner lookup (alga-2026-0002695): where(...).whereNotNull(...).select(...)
+      whereNotNull(column: string) {
+        filteredRows = filteredRows.filter((row) => row[column] != null);
         return builder;
       },
       async first() {
@@ -89,6 +95,7 @@ vi.mock('@alga-psa/db', () => ({
   }),
   withTransaction: mocks.withTransaction,
   createTenantKnex: mocks.createTenantKnex,
+  writeInvoiceAudit: vi.fn(async () => undefined),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -97,7 +104,7 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 vi.mock('../../../../../packages/billing/src/actions/creditActions', () => ({
-  applyCreditToInvoice: mocks.applyCreditToInvoice,
+  applyCreditToInvoiceInternal: mocks.applyCreditToInvoice,
   resolveCreditExpirationDate: vi.fn(async () => undefined),
   resolveCreditDrawdownPolicy: vi.fn(async () => ({
     autoApplyEnabled: true,

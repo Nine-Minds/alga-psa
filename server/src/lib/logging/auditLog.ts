@@ -11,6 +11,9 @@ interface AuditLogParams {
   details: Record<string, unknown>;
 }
 
+// LEVERAGE: friction audit-log-best-effort — this helper skips silently without the app.current_tenant GUC and the
+// settings that must be audited (documentFetchHostSettings.ts) cannot use it; they write audit_logs directly in their
+// transaction. A must-write variant (throws, sets the GUC tx-locally, joins the caller's trx) belongs in this layer.
 export async function auditLog(
   knex: Knex,
   params: AuditLogParams

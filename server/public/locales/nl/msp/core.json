@@ -105,7 +105,13 @@
     "passwords": "Wachtwoorden",
     "ticketsAll": "Alle tickets",
     "ticketsRecurring": "Terugkerende tickets",
-    "ticketsTemplates": "Ticketsjablonen"
+    "ticketsTemplates": "Ticketsjablonen",
+    "assetsCustody": "Apparatuur in bewaring",
+    "ticketsCannedResponses": "Standaardantwoorden",
+    "profile": "Profiel",
+    "signOut": "Afmelden",
+    "coManaged": "Gezamenlijk beheerde IT",
+    "coManagedAdministration": "Toegang en beheer"
   },
   "sidebar": {
     "backToMain": "Terug naar hoofd",
@@ -154,7 +160,8 @@
       "extensions": "Extensies",
       "experimentalFeatures": "Experimentele functies",
       "profile": "Profiel",
-      "security": "Beveiliging"
+      "security": "Beveiliging",
+      "tags": "Labels"
     }
   },
   "dashboard": {
@@ -209,7 +216,35 @@
       "ariaLabel": "Bronnen en hulp",
       "title": "Bronnen",
       "documentation": "Documentatie",
-      "support": "Contact opnemen met support"
+      "support": "Contact opnemen met support",
+      "submitTicket": "Een ticket naar Nine Minds sturen"
+    },
+    "supportDialog": {
+      "title": "Een ticket naar Nine Minds sturen",
+      "intro": "De support van Nine Minds ontvangt dit als ticket en antwoordt per e-mail.",
+      "categoryLabel": "Waarmee heeft u hulp nodig?",
+      "categories": {
+        "bug": "Iets werkt niet",
+        "question": "Vraag",
+        "billing": "Facturatie",
+        "feature": "Functieverzoek"
+      },
+      "subjectLabel": "Onderwerp",
+      "descriptionLabel": "Wat is er gebeurd?",
+      "descriptionPlaceholder": "Vermeld wat u verwachtte, wat er gebeurde en welke klant of factuur het betreft.",
+      "replyTo": "Antwoorden gaan naar {{email}}",
+      "success": "Verzonden naar de support van Nine Minds. Antwoorden gaan naar {{email}}.",
+      "submit": "Naar Nine Minds sturen",
+      "sending": "Verzenden…",
+      "cancel": "Annuleren",
+      "close": "Sluiten",
+      "fallbackLink": "Neem contact op met support via nineminds.com",
+      "errors": {
+        "invalidInput": "Voer een onderwerp van minimaal 3 tekens en een beschrijving van minimaal 20 tekens in.",
+        "rateLimited": "U hebt net een aanvraag verzonden. Wacht een minuut voordat u een volgende verzendt.",
+        "emailNotConfigured": "Voor deze installatie is geen uitgaande e-mail geconfigureerd, dus de aanvraag kon niet worden verzonden.",
+        "sendFailed": "Verzenden van de aanvraag is mislukt. Probeer het opnieuw."
+      }
     },
     "jobs": {
       "ariaLabel": "Activiteit van achtergrondtaken bekijken",
@@ -794,5 +829,42 @@
   "githubStar": {
     "label": "Ster geven",
     "ariaLabel": "{{repository}} een ster geven op GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "MSP-portaal",
+      "dashboard": "Dashboard",
+      "ticketDetails": "Ticketdetails",
+      "tickets": "Tickets",
+      "projectDetails": "Projectdetails",
+      "projects": "Projecten",
+      "clientDetails": "Klantdetails",
+      "clients": "Klanten",
+      "contactDetails": "Contactdetails",
+      "contacts": "Contacten",
+      "assetDetails": "Assetdetails",
+      "assets": "Assets",
+      "billing": "Facturatie",
+      "settings": "Instellingen",
+      "settingsSection": "Instellingen: {{section}}",
+      "chat": "Chat"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Pro-functie",
+      "description": "AI-chatfuncties vereisen Pro. Upgrade om toegang te krijgen tot deze functie."
+    },
+    "messages": {
+      "proRequired": "Berichtfuncties vereisen Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Chatfuncties zijn alleen beschikbaar in Enterprise Edition"
+    }
+  },
+  "coManagedWorkspace": {
+    "loading": "Werkruimte laden…",
+    "navigation": "Klantwerkruimte",
+    "passwordError": "Kan de wachtwoordstatus niet controleren. Laad deze pagina opnieuw."
   }
 }

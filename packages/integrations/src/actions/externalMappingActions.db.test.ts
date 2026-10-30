@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { AUTOMATIC_DISCOUNT_MAPPING_ID, DISCOUNT_MAPPING_ENTITY_TYPE } from '@alga-psa/types';
 import {
   createTestDbConnection,
   wireLocalTestDbEnv,
@@ -1096,6 +1097,101 @@ describe('unlink (tombstone) and explicit relink', () => {
   });
 });
 
+/**
+ * Ticket alga-2026-0002886. A tombstone used to keep owning its external
+ * target: both unique indexes counted unlinked rows, so after unlinking a
+ * mapping the target it had held could never be used again — the customer saw
+ * "This target is already mapped to another entity in this organisation" while
+ * the mappings list (which hides tombstones) showed nothing to unmap.
+ */
+describe('an unlinked mapping stops owning its target', () => {
+  const unlink = (id: string) =>
+    (deleteExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, id);
+  const create = (mapping: Record<string, unknown>) =>
+    (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, {
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'service',
+      external_realm_id: realmA,
+      ...mapping,
+    });
+
+  it('lets another entity take the target of an unlinked mapping, keeping the tombstone', async () => {
+    const other = await seedService(tenantA);
+    const { id } = await seedMapping({ alga_entity_id: serviceA, external_entity_id: 'item-shared' });
+    await unlink(id);
+
+    const result = await create({ alga_entity_id: other, external_entity_id: 'item-shared' });
+
+    expect(result).toMatchObject({ id: expect.any(String), external_entity_id: 'item-shared' });
+    expect(result.id).not.toBe(id);
+
+    // The tombstone survives: the invoice export path reads it to decide
+    // relink-or-recreate, so freeing the target must not purge it.
+    const tombstone = await db('tenant_external_entity_mappings').where({ id }).first();
+    expect(tombstone.deleted_at).not.toBeNull();
+    expect(tombstone.external_entity_id).toBe('item-shared');
+  });
+
+  it('relinks a tombstone onto a target another tombstone still holds (tax region DEFAULT -> TAX)', async () => {
+    // The exact prod case: both regions unlinked, then DEFAULT remapped to the
+    // code US had held. The failing statement was the relink UPDATE.
+    await setAutomatedSalesTaxRealms(tenantA, [realmA]);
+    const regionUs = await seedTaxRegion(tenantA);
+    const taxCode = { alga_entity_type: 'tax_code' };
+    const defaultRegion = await seedMapping({
+      ...taxCode,
+      alga_entity_id: taxRegionA,
+      external_entity_id: 'NON',
+    });
+    const usRegion = await seedMapping({
+      ...taxCode,
+      alga_entity_id: regionUs,
+      external_entity_id: 'TAX',
+    });
+    await unlink(defaultRegion.id);
+    await unlink(usRegion.id);
+
+    const result = await create({ ...taxCode, alga_entity_id: taxRegionA, external_entity_id: 'TAX' });
+
+    expect(result.id).toBe(defaultRegion.id);
+    expect(result.external_entity_id).toBe('TAX');
+    const relinked = await db('tenant_external_entity_mappings').where({ id: defaultRegion.id }).first();
+    expect(relinked.deleted_at).toBeNull();
+    expect(relinked.sync_status).toBe('manual_link');
+
+    // US keeps its tombstone, still naming the code it used to hold.
+    const stillUnlinked = await db('tenant_external_entity_mappings').where({ id: usRegion.id }).first();
+    expect(stillUnlinked.deleted_at).not.toBeNull();
+    expect(stillUnlinked.external_entity_id).toBe('TAX');
+  });
+
+  it('still refuses a target a LIVE mapping holds, without touching the database', async () => {
+    const other = await seedService(tenantA);
+    await seedMapping({ alga_entity_id: serviceA, external_entity_id: 'item-held' });
+
+    const result = await create({ alga_entity_id: other, external_entity_id: 'item-held' });
+
+    expect(result.actionError).toMatch(/target is already mapped to another entity/);
+    expect(result.messageKey).toBe('msp/integrations:errors.mappings.duplicateTarget');
+    expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA })).toHaveLength(1);
+    expect(await lastAudit(tenantA, 'CREATE')).toBeUndefined();
+  });
+
+  it('still refuses a second live mapping for an entity whose tombstone was relinked', async () => {
+    const { id } = await seedMapping({ alga_entity_id: serviceA, external_entity_id: 'item-x' });
+    await unlink(id);
+    expect(await create({ alga_entity_id: serviceA, external_entity_id: 'item-x' })).toMatchObject({ id });
+
+    const again = await create({ alga_entity_id: serviceA, external_entity_id: 'item-z' });
+
+    expect(again.actionError).toMatch(/A mapping already exists for this entity/);
+    expect(again.messageKey).toBe('msp/integrations:errors.mappings.duplicate');
+    const rows = await db('tenant_external_entity_mappings').where({ tenant: tenantA, alga_entity_id: serviceA });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].external_entity_id).toBe('item-x');
+  });
+});
+
 describe('createExternalEntityMappings — bulk create with per-row isolation', () => {
   const bulkRow = (serviceId: string, code: string, kind: 'item' | 'account') => ({
     integration_type: 'xero',
@@ -1200,5 +1296,44 @@ describe('createExternalEntityMappings — bulk create with per-row isolation', 
     // Same entity, different target: idx_unique_alga_mapping.
     const sameEntity = await (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, make(svc1, uuidv4()));
     expect(sameEntity.actionError).toMatch(/A mapping already exists for this entity/);
+  });
+});
+
+describe('invoice discount mapping configuration', () => {
+  it.each(['quickbooks_online', 'xero', 'quickbooks_csv', 'xero_csv', 'quickbooks_desktop'])('creates, reads, edits and removes the tenant-scoped %s mapping', async (provider) => {
+    const realm = provider === 'quickbooks_online' ? realmA : provider === 'xero' ? xeroRealm : null;
+    const external = provider === 'xero' ? '200' : 'Discount account';
+    const user = { user_id: 'u' };
+    const context = { tenant: tenantA };
+    const result = await (createExternalEntityMapping as any)(user, context, {
+      integration_type: provider, alga_entity_type: DISCOUNT_MAPPING_ENTITY_TYPE, alga_entity_id: AUTOMATIC_DISCOUNT_MAPPING_ID,
+      external_entity_id: external, external_realm_id: realm,
+      ...(provider === 'xero' ? { metadata: { xeroTargetKind: 'account' } } : {}),
+    });
+    expect(result.id).toBeTruthy();
+    expect(await db('tenant_external_entity_mappings').where({ tenant: tenantB, alga_entity_type: 'discount' })).toHaveLength(0);
+    if (provider === 'quickbooks_online') expect(qboReadMock).toHaveBeenCalledWith('Item', external);
+    if (provider === 'xero') expect(xeroListAccountsMock).toHaveBeenCalled();
+    const read = await (getExternalEntityMappings as any)(user, context, { integrationType: provider, algaEntityType: 'discount', externalRealmId: realm });
+    expect(read).toHaveLength(1);
+    const updated = await (updateExternalEntityMapping as any)(user, context, result.id, { external_entity_id: external });
+    expect(updated.external_entity_id).toBe(external);
+    await (deleteExternalEntityMapping as any)(user, context, result.id);
+    expect(await (getExternalEntityMappings as any)(user, context, { integrationType: provider, algaEntityType: 'discount', externalRealmId: realm })).toHaveLength(0);
+  });
+
+  it('rejects forged discount identities and unmappable Xero accounts', async () => {
+    for (const input of [
+      { alga_entity_id: uuidv4(), external_entity_id: '200' },
+      { alga_entity_id: AUTOMATIC_DISCOUNT_MAPPING_ID, external_entity_id: '090' },
+      { alga_entity_id: AUTOMATIC_DISCOUNT_MAPPING_ID, external_entity_id: '299' },
+    ]) {
+      const result = await (createExternalEntityMapping as any)({ user_id: 'u' }, { tenant: tenantA }, {
+        integration_type: 'xero', alga_entity_type: DISCOUNT_MAPPING_ENTITY_TYPE, external_realm_id: xeroRealm,
+        metadata: { xeroTargetKind: 'account' }, ...input,
+      });
+      expect(result.actionError).toBeTruthy();
+    }
+    expect(await db('tenant_external_entity_mappings').where({ tenant: tenantA, alga_entity_type: 'discount' })).toHaveLength(0);
   });
 });

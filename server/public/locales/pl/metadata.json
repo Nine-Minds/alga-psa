@@ -210,7 +210,10 @@
             "title": "Zadanie projektu"
           }
         },
-        "fallbackTitle": "Szczegóły projektu"
+        "fallbackTitle": "Szczegóły projektu",
+        "staging": {
+          "title": "Przygotowanie projektu"
+        }
       },
       "templates": {
         "layout": {
@@ -288,6 +291,9 @@
       },
       "templates": {
         "title": "Szablony zgłoszeń"
+      },
+      "cannedResponses": {
+        "title": "Gotowe odpowiedzi"
       }
     },
     "workflowEditor": {
@@ -362,7 +368,10 @@
         },
         "fallbackTitle": "Szczegóły zasobu"
       },
-      "title": "Zasoby"
+      "title": "Zasoby",
+      "custody": {
+        "title": "Sprzęt w przechowaniu"
+      }
     },
     "createContact": {
       "title": "Utwórz kontakt"
@@ -510,6 +519,29 @@
     },
     "layout": {
       "defaultTitle": "Pulpit | AlgaPSA"
+    },
+    "coManaged": {
+      "title": "Współzarządzane IT"
+    },
+    "coManagement": {
+      "title": "Dostęp do współzarządzania",
+      "administration": {
+        "title": "Administracja współzarządzana"
+      },
+      "customerTickets": {
+        "title": "Zgłoszenia klientów"
+      },
+      "sharedTicket": {
+        "title": "Udostępnione zgłoszenie"
+      },
+      "providers": {
+        "title": "Dostawcy poczty e-mail i tożsamości"
+      },
+      "sharedTasks": {
+        "title": "Udostępnione zadania",
+        "taskTitle": "Udostępnione zadanie",
+        "projectTitle": "Udostępniony projekt"
+      }
     }
   },
   "auth": {
@@ -630,5 +662,8 @@
     "setupComplete": {
       "title": "Konfiguracja karty"
     }
+  },
+  "pay": {
+    "title": "Zapłać fakturę"
   }
 }

@@ -10,12 +10,14 @@ import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { createAsset } from '../actions/assetActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { formatClientLocation } from '../lib/formatClientLocation';
+import { parseMoneyToMinorUnits } from '../lib/money';
 import { isBuiltinAssetTypeSlug, pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
 import { buildAssetTypeOptions, findCustomAssetType, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
+import { buildAssetStatusOptions, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
 import { CustomTypeFieldsPanel } from './shared/CustomTypeFieldsPanel';
 import type { CreateAssetRequest, IClient, IClientLocation, IContact } from '@alga-psa/types';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { getAllClientsForAssets, getClientContactsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
+import { getAllClientsForAssets, getClientContactsForAssets, getClientLocationsForAssets, getVendorOptionsForAssets } from '../actions/clientLookupActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -28,19 +30,24 @@ interface QuickAddAssetProps {
 }
 
 type NetworkDeviceType = 'switch' | 'router' | 'firewall' | 'access_point' | 'load_balancer';
-type AssetStatus = 'active' | 'inactive' | 'maintenance';
-
-const STATUS_OPTION_VALUES: AssetStatus[] = ['active', 'inactive', 'maintenance'];
 
 interface FormData {
   name: string;
   asset_tag: string;
   asset_type: string;
-  status: AssetStatus;
+  /** An asset_statuses slug (F020); no longer a closed union. */
+  status: string;
+  ownership: 'client' | 'msp';
   serial_number: string;
   location_id: string | null;
   contact_name_id: string | null;
   location: string;
+  manufacturer: string;
+  model: string;
+  vendor_id: string | null;
+  /** Typed as a decimal amount; converted to minor units on submit. */
+  purchase_cost: string;
+  order_number: string;
   workstation: {
     os_type: string;
     os_version: string;
@@ -83,12 +90,14 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
   const [clientContacts, setClientContacts] = useState<IContact[]>([]);
   const [contactsLoading, setContactsLoading] = useState(false);
   const [attributeErrors, setAttributeErrors] = useState<Record<string, string>>({});
-  const statusOptions: SelectOption[] = STATUS_OPTION_VALUES.map((value) => ({
-    value,
-    label: t(`quickAddAsset.statusOptions.${value}`, {
-      defaultValue: value.charAt(0).toUpperCase() + value.slice(1)
-    })
-  }));
+  const [vendors, setVendors] = useState<Array<{ vendor_id: string; vendor_name: string }>>([]);
+  const vendorOptions: SelectOption[] = [
+    { value: '', label: t('quickAddAsset.placeholders.noVendor', { defaultValue: 'No vendor' }) },
+    ...vendors.map((vendor) => ({ value: vendor.vendor_id, label: vendor.vendor_name })),
+  ];
+  // F020: options come from the tenant's asset_statuses registry.
+  const { statuses: assetStatuses } = useAssetStatusRegistry(open);
+  const statusOptions: SelectOption[] = buildAssetStatusOptions(assetStatuses, t);
   // F308: type options come from the tenant registry (built-ins first with
   // their existing labels, then custom types by registry name).
   const registryEntries = useAssetTypeRegistry(open);
@@ -105,10 +114,16 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     asset_tag: '',
     asset_type: '',
     status: 'active',
+    ownership: 'client',
     serial_number: '',
     location_id: null,
     contact_name_id: null,
     location: '',
+    manufacturer: '',
+    model: '',
+    vendor_id: null,
+    purchase_cost: '',
+    order_number: '',
     // Type-specific fields will be added conditionally
     workstation: {
       os_type: '',
@@ -142,6 +157,23 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
       setOpen(true);
     }
   }, [defaultOpen]);
+
+  useEffect(() => {
+    if (!open) return;
+    let isMounted = true;
+    void (async () => {
+      try {
+        const list = await getVendorOptionsForAssets(null);
+        if (isMounted) setVendors(list);
+      } catch (error) {
+        // A missing supplier list must not block the quick add.
+        console.error('Error fetching vendors:', error);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, [open]);
 
   useEffect(() => {
     const fetchClients = async () => {
@@ -293,10 +325,16 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         asset_tag: formData.asset_tag,
         name: formData.name,
         status: formData.status,
+        ownership: formData.ownership,
         location_id: formData.location_id,
         contact_name_id: formData.contact_name_id,
         location: formData.location.trim() || undefined,
-        serial_number: formData.serial_number || undefined
+        serial_number: formData.serial_number || undefined,
+        manufacturer: formData.manufacturer.trim() || null,
+        model: formData.model.trim() || null,
+        vendor_id: formData.vendor_id || null,
+        purchase_cost: parseMoneyToMinorUnits(formData.purchase_cost),
+        order_number: formData.order_number.trim() || null
       };
 
       // F309: custom-type schema values land in payload.attributes.
@@ -374,7 +412,13 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         asset_tag: '',
         asset_type: '',
         status: 'active',
+        ownership: 'client',
         serial_number: '',
+        manufacturer: '',
+        model: '',
+        vendor_id: null,
+        purchase_cost: '',
+        order_number: '',
         location_id: null,
         contact_name_id: null,
         location: '',
@@ -819,10 +863,25 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                 {...withDataAutomationId({ id: 'asset-status-select' })}
                 options={statusOptions}
                 value={formData.status}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, status: value as AssetStatus }))}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, status: value }))}
                 placeholder={t('quickAddAsset.placeholders.selectStatus', {
                   defaultValue: 'Select status'
                 })}
+              />
+            </div>
+
+            <div {...withDataAutomationId({ id: 'asset-ownership-container' })}>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.ownership', { defaultValue: 'Ownership' })}
+              </label>
+              <CustomSelect
+                {...withDataAutomationId({ id: 'asset-ownership-select' })}
+                options={[
+                  { value: 'client', label: t('assetForm.ownership.client', { defaultValue: 'Client-owned' }) },
+                  { value: 'msp', label: t('assetForm.ownership.msp', { defaultValue: 'MSP-owned' }) },
+                ]}
+                value={formData.ownership}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, ownership: value as 'client' | 'msp' }))}
               />
             </div>
 
@@ -837,6 +896,68 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                 placeholder={t('quickAddAsset.placeholders.serialNumber', {
                   defaultValue: 'Enter serial number'
                 })}
+              />
+            </div>
+
+            <div {...withDataAutomationId({ id: 'asset-manufacturer-container' })}>
+              <label htmlFor="asset-manufacturer-input" className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.manufacturer', { defaultValue: 'Manufacturer' })}
+              </label>
+              <Input
+                id="asset-manufacturer-input"
+                value={formData.manufacturer}
+                onChange={(e) => setFormData(prev => ({ ...prev, manufacturer: e.target.value }))}
+                placeholder={t('quickAddAsset.placeholders.manufacturer', { defaultValue: 'e.g., Lenovo' })}
+              />
+            </div>
+
+            <div {...withDataAutomationId({ id: 'asset-model-container' })}>
+              <label htmlFor="asset-model-input" className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.model', { defaultValue: 'Model' })}
+              </label>
+              <Input
+                id="asset-model-input"
+                value={formData.model}
+                onChange={(e) => setFormData(prev => ({ ...prev, model: e.target.value }))}
+                placeholder={t('quickAddAsset.placeholders.modelName', { defaultValue: 'e.g., ThinkPad T14' })}
+              />
+            </div>
+
+            <div {...withDataAutomationId({ id: 'asset-vendor-container' })}>
+              <label htmlFor="asset-vendor-select" className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.vendor', { defaultValue: 'Vendor' })}
+              </label>
+              <CustomSelect
+                id="asset-vendor-select"
+                options={vendorOptions}
+                value={formData.vendor_id ?? ''}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, vendor_id: value || null }))}
+                placeholder={t('quickAddAsset.placeholders.selectVendor', { defaultValue: 'Select vendor' })}
+              />
+            </div>
+
+            <div {...withDataAutomationId({ id: 'asset-purchase-cost-container' })}>
+              <label htmlFor="asset-purchase-cost-input" className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.purchaseCost', { defaultValue: 'Purchase cost' })}
+              </label>
+              <Input
+                id="asset-purchase-cost-input"
+                inputMode="decimal"
+                value={formData.purchase_cost}
+                onChange={(e) => setFormData(prev => ({ ...prev, purchase_cost: e.target.value }))}
+                placeholder={t('quickAddAsset.placeholders.purchaseCost', { defaultValue: '0.00' })}
+              />
+            </div>
+
+            <div {...withDataAutomationId({ id: 'asset-order-number-container' })}>
+              <label htmlFor="asset-order-number-input" className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.orderNumber', { defaultValue: 'Order no.' })}
+              </label>
+              <Input
+                id="asset-order-number-input"
+                value={formData.order_number}
+                onChange={(e) => setFormData(prev => ({ ...prev, order_number: e.target.value }))}
+                placeholder={t('quickAddAsset.placeholders.orderNumber', { defaultValue: 'Enter order number' })}
               />
             </div>
 

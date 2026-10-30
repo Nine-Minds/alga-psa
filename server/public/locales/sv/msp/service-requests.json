@@ -93,6 +93,36 @@
         "checkbox": "Kryssruta",
         "date": "Datum",
         "file-upload": "Filuppladdning"
+      },
+      "visibility": {
+        "title": "Visa när…",
+        "none": "Visas alltid",
+        "addRule": "Lägg till villkor",
+        "removeRule": "Ta bort villkor",
+        "source": "Fält",
+        "selectSource": "Välj ett fält",
+        "operator": "Villkor",
+        "value": "Värde",
+        "valueTrue": "Markerad",
+        "valueFalse": "Avmarkerad",
+        "selectValue": "Välj ett värde",
+        "legacyBooleanWarning": "Den här regeln jämför med text, men en kryssruta innehåller sant/falskt och matchar därför aldrig. Välj värdet igen för att åtgärda.",
+        "saveFailed": "Det gick inte att spara synlighetsreglerna.",
+        "contextSources": {
+          "requesterUserId": "Begärande användare",
+          "clientId": "Begärande kund",
+          "contactId": "Begärande kontakt"
+        },
+        "operators": {
+          "equals": "är lika med",
+          "not-equals": "är inte lika med",
+          "is-true": "är markerad / sant",
+          "is-false": "är avmarkerad / falskt",
+          "has-value": "har ett värde",
+          "is-empty": "är tomt"
+        },
+        "advancedJson": "Avancerat (JSON)",
+        "advancedJsonHelp": "Hela den sparade konfigurationen, inklusive kontextstandarder. Synlighetsregler ändras enklast med ”Visa när…” på varje fält. Osparade ändringar här förkastas om en regel ändras där."
       }
     },
     "execution": {
@@ -144,7 +174,50 @@
       "visibility": {
         "title": "Synlighetsinställningar",
         "config": "Synlighetsinställningar (JSON-objekt)",
-        "save": "Spara synlighetsinställningar"
+        "save": "Spara synlighetsinställningar",
+        "audience": {
+          "removedReferences": "Otillgängliga målgruppsval har tagits bort. Granska och spara målgruppen.",
+          "reference_client_id": "Kund",
+          "reference_client_tags": "Kundtagg",
+          "reference_contact_id": "Kontakt",
+          "reference_contact_tags": "Kontakttagg",
+          "reference_contact_group_id": "Kundgrupp",
+          "chooseTags": "Välj taggar",
+          "loadError": "Kunde inte läsa in målgruppsval.",
+          "saveError": "Kunde inte spara målgruppen.",
+          "saved": "Målgruppen har sparats",
+          "convertedReadOnly": "Den migrerade målgruppen är skrivskyddad.",
+          "replace": "Ersätt med en ny målgrupp",
+          "clientTags": "Kundtaggar",
+          "contactTags": "Kontakttaggar",
+          "allUsers": "Alla användare hos kunden",
+          "missingClient": "Kunden är inte tillgänglig",
+          "missingContact": "Kontakten är inte tillgänglig",
+          "narrowTags": "Endast kontakter med taggen",
+          "remove": "Ta bort",
+          "allPortalUsers": "Alla användare i kundportalen",
+          "reach": "Synlig för {{count}} kontakter hos {{clients}} kunder",
+          "reachUnavailable": "Räckvidd är inte tillgänglig",
+          "title": "Vem som kan se det här formuläret",
+          "everyone": "Alla",
+          "everyoneHelp": "Alla autentiserade kundanvändare kan se och skicka in det här formuläret.",
+          "scoped": "Valda kunder och kontakter",
+          "scopedHelp": "Endast användare hos de valda kunderna, eller medlemmar i de valda grupperna, kan se och skicka in det här formuläret.",
+          "addClient": "Lägg till en kund",
+          "clientPlaceholder": "Sök kunder...",
+          "noClients": "Inga kunder valda ännu.",
+          "selectedClients": "Valda kunder",
+          "removeClient": "Ta bort {{name}}",
+          "groupsOf": "Kundanvändargrupper för {{name}}",
+          "groupLabel": "{{group}} ({{client}})",
+          "loadingGroups": "Laddar grupper...",
+          "noGroups": "Den här kunden har inga kundanvändargrupper.",
+          "groupsHelp": "Varje kund gäller antingen alla sina användare eller bara medlemmarna i valda grupper. En grupp ger bara åtkomst till medlemmar hos sin egen kund. En kund kan inte vara inställd på alla användare och samtidigt ha valda grupper.",
+          "emptyWarning": "Ingen kan se formuläret förrän du lägger till en målgrupp.",
+          "save": "Spara målgrupp",
+          "allUsersOf": "Alla användare hos {{name}}",
+          "onlyGroups": "Endast medlemmar i valda grupper"
+        }
       },
       "fields": {
         "executionProvider": "Hanterare för utförande",
@@ -387,7 +460,8 @@
       "ticketRoutingUpdated": "Inställningarna för ärendefördelning har uppdaterats",
       "workflowConfigurationUpdated": "Arbetsflödesinställningarna har uppdaterats",
       "formBehaviorConfigUpdated": "Inställningarna för formulärbeteende har uppdaterats",
-      "visibilityConfigUpdated": "Synlighetsinställningarna har uppdaterats"
+      "visibilityConfigUpdated": "Synlighetsinställningarna har uppdaterats",
+      "audienceUpdated": "Målgrupp uppdaterad"
     },
     "error": {
       "loadFailed": "Det gick inte att läsa in tjänsteförfrågningar",
@@ -410,7 +484,8 @@
       "formBehaviorInvalid": "Ogiltig JSON för formulärbeteende",
       "visibilityNotObject": "Synlighetsinställningarna måste vara ett JSON-objekt",
       "visibilityInvalid": "Ogiltig JSON för synlighet",
-      "saveAllPartial": "Det gick inte att spara vissa avsnitt: {{sections}}"
+      "saveAllPartial": "Det gick inte att spara vissa avsnitt: {{sections}}",
+      "audienceSaveFailed": "Det gick inte att uppdatera målgruppen"
     }
   }
 }

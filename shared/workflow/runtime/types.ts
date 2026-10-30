@@ -41,7 +41,7 @@ export const literalValueSchema = z.union([
   z.boolean(),
   z.null(),
   z.array(z.unknown()),
-  z.record(z.unknown())
+  z.record(z.string(), z.unknown())
 ]);
 
 export type LiteralValue = z.infer<typeof literalValueSchema>;
@@ -76,7 +76,7 @@ export type MappingValue = z.infer<typeof mappingValueSchema>;
  * InputMapping type for action.call config.
  * Maps target field names to MappingValue (expression, secret, or literal).
  */
-export const inputMappingSchema = z.record(mappingValueSchema);
+export const inputMappingSchema = z.record(z.string(), mappingValueSchema);
 
 export type InputMapping = z.infer<typeof inputMappingSchema>;
 
@@ -113,6 +113,7 @@ export type ControlStepType =
   | 'control.callWorkflow'
   | 'control.return';
 
+// LEVERAGE: pattern condition-dialects — overlapping condition dialect; candidate to converge on @alga-psa/predicates (also: workflow event-wait filters, reporting FilterDefinition, inbound email rules, service-request visibility)
 export const eventWaitFilterOperatorSchema = z.enum([
   '=',
   '!=',
@@ -195,7 +196,7 @@ export const eventWaitConfigSchema = z.object({
   correlationKey: exprSchema,
   filters: z.array(eventWaitFilterSchema).optional(),
   timeoutMs: z.number().int().positive().optional(),
-  assign: z.record(exprSchema).optional()
+  assign: z.record(z.string(), exprSchema).optional()
 }).strict();
 
 export type EventWaitConfig = z.infer<typeof eventWaitConfigSchema>;
@@ -204,7 +205,7 @@ export const timeWaitConfigSchema = z.object({
   mode: z.enum(['duration', 'until']),
   durationMs: z.number().int().positive().safe().optional(),
   until: exprSchema.optional(),
-  assign: z.record(exprSchema).optional()
+  assign: z.record(z.string(), exprSchema).optional()
 }).strict().superRefine((config, ctx) => {
   if (config.mode === 'duration') {
     if (!config.durationMs) {
@@ -372,8 +373,8 @@ export const callWorkflowBlockSchema = z.object({
   type: z.literal('control.callWorkflow'),
   workflowId: z.string().min(1),
   workflowVersion: z.number().int().positive(),
-  inputMapping: z.record(exprSchema).optional(),
-  outputMapping: z.record(exprSchema).optional(),
+  inputMapping: z.record(z.string(), exprSchema).optional(),
+  outputMapping: z.record(z.string(), exprSchema).optional(),
   retry: retryPolicySchema.optional(),
   onError: onErrorPolicySchema.optional()
 }).strict();
@@ -396,7 +397,8 @@ const stepSchemaInner = z.unknown().transform((val, ctx) => {
   const parseAndReturn = <T>(schema: z.ZodType<T>): Step | typeof z.NEVER => {
     const result = schema.safeParse(val);
     if (!result.success) {
-      result.error.issues.forEach(issue => ctx.addIssue(issue));
+      // Re-raised as-is so the authoring layer still sees the original issue codes.
+      result.error.issues.forEach(issue => ctx.addIssue(issue as unknown as Parameters<typeof ctx.addIssue>[0]));
       return z.NEVER;
     }
     return result.data as Step;
@@ -448,7 +450,7 @@ export const workflowDateTriggerSchema = z.object({
   offsetDays: z.number().int().min(-365).max(365),
   // Per-source parameters (validated by workflowDateTriggerWithParamsSchema / publish validation).
   // Optional, so definitions stored before sources took parameters still validate.
-  params: z.record(z.unknown()).optional(),
+  params: z.record(z.string(), z.unknown()).optional(),
   localTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).default('08:00'),
   timezone: z.string().min(1).optional(),
 }).strict();
@@ -506,16 +508,16 @@ export const envelopeSchema = z.object({
     workflowVersion: z.number(),
     startedAt: z.string()
   }).strict(),
-  payload: z.unknown(),
+  payload: z.unknown().optional(),
   meta: z.object({
     state: z.string().optional(),
     traceId: z.string().optional(),
-    tags: z.record(z.string()).optional(),
+    tags: z.record(z.string(), z.string()).optional(),
     redactions: z.array(z.string()).optional(),
     sourcePayloadSchemaRef: z.string().optional(),
     triggerMappingApplied: z.boolean().optional()
   }).strict(),
-  vars: z.record(z.unknown()),
+  vars: z.record(z.string(), z.unknown()),
   error: envelopeErrorSchema.optional()
 }).strict();
 

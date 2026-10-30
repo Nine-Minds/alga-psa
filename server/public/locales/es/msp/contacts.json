@@ -69,7 +69,9 @@
       "message_one": "El siguiente tipo de teléfono personalizado ya no lo usa ningún contacto: {{labels}}. ¿Eliminar la definición del tipo o conservarla para uso futuro?",
       "message_other": "Los siguientes tipos de teléfono personalizados ya no los usa ningún contacto: {{labels}}. ¿Eliminar las definiciones de los tipos o conservarlas para uso futuro?",
       "deleteType": "Eliminar tipo",
-      "keepType": "Conservar tipo"
+      "keepType": "Conservar tipo",
+      "message_few": "Los siguientes tipos de teléfono personalizados ya no los usa ningún contacto: {{labels}}. ¿Eliminar las definiciones de los tipos o conservarlas para uso futuro?",
+      "message_many": "Los siguientes tipos de teléfono personalizados ya no los usa ningún contacto: {{labels}}. ¿Eliminar las definiciones de los tipos o conservarlas para uso futuro?"
     },
     "print": {
       "title": "Contactos",
@@ -455,7 +457,9 @@
         "invitationNotFound": "Invitación no encontrada o ya utilizada."
       },
       "userNotFound": "No se encontró el usuario del cliente"
-    }
+    },
+    "boardCount_few": "{{count}} tableros",
+    "boardCount_many": "{{count}} tableros"
   },
   "quickAddContact": {
     "title": "Añadir contacto nuevo",
@@ -734,7 +738,67 @@
       "visibilityDuplicate": "Ya existe un grupo de visibilidad con estos datos para este cliente.",
       "visibilityInvalidData": "Se proporcionaron datos de grupo de visibilidad no válidos. Compruebe los datos del grupo y los tableros seleccionados.",
       "groupNameRequired": "El nombre del grupo es obligatorio",
-      "readPermission": "Permiso denegado: no se pueden leer contactos"
+      "readPermission": "Permiso denegado: no se pueden leer contactos",
+      "idRequired": "El ID del contacto es obligatorio",
+      "schemaError": "Error en el esquema de la base de datos; contacte con soporte",
+      "readFailed": "Ocurrió un error inesperado al obtener la información del contacto",
+      "deleteRecordFailed": "No se encontró el registro del contacto o no se pudo eliminar",
+      "updateIdRequired": "El ID del contacto es obligatorio para las actualizaciones",
+      "clientMissing": "El cliente seleccionado ya no existe",
+      "destinationMissing": "El destino seleccionado para tickets entrantes ya no existe",
+      "updateMissing": "El contacto que intenta actualizar ya no existe",
+      "updateRecordMissing": "La actualización del contacto se completó sin devolver el registro actualizado",
+      "clientIdRequired": "El ID del cliente es obligatorio",
+      "specifiedClientMissing": "El cliente especificado no existe",
+      "updateDataRequired": "No se proporcionaron datos de actualización",
+      "emailInvalid": "Introduzca una dirección de correo electrónico válida",
+      "bulkUpdateFailed": "La actualización de contactos del cliente se completó sin modificar ningún registro",
+      "updateFailed": "Ocurrió un error inesperado al actualizar los contactos del cliente",
+      "importMultipleMatches": "Las direcciones de correo electrónico importadas coinciden con varios contactos existentes",
+      "updatePermission": "No se pueden actualizar los contactos",
+      "importDataRequired": "No se proporcionaron datos de contactos",
+      "fullNameRequired": "El nombre completo es obligatorio",
+      "importFailed": "Ocurrió un error inesperado al importar contactos",
+      "emailsRequired": "No se proporcionaron direcciones de correo electrónico",
+      "validEmailsRequired": "No se proporcionaron direcciones de correo electrónico válidas",
+      "checkEmailsFailed": "Ocurrió un error inesperado al verificar las direcciones de correo electrónico existentes",
+      "portalAdminRequired": "Se requiere acceso de administrador al portal del cliente",
+      "assignedGroupInvalid": "El grupo de visibilidad asignado no es válido para este contacto",
+      "groupNotFound": "No se encontró el grupo de visibilidad",
+      "boardsInvalid": "Uno o más tableros no son válidos para este inquilino",
+      "groupCreateFailed": "La creación del grupo de visibilidad se completó sin devolver un ID de grupo",
+      "groupInUse": "No se puede eliminar el grupo de visibilidad mientras esté asignado a contactos",
+      "importEmailInvalid": "Formato de correo electrónico inválido para el contacto: {{name}}",
+      "importClientMissing": "No se encontró el cliente del contacto: {{name}}",
+      "invalidEmailValue": "Formato de correo electrónico inválido: {{email}}",
+      "invalidData": "Datos de contacto inválidos",
+      "phoneExtensionInvalid": "Teléfono {{index}}: Ingrese una extensión válida",
+      "phoneNumberInvalid": "Teléfono {{index}}: Ingrese un número de teléfono válido",
+      "phoneCountryRequired": "Teléfono {{index}}: Incluya el código de país, comenzando con +",
+      "tenantEmailExists": "Ya existe una dirección de correo electrónico de contacto en este inquilino",
+      "importRowFailed": "No se pudo importar este contacto. Revise los campos obligatorios y las referencias de clientes.",
+      "deleteMissing": "El contacto que intenta eliminar ya no existe.",
+      "deleteFailed": "No se pudo eliminar el contacto. Intente de nuevo.",
+      "deleteDependencies": "No se puede eliminar el contacto porque tiene registros asociados",
+      "connectionFailed": "Problema de conexión con la base de datos. Intente de nuevo.",
+      "deleteUnexpected": "Ocurrió un error inesperado al eliminar el contacto",
+      "importFileFailed": "No se pudieron importar los contactos. Revise el archivo e intente de nuevo.",
+      "portalAdminUpdateFailed": "No se pudo actualizar el estado de administrador del portal. Actualice la página e intente de nuevo.",
+      "userLoadFailed": "No se pudo obtener el usuario",
+      "sharedMailboxAdmin": "Los contactos de buzones compartidos no pueden ser administradores de clientes.",
+      "createFailed": "Ocurrió un error inesperado al crear el contacto",
+      "importDuplicateEmail": "Ya existe un contacto con este correo electrónico: {{value}}",
+      "importDuplicateName": "Ya existe un contacto con este nombre: {{value}}",
+      "permissions": {
+        "readContacts": "No se pueden leer los contactos",
+        "deleteContacts": "No se pueden eliminar los contactos",
+        "createContacts": "No se pueden crear contactos",
+        "updateContacts": "No se pueden actualizar los contactos",
+        "managePhoneTypes": "No se pueden administrar los tipos de teléfono",
+        "updateClientUsers": "No tiene permiso para actualizar usuarios de clientes",
+        "viewClientUsers": "No tiene permiso para ver usuarios de clientes"
+      },
+      "field": "campo"
     }
   },
   "portal": {
@@ -760,7 +824,30 @@
       "scopeSummaryOwn": "Propios",
       "managerScopeNote_one": "Su vista también incluye los registros de {{count}} persona que depende de ella.",
       "managerScopeNote_many": "Su vista también incluye los registros de {{count}} de personas que dependen de ella.",
-      "managerScopeNote_other": "Su vista también incluye los registros de {{count}} personas que dependen de ella."
+      "managerScopeNote_other": "Su vista también incluye los registros de {{count}} personas que dependen de ella.",
+      "managerScopeNote_few": "Su vista también incluye los registros de {{count}} personas que dependen de ella."
     }
+  },
+  "messages": {
+    "success": {
+      "updated": "Contacto actualizado correctamente",
+      "created": "Contacto creado correctamente"
+    }
+  },
+  "csvTemplate": {
+    "explorerRole": "Exploradora principal",
+    "explorerNotes": "Cayó en una madriguera de conejo y descubrió un mundo completamente nuevo",
+    "explorerTags": "Curiosa, Aventurera, Valiente",
+    "teaRole": "Experto principal en ceremonias del té",
+    "teaNotes": "Sabe por qué un cuervo se parece a un escritorio",
+    "teaTags": "Creativo, Excéntrico, Experto en té"
+  },
+  "entraContactBadge": {
+    "lastSyncedTitle": "Microsoft Entra · última sincronización: {{date}}",
+    "description": "Este contacto se sincroniza con una cuenta del directorio.",
+    "signInName": "Nombre de inicio de sesión: {{name}}",
+    "lastSynced": "Última sincronización: {{date}}",
+    "deleted": "Inactivo — la cuenta de Microsoft se eliminó.",
+    "disabled": "Inactivo — la cuenta de Microsoft está deshabilitada."
   }
 }

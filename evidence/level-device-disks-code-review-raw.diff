@@ -1,0 +1,476 @@
+diff --git a/ee/server/src/__tests__/integration/levelioEmulatorApiClient.integration.test.ts b/ee/server/src/__tests__/integration/levelioEmulatorApiClient.integration.test.ts
+index ad860b3f91..6971b18d1f 100644
+--- a/ee/server/src/__tests__/integration/levelioEmulatorApiClient.integration.test.ts
++++ b/ee/server/src/__tests__/integration/levelioEmulatorApiClient.integration.test.ts
+@@ -14,6 +14,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
+ import { EmulatorHost } from '@alga-psa/emulator-host';
+ import levelio, { type LevelEmulatorCore } from '@alga-psa/emulator-levelio';
+ import { LevelIoApiClient, LevelIoApiError } from '../../lib/integrations/levelio/levelApiClient';
++import { mapLevelIoDiskUsage } from '../../lib/integrations/levelio/mappers/deviceMapper';
+ 
+ // createLevelIoClient imports the secrets provider at module load; the client
+ // under test is constructed directly with the emulator's base URL.
+@@ -117,9 +118,10 @@ describe('LevelIoApiClient against the Level emulator', () => {
+     expect(devices.map((d) => d.hostname)).toEqual(['WS-01']);
+     expect(devices[0].operating_system).toEqual({ full_operating_system: 'Windows 11 Pro', major_version: '10.0' });
+     expect(devices[0].network_interfaces).toHaveLength(1);
+-    // Level's documented device carries `disks`; Alga's mapper reads `disk_partitions`.
+-    expect((devices[0] as unknown as Record<string, unknown>).disks).toHaveLength(1);
+-    expect(devices[0].disk_partitions).toBeUndefined();
++    // Level's documented device carries `disks`, which Alga's type and mapper read.
++    expect(devices[0].disks).toHaveLength(1);
++    expect((devices[0] as unknown as Record<string, unknown>).disk_partitions).toBeUndefined();
++    expect(mapLevelIoDiskUsage(devices[0])).toEqual([{ name: 'NVMe Samsung', total_gb: 476.84 }]);
+ 
+     expect((await client().getDevice(ws.id)).security).toEqual({ score: 80 });
+     expect(await client().listDevices({ groupId: acme.id })).toEqual([]);
+diff --git a/ee/server/src/__tests__/unit/integrations/levelioDeviceMapper.test.ts b/ee/server/src/__tests__/unit/integrations/levelioDeviceMapper.test.ts
+index fc6df29872..ff41664f47 100644
+--- a/ee/server/src/__tests__/unit/integrations/levelioDeviceMapper.test.ts
++++ b/ee/server/src/__tests__/unit/integrations/levelioDeviceMapper.test.ts
+@@ -87,18 +87,70 @@ describe('extractLanIp', () => {
+ });
+ 
+ describe('mapLevelIoDiskUsage', () => {
+-  it('converts partitions to RmmStorageInfo in GB with utilization', () => {
++  const GB = 1024 ** 3;
++
++  it('maps documented disks to capacity-only storage entries in GB', () => {
++    const device = makeDevice({
++      disks: [
++        { disk_type: 'SSD', model: 'Samsung 980', serial_number: 'S1', size: 500 * GB },
++        { disk_type: 'HDD', model: 'WD Blue', serial_number: 'S2', size: 1.5 * GB },
++      ],
++    });
++
++    const result = mapLevelIoDiskUsage(device);
++    expect(result).toEqual([
++      { name: 'SSD Samsung 980', total_gb: 500 },
++      { name: 'HDD WD Blue', total_gb: 1.5 },
++    ]);
++    // Level sends no free space: it must not be fabricated.
++    for (const disk of result) {
++      expect(disk).not.toHaveProperty('free_gb');
++      expect(disk).not.toHaveProperty('utilization_percent');
++    }
++  });
++
++  it('skips disks whose size is zero, negative, missing, or null', () => {
++    const device = makeDevice({
++      disks: [
++        { model: 'zero', size: 0 },
++        { model: 'negative', size: -5 },
++        { model: 'missing' },
++        { model: 'null', size: null },
++        { model: 'kept', size: 10 * GB },
++      ],
++    });
++
++    expect(mapLevelIoDiskUsage(device)).toEqual([{ name: 'kept', total_gb: 10 }]);
++  });
++
++  it('falls back when model or disk_type is missing', () => {
+     const device = makeDevice({
+-      disk_partitions: [
+-        { mount_point: 'C:', size: 100 * 1024 ** 3, free_space: 25 * 1024 ** 3 },
+-        { label: 'no-size partition' },
++      disks: [
++        { disk_type: 'NVMe', size: 256 * GB },
++        { model: 'Crucial MX500', disk_type: null, size: 256 * GB },
++        { model: '  ', size: 256 * GB },
++        { size: 256 * GB },
+       ],
+     });
+ 
+-    expect(mapLevelIoDiskUsage(device)).toEqual([
+-      { name: 'C:', total_gb: 100, free_gb: 25, utilization_percent: 75 },
++    expect(mapLevelIoDiskUsage(device).map((d) => d.name)).toEqual([
++      'NVMe',
++      'Crucial MX500',
++      'Disk 3',
++      'Disk 4',
+     ]);
+   });
++
++  it('returns [] when disks is absent, null, or empty', () => {
++    expect(mapLevelIoDiskUsage(makeDevice({}))).toEqual([]);
++    expect(mapLevelIoDiskUsage(makeDevice({ disks: null }))).toEqual([]);
++    expect(mapLevelIoDiskUsage(makeDevice({ disks: [] }))).toEqual([]);
++  });
++
++  it('maps a disks payload shaped like the emulator output', () => {
++    const device = makeDevice({ disks: [{ disk_type: 'NVMe', model: 'Samsung', size: 512_000_000_000 }] });
++    expect(mapLevelIoDiskUsage(device)).toEqual([{ name: 'NVMe Samsung', total_gb: 476.84 }]);
++  });
+ });
+ 
+ describe('mapLevelIoDeviceToSnapshot', () => {
+diff --git a/ee/server/src/interfaces/rmm.interfaces.ts b/ee/server/src/interfaces/rmm.interfaces.ts
+index 0fdb3031ff..0053e354fe 100644
+--- a/ee/server/src/interfaces/rmm.interfaces.ts
++++ b/ee/server/src/interfaces/rmm.interfaces.ts
+@@ -210,8 +210,10 @@ export interface RmmServerCacheFields extends RmmWorkstationCacheFields {
+ export interface RmmStorageInfo {
+   name: string;
+   total_gb: number;
+-  free_gb: number;
+-  utilization_percent: number;
++  /** Absent when the provider reports capacity only (e.g. Level.io `disks`). */
++  free_gb?: number | null;
++  /** Absent when free space is unknown; never substitute 0. */
++  utilization_percent?: number | null;
+ }
+ 
+ export interface RmmServerFields extends RmmWorkstationFields {
+diff --git a/ee/server/src/lib/integrations/levelio/levelApiClient.ts b/ee/server/src/lib/integrations/levelio/levelApiClient.ts
+index 6816f6837d..980c273f96 100644
+--- a/ee/server/src/lib/integrations/levelio/levelApiClient.ts
++++ b/ee/server/src/lib/integrations/levelio/levelApiClient.ts
+@@ -36,14 +36,16 @@ export interface LevelIoCpu {
+   cores?: number;
+ }
+ 
+-export interface LevelIoDiskPartition {
+-  label?: string;
+-  mount_point?: string;
+-  encrypted?: boolean;
+-  primary?: boolean;
+-  size?: number;
+-  free_space?: number;
+-  file_system?: string;
++/**
++ * Physical disk as documented in Level's v2 device schema (returned when the
++ * request sets `include_disks=true`). Level reports capacity only: there is no
++ * free space and no mount point. `size` is in bytes.
++ */
++export interface LevelIoDisk {
++  disk_type?: string | null;
++  model?: string | null;
++  serial_number?: string | null;
++  size?: number | null;
+ }
+ 
+ export interface LevelIoNetworkInterface {
+@@ -97,7 +99,7 @@ export interface LevelIoDevice {
+   platform?: 'Windows' | 'Mac' | 'Linux' | null;
+   operating_system?: LevelIoOperatingSystem;
+   cpus?: LevelIoCpu[];
+-  disk_partitions?: LevelIoDiskPartition[];
++  disks?: LevelIoDisk[] | null;
+   network_interfaces?: LevelIoNetworkInterface[];
+   security?: LevelIoSecurity;
+ }
+diff --git a/ee/server/src/lib/integrations/levelio/mappers/deviceMapper.ts b/ee/server/src/lib/integrations/levelio/mappers/deviceMapper.ts
+index 61b3e27545..d243d7f8d9 100644
+--- a/ee/server/src/lib/integrations/levelio/mappers/deviceMapper.ts
++++ b/ee/server/src/lib/integrations/levelio/mappers/deviceMapper.ts
+@@ -78,20 +78,24 @@ export function extractLanIp(interfaces?: LevelIoNetworkInterface[] | null): str
+   return null;
+ }
+ 
++/**
++ * Maps Level's documented `disks` (physical disks: type, model, serial, size)
++ * to storage entries. Level sends no free space, so `free_gb` and
++ * `utilization_percent` are omitted rather than fabricated; consumers render
++ * those disks as capacity-only.
++ */
+ export function mapLevelIoDiskUsage(device: LevelIoDevice): RmmStorageInfo[] {
+-  return (device.disk_partitions ?? [])
+-    .filter((partition) => typeof partition.size === 'number' && partition.size > 0)
+-    .map((partition) => {
+-      const totalGb = roundTo2((partition.size as number) / BYTES_PER_GB);
+-      const freeGb = typeof partition.free_space === 'number' ? roundTo2(partition.free_space / BYTES_PER_GB) : 0;
+-      const utilization = totalGb > 0 ? roundTo2(((totalGb - freeGb) / totalGb) * 100) : 0;
+-      return {
+-        name: partition.mount_point || partition.label || 'disk',
+-        total_gb: totalGb,
+-        free_gb: freeGb,
+-        utilization_percent: utilization,
+-      };
++  const storage: RmmStorageInfo[] = [];
++  (device.disks ?? []).forEach((disk, index) => {
++    if (typeof disk?.size !== 'number' || !Number.isFinite(disk.size) || disk.size <= 0) return;
++    const model = disk.model?.trim();
++    const type = disk.disk_type?.trim();
++    storage.push({
++      name: [type, model].filter(Boolean).join(' ') || `Disk ${index + 1}`,
++      total_gb: roundTo2(disk.size / BYTES_PER_GB),
+     });
++  });
++  return storage;
+ }
+ 
+ export function mapLevelIoDeviceToSnapshot(args: {
+diff --git a/packages/assets/src/components/AssetBentoLayout.tsx b/packages/assets/src/components/AssetBentoLayout.tsx
+index de3928d55f..fdf080095e 100644
+--- a/packages/assets/src/components/AssetBentoLayout.tsx
++++ b/packages/assets/src/components/AssetBentoLayout.tsx
+@@ -280,7 +280,7 @@ export function AssetBentoLayout({
+                   <BentoGauge
+                     percent={disk?.utilization_percent}
+                     label={disk ? `${t('assetBento.disk', { defaultValue: 'Disk' })} ${disk.name}` : t('assetBento.disk', { defaultValue: 'Disk' })}
+-                    caption={disk ? `${disk.free_gb} GB free of ${disk.total_gb} GB` : undefined}
++                    caption={disk ? (disk.free_gb != null ? `${disk.free_gb} GB free of ${disk.total_gb} GB` : `${disk.total_gb} GB`) : undefined}
+                   />
+                 </div>
+                 <div className="mt-3 space-y-1.5 border-t border-[rgb(var(--color-border-100))] pt-3 text-sm">
+diff --git a/packages/assets/src/components/panels/HardwareSpecsPanel.tsx b/packages/assets/src/components/panels/HardwareSpecsPanel.tsx
+index 9811c686d4..3ca66c82e7 100644
+--- a/packages/assets/src/components/panels/HardwareSpecsPanel.tsx
++++ b/packages/assets/src/components/panels/HardwareSpecsPanel.tsx
+@@ -131,16 +131,21 @@ export const HardwareSpecsPanel: React.FC<HardwareSpecsPanelProps> = ({
+                    <div className="flex items-center gap-2 flex-1">
+                      <div className="w-32">
+                        <UtilizationBar 
+-                         value={drive.utilization_percent} 
++                         value={drive.utilization_percent ?? null} 
+                          showLabel={false}
+                          size="sm"
+                        />
+                      </div>
+                      <span className="text-sm text-gray-900">
+-                       {t('hardwareSpecsPanel.values.freeStorage', {
+-                         defaultValue: '{{size}} GB Free',
+-                         size: drive.free_gb.toFixed(1)
+-                       })}
++                       {drive.free_gb != null
++                         ? t('hardwareSpecsPanel.values.freeStorage', {
++                             defaultValue: '{{size}} GB Free',
++                             size: drive.free_gb.toFixed(1)
++                           })
++                         : t('hardwareSpecsPanel.values.totalStorage', {
++                             defaultValue: '{{size}} GB',
++                             size: drive.total_gb.toFixed(1)
++                           })}
+                      </span>
+                    </div>
+                  </div>
+diff --git a/packages/assets/src/lib/assetSignals.ts b/packages/assets/src/lib/assetSignals.ts
+index e7b34c043d..da7902e9b1 100644
+--- a/packages/assets/src/lib/assetSignals.ts
++++ b/packages/assets/src/lib/assetSignals.ts
+@@ -84,11 +84,15 @@ export function formatAge(iso: string | null | undefined, now: number, t: TFn):
+   return new Date(iso).toLocaleDateString();
+ }
+ 
+-/** The disk the operator cares about is the fullest one. */
++/**
++ * The disk the operator cares about is the fullest one. Disks whose
++ * utilisation is unknown (capacity-only providers) rank below any measured
++ * disk; if none is measured, the first disk is returned.
++ */
+ export function worstStorage(storage: RmmStorageInfo[] | undefined): RmmStorageInfo | null {
+   if (!storage?.length) return null;
+   return storage.reduce((worst, current) =>
+-    current.utilization_percent > worst.utilization_percent ? current : worst
++    (current.utilization_percent ?? -1) > (worst.utilization_percent ?? -1) ? current : worst
+   );
+ }
+ 
+diff --git a/packages/emulators/PROTOCOL_PARITY.md b/packages/emulators/PROTOCOL_PARITY.md
+index db9aa784db..8bf812fe20 100644
+--- a/packages/emulators/PROTOCOL_PARITY.md
++++ b/packages/emulators/PROTOCOL_PARITY.md
+@@ -168,7 +168,10 @@ and custom-field REST endpoints (all answer 501); custom-field references and
+ any alert-specific variables in automations (Level documents none); webhook
+ endpoint management through the API; Level's own request-log UI.
+ 
+-Consumer drift found while building the emulator: Level's device schema has
+-`disks` (`disk_type`, `model`, `serial_number`, `size`), while Alga's
+-`LevelIoDevice` type and device mapper read `disk_partitions`. Against the
+-documented API, Alga maps no disks. The emulator serves the documented field.
++Consumer drift (resolved): Level's device schema carries `disks` (`disk_type`,
++`model`, `serial_number`, `size`) and no `disk_partitions`. Alga's
++`LevelIoDevice` type and device mapper read the documented `disks` field, so
++the emulator's payload and Alga's mapping agree. Level reports physical
++capacity only; mapped storage entries carry `total_gb` without `free_gb` or
++`utilization_percent`. `restConsumer.test.ts` runs the mapper against the
++emulator's `disks` payload.
+diff --git a/packages/types/src/interfaces/asset.interfaces.ts b/packages/types/src/interfaces/asset.interfaces.ts
+index bdc010c96e..50a53234b9 100644
+--- a/packages/types/src/interfaces/asset.interfaces.ts
++++ b/packages/types/src/interfaces/asset.interfaces.ts
+@@ -197,8 +197,10 @@ export interface DiskUsageInfo {
+ export interface RmmStorageInfo {
+   name: string;
+   total_gb: number;
+-  free_gb: number;
+-  utilization_percent: number;
++  /** Absent when the provider reports capacity only (e.g. Level.io `disks`). */
++  free_gb?: number | null;
++  /** Absent when free space is unknown; never substitute 0. */
++  utilization_percent?: number | null;
+ }
+ 
+ // Cached RMM data structure (returned by getAssetRmmData)
+diff --git a/server/public/locales/de/msp/assets.json b/server/public/locales/de/msp/assets.json
+index f7ddb69be5..c1c6ab7e3a 100644
+--- a/server/public/locales/de/msp/assets.json
++++ b/server/public/locales/de/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "Unbekannt",
+       "unifiedMemory": "{{size}}GB Einheitlicher Speicher",
+       "memoryUsed": "({{size}}GB verwendet)",
+-      "freeStorage": "{{size}} GB frei"
++      "freeStorage": "{{size}} GB frei",
++      "totalStorage": "{{size}} GB"
+     },
+     "empty": "Keine Hardwaredaten verfügbar",
+     "emptyStorage": "Keine Speicherlaufwerke erkannt"
+diff --git a/server/public/locales/en/msp/assets.json b/server/public/locales/en/msp/assets.json
+index 0b4d9ad483..65fcbffd44 100644
+--- a/server/public/locales/en/msp/assets.json
++++ b/server/public/locales/en/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "Unknown",
+       "unifiedMemory": "{{size}}GB Unified Memory",
+       "memoryUsed": " ({{size}}GB Used)",
+-      "freeStorage": "{{size}} GB Free"
++      "freeStorage": "{{size}} GB Free",
++      "totalStorage": "{{size}} GB"
+     },
+     "empty": "No hardware data available",
+     "emptyStorage": "No storage drives detected"
+diff --git a/server/public/locales/es/msp/assets.json b/server/public/locales/es/msp/assets.json
+index 678039e830..039b06fa4c 100644
+--- a/server/public/locales/es/msp/assets.json
++++ b/server/public/locales/es/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "Desconocido",
+       "unifiedMemory": "{{size}}GB Memoria unificada",
+       "memoryUsed": "({{size}}GB usado)",
+-      "freeStorage": "{{size}} GB gratis"
++      "freeStorage": "{{size}} GB gratis",
++      "totalStorage": "{{size}} GB"
+     },
+     "empty": "No hay datos de hardware disponibles",
+     "emptyStorage": "No se detectaron unidades de almacenamiento"
+diff --git a/server/public/locales/fr/msp/assets.json b/server/public/locales/fr/msp/assets.json
+index 07576a8219..e19147e03d 100644
+--- a/server/public/locales/fr/msp/assets.json
++++ b/server/public/locales/fr/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "Inconnu",
+       "unifiedMemory": "{{size}}Go de mémoire unifiée",
+       "memoryUsed": "({{size}}Go utilisé)",
+-      "freeStorage": "{{size}} Go gratuits"
++      "freeStorage": "{{size}} Go gratuits",
++      "totalStorage": "{{size}} GB"
+     },
+     "empty": "Aucune donnée matérielle disponible",
+     "emptyStorage": "Aucun lecteur de stockage détecté"
+diff --git a/server/public/locales/it/msp/assets.json b/server/public/locales/it/msp/assets.json
+index dd8fd2041e..79893d3d5b 100644
+--- a/server/public/locales/it/msp/assets.json
++++ b/server/public/locales/it/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "Sconosciuto",
+       "unifiedMemory": "{{size}}GB Memoria unificata",
+       "memoryUsed": "({{size}}GB utilizzato)",
+-      "freeStorage": "{{size}} GB Gratuito"
++      "freeStorage": "{{size}} GB Gratuito",
++      "totalStorage": "{{size}} GB"
+     },
+     "empty": "Nessun dato hardware disponibile",
+     "emptyStorage": "Nessuna unità di archiviazione rilevata"
+diff --git a/server/public/locales/nl/msp/assets.json b/server/public/locales/nl/msp/assets.json
+index b6e9d5830d..0e58292af7 100644
+--- a/server/public/locales/nl/msp/assets.json
++++ b/server/public/locales/nl/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "Onbekend",
+       "unifiedMemory": "{{size}}GB Uniform geheugen",
+       "memoryUsed": "({{size}}GB gebruikt)",
+-      "freeStorage": "{{size}} GB Gratis"
++      "freeStorage": "{{size}} GB Gratis",
++      "totalStorage": "{{size}} GB"
+     },
+     "empty": "Geen hardwaregegevens beschikbaar",
+     "emptyStorage": "Geen opslagstations gedetecteerd"
+diff --git a/server/public/locales/pl/msp/assets.json b/server/public/locales/pl/msp/assets.json
+index 877cbd90fd..a4efaf9f1f 100644
+--- a/server/public/locales/pl/msp/assets.json
++++ b/server/public/locales/pl/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "Nieznany",
+       "unifiedMemory": "{{size}}GB Pamięci zunifikowanej",
+       "memoryUsed": " ({{size}}GB używane)",
+-      "freeStorage": "{{size}} GB wolnego miejsca"
++      "freeStorage": "{{size}} GB wolnego miejsca",
++      "totalStorage": "{{size}} GB"
+     },
+     "empty": "Brak dostępnych danych sprzętowych",
+     "emptyStorage": "Nie wykryto dysków pamięci masowej"
+diff --git a/server/public/locales/pt/msp/assets.json b/server/public/locales/pt/msp/assets.json
+index aeae981d20..1197bf2eb8 100644
+--- a/server/public/locales/pt/msp/assets.json
++++ b/server/public/locales/pt/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "Desconhecido",
+       "unifiedMemory": "Memória unificada {{size}}GB",
+       "memoryUsed": "({{size}}GB usado)",
+-      "freeStorage": "{{size}} GB grátis"
++      "freeStorage": "{{size}} GB grátis",
++      "totalStorage": "{{size}} GB"
+     },
+     "empty": "Nenhum dado de hardware disponível",
+     "emptyStorage": "Nenhuma unidade de armazenamento detectada"
+diff --git a/server/public/locales/sv/msp/assets.json b/server/public/locales/sv/msp/assets.json
+index c763522ca9..6e7099bd9a 100644
+--- a/server/public/locales/sv/msp/assets.json
++++ b/server/public/locales/sv/msp/assets.json
+@@ -1094,7 +1094,8 @@
+       "unknown": "Okänd",
+       "unifiedMemory": "{{size}} GB enhetligt minne",
+       "memoryUsed": " ({{size}} GB använt)",
+-      "freeStorage": "{{size}} GB ledigt"
++      "freeStorage": "{{size}} GB ledigt",
++      "totalStorage": "{{size}} GB"
+     },
+     "empty": "Inga maskinvarudata tillgängliga",
+     "emptyStorage": "Inga lagringsenheter upptäcktes"
+diff --git a/server/public/locales/xx/msp/assets.json b/server/public/locales/xx/msp/assets.json
+index 5eac31a924..9f264496af 100644
+--- a/server/public/locales/xx/msp/assets.json
++++ b/server/public/locales/xx/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "⟦Ŭƞķƞȯẇƞ⟧",
+       "unifiedMemory": "⟦{{size}}ƓƁ Ŭƞīƒīḗḓ Ḿḗḿȯřẏ⟧",
+       "memoryUsed": "⟦ ({{size}}ƓƁ Ŭşḗḓ)⟧",
+-      "freeStorage": "⟦{{size}} ƓƁ Ƒřḗḗ⟧"
++      "freeStorage": "⟦{{size}} ƓƁ Ƒřḗḗ⟧",
++      "totalStorage": "⟦{{size}} ƓƁ⟧"
+     },
+     "empty": "⟦Ƞȯ ħȧřḓẇȧřḗ ḓȧŧȧ ȧṽȧīŀȧƀŀḗ⟧",
+     "emptyStorage": "⟦Ƞȯ şŧȯřȧɠḗ ḓřīṽḗş ḓḗŧḗƈŧḗḓ⟧"
+diff --git a/server/public/locales/yy/msp/assets.json b/server/public/locales/yy/msp/assets.json
+index dfba58ce71..8a1ef4f8d0 100644
+--- a/server/public/locales/yy/msp/assets.json
++++ b/server/public/locales/yy/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "〖Ŭƞķƞȯẇƞ ···〗",
+       "unifiedMemory": "〖{{size}}ƓƁ Ŭƞīƒīḗḓ Ḿḗḿȯřẏ ··········〗",
+       "memoryUsed": "〖 ({{size}}ƓƁ Ŭşḗḓ) ········〗",
+-      "freeStorage": "〖{{size}} ƓƁ Ƒřḗḗ ·······〗"
++      "freeStorage": "〖{{size}} ƓƁ Ƒřḗḗ ·······〗",
++      "totalStorage": "〖{{size}} ƓƁ ·····〗"
+     },
+     "empty": "〖Ƞȯ ħȧřḓẇȧřḗ ḓȧŧȧ ȧṽȧīŀȧƀŀḗ ···········〗",
+     "emptyStorage": "〖Ƞȯ şŧȯřȧɠḗ ḓřīṽḗş ḓḗŧḗƈŧḗḓ ···········〗"
+diff --git a/server/src/interfaces/asset.interfaces.tsx b/server/src/interfaces/asset.interfaces.tsx
+index 11d6e8302b..f947c157a0 100644
+--- a/server/src/interfaces/asset.interfaces.tsx
++++ b/server/src/interfaces/asset.interfaces.tsx
+@@ -163,8 +163,10 @@ export interface DiskUsageInfo {
+ export interface RmmStorageInfo {
+   name: string;
+   total_gb: number;
+-  free_gb: number;
+-  utilization_percent: number;
++  /** Absent when the provider reports capacity only (e.g. Level.io `disks`). */
++  free_gb?: number | null;
++  /** Absent when free space is unknown; never substitute 0. */
++  utilization_percent?: number | null;
+ }
+ 
+ // Cached RMM data structure (returned by getAssetRmmData)

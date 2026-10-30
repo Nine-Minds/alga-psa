@@ -141,7 +141,7 @@ describe('generateLineServicePeriods + assignServicePeriodsToInvoicePeriods', ()
       invoiceSchedule: MONTHLY_FIRST,
       contractStartDate: '2026-08-01T00:00:00Z',
       scenarioId: 'scenario-1',
-    });
+    }).flatMap((streamPeriods) => streamPeriods.records);
     const invoicePeriods = buildInvoicePeriods(HORIZON, MONTHLY_FIRST);
     const assignments = assignServicePeriodsToInvoicePeriods(
       records,
@@ -174,7 +174,7 @@ describe('generateLineServicePeriods + assignServicePeriodsToInvoicePeriods', ()
       invoiceSchedule: MONTHLY_FIRST,
       contractStartDate: '2026-08-01T00:00:00Z',
       scenarioId: 'scenario-1',
-    });
+    }).flatMap((streamPeriods) => streamPeriods.records);
     const invoicePeriods = buildInvoicePeriods(HORIZON, MONTHLY_FIRST);
     const assignments = assignServicePeriodsToInvoicePeriods(
       records,
@@ -209,7 +209,7 @@ describe('generateLineServicePeriods + assignServicePeriodsToInvoicePeriods', ()
       invoiceSchedule: MONTHLY_FIRST,
       contractStartDate: '2026-08-01T00:00:00Z',
       scenarioId: 'scenario-1',
-    });
+    }).flatMap((streamPeriods) => streamPeriods.records);
     const invoicePeriods = buildInvoicePeriods(HORIZON, MONTHLY_FIRST);
 
     expect(
@@ -424,7 +424,7 @@ describe('compareSimulations', () => {
       }),
     ]);
 
-    const comparison = compareSimulations(baseline, scenario);
+    const comparison = compareSimulations(baseline, scenario)!;
     expect(comparison.periods[0].lines).toEqual([
       expect.objectContaining({ kind: 'added', delta: 4000 }),
       expect.objectContaining({ kind: 'changed', delta: 2500 }),
@@ -432,6 +432,25 @@ describe('compareSimulations', () => {
     ]);
     expect(comparison.periods[0].total_delta).toBe(4000);
     expect(comparison.horizon_total_delta).toBe(4000);
+  });
+
+  it('does not compare when either side is blocked, so a refusal never reads as a $0 change', () => {
+    const blocked: ContractSimulationResult = {
+      scenario_id: 'scenario',
+      currency_code: 'USD',
+      horizon: { start_date: '2026-08-01', period_count: 1 },
+      periods: [],
+      diagnostics: [
+        {
+          severity: 'error',
+          code: 'CONTRACT_SIMULATION_UNSUPPORTED_SERVICE_CONFIGURATION',
+          message: 'blocked',
+        },
+      ],
+    };
+    const priced = result([]);
+    expect(compareSimulations(blocked, priced)).toBeNull();
+    expect(compareSimulations(priced, blocked)).toBeNull();
   });
 });
 
@@ -594,9 +613,78 @@ describe('historical activity assumptions', () => {
       ],
       usageRows: [],
     });
+    // Hourly time bills in arrears: May work is on the June invoice (index 1);
+    // July work bills on the August invoice, which is outside this replay.
     expect(assumptions['hourly-line:shared-service']).toEqual({
       flat: 0,
-      overrides: { 0: 1, 1: 0, 2: 3 },
+      overrides: { 0: 0, 1: 1, 2: 0 },
     });
+  });
+
+  it('places a cadence Prepaid Block line\'s overage hours on the invoice that bills them', () => {
+    const blockScenario = {
+      ...scenario,
+      horizon: { start_date: '2026-09-01T00:00:00Z', period_count: 2 },
+      lines: [
+        buildLine({
+          key: 'block-line',
+          origin_contract_line_id: 'block-origin',
+          contract_line_type: 'Hourly',
+          prepaid_block: { issue_mode: 'cadence' } as any,
+          services: [
+            {
+              service_id: 'support',
+              service_name: 'Support',
+              quantity: 1,
+              custom_rate: 15000,
+              default_rate: 15000,
+              tax_rate_id: null,
+              item_kind: 'service',
+              is_license: false,
+              configuration: {
+                configuration_type: 'Hourly',
+                hourly_rate: 15000,
+                minimum_billable_time: 0,
+                round_up_to_nearest: 0,
+                user_type_rates: [],
+              },
+            },
+          ],
+        }),
+      ],
+    };
+    const septOct = [
+      { start: '2026-09-01T00:00:00Z', endExclusive: '2026-10-01T00:00:00Z' },
+      { start: '2026-10-01T00:00:00Z', endExclusive: '2026-11-01T00:00:00Z' },
+    ];
+    const assumptions = aggregateActivityAssumptions({
+      scenario: blockScenario,
+      periods: septOct,
+      mode: 'replay',
+      timeRows: [
+        // 14 h worked in September: billed (4 h over the block) on the October invoice.
+        { contract_line_id: 'block-origin', service_id: 'support', entry_date: '2026-09-10', billable_duration: 14 * 60 },
+        // Worked in October: billed on a November invoice, past this replay.
+        { contract_line_id: 'block-origin', service_id: 'support', entry_date: '2026-10-20', billable_duration: 120 },
+      ],
+      usageRows: [],
+    });
+    expect(assumptions['block-line:support']).toEqual({
+      flat: 0,
+      overrides: { 0: 0, 1: 14 },
+    });
+  });
+
+  it('keeps average mode on the window the work falls in', () => {
+    const assumptions = aggregateActivityAssumptions({
+      scenario,
+      periods,
+      mode: 'average',
+      timeRows: [
+        { contract_line_id: 'hourly-origin', service_id: 'shared-service', entry_date: '2026-07-15', billable_duration: 180 },
+      ],
+      usageRows: [],
+    });
+    expect(assumptions['hourly-line:shared-service'].flat).toBe(1);
   });
 });

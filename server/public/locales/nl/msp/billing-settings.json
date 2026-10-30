@@ -202,6 +202,27 @@
         "save": "Instellingen opslaan mislukt",
         "range": "Voer een geheel getal van 1 tot en met 365 in."
       }
+    },
+    "paymentTerms": {
+      "title": "Standaard betalingsvoorwaarden",
+      "description": "Stel de betalingsvoorwaarden in die nieuwe facturen gebruiken wanneer noch de klant noch het factuurprofiel er een instelt.",
+      "fields": {
+        "terms": {
+          "label": "Betalingsvoorwaarden",
+          "help": "Geldt alleen voor nieuwe facturen. Bestaande facturen en klanten met eigen voorwaarden behouden die."
+        }
+      },
+      "actions": {
+        "save": "Opslaan"
+      },
+      "toast": {
+        "updated": "De standaard betalingsvoorwaarden zijn bijgewerkt."
+      },
+      "errors": {
+        "load": "Instellingen laden mislukt",
+        "save": "Instellingen opslaan mislukt",
+        "invalid": "Kies een geldige betalingsvoorwaarde."
+      }
     }
   },
   "quoting": {
@@ -215,8 +236,56 @@
     }
   },
   "tax": {
-    "defaultRate": { "title": "Standaard belastingtarief", "tooltip": "Kies het tarief dat nieuwe klanten, producten en diensten overnemen.", "description": "Stel het tarief in voor nieuwe klanten en catalogusitems. Bestaande records blijven ongewijzigd.", "loading": "Standaardtarief laden...", "empty": "Maak een actief tarief voordat u een standaard kiest.", "invalid": "Het ingestelde standaardtarief is niet meer actief of geldig. Kies een ander tarief.", "field": { "label": "Standaard belastingtarief" }, "options": { "none": "Geen tenantstandaard" }, "help": "Zonder standaard blijven nieuwe catalogusitems onbelast en gebruiken klanten het oudste actieve tarief, indien aanwezig.", "actions": { "save": "Standaard opslaan", "saving": "Opslaan..." }, "toast": { "saved": "Standaardtarief opgeslagen." }, "errors": { "load": "Kan het standaardtarief niet laden.", "save": "Kan het standaardtarief niet opslaan." } },
-    "backfill": { "title": "Standaard toepassen op bestaande catalogusitems", "description": "Bekijk producten en diensten zonder belastingtarief.", "warning": "Dit wijzigt toekomstige belastbaarheid en herschrijft geen uitgegeven facturen.", "loading": "Voorbeeld laden...", "empty": "Geen geschikte producten of diensten gevonden.", "target": "Doeltarief: {{rate}}", "count": "{{count}} geschikte items", "dialog": { "title": "Standaardtarief toepassen" }, "actions": { "preview": "Bestaande items bekijken", "apply": "Selectie toepassen", "applying": "Toepassen..." }, "toast": { "applied": "Standaardtarief toegepast op geselecteerde items." }, "errors": { "preview": "Kan catalogusvoorbeeld niet laden.", "apply": "Kan het standaardtarief niet toepassen." } },
+    "defaultRate": {
+      "title": "Standaard belastingtarief",
+      "tooltip": "Kies het tarief dat nieuwe klanten, producten en diensten overnemen.",
+      "description": "Stel het tarief in voor nieuwe klanten en catalogusitems. Bestaande records blijven ongewijzigd.",
+      "loading": "Standaardtarief laden...",
+      "empty": "Maak een actief tarief voordat u een standaard kiest.",
+      "invalid": "Het ingestelde standaardtarief is niet meer actief of geldig. Kies een ander tarief.",
+      "field": {
+        "label": "Standaard belastingtarief"
+      },
+      "options": {
+        "none": "Geen tenantstandaard"
+      },
+      "help": "Zonder standaard blijven nieuwe catalogusitems onbelast en gebruiken klanten het oudste actieve tarief, indien aanwezig.",
+      "actions": {
+        "save": "Standaard opslaan",
+        "saving": "Opslaan..."
+      },
+      "toast": {
+        "saved": "Standaardtarief opgeslagen."
+      },
+      "errors": {
+        "load": "Kan het standaardtarief niet laden.",
+        "save": "Kan het standaardtarief niet opslaan."
+      }
+    },
+    "backfill": {
+      "title": "Standaard toepassen op bestaande catalogusitems",
+      "description": "Bekijk producten en diensten zonder belastingtarief.",
+      "warning": "Dit wijzigt toekomstige belastbaarheid en herschrijft geen uitgegeven facturen.",
+      "loading": "Voorbeeld laden...",
+      "empty": "Geen geschikte producten of diensten gevonden.",
+      "target": "Doeltarief: {{rate}}",
+      "count": "{{count}} geschikte items",
+      "dialog": {
+        "title": "Standaardtarief toepassen"
+      },
+      "actions": {
+        "preview": "Bestaande items bekijken",
+        "apply": "Selectie toepassen",
+        "applying": "Toepassen..."
+      },
+      "toast": {
+        "applied": "Standaardtarief toegepast op geselecteerde items."
+      },
+      "errors": {
+        "preview": "Kan catalogusvoorbeeld niet laden.",
+        "apply": "Kan het standaardtarief niet toepassen."
+      }
+    },
     "taxRegions": {
       "title": "Belastingregio's",
       "description": "Beheer belastingregio's en gerelateerde instellingen."
@@ -998,7 +1067,10 @@
       "taxRate": {
         "label": "Belastingtarief (optioneel)",
         "placeholder": "Selecteer belastingtarief (optioneel)",
-        "loading": "Belastingtarieven laden...", "inherit": "Tenantstandaard gebruiken", "inheritNamed": "Tenantstandaard gebruiken ({{rate}})", "nonTaxable": "Niet-belastbaar"
+        "loading": "Belastingtarieven laden...",
+        "inherit": "Tenantstandaard gebruiken",
+        "inheritNamed": "Tenantstandaard gebruiken ({{rate}})",
+        "nonTaxable": "Niet-belastbaar"
       },
       "sku": {
         "label": "SKU",
@@ -1094,7 +1166,10 @@
       "taxRate": {
         "label": "Belastingtarief",
         "placeholder": "Niet-belastbaar",
-        "loading": "Laden...", "inherit": "Tenantstandaard gebruiken", "inheritNamed": "Tenantstandaard gebruiken ({{rate}})", "nonTaxable": "Niet-belastbaar"
+        "loading": "Laden...",
+        "inherit": "Tenantstandaard gebruiken",
+        "inheritNamed": "Tenantstandaard gebruiken ({{rate}})",
+        "nonTaxable": "Niet-belastbaar"
       },
       "active": {
         "label": "Actief"
@@ -1420,6 +1495,103 @@
     }
   },
   "payment": {
+    "import": {
+      "title": "Bestaande Stripe-klanten importeren",
+      "description": "Haal Stripe-klanten en opgeslagen kaarten over uit een ander systeem. Importeren schrijft een klant nooit in voor automatische betaling; dat bevestigt u per rij.",
+      "open": "Import starten",
+      "preview": "Voorbeeld",
+      "execute": "Importeren",
+      "reset": "Opnieuw beginnen",
+      "default": "standaard",
+      "done": "Import voltooid",
+      "attest": "De klant heeft terugkerende afschrijvingen van deze kaart geautoriseerd",
+      "alreadyEnrolled": "Al ingeschreven",
+      "scaRisk": "SCA-risico: geen bewijs dat de kaart is opgeslagen voor gebruik zonder sessie",
+      "cardsImported": "{{count}} kaart(en) geïmporteerd",
+      "csv": {
+        "label": "Rijen (klant, factureringsprofiel, Stripe-klant-ID)",
+        "upload": "CSV uploaden"
+      },
+      "assisted": {
+        "run": "Koppelen op e-mail, daarna op naam",
+        "summary": "{{matched}} voorgesteld, {{ambiguous}} dubbelzinnig (niet voorgesteld){{truncated}}",
+        "truncated": "; lijst afgekapt",
+        "ambiguousTitle": "Dubbelzinnige overeenkomsten (niet voorgesteld)",
+        "addRow": "Toevoegen als rij",
+        "matchedBy": "Gematcht op {{by}}",
+        "by": {
+          "email": "e-mail",
+          "name": "naam"
+        },
+        "ambiguousReasons": {
+          "multiple-profiles": "Komt overeen met meerdere factureringsprofielen",
+          "multiple-customers": "Komt overeen met meerdere Stripe-klanten"
+        }
+      },
+      "errors": {
+        "preview": "Voorbeeld mislukt",
+        "noRows": "Voeg minstens één rij toe",
+        "match": "Koppelen mislukt",
+        "execute": "Import mislukt"
+      },
+      "table": {
+        "customer": "Stripe-klant",
+        "plan": "Abonnement",
+        "cards": "Kaarten",
+        "enroll": "Inschrijven voor automatische betaling",
+        "clientProfile": "Klant / factureringsprofiel",
+        "include": "Opnemen"
+      },
+      "actions": {
+        "adopt": "Overnemen",
+        "already-imported": "Al geïmporteerd",
+        "conflict": "Conflict",
+        "skip": "Overslaan"
+      },
+      "cardActions": {
+        "import": "Importeren",
+        "already-imported": "Al geïmporteerd",
+        "conflict": "Conflict",
+        "skip": "Overslaan"
+      },
+      "cardReasons": {
+        "unsupported-method": "niet-ondersteunde methode",
+        "expired-card": "verlopen kaart",
+        "card-claimed-elsewhere": "kaart behoort toe aan een andere klant"
+      },
+      "reasons": {
+        "invalid-customer-id": "Geen geldig Stripe-klant-ID",
+        "customer-not-found": "Klant niet gevonden in Stripe",
+        "customer-deleted": "Klant is verwijderd in Stripe",
+        "profile-not-found": "Klant of factureringsprofiel niet gevonden",
+        "profile-inactive": "Factureringsprofiel is inactief",
+        "currency-not-configured": "Geen factureringsvaluta geconfigureerd voor deze klant",
+        "currency-unsupported": "De factureringsvaluta wordt niet ondersteund door automatische betaling van Stripe",
+        "duplicate-customer-in-input": "Dezelfde Stripe-klant komt voor in meer dan één rij",
+        "duplicate-profile-in-input": "Hetzelfde factureringsprofiel komt voor met meer dan één Stripe-klant",
+        "customer-claimed-by-other": "Stripe-klant is al gekoppeld aan een andere klant of een ander factureringsprofiel",
+        "customer-metadata-owned-by-other": "Metadata van de Stripe-klant noemen een andere tenant, klant of ander factureringsprofiel",
+        "profile-mapped-to-other-customer": "Dit factureringsprofiel gebruikt al een andere Stripe-klant"
+      },
+      "warnings": {
+        "no-cards": "Klant heeft geen betaalmethoden",
+        "customer-currency-mismatch": "De valuta van de Stripe-klant wijkt af van de factureringsvaluta",
+        "no-importable-card": "Er kan geen kaart worden geïmporteerd"
+      },
+      "resultStatus": {
+        "imported": "Geïmporteerd",
+        "unchanged": "Niets te doen",
+        "skipped": "Overgeslagen",
+        "conflict": "Conflict",
+        "failed": "Mislukt"
+      },
+      "enrollment": {
+        "enrolled": "ingeschreven voor automatische betaling",
+        "not-eligible": "niet in aanmerking voor inschrijving",
+        "already-enrolled": "al ingeschreven",
+        "failed": "inschrijving mislukt"
+      }
+    },
     "messages": {
       "loadConfigFailed": "Kan betalingsconfiguratie niet laden",
       "keysRequired": "Voer zowel de geheime sleutel als de publiceerbare sleutel in",
@@ -1446,7 +1618,7 @@
       "daysPlural": "{{count}} dagen",
       "daysDecimal": "{{count}} dagen",
       "hoursUnit": "uur ({{formatted}})",
-      "willExpireAfter": "Betaallinks verlopen na {{duration}}"
+      "willExpireAfter": "De betaallink in de e-mail werkt gedurende {{duration}}"
     },
     "notConnected": {
       "title": "Stripe niet verbonden",
@@ -1464,7 +1636,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Vervaldatum betaallink",
-        "description": "Hoe lang betaallinks geldig blijven voordat ze verlopen"
+        "description": "Hoe lang de betaallink in factuurmails werkt (1 uur tot 30 dagen). Elke klik opent een nieuwe beveiligde betaalpagina zolang de factuur openstaat."
       },
       "actions": {
         "save": "Instellingen opslaan",

@@ -1,7 +1,7 @@
 import { prepareCommentAttachmentEmail, claimCommentEmailDelivery, finishCommentEmailDelivery, recipientCanReceiveCommentFiles } from './ticketCommentAttachmentEmail';
 import { isPublicAttachmentComment } from '@shared/lib/ticketCommentAttachments';
 import { randomUUID } from 'node:crypto';
-import { tenantDb } from '@alga-psa/db';
+import { type TenantDb, tenantDb } from '@alga-psa/db';
 import { getConnection } from '../db/db';
 // Note: Email sending is routed through TenantEmailService
 import logger from '@alga-psa/core/logger';
@@ -219,7 +219,7 @@ async function persistReplyToken(
  * previous editor for activity (e.g. a public comment) that this write follows.
  */
 export async function appendOutboundMessageIdReference(
-  db: { table: (name: string) => any },
+  db: TenantDb,
   knex: { raw: (sql: string, bindings?: any[]) => any },
   ticketId: string,
   rfcMessageId: string
@@ -483,6 +483,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
           supportsAttachments: capabilities.supportsAttachments,
           blockedAttachmentExtensions: capabilities.blockedAttachmentExtensions,
           maxAttachmentBytes: capabilities.maxAttachmentSize || 0,
+          // LEVERAGE: pattern tenant-link-context — hand-built tenant-facing base URL; recipient may be MSP or client, so surface is not known here (left canonical).
           baseUrl: process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || '',
         });
         if (prepared.downloadLinks.length) attachmentDownloadText = '\nDownload attachments within one hour (verify the recipient email; no portal account required):\n' + prepared.downloadLinks.join('\n');

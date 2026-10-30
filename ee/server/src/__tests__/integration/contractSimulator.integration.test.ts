@@ -9,7 +9,10 @@ import {
 } from "vitest";
 import { v4 as uuidv4 } from "uuid";
 import type { Knex } from "knex";
-import type { ContractScenario } from "@alga-psa/types";
+import type {
+  ContractScenario,
+  ContractSimulationResult,
+} from "@alga-psa/types";
 import { ensureClientBillingSettingsRow } from "@alga-psa/shared/billingClients/billingSettings";
 import { TestContext } from "@main-test-utils/testContext";
 import {
@@ -118,6 +121,7 @@ async function seedCustomerShapedTemplate(
     tenant: context.tenantId,
     template_id: templateId,
     template_name: `Managed Care ${templateId}`,
+    currency_code: 'USD',
     default_billing_frequency: "monthly",
     template_status: "published",
     created_at: now,
@@ -228,6 +232,19 @@ async function seedCustomerShapedTemplate(
   return { templateId, fixedLineId, hourlyLineId, hourlyServices };
 }
 
+/** A refused run is a result with one blocking diagnostic and no totals, never a rejection. */
+function expectBlocked(result: ContractSimulationResult, code: string) {
+  expect(result.periods).toEqual([]);
+  expect(result.diagnostics).toEqual([
+    expect.objectContaining({
+      severity: "error",
+      code,
+      message: expect.any(String),
+      message_key: expect.stringMatching(/^msp\/contracts:contractSimulator\.errors\./),
+    }),
+  ]);
+}
+
 describe("Contract simulator – migrated-schema integration", () => {
   const helpers = TestContext.createHelpers();
   let context: TestContext;
@@ -270,6 +287,8 @@ describe("Contract simulator – migrated-schema integration", () => {
         day_of_week: null,
         reference_date: null,
       },
+      // No cycle rows exist for this client: the snapshot carries an empty history.
+      history: [],
     });
 
     const fixed = scenario.lines.find(
@@ -371,6 +390,61 @@ describe("Contract simulator – migrated-schema integration", () => {
     }
   });
 
+  it("simulates a pool carried only in contract_template_line_buckets (10h pool, 14h assumed => 4 overage hours, no plain hourly)", async () => {
+    const { templateId, hourlyLineId, hourlyServices } =
+      await seedCustomerShapedTemplate(context, fixture);
+    const now = new Date().toISOString();
+    const poolId = uuidv4();
+    await context.db("contract_template_line_buckets").insert({
+      tenant: context.tenantId,
+      bucket_id: poolId,
+      template_line_id: hourlyLineId,
+      bucket_name: "Template pool",
+      total_minutes: 600,
+      overage_rate: 15_000,
+      allow_rollover: false,
+      covers_all_services: false,
+      created_at: now,
+      updated_at: now,
+    });
+    await context.db("contract_template_line_bucket_services").insert({
+      tenant: context.tenantId,
+      bucket_id: poolId,
+      template_line_id: hourlyLineId,
+      service_id: hourlyServices[0],
+      burn_multiplier: 1,
+      created_at: now,
+      updated_at: now,
+    });
+
+    const scenario = await snapshotContractToScenario(
+      context.db,
+      context.tenantId,
+      { contractId: templateId, clientContractId: null, forceProfile: true },
+    );
+    scenario.horizon = { start_date: "2025-05-15T00:00:00Z", period_count: 2 };
+    scenario.assumptions[assumptionKey(hourlyLineId, hourlyServices[0])] = {
+      flat: 14,
+    };
+    const result = await simulateContractScenario(
+      context.db,
+      context.tenantId,
+      scenario,
+    );
+    // Arrears: the first period has nothing to bill yet.
+    const lines = result.periods[1].lines;
+    const bucket = lines.filter((line) => line.charge_type === "bucket");
+    expect(bucket).toHaveLength(1);
+    expect(bucket[0].net_amount).toBe(4 * 15_000);
+    expect(
+      lines.filter(
+        (line) =>
+          line.service_id === hourlyServices[0] &&
+          (line.charge_type === "time" || line.charge_type === "hourly"),
+      ),
+    ).toHaveLength(0);
+  });
+
   it("rejects unknown contract ids and template line references outside the template", async () => {
     const { templateId } = await seedCustomerShapedTemplate(context, fixture);
     const otherTemplate = await seedCustomerShapedTemplate(context, fixture);
@@ -383,26 +457,33 @@ describe("Contract simulator – migrated-schema integration", () => {
 
     const unknownContract = structuredClone(scenario);
     unknownContract.contract_id = uuidv4();
-    await expect(
-      simulateContractScenario(context.db, context.tenantId, unknownContract),
-    ).rejects.toThrow("Scenario contract is not available");
+    expectBlocked(
+      await simulateContractScenario(
+        context.db,
+        context.tenantId,
+        unknownContract,
+      ),
+      "CONTRACT_SIMULATION_CONTRACT_NOT_FOUND",
+    );
 
     const bogusLine = structuredClone(scenario);
     bogusLine.lines[0].origin_contract_line_id = uuidv4();
-    await expect(
-      simulateContractScenario(context.db, context.tenantId, bogusLine),
-    ).rejects.toThrow("invalid contract line reference");
+    expectBlocked(
+      await simulateContractScenario(context.db, context.tenantId, bogusLine),
+      "CONTRACT_SIMULATION_SCENARIO_REFERENCE_INVALID",
+    );
 
     const otherTemplateLine = structuredClone(scenario);
     otherTemplateLine.lines[0].origin_contract_line_id =
       otherTemplate.fixedLineId;
-    await expect(
-      simulateContractScenario(
+    expectBlocked(
+      await simulateContractScenario(
         context.db,
         context.tenantId,
         otherTemplateLine,
       ),
-    ).rejects.toThrow("invalid contract line reference");
+      "CONTRACT_SIMULATION_SCENARIO_REFERENCE_INVALID",
+    );
   });
 
   it("simulates mixed fixed, hourly, usage, bucket, product, and license charges with tax and explanations", async () => {
@@ -711,7 +792,7 @@ describe("Contract simulator – migrated-schema integration", () => {
         contractId: otherContract,
         clientContractId: null,
       }),
-    ).rejects.toThrow("not found");
+    ).rejects.toMatchObject({ code: "CONTRACT_SIMULATION_CONTRACT_NOT_FOUND" });
 
     const foreignClientScenario = structuredClone(fixture.scenario);
     foreignClientScenario.client_binding = {
@@ -719,23 +800,25 @@ describe("Contract simulator – migrated-schema integration", () => {
       client_id: otherClient,
       client_name: "Must not leak",
     };
-    await expect(
-      simulateContractScenario(
+    expectBlocked(
+      await simulateContractScenario(
         context.db,
         context.tenantId,
         foreignClientScenario,
       ),
-    ).rejects.toThrow("Scenario client is not available");
+      "CONTRACT_SIMULATION_CLIENT_NOT_AVAILABLE",
+    );
 
     const foreignServiceScenario = structuredClone(fixture.scenario);
     foreignServiceScenario.lines[0].services[0].service_id = otherService;
-    await expect(
-      simulateContractScenario(
+    expectBlocked(
+      await simulateContractScenario(
         context.db,
         context.tenantId,
         foreignServiceScenario,
       ),
-    ).rejects.toThrow("invalid service reference");
+      "CONTRACT_SIMULATION_SCENARIO_REFERENCE_INVALID",
+    );
     await expect(
       loadReplayAssumptions(
         context.db,
@@ -744,10 +827,36 @@ describe("Contract simulator – migrated-schema integration", () => {
         "2025-01-15T00:00:00Z",
         "2025-02-15T00:00:00Z",
       ),
-    ).rejects.toThrow("invalid service reference");
+    ).rejects.toMatchObject({
+      code: "CONTRACT_SIMULATION_SCENARIO_REFERENCE_INVALID",
+    });
   });
 
-  it("prefills recent averages and replay overrides from actual contract activity", async () => {
+  it("returns a blocking result, not a rejection, for a missing client and a scenario without lines", async () => {
+    const missingClient = structuredClone(fixture.scenario);
+    missingClient.client_binding = {
+      kind: "client",
+      client_id: uuidv4(),
+      client_name: "Nobody",
+    };
+    expectBlocked(
+      await simulateContractScenario(
+        context.db,
+        context.tenantId,
+        missingClient,
+      ),
+      "CONTRACT_SIMULATION_CLIENT_NOT_AVAILABLE",
+    );
+
+    const noLines = structuredClone(fixture.scenario) as any;
+    delete noLines.lines;
+    expectBlocked(
+      await simulateContractScenario(context.db, context.tenantId, noLines),
+      "CONTRACT_SIMULATION_SCENARIO_INVALID",
+    );
+  });
+
+  it("prefills recent averages and replay overrides (indexed by the invoice that bills the activity) from actual contract activity", async () => {
     await seedHistoricalActivity(context, fixture);
 
     const recentScenario = structuredClone(fixture.scenario);
@@ -769,6 +878,8 @@ describe("Contract simulator – migrated-schema integration", () => {
       ]?.flat,
     ).toBeCloseTo(4);
 
+    // Replay overrides are indexed by the invoice that BILLS the activity (the
+    // billing period index), not by the period the work happened in.
     const replay = await loadReplayAssumptions(
       context.db,
       context.tenantId,
@@ -784,12 +895,14 @@ describe("Contract simulator – migrated-schema integration", () => {
       replay.assumptions[
         assumptionKey(fixture.lines.hourly, fixture.services.hourly)
       ]?.overrides,
-    ).toEqual({ 0: 1, 1: 2, 2: 0 });
+    ).toEqual({ 0: 0, 1: 1, 2: 2 });
     expect(
       replay.assumptions[
         assumptionKey(fixture.lines.usage, fixture.services.usage)
       ]?.overrides,
-    ).toEqual({ 0: 3, 1: 0, 2: 9 });
+    ).toEqual({ 0: 0, 1: 3, 2: 0 });
+    // (The 9 units used on 21 Mar are billed by the fourth invoice, beyond the
+    // three-invoice replay, so they appear in no override.)
   });
 
   it("returns seeded issued invoices beside replay assumptions with normalized lines", async () => {

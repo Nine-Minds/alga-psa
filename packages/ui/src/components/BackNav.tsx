@@ -9,9 +9,13 @@ import { UnsavedChangesContext } from '../context/UnsavedChangesContext';
 interface BackNavProps extends AutomationProps {
   children: React.ReactNode;
   href?: string;
+  /** Stable id for the button; defaults to the shared back-navigation id. */
+  id?: string;
+  variant?: 'soft' | 'ghost';
+  size?: 'default' | 'sm';
 }
 
-export default function BackNav({ children, href }: BackNavProps) {
+export default function BackNav({ children, href, id = 'back-navigation-button', variant = 'soft', size = 'default' }: BackNavProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -49,8 +53,9 @@ export default function BackNav({ children, href }: BackNavProps) {
 
   return (
     <Button
-      id="back-navigation-button"
-      variant="soft"
+      id={id}
+      variant={variant}
+      size={size}
       onClick={handleNavigation}
     >
       {children}

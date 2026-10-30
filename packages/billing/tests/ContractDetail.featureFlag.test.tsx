@@ -103,6 +103,8 @@ vi.mock("@alga-psa/ui/lib/i18n/client", () => ({
   }),
   useFormatters: () => ({
     formatCurrency: (value: number) => String(value),
+    formatDate: (value: Date | string, options?: Intl.DateTimeFormatOptions) =>
+      new Intl.DateTimeFormat("en-US", options).format(new Date(value)),
   }),
 }));
 
@@ -172,6 +174,13 @@ vi.mock(
 
 vi.mock(
   "../src/components/billing-dashboard/contracts/PricingSchedules",
+  () => ({
+    default: () => null,
+  }),
+);
+
+vi.mock(
+  "../src/components/billing-dashboard/contracts/ContractDiscounts",
   () => ({
     default: () => null,
   }),

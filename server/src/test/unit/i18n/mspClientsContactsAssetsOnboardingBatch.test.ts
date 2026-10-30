@@ -194,11 +194,13 @@ describe('MSP clients/contacts/assets/onboarding locale batch', () => {
   });
 
   it('T040: ROUTE_NAMESPACES loads the new MSP feature namespaces on the expected routes', () => {
-    expect(ROUTE_NAMESPACES['/msp/clients']).toEqual(['common', 'msp/core', 'msp/clients']);
-    expect(ROUTE_NAMESPACES['/msp/contacts']).toEqual(['common', 'msp/core', 'msp/contacts']);
-    expect(ROUTE_NAMESPACES['/msp/interactions']).toEqual(['common', 'msp/core', 'msp/clients', 'msp/integrations']);
-    expect(ROUTE_NAMESPACES['/msp/assets']).toEqual(['common', 'msp/core', 'msp/assets']);
-    expect(ROUTE_NAMESPACES['/msp/assets/maintenance']).toEqual(['common', 'msp/core', 'msp/assets']);
+    // These routes can also open ticket details (including the shared SLA
+    // badge and time-entry launcher), so they carry those namespaces too.
+    expect(ROUTE_NAMESPACES['/msp/clients']).toEqual(['common', 'msp/core', 'msp/clients', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/billing', 'features/documents']);
+    expect(ROUTE_NAMESPACES['/msp/contacts']).toEqual(['common', 'msp/core', 'msp/contacts', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/documents']);
+    expect(ROUTE_NAMESPACES['/msp/interactions']).toEqual(['common', 'msp/core', 'msp/clients', 'msp/integrations', 'msp/time-entry', 'msp/schedule']);
+    expect(ROUTE_NAMESPACES['/msp/assets']).toEqual(['common', 'msp/core', 'msp/assets', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/documents']);
+    expect(ROUTE_NAMESPACES['/msp/assets/maintenance']).toEqual(['common', 'msp/core', 'msp/assets', 'features/tickets', 'msp/time-entry', 'msp/schedule', 'features/documents']);
     expect(ROUTE_NAMESPACES['/msp/onboarding']).toEqual(['common', 'msp/core', 'msp/onboarding']);
   });
 

@@ -51,7 +51,7 @@ describe('date trigger scan and workflow launch integration', () => {
         const workflowId = workflowIds[i];
         const definition = { trigger: { type: 'date', source: fixture.source, offsetDays: fixture.offsetDays, localTime: '08:00', timezone: 'UTC' }, payloadSchemaRef: fixture.ref, steps: [] };
         await trx('workflow_definitions').insert({ workflow_id: workflowId, tenant: tenantId, name: `Date scan ${fixture.source}`, payload_schema_ref: fixture.ref, trigger: JSON.stringify(definition.trigger), draft_definition: JSON.stringify(definition), draft_version: 1, status: 'published' });
-        await trx('workflow_definition_versions').insert({ workflow_id: workflowId, version: 1, definition_json: JSON.stringify(definition), published_at: fireDate });
+        await trx('workflow_definition_versions').insert({ workflow_id: workflowId, tenant: tenantId, version: 1, definition_json: JSON.stringify(definition), published_at: fireDate });
       }
 
       // Regression probe: OID 1082 is parsed by node-postgres as a local-midnight Date.

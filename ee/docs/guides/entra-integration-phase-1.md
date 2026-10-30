@@ -4,7 +4,7 @@
 
 This guide documents Enterprise Edition Phase 1 of Microsoft Entra integration:
 
-- Partner-level connection (`direct` Microsoft OAuth or `cipp` API token).
+- Partner-level connection (`direct` Microsoft OAuth or `cipp` API client).
 - Managed tenant discovery and tenant-to-client mapping.
 - Initial/manual/recurring contact sync through Temporal workflows.
 - Additive, non-destructive sync behavior.
@@ -44,16 +44,28 @@ Choose one connection type per tenant:
 
 2. `cipp` (CIPP API)
 - Available on Pro. No feature flag is involved.
-- Uses the classic CIPP API for managed tenant and user enumeration.
-- Requires the **CIPP-API function app host** (for example `my-cipp-api.azurewebsites.net`) — not
-  the CIPP frontend an operator signs into — and a **CIPP API key**, taken from
-  Settings → CIPP → API access in CIPP itself. An Azure client secret is not this credential.
+- Uses the CIPP API for managed tenant and user enumeration, authenticated with a **CIPP API
+  client** (an Entra app created in CIPP under **Integrations > CIPP-API**).
+- The operator supplies four values from that page, using the dialog's labels: **API URL** (the
+  CIPP-API function app host, for example `my-cipp-api.azurewebsites.net`, shown by CIPP ending in
+  `/api`; not the CIPP frontend an operator signs into), **Application (client) ID**, **Client
+  secret** (CIPP shows it only once, when the client is saved to Azure) and **Tenant ID**.
+- Alga mints and refreshes the access token itself: it runs the OAuth client-credentials grant
+  against the Tenant ID's directory (scope `api://<client id>/.default`) and re-mints before expiry
+  and after a 401. Minted tokens are cached in process memory only and are never written to the
+  secret provider.
+- CIPP no longer issues static API keys. A connection that still uses one (`entra_cipp_api_token`)
+  is a **deprecated legacy path**: it keeps working, and the dialog offers it only behind
+  "Use a legacy API key instead". New connections should use an API client.
+- If the API client uses **Allowed IP Ranges**, Alga's egress IPs must be listed; if it uses a
+  **Custom Role**, the role must allow `listtenants`, `listusers`, `listgroups`, `listusergroups`
+  and `ListMailboxes`.
 - Best when your MSP already uses CIPP and wants to reuse that API boundary.
 
 Switching connection types automatically clears stale credentials for the previous type.
 
 Both connect paths validate before they persist. The CIPP dialog tests the candidate credential
-against the tenant list and keeps Save disabled until that test passes; the Direct OAuth callback
+(mint a token, read the tenant list, then read users for the first tenant) and keeps **Connect** disabled until that test passes; the Direct OAuth callback
 probes Microsoft Graph with the freshly exchanged token before writing anything, so a sign-in that
 completes without admin consent leaves no connection record at all. A failed connect never disturbs
 a connection the tenant already had.
@@ -76,10 +88,30 @@ Direct Entra token keys:
 - `entra_direct_partner_tenant_id`
 - `entra_direct_token_scope`
 
-CIPP keys:
+CIPP keys (defined in `ENTRA_CIPP_SECRET_KEYS`, stored per tenant by `cippSecretStore.ts`):
 
-- `entra_cipp_base_url`
-- `entra_cipp_api_token`
+- `entra_cipp_auth_type`: `api_client` or `legacy_api_token`. A missing value means a connection
+  saved before API clients existed, and is read as legacy; no migration is needed.
+- `entra_cipp_base_url`: the CIPP-API host without the trailing `/api` (the dialog accepts either).
+- `entra_cipp_client_id`: the API client's Application (client) ID.
+- `entra_cipp_client_secret`: the API client's secret.
+- `entra_cipp_directory_id`: the Tenant ID (directory) that hosts the client; the dialog's
+  **Tenant ID** field.
+- `entra_cipp_api_token`: **deprecated** legacy static API key. Read only for connections created
+  before API clients; new connections never write it.
+
+Saving one shape deletes the other's keys, so a tenant never holds a stale credential of the
+other kind. Disconnect deletes every CIPP key, including the client secret.
+
+Reconnecting: on a legacy connection the Connection details show a warning badge and the notice
+"This connection uses a legacy CIPP API key. It keeps syncing unchanged. Reconnect to switch to a
+CIPP API client." with a **Reconnect** button (in the setup wizard and the console's Connection
+tab). On an API-client connection, **Rotate credential** on the console's Connection tab opens the
+same dialog, titled **Reconnect CIPP**, with the API URL, Application (client) ID and Tenant ID
+prefilled; the operator re-enters the Client secret. For a legacy connection the dialog opens in the API-client shape with the API URL filled
+in; the operator enters the client ID, secret and Tenant ID. The legacy key keeps working until
+the new client passes a test and is saved; saving replaces the legacy key and connection row with
+the API client. If the API-client test or the swap fails, the legacy key is left (or put back) as it was.
 
 Secret provider compatibility:
 
@@ -218,7 +250,10 @@ The settings wizard follows four explicit write-gated steps:
 - Choose `direct` or `cipp` from the connection chooser, which states each option's prerequisites.
 - For direct: confirm the interstitial (a Global Administrator must consent; the connection then
   runs as a service principal), complete OAuth, and the callback validates before persisting.
-- For CIPP: enter the CIPP-API host and API key, press Test connection, then Save.
+- For CIPP: choose the CIPP card in the connection chooser and press **Set up CIPP connection**, which opens the **Connect CIPP** dialog. In CIPP open **Integrations > CIPP-API**, create the client, enable it and Save to
+  Azure; then enter **API URL**, **Application (client) ID**, **Client secret** and **Tenant ID**,
+  press **Test connection**, then **Connect**. The Tenant ID can take 5 to 15 minutes to appear in CIPP after
+  the first save.
 
 2. Discover Tenants
 - Run discovery to populate managed Entra tenants.
@@ -334,7 +369,7 @@ Two explicit run scopes:
 | 1. Readiness | Edition/tier/RBAC; active connection row + stored validation snapshot; app-registration binding (missing binding, missing/archived profile, missing Entra capability); client secret presence and fingerprint; expected app-registration values; Temporal/schedule readiness |
 | 2. Partner auth | Token-set presence; forced common-authority refresh; decoded claims and required-scope comparison; `/me` baseline |
 | 3. Discovery | `managedTenants` endpoint probe (or `/organization` in self-tenant smoke mode); full paged discovery with count and up-to-ten sample; confirmed mappings versus live discovery |
-| C.1–C.5 (CIPP) | Credential presence; reachability across the candidate endpoints; authentication; tenant-list count/sample; mappings versus the CIPP list |
+| C.1–C.6 (CIPP) | In run order: `cipp_credentials_present` (CIPP credentials); `cipp_token_mint` (CIPP API token mint; API clients only, skipped for legacy API-key connections); `cipp_reachable` (CIPP API reachability); `cipp_auth` (CIPP API credential); `cipp_tenant_list` (tenant-list count/sample); `cipp_mappings_vs_list` (confirmed mappings versus the CIPP tenant list) |
 | 5. Sync health | Last five runs with trigger/duration/totals; per-tenant failures of the latest real run; open reconciliation count and oldest age |
 
 A failed prerequisite marks only its **dependent** steps `skip` with
@@ -352,7 +387,7 @@ token failure does not suppress local sync-history and queue checks.
 | `entitlement_group_resolves` | Resolve the configured group (report `securityEnabled`, flag a non-security group), then a read-only `checkMemberGroups` probe for the first user |
 | `user_yield_preview` | Off by default; when enabled, reuse the existing user filter to report total/included and exclusions by `account_disabled`, `missing_identity`, `service_account`, `tenant_custom_pattern` |
 
-CIPP clients run `C.6 per_tenant_users` as a bounded one-page read, with the same optional
+CIPP clients run the per-client step `per_tenant_users` as a bounded one-page read, with the same optional
 yield preview.
 
 ### Support export
@@ -386,7 +421,11 @@ reconciles, creates, deletes, or starts a schedule.
 | `AADSTS50020` | Both | Connecting account is not a guest/allowed user here; verify account access; other. |
 | Network failure | Both | Endpoint unreachable; DNS/TLS/timeout distinction is reported where available; other. |
 | `/users` or `/groups` HTTP 403 | Customer | Consent exists but the delegated account lacks a directory-read role via GDAP (for example Directory Readers); check GDAP role assignments; missing role. |
-| CIPP 401/403 | — | CIPP rejected the **API key** from Settings > CIPP > API access, not an Azure client secret; rotate it on the Connection tab. |
+| CIPP: "CIPP could not be reached at this URL" (`unreachable`, `html_response`, `validation_failed`) | — | DNS, refused, timeout or TLS failure on the host, or CIPP answered with a web page because the API URL lacks `/api` or points at the CIPP web UI. Copy the API URL from CIPP > Integrations > CIPP-API. |
+| CIPP: "Microsoft rejected the API client's sign-in" (`token_mint_failed`, `token_scope_rejected`) | — | Token mint failed. `AADSTS7000215`/`7000222`: wrong or expired secret (use the secret Value, not its ID). `AADSTS700016`: check client ID and Tenant ID. `AADSTS90002`/`90023`: check Tenant ID. `AADSTS500011`/`70011`: run Repair Identifier URI on the client in CIPP. `AADSTS65001` and related: a Global Administrator must grant consent. |
+| CIPP: "CIPP refused the access token" (`ip_blocked`, or `auth_rejected` for an API client) | — | HTTP 403 on every endpoint including `listtenants`: Alga's egress IPs are not in the client's **Allowed IP Ranges**. HTTP 401 on a fresh token: confirm the client is enabled and its Role permits the endpoints sync calls, then reconnect. |
+| CIPP: "CIPP's Custom Role blocks a permission sync needs" (`role_blocked`) | — | HTTP 403 on one endpoint while others work: give the client's Custom Role access to the named endpoint (`listtenants`, `listusers`, `listgroups`, `listusergroups`, `ListMailboxes`). |
+| CIPP: "CIPP rejected the API key" (`auth_rejected`, legacy connections) | — | The deprecated `entra_cipp_api_token` was rejected. Reconnect with an API client instead of rotating the key. |
 
 Customer consent links are generated server-side from the **bound application's client id**,
 never the mapped Alga client id, and never carry tokens or secrets.

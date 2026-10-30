@@ -22,7 +22,8 @@ export type RecurringChargeFamily =
   | 'license'
   | 'bucket'
   | 'hourly'
-  | 'usage';
+  | 'usage'
+  | 'prepaid_block';
 export type RecurringTimingMetadataValue = string | number | boolean | null;
 export type RecurringTimingMetadata = Record<string, RecurringTimingMetadataValue>;
 
@@ -242,6 +243,8 @@ export const RECURRING_SERVICE_PERIOD_PROVENANCE_REASON_CODES = {
     'integrity_repair',
     'invoice_linkage_repair',
     'admin_correction',
+    'hourly_usage_arrears_repair',
+    'stranded_advance_catch_up',
   ],
 } as const satisfies Record<RecurringServicePeriodProvenanceKind, readonly string[]>;
 
@@ -363,6 +366,14 @@ export interface IRecurringRunExecutionWindowIdentity {
   contractLineId?: string | null;
   windowStart?: ISO8601String | null;
   windowEnd?: ISO8601String | null;
+  /**
+   * Charge stream when one contract line owns more than one stream in the same
+   * invoice window. Set only for the advance prepaid-block fee of a cadence
+   * Prepaid Block line, whose window is shared with the previous period's
+   * arrears hourly (overage) stream. Absent for every other row, so existing
+   * identity keys are unchanged.
+   */
+  chargeStream?: 'prepaid_block' | null;
 }
 
 export type RecurringDueWorkCadenceSource = 'client_schedule' | 'contract_anniversary';
@@ -495,10 +506,10 @@ export interface IRecurringDueSelectionInput {
  * the "known now vs calculated at generation" split on the Automatic Invoices
  * screen. Values mirror `contract_lines.contract_line_type`.
  */
-export type RecurringDueWorkChargeType = 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
+export type RecurringDueWorkChargeType = 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' | 'PrepaidBlock';
 
 export interface IRecurringDueWorkWarning {
-  code: 'stale_project_billing_ready_entries';
+  code: 'stale_project_billing_ready_entries' | 'stale_pending_prepaid_block';
   severity: 'warning';
   message: string;
   entryCount: number;
@@ -548,6 +559,10 @@ export interface IRecurringDueWorkRow {
    * ('Hourly' for time entries, 'Usage' for usage records). Null when unknown.
    */
   chargeType?: RecurringDueWorkChargeType | null;
+  /** Prepaid Block issuance rows only: the date the block is actually due (may precede the invoice window). */
+  blockDueDate?: ISO8601String | null;
+  /** Prepaid Block issuance rows only: contract_start | exhaustion | threshold | expiry | renewal | manual. */
+  blockTriggerKind?: string | null;
   purchaseOrderScopeKey?: string | null;
   currencyCode?: string | null;
   taxSource?: string | null;
@@ -625,7 +640,12 @@ export interface IRecurringDueWorkMaterializationGap {
   invoiceWindowEnd: ISO8601String;
   servicePeriodStart: ISO8601String;
   servicePeriodEnd: ISO8601String;
-  reason: 'missing_service_period_materialization';
+  /**
+   * `stranded_arrears_only_line`: an Hourly/Usage line still carries the leftovers of an advance
+   * schedule (a billed empty advance period holding unbilled work, or a retired advance period with
+   * no arrears row). It does not block invoicing; "Fix all" repairs it.
+   */
+  reason: 'missing_service_period_materialization' | 'stranded_arrears_only_line';
   detail: string;
 }
 

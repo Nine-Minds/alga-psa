@@ -24,7 +24,9 @@ const repoRoot = path.resolve(__dirname, '../../../../..');
 
 // Mock Stripe before any imports that use it
 vi.mock('stripe', () => {
-  const mockStripe = vi.fn().mockImplementation(() => ({
+  // vitest 4 calls mock implementations with `new`; arrow functions cannot be constructed.
+  const mockStripe = vi.fn().mockImplementation(function () {
+    return {
     customers: {
       create: vi.fn().mockResolvedValue({ id: 'cus_mock123' }),
       retrieve: vi.fn().mockResolvedValue({ id: 'cus_mock123', deleted: false }),
@@ -72,7 +74,8 @@ vi.mock('stripe', () => {
         return JSON.parse(payload);
       }),
     },
-  }));
+    };
+  });
 
   return { default: mockStripe, Stripe: mockStripe };
 });
@@ -755,11 +758,15 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
 
   describe('Payment Link Expiration Issues', () => {
     /**
-     * MEDIUM BUG: PaymentSettings.tsx allows 30-day expiration,
-     * but Stripe Checkout Sessions max out at 24 hours.
+     * Stripe Checkout Sessions last at most 24h, independent of the tenant's
+     * "Payment link expiration" setting. The setting (up to 720h) is the
+     * lifetime of the durable /pay/<token> link carried by invoice emails.
      */
-    it('should expose payment link expiration beyond Stripe limit', async () => {
+    it('keeps the Checkout Session <= 24h while the durable link lives for the configured 720h', async () => {
       const { PaymentService } = await import('@ee/lib/payments');
+      const { issuePaymentLinkToken, verifyPaymentLinkToken } = await import(
+        '@alga-psa/billing/lib/payments/paymentLinkToken'
+      );
 
       const { invoiceId } = await createTestInvoiceWithClient(mockDb, testTenantId, {
         totalAmount: 10000,
@@ -768,24 +775,29 @@ describe('Stripe Payment Integration - Vulnerability Tests', () => {
 
       // Configure with 30-day expiration (720 hours)
       await setupPaymentProviderConfig(mockDb, testTenantId, {
-        paymentLinkExpirationHours: 720, // 30 days - exceeds Stripe's 24-hour limit
+        paymentLinkExpirationHours: 720,
       });
 
       const paymentService = await PaymentService.create(testTenantId);
 
-      // CORRECT BEHAVIOR: Service should cap expiration at 24 hours (Stripe's limit)
-      // or reject the configuration
+      // Assertion 1: the provider session is never longer than Stripe's 24h limit.
       const link = await paymentService.getOrCreatePaymentLink(invoiceId);
-
-      // Verify a link was created
-      expect(link).toBeDefined();
       expect(link?.expiresAt).toBeDefined();
+      const hoursUntilExpiry = (link!.expiresAt!.getTime() - Date.now()) / (1000 * 60 * 60);
+      expect(hoursUntilExpiry).toBeLessThanOrEqual(24);
 
-      if (link?.expiresAt) {
-        const hoursUntilExpiry = (link.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60);
-        // BUG: Service allows 720 hours but Stripe max is 24 hours
-        // This will cause Stripe API failures or silent capping
-        expect(hoursUntilExpiry).toBeLessThanOrEqual(24);
+      // Assertion 2: the durable link lives for exactly the configured lifetime.
+      const settings = await paymentService.getPaymentSettings();
+      expect(settings.paymentLinkExpirationHours).toBe(720);
+      const issuedAt = new Date();
+      const { token } = issuePaymentLinkToken(
+        { tenantId: testTenantId, invoiceId, lifetimeHours: settings.paymentLinkExpirationHours },
+        issuedAt,
+      );
+      const verified = verifyPaymentLinkToken(token, issuedAt);
+      expect(verified.ok).toBe(true);
+      if (verified.ok) {
+        expect(verified.exp - issuedAt.getTime()).toBe(720 * 60 * 60 * 1000);
       }
     }, HOOK_TIMEOUT);
 

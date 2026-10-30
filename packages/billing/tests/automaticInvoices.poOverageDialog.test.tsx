@@ -70,6 +70,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
 
 vi.mock('@alga-psa/billing/actions/billingAndTax', () => ({
   getAvailableRecurringDueWork: mockGetAvailableRecurringDueWork,
+  getLateApprovedHourlyTime: vi.fn(async () => []),
 }));
 
 vi.mock('@alga-psa/billing/actions/invoiceGeneration', () => ({
@@ -291,7 +292,7 @@ function buildSinglePreviewSuccess() {
   };
 }
 
-async function selectSingleChildAndOpenPreview() {
+async function selectSingleChildAndOpenPreview(previewResponse: unknown = buildSinglePreviewSuccess()) {
   render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
   const toggle = await waitFor(() => {
@@ -312,7 +313,7 @@ async function selectSingleChildAndOpenPreview() {
   }, { timeout: 5000 });
   fireEvent.click(childCheckbox);
 
-  mockPreviewGroupedInvoicesForSelectionInputs.mockResolvedValueOnce(buildSinglePreviewSuccess());
+  mockPreviewGroupedInvoicesForSelectionInputs.mockResolvedValueOnce(previewResponse);
   const previewButton = await screen.findByText('Preview Selected');
   fireEvent.click(previewButton);
 
@@ -363,6 +364,27 @@ describe('AutomaticInvoices PO overage dialog', () => {
     };
     mockRecurringInvoiceHistoryResponse = { rows: [], total: 0, page: 1, pageSize: 10 };
     mockGetAvailableRecurringDueWork.mockResolvedValue(mockDueWorkResponse);
+  });
+
+  it('previews an invoice for a client without a billing email and warns instead of failing', async () => {
+    const previewSuccess = buildSinglePreviewSuccess();
+    await selectSingleChildAndOpenPreview({
+      ...previewSuccess,
+      previews: previewSuccess.previews.map((preview) => ({
+        ...preview,
+        billingEmailWarning: { code: 'NO_BILLING_EMAIL', params: { clientName: 'Acme Co' } },
+      })),
+    });
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Acme Co has no billing email\. The invoice can be generated, but it cannot be emailed or paid online/),
+      ).toBeInTheDocument();
+    });
+    // The preview still rendered and the invoice can be generated.
+    expect(screen.getByText('Managed services')).toBeInTheDocument();
+    const generateButton = screen.getByRole('button', { name: 'Generate Invoice' });
+    expect(generateButton).not.toBeDisabled();
   });
 
   it('formats overage_cents as minor units — a 61250-cent overage renders as $612.50, not $61,250.00 (Defect B)', async () => {

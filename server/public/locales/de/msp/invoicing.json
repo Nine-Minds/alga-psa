@@ -98,6 +98,20 @@
         "assignedContractLine": "Zugewiesene Vertragszeile",
         "assignedWorkItem": "Zugewiesenes Arbeitselement",
         "unresolvedWork": "Ungelöste Arbeit"
+      },
+      "prepaidBlock": {
+        "due": "{{trigger}} · fällig am {{date}}",
+        "trigger": {
+          "contract_start": "Prepaid-Block: Vertragsbeginn",
+          "exhaustion": "Prepaid-Block: aufgebraucht",
+          "threshold": "Prepaid-Block: Verbrauchsschwelle",
+          "expiry": "Prepaid-Block: Ablauf",
+          "renewal": "Prepaid-Block: Verlängerung",
+          "manual": "Prepaid-Block: manuell ausgestellt"
+        },
+        "stalePendingWarning": "{{count}} ausstehende Prepaid-Blöcke warten seit mehr als 14 Tagen auf die Finalisierung und halten Zeiteinträge zurück. Finalisieren oder löschen Sie die Rechnungsentwürfe, damit die zurückgehaltene Zeit abgerechnet werden kann.",
+        "stalePendingWarning_one": "{{count}} ausstehender Prepaid-Block wartet seit mehr als 14 Tagen auf die Finalisierung und hält Zeiteinträge zurück. Finalisieren oder löschen Sie die Rechnungsvorlage, damit die zurückgehaltene Zeit abgerechnet werden kann.",
+        "stalePendingWarning_other": "{{count}} ausstehende Prepaid-Blöcke warten seit mehr als 14 Tagen auf die Finalisierung und halten Zeiteinträge zurück. Finalisieren oder löschen Sie die Rechnungsentwürfe, damit die zurückgehaltene Zeit abgerechnet werden kann."
       }
     },
     "actions": {
@@ -147,6 +161,7 @@
       "preview": {
         "title": "Rechnungsvorschau",
         "description": "Dies ist eine Vorschau, wie die Rechnung nach Fertigstellung aussehen wird.",
+        "noBillingEmailWarning": "{{clientName}} hat keine Rechnungs-E-Mail-Adresse. Die Rechnung kann erstellt werden, aber sie kann erst per E-Mail versendet oder online bezahlt werden, wenn Sie einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort festlegen.",
         "summary_one": "{{count}}-Rechnung ausgewählt",
         "summary_other": "{{count}}-Rechnungen ausgewählt",
         "summaryCombined": "Durch diese Auswahl wird eine kombinierte Rechnung generiert.",
@@ -238,7 +253,8 @@
       "fixAllResult": "{{schedules}} Zeitplan/Zeitpläne über {{clients}} Kunde(n) neu aufgebaut.",
       "fixAllNoop": "Alle Abrechnungspläne sind bereits aktuell. Alles, was unten noch aufgeführt ist, muss einzeln geprüft werden.",
       "fixAllError": "Leistungszeiträume konnten nicht neu aufgebaut werden. Bitte versuchen Sie es erneut.",
-      "fixAllDenied": "Sie haben keine Berechtigung, Leistungszeiträume neu aufzubauen."
+      "fixAllDenied": "Sie haben keine Berechtigung, Leistungszeiträume neu aufzubauen.",
+      "fixAllManualReview": "{{count}} Stunden- oder Nutzungszeitraum/-zeiträume müssen einzeln geprüft werden."
     },
     "errors": {
       "title": "Beim Abschluss der Rechnungen sind Fehler aufgetreten:",
@@ -271,7 +287,8 @@
       "fixed": "FIX",
       "hourly": "T&M",
       "usage": "USE",
-      "bucket": "BKT"
+      "bucket": "BKT",
+      "prepaidBlock": "PRE"
     },
     "summary": {
       "selected": "{{count}} ausgewählt",
@@ -306,6 +323,21 @@
       "any": "alle",
       "clear": "Zurücksetzen",
       "countSummary": "{{groups}} Gruppe(n) · {{obligations}} Posten"
+    },
+    "lateTime": {
+      "title": "Verspätet genehmigte Stundenzeit",
+      "description": "Diese Zeit wurde genehmigt, nachdem die Rechnung für den Leistungszeitraum bereits ausgestellt wurde. Einträge, die auf die Abrechnung warten, werden einmalig der nächsten Rechnung hinzugefügt und als verspätete Zeit gekennzeichnet. Einträge außerhalb des Rückblickzeitraums werden nicht abgerechnet.",
+      "columns": {
+        "client": "Kunde",
+        "technician": "Techniker",
+        "service": "Dienst",
+        "workDate": "Arbeitsdatum",
+        "hours": "Stunden",
+        "closedPeriod": "Abgeschlossener Leistungszeitraum",
+        "status": "Status"
+      },
+      "nextInvoice": "Wird mit der nächsten Rechnung abgerechnet",
+      "outsideLookback": "Außerhalb des Rückblickzeitraums — nicht abgerechnet"
     }
   },
   "manualInvoices": {
@@ -332,7 +364,8 @@
       "title": "Automatisierte Werbebuchungen",
       "service": "Dienst",
       "total": "Gesamt",
-      "unknownService": "Unbekannter Dienst"
+      "unknownService": "Unbekannter Dienst",
+      "period": "Zeitraum"
     },
     "lineItems": {
       "manual": "Manuelle Einzelposten",
@@ -345,7 +378,10 @@
       "saveChanges": "Änderungen speichern",
       "processing": "Wird verarbeitet...",
       "generateSalesOrderInvoice": "Kundenauftragsrechnung erstellen",
-      "clearSalesOrderSource": "Kundenauftrag als Quelle entfernen"
+      "clearSalesOrderSource": "Kundenauftrag als Quelle entfernen",
+      "addPartialPeriodCharge": "Gebühr für Teilzeitraum hinzufügen",
+      "reauthenticate": "Erneut anmelden",
+      "retrySave": "Speichern erneut versuchen"
     },
     "labels": {
       "total": "Gesamt",
@@ -393,11 +429,15 @@
       "SOURCE_ALREADY_BILLED": "Einige ausgewählte Positionen sind nicht mehr abrechenbar (bereits abgerechnet, nicht genehmigt oder entfernt). Aktualisieren und erneut versuchen.",
       "SOURCE_NOT_ELIGIBLE": "Eine ausgewählte Position gehört nicht zu den abrechenbaren Positionen dieses Tickets oder ist nicht mehr zulässig. Aktualisieren und erneut versuchen.",
       "SOURCE_CURRENCY_MISMATCH": "Einige ausgewählte Produkte sind in einer anderen Währung bepreist als die Rechnungswährung dieses Kunden. Sie können nicht hinzugefügt werden. Rechnen Sie sie in ihrer eigenen Währung getrennt ab.",
+      "CLIENT_CONTRACT_NOT_FOUND": "Der ausgewählte Vertrag gehört nicht zum Kunden dieser Rechnung.",
+      "SERVICE_REQUIRED": "Weisen Sie dieser Position vor dem Speichern einen Dienst zu.",
       "RECURRING_PRICING_STALE": "Die Vorschau ist veraltet: {{details}}. Führen Sie die Vorschau erneut aus, um die aktuellen Zahlen zu sehen, und erstellen Sie die Rechnung dann erneut.",
-      "BILLING_PROFILE_NOT_FOUND": "Das ausgewählte Abrechnungsprofil ist für diesen Kunden nicht verfügbar. Aktualisiere die Seite und versuche es erneut."
+      "BILLING_PROFILE_NOT_FOUND": "Das ausgewählte Abrechnungsprofil ist für diesen Kunden nicht verfügbar. Aktualisiere die Seite und versuche es erneut.",
+      "sessionExpired": "Ihre Sitzung ist abgelaufen. Ihre Änderungen sind noch hier, wurden aber nicht gespeichert. Melden Sie sich in einem neuen Tab wieder an und versuchen Sie anschließend erneut zu speichern.",
+      "saveRefreshFailed": "Ihre Änderungen wurden gespeichert, aber die Rechnungsseite konnte nicht vollständig aktualisiert werden. Laden Sie die Seite neu, um die gespeicherte Rechnung anzuzeigen."
     },
     "warnings": {
-      "noBillingEmail": "Für diesen Kunden ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege vor dem Generieren der Rechnung einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort fest."
+      "noBillingEmail": "Für diesen Kunden ist keine Rechnungs-E-Mail-Adresse hinterlegt. Die Rechnung kann erstellt werden, aber sie kann erst per E-Mail versendet oder online bezahlt werden, wenn Sie einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort festlegen."
     },
     "errorFallback": {
       "title": "Etwas ist schief gelaufen",
@@ -405,6 +445,48 @@
     },
     "salesOrderContext": {
       "summary": "{{quantity}} Artikel aus {{lineCount}} Positionen können abgerechnet werden. Dieser Entwurf wird mit dem Kundenauftrag verknüpft."
+    },
+    "draftAdjustments": {
+      "title": "Rechnungsanpassungen",
+      "description": "Fügen Sie einmalige Gebühren, Rabatte oder Gutschriften hinzu. Generierte Vertragsgebühren bleiben schreibgeschützt; korrigieren Sie den Quellvertrag oder fügen Sie eine Anpassung hinzu."
+    },
+    "partialPeriod": {
+      "title": "Teilzeitraum-Gebühr",
+      "help": "Berechnet als Einheiten × Einzelpreis des Zeitraums × abgedeckte Tage / Tage des Gesamtzeitraums. Die Eingaben bleiben bei der Position erhalten, damit sie verständlich bleibt.",
+      "direction": "Richtung",
+      "increase": "Erhöhung",
+      "decrease": "Verringerung (Gutschrift)",
+      "units": "Einheiten",
+      "unitPrice": "Einzelpreis",
+      "coveredDays": "Abgedeckte Tage",
+      "fullPeriodDays": "Tage des Gesamtzeitraums",
+      "description": "Beschreibung (optional)",
+      "reason": "Grund (optional)",
+      "previewUnavailable": "Geben Sie eine gültige Berechnung ein.",
+      "resolvedAmount": "Aufgelöster Betrag: {{amount}}",
+      "addCharge": "Gebühr hinzufügen",
+      "creditDescription": "Gutschrift: {{proration}}",
+      "errors": {
+        "units": "Die Einheiten müssen größer als null sein.",
+        "unitPrice": "Der Einzelpreis muss eine Zahl sein.",
+        "invalid": "Geben Sie einen gültigen Teilzeitraum ein.",
+        "source": "Wählen Sie eine abgerechnete Leistung mit eindeutigem Leistungszeitraum."
+      },
+      "source": "Abgerechnete Leistung auswählen",
+      "effectiveDate": "Wirksam ab",
+      "sourceRate": "Satz {{rate}}",
+      "permanentChangeNudge": "Ist dies eine dauerhafte Änderung? Erfassen Sie sie stattdessen im Vertrag.",
+      "overlapConfirm": "Eine automatische Vertragsänderungsanpassung überschneidet diesen Zeitraum bereits. Diese separate manuelle Anpassung trotzdem hinzufügen?",
+      "invoiceDescription": {
+        "increase": "{{description}} — zusätzlich {{units}} {{unitLabel}}, {{period}} — {{calculation}}",
+        "decrease": "{{description}} — Gutschrift für {{units}} weniger {{unitLabel}}, {{period}} — {{calculation}}"
+      },
+      "sourceDescriptionFallback": "Serviceanpassung"
+    },
+    "exportWarnings": {
+      "discount": "{{adapter}}: Konfigurieren Sie die Rabattzuordnung vor dem Export von {{description}}.",
+      "service": "{{adapter}}: Weisen Sie {{description}} vor dem Export einen zugeordneten Dienst zu.",
+      "unavailable": "Die Exportbereitschaft konnte nicht geprüft werden. Prüfen Sie die Zuordnungen vor dem Export."
     },
     "hints": {
       "billingProfile": "Die Rechnung und ihre Positionen werden diesem Profil zugeordnet."
@@ -490,6 +572,17 @@
         "selectedCount": "{{count}} ausgewählt",
         "clear": "Auswahl aufheben"
       }
+    },
+    "warnings": {
+      "finalizedWithWarnings": "Rechnung abgeschlossen, aber ein Folgeschritt wurde nicht beendet: {{steps}}. Die Rechnung ist abgeschlossen; Sie können den Schritt wiederholen.",
+      "steps": {
+        "credit_auto_apply": "automatische Gutschriftanwendung",
+        "project_deposit_credits": "Projektanzahlungsgutschriften",
+        "workflow_events": "Workflow-Ereignisse",
+        "accounting_export": "Buchhaltungsexport",
+        "replenishment_status": "Status der Prepaid-Aufladung",
+        "autopay": "Autopay"
+      }
     }
   },
   "finalizedTab": {
@@ -528,7 +621,9 @@
       "bulkPdfFailed": "PDFs konnten nicht generiert werden. Bitte versuchen Sie es erneut.",
       "unfinalizeFailed": "Die Rechnung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
       "bulkUnfinalizeFailed": "Rechnungen konnten nicht abgeschlossen werden. Bitte versuchen Sie es erneut.",
-      "bulkUnfinalizeInvoiceFailed": "{{invoiceNumber}} konnte nicht wieder geöffnet werden: {{reason}}"
+      "bulkUnfinalizeInvoiceFailed": "{{invoiceNumber}} konnte nicht wieder geöffnet werden: {{reason}}",
+      "explainThis": "Erklärung anzeigen",
+      "usedHourBlockExplanation": "Mit der Finalisierung dieser Rechnung wurden die vorausbezahlten Stunden für Zeiteinträge verfügbar. Inzwischen wurden dem Stundenblock Zeiten zugeordnet. Ein erneutes Öffnen der Rechnung würde den Block rückgängig machen, obwohl diese Zuordnungen und spätere Gebühren noch davon abhängen könnten. Damit die Abrechnung konsistent bleibt, kann die Finalisierung von Rechnungen für bereits verwendete Blöcke nicht aufgehoben werden, auch wenn die Zeiten später storniert wurden. Verwenden Sie zur Korrektur der Rechnung eine separate Anpassung oder Gutschrift."
     },
     "bulk": {
       "actionBar": {
@@ -739,6 +834,7 @@
     }
   },
   "invoicePreview": {
+    "sessionExpired": "Ihre Sitzung ist beim Laden dieser Rechnung abgelaufen. Melden Sie sich erneut an und laden Sie anschließend die Vorschau erneut.",
     "title": "Rechnungsvorschau",
     "templatePlaceholder": "Rechnungsvorlage auswählen...",
     "labels": {
@@ -789,6 +885,19 @@
       "cancel": "Abbrechen",
       "confirm": "Rechnung stornieren",
       "voiding": "Wird storniert…"
+    },
+    "history": {
+      "title": "Verlauf",
+      "empty": "Kein Verlauf aufgezeichnet.",
+      "loadFailed": "Rechnungsverlauf konnte nicht geladen werden.",
+      "system": "System",
+      "ops": {
+        "invoice_finalized": "Abgeschlossen",
+        "invoice_unfinalized": "Wieder geöffnet",
+        "invoice_deleted": "Gelöscht"
+      },
+      "change": "{{from}} → {{to}}",
+      "none": "keine"
     }
   },
   "templateEditor": {
@@ -1309,7 +1418,7 @@
       "mediaSource": "Bildquelle",
       "mediaSourceLogo": "Firmenlogo",
       "mediaSourceCustom": "Eigenes Bild",
-      "mediaSourceLogoHint": "Zeigt auf jedem Dokument das Logo aus den Branding-Einstellungen Ihres Unternehmens.",
+      "mediaSourceLogoHint": "Zeigt auf jedem Dokument das Logo aus dem Kundendatensatz Ihres eigenen Unternehmens.",
       "mediaSourceUrl": "Quell-URL",
       "renameInner": "Auch {{count}} innere Ebenen umbenennen ({{from}} → {{to}}…)?",
       "renameInnerApply": "Umbenennen",
@@ -1359,7 +1468,14 @@
           "widthTooltip": "Die unten eingegebene exakte Breite verwenden",
           "heightTooltip": "Die unten eingegebene exakte Höhe verwenden"
         }
-      }
+      },
+      "barcode": "Barcode",
+      "barcodeSymbology": "Typ",
+      "barcodeQr": "QR-Code",
+      "barcodeCode128": "Code 128",
+      "barcodeValue": "Wert",
+      "barcodeHintWorkTag": "Text oder ein Feld wie {{example}} (der Link zum Datensatz). Der Code sollte mindestens etwa 20 mm breit sein, damit er sich scannen lässt.",
+      "barcodeHint": "Der zu codierende Text. Der Code sollte mindestens etwa 20 mm breit sein, damit er sich scannen lässt."
     },
     "shell": {
       "selectedLabel": "Ausgewählt:",
@@ -1372,7 +1488,11 @@
       "title": "Seiteneinrichtung",
       "description": "Papierformat und Seitenrand wählen, ohne den versteckten Seiten-Knoten auszuwählen.",
       "paperPreset": "Papierformat",
-      "marginMm": "Rand (mm)"
+      "marginMm": "Rand (mm)",
+      "customSize": "Benutzerdefinierte Größe…",
+      "customWidth": "Breite",
+      "customHeight": "Höhe",
+      "customUnit": "Einheit"
     },
     "breadcrumbs": {
       "emptyHelp": "Wählen Sie eine Komponente auf der Leinwand aus, um ihre Hierarchie anzuzeigen.",
@@ -1403,7 +1523,13 @@
         "noQuotesFound": "Keine Angebote gefunden.",
         "selectQuote": "Angebot wählen",
         "loadingQuoteDetails": "Angebotsdetails werden geladen…",
-        "loadingDocumentDetails": "Dokumentdetails werden geladen…"
+        "loadingDocumentDetails": "Dokumentdetails werden geladen…",
+        "zoom": {
+          "fit": "Einpassen",
+          "actual": "100 %",
+          "label": "Vorschau-Zoom",
+          "fitWithScale": "Einpassen ({{percent}} %)"
+        }
       },
       "tabs": {
         "design": "Entwurf",
@@ -2297,7 +2423,7 @@
     },
     "imagePicker": {
       "browse": "Dokumente durchsuchen",
-      "hiddenFromClients": "{{document}} ist für Kunden ausgeblendet. Es wird nicht in Angeboten oder Rechnungen angezeigt, die über das Kundenportal aufgerufen werden.",
+      "hiddenFromClients": "{{document}} ist für Kunden ausgeblendet und kann im Kundenportal nicht geöffnet werden. Es erscheint weiterhin auf Rechnungen und in PDF-Dateien von Angeboten, die es verwenden.",
       "updating": "Wird aktualisiert...",
       "markVisible": "Als für Kunden sichtbar markieren",
       "visibleInPortal": "Im Kundenportal sichtbar",
@@ -2322,6 +2448,7 @@
     }
   },
   "draftInvoiceDetails": {
+    "sessionExpired": "Ihre Sitzung ist beim Laden der Rechnungsdetails abgelaufen. Melden Sie sich erneut an und laden Sie die Details erneut.",
     "title": "Rechnungsdetails",
     "description": "Bearbeiten Sie vor dem Abschluss die Metadaten des Rechnungsentwurfs.",
     "actions": {
@@ -2345,11 +2472,13 @@
     "description": "Entwerfen Sie die Layouts, die zum Rendern von {{type}}-PDFs und -Vorschauen verwendet werden.",
     "availableLayouts": "Verfügbare Layouts",
     "actions": {
-      "newLayout": "Neues Layout"
+      "newLayout": "Neues Layout",
+      "setDefaultForClass": "Als Standard für {{class}} festlegen"
     },
     "columns": {
       "name": "Name",
-      "source": "Quelle"
+      "source": "Quelle",
+      "labelClass": "Klasse"
     },
     "values": {
       "nameWithStandardSuffix": "{{name}} (Standardversion)",
@@ -2381,7 +2510,10 @@
         "details": "Layoutdetails"
       },
       "fields": {
-        "version": "Version"
+        "version": "Version",
+        "labelClass": "Etikettenklasse",
+        "labelFields": "Auf dem Etikett angezeigte Felder",
+        "labelFieldsHint": "Der Datensatzlink (QR-Code) und die Kennung werden immer angezeigt."
       },
       "placeholders": {
         "templateName": "Vorlage für {{type}}"
@@ -2418,7 +2550,10 @@
     "types": {
       "salesOrder": "Verkaufsauftrag",
       "packingSlip": "Lieferschein",
-      "pickList": "Kommissionierliste"
+      "pickList": "Kommissionierliste",
+      "workTag": "Arbeitsetikett / Label",
+      "stagingManifest": "Packliste",
+      "rmaReturnSlip": "RMA-Rücksendeschein"
     }
   },
   "errors": {
@@ -2426,7 +2561,8 @@
       "invoiceUpdate": "Berechtigung verweigert: Aktualisierungsberechtigung für Rechnungen erforderlich",
       "invoiceDelete": "Berechtigung verweigert: Löschberechtigung für Rechnungen erforderlich",
       "invoiceAccess": "Berechtigung verweigert: Zugriff auf die Rechnung verweigert",
-      "otherClientInvoices": "Berechtigung verweigert: Auf Rechnungen eines anderen Kunden kann nicht zugegriffen werden"
+      "otherClientInvoices": "Berechtigung verweigert: Auf Rechnungen eines anderen Kunden kann nicht zugegriffen werden",
+      "invoiceRead": "Zugriff verweigert: Berechtigung zum Lesen von Rechnungen erforderlich"
     },
     "invoice": {
       "notFound": "Rechnung nicht gefunden",
@@ -2440,6 +2576,7 @@
       "onlyDraftEditable": "Nur Rechnungsentwürfe können bearbeitet werden",
       "numberExists": "Die Rechnungsnummer existiert bereits. Wählen Sie eine andere Nummer.",
       "notFinalized": "Die Rechnung ist nicht finalisiert",
+      "usedHourBlockUnfinalize": "Die Finalisierung dieser Rechnung kann nicht aufgehoben werden: Der Stundenblock {{blockId}} wurde bereits verwendet ({{usedHours}} von {{totalHours}} Std.). Verwenden Sie zur Korrektur der Rechnung eine separate Anpassung oder Gutschrift.",
       "unfinalizeFailed": "Die Finalisierung der Rechnung konnte wegen eines unerwarteten Datenfehlers nicht aufgehoben werden. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "paidOrCancelled": "Eine bezahlte oder stornierte Rechnung kann nicht geändert werden",
       "syncedVoidInstead": "Diese Rechnung ist mit einem Buchhaltungssystem synchronisiert – stornieren Sie sie, statt sie zu löschen.",
@@ -2448,7 +2585,9 @@
       "duplicate": "Es existiert bereits eine widersprüchliche Rechnung. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
       "missingField": "Erforderliches Rechnungsfeld fehlt.",
       "missingFieldNamed": "Erforderliches Rechnungsfeld fehlt: {{field}}.",
-      "billingProfileUnavailable": "Das ausgewählte Abrechnungsprofil ist für diesen Kunden nicht verfügbar."
+      "billingProfileUnavailable": "Das ausgewählte Abrechnungsprofil ist für diesen Kunden nicht verfügbar.",
+      "deleteNotDraft": "Nur Rechnungsentwürfe können gelöscht werden; stornieren Sie die Rechnung stattdessen.",
+      "deleteHasPayments": "Rechnungen mit erfassten Zahlungen können nicht gelöscht werden."
     },
     "billingCycle": {
       "notFoundRefresh": "Abrechnungszeitraum nicht gefunden. Er wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
@@ -2488,5 +2627,15 @@
     "saving": "Wird gespeichert …",
     "saveCorrection": "Korrektur speichern",
     "save": "Speichern"
+  },
+  "draftInvoiceAdjustments": {
+    "sessionExpired": "Ihre Sitzung ist beim Laden der Rechnungsanpassungen abgelaufen. Melden Sie sich erneut an und laden Sie diese Rechnung anschließend erneut.",
+    "signIn": "Anmelden",
+    "retry": "Erneut laden",
+    "blockedTitle": "Rechnungsanpassungen nicht verfügbar",
+    "blocked": {
+      "exported": "Diese Rechnung ist mit einem Buchhaltungssystem synchronisiert. Stornieren Sie sie oder stellen Sie eine separate Gutschrift aus, anstatt ihre Positionen zu bearbeiten.",
+      "exporting": "Ein Buchhaltungsexport für diese Rechnung wird vorbereitet. Warten Sie, bis er abgeschlossen ist, bevor Sie die Rechnung ändern."
+    }
   }
 }

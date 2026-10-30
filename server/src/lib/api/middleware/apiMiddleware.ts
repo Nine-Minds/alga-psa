@@ -204,6 +204,9 @@ export function createServerActionErrorResponse(error: ServerActionErrorResult):
 }
 
 const APPLICATION_ERROR_STATUS: Record<string, number> = {
+  CO_MANAGED_NOT_ACTIVE: 409,
+  CO_MANAGED_READ_ONLY: 423,
+  HUMAN_WORK_ASSIGNEE_INVALID: 422,
   QBO_AUTH_ERROR: 401,
   QBO_CONFIG_MISSING: 400,
   QBO_INVALID_INPUT: 400,
@@ -456,7 +459,7 @@ export function withValidation(schema: ZodSchema) {
         return await handler(req, validatedData);
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Validation failed', error.errors));
+          return handleApiError(new ValidationError('Validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -478,7 +481,7 @@ export function withQueryValidation(schema: ZodSchema) {
         return await handler(req, validatedQuery);
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Query validation failed', error.errors));
+          return handleApiError(new ValidationError('Query validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -563,7 +566,7 @@ export function handleApiError(error: any): NextResponse {
       error: {
         code: 'VALIDATION_ERROR',
         message: 'Validation failed',
-        details: redactSensitiveFields(error.errors)
+        details: redactSensitiveFields(error.issues)
       }
     }, { status: 400 });
   }

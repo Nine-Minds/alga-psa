@@ -21,7 +21,7 @@ export function isWorkspaceDbTest(file) {
   if (/^server\/migrations\/__tests__\//.test(file)) {
     return /\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
   }
-  return /^(packages|shared|ee\/packages|ee\/server\/src\/__tests__\/unit|server\/src\/test\/unit|services\/workflow-worker\/src)\//.test(file)
+  return /^(packages|shared|ee\/packages|ee\/server\/src\/__tests__\/unit|server\/src\/test\/unit|server\/src\/test\/contract|services\/workflow-worker\/src)\//.test(file)
     && /\.db\.test\.[cm]?[jt]sx?$/.test(file);
 }
 
@@ -56,6 +56,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
       'ee/temporal-workflows/src/__tests__/marketing-worker-registration.test.ts',
       'ee/temporal-workflows/src/__tests__/worker-registration.test.ts',
       'ee/temporal-workflows/src/__tests__/quote-terms-formatting-source-mapping.contract.test.ts',
+      'ee/temporal-workflows/src/__tests__/db-subpath-source-mapping.contract.test.ts',
       'ee/temporal-workflows/src/activities/__tests__/portalDomainActivitiesTenantScoped.contract.test.ts',
       'ee/temporal-workflows/src/activities/__tests__/slaActivitiesTenantScoped.contract.test.ts',
       'ee/temporal-workflows/src/workflows/__tests__/kb-article-import-wiring.contract.test.ts',
@@ -67,9 +68,12 @@ export function isAdditionalWorkspaceTest(file, lane) {
     if (file === 'ee/temporal-workflows/src/__tests__/temporal-worker-shared-tenant-secrets.helm.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/__tests__/worker-queue-ownership.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/__tests__/worker-health.test.ts') return true;
+    if (file === 'ee/temporal-workflows/src/__tests__/worker.capabilityBoot.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/workflows/__tests__/tenant-deletion-workflow.behavior.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/tenant-deletion-external-links.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/tenant-deletion-answer-mappings.test.ts') return true;
+    if (file === 'ee/temporal-workflows/src/activities/__tests__/tenant-deletion-prepaid-block-order.test.ts') return true;
+    if (/^ee\/temporal-workflows\/src\/activities\/__tests__\/(defaultTaxRate|workSchedule|teamsObservability)TenantDeletionOrder\.test\.ts$/.test(file)) return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/email-activities.temporal.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/maintenance-fanout-activities.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/portal-domain-reconcile.integration.test.ts') return true;
@@ -84,8 +88,8 @@ export function isAdditionalWorkspaceTest(file, lane) {
       || file === 'ee/temporal-workflows/src/db/__tests__/tenant-operations.email-settings.test.ts'
       || file === 'ee/temporal-workflows/src/db/__tests__/product-bootstrap-resolver.test.ts'
       || file === 'ee/temporal-workflows/src/db/__tests__/permission-catalog-packaging.test.ts'
-      || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(portal-domain-activities(?:\.git)?|portal-domain-nextauth-url)\.test\.ts$/.test(file)
-      || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(workflow-runtime-v2-activities|autopay-activities|sla-activities|marketing-activities|tenant-suspension-activities|tenant-email-ingestion-activities|product-upgrade-activities|trial-payment-reminder-activities|trial-payment-reminder-email|comment-recovery-forwarding|migration-apply-forwarding|customer-tracking-activities|email-activities-portal-status|portal-user-operations|email-activities-simple|email-activities-standalone|gmail-adapter-secret-log-hygiene|microsoft-email-filesystem-secret-provider)\.test\.ts$/.test(file);
+      || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(portal-domain-activities(?:\.git)?|portal-domain-nextauth-url|portal-domain-redirect-uri-gate)\.test\.ts$/.test(file)
+      || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(workflow-runtime-v2-activities|autopay-activities|sla-activities|marketing-activities|tenant-suspension-activities|tenant-email-ingestion-activities|product-upgrade-activities|appliance-console-stripe-seat-change|trial-payment-reminder-activities|trial-payment-reminder-email|comment-recovery-forwarding|migration-apply-forwarding|customer-tracking-activities|email-activities-portal-status|portal-user-operations|email-activities-simple|email-activities-standalone|gmail-adapter-secret-log-hygiene|microsoft-email-filesystem-secret-provider)\.test\.ts$/.test(file);
   }
   if (lane === 'api-e2e') {
     return (/^server\/src\/test\/e2e\/api\//.test(file)
@@ -123,7 +127,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
       && !/(^|\/)(node_modules|dist)\//.test(file)
       && !/\.(integration|db|playwright)\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
   }
-  if (!/^(services\/(email-service|workflow-worker)|sdk|ee\/server\/src\/lib)\//.test(file)
+  if (!/^(services\/(email-service|workflow-worker)|sdk|ee\/server\/src\/lib|scripts\/dev)\//.test(file)
     || !/\.(test|spec)\.[cm]?[jt]sx?$/.test(file)
     || /(^|\/)(node_modules|dist)\//.test(file)) return false;
   const runtime = /\.integration\.(test|spec)\.[cm]?[jt]sx?$/.test(file);

@@ -1,6 +1,10 @@
 // @alga-psa/billing/actions.ts
 'use server'
 
+import { resolveEffectiveBillingTiming } from '@alga-psa/shared/billingClients/contractLineTimingRule';
+import { randomUUID } from 'node:crypto';
+
+import { resolveContractLineDisplayKinds, resolveTemplateLineDisplayKinds } from '../services/prepaidBlockConfigService';
 import { resolveEffectiveRecurringUnitPricingInTransaction } from '../lib/billing/seatRevisions';
 import { resolveUsageMeasurementRevision } from '../lib/billing/usageMeasurementTransitions';
 
@@ -17,7 +21,9 @@ import {
   IContractTemplateWithLines,
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
+import { deriveClientContractStatus, getTenantLocalToday } from '@alga-psa/shared/billingClients';
+import { isContractLineTimingNotAllowedError } from '@alga-psa/shared/billingClients/contractLineTimingRule';
+import { validateDiscountInput, type DiscountAuthoringInput } from '../lib/billing/discountAuthoring';
 import { getContractMonthlyFixedValuesByContract } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { resolveMemberRate, type ServicePriceRateRow } from '@alga-psa/shared/billingClients/resolveFixedLineRate';
 import { publishWorkflowEvent, publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -41,6 +47,7 @@ import {
 } from '../repositories/contractLineRepository';
 import { newSupportReference } from '../lib/supportReference';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
+import { syncPrepaidBlockIssuancesForContractLine } from '../services/prepaidBlockIssuanceSync';
 
 type TenantScopedKnex = Knex | Knex.Transaction;
 type ContractActionError = ActionMessageError | ActionPermissionError;
@@ -53,6 +60,10 @@ class ContractActionDomainError extends Error {
 }
 
 function contractActionErrorFrom(error: unknown): ContractActionError | null {
+  if (isContractLineTimingNotAllowedError(error)) {
+    return actionError(error.message, 'msp/contract-lines:errors.line.advanceTimingNotAllowed');
+  }
+
   if (error instanceof ContractActionDomainError) {
     if (error.message.startsWith('Permission denied:')) {
       return permissionError(error.message);
@@ -150,6 +161,71 @@ const assertNoSystemManagedIdentityMutation = (
   }
 };
 
+async function validateTemplateDefaultDiscounts(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  templateId: string,
+  templateMetadata: unknown,
+): Promise<void> {
+  const metadata = typeof templateMetadata === 'object' && templateMetadata !== null
+    ? templateMetadata as Record<string, unknown> : {};
+  const definitions = metadata.default_discounts ?? [];
+  if (!Array.isArray(definitions)) throw new ContractActionDomainError('Default discounts must be a list.');
+  const db = tenantDb(trx, tenant);
+  const lines = await db.table('contract_template_lines').where({ template_id: templateId }).select('template_line_id');
+  const lineIds = new Set(lines.map((line: { template_line_id: string }) => String(line.template_line_id)));
+  const serviceRows = lineIds.size ? await db.table('contract_template_line_services')
+    .whereIn('template_line_id', [...lineIds]).select('service_id') : [];
+  const serviceIds = new Set(serviceRows.map((row: { service_id: string }) => String(row.service_id)));
+  const sourceKeys = new Set<string>();
+  for (const [index, raw] of definitions.entries()) {
+    if (!raw || typeof raw !== 'object') throw new ContractActionDomainError(`Default discount ${index + 1} is invalid.`);
+    const term = raw as Record<string, unknown>;
+    const name = typeof term.discount_name === 'string' ? term.discount_name.trim() : '';
+    const type = term.discount_type;
+    const value = Number(term.value);
+    const scope = term.scope ?? 'contract';
+    if (typeof term.template_discount_key === 'string') {
+      if (!term.template_discount_key.trim() || term.template_discount_key.length > 200 || sourceKeys.has(term.template_discount_key)) {
+        throw new ContractActionDomainError(`Default discount ${index + 1} has a duplicate or invalid template identity. Remove and re-add that term.`);
+      }
+      sourceKeys.add(term.template_discount_key);
+    }
+    if (typeof term.is_active !== 'undefined' && typeof term.is_active !== 'boolean') {
+      throw new ContractActionDomainError(`Default discount “${name || index + 1}” needs an active/inactive value.`);
+    }
+    if (term.priority != null && (typeof term.priority !== 'number' || !Number.isInteger(term.priority))) {
+      throw new ContractActionDomainError(`Default discount “${name || index + 1}” priority must be a whole number.`);
+    }
+    const normalizedType = type === 'fixed' || type === 'percentage' ? type : null;
+    const normalizedScope = scope === 'contract' || scope === 'line' || scope === 'service' ? scope : null;
+    if (!normalizedType || !normalizedScope) throw new ContractActionDomainError(`Default discount ${index + 1} has an unsupported type or scope.`);
+    const validatedInput: DiscountAuthoringInput = {
+      discount_name: name,
+      discount_type: normalizedType,
+      value,
+      start_date: typeof term.start_date === 'string' ? term.start_date : '',
+      end_date: typeof term.end_date === 'string' ? term.end_date : null,
+      scope: normalizedScope,
+      contract_line_id: typeof term.contract_line_id === 'string' ? term.contract_line_id : null,
+      scope_service_id: typeof term.scope_service_id === 'string' ? term.scope_service_id : null,
+      priority: typeof term.priority === 'number' ? term.priority : null,
+      is_active: typeof term.is_active === 'boolean' ? term.is_active : true,
+    };
+    const validationError = validateDiscountInput(validatedInput);
+    if (validationError) throw new ContractActionDomainError(`Default discount ${index + 1}: ${validationError}`);
+    if (value <= 0 || (normalizedType === 'fixed' && Number(value.toFixed(2)) !== value)) {
+      throw new ContractActionDomainError(`Default discount “${name}” must be positive; fixed amounts must use no more than two decimal places.`);
+    }
+    if (scope === 'line' && (typeof term.contract_line_id !== 'string' || !lineIds.has(term.contract_line_id))) {
+      throw new ContractActionDomainError(`Choose a line from this template for default discount “${name}”.`);
+    }
+    if (scope === 'service' && (typeof term.scope_service_id !== 'string' || !serviceIds.has(term.scope_service_id))) {
+      throw new ContractActionDomainError(`Choose a service used by this template for default discount “${name}”.`);
+    }
+  }
+}
+
 
 
 const mapTemplateToContract = (template: IContractTemplate): IContract => ({
@@ -158,10 +234,9 @@ const mapTemplateToContract = (template: IContractTemplate): IContract => ({
   contract_name: template.template_name,
   contract_description: template.template_description ?? undefined,
   billing_frequency: template.default_billing_frequency,
-  // currency_code removed from templates - templates are now currency-neutral
-  // When converting to contract, we use USD as default. Actual contract currency
-  // is set from client's default_currency_code when creating a real contract.
-  currency_code: 'USD',
+  // The template's base currency. A contract created from it takes the client's
+  // currency, not this one.
+  currency_code: template.currency_code,
   is_active: template.template_status === 'published',
   status: template.template_status,
   is_template: true,
@@ -358,11 +433,13 @@ export const addContractLine = withAuth(async (
 
     return knex.transaction((trx: Knex.Transaction) =>
       repoAddContractLine(trx, tenant, contractId, contractLineId, customRate).then(async (mapping) => {
+        // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
         await syncRecurringServicePeriodsForContractLine(trx, {
           tenant,
           contractLineId: mapping.contract_line_id,
           sourceRunPrefix: 'contract_add_line',
         });
+        await syncPrepaidBlockIssuancesForContractLine(trx, tenant, mapping.contract_line_id);
         return mapping;
       })
     );
@@ -413,11 +490,13 @@ export const updateContractLineAssociation = withAuth(async (
 
     const updated = await repoUpdateContractLine(knex, tenant, contractId, contractLineId, updateData);
     await knex.transaction(async (trx) => {
+      // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
       await syncRecurringServicePeriodsForContractLine(trx, {
         tenant,
         contractLineId,
         sourceRunPrefix: 'contract_line_association_update',
       });
+      await syncPrepaidBlockIssuancesForContractLine(trx, tenant, contractLineId);
     });
     return updated;
   } catch (error) {
@@ -436,10 +515,15 @@ export const updateContractLineRate = withAuth(async (
   contractId: string,
   contractLineId: string,
   rate: number,
-  billingTiming?: 'arrears' | 'advance'
+  billingTiming?: 'arrears' | 'advance',
+  invoiceLineDescription?: string | null
 ): Promise<void | ContractActionError> => {
   try {
     const { knex } = await createTenantKnex();
+
+    if (rate !== null && rate !== undefined && (!Number.isFinite(Number(rate)) || Number(rate) < 0)) {
+      return actionError('Rate must be zero or greater.');
+    }
 
     const canUpdate = await hasPermission(user, 'billing', 'update');
     if (!canUpdate) {
@@ -447,12 +531,14 @@ export const updateContractLineRate = withAuth(async (
     }
 
     await knex.transaction(async (trx) => {
-      await repoUpdateContractLineRate(trx, tenant, contractId, contractLineId, rate, billingTiming);
+      await repoUpdateContractLineRate(trx, tenant, contractId, contractLineId, rate, billingTiming, invoiceLineDescription);
+      // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
       await syncRecurringServicePeriodsForContractLine(trx, {
         tenant,
         contractLineId,
         sourceRunPrefix: 'contract_line_rate_update',
       });
+      await syncPrepaidBlockIssuancesForContractLine(trx, tenant, contractLineId);
     });
   } catch (error) {
     console.error(`Error updating contract line ${contractLineId} rate for contract ${contractId}:`, error);
@@ -555,13 +641,24 @@ export const updateContract = withAuth(async (
       if (typeof updateData.billing_frequency === 'string') {
         templateUpdates.default_billing_frequency = updateData.billing_frequency;
       }
-      // currency_code removed from templates - templates are now currency-neutral
-      // Currency is inherited from the client when a contract is created
+      // The base currency is not changed here: relabelling goes through
+      // updateContractTemplateCurrency, which also guards the per-currency price sets.
       if (updateData.status && ['draft', 'published', 'archived'].includes(updateData.status)) {
         templateUpdates.template_status = updateData.status as IContractTemplate['template_status'];
       }
       if (updateData.template_metadata !== undefined) {
-        templateUpdates.template_metadata = updateData.template_metadata ?? null;
+        await validateTemplateDefaultDiscounts(knex, tenant, contractId, updateData.template_metadata);
+        const metadata = updateData.template_metadata && typeof updateData.template_metadata === 'object'
+          ? updateData.template_metadata as Record<string, unknown> : null;
+        const terms = Array.isArray(metadata?.default_discounts) ? metadata.default_discounts : null;
+        templateUpdates.template_metadata = metadata && terms
+          ? { ...metadata, default_discounts: terms.map((term) => ({
+              ...(term as Record<string, unknown>),
+              template_discount_key: typeof (term as Record<string, unknown>).template_discount_key === 'string'
+                ? (term as Record<string, unknown>).template_discount_key
+                : randomUUID(),
+            })) }
+          : updateData.template_metadata ?? null;
       }
 
       if (Object.keys(templateUpdates).length === 0) {
@@ -825,8 +922,12 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
     }));
 
     const totalAssignments = assignments.length;
+    const tenantToday = await getTenantLocalToday(knex, tenant);
+    // Summary "active clients" counts only assignments billing now: 'scheduled' (future start) is
+    // neither active nor draft, so it is not counted until its start date.
     const activeAssignments = assignments.filter((assignment) =>
       deriveClientContractStatus({
+        now: tenantToday,
         isActive: Boolean(assignment.is_active),
         startDate: assignment.start_date,
         endDate: assignment.end_date,
@@ -918,6 +1019,7 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
       .select(selection)
       .orderBy('cc.start_date', 'asc');
 
+    const tenantToday = await getTenantLocalToday(knex, tenant);
     return rows.map((row: any) => {
       const renewalMode =
         row.renewal_mode === 'none' || row.renewal_mode === 'manual' || row.renewal_mode === 'auto'
@@ -961,6 +1063,7 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
         billing_profile_id: row.billing_profile_id ?? null,
         billing_profile_name: row.billing_profile_name ?? null,
         assignment_status: deriveClientContractStatus({
+          now: tenantToday,
           isActive: Boolean(row.is_active),
           startDate: row.start_date,
           endDate: row.end_date,
@@ -1007,13 +1110,28 @@ export interface IContractLineOverview {
   contract_line_id: string;
   contract_line_name: string;
   contract_line_type: 'Fixed' | 'Hourly' | 'Usage';
+  /** Derived label kind ('PrepaidBlock' for Hourly lines with a block config); the stored type is untouched. */
+  display_kind?: string;
   billing_frequency: string;
+  /** Effective timing (Hourly/Usage always resolve to arrears); never the raw column. */
+  billing_timing: 'advance' | 'arrears';
   base_rate: number | null;  // For fixed lines - in cents
+  /**
+   * Effective recurring amount of one billing period (cents) for a Fixed line
+   * that holds product members, computed by the shared contract valuation so
+   * the header can never disagree with the contract total. A zero line rate is
+   * a historical placeholder, not a price, so `base_rate` must not be printed
+   * for such a line. Null when the line has no product members (the line's own
+   * `base_rate` is then the amount) and for templates.
+   */
+  recurring_amount: number | null;
   display_order: number;
   services: {
     service_id: string;
     service_name: string;
     billing_method: string;
+    /** Catalog item kind ('product' members are billed quantity x rate, never as a bundle share). */
+    item_kind: string | null;
     custom_rate: number | null;  // In cents
     /**
      * Fixed-allocation quantity. Always null for Usage lines: usage billing is
@@ -1075,8 +1193,8 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
 
     const isTemplate = Boolean(templateRecord);
 
-    // Get currency code - templates default to USD, contracts have their own currency
-    let currencyCode = 'USD';
+    // Templates carry their own base currency; contracts have theirs.
+    let currencyCode = templateRecord?.currency_code ?? 'USD';
     let clientId: string | null = null;
     if (!isTemplate) {
       const contractRecord = await tenantScopedTable(knex, tenant, 'contracts')
@@ -1104,6 +1222,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           'ctl.template_line_name as contract_line_name',
           'ctl.line_type as contract_line_type',
           'ctl.billing_frequency',
+          'ctl.billing_timing',
           'ctl.display_order',
           'tfc.base_rate'
         ])
@@ -1120,6 +1239,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
             'ctls.service_id',
             's.service_name',
             's.billing_method',
+            's.item_kind',
             'ctls.custom_rate',
             'ctls.quantity'
           ]);
@@ -1148,7 +1268,9 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           contract_line_name: line.contract_line_name,
           contract_line_type: (line.contract_line_type || 'Fixed') as 'Fixed' | 'Hourly' | 'Usage',
           billing_frequency: line.billing_frequency || 'monthly',
+          billing_timing: resolveEffectiveBillingTiming(line.contract_line_type || 'Fixed', line.billing_timing),
           base_rate: line.base_rate ? Number(line.base_rate) : null,
+          recurring_amount: null,
           display_order: line.display_order ?? 0,
           services: (services as any[]).map((svc: any) => {
             const config = configMap.get(svc.service_id);
@@ -1158,6 +1280,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
               service_id: svc.service_id,
               service_name: svc.service_name || 'Unknown Service',
               billing_method: svc.billing_method || 'fixed',
+              item_kind: svc.item_kind ?? null,
               custom_rate: config?.custom_rate ? Number(config.custom_rate) : (svc.custom_rate ? Number(svc.custom_rate) : null),
               // Usage lines bill recorded usage only; legacy configured
               // quantities are audit metadata and must not read as billable.
@@ -1192,6 +1315,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           'cl.contract_line_name',
           'cl.contract_line_type',
           'cl.billing_frequency',
+          'cl.billing_timing',
           'cl.display_order',
           'cl.custom_rate as base_rate'
         ])
@@ -1305,10 +1429,13 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
         const catalogRateByConfig = new Map<string, number | null>();
         const inheritingUnitConfigs = (configs as any[]).filter((config: any) => {
           const fixed = fixedSemanticsMap.get(config.config_id);
-          const unitValued = fixed?.pricing_basis === 'unit' || effectiveUnitConfigIds.has(config.config_id);
+          const isProduct = itemKindByService.get(config.service_id) === 'product';
+          // A product is always quantity x rate (the engine never reads its
+          // pricing_basis), and its fixed base_rate is never a unit rate.
+          const unitValued = isProduct || fixed?.pricing_basis === 'unit' || effectiveUnitConfigIds.has(config.config_id);
           if (!unitValued) return false;
           return catalogPolicyConfigIds.has(config.config_id)
-            || (fixed?.base_rate == null && config.custom_rate == null);
+            || ((isProduct || fixed?.base_rate == null) && config.custom_rate == null);
         });
         if (inheritingUnitConfigs.length > 0) {
           const inheritingServiceIds = inheritingUnitConfigs.map((config: any) => config.service_id);
@@ -1350,18 +1477,22 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           contract_line_name: line.contract_line_name,
           contract_line_type: (line.contract_line_type || 'Fixed') as 'Fixed' | 'Hourly' | 'Usage',
           billing_frequency: line.billing_frequency || 'monthly',
+          billing_timing: resolveEffectiveBillingTiming(line.contract_line_type || 'Fixed', line.billing_timing),
           base_rate: line.base_rate ? Number(line.base_rate) : null,
+          recurring_amount: null,
           display_order: line.display_order ?? 0,
           services: (services as any[]).map((svc: any) => {
             const config = configMap.get(svc.service_id);
             const semantics = fixedSemanticsMap.get(config?.config_id);
             const isScheduledUnit = effectiveUnitConfigIds.has(config?.config_id);
             const isCatalogPolicy = catalogPolicyConfigIds.has(config?.config_id);
-            const isUnitValued = semantics?.pricing_basis === 'unit' || isScheduledUnit;
+            const isProduct = svc.item_kind === 'product';
+            const isUnitValued = semantics?.pricing_basis === 'unit' || isScheduledUnit || isProduct;
             return {
               service_id: svc.service_id,
               service_name: svc.service_name || 'Unknown Service',
               billing_method: svc.billing_method || 'fixed',
+              item_kind: svc.item_kind ?? null,
               custom_rate: config?.custom_rate ? Number(config.custom_rate) : null,
               // Usage lines bill recorded usage only; legacy configured
               // quantities are audit metadata and must not read as billable.
@@ -1380,13 +1511,23 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
                 ? null
                 : catalogRateByConfig.has(config?.config_id)
                   ? catalogRateByConfig.get(config?.config_id) ?? null
-                  : (semantics?.base_rate != null
+                  : (semantics?.base_rate != null && !isProduct
                       ? Number(semantics.base_rate)
                       : (config?.custom_rate != null ? Number(config.custom_rate) : null))
             };
           })
         });
       }
+    }
+
+    // Derived label kind so the overview labels Prepaid Block lines correctly.
+    const overviewDisplayKinds = await (isTemplate ? resolveTemplateLineDisplayKinds : resolveContractLineDisplayKinds)(
+      knex,
+      tenant,
+      contractLines.map((line) => ({ contract_line_id: line.contract_line_id, contract_line_type: line.contract_line_type })),
+    );
+    for (const line of contractLines) {
+      line.display_kind = overviewDisplayKinds.get(line.contract_line_id) ?? line.contract_line_type;
     }
 
     // Calculate totals
@@ -1399,13 +1540,26 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
     // show the fixed portion; hourly/usage revenue is variable).
     let totalEstimatedMonthlyValue: number | null = null;
 
-    if (hasFixedServices && !isTemplate) {
+    // A cadence Prepaid Block lives on an Hourly line but bills a fixed fee every period, so a
+    // contract with only such lines still has a fixed monthly value.
+    const contractValues = !isTemplate && (hasFixedServices || hasHourlyServices)
+      ? await getContractMonthlyFixedValuesByContract(knex, tenant, [contractId])
+      : null;
+    if (contractValues && (hasFixedServices || contractValues.get(contractId)?.hasCadencePrepaidBlock)) {
       // Real contracts use the canonical shared valuation so the overview,
       // contract reports, and the summary MRR cannot disagree: unit-priced
       // lines are quantity × unit rate (revision-aware), bundles keep their
       // line rate, and every line is cadence-normalized.
-      const contractValues = await getContractMonthlyFixedValuesByContract(knex, tenant, [contractId]);
       totalEstimatedMonthlyValue = contractValues.get(contractId)?.monthlyValueCents ?? 0;
+      // A Fixed line holding product members is billed quantity x rate, so
+      // its header amount comes from the same valuation as the total (a line
+      // `custom_rate` of 0 is a legacy placeholder and must not be printed).
+      const linePeriodCents = contractValues.get(contractId)?.linePeriodCentsByLine;
+      for (const line of contractLines) {
+        if (line.contract_line_type !== 'Fixed') continue;
+        if (!line.services.some((service) => service.item_kind === 'product')) continue;
+        line.recurring_amount = linePeriodCents?.get(line.contract_line_id) ?? null;
+      }
     } else if (hasFixedServices) {
       // Templates have no contract rows for the shared valuation; keep the
       // template-line normalization. Per-seat members add quantity × default

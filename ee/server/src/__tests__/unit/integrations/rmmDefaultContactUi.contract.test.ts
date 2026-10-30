@@ -48,13 +48,15 @@ describe('RMM default contact mapping UI contracts', () => {
 
   const tactical = () =>
     readRepoFile('packages/integrations/src/components/settings/integrations/TacticalRmmIntegrationSettings.tsx');
+  const datto = () =>
+    readRepoFile('ee/server/src/components/settings/integrations/DattoRmmIntegrationSettings.tsx');
   const level = () =>
     readRepoFile('ee/server/src/components/settings/integrations/LevelIoIntegrationSettings.tsx');
   const tanium = () =>
     readRepoFile('ee/server/src/components/settings/integrations/TaniumIntegrationSettings.tsx');
 
-  it('T045: Tactical/Level/Tanium mapping UIs render a default contact picker, filtered and disabled when unmapped', () => {
-    for (const source of [tactical(), level(), tanium()]) {
+  it('T045: Tactical/Datto/Level/Tanium mapping UIs render a default contact picker, filtered and disabled when unmapped', () => {
+    for (const source of [tactical(), datto(), level(), tanium()]) {
       expect(source).toContain("import { ContactPicker } from '@alga-psa/ui/components/ContactPicker'");
       expect(source).toContain('default_contact_id');
       // disabled when the row has no mapped client (m. for Tactical, mapping. for Level/Tanium)
@@ -64,11 +66,12 @@ describe('RMM default contact mapping UI contracts', () => {
     }
   });
 
-  it('T046: all five provider pickers wire onAddNew to the Quick Add Contact dialog', () => {
+  it('T046: all six provider pickers wire onAddNew to the Quick Add Contact dialog', () => {
     const all = [
       huntress(),
       ninjaone(),
       tactical(),
+      datto(),
       level(),
       tanium(),
     ];

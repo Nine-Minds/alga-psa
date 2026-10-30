@@ -11,6 +11,7 @@ import { tenantDb } from '@alga-psa/db';
 import { TicketModel } from '../../models/ticketModel';
 import { SharedNumberingService } from '../../services/numberingService';
 import { applyBoardDefaultWatchers } from '../../lib/tickets/boardDefaultWatchers';
+import { TicketWatcherService } from '../../services/tickets/ticketWatcherService';
 import type {
   NormalizedRmmAlertEvent,
   NormalizedRmmAlertSeverity,
@@ -18,12 +19,37 @@ import type {
 } from './contracts';
 import { resolveRmmTicketContactId } from './resolveContact';
 import { associateAssetWithTicket } from '../../services/assets/assetTicketAssociation';
+import {
+  assertBillingProfileForClient,
+  resolveAssetBillingProfileId,
+} from '../../models/assetBillingProfileModel';
+
+/**
+ * The profile when it belongs to this client and is active, otherwise null —
+ * an alert ticket falls back to the client default rather than failing or
+ * billing someone else's profile.
+ */
+async function profileForClient(
+  trx: Knex.Transaction,
+  tenantId: string,
+  clientId: string,
+  billingProfileId: string | null
+): Promise<string | null> {
+  if (!billingProfileId) return null;
+  try {
+    return await assertBillingProfileForClient(trx, tenantId, clientId, billingProfileId);
+  } catch {
+    return null;
+  }
+}
 
 export interface CreateAlertTicketParams {
   event: NormalizedRmmAlertEvent;
   actions: RmmAlertRuleActions;
   clientId: string;
   assetId?: string | null;
+  /** FR-F3: the RMM organization mapping's billing profile, when it has one. */
+  mappingBillingProfileId?: string | null;
   organizationName?: string | null;
   mappingDefaultContactId?: string | null;
 }
@@ -57,6 +83,7 @@ export async function createTicketForAlert(
   const contactId = await resolveRmmTicketContactId(trx, tenantId, {
     clientId: params.clientId,
     mappingDefaultContactId: params.mappingDefaultContactId,
+    assetId: params.assetId,
   });
 
   const title = renderTemplate(actions.ticketTemplate?.titleTemplate, params) ?? defaultTitle(event);
@@ -75,6 +102,24 @@ export async function createTicketForAlert(
     source_reference: event.externalAlertId,
   });
 
+  // FR-F3: the RMM organization's profile wins, then the device's own, then
+  // its location's default. Null leaves today's client-default behaviour.
+  //
+  // Each candidate is checked against the client the ticket is raised for:
+  // the client comes from the device (FR-G5 lets a device be moved by hand and
+  // keeps it there), so a mapping still pointing at the previous client would
+  // otherwise bill the work to a profile that client no longer owns.
+  const billingProfileId =
+    (await profileForClient(trx, tenantId, params.clientId, params.mappingBillingProfileId ?? null)) ??
+    (params.assetId
+      ? await profileForClient(
+          trx,
+          tenantId,
+          params.clientId,
+          await resolveAssetBillingProfileId(trx, tenantId, params.assetId)
+        )
+      : null);
+
   const [ticket] = await db.table('tickets')
     .insert({
       tenant: tenantId,
@@ -82,6 +127,7 @@ export async function createTicketForAlert(
       title,
       client_id: params.clientId,
       contact_name_id: contactId,
+      billing_profile_id: billingProfileId,
       status_id: defaultStatusId,
       priority_id: priorityId ?? null,
       board_id: boardId,
@@ -92,6 +138,8 @@ export async function createTicketForAlert(
       updated_at: now,
     })
     .returning(['ticket_id', 'ticket_number']);
+
+  await TicketWatcherService.seedFromAttributes(trx, tenantId, ticket.ticket_id);
 
   if (params.assetId) {
     await associateAssetWithTicket(trx, tenantId, params.assetId, ticket.ticket_id, now);
@@ -241,6 +289,7 @@ function initialNote(event: NormalizedRmmAlertEvent): string {
 const PROVIDER_LABELS: Record<string, string> = {
   ninjaone: 'NinjaOne',
   tacticalrmm: 'Tactical RMM',
+  datto: 'Datto RMM',
   levelio: 'Level',
   huntress: 'Huntress',
   tanium: 'Tanium',

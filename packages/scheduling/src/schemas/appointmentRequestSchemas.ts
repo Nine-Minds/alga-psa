@@ -16,9 +16,9 @@ export const appointmentRequestStatusSchema = z.enum(['pending', 'approved', 'de
 
 export const appointmentRequestFilterSchema = z.object({
   status: appointmentRequestStatusSchema.optional().nullable(),
-  service_id: z.string().uuid().optional().nullable(),
-  client_id: z.string().uuid().optional().nullable(),
-  assigned_user_id: z.string().uuid().optional().nullable(),
+  service_id: z.string().guid().optional().nullable(),
+  client_id: z.string().guid().optional().nullable(),
+  assigned_user_id: z.string().guid().optional().nullable(),
   start_date: dateStringSchema.optional().nullable(),
   end_date: dateStringSchema.optional().nullable(),
   is_authenticated: z.boolean().optional().nullable(),
@@ -36,29 +36,29 @@ export const appointmentRequestFilterSchema = z.object({
 export type AppointmentRequestFilters = z.infer<typeof appointmentRequestFilterSchema>;
 
 export const approveAppointmentRequestSchema = z.object({
-  appointment_request_id: z.string().uuid('Request ID must be a valid UUID'),
+  appointment_request_id: z.string().guid('Request ID must be a valid UUID'),
   final_date: dateStringSchema.optional().nullable(),
   final_time: timeStringSchema.optional().nullable(),
-  assigned_user_id: z.string().uuid('Assigned user ID must be a valid UUID'),
+  assigned_user_id: z.string().guid('Assigned user ID must be a valid UUID'),
   generate_teams_meeting: z.boolean().default(false),
   // When Teams meeting creation fails the approval is aborted so the approver
   // can retry; setting this completes the approval without a meeting instead.
   approve_without_meeting: z.boolean().default(false),
   internal_notes: z.string().max(2000, 'Notes cannot exceed 2000 characters').optional().nullable(),
-  ticket_id: z.string().uuid('Ticket ID must be a valid UUID').optional().nullable(),
+  ticket_id: z.string().guid('Ticket ID must be a valid UUID').optional().nullable(),
 });
 
 export type ApproveAppointmentRequestInput = z.input<typeof approveAppointmentRequestSchema>;
 
 export const declineAppointmentRequestSchema = z.object({
-  appointment_request_id: z.string().uuid('Request ID must be a valid UUID'),
+  appointment_request_id: z.string().guid('Request ID must be a valid UUID'),
   decline_reason: z.string().min(1, 'Reason for declining is required').max(2000, 'Reason cannot exceed 2000 characters'),
 });
 
 export type DeclineAppointmentRequestInput = z.infer<typeof declineAppointmentRequestSchema>;
 
 export const updateAppointmentRequestDateTimeSchema = z.object({
-  appointment_request_id: z.string().uuid('Request ID must be a valid UUID'),
+  appointment_request_id: z.string().guid('Request ID must be a valid UUID'),
   new_date: dateStringSchema,
   new_time: timeStringSchema,
   new_duration: z.number().int().min(15).max(480).optional().nullable(),
@@ -68,8 +68,8 @@ export const updateAppointmentRequestDateTimeSchema = z.object({
 export type UpdateAppointmentRequestDateTimeInput = z.infer<typeof updateAppointmentRequestDateTimeSchema>;
 
 export const associateRequestToTicketSchema = z.object({
-  appointment_request_id: z.string().uuid('Request ID must be a valid UUID'),
-  ticket_id: z.string().uuid('Ticket ID must be a valid UUID'),
+  appointment_request_id: z.string().guid('Request ID must be a valid UUID'),
+  ticket_id: z.string().guid('Ticket ID must be a valid UUID'),
 });
 
 export type AssociateRequestToTicketInput = z.infer<typeof associateRequestToTicketSchema>;

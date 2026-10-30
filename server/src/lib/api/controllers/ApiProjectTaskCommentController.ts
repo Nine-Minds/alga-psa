@@ -62,7 +62,7 @@ export class ApiProjectTaskCommentController extends ApiBaseController {
       return parse(body);
     } catch (error) {
       if (error instanceof ZodError) {
-        throw new ValidationError('Validation failed', error.errors);
+        throw new ValidationError('Validation failed', error.issues);
       }
       throw error;
     }

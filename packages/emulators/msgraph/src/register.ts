@@ -304,7 +304,7 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
       conversationType: z.enum(['personal', 'groupChat', 'channel']).optional(),
       tenantId: z.string().optional(),
       serviceUrl: z.string().optional(),
-      value: z.record(z.unknown()).optional(),
+      value: z.record(z.string(), z.unknown()).optional(),
       targetUrl: z.string().optional(),
       appId: z.string().optional(),
       tokenAgeSeconds: z.number().int().nonnegative().optional(),
@@ -378,7 +378,7 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
     params: z.object({
       name: z.string().min(1),
       seeder: z.string().min(1),
-      payload: z.record(z.unknown()),
+      payload: z.record(z.string(), z.unknown()),
     }),
     run: ({ name, seeder, payload }) => core.saveSeedPreset(name, seeder, payload),
   });

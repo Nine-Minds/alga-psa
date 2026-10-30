@@ -33,6 +33,10 @@
       "import": "./dist/components/index.mjs",
       "require": "./dist/components/index.js"
     },
+    "./components/*": {
+      "types": "./src/components/*.tsx",
+      "import": "./src/components/*.tsx"
+    },
     "./email": {
       "types": "./dist/email/index.d.ts",
       "import": "./dist/email/index.mjs",
@@ -58,7 +62,7 @@
     "axios": "^1.20.0",
     "imapflow": "^1.2.18",
     "knex": "^3.1.0",
-    "zod": "^3.22.4"
+    "zod": "^4.6.7"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

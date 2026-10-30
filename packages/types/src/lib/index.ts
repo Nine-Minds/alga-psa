@@ -11,3 +11,4 @@ export * from './tax';
 export * from './temporal';
 export * from './email';
 export * from './invoice-renderer/types';
+export * from './paymentSettings';

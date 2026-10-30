@@ -42,6 +42,8 @@ export interface WasmInvoiceLineItem {
   // these fields span the earliest start and latest end across the canonical periods.
   servicePeriodStart?: string | null;
   servicePeriodEnd?: string | null;
+  /** Display range for the row's service period; null for one-time lines. */
+  servicePeriodLabel?: string | null;
   // Compatibility summary timing. When recurringDetailPeriods is present,
   // this stays populated only when every canonical period shares the same timing.
   billingTiming?: 'arrears' | 'advance' | null;
@@ -56,6 +58,15 @@ export interface WasmInvoiceLineItem {
   location_id?: string | null;
   /** Resolved location object, when available. */
   location?: WasmInvoiceLineItemLocation | null;
+  /** True for discount/adjustment rows so renderers can style them distinctly. */
+  isDiscount?: boolean;
+  discountType?: 'percentage' | 'fixed' | null;
+  /** Provenance for automatic discounts/true-ups and manual adjustments. */
+  adjustmentSourceKind?: 'discount' | 'contract_change' | 'manual_adjustment' | null;
+  adjustmentScope?: 'invoice' | 'contract' | 'service' | 'item' | null;
+  adjustmentReason?: string | null;
+  /** Authoring facts for manually entered adjustment lines (e.g. partial period). */
+  manualLineMetadata?: Record<string, unknown> | null;
 }
 
 /**
@@ -163,6 +174,7 @@ export interface InvoiceTicketPresentationRow {
   amount: number;
   servicePeriodStart?: string | null;
   servicePeriodEnd?: string | null;
+  servicePeriodLabel?: string | null;
   contributions: Array<{ itemId: string; entryId: string | null; amount: number }>;
 }
 

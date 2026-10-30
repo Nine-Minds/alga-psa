@@ -9,8 +9,8 @@ export interface IContractTemplate extends TenantEntity {
   template_name: string;
   template_description?: string | null;
   default_billing_frequency: string;
-  // currency_code removed - templates are now currency-neutral
-  // Currency is inherited from the client when a contract is created from this template
+  /** Base currency of the template; the amounts stored in its columns are in this currency. */
+  currency_code: string;
   template_status: TemplateStatus;
   template_metadata?: Record<string, unknown> | null;
   created_at?: ISO8601String;
@@ -22,6 +22,8 @@ export interface IContractTemplateLine extends TenantEntity {
   template_id: string;
   template_line_name: string;
   description?: string | null;
+  /** Verbatim invoice line text; copied to the live line when the template is applied. */
+  invoice_line_description?: string | null;
   billing_frequency: string;
   line_type?: string | null;
   service_category?: string | null;

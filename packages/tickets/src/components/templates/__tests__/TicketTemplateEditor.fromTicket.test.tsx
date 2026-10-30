@@ -16,7 +16,11 @@ vi.mock('next/link', () => ({
   __esModule: true,
   default: ({ children, href, ...rest }: any) => <a href={href} {...rest}>{children}</a>,
 }));
-vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: replaceMock, push: vi.fn() }) }));
+// useSearchParams: the shared BackNav reads it to carry returnFilters back to a list.
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: replaceMock, push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
 vi.mock('react-hot-toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 vi.mock('../../../actions/ticketTemplateActions', () => ({
@@ -30,8 +34,8 @@ vi.mock('../../../actions/ticketActions', () => ({
 vi.mock('../useTicketTemplatePermissions', () => ({
   useTicketTemplatePermissions: () => permissionsMock(),
 }));
-vi.mock('../../recurring/useRecurringReferenceData', () => ({
-  useRecurringReferenceData: () => ({
+vi.mock('../../useTicketFieldReferenceData', () => ({
+  useTicketFieldReferenceData: () => ({
     loading: false, error: null, users: [], teams: [], boards: [], checklistTemplates: [], boardData: {}, ensureBoard: vi.fn(),
   }),
 }));
@@ -150,6 +154,8 @@ describe('TicketTemplateEditor with ?fromTicket', () => {
       name: 'Microsoft 365 Employee Department Change',
       notes: null,
       title: 'Jane Smith moved to Sales',
+      // A new template is offered in the picker unless the editor says otherwise (R5).
+      offer_for_manual_use: true,
       description: paragraph('Move steps'),
       board_id: UUID(1),
       category_id: UUID(2),

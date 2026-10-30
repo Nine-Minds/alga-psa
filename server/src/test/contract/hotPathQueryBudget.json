@@ -1,0 +1,99 @@
+{
+  "schemaVersion": 1,
+  "scenario": "psa-canonical-v1",
+  "edge": "ce",
+  "steps": [
+    {
+      "name": "auth.withAuth",
+      "statements": 3,
+      "locks": 0
+    },
+    {
+      "name": "tier.check",
+      "statements": 2,
+      "locks": 0
+    },
+    {
+      "name": "ticket.list",
+      "statements": 17,
+      "locks": 0
+    },
+    {
+      "name": "ticket.open",
+      "statements": 34,
+      "locks": 0
+    },
+    {
+      "name": "ticket.update",
+      "statements": 12,
+      "locks": 0
+    },
+    {
+      "name": "ticket.boardMove",
+      "statements": 25,
+      "locks": 0
+    },
+    {
+      "name": "comment.add",
+      "statements": 23,
+      "locks": 3
+    },
+    {
+      "name": "comment.edit",
+      "statements": 12,
+      "locks": 2
+    },
+    {
+      "name": "comment.delete",
+      "statements": 11,
+      "locks": 0
+    },
+    {
+      "name": "comment.scheduledEnqueue",
+      "statements": 14,
+      "locks": 2
+    },
+    {
+      "name": "timeEntry.create",
+      "statements": 18,
+      "locks": 1
+    },
+    {
+      "name": "timeEntry.approve",
+      "statements": 25,
+      "locks": 0
+    },
+    {
+      "name": "invoice.generate",
+      "statements": 207,
+      "locks": 4
+    },
+    {
+      "name": "portal.ticketView",
+      "statements": 15,
+      "locks": 0
+    },
+    {
+      "name": "inbound.replyHandling",
+      "statements": 43,
+      "locks": 5
+    },
+    {
+      "name": "maintenance.fanoutTick",
+      "statements": 5,
+      "locks": 0
+    }
+  ],
+  "totals": {
+    "statements": 466,
+    "locks": 17
+  },
+  "denylist": [
+    "^co_managed_",
+    "^co_management_",
+    "^sla_organization_",
+    "^native_time_tracking_",
+    "^tenant_license_state$"
+  ],
+  "notes": "raising a number requires this file in the PR diff"
+}

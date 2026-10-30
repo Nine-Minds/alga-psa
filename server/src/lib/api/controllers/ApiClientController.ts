@@ -158,7 +158,7 @@ export class ApiClientController extends ApiBaseController {
             data = createClientLocationSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }
@@ -211,7 +211,7 @@ export class ApiClientController extends ApiBaseController {
             data = updateClientLocationSchema.parse(await req.json());
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }
@@ -306,7 +306,7 @@ export class ApiClientController extends ApiBaseController {
       return schema.parse(await req.json());
     } catch (error) {
       if (error instanceof ZodError) {
-        throw new ValidationError('Validation failed', error.errors);
+        throw new ValidationError('Validation failed', error.issues);
       }
       throw error;
     }
@@ -389,6 +389,7 @@ export class ApiClientController extends ApiBaseController {
                 mappingId: entry.mapping_id,
                 apply: entry.apply,
               })),
+              billingStrategy: body.billing_strategy,
             },
             apiRequest.context!
           );
@@ -402,6 +403,7 @@ export class ApiClientController extends ApiBaseController {
             counts: result.counts,
             remapped_external_mapping_ids: result.remappedExternalMappingIds,
             skipped_external_mapping_ids: result.skippedExternalMappingIds,
+            billing_strategy: result.billingStrategy,
           });
         });
       } catch (error) {

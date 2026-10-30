@@ -5,6 +5,7 @@ import {
   BaseService,
   type ListResult,
   type ServiceContext,
+  tenantDb,
   withTransaction,
 } from '@alga-psa/db';
 import {
@@ -291,6 +292,17 @@ function throwInventoryApiError(error: unknown): never {
   throw new ValidationError(message);
 }
 
+/**
+ * Decides which scanned asset rows the caller may see. Receives the candidate
+ * rows (already tenant scoped) and the lookup transaction, and returns the
+ * subset the caller is authorized to read. Lookup is deny-by-default: when no
+ * authorizer is supplied no asset is ever returned.
+ */
+export type InventoryLookupAssetAuthorizer = <T extends { asset_id: string; client_id?: string | null }>(
+  trx: Knex.Transaction,
+  assets: T[],
+) => Promise<T[]>;
+
 export class InventoryService extends BaseService<any> {
   constructor() {
     super({
@@ -300,7 +312,11 @@ export class InventoryService extends BaseService<any> {
     });
   }
 
-  async lookup(code: string, context: ServiceContext): Promise<InventoryLookupResult> {
+  async lookup(
+    code: string,
+    context: ServiceContext,
+    authorizeAssets?: InventoryLookupAssetAuthorizer,
+  ): Promise<InventoryLookupResult> {
     const knex = await this.getDbForContext(context);
     return withTransaction(knex, async (trx) => {
       const trimmed = code.trim();
@@ -337,8 +353,15 @@ export class InventoryService extends BaseService<any> {
       // offers "View asset"); don't also surface that same asset as a separate
       // hit. Only directly-matched assets NOT reachable through a found unit.
       const unitAssetIds = new Set(units.map((row: any) => row.asset_id).filter(Boolean));
-      const assets = [...new Map((assetRows as any[]).map((row) => [row.asset_id, row])).values()]
+      const candidateAssets = [...new Map((assetRows as any[]).map((row) => [row.asset_id, row])).values()]
         .filter((row: any) => !unitAssetIds.has(row.asset_id));
+      // Deny by default, and filter BEFORE `domains` is computed: an unreadable
+      // asset must not count as a match domain (it would turn a product result
+      // into a `multi`, or an `asset` result into something other than `none`).
+      // Never post-filter the response union; `multi` requires >= 2 matches.
+      const assets = authorizeAssets && candidateAssets.length > 0
+        ? await authorizeAssets(trx, candidateAssets)
+        : [];
 
       const domains = (products.length > 0 ? 1 : 0) + (units.length > 0 ? 1 : 0) + (assets.length > 0 ? 1 : 0);
 
@@ -620,21 +643,23 @@ export class InventoryService extends BaseService<any> {
   ): Promise<ListResult<CountSessionApiRow>> {
     const knex = await this.getDbForContext(context);
     return withTransaction(knex, async (trx) => {
+      const lineCounts = trx('count_lines')
+        .where({ tenant: context.tenant })
+        .groupBy('tenant', 'session_id')
+        .select('tenant', 'session_id')
+        .count({ line_count: '*' })
+        .as('cl');
       const query = trx('count_sessions as cs')
         .leftJoin('stock_locations as loc', function () {
           this.on('loc.location_id', '=', 'cs.location_id').andOn('loc.tenant', '=', 'cs.tenant');
         })
-        .leftJoin(
-          trx('count_lines')
-            .where({ tenant: context.tenant })
-            .groupBy('session_id')
-            .select('session_id')
-            .count({ line_count: '*' })
-            .as('cl'),
-          'cl.session_id',
-          'cs.session_id',
-        )
         .where({ 'cs.tenant': context.tenant });
+      // Derived table carries tenant and is joined on it so Citus keeps the join co-located.
+      tenantDb(trx, context.tenant).tenantJoinSubquery(query, lineCounts, 'cl.session_id', 'cs.session_id', {
+        type: 'left',
+        rootTenantColumn: 'cs.tenant',
+        joinedTenantColumn: 'cl.tenant',
+      });
       if (input.location_id) query.andWhere('cs.location_id', input.location_id);
       if (input.status) query.andWhere('cs.status', input.status);
       const rows = await query

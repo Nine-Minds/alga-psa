@@ -8,6 +8,7 @@ import {
   uuidSchema,
   booleanTransform,
 } from './common';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 // ============================================================================
 // Enums
@@ -67,7 +68,7 @@ export const createQuoteItemSchema = z.object({
   // reaches the model.
 });
 
-export const updateQuoteItemSchema = createQuoteItemSchema.partial();
+export const updateQuoteItemSchema = partialWithoutDefaults(createQuoteItemSchema);
 
 // ============================================================================
 // Quote Schemas
@@ -81,6 +82,8 @@ export const createQuoteApiSchema = z.object({
   quote_date: quoteDateSchema.optional().nullable(),
   valid_until: quoteDateSchema.optional().nullable(),
   po_number: z.string().trim().max(255).optional().nullable(),
+  recurring_section_title: z.string().trim().max(255).optional().nullable().transform((value) => value || null),
+  onetime_section_title: z.string().trim().max(255).optional().nullable().transform((value) => value || null),
   opportunity_id: uuidSchema.optional().nullable(),
   internal_notes: z.string().optional().nullable(),
   client_notes: z.string().optional().nullable(),
@@ -97,7 +100,7 @@ export const createQuoteApiSchema = z.object({
   items: z.array(createQuoteItemSchema).optional(),
 });
 
-export const updateQuoteApiSchema = createQuoteApiSchema.partial().extend({
+export const updateQuoteApiSchema = partialWithoutDefaults(createQuoteApiSchema).extend({
   status: quoteStatusSchema.optional().nullable(),
 });
 

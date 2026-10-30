@@ -43,13 +43,13 @@ export const availabilitySettingTypeSchema = z.enum(['user_hours', 'service_rule
  * Used when logged-in clients request appointments
  */
 export const createAppointmentRequestSchema = z.object({
-  service_id: z.string().uuid('Service ID must be a valid UUID'),
+  service_id: z.string().guid('Service ID must be a valid UUID'),
   requested_date: dateStringSchema,
   requested_time: timeStringSchema,
   requested_duration: z.number().int().min(15, 'Duration must be at least 15 minutes').max(480, 'Duration cannot exceed 8 hours'),
-  preferred_assigned_user_id: z.string().uuid('User ID must be a valid UUID').optional().nullable(),
+  preferred_assigned_user_id: z.string().guid('User ID must be a valid UUID').optional().nullable(),
   description: z.string().max(2000, 'Description cannot exceed 2000 characters').optional().nullable(),
-  ticket_id: z.string().uuid('Ticket ID must be a valid UUID').optional().nullable(),
+  ticket_id: z.string().guid('Ticket ID must be a valid UUID').optional().nullable(),
   requester_timezone: z.string().max(100).optional().nullable(),
 }).refine((data) => {
   // Validate that requested_date is not in the past (in the requester's timezone)
@@ -66,14 +66,14 @@ export type CreateAppointmentRequestInput = z.infer<typeof createAppointmentRequ
  * Used when clients edit pending appointment requests
  */
 export const updateAppointmentRequestSchema = z.object({
-  appointment_request_id: z.string().uuid('Request ID must be a valid UUID'),
-  service_id: z.string().uuid('Service ID must be a valid UUID'),
+  appointment_request_id: z.string().guid('Request ID must be a valid UUID'),
+  service_id: z.string().guid('Service ID must be a valid UUID'),
   requested_date: dateStringSchema,
   requested_time: timeStringSchema,
   requested_duration: z.number().int().min(15, 'Duration must be at least 15 minutes').max(480, 'Duration cannot exceed 8 hours'),
-  preferred_assigned_user_id: z.string().uuid('User ID must be a valid UUID').optional().nullable(),
+  preferred_assigned_user_id: z.string().guid('User ID must be a valid UUID').optional().nullable(),
   description: z.string().max(2000, 'Description cannot exceed 2000 characters').optional().nullable(),
-  ticket_id: z.string().uuid('Ticket ID must be a valid UUID').optional().nullable(),
+  ticket_id: z.string().guid('Ticket ID must be a valid UUID').optional().nullable(),
   requester_timezone: z.string().max(100).optional().nullable(),
 }).refine((data) => {
   // Validate that requested_date is not in the past (in the requester's timezone)
@@ -95,12 +95,12 @@ export const createPublicAppointmentRequestSchema = z.object({
   email: z.string().email('Valid email address is required'),
   phone: z.string().min(1).max(50).optional().nullable(),
   company: z.string().max(255, 'Company name cannot exceed 255 characters').optional().nullable(),
-  service_id: z.string().uuid('Service ID must be a valid UUID'),
+  service_id: z.string().guid('Service ID must be a valid UUID'),
   requested_date: dateStringSchema,
   requested_time: timeStringSchema,
   requested_duration: z.number().int().min(15, 'Duration must be at least 15 minutes').max(480, 'Duration cannot exceed 8 hours').optional(),
   message: z.string().max(2000, 'Message cannot exceed 2000 characters').optional().nullable(),
-  preferred_assigned_user_id: z.string().uuid('Preferred technician ID must be a valid UUID').optional().nullable(),
+  preferred_assigned_user_id: z.string().guid('Preferred technician ID must be a valid UUID').optional().nullable(),
   requester_timezone: z.string().max(100).optional().nullable(),
 });
 
@@ -111,12 +111,12 @@ export type CreatePublicAppointmentRequestInput = z.infer<typeof createPublicApp
  * Used by MSP staff to approve appointment requests
  */
 export const approveAppointmentRequestSchema = z.object({
-  appointment_request_id: z.string().uuid('Request ID must be a valid UUID'),
+  appointment_request_id: z.string().guid('Request ID must be a valid UUID'),
   final_date: dateStringSchema.optional().nullable(),
   final_time: timeStringSchema.optional().nullable(),
-  assigned_user_id: z.string().uuid('Assigned user ID must be a valid UUID'),
+  assigned_user_id: z.string().guid('Assigned user ID must be a valid UUID'),
   internal_notes: z.string().max(2000, 'Notes cannot exceed 2000 characters').optional().nullable(),
-  ticket_id: z.string().uuid('Ticket ID must be a valid UUID').optional().nullable(),
+  ticket_id: z.string().guid('Ticket ID must be a valid UUID').optional().nullable(),
 });
 
 export type ApproveAppointmentRequestInput = z.infer<typeof approveAppointmentRequestSchema>;
@@ -126,7 +126,7 @@ export type ApproveAppointmentRequestInput = z.infer<typeof approveAppointmentRe
  * Used by MSP staff to decline appointment requests
  */
 export const declineAppointmentRequestSchema = z.object({
-  appointment_request_id: z.string().uuid('Request ID must be a valid UUID'),
+  appointment_request_id: z.string().guid('Request ID must be a valid UUID'),
   decline_reason: z.string().min(1, 'Reason for declining is required').max(2000, 'Reason cannot exceed 2000 characters'),
 });
 
@@ -137,7 +137,7 @@ export type DeclineAppointmentRequestInput = z.infer<typeof declineAppointmentRe
  * Used by clients to cancel their pending requests
  */
 export const cancelAppointmentRequestSchema = z.object({
-  appointment_request_id: z.string().uuid('Request ID must be a valid UUID'),
+  appointment_request_id: z.string().guid('Request ID must be a valid UUID'),
   cancellation_reason: z.string().max(2000, 'Cancellation reason cannot exceed 2000 characters').optional().nullable(),
 });
 
@@ -149,8 +149,8 @@ export type CancelAppointmentRequestInput = z.infer<typeof cancelAppointmentRequ
  */
 export const availabilitySettingSchema = z.object({
   setting_type: availabilitySettingTypeSchema,
-  user_id: z.string().uuid('User ID must be a valid UUID').optional().nullable(),
-  service_id: z.string().uuid('Service ID must be a valid UUID').optional().nullable(),
+  user_id: z.string().guid('User ID must be a valid UUID').optional().nullable(),
+  service_id: z.string().guid('Service ID must be a valid UUID').optional().nullable(),
   day_of_week: z.number().int().min(0, 'Day of week must be 0-6').max(6, 'Day of week must be 0-6').optional().nullable(),
   start_time: timeStringSchema.optional().nullable(),
   end_time: timeStringSchema.optional().nullable(),
@@ -161,7 +161,7 @@ export const availabilitySettingSchema = z.object({
   allow_without_contract: z.boolean().optional().nullable(),
   advance_booking_days: z.number().int().min(1).max(365, 'Advance booking days must be between 1-365').optional().nullable(),
   minimum_notice_hours: z.number().int().min(0).max(168, 'Minimum notice hours cannot exceed 1 week').optional().nullable(),
-  config_json: z.record(z.any()).optional().nullable(),
+  config_json: z.record(z.string(), z.any()).optional().nullable(),
 }).refine((data) => {
   // Validate that start_time is before end_time when both are provided
   if (data.start_time && data.end_time) {
@@ -190,11 +190,11 @@ export const availabilityUserHoursDaySchema = z.object({
 });
 
 export const availabilityUserHoursWeekSchema = z.object({
-  user_id: z.string().uuid('User ID must be a valid UUID'),
+  user_id: z.string().guid('User ID must be a valid UUID'),
   days: z.array(availabilityUserHoursDaySchema).length(7, 'All seven days are required'),
   buffer_before_minutes: z.number().int().min(0).max(120),
   buffer_after_minutes: z.number().int().min(0).max(120),
-  config_json: z.record(z.any()),
+  config_json: z.record(z.string(), z.any()),
 }).superRefine((week, ctx) => {
   const days = new Set(week.days.map((day) => day.day_of_week));
   if (days.size !== 7 || Array.from({ length: 7 }, (_, day) => day).some((day) => !days.has(day))) {
@@ -213,7 +213,7 @@ export type AvailabilityUserHoursWeekInput = z.infer<typeof availabilityUserHour
  * Used to create or update availability exceptions
  */
 export const availabilityExceptionSchema = z.object({
-  user_id: z.string().uuid('User ID must be a valid UUID').optional().nullable(),
+  user_id: z.string().guid('User ID must be a valid UUID').optional().nullable(),
   date: dateStringSchema,
   is_available: z.boolean(),
   reason: z.string().max(500, 'Reason cannot exceed 500 characters').optional().nullable(),
@@ -227,8 +227,8 @@ export type AvailabilityExceptionInput = z.infer<typeof availabilityExceptionSch
  */
 export const updateAvailabilitySettingSchema = z.object({
   setting_type: availabilitySettingTypeSchema.optional(),
-  user_id: z.string().uuid('User ID must be a valid UUID').optional().nullable(),
-  service_id: z.string().uuid('Service ID must be a valid UUID').optional().nullable(),
+  user_id: z.string().guid('User ID must be a valid UUID').optional().nullable(),
+  service_id: z.string().guid('Service ID must be a valid UUID').optional().nullable(),
   day_of_week: z.number().int().min(0, 'Day of week must be 0-6').max(6, 'Day of week must be 0-6').optional().nullable(),
   start_time: timeStringSchema.optional().nullable(),
   end_time: timeStringSchema.optional().nullable(),
@@ -239,7 +239,7 @@ export const updateAvailabilitySettingSchema = z.object({
   allow_without_contract: z.boolean().optional().nullable(),
   advance_booking_days: z.number().int().min(1).max(365, 'Advance booking days must be between 1-365').optional().nullable(),
   minimum_notice_hours: z.number().int().min(0).max(168, 'Minimum notice hours cannot exceed 1 week').optional().nullable(),
-  config_json: z.record(z.any()).optional().nullable(),
+  config_json: z.record(z.string(), z.any()).optional().nullable(),
 });
 
 export type UpdateAvailabilitySettingInput = z.infer<typeof updateAvailabilitySettingSchema>;
@@ -257,10 +257,10 @@ export type UpdateAvailabilityExceptionInput = z.infer<typeof updateAvailability
  * Used to fetch available time slots for a given date/service
  */
 export const getAvailableTimeSlotsSchema = z.object({
-  service_id: z.string().uuid('Service ID must be a valid UUID'),
+  service_id: z.string().guid('Service ID must be a valid UUID'),
   date: dateStringSchema,
   duration: z.number().int().min(15).max(480).optional(),
-  user_id: z.string().uuid('User ID must be a valid UUID').optional().nullable(),
+  user_id: z.string().guid('User ID must be a valid UUID').optional().nullable(),
 });
 
 export type GetAvailableTimeSlotsInput = z.infer<typeof getAvailableTimeSlotsSchema>;
@@ -270,10 +270,10 @@ export type GetAvailableTimeSlotsInput = z.infer<typeof getAvailableTimeSlotsSch
  * Used to fetch dates with availability in a date range
  */
 export const getAvailableDatesSchema = z.object({
-  service_id: z.string().uuid('Service ID must be a valid UUID'),
+  service_id: z.string().guid('Service ID must be a valid UUID'),
   start_date: dateStringSchema,
   end_date: dateStringSchema,
-  user_id: z.string().uuid('User ID must be a valid UUID').optional().nullable(),
+  user_id: z.string().guid('User ID must be a valid UUID').optional().nullable(),
 }).refine((data) => {
   // Validate that start_date is before or equal to end_date
   return data.start_date <= data.end_date;
@@ -290,9 +290,9 @@ export type GetAvailableDatesInput = z.infer<typeof getAvailableDatesSchema>;
  */
 export const appointmentRequestFilterSchema = z.object({
   status: appointmentRequestStatusSchema.optional().nullable(),
-  service_id: z.string().uuid().optional().nullable(),
-  client_id: z.string().uuid().optional().nullable(),
-  assigned_user_id: z.string().uuid().optional().nullable(),
+  service_id: z.string().guid().optional().nullable(),
+  client_id: z.string().guid().optional().nullable(),
+  assigned_user_id: z.string().guid().optional().nullable(),
   start_date: dateStringSchema.optional().nullable(),
   end_date: dateStringSchema.optional().nullable(),
   is_authenticated: z.boolean().optional().nullable(),
@@ -315,7 +315,7 @@ export type AppointmentRequestFilters = z.infer<typeof appointmentRequestFilterS
  * Used by MSP staff to modify the requested date/time during approval
  */
 export const updateAppointmentRequestDateTimeSchema = z.object({
-  appointment_request_id: z.string().uuid('Request ID must be a valid UUID'),
+  appointment_request_id: z.string().guid('Request ID must be a valid UUID'),
   new_date: dateStringSchema,
   new_time: timeStringSchema,
   new_duration: z.number().int().min(15).max(480).optional().nullable(),
@@ -329,8 +329,8 @@ export type UpdateAppointmentRequestDateTimeInput = z.infer<typeof updateAppoint
  * Used to link an appointment request to an existing ticket
  */
 export const associateRequestToTicketSchema = z.object({
-  appointment_request_id: z.string().uuid('Request ID must be a valid UUID'),
-  ticket_id: z.string().uuid('Ticket ID must be a valid UUID'),
+  appointment_request_id: z.string().guid('Request ID must be a valid UUID'),
+  ticket_id: z.string().guid('Ticket ID must be a valid UUID'),
 });
 
 export type AssociateRequestToTicketInput = z.infer<typeof associateRequestToTicketSchema>;
@@ -341,8 +341,8 @@ export type AssociateRequestToTicketInput = z.infer<typeof associateRequestToTic
  */
 export const availabilitySettingFiltersSchema = z.object({
   setting_type: availabilitySettingTypeSchema.optional().nullable(),
-  user_id: z.string().uuid().optional().nullable(),
-  service_id: z.string().uuid().optional().nullable(),
+  user_id: z.string().guid().optional().nullable(),
+  service_id: z.string().guid().optional().nullable(),
   day_of_week: z.number().int().min(0).max(6).optional().nullable(),
 }).optional();
 
@@ -352,24 +352,24 @@ export type AvailabilitySettingFilters = z.infer<typeof availabilitySettingFilte
  * Full Appointment Request Schema (for validation of complete records)
  */
 export const appointmentRequestSchema = tenantSchema.extend({
-  appointment_request_id: z.string().uuid(),
-  client_id: z.string().uuid().optional().nullable(),
-  contact_id: z.string().uuid().optional().nullable(),
-  service_id: z.string().uuid(),
+  appointment_request_id: z.string().guid(),
+  client_id: z.string().guid().optional().nullable(),
+  contact_id: z.string().guid().optional().nullable(),
+  service_id: z.string().guid(),
   requested_date: dateStringSchema,
   requested_time: timeStringSchema,
   requested_duration: z.number().int().min(15).max(480),
-  preferred_assigned_user_id: z.string().uuid().optional().nullable(),
+  preferred_assigned_user_id: z.string().guid().optional().nullable(),
   status: appointmentRequestStatusSchema,
   description: z.string().max(2000).optional().nullable(),
-  ticket_id: z.string().uuid().optional().nullable(),
+  ticket_id: z.string().guid().optional().nullable(),
   is_authenticated: z.boolean(),
   requester_name: z.string().max(255).optional().nullable(),
   requester_email: z.string().email().optional().nullable(),
   requester_phone: z.string().max(50).optional().nullable(),
   company_name: z.string().max(255).optional().nullable(),
-  schedule_entry_id: z.string().uuid().optional().nullable(),
-  approved_by_user_id: z.string().uuid().optional().nullable(),
+  schedule_entry_id: z.string().guid().optional().nullable(),
+  approved_by_user_id: z.string().guid().optional().nullable(),
   approved_at: z.string().optional().nullable(),
   declined_reason: z.string().max(2000).optional().nullable(),
   requester_timezone: z.string().max(100).optional().nullable(),
@@ -383,10 +383,10 @@ export type AppointmentRequest = z.infer<typeof appointmentRequestSchema>;
  * Full Availability Setting Schema (for validation of complete records)
  */
 export const fullAvailabilitySettingSchema = tenantSchema.extend({
-  availability_setting_id: z.string().uuid(),
+  availability_setting_id: z.string().guid(),
   setting_type: availabilitySettingTypeSchema,
-  user_id: z.string().uuid().optional().nullable(),
-  service_id: z.string().uuid().optional().nullable(),
+  user_id: z.string().guid().optional().nullable(),
+  service_id: z.string().guid().optional().nullable(),
   day_of_week: z.number().int().min(0).max(6).optional().nullable(),
   start_time: timeStringSchema.optional().nullable(),
   end_time: timeStringSchema.optional().nullable(),
@@ -397,7 +397,7 @@ export const fullAvailabilitySettingSchema = tenantSchema.extend({
   allow_without_contract: z.boolean().optional().nullable(),
   advance_booking_days: z.number().int().min(1).max(365).optional().nullable(),
   minimum_notice_hours: z.number().int().min(0).max(168).optional().nullable(),
-  config_json: z.record(z.any()).optional().nullable(),
+  config_json: z.record(z.string(), z.any()).optional().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -408,8 +408,8 @@ export type AvailabilitySetting = z.infer<typeof fullAvailabilitySettingSchema>;
  * Full Availability Exception Schema (for validation of complete records)
  */
 export const fullAvailabilityExceptionSchema = tenantSchema.extend({
-  exception_id: z.string().uuid(),
-  user_id: z.string().uuid().optional().nullable(),
+  exception_id: z.string().guid(),
+  user_id: z.string().guid().optional().nullable(),
   date: dateStringSchema,
   is_available: z.boolean(),
   reason: z.string().max(500).optional().nullable(),

@@ -1,9 +1,10 @@
 'use server'
 
 import { canAccessAttachmentTicket, expireCommentAttachmentDrafts } from '@shared/lib/ticketCommentAttachments';
+import { applyDocumentProductReadScope, canReadDocument, canReadTicketDocuments, canUploadDocument } from '../lib/documentPermissions';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
-import { withAuth, hasPermission } from '@alga-psa/auth';
+import { withAuth, hasPermission, checkMultiplePermissions } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { marked } from 'marked';
 import { PDFDocument } from 'pdf-lib';
@@ -57,6 +58,7 @@ import {
   type DocumentActionError,
 } from './documentActionErrors';
 import { authorizeAndRedactDocuments as authorizeDocumentRows } from '@shared/lib/documentAuthorization';
+import { admitMeetingDocumentsForBrowser } from '../lib/meetingDocumentAdmission';
 import { getClientLogoUrlsBatch, getContactAvatarUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 
 async function loadSharp() {
@@ -288,7 +290,16 @@ async function ensureEntityFoldersInitializedInternal(
   }
 }
 
-// Preserve the existing server-action entry point for document consumers.
+/**
+ * Preserve the existing server-action entry point for document consumers.
+ *
+ * Authorization itself lives in the shared engine (`@shared/lib/documentAuthorization`), so the
+ * ticket list, the Documents browser and the byte-serving routes make the same decision. This
+ * wrapper only narrows the candidate set first through the deny-only meeting-document admission
+ * (a no-op for tenants the co-managed capability does not serve); it never widens access.
+ *
+ * Must stay `async`: this module is a `'use server'` boundary and Next rejects non-async exports.
+ */
 export async function authorizeAndRedactDocuments<T extends IDocument>(
   trx: Knex.Transaction,
   tenant: string,
@@ -296,7 +307,10 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   documents: T[],
   verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
 ): Promise<T[]> {
-  return authorizeDocumentRows(trx, tenant, user, documents, verifiedRecipientLifecycleAccess);
+  const admitted = await admitMeetingDocumentsForBrowser(trx, tenant, user, documents);
+  const authorized = await authorizeDocumentRows(trx, tenant, user, admitted.documents, verifiedRecipientLifecycleAccess);
+  await admitted.assertCurrent?.();
+  return authorized;
 }
 
 export async function getAuthorizedDocumentByFileId(
@@ -306,6 +320,7 @@ export async function getAuthorizedDocumentByFileId(
   fileId: string
 ): Promise<IDocument | null> {
   const document = await tenantScopedTable(trx, 'documents', tenant)
+    .modify(query => applyDocumentProductReadScope(query, trx, user))
     .where('file_id', fileId)
     .first();
 
@@ -324,6 +339,7 @@ export async function getAuthorizedDocumentById(
   documentId: string
 ): Promise<IDocument | null> {
   const document = await tenantScopedTable(trx, 'documents', tenant)
+    .modify(query => applyDocumentProductReadScope(query, trx, user))
     .where('document_id', documentId)
     .first();
 
@@ -764,7 +780,7 @@ export const deleteDocument = withAuth(async (
 export const getDocument = withAuth(async (user, { tenant }, documentId: string) => {
   try {
     // Check permission for document reading
-    if (!await hasPermission(user, 'document', 'read')) {
+    if (!await canReadDocument(user, documentId)) {
       return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
     }
 
@@ -843,7 +859,7 @@ export const getDocument = withAuth(async (user, { tenant }, documentId: string)
 export const getDocumentByTicketId = withAuth(async (user, { tenant }, ticketId: string) => {
   try {
     // Check permission for document reading
-    if (!await hasPermission(user, 'document', 'read')) {
+    if (!await canReadTicketDocuments(user, ticketId)) {
       return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
     }
 
@@ -1285,7 +1301,7 @@ export const getDocumentPreview = withAuth(async (
   console.log(`[getDocumentPreview] Received identifier: ${identifier}`);
   try {
     // Check permission for document reading
-    if (!await hasPermission(user, 'document', 'read')) {
+    if (!await canReadDocument(user, identifier)) {
       return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
     }
 
@@ -1390,7 +1406,7 @@ export const getDocumentPreview = withAuth(async (
 // Get document download URL
 export const getDocumentDownloadUrl = withAuth(async (user, { tenant }, documentIdOrFileId: string): Promise<string | ActionPermissionError> => {
     // Check permission for document reading/download
-    if (!await hasPermission(user, 'document', 'read')) {
+    if (!await canReadDocument(user, documentIdOrFileId)) {
       return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
     }
 
@@ -1417,7 +1433,7 @@ export const getDocumentDownloadUrl = withAuth(async (user, { tenant }, document
 export const getDocumentThumbnailUrl = withAuth(async (user, { tenant }, documentId: string): Promise<string | null | ActionPermissionError> => {
   try {
     // Check permission for document reading
-    if (!await hasPermission(user, 'document', 'read')) {
+    if (!await canReadDocument(user, documentId)) {
       return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
     }
 
@@ -1434,7 +1450,7 @@ export const getDocumentThumbnailUrl = withAuth(async (user, { tenant }, documen
 
     // Check if thumbnail exists
     if (document.thumbnail_file_id) {
-      return `/api/documents/thumbnail/${documentId}`;
+      return `/api/documents/${documentId}/thumbnail`;
     }
 
     // Fallback: For images without thumbnails, return original file
@@ -1460,7 +1476,7 @@ export const getDocumentThumbnailUrl = withAuth(async (user, { tenant }, documen
 export const getDocumentPreviewUrl = withAuth(async (user, { tenant }, documentId: string): Promise<string | null | ActionPermissionError> => {
   try {
     // Check permission for document reading
-    if (!await hasPermission(user, 'document', 'read')) {
+    if (!await canReadDocument(user, documentId)) {
       return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
     }
 
@@ -1477,7 +1493,7 @@ export const getDocumentPreviewUrl = withAuth(async (user, { tenant }, documentI
 
     // Check if preview exists
     if (document.preview_file_id) {
-      return `/api/documents/preview/${documentId}`;
+      return `/api/documents/${documentId}/preview`;
     }
 
     // Fallback: Return original file if available
@@ -1497,7 +1513,7 @@ export const getDocumentPreviewUrl = withAuth(async (user, { tenant }, documentI
 export const downloadDocument = withAuth(async (user, { tenant }, documentIdOrFileId: string) => {
     try {
         // Check permission for document reading/download
-        if (!await hasPermission(user, 'document', 'read')) {
+        if (!await canReadDocument(user, documentIdOrFileId)) {
           return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
         }
 
@@ -2345,7 +2361,7 @@ export const uploadDocument = withAuth(async (
   try {
     options = { ...options, commentAttachmentDraft: options.commentAttachmentDraft === true || file.get('commentAttachmentDraft') === 'true' };
     // Check permission for document creation/upload
-    if (!await hasPermission(user, 'document', 'create')) {
+    if (!await canUploadDocument(user, options)) {
       return permissionError('Permission denied: Cannot create documents', 'documents:errors.permissions.create');
     }
 
@@ -2394,7 +2410,7 @@ export const uploadDocument = withAuth(async (
         uploaded_by_id: authenticatedUserId
       });
 
-      if (options.commentAttachmentDraft) unclaimedStorageFileId = uploadResult.file_id;
+      unclaimedStorageFileId = uploadResult.file_id;
 
       // Get document type based on mime type
       const typeResult = await getDocumentTypeId(fileData.type);
@@ -2472,7 +2488,7 @@ export const uploadDocument = withAuth(async (
       // Documents uploaded by client users are automatically client-visible.
       // For internal users, inherit visibility from the target folder.
       let isClientVisible = options.isClientVisible === true || user.user_type === 'client';
-      if (!isClientVisible && resolvedFolderPath) {
+      if (!isClientVisible && options.isClientVisible !== false && resolvedFolderPath) {
         try {
           const folderVisibilityQuery = tenantScopedTable(knex, 'document_folders', tenant)
             .select('is_client_visible')
@@ -2655,13 +2671,17 @@ export const uploadDocument = withAuth(async (
         );
       }
 
-      await publishDocumentUpdatedSearchEvent(
-        tenant,
-        document.document_id,
-        user.user_id,
-        ['document_name', 'file_id', 'storage_path'],
-        'uploadDocument',
-      );
+      try {
+        await publishDocumentUpdatedSearchEvent(
+          tenant,
+          document.document_id,
+          user.user_id,
+          ['document_name', 'file_id', 'storage_path'],
+          'uploadDocument',
+        );
+      } catch (error) {
+        console.error('[uploadDocument] Failed to publish search update:', error);
+      }
 
       // Generate previews after the transaction completes.
       // Awaited so the preview is ready before the response reaches the client.
@@ -2723,7 +2743,8 @@ async function validateDocumentUpload(file: File): Promise<void> {
 // Get document type ID
 export const getDocumentTypeId = withAuth(async (user, { tenant }, mimeType: string): Promise<{ typeId: string, isShared: boolean } | ActionPermissionError> => {
   // Check permission for document reading
-  if (!await hasPermission(user, 'document', 'read')) {
+  if (!(await checkMultiplePermissions(user, [{ resource: 'document', action: 'read' },
+    { resource: 'ticket_attachment', action: 'create' }])).some(permission => permission.granted)) {
     return permissionError('Permission denied: Cannot read document types', 'documents:errors.permissions.readTypes');
   }
 

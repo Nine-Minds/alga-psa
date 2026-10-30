@@ -8,6 +8,8 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { tenantDb } from '@alga-psa/db';
+import { closeOpenAssignmentsForContact } from './assetAssignmentModel';
+import { clearGroupContactLinksForContact } from './assetGroupContactModel';
 import {
   CONTACT_PHONE_CANONICAL_TYPES,
   type ContactPhoneCanonicalType,
@@ -67,6 +69,12 @@ export async function clearContactLinksBeforeDelete(
   await scoped.table('assets')
     .where({ contact_name_id: contactId })
     .update({ contact_name_id: null });
+  // FR-C5: the assignments the contact held are closed, not deleted — "who had
+  // this laptop in March" must survive the person leaving.
+  await closeOpenAssignmentsForContact(db, tenant, contactId);
+  // FR-E6: the contact stops being a workspace user; a deleted bundle owner
+  // leaves its members unassigned.
+  await clearGroupContactLinksForContact(db, tenant, contactId);
 }
 
 /**
@@ -138,7 +146,7 @@ export async function assertValidContactManager(
 // LEVERAGE: pattern contact-row-input-schema — API (server/src/lib/api/schemas/contact.ts) and model
 // each define the phone/email row input shape
 const phoneRowInputSchema = z.object({
-  contact_phone_number_id: z.string().uuid().optional(),
+  contact_phone_number_id: z.string().guid().optional(),
   phone_number: z.string().trim().min(1, 'Phone number is required'),
   // Extension has its own column; it is never packed into phone_number.
   extension: z.string().trim().regex(/^\d*$/, 'Extension can only contain digits').max(10).nullish(),
@@ -149,7 +157,7 @@ const phoneRowInputSchema = z.object({
 });
 
 const emailRowInputSchema = z.object({
-  contact_additional_email_address_id: z.string().uuid().optional(),
+  contact_additional_email_address_id: z.string().guid().optional(),
   email_address: z.string().trim().min(1, 'Email address is required'),
   canonical_type: canonicalEmailTypeSchema.nullish(),
   custom_type: z.string().trim().min(1).nullish(),
@@ -178,12 +186,12 @@ export const contactFormSchema = z.object({
     ),
   primary_email_canonical_type: canonicalEmailTypeSchema.nullish(),
   primary_email_custom_type: z.string().trim().min(1).nullish(),
-  primary_email_custom_type_id: z.string().uuid().nullable().optional(),
+  primary_email_custom_type_id: z.string().guid().nullable().optional(),
   additional_email_addresses: z.array(emailRowInputSchema).optional(),
   phone_numbers: z.array(phoneRowInputSchema).optional(),
-  client_id: z.string().uuid('Client ID must be a valid UUID').optional().nullable(),
-  inbound_ticket_defaults_id: z.string().uuid('Inbound ticket destination must be a valid UUID').nullable().optional(),
-  manager_contact_id: z.string().uuid('Manager must be a valid contact').nullable().optional(),
+  client_id: z.string().guid('Client ID must be a valid UUID').optional().nullable(),
+  inbound_ticket_defaults_id: z.string().guid('Inbound ticket destination must be a valid UUID').nullable().optional(),
+  manager_contact_id: z.string().guid('Manager must be a valid contact').nullable().optional(),
   role: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
   is_inactive: z.boolean().optional(),
@@ -191,20 +199,20 @@ export const contactFormSchema = z.object({
 
 export const contactSchema = z.object({
   contact_kind: z.enum(['person', 'shared_mailbox']).optional(),
-  contact_name_id: z.string().uuid(),
-  tenant: z.string().uuid(),
+  contact_name_id: z.string().guid(),
+  tenant: z.string().guid(),
   full_name: z.string(),
-  client_id: z.string().uuid().nullable(),
+  client_id: z.string().guid().nullable(),
   primary_email_canonical_type: canonicalEmailTypeSchema.nullable(),
-  primary_email_custom_type_id: z.string().uuid().nullable().optional(),
+  primary_email_custom_type_id: z.string().guid().nullable().optional(),
   primary_email_type: z.string().nullable().optional(),
   additional_email_addresses: z.array(
     z.object({
-      contact_additional_email_address_id: z.string().uuid(),
+      contact_additional_email_address_id: z.string().guid(),
       email_address: z.string(),
       normalized_email_address: z.string(),
       canonical_type: canonicalEmailTypeSchema.nullable(),
-      custom_email_type_id: z.string().uuid().nullable().optional(),
+      custom_email_type_id: z.string().guid().nullable().optional(),
       custom_type: z.string().nullable(),
       display_order: z.number().int().min(0),
       created_at: z.string().optional(),
@@ -213,11 +221,11 @@ export const contactSchema = z.object({
   ),
   phone_numbers: z.array(
     z.object({
-      contact_phone_number_id: z.string().uuid(),
+      contact_phone_number_id: z.string().guid(),
       phone_number: z.string(),
       normalized_phone_number: z.string(),
       canonical_type: canonicalPhoneTypeSchema.nullable(),
-      custom_phone_type_id: z.string().uuid().nullable().optional(),
+      custom_phone_type_id: z.string().guid().nullable().optional(),
       custom_type: z.string().nullable(),
       is_default: z.boolean(),
       display_order: z.number().int().min(0),
@@ -365,7 +373,7 @@ export function validateData<T>(schema: z.ZodSchema<T>, data: unknown): T {
     return schema.parse(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+      const errorMessages = error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
       throw new Error(`Validation failed: ${errorMessages}`);
     }
     throw error;
@@ -605,7 +613,7 @@ export class ContactModel {
       if (!parsedRow.success) {
         return {
           valid: false,
-          errors: parsedRow.error.errors.map(error => `phone_numbers.${index}.${error.path.join('.')}: ${error.message}`),
+          errors: parsedRow.error.issues.map(error => `phone_numbers.${index}.${error.path.join('.')}: ${error.message}`),
         };
       }
 
@@ -690,7 +698,7 @@ export class ContactModel {
       const row = additionalEmailAddresses[index];
       const parsedRow = emailRowInputSchema.safeParse(row);
       if (!parsedRow.success) {
-        errors.push(...parsedRow.error.errors.map(error => `additional_email_addresses.${index}.${error.path.join('.')}: ${error.message}`));
+        errors.push(...parsedRow.error.issues.map(error => `additional_email_addresses.${index}.${error.path.join('.')}: ${error.message}`));
         continue;
       }
 

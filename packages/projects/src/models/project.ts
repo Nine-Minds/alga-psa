@@ -13,6 +13,7 @@ import type { Knex } from 'knex';
 import type { IProject, IProjectPhase, IProjectStatusMapping, IProjectTask, IStatus, IStandardStatus, ItemType } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
+import { releaseStagingForProject, releaseStagingForTasks } from '@alga-psa/inventory/lib';
 
 /** Status enriched with mapping metadata as returned by getProjectTaskStatuses. */
 export type ProjectTaskStatus = (IStatus | IStandardStatus) & Pick<IProjectStatusMapping, 'project_status_mapping_id' | 'phase_id' | 'custom_name' | 'display_order' | 'is_visible'> & { is_standard: boolean };
@@ -352,6 +353,9 @@ const ProjectModel = {
         }
       }
 
+      // C6: return every staging claim of the project before its tasks go (task FKs are NO ACTION)
+      await releaseStagingForProject(trx, tenant, projectId, null);
+
       // Delete task dependencies (both predecessor and successor references)
       if (phaseIds.length > 0) {
         await tenantScopedTable(trx, 'project_task_dependencies', tenant)
@@ -578,6 +582,12 @@ const ProjectModel = {
           `Cannot delete phase: ${timeEntriesCount.count} time ${Number(timeEntriesCount.count) === 1 ? 'entry exists' : 'entries exist'} for tasks in this phase.`
         );
       }
+
+      // C6: release staging claims on the phase's tasks (installed lines/boxes are detached)
+      const phaseTaskIds = await tenantScopedTable(trx, 'project_tasks', tenant)
+        .where('phase_id', phaseId)
+        .pluck('task_id') as string[];
+      await releaseStagingForTasks(trx, tenant, phaseTaskIds, null);
 
       // Delete task dependencies (both predecessor and successor references)
       await tenantScopedTable(trx, 'project_task_dependencies', tenant)

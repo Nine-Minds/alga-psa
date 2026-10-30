@@ -37,6 +37,7 @@ export const DEFAULT_BLOCK: PartialBlock[] = [{
     styles: {}
   }]
 }];
+import { useCannedResponseSnippets } from '../cannedResponses/useCannedResponseSnippets';
 import CommentItem from './CommentItem';
 import type { ITicketExternalLinkView } from '../../actions/externalLinks/externalLinkActions';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
@@ -48,8 +49,8 @@ import { useDialogSubmitShortcut, usePageCreateShortcut } from '@alga-psa/ui/key
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { getContactAvatarUrlAction, getUserContactId, searchUsersForMentions } from '@alga-psa/user-composition/actions';
-import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
+import { useTicketDataSource } from './TicketDataSourceContext';
+import { hasCommentCollaborationAttribution, type CommentContactAuthor, type CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context/UnsavedChangesContext';
@@ -61,7 +62,6 @@ import {
   setStoredTicketConversationNewestFirst,
 } from './ticketConversationOrderPreference';
 import { buildTicketThreadTabState } from './ticketConversationThreadTabs';
-import { toggleCommentReaction, getCommentsReactionsBatch } from '../../actions/comment-actions/commentReactionActions';
 import type { IAggregatedReaction } from '@alga-psa/types';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
@@ -108,6 +108,13 @@ interface TicketConversationProps {
   onDelete: (comment: IComment) => void;
   onContentChange: (content: PartialBlock[]) => void;
   hideInternalTab?: boolean; // Optional prop to hide the Internal tab
+  defaultReplyInternal?: boolean;
+  /**
+   * Read-only: the thread is shown without any way to add to it. The client
+   * portal uses this for a ticket a shared-workspace colleague can see but
+   * not act on (FR-E7b) — the write path would refuse them anyway.
+   */
+  readOnly?: boolean;
   isSubmitting?: boolean; // Flag to indicate if a submission is in progress
   overrides?: Record<string, { note?: string; updated_at?: string }>; // Optional local overrides by comment_id
   externalComments?: Array<IComment & { child_ticket_id?: string; child_ticket_number?: string; child_ticket_title?: string; child_client_name?: string }>;
@@ -159,6 +166,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   editorKey,
   onNewCommentContentChange,
   onAddNewComment,
+  readOnly = false,
   onAddReplyComment,
   onTabChange,
   onEdit,
@@ -167,6 +175,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   onDelete,
   onContentChange,
   hideInternalTab = false,
+  defaultReplyInternal = false,
   isSubmitting: isSubmittingFromParent = false,
   overrides = {},
   externalComments = [],
@@ -182,6 +191,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   allowEmailRecipients = false,
 }) => {
   const { t } = useTranslation('features/tickets');
+  const dataSource = useTicketDataSource();
+  const { toggleCommentReaction, getCommentsReactionsBatch } = dataSource.comments;
+  const { getContactAvatarUrlAction } = dataSource.avatars;
+  const { getUserContactId, searchUsersForMentions } = dataSource.viewer;
   const { t: tCore } = useTranslation('common');
   const { deleteDocument } = useDocumentsCrossFeature();
   // Ensure we have a stable id for interactive element ids
@@ -204,6 +217,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const replyEmailRecipients = useCommentEmailRecipientsDraft();
   const searchEmailRecipients = useCommentEmailRecipientSuggestions(ticket.client_id);
   const showEmailRecipients = allowEmailRecipients && !hideInternalTab;
+  // Canned responses are an MSP-agent tool: this component is also the client portal's conversation view
+  // (hideInternalTab), where customers must not see the library.
+  const cannedResponseSnippets = useCannedResponseSnippets(ticket.ticket_id, !hideInternalTab);
   // A reply inherits is_internal from its parent, so the control only appears
   // under a public comment.
   const showReplyEmailRecipients = (parent?: IComment | null) =>
@@ -317,7 +333,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const handleAddCommentClick = (placement: 'top' | 'bottom' = 'top') => {
     // Auto-check toggles based on which tab is active
     if (!hideInternalTab) {
-      setIsInternalToggle(activeTab === INTERNAL_TAB_ID);
+      setIsInternalToggle(activeTab === INTERNAL_TAB_ID || (activeTab === ALL_COMMENTS_TAB_ID && defaultReplyInternal));
     }
     setIsResolutionToggle(activeTab === RESOLUTION_TAB_ID);
     setEditorPlacement(placement);
@@ -386,7 +402,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     composeUploadSession.requestDiscard();
   };
 
-  usePageCreateShortcut(() => { handleAddCommentClick(headerAnchorVisible ? 'top' : 'bottom'); }, { enabled: !showEditor });
+  usePageCreateShortcut(() => { handleAddCommentClick(headerAnchorVisible ? 'top' : 'bottom'); }, { enabled: !showEditor && !readOnly });
   useDialogSubmitShortcut(() => { void handleSubmitComment(); }, {
     active: showEditor,
     enabled: !isSubmitting,
@@ -420,15 +436,17 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     }
   };
 
-  // Sync toggles when active tab changes while editor is open
+  const previousComposerTab = useRef(activeTab);
+  // Explicit tab changes override visibility; loading settings must not change an open draft.
   useEffect(() => {
-    if (showEditor) {
+    if (showEditor && previousComposerTab.current !== activeTab) {
       if (!hideInternalTab) {
-        setIsInternalToggle(activeTab === INTERNAL_TAB_ID);
+        setIsInternalToggle(activeTab === INTERNAL_TAB_ID || (activeTab === ALL_COMMENTS_TAB_ID && defaultReplyInternal));
       }
       setIsResolutionToggle(activeTab === RESOLUTION_TAB_ID);
     }
-  }, [activeTab, showEditor, hideInternalTab]);
+    previousComposerTab.current = activeTab;
+  }, [activeTab, showEditor, hideInternalTab, defaultReplyInternal]);
 
   // Reset close-status selection when leaving resolution mode or closing the editor.
   useEffect(() => {
@@ -452,7 +470,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       
       // Find all client users in the conversations
       for (const conversation of conversations) {
-        if (conversation.user_id && userMap[conversation.user_id]?.user_type === 'client') {
+        if (!hasCommentCollaborationAttribution(conversation) && conversation.user_id && userMap[conversation.user_id]?.user_type === 'client') {
           try {
             const contactId = await getUserContactId(conversation.user_id);
             
@@ -501,6 +519,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     [conversations]
   );
   useEffect(() => {
+    if (!dataSource.capabilities.reactions) return;
     const commentIds = commentIdsKey.split(',').filter(Boolean);
     if (commentIds.length === 0) return;
     getCommentsReactionsBatch(commentIds)
@@ -563,7 +582,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         <CommentItem
           id={mergedConversation.comment_id ? `comment-${mergedConversation.comment_id}` : `${id}-comment-unknown`}
           conversation={mergedConversation}
-          currentUserId={currentUser?.id}
+          currentUserId={readOnly ? null : currentUser?.id}
           isEditing={isEditing && currentComment?.comment_id === mergedConversation.comment_id}
           currentComment={currentComment}
           ticketId={ticket.ticket_id || ''}
@@ -572,13 +591,13 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           onContentChange={onContentChange}
           onSave={updates => { if (!existingCommentUploadSession.isUploading) onSave(updates); }}
           onClose={existingCommentUploadSession.requestDiscard}
-          onEdit={() => onEdit(mergedConversation)}
-          onDelete={onDelete}
-          onReply={() => setReplyingToCommentId(mergedConversation.comment_id ?? null)}
+          onEdit={readOnly ? undefined : () => onEdit(mergedConversation)}
+          onDelete={readOnly ? undefined : onDelete}
+          onReply={readOnly ? undefined : () => setReplyingToCommentId(mergedConversation.comment_id ?? null)}
           hideInternalTab={hideInternalTab}
           uploadFile={existingCommentUploadSession.uploadFile}
-          reactions={reactionsMap[mergedConversation.comment_id || ''] || []}
-          onToggleReaction={handleToggleReaction}
+          reactions={dataSource.capabilities.reactions ? reactionsMap[mergedConversation.comment_id || ''] || [] : undefined}
+          onToggleReaction={dataSource.capabilities.reactions ? handleToggleReaction : undefined}
           userNames={reactionUserNames}
           canViewCommentMetadataDebug={canViewCommentMetadataDebug}
           externalLinks={externalLinksByCommentId[mergedConversation.comment_id || ''] ?? []}
@@ -592,6 +611,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             showInternalToggle={false}
             uploadFile={existingCommentUploadSession.uploadFile}
             searchMentions={searchUsersForMentions}
+            snippets={cannedResponseSnippets}
             footerActions={showReplyEmailRecipients(mergedConversation) ? (
               <>
                 <CommentEmailRecipientsControl
@@ -926,6 +946,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             onContentChange={handleComposeContentChange}
             searchMentions={searchUsersForMentions}
             uploadFile={composeUploadSession.uploadFile}
+            snippets={cannedResponseSnippets}
             footerActions={showEmailRecipients ? (
               <CommentEmailRecipientsControl
                 idPrefix={compId}
@@ -972,7 +993,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       <div className="p-6">
         <div ref={headerAnchorRef} className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">{t('conversation.comments', 'Comments')}</h2>
-          {!showEditor && (
+          {!showEditor && !readOnly && (
             <Button
               id={`${compId}-show-comment-editor-btn`}
               onClick={() => handleAddCommentClick('top')}
@@ -984,7 +1005,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         <StickyComposerDock
           id={`${compId}-composer-top`}
           side="top"
-          visible={showEditor && editorPlacement === 'top'}
+          visible={!readOnly && showEditor && editorPlacement === 'top'}
           expanded
         >
           <div className="p-3">{composerBlock}</div>
@@ -1009,7 +1030,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             composer right here rather than sending the reader back up. */}
         <StickyComposerDock
           id={`${compId}-composer-dock`}
-          visible={showEditor ? editorPlacement === 'bottom' : !headerAnchorVisible}
+          visible={!readOnly && (showEditor ? editorPlacement === 'bottom' : !headerAnchorVisible)}
           expanded={showEditor && editorPlacement === 'bottom'}
           placeholder={t('conversation.typeComment', 'Type your comment here...')}
           onExpand={() => handleAddCommentClick('bottom')}
@@ -1040,6 +1061,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         group={openPanelThreadGroup}
         getCommentId={(comment) => comment.comment_id}
         renderComment={(comment) => renderCommentItem(comment)}
+        canReply={!readOnly}
         replyParentCommentId={openPanelComment?.comment_id ?? null}
         replyRoomName={(parentCommentId) => `ticket-${ticket.ticket_id}-reply-${parentCommentId}`}
         initialInternal={Boolean(openPanelComment?.is_internal ?? openPanelThreadGroup?.root.is_internal)}

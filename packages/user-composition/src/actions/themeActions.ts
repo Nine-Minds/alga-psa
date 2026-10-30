@@ -38,6 +38,10 @@ export const getThemePreferenceAction = withOptionalAuth(async (
   }
 
   return null;
+}, {
+  // AppThemeProvider themes the pre-acceptance review screen. It reads only the
+  // caller's own theme preference.
+  allowBeforeCoManagedAcceptance: true,
 });
 
 export const updateThemePreferenceAction = withAuth(async (

@@ -16,7 +16,14 @@
     "client": "Client",
     "location": "Location",
     "warrantyEnds": "Warranty ends",
-    "purchased": "Purchased"
+    "purchased": "Purchased",
+    "assignedTo": "Assigned to",
+    "unassigned": "Unassigned",
+    "sharedWorkspace": "Shared workspace",
+    "bundle": "Bundle",
+    "manufacturer": "Manufacturer",
+    "model": "Model",
+    "vendor": "Vendor"
   },
   "warranty": {
     "active": "Under warranty",

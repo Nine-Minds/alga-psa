@@ -21,75 +21,36 @@ import {
     normalizeLiveRecurringStorage,
     normalizeTemplateRecurringStorage,
 } from '@shared/billingClients/recurrenceStorageModel';
+import {
+    ContractLineTimingNotAllowedError,
+    isAdvanceTimingAllowedForLineType,
+} from '@shared/billingClients/contractLineTimingRule';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
+import { normalizeContractLineDate } from '../lib/billing/contractLineWindow';
+import {
+    assertContractLineIsAuthorable,
+    assertNonNegativeContractLineRate,
+    getActiveContractLineAssignmentWindow,
+    getProtectedContractLinePeriods,
+    updateContractLineInTransaction,
+    contractLineActionErrorFrom,
+} from '../lib/billing/contractLineUpdate';
+import { syncPrepaidBlockIssuancesForContractLine } from '../services/prepaidBlockIssuanceSync';
 import { actionError, getErrorMessage, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 type ContractLineActionError = ActionMessageError | ActionPermissionError;
 
-function contractLineActionErrorFrom(error: unknown): ContractLineActionError | null {
-    if (error instanceof Error && error.message.startsWith('Permission denied:')) {
-        return permissionError(error.message);
-    }
 
-    if (error instanceof Error) {
-        if (error.message.includes('not found')) {
-            return actionError('The selected contract line is no longer available. Please refresh and try again.', 'msp/contract-lines:errors.line.unavailable');
-        }
-        if (error.message === 'System-managed default contracts are attribution-only; contract-line authoring is disabled.') {
-            return actionError(error.message);
-        }
-        if (error.message === 'Advance billing is only supported for fixed contract lines.') {
-            return actionError(error.message);
-        }
-        if (error.message.startsWith('Cannot update fixed')) {
-            return actionError(error.message);
-        }
-    }
-
-    const dbError = error as { code?: string; column?: string };
-    if (dbError?.code === '22P02') {
-        return actionError('One of the selected contract line values is invalid. Please refresh and try again.', 'msp/contract-lines:errors.line.invalidValue');
-    }
-    if (dbError?.code === '23502') {
-        return dbError.column
-          ? actionError(
-              `Missing required contract line field: ${dbError.column}.`,
-              'msp/contract-lines:errors.line.missingFieldNamed',
-              { field: dbError.column },
-            )
-          : actionError('Missing required contract line field.', 'msp/contract-lines:errors.line.missingField');
-    }
-    if (dbError?.code === '23503') {
-        return actionError('The selected contract or contract line no longer exists. Please refresh and try again.', 'msp/contract-lines:errors.line.referenceMissing');
-    }
-    if (dbError?.code === '23505') {
-        return actionError('This contract line change conflicts with an existing record. Please refresh and try again.', 'msp/contract-lines:errors.line.conflict');
-    }
-    if (dbError?.code === '23514') {
-        return actionError('One of the contract line values is not allowed. Please review the form and try again.', 'msp/contract-lines:errors.line.notAllowed');
-    }
-
-    return null;
-}
-
-async function assertContractLineIsAuthorable(
-    trx: Knex.Transaction,
-    tenant: string,
-    contractLineId: string,
-): Promise<void> {
-    const db = tenantDb(trx, tenant);
-    const query = db.table('contract_lines as cl');
-    db.tenantJoin(query, 'contracts as c', 'cl.contract_id', 'c.contract_id');
-
-    const contract = await query
-        .andWhere('cl.contract_line_id', contractLineId)
-        .first('c.is_system_managed_default as is_system_managed_default') as { is_system_managed_default?: boolean } | undefined;
-
-    if (contract?.is_system_managed_default === true) {
-        throw new Error('System-managed default contracts are attribution-only; contract-line authoring is disabled.');
-    }
-}
+export const hasContractLineProtectedHistory = withAuth(async (
+    user, { tenant }, contractLineId: string,
+): Promise<boolean | ContractLineActionError> => {
+    const { knex } = await createTenantKnex();
+    if (!tenant) throw new Error('tenant context not found');
+    if (!await hasPermission(user, 'billing', 'update', knex)) throw new Error('Permission denied: Cannot update contract lines');
+    const bounds = await getProtectedContractLinePeriods(knex, tenant, contractLineId);
+    return Boolean(bounds.earliestStart || bounds.latestEnd);
+});
 
 export const getContractLines = withAuth(async (
     user,
@@ -207,7 +168,9 @@ export const createContractLine = withAuth(async (
 
             // Remove tenant field if present in planData to prevent override
             const { tenant: _, ...safePlanData } = planData;
+            assertNonNegativeContractLineRate(safePlanData.custom_rate);
             const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+                lineType: safePlanData.contract_line_type ?? null,
                 cadenceOwner: safePlanData.cadence_owner,
                 defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
                 billingTiming: safePlanData.billing_timing,
@@ -218,11 +181,13 @@ export const createContractLine = withAuth(async (
             const enrichedPlan: IContractLine = normalizeLiveRecurringStorage(plan);
 
             if (enrichedPlan.contract_line_id) {
+                // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
                 await syncRecurringServicePeriodsForContractLine(trx, {
                     tenant,
                     contractLineId: enrichedPlan.contract_line_id,
                     sourceRunPrefix: 'contract_line_create',
                 });
+                await syncPrepaidBlockIssuancesForContractLine(trx, tenant, enrichedPlan.contract_line_id);
             }
 
             // Track analytics
@@ -262,93 +227,23 @@ export const updateContractLine = withAuth(async (
                 throw new Error('Permission denied: Cannot update contract lines');
             }
 
-            // Template lines live in contract_template_lines, not contract_lines. Without this
-            // branch the live lookup below reports the template line as not found and any
-            // line-level edit (timing, cadence, rounding) is lost.
-            const existingTemplateLine = await tenantDb(trx, tenant).table('contract_template_lines')
-                .where({ template_line_id: planId })
-                .first();
-            if (existingTemplateLine) {
-                const templatePatch: Record<string, unknown> = {};
-                if (updateData.contract_line_name !== undefined) templatePatch.template_line_name = updateData.contract_line_name;
-                if (updateData.billing_frequency !== undefined) templatePatch.billing_frequency = updateData.billing_frequency;
-                if (updateData.is_active !== undefined) templatePatch.is_active = updateData.is_active;
-                if (updateData.minimum_billable_time !== undefined) templatePatch.minimum_billable_time = updateData.minimum_billable_time;
-                if (updateData.round_up_to_nearest !== undefined) templatePatch.round_up_to_nearest = updateData.round_up_to_nearest;
-                if (updateData.cadence_owner !== undefined || updateData.billing_timing !== undefined) {
-                    const templatePolicy = resolveRecurringAuthoringPolicy({
-                        cadenceOwner: updateData.cadence_owner,
-                        fallbackCadenceOwner: existingTemplateLine.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
-                        billingTiming: updateData.billing_timing,
-                        fallbackBillingTiming: existingTemplateLine.billing_timing,
-                    });
-                    templatePatch.cadence_owner = templatePolicy.cadenceOwner;
-                    templatePatch.billing_timing = templatePolicy.billingTiming;
-                }
-                if (Object.keys(templatePatch).length > 0) {
-                    await tenantDb(trx, tenant).table('contract_template_lines')
-                        .where({ template_line_id: planId })
-                        .update({ ...templatePatch, updated_at: trx.fn.now() });
-                }
-                const updatedTemplateLine = await tenantDb(trx, tenant).table('contract_template_lines')
-                    .where({ template_line_id: planId })
-                    .first();
-                return {
-                    contract_line_id: updatedTemplateLine.template_line_id,
-                    contract_line_name: updatedTemplateLine.template_line_name,
-                    billing_frequency: updatedTemplateLine.billing_frequency,
-                    is_custom: true,
-                    contract_id: updatedTemplateLine.template_id,
-                    tenant,
-                    display_order: updatedTemplateLine.display_order ?? 0,
-                    custom_rate: updatedTemplateLine.custom_rate != null ? Number(updatedTemplateLine.custom_rate) : null,
-                    ...normalizeTemplateRecurringStorage({
-                        billing_timing: updatedTemplateLine.billing_timing,
-                        cadence_owner: updatedTemplateLine.cadence_owner,
-                    }),
-                    contract_line_type: updatedTemplateLine.line_type ?? 'Fixed',
-                    service_category: updatedTemplateLine.service_category ?? null,
-                    is_active: updatedTemplateLine.is_active ?? true,
-                    created_at: updatedTemplateLine.created_at,
-                    updated_at: updatedTemplateLine.updated_at,
-                } as IContractLine;
+            const { line: enrichedPlan, updatedFields, isTemplate } = await updateContractLineInTransaction(
+                trx,
+                tenant,
+                planId,
+                updateData,
+            );
+            if (isTemplate) {
+                return enrichedPlan;
             }
 
-            // Fetch the existing plan to check its type
-            const existingPlan = await ContractLine.findById(trx, planId);
-            if (!existingPlan) {
-                // Handle case where plan is not found before update attempt
-                throw new Error(`Contract Line with ID ${planId} not found.`);
-            }
-            await assertContractLineIsAuthorable(trx, tenant, planId);
-
-            // Remove tenant field if present in updateData to prevent override
-            const { tenant: _, ...safeUpdateData } = updateData;
-            const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
-                cadenceOwner: safeUpdateData.cadence_owner,
-                fallbackCadenceOwner: existingPlan.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
-                billingTiming: safeUpdateData.billing_timing,
-                fallbackBillingTiming: existingPlan.billing_timing,
-            });
-            safeUpdateData.cadence_owner = recurringAuthoringPolicy.cadenceOwner;
-            safeUpdateData.billing_timing = recurringAuthoringPolicy.billingTiming;
-
-            // If the plan is hourly, remove only the per-service hourly_rate field
-            // minimum_billable_time and round_up_to_nearest are now contract-line-level
-            if (existingPlan.contract_line_type === 'Hourly') {
-                delete safeUpdateData.hourly_rate;
-            }
-
-            // Proceed with the update using the potentially modified data
-            // Ensure ContractLine.update handles empty updateData gracefully if all fields were removed
-            const plan = await ContractLine.update(trx, planId, safeUpdateData);
-            const enrichedPlan: IContractLine = normalizeLiveRecurringStorage(plan);
-
+            // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
             await syncRecurringServicePeriodsForContractLine(trx, {
                 tenant,
                 contractLineId: planId,
                 sourceRunPrefix: 'contract_line_update',
             });
+            await syncPrepaidBlockIssuancesForContractLine(trx, tenant, planId);
 
             // Track analytics
             const { analytics, AnalyticsEvents } = await getAnalyticsAsync();
@@ -356,7 +251,7 @@ export const updateContractLine = withAuth(async (
                 contract_line_id: enrichedPlan.contract_line_id,
                 contract_line_name: enrichedPlan.contract_line_name,
                 contract_line_type: enrichedPlan.contract_line_type,
-                updated_fields: Object.keys(safeUpdateData)
+                updated_fields: updatedFields
             }, user.user_id);
 
             return enrichedPlan;
@@ -394,8 +289,8 @@ export const upsertContractLineTerms = withAuth(async (
             }
             await assertContractLineIsAuthorable(trx, tenant, contractLineId);
 
-            if (billingTiming === 'advance' && contractLine.contract_line_type !== 'Fixed') {
-                throw new Error('Advance billing is only supported for fixed contract lines.');
+            if (billingTiming === 'advance' && !isAdvanceTimingAllowedForLineType(contractLine.contract_line_type)) {
+                throw new ContractLineTimingNotAllowedError();
             }
 
             await tenantDb(trx, tenant).table('contract_lines')
@@ -405,11 +300,13 @@ export const upsertContractLineTerms = withAuth(async (
                     updated_at: trx.fn.now(),
                 });
 
+            // LEVERAGE: pattern line-obligation-sync — prepaid block issuances follow the same line-obligation changes as recurring service periods
             await syncRecurringServicePeriodsForContractLine(trx, {
                 tenant,
                 contractLineId,
                 sourceRunPrefix: 'contract_line_terms_update',
             });
+            await syncPrepaidBlockIssuancesForContractLine(trx, tenant, contractLineId);
 
         });
     } catch (error) {
@@ -637,6 +534,8 @@ export const updateContractLineFixedConfig = withAuth(async (
                 throw new Error(`Cannot update fixed plan configuration for non-fixed plan type: ${existingPlan.contract_line_type}`);
             }
 
+            assertNonNegativeContractLineRate(configData.base_rate, 'Base rate');
+
             const model = new ContractLineFixedConfig(trx, tenant);
             const existingConfig = await model.getByPlanId(planId);
 
@@ -668,86 +567,3 @@ export const updateContractLineFixedConfig = withAuth(async (
 });
 
 
-/**
- * Updates only the base_rate for a specific service within a fixed plan.
- * Interacts with contract_line_service_fixed_config.
- * Renamed from updateFixedPlanConfiguration.
- */
-export const updatePlanServiceFixedConfigRate = withAuth(async (
-    user,
-    { tenant },
-    planId: string,
-    serviceId: string,
-    baseRate: number | null // Only accept base_rate
-): Promise<boolean | ContractLineActionError> => {
-    try {
-        const { knex } = await createTenantKnex();
-        if (!tenant) {
-            throw new Error("tenant context not found");
-        }
-
-        return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'update', trx)) {
-                throw new Error('Permission denied: Cannot update contract line configurations');
-            }
-
-            // Fetch the existing plan to check its type
-            const existingPlan = await ContractLine.findById(trx, planId); // Use ContractLine model directly
-            if (!existingPlan) {
-                throw new Error(`Contract Line with ID ${planId} not found.`);
-            }
-            await assertContractLineIsAuthorable(trx, tenant, planId);
-            if (existingPlan.contract_line_type !== 'Fixed') {
-                throw new Error(`Cannot update fixed service config rate for non-fixed plan type: ${existingPlan.contract_line_type}`);
-            }
-
-            // Create configuration service
-            const configService = new ContractLineServiceConfigurationService(trx, tenant);
-
-            // Get existing configuration for this plan and service
-            let config = await configService.getConfigurationForService(planId, serviceId);
-
-            if (!config) {
-                // If no configuration exists, create a new one with the provided base_rate
-                console.log(`Creating new fixed plan service configuration for plan ${planId}, service ${serviceId}`);
-
-                const configId = await configService.createConfiguration(
-                    { // Base config data
-                        contract_line_id: planId,
-                        service_id: serviceId,
-                        configuration_type: 'Fixed',
-                        tenant
-                    },
-                    { // Type config data (only base_rate now)
-                        base_rate: baseRate
-                    }
-                    // No legacy partial-period compatibility data is passed here anymore
-                );
-
-                return !!configId;
-            } else {
-                // Update existing configuration's base_rate
-                console.log(`Updating fixed plan service configuration base_rate for plan ${planId}, service ${serviceId}`);
-
-                // Prepare fixed config update data (only base_rate)
-                const fixedConfigData: Partial<IContractLineServiceFixedConfig> = {
-                     base_rate: baseRate
-                };
-
-                // Update the configuration using the service
-                return await configService.updateConfiguration(
-                    config.config_id,
-                    undefined, // No base config updates needed
-                    fixedConfigData // Only contains base_rate
-                );
-            }
-        });
-    } catch (error) {
-        console.error('Error updating fixed plan service config rate:', error);
-        const expected = contractLineActionErrorFrom(error);
-        if (expected) {
-            return expected;
-        }
-        throw error;
-    }
-});

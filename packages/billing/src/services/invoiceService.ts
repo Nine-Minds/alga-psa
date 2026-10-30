@@ -5,14 +5,20 @@ import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from './taxService';
 import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
 import type { InvoiceViewModel, IInvoiceCharge as ManualInvoiceItem, NetAmountItem, DiscountType, ManualInvoiceSourceLink } from '@alga-psa/types'; // Renamed for clarity
-import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, RecurringChargeFamily, IHourBlockCharge, IBucketCharge, ITimeBasedCharge, InvoiceTimeEntrySnapshot } from '@alga-psa/types'; // Added import
+import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, RecurringChargeFamily, IHourBlockCharge, IPrepaidBlockCharge, IBucketCharge, ITimeBasedCharge, InvoiceTimeEntrySnapshot } from '@alga-psa/types'; // Added import
 import type { IClientWithLocation } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import type { ISO8601String, IRecurringDueSelectionInput, IUsageServicePeriodStatus } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
+import { resolveEffectiveBillingIdentity } from '@alga-psa/shared/billingClients/billingProfileSettings';
+import { isOfflinePaymentMethod } from '@alga-psa/shared/billingClients/paymentPreferences';
 import { canonicalizeRecurringServicePeriodScheduleKey } from '@alga-psa/shared/billingClients/recurringServicePeriodKeys';
 import { DEFAULT_UNIT_CODE, HOUR_UNIT_CODE, resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
+import { computePrepaidBlockExpirationDate } from '../lib/prepaidBlockDates';
+import { createPendingHourBlockForInvoiceCharge } from './pendingHourBlockService';
+import { reconcileLineAllocations } from '@alga-psa/shared/billingClients/hourBlockService';
+import { overPrepaidBlockDescription, prepaidBlockFeeDescription } from '../lib/billing/compute/prepaidBlockDescriptions';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import { resolveChargeProfile } from '../lib/billing/billingProfileResolution';
 import { resolveInvoiceBillingRecipient } from './invoiceBillingRecipientService';
@@ -182,6 +188,15 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
       })
       .whereNotIn('lifecycle_state', ['archived', 'superseded']);
 
+    // Prepaid Block issuance selectors identify an issuance, not a recurring
+    // obligation: there are no recurring_service_periods rows to claim.
+    if (
+      executionWindow.kind === 'client_cadence_window'
+      && /^schedule:[^:]+:prepaid_block:[^:]+$/.test(executionWindow.scheduleKey ?? '')
+    ) {
+      continue;
+    }
+
     if (executionWindow.kind === 'client_cadence_window') {
       query
         .where({
@@ -208,6 +223,7 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
     const rows = await query.select<{
       record_id: string; invoice_id: string | null; obligation_id: string;
       charge_family: string; service_period_start: string | Date; service_period_end: string | Date;
+      due_position: string | null; provenance_kind: string | null; reason_code: string | null;
     }[]>(
       'record_id',
       'invoice_id',
@@ -215,6 +231,9 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
       'charge_family',
       'service_period_start',
       'service_period_end',
+      'due_position',
+      'provenance_kind',
+      'reason_code',
     );
 
     if (rows.length === 0) {
@@ -223,7 +242,23 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
       );
     }
 
+    // The arrears-only line repair adds an arrears catch-up row beside an advance period that
+    // was already billed for the same window. Only in that case is a row billed to another
+    // invoice skipped; everywhere else a period billed elsewhere is an integrity error.
+    const hasRepairCatchUpSibling = executionWindow.kind === 'contract_cadence_window'
+      && rows.some((row) => (!row.invoice_id || row.invoice_id === invoiceId)
+        && row.provenance_kind === 'repair'
+        && row.reason_code === 'stranded_advance_catch_up');
+
     for (const row of rows) {
+      if (
+        hasRepairCatchUpSibling
+        && row.invoice_id
+        && row.invoice_id !== invoiceId
+        && row.due_position === 'advance'
+      ) {
+        continue;
+      }
       if (row.charge_family === 'usage' && omitted.has(JSON.stringify([
         row.obligation_id, storedDate(row.service_period_start), storedDate(row.service_period_end),
       ]))) {
@@ -397,6 +432,7 @@ async function linkAndMarkSourceBillingRecord(params: {
   }
 }
 
+// LEVERAGE: pattern line-recurring-streams — maps a charge type back to a recurring family/stream; it should come from the same source as contractLineRecurringStreams once prepaid_block charges are linked
 function getRecurringChargeFamilyForInvoiceLinkage(
   charge: IBillingCharge,
 ): RecurringChargeFamily | null {
@@ -409,12 +445,35 @@ function getRecurringChargeFamilyForInvoiceLinkage(
       return charge.type;
     case 'time':
       return 'hourly';
+    case 'prepaid_block':
+      // Only cadence blocks (no issuance) hold a recurring service period.
+      return (charge as IPrepaidBlockCharge).issuance_id ? null : 'prepaid_block';
     default:
       return null;
   }
 }
 
+/**
+ * Line description for a time charge: overtime segments say so, and late time
+ * names the service period of the invoice that closed its window. Shared by the
+ * preview and persist paths so the preview, PDF and API show the same wording.
+ */
+export function describeTimeCharge(
+  charge: Pick<ITimeBasedCharge, 'serviceName' | 'timeSegment' | 'lateForServicePeriod' | 'overPrepaidBlock'>,
+): string {
+  const base = charge.timeSegment === 'overtime'
+    ? `${charge.serviceName} (overtime)`
+    : charge.overPrepaidBlock
+      ? overPrepaidBlockDescription(charge.serviceName)
+      : charge.serviceName;
+  const late = charge.lateForServicePeriod;
+  return late ? `${base} (late time, service period ${late.servicePeriodStart}–${late.servicePeriodEnd})` : base;
+}
+
 function requiresRecurringServicePeriodLinkage(charge: IBillingCharge): boolean {
+  // Late time belongs to a period an earlier invoice already closed; this
+  // invoice's own period is claimed by its own charges or the chargeless sweep.
+  if (charge.lateForServicePeriod) return false;
   return Boolean(charge.servicePeriodRecordId || charge.client_contract_line_id);
 }
 
@@ -493,9 +552,13 @@ export interface ValidationResult {
 }
 
 /**
- * Validates that a client has a billing email address set.
- * This is required for online payments via Stripe.
- * Returns a validation result instead of throwing an error.
+ * Reports whether an invoice for this client (billed to this profile) could be
+ * emailed or paid online. Advisory only: the email is consumed when the invoice
+ * is sent or a payment link is created, and both of those paths refuse on their
+ * own, so a missing address never blocks generating or previewing the invoice.
+ *
+ * A profile or client set to mail delivery with an offline payment method
+ * (check, bank transfer) never needs an address, so it is not flagged.
  */
 export async function validateClientBillingEmail(
   knex: Knex,
@@ -505,19 +568,24 @@ export async function validateClientBillingEmail(
   billingProfileId?: string | null,
 ): Promise<ValidationResult> {
   // A segmented client may hold its billing address on the profile alone, so
-  // the gate has to ask about the profile this invoice bills — otherwise a
-  // profile with a perfectly good AP inbox is refused an invoice.
+  // the check has to ask about the profile this invoice bills.
   const billingEmail = await getClientBillingEmail(knex, tenant, clientId, billingProfileId);
-  if (!billingEmail) {
-    return {
-      valid: false,
-      code: 'NO_BILLING_EMAIL',
-      params: { clientName },
-      error: `Cannot generate invoice: No billing email address for "${clientName}". ` +
-        `Please set a billing contact, billing email, or a billing/default location email before generating invoices.`
-    };
+  if (billingEmail) {
+    return { valid: true };
   }
-  return { valid: true };
+
+  const identity = await resolveEffectiveBillingIdentity(knex, tenant, clientId, billingProfileId);
+  if (identity.invoiceDeliveryMethod === 'mail' && isOfflinePaymentMethod(identity.preferredPaymentMethod)) {
+    return { valid: true };
+  }
+
+  return {
+    valid: false,
+    code: 'NO_BILLING_EMAIL',
+    params: { clientName },
+    error: `Cannot generate invoice: No billing email address for "${clientName}". ` +
+      `Please set a billing contact, billing email, or a billing/default location email before generating invoices.`
+  };
 }
 
 /** Unit snapshot for a manual line: its catalog service's unit, else what the caller sent, else Each. */
@@ -534,14 +602,25 @@ function manualChargeUnit(
 
 // Renamed interface for clarity within manual context
 interface ManualInvoiceItemInput extends NetAmountItem {
+  /**
+   * Client-supplied stable line id. When present it is reused so a repeated
+   * save of the same editor payload updates the same row instead of minting a
+   * new UUID (idempotent manual save); absent ids are generated.
+   */
+  item_id?: string;
+  service_id?: string;
   unit_code?: string | null;
   unit_label?: string | null;
-  service_id?: string; // Optional for manual items
   description: string;
   is_taxable?: boolean; // Still needed for purely manual items without a service
   applies_to_service_id?: string;
   discount_percentage?: number;
   location_id?: string | null;
+  client_contract_id?: string | null;
+  service_period_start?: string | null;
+  service_period_end?: string | null;
+  adjustment_period_start?: string | null;
+  adjustment_period_end?: string | null;
   /**
    * Explicit billing profile for this manual item — step 1 of the resolution
    * chain, and the only step a manual item can use, since it has no contract
@@ -554,6 +633,18 @@ interface ManualInvoiceItemInput extends NetAmountItem {
   /** Per-line tax override: takes precedence over the service's tax_rate_id (F045). */
   tax_rate_id?: string | null;
   /**
+   * Provenance for automatic discounts/true-ups and manual adjustments. Manual
+   * lines keep `is_manual = true`; these fields record what produced the row
+   * and, for partial-period charges, the inputs behind the resolved amount.
+   */
+  adjustment_source_kind?: 'discount' | 'contract_change' | 'manual_adjustment' | null;
+  adjustment_source_id?: string | null;
+  adjustment_source_revision?: number | null;
+  adjustment_scope?: 'invoice' | 'contract' | 'service' | 'item' | null;
+  adjustment_base_amount?: number | null;
+  adjustment_reason?: string | null;
+  manual_line_metadata?: Record<string, unknown> | null;
+  /**
    * Ticket source record this line claims (quick-invoice-a-ticket). When set,
    * the owning time entry / ticket material is marked billed and linked in the
    * same transaction as the charge, so an already-billed selection aborts.
@@ -561,6 +652,22 @@ interface ManualInvoiceItemInput extends NetAmountItem {
   source_link?: ManualInvoiceSourceLink;
 }
 
+
+/**
+ * Resolves the region code a per-line tax treatment selects. A caller-provided
+ * tax rate is validated against the tenant; an unknown or foreign id yields
+ * null so the line is not silently taxed in the wrong region.
+ */
+export async function resolveTaxRegionCodeForRate(
+  tx: Knex.Transaction,
+  tenant: string,
+  taxRateId: string,
+): Promise<string | null> {
+  const rate = await tenantScopedTable(tx, tenant, 'tax_rates')
+    .where({ tax_rate_id: taxRateId, tenant })
+    .first('region_code');
+  return (rate?.region_code as string | null) ?? null;
+}
 
 export function calculateNetAmount(
   requestItem: NetAmountItem,
@@ -586,6 +693,15 @@ export function calculateNetAmount(
   }
 }
 
+/**
+ * A row produced by automatic reconciliation (automatic discount, contract
+ * settlement) rather than authored by an operator. It carries both a source
+ * kind and a stable source id; manual lines carry a kind but no source id.
+ */
+function isSourceLinkedSettlement(item: ManualInvoiceItem): boolean {
+  return Boolean(item.adjustment_source_kind) && Boolean(item.adjustment_source_id);
+}
+
 export async function recalculatePercentageDiscountInvoiceCharges(
   tx: Knex.Transaction,
   invoiceId: string,
@@ -597,6 +713,12 @@ export async function recalculatePercentageDiscountInvoiceCharges(
       .where('invoice_id', invoiceId)
       .select('*');
 
+  // Automatic discounts are source-linked settlements: their scope, cap and
+  // per-charge allocation are owned by reconcileAutomaticInvoiceAdjustments.
+  // Recomputing them here from the whole invoice subtotal (or a single target
+  // item) would discard that scope/cap and let the stored rows disagree with
+  // the totals. Legacy/manual percentage discounts carry no source id and keep
+  // the historical whole-invoice/target-item recalculation.
   const percentageDiscountItems = invoiceItems.filter(
     (item) =>
       item.is_discount === true &&
@@ -604,7 +726,8 @@ export async function recalculatePercentageDiscountInvoiceCharges(
       // shared evaluator; this legacy recalculator owns manual rows only.
       (item as ManualInvoiceItem & { adjustment_source_kind?: string }).adjustment_source_kind !== 'discount' &&
       item.discount_type === 'percentage' &&
-      item.discount_percentage != null,
+      item.discount_percentage != null &&
+      !isSourceLinkedSettlement(item),
   );
 
   if (percentageDiscountItems.length === 0) {
@@ -634,7 +757,7 @@ export async function recalculatePercentageDiscountInvoiceCharges(
       Number(discountItem.total_price || 0) !== recalculatedNetAmount
     ) {
       await tenantScopedTable(tx, tenant, 'invoice_charges')
-        .where('item_id', discountItem.item_id)
+        .where({ item_id: discountItem.item_id, invoice_id: invoiceId })
         .update({
           net_amount: recalculatedNetAmount,
           total_price: recalculatedNetAmount,
@@ -791,6 +914,126 @@ async function claimManualChargeSource(
 }
 
 /**
+ * Rejects operator-supplied attribution that does not belong to the invoice's
+ * client. The editor's location/billing-profile selects only constrain the
+ * browser: a forged or stale id must not be persisted just because it exists
+ * for another client.
+ */
+export async function validateManualChargeAttribution(
+  tx: Knex.Transaction,
+  tenant: string,
+  clientId: string,
+  items: Array<{
+    location_id?: string | null;
+    billing_profile_id?: string | null;
+    tax_rate_id?: string | null;
+    client_contract_id?: string | null;
+    service_id?: string | null;
+    description?: string | null;
+    is_discount?: boolean | null;
+    rate?: number | null;
+  }>,
+): Promise<void> {
+  for (const item of items) {
+    const serviceId = item.service_id?.trim();
+    const requiresService = !item.is_discount && !(Number(item.rate) < 0);
+    if (!serviceId && !requiresService) continue;
+    if (!serviceId) {
+      throw new ManualInvoiceError(
+        'SERVICE_REQUIRED',
+        `Assign a service to '${item.description?.trim() || 'manual charge'}' before saving.`,
+        { description: item.description ?? 'manual charge' },
+      );
+    }
+    const service = await tenantScopedTable(tx, tenant, 'service_catalog')
+      .where({ service_id: serviceId, tenant })
+      .first('service_id');
+    if (!service) {
+      throw new ManualInvoiceError(
+        'SERVICE_NOT_FOUND',
+        `The selected service for '${item.description?.trim() || 'manual charge'}' is not available in this workspace.`,
+        { serviceId },
+      );
+    }
+  }
+
+  const locationIds = [...new Set(
+    items
+      .map((item) => item.location_id)
+      .filter((value): value is string => Boolean(value)),
+  )];
+  if (locationIds.length > 0) {
+    const owned = await tenantScopedTable(tx, tenant, 'client_locations')
+      .where({ tenant, client_id: clientId })
+      .whereIn('location_id', locationIds)
+      .pluck('location_id');
+    const ownedSet = new Set(owned as string[]);
+    const foreign = locationIds.find((id) => !ownedSet.has(id));
+    if (foreign) {
+      throw new ManualInvoiceError(
+        'LOCATION_NOT_FOUND',
+        "The selected location does not belong to this invoice's client.",
+        { locationId: foreign },
+      );
+    }
+  }
+
+  const profileIds = [...new Set(
+    items
+      .map((item) => item.billing_profile_id)
+      .filter((value): value is string => Boolean(value)),
+  )];
+  if (profileIds.length > 0) {
+    const owned = await tenantScopedTable(tx, tenant, 'client_billing_profiles')
+      .where({ tenant, client_id: clientId })
+      .whereIn('billing_profile_id', profileIds)
+      .pluck('billing_profile_id');
+    const ownedSet = new Set(owned as string[]);
+    const foreign = profileIds.find((id) => !ownedSet.has(id));
+    if (foreign) {
+      throw new ManualInvoiceError(
+        'BILLING_PROFILE_NOT_FOUND',
+        "The selected billing profile does not belong to this invoice's client.",
+        { billingProfileId: foreign },
+      );
+    }
+  }
+
+  // Tax treatments are tenant-wide (not client-scoped). An explicit per-line
+  // tax_rate_id that does not resolve inside this tenant is a forged or stale
+  // selection; reject it before any row is written rather than silently
+  // persisting a taxable line with no region.
+  const taxRateIds = [...new Set(
+    items
+      .map((item) => item.tax_rate_id)
+      .filter((value): value is string => Boolean(value)),
+  )];
+  const contractIds = [...new Set(items.map((item) => item.client_contract_id).filter((value): value is string => Boolean(value)))];
+  if (contractIds.length > 0) {
+    const owned = await tenantScopedTable(tx, tenant, 'client_contracts')
+      .where({ tenant, client_id: clientId }).whereIn('client_contract_id', contractIds).pluck('client_contract_id');
+    const ownedSet = new Set(owned as string[]);
+    const foreign = contractIds.find((id) => !ownedSet.has(id));
+    if (foreign) throw new ManualInvoiceError('CLIENT_CONTRACT_NOT_FOUND', "The selected contract does not belong to this invoice's client.", { clientContractId: foreign });
+  }
+  if (taxRateIds.length > 0) {
+    const owned = await tenantScopedTable(tx, tenant, 'tax_rates')
+      .where({ tenant })
+      .whereIn('tax_rate_id', taxRateIds)
+      .pluck('tax_rate_id');
+    const ownedSet = new Set(owned as string[]);
+    const unknown = taxRateIds.find((id) => !ownedSet.has(id));
+    if (unknown) {
+      throw new ManualInvoiceError(
+        'TAX_RATE_NOT_FOUND',
+        "The selected tax treatment was not found for this tenant.",
+        { taxRateId: unknown },
+      );
+    }
+  }
+}
+
+/**
  * Persists manual invoice items to the database.
  * Handles both regular manual items and manual discount items.
  * Resolves service ID references for discounts.
@@ -807,6 +1050,7 @@ export async function persistManualInvoiceCharges(
   tenant: string
 ): Promise<number> {
   const sourceSnapshots = await validateManualTicketSources(tx, tenant, invoiceId, client.client_id, manualItems);
+  await validateManualChargeAttribution(tx, tenant, client.client_id, manualItems);
   let subtotal = 0;
   const serviceToItemMap = new Map<string, string>(); // Maps service_id to item_id for discount resolution
   const now = Temporal.Now.instant().toString();
@@ -828,6 +1072,20 @@ export async function persistManualInvoiceCharges(
   // --- First Pass: Process non-discount manual items ---
   const nonDiscountItems = manualItems.filter(item => !item.is_discount);
   for (const requestItem of nonDiscountItems) {
+    // A negative unit rate is a quantity-derived manual credit and is
+    // classified as a discount settlement below. It uses the discount
+    // accounting mapping, so it does not require a service.
+    const isCredit = requestItem.rate < 0;
+    // Accounting classification is part of a manual charge's persisted
+    // contract. Credits/discount settlements are classified by their
+    // integration discount mapping and are the only serviceless exception.
+    if (!requestItem.service_id && !isCredit) {
+      throw new ManualInvoiceError(
+        'SERVICE_REQUIRED',
+        `Assign a service to '${requestItem.description?.trim() || 'manual charge'}' before saving.`,
+        { description: requestItem.description ?? null }
+      );
+    }
     let service;
     if (requestItem.service_id) {
       service = await tenantScopedTable(tx, tenant, 'service_catalog')
@@ -844,39 +1102,39 @@ export async function persistManualInvoiceCharges(
       }
     }
     // --- Determine Tax Info based on the item's (or service's) Tax Rate ID ---
-    // A per-item tax_rate_id (e.g. from a sales-order line — F045) overrides the
-    // service default.
-    const effectiveTaxRateId = requestItem.tax_rate_id ?? service?.tax_rate_id ?? null;
+    // An explicit per-item `tax_rate_id` is authoritative: a string taxes the
+    // line in that rate's region, while an explicit `null` means the operator
+    // chose Non-taxable and MUST override a taxable service default (otherwise a
+    // catalog line can never be made non-taxable). Only an absent choice
+    // (`undefined`) falls through to the linked service — this preserves legacy
+    // callers such as sales-order lines that never saw the tax-treatment control.
+    const hasExplicitTaxTreatment = requestItem.tax_rate_id !== undefined;
+    const explicitTaxRateId = requestItem.tax_rate_id || null;
+    const effectiveTaxRateId = hasExplicitTaxTreatment
+      ? explicitTaxRateId
+      : service?.tax_rate_id ?? null;
     let serviceTaxRegion: string | null = null;
     let serviceIsTaxable = true; // Default for purely manual items if no service
-    if (service) {
-      if (effectiveTaxRateId) {
-        const taxRateInfo = await tenantScopedTable(tx, tenant, 'tax_rates')
-          .where('tax_rate_id', effectiveTaxRateId)
-          // Add validity checks if needed (e.g., is_active, date range)
-          // For now, just fetch the region code associated with the ID
-          .select('region_code')
-          .first();
-        if (taxRateInfo) {
-          serviceTaxRegion = taxRateInfo.region_code;
-          serviceIsTaxable = true; // A valid tax_rate_id means taxable
-        } else {
-          // tax_rate_id exists but doesn't link to a valid rate? Treat as non-taxable.
-          console.warn(`Service ${service.service_id} has tax_rate_id ${effectiveTaxRateId} but no matching tax_rate found.`);
-          serviceIsTaxable = false;
-          serviceTaxRegion = null;
-        }
+    if (effectiveTaxRateId) {
+      serviceTaxRegion = await resolveTaxRegionCodeForRate(tx, tenant, effectiveTaxRateId);
+      if (serviceTaxRegion) {
+        serviceIsTaxable = true; // A valid tax_rate_id means taxable
       } else {
-        // Service exists but tax_rate_id is NULL, so it's non-taxable
+        // tax_rate_id exists but doesn't link to a valid rate? Treat as non-taxable.
+        console.warn(`Manual charge references tax_rate_id ${effectiveTaxRateId} but no matching tax_rate found.`);
         serviceIsTaxable = false;
-        serviceTaxRegion = null;
       }
+    } else if (hasExplicitTaxTreatment) {
+      // Explicit Non-taxable selection: authoritative even when the linked
+      // service is taxable.
+      serviceIsTaxable = false;
+    } else if (service) {
+      // Service exists but tax_rate_id is NULL, so it's non-taxable
+      serviceIsTaxable = false;
     } else {
-      // No service linked, use fallback logic below for purely manual items
-      serviceIsTaxable = requestItem.is_taxable ?? true; // Existing fallback
-      // serviceTaxRegion is derived from tax_rate_id now, or client default if no service/rate
-      // No direct tax_region on requestItem anymore
-      serviceTaxRegion = client.region_code ?? null; // Fallback to client default region if no service linked
+      // No service and no explicit treatment: purely manual fallback.
+      serviceIsTaxable = requestItem.is_taxable ?? true;
+      serviceTaxRegion = client.region_code ?? null;
     }
     // --- End Determine Tax Info ---
 
@@ -885,13 +1143,32 @@ export async function persistManualInvoiceCharges(
     }
 
     const netAmount = calculateNetAmount(requestItem, subtotal); // No applicable amount needed here
+    const partialPeriodMetadata = requestItem.manual_line_metadata?.partialPeriod as Record<string, unknown> | undefined;
+    if (partialPeriodMetadata && Number.isFinite(Number(partialPeriodMetadata.resolved_amount_minor))
+      && Number(partialPeriodMetadata.resolved_amount_minor) !== netAmount) {
+      throw new ManualInvoiceError('SOURCE_NOT_ELIGIBLE', 'Partial-period amount must equal the saved quantity multiplied by its prorated unit rate.');
+    }
 
     // Detect manual credits (negative rate, not explicitly marked as discount)
-    const isCredit = !requestItem.is_discount && requestItem.rate < 0;
     const itemProfile = resolveItemProfile(requestItem);
 
+    if (requestItem.item_id) {
+      const alreadyPersisted = await tenantScopedTable(tx, tenant, 'invoice_charges')
+        .where({ item_id: requestItem.item_id, invoice_id: invoiceId })
+        .first();
+      if (alreadyPersisted) {
+        // Idempotent re-submission: the same editor payload arrived twice, so
+        // reuse the row instead of minting a duplicate charge.
+        if (requestItem.service_id) {
+          serviceToItemMap.set(requestItem.service_id, alreadyPersisted.item_id);
+        }
+        subtotal += Number(alreadyPersisted.net_amount ?? 0);
+        continue;
+      }
+    }
+
     const invoiceItem = {
-      item_id: uuidv4(),
+      item_id: requestItem.item_id ?? uuidv4(),
       invoice_id: invoiceId,
       service_id: requestItem.service_id || null,
       ...manualChargeUnit(service, requestItem),
@@ -900,19 +1177,34 @@ export async function persistManualInvoiceCharges(
       unit_price: Math.round(requestItem.rate), // Store the actual rate
       net_amount: netAmount,
       tax_amount: 0, // Placeholder
-      tax_region: service ? serviceTaxRegion : (client.region_code ?? null), // Fallback to client region if no service
+      tax_region: serviceTaxRegion, // Explicit treatment region, service region, or client fallback
       tax_rate: 0, // Placeholder
       total_price: netAmount, // Placeholder
       is_manual: true,
       is_discount: isCredit, // Mark manual credits as discounts for tax base calculation logic
+      // Records that the amount is quantity × rate. Authored fixed discounts,
+      // which are quantity-independent, keep the default false.
+      is_manual_credit: isCredit,
       is_taxable: isCredit ? false : serviceIsTaxable, // Use derived taxable status
       discount_type: isCredit ? 'fixed' : undefined, // Credits are like fixed discounts
       applies_to_item_id: null, // Manual non-discounts don't apply to others
       applies_to_service_id: null,
       location_id: requestItem.location_id ?? null,
+      client_contract_id: requestItem.client_contract_id ?? null,
+      adjustment_period_start: requestItem.adjustment_period_start ?? null,
+      adjustment_period_end: requestItem.adjustment_period_end ?? null,
       billing_profile_id: itemProfile.billingProfileId,
       billing_profile_source: itemProfile.source,
       so_line_id: requestItem.so_line_id ?? null,
+      adjustment_source_kind: requestItem.adjustment_source_kind ?? 'manual_adjustment',
+      adjustment_source_id: requestItem.adjustment_source_id ?? null,
+      adjustment_source_revision: requestItem.adjustment_source_revision ?? null,
+      adjustment_scope: requestItem.adjustment_scope ?? null,
+      adjustment_base_amount: requestItem.adjustment_base_amount ?? null,
+      adjustment_reason: requestItem.adjustment_reason ?? null,
+      manual_line_metadata: requestItem.manual_line_metadata
+        ? JSON.stringify(requestItem.manual_line_metadata)
+        : null,
       created_by: session.user.id,
       created_at: now,
       tenant
@@ -957,17 +1249,39 @@ export async function persistManualInvoiceCharges(
       }
     }
 
-    // Get applicable item amount for percentage discounts
+    // Get applicable item amount for percentage discounts. Scope the lookup to
+    // this invoice so a client-supplied target that belongs to a different
+    // invoice cannot be used as the discount base.
     if (applicableItemId) {
       const applicableItem = await tenantScopedTable(tx, tenant, 'invoice_charges')
-        .where('item_id', applicableItemId)
+        .where({ item_id: applicableItemId, invoice_id: invoiceId })
         .first();
-      applicableAmount = applicableItem?.net_amount;
+      if (!applicableItem) {
+        throw new ManualInvoiceError(
+          'DISCOUNT_TARGET_NOT_FOUND',
+          'The selected discount target is not a line on this invoice.',
+          { itemId: applicableItemId },
+        );
+      }
+      applicableAmount = applicableItem.net_amount;
     }
+
+    // Resolve the base from the complete post-addition invoice state. The local
+    // `subtotal` only contains rows submitted in this request; a discount-only
+    // edit would therefore be saved as zero, and a mixed generated/manual
+    // invoice would omit generated charges. Non-discount rows were inserted in
+    // the first pass, so this includes persisted and current-request charges
+    // exactly once while excluding every discount row.
+    const eligibleInvoiceBase = await tenantScopedTable(tx, tenant, 'invoice_charges')
+      .where({ invoice_id: invoiceId })
+      .whereNot('is_discount', true)
+      .sum({ eligible_total: 'net_amount' })
+      .first();
+    const completeSubtotal = Number(eligibleInvoiceBase?.eligible_total ?? 0);
 
     const netAmount = calculateNetAmount(
       { ...requestItem, applies_to_item_id: applicableItemId },
-      subtotal, // Pass current subtotal for percentage discounts not tied to an item
+      completeSubtotal,
       applicableAmount
     );
 
@@ -996,8 +1310,19 @@ export async function persistManualInvoiceCharges(
     // --- End Determine Tax Region ---
 
     const discountProfile = resolveItemProfile(requestItem);
+
+    if (requestItem.item_id) {
+      const alreadyPersisted = await tenantScopedTable(tx, tenant, 'invoice_charges')
+        .where({ item_id: requestItem.item_id, invoice_id: invoiceId })
+        .first();
+      if (alreadyPersisted) {
+        subtotal += Number(alreadyPersisted.net_amount ?? 0);
+        continue;
+      }
+    }
+
     const invoiceItem = {
-      item_id: uuidv4(),
+      item_id: requestItem.item_id ?? uuidv4(),
       invoice_id: invoiceId,
       service_id: requestItem.service_id || null,
       ...manualChargeUnit(service, requestItem),
@@ -1020,6 +1345,15 @@ export async function persistManualInvoiceCharges(
       location_id: requestItem.location_id ?? null,
       billing_profile_id: discountProfile.billingProfileId,
       billing_profile_source: discountProfile.source,
+      adjustment_source_kind: requestItem.adjustment_source_kind ?? 'manual_adjustment',
+      adjustment_source_id: requestItem.adjustment_source_id ?? null,
+      adjustment_source_revision: requestItem.adjustment_source_revision ?? null,
+      adjustment_scope: requestItem.adjustment_scope ?? null,
+      adjustment_base_amount: requestItem.adjustment_base_amount ?? null,
+      adjustment_reason: requestItem.adjustment_reason ?? null,
+      manual_line_metadata: requestItem.manual_line_metadata
+        ? JSON.stringify(requestItem.manual_line_metadata)
+        : null,
       created_by: session.user.id,
       created_at: now,
       tenant
@@ -1031,6 +1365,15 @@ export async function persistManualInvoiceCharges(
 
   return subtotal;
 }
+
+
+// Automatic discount settlement lives in a dedicated service so generation,
+// preview and draft refresh share one evaluator.
+export {
+  reconcileAutomaticInvoiceDiscounts,
+  reconcileAutomaticInvoiceAdjustments,
+} from "./invoiceAutomaticAdjustments";
+
 
 /**
  * Persists fixed-price invoice items generated by the billing engine.
@@ -1409,6 +1752,140 @@ async function persistFixedInvoiceCharges(
 
 
 /**
+ * Materialises a Prepaid Block issuance on the invoice that bills it: creates
+ * the pending block linked to the charge (expiry from the invoice date),
+ * marks the issuance invoiced, then re-draws the line's uninvoiced time.
+ *
+ * Lock order (plan section 5): config and issuance rows first, then blocks
+ * (reconcileLineAllocations locks them in canonical block_id order). The
+ * issuance is locked and must still be 'scheduled', so two concurrent or
+ * repeated generations for the same issuance fail fast instead of issuing two
+ * blocks.
+ */
+export async function persistPrepaidBlockIssuance(params: {
+  tx: Knex.Transaction;
+  tenant: string;
+  invoiceId: string;
+  invoiceChargeId: string;
+  /** The block terms; a full engine charge or the same fields read from the line config (usage-triggered follow-ons). */
+  charge: Pick<
+    IPrepaidBlockCharge,
+    'issuance_id' | 'contract_line_id' | 'serviceId' | 'block_minutes' | 'block_price' | 'rate'
+    | 'currency_code' | 'expiry_months' | 'scope_service_ids'
+  >;
+  clientId: string;
+  createdBy: string | null;
+  now: string;
+}): Promise<void> {
+  const { tx, tenant, invoiceId, invoiceChargeId, charge } = params;
+
+  await tenantScopedTable(tx, tenant, 'contract_line_prepaid_blocks')
+    .where({ contract_line_id: charge.contract_line_id })
+    .forUpdate()
+    .select('contract_line_id')
+    .first();
+
+  const issuance = await tenantScopedTable(tx, tenant, 'contract_line_block_issuances')
+    .where({ issuance_id: charge.issuance_id })
+    .forUpdate()
+    .first();
+  if (!issuance || issuance.status !== 'scheduled') {
+    throw new Error(
+      `Prepaid block issuance ${charge.issuance_id} is ${issuance?.status ?? 'missing'}, not scheduled; it has already been invoiced or is no longer due.`,
+    );
+  }
+
+  const invoice = await tenantScopedTable(tx, tenant, 'invoices')
+    .where({ invoice_id: invoiceId })
+    .select('invoice_date')
+    .first();
+  if (!invoice?.invoice_date) {
+    throw new Error(`Invoice ${invoiceId} has no invoice date; cannot compute prepaid block expiry.`);
+  }
+
+  const { blockId } = await createPendingHourBlockForInvoiceCharge(tx, {
+    tenant,
+    clientId: params.clientId,
+    serviceId: charge.serviceId,
+    minutes: charge.block_minutes,
+    hourlyRate: charge.rate,
+    purchaseAmount: charge.block_price,
+    currencyCode: charge.currency_code,
+    invoiceId,
+    invoiceChargeId,
+    expirationDate: computePrepaidBlockExpirationDate(invoice.invoice_date, charge.expiry_months),
+    scopeServiceIds: charge.scope_service_ids,
+    sourceType: 'contract',
+    contractLineId: charge.contract_line_id,
+    clientContractId: issuance.client_contract_id,
+    issuanceId: charge.issuance_id,
+    createdBy: params.createdBy,
+  });
+
+  await tenantScopedTable(tx, tenant, 'contract_line_block_issuances')
+    .where({ issuance_id: charge.issuance_id })
+    .update({
+      status: 'invoiced',
+      block_id: blockId,
+      invoice_id: invoiceId,
+      invoice_charge_id: invoiceChargeId,
+      block_minutes: charge.block_minutes,
+      block_price: charge.block_price,
+      currency_code: charge.currency_code,
+      updated_at: params.now,
+    });
+
+  // Overflow already logged against the line lands on the new pending block.
+  await reconcileLineAllocations(tx, tenant, charge.contract_line_id);
+}
+
+/**
+ * Creates the pending hour block a cadence Prepaid Block charge bills: dated
+ * and linked to its service period by the charge, with no issuance. The caller
+ * links the period and reconciles the line's time afterwards.
+ */
+async function persistCadencePrepaidBlock(params: {
+  tx: Knex.Transaction;
+  tenant: string;
+  invoiceId: string;
+  invoiceChargeId: string;
+  charge: IPrepaidBlockCharge;
+  clientId: string;
+  createdBy: string | null;
+}): Promise<void> {
+  const { tx, tenant, charge } = params;
+  if (!charge.servicePeriodRecordId || !charge.valid_from || !charge.expiration_date) {
+    throw new Error(
+      `Cadence prepaid block for line ${charge.contract_line_id} is missing its service period or validity dates.`,
+    );
+  }
+  await tenantScopedTable(tx, tenant, 'contract_line_prepaid_blocks')
+    .where({ contract_line_id: charge.contract_line_id })
+    .forUpdate()
+    .select('contract_line_id')
+    .first();
+  await createPendingHourBlockForInvoiceCharge(tx, {
+    tenant,
+    clientId: params.clientId,
+    serviceId: charge.serviceId,
+    minutes: charge.block_minutes,
+    hourlyRate: charge.rate,
+    purchaseAmount: charge.block_price,
+    currencyCode: charge.currency_code,
+    invoiceId: params.invoiceId,
+    invoiceChargeId: params.invoiceChargeId,
+    expirationDate: charge.expiration_date,
+    validFrom: charge.valid_from,
+    scopeServiceIds: charge.scope_service_ids,
+    sourceType: 'contract',
+    contractLineId: charge.contract_line_id,
+    clientContractId: charge.client_contract_id ?? null,
+    servicePeriodRecordId: charge.servicePeriodRecordId,
+    createdBy: params.createdBy,
+  });
+}
+
+/**
  * Persists invoice items generated by the billing engine.
  * Delegates fixed-price items to persistFixedInvoiceCharges.
  * Handles other billing charge types (usage, hourly, etc.).
@@ -1504,12 +1981,14 @@ export async function persistInvoiceCharges(
         ? `Product: ${charge.serviceName}`
         : charge.type === 'license'
           ? `License: ${charge.serviceName}`
+          : charge.type === 'prepaid_block'
+            ? prepaidBlockFeeDescription({ name: charge.serviceName, hours: (charge as IPrepaidBlockCharge).quantity })
           : charge.type === 'hour_block'
             ? `Prepaid hour block (${charge.serviceName}) — ${(charge as IHourBlockCharge).hoursUsed.toFixed(1)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel} consumed, ${(charge as IHourBlockCharge).hoursRemaining.toFixed(1)} ${resolveUnitOfMeasure({ fallback: 'HUR' }).shortLabel} remaining`
-            : charge.type === 'time' && (charge as ITimeBasedCharge).timeSegment === 'overtime'
+            : charge.type === 'time'
               // LEVERAGE: pattern charge-line-description — preview (invoiceGeneration.timeChargeDescription,
               // formatHourBlockChargeDescription) and persist each derive line descriptions from a charge
-              ? `${charge.serviceName} (overtime)`
+              ? describeTimeCharge(charge as ITimeBasedCharge)
               : charge.serviceName;
     const invoiceItem = {
       item_id: uuidv4(),
@@ -1567,6 +2046,35 @@ export async function persistInvoiceCharges(
       requireRecurringServicePeriodLinkage
       && shouldPersistDetail
       && requiresRecurringServicePeriodLinkage(charge);
+
+    let cadenceBlockToReconcile: string | null = null;
+    if (charge.type === 'prepaid_block' && !(charge as IPrepaidBlockCharge).issuance_id) {
+      // Cadence block: created pending and linked to its service period (below)
+      // like any recurring charge; no issuance row exists to flip.
+      await persistCadencePrepaidBlock({
+        tx,
+        tenant,
+        invoiceId,
+        invoiceChargeId: invoiceItem.item_id,
+        charge: charge as IPrepaidBlockCharge,
+        clientId: client.client_id,
+        createdBy: session.user.id,
+      });
+      cadenceBlockToReconcile = (charge as IPrepaidBlockCharge).contract_line_id;
+    } else if (charge.type === 'prepaid_block') {
+      await persistPrepaidBlockIssuance({
+        tx,
+        tenant,
+        invoiceId,
+        invoiceChargeId: invoiceItem.item_id,
+        charge: charge as IPrepaidBlockCharge,
+        clientId: client.client_id,
+        createdBy: session.user.id,
+        now,
+      });
+      otherSubtotal += netAmount;
+      continue;
+    }
 
     await linkAndMarkSourceBillingRecord({
       tx,
@@ -1634,6 +2142,11 @@ export async function persistInvoiceCharges(
           }
         }
       }
+    }
+
+    if (cadenceBlockToReconcile) {
+      // Overflow already logged against the line lands on the new pending block.
+      await reconcileLineAllocations(tx, tenant, cadenceBlockToReconcile);
     }
 
     otherSubtotal += netAmount;
@@ -2044,6 +2557,62 @@ export async function calculateAndDistributeTax(
   return finalTotalTax;
 }
 
+
+/**
+ * Reconcile an already-posted invoice after editing its draft charges. Generation
+ * posts the principal before finalization; subsequent saves post only the delta.
+ * Payments/credits are separate ledger activity and must not enter that base.
+ * The caller holds the invoice lock and updates its totals in this transaction.
+ */
+export async function reconcileInvoiceAdjustmentTransaction(
+  tx: Knex.Transaction,
+  tenant: string,
+  invoice: {
+    invoice_id: string;
+    client_id: string;
+    invoice_number: string;
+    currency_code?: string | null;
+    billing_profile_id?: string | null;
+  },
+  totalAmount: number,
+): Promise<void> {
+  // Serialize this client's adjustment balance reads, including edits to two
+  // different invoices. Lock order matches the writers: invoice, then client.
+  await tenantScopedTable(tx, tenant, 'clients')
+    .where({ client_id: invoice.client_id })
+    .forUpdate()
+    .first('client_id');
+
+  const postings = await tenantScopedTable(tx, tenant, 'transactions')
+    .where({ invoice_id: invoice.invoice_id, client_id: invoice.client_id, status: 'completed' })
+    .whereIn('type', ['invoice_generated', 'invoice_adjustment'])
+    .select<{ type: string; amount: unknown }[]>('type', 'amount');
+  // Imported/unposted drafts do not acquire a financial posting just by editing.
+  if (!postings.some((posting) => posting.type === 'invoice_generated')) return;
+
+  const postedAmount = postings.reduce((sum, posting) => sum + Number(posting.amount), 0);
+  const delta = Math.round(totalAmount) - postedAmount;
+  if (delta === 0) return;
+
+  const lastTransaction = await tenantScopedTable(tx, tenant, 'transactions')
+    .where({ client_id: invoice.client_id })
+    .orderBy('created_at', 'desc')
+    .first('balance_after');
+  await tenantScopedTable(tx, tenant, 'transactions').insert({
+    tenant,
+    transaction_id: uuidv4(),
+    client_id: invoice.client_id,
+    invoice_id: invoice.invoice_id,
+    billing_profile_id: invoice.billing_profile_id ?? null,
+    currency_code: invoice.currency_code ?? 'USD',
+    type: 'invoice_adjustment',
+    status: 'completed',
+    amount: delta,
+    balance_after: Number(lastTransaction?.balance_after ?? 0) + delta,
+    description: `Adjusted invoice ${invoice.invoice_number}`,
+    created_at: tx.raw('clock_timestamp()'),
+  });
+}
 
 export async function updateInvoiceTotalsAndRecordTransaction(
   tx: Knex.Transaction,

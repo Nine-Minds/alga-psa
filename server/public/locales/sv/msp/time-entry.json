@@ -1,4 +1,9 @@
 {
+  "timeEntryList": {
+    "actions": {
+      "addEntry": "Lägg till tidpost"
+    }
+  },
   "common": {
     "actions": {
       "view": "Visa",
@@ -127,12 +132,15 @@
       "billable": "Debiterbar",
       "notes": "Anteckningar",
       "deleteTimeEntry": "Radera tidpost",
-      "unsavedChanges": "Osparade ändringar"
+      "unsavedChanges": "Osparade ändringar",
+      "contractLine": "Avtalsrad"
     },
     "placeholders": {
       "selectService": "Välj en tjänst",
+      "searchServices": "Sök tjänster…",
       "selectDate": "Välj datum",
-      "addNotes": "Lägg till anteckningar"
+      "addNotes": "Lägg till anteckningar",
+      "selectContractLine": "Välj en avtalsrad"
     },
     "validation": {
       "startBeforeEnd": "Starttiden måste vara före sluttiden",
@@ -150,6 +158,10 @@
       "task": "Standard från uppgift",
       "phase": "Standard från fas",
       "project": "Standard från projekt"
+    },
+    "options": {
+      "resolveContractLineLater": "Ingen rad - lös senare",
+      "noServicesFound": "Inga tjänster hittades"
     }
   },
   "workItemPicker": {
@@ -396,7 +408,7 @@
     "noContract": "Ingen avtalsrad hittades för den här tjänsten. Tiden kommer att kopplas till standardavtalet som hanteras av systemet.",
     "contract": "Avtal: {{name}}",
     "defaultContract": "Standardavtal som hanteras av systemet",
-    "multipleLines": "Flera avtalsrader är tillgängliga – standardvalet används"
+    "multipleEligible": "Flera avtalsrader är giltiga för detta datum. Välj en avtalsrad för att spara tilldelningen."
   },
   "billableLegend": {
     "title": "Färgförklaring för debiterbar tid",
@@ -458,14 +470,24 @@
     },
     "timePeriod": {
       "datesRequired": "Ange giltiga start- och slutdatum.",
-      "closed": "Den här tidsperioden är stängd. Öppna den igen innan du gör ändringar."
+      "closed": "Den här tidsperioden är stängd. Öppna den igen innan du gör ändringar.",
+      "permissions": {
+        "read": "Åtkomst nekad: kan inte visa tidsperioder.",
+        "create": "Åtkomst nekad: kan inte skapa tidsperioder.",
+        "update": "Åtkomst nekad: kan inte uppdatera tidsperioder.",
+        "delete": "Åtkomst nekad: kan inte radera tidsperioder."
+      }
     },
     "timePeriodSettings": {
       "invalidValue": "Ett värde i tidsperiodens inställningar är ogiltigt. Ladda om sidan och försök igen.",
       "referenceMissing": "Den valda tidsperiodsinställningen är inte längre giltig. Ladda om sidan och försök igen.",
       "duplicate": "Det finns redan en tidsperiodsinställning som står i konflikt med den här.",
       "missingField": "Ett obligatoriskt fält för tidsperiodsinställningen saknas.",
-      "missingFieldNamed": "Ett obligatoriskt fält för tidsperiodsinställningen saknas: {{field}}."
+      "missingFieldNamed": "Ett obligatoriskt fält för tidsperiodsinställningen saknas: {{field}}.",
+      "permissions": {
+        "read": "Åtkomst nekad: kan inte visa inställningar för tidsperioder.",
+        "manage": "Åtkomst nekad: kan inte hantera inställningar för tidsperioder."
+      }
     },
     "stopwatch": {
       "notFound": "Stoppurssessionen hittades inte. Den kan redan ha loggats eller förkastats. Uppdatera sidan.",
@@ -503,7 +525,8 @@
     "entryMissingPeriod": "Tidrapporten för den här posten saknar sin tidsperiod och kan inte öppnas.",
     "noPeriods": "Inga tidsperioder har skapats ännu, så tid kan inte registreras. Be en administratör skapa tidsperioder under Inställningar → Tidregistrering.",
     "noEditablePeriods": "Alla tidrapporter är inskickade eller godkända, så det finns ingen dag att lägga till tid på. Be en godkännare öppna en tidrapport igen, eller en administratör att lägga till en tidsperiod.",
-    "prepareFailed": "Ett fel uppstod när tidposten förbereddes. Försök igen."
+    "prepareFailed": "Ett fel uppstod när tidposten förbereddes. Försök igen.",
+    "periodRange": "{{start}} – {{end}}"
   },
   "suggestions": {
     "title": "Förslag",
@@ -528,7 +551,9 @@
       "checklistChanged": "checklista ändrad",
       "linksChanged": "länkar ändrade",
       "updated": "uppdaterat"
-    }
+    },
+    "activitySummary_few": "första aktivitet {{first}} · senaste {{last}} · {{count}} åtgärder ({{kinds}})",
+    "activitySummary_many": "första aktivitet {{first}} · senaste {{last}} · {{count}} åtgärder ({{kinds}})"
   },
   "stopwatch": {
     "pausedNotice_one": "{{active}} spårat i {{count}} segment (pausat {{paused}})",
@@ -547,6 +572,8 @@
       "confirm": "Fortsätt",
       "cancel": "Avbryt"
     },
-    "ticketFallbackName": "Ärende {{number}}"
+    "ticketFallbackName": "Ärende {{number}}",
+    "pausedNotice_few": "{{active}} spårat i {{count}} segment (pausat {{paused}})",
+    "pausedNotice_many": "{{active}} spårat i {{count}} segment (pausat {{paused}})"
   }
 }

@@ -3,7 +3,6 @@ import { registerAdminRoutes } from './routes/admin';
 import { registerAccessControlUserRoutes } from './routes/accessControlUsers';
 import { registerAssetRoutes } from './routes/assets';
 import { registerRmmIntegrationRoutes } from './routes/rmmIntegrations';
-import { registerAutomationRoutes } from './routes/automation';
 import { registerAuthRoutes } from './routes/auth';
 import { registerBillingRoutes } from './routes/billing';
 import { registerBoardRoutes } from './routes/boards';
@@ -59,7 +58,6 @@ export function buildBaseRegistry(options: RegistryInitOptions = {}): ApiOpenApi
   registerAccessControlUserRoutes(registry);
   registerAssetRoutes(registry);
   registerRmmIntegrationRoutes(registry);
-  registerAutomationRoutes(registry);
   registerBillingRoutes(registry);
   registerChatRoutes(registry);
   registerClientContactRoutes(registry);

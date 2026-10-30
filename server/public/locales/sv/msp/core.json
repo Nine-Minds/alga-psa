@@ -105,7 +105,13 @@
     "extensions": "Tillägg",
     "ticketsAll": "Alla ärenden",
     "ticketsRecurring": "Återkommande ärenden",
-    "ticketsTemplates": "Ärendemallar"
+    "ticketsTemplates": "Ärendemallar",
+    "assetsCustody": "Utrustning i förvar",
+    "ticketsCannedResponses": "Färdiga svar",
+    "profile": "Profil",
+    "signOut": "Logga ut",
+    "coManaged": "Samförvaltad IT",
+    "coManagedAdministration": "Åtkomst och administration"
   },
   "marketing": {
     "dialogs": {
@@ -506,7 +512,8 @@
       "extensions": "Tillägg",
       "experimentalFeatures": "Experimentella funktioner",
       "profile": "Profil",
-      "security": "Säkerhet"
+      "security": "Säkerhet",
+      "tags": "Taggar"
     }
   },
   "dashboard": {
@@ -566,7 +573,35 @@
       "ariaLabel": "Resurser och hjälp",
       "title": "Resurser",
       "documentation": "Dokumentation",
-      "support": "Kontakta supporten"
+      "support": "Kontakta supporten",
+      "submitTicket": "Skicka ett ärende till Nine Minds"
+    },
+    "supportDialog": {
+      "title": "Skicka ett ärende till Nine Minds",
+      "intro": "Nine Minds support tar emot detta som ett ärende och svarar via e-post.",
+      "categoryLabel": "Vad behöver du hjälp med?",
+      "categories": {
+        "bug": "Något fungerar inte",
+        "question": "Fråga",
+        "billing": "Fakturering",
+        "feature": "Önskemål om funktion"
+      },
+      "subjectLabel": "Ämne",
+      "descriptionLabel": "Vad hände?",
+      "descriptionPlaceholder": "Ange vad du förväntade dig, vad som hände och vilken kund eller faktura det gäller.",
+      "replyTo": "Svar skickas till {{email}}",
+      "success": "Skickat till Nine Minds support. Svar skickas till {{email}}.",
+      "submit": "Skicka till Nine Minds",
+      "sending": "Skickar…",
+      "cancel": "Avbryt",
+      "close": "Stäng",
+      "fallbackLink": "Kontakta supporten på nineminds.com",
+      "errors": {
+        "invalidInput": "Ange ett ämne med minst 3 tecken och en beskrivning med minst 20 tecken.",
+        "rateLimited": "Du skickade nyss en förfrågan. Vänta en minut innan du skickar en till.",
+        "emailNotConfigured": "Den här installationen har ingen utgående e-post konfigurerad, så förfrågan kunde inte skickas.",
+        "sendFailed": "Förfrågan kunde inte skickas. Försök igen."
+      }
     },
     "jobs": {
       "ariaLabel": "Visa aktivitet för bakgrundsjobb",
@@ -794,5 +829,42 @@
   "githubStar": {
     "label": "Stjärnmärk",
     "ariaLabel": "Stjärnmärk {{repository}} på GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "MSP-portal",
+      "dashboard": "Översikt",
+      "ticketDetails": "Ärendedetaljer",
+      "tickets": "Ärenden",
+      "projectDetails": "Projektdetaljer",
+      "projects": "Projekt",
+      "clientDetails": "Kunduppgifter",
+      "clients": "Kunder",
+      "contactDetails": "Kontaktuppgifter",
+      "contacts": "Kontakter",
+      "assetDetails": "Tillgångsdetaljer",
+      "assets": "Tillgångar",
+      "billing": "Fakturering",
+      "settings": "Inställningar",
+      "settingsSection": "Inställningar: {{section}}",
+      "chat": "Chatt"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Pro-funktion",
+      "description": "AI-chattfunktionerna kräver Pro. Uppgradera för att få tillgång till den här funktionen."
+    },
+    "messages": {
+      "proRequired": "Meddelandefunktionerna kräver Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Chattfunktionerna är endast tillgängliga i Enterprise Edition"
+    }
+  },
+  "coManagedWorkspace": {
+    "loading": "Läser in arbetsytan…",
+    "navigation": "Kundens arbetsyta",
+    "passwordError": "Det gick inte att kontrollera lösenordsstatus. Läs in sidan igen."
   }
 }

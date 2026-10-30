@@ -1,7 +1,7 @@
 import type { IUserWithRoles } from '@alga-psa/types';
-import { getUserWithRoles, getUserWithRolesByEmail, createTenantKnex } from '@alga-psa/db';
+import { getUserWithRoles, getUserWithRolesByEmail, createTenantKnex, noteTenantProductCode } from '@alga-psa/db';
 import { getApiKeyUserOverride } from './apiKeyUserContext';
-import { getSession, getSessionWithRevocationCheck } from './getSession';
+import { getSession, getSessionWithRevocationCheck, logSessionRejection } from './getSession';
 import logger from '@alga-psa/core/logger';
 import type { Session } from 'next-auth';
 // Note: Avatar URLs are NOT fetched here to avoid circular dependency with @alga-psa/documents.
@@ -47,10 +47,15 @@ async function resolveCurrentUser(
     // Use the user ID from the session if available (most reliable)
     const sessionUser = session.user as any;
     if (sessionUser.id && sessionUser.tenant) {
+      // The session already says which product this tenant is on. Hand it to write
+      // admission so a plain PSA request never pays a `tenants` read for it.
+      noteTenantProductCode(sessionUser.tenant, sessionUser.product_code);
       const userWithRoles = await getUserWithRoles(
         sessionUser.id,
         sessionUser.tenant
       );
+
+      if (!userWithRoles) await logSessionRejection('user_missing');
 
       return activeUserOrNull(userWithRoles);
     }

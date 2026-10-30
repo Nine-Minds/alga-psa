@@ -7,7 +7,7 @@ export type TicketTemplateActionError = ActionMessageError | ActionPermissionErr
 export class TicketTemplateError extends Error {
   constructor(
     message: string,
-    readonly code: 'TEMPLATE_NOT_FOUND' | 'DUPLICATE_NAME' | 'INVALID_REFERENCES' | 'NOT_AVAILABLE',
+    readonly code: 'TEMPLATE_NOT_FOUND' | 'DUPLICATE_NAME' | 'INVALID_REFERENCES' | 'NOT_AVAILABLE' | 'IN_USE_BY_SCHEDULES',
     readonly params?: Record<string, string | number>
   ) {
     super(message);
@@ -20,6 +20,7 @@ const ERROR_KEYS: Record<TicketTemplateError['code'], string> = {
   DUPLICATE_NAME: 'features/tickets:templates.errors.duplicateName',
   INVALID_REFERENCES: 'features/tickets:templates.errors.invalidReferences',
   NOT_AVAILABLE: 'features/tickets:templates.errors.notAvailable',
+  IN_USE_BY_SCHEDULES: 'features/tickets:templates.errors.inUseBySchedules',
 };
 
 const UNIQUE_NAME_INDEX = 'ticket_templates_active_name_unique';

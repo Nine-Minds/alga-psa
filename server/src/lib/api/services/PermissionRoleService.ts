@@ -19,6 +19,7 @@ import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { withTransaction } from '@alga-psa/db';
+import { unservedPermissionResources } from '@alga-psa/auth/lib/permissionCapabilities';
 import { 
   IRole, 
   IPermission, 
@@ -92,26 +93,21 @@ export class PermissionRoleService extends BaseService<IRole> {
     });
   }
 
-  /**
-   * Override to exclude created_by and updated_by fields which don't exist in roles table
-   */
-  protected addCreateAuditFields(data: any, context: ServiceContext): any {
-    const now = new Date().toISOString();
-    return {
-      ...data,
-      [this.auditFields.createdAt]: now,
-      [this.auditFields.updatedAt]: now,
-      [this.tenantColumn]: context.tenant
-    };
-  }
+  // The base audit helpers filter the stamped fields against the target table's
+  // columns, so `roles` (which has created_at/updated_at but not
+  // created_by/updated_by) no longer needs an override.
 
   /**
-   * Override to exclude updated_by field which doesn't exist in roles table
+   * The role list joins `user_roles`, which also has created_at/updated_at, so
+   * the range columns must be qualified to `r.`. Unsupported range keys throw.
    */
-  protected addUpdateAuditFields(data: any, context: ServiceContext): any {
+  protected rangeFilterColumns(): Record<string, string> {
     return {
-      ...data,
-      [this.auditFields.updatedAt]: new Date().toISOString()
+      ...super.rangeFilterColumns(),
+      created_from: 'r.created_at',
+      created_to: 'r.created_at',
+      updated_from: 'r.updated_at',
+      updated_to: 'r.updated_at',
     };
   }
 
@@ -130,6 +126,11 @@ export class PermissionRoleService extends BaseService<IRole> {
     const { filters = {} as PermissionFilterData, categorize = false } = options;
 
     let query = tenantDb(knex, context.tenant).table('permissions');
+
+    // Capability-gated permissions are listed only for tenants served for the capability
+    // (an ended sponsorship or a kill switch leaves the rows in place).
+    const hidden = await unservedPermissionResources(context.tenant);
+    if (hidden.length) query = query.whereNotIn('resource', hidden);
 
     // Apply filters
     if (filters.resource) {
@@ -392,6 +393,10 @@ export class PermissionRoleService extends BaseService<IRole> {
 
     let countQuery = scopedDb.table('roles as r');
 
+    // Common created_*/updated_* range filters (qualified to the roles alias).
+    this.applyRangeFilters(dataQuery, filters);
+    this.applyRangeFilters(countQuery, filters);
+
     // Apply filters
     if (filters.role_name) {
       dataQuery = dataQuery.whereILike('r.role_name', `%${filters.role_name}%`);
@@ -577,7 +582,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         }
       }
 
-      roleData = this.addCreateAuditFields(roleData, context);
+      roleData = await this.addCreateAuditFields(trx, roleData, context, 'roles');
       const [role] = await tenantDb(trx, context.tenant).table('roles').insert(roleData).returning('*');
 
       // Handle permissions assignment
@@ -655,7 +660,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         }
       }
 
-      const updateData = this.addUpdateAuditFields(data, context);
+      const updateData = await this.addUpdateAuditFields(trx, data, context, 'roles');
       
       const [role] = await tenantDb(trx, context.tenant).table('roles')
         .where('role_id', roleId)

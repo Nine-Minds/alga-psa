@@ -60,8 +60,14 @@ export { sendPasswordResetEmail } from './sendPasswordResetEmail';
 export { sendPortalInvitationEmail } from './sendPortalInvitationEmail';
 export { sendTeamInvitationEmail } from './sendTeamInvitationEmail';
 export { sendTenantRecoveryEmail } from './clientPortalTenantRecoveryEmail';
+export type { SendTenantRecoveryEmailOptions, TenantRecoveryTemplateName } from './clientPortalTenantRecoveryEmail';
 export { sendVerificationEmail } from './sendVerificationEmail';
 export { sendCancellationFeedbackEmail } from './sendCancellationFeedbackEmail';
+export { sendVendorSupportRequestEmail } from './sendVendorSupportRequestEmail';
+export type {
+  VendorSupportCategory,
+  VendorSupportRequestData,
+} from './sendVendorSupportRequestEmail';
 
 // System email provider factory
 export { SystemEmailProviderFactory } from './system/SystemEmailProviderFactory';

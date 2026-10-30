@@ -97,6 +97,8 @@ interface QuoteFormState {
   quote_date: string;
   valid_until: string;
   po_number: string;
+  recurring_section_title: string;
+  onetime_section_title: string;
   client_notes: string;
   terms_and_conditions: string;
   currency_code: string;
@@ -111,6 +113,8 @@ const EMPTY_FORM: QuoteFormState = {
   quote_date: '',
   valid_until: '',
   po_number: '',
+  recurring_section_title: '',
+  onetime_section_title: '',
   client_notes: '',
   terms_and_conditions: '',
   currency_code: 'USD',
@@ -397,6 +401,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
           quote_date: toDateInputValue(quote.quote_date),
           valid_until: toDateInputValue(quote.valid_until),
           po_number: quote.po_number || '',
+          recurring_section_title: quote.recurring_section_title || '',
+          onetime_section_title: quote.onetime_section_title || '',
           client_notes: quote.client_notes || '',
           terms_and_conditions: quote.terms_and_conditions || '',
           currency_code: quote.currency_code || tenantCurrency,
@@ -640,6 +646,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
         quote_date: form.quote_date || null,
         valid_until: form.valid_until || null,
         po_number: form.po_number || null,
+        recurring_section_title: form.recurring_section_title.trim() || null,
+        onetime_section_title: form.onetime_section_title.trim() || null,
         client_notes: form.client_notes || null,
         terms_and_conditions: form.terms_and_conditions || null,
         terms_and_conditions_block: hasTermsContent(termsBlock) ? termsBlock : null,
@@ -1763,6 +1771,23 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
               />
             </section>
 
+            <section className="rounded-lg border border-border bg-background p-5 shadow-sm">
+              <header className="mb-4 space-y-1">
+                <h3 className="text-base font-semibold">{t('quoteForm.sectionTitles.title', { defaultValue: 'Grouped quote section titles' })}</h3>
+                <p className="text-xs text-muted-foreground">{t('quoteForm.sectionTitles.description', { defaultValue: 'Optional headings used by the Standard Quote Grouped layout.' })}</p>
+              </header>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  {t('quoteForm.sectionTitles.monthlyLabel', { defaultValue: 'Monthly section title' })}
+                  <Input id="quote-monthly-section-title" value={form.recurring_section_title} maxLength={255} placeholder={t('quoteForm.sectionTitles.monthlyPlaceholder')} onChange={(event) => handleChange('recurring_section_title', event.target.value)} disabled={isReadOnly} />
+                </label>
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  {t('quoteForm.sectionTitles.oneTimeLabel', { defaultValue: 'One-time section title' })}
+                  <Input id="quote-onetime-section-title" value={form.onetime_section_title} maxLength={255} placeholder={t('quoteForm.sectionTitles.oneTimePlaceholder')} onChange={(event) => handleChange('onetime_section_title', event.target.value)} disabled={isReadOnly} />
+                </label>
+              </div>
+            </section>
+
             {/* --- Client-facing text card --- */}
             <section className="rounded-lg border border-border bg-background p-5 shadow-sm">
               <header className="mb-4 space-y-1">
@@ -2314,6 +2339,26 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
                       defaultValue: 'No recurring items will convert to a contract.',
                     })}
                   </p>
+                )}
+                {conversionPreview.contract_discounts.length > 0 && (
+                  <div className="space-y-2" data-testid="quote-conversion-contract-discounts">
+                    <h4 className="text-sm font-semibold">{t('quoteConversion.sections.carriedDiscounts', { defaultValue: 'Discounts carried onto contract lines' })}</h4>
+                    {conversionPreview.contract_discounts.map((discount) => (
+                      <div key={`${discount.quote_item_id}:${discount.line_quote_item_id}`} className="rounded-md border border-border p-3">
+                        <div className="font-medium text-foreground">{discount.description}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {discount.line_description} {'\u2022'} {discount.discount_type === 'percentage' && discount.percentage !== null
+                            ? `${discount.percentage}%`
+                            : `-${formatCurrency(discount.amount)}`}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {conversionPreview.contract_items.length > 0 && (
+                  <div className="text-sm font-medium text-foreground" data-testid="quote-conversion-contract-monthly-total">
+                    {t('quoteConversion.summary.monthlyTotal', { defaultValue: 'Monthly total after discounts' })}: {formatCurrency(conversionPreview.contract_monthly_total)}
+                  </div>
                 )}
               </section>
               <section className="space-y-2 rounded-lg border border-border p-4">

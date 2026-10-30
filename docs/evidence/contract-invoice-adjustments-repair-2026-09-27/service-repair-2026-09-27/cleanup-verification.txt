@@ -1,0 +1,45 @@
+BEGIN
+SELECT 1
+SELECT 3
+DELETE 0
+DELETE 3
+DELETE 3
+DELETE 7
+DELETE 4
+DELETE 1
+SELECT 0
+SELECT 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+DELETE 0
+COMMIT
+ owned_invoices
+----------------
+              0
+(1 row)
+
+ owned_transactions
+--------------------
+                  0
+(1 row)
+
+ owned_contracts
+-----------------
+               0
+(1 row)
+
+ owned_templates
+-----------------
+               0
+(1 row)
+
+ invoice_number | total_amount | draft_adjustment_revision
+----------------+--------------+---------------------------
+ SMOKE-ADJ-1    |       371400 |                        63
+ INV-000039     |       390000 |                         0
+(2 rows)

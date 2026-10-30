@@ -376,5 +376,8 @@
     "altVideoThumbnail": "Miniatyrbild av {{name}}",
     "pageCount_one": "{{count}} sida",
     "pageCount_other": "{{count}} sidor"
+  },
+  "skeleton": {
+    "cardLabel": "Platshållare för dokumentkort"
   }
 }

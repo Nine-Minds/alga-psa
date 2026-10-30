@@ -27,6 +27,12 @@ const PRODUCTS: ProductCode[] = ['algadesk', 'psa'];
 const INTENTIONALLY_UNLINKED: Record<string, string> = {
   '/msp/account': 'reached via the header avatar menu → Account, not the sidebar',
   '/msp/add-ons': 'reached via add-on notices and paywall CTAs, not the sidebar',
+  '/msp/co-managed': 'capability-gated Co-managed IT menu group contributed through the msp.navigation.group UI slot (config/coManagedMenu.ts), not menuConfig; coManagedMenuGroup.test.tsx pins it',
+  '/msp/co-management/administration': 'capability-gated Access & administration screen; the sidebar shows it only when the co-managed capability holds (SidebarWithFeatureFlags filters it out otherwise), so the registry-level coherence check does not see it',
+  '/msp/co-management/customer-tickets': 'capability-gated (co-managed serves) sponsor queue of customer-shared tickets, reached by its own deep links; the nav entry arrives when the L1b Oversight shell absorbs this route',
+  '/msp/co-management/tasks': 'capability-gated (co-managed serves) sponsor Shared Tasks queue, reached from the Projects page via CoManagedProjectTaskQueueLink',
+  '/msp/co-management/projects': 'capability-gated (co-managed serves) shared project screen, reached by deep links from the Shared Tasks queue and shared search results',
+  '/msp/co-management/providers': 'capability-gated provider setup reached through the product-neutral /msp/go/providers entry (Open Providers in email setup, profile SSO)',
   '/msp/create-opportunity': 'reached via the Quick Create button in the header, not the sidebar',
   '/msp/create-ticket': 'reached via the Quick Create button in the header, not the sidebar',
   '/msp/integrations': 'legacy path kept routable; the user-facing entry is /msp/settings/integrations',
@@ -219,43 +225,57 @@ describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
     'time-entry': 'PSA time tracking settings',
   };
 
-  it('every settings page on disk is classified for algadesk: allowed tab or documented exclusion', () => {
-    const tabAllowList = getAllowedSettingsTabIds('algadesk');
-    const onDisk = listRouteDirSegments([
-      'src/app/msp/settings',
-      '../ee/server/src/app/msp/settings',
-    ]);
-    expect(onDisk.size).toBeGreaterThan(5);
+  // Products with a settings allow-list, and the documented exclusions for
+  // each. co_managed currently takes the help-desk tab set, so its exclusions
+  // are AlgaDesk's; the cards that open time entry / SLA / notifications to
+  // co_managed move those segments into its allow-list.
+  const BLOCKED_SETTINGS_BY_PRODUCT: Record<'algadesk' | 'co_managed', Record<string, string>> = {
+    algadesk: ALGADESK_BLOCKED_SETTINGS,
+    co_managed: ALGADESK_BLOCKED_SETTINGS,
+  };
 
-    const unclassified = [...onDisk]
-      .filter((segment) => !tabAllowList.has(segment) && !(segment in ALGADESK_BLOCKED_SETTINGS))
-      .sort();
-    expect(
-      unclassified,
-      `settings pages on disk that are neither in the algadesk tab allow-list nor documented in ALGADESK_BLOCKED_SETTINGS — classify them: ${unclassified.join(', ')}`,
-    ).toEqual([]);
+  for (const [product, blocked] of Object.entries(BLOCKED_SETTINGS_BY_PRODUCT) as Array<
+    ['algadesk' | 'co_managed', Record<string, string>]
+  >) {
+    it(`every settings page on disk is classified for ${product}: allowed tab or documented exclusion`, () => {
+      const tabAllowList = getAllowedSettingsTabIds(product);
+      const onDisk = listRouteDirSegments([
+        'src/app/msp/settings',
+        '../ee/server/src/app/msp/settings',
+      ]);
+      expect(onDisk.size).toBeGreaterThan(5);
+      expect(tabAllowList.size, `${product} has an empty settings allow-list`).toBeGreaterThan(0);
 
-    // The classification must hold at the route layer, and the exclusion
-    // list must stay honest as pages come and go.
-    for (const segment of Object.keys(ALGADESK_BLOCKED_SETTINGS)) {
+      const unclassified = [...onDisk]
+        .filter((segment) => !tabAllowList.has(segment) && !(segment in blocked))
+        .sort();
       expect(
-        onDisk.has(segment),
-        `"${segment}" no longer has a settings page on disk — remove it from ALGADESK_BLOCKED_SETTINGS`,
-      ).toBe(true);
-      expect(
-        tabAllowList.has(segment),
-        `"${segment}" is now in the algadesk tab allow-list — remove it from ALGADESK_BLOCKED_SETTINGS`,
-      ).toBe(false);
-      expect(
-        resolveProductRouteBehavior('algadesk', `/msp/settings/${segment}`),
-        `blocked settings segment "${segment}" must not resolve allowed for algadesk`,
-      ).not.toBe('allowed');
-    }
-    for (const segment of [...onDisk].filter((s) => tabAllowList.has(s))) {
-      expect(
-        resolveProductRouteBehavior('algadesk', `/msp/settings/${segment}`),
-        `allowed settings segment "${segment}" must resolve allowed for algadesk`,
-      ).toBe('allowed');
-    }
-  });
+        unclassified,
+        `settings pages on disk that are neither in the ${product} tab allow-list nor documented as blocked — classify them: ${unclassified.join(', ')}`,
+      ).toEqual([]);
+
+      // The classification must hold at the route layer, and the exclusion
+      // list must stay honest as pages come and go.
+      for (const segment of Object.keys(blocked)) {
+        expect(
+          onDisk.has(segment),
+          `"${segment}" no longer has a settings page on disk — remove it from the ${product} exclusions`,
+        ).toBe(true);
+        expect(
+          tabAllowList.has(segment),
+          `"${segment}" is now in the ${product} tab allow-list — remove it from the ${product} exclusions`,
+        ).toBe(false);
+        expect(
+          resolveProductRouteBehavior(product, `/msp/settings/${segment}`),
+          `blocked settings segment "${segment}" must not resolve allowed for ${product}`,
+        ).not.toBe('allowed');
+      }
+      for (const segment of [...onDisk].filter((s) => tabAllowList.has(s))) {
+        expect(
+          resolveProductRouteBehavior(product, `/msp/settings/${segment}`),
+          `allowed settings segment "${segment}" must resolve allowed for ${product}`,
+        ).toBe('allowed');
+      }
+    });
+  }
 });

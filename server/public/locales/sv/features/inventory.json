@@ -32,7 +32,8 @@
     "to": "Till",
     "today": "Idag",
     "total": "Totalt",
-    "unknown": "Okänd"
+    "unknown": "Okänd",
+    "recordUnavailable": "Hittades inte, eller så saknar du åtkomst"
   },
   "counts": {
     "adjustments": "Justeringar: {{count}}",
@@ -588,7 +589,32 @@
       "returnLocationRequired": "Välj en plats innan du tar emot returen.",
       "returnedUnitNotFound": "Den returnerade lagerenheten hittades inte. Uppdatera och välj en annan enhet.",
       "returnedUnitRequired": "Den returnerade enhetens ID krävs.",
-      "vendorRequired": "Välj en leverantör innan du skickar returen."
+      "vendorRequired": "Välj en leverantör innan du skickar returen.",
+      "warrantyUnitTracked": "Den här RMA:n gäller en lagerenhet. Använd lagerenhetens RMA-åtgärder.",
+      "warrantyStockTrackedAsset": "Den här enheten såldes från lager. Öppna i stället en RMA från dess lagerenhet.",
+      "warrantyNotClientOwned": "Garantiärenden gäller kundägd utrustning.",
+      "warrantyNoCustody": "Enheten är inte i förvar. Ta först emot utrustningen.",
+      "warrantyCustodyWrongState": "Enheten är inte på rätt plats för det här steget. Uppdatera och kontrollera dess förvar.",
+      "warrantyLocationRequired": "Välj var enheten befinner sig nu så att den kan tas emot i retur.",
+      "warrantyInvalidTransition": "Det steget är inte tillgängligt i RMA:ns nuvarande status. Uppdatera och försök igen.",
+      "warrantyReviewClose": "Godkänn eller avslå ärendet innan du stänger det.",
+      "duplicateReference": "Den RMA-referensen eller det numret används redan.",
+      "checkViolation": "Det värdet är inte tillåtet för den här RMA:n.",
+      "ticketNotFound": "Ärendet hittades inte.",
+      "noTicket": "Den här RMA:n är inte länkad till ett ärende.",
+      "referenceRequired": "Lägg först till leverantörens ärendenummer.",
+      "warrantyClaimUnitAction": "Det här är ett garantiärende på kundutrustning. Använd garantiåtgärderna på RMA:n.",
+      "warrantyReasonRequired": "Beskriv vad som är fel på enheten.",
+      "warrantyDenialReasonRequired": "Ange varför anspråket inte täcks.",
+      "warrantyCarrierRequired": "Ange fraktbolaget.",
+      "warrantyTrackingRequired": "Ange spårningsnumret.",
+      "warrantyReplacementSerialRequired": "Ange ersättningsenhetens serienummer.",
+      "warrantyDateFormat": "Använd formatet ÅÅÅÅ-MM-DD.",
+      "warrantyDateInvalid": "Det är inte ett giltigt datum.",
+      "warrantyInputInvalid": "Vissa uppgifter är ogiltiga. Kontrollera dem och försök igen.",
+      "baseUrlMissing": "Programmets URL är inte konfigurerad.",
+      "vendorSystemNotFound": "Det systemet för leverantörsärenden är inte tillgängligt.",
+      "vendorSystemTemplateInvalid": "Det systemets länkmall kan inte användas för ett leverantörsärende."
     },
     "salesOrders": {
       "clientRequired": "Välj en kund innan du skapar försäljningsordern.",
@@ -1255,7 +1281,9 @@
       "type": "Typ",
       "vendor": "Leverantör",
       "creditAtStake": "Kreditering som riskeras",
-      "rmaNumber": "RMA-nummer"
+      "rmaNumber": "RMA-nummer",
+      "ticket": "Ärende",
+      "returnBy": "Retur senast"
     },
     "deadUnitsOwed": "Trasiga enheter att återlämna",
     "fields": {
@@ -1300,11 +1328,128 @@
       "replaced": "Ersatt",
       "credited": "Krediterat",
       "charged": "Debiterat",
-      "closed": "Stängt"
+      "closed": "Stängt",
+      "warrantyReview": "Garantigranskning",
+      "repaired": "Reparerad"
     },
     "ageAtVendor": "{{days}} d hos leverantören",
     "filters": {
       "statusActive": "Visar returärenden med status {{status}}."
+    },
+    "detail": {
+      "title": "RMA {{id}}",
+      "reference": "RMA-referens",
+      "product": "Produkt",
+      "returnedSerial": "Serienummer för returnerad enhet",
+      "opened": "Öppnad",
+      "updated": "Uppdaterad",
+      "age": "Ålder (dagar)",
+      "reason": "Orsak",
+      "viewUnit": "Visa enhet",
+      "viewAsset": "Visa tillgång"
+    },
+    "tabs": {
+      "all": "Alla",
+      "review": "Garantigranskning",
+      "inProgress": "Pågående",
+      "closed": "Stängda"
+    },
+    "warranty": {
+      "openDetail": "Öppna",
+      "updated": "RMA uppdaterad.",
+      "updateFailed": "Det gick inte att uppdatera RMA:n.",
+      "printTag": "Skriv ut RMA-etikett",
+      "printTagFailed": "Det gick inte att skriva ut RMA-etiketten.",
+      "popupBlocked": "Tillåt popup-fönster för att se etiketten.",
+      "printSlip": "Skriv ut returfölje",
+      "mirrorToTicket": "Spegla leverantörsärende till ärendet",
+      "mirrored": "Leverantörsärendet lades till i ärendet.",
+      "mirrorFailed": "Det gick inte att lägga till leverantörsärendet i ärendet.",
+      "mirrorSystem": "System för leverantörsärende",
+      "mirrorSystemGeneric": "Allmän länk",
+      "assetLink": "Tillgång: {{name}}",
+      "ticketLink": "Ärende: {{number}}",
+      "timeline": "Historik",
+      "noEvents": "Ingen historik ännu.",
+      "confirmReceived": "Bekräfta att enheten finns på kontoret. Dess förvar måste vara på kontoret.",
+      "confirmCredit": "Registrera att leverantören har krediterat den här enheten. Förvarsperioden avslutas som kasserad.",
+      "actions": {
+        "approveStandard": "Godkänn (standard)",
+        "approveAdvance": "Godkänn (förskottsersättning)",
+        "deny": "Avslå ärende",
+        "cancel": "Avbryt ärende",
+        "markDeviceReceived": "Markera enhet som mottagen",
+        "shipToVendor": "Skicka till leverantör",
+        "receiveReplacement": "Ta emot ersättning",
+        "recordRepair": "Registrera reparation",
+        "recordCredit": "Registrera leverantörskredit",
+        "returnToClient": "Returnera till kund",
+        "close": "Stäng RMA"
+      },
+      "events": {
+        "opened": "Ärende öppnat",
+        "warrantyApproved": "Garanti godkänd",
+        "warrantyDenied": "Garanti avslagen",
+        "deviceReceived": "Enhet mottagen",
+        "shippedOutbound": "Skickad till leverantör",
+        "vendorCaseRecorded": "Leverantörsärende registrerat",
+        "replacementReceived": "Ersättning mottagen",
+        "repairReceived": "Reparation mottagen",
+        "vendorCredited": "Krediterad av leverantör",
+        "returnedToClient": "Returnerad till kund",
+        "closed": "Stängt",
+        "note": "Anteckning"
+      },
+      "outcome": {
+        "covered": "Täckt",
+        "notCovered": "Ej täckt",
+        "unknown": "Okänt"
+      },
+      "closeReason": {
+        "resolved": "Löst",
+        "warrantyDenied": "Garanti avslagen",
+        "cancelled": "Avbrutet",
+        "duplicate": "Dubblett",
+        "vendorCredited": "Krediterad av leverantör"
+      },
+      "fields": {
+        "outcome": "Garantibeslut",
+        "decidedAt": "Beslutad",
+        "denialReason": "Orsak till avslag",
+        "vendorRef": "Leverantörens RMA-referens",
+        "returnBy": "Retur senast",
+        "outbound": "Utgående försändelse",
+        "inbound": "Inkommande försändelse",
+        "replacementSerial": "Ersättningens serienummer",
+        "returnShipTo": "Returadress",
+        "closedReason": "Orsak till stängning",
+        "cancelReason": "Orsak",
+        "carrier": "Transportör",
+        "tracking": "Spårningsnummer",
+        "model": "Modell",
+        "manufacturer": "Tillverkare",
+        "warrantyEnd": "Garantins slutdatum",
+        "inboundCarrier": "Inkommande transportör",
+        "inboundTracking": "Inkommande spårningsnummer",
+        "counterparty": "Returnerad till",
+        "closeReason": "Orsak till stängning",
+        "note": "Anteckning"
+      },
+      "claim": {
+        "title": "Nytt garantiärende",
+        "loadAssetsFailed": "Det gick inte att läsa in utrustning.",
+        "assetRequired": "Välj utrustningen.",
+        "reasonRequired": "Beskriv vad som är fel på enheten.",
+        "opened": "Garantiärende öppnat.",
+        "openFailed": "Det gick inte att öppna garantiärendet.",
+        "search": "Hitta utrustning",
+        "searchPlaceholder": "Namn, tagg eller serienummer",
+        "asset": "Utrustning",
+        "assetPlaceholder": "Välj utrustning…",
+        "track": "Spåra",
+        "stockHint": "Enheter som sålts från lager kan inte anmälas här. Använd i stället Öppna RMA från lagerenheten.",
+        "submit": "Öppna ärende"
+      }
     }
   },
   "salesOrders": {
@@ -1564,6 +1709,10 @@
       "inProgress": "Bygger om…"
     },
     "receive": {
+      "searchProducts": "Sök produkter eller SKU...",
+      "noProductsFound": "Inga produkter hittades",
+      "searchLocations": "Sök platser...",
+      "noLocationsFound": "Inga platser hittades",
       "costNonNegative": "Enhetskostnaden får inte vara negativ.",
       "failed": "Det gick inte att ta emot varor.",
       "inProgress": "Tar emot…",
@@ -1698,7 +1847,15 @@
       "failed": "Det gick inte att återlägga returen i lager.",
       "restocking": "Återlägger i lager…",
       "submit": "Återlägg i lager"
-    }
+    },
+    "printLabel": "Skriv ut etikett",
+    "printWithTemplate": "Skriv ut med {{code}}",
+    "claimant": {
+      "project": "Projekt {{number}}",
+      "salesOrder": "Försäljningsorder {{number}}"
+    },
+    "printPopupBlocked": "Tillåt popup-fönster för att öppna etiketten.",
+    "printFailed": "Det gick inte att skriva ut den här etiketten."
   },
   "transfers": {
     "addLine": "Lägg till rad",

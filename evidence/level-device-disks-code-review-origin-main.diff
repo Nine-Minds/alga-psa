@@ -1,0 +1,4315 @@
+diff --git a/.github/workflows/e2e-fresh-install-tests.yaml b/.github/workflows/e2e-fresh-install-tests.yaml
+index 3478daa483..47ff830b73 100644
+--- a/.github/workflows/e2e-fresh-install-tests.yaml
++++ b/.github/workflows/e2e-fresh-install-tests.yaml
+@@ -467,7 +467,7 @@ jobs:
+           docker-compose -p alga-e2e-test up --no-build --wait --wait-timeout 90 -d algasim test-ingress
+           docker-compose -p alga-e2e-test exec -T algasim node --input-type=module -e 'const r = await fetch("https://calendar-callback:3443/probe", { signal: AbortSignal.timeout(5000) }); if (r.status !== 404) throw new Error("Calendar callback TLS routing failed")'
+           curl --fail --silent http://127.0.0.1:9500/control/catalog > "$RUNNER_TEMP/algasim-catalog.json"
+-          jq -e '[.result.emulators[].id] | sort == ["msgraph", "qbo", "smtp-sink", "stripe", "threecx", "webhook-sink", "xero"]' "$RUNNER_TEMP/algasim-catalog.json"
++          jq -e '[.result.emulators[].id] | sort == ["levelio", "msgraph", "qbo", "smtp-sink", "stripe", "threecx", "webhook-sink", "xero"]' "$RUNNER_TEMP/algasim-catalog.json"
+           docker image inspect alga-e2e-test-algasim:latest --format '{{.Id}}' > "$RUNNER_TEMP/algasim-image-id.txt"
+ 
+       - name: Initialize isolated shared worker state
+diff --git a/ee/server/src/__tests__/integration/levelioEmulatorApiClient.integration.test.ts b/ee/server/src/__tests__/integration/levelioEmulatorApiClient.integration.test.ts
+new file mode 100644
+index 0000000000..6971b18d1f
+--- /dev/null
++++ b/ee/server/src/__tests__/integration/levelioEmulatorApiClient.integration.test.ts
+@@ -0,0 +1,208 @@
++/**
++ * Alga's real LevelIoApiClient against the algasim Level emulator, over HTTP.
++ *
++ * The emulator package knows nothing about the product: an import of ee/server
++ * from packages/emulators/levelio would make the Nx project graph circular
++ * (sebastian-ee already imports the emulator for the route test). So the
++ * consumer-side check lives here: cursor pagination, include_* detail
++ * sections, last_seen_at as incremental-sync input, alert/update filters and
++ * the client's 429/5xx handling. The vendor wire contract itself is covered by
++ * packages/emulators/levelio/tests/rest.test.ts.
++ */
++
++import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
++import { EmulatorHost } from '@alga-psa/emulator-host';
++import levelio, { type LevelEmulatorCore } from '@alga-psa/emulator-levelio';
++import { LevelIoApiClient, LevelIoApiError } from '../../lib/integrations/levelio/levelApiClient';
++import { mapLevelIoDiskUsage } from '../../lib/integrations/levelio/mappers/deviceMapper';
++
++// createLevelIoClient imports the secrets provider at module load; the client
++// under test is constructed directly with the emulator's base URL.
++vi.mock('@alga-psa/core/secrets', () => ({
++  getSecretProviderInstance: async () => ({ getTenantSecret: async () => undefined }),
++}));
++
++const API_KEY = 'algasim-level-key';
++
++let host: EmulatorHost;
++let control: string;
++let vendor: string;
++let core: LevelEmulatorCore;
++
++async function callControl(kind: 'seed' | 'actions', name: string, params: unknown = {}) {
++  const response = await fetch(`${control}/control/levelio/${kind}/${name}`, {
++    method: 'POST',
++    headers: { 'content-type': 'application/json' },
++    body: JSON.stringify(params),
++  });
++  const json = (await response.json()) as { ok: boolean; result?: any; error?: string };
++  if (!json.ok) throw new Error(`${kind}/${name} failed: ${json.error}`);
++  return json.result;
++}
++
++const seed = (name: string, params?: unknown) => callControl('seed', name, params);
++const action = (name: string, params?: unknown) => callControl('actions', name, params);
++
++async function arm(name: string, params: unknown = {}) {
++  const response = await fetch(`${control}/control/levelio/faults/${name}/arm`, {
++    method: 'POST',
++    headers: { 'content-type': 'application/json' },
++    body: JSON.stringify(params),
++  });
++  if (response.status !== 200) throw new Error(`arm ${name} failed: ${await response.text()}`);
++}
++
++function client(apiKey = API_KEY) {
++  return new LevelIoApiClient({ apiKey, baseUrl: vendor, maxRetries: 2 });
++}
++
++beforeAll(async () => {
++  host = new EmulatorHost({ emulators: [levelio], controlPort: 0, ports: { levelio: 0 } });
++  const { controlPort, ports } = await host.start();
++  control = `http://127.0.0.1:${controlPort}`;
++  vendor = `http://127.0.0.1:${ports.levelio}`;
++  core = host.instance('levelio').core as LevelEmulatorCore;
++});
++
++afterAll(async () => {
++  await host.stop();
++});
++
++beforeEach(async () => {
++  await fetch(`${control}/control/levelio/reset`, { method: 'POST' });
++});
++
++describe('LevelIoApiClient against the Level emulator', () => {
++  it('testConnection succeeds with the key and surfaces 401 as LevelIoApiError otherwise', async () => {
++    await expect(client().testConnection()).resolves.toBeUndefined();
++    await expect(client('wrong-key').testConnection()).rejects.toMatchObject({ status: 401 });
++
++    await action('revoke-api-key', { key: API_KEY });
++    await expect(client().testConnection()).rejects.toBeInstanceOf(LevelIoApiError);
++  });
++
++  it('listGroups walks the hierarchy across pages with limit=100 + starting_after', async () => {
++    const root = (await seed('group', { name: 'Acme Corp' })).group;
++    for (let i = 0; i < 104; i += 1) {
++      await seed('group', { name: `Site ${i}`, parentId: root.id });
++    }
++    await seed('device', { hostname: 'WS-01', groupId: root.id });
++
++    const groups = await client().listGroups();
++    expect(groups).toHaveLength(105);
++    expect(new Set(groups.map((g) => g.id)).size).toBe(105);
++    const acme = groups.find((g) => g.id === root.id)!;
++    expect(acme).toMatchObject({ parent_id: null, name: 'Acme Corp', device_count: 1, descendent_device_count: 1 });
++    expect(acme.child_ids).toHaveLength(104);
++    expect(root.id).toBe('Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMQ'); // gid://level/DeviceGroup/1, Level's id form
++  });
++
++  it('listDevices asks for the detail sections and filters by ancestor group; getDevice carries security', async () => {
++    const acme = (await seed('group', { name: 'Acme' })).group;
++    const branch = (await seed('group', { name: 'Branch', parentId: acme.id })).group;
++    const other = (await seed('group', { name: 'Other' })).group;
++    const ws = (
++      await seed('device', {
++        hostname: 'WS-01',
++        groupId: branch.id,
++        serial_number: 'SN-1',
++        operating_system: { full_operating_system: 'Windows 11 Pro', major_version: '10.0' },
++        network_interfaces: [{ interface: 'eth0', ip_addresses: ['10.0.0.5'] }],
++        disks: [{ disk_type: 'NVMe', model: 'Samsung', size: 512_000_000_000 }],
++        security: { score: 80 },
++      })
++    ).device;
++    await seed('device', { hostname: 'OTHER-01', groupId: other.id });
++
++    const devices = await client().listDevices({ ancestorGroupId: acme.id });
++    expect(devices.map((d) => d.hostname)).toEqual(['WS-01']);
++    expect(devices[0].operating_system).toEqual({ full_operating_system: 'Windows 11 Pro', major_version: '10.0' });
++    expect(devices[0].network_interfaces).toHaveLength(1);
++    // Level's documented device carries `disks`, which Alga's type and mapper read.
++    expect(devices[0].disks).toHaveLength(1);
++    expect((devices[0] as unknown as Record<string, unknown>).disk_partitions).toBeUndefined();
++    expect(mapLevelIoDiskUsage(devices[0])).toEqual([{ name: 'NVMe Samsung', total_gb: 476.84 }]);
++
++    expect((await client().getDevice(ws.id)).security).toEqual({ score: 80 });
++    expect(await client().listDevices({ groupId: acme.id })).toEqual([]);
++    await expect(client().getDevice('nope')).rejects.toMatchObject({ status: 404 });
++  });
++
++  it('reports last_seen_at as now for online devices and frozen for offline ones (incremental sync input)', async () => {
++    const online = (await seed('device', { hostname: 'ONLINE' })).device;
++    const offline = (await seed('device', { hostname: 'OFFLINE' })).device;
++    await action('device-offline', { deviceId: offline.id });
++    const frozenAt = core.getDevice(offline.id).last_seen_at!;
++
++    host.clock.advance('2h');
++    const since = new Date(host.clock.now().getTime() - 60_000);
++    const devices = await client().listDevices();
++    const byHost = Object.fromEntries(devices.map((d) => [d.hostname, d]));
++    expect(byHost.OFFLINE.last_seen_at).toBe(frozenAt);
++    expect(new Date(byHost.ONLINE.last_seen_at!).getTime()).toBeGreaterThanOrEqual(since.getTime());
++    // The sync engine's incremental filter keeps devices seen at/after `since`.
++    const changed = devices.filter((d) => !d.last_seen_at || new Date(d.last_seen_at) >= since);
++    expect(changed.map((d) => d.id)).toEqual([online.id]);
++
++    await action('device-checkin', { deviceId: offline.id });
++    expect((await client().getDevice(offline.id)).online).toBe(true);
++  });
++
++  it('lists alerts by device and status, and resolves through POST /resolve', async () => {
++    const ws = (await seed('device', { hostname: 'WS-01' })).device;
++    const srv = (await seed('device', { hostname: 'SRV-01', role: 'server' })).device;
++    const disk = (
++      await action('fire-alert', {
++        deviceId: ws.id,
++        name: 'Low disk space',
++        description: 'Disk free < 5.0%',
++        severity: 'critical',
++        payload: '4.37% (10.39 GB) remaining',
++      })
++    ).alert;
++    await action('fire-alert', { deviceId: srv.id, name: 'CPU', severity: 'warning' });
++
++    const active = await client().listAlerts({ status: 'active' });
++    expect(active).toHaveLength(2);
++    expect(active[0]).toEqual({
++      id: disk.id,
++      device_id: ws.id,
++      device_hostname: 'WS-01',
++      name: 'Low disk space',
++      description: 'Disk free < 5.0%',
++      payload: '4.37% (10.39 GB) remaining',
++      severity: 'critical',
++      is_resolved: false,
++      started_at: expect.any(String),
++      resolved_at: null,
++    });
++
++    await client().resolveAlert(disk.id);
++    expect((await client().listAlerts({ status: 'resolved' })).map((a) => a.id)).toEqual([disk.id]);
++    expect(await client().listAlerts({ deviceId: srv.id })).toHaveLength(1);
++  });
++
++  it('lists updates filtered by device and status', async () => {
++    const ws = (await seed('device', { hostname: 'WS-01' })).device;
++    await seed('update', { deviceId: ws.id, name: 'KB5034441', category: 'Security Updates' });
++    await seed('update', { deviceId: ws.id, name: 'KB0000001', is_available: false, installed_on: '2026-10-01T00:00:00.000Z' });
++    expect((await client().listUpdates({ deviceId: ws.id, status: 'available' })).map((u) => u.name)).toEqual(['KB5034441']);
++    expect((await client().listUpdates({ status: 'installed' })).map((u) => u.name)).toEqual(['KB0000001']);
++  });
++
++  it('retries a 429 after Retry-After, then surfaces persistent 429 and 5xx as errors', async () => {
++    await seed('group', { name: 'Acme' });
++
++    await arm('rate-limit', { remaining: 2, retryAfterSeconds: 0 });
++    await expect(client().listGroups()).resolves.toHaveLength(1);
++    const journal = (await (await fetch(`${control}/control/levelio/requests`)).json()).result;
++    expect(journal.requests.filter((r: { status: number }) => r.status === 429)).toHaveLength(2);
++
++    await arm('rate-limit', { remaining: 3, retryAfterSeconds: 0 });
++    await expect(client().listGroups()).rejects.toMatchObject({ status: 429 }); // maxRetries: 2
++
++    await arm('operation-fault', { operation: 'GET /v2/devices', status: 503, message: 'Service unavailable' });
++    await expect(client().listDevices()).rejects.toMatchObject({ status: 503 });
++    await expect(client().listDevices()).resolves.toEqual([]);
++  });
++});
+diff --git a/ee/server/src/__tests__/integration/levelioEmulatorRoute.integration.test.ts b/ee/server/src/__tests__/integration/levelioEmulatorRoute.integration.test.ts
+new file mode 100644
+index 0000000000..e4d4ee905a
+--- /dev/null
++++ b/ee/server/src/__tests__/integration/levelioEmulatorRoute.integration.test.ts
+@@ -0,0 +1,364 @@
++/**
++ * Level.io alert ingestion, end to end through the algasim Level emulator.
++ *
++ * The real EE webhook route runs behind a local HTTP listener against a real
++ * database. The emulator plays Level: it sends native webhooks and monitor
++ * automation HTTP requests exactly as Level does, and serves the v2 REST API
++ * the route calls back into (LEVELIO_API_BASE_URL). The two prod-failure
++ * scenarios are the bundled suite files
++ * (packages/emulators/suite/scenarios/levelio-*.yaml), retargeted at the route.
++ *
++ * KNOWN PROD FAILURES (2026-10-15). The first two tests assert the broken
++ * behavior the route had when they were written:
++ *   (a) native webhook with a secret → 401 on every attempt, nothing recorded;
++ *   (b) Alga's pasted payload template via an automation → 200, but the
++ *       literal {{alert_id}} collapses every alert into one rmm_alerts row and
++ *       no ticket is created.
++ * When the route fix lands they fail by design. Flip them to assert that the
++ * signed envelopes are accepted and that the CPU alert on SRV-01 creates a
++ * ticket for Acme Corp (the third test shows the fixture can do that).
++ */
++
++import { readFileSync } from 'node:fs';
++import http from 'node:http';
++import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
++import type { Knex } from 'knex';
++import { v4 as uuidv4 } from 'uuid';
++import { tenantDb } from '@alga-psa/db';
++import { EmulatorHost, loadScenarioFile, runScenario } from '@alga-psa/emulator-host';
++import levelio, { retargetScenario, type LevelEmulatorCore } from '@alga-psa/emulator-levelio';
++import { createTestDbConnection } from '@main-test-utils/dbConfig';
++
++const HOOK_TIMEOUT = 180_000;
++
++const ALGA_WEBHOOK_SECRET = 'algasim-alga-webhook-secret';
++const LEVEL_API_KEY = 'algasim-level-key';
++
++const h = vi.hoisted(() => ({ db: null as unknown as Knex }));
++
++vi.mock('@alga-psa/core/secrets', () => ({
++  getSecretProviderInstance: async () => ({
++    getAppSecret: async () => undefined,
++    getTenantSecret: async (_tenant: string, name: string) =>
++      ({ levelio_webhook_secret: ALGA_WEBHOOK_SECRET, levelio_api_key: LEVEL_API_KEY })[name],
++    setTenantSecret: async () => undefined,
++  }),
++}));
++
++vi.mock('@alga-psa/db', async () => {
++  const actual = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
++  return { ...actual, createTenantKnex: async (tenant?: string) => ({ knex: h.db, tenant: tenant ?? null }) };
++});
++
++vi.mock('@alga-psa/event-bus/publishers', () => ({
++  publishEvent: vi.fn(async () => undefined),
++  publishWorkflowEvent: vi.fn(async () => undefined),
++  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
++  publishStoredWorkflowEvent: vi.fn(async () => undefined),
++  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
++}));
++
++const { POST } = await import('../../app/api/webhooks/levelio/route');
++
++/**
++ * The payload template and header name getLevelIoWebhookInfo hands out, read
++ * from source (the server action itself needs a session and tier gate).
++ */
++function algaSettingsTemplate(): { headerName: string; payloadTemplate: string } {
++  const source = readFileSync(new URL('../../lib/actions/integrations/levelIoActions.ts', import.meta.url), 'utf8');
++  const literal = /const payloadTemplate = JSON\.stringify\(\s*(\{[\s\S]*?\})\s*,\s*null\s*,\s*2\s*\)/.exec(source)?.[1];
++  const headerName = /headerName: '([^']+)'/.exec(source)?.[1];
++  if (!literal || !headerName) throw new Error('getLevelIoWebhookInfo no longer builds a payload template; update this test');
++  return { headerName, payloadTemplate: JSON.stringify(new Function(`return (${literal});`)(), null, 2) };
++}
++
++const tenantId = uuidv4();
++const userId = uuidv4();
++const clientId = uuidv4();
++const boardId = uuidv4();
++const integrationId = uuidv4();
++
++// Fixed ids from the scenario files.
++const ACME = 'Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMQ';
++const BRANCH = 'Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMg';
++const WS_01 = 'Z2lkOi8vbGV2ZWwvRGV2aWNlLzE';
++const SRV_01 = 'Z2lkOi8vbGV2ZWwvRGV2aWNlLzI';
++
++const SCENARIOS = new URL('../../../../../packages/emulators/suite/scenarios/', import.meta.url);
++
++let routeServer: http.Server;
++let routeOrigin: string;
++let host: EmulatorHost;
++let control: string;
++
++function table(name: string) {
++  return tenantDb(h.db, tenantId).table(name);
++}
++
++async function hasColumn(name: string, column: string) {
++  return h.db.schema.hasColumn(name, column);
++}
++
++/** The Next route handler behind a real socket, so the emulator talks HTTP to it. */
++async function startRouteServer() {
++  const server = http.createServer(async (req, res) => {
++    const chunks: Buffer[] = [];
++    for await (const chunk of req) chunks.push(chunk as Buffer);
++    const headers = new Headers();
++    for (const [name, value] of Object.entries(req.headers)) {
++      if (typeof value === 'string') headers.set(name, value);
++    }
++    const response = await POST(
++      new Request(`${routeOrigin}${req.url}`, { method: req.method, headers, body: Buffer.concat(chunks) }),
++    );
++    res.writeHead(response.status, { 'content-type': 'application/json' });
++    res.end(await response.text());
++  });
++  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
++  routeOrigin = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
++  return server;
++}
++
++async function runLevelScenario(name: string) {
++  const scenario = retargetScenario(loadScenarioFile(new URL(`${name}.yaml`, SCENARIOS).pathname), {
++    'http://localhost:4030': routeOrigin,
++    'tenant=algasim-tenant': `tenant=${tenantId}`,
++  });
++  await runScenario(host, scenario);
++}
++
++async function levelState(view: string) {
++  return ((await (await fetch(`${control}/control/levelio/state/${view}`)).json()) as { result: any }).result;
++}
++
++async function rmmAlerts() {
++  return table('rmm_alerts').where({ tenant: tenantId }).select('external_alert_id', 'external_device_id', 'ticket_id', 'status');
++}
++
++async function ticketCount() {
++  const row = await table('tickets').where({ tenant: tenantId }).count('ticket_id as n').first();
++  return Number(row?.n ?? 0);
++}
++
++async function clearAlertsAndTickets() {
++  for (const name of ['comments', 'comment_threads', 'asset_associations', 'rmm_alerts', 'tickets']) {
++    await table(name).where({ tenant: tenantId }).del().catch(() => undefined);
++  }
++}
++
++beforeAll(async () => {
++  process.env.DB_PORT = process.env.DB_PORT || '5432';
++  process.env.APP_ENV = process.env.APP_ENV || 'test';
++  h.db = await createTestDbConnection();
++
++  await table('tenants').insert({
++    tenant: tenantId,
++    ...((await hasColumn('tenants', 'company_name')) ? { company_name: 'Level Emulator Tenant' } : { client_name: 'Level Emulator Tenant' }),
++    email: `level-emu-${tenantId.slice(0, 8)}@example.com`,
++    created_at: h.db.fn.now(),
++    updated_at: h.db.fn.now(),
++  });
++  await table('users').insert({
++    tenant: tenantId,
++    user_id: userId,
++    username: `level-emu-${tenantId.slice(0, 8)}`,
++    hashed_password: 'not-used',
++    email: `level-emu-user-${tenantId.slice(0, 8)}@example.com`,
++    created_at: h.db.fn.now(),
++    updated_at: h.db.fn.now(),
++  });
++  await table('clients').insert({
++    tenant: tenantId,
++    client_id: clientId,
++    client_name: 'Acme Corp',
++    properties: JSON.stringify({}),
++    is_inactive: false,
++    created_at: h.db.fn.now(),
++    updated_at: h.db.fn.now(),
++  });
++  await table('boards').insert({ tenant: tenantId, board_id: boardId, board_name: 'Alerts', is_default: true });
++  const statusItemType = {
++    ...((await hasColumn('statuses', 'item_type')) ? { item_type: 'ticket' } : {}),
++    ...((await hasColumn('statuses', 'status_type')) ? { status_type: 'ticket' } : {}),
++  };
++  await table('statuses').insert([
++    { tenant: tenantId, status_id: uuidv4(), name: 'Open', ...statusItemType, board_id: boardId, is_closed: false, is_default: true, order_number: 10, created_by: userId },
++    { tenant: tenantId, status_id: uuidv4(), name: 'Closed', ...statusItemType, board_id: boardId, is_closed: true, is_default: false, order_number: 20, created_by: userId },
++  ]);
++  await table('rmm_integrations').insert({
++    tenant: tenantId,
++    integration_id: integrationId,
++    provider: 'levelio',
++    instance_url: 'https://api.level.io',
++    is_active: true,
++    connected_at: h.db.fn.now(),
++    settings: JSON.stringify({}),
++  });
++  await table('rmm_organization_mappings').insert({
++    tenant: tenantId,
++    mapping_id: uuidv4(),
++    integration_id: integrationId,
++    external_organization_id: ACME,
++    external_organization_name: 'Acme Corp',
++    client_id: clientId,
++    default_contact_id: null,
++    auto_sync_assets: true,
++    auto_create_tickets: false,
++  });
++  // Both scenario devices, synced: the realm is the deepest mapped group (Acme).
++  for (const [deviceId, name] of [[WS_01, 'WS-01'], [SRV_01, 'SRV-01']] as const) {
++    const assetId = uuidv4();
++    await table('assets').insert({
++      tenant: tenantId,
++      asset_id: assetId,
++      asset_type: deviceId === SRV_01 ? 'server' : 'workstation',
++      name,
++      asset_tag: `levelio:${deviceId}`,
++      serial_number: `SN-${name}`,
++      status: 'active',
++      client_id: clientId,
++      rmm_provider: 'levelio',
++      rmm_device_id: deviceId,
++      created_at: h.db.fn.now(),
++      updated_at: h.db.fn.now(),
++    });
++    await table('tenant_external_entity_mappings').insert({
++      tenant: tenantId,
++      id: uuidv4(),
++      integration_type: 'levelio',
++      alga_entity_type: 'asset',
++      alga_entity_id: assetId,
++      external_entity_id: deviceId,
++      external_realm_id: ACME,
++      sync_status: 'synced',
++      created_at: h.db.fn.now(),
++      updated_at: h.db.fn.now(),
++    });
++  }
++  // The prod shape: a group-scoped rule that tickets every Acme alert.
++  await table('rmm_alert_rules').insert({
++    tenant: tenantId,
++    rule_id: uuidv4(),
++    integration_id: integrationId,
++    name: 'Acme alerts',
++    is_active: true,
++    priority_order: 0,
++    conditions: JSON.stringify({ organizationIds: [ACME] }),
++    actions: JSON.stringify({ createTicket: true, boardId }),
++  });
++
++  routeServer = await startRouteServer();
++  host = new EmulatorHost({ emulators: [levelio], controlPort: 0, ports: { levelio: 0 } });
++  const started = await host.start();
++  control = `http://127.0.0.1:${started.controlPort}`;
++  process.env.LEVELIO_API_BASE_URL = `http://127.0.0.1:${started.ports.levelio}`;
++  process.env.LEVELIO_SYNC_TRANSPORT = 'direct';
++}, HOOK_TIMEOUT);
++
++afterAll(async () => {
++  await host?.stop();
++  await new Promise((resolve) => routeServer?.close(resolve));
++  if (!h.db) return;
++  await clearAlertsAndTickets();
++  for (const name of [
++    'next_number', 'rmm_alert_rules', 'tenant_external_entity_mappings', 'rmm_organization_mappings',
++    'rmm_integrations', 'assets', 'statuses', 'boards', 'clients', 'users', 'tenants',
++  ]) {
++    await table(name).where({ tenant: tenantId }).del().catch(() => undefined);
++  }
++  await h.db.destroy().catch(() => undefined);
++}, HOOK_TIMEOUT);
++
++describe('Level.io alert ingestion through the Level emulator (route + DB)', { shuffle: false }, () => {
++  it('known prod failure (a): native webhooks with a secret are rejected 401 on every attempt', async () => {
++    await clearAlertsAndTickets();
++    await runLevelScenario('levelio-native-webhook-signed');
++    const core = host.instance('levelio').core as LevelEmulatorCore;
++    core.configure({ autoRetry: false });
++
++    // Level retries each failed delivery three times, minutes apart.
++    for (let round = 0; round < 3; round += 1) {
++      host.clock.advance('1h');
++      await fetch(`${control}/control/levelio/actions/deliver-due-retries`, { method: 'POST' });
++    }
++
++    const deliveries = await levelState('webhook-deliveries');
++    expect(deliveries).toHaveLength(8);
++    for (const delivery of deliveries) {
++      expect(delivery.signature).toMatch(/^sha256=[0-9a-f]{64}$/);
++      expect(delivery.status).toBe(401);
++      expect(JSON.parse(delivery.response)).toEqual({ error: 'Unauthorized: missing webhook secret' });
++    }
++    expect(new Set(deliveries.map((d: { eventId: string }) => d.eventId)).size).toBe(2);
++    expect(await rmmAlerts()).toEqual([]);
++    expect(await ticketCount()).toBe(0);
++  });
++
++  it('known prod failure (b): the pasted Alga template collapses every alert into one row and opens no ticket', async () => {
++    await clearAlertsAndTickets();
++
++    // The scenario's automation is exactly what the settings screen hands out.
++    const settings = algaSettingsTemplate();
++    const scenario = loadScenarioFile(new URL('levelio-automation-alga-template.yaml', SCENARIOS).pathname);
++    const automation = scenario.steps.find((step: (typeof scenario.steps)[number]) => 'seed' in step && step.seed === 'levelio/automation') as {
++      params: { body: string; headers: Array<{ key: string; value: string }> };
++    };
++    expect(automation.params.body).toBe(settings.payloadTemplate);
++    expect(automation.params.headers).toEqual([{ key: settings.headerName, value: ALGA_WEBHOOK_SECRET }]);
++
++    await runLevelScenario('levelio-automation-alga-template');
++
++    const runs = await levelState('automation-runs');
++    expect(runs.map((run: { status: number }) => run.status)).toEqual([200, 200, 200]);
++    expect(runs.map((run: { response: string }) => JSON.parse(run.response).outcome)).toEqual([
++      'recorded_only',
++      'skipped',
++      'skipped',
++    ]);
++    expect(await rmmAlerts()).toEqual([
++      expect.objectContaining({ external_alert_id: '{{alert_id}}', external_device_id: '{{device_id}}', ticket_id: null }),
++    ]);
++    expect(await ticketCount()).toBe(0);
++  });
++
++  it('control: the same route tickets an alert whose payload uses Level\'s documented system variables', async () => {
++    await clearAlertsAndTickets();
++    await fetch(`${control}/control/levelio/reset`, { method: 'POST' });
++    const call = (path: string, body: unknown) =>
++      fetch(`${control}/control/levelio/${path}`, {
++        method: 'POST',
++        headers: { 'content-type': 'application/json' },
++        body: JSON.stringify(body),
++      }).then((r) => r.json() as Promise<{ ok: boolean; result: any }>);
++
++    await call('seed/group', { id: ACME, name: 'Acme Corp' });
++    await call('seed/group', { id: BRANCH, name: 'Branch Office', parentId: ACME });
++    await call('seed/device', { id: SRV_01, hostname: 'SRV-01', role: 'server', groupId: ACME, serial_number: 'SN-SRV-01' });
++    await call('seed/automation', {
++      name: 'Forward alerts to Alga (system variables)',
++      url: `${routeOrigin}/api/webhooks/levelio?tenant=${tenantId}`,
++      headers: [{ key: 'X-Alga-Webhook-Secret', value: ALGA_WEBHOOK_SECRET }],
++      body: JSON.stringify({
++        event: 'alert.triggered',
++        alert_id: '{{level_device_id}}:cpu:{{level_time}}',
++        device_id: '{{level_device_id}}',
++        hostname: '{{level_device_hostname}}',
++        group_id: '{{level_group_id}}',
++        name: 'CPU',
++        severity: 'critical',
++      }),
++    });
++    const fired = await call('actions/fire-alert', { deviceId: SRV_01, name: 'CPU', severity: 'critical' });
++
++    expect(fired.result.automationRuns).toHaveLength(1);
++    expect(fired.result.automationRuns[0].unresolvedVariables).toEqual([]);
++    expect(JSON.parse(fired.result.automationRuns[0].response)).toMatchObject({ ok: true, outcome: 'ticket_created' });
++    const alerts = await rmmAlerts();
++    expect(alerts).toHaveLength(1);
++    expect(alerts[0].external_device_id).toBe(SRV_01);
++    expect(alerts[0].ticket_id).not.toBeNull();
++    expect(await ticketCount()).toBe(1);
++    const ticket = await table('tickets').where({ tenant: tenantId }).first();
++    expect(ticket.client_id).toBe(clientId);
++  });
++});
+diff --git a/ee/server/src/__tests__/unit/integrations/levelioDeviceMapper.test.ts b/ee/server/src/__tests__/unit/integrations/levelioDeviceMapper.test.ts
+index fc6df29872..ff41664f47 100644
+--- a/ee/server/src/__tests__/unit/integrations/levelioDeviceMapper.test.ts
++++ b/ee/server/src/__tests__/unit/integrations/levelioDeviceMapper.test.ts
+@@ -87,18 +87,70 @@ describe('extractLanIp', () => {
+ });
+ 
+ describe('mapLevelIoDiskUsage', () => {
+-  it('converts partitions to RmmStorageInfo in GB with utilization', () => {
++  const GB = 1024 ** 3;
++
++  it('maps documented disks to capacity-only storage entries in GB', () => {
++    const device = makeDevice({
++      disks: [
++        { disk_type: 'SSD', model: 'Samsung 980', serial_number: 'S1', size: 500 * GB },
++        { disk_type: 'HDD', model: 'WD Blue', serial_number: 'S2', size: 1.5 * GB },
++      ],
++    });
++
++    const result = mapLevelIoDiskUsage(device);
++    expect(result).toEqual([
++      { name: 'SSD Samsung 980', total_gb: 500 },
++      { name: 'HDD WD Blue', total_gb: 1.5 },
++    ]);
++    // Level sends no free space: it must not be fabricated.
++    for (const disk of result) {
++      expect(disk).not.toHaveProperty('free_gb');
++      expect(disk).not.toHaveProperty('utilization_percent');
++    }
++  });
++
++  it('skips disks whose size is zero, negative, missing, or null', () => {
++    const device = makeDevice({
++      disks: [
++        { model: 'zero', size: 0 },
++        { model: 'negative', size: -5 },
++        { model: 'missing' },
++        { model: 'null', size: null },
++        { model: 'kept', size: 10 * GB },
++      ],
++    });
++
++    expect(mapLevelIoDiskUsage(device)).toEqual([{ name: 'kept', total_gb: 10 }]);
++  });
++
++  it('falls back when model or disk_type is missing', () => {
+     const device = makeDevice({
+-      disk_partitions: [
+-        { mount_point: 'C:', size: 100 * 1024 ** 3, free_space: 25 * 1024 ** 3 },
+-        { label: 'no-size partition' },
++      disks: [
++        { disk_type: 'NVMe', size: 256 * GB },
++        { model: 'Crucial MX500', disk_type: null, size: 256 * GB },
++        { model: '  ', size: 256 * GB },
++        { size: 256 * GB },
+       ],
+     });
+ 
+-    expect(mapLevelIoDiskUsage(device)).toEqual([
+-      { name: 'C:', total_gb: 100, free_gb: 25, utilization_percent: 75 },
++    expect(mapLevelIoDiskUsage(device).map((d) => d.name)).toEqual([
++      'NVMe',
++      'Crucial MX500',
++      'Disk 3',
++      'Disk 4',
+     ]);
+   });
++
++  it('returns [] when disks is absent, null, or empty', () => {
++    expect(mapLevelIoDiskUsage(makeDevice({}))).toEqual([]);
++    expect(mapLevelIoDiskUsage(makeDevice({ disks: null }))).toEqual([]);
++    expect(mapLevelIoDiskUsage(makeDevice({ disks: [] }))).toEqual([]);
++  });
++
++  it('maps a disks payload shaped like the emulator output', () => {
++    const device = makeDevice({ disks: [{ disk_type: 'NVMe', model: 'Samsung', size: 512_000_000_000 }] });
++    expect(mapLevelIoDiskUsage(device)).toEqual([{ name: 'NVMe Samsung', total_gb: 476.84 }]);
++  });
+ });
+ 
+ describe('mapLevelIoDeviceToSnapshot', () => {
+diff --git a/ee/server/src/interfaces/rmm.interfaces.ts b/ee/server/src/interfaces/rmm.interfaces.ts
+index 0fdb3031ff..0053e354fe 100644
+--- a/ee/server/src/interfaces/rmm.interfaces.ts
++++ b/ee/server/src/interfaces/rmm.interfaces.ts
+@@ -210,8 +210,10 @@ export interface RmmServerCacheFields extends RmmWorkstationCacheFields {
+ export interface RmmStorageInfo {
+   name: string;
+   total_gb: number;
+-  free_gb: number;
+-  utilization_percent: number;
++  /** Absent when the provider reports capacity only (e.g. Level.io `disks`). */
++  free_gb?: number | null;
++  /** Absent when free space is unknown; never substitute 0. */
++  utilization_percent?: number | null;
+ }
+ 
+ export interface RmmServerFields extends RmmWorkstationFields {
+diff --git a/ee/server/src/lib/integrations/levelio/levelApiClient.ts b/ee/server/src/lib/integrations/levelio/levelApiClient.ts
+index 6816f6837d..980c273f96 100644
+--- a/ee/server/src/lib/integrations/levelio/levelApiClient.ts
++++ b/ee/server/src/lib/integrations/levelio/levelApiClient.ts
+@@ -36,14 +36,16 @@ export interface LevelIoCpu {
+   cores?: number;
+ }
+ 
+-export interface LevelIoDiskPartition {
+-  label?: string;
+-  mount_point?: string;
+-  encrypted?: boolean;
+-  primary?: boolean;
+-  size?: number;
+-  free_space?: number;
+-  file_system?: string;
++/**
++ * Physical disk as documented in Level's v2 device schema (returned when the
++ * request sets `include_disks=true`). Level reports capacity only: there is no
++ * free space and no mount point. `size` is in bytes.
++ */
++export interface LevelIoDisk {
++  disk_type?: string | null;
++  model?: string | null;
++  serial_number?: string | null;
++  size?: number | null;
+ }
+ 
+ export interface LevelIoNetworkInterface {
+@@ -97,7 +99,7 @@ export interface LevelIoDevice {
+   platform?: 'Windows' | 'Mac' | 'Linux' | null;
+   operating_system?: LevelIoOperatingSystem;
+   cpus?: LevelIoCpu[];
+-  disk_partitions?: LevelIoDiskPartition[];
++  disks?: LevelIoDisk[] | null;
+   network_interfaces?: LevelIoNetworkInterface[];
+   security?: LevelIoSecurity;
+ }
+diff --git a/ee/server/src/lib/integrations/levelio/mappers/deviceMapper.ts b/ee/server/src/lib/integrations/levelio/mappers/deviceMapper.ts
+index 61b3e27545..d243d7f8d9 100644
+--- a/ee/server/src/lib/integrations/levelio/mappers/deviceMapper.ts
++++ b/ee/server/src/lib/integrations/levelio/mappers/deviceMapper.ts
+@@ -78,20 +78,24 @@ export function extractLanIp(interfaces?: LevelIoNetworkInterface[] | null): str
+   return null;
+ }
+ 
++/**
++ * Maps Level's documented `disks` (physical disks: type, model, serial, size)
++ * to storage entries. Level sends no free space, so `free_gb` and
++ * `utilization_percent` are omitted rather than fabricated; consumers render
++ * those disks as capacity-only.
++ */
+ export function mapLevelIoDiskUsage(device: LevelIoDevice): RmmStorageInfo[] {
+-  return (device.disk_partitions ?? [])
+-    .filter((partition) => typeof partition.size === 'number' && partition.size > 0)
+-    .map((partition) => {
+-      const totalGb = roundTo2((partition.size as number) / BYTES_PER_GB);
+-      const freeGb = typeof partition.free_space === 'number' ? roundTo2(partition.free_space / BYTES_PER_GB) : 0;
+-      const utilization = totalGb > 0 ? roundTo2(((totalGb - freeGb) / totalGb) * 100) : 0;
+-      return {
+-        name: partition.mount_point || partition.label || 'disk',
+-        total_gb: totalGb,
+-        free_gb: freeGb,
+-        utilization_percent: utilization,
+-      };
++  const storage: RmmStorageInfo[] = [];
++  (device.disks ?? []).forEach((disk, index) => {
++    if (typeof disk?.size !== 'number' || !Number.isFinite(disk.size) || disk.size <= 0) return;
++    const model = disk.model?.trim();
++    const type = disk.disk_type?.trim();
++    storage.push({
++      name: [type, model].filter(Boolean).join(' ') || `Disk ${index + 1}`,
++      total_gb: roundTo2(disk.size / BYTES_PER_GB),
+     });
++  });
++  return storage;
+ }
+ 
+ export function mapLevelIoDeviceToSnapshot(args: {
+diff --git a/package-lock.json b/package-lock.json
+index 8965c8fb0b..94794b37b4 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -936,6 +936,10 @@
+       "resolved": "packages/emulators/host",
+       "link": true
+     },
++    "node_modules/@alga-psa/emulator-levelio": {
++      "resolved": "packages/emulators/levelio",
++      "link": true
++    },
+     "node_modules/@alga-psa/emulator-msgraph": {
+       "resolved": "packages/emulators/msgraph",
+       "link": true
+@@ -48362,6 +48366,22 @@
+         "node": ">=20"
+       }
+     },
++    "packages/emulators/levelio": {
++      "name": "@alga-psa/emulator-levelio",
++      "version": "0.0.1",
++      "dependencies": {
++        "@alga-psa/emulator-host": "*",
++        "express": "^5.1.0",
++        "zod": "^3.25.67"
++      },
++      "devDependencies": {
++        "@types/express": "^5.0.3",
++        "@types/node": "^22.0.0",
++        "tsup": "^8.0.0",
++        "typescript": "^5.7.3",
++        "vitest": "^4.1.9"
++      }
++    },
+     "packages/emulators/msgraph": {
+       "name": "@alga-psa/emulator-msgraph",
+       "version": "0.0.1",
+@@ -48709,6 +48729,7 @@
+       "version": "0.0.1",
+       "dependencies": {
+         "@alga-psa/emulator-host": "*",
++        "@alga-psa/emulator-levelio": "*",
+         "@alga-psa/emulator-msgraph": "*",
+         "@alga-psa/emulator-qbo": "*",
+         "@alga-psa/emulator-smtp-sink": "*",
+diff --git a/packages/assets/src/components/AssetBentoLayout.tsx b/packages/assets/src/components/AssetBentoLayout.tsx
+index de3928d55f..fdf080095e 100644
+--- a/packages/assets/src/components/AssetBentoLayout.tsx
++++ b/packages/assets/src/components/AssetBentoLayout.tsx
+@@ -280,7 +280,7 @@ export function AssetBentoLayout({
+                   <BentoGauge
+                     percent={disk?.utilization_percent}
+                     label={disk ? `${t('assetBento.disk', { defaultValue: 'Disk' })} ${disk.name}` : t('assetBento.disk', { defaultValue: 'Disk' })}
+-                    caption={disk ? `${disk.free_gb} GB free of ${disk.total_gb} GB` : undefined}
++                    caption={disk ? (disk.free_gb != null ? `${disk.free_gb} GB free of ${disk.total_gb} GB` : `${disk.total_gb} GB`) : undefined}
+                   />
+                 </div>
+                 <div className="mt-3 space-y-1.5 border-t border-[rgb(var(--color-border-100))] pt-3 text-sm">
+diff --git a/packages/assets/src/components/panels/HardwareSpecsPanel.tsx b/packages/assets/src/components/panels/HardwareSpecsPanel.tsx
+index 9811c686d4..3ca66c82e7 100644
+--- a/packages/assets/src/components/panels/HardwareSpecsPanel.tsx
++++ b/packages/assets/src/components/panels/HardwareSpecsPanel.tsx
+@@ -131,16 +131,21 @@ export const HardwareSpecsPanel: React.FC<HardwareSpecsPanelProps> = ({
+                    <div className="flex items-center gap-2 flex-1">
+                      <div className="w-32">
+                        <UtilizationBar 
+-                         value={drive.utilization_percent} 
++                         value={drive.utilization_percent ?? null} 
+                          showLabel={false}
+                          size="sm"
+                        />
+                      </div>
+                      <span className="text-sm text-gray-900">
+-                       {t('hardwareSpecsPanel.values.freeStorage', {
+-                         defaultValue: '{{size}} GB Free',
+-                         size: drive.free_gb.toFixed(1)
+-                       })}
++                       {drive.free_gb != null
++                         ? t('hardwareSpecsPanel.values.freeStorage', {
++                             defaultValue: '{{size}} GB Free',
++                             size: drive.free_gb.toFixed(1)
++                           })
++                         : t('hardwareSpecsPanel.values.totalStorage', {
++                             defaultValue: '{{size}} GB',
++                             size: drive.total_gb.toFixed(1)
++                           })}
+                      </span>
+                    </div>
+                  </div>
+diff --git a/packages/assets/src/lib/assetSignals.ts b/packages/assets/src/lib/assetSignals.ts
+index e7b34c043d..da7902e9b1 100644
+--- a/packages/assets/src/lib/assetSignals.ts
++++ b/packages/assets/src/lib/assetSignals.ts
+@@ -84,11 +84,15 @@ export function formatAge(iso: string | null | undefined, now: number, t: TFn):
+   return new Date(iso).toLocaleDateString();
+ }
+ 
+-/** The disk the operator cares about is the fullest one. */
++/**
++ * The disk the operator cares about is the fullest one. Disks whose
++ * utilisation is unknown (capacity-only providers) rank below any measured
++ * disk; if none is measured, the first disk is returned.
++ */
+ export function worstStorage(storage: RmmStorageInfo[] | undefined): RmmStorageInfo | null {
+   if (!storage?.length) return null;
+   return storage.reduce((worst, current) =>
+-    current.utilization_percent > worst.utilization_percent ? current : worst
++    (current.utilization_percent ?? -1) > (worst.utilization_percent ?? -1) ? current : worst
+   );
+ }
+ 
+diff --git a/packages/emulators/Dockerfile b/packages/emulators/Dockerfile
+index 919dcb47a2..0a6553b22c 100644
+--- a/packages/emulators/Dockerfile
++++ b/packages/emulators/Dockerfile
+@@ -6,8 +6,8 @@ WORKDIR /algasim
+ COPY .stage/ ./
+ RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
+ 
+-# msgraph / qbo / webhook-sink / smtp-sink / stripe / xero / threecx vendor surfaces + control API
+-EXPOSE 4010 4020 4030 4040 4050 4060 4070 9500
++# msgraph / qbo / webhook-sink / smtp-sink / stripe / xero / threecx / levelio vendor surfaces + control API
++EXPOSE 4010 4020 4030 4040 4050 4060 4070 4080 9500
+ 
+ ENV ALGASIM_CONTROL_PORT=9500
+ CMD ["node", "node_modules/@alga-psa/emulator-suite/dist/cli.js"]
+diff --git a/packages/emulators/PROTOCOL_PARITY.md b/packages/emulators/PROTOCOL_PARITY.md
+index 7f4bde1e99..8bf812fe20 100644
+--- a/packages/emulators/PROTOCOL_PARITY.md
++++ b/packages/emulators/PROTOCOL_PARITY.md
+@@ -14,6 +14,8 @@ current revision passed the full CI or browser matrix.
+ | Xero revocation | Basic authentication + form refresh token, empty 200; removes connected organisations and rotated credentials. | [Lifecycle HTTP tests](xero/tests/tokenLifecycle.test.ts), [model limits](xero/README.md). One resource owner per client; immediate access-token invalidation is deterministic emulation, not measured JWT propagation. Unknown/repeated/foreign-token success follows RFC 7009. Direct access-token revocation is not modeled. |
+ | Actual accounting cleanup consumers | Real `revokeAccountingOAuthGrant` for each provider reaches the journaled vendor route. Success rejects credentials; Xero also verifies connection removal after fresh authorization. Failed cleanup logs without throwing and preserves usable credentials. | [QBO consumer](qbo/tests/accountingCleanupConsumer.test.ts), [Xero consumer](xero/tests/accountingCleanup.test.ts). Native HTTP with guards against external destinations; auth/state/logger seams are isolated. This is the cleanup helper, not the entire denied OAuth callback, database rollback, disconnect UI, or a running worker. |
+ | Stripe callback redirects | HTTP 302/307 count as delivery failures; redirect destination receives no request and independent callbacks still receive valid signed payloads. | [Redirect tests](stripe/tests/webhookRedirect.test.ts). SDK verification covers signatures and delivery time; no live sandbox capture, exhaustive event schema, or automatic retry/backoff parity is implied. |
++| Level REST consumer | Alga's real `LevelIoApiClient` over HTTP: `testConnection`, group hierarchy across pages, devices with `include_*` sections and `ancestor_group_id`, alerts by device/status, resolve, updates, 401 envelope, 429 retry on `Retry-After`, persistent 429/5xx errors. | [Consumer tests](levelio/tests/restConsumer.test.ts). Shapes follow the OpenAPI definition only; no live Level capture. The incremental-sync check applies the sync engine's `last_seen_at` filter by hand, not `runLevelIoFullSync`. |
++| Level outbound (route) | Both 2026-10-15 production failures reproduced through the real EE route and a migrated database: signed native webhooks get 401 on all four attempts; Alga's pasted automation template returns 200 three times but records one `{{alert_id}}` alert and no ticket. A system-variable template creates the ticket. | [Route integration test](../../ee/server/src/__tests__/integration/levelioEmulatorRoute.integration.test.ts), [webhook tests](levelio/tests/webhooks.test.ts), [automation tests](levelio/tests/automation.test.ts). Secrets and event publishing are stubbed. Level-side delivery behavior beyond the documented points below is modeled, not observed. |
+ | Temporal Stripe routing | Actual subscription-metadata POST and tenant-deletion DELETE use the configured SDK endpoint; missing override retains production default and malformed overrides fail. | [Native consumer tests](../../ee/temporal-workflows/src/config/__tests__/stripe-client-routing.test.ts). Two of five migrated constructors have individual HTTP journeys. DB/secrets/activity context are mocked; no running Temporal worker or workflow-engine routing proof. |
+ 
+ ## Independent references and deliberate model choices
+@@ -104,3 +106,72 @@ which methods a given Entra application accepts.
+ ## SMTP transaction evidence
+ 
+ The SMTP sink records bounded DATA transactions through the host request-history endpoint: acceptance, rejection, processing failure and interrupted transfers, with in-flight, dropped and reset-generation accounting. Records contain protocol, command, sequence, timestamps and outcome only; they contain no envelope, credentials or message content. Native transport tests cover these outcomes and isolation across reset. Greeting, envelope and authentication failures before DATA are not represented. The browser readiness consumer requires complete, nonempty SMTP evidence for the inbound-email journey; this is emulator observation, not live mail-provider parity.
++
++## Level
++
++Reviewed 2026-10-15 against the Level v2 OpenAPI definition at
++[developers.level.io](https://developers.level.io) (endpoint and webhook
++pages updated 2026-05-22), [About Webhooks](https://developers.level.io/reference/about-webhooks),
++the [system variables](https://docs.level.io/en/articles/11321970-system-variables)
++article and the [HTTP Request action](https://docs.level.io/en/articles/13909223-http-request-action)
++article. No live Level account was used.
++
++Documented and modeled:
++
++- `Authorization: <api key>` with no scheme; 401 `{"error":"Access denied"}`,
++  404 `{"error":"Record not found"}`.
++- List parameters for groups, devices, alerts and updates, including
++  `limit` (1–100, default 20), `starting_after`, `ending_before` and
++  `{ data, has_more }`. Device detail sections only appear with their
++  `include_*` flag. Online devices report `last_seen_at` as the current time.
++- Group, device, alert and update field names. Ids follow Level's examples,
++  unpadded base64 of `gid://level/<Type>/<n>`.
++- Webhook envelope `{ event_type, event_id, occurred_at, data }` for all eight
++  event types. Alert, device and group `data` use the same schemas as the REST
++  resources. `event_id` stays constant across retries.
++- `X-Level-Signature: sha256=<hex>` over the raw body, only when a secret is
++  set, verified with Level's own Node.js snippet. No custom headers.
++- Up to 3 retries with exponential backoff and jitter, 2+ minutes apart; only
++  2xx succeeds; manual "Re-run request".
++- System variable names and rendering rules (unreported values empty,
++  booleans as text). HTTP Request action fields: URL, method, the three content
++  types, header rows, body; 4xx/5xx marks the action failed.
++
++Emulator choices, not confirmed against Level:
++
++- Out-of-range `limit`, an unknown cursor, or both cursors at once answer
++  400. Level documents no error for these.
++- Rate limiting answers 429 with `Retry-After` and `{"error":"Too many requests"}`.
++  Level documents neither the limit nor the envelope.
++- `Bearer <key>` is rejected. Level documents only the bare key.
++- `ancestor_group_id` includes devices directly in that group.
++  `status=installed` on updates means `is_available: false` with an
++  `installed_on` date.
++- Deleting a group moves its children to its parent and ungroups its devices.
++- Device webhook `data` carries every detail section.
++- Retry delays are 2, 4 and 8 minutes plus up to 30 s of jitter. A redirect,
++  a network error or a 10-second timeout counts as a failed delivery. A
++  re-run does not start a new retry chain.
++- System variable formatting where the article is silent: comma-separated
++  lists with no spaces, `level_device_memory_formatted` as `16 GB`,
++  `level_device_os_version` from the OS minor version. Substituted values are
++  inserted as-is, with no JSON escaping.
++- Unknown `{{tokens}}` are sent literally. The docs do not say this; production
++  traffic to Alga on 2026-10-15 showed it.
++- Action retries are immediate. The docs name a retries option without a
++  schedule.
++- `fire-alert`'s `webhookDataExtra` adds fields to alert webhook `data` that
++  Level does not document. Treat anything set there as unverified.
++
++Not modeled: group/tag/custom-field writes and the automations, activities
++and custom-field REST endpoints (all answer 501); custom-field references and
++any alert-specific variables in automations (Level documents none); webhook
++endpoint management through the API; Level's own request-log UI.
++
++Consumer drift (resolved): Level's device schema carries `disks` (`disk_type`,
++`model`, `serial_number`, `size`) and no `disk_partitions`. Alga's
++`LevelIoDevice` type and device mapper read the documented `disks` field, so
++the emulator's payload and Alga's mapping agree. Level reports physical
++capacity only; mapped storage entries carry `total_gb` without `free_gb` or
++`utilization_percent`. `restConsumer.test.ts` runs the mapper against the
++emulator's `disks` payload.
+diff --git a/packages/emulators/README.md b/packages/emulators/README.md
+index bf2cbbc7e8..6d8a11c13a 100644
+--- a/packages/emulators/README.md
++++ b/packages/emulators/README.md
+@@ -26,6 +26,7 @@ This starts every emulator on its default port and the console at
+ | `smtp-sink` | `@alga-psa/emulator-smtp-sink` | 4040 | SMTP capture (MailHog stand-in) |
+ | `stripe` | `@alga-psa/emulator-stripe` | 4050 | Stripe /v1 API (customers, Checkout sessions) + simulated hosted Checkout with signed webhooks |
+ | `xero` | `@alga-psa/emulator-xero` | 4060 | Xero identity OAuth + connections list + api.xro/2.0 accounting API (invoices, contacts, settings) |
++| `levelio` | `@alga-psa/emulator-levelio` | 4080 | Level v2 REST API (groups, devices, alerts, updates) with API-key auth and cursor pagination; sends Level's native webhooks (signed envelopes, retries, re-run) and monitor-automation HTTP Request actions rendered with Level's system variables |
+ | `threecx` | `@alga-psa/emulator-threecx` | 4070 | 3CX both ways: the CRM engine client that dials the AlgaPSA 3CX routes (lookup, search, report-call, contacts, report-chat) with the bearer key, and the PBX that AlgaPSA dials back — `/connect/token`, XAPI (users, contacts, call history, recordings), call control with its WebSocket event feed |
+ 
+ The control API and console share port 9500. Override ports with
+@@ -65,6 +66,7 @@ Emulators implement the vendor protocol subsets listed in this guide and the
+ | Webhooks | Point the integration's webhook/notification URL at `http://localhost:4030/<any path>` |
+ | SMTP | Configure the SMTP provider with host `localhost`, port `4040`, no TLS |
+ | 3CX | `THREECX_EMULATOR_MODE=true`, then enter `http://localhost:4070` as the PBX base URL on the 3CX integration card |
++| Level | `LEVELIO_API_BASE_URL=http://localhost:4080`, then save `algasim-level-key` as the Level API key. Webhooks and automations go outbound: register their target URL in the emulator (see [Level](#level)) |
+ 
+ `TEAMS_EMULATOR_MODE` is the single gate for every Teams override, and it is
+ deny-by-default: unless it is explicitly `true` (or `1`), the Teams surface
+@@ -502,6 +504,95 @@ Click-to-call from a ticket lands in `algasim state threecx makecalls`; call
+ history import reads whatever `cdr-segment` rows you seeded; phonebook push
+ shows up in `pbx-contacts`.
+ 
++### Level
++
++The `levelio` emulator on port 4080 covers both directions of the Level
++integration.
++
++**REST API (inbound).** Alga's `LevelIoApiClient` talks to it unmodified once
++`LEVELIO_API_BASE_URL` points here. The key goes in the `Authorization` header
++with no scheme prefix, as Level documents. A missing, unknown or
++`Bearer`-prefixed key answers `401 {"error":"Access denied"}`.
++
++| Route | Behaviour |
++| --- | --- |
++| `GET /v2/groups`, `GET /v2/groups/:id` | Groups with `parent_id`, `child_ids`, `device_count`, `descendent_device_count`. `parent_id=null` lists roots |
++| `GET /v2/devices`, `GET /v2/devices/:id` | Filters `group_id` (`null` = ungrouped), `ancestor_group_id` (the group and everything below it), `tag_id`, `hostname`, `serial_number`. Detail sections (`operating_system`, `cpus`, `memory`, `disks`, `network_interfaces`, `motherboard`, `security`) appear only when their `include_*` flag is `true` |
++| `GET /v2/alerts`, `GET /v2/alerts/:id` | Filters `device_id` and `status` (`active` / `resolved`) |
++| `POST /v2/alerts/:id/resolve` | Resolves the alert and emits `alert_resolved` |
++| `GET /v2/updates`, `GET /v2/updates/:id` | Filters `device_id`, `status` (`available` / `installed`), `category` |
++| any other `/v2` route | `501` with `code: EmulatorUnsupportedOperation` |
++
++Every list is cursor-paginated: `limit` 1–100 (default 20), `starting_after`
++or `ending_before` an item id, `{ data, has_more }` back. Ids use Level's form,
++unpadded base64 of `gid://level/<Type>/<n>`. An online device reports
++`last_seen_at` as the current (virtual) time, as Level does. Use
++`device-offline` to freeze it, which is what Alga's incremental device sync
++filters on.
++
++**Native webhooks (outbound).** `seed webhook` registers what a Level admin
++sets up under Settings → Webhooks: a URL, an optional secret and the selected
++event types (`alert_active`, `alert_resolved`, `device_created/updated/deleted`,
++`group_created/updated/deleted`; all of them by default). Each delivery is a
++JSON POST of `{ event_type, event_id, occurred_at, data }`. With a secret it
++carries `X-Level-Signature: sha256=<hex HMAC-SHA256 of the raw body>`; without
++one there is no signature header. There is no way to add other headers. A
++non-2xx answer, a redirect, a network error or a 10-second timeout is a failed
++delivery. Level then retries up to 3 times with exponential backoff and
++jitter, starting at 2 minutes, and the `event_id` and bytes stay the same.
++Retries run on the virtual clock: `clock advance 10m` and the background pump
++(or `action levelio deliver-due-retries`) sends whatever is due.
++`rerun-delivery { deliveryId }` is the request log's "Re-run request".
++
++The lifecycle controls emit the matching events: the `group` and `device`
++seeders, `update-group`, `delete-group`, `update-device`, `delete-device`,
++`fire-alert` and `resolve-alert`. `device-checkin` and `device-offline` change
++`last_seen_at` without a webhook.
++
++**Automation HTTP Request action (outbound).** `seed automation` creates a
++monitor automation: a URL, method, content type, header rows and a body, plus
++optional automation `variables`, `alertNames` and `groupIds` filters and a
++`retries` count. When `fire-alert` raises a matching alert, the action runs
++for that device. URL, header keys and values, and body render
++`{{level_device_id}}`, `{{level_group_name}}` and the rest of Level's
++[system variables](https://docs.level.io/en/articles/11321970-system-variables).
++A `{{token}}` that names no variable is sent as literal text. That is what
++Level does in production: Alga's old `{{alert_id}}` template reached the route
++unrendered. `run-automation` runs an action by hand.
++
++```bash
++algasim seed levelio group -p '{"name":"Acme Corp"}'
++algasim seed levelio device -p '{"hostname":"WS-01","groupId":"<group id>"}'
++algasim seed levelio webhook -p '{"url":"http://localhost:3000/api/webhooks/levelio?tenant=<tenant>","secret":"s3cret","eventTypes":["alert_active","alert_resolved"]}'
++algasim action levelio fire-alert -p '{"deviceId":"<device id>","name":"CPU","severity":"critical"}'
++algasim state levelio webhook-deliveries     # status, attempt, signature, response excerpt
++algasim state levelio automation-runs        # rendered request + unresolved {{tokens}}
++```
++
++Faults: `rate-limit { remaining, retryAfterSeconds }` answers 429 with
++`Retry-After`; `operation-fault { operation, status, remaining }` fails one
++route (`"GET /v2/devices"`, `"*"` for all). The transport faults apply too.
++
++State views: `config`, `groups`, `devices`, `alerts`, `updates`, `webhooks`
++(secrets masked), `events`, `webhook-deliveries`, `pending-retries`,
++`automations`, `automation-runs`, `operation-faults`.
++
++Two scenarios reproduce the alert-ingestion failures seen in production on
++2026-10-15. Both send to `http://localhost:4030/api/webhooks/levelio?tenant=algasim-tenant`
++(webhook-sink) by default:
++
++- `levelio-native-webhook-signed`: a native webhook with a secret. The route of
++  that date accepts only `X-Alga-Webhook-Secret`, so every delivery is a 401.
++- `levelio-automation-alga-template`: an automation posting the template Alga's
++  settings screen handed out. Three different alerts arrive byte-identical, so
++  the route records one alert and creates no ticket.
++
++`retargetScenario` (exported by the package) rewrites those URLs.
++[levelioEmulatorRoute.integration.test.ts](../../ee/server/src/__tests__/integration/levelioEmulatorRoute.integration.test.ts)
++uses it to run both scenarios against the real route and database. The
++failure assertions in that test describe the route as of 2026-10-15 and are
++meant to flip to ticket-creation assertions once the route is fixed.
++
+ ### Living with the emulator
+ 
+ Six ergonomics fixes that came out of using it in anger:
+diff --git a/packages/emulators/build-image.sh b/packages/emulators/build-image.sh
+index 6f7f3b2659..862301f72d 100755
+--- a/packages/emulators/build-image.sh
++++ b/packages/emulators/build-image.sh
+@@ -10,7 +10,7 @@ set -euo pipefail
+ cd "$(dirname "$0")"
+ 
+ TAG="${1:-algasim:dev}"
+-PACKAGES=(host msgraph qbo webhook-sink smtp-sink stripe xero threecx suite)
++PACKAGES=(host msgraph qbo webhook-sink smtp-sink stripe xero threecx levelio suite)
+ 
+ for pkg in "${PACKAGES[@]}"; do
+   (cd "$pkg" && npx tsup)
+diff --git a/packages/emulators/compose.yml b/packages/emulators/compose.yml
+index 427025502f..ea7fd05e6e 100644
+--- a/packages/emulators/compose.yml
++++ b/packages/emulators/compose.yml
+@@ -12,6 +12,7 @@ services:
+       - "4050:4050" # stripe (Stripe /v1 API + simulated hosted Checkout)
+       - "4060:4060" # xero (Xero identity OAuth + connections + api.xro/2.0)
+       - "4070:4070" # threecx (3CX CRM engine client: dials the AlgaPSA 3CX routes)
++      - "4080:4080" # levelio (Level v2 REST API; native webhooks + automation HTTP requests go outbound)
+       - "9500:9500" # control API + console
+     environment:
+       # Seeds (clients, users, meetings, calls) survive a container restart.
+diff --git a/packages/emulators/host/src/scenario.ts b/packages/emulators/host/src/scenario.ts
+index ec1a5a9573..235a03624c 100644
+--- a/packages/emulators/host/src/scenario.ts
++++ b/packages/emulators/host/src/scenario.ts
+@@ -87,7 +87,10 @@ async function runStep(host: EmulatorHost, step: ScenarioStep): Promise<unknown>
+     await host.instance(emulatorId).controls.armFault(name, step.params);
+     return null;
+   }
+-  const { emulatorId, name } = splitTarget(step.disarm);
+-  await host.instance(emulatorId).controls.disarmFault(name);
+-  return null;
++  if ('disarm' in step) {
++    const { emulatorId, name } = splitTarget(step.disarm);
++    await host.instance(emulatorId).controls.disarmFault(name);
++    return null;
++  }
++  throw new ControlError(400, `Unknown scenario step ${JSON.stringify(step)}`);
+ }
+diff --git a/packages/emulators/levelio/package.json b/packages/emulators/levelio/package.json
+new file mode 100644
+index 0000000000..5e3e6ba08c
+--- /dev/null
++++ b/packages/emulators/levelio/package.json
+@@ -0,0 +1,32 @@
++{
++  "name": "@alga-psa/emulator-levelio",
++  "version": "0.0.1",
++  "private": true,
++  "type": "module",
++  "main": "./dist/index.js",
++  "types": "./src/index.ts",
++  "exports": {
++    ".": {
++      "types": "./src/index.ts",
++      "import": "./dist/index.js",
++      "require": "./dist/index.cjs"
++    }
++  },
++  "scripts": {
++    "build": "tsup",
++    "typecheck": "tsc --noEmit",
++    "test": "vitest run"
++  },
++  "dependencies": {
++    "@alga-psa/emulator-host": "*",
++    "express": "^5.1.0",
++    "zod": "^3.25.67"
++  },
++  "devDependencies": {
++    "@types/express": "^5.0.3",
++    "@types/node": "^22.0.0",
++    "tsup": "^8.0.0",
++    "typescript": "^5.7.3",
++    "vitest": "^4.1.9"
++  }
++}
+diff --git a/packages/emulators/levelio/project.json b/packages/emulators/levelio/project.json
+new file mode 100644
+index 0000000000..c6fd86da0a
+--- /dev/null
++++ b/packages/emulators/levelio/project.json
+@@ -0,0 +1,43 @@
++{
++  "name": "@alga-psa/emulator-levelio",
++  "$schema": "../../../node_modules/nx/schemas/project-schema.json",
++  "sourceRoot": "packages/emulators/levelio/src",
++  "projectType": "library",
++  "tags": [
++    "scope:emulator-levelio",
++    "type:test-infra"
++  ],
++  "targets": {
++    "build": {
++      "executor": "nx:run-commands",
++      "outputs": [
++        "{projectRoot}/dist"
++      ],
++      "options": {
++        "command": "tsup",
++        "cwd": "{projectRoot}"
++      },
++      "inputs": [
++        "production",
++        "^production"
++      ]
++    },
++    "typecheck": {
++      "executor": "nx:run-commands",
++      "options": {
++        "command": "tsc --noEmit",
++        "cwd": "{projectRoot}"
++      }
++    },
++    "test": {
++      "executor": "nx:run-commands",
++      "options": {
++        "command": "vitest run",
++        "cwd": "{projectRoot}"
++      },
++      "dependsOn": [
++        "^build"
++      ]
++    }
++  }
++}
+diff --git a/packages/emulators/levelio/src/core.ts b/packages/emulators/levelio/src/core.ts
+new file mode 100644
+index 0000000000..e5cc67aa1d
+--- /dev/null
++++ b/packages/emulators/levelio/src/core.ts
+@@ -0,0 +1,916 @@
++import type { EmulatorCore, HostEnv } from '@alga-psa/emulator-host';
++
++/**
++ * Level-shaped error the wire shell serializes. Level's documented error
++ * envelope is a bare `{ "error": "<message>" }` (e.g. 401 "Access denied",
++ * 404 "Record not found").
++ */
++export class LevelWireError extends Error {
++  constructor(
++    public readonly status: number,
++    message: string,
++    public readonly headers: Record<string, string> = {},
++    public readonly code?: string,
++  ) {
++    super(message);
++    this.name = 'LevelWireError';
++  }
++
++  toEnvelope(): { error: string; code?: string } {
++    return { error: this.message, ...(this.code ? { code: this.code } : {}) };
++  }
++}
++
++// ── Vendor resources (shapes from the Level v2 OpenAPI definition) ─────────
++
++export const LEVEL_EVENT_TYPES = [
++  'alert_active',
++  'alert_resolved',
++  'device_created',
++  'device_updated',
++  'device_deleted',
++  'group_created',
++  'group_updated',
++  'group_deleted',
++] as const;
++export type LevelEventType = (typeof LEVEL_EVENT_TYPES)[number];
++
++export const LEVEL_SEVERITIES = ['information', 'warning', 'critical', 'emergency'] as const;
++export type LevelSeverity = (typeof LEVEL_SEVERITIES)[number];
++
++export interface LevelGroupRecord {
++  id: string;
++  parent_id: string | null;
++  name: string;
++}
++
++export interface LevelGroup extends LevelGroupRecord {
++  child_ids: string[];
++  device_count: number;
++  descendent_device_count: number;
++}
++
++/**
++ * Detail sections Level returns only when the matching `include_*` query
++ * parameter is `true`.
++ */
++export const DEVICE_DETAIL_SECTIONS = {
++  include_operating_system: 'operating_system',
++  include_cpus: 'cpus',
++  include_memory: 'memory',
++  include_disks: 'disks',
++  include_network_interfaces: 'network_interfaces',
++  include_motherboard: 'motherboard',
++  include_security: 'security',
++} as const;
++
++export interface LevelDevice {
++  id: string;
++  hostname: string;
++  nickname: string | null;
++  role: 'workstation' | 'server' | 'domain_controller' | null;
++  group_id: string | null;
++  tags: string[];
++  flag: string | null;
++  maintenance_mode: boolean;
++  online: boolean;
++  notes: string | null;
++  manufacturer: string | null;
++  model: string | null;
++  architecture: string | null;
++  serial_number: string | null;
++  total_memory: number | null;
++  memory_slots: number | null;
++  cpu_cores: number | null;
++  last_logged_in_user: string | null;
++  last_reboot_time: string | null;
++  last_seen_at: string | null;
++  city: string | null;
++  country: string | null;
++  security_score: number | null;
++  platform: 'Windows' | 'Mac' | 'Linux' | null;
++  operating_system?: Record<string, unknown>;
++  cpus?: Array<Record<string, unknown>>;
++  memory?: Array<Record<string, unknown>>;
++  disks?: Array<Record<string, unknown>>;
++  network_interfaces?: Array<Record<string, unknown>>;
++  motherboard?: Record<string, unknown>;
++  security?: Record<string, unknown>;
++  [key: string]: unknown;
++}
++
++/**
++ * Device facts that only surface through automation system variables
++ * (`level_device_public_ip_address`, `level_device_first_seen_at`,
++ * `level_device_restart_required`), not through the REST device schema.
++ */
++export interface LevelDeviceFacts {
++  publicIpAddress: string | null;
++  firstSeenAt: string;
++  restartRequired: boolean;
++}
++
++export interface LevelAlert {
++  id: string;
++  device_id: string;
++  device_hostname: string;
++  name: string;
++  description: string;
++  payload: string | null;
++  severity: LevelSeverity;
++  is_resolved: boolean;
++  started_at: string;
++  resolved_at: string | null;
++}
++
++export interface LevelUpdate {
++  id: string;
++  device_id: string;
++  device_hostname: string;
++  name: string;
++  description: string | null;
++  category: string;
++  version: string | null;
++  size: number;
++  kb_ids: string[];
++  is_available: boolean;
++  error: string | null;
++  published_on: string | null;
++  installed_on: string | null;
++}
++
++// ── Native webhooks (Settings → Webhooks) ─────────────────────────────────
++
++export interface LevelWebhookEndpoint {
++  id: string;
++  url: string;
++  /** Null = no secret configured, so deliveries carry no X-Level-Signature. */
++  secret: string | null;
++  eventTypes: LevelEventType[];
++  enabled: boolean;
++}
++
++export interface LevelWebhookEvent {
++  event_type: LevelEventType;
++  event_id: string;
++  occurred_at: string;
++  data: Record<string, unknown>;
++}
++
++export type DeliveryTrigger = 'initial' | 'retry' | 'rerun';
++
++export interface WebhookDeliveryRecord {
++  id: number;
++  webhookId: string;
++  eventId: string;
++  eventType: LevelEventType;
++  trigger: DeliveryTrigger;
++  /** 1 for the first send; automatic retries count up from there. */
++  attempt: number;
++  url: string;
++  signature: string | null;
++  status: number;
++  ok: boolean;
++  response: string;
++  error?: string;
++  deliveredAt: string;
++  nextRetryAt: string | null;
++}
++
++export interface PendingRetry {
++  webhookId: string;
++  eventId: string;
++  attempt: number;
++  dueAtMs: number;
++}
++
++// ── Automations: monitor remediation → HTTP Request action ────────────────
++
++export const HTTP_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'] as const;
++export type HttpMethod = (typeof HTTP_METHODS)[number];
++export const HTTP_CONTENT_TYPES = ['application/json', 'text/plain', 'application/x-www-form-urlencoded'] as const;
++export type HttpContentType = (typeof HTTP_CONTENT_TYPES)[number];
++
++export interface HttpRequestAction {
++  url: string;
++  method: HttpMethod;
++  contentType: HttpContentType;
++  headers: Array<{ key: string; value: string }>;
++  body: string;
++}
++
++export interface LevelAutomation {
++  id: string;
++  name: string;
++  enabled: boolean;
++  /** Monitor trigger: fires when a matching alert becomes active. */
++  trigger: {
++    type: 'monitor';
++    /** Alert names this monitor raises; empty = every alert. */
++    alertNames: string[];
++    /** Limit to devices in these groups (or their descendants); empty = all. */
++    groupIds: string[];
++  };
++  action: HttpRequestAction;
++  /** Automation variables available to `{{name}}` alongside system variables. */
++  variables: Record<string, string>;
++  /** Extra attempts after a failed (non-2xx / network) action. */
++  retries: number;
++}
++
++export interface AutomationRunRecord {
++  id: number;
++  automationId: string;
++  alertId: string | null;
++  deviceId: string;
++  attempt: number;
++  request: { method: HttpMethod; url: string; headers: Record<string, string>; body: string };
++  /** `{{tokens}}` that matched no variable and were sent literally. */
++  unresolvedVariables: string[];
++  status: number;
++  ok: boolean;
++  response: string;
++  error?: string;
++  ranAt: string;
++}
++
++export interface OperationFault {
++  /** "GET /v2/devices", or "*" for every vendor operation. */
++  operation: string;
++  status: number;
++  message: string;
++  retryAfterSeconds: number | null;
++  remaining: number;
++}
++
++export interface LevelConfig {
++  apiKeys: string[];
++  /** Automatic webhook retries after the first failed attempt. */
++  webhookMaxRetries: number;
++  /** First retry delay; doubles per attempt, plus up to `retryJitterMs`. */
++  retryBaseDelayMs: number;
++  retryJitterMs: number;
++  /** Background delivery of due retries as wall/virtual time passes. */
++  autoRetry: boolean;
++}
++
++export interface ListPage<T> {
++  data: T[];
++  has_more: boolean;
++}
++
++const DEFAULT_API_KEY = 'algasim-level-key';
++
++function defaultConfig(): LevelConfig {
++  return {
++    apiKeys: [DEFAULT_API_KEY],
++    // Level: "Failed deliveries are automatically retried up to 3 times" with
++    // "exponential backoff with jitter (2+ minutes between attempts)".
++    webhookMaxRetries: 3,
++    retryBaseDelayMs: 2 * 60_000,
++    retryJitterMs: 30_000,
++    autoRetry: true,
++  };
++}
++
++/** Level ids are unpadded base64 of a GraphQL global id, e.g. gid://level/Device/1. */
++export function levelGid(type: string, n: number): string {
++  return Buffer.from(`gid://level/${type}/${n}`, 'utf8').toString('base64').replace(/=+$/, '');
++}
++
++interface Counters {
++  group: number;
++  device: number;
++  alert: number;
++  update: number;
++  tag: number;
++  webhook: number;
++  automation: number;
++  delivery: number;
++  run: number;
++}
++
++function zeroCounters(): Counters {
++  return { group: 0, device: 0, alert: 0, update: 0, tag: 0, webhook: 0, automation: 0, delivery: 0, run: 0 };
++}
++
++export interface LevelSnapshot {
++  config: LevelConfig;
++  groups: LevelGroupRecord[];
++  devices: LevelDevice[];
++  deviceFacts: Array<[string, LevelDeviceFacts]>;
++  alerts: LevelAlert[];
++  alertWebhookExtras: Array<[string, Record<string, unknown>]>;
++  updates: LevelUpdate[];
++  tags: Array<[string, string]>;
++  webhooks: LevelWebhookEndpoint[];
++  automations: LevelAutomation[];
++  counters: Counters;
++}
++
++/**
++ * Deterministic Level-shaped state machine. No I/O, no wall time
++ * (`env.clock`), no `Math.random()` (`env.rng`). The wire shell adapts these
++ * operations to Level's v2 REST surface; the dispatcher performs outbound
++ * webhook and automation HTTP.
++ */
++export class LevelEmulatorCore implements EmulatorCore {
++  readonly env: HostEnv;
++  config: LevelConfig = defaultConfig();
++
++  /** Insertion order is list order, which is what cursor pagination walks. */
++  readonly groups = new Map<string, LevelGroupRecord>();
++  readonly devices = new Map<string, LevelDevice>();
++  readonly deviceFacts = new Map<string, LevelDeviceFacts>();
++  readonly alerts = new Map<string, LevelAlert>();
++  /** Per-alert extra fields merged into webhook `data` (unverified shape). */
++  readonly alertWebhookExtras = new Map<string, Record<string, unknown>>();
++  readonly updates = new Map<string, LevelUpdate>();
++  /** Tag name → tag id. */
++  readonly tags = new Map<string, string>();
++
++  readonly webhooks = new Map<string, LevelWebhookEndpoint>();
++  readonly events = new Map<string, LevelWebhookEvent>();
++  readonly deliveries: WebhookDeliveryRecord[] = [];
++  pendingRetries: PendingRetry[] = [];
++
++  readonly automations = new Map<string, LevelAutomation>();
++  readonly automationRuns: AutomationRunRecord[] = [];
++
++  readonly operationFaults: OperationFault[] = [];
++
++  private counters: Counters = zeroCounters();
++
++  constructor(env: HostEnv) {
++    this.env = env;
++  }
++
++  reset(): void {
++    this.config = defaultConfig();
++    this.groups.clear();
++    this.devices.clear();
++    this.deviceFacts.clear();
++    this.alerts.clear();
++    this.alertWebhookExtras.clear();
++    this.updates.clear();
++    this.tags.clear();
++    this.webhooks.clear();
++    this.events.clear();
++    this.deliveries.length = 0;
++    this.pendingRetries = [];
++    this.automations.clear();
++    this.automationRuns.length = 0;
++    this.operationFaults.length = 0;
++    this.counters = zeroCounters();
++  }
++
++  snapshot(): LevelSnapshot {
++    return structuredClone({
++      config: this.config,
++      groups: [...this.groups.values()],
++      devices: [...this.devices.values()],
++      deviceFacts: [...this.deviceFacts.entries()],
++      alerts: [...this.alerts.values()],
++      alertWebhookExtras: [...this.alertWebhookExtras.entries()],
++      updates: [...this.updates.values()],
++      tags: [...this.tags.entries()],
++      webhooks: [...this.webhooks.values()],
++      automations: [...this.automations.values()],
++      counters: this.counters,
++    });
++  }
++
++  restore(state: unknown): void {
++    const snap = structuredClone(state) as LevelSnapshot;
++    this.reset();
++    this.config = { ...defaultConfig(), ...snap.config };
++    for (const group of snap.groups ?? []) this.groups.set(group.id, group);
++    for (const device of snap.devices ?? []) this.devices.set(device.id, device);
++    for (const [id, facts] of snap.deviceFacts ?? []) this.deviceFacts.set(id, facts);
++    for (const alert of snap.alerts ?? []) this.alerts.set(alert.id, alert);
++    for (const [id, extra] of snap.alertWebhookExtras ?? []) this.alertWebhookExtras.set(id, extra);
++    for (const update of snap.updates ?? []) this.updates.set(update.id, update);
++    for (const [name, id] of snap.tags ?? []) this.tags.set(name, id);
++    for (const webhook of snap.webhooks ?? []) this.webhooks.set(webhook.id, webhook);
++    for (const automation of snap.automations ?? []) this.automations.set(automation.id, automation);
++    this.counters = { ...zeroCounters(), ...snap.counters };
++  }
++
++  now(): Date {
++    return this.env.clock.now();
++  }
++
++  private nextId(kind: keyof Counters, type: string): string {
++    this.counters[kind] += 1;
++    return levelGid(type, this.counters[kind]);
++  }
++
++  /** RFC 4122 v4 UUID from the seeded PRNG, so event ids replay. */
++  uuid(): string {
++    const bytes = Array.from({ length: 16 }, () => Math.floor(this.env.rng() * 256));
++    bytes[6] = (bytes[6] & 0x0f) | 0x40;
++    bytes[8] = (bytes[8] & 0x3f) | 0x80;
++    const hex = bytes.map((b) => b.toString(16).padStart(2, '0')).join('');
++    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
++  }
++
++  configure(patch: Partial<LevelConfig>): LevelConfig {
++    this.config = { ...this.config, ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)) };
++    return this.config;
++  }
++
++  // ── Auth ──────────────────────────────────────────────────────────────────
++
++  /**
++   * Level's security scheme is an apiKey in the `Authorization` header: the
++   * raw key, no scheme prefix. A `Bearer <key>` value is not the documented
++   * form and is rejected rather than silently accepted.
++   */
++  authenticate(authorization: string | undefined): void {
++    const key = (authorization ?? '').trim();
++    if (!key || !this.config.apiKeys.includes(key)) {
++      throw new LevelWireError(401, 'Access denied');
++    }
++  }
++
++  // ── Operation faults ──────────────────────────────────────────────────────
++
++  armOperationFault(fault: OperationFault): void {
++    this.operationFaults.push({ ...fault });
++  }
++
++  disarmOperationFaults(): void {
++    this.operationFaults.length = 0;
++  }
++
++  /** Consumes one use of the first fault matching the operation. */
++  consumeOperationFault(operation: string): OperationFault | null {
++    const index = this.operationFaults.findIndex((f) => f.operation === '*' || f.operation === operation);
++    if (index < 0) return null;
++    const fault = this.operationFaults[index];
++    fault.remaining -= 1;
++    if (fault.remaining <= 0) this.operationFaults.splice(index, 1);
++    return { ...fault };
++  }
++
++  // ── Groups ────────────────────────────────────────────────────────────────
++
++  private childIds(groupId: string): string[] {
++    return [...this.groups.values()].filter((g) => g.parent_id === groupId).map((g) => g.id);
++  }
++
++  /** The group and every group below it. */
++  descendantGroupIds(groupId: string): Set<string> {
++    const ids = new Set<string>([groupId]);
++    const queue = [groupId];
++    while (queue.length) {
++      for (const child of this.childIds(queue.shift()!)) {
++        if (!ids.has(child)) {
++          ids.add(child);
++          queue.push(child);
++        }
++      }
++    }
++    return ids;
++  }
++
++  presentGroup(record: LevelGroupRecord): LevelGroup {
++    const descendants = this.descendantGroupIds(record.id);
++    const devices = [...this.devices.values()];
++    return {
++      id: record.id,
++      parent_id: record.parent_id,
++      child_ids: this.childIds(record.id),
++      name: record.name,
++      device_count: devices.filter((d) => d.group_id === record.id).length,
++      descendent_device_count: devices.filter((d) => d.group_id && descendants.has(d.group_id)).length,
++    };
++  }
++
++  getGroup(id: string): LevelGroupRecord {
++    const group = this.groups.get(id);
++    if (!group) throw new LevelWireError(404, 'Record not found');
++    return group;
++  }
++
++  createGroup(input: { id?: string; name: string; parentId?: string | null }): LevelGroupRecord {
++    if (input.parentId) this.getGroup(input.parentId);
++    const id = input.id ?? this.nextId('group', 'DeviceGroup');
++    if (this.groups.has(id)) throw new LevelWireError(409, `Group ${id} already exists`);
++    const group: LevelGroupRecord = { id, name: input.name, parent_id: input.parentId ?? null };
++    this.groups.set(id, group);
++    return group;
++  }
++
++  updateGroup(id: string, patch: { name?: string; parentId?: string | null }): LevelGroupRecord {
++    const group = this.getGroup(id);
++    if (patch.parentId !== undefined) {
++      if (patch.parentId && this.descendantGroupIds(id).has(patch.parentId)) {
++        throw new LevelWireError(422, 'A group cannot be moved beneath itself');
++      }
++      if (patch.parentId) this.getGroup(patch.parentId);
++      group.parent_id = patch.parentId;
++    }
++    if (patch.name !== undefined) group.name = patch.name;
++    return group;
++  }
++
++  /** Deletes the group; its children move up to its parent, its devices become ungrouped. */
++  deleteGroup(id: string): LevelGroup {
++    const group = this.getGroup(id);
++    const presented = this.presentGroup(group);
++    for (const child of this.groups.values()) {
++      if (child.parent_id === id) child.parent_id = group.parent_id;
++    }
++    for (const device of this.devices.values()) {
++      if (device.group_id === id) device.group_id = null;
++    }
++    this.groups.delete(id);
++    return presented;
++  }
++
++  /** "HQ / Servers" — root first, as `level_group_path` renders it. */
++  groupPath(groupId: string | null): string {
++    const names: string[] = [];
++    let cursor = groupId ? this.groups.get(groupId) : undefined;
++    const seen = new Set<string>();
++    while (cursor && !seen.has(cursor.id)) {
++      seen.add(cursor.id);
++      names.unshift(cursor.name);
++      cursor = cursor.parent_id ? this.groups.get(cursor.parent_id) : undefined;
++    }
++    return names.join(' / ');
++  }
++
++  // ── Devices ───────────────────────────────────────────────────────────────
++
++  tagId(name: string): string {
++    let id = this.tags.get(name);
++    if (!id) {
++      id = this.nextId('tag', 'Tag');
++      this.tags.set(name, id);
++    }
++    return id;
++  }
++
++  getDevice(id: string): LevelDevice {
++    const device = this.devices.get(id);
++    if (!device) throw new LevelWireError(404, 'Record not found');
++    return device;
++  }
++
++  createDevice(input: Partial<LevelDevice> & { hostname: string } & {
++    publicIpAddress?: string | null;
++    restartRequired?: boolean;
++  }): LevelDevice {
++    const { publicIpAddress, restartRequired, ...fields } = input;
++    if (fields.group_id) this.getGroup(fields.group_id);
++    const id = fields.id ?? this.nextId('device', 'Device');
++    if (this.devices.has(id)) throw new LevelWireError(409, `Device ${id} already exists`);
++    const now = this.now().toISOString();
++    const device: LevelDevice = {
++      nickname: null,
++      role: 'workstation',
++      group_id: null,
++      tags: [],
++      flag: null,
++      maintenance_mode: false,
++      online: true,
++      notes: null,
++      manufacturer: null,
++      model: null,
++      architecture: null,
++      serial_number: null,
++      total_memory: null,
++      memory_slots: null,
++      cpu_cores: null,
++      last_logged_in_user: null,
++      last_reboot_time: null,
++      last_seen_at: now,
++      city: null,
++      country: null,
++      security_score: null,
++      platform: 'Windows',
++      ...fields,
++      id,
++      hostname: fields.hostname,
++    };
++    for (const tag of device.tags) this.tagId(tag);
++    this.devices.set(id, device);
++    this.deviceFacts.set(id, {
++      publicIpAddress: publicIpAddress ?? null,
++      firstSeenAt: now,
++      restartRequired: restartRequired ?? false,
++    });
++    return device;
++  }
++
++  updateDevice(id: string, patch: Partial<LevelDevice> & { publicIpAddress?: string | null; restartRequired?: boolean }): LevelDevice {
++    const device = this.getDevice(id);
++    const { publicIpAddress, restartRequired, id: _ignored, ...fields } = patch;
++    if (fields.group_id) this.getGroup(fields.group_id);
++    Object.assign(device, fields);
++    for (const tag of device.tags) this.tagId(tag);
++    const facts = this.deviceFacts.get(id)!;
++    if (publicIpAddress !== undefined) facts.publicIpAddress = publicIpAddress;
++    if (restartRequired !== undefined) facts.restartRequired = restartRequired;
++    return device;
++  }
++
++  deleteDevice(id: string): LevelDevice {
++    const device = this.getDevice(id);
++    this.devices.delete(id);
++    this.deviceFacts.delete(id);
++    return device;
++  }
++
++  /** The agent reports in: online, and last seen now. */
++  checkIn(id: string): LevelDevice {
++    const device = this.getDevice(id);
++    device.online = true;
++    device.last_seen_at = this.now().toISOString();
++    return device;
++  }
++
++  /** The agent stops reporting: last_seen_at freezes at this moment. */
++  goOffline(id: string): LevelDevice {
++    const device = this.getDevice(id);
++    if (device.online) device.last_seen_at = this.now().toISOString();
++    device.online = false;
++    return device;
++  }
++
++  /**
++   * The device as the API returns it. `last_seen_at` "Returns the current
++   * time if the device is online", and detail sections appear only when their
++   * include flag is set (pass `null` for every section, as webhooks carry).
++   */
++  presentDevice(device: LevelDevice, include: Record<string, unknown> | null): LevelDevice {
++    const out: LevelDevice = structuredClone(device);
++    if (out.online) out.last_seen_at = this.now().toISOString();
++    if (include) {
++      for (const [flag, section] of Object.entries(DEVICE_DETAIL_SECTIONS)) {
++        if (String(include[flag]) !== 'true') delete out[section];
++      }
++    }
++    return out;
++  }
++
++  // ── Alerts ────────────────────────────────────────────────────────────────
++
++  getAlert(id: string): LevelAlert {
++    const alert = this.alerts.get(id);
++    if (!alert) throw new LevelWireError(404, 'Record not found');
++    return alert;
++  }
++
++  raiseAlert(input: {
++    deviceId: string;
++    name: string;
++    description?: string;
++    payload?: string | null;
++    severity?: LevelSeverity;
++    id?: string;
++    webhookDataExtra?: Record<string, unknown>;
++  }): LevelAlert {
++    const device = this.getDevice(input.deviceId);
++    const id = input.id ?? this.nextId('alert', 'Alert');
++    if (this.alerts.has(id)) throw new LevelWireError(409, `Alert ${id} already exists`);
++    const alert: LevelAlert = {
++      id,
++      device_id: device.id,
++      device_hostname: device.hostname,
++      name: input.name,
++      description: input.description ?? '',
++      payload: input.payload ?? null,
++      severity: input.severity ?? 'warning',
++      is_resolved: false,
++      started_at: this.now().toISOString(),
++      resolved_at: null,
++    };
++    this.alerts.set(id, alert);
++    if (input.webhookDataExtra) this.alertWebhookExtras.set(id, input.webhookDataExtra);
++    return alert;
++  }
++
++  /** Returns the alert and whether this call changed it (re-resolving is a no-op). */
++  resolveAlert(id: string): { alert: LevelAlert; changed: boolean } {
++    const alert = this.getAlert(id);
++    if (alert.is_resolved) return { alert, changed: false };
++    alert.is_resolved = true;
++    alert.resolved_at = this.now().toISOString();
++    return { alert, changed: true };
++  }
++
++  // ── Updates ───────────────────────────────────────────────────────────────
++
++  createUpdate(input: Partial<LevelUpdate> & { deviceId: string; name: string }): LevelUpdate {
++    const device = this.getDevice(input.deviceId);
++    const { deviceId: _deviceId, ...fields } = input;
++    const update: LevelUpdate = {
++      description: null,
++      category: 'Security Updates',
++      version: null,
++      size: 0,
++      kb_ids: [],
++      is_available: true,
++      error: null,
++      published_on: null,
++      installed_on: null,
++      ...fields,
++      id: fields.id ?? this.nextId('update', 'Update'),
++      device_id: device.id,
++      device_hostname: device.hostname,
++      name: input.name,
++    };
++    this.updates.set(update.id, update);
++    return update;
++  }
++
++  getUpdate(id: string): LevelUpdate {
++    const update = this.updates.get(id);
++    if (!update) throw new LevelWireError(404, 'Record not found');
++    return update;
++  }
++
++  // ── Cursor pagination ─────────────────────────────────────────────────────
++
++  /**
++   * Level list semantics: `limit` 1–100 (default 20), `starting_after` /
++   * `ending_before` item-id cursors, `{ data, has_more }`. An out-of-range
++   * limit or an unknown cursor is rejected; Level does not document the
++   * rejection envelope, so the 400 here is an emulator choice.
++   */
++  paginate<T extends { id: string }>(items: T[], query: Record<string, unknown>): ListPage<T> {
++    const rawLimit = query.limit;
++    let limit = 20;
++    if (rawLimit !== undefined && rawLimit !== '') {
++      limit = Number(rawLimit);
++      if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
++        throw new LevelWireError(400, 'limit must be an integer between 1 and 100');
++      }
++    }
++    const startingAfter = typeof query.starting_after === 'string' && query.starting_after ? query.starting_after : null;
++    const endingBefore = typeof query.ending_before === 'string' && query.ending_before ? query.ending_before : null;
++    if (startingAfter && endingBefore) {
++      throw new LevelWireError(400, 'starting_after and ending_before cannot be combined');
++    }
++    if (endingBefore) {
++      const index = items.findIndex((item) => item.id === endingBefore);
++      if (index < 0) throw new LevelWireError(400, `Invalid ending_before cursor: ${endingBefore}`);
++      const start = Math.max(0, index - limit);
++      return { data: items.slice(start, index), has_more: start > 0 };
++    }
++    let start = 0;
++    if (startingAfter) {
++      const index = items.findIndex((item) => item.id === startingAfter);
++      if (index < 0) throw new LevelWireError(400, `Invalid starting_after cursor: ${startingAfter}`);
++      start = index + 1;
++    }
++    return { data: items.slice(start, start + limit), has_more: start + limit < items.length };
++  }
++
++  // ── Native webhooks ───────────────────────────────────────────────────────
++
++  registerWebhook(input: {
++    id?: string;
++    url: string;
++    secret?: string | null;
++    eventTypes?: LevelEventType[];
++    enabled?: boolean;
++  }): LevelWebhookEndpoint {
++    this.counters.webhook += 1;
++    const webhook: LevelWebhookEndpoint = {
++      id: input.id ?? `webhook-${this.counters.webhook}`,
++      url: input.url,
++      secret: input.secret ? input.secret : null,
++      eventTypes: input.eventTypes && input.eventTypes.length ? [...input.eventTypes] : [...LEVEL_EVENT_TYPES],
++      enabled: input.enabled ?? true,
++    };
++    this.webhooks.set(webhook.id, webhook);
++    return webhook;
++  }
++
++  getWebhook(id: string): LevelWebhookEndpoint {
++    const webhook = this.webhooks.get(id);
++    if (!webhook) throw new LevelWireError(404, `Unknown webhook ${id}`);
++    return webhook;
++  }
++
++  /** Records an event; delivery is the dispatcher's job. */
++  emitEvent(eventType: LevelEventType, data: object): LevelWebhookEvent {
++    const event: LevelWebhookEvent = {
++      event_type: eventType,
++      event_id: this.uuid(),
++      occurred_at: this.now().toISOString(),
++      // Snapshot at emission: retries and re-runs resend the original data.
++      data: structuredClone(data) as Record<string, unknown>,
++    };
++    this.events.set(event.event_id, event);
++    return event;
++  }
++
++  alertEventData(alert: LevelAlert): Record<string, unknown> {
++    return { ...alert, ...(this.alertWebhookExtras.get(alert.id) ?? {}) };
++  }
++
++  subscribers(eventType: LevelEventType): LevelWebhookEndpoint[] {
++    return [...this.webhooks.values()].filter((w) => w.enabled && w.eventTypes.includes(eventType));
++  }
++
++  /** The exact bytes Level sends (and signs) for an event. */
++  serializeEvent(event: LevelWebhookEvent): string {
++    return JSON.stringify(event);
++  }
++
++  recordDelivery(input: Omit<WebhookDeliveryRecord, 'id' | 'deliveredAt' | 'nextRetryAt'>): WebhookDeliveryRecord {
++    this.counters.delivery += 1;
++    let nextRetryAt: string | null = null;
++    const retriesUsed = input.attempt - 1;
++    if (!input.ok && input.trigger !== 'rerun' && retriesUsed < this.config.webhookMaxRetries) {
++      const dueAtMs = this.now().getTime() + this.retryDelayMs(input.attempt);
++      this.pendingRetries.push({ webhookId: input.webhookId, eventId: input.eventId, attempt: input.attempt + 1, dueAtMs });
++      nextRetryAt = new Date(dueAtMs).toISOString();
++    }
++    const record: WebhookDeliveryRecord = {
++      ...input,
++      id: this.counters.delivery,
++      deliveredAt: this.now().toISOString(),
++      nextRetryAt,
++    };
++    this.deliveries.push(record);
++    return record;
++  }
++
++  /** Exponential backoff with jitter: base, 2×base, 4×base … plus [0, jitter). */
++  retryDelayMs(failedAttempt: number): number {
++    return this.config.retryBaseDelayMs * 2 ** (failedAttempt - 1) + Math.floor(this.env.rng() * this.config.retryJitterMs);
++  }
++
++  /** Removes and returns retries due at `nowMs` — atomically, so two flushers never double-send. */
++  takeDueRetries(nowMs: number): PendingRetry[] {
++    const due = this.pendingRetries.filter((r) => r.dueAtMs <= nowMs);
++    this.pendingRetries = this.pendingRetries.filter((r) => r.dueAtMs > nowMs);
++    return due.sort((a, b) => a.dueAtMs - b.dueAtMs);
++  }
++
++  // ── Automations ───────────────────────────────────────────────────────────
++
++  createAutomation(input: {
++    id?: string;
++    name: string;
++    enabled?: boolean;
++    alertNames?: string[];
++    groupIds?: string[];
++    action: Partial<HttpRequestAction> & { url: string };
++    variables?: Record<string, string>;
++    retries?: number;
++  }): LevelAutomation {
++    this.counters.automation += 1;
++    const automation: LevelAutomation = {
++      id: input.id ?? `automation-${this.counters.automation}`,
++      name: input.name,
++      enabled: input.enabled ?? true,
++      trigger: { type: 'monitor', alertNames: input.alertNames ?? [], groupIds: input.groupIds ?? [] },
++      action: {
++        method: 'POST',
++        contentType: 'application/json',
++        headers: [],
++        body: '',
++        ...input.action,
++      },
++      variables: { ...(input.variables ?? {}) },
++      retries: input.retries ?? 0,
++    };
++    this.automations.set(automation.id, automation);
++    return automation;
++  }
++
++  getAutomation(id: string): LevelAutomation {
++    const automation = this.automations.get(id);
++    if (!automation) throw new LevelWireError(404, `Unknown automation ${id}`);
++    return automation;
++  }
++
++  /** Automations whose monitor trigger matches an alert that just became active. */
++  automationsForAlert(alert: LevelAlert): LevelAutomation[] {
++    const device = this.devices.get(alert.device_id);
++    return [...this.automations.values()].filter((automation) => {
++      if (!automation.enabled) return false;
++      const { alertNames, groupIds } = automation.trigger;
++      if (alertNames.length && !alertNames.includes(alert.name)) return false;
++      if (groupIds.length) {
++        if (!device?.group_id) return false;
++        return groupIds.some((groupId) => this.descendantGroupIds(groupId).has(device.group_id!));
++      }
++      return true;
++    });
++  }
++
++  recordAutomationRun(input: Omit<AutomationRunRecord, 'id' | 'ranAt'>): AutomationRunRecord {
++    this.counters.run += 1;
++    const record: AutomationRunRecord = { ...input, id: this.counters.run, ranAt: this.now().toISOString() };
++    this.automationRuns.push(record);
++    return record;
++  }
++}
+diff --git a/packages/emulators/levelio/src/dispatcher.ts b/packages/emulators/levelio/src/dispatcher.ts
+new file mode 100644
+index 0000000000..5530f08f43
+--- /dev/null
++++ b/packages/emulators/levelio/src/dispatcher.ts
+@@ -0,0 +1,214 @@
++import { createHmac } from 'node:crypto';
++import type {
++  AutomationRunRecord,
++  DeliveryTrigger,
++  LevelAlert,
++  LevelAutomation,
++  LevelEmulatorCore,
++  LevelWebhookEndpoint,
++  LevelWebhookEvent,
++  WebhookDeliveryRecord,
++} from './core';
++import { renderTemplate, systemVariables } from './variables';
++
++/** Level asks receivers to answer within 10 seconds. */
++const DELIVERY_TIMEOUT_MS = 10_000;
++const RESPONSE_EXCERPT = 500;
++
++/** `sha256=<lowercase hex HMAC-SHA256 of the raw body>`, as X-Level-Signature carries it. */
++export function signLevelPayload(rawBody: string, secret: string): string {
++  return `sha256=${createHmac('sha256', secret).update(rawBody, 'utf8').digest('hex')}`;
++}
++
++interface HttpOutcome {
++  status: number;
++  ok: boolean;
++  response: string;
++  error?: string;
++}
++
++async function send(url: string, init: { method: string; headers: Record<string, string>; body?: string }): Promise<HttpOutcome> {
++  try {
++    const res = await fetch(url, {
++      method: init.method,
++      headers: init.headers,
++      body: init.body,
++      // A redirect is a failed delivery; the Location is not followed.
++      redirect: 'manual',
++      signal: AbortSignal.timeout(DELIVERY_TIMEOUT_MS),
++    });
++    const response = (await res.text()).slice(0, RESPONSE_EXCERPT);
++    return { status: res.status, ok: res.status >= 200 && res.status < 300, response };
++  } catch (error) {
++    return { status: 0, ok: false, response: '', error: error instanceof Error ? error.message : String(error) };
++  }
++}
++
++/**
++ * Sends one event to one endpoint. Native webhooks carry only Level's own
++ * headers: there is no way to add a custom header (so no X-Alga-Webhook-Secret),
++ * and X-Level-Signature is present only when the endpoint has a secret.
++ */
++async function deliverTo(
++  core: LevelEmulatorCore,
++  webhook: LevelWebhookEndpoint,
++  event: LevelWebhookEvent,
++  trigger: DeliveryTrigger,
++  attempt: number,
++): Promise<WebhookDeliveryRecord> {
++  const rawBody = core.serializeEvent(event);
++  const signature = webhook.secret ? signLevelPayload(rawBody, webhook.secret) : null;
++  const headers: Record<string, string> = { 'content-type': 'application/json' };
++  if (signature) headers['x-level-signature'] = signature;
++  const outcome = await send(webhook.url, { method: 'POST', headers, body: rawBody });
++  const record = core.recordDelivery({
++    webhookId: webhook.id,
++    eventId: event.event_id,
++    eventType: event.event_type,
++    trigger,
++    attempt,
++    url: webhook.url,
++    signature,
++    ...outcome,
++  });
++  core.env.log('levelio webhook delivery', {
++    webhookId: webhook.id,
++    eventType: event.event_type,
++    eventId: event.event_id,
++    attempt,
++    trigger,
++    status: outcome.status,
++  });
++  return record;
++}
++
++/** First delivery of an event to every enabled endpoint subscribed to its type. */
++export async function deliverEvent(core: LevelEmulatorCore, event: LevelWebhookEvent): Promise<WebhookDeliveryRecord[]> {
++  const records: WebhookDeliveryRecord[] = [];
++  for (const webhook of core.subscribers(event.event_type)) {
++    records.push(await deliverTo(core, webhook, event, 'initial', 1));
++  }
++  return records;
++}
++
++/** "Re-run request": resend a recorded delivery's event — same event_id, same bytes. */
++export async function rerunDelivery(core: LevelEmulatorCore, deliveryId: number): Promise<WebhookDeliveryRecord> {
++  const original = core.deliveries.find((d) => d.id === deliveryId);
++  if (!original) throw new Error(`Unknown delivery ${deliveryId}`);
++  const event = core.events.get(original.eventId)!;
++  const webhook = core.getWebhook(original.webhookId);
++  return deliverTo(core, webhook, event, 'rerun', original.attempt);
++}
++
++/** Delivers every automatic retry due at the current virtual time. */
++export async function flushDueRetries(core: LevelEmulatorCore): Promise<WebhookDeliveryRecord[]> {
++  const records: WebhookDeliveryRecord[] = [];
++  for (const retry of core.takeDueRetries(core.now().getTime())) {
++    const event = core.events.get(retry.eventId);
++    const webhook = core.webhooks.get(retry.webhookId);
++    // A deleted or disabled endpoint, or a reset, drops the remaining retries.
++    if (!event || !webhook || !webhook.enabled) continue;
++    records.push(await deliverTo(core, webhook, event, 'retry', retry.attempt));
++  }
++  return records;
++}
++
++/**
++ * Background retry pump: delivers due retries as wall or virtual time passes.
++ * The timer is unref'd so it never holds a process open.
++ */
++export function startRetryPump(core: LevelEmulatorCore, intervalMs = 500): () => void {
++  let running = false;
++  const timer = setInterval(() => {
++    if (running || !core.config.autoRetry || core.pendingRetries.length === 0) return;
++    running = true;
++    flushDueRetries(core)
++      .catch((error) => core.env.log('levelio retry pump failed', { error: String(error) }))
++      .finally(() => {
++        running = false;
++      });
++  }, intervalMs);
++  timer.unref?.();
++  return () => clearInterval(timer);
++}
++
++/**
++ * The automation HTTP Request action, rendered for a device: URL, header keys
++ * and values, and body all go through variable rendering.
++ */
++export async function runAutomation(
++  core: LevelEmulatorCore,
++  automation: LevelAutomation,
++  context: { deviceId: string; alert: LevelAlert | null },
++): Promise<AutomationRunRecord[]> {
++  const variables = { ...automation.variables, ...systemVariables(core, context.deviceId) };
++  const unresolved = new Set<string>();
++  const render = (template: string) => {
++    const result = renderTemplate(template, variables);
++    result.unresolved.forEach((name) => unresolved.add(name));
++    return result.text;
++  };
++
++  const { action } = automation;
++  const url = render(action.url);
++  const headers: Record<string, string> = {};
++  if (action.method !== 'GET') headers['content-type'] = action.contentType;
++  for (const { key, value } of action.headers) {
++    const name = render(key).trim();
++    if (name) headers[name.toLowerCase()] = render(value);
++  }
++  const body = action.method === 'GET' ? '' : render(action.body);
++
++  const runs: AutomationRunRecord[] = [];
++  for (let attempt = 1; attempt <= 1 + automation.retries; attempt += 1) {
++    const outcome = await send(url, {
++      method: action.method,
++      headers,
++      body: action.method === 'GET' ? undefined : body,
++    });
++    const run = core.recordAutomationRun({
++      automationId: automation.id,
++      alertId: context.alert?.id ?? null,
++      deviceId: context.deviceId,
++      attempt,
++      request: { method: action.method, url, headers, body },
++      unresolvedVariables: [...unresolved],
++      ...outcome,
++    });
++    core.env.log('levelio automation http request', {
++      automationId: automation.id,
++      attempt,
++      status: outcome.status,
++      unresolved: run.unresolvedVariables,
++    });
++    runs.push(run);
++    if (outcome.ok) break;
++  }
++  return runs;
++}
++
++export interface AlertFiredResult {
++  alert: LevelAlert;
++  event: LevelWebhookEvent;
++  deliveries: WebhookDeliveryRecord[];
++  automationRuns: AutomationRunRecord[];
++}
++
++/**
++ * An alert becoming active: emits alert_active to native webhooks, then runs
++ * every monitor automation whose trigger matches (the remediation path).
++ */
++export async function onAlertActive(core: LevelEmulatorCore, alert: LevelAlert): Promise<AlertFiredResult> {
++  const event = core.emitEvent('alert_active', core.alertEventData(alert));
++  const deliveries = await deliverEvent(core, event);
++  const automationRuns: AutomationRunRecord[] = [];
++  for (const automation of core.automationsForAlert(alert)) {
++    automationRuns.push(...(await runAutomation(core, automation, { deviceId: alert.device_id, alert })));
++  }
++  return { alert, event, deliveries, automationRuns };
++}
++
++export async function onAlertResolved(core: LevelEmulatorCore, alert: LevelAlert) {
++  const event = core.emitEvent('alert_resolved', core.alertEventData(alert));
++  return { alert, event, deliveries: await deliverEvent(core, event) };
++}
+diff --git a/packages/emulators/levelio/src/index.ts b/packages/emulators/levelio/src/index.ts
+new file mode 100644
+index 0000000000..d9d8036c6c
+--- /dev/null
++++ b/packages/emulators/levelio/src/index.ts
+@@ -0,0 +1,42 @@
++import type { EmulatorPackage } from '@alga-psa/emulator-host';
++import { LevelEmulatorCore } from './core';
++import { register } from './register';
++import { wire } from './wire';
++
++const levelioEmulator: EmulatorPackage<LevelEmulatorCore> = {
++  id: 'levelio',
++  displayName: 'Level',
++  defaultPort: 4080,
++  createCore: (env) => new LevelEmulatorCore(env),
++  wire,
++  register,
++};
++
++export default levelioEmulator;
++export { levelioEmulator as emulator };
++export { LevelEmulatorCore, LevelWireError, levelGid, LEVEL_EVENT_TYPES, LEVEL_SEVERITIES } from './core';
++export {
++  deliverEvent,
++  flushDueRetries,
++  onAlertActive,
++  onAlertResolved,
++  rerunDelivery,
++  runAutomation,
++  signLevelPayload,
++} from './dispatcher';
++export { renderTemplate, systemVariables, SYSTEM_VARIABLE_NAMES, formatMemory } from './variables';
++export type {
++  AutomationRunRecord,
++  HttpRequestAction,
++  LevelAlert,
++  LevelAutomation,
++  LevelDevice,
++  LevelEventType,
++  LevelGroup,
++  LevelSeverity,
++  LevelUpdate,
++  LevelWebhookEndpoint,
++  LevelWebhookEvent,
++  WebhookDeliveryRecord,
++} from './core';
++export { retargetScenario } from './scenarios';
+diff --git a/packages/emulators/levelio/src/register.ts b/packages/emulators/levelio/src/register.ts
+new file mode 100644
+index 0000000000..03c1ca2f07
+--- /dev/null
++++ b/packages/emulators/levelio/src/register.ts
+@@ -0,0 +1,452 @@
++import { z } from 'zod';
++import type { ControlRegistry } from '@alga-psa/emulator-host';
++import { ControlError } from '@alga-psa/emulator-host';
++import {
++  HTTP_CONTENT_TYPES,
++  HTTP_METHODS,
++  LEVEL_EVENT_TYPES,
++  LEVEL_SEVERITIES,
++  LevelWireError,
++} from './core';
++import type { HttpRequestAction, LevelEmulatorCore, LevelEventType, LevelWebhookEndpoint } from './core';
++import {
++  deliverEvent,
++  flushDueRetries,
++  onAlertActive,
++  onAlertResolved,
++  rerunDelivery,
++  runAutomation,
++} from './dispatcher';
++
++/**
++ * Control inputs are typed from the core methods they feed rather than from
++ * the zod schemas. A consumer that compiles this package without
++ * strictNullChecks (EE's tsc includes its tests, which import the emulator
++ * source) sees every z.infer key as optional, which no longer satisfies the
++ * core signatures.
++ */
++// LEVERAGE: friction ee-tsc-compiles-foreign-package-sources-nonstrict — ee/server/tsconfig.json (strict:false) type-checks emulator src through package `types`, so zod inference cannot be the control signature.
++type GroupSeedInput = Parameters<LevelEmulatorCore['createGroup']>[0];
++type UpdateSeedInput = Parameters<LevelEmulatorCore['createUpdate']>[0];
++type FireAlertInput = Parameters<LevelEmulatorCore['raiseAlert']>[0];
++type WebhookSeedInput = Parameters<LevelEmulatorCore['registerWebhook']>[0];
++type AutomationSeedInput = Omit<Parameters<LevelEmulatorCore['createAutomation']>[0], 'action'> &
++  Partial<HttpRequestAction> & { url: string };
++
++function mask(value: string | null): string | null {
++  if (!value) return value;
++  return value.length <= 8 ? '••••' : `${value.slice(0, 4)}…${value.slice(-4)}`;
++}
++
++function maskedWebhook(webhook: LevelWebhookEndpoint) {
++  return { ...webhook, secret: mask(webhook.secret) };
++}
++
++/** Core errors surface as control errors with the same status. */
++async function control<T>(fn: () => T | Promise<T>): Promise<T> {
++  try {
++    return await fn();
++  } catch (error) {
++    if (error instanceof LevelWireError) throw new ControlError(error.status, error.message);
++    throw error;
++  }
++}
++
++const EventTypes = z.array(z.enum(LEVEL_EVENT_TYPES));
++const Severity = z.enum(LEVEL_SEVERITIES);
++
++/**
++ * Header rows as `[{key, value}]` (the Level UI's shape) or a plain object.
++ */
++const Headers = z
++  .union([z.array(z.object({ key: z.string(), value: z.string() })), z.record(z.string())])
++  .transform((headers) => (Array.isArray(headers) ? headers : Object.entries(headers).map(([key, value]) => ({ key, value }))));
++
++const DevicePatch = z
++  .object({
++    hostname: z.string().optional(),
++    nickname: z.string().nullable().optional(),
++    groupId: z.string().nullable().optional(),
++    online: z.boolean().optional(),
++    tags: z.array(z.string()).optional(),
++    publicIpAddress: z.string().nullable().optional(),
++    restartRequired: z.boolean().optional(),
++  })
++  .passthrough();
++
++/** Accepts camel `groupId` alongside any vendor-named device field. */
++function deviceFields(input: Record<string, unknown>) {
++  const { groupId, ...rest } = input;
++  return groupId === undefined ? rest : { ...rest, group_id: groupId };
++}
++
++export function register(reg: ControlRegistry, core: LevelEmulatorCore): void {
++  const emit = async (eventType: LevelEventType, data: object) => {
++    const event = core.emitEvent(eventType, data);
++    return { event, deliveries: await deliverEvent(core, event) };
++  };
++
++  // ── Configuration and credentials ──────────────────────────────────────
++
++  reg.action({
++    name: 'configure',
++    description: 'Set API keys and the webhook retry policy (max retries, base delay, jitter, background retry pump)',
++    params: z.object({
++      apiKeys: z.array(z.string().min(1)).optional(),
++      webhookMaxRetries: z.number().int().min(0).max(10).optional(),
++      retryBaseDelayMs: z.number().int().min(0).optional(),
++      retryJitterMs: z.number().int().min(0).optional(),
++      autoRetry: z.boolean().optional(),
++    }),
++    run: (patch) => {
++      const config = core.configure(patch);
++      return { ...config, apiKeys: config.apiKeys.map(mask) };
++    },
++  });
++
++  reg.seeder({
++    name: 'api-key',
++    description: 'Accept another API key in the Authorization header (Settings → API)',
++    params: z.object({ key: z.string().min(1) }),
++    run: ({ key }) => {
++      if (!core.config.apiKeys.includes(key)) core.config.apiKeys.push(key);
++      return { apiKeys: core.config.apiKeys.map(mask) };
++    },
++  });
++
++  reg.action({
++    name: 'revoke-api-key',
++    description: 'Stop accepting an API key; requests with it answer 401 Access denied',
++    params: z.object({ key: z.string() }),
++    run: ({ key }) => {
++      core.config.apiKeys = core.config.apiKeys.filter((k) => k !== key);
++      return { apiKeys: core.config.apiKeys.map(mask) };
++    },
++  });
++
++  // ── Groups ─────────────────────────────────────────────────────────────
++
++  reg.seeder({
++    name: 'group',
++    description: 'Create a group (optionally under a parent); emits group_created',
++    params: z.object({ id: z.string().optional(), name: z.string(), parentId: z.string().nullable().optional() }),
++    run: (input: GroupSeedInput) =>
++      control(async () => {
++        const group = core.createGroup(input);
++        return { group: core.presentGroup(group), ...(await emit('group_created', core.presentGroup(group))) };
++      }),
++  });
++
++  reg.action({
++    name: 'update-group',
++    description: 'Rename or re-parent a group; emits group_updated',
++    params: z.object({ groupId: z.string(), name: z.string().optional(), parentId: z.string().nullable().optional() }),
++    run: ({ groupId, ...patch }) =>
++      control(async () => {
++        const group = core.updateGroup(groupId, patch);
++        return { group: core.presentGroup(group), ...(await emit('group_updated', core.presentGroup(group))) };
++      }),
++  });
++
++  reg.action({
++    name: 'delete-group',
++    description: 'Delete a group (children move to its parent, devices become ungrouped); emits group_deleted',
++    params: z.object({ groupId: z.string() }),
++    run: ({ groupId }) =>
++      control(async () => {
++        const group = core.deleteGroup(groupId);
++        return { group, ...(await emit('group_deleted', group)) };
++      }),
++  });
++
++  // ── Devices ────────────────────────────────────────────────────────────
++
++  reg.seeder({
++    name: 'device',
++    description:
++      'Create a device (hostname, groupId, plus any Level device field: platform, serial_number, operating_system, network_interfaces, security …); emits device_created',
++    params: DevicePatch.extend({ id: z.string().optional(), hostname: z.string() }),
++    run: (input) =>
++      control(async () => {
++        const device = core.createDevice(deviceFields(input) as Parameters<LevelEmulatorCore['createDevice']>[0]);
++        return { device: core.presentDevice(device, null), ...(await emit('device_created', core.presentDevice(device, null))) };
++      }),
++  });
++
++  reg.action({
++    name: 'update-device',
++    description: 'Patch a device (any Level device field, groupId, publicIpAddress, restartRequired); emits device_updated',
++    params: z.object({ deviceId: z.string(), patch: DevicePatch }),
++    run: ({ deviceId, patch }) =>
++      control(async () => {
++        const device = core.updateDevice(deviceId, deviceFields(patch));
++        return { device: core.presentDevice(device, null), ...(await emit('device_updated', core.presentDevice(device, null))) };
++      }),
++  });
++
++  reg.action({
++    name: 'delete-device',
++    description: 'Remove a device; emits device_deleted',
++    params: z.object({ deviceId: z.string() }),
++    run: ({ deviceId }) =>
++      control(async () => {
++        const device = core.deleteDevice(deviceId);
++        return { device, ...(await emit('device_deleted', { ...device })) };
++      }),
++  });
++
++  reg.action({
++    name: 'device-checkin',
++    description: 'The agent reports in: device online, last_seen_at = now (no webhook)',
++    params: z.object({ deviceId: z.string() }),
++    run: ({ deviceId }) => control(() => core.presentDevice(core.checkIn(deviceId), null)),
++  });
++
++  reg.action({
++    name: 'device-offline',
++    description: 'The agent stops reporting: device offline, last_seen_at frozen at now (no webhook)',
++    params: z.object({ deviceId: z.string() }),
++    run: ({ deviceId }) => control(() => core.presentDevice(core.goOffline(deviceId), null)),
++  });
++
++  reg.seeder({
++    name: 'update',
++    description: 'Create an OS/software update record for a device (served by /v2/updates)',
++    params: z
++      .object({
++        deviceId: z.string(),
++        name: z.string(),
++        category: z.string().optional(),
++        is_available: z.boolean().optional(),
++        installed_on: z.string().nullable().optional(),
++      })
++      .passthrough(),
++    run: (input: UpdateSeedInput) => control(() => core.createUpdate(input)),
++  });
++
++  // ── Alerts ─────────────────────────────────────────────────────────────
++
++  reg.action({
++    name: 'fire-alert',
++    description:
++      'A monitor raises an alert on a device: the alert becomes active, alert_active goes to native webhooks, and matching monitor automations run their HTTP Request action. webhookDataExtra merges unverified fields into the webhook data.',
++    params: z.object({
++      deviceId: z.string(),
++      name: z.string(),
++      description: z.string().optional(),
++      payload: z.string().nullable().optional(),
++      severity: Severity.optional(),
++      id: z.string().optional(),
++      webhookDataExtra: z.record(z.unknown()).optional(),
++    }),
++    run: (input: FireAlertInput) => control(async () => onAlertActive(core, core.raiseAlert(input))),
++  });
++
++  reg.action({
++    name: 'resolve-alert',
++    description: 'Resolve an active alert (as Level does when the monitor clears); emits alert_resolved',
++    params: z.object({ alertId: z.string() }),
++    run: ({ alertId }) =>
++      control(async () => {
++        const { alert, changed } = core.resolveAlert(alertId);
++        if (!changed) return { alert, event: null, deliveries: [] };
++        return onAlertResolved(core, alert);
++      }),
++  });
++
++  // ── Native webhooks ────────────────────────────────────────────────────
++
++  reg.seeder({
++    name: 'webhook',
++    description:
++      'Register a native webhook (Settings → Webhooks): URL, optional secret (adds X-Level-Signature), selected event types (default all). No custom headers.',
++    params: z.object({
++      id: z.string().optional(),
++      url: z.string().url(),
++      secret: z.string().nullable().optional(),
++      eventTypes: EventTypes.optional(),
++      enabled: z.boolean().optional(),
++    }),
++    run: (input: WebhookSeedInput) => maskedWebhook(core.registerWebhook(input)),
++  });
++
++  reg.action({
++    name: 'update-webhook',
++    description: 'Change a webhook endpoint: URL, secret (null clears it), event types, enabled',
++    params: z.object({
++      webhookId: z.string(),
++      url: z.string().url().optional(),
++      secret: z.string().nullable().optional(),
++      eventTypes: EventTypes.optional(),
++      enabled: z.boolean().optional(),
++    }),
++    run: ({ webhookId, ...patch }) =>
++      control(() => {
++        const webhook = core.getWebhook(webhookId);
++        if (patch.url !== undefined) webhook.url = patch.url;
++        if (patch.secret !== undefined) webhook.secret = patch.secret || null;
++        if (patch.eventTypes !== undefined) webhook.eventTypes = [...patch.eventTypes];
++        if (patch.enabled !== undefined) webhook.enabled = patch.enabled;
++        return maskedWebhook(webhook);
++      }),
++  });
++
++  reg.action({
++    name: 'delete-webhook',
++    description: 'Remove a webhook endpoint (its pending retries are dropped)',
++    params: z.object({ webhookId: z.string() }),
++    run: ({ webhookId }) =>
++      control(() => {
++        core.getWebhook(webhookId);
++        core.webhooks.delete(webhookId);
++        core.pendingRetries = core.pendingRetries.filter((r) => r.webhookId !== webhookId);
++        return { deleted: webhookId };
++      }),
++  });
++
++  reg.action({
++    name: 'rerun-delivery',
++    description: 'The request log\'s "Re-run request": resend a recorded delivery with the same event_id and body',
++    params: z.object({ deliveryId: z.number().int() }),
++    run: ({ deliveryId }) =>
++      control(async () => {
++        if (!core.deliveries.some((d) => d.id === deliveryId)) throw new ControlError(404, `Unknown delivery ${deliveryId}`);
++        return rerunDelivery(core, deliveryId);
++      }),
++  });
++
++  reg.action({
++    name: 'deliver-due-retries',
++    description: 'Deliver every automatic retry due at the current virtual time now (after `clock advance`)',
++    run: () => flushDueRetries(core),
++  });
++
++  // ── Automations ────────────────────────────────────────────────────────
++
++  reg.seeder({
++    name: 'automation',
++    description:
++      'A monitor automation with an HTTP Request action. url/headers/body render {{level_*}} system variables and {{variables}}; unknown {{tokens}} are sent literally.',
++    params: z.object({
++      id: z.string().optional(),
++      name: z.string(),
++      enabled: z.boolean().optional(),
++      alertNames: z.array(z.string()).optional(),
++      groupIds: z.array(z.string()).optional(),
++      url: z.string(),
++      method: z.enum(HTTP_METHODS).optional(),
++      contentType: z.enum(HTTP_CONTENT_TYPES).optional(),
++      headers: Headers.optional(),
++      body: z.string().optional(),
++      variables: z.record(z.string()).optional(),
++      retries: z.number().int().min(0).max(5).optional(),
++    }),
++    run: ({ url, method, contentType, headers, body, ...rest }: AutomationSeedInput) =>
++      core.createAutomation({
++        ...rest,
++        action: {
++          url,
++          ...(method ? { method } : {}),
++          ...(contentType ? { contentType } : {}),
++          ...(headers ? { headers } : {}),
++          ...(body !== undefined ? { body } : {}),
++        },
++      }),
++  });
++
++  reg.action({
++    name: 'run-automation',
++    description: 'Run an automation on a device by hand (no alert context)',
++    params: z.object({ automationId: z.string(), deviceId: z.string() }),
++    run: ({ automationId, deviceId }) =>
++      control(async () => {
++        core.getDevice(deviceId);
++        return runAutomation(core, core.getAutomation(automationId), { deviceId, alert: null });
++      }),
++  });
++
++  // ── Faults ─────────────────────────────────────────────────────────────
++
++  reg.fault({
++    name: 'operation-fault',
++    description:
++      'Fail one REST operation ("GET /v2/devices", "GET /v2/groups", "GET /v2/devices/:id", "GET /v2/alerts", "POST /v2/alerts/:id/resolve", "GET /v2/updates", or "*") N times with a status and Level error envelope',
++    params: z.object({
++      operation: z.string(),
++      status: z.number().int().min(400).max(599).default(500),
++      message: z.string().default('Internal server error'),
++      retryAfterSeconds: z.number().int().min(0).nullable().optional(),
++      remaining: z.number().int().positive().default(1),
++    }),
++    arm: ({ operation, status, message, retryAfterSeconds, remaining }) =>
++      core.armOperationFault({
++        operation,
++        status: status ?? 500,
++        message: message ?? 'Internal server error',
++        retryAfterSeconds: retryAfterSeconds ?? null,
++        remaining: remaining ?? 1,
++      }),
++    disarm: () => core.disarmOperationFaults(),
++  });
++
++  reg.fault({
++    name: 'rate-limit',
++    description: 'Answer the next N REST requests with 429 and Retry-After (Level\'s rate-limit envelope is undocumented)',
++    params: z.object({
++      remaining: z.number().int().positive().default(1),
++      retryAfterSeconds: z.number().int().min(0).default(1),
++    }),
++    arm: ({ remaining, retryAfterSeconds }) =>
++      core.armOperationFault({
++        operation: '*',
++        status: 429,
++        message: 'Too many requests',
++        retryAfterSeconds: retryAfterSeconds ?? 1,
++        remaining: remaining ?? 1,
++      }),
++    disarm: () => core.disarmOperationFaults(),
++  });
++
++  // ── State views ────────────────────────────────────────────────────────
++
++  reg.stateView({
++    name: 'config',
++    description: 'API keys (masked) and webhook retry policy',
++    get: () => ({ ...core.config, apiKeys: core.config.apiKeys.map(mask) }),
++  });
++  reg.stateView({
++    name: 'groups',
++    description: 'Groups as /v2/groups presents them (child_ids, device counts)',
++    get: () => [...core.groups.values()].map((g) => core.presentGroup(g)),
++  });
++  reg.stateView({
++    name: 'devices',
++    description: 'Devices with every detail section',
++    get: () => [...core.devices.values()].map((d) => core.presentDevice(d, null)),
++  });
++  reg.stateView({ name: 'alerts', description: 'Alerts, active and resolved', get: () => [...core.alerts.values()] });
++  reg.stateView({ name: 'updates', description: 'Update records', get: () => [...core.updates.values()] });
++  reg.stateView({
++    name: 'webhooks',
++    description: 'Native webhook endpoints (secrets masked)',
++    get: () => [...core.webhooks.values()].map(maskedWebhook),
++  });
++  reg.stateView({ name: 'events', description: 'Emitted webhook events (envelopes as sent)', get: () => [...core.events.values()] });
++  reg.stateView({
++    name: 'webhook-deliveries',
++    description: 'Every webhook send: trigger (initial/retry/rerun), attempt, signature, status, response',
++    get: () => core.deliveries,
++  });
++  reg.stateView({
++    name: 'pending-retries',
++    description: 'Automatic retries waiting for their backoff to elapse',
++    get: () => core.pendingRetries.map((r) => ({ ...r, dueAt: new Date(r.dueAtMs).toISOString() })),
++  });
++  reg.stateView({ name: 'automations', description: 'Monitor automations and their HTTP Request actions', get: () => [...core.automations.values()] });
++  reg.stateView({
++    name: 'automation-runs',
++    description: 'Rendered HTTP Request action sends, with unresolved {{tokens}} and the response',
++    get: () => core.automationRuns,
++  });
++  reg.stateView({ name: 'operation-faults', description: 'Armed REST faults', get: () => core.operationFaults });
++}
+diff --git a/packages/emulators/levelio/src/scenarios.ts b/packages/emulators/levelio/src/scenarios.ts
+new file mode 100644
+index 0000000000..9ffc9d9024
+--- /dev/null
++++ b/packages/emulators/levelio/src/scenarios.ts
+@@ -0,0 +1,21 @@
++import type { Scenario } from '@alga-psa/emulator-host';
++
++/**
++ * Rewrites every string in a scenario's step params, e.g. the
++ * `http://localhost:4030` default target and `tenant=algasim-tenant` in the
++ * bundled Level scenarios, so the same file can aim at an ephemeral
++ * webhook-sink or a real Alga route under test.
++ */
++export function retargetScenario(scenario: Scenario, replacements: Record<string, string>): Scenario {
++  const rewrite = (value: unknown): unknown => {
++    if (typeof value === 'string') {
++      return Object.entries(replacements).reduce((text, [from, to]) => text.split(from).join(to), value);
++    }
++    if (Array.isArray(value)) return value.map(rewrite);
++    if (value && typeof value === 'object') {
++      return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, rewrite(inner)]));
++    }
++    return value;
++  };
++  return { ...scenario, steps: scenario.steps.map((step) => rewrite(step) as Scenario['steps'][number]) };
++}
+diff --git a/packages/emulators/levelio/src/variables.ts b/packages/emulators/levelio/src/variables.ts
+new file mode 100644
+index 0000000000..6d98fe0343
+--- /dev/null
++++ b/packages/emulators/levelio/src/variables.ts
+@@ -0,0 +1,121 @@
++import type { LevelDevice, LevelEmulatorCore } from './core';
++
++/**
++ * Level's documented automation system variables
++ * (docs.level.io/en/articles/11321970-system-variables). Values the device has
++ * not reported render as an empty string, and booleans render as the text
++ * "true"/"false".
++ */
++export const SYSTEM_VARIABLE_NAMES = [
++  'level_time',
++  'level_device_id',
++  'level_device_hostname',
++  'level_device_nickname',
++  'level_device_public_ip_address',
++  'level_device_private_ip_addresses',
++  'level_device_architecture',
++  'level_device_cpu_cores',
++  'level_device_memory',
++  'level_device_memory_formatted',
++  'level_device_os',
++  'level_device_os_version',
++  'level_device_manufacturer',
++  'level_device_model',
++  'level_device_last_boot_at',
++  'level_device_last_seen_at',
++  'level_device_first_seen_at',
++  'level_device_online',
++  'level_device_maintenance_mode',
++  'level_device_restart_required',
++  'level_group_id',
++  'level_group_name',
++  'level_group_path',
++  'level_tag_names',
++  'level_tag_ids',
++] as const;
++
++export type SystemVariableName = (typeof SYSTEM_VARIABLE_NAMES)[number];
++
++function text(value: unknown): string {
++  return value === null || value === undefined ? '' : String(value);
++}
++
++/** "16 GB" style; Level's exact rounding is undocumented. */
++export function formatMemory(bytes: number | null | undefined): string {
++  if (!bytes || bytes <= 0) return '';
++  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
++  let value = bytes;
++  let unit = 0;
++  while (value >= 1024 && unit < units.length - 1) {
++    value /= 1024;
++    unit += 1;
++  }
++  const rounded = value >= 10 || Number.isInteger(value) ? Math.round(value) : Math.round(value * 10) / 10;
++  return `${rounded} ${units[unit]}`;
++}
++
++function privateIps(device: LevelDevice): string {
++  const interfaces = (device.network_interfaces ?? []) as Array<{ ip_addresses?: unknown }>;
++  return interfaces
++    .flatMap((iface) => (Array.isArray(iface.ip_addresses) ? iface.ip_addresses.map(String) : []))
++    .join(',');
++}
++
++/** Every system variable for a device at the current virtual time. */
++export function systemVariables(core: LevelEmulatorCore, deviceId: string): Record<SystemVariableName, string> {
++  const device = core.getDevice(deviceId);
++  const facts = core.deviceFacts.get(deviceId);
++  const group = device.group_id ? core.groups.get(device.group_id) : undefined;
++  const os = (device.operating_system ?? {}) as { full_operating_system?: unknown; minor_version?: unknown; major_version?: unknown };
++  const now = core.now().toISOString();
++  return {
++    level_time: now,
++    level_device_id: device.id,
++    level_device_hostname: device.hostname,
++    level_device_nickname: text(device.nickname),
++    level_device_public_ip_address: text(facts?.publicIpAddress),
++    level_device_private_ip_addresses: privateIps(device),
++    level_device_architecture: text(device.architecture),
++    level_device_cpu_cores: text(device.cpu_cores),
++    level_device_memory: text(device.total_memory),
++    level_device_memory_formatted: formatMemory(device.total_memory),
++    level_device_os: text(os.full_operating_system),
++    level_device_os_version: text(os.minor_version ?? os.major_version),
++    level_device_manufacturer: text(device.manufacturer),
++    level_device_model: text(device.model),
++    level_device_last_boot_at: text(device.last_reboot_time),
++    level_device_last_seen_at: device.online ? now : text(device.last_seen_at),
++    level_device_first_seen_at: text(facts?.firstSeenAt),
++    level_device_online: String(device.online),
++    level_device_maintenance_mode: String(device.maintenance_mode),
++    level_device_restart_required: String(facts?.restartRequired ?? false),
++    level_group_id: group?.id ?? '',
++    level_group_name: group?.name ?? '',
++    level_group_path: core.groupPath(device.group_id),
++    level_tag_names: device.tags.join(','),
++    level_tag_ids: device.tags.map((tag) => core.tagId(tag)).join(','),
++  };
++}
++
++const TOKEN = /\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}/g;
++
++export interface RenderResult {
++  text: string;
++  /** Token names that matched no variable and were left in place verbatim. */
++  unresolved: string[];
++}
++
++/**
++ * Substitutes `{{name}}` tokens. A token naming no known variable stays in the
++ * output as literal text — the behavior observed from Level in production,
++ * where `{{alert_id}}` arrived at Alga unrendered.
++ */
++export function renderTemplate(template: string, variables: Record<string, string>): RenderResult {
++  const unresolved: string[] = [];
++  const text = template.replace(TOKEN, (match, name: string) => {
++    if (Object.prototype.hasOwnProperty.call(variables, name)) return variables[name];
++    if (!unresolved.includes(name)) unresolved.push(name);
++    return match;
++  });
++  return { text, unresolved };
++}
+diff --git a/packages/emulators/levelio/src/wire.ts b/packages/emulators/levelio/src/wire.ts
+new file mode 100644
+index 0000000000..44a7ef2216
+--- /dev/null
++++ b/packages/emulators/levelio/src/wire.ts
+@@ -0,0 +1,138 @@
++import express from 'express';
++import type { NextFunction, Request, Response, Router } from 'express';
++import { route } from '@alga-psa/emulator-host';
++import type { HostEnv } from '@alga-psa/emulator-host';
++import { LevelWireError } from './core';
++import type { LevelEmulatorCore } from './core';
++import { onAlertResolved, startRetryPump } from './dispatcher';
++
++function query(req: Request): Record<string, unknown> {
++  return req.query as Record<string, unknown>;
++}
++
++function str(value: unknown): string | undefined {
++  return typeof value === 'string' && value !== '' ? value : undefined;
++}
++
++/**
++ * Level's v2 REST surface as Alga's LevelIoApiClient uses it: groups,
++ * devices (with include_* detail flags), alerts (+ resolve) and updates, each
++ * cursor-paginated. Point LEVELIO_API_BASE_URL at this origin.
++ */
++export function wire(router: Router, core: LevelEmulatorCore, _env: HostEnv): void {
++  startRetryPump(core);
++  router.use(express.json());
++
++  const v2 = express.Router();
++  router.use('/v2', v2);
++
++  // Auth precedes everything, including the operation faults, as at Level's edge.
++  v2.use((req, _res, next) => {
++    try {
++      core.authenticate(req.headers.authorization);
++      next();
++    } catch (error) {
++      next(error);
++    }
++  });
++
++  const operation = (name: string) => (_req: Request, _res: Response, next: NextFunction) => {
++    const fault = core.consumeOperationFault(name);
++    if (!fault) return next();
++    const headers: Record<string, string> = {};
++    if (fault.retryAfterSeconds !== null) headers['retry-after'] = String(fault.retryAfterSeconds);
++    next(new LevelWireError(fault.status, fault.message, headers));
++  };
++
++  v2.get('/groups', operation('GET /v2/groups'), route((req, res) => {
++    const parentId = query(req).parent_id;
++    let groups = [...core.groups.values()];
++    if (parentId === 'null') groups = groups.filter((g) => g.parent_id === null);
++    else if (str(parentId)) groups = groups.filter((g) => g.parent_id === parentId);
++    const page = core.paginate(groups, query(req));
++    res.json({ data: page.data.map((g) => core.presentGroup(g)), has_more: page.has_more });
++  }));
++
++  v2.get('/groups/:id', operation('GET /v2/groups/:id'), route((req, res) => {
++    res.json(core.presentGroup(core.getGroup(String(req.params.id))));
++  }));
++
++  v2.get('/devices', operation('GET /v2/devices'), route((req, res) => {
++    const q = query(req);
++    let devices = [...core.devices.values()];
++    if (q.group_id === 'null') devices = devices.filter((d) => d.group_id === null);
++    else if (str(q.group_id)) devices = devices.filter((d) => d.group_id === q.group_id);
++    const ancestor = str(q.ancestor_group_id);
++    if (ancestor) {
++      const scope = core.descendantGroupIds(ancestor);
++      devices = devices.filter((d) => d.group_id !== null && scope.has(d.group_id));
++    }
++    const tagId = str(q.tag_id);
++    if (tagId) devices = devices.filter((d) => d.tags.some((tag) => core.tags.get(tag) === tagId));
++    const hostname = str(q.hostname);
++    if (hostname) devices = devices.filter((d) => d.hostname === hostname);
++    const serial = str(q.serial_number);
++    if (serial) devices = devices.filter((d) => d.serial_number === serial);
++    const page = core.paginate(devices, q);
++    res.json({ data: page.data.map((d) => core.presentDevice(d, q)), has_more: page.has_more });
++  }));
++
++  v2.get('/devices/:id', operation('GET /v2/devices/:id'), route((req, res) => {
++    res.json(core.presentDevice(core.getDevice(String(req.params.id)), query(req)));
++  }));
++
++  v2.get('/alerts', operation('GET /v2/alerts'), route((req, res) => {
++    const q = query(req);
++    let alerts = [...core.alerts.values()];
++    const deviceId = str(q.device_id);
++    if (deviceId) alerts = alerts.filter((a) => a.device_id === deviceId);
++    const status = str(q.status);
++    if (status === 'active') alerts = alerts.filter((a) => !a.is_resolved);
++    else if (status === 'resolved') alerts = alerts.filter((a) => a.is_resolved);
++    else if (status) throw new LevelWireError(400, 'status must be one of: active, resolved');
++    res.json(core.paginate(alerts, q));
++  }));
++
++  v2.get('/alerts/:id', operation('GET /v2/alerts/:id'), route((req, res) => {
++    res.json(core.getAlert(String(req.params.id)));
++  }));
++
++  v2.post('/alerts/:id/resolve', operation('POST /v2/alerts/:id/resolve'), route(async (req, res) => {
++    const { alert, changed } = core.resolveAlert(String(req.params.id));
++    if (changed) await onAlertResolved(core, alert);
++    res.json(alert);
++  }));
++
++  v2.get('/updates', operation('GET /v2/updates'), route((req, res) => {
++    const q = query(req);
++    let updates = [...core.updates.values()];
++    const deviceId = str(q.device_id);
++    if (deviceId) updates = updates.filter((u) => u.device_id === deviceId);
++    const status = str(q.status);
++    if (status === 'available') updates = updates.filter((u) => u.is_available);
++    else if (status === 'installed') updates = updates.filter((u) => !u.is_available && u.installed_on !== null);
++    else if (status) throw new LevelWireError(400, 'status must be one of: available, installed');
++    const category = str(q.category);
++    if (category) updates = updates.filter((u) => u.category === category);
++    res.json(core.paginate(updates, q));
++  }));
++
++  v2.get('/updates/:id', operation('GET /v2/updates/:id'), route((req, res) => {
++    res.json(core.getUpdate(String(req.params.id)));
++  }));
++
++  // Level documents more of v2 (group writes, tags, custom fields, automations,
++  // activities); none of it is modeled. Say so instead of answering 404.
++  v2.use(() => {
++    throw new LevelWireError(501, 'This Level operation is not implemented by the emulator.', {}, 'EmulatorUnsupportedOperation');
++  });
++
++  router.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
++    if (err instanceof LevelWireError) {
++      for (const [name, value] of Object.entries(err.headers)) res.setHeader(name, value);
++      res.status(err.status).json(err.toEnvelope());
++      return;
++    }
++    res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
++  });
++}
+diff --git a/packages/emulators/levelio/tests/automation.test.ts b/packages/emulators/levelio/tests/automation.test.ts
+new file mode 100644
+index 0000000000..fa25d559ce
+--- /dev/null
++++ b/packages/emulators/levelio/tests/automation.test.ts
+@@ -0,0 +1,165 @@
++import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
++import { renderTemplate, SYSTEM_VARIABLE_NAMES } from '../src/variables';
++import { startLevel, startReceiver } from './helpers';
++
++let level: Awaited<ReturnType<typeof startLevel>>;
++let receiver: Awaited<ReturnType<typeof startReceiver>>;
++
++/**
++ * The payload template Alga's settings screen tells users to paste into a
++ * Level automation (getLevelIoWebhookInfo, as of 2026-10-15).
++ */
++const ALGA_TEMPLATE = JSON.stringify(
++  {
++    event: 'alert.triggered',
++    alert_id: '{{alert_id}}',
++    device_id: '{{device_id}}',
++    hostname: '{{hostname}}',
++    name: '{{alert_name}}',
++    severity: '{{severity}}',
++    description: '{{description}}',
++  },
++  null,
++  2,
++);
++
++beforeAll(async () => {
++  level = await startLevel();
++  receiver = await startReceiver();
++});
++
++afterAll(async () => {
++  await level.host.stop();
++  await receiver.close();
++});
++
++beforeEach(async () => {
++  await level.reset();
++  receiver.received.length = 0;
++  receiver.respondWith(() => ({ status: 200, body: '{"ok":true}' }));
++});
++
++async function seedEstate() {
++  const hq = (await level.seed('group', { name: 'HQ' })).group;
++  const servers = (await level.seed('group', { name: 'Servers', parentId: hq.id })).group;
++  const device = (
++    await level.seed('device', {
++      hostname: 'SRV-01',
++      groupId: servers.id,
++      tags: ['exchange', 'nginx'],
++      total_memory: 17_179_869_184,
++      cpu_cores: 8,
++      architecture: 'amd64',
++      manufacturer: 'Dell',
++      model: 'PowerEdge R650',
++      operating_system: { full_operating_system: 'Windows Server 2022', minor_version: '10.0.20348.2340' },
++      network_interfaces: [{ ip_addresses: ['10.0.0.5', '10.0.1.5'] }],
++      publicIpAddress: '203.0.113.7',
++    })
++  ).device;
++  return { hq, servers, device };
++}
++
++describe('Level automation HTTP Request action', () => {
++  it('renders every documented system variable', async () => {
++    const { servers, device } = await seedEstate();
++    await level.seed('automation', {
++      name: 'dump variables',
++      url: `${receiver.url}/vars`,
++      body: JSON.stringify(Object.fromEntries(SYSTEM_VARIABLE_NAMES.map((name) => [name, `{{${name}}}`]))),
++    });
++    await level.action('fire-alert', { deviceId: device.id, name: 'CPU' });
++
++    const vars = JSON.parse(receiver.received[0].rawBody);
++    expect(vars).toMatchObject({
++      level_device_id: device.id,
++      level_device_hostname: 'SRV-01',
++      level_device_nickname: '',
++      level_device_public_ip_address: '203.0.113.7',
++      level_device_private_ip_addresses: '10.0.0.5,10.0.1.5',
++      level_device_architecture: 'amd64',
++      level_device_cpu_cores: '8',
++      level_device_memory: '17179869184',
++      level_device_memory_formatted: '16 GB',
++      level_device_os: 'Windows Server 2022',
++      level_device_os_version: '10.0.20348.2340',
++      level_device_manufacturer: 'Dell',
++      level_device_model: 'PowerEdge R650',
++      level_device_last_boot_at: '',
++      level_device_online: 'true',
++      level_device_maintenance_mode: 'false',
++      level_device_restart_required: 'false',
++      level_group_id: servers.id,
++      level_group_name: 'Servers',
++      level_group_path: 'HQ / Servers',
++      level_tag_names: 'exchange,nginx',
++    });
++    expect(vars.level_tag_ids.split(',')).toHaveLength(2);
++    expect(Object.values(vars).some((value) => String(value).includes('{{'))).toBe(false);
++  });
++
++  it('sends Alga\'s pasted template with its unknown {{placeholders}} as literal text', async () => {
++    const { device } = await seedEstate();
++    await level.seed('automation', {
++      name: 'Alga alert forwarder',
++      url: `${receiver.url}/api/webhooks/levelio?tenant=t-1`,
++      headers: { 'X-Alga-Webhook-Secret': 'alga-secret' },
++      body: ALGA_TEMPLATE,
++    });
++    await level.action('fire-alert', { deviceId: device.id, name: 'CPU', severity: 'critical' });
++    await level.action('fire-alert', { deviceId: device.id, name: 'Low disk space' });
++
++    expect(receiver.received).toHaveLength(2);
++    const [first, second] = receiver.received.map((r) => JSON.parse(r.rawBody));
++    expect(first).toEqual(JSON.parse(ALGA_TEMPLATE)); // nothing rendered
++    expect(second).toEqual(first); // two distinct alerts, byte-identical payloads
++    expect(receiver.received[0].headers['x-alga-webhook-secret']).toBe('alga-secret');
++    const runs = await level.state('automation-runs');
++    expect(runs[0].unresolvedVariables).toEqual(['alert_id', 'device_id', 'hostname', 'alert_name', 'severity', 'description']);
++  });
++
++  it('renders system variables and automation variables in URL, headers and body', async () => {
++    const { device } = await seedEstate();
++    await level.seed('automation', {
++      name: 'rendered forwarder',
++      url: `${receiver.url}/hook/{{level_group_id}}?host={{level_device_hostname}}`,
++      headers: [{ key: 'Authorization', value: 'Bearer {{api_token}}' }],
++      body: '{"device_id":"{{level_device_id}}","group":"{{level_group_name}}","at":"{{level_time}}"}',
++      variables: { api_token: 'tok-123' },
++    });
++    await level.action('fire-alert', { deviceId: device.id, name: 'CPU' });
++    const [request] = receiver.received;
++    expect(request.path).toBe(`/hook/${device.group_id}?host=SRV-01`);
++    expect(request.headers.authorization).toBe('Bearer tok-123');
++    expect(JSON.parse(request.rawBody)).toEqual({
++      device_id: device.id,
++      group: 'Servers',
++      at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
++    });
++  });
++
++  it('runs only automations whose monitor trigger matches the alert and the device\'s group', async () => {
++    const { hq, device } = await seedEstate();
++    const other = (await level.seed('group', { name: 'Elsewhere' })).group;
++    const lone = (await level.seed('device', { hostname: 'WS-99', groupId: other.id })).device;
++    await level.seed('automation', { name: 'disk only', alertNames: ['Low disk space'], url: `${receiver.url}/disk` });
++    await level.seed('automation', { name: 'HQ tree', groupIds: [hq.id], url: `${receiver.url}/hq` });
++    await level.seed('automation', { name: 'disabled', enabled: false, url: `${receiver.url}/off` });
++
++    await level.action('fire-alert', { deviceId: device.id, name: 'CPU' });
++    await level.action('fire-alert', { deviceId: lone.id, name: 'Low disk space' });
++    expect(receiver.received.map((r) => r.path)).toEqual(['/hq', '/disk']);
++  });
++
++  it('records failed actions and honors the configured retry count', async () => {
++    const { device } = await seedEstate();
++    receiver.respondWith(() => ({ status: 503 }));
++    await level.seed('automation', { name: 'flaky', url: `${receiver.url}/x`, retries: 2 });
++    const fired = await level.action('fire-alert', { deviceId: device.id, name: 'CPU' });
++    expect(fired.automationRuns.map((r: any) => [r.attempt, r.status, r.ok])).toEqual([[1, 503, false], [2, 503, false], [3, 503, false]]);
++  });
++
++  it('leaves unknown tokens intact and reports them', () => {
++    expect(renderTemplate('{{ level_x }} {{a}} {{a}} {{b}}', { a: '1' })).toEqual({ text: '{{ level_x }} 1 1 {{b}}', unresolved: ['level_x', 'b'] });
++  });
++});
+diff --git a/packages/emulators/levelio/tests/helpers.ts b/packages/emulators/levelio/tests/helpers.ts
+new file mode 100644
+index 0000000000..07d754e085
+--- /dev/null
++++ b/packages/emulators/levelio/tests/helpers.ts
+@@ -0,0 +1,76 @@
++import http from 'node:http';
++import { EmulatorHost } from '@alga-psa/emulator-host';
++import levelio from '../src/index';
++import type { LevelEmulatorCore } from '../src/core';
++
++export interface Received {
++  method: string;
++  path: string;
++  headers: http.IncomingHttpHeaders;
++  rawBody: string;
++}
++
++/** A local HTTP receiver whose answer is set per test. */
++export async function startReceiver() {
++  const received: Received[] = [];
++  let respond: (req: Received) => { status: number; body?: string } = () => ({ status: 200, body: '{"ok":true}' });
++  const server = http.createServer(async (req, res) => {
++    const chunks: Buffer[] = [];
++    for await (const chunk of req) chunks.push(chunk as Buffer);
++    const entry: Received = {
++      method: req.method ?? '',
++      path: req.url ?? '',
++      headers: req.headers,
++      rawBody: Buffer.concat(chunks).toString('utf8'),
++    };
++    received.push(entry);
++    const answer = respond(entry);
++    res.writeHead(answer.status, { 'content-type': 'application/json' });
++    res.end(answer.body ?? '');
++  });
++  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
++  const url = `http://127.0.0.1:${(server.address() as { port: number }).port}`;
++  return {
++    url,
++    received,
++    respondWith(fn: typeof respond) {
++      respond = fn;
++    },
++    close: () => new Promise<void>((resolve) => server.close(() => resolve())),
++  };
++}
++
++export async function startLevel() {
++  const host = new EmulatorHost({ emulators: [levelio], controlPort: 0, ports: { levelio: 0 } });
++  const { controlPort, ports } = await host.start();
++  const control = `http://127.0.0.1:${controlPort}`;
++  const call = async (kind: 'seed' | 'actions', name: string, params: unknown = {}) => {
++    const response = await fetch(`${control}/control/levelio/${kind}/${name}`, {
++      method: 'POST',
++      headers: { 'content-type': 'application/json' },
++      body: JSON.stringify(params),
++    });
++    const json = (await response.json()) as { ok: boolean; result?: any; error?: string };
++    if (!json.ok) throw new Error(`${kind}/${name} failed: ${json.error}`);
++    return json.result;
++  };
++  return {
++    host,
++    control,
++    vendor: `http://127.0.0.1:${ports.levelio}`,
++    core: host.instance('levelio').core as LevelEmulatorCore,
++    seed: (name: string, params?: unknown) => call('seed', name, params),
++    action: (name: string, params?: unknown) => call('actions', name, params),
++    arm: async (name: string, params: unknown = {}) => {
++      const response = await fetch(`${control}/control/levelio/faults/${name}/arm`, {
++        method: 'POST',
++        headers: { 'content-type': 'application/json' },
++        body: JSON.stringify(params),
++      });
++      if (response.status !== 200) throw new Error(`arm ${name} failed: ${await response.text()}`);
++    },
++    state: async (view: string) =>
++      ((await (await fetch(`${control}/control/levelio/state/${view}`)).json()) as { result: any }).result,
++    reset: () => fetch(`${control}/control/levelio/reset`, { method: 'POST' }),
++  };
++}
+diff --git a/packages/emulators/levelio/tests/rest.test.ts b/packages/emulators/levelio/tests/rest.test.ts
+new file mode 100644
+index 0000000000..21b67a9721
+--- /dev/null
++++ b/packages/emulators/levelio/tests/rest.test.ts
+@@ -0,0 +1,218 @@
++import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
++import { startLevel } from './helpers';
++
++// The Level v2 REST surface as a wire contract, driven with plain fetch the way
++// Level documents it (Authorization: <key>, limit + starting_after cursors,
++// include_* detail flags). Alga's LevelIoApiClient against this emulator is
++// covered on the product side, in
++// ee/server/src/__tests__/integration/levelioEmulatorApiClient.integration.test.ts,
++// so this package never imports the product.
++
++const API_KEY = 'algasim-level-key';
++const INCLUDE_ALL =
++  'include_operating_system=true&include_cpus=true&include_memory=true&include_disks=true&include_network_interfaces=true&include_security=true';
++let level: Awaited<ReturnType<typeof startLevel>>;
++
++async function raw(path: string, init: RequestInit = {}) {
++  const response = await fetch(`${level.vendor}${path}`, {
++    ...init,
++    headers: { authorization: API_KEY, ...(init.headers as Record<string, string>) },
++  });
++  return { status: response.status, headers: response.headers, body: (await response.json()) as any };
++}
++
++/** Walk a list endpoint with limit=100 + starting_after until has_more is false. */
++async function listAll(path: string) {
++  const items: any[] = [];
++  let startingAfter: string | undefined;
++  for (;;) {
++    const separator = path.includes('?') ? '&' : '?';
++    const cursor = startingAfter ? `&starting_after=${encodeURIComponent(startingAfter)}` : '';
++    const page = await raw(`${path}${separator}limit=100${cursor}`);
++    expect(page.status).toBe(200);
++    items.push(...page.body.data);
++    if (!page.body.has_more || page.body.data.length === 0) return items;
++    startingAfter = page.body.data[page.body.data.length - 1].id;
++  }
++}
++
++beforeAll(async () => {
++  level = await startLevel();
++});
++
++afterAll(async () => {
++  await level.host.stop();
++});
++
++beforeEach(async () => {
++  await level.reset();
++});
++
++describe('Level v2 REST surface', () => {
++  it('accepts the bare API key and answers Level\'s 401 envelope otherwise', async () => {
++    expect((await raw('/v2/groups?limit=1')).status).toBe(200);
++
++    const wrong = await fetch(`${level.vendor}/v2/groups`, { headers: { authorization: 'wrong-key' } });
++    expect(wrong.status).toBe(401);
++    expect(await wrong.json()).toEqual({ error: 'Access denied' });
++    // Level takes the key verbatim, not as a Bearer token.
++    const bearer = await fetch(`${level.vendor}/v2/groups`, { headers: { authorization: `Bearer ${API_KEY}` } });
++    expect(bearer.status).toBe(401);
++
++    await level.action('revoke-api-key', { key: API_KEY });
++    expect((await raw('/v2/groups?limit=1')).status).toBe(401);
++  });
++
++  it('pages the group hierarchy with starting_after/ending_before and has_more', async () => {
++    const root = (await level.seed('group', { name: 'Acme Corp' })).group;
++    for (let i = 0; i < 104; i += 1) {
++      await level.seed('group', { name: `Site ${i}`, parentId: root.id });
++    }
++    await level.seed('device', { hostname: 'WS-01', groupId: root.id });
++
++    const groups = await listAll('/v2/groups');
++    expect(groups).toHaveLength(105);
++    expect(new Set(groups.map((g) => g.id)).size).toBe(105);
++    const acme = groups.find((g) => g.id === root.id)!;
++    expect(acme).toMatchObject({ parent_id: null, name: 'Acme Corp', device_count: 1, descendent_device_count: 1 });
++    expect(acme.child_ids).toHaveLength(104);
++    expect(root.id).toBe('Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMQ'); // gid://level/DeviceGroup/1, Level's id form
++
++    const firstPage = await raw('/v2/groups');
++    expect(firstPage.body.data).toHaveLength(20); // documented default limit
++    expect(firstPage.body.has_more).toBe(true);
++    const roots = await raw('/v2/groups?parent_id=null');
++    expect(roots.body).toEqual({ data: [expect.objectContaining({ id: root.id })], has_more: false });
++    const back = await raw(`/v2/groups?limit=2&ending_before=${groups[5].id}`);
++    expect(back.body.data.map((g: { id: string }) => g.id)).toEqual([groups[3].id, groups[4].id]);
++    expect(back.body.has_more).toBe(true);
++  });
++
++  it('returns detail sections only when include_* is true, and filters by ancestor group', async () => {
++    const acme = (await level.seed('group', { name: 'Acme' })).group;
++    const branch = (await level.seed('group', { name: 'Branch', parentId: acme.id })).group;
++    const other = (await level.seed('group', { name: 'Other' })).group;
++    const ws = (
++      await level.seed('device', {
++        hostname: 'WS-01',
++        groupId: branch.id,
++        serial_number: 'SN-1',
++        operating_system: { full_operating_system: 'Windows 11 Pro', major_version: '10.0' },
++        network_interfaces: [{ interface: 'eth0', ip_addresses: ['10.0.0.5'] }],
++        disks: [{ disk_type: 'NVMe', model: 'Samsung', size: 512_000_000_000 }],
++        security: { score: 80 },
++      })
++    ).device;
++    await level.seed('device', { hostname: 'OTHER-01', groupId: other.id });
++
++    const devices = await listAll(`/v2/devices?ancestor_group_id=${acme.id}&${INCLUDE_ALL}`);
++    expect(devices.map((d) => d.hostname)).toEqual(['WS-01']);
++    expect(devices[0].operating_system).toEqual({ full_operating_system: 'Windows 11 Pro', major_version: '10.0' });
++    expect(devices[0].network_interfaces).toHaveLength(1);
++    // Level's documented device carries `disks`, not `disk_partitions`.
++    expect(devices[0].disks).toHaveLength(1);
++    expect(devices[0].disk_partitions).toBeUndefined();
++
++    const bare = await raw(`/v2/devices/${ws.id}`);
++    expect(bare.body.operating_system).toBeUndefined();
++    expect(bare.body.security).toBeUndefined();
++    expect((await raw(`/v2/devices/${ws.id}?include_security=true`)).body.security).toEqual({ score: 80 });
++
++    expect((await raw(`/v2/devices?group_id=${acme.id}`)).body.data).toEqual([]);
++    expect((await raw('/v2/devices?serial_number=SN-1')).body.data).toHaveLength(1);
++    expect((await raw('/v2/devices/nope')).status).toBe(404);
++    expect((await raw('/v2/devices/nope')).body).toEqual({ error: 'Record not found' });
++  });
++
++  it('reports last_seen_at as now for online devices and frozen for offline ones', async () => {
++    const online = (await level.seed('device', { hostname: 'ONLINE' })).device;
++    const offline = (await level.seed('device', { hostname: 'OFFLINE' })).device;
++    await level.action('device-offline', { deviceId: offline.id });
++    const frozenAt = level.core.getDevice(offline.id).last_seen_at!;
++
++    level.host.clock.advance('2h');
++    const since = new Date(level.host.clock.now().getTime() - 60_000);
++    const devices = await listAll('/v2/devices');
++    const byHost = Object.fromEntries(devices.map((d) => [d.hostname, d]));
++    expect(byHost.OFFLINE.last_seen_at).toBe(frozenAt);
++    expect(byHost.OFFLINE.online).toBe(false);
++    expect(new Date(byHost.ONLINE.last_seen_at).getTime()).toBeGreaterThanOrEqual(since.getTime());
++    expect([online.id]).toEqual(devices.filter((d) => new Date(d.last_seen_at) >= since).map((d) => d.id));
++
++    await level.action('device-checkin', { deviceId: offline.id });
++    expect((await raw(`/v2/devices/${offline.id}`)).body.online).toBe(true);
++  });
++
++  it('lists alerts by device and status, and resolves through POST /resolve', async () => {
++    const ws = (await level.seed('device', { hostname: 'WS-01' })).device;
++    const srv = (await level.seed('device', { hostname: 'SRV-01', role: 'server' })).device;
++    const disk = (
++      await level.action('fire-alert', {
++        deviceId: ws.id,
++        name: 'Low disk space',
++        description: 'Disk free < 5.0%',
++        severity: 'critical',
++        payload: '4.37% (10.39 GB) remaining',
++      })
++    ).alert;
++    await level.action('fire-alert', { deviceId: srv.id, name: 'CPU', severity: 'warning' });
++
++    const active = await raw('/v2/alerts?status=active');
++    expect(active.body.data).toHaveLength(2);
++    expect(active.body.data[0]).toEqual({
++      id: disk.id,
++      device_id: ws.id,
++      device_hostname: 'WS-01',
++      name: 'Low disk space',
++      description: 'Disk free < 5.0%',
++      payload: '4.37% (10.39 GB) remaining',
++      severity: 'critical',
++      is_resolved: false,
++      started_at: expect.any(String),
++      resolved_at: null,
++    });
++
++    expect((await raw(`/v2/alerts/${disk.id}/resolve`, { method: 'POST' })).status).toBe(200);
++    expect((await raw('/v2/alerts?status=resolved')).body.data.map((a: { id: string }) => a.id)).toEqual([disk.id]);
++    expect((await raw(`/v2/alerts?device_id=${srv.id}`)).body.data).toHaveLength(1);
++    expect((await raw('/v2/alerts?status=bogus')).status).toBe(400);
++  });
++
++  it('serves updates filtered by device and status', async () => {
++    const ws = (await level.seed('device', { hostname: 'WS-01' })).device;
++    await level.seed('update', { deviceId: ws.id, name: 'KB5034441', category: 'Security Updates' });
++    await level.seed('update', { deviceId: ws.id, name: 'KB0000001', is_available: false, installed_on: '2026-10-01T00:00:00.000Z' });
++    const available = await raw(`/v2/updates?device_id=${ws.id}&status=available`);
++    expect(available.body.data.map((u: { name: string }) => u.name)).toEqual(['KB5034441']);
++    const installed = await raw('/v2/updates?status=installed');
++    expect(installed.body.data.map((u: { name: string }) => u.name)).toEqual(['KB0000001']);
++  });
++
++  it('answers armed rate limits with 429 + Retry-After and operation faults with Level\'s error envelope', async () => {
++    await level.seed('group', { name: 'Acme' });
++
++    await level.arm('rate-limit', { remaining: 2, retryAfterSeconds: 7 });
++    const first = await raw('/v2/groups');
++    expect(first.status).toBe(429);
++    expect(first.headers.get('retry-after')).toBe('7');
++    expect((await raw('/v2/groups')).status).toBe(429);
++    expect((await raw('/v2/groups')).status).toBe(200);
++    const journal = (await (await fetch(`${level.control}/control/levelio/requests`)).json()).result;
++    expect(journal.requests.filter((r: { status: number }) => r.status === 429)).toHaveLength(2);
++
++    await level.arm('operation-fault', { operation: 'GET /v2/devices', status: 503, message: 'Service unavailable' });
++    const failed = await raw('/v2/devices');
++    expect(failed.status).toBe(503);
++    expect(failed.body).toEqual({ error: 'Service unavailable' });
++    expect((await raw('/v2/devices')).body).toEqual({ data: [], has_more: false });
++  });
++
++  it('answers 400 for out-of-range limits and unknown cursors, 501 for unmodeled v2 routes', async () => {
++    expect((await raw('/v2/devices?limit=101')).status).toBe(400);
++    expect((await raw('/v2/devices?limit=0')).status).toBe(400);
++    expect((await raw('/v2/devices?starting_after=missing')).status).toBe(400);
++    const tags = await raw('/v2/tags');
++    expect(tags.status).toBe(501);
++    expect(tags.body.code).toBe('EmulatorUnsupportedOperation');
++  });
++});
+diff --git a/packages/emulators/levelio/tests/webhooks.test.ts b/packages/emulators/levelio/tests/webhooks.test.ts
+new file mode 100644
+index 0000000000..e4034dfcf3
+--- /dev/null
++++ b/packages/emulators/levelio/tests/webhooks.test.ts
+@@ -0,0 +1,158 @@
++import crypto from 'node:crypto';
++import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
++import { startLevel, startReceiver } from './helpers';
++
++let level: Awaited<ReturnType<typeof startLevel>>;
++let receiver: Awaited<ReturnType<typeof startReceiver>>;
++
++/** Level's published Node.js verification snippet, verbatim in behavior. */
++function verifyWebhook(payload: string, signature: string, secret: string): boolean {
++  const expectedSignature = crypto.createHmac('sha256', secret).update(payload, 'utf8').digest('hex');
++  const receivedSignature = signature.replace('sha256=', '');
++  return crypto.timingSafeEqual(Buffer.from(expectedSignature, 'hex'), Buffer.from(receivedSignature, 'hex'));
++}
++
++beforeAll(async () => {
++  level = await startLevel();
++  receiver = await startReceiver();
++});
++
++afterAll(async () => {
++  await level.host.stop();
++  await receiver.close();
++});
++
++beforeEach(async () => {
++  await level.reset();
++  // Deterministic retries: the test pumps them with deliver-due-retries.
++  await level.action('configure', { autoRetry: false });
++  receiver.received.length = 0;
++  receiver.respondWith(() => ({ status: 200, body: '{"ok":true}' }));
++});
++
++describe('Level native webhooks', () => {
++  it('posts the documented envelope with a verifiable X-Level-Signature when a secret is set', async () => {
++    await level.seed('webhook', { url: `${receiver.url}/hook`, secret: 'level-secret', eventTypes: ['alert_active'] });
++    const device = (await level.seed('device', { hostname: 'WS-01' })).device;
++    const fired = await level.action('fire-alert', { deviceId: device.id, name: 'Low disk space', description: 'Disk free < 5.0%', severity: 'critical' });
++
++    expect(receiver.received).toHaveLength(1);
++    const [request] = receiver.received;
++    expect(request.method).toBe('POST');
++    expect(request.headers['content-type']).toBe('application/json');
++    const signature = String(request.headers['x-level-signature']);
++    expect(signature).toMatch(/^sha256=[0-9a-f]{64}$/);
++    expect(verifyWebhook(request.rawBody, signature, 'level-secret')).toBe(true);
++    expect(verifyWebhook(request.rawBody, signature, 'other-secret')).toBe(false);
++
++    const body = JSON.parse(request.rawBody);
++    expect(Object.keys(body)).toEqual(['event_type', 'event_id', 'occurred_at', 'data']);
++    expect(body).toMatchObject({
++      event_type: 'alert_active',
++      event_id: expect.stringMatching(/^[0-9a-f-]{36}$/),
++      data: { id: fired.alert.id, device_id: device.id, device_hostname: 'WS-01', name: 'Low disk space', severity: 'critical', is_resolved: false },
++    });
++    // Native webhooks cannot carry custom headers, so Alga's shared-secret header never arrives.
++    expect(request.headers['x-alga-webhook-secret']).toBeUndefined();
++    // The device_created event was not selected for this endpoint.
++    expect((await level.state('events')).map((e: { event_type: string }) => e.event_type)).toEqual(['device_created', 'alert_active']);
++  });
++
++  it('sends no signature header when the endpoint has no secret', async () => {
++    await level.seed('webhook', { url: `${receiver.url}/hook` });
++    await level.seed('group', { name: 'Acme' });
++    expect(receiver.received).toHaveLength(1);
++    expect(receiver.received[0].headers['x-level-signature']).toBeUndefined();
++    expect(JSON.parse(receiver.received[0].rawBody)).toMatchObject({ event_type: 'group_created', data: { name: 'Acme', child_ids: [] } });
++  });
++
++  it('emits every documented event type through the lifecycle controls', async () => {
++    await level.seed('webhook', { url: `${receiver.url}/hook` });
++    const group = (await level.seed('group', { name: 'Acme' })).group;
++    const device = (await level.seed('device', { hostname: 'WS-01', groupId: group.id })).device;
++    await level.action('update-device', { deviceId: device.id, patch: { nickname: 'Front desk' } });
++    const alert = (await level.action('fire-alert', { deviceId: device.id, name: 'CPU' })).alert;
++    await level.action('resolve-alert', { alertId: alert.id });
++    await level.action('update-group', { groupId: group.id, name: 'Acme Corp' });
++    await level.action('delete-device', { deviceId: device.id });
++    await level.action('delete-group', { groupId: group.id });
++
++    expect(receiver.received.map((r) => JSON.parse(r.rawBody).event_type)).toEqual([
++      'group_created', 'device_created', 'device_updated', 'alert_active', 'alert_resolved',
++      'group_updated', 'device_deleted', 'group_deleted',
++    ]);
++    const resolved = JSON.parse(receiver.received[4].rawBody).data;
++    expect(resolved).toMatchObject({ is_resolved: true, resolved_at: expect.any(String) });
++  });
++
++  it('retries a failing endpoint up to 3 times with growing backoff and a stable event_id', async () => {
++    await level.seed('webhook', { url: `${receiver.url}/hook`, secret: 's3cret', eventTypes: ['alert_active'] });
++    const device = (await level.seed('device', { hostname: 'WS-01' })).device;
++    receiver.respondWith(() => ({ status: 401, body: '{"error":"Unauthorized"}' }));
++    await level.action('fire-alert', { deviceId: device.id, name: 'CPU' });
++
++    // Not due yet: retries wait at least two minutes.
++    expect(await level.action('deliver-due-retries')).toEqual([]);
++    const gaps: number[] = [];
++    for (let i = 0; i < 3; i += 1) {
++      const [pending] = await level.state('pending-retries');
++      gaps.push(pending.dueAtMs - level.host.clock.now().getTime());
++      level.host.clock.advance(pending.dueAtMs - level.host.clock.now().getTime());
++      expect(await level.action('deliver-due-retries')).toHaveLength(1);
++    }
++    expect(gaps[0]).toBeGreaterThanOrEqual(2 * 60_000);
++    expect(gaps[1]).toBeGreaterThan(gaps[0]);
++    expect(gaps[2]).toBeGreaterThan(gaps[1]);
++
++    level.host.clock.advance('1d');
++    expect(await level.action('deliver-due-retries')).toEqual([]);
++    expect(await level.state('pending-retries')).toEqual([]);
++
++    const deliveries = await level.state('webhook-deliveries');
++    expect(deliveries.map((d: any) => [d.trigger, d.attempt, d.status])).toEqual([
++      ['initial', 1, 401], ['retry', 2, 401], ['retry', 3, 401], ['retry', 4, 401],
++    ]);
++    const bodies = receiver.received.map((r) => r.rawBody);
++    expect(new Set(bodies).size).toBe(1); // same event_id, same bytes, same signature
++    expect(new Set(receiver.received.map((r) => r.headers['x-level-signature'])).size).toBe(1);
++  });
++
++  it('stops retrying once the endpoint answers 2xx, and treats redirects as failures', async () => {
++    await level.seed('webhook', { url: `${receiver.url}/hook`, eventTypes: ['group_created'] });
++    let calls = 0;
++    receiver.respondWith(() => (++calls === 1 ? { status: 302 } : { status: 204 }));
++    await level.seed('group', { name: 'Acme' });
++    const [pending] = await level.state('pending-retries');
++    level.host.clock.advance(pending.dueAtMs - level.host.clock.now().getTime());
++    await level.action('deliver-due-retries');
++    expect((await level.state('webhook-deliveries')).map((d: any) => [d.status, d.ok])).toEqual([[302, false], [204, true]]);
++    expect(await level.state('pending-retries')).toEqual([]);
++  });
++
++  it('re-runs a recorded delivery with the same event_id and bytes', async () => {
++    await level.seed('webhook', { url: `${receiver.url}/hook`, secret: 'k', eventTypes: ['device_created'] });
++    await level.seed('device', { hostname: 'WS-01' });
++    const [first] = await level.state('webhook-deliveries');
++    const rerun = await level.action('rerun-delivery', { deliveryId: first.id });
++    expect(rerun).toMatchObject({ trigger: 'rerun', eventId: first.eventId, status: 200 });
++    expect(receiver.received[1].rawBody).toBe(receiver.received[0].rawBody);
++  });
++
++  it('delivers due retries in the background as time passes when autoRetry is on', async () => {
++    await level.action('configure', { autoRetry: true, retryBaseDelayMs: 0, retryJitterMs: 0 });
++    await level.seed('webhook', { url: `${receiver.url}/hook`, eventTypes: ['group_created'] });
++    receiver.respondWith(() => ({ status: 500 }));
++    await level.seed('group', { name: 'Acme' });
++    await expect.poll(() => receiver.received.length, { timeout: 5_000 }).toBe(4);
++  });
++
++  it('merges configurable, unverified extra alert fields into webhook data only', async () => {
++    await level.seed('webhook', { url: `${receiver.url}/hook`, eventTypes: ['alert_active'] });
++    const device = (await level.seed('device', { hostname: 'WS-01' })).device;
++    const { alert } = await level.action('fire-alert', {
++      deviceId: device.id, name: 'CPU', webhookDataExtra: { group_id: 'g-1', monitor_id: 'm-1' },
++    });
++    expect(JSON.parse(receiver.received[0].rawBody).data).toMatchObject({ id: alert.id, group_id: 'g-1', monitor_id: 'm-1' });
++    expect((await level.state('alerts'))[0].group_id).toBeUndefined();
++  });
++});
+diff --git a/packages/emulators/levelio/tsconfig.json b/packages/emulators/levelio/tsconfig.json
+new file mode 100644
+index 0000000000..375497cec6
+--- /dev/null
++++ b/packages/emulators/levelio/tsconfig.json
+@@ -0,0 +1,14 @@
++{
++  "extends": "../../../tsconfig.json",
++  "compilerOptions": {
++    "outDir": "./dist"
++  },
++  "include": [
++    "src/**/*",
++    "tests/**/*"
++  ],
++  "exclude": [
++    "node_modules",
++    "dist"
++  ]
++}
+diff --git a/packages/emulators/levelio/tsup.config.ts b/packages/emulators/levelio/tsup.config.ts
+new file mode 100644
+index 0000000000..39be7842d0
+--- /dev/null
++++ b/packages/emulators/levelio/tsup.config.ts
+@@ -0,0 +1,7 @@
++import { defineConfig } from 'tsup';
++import { makeConfig } from '../../build-tools/tsup-preset';
++
++// addJsExtensions: loaded directly by Node.js ESM via the algasim host.
++export default defineConfig(makeConfig({
++  addJsExtensions: true,
++}));
+diff --git a/packages/emulators/levelio/vitest.config.ts b/packages/emulators/levelio/vitest.config.ts
+new file mode 100644
+index 0000000000..8363e1642b
+--- /dev/null
++++ b/packages/emulators/levelio/vitest.config.ts
+@@ -0,0 +1,8 @@
++import { defineConfig } from 'vitest/config';
++
++export default defineConfig({
++  test: {
++    environment: 'node',
++    include: ['tests/**/*.test.ts'],
++  },
++});
+diff --git a/packages/emulators/suite/package.json b/packages/emulators/suite/package.json
+index 3fac629a72..a4a84b3920 100644
+--- a/packages/emulators/suite/package.json
++++ b/packages/emulators/suite/package.json
+@@ -23,13 +23,14 @@
+   },
+   "dependencies": {
+     "@alga-psa/emulator-host": "*",
++    "@alga-psa/emulator-levelio": "*",
+     "@alga-psa/emulator-msgraph": "*",
+     "@alga-psa/emulator-qbo": "*",
+     "@alga-psa/emulator-smtp-sink": "*",
+     "@alga-psa/emulator-stripe": "*",
++    "@alga-psa/emulator-threecx": "*",
+     "@alga-psa/emulator-webhook-sink": "*",
+-    "@alga-psa/emulator-xero": "*",
+-    "@alga-psa/emulator-threecx": "*"
++    "@alga-psa/emulator-xero": "*"
+   },
+   "devDependencies": {
+     "tsup": "^8.0.0",
+diff --git a/packages/emulators/suite/scenarios/levelio-automation-alga-template.yaml b/packages/emulators/suite/scenarios/levelio-automation-alga-template.yaml
+new file mode 100644
+index 0000000000..ee04ca1f30
+--- /dev/null
++++ b/packages/emulators/suite/scenarios/levelio-automation-alga-template.yaml
+@@ -0,0 +1,67 @@
++name: levelio-automation-alga-template
++description: >-
++  A Level monitor automation whose HTTP Request action posts the payload
++  template Alga's settings screen hands out (getLevelIoWebhookInfo, as of
++  2026-10-15) with the X-Alga-Webhook-Secret header. Level does not know
++  {{alert_id}}, {{device_id}} and the rest, so it sends them as literal text:
++  three different alerts on two devices arrive byte-identical. Against the
++  2026-10-15 route each gets a 200, but all three collapse into one
++  rmm_alerts row and no ticket is created. The target defaults to
++  webhook-sink; point it at Alga's /api/webhooks/levelio?tenant=<id> to
++  reproduce live.
++steps:
++  - reset: levelio
++  - seed: levelio/group
++    params: { id: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMQ, name: Acme Corp }
++  - seed: levelio/group
++    params: { id: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMg, name: Branch Office, parentId: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMQ }
++  - seed: levelio/device
++    params:
++      id: Z2lkOi8vbGV2ZWwvRGV2aWNlLzE
++      hostname: WS-01
++      groupId: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMg
++      serial_number: SN-WS-01
++  - seed: levelio/device
++    params:
++      id: Z2lkOi8vbGV2ZWwvRGV2aWNlLzI
++      hostname: SRV-01
++      role: server
++      groupId: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMQ
++      serial_number: SN-SRV-01
++  - seed: levelio/automation
++    params:
++      id: alga-alert-forwarder
++      name: Forward alerts to Alga
++      url: http://localhost:4030/api/webhooks/levelio?tenant=algasim-tenant
++      method: POST
++      contentType: application/json
++      headers:
++        - { key: X-Alga-Webhook-Secret, value: algasim-alga-webhook-secret }
++      body: |-
++        {
++          "event": "alert.triggered",
++          "alert_id": "{{alert_id}}",
++          "device_id": "{{device_id}}",
++          "hostname": "{{hostname}}",
++          "name": "{{alert_name}}",
++          "severity": "{{severity}}",
++          "description": "{{description}}"
++        }
++  - action: levelio/fire-alert
++    params:
++      deviceId: Z2lkOi8vbGV2ZWwvRGV2aWNlLzE
++      name: CPU
++      description: CPU usage above 90% for 15 minutes
++      severity: critical
++  - action: levelio/fire-alert
++    params:
++      deviceId: Z2lkOi8vbGV2ZWwvRGV2aWNlLzI
++      name: Low disk space
++      description: Disk free < 5.0%
++      severity: warning
++  - action: levelio/fire-alert
++    params:
++      deviceId: Z2lkOi8vbGV2ZWwvRGV2aWNlLzE
++      name: Memory
++      description: Memory usage above 95%
++      severity: critical
+diff --git a/packages/emulators/suite/scenarios/levelio-native-webhook-signed.yaml b/packages/emulators/suite/scenarios/levelio-native-webhook-signed.yaml
+new file mode 100644
+index 0000000000..eca3199ff4
+--- /dev/null
++++ b/packages/emulators/suite/scenarios/levelio-native-webhook-signed.yaml
+@@ -0,0 +1,46 @@
++name: levelio-native-webhook-signed
++description: >-
++  Level Settings → Webhooks with a secret, the way ~99% of Level clients
++  configure it: signed alert_active/alert_resolved envelopes, no custom
++  headers. Against the 2026-10-15 Alga route every delivery is a 401 (it only
++  accepts X-Alga-Webhook-Secret) and Level retries each one three times.
++  The target defaults to webhook-sink; point it at Alga's
++  /api/webhooks/levelio?tenant=<id> to reproduce live.
++steps:
++  - reset: levelio
++  - seed: levelio/group
++    params: { id: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMQ, name: Acme Corp }
++  - seed: levelio/group
++    params: { id: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMg, name: Branch Office, parentId: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMQ }
++  - seed: levelio/device
++    params:
++      id: Z2lkOi8vbGV2ZWwvRGV2aWNlLzE
++      hostname: WS-01
++      groupId: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMg
++      serial_number: SN-WS-01
++  - seed: levelio/device
++    params:
++      id: Z2lkOi8vbGV2ZWwvRGV2aWNlLzI
++      hostname: SRV-01
++      role: server
++      groupId: Z2lkOi8vbGV2ZWwvRGV2aWNlR3JvdXAvMQ
++      serial_number: SN-SRV-01
++  - seed: levelio/webhook
++    params:
++      id: alga-native
++      url: http://localhost:4030/api/webhooks/levelio?tenant=algasim-tenant
++      secret: algasim-level-webhook-secret
++      eventTypes: [alert_active, alert_resolved]
++  - action: levelio/fire-alert
++    params:
++      deviceId: Z2lkOi8vbGV2ZWwvRGV2aWNlLzE
++      name: CPU
++      description: CPU usage above 90% for 15 minutes
++      severity: critical
++  - action: levelio/fire-alert
++    params:
++      deviceId: Z2lkOi8vbGV2ZWwvRGV2aWNlLzI
++      name: Low disk space
++      description: Disk free < 5.0%
++      payload: 4.37% (10.39 GB) remaining
++      severity: warning
+diff --git a/packages/emulators/suite/src/index.ts b/packages/emulators/suite/src/index.ts
+index a7cee8f428..46ef4a6e4f 100644
+--- a/packages/emulators/suite/src/index.ts
++++ b/packages/emulators/suite/src/index.ts
+@@ -5,6 +5,7 @@ import webhookSink from '@alga-psa/emulator-webhook-sink';
+ import stripe from '@alga-psa/emulator-stripe';
+ import xero from '@alga-psa/emulator-xero';
+ import threecx from '@alga-psa/emulator-threecx';
++import levelio from '@alga-psa/emulator-levelio';
+ import type { EmulatorPackage } from '@alga-psa/emulator-host';
+ 
+ /** Every emulator in the suite. New emulators register here. */
+@@ -16,4 +17,5 @@ export const SUITE_EMULATORS: EmulatorPackage[] = [
+   stripe as EmulatorPackage,
+   xero as EmulatorPackage,
+   threecx as EmulatorPackage,
++  levelio as EmulatorPackage,
+ ];
+diff --git a/packages/emulators/suite/tests/suite.test.ts b/packages/emulators/suite/tests/suite.test.ts
+index 0c013e8fd5..aefad2590c 100644
+--- a/packages/emulators/suite/tests/suite.test.ts
++++ b/packages/emulators/suite/tests/suite.test.ts
+@@ -1,9 +1,11 @@
+ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+-import { EmulatorHost, loadScenarioDir } from '@alga-psa/emulator-host';
++import { EmulatorHost, loadScenarioDir, loadScenarioFile, runScenario } from '@alga-psa/emulator-host';
++import { retargetScenario } from '@alga-psa/emulator-levelio';
+ import { SUITE_EMULATORS } from '../src/index';
+ 
+ let host: EmulatorHost;
+ let control: string;
++let ports: Record<string, number>;
+ 
+ beforeAll(async () => {
+   host = new EmulatorHost({
+@@ -12,8 +14,9 @@ beforeAll(async () => {
+     ports: Object.fromEntries(SUITE_EMULATORS.map((emulator) => [emulator.id, 0])),
+     scenarios: loadScenarioDir(new URL('../scenarios', import.meta.url).pathname),
+   });
+-  const { controlPort } = await host.start();
+-  control = `http://127.0.0.1:${controlPort}`;
++  const started = await host.start();
++  ports = started.ports;
++  control = `http://127.0.0.1:${started.controlPort}`;
+ });
+ 
+ afterAll(async () => {
+@@ -24,6 +27,7 @@ describe('emulator suite', () => {
+   it('boots all emulators with distinct ports and a full catalog', async () => {
+     const catalog = ((await (await fetch(`${control}/control/catalog`)).json()) as any).result;
+     expect(catalog.emulators.map((emu: any) => emu.id).sort()).toEqual([
++      'levelio',
+       'msgraph',
+       'qbo',
+       'smtp-sink',
+@@ -55,6 +59,8 @@ describe('emulator suite', () => {
+       'entra-diagnostics-expired-secret',
+       'entra-diagnostics-green',
+       'entra-diagnostics-partner-consent',
++      'levelio-automation-alga-template',
++      'levelio-native-webhook-signed',
+       'token-trouble',
+     ]);
+ 
+@@ -88,4 +94,37 @@ describe('emulator suite', () => {
+     expect(await state('organizations')).toEqual([]);
+     expect(await state('directory-users')).toEqual([]);
+   });
++
++  describe('Level prod-failure scenarios, aimed at webhook-sink', () => {
++    const scenario = (name: string) =>
++      retargetScenario(loadScenarioFile(new URL(`../scenarios/${name}.yaml`, import.meta.url).pathname), {
++        'http://localhost:4030': `http://127.0.0.1:${ports['webhook-sink']}`,
++      });
++    const sinkRequests = async () =>
++      ((await (await fetch(`${control}/control/webhook-sink/state/requests`)).json()) as any).result;
++
++    it('native webhook: signed envelopes with no Alga header, so the current route has nothing to check', async () => {
++      await host.reset('webhook-sink');
++      await runScenario(host, scenario('levelio-native-webhook-signed'));
++      const requests = await sinkRequests();
++      expect(requests.map((r: any) => r.body.event_type)).toEqual(['alert_active', 'alert_active']);
++      for (const request of requests) {
++        expect(request.path).toBe('/api/webhooks/levelio');
++        expect(request.headers['x-level-signature']).toMatch(/^sha256=[0-9a-f]{64}$/);
++        expect(request.headers['x-alga-webhook-secret']).toBeUndefined();
++        expect(request.body.device_id).toBeUndefined(); // the route requires a top-level device_id
++      }
++    });
++
++    it('automation template: three alerts on two devices arrive byte-identical with literal placeholders', async () => {
++      await host.reset('webhook-sink');
++      await runScenario(host, scenario('levelio-automation-alga-template'));
++      const requests = await sinkRequests();
++      expect(requests).toHaveLength(3);
++      expect(requests[0].headers['x-alga-webhook-secret']).toBe('algasim-alga-webhook-secret');
++      expect(requests[0].body).toMatchObject({ alert_id: '{{alert_id}}', device_id: '{{device_id}}', name: '{{alert_name}}' });
++      expect(requests[1].body).toEqual(requests[0].body);
++      expect(requests[2].body).toEqual(requests[0].body);
++    });
++  });
+ });
+diff --git a/packages/types/src/interfaces/asset.interfaces.ts b/packages/types/src/interfaces/asset.interfaces.ts
+index bdc010c96e..50a53234b9 100644
+--- a/packages/types/src/interfaces/asset.interfaces.ts
++++ b/packages/types/src/interfaces/asset.interfaces.ts
+@@ -197,8 +197,10 @@ export interface DiskUsageInfo {
+ export interface RmmStorageInfo {
+   name: string;
+   total_gb: number;
+-  free_gb: number;
+-  utilization_percent: number;
++  /** Absent when the provider reports capacity only (e.g. Level.io `disks`). */
++  free_gb?: number | null;
++  /** Absent when free space is unknown; never substitute 0. */
++  utilization_percent?: number | null;
+ }
+ 
+ // Cached RMM data structure (returned by getAssetRmmData)
+diff --git a/server/public/locales/de/msp/assets.json b/server/public/locales/de/msp/assets.json
+index f7ddb69be5..c1c6ab7e3a 100644
+--- a/server/public/locales/de/msp/assets.json
++++ b/server/public/locales/de/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "Unbekannt",
+       "unifiedMemory": "{{size}}GB Einheitlicher Speicher",
+       "memoryUsed": "({{size}}GB verwendet)",
+-      "freeStorage": "{{size}} GB frei"
++      "freeStorage": "{{size}} GB frei",
++      "totalStorage": "{{size}} GB"
+     },
+     "empty": "Keine Hardwaredaten verfügbar",
+     "emptyStorage": "Keine Speicherlaufwerke erkannt"
+diff --git a/server/public/locales/en/msp/assets.json b/server/public/locales/en/msp/assets.json
+index 0b4d9ad483..65fcbffd44 100644
+--- a/server/public/locales/en/msp/assets.json
++++ b/server/public/locales/en/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "Unknown",
+       "unifiedMemory": "{{size}}GB Unified Memory",
+       "memoryUsed": " ({{size}}GB Used)",
+-      "freeStorage": "{{size}} GB Free"
++      "freeStorage": "{{size}} GB Free",
++      "totalStorage": "{{size}} GB"
+     },
+     "empty": "No hardware data available",
+     "emptyStorage": "No storage drives detected"
+diff --git a/server/public/locales/es/msp/assets.json b/server/public/locales/es/msp/assets.json
+index 678039e830..039b06fa4c 100644
+--- a/server/public/locales/es/msp/assets.json
++++ b/server/public/locales/es/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "Desconocido",
+       "unifiedMemory": "{{size}}GB Memoria unificada",
+       "memoryUsed": "({{size}}GB usado)",
+-      "freeStorage": "{{size}} GB gratis"
++      "freeStorage": "{{size}} GB gratis",
++      "totalStorage": "{{size}} GB"
+     },
+     "empty": "No hay datos de hardware disponibles",
+     "emptyStorage": "No se detectaron unidades de almacenamiento"
+diff --git a/server/public/locales/fr/msp/assets.json b/server/public/locales/fr/msp/assets.json
+index 07576a8219..e19147e03d 100644
+--- a/server/public/locales/fr/msp/assets.json
++++ b/server/public/locales/fr/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "Inconnu",
+       "unifiedMemory": "{{size}}Go de mémoire unifiée",
+       "memoryUsed": "({{size}}Go utilisé)",
+-      "freeStorage": "{{size}} Go gratuits"
++      "freeStorage": "{{size}} Go gratuits",
++      "totalStorage": "{{size}} GB"
+     },
+     "empty": "Aucune donnée matérielle disponible",
+     "emptyStorage": "Aucun lecteur de stockage détecté"
+diff --git a/server/public/locales/it/msp/assets.json b/server/public/locales/it/msp/assets.json
+index dd8fd2041e..79893d3d5b 100644
+--- a/server/public/locales/it/msp/assets.json
++++ b/server/public/locales/it/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "Sconosciuto",
+       "unifiedMemory": "{{size}}GB Memoria unificata",
+       "memoryUsed": "({{size}}GB utilizzato)",
+-      "freeStorage": "{{size}} GB Gratuito"
++      "freeStorage": "{{size}} GB Gratuito",
++      "totalStorage": "{{size}} GB"
+     },
+     "empty": "Nessun dato hardware disponibile",
+     "emptyStorage": "Nessuna unità di archiviazione rilevata"
+diff --git a/server/public/locales/nl/msp/assets.json b/server/public/locales/nl/msp/assets.json
+index b6e9d5830d..0e58292af7 100644
+--- a/server/public/locales/nl/msp/assets.json
++++ b/server/public/locales/nl/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "Onbekend",
+       "unifiedMemory": "{{size}}GB Uniform geheugen",
+       "memoryUsed": "({{size}}GB gebruikt)",
+-      "freeStorage": "{{size}} GB Gratis"
++      "freeStorage": "{{size}} GB Gratis",
++      "totalStorage": "{{size}} GB"
+     },
+     "empty": "Geen hardwaregegevens beschikbaar",
+     "emptyStorage": "Geen opslagstations gedetecteerd"
+diff --git a/server/public/locales/pl/msp/assets.json b/server/public/locales/pl/msp/assets.json
+index 877cbd90fd..a4efaf9f1f 100644
+--- a/server/public/locales/pl/msp/assets.json
++++ b/server/public/locales/pl/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "Nieznany",
+       "unifiedMemory": "{{size}}GB Pamięci zunifikowanej",
+       "memoryUsed": " ({{size}}GB używane)",
+-      "freeStorage": "{{size}} GB wolnego miejsca"
++      "freeStorage": "{{size}} GB wolnego miejsca",
++      "totalStorage": "{{size}} GB"
+     },
+     "empty": "Brak dostępnych danych sprzętowych",
+     "emptyStorage": "Nie wykryto dysków pamięci masowej"
+diff --git a/server/public/locales/pt/msp/assets.json b/server/public/locales/pt/msp/assets.json
+index aeae981d20..1197bf2eb8 100644
+--- a/server/public/locales/pt/msp/assets.json
++++ b/server/public/locales/pt/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "Desconhecido",
+       "unifiedMemory": "Memória unificada {{size}}GB",
+       "memoryUsed": "({{size}}GB usado)",
+-      "freeStorage": "{{size}} GB grátis"
++      "freeStorage": "{{size}} GB grátis",
++      "totalStorage": "{{size}} GB"
+     },
+     "empty": "Nenhum dado de hardware disponível",
+     "emptyStorage": "Nenhuma unidade de armazenamento detectada"
+diff --git a/server/public/locales/sv/msp/assets.json b/server/public/locales/sv/msp/assets.json
+index c763522ca9..6e7099bd9a 100644
+--- a/server/public/locales/sv/msp/assets.json
++++ b/server/public/locales/sv/msp/assets.json
+@@ -1094,7 +1094,8 @@
+       "unknown": "Okänd",
+       "unifiedMemory": "{{size}} GB enhetligt minne",
+       "memoryUsed": " ({{size}} GB använt)",
+-      "freeStorage": "{{size}} GB ledigt"
++      "freeStorage": "{{size}} GB ledigt",
++      "totalStorage": "{{size}} GB"
+     },
+     "empty": "Inga maskinvarudata tillgängliga",
+     "emptyStorage": "Inga lagringsenheter upptäcktes"
+diff --git a/server/public/locales/xx/msp/assets.json b/server/public/locales/xx/msp/assets.json
+index 5eac31a924..9f264496af 100644
+--- a/server/public/locales/xx/msp/assets.json
++++ b/server/public/locales/xx/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "⟦Ŭƞķƞȯẇƞ⟧",
+       "unifiedMemory": "⟦{{size}}ƓƁ Ŭƞīƒīḗḓ Ḿḗḿȯřẏ⟧",
+       "memoryUsed": "⟦ ({{size}}ƓƁ Ŭşḗḓ)⟧",
+-      "freeStorage": "⟦{{size}} ƓƁ Ƒřḗḗ⟧"
++      "freeStorage": "⟦{{size}} ƓƁ Ƒřḗḗ⟧",
++      "totalStorage": "⟦{{size}} ƓƁ⟧"
+     },
+     "empty": "⟦Ƞȯ ħȧřḓẇȧřḗ ḓȧŧȧ ȧṽȧīŀȧƀŀḗ⟧",
+     "emptyStorage": "⟦Ƞȯ şŧȯřȧɠḗ ḓřīṽḗş ḓḗŧḗƈŧḗḓ⟧"
+diff --git a/server/public/locales/yy/msp/assets.json b/server/public/locales/yy/msp/assets.json
+index dfba58ce71..8a1ef4f8d0 100644
+--- a/server/public/locales/yy/msp/assets.json
++++ b/server/public/locales/yy/msp/assets.json
+@@ -1110,7 +1110,8 @@
+       "unknown": "〖Ŭƞķƞȯẇƞ ···〗",
+       "unifiedMemory": "〖{{size}}ƓƁ Ŭƞīƒīḗḓ Ḿḗḿȯřẏ ··········〗",
+       "memoryUsed": "〖 ({{size}}ƓƁ Ŭşḗḓ) ········〗",
+-      "freeStorage": "〖{{size}} ƓƁ Ƒřḗḗ ·······〗"
++      "freeStorage": "〖{{size}} ƓƁ Ƒřḗḗ ·······〗",
++      "totalStorage": "〖{{size}} ƓƁ ·····〗"
+     },
+     "empty": "〖Ƞȯ ħȧřḓẇȧřḗ ḓȧŧȧ ȧṽȧīŀȧƀŀḗ ···········〗",
+     "emptyStorage": "〖Ƞȯ şŧȯřȧɠḗ ḓřīṽḗş ḓḗŧḗƈŧḗḓ ···········〗"
+diff --git a/server/src/interfaces/asset.interfaces.tsx b/server/src/interfaces/asset.interfaces.tsx
+index 11d6e8302b..f947c157a0 100644
+--- a/server/src/interfaces/asset.interfaces.tsx
++++ b/server/src/interfaces/asset.interfaces.tsx
+@@ -163,8 +163,10 @@ export interface DiskUsageInfo {
+ export interface RmmStorageInfo {
+   name: string;
+   total_gb: number;
+-  free_gb: number;
+-  utilization_percent: number;
++  /** Absent when the provider reports capacity only (e.g. Level.io `disks`). */
++  free_gb?: number | null;
++  /** Absent when free space is unknown; never substitute 0. */
++  utilization_percent?: number | null;
+ }
+ 
+ // Cached RMM data structure (returned by getAssetRmmData)
+diff --git a/server/vitest.config.ts b/server/vitest.config.ts
+index 18ef8209c5..b9a6e55b7d 100644
+--- a/server/vitest.config.ts
++++ b/server/vitest.config.ts
+@@ -370,6 +370,7 @@ export default defineConfig({
+       { find: /^@alga-psa\/emulator-webhook-sink$/, replacement: path.resolve(__dirname, '../packages/emulators/webhook-sink/src/index.ts') },
+       { find: /^@alga-psa\/emulator-xero$/, replacement: path.resolve(__dirname, '../packages/emulators/xero/src/index.ts') },
+       { find: /^@alga-psa\/emulator-threecx$/, replacement: path.resolve(__dirname, '../packages/emulators/threecx/src/index.ts') },
++      { find: /^@alga-psa\/emulator-levelio$/, replacement: path.resolve(__dirname, '../packages/emulators/levelio/src/index.ts') },
+ 
+       { find: /^@alga-psa\/media$/, replacement: path.resolve(__dirname, '../packages/media/src/index.ts') },
+       { find: /^@alga-psa\/storage$/, replacement: path.resolve(__dirname, '../packages/storage/src/index.ts') },

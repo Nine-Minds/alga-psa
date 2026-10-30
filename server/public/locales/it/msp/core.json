@@ -105,7 +105,13 @@
     "passwords": "Password",
     "ticketsAll": "Tutti i ticket",
     "ticketsRecurring": "Ticket ricorrenti",
-    "ticketsTemplates": "Modelli di ticket"
+    "ticketsTemplates": "Modelli di ticket",
+    "assetsCustody": "Apparecchiature in custodia",
+    "ticketsCannedResponses": "Risposte predefinite",
+    "profile": "Profilo",
+    "signOut": "Esci",
+    "coManaged": "IT in co-gestione",
+    "coManagedAdministration": "Accesso e amministrazione"
   },
   "sidebar": {
     "backToMain": "Torna al principale",
@@ -154,7 +160,8 @@
       "extensions": "Estensioni",
       "experimentalFeatures": "Funzionalità sperimentali",
       "profile": "Profilo",
-      "security": "Sicurezza"
+      "security": "Sicurezza",
+      "tags": "Tag"
     }
   },
   "dashboard": {
@@ -209,7 +216,35 @@
       "ariaLabel": "Risorse e aiuto",
       "title": "Risorse",
       "documentation": "Documentazione",
-      "support": "Contatta l'assistenza"
+      "support": "Contatta l'assistenza",
+      "submitTicket": "Invia un ticket a Nine Minds"
+    },
+    "supportDialog": {
+      "title": "Invia un ticket a Nine Minds",
+      "intro": "Il supporto Nine Minds riceve questa richiesta come ticket e risponde via email.",
+      "categoryLabel": "Su cosa ti serve aiuto?",
+      "categories": {
+        "bug": "Qualcosa non funziona",
+        "question": "Domanda",
+        "billing": "Fatturazione",
+        "feature": "Richiesta di funzionalità"
+      },
+      "subjectLabel": "Oggetto",
+      "descriptionLabel": "Che cosa è successo?",
+      "descriptionPlaceholder": "Indica cosa ti aspettavi, cosa è successo e quale cliente o fattura è coinvolto.",
+      "replyTo": "Le risposte arrivano a {{email}}",
+      "success": "Inviato al supporto Nine Minds. Le risposte arrivano a {{email}}.",
+      "submit": "Invia a Nine Minds",
+      "sending": "Invio in corso…",
+      "cancel": "Annulla",
+      "close": "Chiudi",
+      "fallbackLink": "Contatta il supporto su nineminds.com",
+      "errors": {
+        "invalidInput": "Inserisci un oggetto di almeno 3 caratteri e una descrizione di almeno 20 caratteri.",
+        "rateLimited": "Hai appena inviato una richiesta. Attendi un minuto prima di inviarne un’altra.",
+        "emailNotConfigured": "Questa installazione non ha la posta in uscita configurata, quindi la richiesta non è stata inviata.",
+        "sendFailed": "Invio della richiesta non riuscito. Riprova."
+      }
     },
     "jobs": {
       "ariaLabel": "Visualizza l'attività dei job in background",
@@ -794,5 +829,42 @@
   "githubStar": {
     "label": "Aggiungi una stella",
     "ariaLabel": "Aggiungi una stella a {{repository}} su GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "Portale MSP",
+      "dashboard": "Dashboard",
+      "ticketDetails": "Dettagli del ticket",
+      "tickets": "Ticket",
+      "projectDetails": "Dettagli del progetto",
+      "projects": "Progetti",
+      "clientDetails": "Dettagli del cliente",
+      "clients": "Clienti",
+      "contactDetails": "Dettagli del contatto",
+      "contacts": "Contatti",
+      "assetDetails": "Dettagli dell’asset",
+      "assets": "Asset",
+      "billing": "Fatturazione",
+      "settings": "Impostazioni",
+      "settingsSection": "Impostazioni: {{section}}",
+      "chat": "Chat"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Funzionalità Pro",
+      "description": "Le funzionalità di chat con IA richiedono Pro. Passa al piano superiore per accedere a questa funzionalità."
+    },
+    "messages": {
+      "proRequired": "Le funzionalità di messaggistica richiedono Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Le funzionalità di chat sono disponibili solo in Enterprise Edition"
+    }
+  },
+  "coManagedWorkspace": {
+    "loading": "Caricamento dell’area di lavoro…",
+    "navigation": "Area di lavoro cliente",
+    "passwordError": "Impossibile verificare lo stato della password. Ricarica questa pagina."
   }
 }

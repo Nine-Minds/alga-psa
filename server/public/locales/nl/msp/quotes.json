@@ -378,6 +378,14 @@
       "customLayout": "Aangepast",
       "tenantDefault": "Tenant-standaard",
       "changeLayout": "Wijzigen"
+    },
+    "sectionTitles": {
+      "title": "Sectietitels voor gegroepeerde offertes",
+      "description": "Optionele koppen voor de standaardindeling met gegroepeerde offerte.",
+      "monthlyLabel": "Titel van maandelijkse sectie",
+      "oneTimeLabel": "Titel van eenmalige sectie",
+      "monthlyPlaceholder": "Maandelijks",
+      "oneTimePlaceholder": "Eenmalig"
     }
   },
   "quoteDetail": {
@@ -622,6 +630,7 @@
       }
     },
     "sections": {
+      "carriedDiscounts": "Kortingen overgenomen op contractregels",
       "contractItems": "Contractartikelen",
       "conversionMode": "Conversiemodus",
       "excludedFromConversion": "Uitgesloten van conversie",
@@ -647,6 +656,7 @@
       "converted": "Geconverteerd",
       "discount": "Korting",
       "fixed": "vast",
+      "monthlyTotal": "Maandtotaal na kortingen",
       "notConverted": "Niet omgezet"
     },
     "partial": {

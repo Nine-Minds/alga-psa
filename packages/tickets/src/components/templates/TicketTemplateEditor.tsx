@@ -2,33 +2,43 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { PartialBlock } from '@blocknote/core';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import type { ITicketTemplate, PendingTag, TicketTemplateReferenceProblem } from '@alga-psa/types';
+import type { ITicketTemplate, PendingTag, TicketTemplateReferenceProblem, TicketTemplateUsage } from '@alga-psa/types';
 import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import BackNav from '@alga-psa/ui/components/BackNav';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Input } from '@alga-psa/ui/components/Input';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
+import { SectionCard } from '@alga-psa/ui/components/SectionCard';
+import FormCardsSkeleton from '@alga-psa/ui/components/skeletons/FormCardsSkeleton';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
+import {
+  TranslatedUnsavedChangesProvider,
+  useRegisterUnsavedChanges,
+} from '@alga-psa/ui/context/UnsavedChangesContext';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   createTicketTemplate,
   getTicketTemplate,
+  listSchedulesForTemplate,
   updateTicketTemplate,
 } from '../../actions/ticketTemplateActions';
 import { getTicketTemplateDraftFromTicket } from '../../actions/ticketActions';
+import { TICKET_TITLE_TOKENS } from '../../lib/ticketTitleTokens';
 import { ticketTemplateInputSchema } from '../../lib/ticketTemplateSchema';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../lib/ticketRichText';
 import { BoardStatusFields, CategoryField, PriorityField } from '../recurring/RecurringFieldGroups';
-// LEVERAGE: friction recurring-reference-data-hook — the board/priority/category lookups live in a recurring-named hook (and also load users, teams, checklist templates this editor does not use); a neutral reference-data hook would serve both
-import { useRecurringReferenceData } from '../recurring/useRecurringReferenceData';
+import { useTicketFieldReferenceData } from '../useTicketFieldReferenceData';
 import { isBlankDocument, recurringErrorMessage, unwrapRecurring } from '../recurring/recurringUi';
+import { useRecurringTicketPermissions } from '../recurring/useRecurringTicketPermissions';
 import { useTicketTemplatePermissions } from './useTicketTemplatePermissions';
 
 const ID = 'ticket-template';
@@ -55,6 +65,7 @@ interface FormState {
   name: string;
   notes: string;
   title: string;
+  offer_for_manual_use: boolean;
   description: PartialBlock[] | null;
   board_id: string;
   category_id: string | null;
@@ -72,12 +83,13 @@ const nextKey = () => `row-${(rowCounter += 1)}`;
 
 function emptyForm(): FormState {
   return {
-    name: '', notes: '', title: '', description: null, board_id: '', category_id: null, subcategory_id: null,
+    name: '', notes: '', title: '', offer_for_manual_use: true, description: null, board_id: '', category_id: null, subcategory_id: null,
     priority_id: '', itil_impact: null, itil_urgency: null, tags: [], checklist: [], customFields: [],
   };
 }
 
 interface TemplateLike {
+  offer_for_manual_use?: boolean;
   name: string;
   notes: string | null;
   title: string;
@@ -98,6 +110,7 @@ function formFromTemplate(template: TemplateLike): FormState {
     name: template.name,
     notes: template.notes ?? '',
     title: template.title,
+    offer_for_manual_use: template.offer_for_manual_use ?? true,
     description: template.description ? parseTicketRichTextContent(template.description) : null,
     board_id: template.board_id ?? '',
     category_id: template.category_id,
@@ -134,6 +147,7 @@ function toInput(form: FormState) {
     name: form.name,
     notes: form.notes.trim() ? form.notes : null,
     title: form.title,
+    offer_for_manual_use: form.offer_for_manual_use,
     description: isBlankDocument(form.description as Record<string, unknown>[] | null)
       ? null
       : serializeTicketRichTextContent(form.description as PartialBlock[]),
@@ -172,14 +186,23 @@ export interface TicketTemplateEditorProps {
  * Create / edit page body for a ticket template: name, ticket fields, description, tags, checklist
  * and custom fields. "Create template from ticket" lands here prefilled; nothing is persisted until Save.
  */
-export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplateEditorProps) {
+function TicketTemplateEditorBody({ templateId, fromTicketId }: TicketTemplateEditorProps) {
   const { t } = useTranslation('features/tickets');
   const router = useRouter();
-  const reference = useRecurringReferenceData();
+  const searchParams = useSearchParams();
+  // "New template" from a schedule passes the schedule it came from; after the first save we go back to it with the new template picked.
+  const rawScheduleReturn = searchParams?.get('scheduleReturn') ?? null;
+  const scheduleReturn = rawScheduleReturn && (rawScheduleReturn === 'new' || /^[0-9a-f-]{36}$/i.test(rawScheduleReturn)) ? rawScheduleReturn : null;
+  const reference = useTicketFieldReferenceData();
   const permissions = useTicketTemplatePermissions();
+  // "Schedule this template…" creates a recurring ticket, so it follows `recurring_ticket:create`.
+  const recurringPermissions = useRecurringTicketPermissions();
   const isNew = templateId === 'new';
 
-  const [template, setTemplate] = useState<ITicketTemplate | null>(null);
+  const [template, setTemplate] = useState<(ITicketTemplate & TicketTemplateUsage) | null>(null);
+  const [schedules, setSchedules] = useState<Array<{ definition_id: string; name: string; is_active: boolean; pins_status: boolean }>>([]);
+  // Only schedules that pin a dispatch status can break when the template's board changes (status belongs to a board).
+  const pinnedStatusSchedules = schedules.filter((schedule) => schedule.pins_status);
   const [referenceProblems, setReferenceProblems] = useState<TicketTemplateReferenceProblem[]>([]);
   const [form, setForm] = useState<FormState>(emptyForm);
   const [baseline, setBaseline] = useState<string>(() => snapshot(emptyForm()));
@@ -189,7 +212,6 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [editorKey, setEditorKey] = useState(0);
-  const savedRef = useRef(false);
 
   // Until the permission check resolves nothing is locked, so a permitted user never sees a flash of
   // disabled fields; the server actions enforce the permission either way.
@@ -219,6 +241,12 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
         const { referenceProblems: problems, ...loaded } = result;
         setTemplate(loaded);
         setReferenceProblems(problems);
+        try {
+          const used = await listSchedulesForTemplate(templateId);
+          if (Array.isArray(used) && !cancelled) setSchedules(used);
+        } catch {
+          // The panel is informational; the count on the template still shows.
+        }
         seed(formFromTemplate(loaded));
       } catch (error) {
         if (!cancelled) setLoadError(error instanceof Error ? error.message : String(error));
@@ -231,12 +259,9 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
 
   const dirty = useMemo(() => !loading && snapshot(form) !== baseline, [form, baseline, loading]);
 
-  useEffect(() => {
-    if (!dirty || savedRef.current) return;
-    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); };
-    window.addEventListener('beforeunload', warn);
-    return () => window.removeEventListener('beforeunload', warn);
-  }, [dirty]);
+  // Feeds the provider above: in-app navigation (back button, sidebar links) asks for confirmation and
+  // the shared leave guard covers reload, tab close and the browser history chords.
+  useRegisterUnsavedChanges(`${ID}-editor`, dirty);
 
   const patch = (changes: Partial<FormState>) => setForm((current) => ({ ...current, ...changes }));
   const patchChecklist = (key: string, changes: Partial<ChecklistRow>) =>
@@ -251,7 +276,7 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
   const patchCustomField = (key: string, changes: Partial<CustomFieldRow>) =>
     patch({ customFields: form.customFields.map((row) => (row.key === key ? { ...row, ...changes } : row)) });
 
-  const issueMessages = (error: { issues: Array<{ message: string; path: (string | number)[]; params?: Record<string, unknown> }> }) =>
+  const issueMessages = (error: { issues: Array<{ message: string; path: ReadonlyArray<PropertyKey>; params?: Record<string, unknown> }> }) =>
     error.issues.map((issue) => {
       const params = (issue as { params?: { messageKey?: string; messageParams?: Record<string, unknown> } }).params;
       if (params?.messageKey) {
@@ -274,9 +299,13 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
         const result = await createTicketTemplate(parsed.data, fromTicketId ?? null);
         const message = recurringErrorMessage(result);
         if (message !== null) { setErrors([message]); return; }
-        savedRef.current = true;
+        // The draft is now stored, so the guard must let the redirect to the saved template through.
+        setBaseline(snapshot(form));
         toast.success(t('templates.editor.created', 'Template created'));
-        router.replace(`/msp/tickets/templates/${(result as { template_id: string }).template_id}`);
+        const createdId = (result as { template_id: string }).template_id;
+        router.replace(scheduleReturn
+          ? `/msp/tickets/recurring/${scheduleReturn}?template=${createdId}`
+          : `/msp/tickets/templates/${createdId}`);
       } else {
         const message = recurringErrorMessage(await updateTicketTemplate(templateId, parsed.data));
         if (message !== null) { setErrors([message]); return; }
@@ -295,35 +324,52 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
   };
 
   if (loading) {
-    return <div id={`${ID}-loading`} className="p-6 text-sm text-[rgb(var(--color-text-500))]">{t('templates.loading', 'Loading…')}</div>;
+    return <FormCardsSkeleton id={`${ID}-loading`} label={t('templates.loading', 'Loading…')} />;
   }
   if (loadError) {
     return <div className="p-6"><Alert id={`${ID}-load-error`} variant="destructive"><AlertDescription>{loadError}</AlertDescription></Alert></div>;
   }
 
   return (
-    <div id={`${ID}-editor`} className="mx-auto max-w-5xl space-y-8 p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <Link id={`${ID}-back`} href="/msp/tickets/templates" className="text-sm text-[rgb(var(--color-primary-600))] hover:underline">
-            {t('templates.editor.back', 'Ticket templates')}
-          </Link>
-          <h1 className="text-2xl font-semibold">
-            {isNew ? t('templates.editor.newTitle', 'New ticket template') : form.name}
-          </h1>
-          {template && (
-            <Badge variant={template.is_active ? 'success' : 'default-muted'}>
-              {template.is_active ? t('templates.status.active', 'Active') : t('templates.status.inactive', 'Inactive')}
-            </Badge>
+    <div id={`${ID}-editor`} className="space-y-6 p-6">
+      <div className="space-y-3">
+        {/* BackNav routes through UnsavedChangesContext, so an in-app back click respects a dirty form. */}
+        <BackNav id={`${ID}-back`} href="/msp/tickets/templates">
+          ← {t('templates.editor.back', 'Ticket templates')}
+        </BackNav>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-bold">
+              {isNew ? t('templates.editor.newTitle', 'New ticket template') : form.name}
+            </h1>
+            {template && (
+              <Badge variant={template.is_active ? 'success' : 'default-muted'}>
+                {template.is_active ? t('templates.status.active', 'Active') : t('templates.status.inactive', 'Inactive')}
+              </Badge>
+            )}
+          </div>
+          {!readOnly && (
+            <Button id={`${ID}-save`} type="button" disabled={saving || reference.loading} onClick={() => void save()}>
+              {saving ? t('templates.editor.saving', 'Saving…') : t('templates.editor.save', 'Save')}
+            </Button>
           )}
         </div>
-        {!readOnly && (
-          <Button id={`${ID}-save`} type="button" disabled={saving || reference.loading} onClick={() => void save()}>
-            {saving ? t('templates.editor.saving', 'Saving…') : t('templates.editor.save', 'Save')}
-          </Button>
-        )}
       </div>
 
+      {template && !template.is_active && (
+        <Alert id={`${ID}-inactive-warning`} variant="warning">
+          <AlertDescription>
+            {t('templates.editor.inactiveWarning', 'Inactive: hidden from the template picker; still used by {{count}} schedules.', { count: template.schedule_count })}
+          </AlertDescription>
+        </Alert>
+      )}
+      {template && template.schedule_count > 0 && (
+        <Alert id={`${ID}-shared-warning`} variant="warning">
+          <AlertDescription>
+            {t('templates.editor.sharedWarning', 'Changes here apply to every recurring schedule that uses this template, from the next ticket each one creates.')}
+          </AlertDescription>
+        </Alert>
+      )}
       {fromTicket && (
         <Alert id={`${ID}-from-ticket-banner`}>
           <AlertDescription>
@@ -358,24 +404,67 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
         </Alert>
       )}
 
-      <section id={`${ID}-details`} className="space-y-4">
-        <h2 className="text-lg font-semibold">{t('templates.sections.details', 'Template')}</h2>
-        <div>
-          <Label htmlFor={`${ID}-name`}>{t('templates.fields.name', 'Template name')}</Label>
-          <Input id={`${ID}-name`} value={form.name} disabled={readOnly} onChange={(event) => patch({ name: event.target.value })} />
+      <SectionCard id={`${ID}-details`} title={t('templates.sections.details', 'Template')}>
+        {/* Two columns on wide viewports, so short fields do not stretch across the whole page. */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <Label htmlFor={`${ID}-name`}>{t('templates.fields.name', 'Template name')}</Label>
+            <Input id={`${ID}-name`} value={form.name} disabled={readOnly} onChange={(event) => patch({ name: event.target.value })} />
+          </div>
+          <div>
+            <Label htmlFor={`${ID}-notes`}>{t('templates.fields.notes', 'Notes')}</Label>
+            <TextArea id={`${ID}-notes`} value={form.notes} disabled={readOnly} onChange={(event) => patch({ notes: event.target.value })} />
+            <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{t('templates.fields.notesHelp', 'For your team only. Not copied to tickets.')}</p>
+          </div>
         </div>
-        <div>
-          <Label htmlFor={`${ID}-notes`}>{t('templates.fields.notes', 'Notes')}</Label>
-          <TextArea id={`${ID}-notes`} value={form.notes} disabled={readOnly} onChange={(event) => patch({ notes: event.target.value })} />
-          <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{t('templates.fields.notesHelp', 'For your team only. Not copied to tickets.')}</p>
+        <div className="flex items-start gap-3">
+          <Switch
+            id={`${ID}-offer-manual`}
+            checked={form.offer_for_manual_use}
+            disabled={readOnly}
+            onCheckedChange={(checked) => patch({ offer_for_manual_use: checked })}
+          />
+          <div>
+            <Label htmlFor={`${ID}-offer-manual`}>{t('templates.fields.offerForManualUse', 'Offer in the new ticket picker')}</Label>
+            <p className="text-xs text-[rgb(var(--color-text-500))]">
+              {t('templates.fields.offerForManualUseHelp', 'Turn off for templates that only recurring schedules use.')}
+            </p>
+          </div>
         </div>
-      </section>
+        {template && (
+          <div id={`${ID}-usage`} className="space-y-1 rounded-md border border-[rgb(var(--color-border-200))] p-3 text-sm">
+            <p className="font-medium">{t('templates.usage.schedules', 'Used by {{count}} schedules', { count: template.schedule_count })}</p>
+            {schedules.length > 0 && (
+              <ul className="list-disc pl-5">
+                {schedules.map((schedule) => (
+                  <li key={schedule.definition_id}>
+                    <Link href={`/msp/tickets/recurring/${schedule.definition_id}`} className="text-[rgb(var(--color-primary-600))] hover:underline">
+                      {schedule.name}
+                    </Link>
+                    {!schedule.is_active && ` (${t('templates.usage.paused', 'paused')})`}
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="text-[rgb(var(--color-text-500))]">
+              {t('templates.usage.tickets', '{{count}} tickets created from this template', { count: template.ticket_count })}
+            </p>
+            {recurringPermissions.create && (
+              <Link id={`${ID}-schedule-link`} href={`/msp/tickets/recurring/new?template=${template.template_id}`} className="text-[rgb(var(--color-primary-600))] hover:underline">
+                {t('templates.usage.scheduleThis', 'Schedule this template…')}
+              </Link>
+            )}
+          </div>
+        )}
+      </SectionCard>
 
-      <section id={`${ID}-ticket`} className="space-y-4">
-        <h2 className="text-lg font-semibold">{t('templates.sections.ticket', 'Ticket')}</h2>
-        <div>
+      <SectionCard id={`${ID}-ticket`} title={t('templates.sections.ticket', 'Ticket')}>
+        <div className="md:max-w-2xl">
           <Label htmlFor={`${ID}-title`}>{t('templates.fields.title', 'Ticket title')}</Label>
           <Input id={`${ID}-title`} value={form.title} disabled={readOnly} onChange={(event) => patch({ title: event.target.value })} />
+          <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
+            {t('templates.fields.titleTokens', 'You can use {{tokens}} in the title; they are filled in per ticket.', { tokens: TICKET_TITLE_TOKENS.map((token) => `{{${token}}}`).join(' ') })}
+          </p>
         </div>
         <div>
           <Label htmlFor={`${ID}-description`}>{t('templates.fields.description', 'Description')}</Label>
@@ -410,6 +499,13 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
             ...(value.board_id !== form.board_id ? { priority_id: '', category_id: null, subcategory_id: null } : {}),
           })}
         />
+        {template && pinnedStatusSchedules.length > 0 && template.board_id && form.board_id !== template.board_id && (
+          <Alert id={`${ID}-board-change-warning`} variant="warning">
+            <AlertDescription>
+              {t('templates.editor.boardChangeWarning', 'Changing the board clears priority and category, and can make the status of schedules that use this template invalid. Those schedules fail until you edit them. Affected schedules: {{schedules}}.', { schedules: pinnedStatusSchedules.map((schedule) => schedule.name).join(', ') })}
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <PriorityField
             idPrefix={`${ID}-priority-field`}
@@ -435,10 +531,9 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
           onPendingTagsChange={(tags) => patch({ tags })}
           disabled={readOnly}
         />
-      </section>
+      </SectionCard>
 
-      <section id={`${ID}-checklist`} className="space-y-3">
-        <h2 className="text-lg font-semibold">{t('templates.sections.checklist', 'Checklist')}</h2>
+      <SectionCard id={`${ID}-checklist`} title={t('templates.sections.checklist', 'Checklist')} bodyClassName="space-y-3 md:max-w-3xl">
         {/* LEVERAGE: pattern checklist-item-list-editor — an add/reorder/remove list of checklist items is also written by the checklist template editor; both should share one editor component */}
         {form.checklist.length === 0 && (
           <p id={`${ID}-checklist-empty`} className="text-sm text-[rgb(var(--color-text-500))]">
@@ -484,10 +579,9 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
             {t('templates.checklist.add', 'Add item')}
           </Button>
         )}
-      </section>
+      </SectionCard>
 
-      <section id={`${ID}-custom-fields`} className="space-y-3">
-        <h2 className="text-lg font-semibold">{t('templates.sections.customFields', 'Custom fields')}</h2>
+      <SectionCard id={`${ID}-custom-fields`} title={t('templates.sections.customFields', 'Custom fields')} bodyClassName="space-y-3 md:max-w-3xl">
         {form.customFields.length === 0 && (
           <p id={`${ID}-custom-fields-empty`} className="text-sm text-[rgb(var(--color-text-500))]">
             {t('templates.customFields.empty', 'No custom field values.')}
@@ -525,8 +619,20 @@ export function TicketTemplateEditor({ templateId, fromTicketId }: TicketTemplat
             {t('templates.customFields.add', 'Add field')}
           </Button>
         )}
-      </section>
+      </SectionCard>
     </div>
+  );
+}
+
+/**
+ * The editor plus the page-level unsaved-changes guard it needs: the provider owns the confirmation
+ * dialog and the shared leave guard, and the body registers its dirty state with it.
+ */
+export function TicketTemplateEditor(props: TicketTemplateEditorProps) {
+  return (
+    <TranslatedUnsavedChangesProvider>
+      <TicketTemplateEditorBody {...props} />
+    </TranslatedUnsavedChangesProvider>
   );
 }
 

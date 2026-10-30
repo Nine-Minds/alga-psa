@@ -1,10 +1,22 @@
 'use server';
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal asset actions intentionally compose asset feature APIs for client-facing read views. */
+
 import { Knex } from 'knex';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
-import type { Asset, IUserWithRoles } from '@alga-psa/types';
+import type { Asset, AssetStatus, AssetStatusKind, IUserWithRoles } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import { applyAssetVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/authorization/portal/visibility';
+import {
+  assetStatusKindForSlug,
+  assetStatusLabelForSlug,
+  listAssetStatusRows,
+} from '@alga-psa/assets/lib/assetStatusRegistry';
+import {
+  getAssetGroupSummariesForAssets,
+  getAssetGroupSummary,
+} from '@alga-psa/assets/lib/assetGroups';
 import { getClientContactVisibilityContext } from './visibilityResolver';
 import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
 
@@ -23,17 +35,30 @@ export interface ListClientAssetsParams {
   limit?: number;
   search?: string;
   asset_type?: ClientAssetType;
-  /** "active" => status != 'inactive', "inactive" => status == 'inactive', undefined => all */
-  status?: 'active' | 'inactive';
+  /** A status slug from `by_status` (FR-B5); undefined => every status. */
+  status?: string;
   sort_by?: ClientAssetSortField;
   sort_direction?: 'asc' | 'desc';
+}
+
+/** One status the client's visible devices are actually in (FR-B5). */
+export interface ClientAssetStatusSummary {
+  slug: string;
+  /** The tenant's label for the slug; the portal still localizes the builtins. */
+  label: string;
+  kind: AssetStatusKind;
+  count: number;
 }
 
 export interface ListClientAssetsResponse {
   assets: Asset[];
   total: number;
-  active: number;
-  inactive: number;
+  /**
+   * Statuses in use across the entire client with their counts, in registry
+   * order. Feeds the status filter and the banner, which reads "active" as the
+   * `deployable` kind rather than as "anything but inactive".
+   */
+  by_status: ClientAssetStatusSummary[];
   /** Per-type counts across the entire client (not bound to the current page). */
   by_type: Record<ClientAssetType, number>;
   page: number;
@@ -43,11 +68,12 @@ export interface ListClientAssetsResponse {
 const DEFAULT_LIMIT = 10;
 const MAX_LIMIT = 100;
 
+// Qualified: row reads join `contacts`, which carries its own `updated_at`.
 const SORT_FIELDS: Record<ClientAssetSortField, string> = {
-  name: 'name',
-  asset_type: 'asset_type',
-  status: 'status',
-  updated_at: 'updated_at',
+  name: 'assets.name',
+  asset_type: 'assets.asset_type',
+  status: 'assets.status',
+  updated_at: 'assets.updated_at',
 };
 
 function tenantScopedTable(
@@ -80,7 +106,7 @@ async function resolveAssetVisibility(
   user: IUserWithRoles,
   tenant: string,
 ): Promise<ContactVisibilityContext> {
-  if (user.user_type !== 'client') {
+  if (!isClientUserType(user.user_type)) {
     throw new Error('Unauthorized: Invalid user type for client portal');
   }
   if (!user.contact_id) {
@@ -98,7 +124,114 @@ function scopedAssets(
   return applyAssetVisibilityFilter(tenantScopedTable(trx, 'assets', tenant), visibility, {
     clientColumn: 'assets.client_id',
     contactColumn: 'assets.contact_name_id',
+    // FR-E7 / FR-E7b: a shared-workspace member is visible to its users.
+    sharedWorkspace: { assetIdColumn: 'assets.asset_id', tenantColumn: 'assets.tenant' },
   });
+}
+
+/**
+ * What a client user may see of a device.
+ *
+ * An allow-list rather than `assets.*`: the MSP's commercial columns —
+ * purchase cost and currency, supplier, order number, billing profile — sit on
+ * the same row, and `select *` shipped every one of them to the browser. Add a
+ * column here only when the portal is meant to show it.
+ */
+const PORTAL_ASSET_COLUMNS = [
+  'assets.asset_id',
+  'assets.tenant',
+  'assets.client_id',
+  'assets.asset_type',
+  'assets.asset_tag',
+  'assets.serial_number',
+  'assets.name',
+  'assets.status',
+  'assets.location_id',
+  'assets.location',
+  'assets.purchase_date',
+  'assets.warranty_end_date',
+  'assets.created_at',
+  'assets.updated_at',
+] as const;
+
+/**
+ * FR-C6: the portal names the person a device is assigned to, and `assets`
+ * stores only the contact id — so every row read joins `contacts`. Counts never
+ * need the join, which is why it lives here and not in `scopedAssets`.
+ */
+function withAssigneeName(
+  trx: Knex.Transaction,
+  tenant: string,
+  query: Knex.QueryBuilder,
+): Knex.QueryBuilder {
+  tenantDb(trx, tenant).tenantJoin(
+    query,
+    'contacts',
+    'contacts.contact_name_id',
+    'assets.contact_name_id',
+    { type: 'left' },
+  );
+  return query.select(...PORTAL_ASSET_COLUMNS, 'contacts.full_name as contact_name');
+}
+
+/**
+ * FR-E7b: a shared-workspace member reads as its workspace rather than as one
+ * person, so the group summary travels with every asset the portal returns.
+ */
+async function serializeWithGroups(
+  trx: Knex.Transaction,
+  tenant: string,
+  rows: Array<Asset & Record<string, unknown>>,
+): Promise<Asset[]> {
+  const summaries = await getAssetGroupSummariesForAssets(
+    trx,
+    tenant,
+    rows.map((row) => row.asset_id),
+  );
+  return rows.map((row) => ({
+    ...serializeAsset(row),
+    group: summaries.get(row.asset_id) ?? null,
+  }));
+}
+
+/**
+ * The statuses the client's devices are in, in the tenant's display order, with
+ * a row's own label and kind resolved from the registry. Only statuses actually
+ * in use are returned: the filter then offers exactly the statuses a portal
+ * user can find, and the tenant's wider taxonomy stays the MSP's business.
+ */
+function buildStatusSummary(
+  statusRows: AssetStatus[],
+  counts: Array<{ status: string | null; count: string | number }>,
+): ClientAssetStatusSummary[] {
+  const countBySlug = new Map<string, number>();
+  for (const row of counts) {
+    const slug = String(row.status ?? '').trim();
+    if (!slug) continue;
+    countBySlug.set(slug, (countBySlug.get(slug) ?? 0) + Number(row.count ?? 0));
+  }
+
+  const summaries: ClientAssetStatusSummary[] = statusRows
+    .filter((row) => countBySlug.has(row.slug))
+    .map((row) => ({
+      slug: row.slug,
+      label: row.label,
+      kind: row.kind,
+      count: countBySlug.get(row.slug) ?? 0,
+    }));
+
+  // A slug no registry row claims still has to read as something.
+  for (const [slug, count] of countBySlug) {
+    if (summaries.some((summary) => summary.slug === slug)) continue;
+    summaries.push({
+      slug,
+      label: assetStatusLabelForSlug(slug, statusRows),
+      kind: assetStatusKindForSlug(slug, statusRows),
+      count,
+    });
+  }
+
+  return summaries;
 }
 
 /**
@@ -122,8 +255,7 @@ export const listClientAssets = withAuth(async (
       const baseQuery = () => {
         const q = scopedAssets(trx, tenant, visibility);
         if (params.asset_type) q.where('asset_type', params.asset_type);
-        if (params.status === 'active') q.whereNot('status', 'inactive');
-        if (params.status === 'inactive') q.where('status', 'inactive');
+        if (params.status) q.where('status', params.status);
         if (params.search) {
           const term = `%${params.search.trim().toLowerCase()}%`;
           q.where((b) => {
@@ -135,17 +267,19 @@ export const listClientAssets = withAuth(async (
         return q;
       };
 
-    // Counts: filtered total, plus active/inactive and per-type counts across
+    // Counts: filtered total, plus per-status and per-type counts across
     // everything this user may see (so the summary tiles don't drift when the
     // user paginates or filters the table, and always match the list).
-    const [filteredCount, statusCounts, typeRows] = await Promise.all([
+    const [filteredCount, statusRows, statusCounts, typeRows] = await Promise.all([
       baseQuery().count<{ count: string }>('asset_id as count').first(),
+      // Archived statuses included: a device can still be sitting on one.
+      listAssetStatusRows(trx, tenant, { includeArchived: true }),
       scopedAssets(trx, tenant, visibility)
-        .select(
-          trx.raw(`SUM(CASE WHEN status = 'inactive' THEN 1 ELSE 0 END)::int as inactive`),
-          trx.raw(`SUM(CASE WHEN status <> 'inactive' OR status IS NULL THEN 1 ELSE 0 END)::int as active`),
-        )
-        .first<{ active: number | null; inactive: number | null }>(),
+        .groupBy('status')
+        .select<Array<{ status: string | null; count: string }>>(
+          'status',
+          trx.raw('count(*) as count'),
+        ),
       scopedAssets(trx, tenant, visibility)
         .groupBy('asset_type')
         .select<Array<{ asset_type: string | null; count: string }>>(
@@ -173,16 +307,15 @@ export const listClientAssets = withAuth(async (
     }
 
     const offset = (page - 1) * limit;
-    const rows = await baseQuery()
+    const rows = await withAssigneeName(trx, tenant, baseQuery())
       .orderBy(sortField, sortDirection)
       .limit(limit)
       .offset(offset);
 
       return {
-        assets: rows.map(serializeAsset),
+        assets: await serializeWithGroups(trx, tenant, rows),
         total: Number(filteredCount?.count ?? 0),
-        active: Number(statusCounts?.active ?? 0),
-        inactive: Number(statusCounts?.inactive ?? 0),
+        by_status: buildStatusSummary(statusRows, statusCounts),
         by_type: byType,
         page,
         limit,
@@ -206,9 +339,9 @@ export const getClientAssets = withAuth(async (
     const { knex } = await createTenantKnex();
     return withTransaction(knex, async (trx: Knex.Transaction) => {
       const visibility = await resolveAssetVisibility(trx, user, tenant);
-      const assets = await scopedAssets(trx, tenant, visibility)
-        .orderBy('updated_at', 'desc');
-      return assets.map(serializeAsset);
+      const assets = await withAssigneeName(trx, tenant, scopedAssets(trx, tenant, visibility))
+        .orderBy('assets.updated_at', 'desc');
+      return serializeWithGroups(trx, tenant, assets);
     });
   } catch (error) {
     const expected = clientPortalActionErrorFrom(error);
@@ -234,10 +367,14 @@ export const getClientAssetById = withAuth(async (
     const { knex } = await createTenantKnex();
     return withTransaction(knex, async (trx: Knex.Transaction) => {
       const visibility = await resolveAssetVisibility(trx, user, tenant);
-      const row = await scopedAssets(trx, tenant, visibility)
+      const row = await withAssigneeName(trx, tenant, scopedAssets(trx, tenant, visibility))
         .where('assets.asset_id', assetId)
         .first();
-      return row ? serializeAsset(row) : null;
+      if (!row) return null;
+      return {
+        ...serializeAsset(row),
+        group: await getAssetGroupSummary(trx, tenant, assetId),
+      };
     });
   } catch (error) {
     const expected = clientPortalActionErrorFrom(error);

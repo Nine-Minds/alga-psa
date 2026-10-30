@@ -1,6 +1,19 @@
 import type { Session } from 'next-auth';
 
 import logger from '@alga-psa/core/logger';
+import { headers } from 'next/headers';
+import { getSessionCookieName } from './session';
+
+export async function logSessionRejection(reason: string): Promise<void> {
+  let requestId = 'unavailable';
+  try {
+    const requestHeaders = await headers();
+    const candidate = requestHeaders.get('x-request-id') || requestHeaders.get('x-correlation-id') || '';
+    if (/^[A-Za-z0-9._:-]{1,128}$/.test(candidate)) requestId = candidate;
+  } catch { /* Some auth callers run outside a Next request context. */ }
+  logger.warn('[auth] session_rejected', { reason, requestId });
+}
+import { isInteractiveUserType } from '@alga-psa/types';
 import { UserSession } from '@alga-psa/db/models/UserSession';
 import { auth as edgeAuth } from '../nextauth/edge-auth';
 import { auth as fullAuth } from '../nextauth/auth';
@@ -23,6 +36,13 @@ import { auth as fullAuth } from '../nextauth/auth';
  */
 async function requireLiveSession(session: Session | null): Promise<Session | null> {
   if (!session?.user) {
+    let cookiePresent = false;
+    try {
+      const requestHeaders = await headers();
+      const cookieHeader = requestHeaders.get('cookie') ?? '';
+      cookiePresent = cookieHeader.split(';').some((cookie) => cookie.trim().startsWith(`${getSessionCookieName()}=`));
+    } catch { /* Report the decode result without assuming request context. */ }
+    await logSessionRejection(cookiePresent ? 'cookie_present_session_decode_or_expiry' : 'cookie_absent');
     return null;
   }
 
@@ -36,23 +56,27 @@ async function requireLiveSession(session: Session | null): Promise<Session | nu
     || tenant.length === 0
     || typeof userId !== 'string'
     || userId.length === 0
-    || (userType !== 'internal' && userType !== 'client')
+    || typeof userType !== 'string'
+    || !isInteractiveUserType(userType)
     || typeof sessionId !== 'string'
     || sessionId.length === 0
   ) {
-    logger.warn('[auth] Rejecting session without complete tracked identity claims');
+    await logSessionRejection('missing_identity_claims');
     return null;
   }
 
   try {
-    if (await UserSession.isRevokedOrIdentityMismatch(tenant, sessionId, {
+    const rejectionReason = await UserSession.getRejectionReason(tenant, sessionId, {
       userId,
       userType,
-    })) {
+    });
+    if (rejectionReason) {
+      await logSessionRejection(`durable_session_${rejectionReason}`);
       return null;
     }
-  } catch (error) {
-    logger.error('[auth] Session revocation check failed closed', error);
+  } catch {
+    await logSessionRejection('durable_session_lookup_unavailable');
+    logger.error('[auth] Session revocation check failed closed');
     return null;
   }
 
@@ -60,23 +84,21 @@ async function requireLiveSession(session: Session | null): Promise<Session | nu
 }
 
 async function decodeSession(): Promise<Session | null> {
+  let edgeSession: Session | null = null;
   try {
-    const edgeSession = await edgeAuth();
-    if (edgeSession) {
-      return edgeSession;
-    }
+    edgeSession = await edgeAuth();
+  } catch {
+    await logSessionRejection('edge_session_decode_failed');
+  }
+  if (edgeSession) return edgeSession;
 
-    // Edge auth can legitimately return null (or fail) in dev / after hot reloads.
-    // Fall back to the full Node.js helper which is more tolerant.
+  // Edge auth can legitimately return null (or fail) in dev / after hot reloads.
+  // Fall back to the full Node.js helper which is more tolerant.
+  try {
     return await fullAuth();
-  } catch (error) {
-    logger.error('Failed to retrieve auth session via edge auth helper; falling back to full auth', error);
-    try {
-      return await fullAuth();
-    } catch (fallbackError) {
-      logger.error('Failed to retrieve auth session via full auth helper', fallbackError);
-      return null;
-    }
+  } catch {
+    await logSessionRejection('full_session_decode_failed');
+    return null;
   }
 }
 
@@ -111,19 +133,19 @@ async function decodeSessionWithFullAuthFirst(): Promise<Session | null> {
     if (process.env.NODE_ENV !== 'production') {
       try {
         return await edgeAuth();
-      } catch (edgeError) {
-        logger.error('Dev fallback: failed to retrieve auth session via edge auth helper', edgeError);
+      } catch {
+        await logSessionRejection('edge_session_decode_failed');
       }
     }
 
     return null;
-  } catch (error) {
-    logger.error('Failed to retrieve auth session with revocation check', error);
+  } catch {
+    await logSessionRejection('full_session_decode_failed');
     if (process.env.NODE_ENV !== 'production') {
       try {
         return await edgeAuth();
-      } catch (edgeError) {
-        logger.error('Dev fallback: failed to retrieve auth session via edge auth helper', edgeError);
+      } catch {
+        await logSessionRejection('edge_session_decode_failed');
       }
     }
     return null;

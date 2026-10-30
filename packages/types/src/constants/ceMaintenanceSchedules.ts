@@ -1,4 +1,5 @@
 import { MAINTENANCE_FANOUT_SCHEDULES } from './maintenanceFanoutSchedules';
+import { listExtensionMaintenanceSchedules } from './jobScheduleExtensions';
 
 /**
  * Community Edition maintenance schedules.
@@ -14,9 +15,11 @@ import { MAINTENANCE_FANOUT_SCHEDULES } from './maintenanceFanoutSchedules';
  *
  * `renew-microsoft-calendar-webhooks` and `verify-google-calendar-pubsub` are
  * deliberately absent: their handlers are no-ops outside Enterprise Edition.
- * Crons are UTC.
+ * Crons are UTC. Rows registered through `registerMaintenanceSchedule` for CE
+ * (or both editions) follow the native entries.
  */
 export const CE_SHARED_MAINTENANCE_JOBS: ReadonlyArray<string> = [
+  'recover-file-uploads',
   'expired-credits',
   'expiring-credits-notification',
   'prepaid-balance-alert-scan',
@@ -72,6 +75,7 @@ export function resolveCeMaintenanceSchedules(
       return { jobName, cron };
     }),
     ...CE_ONLY_MAINTENANCE_SCHEDULES.map((s) => ({ ...s })),
+    ...listExtensionMaintenanceSchedules('ce'),
   ];
 
   return entries.map((entry) => {

@@ -12,9 +12,25 @@ import {
 import {
   normalizeLiveRecurringStorage,
   normalizeTemplateRecurringStorage,
+  normalizeRecurringStorageForLineType,
 } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
-import { cloneTemplateLinePools } from '@alga-psa/shared/billingClients/templateClone';
+import {
+  cloneTemplateLinePoolsDetailed,
+  cloneTemplateLinePrepaidBlock,
+  snapshotContractLinePrepaidBlockToTemplateLine,
+} from '@alga-psa/shared/billingClients/templateClone';
+import {
+  assertLiveLineMatchesTemplateCurrency,
+  nonNegativeCentsOrNull,
+  positiveCentsOrNull,
+  resolveTemplateAmounts,
+  templateAmountSlotKey,
+  type ResolvedTemplateAmounts,
+  type TemplateAmountSlot,
+  type TemplateAmountSlotKind,
+} from '@alga-psa/shared/billingClients/templateAmounts';
 import { resolveClonedRate } from '../lib/billing/pricing/resolveFixedLineRate';
+import { fixedMemberRateProvenance, resolveFixedMemberRatePair } from '@alga-psa/shared/billingClients/fixedMemberRate';
 
 export type DetailedContractLine = IContractLineMapping & {
   contract_line_name?: string;
@@ -23,6 +39,9 @@ export type DetailedContractLine = IContractLineMapping & {
   billing_frequency?: string;
   rate?: number | null;
   enable_proration?: boolean;
+  invoice_line_description?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
   billing_cycle_alignment?: 'start' | 'end' | 'prorated';
 };
 
@@ -122,6 +141,7 @@ export async function fetchDetailedContractLines(
         'lines.custom_rate',
         'lines.billing_timing',
         'lines.cadence_owner',
+        'lines.invoice_line_description',
         'lines.created_at',
         'lines.template_line_name as contract_line_name',
         'lines.line_type as contract_line_type',
@@ -150,6 +170,7 @@ export async function fetchDetailedContractLines(
             ? Number(row.default_rate)
             : null,
       enable_proration: row.template_enable_proration ?? false,
+      invoice_line_description: row.invoice_line_description ?? null,
       billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
         billingCycleAlignment: row.template_billing_cycle_alignment,
         enableProration: row.template_enable_proration,
@@ -170,6 +191,9 @@ export async function fetchDetailedContractLines(
       'cl.cadence_owner',
       'cl.location_id',
       'cl.billing_profile_id',
+      'cl.invoice_line_description',
+      'cl.start_date',
+      'cl.end_date',
       'cl.created_at',
       'cl.contract_line_name',
       'cl.contract_line_type',
@@ -193,6 +217,9 @@ export async function fetchDetailedContractLines(
       billing_frequency: row.billing_frequency,
     rate: row.custom_rate !== undefined && row.custom_rate !== null ? Number(row.custom_rate) : null,
     enable_proration: row.enable_proration ?? false,
+    invoice_line_description: row.invoice_line_description ?? null,
+    start_date: row.start_date ?? null,
+    end_date: row.end_date ?? null,
     billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
       billingCycleAlignment: row.billing_cycle_alignment,
       enableProration: row.enable_proration,
@@ -249,6 +276,7 @@ export async function ensureTemplateLineSnapshot(
   if (!baseLine) {
     throw new Error(`Base contract line ${contractLineId} not found for template snapshot`);
   }
+  await assertLiveLineMatchesTemplateCurrency(knex as any, tenant, templateId, contractLineId);
 
   const now = knex.fn.now();
   const existingTemplateLine = await tenantScopedTable(knex, tenant, 'contract_template_lines')
@@ -256,7 +284,8 @@ export async function ensureTemplateLineSnapshot(
     .first();
 
   const targetTemplateLineId = existingTemplateLine ? uuidv4() : contractLineId;
-  const baseRecurringStorage = normalizeLiveRecurringStorage(baseLine);
+  // LEVERAGE: pattern recurring-storage-copy — copy sites each re-derive (billing_timing, cadence_owner) from the source row; a shared copy helper would remove the repeated per-site normalization
+  const baseRecurringStorage = normalizeRecurringStorageForLineType(baseLine, baseLine.contract_line_type);
 
   await tenantScopedTable(knex, tenant, 'contract_template_lines').insert({
     tenant,
@@ -283,6 +312,9 @@ export async function ensureTemplateLineSnapshot(
     cadence_owner: baseRecurringStorage.cadence_owner,
   });
 
+  // Prepaid Block overlay (Hourly line + config row) rides along with the template line.
+  await snapshotContractLinePrepaidBlockToTemplateLine(knex, tenant, contractLineId, targetTemplateLineId);
+
   return targetTemplateLineId;
 }
 
@@ -300,6 +332,10 @@ export interface TemplateLineServiceEdit {
   service_id: string;
   quantity?: number | null;
   rate?: number | null;
+  /** Hourly service overtime rate (slot `member_overtime_rate`), cents. `null` clears it. */
+  overtime_rate?: number | null;
+  /** Legacy per-service bucket overage (slot `legacy_bucket_overage_rate`), cents. `null` clears it. */
+  bucket_overage_rate?: number | null;
 }
 
 /**
@@ -311,6 +347,10 @@ export interface TemplateLineEdits {
   billing_frequency?: string;
   /** Fixed lines only; cents. `null` clears the line rate (line follows catalog). */
   fixed_base_rate?: number | null;
+  /** Line overtime rate (slot `line_overtime_rate`), cents. `null` clears it. */
+  overtime_rate?: number | null;
+  /** Pool overage rates keyed by TEMPLATE pool id (slot `bucket_overage_rate`), cents. `null` clears it. */
+  bucket_overage_rates?: Array<{ bucket_id: string; rate: number | null }>;
   minimum_billable_time?: number | null;
   round_up_to_nearest?: number | null;
   services?: TemplateLineServiceEdit[];
@@ -331,6 +371,14 @@ export interface CloneTemplateLineOptions {
   edits?: TemplateLineEdits;
   /** Overrides the template line's display order. */
   displayOrder?: number;
+  /**
+   * Template amounts resolved for the contract currency (see
+   * `resolveTemplateAmounts`). Resolve once per template and pass it to every
+   * line; when omitted the clone resolves it itself from `currencyCode` (or the
+   * template's base currency when no currency is given). Every amount the clone
+   * writes comes from this map, never from a template amount column.
+   */
+  amounts?: ResolvedTemplateAmounts;
 }
 
 export interface UnpricedTemplateService {
@@ -347,46 +395,31 @@ export interface CloneTemplateLineResult {
    * `currencyCode` was supplied.
    */
   unpriced_services: UnpricedTemplateService[];
+  /**
+   * Every REQUIRED amount slot that ended with no amount in the target currency
+   * (after edits, the resolved slot amounts and, for members, the catalog). Only
+   * populated when `currencyCode` was supplied.
+   */
+  unset_amounts: UnsetTemplateAmount[];
+  /**
+   * What the clone actually wrote per slot, in the contract currency (cents):
+   * the final value after edits, re-split and catalog prefill. Keys are slot
+   * keys of the template's current structure (incl. derived bundle shares, which
+   * are not `required`; filter with `amounts.slots` when building a price set).
+   */
+  written_amounts: Record<string, number>;
+}
+
+export interface UnsetTemplateAmount {
+  slot_key: string;
+  slot_kind: TemplateAmountSlotKind;
+  template_line_id: string;
+  service_id: string | null;
+  bucket_id: string | null;
+  label: string;
 }
 
 type ServicePricingMode = 'fixed' | 'hourly' | 'usage';
-
-const positiveCentsOrNull = (value: unknown): number | null => {
-  if (value === null || value === undefined || value === '') return null;
-  const numeric = typeof value === 'string' ? Number.parseFloat(value) : Number(value);
-  if (!Number.isFinite(numeric)) return null;
-  const rounded = Math.round(numeric);
-  return rounded > 0 ? rounded : null;
-};
-
-const nonNegativeCentsOrNull = (value: unknown): number | null => {
-  if (value === null || value === undefined || value === '') return null;
-  const numeric = typeof value === 'string' ? Number.parseFloat(value) : Number(value);
-  if (!Number.isFinite(numeric)) return null;
-  return Math.max(0, Math.round(numeric));
-};
-
-/**
- * The line rate a Fixed template line carries over (cents), or null when the
- * line follows the catalog. A rate stored on the template line itself is an
- * intentional snapshot, $0 included. The line fixed config is written as
- * `fixed_base_rate ?? 0` by template authoring, so there 0 means "no rate".
- */
-function templateLineRateCents(templateLine: any, templateFixedConfig: any): number | null {
-  return nonNegativeCentsOrNull(templateLine?.custom_rate) ?? positiveCentsOrNull(templateFixedConfig?.base_rate);
-}
-
-/**
- * The rate a Fixed template member carries over (cents). A per-seat member's
- * unit rate lives only in its service fixed config (null follows the catalog);
- * a bundle member's allocated share lives on the configuration/service row.
- */
-function templateFixedMemberRateCents(configuration: any, service: any, serviceFixedConfig: any): number | null {
-  if (serviceFixedConfig?.pricing_basis === 'unit') {
-    return positiveCentsOrNull(serviceFixedConfig.base_rate);
-  }
-  return positiveCentsOrNull(configuration?.custom_rate) ?? positiveCentsOrNull(service.custom_rate);
-}
 
 export interface CurrencyCatalogRates {
   /** `service_catalog_mode_defaults` rows for the line's billing mode. */
@@ -462,8 +495,10 @@ export async function fetchCurrencyCatalogRates(
  * This is the single template-to-contract clone. `addContractLine` and the
  * contract wizard both call it; do not grow a second routine.
  *
- * Rates are cents. Rate precedence per member: wizard edit > template value >
- * client-currency catalog (only when `options.currencyCode` is given). A rate
+ * Rates are cents. Rate precedence per member: wizard edit > resolved
+ * template slot amount (`options.amounts`) > client-currency catalog (only when
+ * `options.currencyCode` is given). A template amount is never used in a currency
+ * it was not authored in: the slot map holds only amounts valid in the target. A rate
  * with no source is left unset (Fixed: `inherited`/null so it follows the
  * catalog; Hourly/Usage: stored as 0 because the column is NOT NULL) and is
  * reported in `unpriced_services` for the caller to reject or accept.
@@ -490,6 +525,30 @@ export async function cloneTemplateLineToContract(
   const edits = options.edits ?? {};
   const lineType: string = templateLine.line_type ?? 'Fixed';
   const now = trx.fn.now();
+  const amounts =
+    options.amounts ??
+    (await resolveTemplateAmounts(trx, tenant, templateLine.template_id, options.currencyCode ?? null));
+  const slotByKey = new Map<string, TemplateAmountSlot>(amounts.slots.map((slot) => [slot.slot_key, slot]));
+  const writtenAmounts: Record<string, number> = {};
+  const unsetAmounts: UnsetTemplateAmount[] = [];
+  // Record the final value of a slot (or, when required and empty, report it).
+  // `coveredElsewhere` = no stored amount but the value follows the live catalog.
+  const recordSlot = (slotKey: string, value: number | null, coveredElsewhere = false) => {
+    const slot = slotByKey.get(slotKey);
+    if (!slot) return;
+    if (value !== null) {
+      writtenAmounts[slotKey] = value;
+    } else if (slot.required && options.currencyCode && !coveredElsewhere) {
+      unsetAmounts.push({
+        slot_key: slot.slot_key,
+        slot_kind: slot.slot_kind,
+        template_line_id: slot.template_line_id,
+        service_id: slot.service_id,
+        bucket_id: slot.bucket_id,
+        label: slot.label,
+      });
+    }
+  };
   const newContractLineId = uuidv4();
 
   const templateFixedConfig = await tenantScopedTable(trx, tenant, 'contract_template_line_fixed_config')
@@ -537,11 +596,17 @@ export async function cloneTemplateLineToContract(
   }
 
   // ----- line-level rate (Fixed) -------------------------------------------
-  const templateLineRate = templateLineRateCents(templateLine, templateFixedConfig);
+  const lineRateSlotKey = templateAmountSlotKey('line_base_rate', { template_line_id: templateLineId });
+  const templateLineRate = amounts.amountBySlot.get(lineRateSlotKey) ?? null;
   // undefined = nothing explicit; null = explicitly cleared (line follows catalog).
   let explicitLineRate: number | null | undefined;
   if (edits.fixed_base_rate !== undefined) {
-    explicitLineRate = positiveCentsOrNull(edits.fixed_base_rate);
+    // A $0 line rate is an intentional snapshot when the template carries a $0
+    // slot; in a foreign currency the operator must be able to enter that 0.
+    explicitLineRate =
+      edits.fixed_base_rate === 0 && amounts.source !== 'base' && slotByKey.has(lineRateSlotKey)
+        ? 0
+        : positiveCentsOrNull(edits.fixed_base_rate);
   } else if (options.customRate !== undefined) {
     explicitLineRate = nonNegativeCentsOrNull(options.customRate);
   }
@@ -557,14 +622,22 @@ export async function cloneTemplateLineToContract(
           templateProvenance: templateLineRate != null ? 'custom' : 'inherited',
         }).rateCents;
 
+  // ----- overtime (F) ----------------------------------------------------------
+  const lineOvertimeSlotKey = templateAmountSlotKey('line_overtime_rate', { template_line_id: templateLineId });
+  const lineOvertimeRate: number | null =
+    edits.overtime_rate !== undefined
+      ? nonNegativeCentsOrNull(edits.overtime_rate)
+      : amounts.amountBySlot.get(lineOvertimeSlotKey) ?? null;
+
   const templateBillingCycleAlignment = resolveBillingCycleAlignmentForCompatibility({
     billingCycleAlignment: templateFixedConfig?.billing_cycle_alignment,
     enableProration: templateFixedConfig?.enable_proration,
   });
-  const templateRecurringStorage = normalizeTemplateRecurringStorage({
+  // LEVERAGE: pattern recurring-storage-copy — copy sites each re-derive (billing_timing, cadence_owner) from the source row; a shared copy helper would remove the repeated per-site normalization
+  const templateRecurringStorage = normalizeRecurringStorageForLineType({
     billing_timing: templateLine.billing_timing,
     cadence_owner: templateLine.cadence_owner,
-  });
+  }, lineType);
 
   const minimumBillableTime =
     edits.minimum_billable_time !== undefined ? edits.minimum_billable_time : templateLine.minimum_billable_time ?? null;
@@ -586,7 +659,7 @@ export async function cloneTemplateLineToContract(
     service_category: templateLine.service_category ?? null,
     is_active: templateLine.is_active ?? true,
     enable_overtime: templateLine.enable_overtime ?? false,
-    overtime_rate: templateLine.overtime_rate ?? null,
+    overtime_rate: lineOvertimeRate,
     overtime_threshold: templateLine.overtime_threshold ?? null,
     enable_after_hours_rate: templateLine.enable_after_hours_rate ?? false,
     after_hours_multiplier: templateLine.after_hours_multiplier ?? null,
@@ -607,15 +680,56 @@ export async function cloneTemplateLineToContract(
   // Full pool config round-trip: clone the line's template pools (scope incl.
   // catch-all, membership, multipliers, schedule, after-hours rule) when the
   // template carries them, and skip the legacy per-config bucket clone below.
-  const hasTemplatePools = await cloneTemplateLinePools(trx, tenant, templateLineId, newContractLineId);
+  // Pool overage comes from the resolved slot map (edit > slot); a pool with no
+  // amount in the contract currency is stored as 0 (NOT NULL column) and, when
+  // its slot is required, reported in `unset_amounts`.
+  const poolOverageByTemplateBucketId = new Map<string, number | null>();
+  for (const slot of amounts.slots) {
+    if (slot.slot_kind === 'bucket_overage_rate' && slot.template_line_id === templateLineId && slot.bucket_id) {
+      poolOverageByTemplateBucketId.set(slot.bucket_id, amounts.amountBySlot.get(slot.slot_key) ?? null);
+    }
+  }
+  for (const poolEdit of edits.bucket_overage_rates ?? []) {
+    if (poolEdit?.bucket_id) {
+      poolOverageByTemplateBucketId.set(poolEdit.bucket_id, nonNegativeCentsOrNull(poolEdit.rate));
+    }
+  }
+  const clonedPools = await cloneTemplateLinePoolsDetailed(
+    trx,
+    tenant,
+    templateLineId,
+    newContractLineId,
+    poolOverageByTemplateBucketId,
+  );
+  const hasTemplatePools = clonedPools.hasPools;
+  for (const pool of clonedPools.pools) {
+    recordSlot(
+      templateAmountSlotKey('bucket_overage_rate', { template_line_id: templateLineId, bucket_id: pool.template_bucket_id }),
+      pool.overage_unset ? null : pool.overage_rate,
+    );
+  }
+  recordSlot(lineRateSlotKey, effectiveLineRate);
+  recordSlot(lineOvertimeSlotKey, lineOvertimeRate);
 
   // Proportional shares of an edited line rate, so per-member rates stay
   // consistent with the line rate (same allocation the wizard uses). Only
   // bundle members share the line rate; a per-seat member bills
   // quantity x unit rate on its own.
   const bundleServices = templateServices.filter((s: any) => !unitServiceIds.has(s.service_id));
-  const lineRateEdited = edits.fixed_base_rate !== undefined && effectiveLineRate !== null;
   const anyServiceRateEdit = (edits.services ?? []).some((s) => s.rate !== undefined);
+  // A line rate that did not come from the template's own (base-currency)
+  // columns - a price set, an explicit rate, or the mismatch fallback - re-splits
+  // across bundle members exactly like an edited rate, unless the price set
+  // carries explicit member shares for this line.
+  const hasExplicitBundleShares = bundleServices.some((s: any) =>
+    amounts.amountBySlot.has(
+      templateAmountSlotKey('member_rate', { template_line_id: templateLineId, service_id: s.service_id }),
+    ),
+  );
+  const lineRateEdited =
+    effectiveLineRate !== null &&
+    (edits.fixed_base_rate !== undefined ||
+      (amounts.source !== 'base' && !hasExplicitBundleShares));
   const memberQuantity = (service: any): number => {
     const edit = serviceEditById.get(service.service_id);
     const quantity = edit?.quantity !== undefined ? edit.quantity : service.quantity;
@@ -648,26 +762,20 @@ export async function cloneTemplateLineToContract(
           .first(),
       });
     }
-    const primaryTyped = configuration ? typedByConfigId.get(configuration.config_id) : undefined;
-
     // ----- resolve the member rate ----------------------------------------
-    const templateMemberRate =
-      lineType === 'Hourly'
-        ? positiveCentsOrNull(primaryTyped?.hourly?.hourly_rate) ??
-          positiveCentsOrNull(configuration?.custom_rate) ??
-          positiveCentsOrNull(service.custom_rate)
-        : lineType === 'Usage'
-          ? positiveCentsOrNull(primaryTyped?.usage?.base_rate) ??
-            positiveCentsOrNull(configuration?.custom_rate) ??
-            positiveCentsOrNull(service.custom_rate)
-          : templateFixedMemberRateCents(
-              configuration,
-              service,
-              configuration ? serviceFixedByConfigId.get(configuration.config_id) : undefined,
-            );
+    const memberSlotKey = templateAmountSlotKey('member_rate', {
+      template_line_id: templateLineId,
+      service_id: service.service_id,
+    });
+    const templateMemberRate = positiveCentsOrNull(amounts.amountBySlot.get(memberSlotKey));
 
     let memberRate: number | null;
     let rateFromEdit = false;
+    // What the stored Fixed member number means (see fixedMemberRate.ts): a
+    // seat's rate is per unit; a bundle member's stored number is its share of
+    // the line total, except a fixed-mode default below, which is a catalog
+    // price per unit.
+    let memberRateBasis: 'per_unit' | 'share' = isUnitMember ? 'per_unit' : 'share';
     if (edit && edit.rate !== undefined) {
       memberRate = edit.rate === null ? null : positiveCentsOrNull(edit.rate);
       rateFromEdit = true;
@@ -691,6 +799,7 @@ export async function cloneTemplateLineToContract(
     // follow the catalog at billing time; Hourly/Usage members need a number
     // now, so they take the mode default, then the current catalog price.
     if (memberRate === null && !rateFromEdit && currencyRates) {
+      if (lineType === 'Fixed') memberRateBasis = 'per_unit';
       memberRate =
         lineType === 'Fixed'
           ? currencyRates.modeDefaults.get(service.service_id) ?? null
@@ -709,6 +818,12 @@ export async function cloneTemplateLineToContract(
           service_name: serviceNameById.get(service.service_id) ?? service.service_id,
         });
       }
+    }
+
+    {
+      const coveredByCatalogFollow =
+        lineType === 'Fixed' && currencyRates !== null && currencyRates.pricedServiceIds.has(service.service_id);
+      recordSlot(memberSlotKey, memberRate, coveredByCatalogFollow);
     }
 
     // ----- contract_line_services -----------------------------------------
@@ -748,14 +863,20 @@ export async function cloneTemplateLineToContract(
       });
 
       if (configurationType === 'Fixed') {
+        const pricingBasis = serviceFixedByConfigId.get(templateConfiguration.config_id)?.pricing_basis === 'unit'
+          ? 'unit'
+          : 'bundle';
+        const rate = resolveFixedMemberRatePair({
+          base_rate: memberRate,
+          base_rate_basis: memberRateBasis,
+          pricing_basis: pricingBasis,
+        });
         await tenantScopedTable(trx, tenant, 'contract_line_service_fixed_config').insert({
           tenant,
           config_id: newConfigId,
-          base_rate: memberRate,
-          rate_provenance: memberRate === null ? 'inherited' : 'custom',
-          pricing_basis: serviceFixedByConfigId.get(templateConfiguration.config_id)?.pricing_basis === 'unit'
-            ? 'unit'
-            : 'bundle',
+          ...rate,
+          rate_provenance: fixedMemberRateProvenance(rate),
+          pricing_basis: pricingBasis,
           created_at: now,
           updated_at: now,
         });
@@ -769,6 +890,16 @@ export async function cloneTemplateLineToContract(
           : undefined;
 
       if (bucketConfig) {
+        // Overage precedence: edit > resolved slot amount > 0 (reported when required).
+        const legacyOverageKey = templateAmountSlotKey('legacy_bucket_overage_rate', {
+          template_line_id: templateLineId,
+          service_id: service.service_id,
+        });
+        const legacyOverage: number | null =
+          edit && edit.bucket_overage_rate !== undefined
+            ? nonNegativeCentsOrNull(edit.bucket_overage_rate)
+            : amounts.amountBySlot.get(legacyOverageKey) ?? null;
+        recordSlot(legacyOverageKey, legacyOverage);
         // Legacy template (pre-dates pool tables): clone into the line-owned
         // pool tables (single member, 1x) rather than the frozen legacy
         // per-service bucket config.
@@ -778,7 +909,7 @@ export async function cloneTemplateLineToContract(
           contract_line_id: newContractLineId,
           bucket_name: null,
           total_minutes: bucketConfig.total_minutes,
-          overage_rate: bucketConfig.overage_rate ?? 0,
+          overage_rate: legacyOverage ?? 0,
           allow_rollover: bucketConfig.allow_rollover,
           billing_period: bucketConfig.billing_period,
           after_hours_multiplier: null,
@@ -808,6 +939,18 @@ export async function cloneTemplateLineToContract(
             ? edits.round_up_to_nearest
             : templateHourly?.round_up_to_nearest ?? templateLine.round_up_to_nearest ?? 15;
 
+        // Overtime precedence: edit > resolved slot amount > the line's resolved
+        // overtime rate (same fallback the template columns had).
+        const memberOvertimeKey = templateAmountSlotKey('member_overtime_rate', {
+          template_line_id: templateLineId,
+          service_id: service.service_id,
+        });
+        const memberOvertime: number | null =
+          edit && edit.overtime_rate !== undefined
+            ? nonNegativeCentsOrNull(edit.overtime_rate)
+            : amounts.amountBySlot.get(memberOvertimeKey) ?? lineOvertimeRate;
+        recordSlot(memberOvertimeKey, memberOvertime);
+
         // Two live tables carry hourly state: `_hourly_configs` (plural) holds
         // the rate and billable-time rounding the engine reads; the singular
         // `_hourly_config` holds the overtime / after-hours terms. Writing only
@@ -827,7 +970,7 @@ export async function cloneTemplateLineToContract(
           minimum_billable_time: hourlyMinimum ?? 0,
           round_up_to_nearest: hourlyRoundUp ?? 0,
           enable_overtime: templateHourly?.enable_overtime ?? templateLine.enable_overtime ?? false,
-          overtime_rate: templateHourly?.overtime_rate ?? templateLine.overtime_rate ?? null,
+          overtime_rate: memberOvertime,
           overtime_threshold: templateHourly?.overtime_threshold ?? templateLine.overtime_threshold ?? null,
           enable_after_hours_rate:
             templateHourly?.enable_after_hours_rate ?? templateLine.enable_after_hours_rate ?? false,
@@ -875,25 +1018,59 @@ export async function cloneTemplateLineToContract(
     });
   }
 
-  return { contract_line_id: newContractLineId, unpriced_services: unpricedServices };
+  // Prepaid Block overlay: after the services exist so the sold-as service resolves. Price is minor
+  // units copied as-is from the template's base currency. Callers sync block issuances for the line.
+  await cloneTemplateLinePrepaidBlock(trx, tenant, templateLineId, newContractLineId);
+
+  return {
+    contract_line_id: newContractLineId,
+    unpriced_services: unpricedServices,
+    unset_amounts: unsetAmounts,
+    written_amounts: writtenAmounts,
+  };
 }
 
 // ---------------------------------------------------------------------------
 // Per-line template view (what the client wizard shows before cloning)
 // ---------------------------------------------------------------------------
 
+/**
+ * One amount field of the template view. `template_amount` is the template's own
+ * base-currency amount (reference only); `amount` is what resolves in the target
+ * currency (base amounts when the currencies match, the price set's amount, or
+ * null); `catalog_amount` is the client-currency catalog price (member rates
+ * only). A field the template leaves empty has no slot: `required` is false and
+ * both template amounts are null.
+ */
+export interface TemplateAmountFieldView {
+  slot_key: string;
+  template_amount: number | null;
+  amount: number | null;
+  catalog_amount: number | null;
+  required: boolean;
+}
+
 export interface TemplateLineServiceView {
   service_id: string;
   service_name: string;
   item_kind: string | null;
   quantity: number | null;
-  /** The rate the template stores for this member (cents), if any. */
-  template_rate: number | null;
-  /** Catalog rate in the client's currency (cents), if any; never USD-by-default. */
-  currency_rate: number | null;
+  /** Member rate: Fixed = base rate / bundle share, Hourly = hourly rate, Usage = unit rate. */
+  rate: TemplateAmountFieldView;
+  /** Hourly service overtime rate. */
+  overtime_rate: TemplateAmountFieldView;
+  /** Legacy per-service bucket overage (lines without pools). */
+  bucket_overage_rate: TemplateAmountFieldView;
   /** Any `service_prices` row exists for this service in the client's currency. */
   has_currency_price: boolean;
   unit_of_measure: string | null;
+}
+
+export interface TemplateLinePoolView {
+  /** TEMPLATE pool id (what `bucket_overage_rates[].bucket_id` edits refer to). */
+  template_bucket_id: string;
+  name: string | null;
+  overage_rate: TemplateAmountFieldView;
 }
 
 export interface TemplateLineView {
@@ -904,27 +1081,49 @@ export interface TemplateLineView {
   cadence_owner: string;
   billing_timing: string;
   display_order: number;
-  /** Fixed lines: the line rate the clone will carry over (cents), else null. */
-  fixed_base_rate: number | null;
+  /** The line rate (all line types; Fixed lines carry the bundle total). */
+  base_rate: TemplateAmountFieldView;
+  /** Line overtime rate. */
+  overtime_rate: TemplateAmountFieldView;
   enable_proration: boolean;
   minimum_billable_time: number | null;
   round_up_to_nearest: number | null;
   bucket_pool_count: number;
+  bucket_pools: TemplateLinePoolView[];
   services: TemplateLineServiceView[];
 }
 
 /**
- * Read-only per-line view of a template, with rates resolved for
- * `currencyCode`. Mirrors the rate sources `cloneTemplateLineToContract` uses so
- * the wizard shows what the clone will produce.
+ * Read-only per-line view of a template, with amounts resolved for
+ * `currencyCode`. Built from the same slot map `cloneTemplateLineToContract`
+ * writes from, so the wizard shows what the clone will produce. Pass `amounts`
+ * (already resolved for `currencyCode`) to avoid resolving twice.
  */
-// LEVERAGE: pattern template-member-rate — the "template value, else client-currency catalog" member-rate decision is written here and in cloneTemplateLineToContract; extract one resolver.
 export async function fetchTemplateLineViews(
   knex: TenantScopedKnex,
   tenant: string,
   templateId: string,
   currencyCode: string,
+  amounts?: ResolvedTemplateAmounts,
 ): Promise<TemplateLineView[]> {
+  const resolved = amounts ?? (await resolveTemplateAmounts(knex, tenant, templateId, currencyCode));
+  const slotByKey = new Map<string, TemplateAmountSlot>(resolved.slots.map((slot) => [slot.slot_key, slot]));
+  const field = (
+    kind: TemplateAmountSlotKind,
+    ids: { template_line_id: string; service_id?: string; bucket_id?: string },
+    catalogAmount: number | null = null,
+  ): TemplateAmountFieldView => {
+    const slotKey = templateAmountSlotKey(kind, ids);
+    const slot = slotByKey.get(slotKey);
+    return {
+      slot_key: slotKey,
+      template_amount: slot ? slot.base_amount : null,
+      amount: slot ? resolved.amountBySlot.get(slotKey) ?? null : null,
+      catalog_amount: catalogAmount,
+      required: slot ? slot.required : false,
+    };
+  };
+
   const lines = await tenantScopedTable(knex, tenant, 'contract_template_lines')
     .where('template_id', templateId)
     .orderBy('display_order', 'asc')
@@ -932,15 +1131,16 @@ export async function fetchTemplateLineViews(
 
   const views: TemplateLineView[] = [];
   for (const line of lines as any[]) {
+    const lineId: string = line.template_line_id;
     const lineType: string = line.line_type ?? 'Fixed';
     const fixedConfig = await tenantScopedTable(knex, tenant, 'contract_template_line_fixed_config')
-      .where('template_line_id', line.template_line_id)
+      .where('template_line_id', lineId)
       .first();
     const services = await tenantScopedTable(knex, tenant, 'contract_template_line_services')
-      .where('template_line_id', line.template_line_id)
+      .where('template_line_id', lineId)
       .orderBy('display_order', 'asc');
     const configurations = await tenantScopedTable(knex, tenant, 'contract_template_line_service_configuration')
-      .where('template_line_id', line.template_line_id);
+      .where('template_line_id', lineId);
     const serviceIds = (services as any[]).map((service) => service.service_id as string);
     const catalog = serviceIds.length
       ? await tenantScopedTable(knex, tenant, 'service_catalog')
@@ -954,73 +1154,58 @@ export async function fetchTemplateLineViews(
     const memberViews: TemplateLineServiceView[] = [];
     for (const service of services as any[]) {
       const configuration = (configurations as any[]).find((c) => c.service_id === service.service_id);
-      const hourly = configuration && lineType === 'Hourly'
-        ? await tenantScopedTable(knex, tenant, 'contract_template_line_service_hourly_config')
-            .where('config_id', configuration.config_id)
-            .first()
-        : undefined;
       const usage = configuration && lineType === 'Usage'
         ? await tenantScopedTable(knex, tenant, 'contract_template_line_service_usage_config')
             .where('config_id', configuration.config_id)
             .first()
         : undefined;
-      const templateRate =
-        lineType === 'Hourly'
-          ? positiveCentsOrNull(hourly?.hourly_rate) ??
-            positiveCentsOrNull(configuration?.custom_rate) ??
-            positiveCentsOrNull(service.custom_rate)
-          : lineType === 'Usage'
-            ? positiveCentsOrNull(usage?.base_rate) ??
-              positiveCentsOrNull(configuration?.custom_rate) ??
-              positiveCentsOrNull(service.custom_rate)
-            : templateFixedMemberRateCents(
-                configuration,
-                service,
-                configuration
-                  ? await tenantScopedTable(knex, tenant, 'contract_template_line_service_fixed_config')
-                      .where('config_id', configuration.config_id)
-                      .first()
-                  : undefined,
-              );
       const currencyRate =
         lineType === 'Fixed'
           ? rates.modeDefaults.get(service.service_id) ?? null
           : rates.modeDefaults.get(service.service_id) ?? rates.currentPrices.get(service.service_id) ?? null;
       const catalogRow = catalogById.get(service.service_id);
+      const ids = { template_line_id: lineId, service_id: service.service_id as string };
       memberViews.push({
         service_id: service.service_id,
         service_name: catalogRow?.service_name ?? service.service_id,
         item_kind: catalogRow?.item_kind ?? null,
         quantity: service.quantity ?? configuration?.quantity ?? null,
-        template_rate: templateRate,
-        currency_rate: currencyRate,
+        rate: field('member_rate', ids, currencyRate),
+        overtime_rate: field('member_overtime_rate', ids),
+        bucket_overage_rate: field('legacy_bucket_overage_rate', ids),
         has_currency_price: rates.pricedServiceIds.has(service.service_id) || currencyRate !== null,
         unit_of_measure: usage?.unit_of_measure ?? catalogRow?.unit_of_measure ?? null,
       });
     }
 
-    const poolCountRow = await tenantScopedTable(knex, tenant, 'contract_template_line_buckets')
-      .where('template_line_id', line.template_line_id)
-      .count<{ count: string }[]>({ count: '*' })
-      .first();
+    const pools = await tenantScopedTable(knex, tenant, 'contract_template_line_buckets')
+      .where('template_line_id', lineId)
+      .orderBy('created_at', 'asc')
+      .select('bucket_id', 'bucket_name');
     const recurring = normalizeTemplateRecurringStorage({
       billing_timing: line.billing_timing,
       cadence_owner: line.cadence_owner,
     });
 
     views.push({
-      template_line_id: line.template_line_id,
+      template_line_id: lineId,
       line_name: line.template_line_name,
       line_type: lineType,
       billing_frequency: line.billing_frequency,
       cadence_owner: recurring.cadence_owner,
       billing_timing: recurring.billing_timing,
       display_order: line.display_order ?? 0,
-      fixed_base_rate: templateLineRateCents(line, fixedConfig),
+      base_rate: field('line_base_rate', { template_line_id: lineId }),
+      overtime_rate: field('line_overtime_rate', { template_line_id: lineId }),
       enable_proration: fixedConfig?.enable_proration ?? false,
       minimum_billable_time: line.minimum_billable_time ?? null,
       round_up_to_nearest: line.round_up_to_nearest ?? null,
-      bucket_pool_count: Number(poolCountRow?.count ?? 0),
+      bucket_pool_count: (pools as any[]).length,
+      bucket_pools: (pools as any[]).map((pool) => ({
+        template_bucket_id: pool.bucket_id,
+        name: pool.bucket_name ?? null,
+        overage_rate: field('bucket_overage_rate', { template_line_id: lineId, bucket_id: pool.bucket_id }),
+      })),
       services: memberViews,
     });
   }
@@ -1132,8 +1317,9 @@ export async function updateContractLine(
   if (template) {
     const existingTemplateLine = await tenantScopedTable(knex, tenant, 'contract_template_lines')
       .where({ template_id: contractId, template_line_id: contractLineId })
-      .first(['cadence_owner', 'billing_timing']);
+      .first(['cadence_owner', 'billing_timing', 'line_type']);
     const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+      lineType: existingTemplateLine?.line_type ?? null,
       cadenceOwner: payload.cadence_owner,
       fallbackCadenceOwner: existingTemplateLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
       billingTiming: payload.billing_timing,
@@ -1169,8 +1355,9 @@ export async function updateContractLine(
 
   const existingLine = await tenantScopedTable(knex, tenant, 'contract_lines')
     .where({ contract_id: contractId, contract_line_id: contractLineId })
-    .first(['cadence_owner', 'billing_timing']);
+    .first(['cadence_owner', 'billing_timing', 'contract_line_type']);
   const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+    lineType: existingLine?.contract_line_type ?? null,
     cadenceOwner: payload.cadence_owner,
     fallbackCadenceOwner: existingLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
     billingTiming: payload.billing_timing,
@@ -1225,16 +1412,21 @@ export async function updateContractLineRate(
   contractId: string,
   contractLineId: string,
   rate: number | null,
-  billingTiming?: 'arrears' | 'advance'
+  billingTiming?: 'arrears' | 'advance',
+  invoiceLineDescription?: string | null
 ): Promise<void> {
+  if (rate !== null && rate !== undefined && (!Number.isFinite(Number(rate)) || Number(rate) < 0)) {
+    throw new Error('Rate must be zero or greater.');
+  }
   const now = knex.fn.now();
   const template = await isTemplateContract(knex, tenant, contractId);
 
   if (template) {
     const existingTemplateLine = await tenantScopedTable(knex, tenant, 'contract_template_lines')
       .where({ template_id: contractId, template_line_id: contractLineId })
-      .first(['billing_timing', 'cadence_owner']);
+      .first(['billing_timing', 'cadence_owner', 'line_type']);
     const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+      lineType: existingTemplateLine?.line_type ?? null,
       fallbackCadenceOwner: existingTemplateLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
       billingTiming,
       fallbackBillingTiming: existingTemplateLine?.billing_timing,
@@ -1245,6 +1437,9 @@ export async function updateContractLineRate(
       .update({
         custom_rate: rate,
         billing_timing: recurringAuthoringPolicy.billingTiming,
+        ...(invoiceLineDescription !== undefined
+          ? { invoice_line_description: invoiceLineDescription?.trim() || null }
+          : {}),
         updated_at: now,
       });
     return;
@@ -1252,8 +1447,9 @@ export async function updateContractLineRate(
 
   const existingLine = await tenantScopedTable(knex, tenant, 'contract_lines')
     .where({ contract_id: contractId, contract_line_id: contractLineId })
-    .first(['billing_timing', 'cadence_owner']);
+    .first(['billing_timing', 'cadence_owner', 'contract_line_type']);
   const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
+    lineType: existingLine?.contract_line_type ?? null,
     fallbackCadenceOwner: existingLine?.cadence_owner ?? DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
     billingTiming,
     fallbackBillingTiming: existingLine?.billing_timing,
@@ -1265,6 +1461,9 @@ export async function updateContractLineRate(
         custom_rate: rate,
         rate_provenance: rate === null ? 'inherited' : 'custom',
         billing_timing: recurringAuthoringPolicy.billingTiming,
+        ...(invoiceLineDescription !== undefined
+          ? { invoice_line_description: invoiceLineDescription?.trim() || null }
+          : {}),
         updated_at: now,
       });
 }

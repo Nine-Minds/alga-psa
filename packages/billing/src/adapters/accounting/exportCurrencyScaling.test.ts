@@ -15,20 +15,34 @@ const harness = vi.hoisted(() => {
   const rows: Record<string, any[]> = {};
   const tableName = (expr: string) => expr.split(/\s+as\s+/i)[0].trim();
   const builder = (list: any[]) => {
+    let selected = list;
     const qb: any = {};
     for (const method of [
-      'select', 'where', 'whereIn', 'whereNull', 'whereNotNull', 'whereRaw',
+      'select', 'whereNull', 'whereNotNull', 'whereRaw',
       'andWhere', 'orderBy', 'limit', 'leftJoin', 'join', 'groupBy'
     ]) {
       qb[method] = () => qb;
     }
+    qb.where = (criteria: Record<string, unknown> | string, value?: unknown) => {
+      selected = selected.filter((row) => typeof criteria === 'string'
+        ? row[criteria.split('.').at(-1)!] === value
+        : Object.entries(criteria).every(([key, expected]) => row[key.split('.').at(-1)!] === expected));
+      return qb;
+    };
+    qb.whereIn = (column: string, values: unknown[]) => {
+      selected = selected.filter((row) => values.includes(row[column.split('.').at(-1)!]));
+      return qb;
+    };
     qb.modify = (cb: (q: any) => void) => { cb(qb); return qb; };
-    qb.first = async () => list[0] ?? null;
-    qb.then = (resolve: any, reject?: any) => Promise.resolve(list).then(resolve, reject);
+    qb.first = async () => selected[0] ?? null;
+    qb.then = (resolve: any, reject?: any) => Promise.resolve(selected).then(resolve, reject);
     return qb;
   };
   const knex: any = (expr: string) => builder(rows[tableName(expr)] ?? []);
   knex.table = knex;
+  // Charge expansion probes for the mid-period adjustments table before it
+  // projects contract-change descriptions; these fixtures carry none.
+  knex.schema = { hasTable: async () => false };
   const tenantDb = () => ({ table: (expr: string) => builder(rows[tableName(expr)] ?? []) });
   return { rows, knex, tenantDb };
 });
@@ -41,18 +55,20 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
 }));
 
 vi.mock('../../services/accountingMappingResolver', () => ({
-  AccountingMappingResolver: {
-    create: vi.fn(async () => ({
-      resolveServiceMapping: vi.fn(async () => ({
+  AccountingMappingResolver: class {
+    resolveServiceMapping = vi.fn(async () => ({
         external_entity_id: 'item-1',
-        metadata: { name: 'Consulting', itemCode: 'CONS', accountCode: '200', taxType: 'OUTPUT' }
-      })),
-      resolveDiscountMapping: vi.fn(async () => null),
-      resolveTaxCodeMapping: vi.fn(async () => null),
-      resolvePaymentTermMapping: vi.fn(async () => null),
-      resolveClientMapping: vi.fn(async () => null),
-      ensureCompanyMapping: vi.fn(async () => null)
-    }))
+        metadata: { name: 'Consulting', itemCode: 'CONS', accountCode: '200', taxType: 'OUTPUT', qbdItem: 'Consulting' }
+      }));
+    resolveDiscountMapping = vi.fn(async () => ({
+      external_entity_id: 'discount-1',
+      metadata: { name: 'Discount', accountCode: '200', taxType: 'NONE', qbdItem: 'Discount' }
+    }));
+    resolveTaxCodeMapping = vi.fn(async () => null);
+    resolvePaymentTermMapping = vi.fn(async () => null);
+    resolveClientMapping = vi.fn(async () => null);
+    ensureCompanyMapping = vi.fn(async () => null);
+    static create = vi.fn(async () => new this());
   }
 }));
 
@@ -189,6 +205,7 @@ function seedInvoice(currency: string, charges: ChargeFixture[]): AccountingExpo
 
 function seedVendorBill(currency: string, amount: number): AccountingExportLine[] {
   harness.rows.vendor_bills = [{
+    tenant: TENANT,
     bill_id: BILL,
     bill_number: 'VB-0001',
     vendor_id: 'vendor-1',
@@ -200,6 +217,7 @@ function seedVendorBill(currency: string, amount: number): AccountingExportLine[
     notes: null
   }];
   harness.rows.vendor_bill_lines = [{
+    tenant: TENANT,
     bill_line_id: 'bill-line-1',
     bill_id: BILL,
     service_id: 'svc-1',
@@ -301,22 +319,29 @@ describe('Xero CSV adapter formats unit amounts with the document currency digit
   });
 });
 
-describe('QuickBooks Desktop IIF adapter scales the AMOUNT column by line currency', () => {
-  it('writes whole yen for JPY lines and dollars for USD lines', async () => {
+describe('QuickBooks Desktop IIF adapter scales amounts by the invoice currency', () => {
+  const amountsFor = async (currency: string, unitPrice: number, netAmount: number) => {
     const { QuickBooksDesktopAdapter } = await import('./quickBooksDesktopAdapter');
     const adapter = await QuickBooksDesktopAdapter.create();
+    const lines = seedInvoice(currency, [{ quantity: 2, unitPrice, netAmount, taxAmount: 0 }]);
+    const result = await adapter.transform({
+      ...context('invoice', adapter.type, lines),
+      adapterSettings: { defaultIncomeAccount: 'Services Income' }
+    });
+    const rows = String(result.files?.[0]?.content ?? '').split('\r\n').map((row) => row.split('\t'));
+    const trnsHeader = rows.find((row) => row[0] === '!TRNS')!;
+    const splHeader = rows.find((row) => row[0] === '!SPL')!;
+    const trns = rows.find((row) => row[0] === 'TRNS')!;
+    const spl = rows.find((row) => row[0] === 'SPL')!;
+    return {
+      total: trns[trnsHeader.indexOf('AMOUNT')],
+      lineAmount: spl[splHeader.indexOf('AMOUNT')],
+      price: spl[splHeader.indexOf('PRICE')]
+    };
+  };
 
-    const result = await adapter.transform(
-      context('invoice', adapter.type, [
-        { document_id: 'inv-jpy', document_line_id: 'c1', client_id: CLIENT, amount_cents: 10000, currency_code: 'JPY' },
-        { document_id: 'inv-usd', document_line_id: 'c2', client_id: CLIENT, amount_cents: 1050, currency_code: 'USD' }
-      ])
-    );
-    const content = String(result.files?.[0]?.content ?? '');
-    const amounts = content
-      .split('\n')
-      .filter((row) => row.startsWith('TRNS\t'))
-      .map((row) => row.split('\t')[5]);
-    expect(amounts).toEqual(['10000', '10.5']);
+  it('writes whole yen for JPY and dollars for USD', async () => {
+    expect(await amountsFor('JPY', 5000, 10000)).toEqual({ total: '10000', lineAmount: '-10000', price: '5000' });
+    expect(await amountsFor('USD', 525, 1050)).toEqual({ total: '10.50', lineAmount: '-10.50', price: '5.25' });
   });
 });

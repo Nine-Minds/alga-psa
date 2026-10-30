@@ -1,0 +1,145 @@
+{
+  "name": "@alga-psa/co-managed",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./capability": {
+      "types": "./src/capability.ts",
+      "import": "./src/capability.ts"
+    },
+    "./permissionsCapability": {
+      "types": "./src/permissionsCapability.ts",
+      "import": "./src/permissionsCapability.ts"
+    },
+    "./acceptance": {
+      "types": "./src/acceptance.ts",
+      "import": "./src/acceptance.ts"
+    },
+    "./provisioning": {
+      "types": "./src/provisioning.ts",
+      "import": "./src/provisioning.ts"
+    },
+    "./provisioningInvitation": {
+      "types": "./src/provisioningInvitation.ts",
+      "import": "./src/provisioningInvitation.ts"
+    },
+    "./managementPolicy": {
+      "types": "./src/managementPolicy.ts",
+      "import": "./src/managementPolicy.ts"
+    },
+    "./sharedWorkIdentity": {
+      "types": "./src/sharedWorkIdentity.ts",
+      "import": "./src/sharedWorkIdentity.ts"
+    },
+    "./localPermission": {
+      "types": "./src/localPermission.ts",
+      "import": "./src/localPermission.ts"
+    },
+    "./localAuthentication": {
+      "types": "./src/localAuthentication.ts",
+      "import": "./src/localAuthentication.ts"
+    },
+    "./queuePolicy": {
+      "types": "./src/queuePolicy.ts",
+      "import": "./src/queuePolicy.ts"
+    },
+    "./sharedWorkRedaction": {
+      "types": "./src/sharedWorkRedaction.ts",
+      "import": "./src/sharedWorkRedaction.ts"
+    },
+    "./policy": {
+      "types": "./src/policy.ts",
+      "import": "./src/policy.ts"
+    },
+    "./sharedWork": {
+      "types": "./src/sharedWork.ts",
+      "import": "./src/sharedWork.ts"
+    },
+    "./sharedWorkRead": {
+      "types": "./src/sharedWorkRead.ts",
+      "import": "./src/sharedWorkRead.ts"
+    },
+    "./customerWork": {
+      "types": "./src/customerWork.ts",
+      "import": "./src/customerWork.ts"
+    },
+    "./delegatedAdministration": {
+      "types": "./src/delegatedAdministration.ts",
+      "import": "./src/delegatedAdministration.ts"
+    },
+    "./participationEvidence": {
+      "types": "./src/participationEvidence.ts",
+      "import": "./src/participationEvidence.ts"
+    },
+    "./schedulingRegistration": {
+      "types": "./src/schedulingRegistration.ts",
+      "import": "./src/schedulingRegistration.ts"
+    },
+    "./appointmentMeetingCreation": {
+      "types": "./src/appointmentMeetingCreation.ts",
+      "import": "./src/appointmentMeetingCreation.ts"
+    },
+    "./meetingCreationOperation": {
+      "types": "./src/meetingCreationOperation.ts",
+      "import": "./src/meetingCreationOperation.ts"
+    },
+    "./nativeScheduleMeetingSync": {
+      "types": "./src/nativeScheduleMeetingSync.ts",
+      "import": "./src/nativeScheduleMeetingSync.ts"
+    },
+    "./localProjectSearchPolicy": {
+      "types": "./src/localProjectSearchPolicy.ts",
+      "import": "./src/localProjectSearchPolicy.ts"
+    },
+    "./projectTaskQueue": {
+      "types": "./src/projectTaskQueue.ts",
+      "import": "./src/projectTaskQueue.ts"
+    },
+    "./projectTaskEditing": {
+      "types": "./src/projectTaskEditing.ts",
+      "import": "./src/projectTaskEditing.ts"
+    },
+    "./projectTaskAssignments": {
+      "types": "./src/projectTaskAssignments.ts",
+      "import": "./src/projectTaskAssignments.ts"
+    },
+    "./projectTaskGate": {
+      "types": "./src/projectTaskGate.ts",
+      "import": "./src/projectTaskGate.ts"
+    },
+    "./nativeTaskCommentAccess": {
+      "types": "./src/nativeTaskCommentAccess.ts",
+      "import": "./src/nativeTaskCommentAccess.ts"
+    },
+    "./coManagedWorkspace": {
+      "types": "./src/coManagedWorkspace.ts",
+      "import": "./src/coManagedWorkspace.ts"
+    },
+    "./projectTaskAudit": {
+      "types": "./src/projectTaskAudit.ts",
+      "import": "./src/projectTaskAudit.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@alga-psa/core": "*",
+    "@alga-psa/db": "*",
+    "@alga-psa/licensing": "*",
+    "knex": "^3.1.0",
+    "@alga-psa/authorization": "*",
+    "@alga-psa/types": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

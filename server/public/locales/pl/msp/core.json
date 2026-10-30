@@ -105,7 +105,13 @@
     "passwords": "Hasła",
     "ticketsAll": "Wszystkie zgłoszenia",
     "ticketsRecurring": "Zgłoszenia cykliczne",
-    "ticketsTemplates": "Szablony zgłoszeń"
+    "ticketsTemplates": "Szablony zgłoszeń",
+    "assetsCustody": "Sprzęt w przechowaniu",
+    "ticketsCannedResponses": "Gotowe odpowiedzi",
+    "profile": "Profil",
+    "signOut": "Wyloguj się",
+    "coManaged": "IT w współzarządzaniu",
+    "coManagedAdministration": "Dostęp i administracja"
   },
   "sidebar": {
     "backToMain": "Powrót do głównego",
@@ -154,7 +160,8 @@
       "extensions": "Rozszerzenia",
       "experimentalFeatures": "Funkcje eksperymentalne",
       "profile": "Profil",
-      "security": "Bezpieczeństwo"
+      "security": "Bezpieczeństwo",
+      "tags": "Tagi"
     }
   },
   "dashboard": {
@@ -209,7 +216,35 @@
       "ariaLabel": "Zasoby i pomoc",
       "title": "Zasoby",
       "documentation": "Dokumentacja",
-      "support": "Skontaktuj się z pomocą techniczną"
+      "support": "Skontaktuj się z pomocą techniczną",
+      "submitTicket": "Wyślij zgłoszenie do Nine Minds"
+    },
+    "supportDialog": {
+      "title": "Wyślij zgłoszenie do Nine Minds",
+      "intro": "Pomoc techniczna Nine Minds otrzyma to jako zgłoszenie i odpowie e-mailem.",
+      "categoryLabel": "W czym potrzebujesz pomocy?",
+      "categories": {
+        "bug": "Coś nie działa",
+        "question": "Pytanie",
+        "billing": "Rozliczenia",
+        "feature": "Propozycja funkcji"
+      },
+      "subjectLabel": "Temat",
+      "descriptionLabel": "Co się stało?",
+      "descriptionPlaceholder": "Podaj, czego oczekiwałeś, co się stało oraz którego klienta lub której faktury to dotyczy.",
+      "replyTo": "Odpowiedzi trafią na adres {{email}}",
+      "success": "Wysłano do pomocy technicznej Nine Minds. Odpowiedzi trafią na adres {{email}}.",
+      "submit": "Wyślij do Nine Minds",
+      "sending": "Wysyłanie…",
+      "cancel": "Anuluj",
+      "close": "Zamknij",
+      "fallbackLink": "Skontaktuj się z pomocą techniczną na nineminds.com",
+      "errors": {
+        "invalidInput": "Wpisz temat o długości co najmniej 3 znaków i opis o długości co najmniej 20 znaków.",
+        "rateLimited": "Właśnie wysłałeś zgłoszenie. Odczekaj minutę przed wysłaniem następnego.",
+        "emailNotConfigured": "Ta instalacja nie ma skonfigurowanej poczty wychodzącej, więc zgłoszenia nie udało się wysłać.",
+        "sendFailed": "Nie udało się wysłać zgłoszenia. Spróbuj ponownie."
+      }
     },
     "jobs": {
       "ariaLabel": "Wyświetl aktywność zadań w tle",
@@ -794,5 +829,42 @@
   "githubStar": {
     "label": "Oznacz gwiazdką",
     "ariaLabel": "Oznacz {{repository}} gwiazdką w serwisie GitHub"
+  },
+  "chatContext": {
+    "screens": {
+      "portal": "Portal MSP",
+      "dashboard": "Pulpit",
+      "ticketDetails": "Szczegóły zgłoszenia",
+      "tickets": "Zgłoszenia",
+      "projectDetails": "Szczegóły projektu",
+      "projects": "Projekty",
+      "clientDetails": "Szczegóły klienta",
+      "clients": "Klienci",
+      "contactDetails": "Szczegóły kontaktu",
+      "contacts": "Kontakty",
+      "assetDetails": "Szczegóły zasobu",
+      "assets": "Zasoby",
+      "billing": "Rozliczenia",
+      "settings": "Ustawienia",
+      "settingsSection": "Ustawienia: {{section}}",
+      "chat": "Czat"
+    }
+  },
+  "chat": {
+    "page": {
+      "title": "Funkcja Pro",
+      "description": "Funkcje czatu z AI wymagają Pro. Przejdź na wyższy plan, aby uzyskać dostęp do tej funkcji."
+    },
+    "messages": {
+      "proRequired": "Funkcje wiadomości wymagają Pro."
+    },
+    "errors": {
+      "enterpriseOnly": "Funkcje czatu są dostępne tylko w Enterprise Edition"
+    }
+  },
+  "coManagedWorkspace": {
+    "loading": "Ładowanie obszaru roboczego…",
+    "navigation": "Obszar roboczy klienta",
+    "passwordError": "Nie można sprawdzić stanu hasła. Odśwież tę stronę."
   }
 }

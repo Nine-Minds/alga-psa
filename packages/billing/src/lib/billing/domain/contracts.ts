@@ -1,10 +1,16 @@
 import type { ProjectCapContext, ProjectCapThresholdCrossing } from './projectCapAdjustments';
 import type { TimeBasedPhaseRateOverride, TimeBasedProjectChargeConfig } from '../compute/computeTimeBasedCharges';
 import type {
+  HourBlockDrawRow,
+  PrepaidBlockIssuanceInput,
+  CadencePrepaidBlockInput,
+} from '../compute/computePrepaidBlockCharges';
+import type {
   ChargeExplanation,
   IAdjustment,
   IBillingCharge,
   IBillingPeriod,
+  ILateServicePeriodSource,
 } from "@alga-psa/types";
 import type { DiscountComputeCandidate } from "../compute";
 
@@ -109,6 +115,8 @@ export type ResolvedContractBillingChargeFacts =
         configurationQuantity?: number | string | null;
         configurationCustomRate?: unknown;
         baseRate: number | string | null;
+        /** What `baseRate` means: 'per_unit' (× quantity) or 'share' (as-is). NULL reads as per_unit. */
+        baseRateBasis?: string | null;
         enableProration?: boolean | null;
         quantity?: number | string | null;
         /** Explicit fixed pricing basis ('unit' recurring seats vs 'bundle'/NULL). */
@@ -125,15 +133,20 @@ export type ResolvedContractBillingChargeFacts =
     })
   | (ContractChargeFactsBase & {
       kind: "hourly";
+      /** The line carries a cadence Prepaid Block (see TimeBasedChargeComputeInputs). */
+      overPrepaidBlock?: boolean;
       overtime: {
         enabled?: boolean | null;
         threshold?: number | null;
         rate?: number | null;
       };
+      /** The contract line's own minimum/rounding (contract_lines), which win over the per-service copy. */
+      lineTerms?: { minimumBillableTime?: number | null; roundUpToNearest?: number | null };
       serviceConfigurations: Array<{
         serviceId: string;
         configurationId: string;
-        hourlyRate: number;
+        hourlyRate: number | null;
+        customRate?: number | null;
         minimumBillableTime: number;
         roundUpToNearest: number;
         userTypeRates: Array<{ userType: string; rate: number }>;
@@ -161,6 +174,8 @@ export type ResolvedContractBillingChargeFacts =
         phaseRateOverride?: TimeBasedPhaseRateOverride | null;
         projectChargeConfig?: TimeBasedProjectChargeConfig;
         billingProfileId?: string | null;
+        /** Set when the activity is dated in a service period an issued invoice already closed. */
+        latePeriod?: ILateServicePeriodSource | null;
       }>;
     })
   | (ContractChargeFactsBase & {
@@ -226,6 +241,35 @@ export type ResolvedContractBillingChargeFacts =
         overageHours?: number | string | null;
         rolledOverMinutes?: number | string | null;
       }>;
+    })
+  | (ContractChargeFactsBase & {
+      /**
+       * The up-front charge for one scheduled prepaid-block issuance. Its
+       * `billingProfile` is the issuance line's own (not the document line's).
+       */
+      kind: "prepaidBlock";
+      issuance: PrepaidBlockIssuanceInput;
+      /** Order key among a document's block charges (ISO date). */
+      dueDate: string;
+    })
+  | (ContractChargeFactsBase & {
+      /**
+       * The block fee of a cadence-mode Prepaid Block for one service period
+       * (the timing on the facts), billed in advance. The resolver derives
+       * the block's validity from the cadence; a source only supplies terms.
+       */
+      kind: "cadencePrepaidBlock";
+      block: CadencePrepaidBlockInput;
+    })
+  | (ContractChargeFactsBase & {
+      /**
+       * $0 consumption lines for the time that drew a line's prepaid blocks.
+       * `allocations` are the rows the resolver selected (see
+       * chargeResolution/prepaidBlockRules.ts).
+       */
+      kind: "hourBlockDraw";
+      period: { startDate: string; endDate: string };
+      allocations: HourBlockDrawRow[];
     })
   | (ContractChargeFactsBase & {
       kind: "product" | "license";
