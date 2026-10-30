@@ -101,7 +101,8 @@ function xeroTarget() {
   return {
     integration: { adapterType: 'xero', targetRealm: 'conn-1' },
     adapter: {},
-    refreshTokenExpiresAt: null
+    refreshTokenExpiresAt: null,
+    qboEnvironment: null
   };
 }
 
@@ -164,9 +165,9 @@ describe('accounting sync actions organisation scoping', () => {
     resolveSyncTargetMock.mockResolvedValue({
       integration: { adapterType: 'quickbooks_online', targetRealm: 'realm-sandbox' },
       adapter: {},
-      refreshTokenExpiresAt: null
+      refreshTokenExpiresAt: null,
+      qboEnvironment: 'sandbox'
     });
-    qboCredentialsMock.mockResolvedValue({ 'realm-sandbox': { environment: 'sandbox' } });
     tenantDbMock.mockImplementation((_knex: unknown, _tenant: unknown) => ({
       table: (table: string) =>
         makeBuilder(
@@ -196,9 +197,9 @@ describe('accounting sync actions organisation scoping', () => {
     resolveSyncTargetMock.mockResolvedValue({
       integration: { adapterType: 'quickbooks_online', targetRealm: 'realm-legacy' },
       adapter: {},
-      refreshTokenExpiresAt: null
+      refreshTokenExpiresAt: null,
+      qboEnvironment: null
     });
-    qboCredentialsMock.mockResolvedValue({ 'realm-legacy': {} });
     resolveTenantQboEnvironmentMock.mockResolvedValue('sandbox');
     tenantDbMock.mockImplementation((_knex: unknown, _tenant: unknown) => ({
       table: (table: string) =>

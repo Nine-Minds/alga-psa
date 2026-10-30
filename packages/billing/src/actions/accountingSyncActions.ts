@@ -6,7 +6,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, writeAccountingAudit } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
-import { getStoredQboCredentialsMap, QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import { getStoredQboCredentialsMap, QboClientService, resolveTenantQboEnvironment } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { getStoredXeroConnections } from '@alga-psa/integrations/lib/xero/xeroClientService';
 import { isAccountingReconnectRequired } from '@alga-psa/integrations/lib/accountingReconnectHeuristic';
 import { isProviderDisconnectActive, PROVIDER_QBO, PROVIDER_XERO } from '@alga-psa/integrations/lib/providerDisconnect';
@@ -374,15 +374,7 @@ export const getInvoiceSyncStatuses = withAuth(async (
   // the tenant setting, else the deployment default.
   let environment: 'sandbox' | 'production' | undefined;
   if (integrationType === 'quickbooks_online') {
-    const { getStoredQboCredentialsMap, resolveTenantQboEnvironment } = await import(
-      '@alga-psa/integrations/lib/qbo/qboClientService'
-    );
-    const storedCredentials = targetRealm
-      ? await getStoredQboCredentialsMap(tenant).catch(() => ({} as Record<string, { environment?: 'sandbox' | 'production' }>))
-      : {};
-    environment =
-      (targetRealm ? storedCredentials[targetRealm]?.environment : undefined) ??
-      (await resolveTenantQboEnvironment(tenant));
+    environment = target.qboEnvironment ?? (await resolveTenantQboEnvironment(tenant));
   }
 
   const result: Record<string, InvoiceSyncStatus> = {};
