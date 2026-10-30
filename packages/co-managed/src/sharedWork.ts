@@ -64,6 +64,10 @@ export async function loadCoManagedGrantFacts(trx: Knex.Transaction, resource: C
     const row = ticket.board_id ? await owner.table('co_management_board_scopes')
       .where({ relationship_id: resource.relationshipId, board_id: ticket.board_id }).forShare().first() : null;
     scope = row ? { canCollaborate: row.can_collaborate } : null;
+    // L3b1: an escalation is an explicit per-ticket grant, live in either visibility mode until revoked.
+    const work = await owner.table('co_management_ticket_work').where({ relationship_id: resource.relationshipId, ticket_id: resource.id })
+      .whereNull('grant_revoked_at').whereNotNull('first_escalated_at').forShare().first('can_collaborate');
+    return { visibilityMode, scope, explicit: work ? { canCollaborate: work.can_collaborate } : null };
   } else {
     const projectId = await projectOf(trx, resource, lock);
     if (!projectId) return null;

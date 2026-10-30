@@ -467,6 +467,12 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_managed_project_task_references',
   'collaboration_actor_references',
   'co_managed_participation_evidence',
+  // Handoffs FK to ticket work, which FKs to relationships: children first. References and
+  // receipts reference the client/board/relationship rows deleted later.
+  'co_management_ticket_handoffs',
+  'co_management_ticket_work',
+  'co_managed_ticket_references',
+  'co_management_command_receipts',
   'co_management_relationships',
 
   // === LEVEL 3: Mid-level entities ===

@@ -52,3 +52,11 @@ export type { CoManagedTaskHistoryEntry } from './projectTaskAudit';
 export { countCoManagedNativeTaskComments } from './nativeTaskCommentAccess';
 export { listCoManagedProjectTaskStatusOptions } from './projectTaskEditing';
 export type { CoManagedProjectTaskStatusOption } from './projectTaskEditing';
+// L3b1: shared ticket handoff engine, Working queue and shared-ticket write path.
+export * from './ticketHandoffs';
+export * from './ticketQueue';
+export * from './ticketEditing';
+export * from './ticketAssignments';
+export * from './ticketBulkHandback';
+export * from './ticketCollaboration';
+export * from './sharedTicketDetails';

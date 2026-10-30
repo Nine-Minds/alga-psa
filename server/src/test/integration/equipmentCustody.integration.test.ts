@@ -229,7 +229,8 @@ const intake = (fx: Fx, over: Record<string, unknown> = {}) => ({
   bin: 'Shelf B3',
   next_action_party: 'vendor',
   next_action_note: 'waiting on vendor, follow up in 5 days',
-  follow_up_on: '2026-10-29',
+  // Far future so the default intake is never overdue, whatever day the suite runs.
+  follow_up_on: '2099-10-29',
   accessories: [{ label: 'Power adapter', quantity: 1 }],
   ...over,
 });
@@ -625,7 +626,7 @@ describe('equipment custody (integration)', () => {
   it('writes non-physical edits as custody_updated history, not events, and keeps follow_up_on a calendar date', async () => {
     const fx = await seedFixture();
     const r = unwrap<any>(await receiveEquipment(intake(fx)));
-    expect(r.custody.follow_up_on).toBe('2026-10-29');
+    expect(r.custody.follow_up_on).toBe('2099-10-29');
     const id = r.custody.custody_id;
     const eventsBefore = await table(fx.tenantId, 'asset_custody_events').where({ custody_id: id });
 
