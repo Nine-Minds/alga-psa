@@ -1,0 +1,54 @@
+import { isInlineTextDocumentMimeType } from './documentMimeType';
+
+export type DocumentDisposition = 'inline' | 'attachment';
+
+export interface DocumentServingPolicy {
+  /** The MIME type after trim / lowercase / `;params` stripping. */
+  mimeType: string;
+  /** May `/api/documents/view` stream these bytes at all? */
+  servable: boolean;
+  /** May the browser render these bytes as our origin? Anything unsure is `attachment`. */
+  disposition: DocumentDisposition;
+  /** Response headers every route serving these bytes must send. */
+  headers: Record<string, string>;
+}
+
+const INLINE_CSP = "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox";
+
+function normalizeMimeType(mimeType?: string | null): string {
+  return (mimeType || '').split(';')[0].trim().toLowerCase();
+}
+
+/**
+ * The single document-serving policy. "May we stream this?" (`servable`) and
+ * "may the browser render this as our origin?" (`disposition`) are separate
+ * questions: SVG and other markup are servable but never inline, because
+ * rendering them executes script on the AlgaPSA origin.
+ */
+export function resolveDocumentServingPolicy(mimeType?: string | null): DocumentServingPolicy {
+  const normalized = normalizeMimeType(mimeType);
+
+  const servable =
+    normalized.startsWith('image/') ||
+    normalized.startsWith('video/') ||
+    normalized === 'application/pdf';
+
+  const inline =
+    normalized === 'application/pdf' ||
+    (normalized.startsWith('image/') && normalized !== 'image/svg+xml') ||
+    normalized.startsWith('video/') ||
+    isInlineTextDocumentMimeType(normalized);
+
+  const disposition: DocumentDisposition = inline ? 'inline' : 'attachment';
+  const headers: Record<string, string> = { 'X-Content-Type-Options': 'nosniff' };
+  if (disposition === 'inline') headers['Content-Security-Policy'] = INLINE_CSP;
+
+  return { mimeType: normalized, servable, disposition, headers };
+}
+
+/** `Content-Disposition` value; with a filename it carries ASCII and RFC 5987 forms. */
+export function buildContentDisposition(disposition: DocumentDisposition, filename?: string | null): string {
+  if (!filename) return disposition;
+  const ascii = filename.replace(/[^\x20-\x7e]/g, '_').replace(/["\;]/g, '_').replace(/[\r\n]/g, '_');
+  return `${disposition}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
+}
