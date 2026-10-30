@@ -1,4 +1,5 @@
 import { createRequire } from "node:module";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import Handlebars from "handlebars";
 import { describe, expect, it } from "vitest";
@@ -37,14 +38,33 @@ describe("email template variable registry", () => {
     expect(html).not.toContain("AST-0042");
     const assetsHtml = entry.variables.find((variable) => variable.path === "ticket.assetsHtml")!.example;
     for (const header of ["Asset Tag", "Name", "Serial #", "Status", "Relationship"]) {
-      expect(assetsHtml).toContain(`<th>${header}</th>`);
+      expect(assetsHtml).toContain(`>${header}</th>`);
     }
     for (const [path, headers] of [
       ["ticket.materialsHtml", ["Item", "Qty", "Rate", "Amount", "Billed"]],
       ["ticket.timeHtml", ["Technician", "Date", "Worked", "Billable"]],
     ] as const) {
       const sample = entry.variables.find((variable) => variable.path === path)!.example;
-      for (const header of headers) expect(sample).toContain(`<th>${header}</th>`);
+      for (const header of headers) expect(sample).toContain(`>${header}</th>`);
+    }
+  });
+
+  it("uses the fixed renderer's exact table styles in every ticket detail example", () => {
+    const source = readFileSync(path.join(repositoryRoot, "server/src/lib/notifications/ticketEmailDetailBlocks.ts"), "utf8");
+    const styles = [
+      ["table", "DETAIL_TABLE_STYLE"],
+      ["th", "DETAIL_TH_STYLE"],
+      ["td", "DETAIL_TD_STYLE"],
+    ] as const;
+    const variables = templateVariableRegistry["ticket-closed"].variables;
+    for (const variablePath of ["ticket.assets", "ticket.assetsHtml", "ticket.materialsHtml", "ticket.timeHtml"]) {
+      const sample = variables.find((variable) => variable.path === variablePath)!.example;
+      for (const [tag, constant] of styles) {
+        const style = source.match(new RegExp(`const ${constant} = '([^']+)';`))![1];
+        const tags = sample.match(new RegExp(`<${tag}\\b[^>]*>`, "g"))!;
+        expect(tags.length).toBeGreaterThan(0);
+        for (const element of tags) expect(element).toBe(`<${tag} style="${style}">`);
+      }
     }
   });
 
