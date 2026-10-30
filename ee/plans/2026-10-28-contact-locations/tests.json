@@ -286,7 +286,7 @@
     "featureIds": [
       "F021"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contact bento Locations tile shows work-arrangement badge, rows with Primary and Inactive markers, and the empty state with Add"
   },
   {
@@ -295,7 +295,7 @@
     "featureIds": [
       "F021"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contact bento Locations tile shows 'Remote' for a remote contact with no links"
   },
   {
@@ -322,7 +322,7 @@
     "featureIds": [
       "F024"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ClientLocations card shows the contact count chip and expands to the contact names, each linking to the contact page"
   },
   {
@@ -331,7 +331,7 @@
     "featureIds": [
       "F025"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Deleting a linked location from the card shows the dependency error text and the card remains"
   },
   {
@@ -341,7 +341,7 @@
       "F026",
       "F027"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "pickers.displayTags-style test: ContactPicker option shows tag badges then the primary location name; the selected row shows the same; a contact with no location shows none"
   },
   {
@@ -694,7 +694,7 @@
     "featureIds": [
       "F051"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Portal user detail shows the user's locations read-only with primary marked and a Remote badge when remote"
   },
   {
@@ -703,7 +703,7 @@
     "featureIds": [
       "F052"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Portal contact write actions reject locations and work_arrangement with a validation error"
   },
   {
@@ -721,7 +721,7 @@
     "featureIds": [
       "F054"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ContactDetailScreen renders the Locations section with Primary marker and address; pressing a row calls Linking.openURL with buildMapsUrl of the address lines"
   },
   {
@@ -730,7 +730,7 @@
     "featureIds": [
       "F054"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "ContactDetailScreen: a location without address lines opens the maps app with the location name; a remote contact shows the Remote badge; no section when unlinked and not remote"
   },
   {

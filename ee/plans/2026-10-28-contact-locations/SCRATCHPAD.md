@@ -116,3 +116,38 @@ lane; it is a follow-up, not a behaviour gap.
   hit neither. The three OpenAPI conflicts were resolved "ours" and then regenerated with
   `npm run generate:artifacts`, so the committed spec is the union again and `artifact-drift` is
   clean.
+
+## 2026-10-30: third review round
+
+- **Blocker: zod 4.** `ApiClientController`'s client-scoped contact filter catch (F046) read
+  `error.errors` off a `ZodError`; zod 4 renamed it `issues`, so `server` failed `tsc --noEmit`
+  (its only error) and `GET /api/v1/clients/{id}/contacts?location_id=<bad>` returned a 400 whose
+  `details` was `undefined`. Now `error.issues`, matching the two sibling catches in the same file.
+  `tsc --noEmit -p server/tsconfig.json` is clean.
+- **Nits with teeth, fixed.**
+  - `ContactLocationsEditor` showed "Choose a client first…" whenever `disabled || !clientId`, so
+    QuickAddContact's `disabled={isSubmitting}` asked for a client the operator had already picked.
+    The hint is now tied to `!clientId` alone and the checkboxes carry `disabled`.
+  - A cross-client location on **create** fell through `prefixedContactActionErrorFrom` to
+    `SYSTEM_ERROR: Failed to create contact`. That mapper now names the refusal first, so the add
+    path and CSV import rows read the same message the update path already did.
+  - F032 said "primary first": the contact's sites were grouped first but kept the client's own
+    order, so a primary that sorts late read second. `QuickAddTicket` now puts the primary at the
+    head of that group.
+  - `ContactDetailsEdit` re-asked on a *second* client change using the stale stored count. The
+    stored count is only consulted while the form still sits on the contact's stored client.
+- **Nine deferred tests land** (43 → 34), all at the render seam the earlier round could not reach
+  without fixtures: `ContactBentoLayout.locations.test.tsx` (T032/T033 — arrangement badge, Primary
+  and inactive markers, empty-with-Add, Remote), `ClientLocations.contacts.test.tsx` (T036/T037 —
+  the chip, its contact links, and a refused delete leaving the card), `ContactPicker.locations`
+  (T038), `ClientUserDetails.locations` + `clientUserActions.locations` (T077/T078 — the read-only
+  line and the portal write refusal), and two cases on the mobile `ContactDetailScreen` (T080/T081 —
+  maps links with and without address lines, the Remote badge, no section when there is nothing).
+- **Still deferred: 34**, and they are the DB-backed halves — `ticket-autofill` (12: the write in
+  `TicketModel.createTicket`, inbound email, portal and REST), `api-csv` (8: REST round trips and
+  CSV import against a live schema), `contact-model` (4: `addContact`/`updateContact` transactions),
+  `search-mcp` (4: indexer and MCP e2e), plus `contact-ui` T031/T035, `pickers` T039/T040 and
+  `merge-ui` T095/T096 (full dialog mounts). Every decision they describe is still pinned by the
+  seam tests listed in the previous round's note. This remains a departure from operator amendment
+  #4 and wants a sign-off rather than silence: closing it means standing the fixtures up in the
+  integration lane.
