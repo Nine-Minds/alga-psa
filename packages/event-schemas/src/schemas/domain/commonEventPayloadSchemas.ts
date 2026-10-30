@@ -1,14 +1,15 @@
 import { z } from 'zod';
 import { withWorkflowPicker, type WorkflowPickerKind } from '../../jsonSchemaMetadata';
+import { collaborationActorReferenceSchema } from '../collaborationActorSchemas';
 
 export const tenantIdSchema = z.string().min(1).describe('Tenant ID');
 export const occurredAtSchema = z.string().datetime().describe('Timestamp when the event occurred (ISO 8601)');
 
-export const uuidSchema = (label: string) => z.string().uuid().describe(label);
+export const uuidSchema = (label: string) => z.string().guid().describe(label);
 
 /** A uuid that identifies a `kind` entity, so the designer can offer that entity's picker. */
 export const entityIdSchema = (label: string, kind: WorkflowPickerKind) =>
-  withWorkflowPicker(z.string().uuid(), label, kind);
+  withWorkflowPicker(z.string().guid(), label, kind);
 
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const isCalendarDate = (value: string): boolean => {
@@ -26,7 +27,7 @@ const isCalendarDate = (value: string): boolean => {
 export const dateOnlySchema = (label: string) =>
   z.string().regex(DATE_ONLY_PATTERN, 'Expected a YYYY-MM-DD date').refine(isCalendarDate, 'Invalid calendar date').describe(label);
 
-export const actorTypeSchema = z.enum(['USER', 'CONTACT', 'SYSTEM']).describe('Actor type');
+export const actorTypeSchema = z.enum(['USER', 'CONTACT', 'SYSTEM', 'COLLABORATOR']).describe('Actor type');
 
 export const BaseDomainEventPayloadSchema = z.object({
   tenantId: tenantIdSchema,
@@ -37,16 +38,17 @@ export const BaseDomainEventPayloadSchema = z.object({
   // Provenance when a workflow run caused the event. The lineage is the ancestry of workflow ids
   // that led here; the event-stream worker uses it to refuse a workflow already in the chain.
   workflowRunId: uuidSchema('Workflow Run ID').optional(),
-  workflowLineage: z.array(z.string().uuid()).describe('Workflow ids that caused this event, oldest first').optional(),
+  workflowLineage: z.array(z.string().guid()).describe('Workflow ids that caused this event, oldest first').optional(),
+  actorReference: collaborationActorReferenceSchema.optional(),
 });
 
 export const updatedFieldsSchema = z.array(z.string()).describe('Dot-paths of updated fields').optional();
 
 export const changesSchema = z
-  .record(
+  .record(z.string(), 
     z.object({
-      previous: z.unknown(),
-      new: z.unknown(),
+      previous: z.unknown().optional(),
+      new: z.unknown().optional(),
     })
   )
   .describe('Map of dot-path -> { previous, new }')

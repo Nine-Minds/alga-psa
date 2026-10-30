@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 const tenantSchema = z.string().min(1).describe('Tenant ID');
-const uuidSchema = (label: string) => z.string().uuid().describe(label);
-const optionalUuidSchema = (label: string) => z.string().uuid().nullable().optional().describe(label);
+const uuidSchema = (label: string) => z.string().guid().describe(label);
+const optionalUuidSchema = (label: string) => z.string().guid().nullable().optional().describe(label);
 
 const eventTimestampSchema = z.string().datetime().optional();
 const changedFieldsSchema = z.array(z.string()).optional();
@@ -53,10 +53,29 @@ export const inventoryRmaCreatedEventPayloadSchema = z.object({
 
 export type InventoryRmaCreatedEventPayload = z.infer<typeof inventoryRmaCreatedEventPayloadSchema>;
 
+/** A warranty/RMA case changed (C5). Published after commit for client-asset warranty claims. */
+export const inventoryRmaUpdatedEventPayloadSchema = z.object({
+  tenant: tenantSchema,
+  rma_id: uuidSchema('RMA ID'),
+  rma_number: z.string().min(1),
+  status: z.string().min(1),
+  previous_status: z.string().nullable(),
+  rma_type: z.enum(['standard', 'advance_replacement']),
+  asset_id: optionalUuidSchema('Asset ID'),
+  ticket_id: optionalUuidSchema('Ticket ID'),
+  client_id: optionalUuidSchema('Client ID'),
+  warranty_outcome: z.enum(['covered', 'not_covered', 'unknown']).nullable(),
+  changed_fields: changedFieldsSchema,
+  user_id: z.string().uuid().optional(),
+  timestamp: z.string().min(1),
+}).describe('Payload for INVENTORY_RMA_UPDATED');
+
+export type InventoryRmaUpdatedEventPayload = z.infer<typeof inventoryRmaUpdatedEventPayloadSchema>;
+
 export const inventorySalesOrderSearchEventPayloadSchema = z.object({
   tenant: tenantSchema,
   so_id: uuidSchema('Sales order ID'),
-  user_id: z.string().uuid().optional(),
+  user_id: z.string().guid().optional(),
   changed_fields: changedFieldsSchema,
   timestamp: eventTimestampSchema,
 }).describe('Payload for inventory sales order search events');
@@ -66,7 +85,7 @@ export type InventorySalesOrderSearchEventPayload = z.infer<typeof inventorySale
 export const inventoryPurchaseOrderSearchEventPayloadSchema = z.object({
   tenant: tenantSchema,
   po_id: uuidSchema('Purchase order ID'),
-  user_id: z.string().uuid().optional(),
+  user_id: z.string().guid().optional(),
   changed_fields: changedFieldsSchema,
   timestamp: eventTimestampSchema,
 }).describe('Payload for inventory purchase order search events');
@@ -93,7 +112,7 @@ const inventoryTransferLifecycleEventPayloadSchema = z.object({
   from_location_id: uuidSchema('Source stock location ID'),
   to_location_id: uuidSchema('Destination stock location ID'),
   line_count: z.number().int().nonnegative(),
-  user_id: z.string().uuid().optional(),
+  user_id: z.string().guid().optional(),
   timestamp: eventTimestampSchema,
 });
 
@@ -117,7 +136,7 @@ const inventoryCountLifecycleEventPayloadSchema = z.object({
   counted_line_count: z.number().int().nonnegative(),
   variance_line_count: z.number().int().nonnegative(),
   variance_quantity: z.number().int(),
-  user_id: z.string().uuid().optional(),
+  user_id: z.string().guid().optional(),
   timestamp: eventTimestampSchema,
 });
 
@@ -135,8 +154,8 @@ export type InventoryCountApprovedEventPayload = z.infer<typeof inventoryCountAp
 export const inventoryStockUnitSearchEventPayloadSchema = z.object({
   tenant: tenantSchema,
   unit_id: uuidSchema('Stock unit ID'),
-  service_id: z.string().uuid().optional(),
-  user_id: z.string().uuid().optional(),
+  service_id: z.string().guid().optional(),
+  user_id: z.string().guid().optional(),
   changed_fields: changedFieldsSchema,
   timestamp: eventTimestampSchema,
 }).describe('Payload for inventory stock unit search events');

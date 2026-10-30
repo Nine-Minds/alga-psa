@@ -109,7 +109,9 @@
     "assetsCustody": "Matériel sous garde",
     "ticketsCannedResponses": "Réponses prédéfinies",
     "profile": "Profil",
-    "signOut": "Se déconnecter"
+    "signOut": "Se déconnecter",
+    "coManaged": "IT cogérée",
+    "coManagedAdministration": "Accès et administration"
   },
   "sidebar": {
     "backToMain": "Retour au principal",

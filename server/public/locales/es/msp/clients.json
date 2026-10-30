@@ -492,7 +492,8 @@
       "ticketClosed": "Ticket cerrado",
       "ticketOpened": "Ticket abierto",
       "unitDelivered": "Equipo entregado"
-    }
+    },
+    "discardFeatureMessage": "Tiene cambios sin guardar en esta vista. ¿Cerrar y descartarlos?"
   },
   "quickAddClient": {
     "lifecycleStatus": "Ciclo de vida",

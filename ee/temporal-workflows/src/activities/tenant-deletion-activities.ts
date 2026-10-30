@@ -58,6 +58,10 @@ export {
 export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'email_sender_routes',
   'email_sender_addresses',
+  // rma_cases has a NO ACTION FK to asset_custody (rma_cases_custody_fk) plus FKs to clients/assets/
+  // stock_units/tickets deleted later, so rma_events (FK to rma_cases) then rma_cases precede asset_custody.
+  'rma_events',
+  'rma_cases',
   'asset_custody_events',
   'asset_custody',
   'sessions',
@@ -65,7 +69,6 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'staging_containers',
   'stock_movements',
   'stock_transfer_lines',
-  'rma_cases',
   'kit_components',
   'stock_levels',
   'product_inventory_settings',
@@ -245,6 +248,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'tag_references',
   'tag_display_rules',
   'ticket_resources',
+  'ticket_watchers',
+  'document_fetch_hosts',
   'client_portal_visibility_group_boards',
   'import_job_items',
   'import_jobs',
@@ -452,7 +457,23 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_managed_allocations',
   'co_managed_entitlements',
   'co_managed_provisioning_operations',
+  'co_managed_purchase_operations',
+  'tenant_license_state',
+  'co_managed_meeting_creation_operations',
   'co_management_relationship_events',
+  'co_management_delegated_receipts',
+  'co_management_delegated_grants',
+  'co_management_project_scopes',
+  'co_management_staff_assignments',
+  'co_managed_project_task_references',
+  'collaboration_actor_references',
+  'co_managed_participation_evidence',
+  // Handoffs FK to ticket work, which FKs to relationships: children first. References and
+  // receipts reference the client/board/relationship rows deleted later.
+  'co_management_ticket_handoffs',
+  'co_management_ticket_work',
+  'co_managed_ticket_references',
+  'co_management_command_receipts',
   'co_management_relationships',
 
   // === LEVEL 3: Mid-level entities ===
@@ -588,6 +609,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'tag_definitions',
   'custom_task_types',
   'tenant_time_period_settings',
+  'time_period_calendar_locks',
   'time_periods',
   'time_period_types',
   'time_period_settings',

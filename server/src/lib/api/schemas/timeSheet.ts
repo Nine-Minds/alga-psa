@@ -140,8 +140,8 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
     total_hours: z.number(),
     billable_hours: z.number(),
     non_billable_hours: z.number(),
-    entries_by_type: z.record(z.number()),
-    entries_by_day: z.record(z.number()),
+    entries_by_type: z.record(z.string(), z.number()),
+    entries_by_day: z.record(z.string(), z.number()),
     approval_ready: z.boolean()
   }).optional()
 });
@@ -268,8 +268,8 @@ export const timeSheetStatsResponseSchema = z.object({
   changes_requested: z.number(),
   total_hours_this_period: z.number(),
   billable_hours_this_period: z.number(),
-  time_sheets_by_status: z.record(z.number()),
-  time_sheets_by_user: z.record(z.number()),
+  time_sheets_by_status: z.record(z.string(), z.number()),
+  time_sheets_by_user: z.record(z.string(), z.number()),
   average_hours_per_sheet: z.number(),
   approval_rate: z.number(),
   on_time_submission_rate: z.number(),
@@ -328,10 +328,12 @@ export const timeSheetEntryRowSchema = z.object({
   contract_line_unresolved_reason: z.enum(['ambiguous', 'no_match', 'error']).nullable(),
   catalog_pricing_acknowledged_at: z.string().datetime().nullable(),
   catalog_pricing_acknowledged_by: uuidSchema.nullable(),
+  // NOT NULL DEFAULT 'commercial' (20261028135000); CHECK limits it to these values.
+  billing_mode: z.enum(['commercial', 'operational']),
 });
 
 // One row of GET /time-sheets/search: exactly time_sheets.* plus the joined user_name.
-// (time_sheets has no notes/created_at/updated_at columns, so this is not timeSheetResponseSchema.)
+// (time_sheets has no created_at/updated_at columns, so this is not timeSheetResponseSchema.)
 export const timeSheetSearchRowSchema = z.object({
   tenant: uuidSchema,
   id: uuidSchema,
@@ -341,6 +343,7 @@ export const timeSheetSearchRowSchema = z.object({
   submitted_at: z.string().datetime().nullable(),
   approved_at: z.string().datetime().nullable(),
   approved_by: uuidSchema.nullable(),
+  notes: z.string().nullable(),
   user_name: z.string(),
   time_entries: z.array(timeSheetEntryRowSchema).optional(),
 });
@@ -355,8 +358,8 @@ export const timeSheetSearchSchema = z.object({
   // YYYY-MM-DD, compared against time_periods.start_date / end_date
   date_from: isoDateSchema.optional(),
   date_to: isoDateSchema.optional(),
-  include_entries: booleanTransform.optional().default("false"),
-  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
+  include_entries: booleanTransform.prefault("false"),
+  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).prefault('25')
 });
 
 // Time sheet summary response (GET /time-sheets/{id}/summary)
@@ -364,16 +367,16 @@ export const timeSheetSummaryResponseSchema = z.object({
   total_hours: z.number(),
   billable_hours: z.number(),
   non_billable_hours: z.number(),
-  entries_by_type: z.record(z.number()),
-  entries_by_day: z.record(z.number()),
+  entries_by_type: z.record(z.string(), z.number()),
+  entries_by_day: z.record(z.string(), z.number()),
   approval_ready: z.boolean()
 });
 
 // Time sheet export schema
 export const timeSheetExportQuerySchema = z.object({
   format: z.enum(['csv', 'json', 'xlsx']).optional().default('csv'),
-  include_time_entries: booleanTransform.optional().default("false"),
-  include_comments: booleanTransform.optional().default("false"),
+  include_time_entries: booleanTransform.prefault("false"),
+  include_comments: booleanTransform.prefault("false"),
   group_by: z.enum(['user', 'period', 'status', 'none']).optional().default('none'),
   approval_statuses: z.array(approvalStatusSchema).optional(),
   user_ids: z.array(uuidSchema).optional(),
@@ -515,7 +518,7 @@ const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 const scheduleQueryDateSchema = z.union([
   isoDateSchema.refine((v) => !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) && new Date(`${v}T00:00:00Z`).toISOString().startsWith(v), 'Invalid date'),
   z.string().datetime({ offset: true }),
-], { errorMap: () => ({ message: 'Expected ISO 8601 date or date-time' }) });
+], { error: () => 'Expected ISO 8601 date or date-time' });
 
 const scheduleEntryFilterShape = {
   start_date: scheduleQueryDateSchema.optional(),

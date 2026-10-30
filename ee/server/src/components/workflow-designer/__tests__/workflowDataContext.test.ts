@@ -1188,6 +1188,7 @@ describe('workflow data context', () => {
       id: 'wf-ref-output',
       name: 'Ref output workflow',
       version: 1,
+      payloadSchemaRef: 'system:default',
       description: '',
       steps: [
         {

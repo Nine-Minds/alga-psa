@@ -55,7 +55,7 @@ export const ticketFiltersShape: { [K in TicketNamedViewFilterKey]: z.ZodTypeAny
   contactId: z.string(),
   showOpenOnly: z.boolean(),
   tags: z.array(z.string()),
-  assignedToIds: z.array(z.string().uuid()),
+  assignedToIds: z.array(z.string().guid()),
   assignedTeamIds: z.array(z.string()),
   includeUnassigned: z.boolean(),
   assignedToMe: z.boolean(),

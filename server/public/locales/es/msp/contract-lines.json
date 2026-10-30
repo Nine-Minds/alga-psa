@@ -819,7 +819,8 @@
       "notAllowed": "Uno de los valores de la línea de contrato no está permitido. Revise el formulario e inténtelo de nuevo.",
       "missingField": "Falta un campo obligatorio de la línea de contrato.",
       "missingFieldNamed": "Falta un campo obligatorio de la línea de contrato: {{field}}.",
-      "advanceTimingNotAllowed": "La facturación por adelantado solo está disponible para líneas de contrato fijas. Las líneas por horas y por uso siempre se facturan al vencimiento, después de realizar el trabajo."
+      "advanceTimingNotAllowed": "La facturación por adelantado solo está disponible para líneas de contrato fijas. Las líneas por horas y por uso siempre se facturan al vencimiento, después de realizar el trabajo.",
+      "versionConflict": "Esta línea de contrato fue modificada por otra persona desde que empezó a editarla. Vuelva a cargarla y aplique de nuevo su edición."
     },
     "templateLine": {
       "unavailable": "La línea de plantilla seleccionada ya no está disponible. Actualice la página e inténtelo de nuevo."

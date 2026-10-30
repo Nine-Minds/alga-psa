@@ -73,11 +73,18 @@ import {
   persistExternalLinksForCreate,
   publishExternalLinkEvent,
 } from '@alga-psa/tickets/actions/externalLinks/externalLinkPersistence';
-import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '../middleware/apiMiddleware';
+import { NotFoundError, ValidationError, ConflictError, ForbiddenError, UnprocessableEntityError } from '../middleware/apiMiddleware';
 import { locationAddressSql } from './locationAddressSql';
 import { inboundSenderLabel } from './ticketCommentAuthor';
 import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
+import { preserveStoredWatchList } from '@shared/lib/tickets/watchList';
+import {
+  TicketWatcherError,
+  TicketWatcherService,
+  type TicketWatcher,
+  type TicketWatcherWriteResult,
+} from '@shared/services/tickets/ticketWatcherService';
 import { resolveAssetTicketContactOptions } from '@alga-psa/shared/models/assetTicketContactModel';
 import { ticketStatusClockPatch } from '@shared/lib/ticketStatusClock';
 import {
@@ -107,6 +114,8 @@ import {
   TicketSearchData,
   CreateTicketFromAssetData,
   AddTicketAgentData,
+  AddTicketWatcherData,
+  UpdateTicketWatcherData,
   TicketAgentsResponse,
   AssignTicketTeamData,
   RemoveTicketTeamData
@@ -118,7 +127,8 @@ import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketR
 import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { aggregateReactions } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import { generateDocumentPreviews, type PreviewGenerationResult } from '@alga-psa/documents/lib/documentPreviewGenerator';
+import type { PreviewGenerationResult } from '@alga-psa/documents/lib/documentPreviewGenerator';
+import { attachDocumentFromBytes, persistDocumentPreviews } from './documents/attachDocument';
 import { addMaterial, InsufficientStockError, MaterialValidationError } from '@alga-psa/inventory/lib';
 import { v4 as uuidv4 } from 'uuid';
 // import { performanceTracker } from '../../analytics/performanceTracking';
@@ -222,18 +232,6 @@ function resolveTicketNotificationSuppression(input: TicketNotificationSuppressi
   }
 
   return { suppressContactNotifications, suppressInternalNotifications };
-}
-
-function ticketUploadValidationMessage(error: unknown): string | null {
-  if (!(error instanceof Error)) {
-    return null;
-  }
-
-  if (error.message.startsWith('File size exceeds limit') || error.message === 'File type not allowed') {
-    return error.message;
-  }
-
-  return null;
 }
 
 function throwTicketModelCreateApiError(error: unknown): never {
@@ -1061,6 +1059,106 @@ export class TicketService extends BaseService<ITicket> {
     return response;
   }
 
+  /** List a ticket's watchers (persistent copy-on-updates recipients). */
+  async listWatchers(ticketId: string, context: ServiceContext): Promise<TicketWatcher[]> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+    try {
+      return await withTransaction(knex, (trx) =>
+        TicketWatcherService.list(trx, context.tenant, ticketId));
+    } catch (error) {
+      throw this.mapTicketWatcherError(error);
+    }
+  }
+
+  /** Idempotent add by contact_id, user_id or bare email. */
+  async addWatcher(ticketId: string, data: AddTicketWatcherData, context: ServiceContext): Promise<TicketWatcher[]> {
+    return this.writeWatchers(ticketId, data.silent, context, (trx) =>
+      TicketWatcherService.add(trx, context.tenant, ticketId, {
+        contact_id: data.contact_id,
+        user_id: data.user_id,
+        email: data.email,
+        name: data.name,
+        active: data.active,
+        source: 'manual',
+      }, context.userId));
+  }
+
+  async setWatcherActive(
+    ticketId: string,
+    data: UpdateTicketWatcherData,
+    context: ServiceContext
+  ): Promise<TicketWatcher[]> {
+    return this.writeWatchers(ticketId, data.silent, context, (trx) =>
+      TicketWatcherService.setActive(trx, context.tenant, ticketId, data.email, data.active, context.userId));
+  }
+
+  async removeWatcher(
+    ticketId: string,
+    email: string,
+    silent: boolean | undefined,
+    context: ServiceContext
+  ): Promise<TicketWatcher[]> {
+    return this.writeWatchers(ticketId, silent, context, (trx) =>
+      TicketWatcherService.remove(trx, context.tenant, ticketId, email, context.userId));
+  }
+
+  /**
+   * Watcher writes run in one transaction (ticket row lock, table write, mirror
+   * sync). A real change publishes TICKET_UPDATED after commit, the same event
+   * the UI watcher save produces; `silent` sets both suppression flags on that
+   * event (the suppressContactNotifications / suppressInternalNotifications
+   * mechanism) and is never stored.
+   *
+   * What the event does: it carries empty `changes`. The email subscriber's
+   * accumulator skips updates with no changes, so no watcher/agent/contact email
+   * is sent for the watch-list change itself; the internal-notification subscriber
+   * still creates the generic 'ticket updated' in-app notification for assigned
+   * agents and the client-portal contact unless `silent` suppresses it. The new
+   * watcher is copied on later updates, not on this one.
+   */
+  private async writeWatchers(
+    ticketId: string,
+    silent: boolean | undefined,
+    context: ServiceContext,
+    write: (trx: Knex.Transaction) => Promise<TicketWatcherWriteResult>
+  ): Promise<TicketWatcher[]> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    let result: TicketWatcherWriteResult;
+    try {
+      result = await withTransaction(knex, write);
+    } catch (error) {
+      throw this.mapTicketWatcherError(error);
+    }
+
+    if (result.changed) {
+      await this.safePublishEvent('TICKET_UPDATED', context, buildTicketUpdatedPayload({
+        ticketId,
+        updatedByUserId: context.userId,
+        changes: {},
+        suppressContactNotifications: silent === true,
+        suppressInternalNotifications: silent === true,
+      }));
+    }
+    return result.watchers;
+  }
+
+  private mapTicketWatcherError(error: unknown): unknown {
+    if (!(error instanceof TicketWatcherError)) {
+      return error;
+    }
+    switch (error.kind) {
+      case 'ticket_not_found':
+      case 'watcher_not_found':
+        return new NotFoundError(error.message);
+      default:
+        // Unknown / other-tenant contact or user, no email, malformed email.
+        return new UnprocessableEntityError(error.message);
+    }
+  }
+
   /**
    * Remove an additional agent from a ticket by user id. The primary agent is
    * changed through the assignment endpoint, not here.
@@ -1228,105 +1326,23 @@ export class TicketService extends BaseService<ITicket> {
     }
 
     if (commentAttachmentDraft && !await canAccessAttachmentTicket(knex, context.tenant, context.userId, ticketId)) throw new NotFoundError('Ticket not found');
-    const mimeType = file.type || 'application/octet-stream';
-    try {
-      await StorageService.validateFileUpload(context.tenant, mimeType, file.size);
-    } catch (error) {
-      const message = ticketUploadValidationMessage(error);
-      if (message) {
-        throw new ValidationError('Validation failed', [
-          { path: ['file'], message },
-        ]);
-      }
-      throw error;
-    }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const uploadResult = await StorageService.uploadFile(context.tenant, buffer, file.name, {
-      mime_type: mimeType,
-      uploaded_by_id: context.userId,
-    });
-
-    let documentCommitted = false;
-    try {
-    const folderRecord = await tenantScopedTable(knex, 'document_folders', context.tenant)
-      .where({
-        entity_id: ticketId,
-        entity_type: 'ticket',
-        folder_path: '/Tickets/Attachments',
-      })
-      .select('folder_path')
-      .first();
-
-    const typeResult = await this.getDocumentTypeIdForMime(knex, context.tenant, mimeType);
-    const documentId = uuidv4();
-    const document: IDocument = {
-      document_id: documentId,
-      document_name: file.name,
-      type_id: typeResult.isShared ? null : typeResult.typeId,
-      shared_type_id: typeResult.isShared ? typeResult.typeId : undefined,
-      user_id: context.userId,
-      order_number: 0,
-      created_by: context.userId,
+    // Validation, storage, the transaction, rollback cleanup, previews and events all
+    // live in the shared upload core; the draft branch is a ticket-adapter option.
+    return attachDocumentFromBytes({
+      knex,
       tenant: context.tenant,
-      file_id: uploadResult.file_id,
-      storage_path: uploadResult.storage_path,
-      mime_type: mimeType,
-      file_size: file.size,
-      folder_path: folderRecord?.folder_path,
-      ...(commentAttachmentDraft ? { is_client_visible: true } : {}),
-    };
-
-    await withTransaction(knex, async (trx) => {
-      await tenantScopedTable(trx, 'documents', context.tenant).insert(document);
-      if (commentAttachmentDraft) await tenantDb(trx, context.tenant).table('ticket_comment_attachments').insert({
-        tenant: context.tenant, ticket_id: ticketId, document_id: documentId,
-        created_by: context.userId, state: 'draft', expires_at: new Date(Date.now() + 86400000),
-      });
-      await tenantScopedTable(trx, 'document_associations', context.tenant).insert({
-        association_id: uuidv4(),
-        document_id: documentId,
-        entity_id: ticketId,
-        entity_type: 'ticket',
-        tenant: context.tenant,
-      });
-
-      // Activity-timeline entry for the document attachment. Stored inside
-      // the same transaction so the timeline row never appears unless the
-      // document and its association were also persisted.
-      await writeTicketActivity(trx, {
-        tenant: context.tenant,
-        ticketId,
-        eventType: TICKET_ACTIVITY_EVENT.DOCUMENT_ATTACHED,
-        entityType: TICKET_ACTIVITY_ENTITY.DOCUMENT,
-        entityId: documentId,
-        actor: {
-          actorType: TICKET_ACTIVITY_ACTOR.USER,
-          userId: context.userId,
-        },
-        source: TICKET_ACTIVITY_SOURCE.API,
-        details: {
-          document_name: file.name,
-          mime_type: mimeType,
-          file_size: file.size,
-        },
-      });
+      actorUserId: context.userId,
+      target: { entityType: 'ticket', entityId: ticketId },
+      file: {
+        fileName: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        bytes: Buffer.from(await file.arrayBuffer()),
+      },
+      source: 'multipart',
+      options: { commentAttachmentDraft },
+      loadDocument: (documentId) => this.getDocumentById(documentId, context),
     });
-
-    documentCommitted = true;
-    await this.persistDocumentPreviews(knex, document, buffer, context.tenant);
-    const createdDocument = await this.getDocumentById(documentId, context);
-    if (!createdDocument) {
-      throw new Error('Uploaded document could not be loaded');
-    }
-
-    return createdDocument;
-    } finally {
-      if (commentAttachmentDraft && !documentCommitted) {
-        try { await StorageService.deleteFile(uploadResult.file_id, context.userId); }
-        catch (error) { console.error('Unable to remove unclaimed comment attachment storage', error); }
-      }
-    }
   }
 
   async downloadTicketDocument(
@@ -1426,26 +1442,13 @@ export class TicketService extends BaseService<ITicket> {
     };
   }
 
-  private async persistDocumentPreviews(
+  private persistDocumentPreviews(
     knex: Knex,
     document: IDocument,
     buffer: Buffer,
     tenant: string,
   ): Promise<PreviewGenerationResult | null> {
-    try {
-      const result = await generateDocumentPreviews(document, buffer);
-      await tenantScopedTable(knex, 'documents', tenant)
-        .where({ document_id: document.document_id })
-        .update({
-          thumbnail_file_id: result.thumbnail_file_id,
-          preview_file_id: result.preview_file_id,
-          preview_generated_at: result.preview_generated_at,
-        });
-      return result;
-    } catch (error) {
-      console.error(`[TicketService] Preview generation failed for document ${document.document_id}:`, error);
-      return null;
-    }
+    return persistDocumentPreviews(knex, document, buffer, tenant);
   }
 
   async deleteTicketDocument(
@@ -1625,57 +1628,6 @@ export class TicketService extends BaseService<ITicket> {
       .first();
 
     return (material as ITicketMaterial | undefined) ?? null;
-  }
-
-  private async getDocumentTypeIdForMime(
-    knex: Knex,
-    tenant: string,
-    mimeType: string,
-  ): Promise<{ typeId: string; isShared: boolean }> {
-    const scopedDb = tenantDb(knex, tenant);
-    const tenantType = await tenantScopedTable(knex, 'document_types', tenant)
-      .where({ type_name: mimeType })
-      .first();
-
-    if (tenantType) {
-      return { typeId: tenantType.type_id, isShared: false };
-    }
-
-    const sharedType = await scopedDb.table('shared_document_types')
-      .where({ type_name: mimeType })
-      .first();
-
-    if (sharedType) {
-      return { typeId: sharedType.type_id, isShared: true };
-    }
-
-    const generalType = `${mimeType.split('/')[0]}/*`;
-
-    const generalTenantType = await tenantScopedTable(knex, 'document_types', tenant)
-      .where({ type_name: generalType })
-      .first();
-
-    if (generalTenantType) {
-      return { typeId: generalTenantType.type_id, isShared: false };
-    }
-
-    const generalSharedType = await scopedDb.table('shared_document_types')
-      .where({ type_name: generalType })
-      .first();
-
-    if (generalSharedType) {
-      return { typeId: generalSharedType.type_id, isShared: true };
-    }
-
-    const unknownType = await scopedDb.table('shared_document_types')
-      .where({ type_name: 'application/octet-stream' })
-      .first();
-
-    if (!unknownType) {
-      throw new ConflictError('Unknown document type not found in shared document types');
-    }
-
-    return { typeId: unknownType.type_id, isShared: true };
   }
 
   private assertValidTicketId(id: string): void {
@@ -1871,9 +1823,13 @@ export class TicketService extends BaseService<ITicket> {
 
     return withTransaction(knex, async (trx) => {
       // Get current ticket for event comparison
-      const currentTicket = await tenantScopedTable(trx, 'tickets', context.tenant)
-        .where({ ticket_id: id })
-        .first();
+      // An update that carries `attributes` re-writes the stored watch_list mirror, so it
+      // takes the same row lock as watcher writes (TicketWatcherService).
+      const currentTicketQuery = tenantScopedTable(trx, 'tickets', context.tenant).where({ ticket_id: id });
+      if ((data as any).attributes !== undefined) {
+        currentTicketQuery.forUpdate();
+      }
+      const currentTicket = await currentTicketQuery.first();
 
       if (!currentTicket) {
         throw new NotFoundError('Ticket not found');
@@ -1899,6 +1855,15 @@ export class TicketService extends BaseService<ITicket> {
       // Create-only field: never a `tickets` column, so it must not reach the
       // UPDATE statement. Inline links are written by the create paths only.
       delete (cleanedData as any).external_links;
+      // `attributes.watch_list` is a derived mirror of `ticket_watchers`, written only
+      // by TicketWatcherService. A generic update ignores whatever it sends for that
+      // key and keeps the stored mirror (use /tickets/{id}/watchers instead).
+      if ((cleanedData as any).attributes !== undefined) {
+        (cleanedData as any).attributes = preserveStoredWatchList(
+          (currentTicket as any).attributes,
+          (cleanedData as any).attributes
+        );
+      }
 
       // A bundled child's workflow fields are locked only while its master is
       // in sync_updates mode (the master pushes status, assignment and priority
@@ -2891,6 +2856,10 @@ export class TicketService extends BaseService<ITicket> {
 
       if (comment.is_system_generated) {
         throw new ValidationError('System-generated comments cannot be edited');
+      }
+
+      if (comment.actor_reference_id) {
+        throw new ValidationError('Qualified comment authors require a collaboration command');
       }
 
       let operatorRepair = false;

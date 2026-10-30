@@ -56,6 +56,9 @@ export interface ITicket extends TenantEntity, ITaggable {
   updated_by: string | null;
   closed_by: string | null;
   assigned_to: string | null;
+  /** Display name of the assignee, when supplied with the ticket (for example an
+   * assignee disclosed by name only, or one no longer offered for assignment). */
+  assigned_to_name?: string | null;
   assigned_team_id?: string | null;
   entered_at: string | null; // Changed from Date to string
   /** When the ticket entered its current status (maintained on every status change). */
@@ -64,7 +67,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   closed_at: string | null;  // Changed from Date to string
   /** Denormalized close flag kept in sync with the selected status. */
   is_closed?: boolean;
-  due_date?: string;         // Optional due date for the ticket
+  due_date?: string | null;         // Optional due date for the ticket
   /** Source ticket this one was duplicated from (create-only provenance, no FK). */
   duplicated_from_ticket_id?: string | null;
   /** Display-only: number of the source ticket, joined on read. */
@@ -74,7 +77,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   /** Display-only: name of the source template, joined on read. */
   created_from_template_name?: string | null;
   attributes: Record<string, unknown> | null; // Changed from any to unknown
-  priority_id?: string; // Used for both custom and ITIL priorities (unified system)
+  priority_id?: string | null; // Used for both custom and ITIL priorities (unified system)
   estimated_hours?: number;
   location?: IClientLocation; // For populated location data
   // ITIL-specific fields (for priority calculation)

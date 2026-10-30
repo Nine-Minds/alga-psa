@@ -109,7 +109,9 @@
     "assetsCustody": "Equipment in custody",
     "ticketsCannedResponses": "Canned Responses",
     "profile": "Profile",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "coManaged": "Co-managed IT",
+    "coManagedAdministration": "Access & administration"
   },
   "marketing": {
     "dialogs": {

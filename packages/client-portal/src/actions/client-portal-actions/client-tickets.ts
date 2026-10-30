@@ -64,7 +64,7 @@ const clientTicketSchema = z.object({
   description: z.string().min(1),
   priority_id: z.string(),
   board_id: z.string().optional(),
-  asset_id: z.string().uuid().optional(),
+  asset_id: z.string().guid().optional(),
 });
 
 const VISIBILITY_NOT_FOUND_ERROR =

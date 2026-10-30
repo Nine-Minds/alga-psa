@@ -2552,7 +2552,8 @@
       "packingSlip": "Följesedel",
       "pickList": "Plocklista",
       "workTag": "Arbetsetikett / Etikett",
-      "stagingManifest": "Packlista"
+      "stagingManifest": "Packlista",
+      "rmaReturnSlip": "RMA-returfölje"
     }
   },
   "errors": {

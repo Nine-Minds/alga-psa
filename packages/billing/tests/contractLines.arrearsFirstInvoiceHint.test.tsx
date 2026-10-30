@@ -11,6 +11,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { normalizeAnchorSettingsForCycle } from '@alga-psa/shared/billingClients/billingCycleAnchors';
 
 const actionMocks = vi.hoisted(() => ({
+  saveContractLineEdit: vi.fn(),
+  getContractLineEditVersion: vi.fn(),
   applyContractLineServiceMembershipChanges: vi.fn(),
   checkContractHasInvoices: vi.fn(),
   deleteBucketOverlay: vi.fn(),
@@ -55,6 +57,11 @@ vi.mock('@alga-psa/billing/actions/contractLineServiceActions', () => ({
   applyContractLineServiceMembershipChanges: actionMocks.applyContractLineServiceMembershipChanges,
   getContractLineServicesWithConfigurations: actionMocks.getContractLineServicesWithConfigurations,
   getTemplateLineServicesWithConfigurations: actionMocks.getTemplateLineServicesWithConfigurations,
+}));
+
+vi.mock('@alga-psa/billing/actions/contractLineSaveAction', () => ({
+  saveContractLineEdit: actionMocks.saveContractLineEdit,
+  getContractLineEditVersion: actionMocks.getContractLineEditVersion,
 }));
 
 vi.mock('@alga-psa/billing/actions/contractLineAction', () => ({
@@ -257,6 +264,8 @@ async function expandAndEdit() {
 describe('ContractLines arrears first-invoice hint', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    actionMocks.getContractLineEditVersion.mockResolvedValue('v1');
+    actionMocks.saveContractLineEdit.mockResolvedValue({ status: 'saved', line: { contract_line_id: 'line-1' }, version: 'v2', rematerialized: false });
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 9, 13, 12, 0, 0));
     actionMocks.checkContractHasInvoices.mockResolvedValue(false);

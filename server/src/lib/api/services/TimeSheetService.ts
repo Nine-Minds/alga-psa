@@ -3,6 +3,7 @@
  * Handles all time sheet-related database operations for the REST API
  */
 
+import { delegateRest } from '@alga-psa/scheduling/lib/timeSource';
 import { v4 as uuidv4 } from 'uuid';
 import { assertHumanWorkAssignee, assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
@@ -195,6 +196,9 @@ export class TimeSheetService extends BaseService<any> {
   }
 
   async list(options: ListOptions, context: ServiceContext, filters?: TimeSheetFilterData): Promise<ListResult<any>> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'list', [options, context, filters]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
       const db = tenantDb(knex, context.tenant);
       
@@ -295,6 +299,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async getById(id: string, context: ServiceContext): Promise<any | null> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getById', [id, context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
       const db = tenantDb(knex, context.tenant);
       const query = this.buildTenantScopedQuery(knex, context);
@@ -319,6 +326,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async getWithDetails(id: string, context: ServiceContext): Promise<any | null> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getWithDetails', [id, context]);
+    if (delegated.handled) return delegated.value;
     const timeSheet = await this.getById(id, context);
     if (!timeSheet) return null;
 
@@ -343,6 +353,9 @@ export class TimeSheetService extends BaseService<any> {
   }
 
   async create(data: CreateTimeSheetData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'create', [data, context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
       
       const created = await withTransaction(knex, async (trx) => {
@@ -398,6 +411,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async update(id: string, data: UpdateTimeSheetData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'update', [id, data, context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
       
       await withTransaction(knex, async (trx) => {
@@ -444,6 +460,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async delete(id: string, context: ServiceContext): Promise<void> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'delete', [id, context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
       
       await withTransaction(knex, async (trx) => {
@@ -482,6 +501,9 @@ export class TimeSheetService extends BaseService<any> {
 
   // Time sheet workflow operations
   async submitTimeSheet(id: string, data: SubmitTimeSheetData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'submitTimeSheet', [id, data, context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
       
       await withTransaction(knex, async (trx) => {
@@ -535,6 +557,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async approveTimeSheet(id: string, data: ApproveTimeSheetData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'approveTimeSheet', [id, data, context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
       
       await withTransaction(knex, async (trx) => {
@@ -607,6 +632,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async requestChanges(id: string, data: RequestChangesTimeSheetData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'requestChanges', [id, data, context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
       
       await withTransaction(knex, async (trx) => {
@@ -660,6 +688,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async bulkApprove(data: BulkApproveTimeSheetData, context: ServiceContext): Promise<any[]> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'bulkApprove', [data, context]);
+    if (delegated.handled) return delegated.value;
       const results: { success: boolean; error?: string; time_sheet_id: string; data?: any }[] = [];
       
       for (const timeSheetId of data.time_sheet_ids) {
@@ -677,6 +708,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async reverseApproval(id: string, data: ReverseApprovalData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'reverseApproval', [id, data, context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
       
       await withTransaction(knex, async (trx) => {
@@ -750,6 +784,9 @@ export class TimeSheetService extends BaseService<any> {
 
   // Time sheet comments
   async addComment(id: string, data: CreateTimeSheetCommentData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'addComment', [id, data, context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
@@ -775,6 +812,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async getTimeSheetComments(timeSheetId: string, context: ServiceContext): Promise<any[]> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getTimeSheetComments', [timeSheetId, context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
       const db = tenantDb(knex, context.tenant);
       const query = db.table('time_sheet_comments');
@@ -803,6 +843,9 @@ export class TimeSheetService extends BaseService<any> {
 
   // Time periods management
   async getTimePeriods(context: ServiceContext): Promise<any[]> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getTimePeriods', [context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
       const today = todayUtc();
 
@@ -813,6 +856,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async getCurrentTimePeriod(context: ServiceContext, date?: string): Promise<any | null> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getCurrentTimePeriod', [context, date]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
 
       const today = todayUtc();
@@ -841,6 +887,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async createTimePeriod(data: CreateTimePeriodData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'createTimePeriod', [data, context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
 
       return withTransaction(knex, async (trx) => {
@@ -864,6 +913,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async updateTimePeriod(id: string, data: UpdateTimePeriodData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'updateTimePeriod', [id, data, context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
 
       return withTransaction(knex, async (trx) => {
@@ -909,6 +961,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async deleteTimePeriod(id: string, context: ServiceContext): Promise<void> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'deleteTimePeriod', [id, context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
@@ -943,11 +998,17 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async closeTimePeriod(id: string, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'closeTimePeriod', [id, context]);
+    if (delegated.handled) return delegated.value;
       return this.setTimePeriodClosed(id, true, context);
     }
 
 
   async reopenTimePeriod(id: string, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'reopenTimePeriod', [id, context]);
+    if (delegated.handled) return delegated.value;
       return this.setTimePeriodClosed(id, false, context);
     }
 
@@ -967,6 +1028,9 @@ export class TimeSheetService extends BaseService<any> {
 
   // Time period settings
   async getTimePeriodSettings(context: ServiceContext): Promise<any[]> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getTimePeriodSettings', [context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
       
       return tenantDb(knex, context.tenant).table('time_period_settings')
@@ -975,6 +1039,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async createTimePeriodSettings(data: CreateTimePeriodSettingsData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'createTimePeriodSettings', [data, context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
 
       try {
@@ -1006,6 +1073,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async updateTimePeriodSettings(id: string, data: UpdateTimePeriodSettingsData, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'updateTimePeriodSettings', [id, data, context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
 
       try {
@@ -1445,6 +1515,9 @@ export class TimeSheetService extends BaseService<any> {
 
   // Search and statistics
   async search(searchData: TimeSheetSearchData, context: ServiceContext): Promise<any[]> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'search', [searchData, context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
       const db = tenantDb(knex, context.tenant);
       const tableName = this.tableName; // Capture tableName to use in callbacks
@@ -1499,6 +1572,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async getStatistics(context: ServiceContext, filters?: TimeSheetFilterData): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getStatistics', [context, filters]);
+    if (delegated.handled) return delegated.value;
     // Implementation would return comprehensive time sheet statistics
     // Similar to other statistics methods in the pattern
     return {
@@ -1623,6 +1699,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async getTimeSheetEntries(timeSheetId: string, context: ServiceContext): Promise<any[]> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getTimeSheetEntries', [timeSheetId, context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
       
       // work_date is a DATE column; node-pg would turn it into a JS Date (serialized as an
@@ -1635,6 +1714,9 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async getTimeSheetSummary(timeSheetId: string, context: ServiceContext): Promise<any> {
+    // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
+    const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'getTimeSheetSummary', [timeSheetId, context]);
+    if (delegated.handled) return delegated.value;
       const { knex } = await this.getKnex();
       
       // worked_minutes is the real duration (end - start); billable_duration is the billed

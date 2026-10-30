@@ -22,6 +22,8 @@ import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipi
 import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
 import { SharedNumberingService } from '../services/numberingService';
 import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
+import { TicketWatcherService } from '../services/tickets/ticketWatcherService';
+import { parseTicketWatchListAttributes } from '../lib/tickets/watchList';
 import { resolveAssetBillingProfileId } from './assetBillingProfileModel';
 import { buildTicketCommentAddedPayload, buildTicketModelChanges } from '../lib/tickets/ticketWorkflowEventPayloads';
 
@@ -41,16 +43,16 @@ const TICKET_ORIGINS = {
 // Core ticket form validation schema extracted from server actions
 export const ticketFormSchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  board_id: z.string().uuid('Board ID must be a valid UUID'),
-  client_id: z.string().uuid('Client ID must be a valid UUID'),
-  location_id: z.string().uuid('Location ID must be a valid UUID').nullable().optional(),
-  contact_name_id: z.string().uuid('Contact ID must be a valid UUID').nullable(),
-  status_id: z.string().uuid('Status ID must be a valid UUID'),
-  assigned_to: z.string().uuid('Assigned to must be a valid UUID').nullable(),
-  priority_id: z.string().uuid('Priority ID must be a valid UUID').nullable(), // Required - used for both custom and ITIL priorities
+  board_id: z.string().guid('Board ID must be a valid UUID'),
+  client_id: z.string().guid('Client ID must be a valid UUID'),
+  location_id: z.string().guid('Location ID must be a valid UUID').nullable().optional(),
+  contact_name_id: z.string().guid('Contact ID must be a valid UUID').nullable(),
+  status_id: z.string().guid('Status ID must be a valid UUID'),
+  assigned_to: z.string().guid('Assigned to must be a valid UUID').nullable(),
+  priority_id: z.string().guid('Priority ID must be a valid UUID').nullable(), // Required - used for both custom and ITIL priorities
   description: z.string(),
-  category_id: z.string().uuid('Category ID must be a valid UUID').nullable(),
-  subcategory_id: z.string().uuid('Subcategory ID must be a valid UUID').nullable(),
+  category_id: z.string().guid('Category ID must be a valid UUID').nullable(),
+  subcategory_id: z.string().guid('Subcategory ID must be a valid UUID').nullable(),
   // ITIL-specific fields (for UI calculation only)
   itil_impact: z.number().int().min(1).max(5).optional(),
   itil_urgency: z.number().int().min(1).max(5).optional(),
@@ -60,52 +62,52 @@ export const ticketFormSchema = z.object({
 export const createTicketFromAssetSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string(),
-  priority_id: z.string().uuid('Priority ID must be a valid UUID'),
-  status_id: z.string().uuid('Status ID must be a valid UUID'),
-  board_id: z.string().uuid('Board ID must be a valid UUID'),
-  asset_id: z.string().uuid('Asset ID must be a valid UUID'),
-  client_id: z.string().uuid('Client ID must be a valid UUID'),
+  priority_id: z.string().guid('Priority ID must be a valid UUID'),
+  status_id: z.string().guid('Status ID must be a valid UUID'),
+  board_id: z.string().guid('Board ID must be a valid UUID'),
+  asset_id: z.string().guid('Asset ID must be a valid UUID'),
+  client_id: z.string().guid('Client ID must be a valid UUID'),
   // FR-E8: the asset's assignee, or a shared workspace's single user.
-  contact_name_id: z.string().uuid('Contact ID must be a valid UUID').nullable().optional(),
+  contact_name_id: z.string().guid('Contact ID must be a valid UUID').nullable().optional(),
   // FR-F2: an explicit pick wins; omitted means "inherit from the asset".
-  billing_profile_id: z.string().uuid('Billing profile ID must be a valid UUID').nullable().optional()
+  billing_profile_id: z.string().guid('Billing profile ID must be a valid UUID').nullable().optional()
 });
 
 // Complete ticket schema for validation
 export const ticketSchema = z.object({
-  tenant: z.string().uuid().optional(),
-  ticket_id: z.string().uuid(),
+  tenant: z.string().guid().optional(),
+  ticket_id: z.string().guid(),
   ticket_number: z.string(),
   title: z.string(),
   url: z.string().nullable(),
   // Optional classification references. Nullable so a create that omits them
   // still validates; retained here so the shared create parse cannot silently
   // strip supplied values before the insert.
-  severity_id: z.string().uuid().nullable().optional(),
-  urgency_id: z.string().uuid().nullable().optional(),
-  impact_id: z.string().uuid().nullable().optional(),
-  board_id: z.string().uuid(),
-  client_id: z.string().uuid(),
-  location_id: z.string().uuid().nullable().optional(),
-  billing_profile_id: z.string().uuid().nullable().optional(),
-  contact_name_id: z.string().uuid().nullable(),
-  status_id: z.string().uuid(),
-  category_id: z.string().uuid().nullable(),
-  subcategory_id: z.string().uuid().nullable(),
-  entered_by: z.string().uuid().nullable(),
-  updated_by: z.string().uuid().nullable(),
-  closed_by: z.string().uuid().nullable(),
-  assigned_to: z.string().uuid().nullable(),
-  assigned_team_id: z.string().uuid().nullable().optional(),
+  severity_id: z.string().guid().nullable().optional(),
+  urgency_id: z.string().guid().nullable().optional(),
+  impact_id: z.string().guid().nullable().optional(),
+  board_id: z.string().guid(),
+  client_id: z.string().guid(),
+  location_id: z.string().guid().nullable().optional(),
+  billing_profile_id: z.string().guid().nullable().optional(),
+  contact_name_id: z.string().guid().nullable(),
+  status_id: z.string().guid(),
+  category_id: z.string().guid().nullable(),
+  subcategory_id: z.string().guid().nullable(),
+  entered_by: z.string().guid().nullable(),
+  updated_by: z.string().guid().nullable(),
+  closed_by: z.string().guid().nullable(),
+  assigned_to: z.string().guid().nullable(),
+  assigned_team_id: z.string().guid().nullable().optional(),
   entered_at: z.string().nullable(),
   updated_at: z.string().nullable(),
   closed_at: z.string().nullable(),
   due_date: z.string().nullable().optional(),
   source: z.string().nullable().optional(),
   ticket_origin: z.string().nullable().optional(),
-  attributes: z.record(z.unknown()).nullable(),
+  attributes: z.record(z.string(), z.unknown()).nullable(),
   email_metadata: z.unknown().nullable().optional(),
-  priority_id: z.string().uuid().nullable().optional(), // Optional for ITIL tickets
+  priority_id: z.string().guid().nullable().optional(), // Optional for ITIL tickets
   response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional(),
   // ITIL-specific fields
   itil_impact: z.number().int().min(1).max(5).nullable().optional(),
@@ -114,9 +116,9 @@ export const ticketSchema = z.object({
   itil_category: z.string().nullable().optional(),
   itil_subcategory: z.string().nullable().optional(),
   // Provenance for a ticket created via "Duplicate". Create-only; no FK.
-  duplicated_from_ticket_id: z.string().uuid().nullable().optional(),
+  duplicated_from_ticket_id: z.string().guid().nullable().optional(),
   // Provenance for a ticket created from a ticket template. Create-only; no FK.
-  created_from_template_id: z.string().uuid().nullable().optional()
+  created_from_template_id: z.string().guid().nullable().optional()
 });
 
 // Ticket update schema. Classification references (severity/urgency/impact)
@@ -137,16 +139,16 @@ export const ticketUpdateSchema = ticketSchema.partial().omit({
 
 // Comment validation schema
 export const createCommentSchema = z.object({
-  ticket_id: z.string().uuid('Ticket ID must be a valid UUID'),
+  ticket_id: z.string().guid('Ticket ID must be a valid UUID'),
   content: z.string().min(1, 'Comment content is required'),
-  parent_comment_id: z.string().uuid('Parent comment ID must be a valid UUID').optional(),
+  parent_comment_id: z.string().guid('Parent comment ID must be a valid UUID').optional(),
   is_internal: z.boolean().optional(),
   is_resolution: z.boolean().optional(),
   is_system_generated: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
-  author_id: z.string().uuid('Author ID must be a valid UUID').optional(),
-  contact_id: z.string().uuid('Contact ID must be a valid UUID').optional(),
-  metadata: z.record(z.unknown()).optional(),
+  author_id: z.string().guid('Author ID must be a valid UUID').optional(),
+  contact_id: z.string().guid('Contact ID must be a valid UUID').optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   emailRecipients: z.object({
     cc: z.array(z.string()).optional(),
     bcc: z.array(z.string()).optional(),
@@ -413,7 +415,7 @@ export function validateData<T>(schema: z.ZodSchema<T>, data: unknown): T {
     return schema.parse(data);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
+      const errorMessages = error.issues.map(err => `${err.path.join('.')}: ${err.message}`).join(', ');
       throw new Error(`Validation failed: ${errorMessages}`);
     }
     throw error;
@@ -1035,6 +1037,13 @@ export class TicketModel {
 
     // Insert the ticket
     await tenantDb(trx, tenant).table('tickets').insert(dbData);
+
+    // Bring ticket_watchers in line with the initial attributes.watch_list (inbound To/Cc,
+    // board defaults); the mirror is then rewritten from the table.
+    // Skipped when the ticket was created without one (the common case).
+    if (parseTicketWatchListAttributes(completeValidation.attributes).length > 0) {
+      await TicketWatcherService.seedFromAttributes(trx, tenant, ticketId);
+    }
 
     if (options?.serviceRequestSubmissionId) {
       const updated = await tenantDb(trx, tenant).table('service_request_submissions')

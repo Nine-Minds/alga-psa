@@ -22,8 +22,6 @@ const KNOWN_DESTINATION_GAPS: Record<string, string> = {
   // AlgaDesk route rules deny (msp_settings_excluded). Pre-existing on main;
   // productRoutes.ts mirrors main and does not change it.
   'providers.algadesk': 'pre-existing main gap: /msp/settings/integrations is denied to algadesk',
-  // The capability-scoped provider page ships with the co-managed workspace (L1a).
-  'providers.co_managed': 'page /msp/co-management/providers and its route rule ship in L1a',
 };
 
 const pathOf = (destination: string) => destination.split('?')[0];

@@ -1740,6 +1740,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         }
       },
       {
+        "name": "description",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
         "name": "manager_id",
         "in": "query",
         "required": false,
@@ -1826,6 +1834,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "team_name": {
           "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
         },
         "manager_id": {
           "type": "string",
@@ -2252,6 +2267,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "team_name": {
           "type": "string"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
         },
         "manager_id": {
           "type": "string",
@@ -6772,7 +6794,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "location_id",
         "bin",
         "purpose"
-      ]
+      ],
+      "additionalProperties": {}
     },
     "responseBodySchema": {
       "type": "object",
@@ -6829,6 +6852,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "event_type"
       ],
+      "additionalProperties": {},
       "description": "Fields depend on event_type: moved {location_id?, bin?}, handed_off {to_holder_user_id}, shipped {counterparty}, received {location_id, bin}, returned {counterparty?}."
     },
     "responseBodySchema": {
@@ -9495,7 +9519,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   "website": {
-                    "type": "string"
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   },
                   "parent_client_id": {
                     "type": "string",
@@ -9777,8 +9804,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "properties": {
             "tax_id": {
               "type": "string",
-              "description": "Deprecated legacy input. Send tax_id_number instead.",
-              "deprecated": true
+              "deprecated": true,
+              "description": "Deprecated legacy input. Send tax_id_number instead."
             }
           },
           "additionalProperties": {}
@@ -9981,7 +10008,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "string"
                 },
                 "website": {
-                  "type": "string"
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "parent_client_id": {
                   "type": "string",
@@ -10297,7 +10327,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "string"
                 },
                 "website": {
-                  "type": "string"
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "parent_client_id": {
                   "type": "string",
@@ -10534,8 +10567,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "properties": {
             "tax_id": {
               "type": "string",
-              "description": "Deprecated legacy input. Send tax_id_number instead.",
-              "deprecated": true
+              "deprecated": true,
+              "description": "Deprecated legacy input. Send tax_id_number instead."
             }
           },
           "additionalProperties": {}
@@ -10738,7 +10771,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "type": "string"
                 },
                 "website": {
-                  "type": "string"
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "parent_client_id": {
                   "type": "string",
@@ -12054,77 +12090,71 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       }
     ],
     "requestBodySchema": {
-      "allOf": [
-        {
-          "$ref": "#/components/schemas/ClientLocationBody"
+      "type": "object",
+      "properties": {
+        "location_name": {
+          "type": "string"
         },
-        {
-          "properties": {
-            "location_name": {
-              "type": "string"
-            },
-            "address_line1": {
-              "type": "string"
-            },
-            "address_line2": {
-              "type": "string"
-            },
-            "address_line3": {
-              "type": "string"
-            },
-            "city": {
-              "type": "string"
-            },
-            "state_province": {
-              "type": "string"
-            },
-            "postal_code": {
-              "type": "string"
-            },
-            "country_code": {
-              "type": "string",
-              "minLength": 2,
-              "maxLength": 3
-            },
-            "country_name": {
-              "type": "string",
-              "minLength": 1
-            },
-            "region_code": {
-              "type": "string"
-            },
-            "is_billing_address": {
-              "type": "boolean"
-            },
-            "is_shipping_address": {
-              "type": "boolean"
-            },
-            "is_default": {
-              "type": "boolean"
-            },
-            "phone": {
-              "type": "string"
-            },
-            "fax": {
-              "type": "string"
-            },
-            "email": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "format": "email",
-              "description": "null clears the email"
-            },
-            "notes": {
-              "type": "string"
-            },
-            "is_active": {
-              "type": "boolean"
-            }
-          }
+        "address_line1": {
+          "type": "string"
+        },
+        "address_line2": {
+          "type": "string"
+        },
+        "address_line3": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "state_province": {
+          "type": "string"
+        },
+        "postal_code": {
+          "type": "string"
+        },
+        "country_code": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 3
+        },
+        "country_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "region_code": {
+          "type": "string"
+        },
+        "is_billing_address": {
+          "type": "boolean"
+        },
+        "is_shipping_address": {
+          "type": "boolean"
+        },
+        "is_default": {
+          "type": "boolean"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "fax": {
+          "type": "string"
+        },
+        "email": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "email",
+          "description": "null clears the email"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "is_active": {
+          "type": "boolean"
         }
-      ]
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -12483,7 +12513,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "type": "string"
               },
               "extension": {
-                "type": "string",
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "description": "Digits only."
               },
               "canonical_type": {
@@ -12532,7 +12565,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -12546,7 +12580,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -12649,7 +12684,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -12663,7 +12699,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -12811,7 +12848,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 "type": "string"
               },
               "extension": {
-                "type": "string",
+                "type": [
+                  "string",
+                  "null"
+                ],
                 "description": "Digits only."
               },
               "canonical_type": {
@@ -12860,7 +12900,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -12874,7 +12915,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -12888,8 +12930,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             ],
             "additionalProperties": false,
             "description": "Each row needs canonical_type (work|mobile|home|fax|other) or custom_type, not both. When any rows are sent, exactly one must have is_default: true. On update, the array replaces all of the contact's phone numbers; include contact_phone_number_id to keep an existing row."
-          },
-          "default": []
+          }
         },
         "email": {
           "type": "string"
@@ -12977,7 +13018,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -12991,7 +13033,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "type": "string"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -13005,8 +13048,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             ],
             "additionalProperties": false,
             "description": "Each row needs canonical_type (work|personal|billing|other) or custom_type, not both. On update, the array replaces all of the contact's additional email addresses; include contact_additional_email_address_id to keep an existing row."
-          },
-          "default": []
+          }
         },
         "role": {
           "type": "string",
@@ -13016,8 +13058,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string"
         },
         "is_inactive": {
-          "type": "boolean",
-          "default": false
+          "type": "boolean"
         },
         "tags": {
           "type": "array",
@@ -13950,7 +13991,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14102,7 +14144,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14173,7 +14216,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14332,7 +14376,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14432,7 +14477,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14520,7 +14566,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14596,7 +14643,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14671,7 +14719,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14759,7 +14808,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14835,7 +14885,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14915,7 +14966,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -14996,7 +15048,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15088,7 +15141,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15159,7 +15213,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15266,7 +15321,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15337,7 +15393,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15428,7 +15485,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15499,7 +15557,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15605,7 +15664,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15687,7 +15747,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15802,7 +15863,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -15931,7 +15993,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -16063,7 +16126,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -16186,7 +16250,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "required": [
             "timestamp",
             "version"
-          ]
+          ],
+          "additionalProperties": {}
         }
       },
       "required": [
@@ -16311,6 +16376,153 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "schema": {
           "type": "string",
           "description": "Optional API key fallback for non-browser clients. Used only when no valid session cookie is present."
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_documents",
+    "method": "get",
+    "path": "/api/v1/documents",
+    "displayName": "Documents API namespace root",
+    "summary": "Documents API namespace root",
+    "description": "Namespace root with no resource of its own — it returns 404. Documents are accessed per parent entity, e.g. /api/v1/tickets/{id}/documents.",
+    "tags": [
+      "Documents"
+    ],
+    "approvalRequired": false,
+    "parameters": []
+  },
+  {
+    "id": "post-_api_v1_documents",
+    "method": "post",
+    "path": "/api/v1/documents",
+    "displayName": "Attach File to Record",
+    "summary": "Attach one file to a ticket, project task, client, contact or asset",
+    "description": "Attaches ONE file to a ticket, project_task, client, contact or asset. Prefer source.type=url: give an https URL and the server downloads it (max size is the tenant storage limit). The URL host must be on the workspace's allowed download hosts (a tenant admin manages the list under Settings > MCP Server > Allowed download hosts; the ChatGPT file host is built in). If the call fails with 400 FETCH_HOST_NOT_ALLOWED, nothing was downloaded: tell the user an admin can add that host, and do not retry with other URLs. Use source.type=base64 only for small content you wrote yourself, never to relay a user's file, and file_name is then required. One file per call; make several calls for several files. In an MCP client with the attach_file tool, use that instead. Returns 201 with the stored document; 400 for a disallowed type, oversize file, unfetchable URL or a host that is not allowed (FETCH_HOST_NOT_ALLOWED), 403 without permission, 404 for a missing record.",
+    "tags": [
+      "Documents"
+    ],
+    "rbacResource": "document",
+    "approvalRequired": true,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "entity_type": {
+          "type": "string",
+          "enum": [
+            "ticket",
+            "project_task",
+            "client",
+            "contact",
+            "asset"
+          ],
+          "description": "Kind of record the file is attached to."
+        },
+        "entity_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "UUID of the ticket, project task, client, contact or asset."
+        },
+        "source": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "url"
+                  ]
+                },
+                "url": {
+                  "type": "string",
+                  "description": "https URL the server downloads the file from. The host must be on the workspace's allowed download hosts (managed by tenant admins under Settings > MCP Server; the ChatGPT file host is built in), otherwise the call fails with 400 FETCH_HOST_NOT_ALLOWED. Port 443 only, public addresses only, at most 3 redirects (each re-checked against the allowlist), size capped at the storage limit. Signed URLs are used once and never logged."
+                }
+              },
+              "required": [
+                "type",
+                "url"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "base64"
+                  ]
+                },
+                "content": {
+                  "type": "string",
+                  "description": "Standard base64 of the file bytes. Only for small content the caller wrote itself; requires file_name."
+                }
+              },
+              "required": [
+                "type",
+                "content"
+              ]
+            }
+          ],
+          "description": "Where the file bytes come from: an https URL (preferred) or base64."
+        },
+        "file_name": {
+          "type": "string",
+          "description": "File name including extension. Required for base64. For url, defaults to the Content-Disposition name, then the last URL path segment."
+        },
+        "mime_type": {
+          "type": "string",
+          "description": "Declared MIME type. The server sniffs the bytes and a recognised type overrides this; the storage allowlist is applied to the resolved type."
+        }
+      },
+      "required": [
+        "entity_type",
+        "entity_id",
+        "source"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {},
+          "description": "The created document row (document_id, document_name, mime_type, file_size, folder_path, ...)."
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "examples": [
+      {
+        "name": "Attach a file to a ticket by URL",
+        "request": {
+          "body": {
+            "entity_type": "ticket",
+            "entity_id": "00000000-0000-4000-8000-000000000001",
+            "source": {
+              "type": "url",
+              "url": "https://acme-uploads.s3.us-east-1.amazonaws.com/screenshot.png?X-Amz-Signature=example"
+            }
+          }
+        }
+      },
+      {
+        "name": "Attach small authored text to a contact by base64",
+        "request": {
+          "body": {
+            "entity_type": "contact",
+            "entity_id": "00000000-0000-4000-8000-000000000002",
+            "source": {
+              "type": "base64",
+              "content": "UGhvbmUgbm90ZXM="
+            },
+            "file_name": "notes.txt",
+            "mime_type": "text/plain"
+          }
         }
       }
     ]
@@ -17076,6 +17288,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "responseBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific response relayed from the runner. Status code, content type, and body are controlled by the extension."
     }
   },
@@ -17137,11 +17350,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific request body. The gateway treats this as opaque, enforces a 10 MB limit for non-GET methods, base64-encodes it, and forwards it to the extension runner."
     },
     "responseBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific response relayed from the runner. Status code, content type, and body are controlled by the extension."
     }
   },
@@ -17203,11 +17418,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific request body. The gateway treats this as opaque, enforces a 10 MB limit for non-GET methods, base64-encodes it, and forwards it to the extension runner."
     },
     "responseBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific response relayed from the runner. Status code, content type, and body are controlled by the extension."
     }
   },
@@ -17269,11 +17486,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific request body. The gateway treats this as opaque, enforces a 10 MB limit for non-GET methods, base64-encodes it, and forwards it to the extension runner."
     },
     "responseBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific response relayed from the runner. Status code, content type, and body are controlled by the extension."
     }
   },
@@ -17335,11 +17554,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific request body. The gateway treats this as opaque, enforces a 10 MB limit for non-GET methods, base64-encodes it, and forwards it to the extension runner."
     },
     "responseBodySchema": {
       "type": "object",
       "properties": {},
+      "additionalProperties": {},
       "description": "Extension-specific response relayed from the runner. Status code, content type, and body are controlled by the extension."
     }
   },
@@ -20023,7 +20244,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "default": "1"
         }
       },
       {
@@ -20031,7 +20253,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "in": "query",
         "required": false,
         "schema": {
-          "type": "string"
+          "type": "string",
+          "default": "25"
         }
       },
       {
@@ -22201,14 +22424,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "max_generations": {
           "type": "number"
         }
-      },
-      "required": [
-        "client_id",
-        "name",
-        "frequency",
-        "start_date",
-        "invoice_template"
-      ]
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -24309,19 +24525,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "description": "Namespace root with no resource of its own — it returns 404. Comments are accessed per ticket: /api/v1/tickets/{id}/comments and its sub-paths.",
     "tags": [
       "Comments"
-    ],
-    "approvalRequired": false,
-    "parameters": []
-  },
-  {
-    "id": "get-_api_v1_documents",
-    "method": "get",
-    "path": "/api/v1/documents",
-    "displayName": "Documents API namespace root",
-    "summary": "Documents API namespace root",
-    "description": "Namespace root with no resource of its own — it returns 404. Documents are accessed per parent entity, e.g. /api/v1/tickets/{id}/documents.",
-    "tags": [
-      "Documents"
     ],
     "approvalRequired": false,
     "parameters": []
@@ -28293,20 +28496,84 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       }
     ],
     "requestBodySchema": {
-      "allOf": [
-        {
-          "$ref": "#/components/schemas/InboundWebhookCreateInput"
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
         },
-        {
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "auth_type": {
+          "type": "string",
+          "enum": [
+            "hmac_sha256",
+            "bearer",
+            "ip_allowlist",
+            "path_token"
+          ]
+        },
+        "auth_config": {
           "type": "object",
+          "additionalProperties": {}
+        },
+        "idempotency_source": {
+          "type": [
+            "object",
+            "null"
+          ],
           "properties": {
-            "inbound_webhook_id": {
+            "type": {
               "type": "string",
-              "format": "uuid"
+              "enum": [
+                "header",
+                "jsonata"
+              ]
+            },
+            "value": {
+              "type": "string"
             }
-          }
+          },
+          "required": [
+            "type",
+            "value"
+          ]
+        },
+        "idempotency_window_seconds": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "handler_type": {
+          "type": "string",
+          "enum": [
+            "direct_action",
+            "workflow"
+          ]
+        },
+        "handler_config": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "is_active": {
+          "type": "boolean"
+        },
+        "rate_limit_per_minute": {
+          "type": "integer",
+          "exclusiveMinimum": 0
+        },
+        "inbound_webhook_id": {
+          "type": "string",
+          "format": "uuid"
         }
-      ]
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -36159,9 +36426,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36173,9 +36437,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36184,9 +36445,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 2048
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -36384,9 +36642,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36398,9 +36653,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36409,9 +36661,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 2048
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -36761,9 +37010,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36772,9 +37018,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "format": "uuid"
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -36789,9 +37032,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36800,9 +37040,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 128
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -36817,9 +37054,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36828,9 +37062,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "number",
               "minimum": 0
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -36846,9 +37077,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36857,9 +37085,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 255
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -36874,9 +37099,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36885,9 +37107,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 255
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -36906,9 +37125,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -36917,9 +37133,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 64
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -37117,9 +37330,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -37128,9 +37338,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "format": "uuid"
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -37145,9 +37352,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -37156,9 +37360,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 128
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -37173,9 +37374,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -37184,9 +37382,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "number",
               "minimum": 0
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -37202,9 +37397,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -37213,9 +37405,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 255
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -37230,9 +37419,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -37241,9 +37427,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 255
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -37262,9 +37445,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             },
             {
               "type": "null"
-            },
-            {
-              "type": "null"
             }
           ]
         },
@@ -37273,9 +37453,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             {
               "type": "string",
               "maxLength": 64
-            },
-            {
-              "type": "null"
             },
             {
               "type": "null"
@@ -38557,12 +38734,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "type": "string"
           }
         }
-      },
-      "required": [
-        "name",
-        "url",
-        "event_types"
-      ]
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -39118,12 +39290,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "type": "string"
           }
         }
-      },
-      "required": [
-        "name",
-        "url",
-        "event_types"
-      ]
+      }
     },
     "responseBodySchema": {
       "type": "object",
@@ -40515,7 +40682,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "tenant",
               "createdAt",
               "updatedAt"
-            ]
+            ],
+            "additionalProperties": {}
           }
         },
         "pagination": {
@@ -40746,7 +40914,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "tenant",
             "createdAt",
             "updatedAt"
-          ]
+          ],
+          "additionalProperties": {}
         },
         "meta": {}
       },
@@ -40942,7 +41111,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "tenant",
             "createdAt",
             "updatedAt"
-          ]
+          ],
+          "additionalProperties": {}
         },
         "meta": {}
       },
@@ -41144,7 +41314,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "tenant",
             "createdAt",
             "updatedAt"
-          ]
+          ],
+          "additionalProperties": {}
         },
         "meta": {}
       },
@@ -41745,8 +41916,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "uuid"
         },
         "task_type_key": {
-          "type": "string",
-          "default": "general"
+          "type": "string"
         },
         "project_status_mapping_id": {
           "type": "string",
@@ -43985,6 +44155,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "start_date",
         "in": "query",
         "required": false,
+        "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day.",
         "schema": {
           "type": "string",
           "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day."
@@ -43994,6 +44165,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "end_date",
         "in": "query",
         "required": false,
+        "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day).",
         "schema": {
           "type": "string",
           "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day)."
@@ -44197,6 +44369,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "start_date",
         "in": "query",
         "required": false,
+        "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day.",
         "schema": {
           "type": "string",
           "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day."
@@ -44206,6 +44379,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "end_date",
         "in": "query",
         "required": false,
+        "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day).",
         "schema": {
           "type": "string",
           "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day)."
@@ -44397,8 +44571,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string"
         },
         "is_private": {
-          "type": "boolean",
-          "default": false
+          "type": "boolean"
         },
         "is_all_day": {
           "type": "boolean"
@@ -46930,7 +47103,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/tickets/{id}",
     "displayName": "Update Ticket",
     "summary": "Update a ticket with optional silent-notification controls",
-    "description": "Updates one or more ticket fields. Set suppressContactNotifications=true to avoid customer email and portal notifications for this operation. Set suppressInternalNotifications=true as well to also avoid agent and watcher notifications; internal suppression requires customer suppression. Silent updates still create normal audit, workflow, and webhook records.",
+    "description": "Updates one or more ticket fields. Set suppressContactNotifications=true to avoid customer email and portal notifications for this operation. Set suppressInternalNotifications=true as well to also avoid agent and watcher notifications; internal suppression requires customer suppression. Silent updates still create normal audit, workflow, and webhook records. Do not hand-edit attributes.watch_list: it is a derived mirror, and any watch_list sent here is ignored and the stored list preserved. To copy contacts, users or external emails on updates use POST /tickets/{id}/watchers (and PATCH/DELETE on the same path).",
     "tags": [
       "Work Management v1"
     ],
@@ -47007,7 +47180,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "object",
             "null"
           ],
-          "additionalProperties": true
+          "additionalProperties": true,
+          "description": "Free-form ticket attributes. Do not put watch_list here: it is ignored and the stored list preserved. Use POST/PATCH/DELETE /tickets/{id}/watchers."
         },
         "tags": {
           "type": "array",
@@ -48581,8 +48755,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
                   },
                   "is_billable": {
-                    "type": "boolean",
-                    "default": true
+                    "type": "boolean"
                   }
                 }
               }
@@ -49460,8 +49633,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
         },
         "is_billable": {
-          "type": "boolean",
-          "default": true
+          "type": "boolean"
         }
       }
     },
@@ -50765,6 +50937,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 ],
                 "format": "uuid"
               },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "user_name": {
                 "type": "string"
               },
@@ -50958,6 +51136,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                         "null"
                       ],
                       "format": "uuid"
+                    },
+                    "billing_mode": {
+                      "type": "string",
+                      "enum": [
+                        "commercial",
+                        "operational"
+                      ]
                     }
                   },
                   "required": [
@@ -50986,7 +51171,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "contract_line_source",
                     "contract_line_unresolved_reason",
                     "catalog_pricing_acknowledged_at",
-                    "catalog_pricing_acknowledged_by"
+                    "catalog_pricing_acknowledged_by",
+                    "billing_mode"
                   ]
                 }
               }
@@ -51000,6 +51186,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "submitted_at",
               "approved_at",
               "approved_by",
+              "notes",
               "user_name"
             ]
           }
@@ -51507,6 +51694,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "null"
                 ],
                 "format": "uuid"
+              },
+              "billing_mode": {
+                "type": "string",
+                "enum": [
+                  "commercial",
+                  "operational"
+                ]
               }
             },
             "required": [
@@ -51535,7 +51729,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "contract_line_source",
               "contract_line_unresolved_reason",
               "catalog_pricing_acknowledged_at",
-              "catalog_pricing_acknowledged_by"
+              "catalog_pricing_acknowledged_by",
+              "billing_mode"
             ]
           }
         }
@@ -52648,12 +52843,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "method": "post",
     "path": "/api/v1/tickets/{id}/documents",
     "displayName": "Upload a ticket document",
-    "summary": "Upload a ticket document",
-    "description": "Uploads a file as a document attachment to a ticket. Send multipart/form-data with a `file` field. Returns the created document.",
+    "summary": "Upload a ticket document (multipart only)",
+    "description": "Multipart/form-data upload only; this endpoint cannot be called through call_api_endpoint, which sends JSON. To attach a file to a ticket, use the attach_file tool or POST /api/v1/documents (entity_type ticket) instead.",
     "tags": [
       "Work Management v1"
     ],
-    "approvalRequired": false,
+    "rbacResource": "ticket",
+    "approvalRequired": true,
     "parameters": [
       {
         "name": "id",
@@ -53754,13 +53950,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "id": "post-_api_v1_tickets_id_agents",
     "method": "post",
     "path": "/api/v1/tickets/{id}/agents",
-    "displayName": "Add a ticket additional agent",
-    "summary": "Add a ticket additional agent",
-    "description": "Adds a user as an additional agent on the ticket and publishes TICKET_ADDITIONAL_AGENT_ASSIGNED so notifications fire as they do in the UI unless suppressed. A ticket with no primary agent promotes the user to primary instead (TICKET_ASSIGNED). Returns the updated agent list; a duplicate returns 409.",
+    "displayName": "Add Ticket Additional Agent",
+    "summary": "Add an internal staff member (technician, coworker or colleague) as an additional agent; internal staff only",
+    "description": "Adds an INTERNAL user (staff) as an additional agent working the ticket and publishes the additional-agent-assigned event so notifications fire unless suppressed. Internal staff only: to copy an external person, client contact or bare email on updates, use POST /tickets/{id}/watchers instead; for a one-off copy of a single comment use the comment cc/bcc fields. A ticket with no primary agent promotes the user to primary. A duplicate returns 409.",
     "tags": [
       "Work Management v1"
     ],
-    "approvalRequired": false,
+    "rbacResource": "ticket",
+    "approvalRequired": true,
     "parameters": [
       {
         "name": "id",
@@ -53826,7 +54023,12 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "data"
       ]
-    }
+    },
+    "playbooks": [
+      "Add another technician to this ticket: POST the agents endpoint with the internal user_id so a second agent can help work the ticket.",
+      "Add a coworker or colleague to help on a ticket, or assign additional staff as another agent: use the additional agents endpoint.",
+      "Add an additional agent to help work the ticket (internal staff only, never an external person)."
+    ]
   },
   {
     "id": "delete-_api_v1_tickets_id_agents_userid",
@@ -53861,6 +54063,374 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "format": "uuid",
           "description": "User UUID of the additional agent."
         }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_tickets_id_watchers",
+    "method": "get",
+    "path": "/api/v1/tickets/{id}/watchers",
+    "displayName": "List Ticket Watchers",
+    "summary": "List ticket watchers: who is copied or cc'd on a ticket's updates",
+    "description": "Watchers vs. additional agents vs. comment cc: WATCHERS (these endpoints) are the persistent watch list - client contacts, internal users or any bare external email - copied on ticket updates until removed; they can be added silently. ADDITIONAL AGENTS (/tickets/{id}/agents) are internal staff working the ticket only; never use them for external people. COMMENT CC/BCC is a one-off copy of a single comment email and never joins the watch list. Use this for requests like 'cc X on updates', 'copy X on this ticket', 'notify X when it changes', 'add to the watch list', 'add a watcher', 'add an external contact / external email'. Returns the current watch list of the ticket, including paused (active=false) watchers. A change to the watch list is not itself emailed to anyone: the new watcher is simply copied on later ticket updates. Unless silent=true the write publishes one ticket-updated event with no field changes; it creates no watcher email, but it does create the generic 'ticket updated' in-app notification for the assigned agents and the client-portal contact. silent=true sets suppressContactNotifications and suppressInternalNotifications on that event, which skips those in-app notifications (request-scoped, never stored); use it when the change should leave no trace for staff or the customer. Every response is the full list of watchers: {email, name, active, entity_type, entity_id, source}; email (case-insensitive) is the key.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "playbooks": [
+      "See who is copied or cc'd on ticket updates: list the ticket watchers."
+    ],
+    "examples": [
+      {
+        "name": "See who is watching a ticket",
+        "request": {
+          "params": {
+            "id": "11111111-1111-1111-1111-111111111111"
+          }
+        },
+        "notes": "Read data[] for each watcher; check email before adding to avoid redundant calls (adds are idempotent anyway)."
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_tickets_id_watchers",
+    "method": "post",
+    "path": "/api/v1/tickets/{id}/watchers",
+    "displayName": "Add Ticket Watcher",
+    "summary": "Add a ticket watcher: copy or cc a contact, user or external email on ticket updates",
+    "description": "Watchers vs. additional agents vs. comment cc: WATCHERS (these endpoints) are the persistent watch list - client contacts, internal users or any bare external email - copied on ticket updates until removed; they can be added silently. ADDITIONAL AGENTS (/tickets/{id}/agents) are internal staff working the ticket only; never use them for external people. COMMENT CC/BCC is a one-off copy of a single comment email and never joins the watch list. Use this for requests like 'cc X on updates', 'copy X on this ticket', 'notify X when it changes', 'add to the watch list', 'add a watcher', 'add an external contact / external email'. Provide exactly one of contact_id (client contact), user_id (internal user) or email (any mailbox, e.g. an external address). The contact/user is resolved to its email and name server-side; an unknown or other-tenant id, or one without an email, returns 422. Idempotent set-add: an email already on the list is re-activated, never duplicated. Example: to copy Dorothy Gale (a client contact) and an outside mailbox on updates, call this once with her contact_id and once with {\"email\":\"ops@vendor.example\"}. A change to the watch list is not itself emailed to anyone: the new watcher is simply copied on later ticket updates. Unless silent=true the write publishes one ticket-updated event with no field changes; it creates no watcher email, but it does create the generic 'ticket updated' in-app notification for the assigned agents and the client-portal contact. silent=true sets suppressContactNotifications and suppressInternalNotifications on that event, which skips those in-app notifications (request-scoped, never stored); use it when the change should leave no trace for staff or the customer. Every response is the full list of watchers: {email, name, active, entity_type, entity_id, source}; email (case-insensitive) is the key.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contact_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Client contact to watch. Exactly one of contact_id, user_id, email."
+        },
+        "user_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Internal user to watch. Exactly one of contact_id, user_id, email."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Any bare email address, including external mailboxes. Exactly one of contact_id, user_id, email."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "Optional display name, used only when the watcher has none yet."
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Defaults to true."
+        },
+        "silent": {
+          "type": "boolean",
+          "description": "Request-scoped, never stored. true = send no customer or internal notification for this write."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "playbooks": [
+      "Copy, cc or notify a client contact, internal user or external email on ticket updates: POST the watcher endpoint with contact_id, user_id or email.",
+      "Add an external watcher or external email to a ticket: use the watcher endpoint, not additional agents (internal staff only) and not comment cc (one comment only).",
+      "Example: to copy Dorothy Gale and an outside mailbox on updates, POST once with her contact_id and once with the mailbox email."
+    ],
+    "examples": [
+      {
+        "name": "Copy a client contact on updates",
+        "request": {
+          "params": {
+            "id": "11111111-1111-1111-1111-111111111111"
+          },
+          "body": {
+            "contact_id": "22222222-2222-2222-2222-222222222222"
+          }
+        },
+        "notes": "Persistent watch-list entry; the contact's email and name are resolved server-side."
+      },
+      {
+        "name": "Copy an external mailbox silently",
+        "request": {
+          "params": {
+            "id": "11111111-1111-1111-1111-111111111111"
+          },
+          "body": {
+            "email": "ops@vendor.example",
+            "silent": true
+          }
+        },
+        "notes": "Adds the watcher without notifying anyone about the change itself; the mailbox receives future ticket updates."
+      }
+    ]
+  },
+  {
+    "id": "patch-_api_v1_tickets_id_watchers",
+    "method": "patch",
+    "path": "/api/v1/tickets/{id}/watchers",
+    "displayName": "Pause or Resume Ticket Watcher",
+    "summary": "Pause or resume a ticket watcher (cc on updates) without removing it",
+    "description": "Watchers vs. additional agents vs. comment cc: WATCHERS (these endpoints) are the persistent watch list - client contacts, internal users or any bare external email - copied on ticket updates until removed; they can be added silently. ADDITIONAL AGENTS (/tickets/{id}/agents) are internal staff working the ticket only; never use them for external people. COMMENT CC/BCC is a one-off copy of a single comment email and never joins the watch list. Use this for requests like 'cc X on updates', 'copy X on this ticket', 'notify X when it changes', 'add to the watch list', 'add a watcher', 'add an external contact / external email'. Identifies the watcher by email (case-insensitive) and toggles active. A paused watcher stays on the list but is not copied. Returns 404 if the email is not a watcher. A change to the watch list is not itself emailed to anyone: the new watcher is simply copied on later ticket updates. Unless silent=true the write publishes one ticket-updated event with no field changes; it creates no watcher email, but it does create the generic 'ticket updated' in-app notification for the assigned agents and the client-portal contact. silent=true sets suppressContactNotifications and suppressInternalNotifications on that event, which skips those in-app notifications (request-scoped, never stored); use it when the change should leave no trace for staff or the customer. Every response is the full list of watchers: {email, name, active, entity_type, entity_id, source}; email (case-insensitive) is the key.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "required": [
+        "email",
+        "active"
+      ],
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "Email of an existing watcher."
+        },
+        "active": {
+          "type": "boolean",
+          "description": "false pauses updates, true resumes them."
+        },
+        "silent": {
+          "type": "boolean",
+          "description": "Request-scoped, never stored. true = send no customer or internal notification for this write."
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "playbooks": [
+      "Pause or resume a watcher: PATCH with email and active=false or true."
+    ],
+    "examples": [
+      {
+        "name": "Pause a watcher",
+        "request": {
+          "params": {
+            "id": "11111111-1111-1111-1111-111111111111"
+          },
+          "body": {
+            "email": "ops@vendor.example",
+            "active": false
+          }
+        },
+        "notes": "The watcher remains listed with active=false."
+      }
+    ]
+  },
+  {
+    "id": "delete-_api_v1_tickets_id_watchers",
+    "method": "delete",
+    "path": "/api/v1/tickets/{id}/watchers",
+    "displayName": "Remove Ticket Watcher",
+    "summary": "Remove a ticket watcher so they are no longer copied or cc'd on updates",
+    "description": "Watchers vs. additional agents vs. comment cc: WATCHERS (these endpoints) are the persistent watch list - client contacts, internal users or any bare external email - copied on ticket updates until removed; they can be added silently. ADDITIONAL AGENTS (/tickets/{id}/agents) are internal staff working the ticket only; never use them for external people. COMMENT CC/BCC is a one-off copy of a single comment email and never joins the watch list. Use this for requests like 'cc X on updates', 'copy X on this ticket', 'notify X when it changes', 'add to the watch list', 'add a watcher', 'add an external contact / external email'. Removes the watcher whose email matches the ?email= query parameter (optional &silent=true). Returns 404 when that email is not a watcher. A change to the watch list is not itself emailed to anyone: the new watcher is simply copied on later ticket updates. Unless silent=true the write publishes one ticket-updated event with no field changes; it creates no watcher email, but it does create the generic 'ticket updated' in-app notification for the assigned agents and the client-portal contact. silent=true sets suppressContactNotifications and suppressInternalNotifications on that event, which skips those in-app notifications (request-scoped, never stored); use it when the change should leave no trace for staff or the customer. Every response is the full list of watchers: {email, name, active, entity_type, entity_id, source}; email (case-insensitive) is the key.",
+    "tags": [
+      "Work Management v1"
+    ],
+    "rbacResource": "ticket",
+    "approvalRequired": true,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Ticket identifier.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "email",
+        "in": "query",
+        "required": true,
+        "description": "Email of the watcher to remove (case-insensitive).",
+        "schema": {
+          "type": "string",
+          "format": "email"
+        }
+      },
+      {
+        "name": "silent",
+        "in": "query",
+        "required": false,
+        "description": "true = send no notification for this removal.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    },
+    "playbooks": [
+      "Stop copying or cc'ing someone on ticket updates: DELETE the watcher with ?email=."
+    ],
+    "examples": [
+      {
+        "name": "Stop copying an external mailbox",
+        "request": {
+          "params": {
+            "id": "11111111-1111-1111-1111-111111111111"
+          },
+          "query": {
+            "email": "ops@vendor.example"
+          }
+        },
+        "notes": "Use this for the persistent watch list; comment cc needs no cleanup."
       }
     ]
   },
@@ -56371,23 +56941,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "medium",
             "high",
             "committed"
-          ],
-          "default": "medium"
+          ]
         },
         "mrr_cents": {
           "type": "integer",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "nrr_cents": {
           "type": "integer",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "hardware_cents": {
           "type": "integer",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "currency_code": {
           "type": "string",
@@ -56544,23 +57110,19 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "medium",
             "high",
             "committed"
-          ],
-          "default": "medium"
+          ]
         },
         "mrr_cents": {
           "type": "integer",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "nrr_cents": {
           "type": "integer",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "hardware_cents": {
           "type": "integer",
-          "minimum": 0,
-          "default": 0
+          "minimum": 0
         },
         "currency_code": {
           "type": "string",
@@ -58684,16 +59246,14 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         },
         "body_markdown": {
           "type": "string",
-          "maxLength": 50000,
-          "default": ""
+          "maxLength": 50000
         },
         "channel_variants": {
           "type": "object",
           "additionalProperties": {
             "type": "string",
             "maxLength": 10000
-          },
-          "default": {}
+          }
         },
         "campaign_id": {
           "type": [
@@ -59671,8 +60231,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
               "subject"
             ]
           },
-          "maxItems": 50,
-          "default": []
+          "maxItems": 50
         }
       }
     },
@@ -60013,7 +60572,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "date-time"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   }
                 ]
               },
@@ -60024,7 +60584,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "date-time"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -60038,7 +60599,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                     "format": "date-time"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -60333,7 +60895,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 }
               ]
             },
@@ -60344,7 +60907,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
@@ -60358,7 +60922,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
@@ -60562,7 +61127,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 }
               ]
             },
@@ -60573,7 +61139,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
@@ -60587,7 +61154,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
@@ -60808,7 +61376,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 }
               ]
             },
@@ -60819,7 +61388,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
@@ -60833,7 +61403,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "format": "date-time"
                 },
                 {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 {
                   "type": "null"
@@ -63632,6 +64203,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Optional future agreement sync flag. Currently ignored by the MVP handlers."
         }
       },
+      "additionalProperties": {},
       "description": "Sync options. The current SoftwareOne MVP handlers parse JSON but ignore all body fields."
     },
     "responseBodySchema": {
@@ -63771,6 +64343,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Optional future agreement sync flag. Currently ignored by the MVP handlers."
         }
       },
+      "additionalProperties": {},
       "description": "Sync options. The current SoftwareOne MVP handlers parse JSON but ignore all body fields."
     },
     "responseBodySchema": {
@@ -63935,6 +64508,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Optional future agreement sync flag. Currently ignored by the MVP handlers."
         }
       },
+      "additionalProperties": {},
       "description": "Sync options. The current SoftwareOne MVP handlers parse JSON but ignore all body fields."
     },
     "responseBodySchema": {
@@ -64363,6 +64937,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "description": "Optional future agreement sync flag. Currently ignored by the MVP handlers."
         }
       },
+      "additionalProperties": {},
       "description": "Sync options. The current SoftwareOne MVP handlers parse JSON but ignore all body fields."
     },
     "responseBodySchema": {
@@ -64438,7 +65013,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "responseBodySchema": {
       "type": "object",
-      "properties": {}
+      "properties": {},
+      "additionalProperties": {}
     },
     "playbooks": [
       "storage/list-namespace"
@@ -64481,11 +65057,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "properties": {}
+      "properties": {},
+      "additionalProperties": {}
     },
     "responseBodySchema": {
       "type": "object",
-      "properties": {}
+      "properties": {},
+      "additionalProperties": {}
     },
     "playbooks": [
       "storage/bulk-upsert-records"
@@ -64542,7 +65120,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "responseBodySchema": {
       "type": "object",
-      "properties": {}
+      "properties": {},
+      "additionalProperties": {}
     },
     "playbooks": [
       "storage/get-record"
@@ -64592,11 +65171,13 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     ],
     "requestBodySchema": {
       "type": "object",
-      "properties": {}
+      "properties": {},
+      "additionalProperties": {}
     },
     "responseBodySchema": {
       "type": "object",
-      "properties": {}
+      "properties": {},
+      "additionalProperties": {}
     },
     "playbooks": [
       "storage/put-record"

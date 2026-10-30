@@ -92,6 +92,8 @@ export interface MenuItem {
 }
 
 export interface NavigationSection {
+  /** Stable React key for sections that have no title (the main group and slot-contributed groups). */
+  id?: string;
   title: string;
   translationKey?: string;
   items: MenuItem[];
@@ -99,6 +101,7 @@ export interface NavigationSection {
 
 export const navigationSections: NavigationSection[] = [
   {
+    id: 'main',
     title: '',
     items: [
       {
