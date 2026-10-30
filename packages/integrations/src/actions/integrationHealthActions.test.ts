@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MAILBOX_SETUP_ENTRY_PATH } from '@alga-psa/types';
 
 const {
   createTenantKnexMock,
@@ -123,7 +124,7 @@ async function loadAction() {
 
 const RMM_HREF = '/msp/settings/integrations?category=rmm';
 const ACCOUNTING_HREF = '/msp/settings/integrations?category=accounting';
-const COMMUNICATION_HREF = '/msp/settings/integrations?category=communication';
+const COMMUNICATION_HREF = MAILBOX_SETUP_ENTRY_PATH;
 
 function isoFromNow(offsetMs: number): string {
   return new Date(Date.now() + offsetMs).toISOString();

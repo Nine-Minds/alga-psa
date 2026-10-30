@@ -5,6 +5,7 @@ import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { MAILBOX_SETUP_ENTRY_PATH } from '@alga-psa/types';
 import type { CalendarProviderConfig, IUserWithRoles, RmmProvider } from '@alga-psa/types';
 import { CALENDAR_PROFILE_TAB, isCalendarEnterpriseEdition } from '../lib/calendarAvailability';
 import { isAccountingReconnectRequired } from '../lib/accountingReconnectHeuristic';
@@ -80,7 +81,11 @@ const EMAIL_SETTINGS_HREF = '/msp/settings/email';
 const CALENDAR_PROFILE_HREF = `/msp/profile?tab=${CALENDAR_PROFILE_TAB}`;
 const RMM_SETTINGS_HREF = '/msp/settings/integrations?category=rmm';
 const ACCOUNTING_SETTINGS_HREF = '/msp/settings/integrations?category=accounting';
-const COMMUNICATION_SETTINGS_HREF = '/msp/settings/integrations?category=communication';
+// Teams bot config lives in the Communication category alongside the mailbox
+// provider list, so it resolves through the same product-neutral dispatcher
+// target rather than linking straight at the PSA-only integrations page (see
+// PRODUCT_NAV_DESTINATIONS / productSurfaceRegistry).
+const COMMUNICATION_SETTINGS_HREF = MAILBOX_SETUP_ENTRY_PATH;
 
 /** Sync adapter types as stored in accounting_sync_cycles.adapter_type. */
 const ACCOUNTING_PROVIDER_NAMES: Record<string, string> = {
