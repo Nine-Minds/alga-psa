@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ExternalLink } from 'lucide-react';
-import type { EmailProvider } from './types';
+import type { PublicEmailProvider } from './types';
 import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '@alga-psa/integrations/actions';
 import { initiateEmailOAuth } from '@alga-psa/integrations/actions';
 import { useOAuthPopup } from './providers/gmail/useOAuthPopup';
@@ -34,8 +34,8 @@ type GmailProviderFormData = import('./providers/gmail/schemas').CEGmailProvider
 
 interface GmailProviderFormProps {
   tenant: string;
-  provider?: EmailProvider;
-  onSuccess: (provider: EmailProvider) => void;
+  provider?: PublicEmailProvider;
+  onSuccess: (provider: PublicEmailProvider) => void;
   onCancel: () => void;
 }
 

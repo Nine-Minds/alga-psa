@@ -11,7 +11,7 @@ import * as z from 'zod';
 import { Button, Input, Label, Switch, Alert, AlertDescription, Card, CardContent, CardDescription, CardHeader, CardTitle, CustomSelect } from '@alga-psa/ui/components';
 import { Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { EmailProvider } from '@alga-psa/integrations/components/email/types';
+import type { PublicEmailProvider } from '@alga-psa/integrations/components/email/types';
 import { createEmailProvider, updateEmailProvider } from '@alga-psa/integrations/actions/email-actions/emailProviderActions';
 import { getInboundTicketDefaults } from '@alga-psa/integrations/actions/email-actions/inboundTicketDefaultsActions';
 import {
@@ -57,8 +57,8 @@ type EEImapProviderFormData = z.infer<typeof eeImapProviderSchema>;
 
 interface EEImapProviderFormProps {
   tenant: string;
-  provider?: EmailProvider;
-  onSuccess: (provider: EmailProvider) => void;
+  provider?: PublicEmailProvider;
+  onSuccess: (provider: PublicEmailProvider) => void;
   onCancel: () => void;
 }
 
@@ -95,7 +95,7 @@ export function ImapProviderForm({
       oauthAuthorizeUrl: provider.imapConfig.oauth_authorize_url || '',
       oauthTokenUrl: provider.imapConfig.oauth_token_url || '',
       oauthClientId: provider.imapConfig.oauth_client_id || '',
-      oauthClientSecret: provider.imapConfig.oauth_client_secret || '',
+      oauthClientSecret: '', // stored secret is never sent to the browser; blank keeps it
       oauthScopes: provider.imapConfig.oauth_scopes || '',
       isActive: provider.isActive,
       folderFilters: provider.imapConfig.folder_filters?.join(', ') || '',
@@ -198,7 +198,7 @@ export function ImapProviderForm({
   };
 
   const authType = form.watch('authType');
-  const oauthConnected = !!provider?.imapConfig?.refresh_token || !!provider?.imapConfig?.access_token;
+  const oauthConnected = !!provider?.imapConfig?.has_refresh_token || !!provider?.imapConfig?.has_access_token;
 
   const handleOauthConnect = async () => {
     if (!provider?.id) return;
