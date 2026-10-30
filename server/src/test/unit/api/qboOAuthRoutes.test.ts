@@ -193,6 +193,23 @@ describe('QBO OAuth routes', () => {
     });
   });
 
+  it('connect route surfaces the Development-keys reason for a sandbox tenant', async () => {
+    const reason =
+      'Connecting an Intuit sandbox company requires this tenant\'s own Intuit app: save its Development keys (client ID and secret) before connecting.';
+    // The shape resolveQboOAuthCredentials throws: an AppError carrying a
+    // secret-free, admin-facing reason. Flattening it to the generic text would
+    // leave the admin with nothing to act on.
+    const configError = Object.assign(new Error(reason), { code: 'QBO_CONFIG_MISSING' });
+    resolveQboOAuthCredentialsMock.mockRejectedValueOnce(configError);
+
+    const { GET } = await import('@/app/api/integrations/qbo/connect/route');
+
+    const response = await GET();
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: reason });
+  });
+
   it('connect route requires the accounting connection-admin permission', async () => {
     hasPermissionMock.mockResolvedValue(false);
 
