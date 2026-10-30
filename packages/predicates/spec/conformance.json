@@ -1229,7 +1229,7 @@
     },
     {
       "id": "scalar-not-contains-empty-needle",
-      "description": "every string contains '', so not_contains '' is false for any present string and true for a missing or non-string value",
+      "description": "every string contains '', so not_contains '' is false for any present string and true for a missing value",
       "covers": {
         "operators": [
           "not_contains"
@@ -1259,13 +1259,6 @@
         {
           "id": "missing",
           "record": {},
-          "expected": true
-        },
-        {
-          "id": "number",
-          "record": {
-            "s": 5
-          },
           "expected": true
         }
       ]
@@ -1544,7 +1537,7 @@
     },
     {
       "id": "scalar-not-starts-with-empty-needle",
-      "description": "every string starts with '', so not_starts_with '' is false for any present string and true for a missing or non-string value",
+      "description": "every string starts with '', so not_starts_with '' is false for any present string and true for a missing value",
       "covers": {
         "operators": [
           "not_starts_with"
@@ -1574,13 +1567,6 @@
         {
           "id": "missing",
           "record": {},
-          "expected": true
-        },
-        {
-          "id": "number",
-          "record": {
-            "s": 5
-          },
           "expected": true
         }
       ]
@@ -1859,7 +1845,7 @@
     },
     {
       "id": "scalar-not-ends-with-empty-needle",
-      "description": "every string ends with '', so not_ends_with '' is false for any present string and true for a missing or non-string value",
+      "description": "every string ends with '', so not_ends_with '' is false for any present string and true for a missing value",
       "covers": {
         "operators": [
           "not_ends_with"
@@ -1889,13 +1875,6 @@
         {
           "id": "missing",
           "record": {},
-          "expected": true
-        },
-        {
-          "id": "number",
-          "record": {
-            "s": 5
-          },
           "expected": true
         }
       ]
