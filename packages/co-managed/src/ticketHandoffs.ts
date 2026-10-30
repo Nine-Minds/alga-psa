@@ -126,19 +126,23 @@ async function transitionTicket(context: CoManagedSharedWorkContext, request: Co
   const workId = work?.work_id ?? randomUUID();
   const revision = request.expectedRevision + 1;
   // LEVERAGE: friction handoff-sla-hook — the SLA clock transition (L6b) is applied here in the reference; this card ships the receipt timestamps it will consume.
+  // write-admission: exempt — co-managed state-machine row, admitted by withCoManagedCustomerTicket/withCoManagedSharedWork
   if (!work) await customer.table('co_management_ticket_work').insert({ tenant: resource.tenant, ...key, work_id: workId,
-    revision, responsibility, can_collaborate: true, first_escalated_at: occurredAt, last_transition_at: occurredAt }); // write-admission: exempt — co-managed state-machine row, admitted by withCoManagedCustomerTicket/withCoManagedSharedWork
+    revision, responsibility, can_collaborate: true, first_escalated_at: occurredAt, last_transition_at: occurredAt });
+  // write-admission: exempt — see insert above
   else await customer.table('co_management_ticket_work').where(key).update({ revision, responsibility, last_transition_at: occurredAt,
     // Re-escalating is a new explicit customer decision to share this ticket.
     ...(transition === 'escalated' ? { grant_revoked_at: null, can_collaborate: true, first_escalated_at: work.first_escalated_at ?? occurredAt } :
-      transition === 'access_revoked' ? { grant_revoked_at: occurredAt, can_collaborate: false } : {}) }); // write-admission: exempt — see insert above
+      transition === 'access_revoked' ? { grant_revoked_at: occurredAt, can_collaborate: false } : {}) });
   if (!previousReference && transition !== 'access_revoked') {
     if (transition !== 'escalated') throw new CoManagedTicketHandoffError('HANDOFF_CHANGED');
+    // write-admission: exempt — MSP-owned routing row written in the customer's admitted handoff transaction
     await sponsor.table('co_managed_ticket_references').insert({ tenant: relationship.sponsor_tenant, ...referenceKey,
       reference_id: randomUUID(), work_id: workId, client_id: relationship.sponsor_client_id, board_id: relationship.escalation_board_id,
-      created_at: occurredAt, updated_at: occurredAt }); // write-admission: exempt — MSP-owned routing row written in the customer's admitted handoff transaction
+      created_at: occurredAt, updated_at: occurredAt });
+  // write-admission: exempt — see insert above
   } else if (previousReference) await sponsor.table('co_managed_ticket_references').where(referenceKey).update({ updated_at: occurredAt,
-    ...(transition === 'escalated' ? { board_id: relationship.escalation_board_id } : { assigned_to: null, assigned_team_id: null }) }); // write-admission: exempt — see insert above
+    ...(transition === 'escalated' ? { board_id: relationship.escalation_board_id } : { assigned_to: null, assigned_team_id: null }) });
   const home = tenantDb(trx, actor.tenant);
   const author = await home.table('users').where('user_id', actor.userId).first('first_name', 'last_name', 'username');
   const organization = await home.table('tenants').first('client_name');

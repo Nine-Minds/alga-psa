@@ -120,17 +120,22 @@ export async function assignCoManagedTicket(db: Knex, inputActor: CoManagedSessi
       const workId = randomUUID();
       // Board sharing admits participation, not a new permanent ticket grant.
       // No escalation timestamp or handoff is manufactured by assignment.
+      // write-admission: exempt — co-managed assignment state, admitted by the update boundary's assertCoManagedOperationalWrite
       await owner.table('co_management_ticket_work').insert({ tenant: resource.tenant, relationship_id: resource.relationshipId, ticket_id: resource.id, work_id: workId,
         revision, responsibility: 'customer', can_collaborate: false, grant_revoked_at: write.trx.raw('clock_timestamp()'), first_escalated_at: null, last_transition_at: null });
+      // write-admission: exempt — see work insert above
       await tenantDb(write.trx, routing.relationship.sponsor_tenant).table('co_managed_ticket_references').insert({ ...values, tenant: routing.relationship.sponsor_tenant,
         reference_id: referenceId, customer_tenant: resource.tenant, relationship_id: resource.relationshipId, ticket_id: resource.id, work_id: workId,
         client_id: routing.relationship.sponsor_client_id, board_id: routing.boardId, created_at: write.trx.raw('clock_timestamp()') });
     } else {
+      // write-admission: exempt — co-managed assignment state, admitted by the update boundary's assertCoManagedOperationalWrite
       await tenantDb(write.trx, routing.relationship.sponsor_tenant).table('co_managed_ticket_references').where('reference_id', referenceId).update(values);
+      // write-admission: exempt — see reference update above
       await owner.table('co_management_ticket_work').where({ relationship_id: resource.relationshipId, ticket_id: resource.id }).update({ revision });
     }
     await recordCoManagedWorkAudit(write, { operation: 'co_managed_ticket_assignment', operationId: request.operationId,
       changes: { msp_assignment: selected ? `${selected.organizationName} · ${selected.name}` : null }, details: { assignment_reference_id: referenceId, work_revision: revision, assignee: request.assignee } });
+    // write-admission: exempt — append-only receipt of the admitted assignment
     const [receipt] = await owner.table('co_management_command_receipts').insert({ tenant: resource.tenant, operation_id: request.operationId, relationship_id: resource.relationshipId, resource_type: 'ticket', resource_id: resource.id,
       actor_tenant: actor.tenant, actor_user_id: actor.userId, command_type: 'ticket_assignment', request_hash: hash, applied_at: write.trx.raw('clock_timestamp()') }).returning('applied_at');
     // LEVERAGE: friction handoff-routing-notification — assignment notification retention (L5) hooks in here once routing notifications exist.

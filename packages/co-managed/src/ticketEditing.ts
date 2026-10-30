@@ -225,6 +225,7 @@ export async function editCoManagedTicket(db: Knex, inputActor: CoManagedSession
         };
         await assertWriteAuthority(context.trx);
         await apply({ ...context, actorReferenceId, assertWriteAuthority }, toNativePatch(request.patch, row));
+        // write-admission: exempt — append-only receipt of the edit, admitted by assertWriteAuthority above
         const [receipt] = await owner.table('co_management_command_receipts').insert({ tenant: resource.tenant, operation_id: request.operationId,
           relationship_id: resource.relationshipId, resource_type: 'ticket', resource_id: resource.id, actor_tenant: actor.tenant,
           actor_user_id: actor.userId, command_type: 'ticket_edit', request_hash: hash, applied_at: context.trx.raw('clock_timestamp()'),
