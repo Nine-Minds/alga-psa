@@ -31,6 +31,8 @@ import {
   prepareCommentEmailRecipients,
   type CommentEmailRecipientsInput,
 } from '@shared/lib/tickets/commentEmailRecipients';
+import { authorizeTicketRecordAccess } from '../../lib/ticketRecordAuthorization';
+import { projectCommentsForPrincipal, type CommentThreadVisibility } from '../../lib/commentVisibility';
 import { ticketActionErrorFrom, type TicketActionError } from '../ticketActionErrors';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
 
@@ -116,6 +118,9 @@ async function assertClientCanCreateComment(
     .where({ ticket_id: comment.ticket_id })
     .first();
 
+  // KEEP until card 36dd23da lands: authorizeTicketRecordAccess's client branch still uses only
+  // `selected_boards` on this branch, so it cannot be shown to enforce same-client. Replace with
+  // authorizeTicketRecordAccess(..., 'update') once the kernel fix is merged.
   if (!ticket || ticket.client_id !== clientId) {
     throw new Error('Client user cannot access this ticket');
   }
@@ -141,12 +146,48 @@ async function assertClientCanCreateComment(
   }
 }
 
-export const findCommentsByTicketId = withAuth(async (_user, { tenant }, ticketId: string): Promise<IComment[] | TicketActionError> => {
+// Every failure on the read actions (missing ticket/comment, record-scope denial,
+// missing ticket:read, hidden comment) collapses to this one error so a caller
+// cannot use the response as an existence oracle.
+function commentReadNotFound(): Error {
+  return new Error('Ticket not found');
+}
+
+async function loadThreadVisibility(
+  trx: Knex.Transaction,
+  tenant: string,
+  comments: IComment[],
+): Promise<Map<string, CommentThreadVisibility>> {
+  const threadIds = [...new Set(comments.map((c) => c.thread_id).filter(Boolean))] as string[];
+  if (threadIds.length === 0) return new Map();
+  const rows = await tenantScopedTable<{ thread_id: string; is_internal: boolean }>(trx, 'comment_threads', tenant)
+    .select('thread_id', 'is_internal')
+    .whereIn('thread_id', threadIds);
+  return new Map(rows.map((r) => [r.thread_id, { is_internal: r.is_internal }]));
+}
+
+async function authorizeCommentRead(user: any, trx: Knex.Transaction, tenant: string, ticketId: string): Promise<void> {
+  // The kernel's rbacEvaluator is a stub, so ticket:read is checked here for everyone.
+  if (!(await hasPermission(user, 'ticket', 'read'))) {
+    throw commentReadNotFound();
+  }
+  try {
+    await authorizeTicketRecordAccess({ trx, tenant: tenant!, user, ticketId, action: 'read' });
+  } catch {
+    throw commentReadNotFound();
+  }
+}
+
+export const findCommentsByTicketId = withAuth(async (user, { tenant }, ticketId: string): Promise<IComment[] | TicketActionError> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      await authorizeCommentRead(user, trx, tenant!, ticketId);
       const comments = await Comment.getAllbyTicketId(trx, tenant!, ticketId);
-      return comments;
+      const threads = isMspPrincipalUserType(user.user_type)
+        ? undefined
+        : await loadThreadVisibility(trx, tenant!, comments);
+      return projectCommentsForPrincipal(user, comments, threads);
     });
   } catch (error) {
     console.error(error);
@@ -158,12 +199,23 @@ export const findCommentsByTicketId = withAuth(async (_user, { tenant }, ticketI
   }
 });
 
-export const findCommentById = withAuth(async (_user, { tenant }, commentId: string): Promise<IComment | TicketActionError | null> => {
+export const findCommentById = withAuth(async (user, { tenant }, commentId: string): Promise<IComment | TicketActionError | null> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const comment = await Comment.get(trx, tenant!, commentId);
-      return comment;
+      if (!comment?.ticket_id) {
+        throw commentReadNotFound();
+      }
+      await authorizeCommentRead(user, trx, tenant!, comment.ticket_id);
+      const threads = isMspPrincipalUserType(user.user_type)
+        ? undefined
+        : await loadThreadVisibility(trx, tenant!, [comment]);
+      const [projected] = projectCommentsForPrincipal(user, [comment], threads);
+      if (!projected) {
+        throw commentReadNotFound();
+      }
+      return projected;
     });
   } catch (error) {
     console.error(error);
