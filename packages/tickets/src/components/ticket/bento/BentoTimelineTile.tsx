@@ -18,6 +18,7 @@ import {
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
 import { buildCommentThreadGroups, HybridThreadNode, type CommentThreadGroup } from '@alga-psa/ui/components';
 import InlineReplyComposer from '@alga-psa/ui/components/InlineReplyComposer';
+import { COMPOSER_MAX_HEIGHT } from '@alga-psa/ui/components/composerSizing';
 import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context/UnsavedChangesContext';
 import { hasEditorContent } from '@alga-psa/ui/editor/hasEditorContent';
@@ -917,6 +918,7 @@ export function BentoTimelineTile({
         searchMentions={searchUsersForMentions}
         uploadFile={composeUploadSession.uploadFile}
         snippets={cannedResponseSnippets}
+        maxHeight={COMPOSER_MAX_HEIGHT}
         footerActions={allowEmailRecipients ? (
           <CommentEmailRecipientsControl
             idPrefix={`${id}-composer`}
@@ -1235,7 +1237,7 @@ export function BentoTimelineTile({
 
       {!readOnly && replyTargetComment && replyingToCommentId && (
         <div id={`${id}-reply-dock`} className="sticky bottom-2 z-20 pt-3">
-          <div className="rounded-lg bg-[rgb(var(--color-card))] shadow-lg">
+          <div className="max-h-[70vh] overflow-y-auto rounded-lg bg-[rgb(var(--color-card))] shadow-lg">
             <p className="px-3 pt-2 text-xs font-medium text-[rgb(var(--color-text-500))]">
               {t('bento.timeline.replyingToComment', 'Replying to {{name}}', {
                 name: replyTargetName ?? t('bento.timeline.someone', 'Someone'),
