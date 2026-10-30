@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   baseInvoiceSchema,
@@ -31,5 +33,14 @@ describe('invoice update field classification', () => {
 
   it('updateInvoiceSchema accepts exactly the allowlist', () => {
     expect(Object.keys(updateInvoiceSchema.shape).sort()).toEqual([...INVOICE_UPDATE_FIELDS].sort());
+  });
+
+  it('published OpenAPI InvoiceUpdateBody lists exactly the allowlist and is closed', () => {
+    const spec = JSON.parse(
+      readFileSync(path.resolve(__dirname, '../../../../../sdk/docs/openapi/alga-openapi.ce.json'), 'utf8'),
+    );
+    const body = spec.components.schemas.InvoiceUpdateBody;
+    expect(Object.keys(body.properties).sort()).toEqual([...INVOICE_UPDATE_FIELDS].sort());
+    expect(body.additionalProperties).toBe(false);
   });
 });
