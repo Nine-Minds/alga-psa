@@ -7,12 +7,16 @@
 import { fileTypeFromBuffer } from 'file-type';
 import { getStorageConfig } from '@alga-psa/storage/config/storage';
 import { ValidationError } from '../../middleware/apiMiddleware';
+import type { Knex } from 'knex';
 import {
+  FetchHostNotAllowedError,
   UnsafeUrlError,
   UrlFetchError,
+  createHostPolicy,
   safeFetch,
   type SafeFetchDeps,
 } from '../../../net/safeFetch';
+import { loadEffectiveFetchHosts } from './fetchHostSettings';
 
 export type AttachSource =
   | { type: 'url'; url: string }
@@ -28,6 +32,29 @@ export interface ResolvedFile {
   fileName: string;
   mimeType: string;
   bytes: Buffer;
+}
+
+/** Stable `code` on the 400 returned when a URL source's host is not on the tenant allowlist. */
+export const FETCH_HOST_NOT_ALLOWED = 'FETCH_HOST_NOT_ALLOWED';
+
+/** The tenant a URL source is being fetched for. Required for `url` sources (allowlist lookup). */
+export interface ResolveSourceTenant {
+  knex: Knex;
+  tenant: string;
+}
+
+/** 400 carrying the stable FETCH_HOST_NOT_ALLOWED code. */
+export class FetchHostNotAllowedValidationError extends ValidationError {
+  constructor(hostname: string, viaRedirect: boolean) {
+    const where = viaRedirect ? `The download redirected to ${hostname}, which is` : `${hostname} is`;
+    super(
+      `${where} not an allowed download host for this workspace. Nothing was downloaded. ` +
+        'Tell the user that an administrator can add the host under Settings > MCP Server > Allowed download hosts, ' +
+        'then retry only after they confirm. Do not try other URLs.',
+      [{ path: ['source'], message: `${hostname} is not an allowed download host` }],
+    );
+    this.code = FETCH_HOST_NOT_ALLOWED;
+  }
 }
 
 export interface ResolveSourceDeps {
@@ -175,6 +202,7 @@ async function resolveMimeType(
 export async function resolveSource(
   input: ResolveSourceInput,
   deps: ResolveSourceDeps = {},
+  tenantCtx?: ResolveSourceTenant,
 ): Promise<ResolvedFile> {
   const maxBytes = deps.maxBytes ?? (await getMaxUploadBytes());
   const { source } = input;
@@ -189,10 +217,23 @@ export async function resolveSource(
     return { fileName, bytes, mimeType: await resolveMimeType(bytes, fileName, input.mimeType) };
   }
 
+  if (!tenantCtx) {
+    throw new Error('resolveSource: a url source requires the tenant context for the download-host allowlist');
+  }
+  // One indexed query per request, no cache. The policy is checked before DNS and on every hop.
+  const hostPolicy = createHostPolicy(await loadEffectiveFetchHosts(tenantCtx.knex, tenantCtx.tenant));
+
   let fetched;
   try {
-    fetched = await safeFetch(source.url, { maxBytes }, deps.fetchDeps);
+    fetched = await safeFetch(source.url, { maxBytes, hostPolicy }, deps.fetchDeps);
   } catch (error) {
+    if (error instanceof FetchHostNotAllowedError) {
+      // Hostname only: the path/query of a signed URL is the credential.
+      console.warn(
+        `[documents] URL source refused: host not on the tenant download allowlist tenant=${tenantCtx.tenant} host=${error.hostname}${error.viaRedirect ? ' (via redirect)' : ''}`,
+      );
+      throw new FetchHostNotAllowedValidationError(error.hostname, error.viaRedirect);
+    }
     if (error instanceof UnsafeUrlError) fail('source', error.message);
     if (error instanceof UrlFetchError) {
       fail(

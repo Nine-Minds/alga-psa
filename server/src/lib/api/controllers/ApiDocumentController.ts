@@ -61,11 +61,11 @@ export class ApiDocumentController extends ApiBaseController {
           await assertEntityAvailableForProduct(adapter, apiRequest.context.tenant);
           await adapter.assertCanAttach(apiRequest, input.entity_id, knex);
 
-          const file = await resolveSource({
-            source: input.source,
-            fileName: input.file_name,
-            mimeType: input.mime_type,
-          });
+          const file = await resolveSource(
+            { source: input.source, fileName: input.file_name, mimeType: input.mime_type },
+            {},
+            { knex, tenant: apiRequest.context.tenant },
+          );
 
           const document = await attachDocumentFromBytes({
             knex,

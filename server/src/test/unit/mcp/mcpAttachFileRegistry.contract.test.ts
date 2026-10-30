@@ -41,5 +41,7 @@ describe('attach-file registry contract', () => {
     expect(d.indexOf('url')).toBeLessThan(d.indexOf('base64'));
     expect(d).toMatch(/one file per call/i);
     expect((entry as any).examples).toHaveLength(2);
+    expect(d).toMatch(/allowed download hosts/i);
+    expect(d).toMatch(/FETCH_HOST_NOT_ALLOWED/);
   });
 });

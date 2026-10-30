@@ -17881,7 +17881,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/documents",
     "displayName": "Attach File to Record",
     "summary": "Attach one file to a ticket, project task, client, contact or asset",
-    "description": "Attaches ONE file to a ticket, project_task, client, contact or asset. Prefer source.type=url: give an https URL and the server downloads it (max size is the tenant storage limit). Use source.type=base64 only for small content you wrote yourself, never to relay a user's file, and file_name is then required. One file per call; make several calls for several files. In an MCP client with the attach_file tool, use that instead. Returns 201 with the stored document; 400 for a disallowed type, oversize file or unfetchable URL, 403 without permission, 404 for a missing record.",
+    "description": "Attaches ONE file to a ticket, project_task, client, contact or asset. Prefer source.type=url: give an https URL and the server downloads it (max size is the tenant storage limit). The URL host must be on the workspace's allowed download hosts (a tenant admin manages the list under Settings > MCP Server > Allowed download hosts; the ChatGPT file host is built in). If the call fails with 400 FETCH_HOST_NOT_ALLOWED, nothing was downloaded: tell the user an admin can add that host, and do not retry with other URLs. Use source.type=base64 only for small content you wrote yourself, never to relay a user's file, and file_name is then required. One file per call; make several calls for several files. In an MCP client with the attach_file tool, use that instead. Returns 201 with the stored document; 400 for a disallowed type, oversize file, unfetchable URL or a host that is not allowed (FETCH_HOST_NOT_ALLOWED), 403 without permission, 404 for a missing record.",
     "tags": [
       "Documents"
     ],
@@ -17920,7 +17920,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                 },
                 "url": {
                   "type": "string",
-                  "description": "https URL the server downloads the file from (public hosts only, port 443, at most 3 redirects, size capped at the storage limit). Signed URLs are used once and never logged."
+                  "description": "https URL the server downloads the file from. The host must be on the workspace's allowed download hosts (managed by tenant admins under Settings > MCP Server; the ChatGPT file host is built in), otherwise the call fails with 400 FETCH_HOST_NOT_ALLOWED. Port 443 only, public addresses only, at most 3 redirects (each re-checked against the allowlist), size capped at the storage limit. Signed URLs are used once and never logged."
                 }
               },
               "required": [
@@ -17987,7 +17987,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "entity_id": "00000000-0000-4000-8000-000000000001",
             "source": {
               "type": "url",
-              "url": "https://example.com/files/screenshot.png"
+              "url": "https://acme-uploads.s3.us-east-1.amazonaws.com/screenshot.png?X-Amz-Signature=example"
             }
           }
         }

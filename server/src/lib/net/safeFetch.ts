@@ -8,6 +8,10 @@
  *  - manual redirects, at most 3, each hop fully re-validated, no https -> http
  *  - 15 s to response headers, 20 s overall, hard byte cap (header + streamed)
  *  - fails closed: there is deliberately NO environment override for private ranges
+ *  - optional caller-supplied `hostPolicy` (host allowlist), checked BEFORE any DNS
+ *    lookup and again on every redirect hop. It is an extra check that sits in front of
+ *    the rules above and never replaces them. safeFetch stays tenant-agnostic: the
+ *    caller decides what the policy is.
  *
  * `lookup` and `fetch` are injected so tests run without a network.
  *
@@ -16,12 +20,34 @@
  */
 import dns from 'node:dns/promises';
 import { BlockList, isIP } from 'node:net';
+import { domainToASCII } from 'node:url';
 import { Agent, fetch as undiciFetch } from 'undici';
 
 export class UnsafeUrlError extends Error {
   constructor(message: string) {
     super(message);
     this.name = 'UnsafeUrlError';
+  }
+}
+
+/**
+ * The host is not permitted by the caller's `hostPolicy`. Carries the (normalised)
+ * hostname only: never the path or query, which may hold a signed credential.
+ */
+export class FetchHostNotAllowedError extends Error {
+  readonly hostname: string;
+  /** True when the refused host was reached through a redirect from an allowed host. */
+  readonly viaRedirect: boolean;
+
+  constructor(hostname: string, viaRedirect = false) {
+    super(
+      viaRedirect
+        ? `A redirect led to ${hostname}, which is not an allowed download host`
+        : `${hostname} is not an allowed download host`,
+    );
+    this.name = 'FetchHostNotAllowedError';
+    this.hostname = hostname;
+    this.viaRedirect = viaRedirect;
   }
 }
 
@@ -77,6 +103,13 @@ export interface SafeFetchOptions {
   totalTimeoutMs?: number;
   /** Maximum redirects followed. Default 3. */
   maxRedirects?: number;
+  /**
+   * Host allowlist predicate. Receives the lowercased, IDNA (punycode) hostname.
+   * Returning false refuses the host with `FetchHostNotAllowedError` before any DNS
+   * lookup. Applied to the first URL and to every redirect target. Build one with
+   * `createHostPolicy`.
+   */
+  hostPolicy?: (hostname: string) => boolean;
 }
 
 export interface SafeFetchResult {
@@ -172,6 +205,39 @@ export function isBlockedAddress(address: string): boolean {
   return true; // not an IP at all -> fail closed
 }
 
+// ---------------------------------------------------------------------------
+// Host allowlist matching
+// ---------------------------------------------------------------------------
+
+/** Lowercase + IDNA (punycode) form of a host or pattern label sequence; '' when invalid. */
+export function normalizeHostForMatching(host: string): string {
+  return domainToASCII(host.replace(/\.$/, '').toLowerCase());
+}
+
+/**
+ * Does `hostname` match `pattern`?
+ *  - an exact pattern matches only itself;
+ *  - `*.label.domain` matches one or more labels below `label.domain`, but not
+ *    `label.domain` itself and not `evillabel.domain`.
+ * Both sides are normalised (lowercase + IDNA) first.
+ */
+export function hostMatchesPattern(hostname: string, pattern: string): boolean {
+  const host = normalizeHostForMatching(hostname);
+  if (!host) return false;
+  if (pattern.startsWith('*.')) {
+    const base = normalizeHostForMatching(pattern.slice(2));
+    return base !== '' && host.length > base.length + 1 && host.endsWith(`.${base}`);
+  }
+  const exact = normalizeHostForMatching(pattern);
+  return exact !== '' && host === exact;
+}
+
+/** Build a `hostPolicy` predicate from a list of exact / wildcard patterns. */
+export function createHostPolicy(patterns: readonly string[]): (hostname: string) => boolean {
+  const list = [...patterns];
+  return (hostname) => list.some((pattern) => hostMatchesPattern(hostname, pattern));
+}
+
 function normalizeHostname(hostname: string): string {
   return hostname.replace(/^\[/, '').replace(/\]$/, '').replace(/\.$/, '').toLowerCase();
 }
@@ -253,7 +319,7 @@ const defaultFetch: NonNullable<SafeFetchDeps['fetch']> = async (url, init, pin)
 // URL validation
 // ---------------------------------------------------------------------------
 
-function parseAndCheckUrl(raw: string, previous?: URL): URL {
+function parseAndCheckUrl(raw: string, previous?: URL, hostPolicy?: SafeFetchOptions['hostPolicy']): URL {
   let url: URL;
   try {
     url = previous ? new URL(raw, previous) : new URL(raw);
@@ -275,6 +341,11 @@ function parseAndCheckUrl(raw: string, previous?: URL): URL {
   const host = normalizeHostname(url.hostname);
   if (!host || host === 'localhost' || host.endsWith('.localhost')) {
     throw new UnsafeUrlError('URL host resolves to a local address');
+  }
+  // Allowlist check: runs here, before resolveVettedAddress (DNS), on the first URL and on
+  // every redirect target. `url.hostname` is already lowercased and punycoded by WHATWG URL.
+  if (hostPolicy && !hostPolicy(host)) {
+    throw new FetchHostNotAllowedError(host, previous !== undefined);
   }
   return url;
 }
@@ -337,7 +408,7 @@ export async function safeFetch(
   }, totalTimeoutMs);
 
   try {
-    let url = parseAndCheckUrl(rawUrl);
+    let url = parseAndCheckUrl(rawUrl, undefined, options.hostPolicy);
 
     for (let hop = 0; ; hop += 1) {
       const pin = await resolveVettedAddress(url, lookup);
@@ -383,7 +454,7 @@ export async function safeFetch(
           if (hop >= maxRedirects) {
             throw new UrlFetchError('too_many_redirects', `Too many redirects (limit ${maxRedirects})`);
           }
-          url = parseAndCheckUrl(location, url);
+          url = parseAndCheckUrl(location, url, options.hostPolicy);
           continue;
         }
 

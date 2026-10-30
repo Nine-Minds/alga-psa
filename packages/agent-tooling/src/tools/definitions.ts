@@ -50,6 +50,9 @@ export const MCP_SERVER_INSTRUCTIONS =
   'AlgaPSA tools: search_api_registry finds endpoints, call_api_endpoint runs them, search_business_data searches records. ' +
   'To attach a file the user provided to a ticket, project task, client, contact or asset, use attach_file: ' +
   'pass the user\'s attachment as `file` (ChatGPT) or give an https `url`. ' +
+  'A `url` must be on the workspace\'s allowed download hosts; if it is refused (FETCH_HOST_NOT_ALLOWED), ' +
+  'tell the user that a workspace admin can add that host under Settings > MCP Server, and do not retry with other URLs. ' +
+  'Never ask the user for an API key. ' +
   'Never base64-encode a file you did not author yourself; content_base64 is only for small text you wrote. ' +
   'call_api_endpoint cannot send multipart/form-data, so do not use it to upload files. ' +
   'Attach one file per call; for several files make several calls.';
@@ -195,9 +198,10 @@ export function buildMetaToolDefinitions(options: BuildMetaToolOptions): MetaToo
       description:
         'Attach ONE file to a ticket, project task, client, contact or asset. Provide exactly one source: ' +
         '`file` (an attachment the user gave you in ChatGPT; it arrives as an object with a download_url), ' +
-        '`url` (an https link the server downloads, preferred for any other file), or ' +
+        '`url` (an https link the server downloads, preferred for any other file; it must be on the workspace\'s allowed download hosts), or ' +
         '`content_base64` (only small content you wrote yourself; never base64 a user-provided file). ' +
         '`file_name` is required with content_base64 and otherwise defaults from the file or URL. ' +
+        'If a url is refused with FETCH_HOST_NOT_ALLOWED, tell the user a workspace admin can add that host under Settings > MCP Server > Allowed download hosts; do not retry with other URLs and never ask for an API key. ' +
         'Call once per file. If the file did not arrive (missing or not a download link), ask the user to re-attach it from ChatGPT web or desktop.',
       inputSchema: {
         type: 'object',
@@ -214,7 +218,7 @@ export function buildMetaToolDefinitions(options: BuildMetaToolOptions): MetaToo
           file: { $ref: '#/$defs/OpenAIFile' },
           url: {
             type: 'string',
-            description: 'https URL of the file for the server to download. Use instead of `file` / `content_base64`.',
+            description: 'https URL of the file for the server to download; the host must be on the workspace\'s allowed download hosts. Use instead of `file` / `content_base64`.',
           },
           content_base64: {
             type: 'string',

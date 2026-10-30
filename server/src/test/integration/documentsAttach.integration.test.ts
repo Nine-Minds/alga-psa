@@ -168,7 +168,7 @@ afterAll(async () => {
     for (const tenant of tenants) {
       const del = async (name: string) => tenantDb(db, tenant).table(name).del().catch(() => undefined);
       for (const name of [
-        'ticket_audit_logs', 'document_associations', 'documents', 'external_files', 'tickets', 'statuses',
+        'ticket_audit_logs', 'document_fetch_hosts', 'document_associations', 'documents', 'external_files', 'tickets', 'statuses',
         'priorities', 'boards', 'contacts', 'clients', 'users',
       ]) {
         await del(name);
@@ -258,6 +258,10 @@ describe('POST /api/v1/documents', () => {
   }, HOOK_TIMEOUT);
 
   it('attaches a URL (fetch stubbed) to a contact', async () => {
+    await t('document_fetch_hosts').insert({
+      tenant: state.tenant, entry_id: uuidv4(), kind: 'custom', host_pattern: 'files.example.com',
+      created_by: state.userId,
+    });
     state.allow = true;
     state.fetchCalls = [];
     state.fetchBody = new Uint8Array(PNG);

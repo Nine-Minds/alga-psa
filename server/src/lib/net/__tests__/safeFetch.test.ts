@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  FetchHostNotAllowedError,
   UnsafeUrlError,
+  createHostPolicy,
+  hostMatchesPattern,
   UrlFetchError,
   createPinnedLookup,
   isBlockedAddress,
@@ -284,5 +287,100 @@ describe('safeFetch limits and status', () => {
     await expect(
       safeFetch('https://example.com/a', { ...opts, connectTimeoutMs: 1000, totalTimeoutMs: 30 }, { lookup: lookupPublic, fetch }),
     ).rejects.toMatchObject({ reason: 'timeout' });
+  });
+});
+
+describe('safeFetch host policy', () => {
+  const allow = createHostPolicy(['files.oaiusercontent.com', '*.files.acme.com']);
+
+  it('refuses a host outside the policy with zero lookup calls and zero fetches', async () => {
+    const lookup = vi.fn(lookupPublic);
+    const fetch = okFetch();
+    const err = await safeFetch('https://evil.example.net/x?sig=SECRET', { ...opts, hostPolicy: allow }, { lookup, fetch }).catch(
+      (e) => e,
+    );
+    expect(err).toBeInstanceOf(FetchHostNotAllowedError);
+    expect(err.hostname).toBe('evil.example.net');
+    expect(err.message).not.toContain('SECRET');
+    expect(lookup).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('fetches an allowed host', async () => {
+    const res = await safeFetch('https://files.oaiusercontent.com/a.pdf', { ...opts, hostPolicy: allow }, {
+      lookup: lookupPublic,
+      fetch: okFetch(),
+    });
+    expect(res.bytes.toString()).toBe('hello');
+  });
+
+  it('rejects an allowed host that redirects to a host outside the policy, before looking it up', async () => {
+    const lookup = vi.fn(lookupPublic);
+    const fetch = vi.fn(async () => new Response(null, { status: 302, headers: { location: 'https://attacker.example.net/c?d=1' } }));
+    const err = await safeFetch('https://files.oaiusercontent.com/a', { ...opts, hostPolicy: allow }, { lookup, fetch }).catch((e) => e);
+    expect(err).toBeInstanceOf(FetchHostNotAllowedError);
+    expect(err.viaRedirect).toBe(true);
+    expect(lookup).toHaveBeenCalledTimes(1); // only the first, allowed hop
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('follows a redirect between two allowed hosts', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 302, headers: { location: 'https://a.files.acme.com/z' } }))
+      .mockResolvedValueOnce(new Response('ok', { status: 200 }));
+    const res = await safeFetch('https://files.oaiusercontent.com/a', { ...opts, hostPolicy: allow }, { lookup: lookupPublic, fetch });
+    expect(res.bytes.toString()).toBe('ok');
+  });
+
+  it('still rejects an allowed host that resolves to a private address', async () => {
+    const fetch = okFetch();
+    const lookup = async () => [{ address: '10.0.0.7', family: 4 }];
+    await expect(
+      safeFetch('https://files.oaiusercontent.com/a', { ...opts, hostPolicy: allow }, { lookup, fetch }),
+    ).rejects.toBeInstanceOf(UnsafeUrlError);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('still enforces https-only and the IP literal rules when a policy is present', async () => {
+    const policy = createHostPolicy(['files.oaiusercontent.com']);
+    const fetch = okFetch();
+    await expect(
+      safeFetch('http://files.oaiusercontent.com/a', { ...opts, hostPolicy: policy }, { lookup: lookupPublic, fetch }),
+    ).rejects.toBeInstanceOf(UnsafeUrlError);
+    await expect(
+      safeFetch('https://127.0.0.1/a', { ...opts, hostPolicy: () => true }, { lookup: lookupPublic, fetch }),
+    ).rejects.toBeInstanceOf(UnsafeUrlError);
+  });
+
+  it('matches wildcards on one or more labels, never the base and never a look-alike', () => {
+    expect(hostMatchesPattern('a.files.acme.com', '*.files.acme.com')).toBe(true);
+    expect(hostMatchesPattern('a.b.files.acme.com', '*.files.acme.com')).toBe(true);
+    expect(hostMatchesPattern('files.acme.com', '*.files.acme.com')).toBe(false);
+    expect(hostMatchesPattern('evilfiles.acme.com', '*.files.acme.com')).toBe(false);
+    expect(hostMatchesPattern('x.files.acme.com.evil.net', '*.files.acme.com')).toBe(false);
+  });
+
+  it('exact entries match only themselves', () => {
+    expect(hostMatchesPattern('files.acme.com', 'files.acme.com')).toBe(true);
+    expect(hostMatchesPattern('a.files.acme.com', 'files.acme.com')).toBe(false);
+    expect(hostMatchesPattern('files.acme.com.evil.net', 'files.acme.com')).toBe(false);
+  });
+
+  it('normalises case, trailing dot and IDNA on both sides', () => {
+    expect(hostMatchesPattern('FILES.Acme.COM', 'files.acme.com')).toBe(true);
+    expect(hostMatchesPattern('files.acme.com.', 'files.acme.com')).toBe(true);
+    expect(hostMatchesPattern('xn--bcher-kva.example', 'bücher.example')).toBe(true);
+    expect(hostMatchesPattern('bücher.example', 'xn--bcher-kva.example')).toBe(true);
+    expect(hostMatchesPattern('a.xn--bcher-kva.example', '*.bücher.example')).toBe(true);
+  });
+
+  it('applies the policy to mixed-case and IDNA URLs through safeFetch', async () => {
+    const policy = createHostPolicy(['bücher.example']);
+    const res = await safeFetch('https://BÜCHER.example/a', { ...opts, hostPolicy: policy }, {
+      lookup: lookupPublic,
+      fetch: okFetch(),
+    });
+    expect(res.bytes.toString()).toBe('hello');
   });
 });

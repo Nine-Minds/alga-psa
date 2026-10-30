@@ -260,7 +260,7 @@ export function registerDocumentRoutes(registry: ApiOpenApiRegistry) {
             url: zOpenApi
               .string()
               .describe(
-                'https URL the server downloads the file from (public hosts only, port 443, at most 3 redirects, size capped at the storage limit). Signed URLs are used once and never logged.',
+                'https URL the server downloads the file from. The host must be on the workspace\'s allowed download hosts (managed by tenant admins under Settings > MCP Server; the ChatGPT file host is built in), otherwise the call fails with 400 FETCH_HOST_NOT_ALLOWED. Port 443 only, public addresses only, at most 3 redirects (each re-checked against the allowlist), size capped at the storage limit. Signed URLs are used once and never logged.',
               ),
           }),
           zOpenApi.object({
@@ -306,15 +306,15 @@ export function registerDocumentRoutes(registry: ApiOpenApiRegistry) {
     summary: 'Attach a file to a ticket, project task, client, contact or asset',
     description:
       'Creates a document from an https URL or from base64 and associates it with one entity. One file per call. ' +
-      'The server downloads URL sources itself (public hosts only). Validation (size, MIME type allowlist), storage, the document row, the association, previews and DOCUMENT_ASSOCIATED events run in one shared upload core; ' +
+      'The server downloads URL sources itself, only from hosts on the workspace\'s allowed download hosts list (and only public addresses); the list applies to every caller of this endpoint, not only MCP. Validation (size, MIME type allowlist), storage, the document row, the association, previews and DOCUMENT_ASSOCIATED events run in one shared upload core; ' +
       'ticket attachments also write a ticket activity entry. Requires document:create and <entity>:update. ' +
-      'Errors: 400 invalid source, unsafe or unreachable URL (a remote error status is reported in the message, never as our status), oversize, or disallowed type; 403 permission denied; 404 entity not found.',
+      'Errors: 400 invalid source, host not allowed (code FETCH_HOST_NOT_ALLOWED; nothing is fetched and no document is created), unsafe or unreachable URL (a remote error status is reported in the message, never as our status), oversize, or disallowed type; 403 permission denied; 404 entity not found.',
     tags: [tag],
     security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: AttachDocumentBody } },
     responses: {
       201: { description: 'Document created and attached.', schema: AttachedDocument },
-      400: { description: 'Validation failure: bad source, unsafe URL, fetch failure, size or type not allowed.', schema: AttachDocumentError },
+      400: { description: 'Validation failure: bad source, URL host not on the workspace allowlist (code FETCH_HOST_NOT_ALLOWED), unsafe URL, fetch failure, size or type not allowed.', schema: AttachDocumentError },
       401: { description: 'API key missing/invalid.', schema: AttachDocumentError },
       403: { description: 'Permission denied (document:create or the entity update permission).', schema: AttachDocumentError },
       404: { description: 'Entity not found.', schema: AttachDocumentError },

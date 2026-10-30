@@ -105,6 +105,13 @@ describe('attach_file tool definition', () => {
     expect(MCP_SERVER_INSTRUCTIONS).toMatch(/attach_file/);
     expect(MCP_SERVER_INSTRUCTIONS).toMatch(/multipart/);
   });
+
+  it('instructions and tool copy explain the download-host allowlist', () => {
+    expect(MCP_SERVER_INSTRUCTIONS).toMatch(/FETCH_HOST_NOT_ALLOWED/);
+    expect(MCP_SERVER_INSTRUCTIONS).toMatch(/allowed download hosts/i);
+    expect(MCP_SERVER_INSTRUCTIONS).toMatch(/Settings > MCP Server/);
+    expect(tool.description).toMatch(/allowed download hosts/i);
+  });
 });
 
 describe('redactToolArguments', () => {
