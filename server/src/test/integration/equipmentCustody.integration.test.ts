@@ -229,7 +229,8 @@ const intake = (fx: Fx, over: Record<string, unknown> = {}) => ({
   bin: 'Shelf B3',
   next_action_party: 'vendor',
   next_action_note: 'waiting on vendor, follow up in 5 days',
-  follow_up_on: '2099-10-29', // far future: the default intake must never become overdue as wall-clock time passes
+  // Far future so the default intake is never overdue, whatever day the suite runs.
+  follow_up_on: '2099-10-29',
   accessories: [{ label: 'Power adapter', quantity: 1 }],
   ...over,
 });

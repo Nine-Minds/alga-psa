@@ -1,7 +1,9 @@
-import type { CoManagedSharedWorkSummary, CoManagedDisplayReference } from '@alga-psa/co-managed';
+import type { CoManagedSharedWorkSummary, CoManagedDisplayReference, CoManagedTicketEditField, CoManagedTicketEditPatch,
+  CoManagedTicketEditRequest } from '@alga-psa/co-managed';
+import { toSharedEditPatch, sharedEditKey } from './sharedTicketMapping';
 import { nativeTicketDataSource } from '@alga-psa/tickets/lib/nativeTicketDataSource';
 import {
-  composeTicketDataSource, NO_TICKET_CAPABILITIES,
+  composeTicketDataSource, NO_TICKET_CAPABILITIES, TICKET_SCREEN_FIELDS,
   type TicketDataSource, type TicketDataSourceOverrides,
 } from '@alga-psa/tickets/lib/ticketDataSource';
 
@@ -11,10 +13,12 @@ import {
  * `getCoManagedSharedWorkSummary` result: it never reaches a native
  * ticket-id action (which would read the technician's own tenant).
  *
- * Read-only (`screen.readOnly`), every optional section absent
+ * Read-only (`screen.readOnly`) unless an {@link CoManagedSharedTicketEdit}
+ * capability is injected; every optional section is absent
  * (`NO_TICKET_CAPABILITIES`). Data the summary does not carry (description,
  * people, comments, documents, ...) is the empty shape the seam allows;
- * conversations arrive with L4a. Any method that would write throws.
+ * conversations arrive with L4a. Any method that would write throws, except the
+ * ticket update methods, which only ever carry the allowlisted shared edit.
  */
 export class CoManagedReadOnlyTicketError extends Error {
   constructor(group: string, method: string) {
@@ -57,6 +61,61 @@ export function sharedTicketOptions(summary: CoManagedSharedWorkSummary) {
   };
 }
 
+/** The result the edit action reports; mirrored here so this module stays free of server-action imports. */
+export type SharedTicketEditOutcome = { ok: true } | { ok: false; code: string };
+
+/**
+ * The write path of a shared ticket: the fields the caller may edit, their
+ * per-field optimistic baselines, and the save command (the
+ * `saveSharedTicketEditAction`, which runs the native writer with collaborator
+ * guards). The data source owns no authority; it only translates.
+ */
+export interface CoManagedSharedTicketEdit {
+  editableFields: readonly CoManagedTicketEditField[];
+  baselines: CoManagedTicketEditPatch;
+  save(request: CoManagedTicketEditRequest): Promise<SharedTicketEditOutcome>;
+  newOperationId(): string;
+  /** Called after a committed save so the screen's baselines follow the saved values. */
+  onSaved?(patch: CoManagedTicketEditPatch): void;
+}
+
+export class CoManagedSharedTicketEditError extends Error {
+  constructor(public readonly code: string) {
+    super(`Shared ticket edit was not saved (${code})`);
+    this.name = 'CoManagedSharedTicketEditError';
+  }
+}
+
+/**
+ * Builds the `updateTicket*` implementation for a shared ticket. A change the
+ * shared model cannot write is refused, never dropped. The operation id is kept
+ * per intended edit (baseline + patch), so a retry after `unknownOutcome` replays
+ * the exact request and cannot apply twice; any other outcome starts a new edit.
+ */
+function sharedUpdate(edit: CoManagedSharedTicketEdit, ticketId: string) {
+  const pending = new Map<string, string>();
+  return async (id: string, changes: Record<string, unknown>) => {
+    if (id !== ticketId) throw new CoManagedReadOnlyTicketError('ticket', 'updateTicket');
+    const mapped = toSharedEditPatch(changes, edit.editableFields);
+    if (!mapped.ok) throw new CoManagedSharedTicketEditError(mapped.code);
+    const patch = mapped.patch;
+    const expected: Record<string, unknown> = {};
+    for (const field of Object.keys(patch)) expected[field] = (edit.baselines as Record<string, unknown>)[field] ?? null;
+    const key = sharedEditKey(expected as CoManagedTicketEditPatch, patch);
+    const operationId = pending.get(key) ?? edit.newOperationId();
+    const result = await edit.save({ operationId, expected: expected as CoManagedTicketEditPatch, patch });
+    if (result.ok) {
+      pending.delete(key);
+      Object.assign(edit.baselines, patch);
+      edit.onSaved?.(patch);
+      return 'success' as const;
+    }
+    // Ambiguous commit: keep the request id and baseline for an exact retry, never claim a rollback.
+    if (result.code === 'unknownOutcome') pending.set(key, operationId); else pending.delete(key);
+    throw new CoManagedSharedTicketEditError(result.code);
+  };
+}
+
 type Group = Record<string, (...args: any[]) => unknown>;
 const idKeyedGroups = ['ticket', 'comments', 'people', 'resources', 'bundles', 'checklist', 'externalLinks', 'activity', 'email', 'materials', 'tiles', 'tags', 'avatars', 'options'] as const;
 
@@ -68,14 +127,21 @@ function group(name: (typeof idKeyedGroups)[number], reads: Group = {}): Group {
 const none = async () => [];
 const nothing = async () => null;
 
-export function createCoManagedSharedTicketDataSource(summary: CoManagedSharedWorkSummary, backHref: string): TicketDataSource {
+export function createCoManagedSharedTicketDataSource(summary: CoManagedSharedWorkSummary, backHref: string, edit?: CoManagedSharedTicketEdit): TicketDataSource {
   const record = sharedTicketRecord(summary);
+  const update = edit ? sharedUpdate(edit, record.ticket_id) : undefined;
+  // LEVERAGE: friction shared-ticket-readonly — `readOnly` conflates "no field edits" with "no composer/reply"; an editable shared screen has to unfreeze fields one by one.
+  const screen = edit
+    ? { readOnly: false, frozenFields: TICKET_SCREEN_FIELDS.filter(field => !(edit.editableFields as readonly string[]).includes(field)), backHref,
+        refresh: () => { if (typeof window !== 'undefined') window.location.reload(); } }
+    : { readOnly: true, backHref, refresh: () => { if (typeof window !== 'undefined') window.location.reload(); } };
   const overrides = {
     kind: 'co-managed-shared',
     boundTicketId: summary.resource.id,
     capabilities: NO_TICKET_CAPABILITIES,
-    screen: { readOnly: true, backHref, refresh: () => { if (typeof window !== 'undefined') window.location.reload(); } },
+    screen,
     ticket: group('ticket', {
+      ...(update ? { updateTicket: update, updateTicketWithCache: update, updateTicketWithCacheForCurrentUser: update } : {}),
       getTicketById: async (id: string) => id === record.ticket_id ? record : null,
       findBoardById: async () => null, getRecurringSourceForTicket: nothing, getScheduledHoursForTicket: async () => 0,
       getTicketAppointmentRequests: none, getAdjacentTicketIds: async () => ({ previous: null, next: null }),
