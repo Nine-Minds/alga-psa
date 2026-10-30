@@ -55,6 +55,11 @@
       "types": "./src/actions/searchActionShared.ts",
       "import": "./dist/actions/searchActionShared.mjs",
       "require": "./dist/actions/searchActionShared.js"
+    },
+    "./projectSearchAccess": {
+      "types": "./src/projectSearchAccess.ts",
+      "import": "./dist/projectSearchAccess.mjs",
+      "require": "./dist/projectSearchAccess.js"
     }
   },
   "scripts": {
