@@ -515,6 +515,14 @@ export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: str
       + 'content hash differs, so re-pointing client_id would break its immutability; it stays pinned to the original client.',
   },
   {
+    table: 'co_managed_project_task_references',
+    reason:
+      "A copy of the customer relationship's sponsor_client_id, which lives in the customer's workspace and "
+      + 'a merge here cannot re-stamp. Participation and queue lookups match the reference on that pair, so '
+      + 'moving the row would detach it from its relationship. A live relationship already refuses the merge '
+      + '(SOURCE_HAS_CO_MANAGEMENT); what remains afterwards is retained history pinned to the original client.',
+  },
+  {
     table: 'co_managed_ticket_references',
     reason:
       'MSP-side routing row for a customer\'s shared ticket. Its client_id mirrors the co-management '

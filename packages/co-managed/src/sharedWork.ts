@@ -135,7 +135,7 @@ export async function withCoManagedAuthenticatedSharedWork<T>(db: Knex, input: C
 }
 
 export async function withCoManagedSharedWork<T, Action extends 'read' | 'update' = 'read' | 'update'>(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource,
-  action: Action, command: (context: CoManagedSharedWorkContext<Action>) => Promise<T>): Promise<T> {
+  action: Action, command: (context: CoManagedSharedWorkContext<Action> & { assertCurrent(): Promise<void> }) => Promise<T>): Promise<T> {
   const actor = snapshotCoManagedSessionActor(inputActor);
   return withCoManagedSharedPrincipal(db, actor, inputResource, action,
     context => command({ ...context, sessionId: actor.sessionId }));

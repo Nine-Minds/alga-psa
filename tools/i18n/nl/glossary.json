@@ -2219,6 +2219,7 @@
   "identicalAllowlist": {
     "exact": [
       "Stopwatch",
+      "{{field}}: {{from}} → {{to}}",
       "{{from}} → {{to}}",
       "RMA {{id}}",
       "({{count}} ticket)",

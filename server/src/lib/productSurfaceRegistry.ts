@@ -84,6 +84,13 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
   },
   {
+    // Sponsor-only Shared Tasks queue and the shared project / task screens for projects customers share with the
+    // sponsor. Only a PSA sponsor has them; the capability gate in each page decides whether a PSA tenant sees them.
+    group: 'msp_co_managed_shared_projects',
+    staticPrefixes: ['/msp/co-management/tasks', '/msp/co-management/projects'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
+  },
+  {
     // Customer-owned Google / Microsoft provider setup. The page itself is
     // gated by the co-managed capability ('serves'), so a co_managed workspace
     // reaches this one capability-scoped page without the wider integrations

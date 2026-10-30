@@ -7,6 +7,7 @@ import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { ProjectListFilters } from '@alga-psa/projects/components/Projects';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
+import CoManagedProjectTaskQueueLink from '@/components/co-managed/CoManagedProjectTaskQueueLink';
 import { getSmartSearchAvailability } from '@enterprise/lib/actions/smartSearchActions';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -127,6 +128,8 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   }
 
   return (
+    <>
+    <CoManagedProjectTaskQueueLink />
     <Projects
       initialProjects={projectsData}
       clients={clientsData}
@@ -135,6 +138,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
       initialAllUniqueTags={allProjectTags}
       smartSearchAvailable={smartSearchAvailable}
     />
+    </>
   );
 }
 
