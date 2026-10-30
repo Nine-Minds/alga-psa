@@ -13,7 +13,7 @@ export const getSharedTicketAssignmentAction = withAuth(async (user, { tenant },
   return getCoManagedTicketAssignment(knex, actor, resource);
 });
 export const listSharedTicketAssigneesAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, kind: 'user' | 'team', afterId?: string) => {
-  await requireCapabilityForAction('co-managed', tenant, 'serves');
+  await requireCapabilityForAction('co-managed', tenant, 'admits');
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
   return listCoManagedTicketAssignees(knex, actor, resource, kind, afterId);
 });
