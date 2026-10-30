@@ -1153,6 +1153,1200 @@
       "skip": {
         "jsonata": "set-valued paths are not representable in the workflow condition adapter"
       }
+    },
+    {
+      "id": "scalar-not-contains",
+      "description": "not_contains is exactly NOT contains: a missing, empty or non-string value satisfies it, a present string that matches does not, matching is case-sensitive",
+      "covers": {
+        "operators": [
+          "not_contains"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_contains",
+        "value": "ell"
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "hello"
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "world"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        },
+        {
+          "id": "empty-string",
+          "record": {
+            "s": ""
+          },
+          "expected": true
+        },
+        {
+          "id": "case-differs",
+          "record": {
+            "s": "HELLO"
+          },
+          "expected": true
+        },
+        {
+          "id": "number",
+          "record": {
+            "s": 5
+          },
+          "expected": true
+        },
+        {
+          "id": "boolean",
+          "record": {
+            "s": true
+          },
+          "expected": true
+        },
+        {
+          "id": "object",
+          "record": {
+            "s": {
+              "a": 1
+            }
+          },
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-contains-empty-needle",
+      "description": "every string contains '', so not_contains '' is false for any present string and true for a missing or non-string value",
+      "covers": {
+        "operators": [
+          "not_contains"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_contains",
+        "value": ""
+      },
+      "rows": [
+        {
+          "id": "string",
+          "record": {
+            "s": "hello"
+          },
+          "expected": false
+        },
+        {
+          "id": "empty-string",
+          "record": {
+            "s": ""
+          },
+          "expected": false
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        },
+        {
+          "id": "number",
+          "record": {
+            "s": 5
+          },
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-contains-percent",
+      "description": "the needle is literal: '%' is not a wildcard or escape",
+      "covers": {
+        "operators": [
+          "not_contains"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_contains",
+        "value": "%"
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "a%b"
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "ab"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-contains-underscore",
+      "description": "the needle is literal: '_' is not a wildcard or escape",
+      "covers": {
+        "operators": [
+          "not_contains"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_contains",
+        "value": "_"
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "a_b"
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "ab"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-contains-backslash",
+      "description": "the needle is literal: '\\' is not a wildcard or escape",
+      "covers": {
+        "operators": [
+          "not_contains"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_contains",
+        "value": "\\"
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "a\\b"
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "ab"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "hop-not-contains",
+      "description": "not_contains across a many-relation hop is NOT EXISTS (a related row that contains the needle): no related rows satisfies it, one matching row among several does not",
+      "covers": {
+        "operators": [
+          "not_contains"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "lines.label",
+        "operator": "not_contains",
+        "value": "ell"
+      },
+      "rows": [
+        {
+          "id": "no-related-rows",
+          "record": {},
+          "expected": true
+        },
+        {
+          "id": "empty-related-rows",
+          "record": {
+            "lines": []
+          },
+          "expected": true
+        },
+        {
+          "id": "every-row-fails",
+          "record": {
+            "lines": [
+              {
+                "label": "world"
+              },
+              {
+                "label": "earth"
+              }
+            ]
+          },
+          "expected": true
+        },
+        {
+          "id": "related-row-without-value",
+          "record": {
+            "lines": [
+              {}
+            ]
+          },
+          "expected": true
+        },
+        {
+          "id": "every-row-matches",
+          "record": {
+            "lines": [
+              {
+                "label": "hello"
+              },
+              {
+                "label": "hello"
+              }
+            ]
+          },
+          "expected": false
+        },
+        {
+          "id": "mixed-rows",
+          "record": {
+            "lines": [
+              {
+                "label": "world"
+              },
+              {
+                "label": "hello"
+              }
+            ]
+          },
+          "expected": false
+        },
+        {
+          "id": "single-matching-row",
+          "record": {
+            "lines": [
+              {
+                "label": "hello"
+              }
+            ]
+          },
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-starts-with",
+      "description": "not_starts_with is exactly NOT starts_with: a missing, empty or non-string value satisfies it, a present string that matches does not, matching is case-sensitive",
+      "covers": {
+        "operators": [
+          "not_starts_with"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_starts_with",
+        "value": "he"
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "hello"
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "world"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        },
+        {
+          "id": "empty-string",
+          "record": {
+            "s": ""
+          },
+          "expected": true
+        },
+        {
+          "id": "case-differs",
+          "record": {
+            "s": "HELLO"
+          },
+          "expected": true
+        },
+        {
+          "id": "number",
+          "record": {
+            "s": 5
+          },
+          "expected": true
+        },
+        {
+          "id": "boolean",
+          "record": {
+            "s": true
+          },
+          "expected": true
+        },
+        {
+          "id": "object",
+          "record": {
+            "s": {
+              "a": 1
+            }
+          },
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-starts-with-empty-needle",
+      "description": "every string starts with '', so not_starts_with '' is false for any present string and true for a missing or non-string value",
+      "covers": {
+        "operators": [
+          "not_starts_with"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_starts_with",
+        "value": ""
+      },
+      "rows": [
+        {
+          "id": "string",
+          "record": {
+            "s": "hello"
+          },
+          "expected": false
+        },
+        {
+          "id": "empty-string",
+          "record": {
+            "s": ""
+          },
+          "expected": false
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        },
+        {
+          "id": "number",
+          "record": {
+            "s": 5
+          },
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-starts-with-percent",
+      "description": "the needle is literal: '%' is not a wildcard or escape",
+      "covers": {
+        "operators": [
+          "not_starts_with"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_starts_with",
+        "value": "%"
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "%b"
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "ab"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-starts-with-underscore",
+      "description": "the needle is literal: '_' is not a wildcard or escape",
+      "covers": {
+        "operators": [
+          "not_starts_with"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_starts_with",
+        "value": "_"
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "_b"
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "ab"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-starts-with-backslash",
+      "description": "the needle is literal: '\\' is not a wildcard or escape",
+      "covers": {
+        "operators": [
+          "not_starts_with"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_starts_with",
+        "value": "\\"
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "\\b"
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "ab"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "hop-not-starts-with",
+      "description": "not_starts_with across a many-relation hop is NOT EXISTS (a related row that starts with the needle): no related rows satisfies it, one matching row among several does not",
+      "covers": {
+        "operators": [
+          "not_starts_with"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "lines.label",
+        "operator": "not_starts_with",
+        "value": "he"
+      },
+      "rows": [
+        {
+          "id": "no-related-rows",
+          "record": {},
+          "expected": true
+        },
+        {
+          "id": "empty-related-rows",
+          "record": {
+            "lines": []
+          },
+          "expected": true
+        },
+        {
+          "id": "every-row-fails",
+          "record": {
+            "lines": [
+              {
+                "label": "world"
+              },
+              {
+                "label": "earth"
+              }
+            ]
+          },
+          "expected": true
+        },
+        {
+          "id": "related-row-without-value",
+          "record": {
+            "lines": [
+              {}
+            ]
+          },
+          "expected": true
+        },
+        {
+          "id": "every-row-matches",
+          "record": {
+            "lines": [
+              {
+                "label": "hello"
+              },
+              {
+                "label": "hello"
+              }
+            ]
+          },
+          "expected": false
+        },
+        {
+          "id": "mixed-rows",
+          "record": {
+            "lines": [
+              {
+                "label": "world"
+              },
+              {
+                "label": "hello"
+              }
+            ]
+          },
+          "expected": false
+        },
+        {
+          "id": "single-matching-row",
+          "record": {
+            "lines": [
+              {
+                "label": "hello"
+              }
+            ]
+          },
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-ends-with",
+      "description": "not_ends_with is exactly NOT ends_with: a missing, empty or non-string value satisfies it, a present string that matches does not, matching is case-sensitive",
+      "covers": {
+        "operators": [
+          "not_ends_with"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_ends_with",
+        "value": "lo"
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "hello"
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "world"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        },
+        {
+          "id": "empty-string",
+          "record": {
+            "s": ""
+          },
+          "expected": true
+        },
+        {
+          "id": "case-differs",
+          "record": {
+            "s": "HELLO"
+          },
+          "expected": true
+        },
+        {
+          "id": "number",
+          "record": {
+            "s": 5
+          },
+          "expected": true
+        },
+        {
+          "id": "boolean",
+          "record": {
+            "s": true
+          },
+          "expected": true
+        },
+        {
+          "id": "object",
+          "record": {
+            "s": {
+              "a": 1
+            }
+          },
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-ends-with-empty-needle",
+      "description": "every string ends with '', so not_ends_with '' is false for any present string and true for a missing or non-string value",
+      "covers": {
+        "operators": [
+          "not_ends_with"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_ends_with",
+        "value": ""
+      },
+      "rows": [
+        {
+          "id": "string",
+          "record": {
+            "s": "hello"
+          },
+          "expected": false
+        },
+        {
+          "id": "empty-string",
+          "record": {
+            "s": ""
+          },
+          "expected": false
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        },
+        {
+          "id": "number",
+          "record": {
+            "s": 5
+          },
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-ends-with-percent",
+      "description": "the needle is literal: '%' is not a wildcard or escape",
+      "covers": {
+        "operators": [
+          "not_ends_with"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_ends_with",
+        "value": "%"
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "a%"
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "ab"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-ends-with-underscore",
+      "description": "the needle is literal: '_' is not a wildcard or escape",
+      "covers": {
+        "operators": [
+          "not_ends_with"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_ends_with",
+        "value": "_"
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "a_"
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "ab"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "scalar-not-ends-with-backslash",
+      "description": "the needle is literal: '\\' is not a wildcard or escape",
+      "covers": {
+        "operators": [
+          "not_ends_with"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "s",
+        "operator": "not_ends_with",
+        "value": "\\"
+      },
+      "rows": [
+        {
+          "id": "match",
+          "record": {
+            "s": "a\\"
+          },
+          "expected": false
+        },
+        {
+          "id": "non-match",
+          "record": {
+            "s": "ab"
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "hop-not-ends-with",
+      "description": "not_ends_with across a many-relation hop is NOT EXISTS (a related row that ends with the needle): no related rows satisfies it, one matching row among several does not",
+      "covers": {
+        "operators": [
+          "not_ends_with"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "lines.label",
+        "operator": "not_ends_with",
+        "value": "lo"
+      },
+      "rows": [
+        {
+          "id": "no-related-rows",
+          "record": {},
+          "expected": true
+        },
+        {
+          "id": "empty-related-rows",
+          "record": {
+            "lines": []
+          },
+          "expected": true
+        },
+        {
+          "id": "every-row-fails",
+          "record": {
+            "lines": [
+              {
+                "label": "world"
+              },
+              {
+                "label": "earth"
+              }
+            ]
+          },
+          "expected": true
+        },
+        {
+          "id": "related-row-without-value",
+          "record": {
+            "lines": [
+              {}
+            ]
+          },
+          "expected": true
+        },
+        {
+          "id": "every-row-matches",
+          "record": {
+            "lines": [
+              {
+                "label": "hello"
+              },
+              {
+                "label": "hello"
+              }
+            ]
+          },
+          "expected": false
+        },
+        {
+          "id": "mixed-rows",
+          "record": {
+            "lines": [
+              {
+                "label": "world"
+              },
+              {
+                "label": "hello"
+              }
+            ]
+          },
+          "expected": false
+        },
+        {
+          "id": "single-matching-row",
+          "record": {
+            "lines": [
+              {
+                "label": "hello"
+              }
+            ]
+          },
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "rmm-details-not-contains-sentinel-agent",
+      "description": "RMM alert rule: details not_contains 'Sentinel Agent' (alert rules skip alerts raised by the Sentinel Agent)",
+      "covers": {
+        "operators": [
+          "not_contains"
+        ],
+        "pathKind": "scalar"
+      },
+      "predicate": {
+        "path": "details",
+        "operator": "not_contains",
+        "value": "Sentinel Agent"
+      },
+      "rows": [
+        {
+          "id": "sentinel",
+          "record": {
+            "details": "Sentinel Agent is offline"
+          },
+          "expected": false
+        },
+        {
+          "id": "sentinel-mid",
+          "record": {
+            "details": "Host: Sentinel Agent stopped responding"
+          },
+          "expected": false
+        },
+        {
+          "id": "other-agent",
+          "record": {
+            "details": "Datto RMM agent is offline"
+          },
+          "expected": true
+        },
+        {
+          "id": "case-differs",
+          "record": {
+            "details": "sentinel agent is offline"
+          },
+          "expected": true
+        },
+        {
+          "id": "empty",
+          "record": {
+            "details": ""
+          },
+          "expected": true
+        },
+        {
+          "id": "missing",
+          "record": {},
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "group-and-not-contains",
+      "description": "not_contains inside an and group: a missing value satisfies it, the other clause still has to hold",
+      "covers": {
+        "operators": [
+          "not_contains"
+        ],
+        "pathKind": "group"
+      },
+      "predicate": {
+        "join": "and",
+        "clauses": [
+          {
+            "path": "s",
+            "operator": "not_contains",
+            "value": "bad"
+          },
+          {
+            "path": "n",
+            "operator": "gt",
+            "value": 1
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": "both",
+          "record": {
+            "s": "good",
+            "n": 2
+          },
+          "expected": true
+        },
+        {
+          "id": "text-matches",
+          "record": {
+            "s": "a bad day",
+            "n": 2
+          },
+          "expected": false
+        },
+        {
+          "id": "missing-text",
+          "record": {
+            "n": 2
+          },
+          "expected": true
+        },
+        {
+          "id": "other-clause-fails",
+          "record": {
+            "s": "good",
+            "n": 1
+          },
+          "expected": false
+        }
+      ]
+    },
+    {
+      "id": "group-or-not-starts-with",
+      "description": "not_starts_with inside an or group",
+      "covers": {
+        "operators": [
+          "not_starts_with"
+        ],
+        "pathKind": "group"
+      },
+      "predicate": {
+        "join": "or",
+        "clauses": [
+          {
+            "path": "s",
+            "operator": "not_starts_with",
+            "value": "RE:"
+          },
+          {
+            "path": "n",
+            "operator": "gt",
+            "value": 5
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": "prefix-only",
+          "record": {
+            "s": "RE: help",
+            "n": 1
+          },
+          "expected": false
+        },
+        {
+          "id": "prefix-and-big-n",
+          "record": {
+            "s": "RE: help",
+            "n": 9
+          },
+          "expected": true
+        },
+        {
+          "id": "no-prefix",
+          "record": {
+            "s": "help",
+            "n": 1
+          },
+          "expected": true
+        },
+        {
+          "id": "missing-text",
+          "record": {
+            "n": 1
+          },
+          "expected": true
+        }
+      ]
+    },
+    {
+      "id": "group-nested-not-ends-with",
+      "description": "negative text operators nested under and/or, mixed with a positive text operator",
+      "covers": {
+        "operators": [
+          "not_ends_with",
+          "not_contains"
+        ],
+        "pathKind": "group"
+      },
+      "predicate": {
+        "join": "and",
+        "clauses": [
+          {
+            "join": "or",
+            "clauses": [
+              {
+                "path": "s",
+                "operator": "not_ends_with",
+                "value": ".tmp"
+              },
+              {
+                "path": "n",
+                "operator": "lt",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "path": "details",
+            "operator": "not_contains",
+            "value": "Sentinel Agent"
+          }
+        ]
+      },
+      "rows": [
+        {
+          "id": "clean",
+          "record": {
+            "s": "a.txt",
+            "details": "ok"
+          },
+          "expected": true
+        },
+        {
+          "id": "tmp-file",
+          "record": {
+            "s": "a.tmp",
+            "details": "ok"
+          },
+          "expected": false
+        },
+        {
+          "id": "tmp-file-negative-n",
+          "record": {
+            "s": "a.tmp",
+            "n": -1,
+            "details": "ok"
+          },
+          "expected": true
+        },
+        {
+          "id": "sentinel",
+          "record": {
+            "s": "a.txt",
+            "details": "Sentinel Agent"
+          },
+          "expected": false
+        },
+        {
+          "id": "all-missing",
+          "record": {},
+          "expected": true
+        }
+      ]
     }
   ]
 }
