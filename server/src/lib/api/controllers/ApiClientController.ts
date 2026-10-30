@@ -116,7 +116,7 @@ export class ApiClientController extends ApiBaseController {
             filters = parsed;
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }
