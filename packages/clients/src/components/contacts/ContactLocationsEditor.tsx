@@ -9,6 +9,7 @@ import type {
 import { CONTACT_WORK_ARRANGEMENTS } from '@alga-psa/types';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { Text } from '@radix-ui/themes';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getClientLocations } from '../../actions/clientLocationActions';
@@ -202,16 +203,20 @@ const ContactLocationsEditor: React.FC<ContactLocationsEditorProps> = ({
                     </Text>
                   )}
                   {isSelected && (
-                    <label className="flex items-center gap-1 text-xs text-gray-600 ml-2">
-                      <input
-                        id={`${id}-primary-${option.location_id}`}
-                        type="radio"
-                        name={`${id}-primary`}
-                        checked={primaryId === option.location_id}
-                        onChange={() => setPrimary(option.location_id)}
-                      />
-                      {t('contactLocations.primary', { defaultValue: 'Primary' })}
-                    </label>
+                    <RadioGroup
+                      id={`${id}-primary-${option.location_id}`}
+                      name={`${id}-primary`}
+                      value={primaryId === option.location_id ? option.location_id : undefined}
+                      onChange={() => setPrimary(option.location_id)}
+                      options={[{
+                        value: option.location_id,
+                        label: t('contactLocations.primary', { defaultValue: 'Primary' }),
+                      }]}
+                      orientation="horizontal"
+                      className="gap-2 ml-2"
+                      size="sm"
+                      disabled={disabled}
+                    />
                   )}
                 </div>
               );
