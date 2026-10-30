@@ -645,18 +645,21 @@ describe('Profitability Reporting Integration', () => {
       .where({ ticket_id: ticketId, billed_invoice_id: invoiceId })
       .first('ticket_material_id', 'service_id');
     expect(material).toBeDefined();
-    const movementIds = [uuidv4(), uuidv4()];
     const before = await getProfitabilitySummary(RANGE);
+    // stock_movements is append-only (DELETE is blocked) and tests run shuffled,
+    // so the movements live in a transaction that is rolled back afterwards.
+    const trx = await db.transaction();
+    holder.db = trx;
     try {
-      await table('stock_movements').insert([
+      await tenantDb(trx, tenantId).table('stock_movements').insert([
         {
-          tenant: tenantId, movement_id: movementIds[0], movement_type: 'consume',
+          tenant: tenantId, movement_id: uuidv4(), movement_type: 'consume',
           service_id: material.service_id, quantity: 3, cogs_cost: 9000,
           cost_currency: before.currencyCode, source_doc_type: 'ticket_material',
           source_doc_id: material.ticket_material_id, performed_by: userId,
         },
         {
-          tenant: tenantId, movement_id: movementIds[1], movement_type: 'return_restock',
+          tenant: tenantId, movement_id: uuidv4(), movement_type: 'return_restock',
           service_id: material.service_id, quantity: 1, cogs_cost: -3000,
           cost_currency: before.currencyCode, source_doc_type: 'ticket_material',
           source_doc_id: material.ticket_material_id, performed_by: userId,
@@ -669,7 +672,8 @@ describe('Profitability Reporting Integration', () => {
       expect(tickets.find((ticket) => ticket.ticketId === ticketId)?.materialCost)
         .toBe(EXPECTED_MATERIAL_COST - BILLED_MATERIAL_COST + 6000);
     } finally {
-      await table('stock_movements').whereIn('movement_id', movementIds).delete();
+      holder.db = db;
+      await trx.rollback();
     }
   });
 
