@@ -69,11 +69,11 @@ now implemented, so nothing in features.json is skipped:
   work-arrangement select and the location multi-select with a primary marker, `contactForm` the
   one-primary rule and the omitted/[]/replace diff.
 
-### Tests still at `implemented: false` (45)
+### Tests still at `implemented: false` (43)
 
 They are the DB-backed and render-heavy halves of the groups, not gaps in the shipped behaviour;
 each one needs a live Postgres (REST routes, CSV import, the search indexer, portal actions,
-`TicketModel.createTicket`'s write) or a full component mount (the bento tile, the edit drawer, the
+`TicketModel.createTicket`'s write) or a full component mount (the bento tile, the
 merge Contacts step, `ClientLocations`). The decisions those tests describe are covered at the seam
 by the unit tests that did land: `shared/models/contactLocation.test.ts` (resolver, nine cases),
 `shared/models/ticketLocationAutofill.test.ts` (the undefined/null/explicit contract and the
@@ -83,5 +83,36 @@ guard), `packages/clients/src/models/contactLocation.test.ts` (replace invariant
 `ChecklistRuleMatchers.test.tsx` (both location paths), `WhereTagFilter.test.tsx` (both toolbar
 controls), `ticketWhereUrl` / `ticketWhereStorage` (URL and saved-view round trip),
 `clientMergeEngine.test.ts` (engine and dry run), and the mobile `contactForm` / `ContactFormModal`
-/ `api/contacts` suites. Writing the remaining 45 means standing up fixtures in the integration
+/ `api/contacts` suites. Writing the remaining 43 means standing up fixtures in the integration
 lane; it is a follow-up, not a behaviour gap.
+
+## 2026-10-30: second review round
+
+- **Portal typecheck (blocking).** `ClientUserDetails` read `locations` / `work_arrangement` off
+  `@shared/interfaces/user.interfaces`' `IUser`, which declares neither, so
+  `@alga-psa/client-portal` failed `tsc --noEmit` (7× TS2339) and took the server project with it.
+  `getClientUserById` now returns a locally declared `ClientUserWithLocations` (IUser plus the two
+  read-only contact facts) and the component's state uses it. No index signature, no cast.
+- **`work_arrangement` could never be cleared.** `contactActions` collapsed `null` to `undefined`
+  on the update action and both CSV branches, and `ContactModel.updateContact` skips only
+  `undefined` — so the editor's "Not set" and a mapped-but-blank CSV cell were silent no-ops while
+  REST PUT cleared fine. Both paths now pass `null` through (`undefined` still means unchanged),
+  with `contactActions.workArrangement.test.ts` and two CSV import cases covering it.
+- **F012 was dead code.** `getContactLocationCount` shipped unused; the confirmation counted the
+  links in local state, which is right when they were loaded but skipped the warning entirely for a
+  contact handed to the form without `locations` — and the save dropped them anyway. The form now
+  falls back to the stored count, so **T029/T030 land** (`ContactDetailsEdit.clientChange.test.tsx`,
+  4 new cases).
+- **FR-C3 in both layouts.** The one-click "Use contact's location" existed only in
+  `TicketBentoLayout`; `TicketProperties` showed the line and left the operator to re-pick. Added
+  there too (skipped when the field is frozen), with a test that holds both files to the same rule.
+- **Operator line comment.** The "N contacts" counter now also rides the client page's bento
+  Locations tile: `ClientPulseLocation.contact_count` from one batched `getContactCountsByLocation`,
+  rendered as a chip (absent at zero), new `clientCommandCenter.locations.contactCount` plural in
+  all eleven locales.
+- **Merge drift.** Merged `origin/main` (dc46a3315d); golden manifest count resolved to 579 (578 on
+  main + `contact_locations`). migration-lint is **clean without restamping**: main's R6 now refuses
+  an earlier stamp only on a same-table conflict or past a 14-day floor, and the three migrations
+  hit neither. The three OpenAPI conflicts were resolved "ours" and then regenerated with
+  `npm run generate:artifacts`, so the committed spec is the union again and `artifact-drift` is
+  clean.

@@ -259,7 +259,7 @@
     "featureIds": [
       "F019"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Edit drawer: changing the client of a contact with 2 links shows a confirmation naming 2 links; cancel keeps the old client; confirm saves and the tile shows no locations"
   },
   {
@@ -268,7 +268,7 @@
     "featureIds": [
       "F019"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Edit drawer: changing the client of a contact with no links shows no confirmation"
   },
   {
