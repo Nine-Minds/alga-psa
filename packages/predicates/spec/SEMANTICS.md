@@ -60,6 +60,9 @@ paths only, not on set-valued paths. Across a relation hop they mean `NOT EXISTS
 positive test)`: no related rows is true, and a mixed hop (one related row passes, one does not) is false, because
 a row passes.
 
+All three negatives ship together, for symmetry with the three positive operators. None is valid on a set-valued
+path (`SET_OPERATORS` is unchanged).
+
 ## Ordering
 
 `gt`, `gte`, `lt`, `lte` compare numbers with numbers and strings with strings (timestamps as instants in SQL,
