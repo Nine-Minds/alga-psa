@@ -49,7 +49,7 @@ export default function TicketCatalogCategoryFilter({
           ...categories.map((category) => ({ value: category.category_id, label: category.category_name }))]} />
       </div>
       {loading && <p role="status" className="text-xs text-[rgb(var(--color-text-500))]">{t('catalogFilter.loading')}</p>}
-      {failed && <div role="alert" className="text-sm text-red-600 dark:text-red-400">
+      {failed && <div role="alert" className="text-sm text-[rgb(var(--badge-error-text))]">
         {t('catalogFilter.loadError')}
         <Button id={`${id}-retry-button`} variant="ghost" size="sm" onClick={() => setAttempt((previous) => previous + 1)}>{t('catalogFilter.retry')}</Button>
       </div>}

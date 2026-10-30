@@ -427,12 +427,12 @@ export default function TicketMaterialsCard({
               <div className="space-y-2">
                 <Label htmlFor={`${id}-currency-select`}>{t('materials.price', 'Price')}</Label>
                 {isLoadingPrices ? (
-                  <div className="flex items-center text-sm text-gray-500">
+                  <div className="flex items-center text-sm text-[rgb(var(--color-text-500))]">
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     {t('materials.loadingPrices', 'Loading prices...')}
                   </div>
                 ) : productPrices.length === 0 ? (
-                  <div className="text-sm text-amber-600">
+                  <div className="text-sm text-[rgb(var(--badge-warning-text))]">
                     {t('materials.noPricesConfigured', 'No prices configured for this product')}
                   </div>
                 ) : productPrices.length === 1 ? (
@@ -514,8 +514,8 @@ export default function TicketMaterialsCard({
             </div>
 
             {availability?.track_stock && availability.locations.length > 0 && (
-              <div id={`${id}-availability`} className="text-xs text-gray-500 space-y-0.5">
-                <div className="font-medium text-gray-600">{t('materials.availableByLocation', 'Free stock by location')}</div>
+              <div id={`${id}-availability`} className="text-xs text-[rgb(var(--color-text-500))] space-y-0.5">
+                <div className="font-medium text-[rgb(var(--color-text-600))]">{t('materials.availableByLocation', 'Free stock by location')}</div>
                 {availability.locations.map((loc) => (
                   <div key={loc.location_id} className="flex justify-between">
                     <span>{loc.location_name}</span>
@@ -528,7 +528,7 @@ export default function TicketMaterialsCard({
             )}
 
             {addError && (
-              <div id={`${id}-add-error`} className="text-sm text-red-600">
+              <div id={`${id}-add-error`} className="text-sm text-[rgb(var(--badge-error-text))]">
                 {addError}
               </div>
             )}
@@ -573,12 +573,12 @@ export default function TicketMaterialsCard({
 
         {/* Materials List */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-8 text-gray-500">
+          <div className="flex items-center justify-center py-8 text-[rgb(var(--color-text-500))]">
             <Loader2 className="w-5 h-5 mr-2 animate-spin" />
             {t('materials.loading', 'Loading materials...')}
           </div>
         ) : materials.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-[rgb(var(--color-text-500))]">
             {t('materials.empty', 'No materials added to this ticket.')}
           </div>
         ) : (
@@ -603,7 +603,7 @@ export default function TicketMaterialsCard({
                             size="sm"
                             onClick={() => handleDeleteMaterial(material.ticket_material_id)}
                             disabled={deletingId === material.ticket_material_id}
-                            className="h-8 w-8 shrink-0 p-0 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300"
+                            className="h-8 w-8 shrink-0 p-0 text-[rgb(var(--badge-error-text))] hover:bg-[rgb(var(--badge-error-bg))] hover:text-[rgb(var(--badge-error-text))]"
                           >
                             {deletingId === material.ticket_material_id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -616,7 +616,7 @@ export default function TicketMaterialsCard({
         )}
 
         {!clientId && (
-          <div className="text-center py-4 text-amber-600 text-sm">
+          <div className="text-center py-4 text-[rgb(var(--badge-warning-text))] text-sm">
             {t(
               'materials.clientRequired',
               'A client must be assigned to this ticket before materials can be added.'

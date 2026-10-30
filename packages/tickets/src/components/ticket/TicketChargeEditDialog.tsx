@@ -66,7 +66,7 @@ export default function TicketChargeEditDialog({
           </div>
           <Label htmlFor={`${id}-description-input`}>{t('fixedFeeServices.description')}</Label>
           <Input id={`${id}-description-input`} value={text} maxLength={2000} disabled={saving} onChange={(event) => setText(event.target.value)} />
-          {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          {error && <p role="alert" className="text-sm text-[rgb(var(--badge-error-text))]">{error}</p>}
         </form>
       </DialogContent>
     </Dialog>

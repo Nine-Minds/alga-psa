@@ -225,7 +225,7 @@ export default function TicketFixedFeeServicesCard({
           </div>
         </div>
       )}
-      {error && <p role="alert" className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-800 dark:border-red-800 dark:bg-red-900/20 dark:text-red-300">{error}</p>}
+      {error && <p role="alert" className="rounded border border-[rgb(var(--badge-error-border))] bg-[rgb(var(--badge-error-bg))] p-2 text-sm text-[rgb(var(--badge-error-text))]">{error}</p>}
       {loading ? <p role="status" className="animate-pulse rounded bg-[rgb(var(--color-border-100))] py-8 text-center text-sm">{t('fixedFeeServices.loading')}</p> : entries.length === 0 ? (
         <p className="py-8 text-center text-sm text-[rgb(var(--color-text-500))]">{t('fixedFeeServices.empty')}</p>
       ) : (
@@ -238,7 +238,7 @@ export default function TicketFixedFeeServicesCard({
                   aria-label={t('chargeEdit.edit')} data-entry-id={entry.entry_id}
                   onClick={() => setEditingEntry(entry)}><Pencil className="h-4 w-4" /></Button>
                 <Button id={`${id}-remove-${index}-button`} variant="ghost" size="sm"
-                  className="h-8 w-8 shrink-0 p-0 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300"
+                  className="h-8 w-8 shrink-0 p-0 text-[rgb(var(--badge-error-text))] hover:bg-[rgb(var(--badge-error-bg))] hover:text-[rgb(var(--badge-error-text))]"
                   disabled={saving} data-entry-id={entry.entry_id} aria-label={t('fixedFeeServices.remove')}
                   onClick={() => setDeleteEntry(entry)}><Trash2 className="h-4 w-4" /></Button>
               </> : undefined,
