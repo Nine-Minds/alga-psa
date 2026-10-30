@@ -285,7 +285,7 @@ export function registerDocumentRoutes(registry: ApiOpenApiRegistry) {
   const AttachedDocument = registry.registerSchema(
     'AttachedDocument',
     zOpenApi.object({
-      data: zOpenApi.record(zOpenApi.unknown()).describe('The created document row (document_id, document_name, mime_type, file_size, folder_path, ...).'),
+      data: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).describe('The created document row (document_id, document_name, mime_type, file_size, folder_path, ...).'),
     }),
   );
 

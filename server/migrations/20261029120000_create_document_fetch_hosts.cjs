@@ -58,6 +58,7 @@ exports.up = async function up(knex) {
     ON ${TABLE} (tenant, kind, host_pattern)
   `);
 
+  // migration-lint: allow 8 - reconcileAllTenants is the repo-standard, additive, per-tenant-idempotent way to provision a catalog permission (server/migrations/utils/permissions/README.md, "Adding a permission"); document:manage_fetch_hosts is declared in catalog.cjs
   await reconcileAllTenants(knex, { label: 'create_document_fetch_hosts' });
 };
 

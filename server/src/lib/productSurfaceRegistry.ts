@@ -218,8 +218,8 @@ export const API_RULES: readonly ApiRule[] = [
     // Per-entity availability (PSA-only entities) is enforced by the entity adapters.
     group: 'api_document_attach',
     dynamicPatterns: [/^\/api\/v1\/documents$/],
-    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
-    visibleInMetadataByProduct: { psa: true, algadesk: true },
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
+    visibleInMetadataByProduct: { psa: true, algadesk: true, co_managed: false },
   },
   {
     group: 'api_psa_only',

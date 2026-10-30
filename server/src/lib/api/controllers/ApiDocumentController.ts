@@ -51,7 +51,7 @@ export class ApiDocumentController extends ApiBaseController {
             input = attachDocumentSchema.parse(await req.json().catch(() => ({})));
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Validation failed', error.errors);
+              throw new ValidationError('Validation failed', error.issues);
             }
             throw error;
           }

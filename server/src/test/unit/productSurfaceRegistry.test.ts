@@ -20,6 +20,12 @@ describe('product surface registry', () => {
     expect(resolveProductApiBehavior('psa', '/api/v1/documents/abc')).toBe('allowed');
   });
 
+  it('opens the attach path to co_managed like its other helpdesk APIs, hidden from metadata', () => {
+    expect(resolveProductApiBehavior('co_managed', '/api/v1/documents')).toBe('allowed');
+    expect(isApiVisibleInMetadata('co_managed', '/api/v1/documents')).toBe(false);
+    expect(resolveProductApiBehavior('co_managed', '/api/v1/documents/abc')).toBe('denied');
+  });
+
   it('exposes attachable entities per product through their adapter API paths', async () => {
     const { ENTITY_ADAPTERS } = await import('../../lib/api/services/documents/entityAdapters');
     const allowedOnAlgadesk = Object.values(ENTITY_ADAPTERS)
