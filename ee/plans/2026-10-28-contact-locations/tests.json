@@ -667,7 +667,7 @@
     "featureIds": [
       "F049"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "CSV export writes work_arrangement, locations 'Warehouse; Head office' and primary_location 'Warehouse'; template includes the headers"
   },
   {
@@ -676,7 +676,7 @@
     "featureIds": [
       "F050"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "CSV import creates links by location name within the contact's client and sets the primary; unknown name fails that row with a message naming it and other rows import"
   },
   {
@@ -685,7 +685,7 @@
     "featureIds": [
       "F050"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "CSV import with locations but no client on the row fails the row with a clear message"
   },
   {

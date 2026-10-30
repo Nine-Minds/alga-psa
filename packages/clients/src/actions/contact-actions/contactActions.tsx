@@ -1540,23 +1540,28 @@ export const importContactsFromCSV = withAuth(async (
               updateData.additional_email_addresses = contactData.additional_email_addresses;
             }
 
+            // Mapped and non-blank states the whole set (including "clear them all"); absent leaves
+            // whatever the contact already has. Resolved before the write: the rows of one file
+            // share a transaction, so a row refused *after* its update would leave the edit behind.
+            const resolvedLocations = contactData.location_names === undefined
+              ? undefined
+              : await resolveImportedContactLocations(
+                trx,
+                tenant,
+                contactData.full_name!.trim(),
+                updateData.client_id ?? existingContact.client_id,
+                contactData.location_names,
+                contactData.primary_location_name,
+              );
+
             savedContact = await ContactModel.updateContact(existingContact.contact_name_id, updateData, tenant, trx);
 
-            // Mapped and non-blank states the whole set (including "clear them all"); absent leaves
-            // whatever the contact already has.
-            if (contactData.location_names !== undefined) {
+            if (resolvedLocations !== undefined) {
               await replaceContactLocations(
                 trx,
                 tenant,
                 savedContact.contact_name_id,
-                await resolveImportedContactLocations(
-                  trx,
-                  tenant,
-                  contactData.full_name!.trim(),
-                  updateData.client_id ?? existingContact.client_id,
-                  contactData.location_names,
-                  contactData.primary_location_name,
-                ),
+                resolvedLocations,
                 { createdBy: user?.user_id ?? null },
               );
             }
@@ -1588,20 +1593,27 @@ export const importContactsFromCSV = withAuth(async (
               work_arrangement: contactData.work_arrangement ?? null,
             };
 
+            // Resolved first, for the same reason as the update branch above: the file's rows share
+            // one transaction, so a name that cannot be placed must fail before the person is
+            // written rather than leave a linkless contact behind.
+            const resolvedLocations = contactData.location_names === undefined
+              ? undefined
+              : await resolveImportedContactLocations(
+                trx,
+                tenant,
+                contactData.full_name!.trim(),
+                contactData.client_id,
+                contactData.location_names,
+                contactData.primary_location_name,
+              );
+
             savedContact = await ContactModel.createContact(contactToCreate, tenant, trx);
-            if (contactData.location_names !== undefined) {
+            if (resolvedLocations !== undefined) {
               await replaceContactLocations(
                 trx,
                 tenant,
                 savedContact.contact_name_id,
-                await resolveImportedContactLocations(
-                  trx,
-                  tenant,
-                  contactData.full_name!.trim(),
-                  contactData.client_id,
-                  contactData.location_names,
-                  contactData.primary_location_name,
-                ),
+                resolvedLocations,
                 { createdBy: user?.user_id ?? null },
               );
             }
