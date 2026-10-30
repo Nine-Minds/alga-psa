@@ -172,7 +172,7 @@ describe('getAssetCountsByType filtered counts', () => {
 
   beforeAll(async () => {
     wireLocalTestDbEnv();
-    db = createTestDbConnection();
+    db = await createTestDbConnection();
     for (const t of ['tenants', 'clients', 'vendors', 'assets', 'users', 'asset_groups']) {
       columns[t] = await db(t).columnInfo();
     }

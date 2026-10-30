@@ -70,7 +70,7 @@ describe('applyAssetListFilters SQL', () => {
             contact_name_id: 'cn-1',
             asset_type: 'workstation',
             status: 'active',
-            ownership: 'company',
+            ownership: 'msp',
             vendor_id: 'v-1',
             agent_status: 'online',
         });
@@ -80,7 +80,7 @@ describe('applyAssetListFilters SQL', () => {
         expect(sql).toContain(`"assets"."contact_name_id" = 'cn-1'`);
         expect(sql).toContain(`"assets"."asset_type" = 'workstation'`);
         expect(sql).toContain(`"assets"."status" = 'active'`);
-        expect(sql).toContain(`"assets"."ownership" = 'company'`);
+        expect(sql).toContain(`"assets"."ownership" = 'msp'`);
         expect(sql).toContain(`"assets"."vendor_id" = 'v-1'`);
         expect(sql).toContain(`"assets"."agent_status" = 'online'`);
     });
