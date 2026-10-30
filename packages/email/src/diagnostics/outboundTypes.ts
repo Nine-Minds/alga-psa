@@ -27,6 +27,8 @@ export interface OutboundEmailDiagnosticsOptions {
   liveSendTest?: boolean;
   recipient?: string;
   includeIdentifiers?: boolean;
+  /** Acting user id (server-supplied; used for per-user rate limiting). */
+  actingUserId?: string;
 }
 
 export interface ResolvedOutboundProvider {
@@ -43,6 +45,7 @@ export interface NormalizedOutboundOptions {
   liveSendTest: boolean;
   includeIdentifiers: boolean;
   recipient?: string;
+  actingUserId?: string;
 }
 
 export interface OutboundLiveSendInput {
@@ -51,6 +54,8 @@ export interface OutboundLiveSendInput {
   from: string;
   fromName?: string;
   recipient: string;
+  /** Acting user, so per-user rate-limit buckets apply to the live send. */
+  userId?: string;
 }
 
 export interface OutboundLiveSendResult {
