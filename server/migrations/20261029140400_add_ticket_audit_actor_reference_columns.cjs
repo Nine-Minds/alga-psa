@@ -8,7 +8,7 @@
  * must hold a full name (text).
  *
  * Step 1 of 2: no long locks. The FK and the shape CHECK are added NOT VALID (catalog
- * only, new rows are enforced at once); 20261029120500 validates them. Every ALTER runs
+ * only, new rows are enforced at once); 20261029140500 validates them. Every ALTER runs
  * under a 2s lock_timeout and is retried. Idempotent.
  */
 const TABLE = 'ticket_audit_logs';
@@ -60,6 +60,7 @@ exports.up = async function up(knex) {
     [TABLE]
   );
   if (rows[0] && rows[0].data_type !== 'text') {
+    // migration-lint: allow 3 - varchar(256) to text is binary-coercible, so PostgreSQL rewrites neither the table nor its indexes; the ACCESS EXCLUSIVE lock is catalog-only and bounded by the 2s lock_timeout retry
     await withLockRetry(knex, `ALTER TABLE ${TABLE} ALTER COLUMN actor_display_name TYPE text`);
   }
 
