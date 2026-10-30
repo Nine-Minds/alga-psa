@@ -650,13 +650,13 @@ describe('Profitability Reporting Integration', () => {
     try {
       await table('stock_movements').insert([
         {
-          movement_id: movementIds[0], movement_type: 'consume',
+          tenant: tenantId, movement_id: movementIds[0], movement_type: 'consume',
           service_id: material.service_id, quantity: 3, cogs_cost: 9000,
           cost_currency: before.currencyCode, source_doc_type: 'ticket_material',
           source_doc_id: material.ticket_material_id, performed_by: userId,
         },
         {
-          movement_id: movementIds[1], movement_type: 'return_restock',
+          tenant: tenantId, movement_id: movementIds[1], movement_type: 'return_restock',
           service_id: material.service_id, quantity: 1, cogs_cost: -3000,
           cost_currency: before.currencyCode, source_doc_type: 'ticket_material',
           source_doc_id: material.ticket_material_id, performed_by: userId,
