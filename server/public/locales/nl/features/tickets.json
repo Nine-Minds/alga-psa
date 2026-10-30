@@ -445,7 +445,7 @@
       "sharedIt": "Gedeelde IT",
       "organizationPrivate": "Privé voor organisatie",
       "placeholder": "Wie kan dit zien?",
-      "required": "Kies wie deze opmerking kan zien voordat je deze plaatst."
+      "required": "Kies wie deze opmerking kan zien voordat u deze plaatst."
     },
     "shared": {
       "loading": "De gedeelde conversatie wordt geladen...",
@@ -1745,7 +1745,7 @@
       "predicateInvalid": "Ongeldige checklistregel: {{detail}}"
     },
     "comment": {
-      "audienceRequired": "Kies wie deze opmerking kan zien voordat je deze plaatst."
+      "audienceRequired": "Kies wie deze opmerking kan zien voordat u deze plaatst."
     }
   },
   "ticketSection": {

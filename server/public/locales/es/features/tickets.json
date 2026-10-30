@@ -452,7 +452,7 @@
       "loadError": "No se pudo cargar la conversación compartida.",
       "reload": "Recargar",
       "errors": {
-        "forbidden": "No tienes permiso para publicar para esta audiencia.",
+        "forbidden": "No tiene permiso para publicar para esta audiencia.",
         "invalid": "Este comentario no se puede publicar.",
         "readOnly": "Este espacio de trabajo es de solo lectura por ahora.",
         "operationConflict": "Este comentario entra en conflicto con un intento anterior. Recarga e inténtalo de nuevo.",
