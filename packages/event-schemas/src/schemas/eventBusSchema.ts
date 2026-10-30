@@ -207,6 +207,7 @@ import {
   inventoryPurchaseOrderDeletedEventPayloadSchema,
   inventoryPurchaseOrderUpdatedEventPayloadSchema,
   inventoryRmaCreatedEventPayloadSchema,
+  inventoryRmaUpdatedEventPayloadSchema,
   inventorySalesOrderCreatedEventPayloadSchema,
   inventorySalesOrderDeletedEventPayloadSchema,
   inventorySalesOrderUpdatedEventPayloadSchema,
@@ -557,6 +558,7 @@ const CORE_EVENT_TYPES = [
   'INVENTORY_PO_RECEIVED',
   'INVENTORY_SO_FULFILLED',
   'INVENTORY_RMA_CREATED',
+  'INVENTORY_RMA_UPDATED',
   'INVENTORY_SALES_ORDER_CREATED',
   'INVENTORY_SALES_ORDER_UPDATED',
   'INVENTORY_SALES_ORDER_DELETED',
@@ -1623,6 +1625,7 @@ export const CorePayloadSchemas = {
   INVENTORY_PO_RECEIVED: inventoryPoReceivedEventPayloadSchema,
   INVENTORY_SO_FULFILLED: inventorySoFulfilledEventPayloadSchema,
   INVENTORY_RMA_CREATED: inventoryRmaCreatedEventPayloadSchema,
+  INVENTORY_RMA_UPDATED: inventoryRmaUpdatedEventPayloadSchema,
   INVENTORY_SALES_ORDER_CREATED: inventorySalesOrderCreatedEventPayloadSchema,
   INVENTORY_SALES_ORDER_UPDATED: inventorySalesOrderUpdatedEventPayloadSchema,
   INVENTORY_SALES_ORDER_DELETED: inventorySalesOrderDeletedEventPayloadSchema,
@@ -1758,6 +1761,7 @@ export type InventoryStockLowEvent = z.infer<typeof EventSchemas.INVENTORY_STOCK
 export type InventoryPoReceivedEvent = z.infer<typeof EventSchemas.INVENTORY_PO_RECEIVED>;
 export type InventorySoFulfilledEvent = z.infer<typeof EventSchemas.INVENTORY_SO_FULFILLED>;
 export type InventoryRmaCreatedEvent = z.infer<typeof EventSchemas.INVENTORY_RMA_CREATED>;
+export type InventoryRmaUpdatedEvent = z.infer<typeof EventSchemas.INVENTORY_RMA_UPDATED>;
 export type InventorySalesOrderCreatedEvent = z.infer<typeof EventSchemas.INVENTORY_SALES_ORDER_CREATED>;
 export type InventorySalesOrderUpdatedEvent = z.infer<typeof EventSchemas.INVENTORY_SALES_ORDER_UPDATED>;
 export type InventorySalesOrderDeletedEvent = z.infer<typeof EventSchemas.INVENTORY_SALES_ORDER_DELETED>;

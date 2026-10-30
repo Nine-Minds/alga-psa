@@ -535,6 +535,7 @@
     "exact": [
       "{{from}} → {{to}}",
       "RMA {{id}}",
+      "RMA {{number}} · {{status}}",
       "Datto RMM",
       "TeamViewer",
       "VNC",
