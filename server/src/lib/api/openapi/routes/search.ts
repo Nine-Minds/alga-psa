@@ -69,7 +69,7 @@ export function registerSearchRoutes(registry: ApiOpenApiRegistry) {
     zOpenApi.object({
       results: zOpenApi.array(SearchResultRow).describe('Matching records for this page, ordered by the requested sort.'),
       groups: zOpenApi
-        .record(zOpenApi.number().int())
+        .record(zOpenApi.string(), zOpenApi.number().int())
         .describe('Total match counts keyed by object type (across all pages), before the page limit is applied.'),
       totalCount: zOpenApi.number().int().describe('Total number of matches across all permitted types.'),
       nextCursor: zOpenApi

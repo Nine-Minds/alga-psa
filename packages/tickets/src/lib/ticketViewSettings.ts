@@ -198,7 +198,7 @@ export function captureTicketViewSettings(view: {
  * undo it.
  *
  * Deliberately hand-rolled rather than a Zod schema: this runs in the browser on
- * the ticket-list render path, and `z.record(z.enum([...]))` *errors* on an
+ * the ticket-list render path, and `z.record(z.string(), z.enum([...]))` *errors* on an
  * unknown key rather than dropping it — the opposite of what is wanted here.
  *
  * Strictness still exists, just at the right end: writes go through

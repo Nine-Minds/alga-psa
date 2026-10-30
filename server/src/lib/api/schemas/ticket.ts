@@ -44,7 +44,7 @@ function getVisibleCommentLength(value: string): number {
 }
 
 // Ticket attributes schema (flexible JSON object)
-const ticketAttributesSchema = z.record(z.unknown()).optional();
+const ticketAttributesSchema = z.record(z.string(), z.unknown()).optional();
 
 // External system links. `url` is constrained to http(s) so javascript:/data:
 // links can never be persisted; the action layer revalidates.
@@ -75,7 +75,7 @@ export const createExternalLinkSchema = z.object({
   actor: externalLinkActorSchema.nullable().optional(),
   external_status: z.string().nullable().optional(),
   external_updated_at: z.string().datetime().nullable().optional(),
-  metadata: z.record(z.unknown()).nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 }).strict();
 
 /**
@@ -98,7 +98,7 @@ export const updateExternalLinkSchema = z.object({
   external_status: z.string().nullable().optional(),
   external_updated_at: z.string().datetime().nullable().optional(),
   last_synced_at: z.string().datetime().nullable().optional(),
-  metadata: z.record(z.unknown()).nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 }).strict();
 
 export const externalLinkLookupQuerySchema = z.object({
@@ -440,7 +440,7 @@ export const createTicketCommentSchema = z.object({
   collaboration_audience: z.enum(['requester', 'organization_private']).optional(),
   is_resolution: z.boolean().optional().default(false),
   time_spent: z.number().min(0).optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   parent_comment_id: uuidSchema.optional(),
   external_links: inlineTicketExternalLinksSchema,
   scheduled_publish_at: z.string().datetime({ offset: true }).optional(),
@@ -535,10 +535,10 @@ export const ticketStatsResponseSchema = z.object({
   closed_tickets: z.number(),
   overdue_tickets: z.number(),
   unassigned_tickets: z.number(),
-  tickets_by_status: z.record(z.number()),
-  tickets_by_priority: z.record(z.number()),
-  tickets_by_category: z.record(z.number()),
-  tickets_by_board: z.record(z.number()),
+  tickets_by_status: z.record(z.string(), z.number()),
+  tickets_by_priority: z.record(z.string(), z.number()),
+  tickets_by_category: z.record(z.string(), z.number()),
+  tickets_by_board: z.record(z.string(), z.number()),
   average_resolution_time: z.number().nullable(),
   tickets_created_today: z.number(),
   tickets_created_this_week: z.number(),
@@ -568,15 +568,15 @@ export const ticketSearchSchema = z.object({
     z.array(uuidSchema),
     arrayTransform(uuidSchema)
   ]).optional(),
-  include_closed: booleanTransform.optional().default("false"),
-  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
+  include_closed: booleanTransform.prefault("false"),
+  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).prefault('25')
 });
 
 // Ticket export schema
 export const ticketExportQuerySchema = z.object({
   format: z.enum(['csv', 'json', 'xlsx']).optional().default('csv'),
-  include_closed: booleanTransform.optional().default("false"),
-  include_comments: booleanTransform.optional().default("false"),
+  include_closed: booleanTransform.prefault("false"),
+  include_comments: booleanTransform.prefault("false"),
   date_range: z.enum(['today', 'week', 'month', 'quarter', 'year', 'custom']).optional(),
   start_date: z.string().datetime().optional(),
   end_date: z.string().datetime().optional(),

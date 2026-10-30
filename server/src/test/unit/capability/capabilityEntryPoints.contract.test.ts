@@ -79,9 +79,9 @@ export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string
   'temporal-workflows': { glob: 'ee/temporal-workflows/src/workflows/coManaged*', files: 0 },
   'temporal-activities-kebab': { glob: 'ee/temporal-workflows/src/activities/co-managed*', files: 1 },
   'temporal-workflows-kebab': { glob: 'ee/temporal-workflows/src/workflows/co-managed*', files: 1 },
-  'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 1 },
+  'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 2 },
   'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
-  'server-ui': { glob: 'server/src/components/co-managed/**', files: 28 },
+  'server-ui': { glob: 'server/src/components/co-managed/**', files: 30 },
   'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
 };
 
@@ -95,6 +95,9 @@ export const ADAPTER_EXPORTS = new Set([
   'isCapabilityServed', //         5 subscriber
   'filterCapabilityServed', //     5 subscriber (batch)
   'activityServesCapability', //   6 Temporal
+  // 7 purchase surface (L8a): a purchase creates the FIRST entitlement, so `admits` (flag AND entitlement)
+  // would make it unreachable. The surface is price AND kill switch AND release flag; it grants nothing.
+  'isCoManagedPurchaseSurfaceOpen',
 ]);
 
 const DB_TOUCHING = new Set(['createTenantKnex', 'tenantDb', 'runWithTenant', 'knex']);

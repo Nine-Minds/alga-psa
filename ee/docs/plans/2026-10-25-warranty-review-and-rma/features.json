@@ -1,0 +1,420 @@
+[
+  {
+    "id": "F001",
+    "title": "Warranty columns on rma_cases",
+    "description": "One migration adds rma_number, ticket_id, custody_id, warranty outcome/decision, closed_reason, outbound/inbound shipping, return_by, return_ship_to and replacement fields to rma_cases; re-states the status CHECK with warranty_review and repaired; backfills rma_number per tenant and seeds next_number; indexes ticket_id, asset_id and (status, return_by).",
+    "acceptanceCriteria": [
+      "F001.1 \u2014 Every listed column exists with the stated nullability and CHECKs; rma_number is NOT NULL and unique per tenant for all existing and future rows.",
+      "F001.2 \u2014 Existing closed cases backfill closed_reason='resolved'; next_number for RMA continues above the highest backfilled number, so a new claim never collides.",
+      "F001.3 \u2014 Composite FKs to tickets, asset_custody and users exist and include tenant; the migration is idempotent and its down() reverses every change."
+    ],
+    "prdRefs": [
+      "Data model",
+      "Migrations"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "title": "Append-only rma_events table",
+    "description": "A new tenant-scoped rma_events table records one row per RMA transition, warranty decision and shipping step, with from/to status snapshots and a jsonb payload. It is Citus-distributed, registered in tenant metadata and the migration shim, and rejects UPDATE/DELETE via a Postgres trigger (app discipline on Citus, like stock_movements).",
+    "acceptanceCriteria": [
+      "F002.1 \u2014 rma_events exists with the specified columns, CHECKs, indexes, composite FKs and Citus distribution; tenantTableMetadata and utils/tenantDb.cjs list it.",
+      "F002.2 \u2014 On plain Postgres an UPDATE or DELETE on rma_events raises an error; no code path updates an event row."
+    ],
+    "prdRefs": [
+      "Data model",
+      "Events and audit"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "title": "RMA numbering",
+    "description": "Register RMA as a numbering entity (RMA-, 5 digits) in shared numbering defaults and the next_number seed, and allocate rma_number through SharedNumberingService when a claim is created.",
+    "acceptanceCriteria": [
+      "F003.1 \u2014 A new claim in a fresh tenant gets RMA-00001 and the next claim RMA-00002; a tenant with backfilled rows continues above them.",
+      "F003.2 \u2014 rma_number is rendered instead of the UUID prefix in the RMA list, the asset RMA history, the RMA tag and the return slip."
+    ],
+    "prdRefs": [
+      "Data model",
+      "Open product questions #1"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "title": "RMA status and case types",
+    "description": "RmaStatus gains warranty_review and repaired, drops dead_unit_returned (the DB CHECK stopped accepting it), and IRmaCase gains every new column. UI labels, badge variants and the status filter accept exactly the statuses the CHECK allows.",
+    "acceptanceCriteria": [
+      "F004.1 \u2014 The RmaStatus union, RmaManager status labels, STATUS_VARIANT and RMA_STATUS_FILTERS match the DB CHECK exactly; dead_unit_returned is gone.",
+      "F004.2 \u2014 IRmaCase exposes rma_number, ticket_id, custody_id, warranty_outcome, warranty_decided_at/by, denial_reason, closed_reason, shipping fields, return_by, return_ship_to and replacement fields.",
+      "F004.3 \u2014 A ?status= value outside the allowed set is ignored rather than rendered as an empty filter."
+    ],
+    "prdRefs": [
+      "Data model",
+      "UI surfaces"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "title": "Warranty claim state machine",
+    "description": "A pure transition table in packages/inventory/src/lib/rma/ encodes the fourteen transitions of the card, including the rule that a warranty_review case cannot be closed by the generic closeRma catch-all.",
+    "acceptanceCriteria": [
+      "F005.1 \u2014 Every allowed transition in the PRD table is accepted by the table and returns the expected target status.",
+      "F005.2 \u2014 Every other (status, action) pair is refused with a typed error, including closeRma from warranty_review and any transition out of closed.",
+      "F005.3 \u2014 The table distinguishes asset-only cases (returned_unit_id null) from stock-unit cases and never routes an asset-only case to a stock-unit action."
+    ],
+    "prdRefs": [
+      "State machine"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "title": "Open a warranty claim",
+    "description": "openWarrantyClaim creates an asset-only RMA in warranty_review with a number, derived client_id, ticket_id and custody_id from the open custody episode, an rma_events 'opened' row and INVENTORY_RMA_CREATED. A composition wrapper adds the ticket record check and client match.",
+    "acceptanceCriteria": [
+      "F006.1 \u2014 A claim on a held client asset lands in warranty_review with rma_number, the asset's client_id, the custody episode's ticket_id and custody_id, one rma_events row, and an INVENTORY_RMA_CREATED event after commit.",
+      "F006.2 \u2014 The action refuses an asset with stock_unit_id (pointing at the unit RMA flow), an asset the caller cannot read, a missing asset, and an asset with no client; refusals are indistinguishable from not-found where a record check applies.",
+      "F006.3 \u2014 Opening from a ticket additionally requires ticket:read and the ticket record check, and refuses when the ticket's client differs from the asset's client."
+    ],
+    "prdRefs": [
+      "State machine",
+      "Permissions",
+      "Integration with C4"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "title": "Approve a claim into a track",
+    "description": "approveWarrantyClaim moves warranty_review to awaiting_return (standard) or open (advance replacement), writes the coverage outcome and decision actor/time, and records the chosen rma_type, vendor and optional return_by.",
+    "acceptanceCriteria": [
+      "F007.1 \u2014 Standard approval sets status awaiting_return, rma_type standard, warranty_outcome covered, warranty_decided_at/by and writes a warranty_approved event.",
+      "F007.2 \u2014 Advance approval sets status open and rma_type advance_replacement, leaving the existing advance-replacement actions usable.",
+      "F007.3 \u2014 Approval is refused from any status other than warranty_review and when the outcome is not_covered."
+    ],
+    "prdRefs": [
+      "State machine"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "title": "Deny or cancel a claim",
+    "description": "denyWarrantyClaim closes a claim as not covered with a mandatory reason; cancelWarrantyClaim closes it as cancelled or duplicate. Neither touches custody.",
+    "acceptanceCriteria": [
+      "F008.1 \u2014 Denial requires denial_reason, sets warranty_outcome not_covered, closed_reason warranty_denied, closed_at, and writes a warranty_denied event.",
+      "F008.2 \u2014 Cancellation accepts only cancelled or duplicate, records the reason and writes a closed event; the custody episode is unchanged by both."
+    ],
+    "prdRefs": [
+      "State machine",
+      "Open product questions #4"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "title": "Mark the device received",
+    "description": "markDeviceReceived moves awaiting_return to returned when the asset is physically in MSP custody. It asserts the open custody episode is in_office and writes no stock rows.",
+    "acceptanceCriteria": [
+      "F009.1 \u2014 With an open in_office custody episode the case moves to returned, writes a device_received event, and leaves stock_units/stock_movements/stock_levels unchanged.",
+      "F009.2 \u2014 Without an open in_office episode the action is refused with a message that points at receiving the equipment into custody."
+    ],
+    "prdRefs": [
+      "State machine",
+      "Integration with C4"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "title": "Ship to the vendor",
+    "description": "shipToVendor moves returned to sent_to_vendor, records vendor, outbound carrier, tracking and return-by date, sets outbound_shipped_at, and moves the custody episode to with_vendor through C4's recordCustodyEvent.",
+    "acceptanceCriteria": [
+      "F010.1 \u2014 The action persists vendor_id, outbound_carrier, outbound_tracking_number, return_by and outbound_shipped_at and writes a shipped_outbound event.",
+      "F010.2 \u2014 The same transaction writes C4's shipped custody event, so the episode state is with_vendor and the equipment queue shows it.",
+      "F010.3 \u2014 Missing vendor, carrier or tracking is refused before any write; a case not in returned is refused."
+    ],
+    "prdRefs": [
+      "State machine",
+      "Integration with C4"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "title": "Receive a vendor replacement",
+    "description": "receiveVendorReplacement records the inbound shipment, updates the SAME asset row with the replacement serial/model/warranty, writes an asset_history warranty_replacement row, and puts custody back in office. No asset is created and no stock row is written.",
+    "acceptanceCriteria": [
+      "F011.1 \u2014 Status becomes replaced; replacement_serial_number, inbound carrier/tracking and inbound_received_at are recorded; replacement_received_at is set.",
+      "F011.2 \u2014 The asset keeps its asset_id and ownership while serial_number (and any supplied manufacturer/model/warranty_end_date) change; the previous values are in asset_history; no new assets row and no stock rows are created.",
+      "F011.3 \u2014 Custody records received and returns to in_office, and ASSET_UPDATED is published after commit with the changed fields."
+    ],
+    "prdRefs": [
+      "State machine",
+      "Invariants",
+      "Open product questions #2"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "title": "Record a repaired return",
+    "description": "recordVendorRepair records that the vendor returned the same unit repaired: status repaired, inbound shipment fields, custody received, optional warranty extension.",
+    "acceptanceCriteria": [
+      "F012.1 \u2014 Status becomes repaired, inbound fields and repair_received event are written, and the asset row changes only when a warranty date is supplied.",
+      "F012.2 \u2014 Custody returns to in_office; the action is refused from any status other than sent_to_vendor."
+    ],
+    "prdRefs": [
+      "State machine"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "title": "Record a vendor credit",
+    "description": "recordVendorCredit records that the vendor credited the device instead of replacing it, sets status credited and closes the custody episode as disposed through the new C5 custody core.",
+    "acceptanceCriteria": [
+      "F013.1 \u2014 Status becomes credited with a vendor_credited event; the linked custody episode closes with close_reason disposed and an asset_history custody_disposed row.",
+      "F013.2 \u2014 No invoice, charge or stock row is created by a vendor credit."
+    ],
+    "prdRefs": [
+      "State machine",
+      "Open product questions #5"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "title": "Return the device to the client",
+    "description": "returnDeviceToClient closes a replaced or repaired case as resolved and, in the same transaction, calls C4's returnCustodyToClient so the device leaves custody.",
+    "acceptanceCriteria": [
+      "F014.1 \u2014 Status becomes closed with closed_reason resolved and a returned_to_client event; the custody episode closes as returned_to_client and the asset status follows C4's held_by_msp\u2192active rule.",
+      "F014.2 \u2014 The action is refused from warranty_review, awaiting_return, returned, sent_to_vendor, open and credited."
+    ],
+    "prdRefs": [
+      "State machine",
+      "Integration with C4"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F015",
+    "title": "Harden the generic close",
+    "description": "closeRma accepts an optional closed_reason, records it, writes a closed event, and refuses to close a case still in warranty_review. Existing stock-unit callers keep working.",
+    "acceptanceCriteria": [
+      "F015.1 \u2014 Closing a resolved case stores the reason (default resolved) and writes a closed event.",
+      "F015.2 \u2014 closeRma on warranty_review is refused; the caller is told to approve, deny or cancel.",
+      "F015.3 \u2014 Calling closeRma on an already closed case is a no-op that returns the row, as today."
+    ],
+    "prdRefs": [
+      "State machine"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F016",
+    "title": "Warranty permission resource",
+    "description": "A new MSP-only warranty permission resource (read/create/update) is added to the executable catalog with default grants for Admin, Manager and Technician, plus a migration granting it to existing tenants. Warranty actions gate on it while accepting the legacy inventory action.",
+    "acceptanceCriteria": [
+      "F016.1 \u2014 The catalog and migration create warranty:read/create/update for every existing tenant and grant them to Admin, Manager and Technician; new tenants get them through the catalog.",
+      "F016.2 \u2014 A technician with warranty:update can run the claim transitions; without it they get a permission error before any write.",
+      "F016.3 \u2014 A role holding only inventory:read still lists and opens RMAs (legacy acceptance), so no existing custom role loses the page."
+    ],
+    "prdRefs": [
+      "Permissions",
+      "Open product questions #8"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F017",
+    "title": "Asset record gate on RMA reads",
+    "description": "List and detail reads filter RMA rows that carry an asset_id through the asset read kernel, so an RMA is visible only when its asset is readable. Missing and unauthorized are the same result.",
+    "acceptanceCriteria": [
+      "F017.1 \u2014 A user who can read inventory but not the linked asset does not see that RMA in the list or counts.",
+      "F017.2 \u2014 getRmaCase returns null for that case, identical to a nonexistent id.",
+      "F017.3 \u2014 Cases without asset_id (legacy stock-unit RMAs with no asset link) keep their current visibility."
+    ],
+    "prdRefs": [
+      "Permissions",
+      "Open product questions #7"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F018",
+    "title": "RMA page warranty surfaces",
+    "description": "The RMA page gains a Warranty review view, the new statuses, an RMA # column using rma_number, a New warranty claim action, and ?assetId= handling that opens the claim dialog prefilled.",
+    "acceptanceCriteria": [
+      "F018.1 \u2014 The page filters to warranty_review and shows rma_number, warranty outcome and return_by without breaking the existing status filter or dead-unit report.",
+      "F018.2 \u2014 New warranty claim opens a dialog listing held client equipment; choosing an asset calls the claim action and the new claim appears in the list.",
+      "F018.3 \u2014 Navigating to /msp/inventory/rma?assetId=<id> opens the claim dialog with that asset selected (e2e)."
+    ],
+    "prdRefs": [
+      "UI surfaces"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F019",
+    "title": "RMA detail warranty panel",
+    "description": "The existing ?rmaId= detail dialog gains a warranty panel: coverage decision, vendor case, shipping and return-by, links to asset and ticket, per-status actions, and Print RMA tag / Print return slip.",
+    "acceptanceCriteria": [
+      "F019.1 \u2014 The panel renders rma_number, warranty outcome, decision actor/time, denial reason, vendor, vendor case, outbound and inbound carrier/tracking and return_by.",
+      "F019.2 \u2014 The action set matches the state machine for the current status (approve/deny/cancel, mark received, ship, receive replacement, record repair, record credit, return to client, close); actions that cannot run are absent or disabled with a reason.",
+      "F019.3 \u2014 Asset and ticket links navigate to the canonical records; an unreadable asset shows no link text.",
+      "F019.4 \u2014 Print RMA tag and Print return slip are present only for statuses where they make sense and write nothing.",
+      "F019.5 \u2014 The full approve \u2192 ship path is reachable from the dialog without leaving the page (e2e)."
+    ],
+    "prdRefs": [
+      "UI surfaces"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F020",
+    "title": "Asset and ticket warranty surfaces",
+    "description": "The asset detail gains a Warranty card (warranty end, vendor, ownership, claim history, start claim), the asset list and the ticket's associated-asset row gain an RMA badge.",
+    "acceptanceCriteria": [
+      "F020.1 \u2014 The Warranty card shows warranty_end_date, vendor name, ownership and the asset's claims with status and number.",
+      "F020.2 \u2014 Start warranty claim navigates to the RMA page with ?assetId= and does not create a claim by itself.",
+      "F020.3 \u2014 The RMA badge shows open claims only, is silent (empty) on any refusal, and never blocks the asset row from rendering.",
+      "F020.4 \u2014 The ticket's associated-asset row shows the RMA chip for an asset with an open claim (e2e)."
+    ],
+    "prdRefs": [
+      "UI surfaces"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F021",
+    "title": "Asset provenance RMA history fix",
+    "description": "getAssetInventoryProvenance returns RMA history for asset-only claims and reports rma_number rather than the vendor reference, and the provenance component renders the case and its status.",
+    "acceptanceCriteria": [
+      "F021.1 \u2014 An asset with no service_id and no stock_unit_id still returns its RMA history.",
+      "F021.2 \u2014 The history row shows rma_number; the vendor reference remains a separate field and is not substituted for the number."
+    ],
+    "prdRefs": [
+      "UI surfaces"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F022",
+    "title": "RMA work-tag label class",
+    "description": "Add the rma-work-tag label class: types, entity mapping, a standard 4x2 in template, an inventory label provider with the asset record gate, and registration in the print composition root.",
+    "acceptanceCriteria": [
+      "F022.1 \u2014 LABEL_CLASSES, LABEL_CLASS_ENTITY_TYPE and the standard-template maps include rma-work-tag \u2192 rma; the standard template is registered and selectable as a tenant default.",
+      "F022.2 \u2014 The provider builds identifier=rma_number, title=device name, detail=vendor, secondaryIdentifier=asset tag, serialSuffix=last 4 of the serial, and url=recordUrl('rma', id).",
+      "F022.3 \u2014 A caller without warranty:read, or without access to the linked asset, gets null for that label; a batch skips and counts it, exactly like the other classes.",
+      "F022.4 \u2014 The standard RMA label prints on a 4x2 in cell with a scannable QR and text inside the cell."
+    ],
+    "prdRefs": [
+      "UI surfaces",
+      "API routes"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F023",
+    "title": "Vendor return slip",
+    "description": "A new rma-return-slip document type with its own bindings, sample data and standard template, rendered by a billing action and served by a session-authenticated route.",
+    "acceptanceCriteria": [
+      "F023.1 \u2014 The document-template registry, DesignerDocumentKind and designer copy recognise rma-return-slip as a document type with its own binding catalog.",
+      "F023.2 \u2014 GET /api/inventory/rma/[id]/document?type=return-slip authenticates with withAuth, requires warranty:read plus the asset record check, and is on the middleware API-key skip-list; unauthenticated or unreadable returns 401/404 with no record data.",
+      "F023.3 \u2014 The slip contains rma_number, vendor name and ship-to, vendor case, device manufacturer/model/serial, accessories from the custody episode, reported fault, return_by and the RMA QR.",
+      "F023.4 \u2014 The slip downloads from the RMA dialog (e2e)."
+    ],
+    "prdRefs": [
+      "UI surfaces",
+      "API routes",
+      "Open product questions #3, #6"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F024",
+    "title": "INVENTORY_RMA_UPDATED workflow event",
+    "description": "A new domain event published after every warranty-claim transition, with schema, event-bus registration, workflow catalog reference, payload builder and catalog seed migration.",
+    "acceptanceCriteria": [
+      "F024.1 \u2014 The payload schema validates the documented fields and is registered in eventBusSchema and workflowEventCatalog; the catalog migration upserts INVENTORY_RMA_UPDATED.",
+      "F024.2 \u2014 Each transition publishes once after commit with status, previous_status, warranty_outcome and ids; a publish failure is logged and does not roll back the transition."
+    ],
+    "prdRefs": [
+      "Events and audit"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F025",
+    "title": "Asset mutation audit",
+    "description": "Every asset row change made by a claim writes one asset_history row in the same transaction and publishes ASSET_UPDATED after commit.",
+    "acceptanceCriteria": [
+      "F025.1 \u2014 A replacement writes asset_history change_type warranty_replacement holding the before/after serial, model, manufacturer and warranty_end_date, attributed to the actor.",
+      "F025.2 \u2014 ASSET_UPDATED is published after commit with the changed paths; a publish failure is swallowed and logged."
+    ],
+    "prdRefs": [
+      "Events and audit"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F026",
+    "title": "Vendor case on the ticket",
+    "description": "The RMA dialog can mirror the vendor case onto the linked ticket's external links with the tenant's custom vendor-case system, without making a second automatic write.",
+    "acceptanceCriteria": [
+      "F026.1 \u2014 The action adds one external_entity_links row through addExternalLink, pre-filled with rma_reference and the selected custom system, and is idempotent for the same case.",
+      "F026.2 \u2014 Saving the vendor case on the RMA alone writes no external link; the link is only created by the explicit action."
+    ],
+    "prdRefs": [
+      "Events and audit"
+    ],
+    "implemented": true,
+    "note": "rma_reference mirrored as a ticket external link using the tenant's custom:<slug> system (validated tenant-scoped in tenant_external_systems; a row existing means active; url from url_template with {external_id}, or the RMA record URL when the template is null; {realm} templates rejected); generic + RMA record URL only when no system is chosen; vendor-conversation link deferred until ticket-conversations merges"
+  },
+  {
+    "id": "F027",
+    "title": "One label print client",
+    "description": "Replace the C3 stopgap packages/inventory/src/components/labelPrintClient.ts with the shared useLabelPrint hook and delete the LEVERAGE marker it carried.",
+    "acceptanceCriteria": [
+      "F027.1 \u2014 No inventory component imports labelPrintClient; the stock-unit print path uses useLabelPrint and behaves identically.",
+      "F027.2 \u2014 labelPrintClient.ts is deleted and no LEVERAGE: pattern label-print-client marker remains."
+    ],
+    "prdRefs": [
+      "UI surfaces"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F028",
+    "title": "Localised copy",
+    "description": "All new RMA and warranty copy goes through i18n keys under features/inventory (rma.*) and msp/assets (warranty.*) with entries in every locale directory.",
+    "acceptanceCriteria": [
+      "F028.1 \u2014 No user-facing English string is hardcoded in the new components; the keys exist in every server/public/locales/*/ directory and the i18n completeness test passes.",
+      "F028.2 \u2014 Status and outcome labels come from keys with a defaultValue fallback, as the existing RMA status labels do."
+    ],
+    "prdRefs": [
+      "UI surfaces",
+      "Risks and failure modes"
+    ],
+    "implemented": true
+  },
+  {
+    "id": "F029",
+    "title": "No-stock invariant",
+    "description": "The asset-only claim path never writes stock, cost or billing rows, and the whole Dell scenario runs end to end.",
+    "acceptanceCriteria": [
+      "F029.1 \u2014 Across open, approve, receive, ship, replacement, return-to-client and credit, row counts in stock_units, stock_movements, stock_levels, product_inventory_settings, invoice_charges and time_entries are unchanged.",
+      "F029.2 \u2014 The Dell scenario from the PRD completes through the UI against the dev stack (e2e)."
+    ],
+    "prdRefs": [
+      "Invariants",
+      "Acceptance (Dell scenario)"
+    ],
+    "implemented": true
+  }
+]

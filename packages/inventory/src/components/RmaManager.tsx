@@ -8,6 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { usePageCreateShortcut, useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import {
@@ -19,6 +20,9 @@ import { toast } from 'react-hot-toast';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { recordPath, type ColumnDefinition, type IRmaCase, type IStockLocation, type IVendor, type RmaType } from '@alga-psa/types';
 import { RecordUnavailable } from './RecordUnavailable';
+import { RmaWarrantyPanel } from './rma/RmaWarrantyPanel';
+import { NewWarrantyClaimDialog } from './rma/NewWarrantyClaimDialog';
+import { isAssetTracked } from '../lib/rma/stateMachine';
 import {
   getRmaCase,
   listRmaCases,
@@ -37,11 +41,13 @@ const STATUS_VARIANT: Record<string, 'secondary' | 'info' | 'warning' | 'success
   closed: 'success',
   replaced: 'success',
   credited: 'success',
-  dead_unit_returned: 'success',
+  repaired: 'success',
+  warranty_review: 'warning',
   charged: 'error',
 };
 
 const RMA_STATUS_FILTERS = new Set([
+  'warranty_review',
   'open',
   'awaiting_return',
   'returned',
@@ -49,15 +55,24 @@ const RMA_STATUS_FILTERS = new Set([
   'replacement_received',
   'replacement_deployed',
   'dead_unit_owed',
-  'dead_unit_returned',
   'replaced',
+  'repaired',
   'credited',
   'charged',
   'closed',
 ]);
 
+type RmaTab = 'all' | 'review' | 'in_progress' | 'closed';
+const TAB_STATUSES: Record<Exclude<RmaTab, 'all'>, ReadonlySet<string>> = {
+  review: new Set(['warranty_review']),
+  in_progress: new Set([
+    'open', 'awaiting_return', 'returned', 'sent_to_vendor', 'replacement_received',
+    'replacement_deployed', 'dead_unit_owed', 'replaced', 'repaired', 'credited',
+  ]),
+  closed: new Set(['closed', 'charged']),
+};
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const shortId = (id?: string | null): string => (id ? id.slice(0, 8) : '—');
 
 // Tenant locale + currency come from CurrencyFormatProvider via the hook;
 // components shadow this with a bound `money` (see below).
@@ -74,9 +89,18 @@ interface OpenFormState {
 export function RmaManager({
   initialCases,
   initialDeadOwed,
+  mirrorRmaToTicket,
+  vendorCaseSystems,
+  getMirroredVendorCaseSystem,
 }: {
   initialCases: IRmaCase[];
   initialDeadOwed: DeadUnitOwedRow[];
+  /** Composition-root action (inventory cannot import the ticket package). Enables "Mirror vendor case to ticket". */
+  mirrorRmaToTicket?: (rmaId: string, systemKey?: string) => Promise<unknown>;
+  /** Tenant custom external systems a vendor case can be mirrored to (`custom:<slug>`); no picker when empty. */
+  vendorCaseSystems?: Array<{ key: string; label: string }>;
+  /** Composition-root action: the vendor-case system currently mirrored to this RMA's ticket, if any. */
+  getMirroredVendorCaseSystem?: (rmaId: string) => Promise<unknown>;
 }) {
   const { money: fmtMinorUnits } = useCurrencyFormat();
   const money = formatMoney(fmtMinorUnits);
@@ -87,6 +111,10 @@ export function RmaManager({
   const { t } = useTranslation('features/inventory');
   const statusParam = searchParams?.get('status') ?? '';
   const statusFilter = RMA_STATUS_FILTERS.has(statusParam) ? statusParam : '';
+  const assetIdParam = searchParams?.get('assetId') ?? null;
+  const [tab, setTab] = useState<RmaTab>('all');
+  const [claimOpen, setClaimOpen] = useState(false);
+  const [claimAssetId, setClaimAssetId] = useState<string | null>(null);
   const [cases, setCases] = useState<IRmaCase[]>(initialCases || []);
   const [deadOwed, setDeadOwed] = useState<DeadUnitOwedRow[]>(initialDeadOwed || []);
   const [locations, setLocations] = useState<IStockLocation[]>([]);
@@ -104,6 +132,7 @@ export function RmaManager({
   const [actioning, setActioning] = useState(false);
   const [rmaDetail, setRmaDetail] = useState<IRmaCase | null>(null);
   const [rmaUnavailable, setRmaUnavailable] = useState(false);
+  const [mirroredSystem, setMirroredSystem] = useState<string | undefined>(undefined);
 
   const RMA_TYPE_OPTIONS = [
     { value: 'standard', label: t('rma.types.standard', 'Standard') },
@@ -118,6 +147,7 @@ export function RmaManager({
   // status/type checks); only the badge/column text is translated. Unknown values fall
   // back to humanize() so behavior never regresses.
   const RMA_STATUS_LABELS: Record<string, string> = {
+    warranty_review: t('rma.status.warrantyReview', 'Warranty review'),
     open: t('rma.status.open', 'Open'),
     awaiting_return: t('rma.status.awaitingReturn', 'Awaiting return'),
     returned: t('rma.status.returned', 'Returned'),
@@ -125,8 +155,8 @@ export function RmaManager({
     replacement_received: t('rma.status.replacementReceived', 'Replacement received'),
     replacement_deployed: t('rma.status.replacementDeployed', 'Replacement deployed'),
     dead_unit_owed: t('rma.status.deadUnitOwed', 'Dead unit owed'),
-    dead_unit_returned: t('rma.status.deadUnitReturned', 'Dead unit returned'),
     replaced: t('rma.status.replaced', 'Replaced'),
+    repaired: t('rma.status.repaired', 'Repaired'),
     credited: t('rma.status.credited', 'Credited'),
     charged: t('rma.status.charged', 'Charged'),
     closed: t('rma.status.closed', 'Closed'),
@@ -178,6 +208,51 @@ export function RmaManager({
       cancelled = true;
     };
   }, [rmaIdParam]);
+
+  // Which vendor-case system is already mirrored to this RMA's ticket, so the picker reopens on it
+  // instead of resetting to generic. Keyed on the id, not the whole object: a transition replaces
+  // `rmaDetail` (onChanged below) without changing which link is mirrored.
+  const rmaDetailId = rmaDetail?.rma_id ?? null;
+  useEffect(() => {
+    if (!rmaDetailId || !getMirroredVendorCaseSystem) {
+      setMirroredSystem(undefined);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const result = await getMirroredVendorCaseSystem(rmaDetailId);
+        if (cancelled) return;
+        setMirroredSystem(typeof result === 'string' ? result : undefined);
+      } catch (e) {
+        if (cancelled) return;
+        console.error(e);
+        setMirroredSystem(undefined);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [rmaDetailId, getMirroredVendorCaseSystem]);
+
+  // `?assetId=` (from the asset's Warranty card) opens the claim dialog prefilled.
+  useEffect(() => {
+    if (assetIdParam && UUID_RE.test(assetIdParam)) {
+      setClaimAssetId(assetIdParam);
+      setClaimOpen(true);
+    }
+  }, [assetIdParam]);
+
+  const closeClaimDialog = useCallback(() => {
+    setClaimOpen(false);
+    setClaimAssetId(null);
+    if (searchParams?.get('assetId')) {
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete('assetId');
+      const qs = next.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname);
+    }
+  }, [pathname, router, searchParams]);
 
   const reload = useCallback(async () => {
     try {
@@ -324,17 +399,42 @@ export function RmaManager({
   };
 
   const unitLabel = (rma: IRmaCase): string => {
+    if (isAssetTracked(rma) && (rma.asset_name || rma.asset_serial_number)) {
+      return [rma.asset_name, rma.asset_serial_number ? `SN ${rma.asset_serial_number}` : null].filter(Boolean).join(' · ');
+    }
     const product = rma.service_name || rma.service_sku || '';
     const serial = rma.returned_serial_number ? `SN ${rma.returned_serial_number}` : '';
     const mac = !serial && rma.returned_mac_address ? rma.returned_mac_address : '';
-    const identifier = serial || mac || shortId(rma.returned_unit_id);
+    const identifier = serial || mac || t('common.emptyValue', '—');
     return product ? `${product} · ${identifier}` : identifier;
   };
 
   const visibleCases = React.useMemo(
-    () => cases.filter((rma) => !statusFilter || rma.status === statusFilter),
-    [cases, statusFilter],
+    () => cases.filter((rma) =>
+      (!statusFilter || rma.status === statusFilter) &&
+      (tab === 'all' || TAB_STATUSES[tab].has(rma.status))),
+    [cases, statusFilter, tab],
   );
+
+  const openRmaDetail = (rmaId: string) => {
+    const next = new URLSearchParams(searchParams?.toString() ?? '');
+    next.set('rmaId', rmaId);
+    router.push(`${pathname}?${next.toString()}`);
+  };
+
+  const mirrorToTicket = async (rma: IRmaCase, systemKey?: string) => {
+    if (!mirrorRmaToTicket) return;
+    try {
+      const result = await mirrorRmaToTicket(rma.rma_id, systemKey);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      toast.success(t('rma.warranty.mirrored', 'Vendor case added to the ticket.'));
+    } catch (e: any) {
+      toast.error(e?.message || t('rma.warranty.mirrorFailed', "Couldn't add the vendor case to the ticket."));
+    }
+  };
 
   const clearStatusFilter = () => {
     router.push('/msp/inventory/rma');
@@ -344,7 +444,7 @@ export function RmaManager({
     {
       title: t('rma.columns.rmaNumber', 'RMA #'),
       dataIndex: 'rma_reference',
-      render: (_: any, rec: IRmaCase) => rec.rma_reference || shortId(rec.rma_id),
+      render: (_: any, rec: IRmaCase) => rec.rma_number || rec.rma_reference || t('common.emptyValue', '—'),
     },
     { title: t('rma.columns.type', 'Type'), dataIndex: 'rma_type', render: (v: any) => typeLabel(v) },
     {
@@ -352,9 +452,19 @@ export function RmaManager({
       dataIndex: 'status',
       render: (v: any) => <Badge variant={STATUS_VARIANT[v] ?? 'secondary'} size="sm">{statusLabel(v)}</Badge>,
     },
-    { title: t('rma.columns.vendor', 'Vendor'), dataIndex: 'vendor_name', render: (_: any, rec: IRmaCase) => rec.vendor_name || rec.vendor_id || t('common.emptyValue', '—') },
+    { title: t('rma.columns.vendor', 'Vendor'), dataIndex: 'vendor_name', render: (_: any, rec: IRmaCase) => rec.vendor_name || t('common.emptyValue', '—') },
     { title: t('rma.columns.returnedUnit', 'Returned unit'), dataIndex: 'returned_unit_id', render: (_: any, rec: IRmaCase) => unitLabel(rec) },
-    { title: t('rma.columns.client', 'Client'), dataIndex: 'client_name', render: (_: any, rec: IRmaCase) => rec.client_name || rec.client_id || t('common.emptyValue', '—') },
+    { title: t('rma.columns.client', 'Client'), dataIndex: 'client_name', render: (_: any, rec: IRmaCase) => rec.client_name || t('common.emptyValue', '—') },
+    { title: t('rma.columns.ticket', 'Ticket'), dataIndex: 'ticket_number', render: (_: any, rec: IRmaCase) => rec.ticket_number || t('common.emptyValue', '—') },
+    {
+      title: t('rma.columns.returnBy', 'Return by'),
+      dataIndex: 'return_by',
+      render: (_: any, rec: IRmaCase) => {
+        if (!rec.return_by) return t('common.emptyValue', '—');
+        const [y, m, d] = rec.return_by.split('-').map(Number);
+        return new Date(y, m - 1, d).toLocaleDateString();
+      },
+    },
     {
       title: t('rma.columns.creditAtStake', 'Credit at stake'),
       dataIndex: 'returned_unit_cost',
@@ -378,7 +488,18 @@ export function RmaManager({
       title: t('common.actions', 'Actions'),
       dataIndex: 'rma_id',
       width: '230px',
-      render: (_: any, rec: IRmaCase) => (
+      render: (_: any, rec: IRmaCase) => isAssetTracked(rec) ? (
+        <div className="flex gap-2">
+          <Button
+            id={`rma-open-detail-${rec.rma_id}`}
+            variant="outline"
+            size="sm"
+            onClick={() => openRmaDetail(rec.rma_id)}
+          >
+            {t('rma.warranty.openDetail', 'Open')}
+          </Button>
+        </div>
+      ) : (
         <div className="flex gap-2">
           <Button
             id={`receive-return-${rec.rma_id}`}
@@ -407,11 +528,11 @@ export function RmaManager({
     {
       title: t('rma.columns.rmaNumber', 'RMA #'),
       dataIndex: 'rma_reference',
-      render: (_: any, rec: DeadUnitOwedRow) => rec.rma_reference || shortId(rec.rma_id),
+      render: (_: any, rec: DeadUnitOwedRow) => rec.rma_number || rec.rma_reference || t('common.emptyValue', '—'),
     },
     { title: t('rma.columns.returnedUnit', 'Returned unit'), dataIndex: 'returned_unit_id', render: (_: any, rec: DeadUnitOwedRow) => unitLabel(rec) },
-    { title: t('rma.columns.client', 'Client'), dataIndex: 'client_name', render: (_: any, rec: DeadUnitOwedRow) => rec.client_name || rec.client_id || t('common.emptyValue', '—') },
-    { title: t('rma.columns.vendor', 'Vendor'), dataIndex: 'vendor_name', render: (_: any, rec: DeadUnitOwedRow) => rec.vendor_name || rec.vendor_id || t('common.emptyValue', '—') },
+    { title: t('rma.columns.client', 'Client'), dataIndex: 'client_name', render: (_: any, rec: DeadUnitOwedRow) => rec.client_name || t('common.emptyValue', '—') },
+    { title: t('rma.columns.vendor', 'Vendor'), dataIndex: 'vendor_name', render: (_: any, rec: DeadUnitOwedRow) => rec.vendor_name || t('common.emptyValue', '—') },
     {
       title: t('rma.columns.creditAtStake', 'Credit at stake'),
       dataIndex: 'returned_unit_cost',
@@ -437,10 +558,27 @@ export function RmaManager({
     <div className="p-6 space-y-4" id="rma-page">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{t('rma.title', 'RMA')}</h1>
-        <Button id="rma-add-button" onClick={openCreate}>
-          {t('rma.openRma', 'Open RMA')}
-        </Button>
+        <div className="flex gap-2">
+          <Button id="rma-new-warranty-claim-button" variant="outline" onClick={() => { setClaimAssetId(null); setClaimOpen(true); }}>
+            {t('rma.warranty.claim.title', 'New warranty claim')}
+          </Button>
+          <Button id="rma-add-button" onClick={openCreate}>
+            {t('rma.openRma', 'Open RMA')}
+          </Button>
+        </div>
       </div>
+
+      <CustomTabs
+        idPrefix="rma-tabs"
+        value={tab}
+        onTabChange={(v: string) => setTab(v as RmaTab)}
+        tabs={[
+          { id: 'all', label: t('rma.tabs.all', 'All'), content: null },
+          { id: 'review', label: t('rma.tabs.review', 'Warranty review'), content: null },
+          { id: 'in_progress', label: t('rma.tabs.inProgress', 'In progress'), content: null },
+          { id: 'closed', label: t('rma.tabs.closed', 'Closed'), content: null },
+        ]}
+      />
 
       {statusFilter && (
         <div className="flex items-center gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
@@ -553,15 +691,59 @@ export function RmaManager({
         </div>
       </Dialog>
 
+      <NewWarrantyClaimDialog
+        isOpen={claimOpen}
+        onClose={closeClaimDialog}
+        vendors={vendors}
+        initialAssetId={claimAssetId}
+        onCreated={async (created) => {
+          closeClaimDialog();
+          await reload();
+          openRmaDetail(created.rma_id);
+        }}
+      />
+
       <Dialog
         id="rma-detail-dialog"
         isOpen={rmaDetail !== null || rmaUnavailable}
         onClose={closeRmaDialog}
-        title={t('rma.detail.title', 'RMA {{id}}', { id: rmaDetail ? rmaDetail.rma_reference || shortId(rmaDetail.rma_id) : '' }).trim()}
-        className="max-w-2xl"
+        title={t('rma.detail.title', 'RMA {{id}}', { id: rmaDetail ? rmaDetail.rma_number || rmaDetail.rma_reference || '' : '' }).trim()}
+        className="max-w-3xl"
       >
         {rmaUnavailable && <RecordUnavailable id="rma-dialog-unavailable" />}
-        {!rmaUnavailable && rmaDetail && (
+        {!rmaUnavailable && rmaDetail && isAssetTracked(rmaDetail) && (
+          <div className="space-y-4 p-1">
+            <div className="grid gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <div className="text-xs text-gray-500">{t('rma.columns.type', 'Type')}</div>
+                <div>{typeLabel(rmaDetail.rma_type)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-gray-500">{t('common.status', 'Status')}</div>
+                <Badge variant={STATUS_VARIANT[rmaDetail.status] ?? 'secondary'} size="sm">{statusLabel(rmaDetail.status)}</Badge>
+              </div>
+            </div>
+            {rmaDetail.reason && (
+              <div className="text-sm">
+                <div className="text-xs text-gray-500">{t('rma.detail.reason', 'Reason')}</div>
+                <div>{rmaDetail.reason}</div>
+              </div>
+            )}
+            <RmaWarrantyPanel
+              rma={rmaDetail}
+              vendors={vendors}
+              locations={locations}
+              onMirrorToTicket={mirrorRmaToTicket ? mirrorToTicket : undefined}
+              vendorCaseSystems={vendorCaseSystems}
+              selectedVendorCaseSystem={mirroredSystem}
+              onChanged={async (updated) => {
+                setRmaDetail(updated);
+                await reload();
+              }}
+            />
+          </div>
+        )}
+        {!rmaUnavailable && rmaDetail && !isAssetTracked(rmaDetail) && (
           <div className="space-y-4 p-1">
             <div className="grid gap-3 text-sm sm:grid-cols-2">
               {([

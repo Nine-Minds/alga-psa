@@ -1,6 +1,5 @@
 'use server';
 
-import { zodToJsonSchema } from 'zod-to-json-schema';
 import { z } from 'zod';
 import { createHash } from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
@@ -24,6 +23,7 @@ import {
   buildWorkflowDesignerActionCatalog,
   getWorkflowIntegrationModuleRegistry,
   resolveAvailableIntegrationModuleKeys,
+  zodToJsonSchemaDocument,
   zodToWorkflowJsonSchema,
   validateWorkflowDefinition,
   validateInputMapping,
@@ -281,7 +281,7 @@ const stripImplicitTenantIdFromManualRunPayload = (
   return rest;
 };
 
-const formatSchedulePayloadValidationMessage = (issues: Array<{ path?: Array<string | number>; message?: string }>): string => {
+const formatSchedulePayloadValidationMessage = (issues: ReadonlyArray<{ path?: ReadonlyArray<PropertyKey>; message?: string }>): string => {
   if (!issues.length) {
     return 'Schedule payload failed validation against the latest published workflow schema.';
   }
@@ -1015,7 +1015,7 @@ const computeValidation = async (params: {
           // Validate action.call inputMapping
           if (step.type === 'action.call' && actionId) {
             const defn = registry.get(actionId, actionVersion ?? 1);
-            const inputSchemaJson = defn?.inputSchema ? (zodToJsonSchema(defn.inputSchema, { name: `${actionId}@${actionVersion ?? 1}.input` }) as any) : null;
+            const inputSchemaJson = defn?.inputSchema ? (zodToJsonSchemaDocument(defn.inputSchema, { name: `${actionId}@${actionVersion ?? 1}.input` }) as any) : null;
             const inputMapping = cfg?.inputMapping ?? null;
             if (inputSchemaJson && inputMapping && typeof inputMapping === 'object') {
               validateMappingTypesAgainstSchema({
@@ -3674,7 +3674,7 @@ export const listWorkflowRegistryNodesAction = withAuth(async (user, { tenant })
   return registry.list().map((node) => ({
     id: node.id,
     ui: node.ui,
-    configSchema: zodToJsonSchema(node.configSchema, { name: node.id }),
+    configSchema: zodToJsonSchemaDocument(node.configSchema, { name: node.id }),
     examples: node.examples ?? null,
     defaultRetry: node.defaultRetry ?? null
   }));

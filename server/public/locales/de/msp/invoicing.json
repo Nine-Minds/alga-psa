@@ -2552,7 +2552,8 @@
       "packingSlip": "Lieferschein",
       "pickList": "Kommissionierliste",
       "workTag": "Arbeitsetikett / Label",
-      "stagingManifest": "Packliste"
+      "stagingManifest": "Packliste",
+      "rmaReturnSlip": "RMA-Rücksendeschein"
     }
   },
   "errors": {

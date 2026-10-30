@@ -144,7 +144,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           searchParams = timeEntrySearchSchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid search parameters', error.errors);
+            throw new ValidationError('Invalid search parameters', error.issues);
           }
           throw error;
         }
@@ -301,7 +301,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           exportParams = timeEntryExportQuerySchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid export parameters', error.errors);
+            throw new ValidationError('Invalid export parameters', error.issues);
           }
           throw error;
         }
@@ -389,7 +389,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           trackingData = startTimeTrackingSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid tracking data', error.errors);
+            throw new ValidationError('Invalid tracking data', error.issues);
           }
           throw error;
         }
@@ -472,7 +472,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           stopData = stopTimeTrackingSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid stop data', error.errors);
+            throw new ValidationError('Invalid stop data', error.issues);
           }
           throw error;
         }
@@ -658,7 +658,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           approvalData = approveTimeEntriesSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid approval data', error.errors);
+            throw new ValidationError('Invalid approval data', error.issues);
           }
           throw error;
         }
@@ -736,7 +736,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           changeData = requestTimeEntryChangesSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid change request data', error.errors);
+            throw new ValidationError('Invalid change request data', error.issues);
           }
           throw error;
         }
@@ -867,7 +867,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           bulkData = bulkTimeEntrySchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid bulk data', error.errors);
+            throw new ValidationError('Invalid bulk data', error.issues);
           }
           throw error;
         }
@@ -945,7 +945,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           bulkData = bulkUpdateTimeEntrySchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid bulk data', error.errors);
+            throw new ValidationError('Invalid bulk data', error.issues);
           }
           throw error;
         }
@@ -1023,7 +1023,7 @@ export class ApiTimeEntryController extends ApiBaseController {
           bulkData = bulkDeleteTimeEntrySchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid bulk data', error.errors);
+            throw new ValidationError('Invalid bulk data', error.issues);
           }
           throw error;
         }

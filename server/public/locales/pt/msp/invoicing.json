@@ -2552,7 +2552,8 @@
       "packingSlip": "Nota de entrega",
       "pickList": "Lista de separação",
       "workTag": "Etiqueta de trabalho / Etiqueta",
-      "stagingManifest": "Manifesto de embalagem"
+      "stagingManifest": "Manifesto de embalagem",
+      "rmaReturnSlip": "Comprovante de devolução de RMA"
     }
   },
   "errors": {

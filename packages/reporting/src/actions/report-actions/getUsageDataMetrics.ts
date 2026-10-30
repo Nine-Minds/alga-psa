@@ -10,7 +10,7 @@ import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 
 // Define the schema for the input parameters
 const InputSchema = z.object({
-  clientId: z.string().uuid(),
+  clientId: z.string().guid(),
   startDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "Invalid start date format (YYYY-MM-DD)",
   }),

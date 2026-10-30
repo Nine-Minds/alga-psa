@@ -58,6 +58,10 @@ export {
 export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'email_sender_routes',
   'email_sender_addresses',
+  // rma_cases has a NO ACTION FK to asset_custody (rma_cases_custody_fk) plus FKs to clients/assets/
+  // stock_units/tickets deleted later, so rma_events (FK to rma_cases) then rma_cases precede asset_custody.
+  'rma_events',
+  'rma_cases',
   'asset_custody_events',
   'asset_custody',
   'sessions',
@@ -65,7 +69,6 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'staging_containers',
   'stock_movements',
   'stock_transfer_lines',
-  'rma_cases',
   'kit_components',
   'stock_levels',
   'product_inventory_settings',
@@ -453,6 +456,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_managed_allocations',
   'co_managed_entitlements',
   'co_managed_provisioning_operations',
+  'co_managed_purchase_operations',
+  'tenant_license_state',
   'co_managed_meeting_creation_operations',
   'co_management_relationship_events',
   'co_management_delegated_receipts',
