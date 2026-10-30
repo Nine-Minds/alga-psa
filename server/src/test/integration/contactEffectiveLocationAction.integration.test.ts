@@ -29,7 +29,10 @@ vi.mock('@alga-psa/auth', () => ({
 }));
 
 import { tenantDb } from '@alga-psa/db';
-import { getContactEffectiveLocation } from '../../../../packages/tickets/src/actions/clientLookupActions';
+import {
+  getContactEffectiveLocation,
+  getContactsByClient,
+} from '../../../../packages/tickets/src/actions/clientLookupActions';
 
 const HOOK_TIMEOUT = 240_000;
 
@@ -119,6 +122,49 @@ describe('getContactEffectiveLocation (integration)', () => {
     expect(effective.locations.map((location) => location.location_id).sort())
       .toEqual([headOfficeId, warehouseId].sort());
     expect(effective.locations.find((location) => location.is_primary)?.location_name).toBe('Warehouse');
+  }, HOOK_TIMEOUT);
+
+  it('T039: the picker page attaches every primary location in one batched read', async () => {
+    state.permitted = true;
+    // A second linked person, so "one read per page" is a claim about the page and not about a row.
+    const secondId = uuidv4();
+    await scoped().table('contacts').insert({
+      tenant: state.tenant,
+      contact_name_id: secondId,
+      full_name: `Second Picker Contact ${secondId.slice(0, 8)}`,
+      client_id: clientId,
+      email: `picker-${secondId.slice(0, 8)}@example.com`,
+      created_at: db.fn.now(),
+      updated_at: db.fn.now(),
+    });
+    await scoped().table('contact_locations').insert({
+      tenant: state.tenant,
+      contact_name_id: secondId,
+      location_id: headOfficeId,
+      is_primary: true,
+      created_at: db.fn.now(),
+    });
+
+    const linkReads: string[] = [];
+    const listener = (query: { sql?: string }) => {
+      if (query?.sql?.includes('contact_locations')) linkReads.push(query.sql);
+    };
+    db.on('query', listener);
+    let rows;
+    try {
+      rows = await getContactsByClient(clientId, 'all');
+    } finally {
+      db.removeListener('query', listener);
+    }
+
+    expect(linkReads).toHaveLength(1);
+    const byId = new Map(rows!.map((contact) => [contact.contact_name_id, contact]));
+    expect(byId.get(contactId)?.primaryLocation).toEqual(
+      expect.objectContaining({ location_id: warehouseId, location_name: 'Warehouse' }),
+    );
+    expect(byId.get(secondId)?.primaryLocation).toEqual(
+      expect.objectContaining({ location_id: headOfficeId, location_name: 'Head office' }),
+    );
   }, HOOK_TIMEOUT);
 
   it('T045: refuses a portal user and an internal user without contact read', async () => {

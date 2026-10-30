@@ -313,7 +313,7 @@
     "featureIds": [
       "F023"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Client contacts tab Location filter narrows to contacts linked to the chosen location; Remote and No location options behave as described"
   },
   {
@@ -350,7 +350,7 @@
     "featureIds": [
       "F027"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Picker actions attach primaryLocation in one batched query per page (query count assertion)"
   },
   {
@@ -802,7 +802,7 @@
     "featureIds": [
       "F060"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Contact indexer: a contact linked to Warehouse (primary) and Head office indexes subtitle '\u2026 | Acme | Warehouse' and a body containing both names and cities; a remote contact's body contains 'Remote'"
   },
   {
@@ -820,7 +820,7 @@
     "featureIds": [
       "F061"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Renaming Warehouse to Depot reindexes linked contacts so searching 'depot' finds them and 'warehouse' no longer does; deactivating a location reindexes the same set"
   },
   {
