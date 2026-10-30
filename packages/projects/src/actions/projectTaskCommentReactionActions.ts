@@ -2,6 +2,7 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { validateEmoji } from '@alga-psa/types';
 import type { IReactionsBatchResult, IUserWithRoles } from '@alga-psa/types';
 import {
   getTaskCommentsReactionsBatchWithDb,
@@ -22,6 +23,8 @@ export const toggleTaskCommentReaction = withAuth(async (
   taskCommentId: string,
   emoji: string
 ): Promise<{ added: boolean }> => {
+  // Input validation touches no data, so it stays ahead of the authorization boundary.
+  validateEmoji(emoji);
   const { knex: db } = await createTenantKnex();
   return withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskCommentId }, 'react', ({ trx }) =>
     toggleTaskCommentReactionWithDb(trx, tenant, user.user_id, taskCommentId, emoji));

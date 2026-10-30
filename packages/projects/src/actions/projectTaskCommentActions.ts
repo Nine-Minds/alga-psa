@@ -2,6 +2,7 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { serves } from '@alga-psa/core/capability';
 import { getApiKeyUserOverride, getSession } from '@alga-psa/auth';
 import type { IProjectTaskComment, IProjectTaskCommentWithUser, IUserWithRoles } from '@alga-psa/types';
@@ -206,6 +207,11 @@ export const getTaskCommentCountsBatch = withAuth(async (
 ): Promise<Record<string, number> | ProjectTaskCommentActionError> => {
   try {
     if (taskIds.length === 0) return {};
+
+    // Coarse permission first, before the co-managed admission path can see the request.
+    if (!await hasPermission(user, 'project_task', 'read')) {
+      throw new Error('Permission denied: cannot read task comments');
+    }
 
     const { knex: db } = await createTenantKnex();
     const coManaged = await coManagedBoardCommentCounts(db, tenant, user, taskIds);

@@ -40,7 +40,8 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: async (_u: unknown, r: string, a: string) => state.perms.has(`${r}:${a}`),
 }));
-vi.mock('@alga-psa/core/capability', () => ({ serves: async () => ({ served: false }) }));
+const serves = vi.hoisted(() => vi.fn(async () => ({ served: false })));
+vi.mock('@alga-psa/core/capability', () => ({ serves }));
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   actionError: (message: string) => ({ error: message }),
   permissionError: (message: string) => ({ permissionError: message }),
@@ -53,7 +54,7 @@ vi.mock('../lib/projectReadAuthorization', () => ({
 }));
 vi.mock('../lib/taskComments/taskCommentService', () => service);
 
-import { createTaskComment, deleteTaskComment, getTaskComments, getTaskCommentCount, updateTaskComment } from './projectTaskCommentActions';
+import { createTaskComment, deleteTaskComment, getTaskComments, getTaskCommentCount, getTaskCommentCountsBatch, updateTaskComment } from './projectTaskCommentActions';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -99,5 +100,18 @@ describe('task comment actions enforce the shared authorization boundary', () =>
   it('positive path: an authorized user reads and creates on an accessible task', async () => {
     expect(await getTaskComments('T1')).toHaveLength(1);
     expect(await createTaskComment({ taskId: 'T1', note: 'x' } as any)).toBe('new');
+  });
+
+  it('batch counts: a caller without project_task:read is rejected before the co-managed path (serves) is consulted', async () => {
+    state.perms = new Set();
+    const result = await getTaskCommentCountsBatch(['T1']);
+    expect(result).toHaveProperty('permissionError');
+    expect(serves).not.toHaveBeenCalled();
+    expect(service.countTaskCommentsBatchWithDb).not.toHaveBeenCalled();
+  });
+
+  it('batch counts: only tasks in accessible projects are counted', async () => {
+    await getTaskCommentCountsBatch(['T1', 'T2']);
+    expect(service.countTaskCommentsBatchWithDb).toHaveBeenCalledWith(expect.anything(), 't1', ['T1']);
   });
 });
