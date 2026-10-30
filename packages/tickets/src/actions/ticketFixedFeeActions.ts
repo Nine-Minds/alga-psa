@@ -93,6 +93,7 @@ export const updateTicketFixedFeeService = withAuth(async (user, { tenant }, ent
   return withTransaction(knex, async (trx) => {
     const db = tenantDb(trx, tenant);
     const entry = await db.table('ticket_fixed_fee_services').where({ entry_id: entryId }).forUpdate().first();
+    // Billed rows are immutable because their quantity and price back an invoice.
     if (!entry || entry.is_billed) {
       return actionError('Billed or removed entries cannot be edited. Refresh and try again.', 'features/tickets:chargeEdit.errors.notEditable');
     }

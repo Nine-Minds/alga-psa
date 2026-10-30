@@ -113,7 +113,12 @@ function createQueryBuilder(rows: Row[], tableName: string) {
     // The ticket→project resolver is joined as raw SQL (alga-2026-0002622).
     joinRaw: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
-    update: vi.fn(async () => 1),
+    update: vi.fn(async (values: Row) => {
+      const error = mocks.updateErrors[tableName];
+      if (error) throw error;
+      resultRows.forEach((row) => Object.assign(row, values));
+      return resultRows.length;
+    }),
     delete: vi.fn(async () => {
       const deletedCount = resultRows.length;
       for (const row of resultRows) {
@@ -137,10 +142,6 @@ function createQueryBuilder(rows: Row[], tableName: string) {
     then: (resolve: (value: Row[]) => unknown, reject?: (reason: unknown) => unknown) =>
       Promise.resolve(resultRows).then(resolve, reject),
   };
-
-  if (tableName === 'ticket_materials' || tableName === 'project_materials') {
-    builder.andWhere = vi.fn(() => builder);
-  }
 
   return builder;
 }
@@ -209,12 +210,21 @@ const mocks = vi.hoisted(() => {
   }));
 
   return {
+    updateErrors: {} as Record<string, Error>,
     rowsByTable,
     knex,
     createTenantKnex: vi.fn(async () => ({ knex })),
-    withTransaction: vi.fn(async (_knex: unknown, callback: (trx: any) => Promise<unknown>) =>
-      callback(knex),
-    ),
+    withTransaction: vi.fn(async (_knex: unknown, callback: (trx: any) => Promise<unknown>) => {
+      const snapshot = structuredClone(rowsByTable);
+      try {
+        return await callback(knex);
+      } catch (error) {
+        for (const [table, rows] of Object.entries(snapshot)) {
+          rowsByTable[table].splice(0, rowsByTable[table].length, ...rows);
+        }
+        throw error;
+      }
+    }),
     validateClientBillingEmail: vi.fn(async () => ({ valid: true })),
     getClientDetails: vi.fn(async () => ({
       client_id: 'client-1',
@@ -418,6 +428,12 @@ describe('invoice generation zero-dollar recurring handling', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.rowsByTable.invoices.length = 0;
+    mocks.rowsByTable.ticket_materials.length = 0;
+    mocks.rowsByTable.project_materials.length = 0;
+    mocks.updateErrors = {};
+    Object.assign(mocks.rowsByTable.client_billing_profiles[0], {
+      tenant: 'tenant-1', client_id: 'client-1',
+    });
     mocks.rowsByTable.recurring_service_periods.splice(
       0,
       mocks.rowsByTable.recurring_service_periods.length,
@@ -488,6 +504,70 @@ describe('invoice generation zero-dollar recurring handling', () => {
 
     expect(mocks.persistInvoiceCharges).toHaveBeenCalledTimes(1);
     expect(mocks.rowsByTable.invoices).toEqual([]);
+    expect(mocks.finalizeInvoiceWithKnex).not.toHaveBeenCalled();
+  });
+
+  async function seedMaterialClaims(includeSourceVersion = true) {
+    const result = await mocks.calculateBilling();
+    const sourceVersion = '2026-10-30T12:00:00.123456Z';
+    const row = {
+      tenant: 'tenant-1', is_billed: false, updated_at: sourceVersion,
+      ticket_material_id: 'ticket-material-a',
+    };
+    mocks.rowsByTable.ticket_materials.push(
+      { ...row },
+      { ...row, ticket_material_id: 'ticket-material-b' },
+      { ...row, tenant: 'tenant-foreign' },
+    );
+    mocks.calculateBilling.mockResolvedValueOnce({
+      ...result,
+      charges: ['ticket-material-a', 'ticket-material-b'].map((id) => ({
+        ...result.charges[0], type: 'product',
+        material_source_type: 'ticket', material_source_id: id,
+        material_source_updated_at: includeSourceVersion ? sourceVersion : undefined,
+      })),
+    });
+    return sourceVersion;
+  }
+
+  it('claims exact source versions without updating another tenant with the same material ID', async () => {
+    await seedMaterialClaims();
+    await generateInvoice('cycle-1');
+    expect(mocks.rowsByTable.ticket_materials.filter((row) => row.tenant === 'tenant-1'))
+      .toEqual(expect.arrayContaining([
+        expect.objectContaining({ ticket_material_id: 'ticket-material-a', is_billed: true, billed_invoice_id: 'invoice-created' }),
+        expect.objectContaining({ ticket_material_id: 'ticket-material-b', is_billed: true, billed_invoice_id: 'invoice-created' }),
+      ]));
+    expect(mocks.rowsByTable.ticket_materials.find((row) => row.tenant === 'tenant-foreign')?.is_billed).toBe(false);
+  });
+
+  it.each(['edited', 'already billed'])('rolls back earlier claims and removes the draft if a later source was %s', async (conflict) => {
+    await seedMaterialClaims();
+    const row = mocks.rowsByTable.ticket_materials[1];
+    if (conflict === 'edited') row.updated_at = '2026-10-30T12:01:00Z';
+    else row.is_billed = true;
+    const before = structuredClone(mocks.rowsByTable.ticket_materials);
+    await expect(generateInvoice('cycle-1')).rejects.toThrow('A ticket product changed');
+    expect(mocks.rowsByTable.ticket_materials).toEqual(before);
+    expect(mocks.rowsByTable.invoices).toEqual([]);
+    expect(mocks.finalizeInvoiceWithKnex).not.toHaveBeenCalled();
+  });
+
+  it.each(['42P01', 'XX000'])('propagates material database error %s instead of completing an invoice', async (code) => {
+    await seedMaterialClaims();
+    const error = Object.assign(new Error('Material claim failed'), { code });
+    mocks.updateErrors.ticket_materials = error;
+    await expect(generateInvoice('cycle-1')).rejects.toThrow(error);
+    expect(mocks.rowsByTable.invoices).toEqual([]);
+    expect(mocks.rowsByTable.ticket_materials.some((row) => row.is_billed)).toBe(false);
+    expect(mocks.finalizeInvoiceWithKnex).not.toHaveBeenCalled();
+  });
+
+  it('rejects a material charge without a priced source version and removes the draft', async () => {
+    await seedMaterialClaims(false);
+    await expect(generateInvoice('cycle-1')).rejects.toThrow('Ticket material source version is required');
+    expect(mocks.rowsByTable.invoices).toEqual([]);
+    expect(mocks.rowsByTable.ticket_materials.some((row) => row.is_billed)).toBe(false);
     expect(mocks.finalizeInvoiceWithKnex).not.toHaveBeenCalled();
   });
 });

@@ -146,6 +146,19 @@ describe('ticket fixed-fee actions', () => {
     expect(mocks.connect).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ['edit service', () => updateTicketFixedFeeService(entryId, { quantity: 3, description: '' })],
+    ['remove service', () => deleteTicketFixedFeeService(entryId)],
+    ['edit material', () => updateTicketMaterial(entryId, { quantity: 3, description: '' })],
+  ] as const)('requires ticket update permission to %s', async (_name, mutate) => {
+    mocks.permission.mockResolvedValue(false);
+    expect(await mutate()).toHaveProperty('permissionError');
+    expect(mocks.permission).toHaveBeenCalledWith(expect.anything(), 'ticket', 'update');
+    expect(mocks.connect).not.toHaveBeenCalled();
+    expect(mocks.consume).not.toHaveBeenCalled();
+    expect(mocks.movement).not.toHaveBeenCalled();
+  });
+
   it.each([0, -1, 1.5, 2147483648, NaN])('rejects invalid quantity %s', async (quantity) => {
     expect(await addTicketFixedFeeService({ ...input, quantity })).toHaveProperty('actionError');
     expect(mocks.connect).not.toHaveBeenCalled();

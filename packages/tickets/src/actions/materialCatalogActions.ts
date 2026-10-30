@@ -261,6 +261,7 @@ export const updateTicketMaterial = withAuth(async (
       const db = tenantDb(trx, tenant);
       const material = await db.table('ticket_materials')
         .where({ ticket_material_id: materialId }).forUpdate().first();
+      // Editing billed rows would invalidate both their invoice and inventory cost attribution.
       if (!material || material.is_billed) {
         throw new CodedError('Billed or removed entries cannot be edited. Refresh and try again.', 'TICKET_MATERIAL_EDIT', 'features/tickets:chargeEdit.errors.notEditable');
       }

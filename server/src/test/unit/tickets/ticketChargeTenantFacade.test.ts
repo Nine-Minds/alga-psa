@@ -23,4 +23,14 @@ describe.each([
     expect(sql).toContain('"f"."ticket_id" = \'ticket-a\'');
     expect(sql).toMatch(/"s"\."tenant" = "f"\."tenant"|"s"\."tenant" = 'tenant-a'/);
   });
+
+  it('scopes material compare-and-swap updates to the current tenant', () => {
+    const sql = facade(knex, 'tenant-a').table('ticket_materials')
+      .where({ ticket_material_id: 'material-a', is_billed: false, updated_at: 'source-version' })
+      .update({ is_billed: true, billed_invoice_id: 'invoice-a' }).toString();
+    expect(sql).toContain('"tenant" = \'tenant-a\'');
+    expect(sql).toContain('"ticket_material_id" = \'material-a\'');
+    expect(sql).toContain('"is_billed" = false');
+    expect(sql).toContain('"updated_at" = \'source-version\'');
+  });
 });

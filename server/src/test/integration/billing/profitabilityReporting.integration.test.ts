@@ -640,6 +640,39 @@ describe('Profitability Reporting Integration', () => {
     expect(summary.revenue).toBe(EXPECTED_REVENUE);
   });
 
+  it('nets consumption and restock-return COGS without changing material revenue', async () => {
+    const material = await table('ticket_materials')
+      .where({ ticket_id: ticketId, billed_invoice_id: invoiceId })
+      .first('ticket_material_id', 'service_id');
+    expect(material).toBeDefined();
+    const movementIds = [uuidv4(), uuidv4()];
+    const before = await getProfitabilitySummary(RANGE);
+    try {
+      await table('stock_movements').insert([
+        {
+          movement_id: movementIds[0], movement_type: 'consume',
+          service_id: material.service_id, quantity: 3, cogs_cost: 9000,
+          cost_currency: before.currencyCode, source_doc_type: 'ticket_material',
+          source_doc_id: material.ticket_material_id, performed_by: userId,
+        },
+        {
+          movement_id: movementIds[1], movement_type: 'return_restock',
+          service_id: material.service_id, quantity: 1, cogs_cost: -3000,
+          cost_currency: before.currencyCode, source_doc_type: 'ticket_material',
+          source_doc_id: material.ticket_material_id, performed_by: userId,
+        },
+      ]);
+      const summary = await getProfitabilitySummary(RANGE);
+      expect(summary.materialCost).toBe(before.materialCost - BILLED_MATERIAL_COST + 6000);
+      expect(summary.revenue).toBe(before.revenue);
+      const tickets = await getTicketProfitability(RANGE);
+      expect(tickets.find((ticket) => ticket.ticketId === ticketId)?.materialCost)
+        .toBe(EXPECTED_MATERIAL_COST - BILLED_MATERIAL_COST + 6000);
+    } finally {
+      await table('stock_movements').whereIn('movement_id', movementIds).delete();
+    }
+  });
+
   it('allocates arrears-billed fixed revenue to tickets worked in the charge window (D8)', async () => {
     // Invoice dated June, service period May, hours in May only: the June
     // report must still allocate the charge to TK2 as a revenue-only row.

@@ -145,7 +145,6 @@ import {
   buildProjectBudgetThresholdReachedPayload,
 } from '@alga-psa/workflow-streams';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
-const POSTGRES_UNDEFINED_TABLE = '42P01';
 
 function isReturnedActionError(value: unknown): value is InvoiceGenerationActionError {
   return Boolean(
@@ -164,15 +163,6 @@ function unwrapBillingHelperResult<T>(value: T | InvoiceGenerationActionError): 
   }
 
   return value;
-}
-
-function isMissingRelationError(error: unknown): boolean {
-  return Boolean(
-    error &&
-      typeof error === 'object' &&
-      'code' in error &&
-      (error as { code?: string }).code === POSTGRES_UNDEFINED_TABLE
-  );
 }
 
 function isFixedPriceCharge(charge: IBillingCharge): charge is IFixedPriceCharge {
@@ -4221,7 +4211,7 @@ export async function createInvoiceFromBillingResultImpl(
 
     // Mark ticket/project materials in this billing window as billed by this invoice.
     // These materials were included by BillingEngine as non-contract charges (like usage/time).
-    try {
+    {
       const billedAt = Temporal.Now.instant().toString();
       const materialCharges = scopedCharges.filter((charge): charge is IProductCharge => (
         charge.type === 'product'
@@ -4251,6 +4241,7 @@ export async function createInvoiceFromBillingResultImpl(
         }
       }
       if (ticketMaterialIds.length > 0) {
+        // Claim the priced source version so an edit or another invoice cannot bill stale quantities.
         for (const charge of materialCharges.filter((charge) => charge.material_source_type === 'ticket')
           .sort((a, b) => a.material_source_id!.localeCompare(b.material_source_id!))) {
           if (!charge.material_source_updated_at) throw new Error('Ticket material source version is required.');
@@ -4267,10 +4258,6 @@ export async function createInvoiceFromBillingResultImpl(
             throw new Error('A ticket product changed before the invoice could be committed. Refresh and try again.');
           }
         }
-      }
-    } catch (err) {
-      if (!isMissingRelationError(err)) {
-        throw err;
       }
     }
 
