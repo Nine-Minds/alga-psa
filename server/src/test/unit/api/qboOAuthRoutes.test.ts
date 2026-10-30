@@ -11,6 +11,7 @@ const createTenantKnexMock = vi.hoisted(() => vi.fn());
 const resolveQboOAuthCredentialsMock = vi.hoisted(() => vi.fn());
 const getQboRedirectUriMock = vi.hoisted(() => vi.fn());
 const getQboOAuthScopesStringMock = vi.hoisted(() => vi.fn());
+const resolveTenantQboEnvironmentMock = vi.hoisted(() => vi.fn(async () => 'production' as const));
 const upsertStoredQboCredentialsMock = vi.hoisted(() => vi.fn());
 const getSecretProviderInstanceMock = vi.hoisted(() => vi.fn());
 const isProviderDisconnectActiveMock = vi.hoisted(() => vi.fn());
@@ -58,6 +59,7 @@ vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
   resolveQboOAuthCredentials: resolveQboOAuthCredentialsMock,
   getQboRedirectUri: getQboRedirectUriMock,
   getQboOAuthScopesString: getQboOAuthScopesStringMock,
+  resolveTenantQboEnvironment: resolveTenantQboEnvironmentMock,
   upsertStoredQboCredentials: upsertStoredQboCredentialsMock
 }));
 
@@ -289,7 +291,9 @@ describe('QBO OAuth routes', () => {
       expect.objectContaining({
         realmId: 'realm-1',
         accessToken: 'access-token',
-        refreshToken: 'refresh-token'
+        refreshToken: 'refresh-token',
+        // The realm is stamped with the environment it was authorized in.
+        environment: 'production'
       }),
       { authorizationFlowStartedAt: '2026-08-31T12:00:00.000Z' }
     );
