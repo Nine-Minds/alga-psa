@@ -26,6 +26,7 @@ import {
   resolveQuoteDiscountConversionShares,
   summarizeContractSide,
 } from '../../../../billingClients/quoteConversionDiscounts';
+import { resolveFixedMemberRatePair } from '../../../../billingClients/fixedMemberRate';
 import { prepareQuoteTermsForDb } from '../../../../lib/quoteTerms';
 import { SharedNumberingService } from '../../../../services/numberingService';
 
@@ -61,21 +62,21 @@ type TaxThresholdRow = {
 };
 
 const createQuoteBaseSchema = z.object({
-  client_id: z.string().uuid().optional().nullable(),
-  contact_id: z.string().uuid().optional().nullable(),
+  client_id: z.string().guid().optional().nullable(),
+  contact_id: z.string().guid().optional().nullable(),
   title: z.string().trim().min(1),
   description: z.string().trim().optional().nullable(),
   quote_date: z.coerce.date(),
   valid_until: z.coerce.date(),
   po_number: z.string().trim().max(255).optional().nullable(),
-  opportunity_id: z.string().uuid().optional().nullable(),
+  opportunity_id: z.string().guid().optional().nullable(),
   internal_notes: z.string().optional().nullable(),
   client_notes: z.string().optional().nullable(),
   terms_and_conditions: z.string().optional().nullable(),
   currency_code: z.string().trim().length(3).default('USD'),
   tax_source: z.enum(['internal', 'external', 'pending_external']).default('internal'),
   is_template: z.boolean().default(false),
-  created_by: z.string().uuid().optional().nullable(),
+  created_by: z.string().guid().optional().nullable(),
 });
 
 export const createQuoteSchema = createQuoteBaseSchema.superRefine((value, ctx) => {
@@ -97,8 +98,8 @@ export const createQuoteSchema = createQuoteBaseSchema.superRefine((value, ctx) 
 });
 
 const createQuoteItemBaseSchema = z.object({
-  quote_id: z.string().uuid(),
-  service_id: z.string().uuid().optional().nullable(),
+  quote_id: z.string().guid(),
+  service_id: z.string().guid().optional().nullable(),
   description: z.string().trim().min(1),
   quantity: z.number().int().positive(),
   unit_price: z.number().int().min(0).optional(),
@@ -113,15 +114,15 @@ const createQuoteItemBaseSchema = z.object({
   is_discount: z.boolean().default(false),
   discount_type: quoteDiscountTypeSchema.optional().nullable(),
   discount_percentage: z.number().int().min(0).max(100).optional().nullable(),
-  applies_to_item_id: z.string().uuid().optional().nullable(),
-  applies_to_service_id: z.string().uuid().optional().nullable(),
+  applies_to_item_id: z.string().guid().optional().nullable(),
+  applies_to_service_id: z.string().guid().optional().nullable(),
   is_taxable: z.boolean().default(true),
   tax_region: z.string().trim().optional().nullable(),
   tax_rate: z.number().int().min(0).optional().nullable(),
-  location_id: z.string().uuid().optional().nullable(),
+  location_id: z.string().guid().optional().nullable(),
   cost: z.number().int().min(0).optional().nullable(),
   cost_currency: z.string().trim().length(3).optional().nullable(),
-  created_by: z.string().uuid().optional().nullable(),
+  created_by: z.string().guid().optional().nullable(),
 });
 
 export const createQuoteItemSchema = createQuoteItemBaseSchema.superRefine((value, ctx) => {
@@ -1355,9 +1356,8 @@ async function convertQuoteToDraftContractRecords(
       fixedConfigRows.map(({ configId, item }) => ({
         tenant,
         config_id: configId,
-        base_rate: item.unit_price,
         // Stamp per_unit only; the quote-quantity defect on this path is out of scope.
-        base_rate_basis: 'per_unit',
+        ...resolveFixedMemberRatePair({ base_rate: item.unit_price, base_rate_basis: 'per_unit' }),
         created_at: nowIso,
         updated_at: nowIso,
       }))

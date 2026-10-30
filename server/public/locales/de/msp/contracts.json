@@ -588,7 +588,8 @@
       "failedToResetRate": "Zurücksetzen des Positionspreises fehlgeschlagen",
       "protectedStartDate": "Das Startdatum muss am oder vor dem {{boundary}} liegen, damit geschützte Leistungszeiträume enthalten bleiben.",
       "protectedEndDate": "Das Enddatum muss am oder nach dem {{boundary}} liegen, damit geschützte Leistungszeiträume enthalten bleiben.",
-      "cannotEditWithInvoices": "Vertragslinie kann nicht bearbeitet werden: Zu diesem Vertrag gibt es zugeordnete Rechnungen. Vertragslinien können nicht mehr bearbeitet werden, sobald Rechnungen erstellt wurden."
+      "cannotEditWithInvoices": "Vertragslinie kann nicht bearbeitet werden: Zu diesem Vertrag gibt es zugeordnete Rechnungen. Vertragslinien können nicht mehr bearbeitet werden, sobald Rechnungen erstellt wurden.",
+      "reloadLatest": "Aktuelle Version laden"
     },
     "loading": {
       "contractLines": "Vertragslinien werden geladen",
@@ -698,6 +699,13 @@
       "statusSuperseded": "Ersetzt",
       "supersededHistory": "Ersetzte ausstehende Änderungen ({{count}})",
       "supersededBy": "Ersetzt durch"
+    },
+    "pricing": {
+      "catalog": "Katalog",
+      "override": "überschrieben",
+      "cost": "Kosten: {{cost}}",
+      "costInCurrency": "Kosten in {{currency}}: {{cost}}",
+      "margin": "Marge: {{margin}} pro Einheit"
     }
   },
   "contractLineEdit": {
@@ -1695,6 +1703,9 @@
       "label": "Abrechnungsprofil",
       "none": "Standardprofil des Kunden verwenden",
       "hint": "Positionen dieses Vertrags werden diesem Profil zugeordnet, sofern keine Vertragsposition dies überschreibt."
+    },
+    "billingTiming": {
+      "label": "Abrechnungszeitpunkt"
     }
   },
   "wizardFixed": {
@@ -1744,7 +1755,8 @@
       "recurringQuantityLabel": "Wiederkehrende Menge",
       "allocationQuantityLabel": "Zuordnungsmenge",
       "noCurrencyPrice": "Kein Preis in {{currency}} im Katalog. Geben Sie einen Stückpreis ein."
-    }
+    },
+    "billingTimingLabel": "Abrechnungszeitpunkt"
   },
   "wizardProducts": {
     "actions": {
@@ -1767,7 +1779,8 @@
       "productMissingPrice": "Dieses Produkt hat keinen Standardpreis und keine Überschreibung. Es kann nicht abgerechnet werden, bis Sie einen Einheitspreis eingeben.",
       "noCurrencyPriceEnterUnitPrice": "Kein {{currency}}-Preis im Katalog. Geben Sie einen Einzelpreis ein.",
       "noCurrencyPriceWithLegacyHint": "Kein {{currency}}-Preis im Katalog. Bisheriger Standardsatz: {{rate}}. Geben Sie einen Einzelpreis in {{currency}} ein."
-    }
+    },
+    "billingTimingLabel": "Abrechnungszeitpunkt"
   },
   "wizardHourly": {
     "actions": {
@@ -1825,7 +1838,8 @@
         "rolloverDisabled": "Deaktiviert",
         "rolloverEnabled": "Aktiviert"
       }
-    }
+    },
+    "billingTimingLabel": "Abrechnungszeitpunkt"
   },
   "wizardUsage": {
     "actions": {
@@ -1863,7 +1877,8 @@
     },
     "values": {
       "defaultUnit": "Einheit"
-    }
+    },
+    "billingTimingLabel": "Abrechnungszeitpunkt"
   },
   "wizardReview": {
     "heading": "Vertrag überprüfen",
@@ -1972,7 +1987,10 @@
         "one": "{{count}} Produkt",
         "other": "{{count}} Produkte"
       },
-      "overrideRate": "- überschreiben {{rate}}/{{currencyCode}}"
+      "overrideRate": "- überschreiben {{rate}}/{{currencyCode}}",
+      "cost": "Kosten: {{cost}}",
+      "costInCurrency": "Kosten in {{currency}}: {{cost}}",
+      "margin": "Marge: {{margin}} pro Einheit"
     },
     "hourly": {
       "badgeCount": {
@@ -1995,8 +2013,12 @@
     "total": {
       "title": "Geschätzte monatliche Summe",
       "description": "Produkte und feste Gebühren sind in dieser Summe enthalten. Stunden- und nutzungsbasierte Services werden nach tatsächlichem Aufwand abgerechnet.",
-      "perMonth": "pro Monat",
-      "savedDraftValue": "Gespeicherter Entwurfswert: {{amount}}"
+      "savedDraftValue": "Gespeicherter Entwurfswert: {{amount}}",
+      "titleCadence": "Geschätzte Gesamtsumme",
+      "mixedFrequencyTitle": "Geschätzte Gesamtsumme nach Abrechnungshäufigkeit",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "ca. {{amount}} pro Monat",
+      "savedDraftValueMonthly": "Gespeicherter Entwurfswert: {{amount}} pro Monat"
     },
     "finalChecklist": {
       "title": "Bevor Sie abschließen:",
@@ -2014,6 +2036,13 @@
       "neverExpires": "läuft nie ab",
       "cadenceSummary": "{{hours}} Std. je Abrechnungszeitraum für {{price}}",
       "overageRate": "Mehrverbrauch {{rate}}/Std."
+    },
+    "billingTiming": {
+      "label": "Abrechnungszeitpunkt:",
+      "advance": "Im Voraus",
+      "arrears": "Nachträglich",
+      "advanceInherited": "Im Voraus (Vertragsstandard)",
+      "arrearsInherited": "Nachträglich (Vertragsstandard)"
     }
   },
   "wizardTemplateLines": {
@@ -2759,6 +2788,7 @@
   "wizardFirstInvoice": {
     "loading": "Abrechnungsplan des Kunden wird geprüft…",
     "arrearsPreviewNote": "Bis dahin zeigt eine Rechnungsvorschau für diesen Kunden nichts zum Abrechnen für diese Position.",
+    "arrearsPreviewNoteMany": "Bis dahin zeigt eine Rechnungsvorschau für diesen Kunden nichts zum Abrechnen für diese Positionen.",
     "unavailable": {
       "missingStartDate": "Wählen Sie ein Startdatum, um zu sehen, wann dieser Vertrag erstmals abgerechnet wird.",
       "unsupportedFrequency": "Es wird kein Datum für die erste Rechnung angezeigt, da die Abrechnung nach Vertragsrhythmus diese Häufigkeit nicht unterstützt. Wählen Sie eine unterstützte Häufigkeit oder rechnen Sie nach dem Plan des Kunden ab.",
@@ -2795,7 +2825,11 @@
     "options": {
       "advance": "Im Voraus (zu Beginn des Zeitraums abrechnen)",
       "arrears": "Nachträglich (am Ende des Zeitraums abrechnen)"
-    }
+    },
+    "inheritWithValue": "Vertragsstandard verwenden — {{timing}}",
+    "inheritedAdvance": "Im Voraus",
+    "inheritedArrears": "Nachträglich",
+    "contractDefaultHelp": "Standard für Festpreispositionen, die im Voraus abgerechnet werden können. Stunden- und Nutzungspositionen werden unabhängig von dieser Auswahl immer nachträglich abgerechnet."
   },
   "contractDiscounts": {
     "title": "Rabatte",

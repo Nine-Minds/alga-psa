@@ -217,6 +217,7 @@ export const upsertBucketOverlay = withAuth(async (
  *          the pool identity is the successor of the legacy per-service
  *          bucket config_id.
  */
+// LEVERAGE: friction use-server-trx-exports — trx-taking *InTransaction helpers are exported from a 'use server' file (so each is an endpoint); same fix as lib/billing/contractLineMembership.ts — move to a non-server lib module.
 export async function upsertBucketOverlayInTransaction(
   trx: Knex.Transaction,
   tenant: string,
@@ -339,6 +340,7 @@ export const deleteBucketOverlay = withAuth(async (
 /**
  * Internal function to delete bucket overlay within a transaction.
  */
+// LEVERAGE: friction use-server-trx-exports — trx-taking *InTransaction helpers are exported from a 'use server' file (so each is an endpoint); same fix as lib/billing/contractLineMembership.ts — move to a non-server lib module.
 export async function deleteBucketOverlayInTransaction(
   trx: Knex.Transaction,
   tenant: string,

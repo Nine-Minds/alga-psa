@@ -3,9 +3,7 @@
 // Skips (exit 0) when patch-package isn't installed — production images install with
 // --omit=dev (Dockerfile:32) and don't need these development repairs. The
 // manifest patch's writer is gated on Turbopack's dev flag; readers no-op on
-// stock manifests. patches/test-exclude+7.0.2.patch only speeds up coverage
-// include matching (scripts/tests/coverage-exclude-matching.test.mjs). Flight
-// ancestry pruning targets development bundles only.
+// stock manifests. Flight ancestry pruning targets development bundles only.
 // Fails loudly when patch-package IS
 // present but a patch no longer applies — that's the tripwire on Next upgrades:
 // re-validate the patched functions and regenerate the patch, don't skip it

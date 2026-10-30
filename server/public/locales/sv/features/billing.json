@@ -409,6 +409,13 @@
       "pending": "Fakturor som väntar på godkännande eller ytterligare behandling",
       "prepayment": "Fakturor för förskottsbetalning eller deposition",
       "partially_applied": "Fakturor med avräknade delbetalningar"
+    },
+    "billingPeriod": {
+      "weekly": "per vecka",
+      "monthly": "per månad",
+      "quarterly": "per kvartal",
+      "semi-annually": "per halvår",
+      "annually": "per år"
     }
   },
   "credits": {

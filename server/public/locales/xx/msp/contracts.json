@@ -588,7 +588,8 @@
       "failedToResetRate": "⟦Ƒȧīŀḗḓ ŧȯ řḗşḗŧ ŧħḗ ŀīƞḗ řȧŧḗ⟧",
       "protectedStartDate": "⟦Şŧȧřŧ ḓȧŧḗ ḿŭşŧ ƀḗ ȯƞ ȯř ƀḗƒȯřḗ {{boundary}} ŧȯ īƞƈŀŭḓḗ ƥřȯŧḗƈŧḗḓ şḗřṽīƈḗ ħīşŧȯřẏ.⟧",
       "protectedEndDate": "⟦Ḗƞḓ ḓȧŧḗ ḿŭşŧ ƀḗ ȯƞ ȯř ȧƒŧḗř {{boundary}} ŧȯ īƞƈŀŭḓḗ ƥřȯŧḗƈŧḗḓ şḗřṽīƈḗ ħīşŧȯřẏ.⟧",
-      "cannotEditWithInvoices": "⟦Ƈȧƞƞȯŧ ḗḓīŧ ƈȯƞŧřȧƈŧ ŀīƞḗ: Ŧħīş ƈȯƞŧřȧƈŧ ħȧş ȧşşȯƈīȧŧḗḓ īƞṽȯīƈḗş. Ƈȯƞŧřȧƈŧ ŀīƞḗş ƈȧƞƞȯŧ ƀḗ ḗḓīŧḗḓ ȯƞƈḗ īƞṽȯīƈḗş ħȧṽḗ ƀḗḗƞ ɠḗƞḗřȧŧḗḓ.⟧"
+      "cannotEditWithInvoices": "⟦Ƈȧƞƞȯŧ ḗḓīŧ ƈȯƞŧřȧƈŧ ŀīƞḗ: Ŧħīş ƈȯƞŧřȧƈŧ ħȧş ȧşşȯƈīȧŧḗḓ īƞṽȯīƈḗş. Ƈȯƞŧřȧƈŧ ŀīƞḗş ƈȧƞƞȯŧ ƀḗ ḗḓīŧḗḓ ȯƞƈḗ īƞṽȯīƈḗş ħȧṽḗ ƀḗḗƞ ɠḗƞḗřȧŧḗḓ.⟧",
+      "reloadLatest": "⟦Řḗŀȯȧḓ ŀȧŧḗşŧ⟧"
     },
     "loading": {
       "contractLines": "⟦Ŀȯȧḓīƞɠ ƈȯƞŧřȧƈŧ ŀīƞḗş⟧",
@@ -698,6 +699,13 @@
       "statusSuperseded": "⟦Şŭƥḗřşḗḓḗḓ⟧",
       "supersededHistory": "⟦Şŭƥḗřşḗḓḗḓ ƥḗƞḓīƞɠ ḗḓīŧş ({{count}})⟧",
       "supersededBy": "⟦Şŭƥḗřşḗḓḗḓ ƀẏ⟧"
+    },
+    "pricing": {
+      "catalog": "⟦ƈȧŧȧŀȯɠ⟧",
+      "override": "⟦ȯṽḗřřīḓḗ⟧",
+      "cost": "⟦Ƈȯşŧ: {{cost}}⟧",
+      "costInCurrency": "⟦Ƈȯşŧ īƞ {{currency}}: {{cost}}⟧",
+      "margin": "⟦Ḿȧřɠīƞ: {{margin}} ƥḗř ŭƞīŧ⟧"
     }
   },
   "contractLineEdit": {
@@ -1695,6 +1703,9 @@
       "label": "⟦Ɓīŀŀīƞɠ ƥřȯƒīŀḗ⟧",
       "none": "⟦Ŭşḗ ŧħḗ ƈŀīḗƞŧ'ş ḓḗƒȧŭŀŧ ƥřȯƒīŀḗ⟧",
       "hint": "⟦Ƈħȧřɠḗş ƒřȯḿ ŧħīş ƈȯƞŧřȧƈŧ ȧřḗ ƀīŀŀḗḓ ŧȯ ŧħīş ƥřȯƒīŀḗ ŭƞŀḗşş ȧ ŀīƞḗ ȯṽḗřřīḓḗş īŧ.⟧"
+    },
+    "billingTiming": {
+      "label": "⟦Ɓīŀŀīƞɠ Ŧīḿīƞɠ⟧"
     }
   },
   "wizardFixed": {
@@ -1744,7 +1755,8 @@
       "recurringQuantityLabel": "⟦Řḗƈŭřřīƞɠ ʠŭȧƞŧīŧẏ⟧",
       "allocationQuantityLabel": "⟦Ȧŀŀȯƈȧŧīȯƞ ʠŭȧƞŧīŧẏ⟧",
       "noCurrencyPrice": "⟦Ƞȯ {{currency}} ƥřīƈḗ īƞ ŧħḗ ƈȧŧȧŀȯɠ. Ḗƞŧḗř ȧ ŭƞīŧ řȧŧḗ.⟧"
-    }
+    },
+    "billingTimingLabel": "⟦Ɓīŀŀīƞɠ Ŧīḿīƞɠ⟧"
   },
   "wizardProducts": {
     "actions": {
@@ -1767,7 +1779,8 @@
       "productMissingPrice": "⟦Ŧħīş ƥřȯḓŭƈŧ ħȧş ƞȯ ḓḗƒȧŭŀŧ ƥřīƈḗ ȧƞḓ ƞȯ ȯṽḗřřīḓḗ. Īŧ ƈȧƞƞȯŧ ƀḗ ƀīŀŀḗḓ ŭƞŧīŀ ẏȯŭ ḗƞŧḗř ȧ ŭƞīŧ ƥřīƈḗ.⟧",
       "noCurrencyPriceEnterUnitPrice": "⟦Ƞȯ {{currency}} ƥřīƈḗ īƞ ŧħḗ ƈȧŧȧŀȯɠ. Ḗƞŧḗř ȧ ŭƞīŧ ƥřīƈḗ.⟧",
       "noCurrencyPriceWithLegacyHint": "⟦Ƞȯ {{currency}} ƥřīƈḗ īƞ ŧħḗ ƈȧŧȧŀȯɠ. Ŀḗɠȧƈẏ ḓḗƒȧŭŀŧ řȧŧḗ: {{rate}}. Ḗƞŧḗř ȧ ŭƞīŧ ƥřīƈḗ īƞ {{currency}}.⟧"
-    }
+    },
+    "billingTimingLabel": "⟦Ɓīŀŀīƞɠ Ŧīḿīƞɠ⟧"
   },
   "wizardHourly": {
     "actions": {
@@ -1825,7 +1838,8 @@
         "rolloverDisabled": "⟦Ḓīşȧƀŀḗḓ⟧",
         "rolloverEnabled": "⟦Ḗƞȧƀŀḗḓ⟧"
       }
-    }
+    },
+    "billingTimingLabel": "⟦Ɓīŀŀīƞɠ Ŧīḿīƞɠ⟧"
   },
   "wizardUsage": {
     "actions": {
@@ -1863,7 +1877,8 @@
     },
     "values": {
       "defaultUnit": "⟦ŭƞīŧ⟧"
-    }
+    },
+    "billingTimingLabel": "⟦Ɓīŀŀīƞɠ Ŧīḿīƞɠ⟧"
   },
   "wizardReview": {
     "heading": "⟦Řḗṽīḗẇ Ƈȯƞŧřȧƈŧ⟧",
@@ -1972,7 +1987,10 @@
         "one": "⟦{{count}} ƥřȯḓŭƈŧ⟧",
         "other": "⟦{{count}} ƥřȯḓŭƈŧş⟧"
       },
-      "overrideRate": "⟦- ȯṽḗřřīḓḗ {{rate}}/{{currencyCode}}⟧"
+      "overrideRate": "⟦- ȯṽḗřřīḓḗ {{rate}}/{{currencyCode}}⟧",
+      "cost": "⟦Ƈȯşŧ: {{cost}}⟧",
+      "costInCurrency": "⟦Ƈȯşŧ īƞ {{currency}}: {{cost}}⟧",
+      "margin": "⟦Ḿȧřɠīƞ: {{margin}} ƥḗř ŭƞīŧ⟧"
     },
     "hourly": {
       "badgeCount": {
@@ -1995,8 +2013,12 @@
     "total": {
       "title": "⟦Ḗşŧīḿȧŧḗḓ Ḿȯƞŧħŀẏ Ŧȯŧȧŀ⟧",
       "description": "⟦Ƥřȯḓŭƈŧş ȧƞḓ ƒīẋḗḓ ƈħȧřɠḗş ȧřḗ īƞƈŀŭḓḗḓ īƞ ŧħīş ŧȯŧȧŀ. Ħȯŭřŀẏ ȧƞḓ ŭşȧɠḗ şḗřṽīƈḗş ȧřḗ ƀīŀŀḗḓ ȯƞ ȧƈŧŭȧŀş.⟧",
-      "perMonth": "⟦ƥḗř ḿȯƞŧħ⟧",
-      "savedDraftValue": "⟦Şȧṽḗḓ ḓřȧƒŧ ṽȧŀŭḗ: {{amount}}⟧"
+      "savedDraftValue": "⟦Şȧṽḗḓ ḓřȧƒŧ ṽȧŀŭḗ: {{amount}}⟧",
+      "titleCadence": "⟦Ḗşŧīḿȧŧḗḓ Ŧȯŧȧŀ⟧",
+      "mixedFrequencyTitle": "⟦Ḗşŧīḿȧŧḗḓ Ŧȯŧȧŀ ƀẏ Ɓīŀŀīƞɠ Ƒřḗʠŭḗƞƈẏ⟧",
+      "perFrequency": "⟦{{amount}} {{period}}⟧",
+      "perMonthEquivalent": "⟦ȧƀȯŭŧ {{amount}} ȧ ḿȯƞŧħ⟧",
+      "savedDraftValueMonthly": "⟦Şȧṽḗḓ ḓřȧƒŧ ṽȧŀŭḗ: {{amount}} ƥḗř ḿȯƞŧħ⟧"
     },
     "finalChecklist": {
       "title": "⟦Ɓḗƒȯřḗ ẏȯŭ ƒīƞīşħ:⟧",
@@ -2014,6 +2036,13 @@
       "neverExpires": "⟦ƞḗṽḗř ḗẋƥīřḗş⟧",
       "cadenceSummary": "⟦{{hours}} ħ ḗṽḗřẏ ƀīŀŀīƞɠ ƥḗřīȯḓ ƒȯř {{price}}⟧",
       "overageRate": "⟦ȯṽḗřȧɠḗ {{rate}}/ħ⟧"
+    },
+    "billingTiming": {
+      "label": "⟦Ɓīŀŀīƞɠ ŧīḿīƞɠ:⟧",
+      "advance": "⟦Īƞ ȧḓṽȧƞƈḗ⟧",
+      "arrears": "⟦Īƞ ȧřřḗȧřş⟧",
+      "advanceInherited": "⟦Īƞ ȧḓṽȧƞƈḗ (ƈȯƞŧřȧƈŧ ḓḗƒȧŭŀŧ)⟧",
+      "arrearsInherited": "⟦Īƞ ȧřřḗȧřş (ƈȯƞŧřȧƈŧ ḓḗƒȧŭŀŧ)⟧"
     }
   },
   "wizardTemplateLines": {
@@ -2759,6 +2788,7 @@
   "wizardFirstInvoice": {
     "loading": "⟦Ƈħḗƈķīƞɠ ŧħḗ ƈŀīḗƞŧ'ş ƀīŀŀīƞɠ şƈħḗḓŭŀḗ…⟧",
     "arrearsPreviewNote": "⟦Ŭƞŧīŀ ŧħḗƞ, ȧƞ īƞṽȯīƈḗ ƥřḗṽīḗẇ ƒȯř ŧħīş ƈŀīḗƞŧ ħȧş ƞȯŧħīƞɠ ŧȯ ƀīŀŀ ƒȯř ŧħīş ŀīƞḗ.⟧",
+    "arrearsPreviewNoteMany": "⟦Ŭƞŧīŀ ŧħḗƞ, ȧƞ īƞṽȯīƈḗ ƥřḗṽīḗẇ ƒȯř ŧħīş ƈŀīḗƞŧ ħȧş ƞȯŧħīƞɠ ŧȯ ƀīŀŀ ƒȯř ŧħḗşḗ ŀīƞḗş.⟧",
     "unavailable": {
       "missingStartDate": "⟦Ƈħȯȯşḗ ȧ şŧȧřŧ ḓȧŧḗ ŧȯ şḗḗ ẇħḗƞ ŧħīş ƈȯƞŧřȧƈŧ ƒīřşŧ īƞṽȯīƈḗş.⟧",
       "unsupportedFrequency": "⟦Ƞȯ ƒīřşŧ īƞṽȯīƈḗ ḓȧŧḗ īş şħȯẇƞ ƀḗƈȧŭşḗ ƈȯƞŧřȧƈŧ-ƈȧḓḗƞƈḗ ƀīŀŀīƞɠ ḓȯḗşƞ'ŧ şŭƥƥȯřŧ ŧħīş ƒřḗʠŭḗƞƈẏ. Ƥīƈķ ȧ şŭƥƥȯřŧḗḓ ƒřḗʠŭḗƞƈẏ ȯř ƀīŀŀ ȯƞ ŧħḗ ƈŀīḗƞŧ'ş şƈħḗḓŭŀḗ.⟧",
@@ -2795,7 +2825,11 @@
     "options": {
       "advance": "⟦Īƞ Ȧḓṽȧƞƈḗ (ƀīŀŀ ȧŧ şŧȧřŧ ȯƒ ƥḗřīȯḓ)⟧",
       "arrears": "⟦Īƞ Ȧřřḗȧřş (ƀīŀŀ ȧŧ ḗƞḓ ȯƒ ƥḗřīȯḓ)⟧"
-    }
+    },
+    "inheritWithValue": "⟦Ŭşḗ ƈȯƞŧřȧƈŧ ḓḗƒȧŭŀŧ — {{timing}}⟧",
+    "inheritedAdvance": "⟦Īƞ ȧḓṽȧƞƈḗ⟧",
+    "inheritedArrears": "⟦Īƞ ȧřřḗȧřş⟧",
+    "contractDefaultHelp": "⟦Ḓḗƒȧŭŀŧ ƒȯř ƒīẋḗḓ ŀīƞḗş, ẇħīƈħ ƈȧƞ ƀīŀŀ īƞ ȧḓṽȧƞƈḗ. Ħȯŭřŀẏ ȧƞḓ ŭşȧɠḗ ŀīƞḗş ȧŀẇȧẏş ƀīŀŀ īƞ ȧřřḗȧřş, ẇħȧŧḗṽḗř ẏȯŭ ƈħȯȯşḗ ħḗřḗ.⟧"
   },
   "contractDiscounts": {
     "title": "⟦Ḓīşƈȯŭƞŧş⟧",

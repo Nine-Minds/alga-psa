@@ -409,6 +409,13 @@
       "pending": "Invoices awaiting approval or additional processing",
       "prepayment": "Advance payment or deposit invoices",
       "partially_applied": "Invoices with partial payments applied"
+    },
+    "billingPeriod": {
+      "weekly": "per week",
+      "monthly": "per month",
+      "quarterly": "per quarter",
+      "semi-annually": "per half-year",
+      "annually": "per year"
     }
   },
   "credits": {

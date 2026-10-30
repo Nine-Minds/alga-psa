@@ -42,6 +42,8 @@ import {
 } from '@alga-psa/billing/actions/invoiceGeneration.constants';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
+import { changeInvoiceTaxSourceInternal } from '@alga-psa/billing/actions/taxSourceActions';
+import type { TaxSource } from '@alga-psa/types';
 import {
   settlePrepaidReplenishmentInvoice,
   deleteInvoiceWithKnex,
@@ -258,6 +260,12 @@ export interface InvoiceHATEOASLinks {
   credit?: string;
   payment?: string;
 }
+
+const TAX_SOURCES: ReadonlySet<string> = new Set<TaxSource>(['internal', 'external', 'pending_external']);
+// The update schema already validates tax_source; this narrows the inferred
+// request type to TaxSource for the shared tax-source change.
+const isTaxSource = (value: unknown): value is TaxSource =>
+  typeof value === 'string' && TAX_SOURCES.has(value);
 
 export class InvoiceService extends BaseService<IInvoice> {
   private taxService: TaxService;
@@ -810,8 +818,18 @@ export class InvoiceService extends BaseService<IInvoice> {
         }
       }
 
-      // Prepare update data. `items` is not an invoices column; it is handled below.
-      const { items: _items, ...headerData } = data;
+      // A tax-source change has its own rules and side effects (draft tax
+      // recalculation, finalized-invoice guard), so it never rides the header
+      // update below.
+      if (isTaxSource(data.tax_source) && data.tax_source !== existing.tax_source) {
+        const taxSourceChange = await changeInvoiceTaxSourceInternal(trx, context.tenant, id, data.tax_source);
+        if (!taxSourceChange.success) {
+          throw new ConflictError(taxSourceChange.error);
+        }
+      }
+
+      // Prepare update data. `items` and `tax_source` are handled separately.
+      const { items: _items, tax_source: _taxSource, ...headerData } = data;
       const updateData: any = await this.addUpdateAuditFields(trx, headerData, context, 'invoices');
 
       // Changing the billing profile of a draft re-resolves the profile-derived

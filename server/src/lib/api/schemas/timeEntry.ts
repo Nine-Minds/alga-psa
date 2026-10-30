@@ -81,7 +81,7 @@ function validateTimeEntryWrite(
 // a superRefine requirement alone is invisible to the generator.
 const createTimeEntryObjectSchema = baseTimeEntrySchema.extend({
   service_id: z
-    .string({ required_error: 'service_id is required for time entries' })
+    .string({ error: (issue) => (issue.input === undefined ? 'service_id is required for time entries' : undefined) })
     .uuid()
     .describe('Required (it drives billing).')
 });
@@ -242,10 +242,10 @@ export const timeEntryStatsResponseSchema = z.object({
   total_billable_hours: z.number(),
   total_non_billable_hours: z.number(),
   billable_percentage: z.number(),
-  entries_by_type: z.record(z.number()),
-  entries_by_status: z.record(z.number()),
-  entries_by_user: z.record(z.number()),
-  entries_by_service: z.record(z.number()),
+  entries_by_type: z.record(z.string(), z.number()),
+  entries_by_status: z.record(z.string(), z.number()),
+  entries_by_user: z.record(z.string(), z.number()),
+  entries_by_service: z.record(z.string(), z.number()),
   total_revenue: z.number(),
   average_entry_duration: z.number(),
   entries_this_week: z.number(),
@@ -269,14 +269,14 @@ export const timeEntrySearchSchema = z.object({
   date_from: dateSchema.optional(),
   date_to: dateSchema.optional(),
   billable_only: booleanTransform.optional(),
-  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
+  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).prefault('25')
 });
 
 // Time entry export schema
 export const timeEntryExportQuerySchema = z.object({
   format: z.enum(['csv', 'json', 'xlsx']).optional().default('csv'),
-  include_billing_info: booleanTransform.optional().default("false"),
-  include_work_item_details: booleanTransform.optional().default("false"),
+  include_billing_info: booleanTransform.prefault("false"),
+  include_work_item_details: booleanTransform.prefault("false"),
   group_by: z.enum(['user', 'work_item', 'service', 'date', 'none']).optional().default('none'),
   work_item_types: z.array(workItemTypeSchema).optional(),
   approval_statuses: z.array(approvalStatusSchema).optional(),

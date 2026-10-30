@@ -4,6 +4,7 @@ import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import type { IContractTemplateLine } from '@alga-psa/types';
 import { legacyCloneAmountReader, type ResolvedTemplateAmounts } from './templateAmounts';
+import { fixedMemberRateProvenance, resolveFixedMemberRatePair } from './fixedMemberRate';
 
 // LEVERAGE: pattern template-clone-substrate — older, divergent template->contract clone (drops hourly/usage rates and fixed config detail). The faithful one is cloneTemplateLineToContract in packages/billing/src/repositories/contractLineRepository.ts (alga-2026-0002371).
 interface CloneTemplateOptions {
@@ -601,16 +602,19 @@ export async function cloneTemplateServiceFixedConfig(
 
   if (!fixedConfig) return;
 
-  const templateBaseRate = baseRate;
+  // Template fixed-config rows exist only for per-unit services, whose rate is per unit.
+  const rate = resolveFixedMemberRatePair({
+    base_rate: baseRate,
+    base_rate_basis: 'per_unit',
+    pricing_basis: fixedConfig.pricing_basis ?? null,
+  });
 
   await db.table('contract_line_service_fixed_config').insert({
     tenant,
     config_id: targetConfigId,
-    base_rate: templateBaseRate,
-    // Template fixed-config rows exist only for per-unit services, whose rate is per unit.
-    base_rate_basis: templateBaseRate === null ? null : 'per_unit',
+    ...rate,
     pricing_basis: fixedConfig.pricing_basis ?? null,
-    rate_provenance: templateBaseRate === null ? 'inherited' : 'custom',
+    rate_provenance: fixedMemberRateProvenance(rate),
     created_at: trx.fn.now(),
     updated_at: trx.fn.now()
   });

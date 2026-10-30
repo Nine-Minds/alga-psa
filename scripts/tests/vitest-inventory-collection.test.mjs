@@ -21,7 +21,7 @@ for (const name of ['maintenance-fanout-activities', 'tenant-deletion-prepaid-bl
       runner: {
         runner: 'temporal-readiness',
         cwd: 'ee/temporal-workflows',
-        cli: 'server/node_modules/vitest/vitest.mjs',
+        cli: 'node_modules/vitest/vitest.mjs',
         config: 'vitest.readiness.config.ts',
         filters: [filter],
         owner: 'Temporal workflows',
@@ -45,7 +45,7 @@ test('real Vitest inventory loads cases without executing bodies and rejects emp
   writeFileSync(path.join(root, 'vitest.config.mjs'),
     'export default { test: { globals: true, include: ["*.test.js"] } };');
   const runner = { runner: 'fixture', cwd: '.',
-    cli: fileURLToPath(new URL('../../server/node_modules/vitest/vitest.mjs', import.meta.url)),
+    cli: fileURLToPath(new URL('../../node_modules/vitest/vitest.mjs', import.meta.url)),
     config: 'vitest.config.mjs', owner: 'Fixture maintainer', runtime: 'Node' };
   const collect = () => collectVitestInventory({ root, runner, output: path.join(root, 'reports') });
   assert.throws(() => collectVitestInventory({ root, output: path.join(root, 'reports'),

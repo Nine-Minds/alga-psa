@@ -13,12 +13,14 @@ export const STANDARD_LABEL_ASSET_CODE = 'standard-asset-label';
 export const STANDARD_LABEL_ASSET_CODE128_CODE = 'standard-asset-label-code128';
 export const STANDARD_LABEL_STOCK_UNIT_CODE = 'standard-stock-unit-label';
 export const STANDARD_LABEL_STAGING_CONTAINER_CODE = 'standard-staging-container-label';
+export const STANDARD_LABEL_RMA_CODE = 'standard-rma-label';
 
 export const LABEL_STANDARD_CODE_BY_CLASS: Record<LabelClass, string> = {
   'ticket-work-tag': STANDARD_LABEL_TICKET_WORK_TAG_CODE,
   'asset-identity': STANDARD_LABEL_ASSET_CODE,
   'stock-unit-identity': STANDARD_LABEL_STOCK_UNIT_CODE,
   'staging-container': STANDARD_LABEL_STAGING_CONTAINER_CODE,
+  'rma-work-tag': STANDARD_LABEL_RMA_CODE,
 };
 
 /** The label class a standard code prints (used to validate a requested code against a class). */
@@ -28,6 +30,7 @@ export const LABEL_CLASS_BY_STANDARD_CODE: Record<string, LabelClass> = {
   [STANDARD_LABEL_ASSET_CODE128_CODE]: 'asset-identity',
   [STANDARD_LABEL_STOCK_UNIT_CODE]: 'stock-unit-identity',
   [STANDARD_LABEL_STAGING_CONTAINER_CODE]: 'staging-container',
+  [STANDARD_LABEL_RMA_CODE]: 'rma-work-tag',
 };
 
 /**
@@ -230,12 +233,38 @@ const buildStagingContainerLabel = (): TemplateAst =>
     '0.5mm',
   );
 
+/**
+ * An RMA bench tag (C5): RMA number large, who and what is going back, vendor and reference, status with the
+ * return-by date, the latest carrier and tracking, and the originating ticket. QR = the RMA record URL.
+ * Line budget on the 44 mm cell (no text brand line, the logo sits above the QR): ~154 px worst case.
+ */
+const buildRmaLabel = (): TemplateAst =>
+  label(
+    'Standard RMA Label',
+    [
+      text('client', 'clientName', { ...lines(1, 12, 1.15), fontWeight: 700 }),
+      identifier('rma-number', 20),
+      text('item', 'title', { ...lines(1, 11, 1.2), fontWeight: 600 }),
+      text('vendor', 'detail', { ...lines(1, 10, 1.2), color: '#374151' }),
+      text('status', 'rmaStatus', { ...lines(1, 10, 1.2), fontWeight: 700 }),
+      text('return-by', 'rmaReturnBy', { ...lines(1, 9, 1.2), color: '#374151' }),
+      text('shipping', 'rmaShipping', { ...lines(1, 9, 1.2), fontFamily: 'monospace' }),
+      text('asset', 'assetLine', { ...lines(1, 9, 1.2), fontFamily: 'monospace' }),
+      text('serial', 'serialLine', { ...lines(1, 9, 1.2), color: '#4b5563', fontFamily: 'monospace' }),
+      text('ticket', 'rmaTicket', { ...lines(1, 9, 1.2), color: '#4b5563' }),
+    ],
+    [logo('logo', 6, { objectPosition: 'center' }), qr('qr', '34mm')],
+    [],
+    '0.4mm',
+  );
+
 export const STANDARD_LABEL_TEMPLATE_ASTS: Record<string, TemplateAst> = {
   [STANDARD_LABEL_TICKET_WORK_TAG_CODE]: buildTicketWorkTag(),
   [STANDARD_LABEL_ASSET_CODE]: buildAssetLabel('Standard Asset Label', false),
   [STANDARD_LABEL_ASSET_CODE128_CODE]: buildAssetLabel('Standard Asset Label with Code 128', true),
   [STANDARD_LABEL_STOCK_UNIT_CODE]: buildStockUnitLabel(),
   [STANDARD_LABEL_STAGING_CONTAINER_CODE]: buildStagingContainerLabel(),
+  [STANDARD_LABEL_RMA_CODE]: buildRmaLabel(),
 };
 
 export const getStandardLabelTemplateAstByCode = (code: string): TemplateAst | null => {

@@ -90,7 +90,7 @@ test('each suite chain starts at a step gated on its resolved suite', () => {
   // The upgrade preparation runs tsx and knex and the Citus probe imports pg
   // from the repository's node_modules; the first sharded run failed there.
   assert.match(byId('api_dependencies').if, /steps\.shard\.outputs\.workspace_dependencies == 'true'/);
-  assert.ok(resolve.run.includes('*" api "*|*" upgrade "*|*" citus "*) workspace_dependencies=true'), 'suites that run from root node_modules install them');
+  assert.ok(resolve.run.includes('*" api "*|*" upgrade "*|*" citus "*|*" teams "*|*" microsoft "*) workspace_dependencies=true'), 'suites that run from root node_modules install them');
 });
 
 test('the journey shard travels from the matrix to the runner, the descriptor and the shard artifact', () => {

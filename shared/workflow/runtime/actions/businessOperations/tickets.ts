@@ -443,8 +443,8 @@ export function registerTicketActions(): void {
         ['board_id', 'category_id']
       ),
       tags: z.array(z.string()).optional().describe('Optional tags (applied to ticket tags and mirrored into ticket attributes)'),
-      custom_fields: z.record(z.unknown()).optional().describe('Optional custom fields (stored in ticket attributes)'),
-      attributes: z.record(z.unknown()).optional().describe('Additional attributes (merged into ticket.attributes)'),
+      custom_fields: z.record(z.string(), z.unknown()).optional().describe('Optional custom fields (stored in ticket attributes)'),
+      attributes: z.record(z.string(), z.unknown()).optional().describe('Additional attributes (merged into ticket.attributes)'),
       initial_comment: z.object({
         body: z.string().min(1).describe('Initial comment body'),
         visibility: commentVisibilityChoice()
@@ -767,8 +767,8 @@ export function registerTicketActions(): void {
         ),
         due_date: isoDateTimeSchema.nullable().optional().describe('Optional due date (stored in ticket.attributes.due_date)'),
         tags: z.array(z.string()).optional().describe('Tags (stored in ticket attributes)'),
-        custom_fields: z.record(z.unknown()).optional().describe('Custom fields (stored in ticket attributes)'),
-        attributes: z.record(z.unknown()).optional().describe('Attributes merge')
+        custom_fields: z.record(z.string(), z.unknown()).optional().describe('Custom fields (stored in ticket attributes)'),
+        attributes: z.record(z.string(), z.unknown()).optional().describe('Attributes merge')
       }).describe('Patch object').refine((patch) => Object.keys(patch).length > 0, {
         message: 'Patch must include at least one field'
       }),
@@ -1348,7 +1348,7 @@ export function registerTicketActions(): void {
       entity_type: z.enum(['project', 'project_task', 'asset', 'contract']).describe('Entity type'),
       entity_id: uuidSchema.describe('Entity id'),
       link_type: z.string().min(1).describe('Link type'),
-      metadata: z.record(z.unknown()).optional().describe('Optional link metadata')
+      metadata: z.record(z.string(), z.unknown()).optional().describe('Optional link metadata')
     }),
     outputSchema: z.object({
       link_id: uuidSchema,
@@ -1556,7 +1556,7 @@ export function registerTicketActions(): void {
     closed_at: isoDateTimeSchema.nullable().describe('Closed at'),
     is_closed: z.boolean().nullable().describe('Is closed'),
     response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional().describe('Waiting on (client or internal)'),
-    attributes: z.record(z.unknown()).optional().describe('Custom attributes')
+    attributes: z.record(z.string(), z.unknown()).optional().describe('Custom attributes')
   });
 
   type TicketDisplayNames = {
@@ -1737,7 +1737,7 @@ export function registerTicketActions(): void {
         return { ticket: null, latest_comment: null, latest_customer_comment: null, comments: [], attachments: [] };
       }
 
-      const include = input.include ?? {};
+      const include: Partial<NonNullable<typeof input.include>> = input.include ?? {};
       const includeAttributes = Boolean(include.attributes || include.custom_fields);
       const attrs = includeAttributes ? parseJsonMaybe(ticket.attributes) : undefined;
 

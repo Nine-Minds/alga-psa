@@ -137,6 +137,7 @@
     },
     "placeholders": {
       "selectService": "Selecteer een dienst",
+      "searchServices": "Diensten zoeken...",
       "selectDate": "Datum selecteren",
       "addNotes": "Voeg notities toe",
       "selectContractLine": "Selecteer een contractregel"
@@ -159,7 +160,8 @@
       "project": "Standaard van project"
     },
     "options": {
-      "resolveContractLineLater": "Geen regel - later oplossen"
+      "resolveContractLineLater": "Geen regel - later oplossen",
+      "noServicesFound": "Geen diensten gevonden"
     }
   },
   "workItemPicker": {

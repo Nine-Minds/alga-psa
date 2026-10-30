@@ -182,6 +182,34 @@ describe('BentoBoard empty-section shelf', () => {
     expect(screen.queryByText('Nothing here yet')).not.toBeInTheDocument();
     expect(screen.getByText('Documents')).toBeInTheDocument();
   });
+
+  it('scrolls the opened section into view and focuses it', () => {
+    setBoardWidth(900);
+    render(boardWithDocs(true));
+    // The shelf sits below the board, so the card the chip expands into is off
+    // screen unless the board brings it over. jsdom has no scrollIntoView.
+    const slot = document.getElementById('board-slot-docs')!;
+    const scrollIntoView = vi.fn();
+    slot.scrollIntoView = scrollIntoView;
+
+    fireEvent.click(document.getElementById('docs-open')!);
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'center' });
+    expect(slot.contains(document.activeElement)).toBe(true);
+  });
+
+  it('does not scroll or focus when a shelved section un-shelves on its own', () => {
+    setBoardWidth(900);
+    const { rerender } = render(boardWithDocs(true));
+    const slot = document.getElementById('board-slot-docs')!;
+    const scrollIntoView = vi.fn();
+    slot.scrollIntoView = scrollIntoView;
+
+    // Content arrived (the tile reports itself non-empty), not a user click.
+    rerender(boardWithDocs(false));
+    expect(screen.getByText('report.pdf')).toBeVisible();
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    expect(slot.contains(document.activeElement)).toBe(false);
+  });
 });
 
 describe('BentoTile empty collapse', () => {

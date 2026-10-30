@@ -18,7 +18,7 @@ import {
  *     silently stored, so a typo or a stale client cannot deposit a key that
  *     nothing will ever read and that the next reader will mistake for meaning.
  *   - on **read**, nothing here applies. Stored documents are coerced by
- *     sanitizeStoredTicketView (key-dropping, no Zod — z.record(z.enum) errors
+ *     sanitizeStoredTicketView (key-dropping, no Zod — z.record(z.string(), z.enum) errors
  *     on an unknown key rather than dropping it) and their ids are checked by
  *     validateCapturedFilters, because a board's saved statusId can die at any
  *     time through no fault of the document.

@@ -459,7 +459,7 @@ export function withValidation(schema: ZodSchema) {
         return await handler(req, validatedData);
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Validation failed', error.errors));
+          return handleApiError(new ValidationError('Validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -481,7 +481,7 @@ export function withQueryValidation(schema: ZodSchema) {
         return await handler(req, validatedQuery);
       } catch (error) {
         if (error instanceof ZodError) {
-          return handleApiError(new ValidationError('Query validation failed', error.errors));
+          return handleApiError(new ValidationError('Query validation failed', error.issues));
         }
         return handleApiError(error);
       }
@@ -566,7 +566,7 @@ export function handleApiError(error: any): NextResponse {
       error: {
         code: 'VALIDATION_ERROR',
         message: 'Validation failed',
-        details: redactSensitiveFields(error.errors)
+        details: redactSensitiveFields(error.issues)
       }
     }, { status: 400 });
   }

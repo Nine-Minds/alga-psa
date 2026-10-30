@@ -1,10 +1,4 @@
-import type { ZodSchema, ZodTypeAny } from 'zod';
-import {
-  jsonDescription,
-  zodToJsonSchema,
-  type Options,
-  type PostProcessCallback,
-} from 'zod-to-json-schema';
+import { z, type ZodSchema, type ZodTypeAny } from 'zod';
 
 export type WorkflowPickerJsonSchemaMetadata = {
   'x-workflow-picker-kind'?: string;
@@ -215,35 +209,278 @@ export const WORKFLOW_COMMENT_VISIBILITY_LABELS: Record<string, string> = {
   public: 'Public: the customer can see it',
 };
 
-export const buildWorkflowJsonSchemaPostProcess = (
-  next?: PostProcessCallback
-): PostProcessCallback => {
-  return (jsonSchema, def, refs) => {
-    const described = jsonDescription(jsonSchema, def, refs);
-    return next ? next(described, def, refs) : described;
-  };
+const JSON_SCHEMA_DRAFT_07 = 'http://json-schema.org/draft-07/schema#';
+
+type JsonSchemaNode = Record<string, unknown>;
+
+export type JsonSchemaDocumentOptions = {
+  /**
+   * Emit the schema the way zod-to-json-schema's `name` option did: the body lives under
+   * `definitions[name]` and the root is a `$ref` to it. The designer's ref resolver and the
+   * schema registry both key on that layout.
+   */
+  name?: string;
 };
 
+const isPlainObject = (value: unknown): value is JsonSchemaNode =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const PRIMITIVE_JSON_TYPES = new Set(['string', 'number', 'integer', 'boolean', 'null']);
+
+const literalMemberType = (member: JsonSchemaNode): string | null => {
+  const keys = Object.keys(member).filter((key) => key !== 'description');
+  const hasConst = keys.includes('const');
+  const hasEnum = keys.includes('enum') && Array.isArray(member.enum);
+  if (!hasConst && !hasEnum) return null;
+  if (keys.some((key) => key !== 'type' && key !== 'const' && key !== 'enum')) return null;
+  const type = typeof member.type === 'string' ? member.type : null;
+  if (type && !PRIMITIVE_JSON_TYPES.has(type)) return null;
+  if (hasConst) {
+    const value = member.const;
+    const inferred = value === null ? 'null' : typeof value;
+    if (!PRIMITIVE_JSON_TYPES.has(inferred)) return null;
+    return type ?? inferred;
+  }
+  if (type !== 'string') return null;
+  return type;
+};
+
+/**
+ * zod-to-json-schema emitted a union of literals (or of enums) as one `enum`, which is what the
+ * designer keys its option pickers on. Zod 4 emits `anyOf` members with `const`; fold them back.
+ */
+const compactLiteralUnion = (node: JsonSchemaNode): JsonSchemaNode => {
+  const members = node.anyOf;
+  if (!Array.isArray(members) || members.length === 0 || !members.every(isPlainObject)) return node;
+  const types = members.map((member) => literalMemberType(member as JsonSchemaNode));
+  if (types.some((type) => type === null)) return node;
+  const values = (members as JsonSchemaNode[]).flatMap((member) =>
+    Array.isArray(member.enum) ? (member.enum as unknown[]) : [member.const]
+  );
+  const uniqueTypes = [...new Set(types as string[])];
+  const { anyOf: _anyOf, ...rest } = node;
+  return { ...rest, type: uniqueTypes.length > 1 ? uniqueTypes : uniqueTypes[0], enum: values };
+};
+
+const isNullMember = (member: unknown): boolean =>
+  isPlainObject(member) && Object.keys(member).length === 1 && member.type === 'null';
+
+/**
+ * zod-to-json-schema copied a nullable field's description (and so its workflow metadata) onto
+ * the `anyOf` wrapper; Zod 4 leaves it on the inner member. The designer reads the wrapper.
+ */
+const hoistNullableMetadata = (node: JsonSchemaNode): JsonSchemaNode => {
+  const members = node.anyOf;
+  if (!Array.isArray(members) || members.length !== 2) return node;
+  const inner = members.find((member) => !isNullMember(member));
+  if (!isPlainObject(inner) || !members.some(isNullMember)) return node;
+  const hoisted: JsonSchemaNode = {};
+  for (const [key, value] of Object.entries(inner)) {
+    if ((key === 'description' || key.startsWith('x-')) && !(key in node)) hoisted[key] = value;
+  }
+  return Object.keys(hoisted).length > 0 ? { ...node, ...hoisted } : node;
+};
+
+/** Zod 4 emits exclusive unions as `oneOf`; zod-to-json-schema always used `anyOf`. */
+const unifyUnionKeyword = (node: JsonSchemaNode): JsonSchemaNode => {
+  if (!Array.isArray(node.oneOf) || 'anyOf' in node) return node;
+  const { oneOf, ...rest } = node;
+  return { ...rest, anyOf: oneOf };
+};
+
+/**
+ * In the input view Zod 4 leaves plain objects open; zod-to-json-schema closed them with
+ * `additionalProperties: false`, which the Run dialog's payload validation relies on.
+ */
+const closePlainObject = (node: JsonSchemaNode): JsonSchemaNode =>
+  node.type === 'object' && isPlainObject(node.properties) && !('additionalProperties' in node)
+    ? { ...node, additionalProperties: false }
+    : node;
+
+const normalizeNode = (node: JsonSchemaNode): JsonSchemaNode =>
+  hoistNullableMetadata(compactLiteralUnion(unifyUnionKeyword(closePlainObject(node))));
+
+/** The `description` carries a JSON payload for workflow metadata; spread it into the node. */
+const applyJsonDescription = (node: JsonSchemaNode): JsonSchemaNode => {
+  if (typeof node.description !== 'string' || !node.description.startsWith('{')) return node;
+  try {
+    const parsed: unknown = JSON.parse(node.description);
+    return isPlainObject(parsed) ? { ...node, ...parsed } : node;
+  } catch {
+    return node;
+  }
+};
+
+const WRAPPER_TYPES = new Set(['optional', 'nullable', 'default', 'prefault', 'nonoptional', 'readonly', 'catch']);
+
+/** The workflow `x-` keys from the JSON descriptions of a wrapper's inner schemas. */
+const innerJsonDescriptionKeys = (schema: z.ZodType): JsonSchemaNode => {
+  const keys: JsonSchemaNode = {};
+  let current: z.ZodType | undefined = schema;
+  while (current) {
+    const description = z.globalRegistry.get(current)?.description;
+    if (typeof description === 'string' && description.startsWith('{')) {
+      try {
+        const parsed: unknown = JSON.parse(description);
+        if (isPlainObject(parsed)) {
+          for (const [key, value] of Object.entries(parsed)) {
+            if (key.startsWith('x-') && !(key in keys)) keys[key] = value;
+          }
+        }
+      } catch {
+        // Not a metadata payload.
+      }
+    }
+    const def = current._zod.def as { type: string; innerType?: z.ZodType };
+    current = WRAPPER_TYPES.has(def.type) ? def.innerType : undefined;
+  }
+  return keys;
+};
+
+const walkJsonSchema = (
+  value: unknown,
+  visit: (node: JsonSchemaNode) => JsonSchemaNode
+): unknown => {
+  if (Array.isArray(value)) return value.map((item) => walkJsonSchema(item, visit));
+  if (!isPlainObject(value)) return value;
+  const out: JsonSchemaNode = {};
+  for (const [key, child] of Object.entries(value)) {
+    // `const`, `enum` and `default` hold data, not subschemas.
+    out[key] = key === 'const' || key === 'enum' || key === 'default' ? child : walkJsonSchema(child, visit);
+  }
+  return visit(out);
+};
+
+const CYCLE_DEFINITION = /^__schema\d+$/;
+
+const refTarget = (node: unknown): string | null =>
+  isPlainObject(node) && typeof node.$ref === 'string' && node.$ref.startsWith('#/definitions/')
+    ? node.$ref.slice('#/definitions/'.length)
+    : null;
+
+/**
+ * zod-to-json-schema inlined a recursive schema and cut the recursion with `{}`. Zod 4 hoists
+ * it into a `__schemaN` definition and points at it through `allOf`, which the designer's
+ * field editor does not read. Inline one level the old way.
+ */
+const inlineCycleDefinitions = (document: JsonSchemaNode): JsonSchemaNode => {
+  const definitions = isPlainObject(document.definitions) ? document.definitions : null;
+  if (!definitions) return document;
+  const cycles = Object.keys(definitions).filter((name) => CYCLE_DEFINITION.test(name));
+  if (cycles.length === 0) return document;
+  const cutSelfRefs = (value: unknown, name: string): unknown => {
+    if (Array.isArray(value)) return value.map((item) => cutSelfRefs(item, name));
+    if (!isPlainObject(value)) return value;
+    if (refTarget(value) === name) return {};
+    const out: JsonSchemaNode = {};
+    for (const [key, child] of Object.entries(value)) out[key] = cutSelfRefs(child, name);
+    const keys = Object.keys(out);
+    const emptyAllOf = Array.isArray(out.allOf) && out.allOf.length === 1 && isPlainObject(out.allOf[0]) && Object.keys(out.allOf[0]).length === 0;
+    return keys.length === 1 && emptyAllOf ? {} : out;
+  };
+  const bodies = Object.fromEntries(cycles.map((name) => [name, cutSelfRefs(definitions[name], name)]));
+  const inline = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(inline);
+    if (!isPlainObject(value)) return value;
+    const direct = refTarget(value);
+    if (direct && direct in bodies) {
+      const { $ref: _ref, ...rest } = value;
+      return { ...(bodies[direct] as JsonSchemaNode), ...rest };
+    }
+    const only = Array.isArray(value.allOf) && value.allOf.length === 1 ? refTarget(value.allOf[0]) : null;
+    if (only && only in bodies) {
+      const { allOf: _allOf, ...rest } = value;
+      return { ...(bodies[only] as JsonSchemaNode), ...rest };
+    }
+    const out: JsonSchemaNode = {};
+    for (const [key, child] of Object.entries(value)) out[key] = inline(child);
+    return out;
+  };
+  const remaining = Object.fromEntries(Object.entries(definitions).filter(([name]) => !(name in bodies)));
+  const { definitions: _definitions, ...rest } = document;
+  const inlined = inline(rest) as JsonSchemaNode;
+  return Object.keys(remaining).length > 0
+    ? { ...inlined, definitions: inline(remaining) as JsonSchemaNode }
+    : inlined;
+};
+
+const convert = (
+  schema: ZodSchema<unknown>,
+  options: JsonSchemaDocumentOptions,
+  visit: (node: JsonSchemaNode) => JsonSchemaNode
+): JsonSchemaNode => {
+  const generated = z.toJSONSchema(schema as z.ZodType, {
+    target: 'draft-7',
+    // The input view: defaulted fields stay optional and transforms show their input shape,
+    // which is what zod-to-json-schema produced and what the designer's forms are built from.
+    io: 'input',
+    unrepresentable: 'any',
+    cycles: 'ref',
+    // Inline subschemas instead of emitting `$ref`s. The designer's field editor
+    // does not resolve `$ref`, so a schema reused across fields (e.g. links.upsert's
+    // `left`/`right` both using entityRefSchema) would otherwise render the second
+    // occurrence as an unresolved ref (shown as a bare "string").
+    reused: 'inline',
+    override: ({ zodSchema, jsonSchema }) => {
+      const def = zodSchema._zod.def as {
+        type: string;
+        innerType?: z.ZodType;
+        defaultValue?: unknown;
+        shape?: Record<string, z.ZodType>;
+      };
+      // zod-to-json-schema required a key unless its schema accepted undefined, so z.unknown()
+      // and z.any() fields were optional. Zod 4 lists them as required; keep the old rule.
+      if (def.type === 'object' && def.shape) {
+        const required = Object.entries(def.shape)
+          .filter(([, field]) => !field.safeParse(undefined).success)
+          .map(([key]) => key);
+        if (required.length > 0) jsonSchema.required = required;
+        else delete jsonSchema.required;
+      }
+      // zod-to-json-schema represented dates as date-time strings; Zod 4 has no mapping.
+      if (def.type === 'date') {
+        jsonSchema.type = 'string';
+        jsonSchema.format = 'date-time';
+      }
+      // A wrapper's own description replaces the inner one in Zod 4, which would drop the
+      // workflow metadata carried in the inner JSON description. Keep those keys.
+      if (WRAPPER_TYPES.has(def.type) && def.innerType) {
+        for (const [key, value] of Object.entries(innerJsonDescriptionKeys(def.innerType))) {
+          if (!(key in jsonSchema)) (jsonSchema as JsonSchemaNode)[key] = value;
+        }
+      }
+      // The input view drops `default` under a transform; the designer still prefills from it.
+      if (def.type === 'default' && !('default' in jsonSchema)) {
+        jsonSchema.default = typeof def.defaultValue === 'function' ? def.defaultValue() : def.defaultValue;
+      }
+    },
+  }) as JsonSchemaNode;
+  const { $schema: _draft, definitions: generatedDefinitions, ...body } = inlineCycleDefinitions(
+    walkJsonSchema(generated, visit) as JsonSchemaNode
+  );
+  const definitions = isPlainObject(generatedDefinitions) ? generatedDefinitions : undefined;
+  if (options.name) {
+    return {
+      $ref: `#/definitions/${options.name}`,
+      definitions: { ...(definitions ?? {}), [options.name]: body },
+      $schema: JSON_SCHEMA_DRAFT_07,
+    };
+  }
+  return { ...body, ...(definitions ? { definitions } : {}), $schema: JSON_SCHEMA_DRAFT_07 };
+};
+
+/** Draft-07 JSON Schema in the layout zod-to-json-schema produced, without workflow metadata. */
+export const zodToJsonSchemaDocument = (
+  schema: ZodSchema<unknown>,
+  options: string | JsonSchemaDocumentOptions = {}
+): Record<string, unknown> =>
+  convert(schema, typeof options === 'string' ? { name: options } : options, normalizeNode);
+
+/** The same document with each JSON description unpacked into the workflow `x-` keywords. */
 export const zodToWorkflowJsonSchema = (
   schema: ZodSchema<unknown>,
-  options?: string | Partial<Options>
-): Record<string, unknown> => {
-  // Inline subschemas instead of emitting `$ref`s. The designer's field editor
-  // does not resolve `$ref`, so a schema reused across fields (e.g. links.upsert's
-  // `left`/`right` both using entityRefSchema) would otherwise render the second
-  // occurrence as an unresolved ref (shown as a bare "string").
-  if (typeof options === 'string') {
-    return zodToJsonSchema(schema, {
-      name: options,
-      $refStrategy: 'none',
-      postProcess: buildWorkflowJsonSchemaPostProcess(),
-    }) as Record<string, unknown>;
-  }
-
-  const nextPostProcess = options?.postProcess;
-  return zodToJsonSchema(schema, {
-    $refStrategy: 'none',
-    ...options,
-    postProcess: buildWorkflowJsonSchemaPostProcess(nextPostProcess),
-  }) as Record<string, unknown>;
-};
+  options: string | JsonSchemaDocumentOptions = {}
+): Record<string, unknown> =>
+  convert(schema, typeof options === 'string' ? { name: options } : options, (node) =>
+    hoistNullableMetadata(applyJsonDescription(normalizeNode(node)))
+  );

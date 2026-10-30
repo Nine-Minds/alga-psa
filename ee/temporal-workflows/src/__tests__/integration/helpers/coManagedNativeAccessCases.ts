@@ -7,7 +7,7 @@ import path from 'node:path';
 import { prepareUpgradeSchema } from '../../../../../../scripts/lib/upgrade-schema-source.mjs';
 import type { Knex } from 'knex';
 import { tenantDb, runWithTenant } from '@alga-psa/db';
-import { prepareCoManagedProvisioning } from '../../../../../../packages/co-managed/src/provisioning';
+import { prepareNativeAccessOperation } from './coManagedFixtures';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../../../../server/test-utils/dbConfig';
 import { NextRequest } from 'next/server';
 import { getCoManagedAcceptanceState, acceptCoManagedRelationship } from '../../../../../../packages/co-managed/src/acceptance';
@@ -111,26 +111,7 @@ export function registerNativeAccessTests(provision: (
     } finally { await admin.destroy(); if (migrationWork) rmSync(migrationWork, { recursive: true, force: true }); }
   });
 
-  /** A sponsoring MSP with a Pro entitlement, one client, one internal user holding the
-   * co-management permissions through a real session, and a reserved operation. */
-  async function prepare(overrides: { seats?: number; email?: string; capacity?: number } = {}) {
-    const sponsorTenant = randomUUID(), clientId = randomUUID(), requestedBy = randomUUID(), escalationBoardId = randomUUID();
-    const sponsor = tenantDb(db, sponsorTenant);
-    await sponsor.table('tenants').insert({ tenant: sponsorTenant, client_name: 'MSP', email: `msp-${sponsorTenant}@example.test`,
-      plan: 'pro', product_code: 'psa' });
-    await sponsor.table('clients').insert({ tenant: sponsorTenant, client_id: clientId, client_name: 'Customer' });
-    await sponsor.table('users').insert({ tenant: sponsorTenant, user_id: requestedBy, username: `msp-${requestedBy}`,
-      email: `msp-${requestedBy}@example.test`, first_name: 'MSP', last_name: 'Admin', hashed_password: 'test-not-a-login',
-      user_type: 'internal', is_inactive: false });
-    await sponsor.table('boards').insert({ tenant: sponsorTenant, board_id: escalationBoardId, board_name: 'Escalations', is_inactive: false });
-    await sponsor.table('co_managed_entitlements').insert({ tenant: sponsorTenant, source: 'hosted', source_reference: randomUUID(),
-      capacity: overrides.capacity ?? 4, verified_at: new Date(), valid_until: new Date(Date.now() + 3600000) });
-    const operation = await prepareCoManagedProvisioning(db, { sponsorTenant, clientId, requestedBy, escalationBoardId,
-      operationId: randomUUID(), seats: overrides.seats ?? 2, visibilityMode: 'board_scope', workspaceName: 'Customer IT',
-      administrator: { firstName: 'Customer', lastName: 'Admin', email: overrides.email ?? `admin-${randomUUID()}@example.test` } });
-    return operation;
-  }
-
+  const prepare = (overrides: { seats?: number; email?: string; capacity?: number } = {}) => prepareNativeAccessOperation(db, overrides);
 
   let operation: Awaited<ReturnType<typeof prepare>>;
   let actor: { tenant: string; userId: string };

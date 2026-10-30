@@ -26,6 +26,8 @@ import { filterMenuSectionsByProduct } from '@/lib/productSurfaceRegistry';
 import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
+const CO_MANAGED_ADMINISTRATION_HREF = '/msp/co-management/administration';
+
 export function filterNavigationSectionsBySelfHost(
   sections: readonly NavigationSection[],
   selfHostMode: boolean,
@@ -152,6 +154,8 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const navigationFlag = useFeatureFlag('ui-navigation-v2', { defaultValue: true });
   const useNavigationSections =
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
+  // Server-bootstrapped capability verdict (serves); never the raw rollout flag.
+  const { enabled: coManagedServed } = useCapability('co-managed');
   const marketingFlag = useFeatureFlag('marketing-module', { defaultValue: false });
   const marketingEnabled =
     typeof marketingFlag === 'boolean' ? marketingFlag : marketingFlag?.enabled ?? false;
@@ -162,7 +166,6 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const credentialsVaultEnabled = hasFeature(TIER_FEATURES.CREDENTIALS);
   const { productCode, edition } = useProduct();
   const isAlgaDesk = productCode === 'algadesk';
-  const coManagedServed = useCapability('co-managed').enabled;
 
   useEffect(() => {
     let isMounted = true;
@@ -223,6 +226,10 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     const filteredSections = baseSections.map((section) => ({
       ...section,
       items: section.items
+        .filter((item) => coManagedServed || item.href !== CO_MANAGED_ADMINISTRATION_HREF)
+        .map((item) => (!coManagedServed && item.subItems?.some((sub) => sub.href === CO_MANAGED_ADMINISTRATION_HREF)
+          ? { ...item, subItems: item.subItems.filter((sub) => sub.href !== CO_MANAGED_ADMINISTRATION_HREF) }
+          : item))
         .filter((item) => item.name !== 'Marketing' || marketingEnabled)
         .filter((item) => item.name !== 'Passwords' || credentialsVaultEnabled)
         .map((item) => {

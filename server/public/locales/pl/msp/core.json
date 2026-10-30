@@ -110,7 +110,8 @@
     "ticketsCannedResponses": "Gotowe odpowiedzi",
     "profile": "Profil",
     "signOut": "Wyloguj się",
-    "coManaged": "IT w współzarządzaniu"
+    "coManaged": "IT w współzarządzaniu",
+    "coManagedAdministration": "Dostęp i administracja"
   },
   "sidebar": {
     "backToMain": "Powrót do głównego",
@@ -327,6 +328,17 @@
       "calendar": {
         "error": "Synchronizacja kalendarza dla {{providerName}} zgłosiła błąd i nie działa.",
         "disconnected": "Synchronizacja kalendarza dla {{providerName}} jest rozłączona i nie działa."
+      },
+      "rmm": {
+        "syncError": "{{providerName}} zgłosił błąd synchronizacji, więc dane urządzeń i alertów mogą być nieaktualne.",
+        "reconnectRequired": "{{providerName}} wymaga ponownego połączenia — jego danych logowania nie można już odświeżyć."
+      },
+      "accounting": {
+        "reconnectRequired": "{{providerName}} wymaga ponownego połączenia, zanim synchronizacja księgowa będzie mogła znów działać.",
+        "syncError": "Ostatnia synchronizacja z {{providerName}} nie została ukończona, więc faktury i płatności mogą być nieaktualne."
+      },
+      "teams": {
+        "botCredentialsMissing": "Bot {{providerName}} nie może odpowiadać: dane logowania łącznika bota nie są skonfigurowane na serwerze."
       },
       "review": "Sprawdź",
       "dismiss": "Odrzuć powiadomienie o integracji"

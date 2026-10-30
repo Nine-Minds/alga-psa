@@ -14,8 +14,9 @@ function grep(pattern: string, paths: string[]): string[] {
 }
 
 // L1a registers its six tables in the manifest and the deletion order. A bare table-name literal is
-// registration data, not coupling; any other mention (imports, product probes, logic) still fails.
-const isTableRegistration = (line: string) => /^[^:]+:\d+:\s*(\{ table: )?'co_manage(d|ment)_[a-z_]+'(, deletion: 'ordered' \},?|,)\s*$/.test(line);
+// registration data, not coupling; a manifest registration line may also carry `clientKeyed: true`
+// (required by tenantLifecycleLists). Any other mention (imports, product probes, logic) still fails.
+const isTableRegistration = (line: string) => /^[^:]+:\d+:\s*(\{ table: )?'co_manage(d|ment)_[a-z_]+'(, deletion: 'ordered'(, clientKeyed: true)? \},?|,)\s*$/.test(line);
 
 // The Temporal worker's provisioning slice is co-managed by definition: it runs the sponsor's
 // reserved operation. Exactly these files are carved out (kebab-case co-managed-* files plus the

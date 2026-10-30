@@ -25,7 +25,7 @@ export function registerMobileCapabilitiesV1Routes(registry: ApiOpenApiRegistry)
     zOpenApi.object(
       Object.fromEntries(
         SeedTokenKeys.map((key) => [key, zOpenApi.string().describe('6-digit hex color, e.g. #8a4dea')]),
-      ) as Record<(typeof SeedTokenKeys)[number], ReturnType<typeof zOpenApi.string>>,
+      ) as unknown as Record<(typeof SeedTokenKeys)[number], ReturnType<typeof zOpenApi.string>>,
     ),
   );
   const CapabilitiesSuccess = registry.registerSchema(

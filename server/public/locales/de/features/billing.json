@@ -290,6 +290,13 @@
       "pending": "Rechnungen, die auf Genehmigung oder weitere Bearbeitung warten",
       "prepayment": "Anzahlungs- oder Vorauszahlungsrechnungen",
       "partially_applied": "Rechnungen mit teilweise zugeordneten Zahlungen"
+    },
+    "billingPeriod": {
+      "weekly": "pro Woche",
+      "monthly": "pro Monat",
+      "quarterly": "pro Quartal",
+      "semi-annually": "pro Halbjahr",
+      "annually": "pro Jahr"
     }
   },
   "quoteForm": {

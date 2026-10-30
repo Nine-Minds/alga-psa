@@ -127,7 +127,8 @@ import { renderTicketDescriptionHtml, renderTicketRichTextHtml } from './ticketR
 import { getClientLogoUrl, getContactAvatarUrl, getUserAvatarUrl } from '@alga-psa/formatting/avatarUtils';
 import { aggregateReactions } from '@alga-psa/types';
 import { StorageService } from '@alga-psa/storage/StorageService';
-import { generateDocumentPreviews, type PreviewGenerationResult } from '@alga-psa/documents/lib/documentPreviewGenerator';
+import type { PreviewGenerationResult } from '@alga-psa/documents/lib/documentPreviewGenerator';
+import { attachDocumentFromBytes, persistDocumentPreviews } from './documents/attachDocument';
 import { addMaterial, InsufficientStockError, MaterialValidationError } from '@alga-psa/inventory/lib';
 import { v4 as uuidv4 } from 'uuid';
 // import { performanceTracker } from '../../analytics/performanceTracking';
@@ -231,18 +232,6 @@ function resolveTicketNotificationSuppression(input: TicketNotificationSuppressi
   }
 
   return { suppressContactNotifications, suppressInternalNotifications };
-}
-
-function ticketUploadValidationMessage(error: unknown): string | null {
-  if (!(error instanceof Error)) {
-    return null;
-  }
-
-  if (error.message.startsWith('File size exceeds limit') || error.message === 'File type not allowed') {
-    return error.message;
-  }
-
-  return null;
 }
 
 function throwTicketModelCreateApiError(error: unknown): never {
@@ -1337,105 +1326,23 @@ export class TicketService extends BaseService<ITicket> {
     }
 
     if (commentAttachmentDraft && !await canAccessAttachmentTicket(knex, context.tenant, context.userId, ticketId)) throw new NotFoundError('Ticket not found');
-    const mimeType = file.type || 'application/octet-stream';
-    try {
-      await StorageService.validateFileUpload(context.tenant, mimeType, file.size);
-    } catch (error) {
-      const message = ticketUploadValidationMessage(error);
-      if (message) {
-        throw new ValidationError('Validation failed', [
-          { path: ['file'], message },
-        ]);
-      }
-      throw error;
-    }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const uploadResult = await StorageService.uploadFile(context.tenant, buffer, file.name, {
-      mime_type: mimeType,
-      uploaded_by_id: context.userId,
-    });
-
-    let documentCommitted = false;
-    try {
-    const folderRecord = await tenantScopedTable(knex, 'document_folders', context.tenant)
-      .where({
-        entity_id: ticketId,
-        entity_type: 'ticket',
-        folder_path: '/Tickets/Attachments',
-      })
-      .select('folder_path')
-      .first();
-
-    const typeResult = await this.getDocumentTypeIdForMime(knex, context.tenant, mimeType);
-    const documentId = uuidv4();
-    const document: IDocument = {
-      document_id: documentId,
-      document_name: file.name,
-      type_id: typeResult.isShared ? null : typeResult.typeId,
-      shared_type_id: typeResult.isShared ? typeResult.typeId : undefined,
-      user_id: context.userId,
-      order_number: 0,
-      created_by: context.userId,
+    // Validation, storage, the transaction, rollback cleanup, previews and events all
+    // live in the shared upload core; the draft branch is a ticket-adapter option.
+    return attachDocumentFromBytes({
+      knex,
       tenant: context.tenant,
-      file_id: uploadResult.file_id,
-      storage_path: uploadResult.storage_path,
-      mime_type: mimeType,
-      file_size: file.size,
-      folder_path: folderRecord?.folder_path,
-      ...(commentAttachmentDraft ? { is_client_visible: true } : {}),
-    };
-
-    await withTransaction(knex, async (trx) => {
-      await tenantScopedTable(trx, 'documents', context.tenant).insert(document);
-      if (commentAttachmentDraft) await tenantDb(trx, context.tenant).table('ticket_comment_attachments').insert({
-        tenant: context.tenant, ticket_id: ticketId, document_id: documentId,
-        created_by: context.userId, state: 'draft', expires_at: new Date(Date.now() + 86400000),
-      });
-      await tenantScopedTable(trx, 'document_associations', context.tenant).insert({
-        association_id: uuidv4(),
-        document_id: documentId,
-        entity_id: ticketId,
-        entity_type: 'ticket',
-        tenant: context.tenant,
-      });
-
-      // Activity-timeline entry for the document attachment. Stored inside
-      // the same transaction so the timeline row never appears unless the
-      // document and its association were also persisted.
-      await writeTicketActivity(trx, {
-        tenant: context.tenant,
-        ticketId,
-        eventType: TICKET_ACTIVITY_EVENT.DOCUMENT_ATTACHED,
-        entityType: TICKET_ACTIVITY_ENTITY.DOCUMENT,
-        entityId: documentId,
-        actor: {
-          actorType: TICKET_ACTIVITY_ACTOR.USER,
-          userId: context.userId,
-        },
-        source: TICKET_ACTIVITY_SOURCE.API,
-        details: {
-          document_name: file.name,
-          mime_type: mimeType,
-          file_size: file.size,
-        },
-      });
+      actorUserId: context.userId,
+      target: { entityType: 'ticket', entityId: ticketId },
+      file: {
+        fileName: file.name,
+        mimeType: file.type || 'application/octet-stream',
+        bytes: Buffer.from(await file.arrayBuffer()),
+      },
+      source: 'multipart',
+      options: { commentAttachmentDraft },
+      loadDocument: (documentId) => this.getDocumentById(documentId, context),
     });
-
-    documentCommitted = true;
-    await this.persistDocumentPreviews(knex, document, buffer, context.tenant);
-    const createdDocument = await this.getDocumentById(documentId, context);
-    if (!createdDocument) {
-      throw new Error('Uploaded document could not be loaded');
-    }
-
-    return createdDocument;
-    } finally {
-      if (commentAttachmentDraft && !documentCommitted) {
-        try { await StorageService.deleteFile(uploadResult.file_id, context.userId); }
-        catch (error) { console.error('Unable to remove unclaimed comment attachment storage', error); }
-      }
-    }
   }
 
   async downloadTicketDocument(
@@ -1535,26 +1442,13 @@ export class TicketService extends BaseService<ITicket> {
     };
   }
 
-  private async persistDocumentPreviews(
+  private persistDocumentPreviews(
     knex: Knex,
     document: IDocument,
     buffer: Buffer,
     tenant: string,
   ): Promise<PreviewGenerationResult | null> {
-    try {
-      const result = await generateDocumentPreviews(document, buffer);
-      await tenantScopedTable(knex, 'documents', tenant)
-        .where({ document_id: document.document_id })
-        .update({
-          thumbnail_file_id: result.thumbnail_file_id,
-          preview_file_id: result.preview_file_id,
-          preview_generated_at: result.preview_generated_at,
-        });
-      return result;
-    } catch (error) {
-      console.error(`[TicketService] Preview generation failed for document ${document.document_id}:`, error);
-      return null;
-    }
+    return persistDocumentPreviews(knex, document, buffer, tenant);
   }
 
   async deleteTicketDocument(
@@ -1734,57 +1628,6 @@ export class TicketService extends BaseService<ITicket> {
       .first();
 
     return (material as ITicketMaterial | undefined) ?? null;
-  }
-
-  private async getDocumentTypeIdForMime(
-    knex: Knex,
-    tenant: string,
-    mimeType: string,
-  ): Promise<{ typeId: string; isShared: boolean }> {
-    const scopedDb = tenantDb(knex, tenant);
-    const tenantType = await tenantScopedTable(knex, 'document_types', tenant)
-      .where({ type_name: mimeType })
-      .first();
-
-    if (tenantType) {
-      return { typeId: tenantType.type_id, isShared: false };
-    }
-
-    const sharedType = await scopedDb.table('shared_document_types')
-      .where({ type_name: mimeType })
-      .first();
-
-    if (sharedType) {
-      return { typeId: sharedType.type_id, isShared: true };
-    }
-
-    const generalType = `${mimeType.split('/')[0]}/*`;
-
-    const generalTenantType = await tenantScopedTable(knex, 'document_types', tenant)
-      .where({ type_name: generalType })
-      .first();
-
-    if (generalTenantType) {
-      return { typeId: generalTenantType.type_id, isShared: false };
-    }
-
-    const generalSharedType = await scopedDb.table('shared_document_types')
-      .where({ type_name: generalType })
-      .first();
-
-    if (generalSharedType) {
-      return { typeId: generalSharedType.type_id, isShared: true };
-    }
-
-    const unknownType = await scopedDb.table('shared_document_types')
-      .where({ type_name: 'application/octet-stream' })
-      .first();
-
-    if (!unknownType) {
-      throw new ConflictError('Unknown document type not found in shared document types');
-    }
-
-    return { typeId: unknownType.type_id, isShared: true };
   }
 
   private assertValidTicketId(id: string): void {
@@ -3013,6 +2856,10 @@ export class TicketService extends BaseService<ITicket> {
 
       if (comment.is_system_generated) {
         throw new ValidationError('System-generated comments cannot be edited');
+      }
+
+      if (comment.actor_reference_id) {
+        throw new ValidationError('Qualified comment authors require a collaboration command');
       }
 
       let operatorRepair = false;

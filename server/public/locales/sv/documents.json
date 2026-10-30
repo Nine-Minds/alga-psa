@@ -93,7 +93,8 @@
       "pickedBy": "Plockad av: ____________________     Datum: ____________",
       "preTaxTotals": "Beloppen visas exklusive moms. Moms tillkommer och beräknas på fakturan.",
       "thankYouForOrder": "Tack för er beställning.",
-      "checkedBy": "Kontrollerad av: ____________________     Datum: ____________"
+      "checkedBy": "Kontrollerad av: ____________________     Datum: ____________",
+      "releasedBy": "Utlämnad av: ____________________     Signatur: ____________________     Datum: ____________"
     },
     "serialNumbers": "Serienummer",
     "allocatedSerialsNote": "Tilldelade serienummer; kan ändras vid leverans.",
@@ -114,7 +115,17 @@
     "ownerMsp": "MSP",
     "ownerClient": "Kund",
     "statusOpen": "Öppen",
-    "statusSealed": "Förseglad"
+    "statusSealed": "Förseglad",
+    "rmaReturnSlipTitle": "RMA-RETURFÖLJE",
+    "device": "Enhet",
+    "vendor": "Leverantör",
+    "vendorReference": "Leverantörsreferens",
+    "asset": "Tillgång",
+    "assetTag": "Tillgångstagg",
+    "replacementSerial": "Ersättningens serienummer",
+    "shipping": "Frakt",
+    "returnBy": "Retur senast",
+    "returnShipTo": "Returnera till"
   },
   "errors": {
     "permissions": {

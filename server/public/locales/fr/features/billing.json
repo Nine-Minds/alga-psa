@@ -290,6 +290,13 @@
       "pending": "Factures en attente d'approbation ou de traitement",
       "prepayment": "Factures d'acompte ou de dépôt",
       "partially_applied": "Factures avec paiements partiels appliqués"
+    },
+    "billingPeriod": {
+      "weekly": "par semaine",
+      "monthly": "par mois",
+      "quarterly": "par trimestre",
+      "semi-annually": "par semestre",
+      "annually": "par an"
     }
   },
   "quoteForm": {

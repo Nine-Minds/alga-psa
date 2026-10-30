@@ -436,6 +436,8 @@ export interface ContractDraftSimulationInput {
   billing_timing?: "arrears" | "advance";
   enable_proration: boolean;
   fixed_lines: ContractWizardFixedLine[];
+  /** Products line's own timing; undefined inherits `billing_timing`. */
+  product_billing_timing?: "arrears" | "advance";
   product_services: Array<{
     service_id: string;
     service_name?: string;

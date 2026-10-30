@@ -98,7 +98,7 @@ export class TeamService extends BaseService<ITeam> {
       tableName: 'teams',
       primaryKey: 'team_id',
       tenantColumn: 'tenant',
-      searchableFields: ['team_name'],
+      searchableFields: ['team_name', 'description'],
       defaultSort: 'team_name',
       defaultOrder: 'asc'
     });
@@ -366,6 +366,7 @@ export class TeamService extends BaseService<ITeam> {
         const teamData = {
           team_id: uuid4(),
           team_name: data.team_name,
+          description: data.description ?? null,
           manager_id: data.manager_id || null,
           tenant: context.tenant,
           created_at: new Date(),
@@ -1496,6 +1497,9 @@ export class TeamService extends BaseService<ITeam> {
         case 'team_name':
           query.whereILike('t.team_name', `%${value}%`);
           break;
+        case 'description':
+          query.whereILike('t.description', `%${value}%`);
+          break;
         case 'manager_id':
           query.where('t.manager_id', value);
           break;
@@ -1524,6 +1528,7 @@ export class TeamService extends BaseService<ITeam> {
         case 'search':
           query.where(function() {
             this.whereILike('t.team_name', `%${value}%`);
+            this.orWhereILike('t.description', `%${value}%`);
             // Only search in manager name if the manager table is joined
             if (hasManagerJoin) {
               this.orWhereRaw(`COALESCE(manager.first_name || ' ' || manager.last_name, manager.username) ILIKE ?`, [`%${value}%`]);

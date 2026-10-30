@@ -1,5 +1,7 @@
 import {
   runRegistrySearch,
+  buildAttachFileRequest,
+  AttachFileInputError,
   type ChatApiRegistryEntry,
   type CallEndpointArgs,
 } from '@alga-psa/agent-tooling';
@@ -57,5 +59,22 @@ export async function handleCallApiEndpoint(
     return { data: { error: `No registry entry found for entryId "${entryId}".` }, isError: true };
   }
   const res = await client.callEndpoint(entry, args as CallEndpointArgs);
+  return { data: { status: res.status, ok: res.ok, data: res.data }, isError: !res.ok };
+}
+
+// LEVERAGE: pattern mcp-tool-dispatch — the same attach_file dispatch lives in ee/server jsonRpcServer.ts
+export async function handleAttachFile(
+  client: InstanceClient,
+  args: Record<string, unknown>,
+): Promise<ToolOutcome> {
+  let built;
+  try {
+    built = buildAttachFileRequest(args);
+  } catch (error) {
+    // AttachFileInputError messages never echo the signed download URL.
+    if (error instanceof AttachFileInputError) return { data: { error: error.message }, isError: true };
+    throw error;
+  }
+  const res = await client.sendBuilt(built);
   return { data: { status: res.status, ok: res.ok, data: res.data }, isError: !res.ok };
 }

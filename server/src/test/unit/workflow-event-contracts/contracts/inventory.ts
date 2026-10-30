@@ -4,6 +4,7 @@ import {
   buildInventoryPoReceivedPayload,
   buildInventoryPurchaseOrderPayload,
   buildInventoryRmaCreatedPayload,
+  buildInventoryRmaUpdatedPayload,
   buildInventorySalesOrderPayload,
   buildInventorySoFulfilledPayload,
   buildInventoryStockLowPayload,
@@ -33,6 +34,7 @@ type InventoryEventType =
   | 'INVENTORY_PO_RECEIVED'
   | 'INVENTORY_SO_FULFILLED'
   | 'INVENTORY_RMA_CREATED'
+  | 'INVENTORY_RMA_UPDATED'
   | 'INVENTORY_SALES_ORDER_CREATED'
   | 'INVENTORY_SALES_ORDER_UPDATED'
   | 'INVENTORY_SALES_ORDER_DELETED'
@@ -77,6 +79,24 @@ const rma = (overrides: Partial<Parameters<typeof buildInventoryRmaCreatedPayloa
     clientId: IDS.client,
     serviceId: IDS.service,
     serialNumber: 'SN-12345',
+    ...overrides,
+  });
+
+const rmaUpdated = (overrides: Partial<Parameters<typeof buildInventoryRmaUpdatedPayload>[0]> = {}) =>
+  buildInventoryRmaUpdatedPayload({
+    tenant,
+    rmaId: IDS.rma,
+    rmaNumber: 'RMA-00007',
+    status: 'sent_to_vendor',
+    previousStatus: 'returned',
+    rmaType: 'standard',
+    assetId: IDS.asset,
+    ticketId: IDS.ticket,
+    clientId: IDS.client,
+    warrantyOutcome: 'covered',
+    changedFields: ['status', 'outbound_carrier', 'outbound_tracking_number'],
+    userId: IDS.user,
+    timestamp: NOW,
     ...overrides,
   });
 
@@ -153,6 +173,18 @@ export const inventoryContracts = {
         site: 'packages/inventory/src/actions/rmaActions.ts#openAdvanceRma',
         ...raw,
         build: () => rma({ rmaReference: null, serialNumber: null, serviceId: null }),
+      },
+    ],
+  },
+  INVENTORY_RMA_UPDATED: {
+    status: 'covered',
+    cases: [
+      { site: 'packages/inventory/src/lib/rma/publishRmaUpdated.ts#publishRmaUpdated', ...raw, build: () => rmaUpdated() },
+      {
+        // closed without a decision owner or ticket
+        site: 'packages/inventory/src/lib/rma/publishRmaUpdated.ts#publishRmaUpdated',
+        ...raw,
+        build: () => rmaUpdated({ status: 'closed', previousStatus: 'warranty_review', warrantyOutcome: 'not_covered', ticketId: null, userId: undefined }),
       },
     ],
   },

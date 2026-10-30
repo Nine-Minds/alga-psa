@@ -39,6 +39,15 @@ export interface AssetInventoryProvenance {
 const toIso = (value: unknown): string | null =>
   value ? new Date(value as string | number | Date).toISOString() : null;
 
+const toHistoryRow = (r: any): AssetRmaHistoryRow => ({
+  rma_id: r.rma_id,
+  rma_number: r.rma_number ?? null,
+  status: r.status,
+  created_at: toIso(r.created_at) ?? new Date(0).toISOString(),
+  // rma_cases has no dedicated resolution column; the status conveys the outcome.
+  resolution: null,
+});
+
 const EMPTY_PROVENANCE: AssetInventoryProvenance = {
   service_id: null,
   service_name: null,
@@ -54,8 +63,8 @@ const EMPTY_PROVENANCE: AssetInventoryProvenance = {
 
 /**
  * Product/SKU, the delivered serial unit, its origin sales order, and RMA history
- * for a managed asset. Returns an all-null shape (no links) when the asset carries
- * neither a service_id nor a stock_unit_id. Requires asset:read.
+ * for a managed asset. Returns an all-null shape (plus any asset-only warranty claims) when the
+ * asset carries neither a service_id nor a stock_unit_id. Requires asset:read.
  */
 export const getAssetInventoryProvenance = withAuth(async (
   user,
@@ -69,8 +78,15 @@ export const getAssetInventoryProvenance = withAuth(async (
       .where({ tenant, asset_id: assetId })
       .select('service_id', 'stock_unit_id')
       .first();
-    if (!asset || (!asset.service_id && !asset.stock_unit_id)) {
-      return { ...EMPTY_PROVENANCE };
+    if (!asset) return { ...EMPTY_PROVENANCE };
+    // An asset with no inventory links can still carry asset-only warranty claims (C5): fall through to
+    // the RMA history instead of returning early.
+    if (!asset.service_id && !asset.stock_unit_id) {
+      const claims = await trx('rma_cases')
+        .where({ tenant, asset_id: assetId })
+        .select('rma_id', 'rma_number', 'status', 'created_at')
+        .orderBy('created_at', 'desc');
+      return { ...EMPTY_PROVENANCE, rma_history: claims.map(toHistoryRow) };
     }
 
     const unit = asset.stock_unit_id
@@ -129,17 +145,10 @@ export const getAssetInventoryProvenance = withAuth(async (
         qb.where({ asset_id: assetId });
         if (unit?.unit_id) qb.orWhere({ returned_unit_id: unit.unit_id });
       })
-      .select('rma_id', 'rma_reference', 'status', 'created_at')
+      .select('rma_id', 'rma_number', 'status', 'created_at')
       .orderBy('created_at', 'desc');
 
-    const rma_history: AssetRmaHistoryRow[] = rmaRows.map((r: any) => ({
-      rma_id: r.rma_id,
-      rma_number: r.rma_reference ?? null,
-      status: r.status,
-      created_at: toIso(r.created_at) ?? new Date(0).toISOString(),
-      // rma_cases has no dedicated resolution column; the status conveys the outcome.
-      resolution: null,
-    }));
+    const rma_history: AssetRmaHistoryRow[] = rmaRows.map(toHistoryRow);
 
     return {
       service_id: serviceId,

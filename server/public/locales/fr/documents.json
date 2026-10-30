@@ -93,7 +93,8 @@
       "pickedBy": "Prélevé par : ____________________     Date : ____________",
       "preTaxTotals": "Les totaux indiqués sont hors taxes. Les taxes applicables sont calculées sur votre facture.",
       "thankYouForOrder": "Merci pour votre commande.",
-      "checkedBy": "Vérifié par : ____________________     Date : ____________"
+      "checkedBy": "Vérifié par : ____________________     Date : ____________",
+      "releasedBy": "Libéré par : ____________________     Signature : ____________________     Date : ____________"
     },
     "serialNumbers": "Numéros de série",
     "allocatedSerialsNote": "Numéros de série attribués ; susceptibles de changer lors de l’exécution.",
@@ -114,7 +115,17 @@
     "ownerMsp": "MSP",
     "ownerClient": "Client",
     "statusOpen": "Ouvert",
-    "statusSealed": "Scellé"
+    "statusSealed": "Scellé",
+    "rmaReturnSlipTitle": "BORDEREAU DE RETOUR RMA",
+    "device": "Appareil",
+    "vendor": "Fournisseur",
+    "vendorReference": "Référence fournisseur",
+    "asset": "Actif",
+    "assetTag": "Étiquette de l'actif",
+    "replacementSerial": "Numéro de série du remplacement",
+    "shipping": "Expédition",
+    "returnBy": "Retour avant le",
+    "returnShipTo": "Adresse de retour"
   },
   "errors": {
     "permissions": {

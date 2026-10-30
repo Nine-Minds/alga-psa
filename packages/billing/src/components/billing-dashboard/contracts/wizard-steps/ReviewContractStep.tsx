@@ -18,7 +18,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { CURRENCY_OPTIONS, fromMinorUnits } from '@alga-psa/core';
-import { cadencePrepaidBlocksMonthlyCents, draftToInput, minutesToHoursText, prepaidLineSoldAsRate } from '../prepaidBlockConfigDraft';
+import { cadencePrepaidBlockPeriodAmounts, draftToInput, minutesToHoursText, prepaidLineSoldAsRate } from '../prepaidBlockConfigDraft';
 import { describeRollover } from '../prepaidBlockLabels';
 import { parse } from 'date-fns';
 import { getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
@@ -26,20 +26,27 @@ import { getClientBillingProfilesForBilling } from '@alga-psa/billing/actions/bi
 import { useClientBillingProfiles } from '@alga-psa/ui/hooks/useClientBillingProfiles';
 import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';
 import { FirstInvoiceNotice } from './FirstInvoiceNotice';
+import { fixedLineDisplayName } from './firstInvoiceLines';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { meaningfulFixedLines } from '../../../../lib/contractWizardFixedLines';
 import {
-  fixedLinesRecurringTotalCents,
+  fixedLinePeriodCents,
   hasBundleFixedService,
   isUnitFixedService,
   unitFixedServiceAmountCents,
 } from '../../../../lib/fixedServiceBasis';
-import { resolveFixedLineRecurringTotal } from '../../../../lib/billing/compute/recurringMemberRate';
-import { getServiceCatalogRatesForCurrency } from '@alga-psa/billing/actions/serviceActions';
+import { isAdvanceTimingAllowedForLineType, resolveEffectiveBillingTiming } from '@shared/billingClients/contractLineTimingRule';
+import {
+  resolveFixedLinePeriodTotal,
+  summarizeRecurringAmounts,
+  type RecurringPeriodAmount,
+} from '../../../../lib/billing/compute/recurringMemberRate';
+import { useProductCatalogRates } from '../../../../hooks/useProductCatalogRates';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   useBillingFrequencyOptions,
   useFormatBillingFrequency,
+  useFormatBillingPeriod,
 } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 
 const loadBillingProfiles = (clientId: string) => getClientBillingProfilesForBilling(clientId);
@@ -53,6 +60,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
   const { formatCurrency, formatNumber, formatDate: formatDateInLocale } = useFormatters();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const formatBillingFrequency = useFormatBillingFrequency();
+  const formatBillingPeriod = useFormatBillingPeriod();
   const notSelectedLabel = t('wizardReview.fallback.notSelected', { defaultValue: 'Not selected' });
   // `client_id` is the single canonical identity for the chosen client;
   // `clientName` only ever holds a resolved display value. It is empty while the
@@ -113,6 +121,21 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
       billingFrequency: line.billing_frequency ?? data.billing_frequency,
       enableProration: line.enable_proration,
     }, t);
+
+  // Same resolver the server uses. Hourly/usage lines are always arrears (never "inherited");
+  // others show where the value came from when the line has no timing of its own.
+  const reviewTimingLabel = (lineType: string, ownTiming: 'arrears' | 'advance' | undefined) => {
+    const effective = resolveEffectiveBillingTiming(lineType, ownTiming ?? data.billing_timing);
+    const inherited = ownTiming === undefined && isAdvanceTimingAllowedForLineType(lineType);
+    if (effective === 'advance') {
+      return inherited
+        ? t('wizardReview.billingTiming.advanceInherited', { defaultValue: 'In advance (contract default)' })
+        : t('wizardReview.billingTiming.advance', { defaultValue: 'In advance' });
+    }
+    return inherited
+      ? t('wizardReview.billingTiming.arrearsInherited', { defaultValue: 'In arrears (contract default)' })
+      : t('wizardReview.billingTiming.arrears', { defaultValue: 'In arrears' });
+  };
 
   const formatMinorCurrency = (minorUnits: number | null | undefined) => {
     const amount = minorUnits == null ? 0 : minorUnits;
@@ -206,57 +229,66 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
     return formatDateInLocale(local);
   };
 
-  // Products resumed from a saved draft carry no catalog price; look it up in
-  // the contract currency so the total prices them like the engine does.
-  const [resumedCatalogRates, setResumedCatalogRates] = useState<Record<string, number | null>>({});
-  const unpricedProductIds = data.product_services
-    .filter((product) => product.service_id && product.currency_rate === undefined)
-    .map((product) => product.service_id)
-    .join(',');
-  useEffect(() => {
-    if (!unpricedProductIds) return;
-    let cancelled = false;
-    getServiceCatalogRatesForCurrency(unpricedProductIds.split(','), currencyCode)
-      .then((rates) => {
-        if (!cancelled && rates && !isActionMessageError(rates) && !isActionPermissionError(rates)) {
-          setResumedCatalogRates(rates as Record<string, number | null>);
-        }
-      })
-      .catch((error) => console.error('Error loading product catalog prices:', error));
-    return () => {
-      cancelled = true;
-    };
-  }, [unpricedProductIds, currencyCode]);
+  // Products are priced through the same shared (contract currency, service id)
+  // lookup the Products step uses, so the two steps cannot disagree — whether
+  // the product was just picked, resumed from a saved draft, or the contract
+  // currency changed after it was picked.
+  const { rates: productCatalogRates } = useProductCatalogRates(
+    currencyCode,
+    data.product_services.map((product) => product.service_id),
+  );
 
   // Per line: unit members bill quantity × unit rate; the base rate is the
-  // bundle total and counts only when an allocation member exists. Lines are
-  // normalized to a monthly amount by their own billing frequency.
+  // bundle total and counts only when an allocation member exists. Each line
+  // contributes one billing period's amount on its own billing frequency; the
+  // shared summary groups them by cadence and derives the monthly equivalent
+  // with the same per-line normalization the stored value and the engine use.
   // Products are priced by the shared resolver (the invoice engine's rate
   // chain: product override, then the contract-currency catalog price, then
   // the legacy default rate) — never a parallel copy of the rule here.
   // A cadence Prepaid Block line adds its block fee per period (billed in advance) on the line's
   // frequency, the same one the submission gives it.
-  const calculateTotalMonthly = () =>
-    fixedLinesRecurringTotalCents(fixedLines, data.billing_frequency) +
-    cadencePrepaidBlocksMonthlyCents(
+  const recurringSummary = summarizeRecurringAmounts([
+    ...fixedLines.map(
+      (line): RecurringPeriodAmount => ({
+        periodCents: fixedLinePeriodCents(line),
+        frequency: line.billing_frequency ?? data.billing_frequency,
+      }),
+    ),
+    ...cadencePrepaidBlockPeriodAmounts(
       data.prepaid_block_drafts ?? [],
       data.hourly_billing_frequency ?? data.billing_frequency,
-    ) +
-    (resolveFixedLineRecurringTotal(
-      {
-        custom_rate: null,
-        members: data.product_services
-          .filter((product) => product.service_id)
-          .map((product) => ({
-            item_kind: 'product',
-            quantity: product.quantity,
-            configuration_custom_rate: product.custom_rate,
-            price_rate: product.currency_rate ?? resumedCatalogRates[product.service_id] ?? null,
-            default_rate: product.default_rate,
-          })),
-      },
-      data.billing_frequency,
-    ) ?? 0);
+    ),
+    // Products carry the contract cadence and are valued as one line, like the engine.
+    {
+      periodCents:
+        resolveFixedLinePeriodTotal({
+          custom_rate: null,
+          members: data.product_services
+            .filter((product) => product.service_id)
+            .map((product) => ({
+              item_kind: 'product',
+              quantity: product.quantity,
+              configuration_custom_rate: product.custom_rate,
+              price_rate: productCatalogRates[product.service_id]?.currency_rate ?? null,
+              default_rate: productCatalogRates[product.service_id]?.default_rate ?? null,
+            })),
+        }) ?? 0,
+      frequency: data.billing_frequency,
+    },
+  ]);
+  const isMixedFrequency = recurringSummary.groups.length > 1;
+  const headlineFrequency = recurringSummary.singleFrequency ?? 'monthly';
+  const perFrequencyText = (periodCents: number, frequency: string) =>
+    t('wizardReview.total.perFrequency', {
+      defaultValue: '{{amount}} {{period}}',
+      amount: formatMinorCurrency(periodCents),
+      period: formatBillingPeriod(frequency),
+    });
+  const monthlyEquivalentText = t('wizardReview.total.perMonthEquivalent', {
+    defaultValue: 'about {{amount}} a month',
+    amount: formatMinorCurrency(recurringSummary.monthlyCents),
+  });
 
   const hasFixedServices = fixedLines.length > 0;
   const hasProducts = data.product_services.length > 0;
@@ -513,13 +545,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             <div className="flex items-center gap-2">
               <Package className="h-5 w-5 text-[rgb(var(--color-status-success))]" />
               <h4 className="font-semibold">
-                {line.contract_line_name?.trim() ||
-                  (fixedLines.length > 1
-                    ? t('wizardReview.sections.fixedFeeServicesNumbered', {
-                        defaultValue: 'Fixed Fee Services ({{number}})',
-                        number: lineIndex + 1,
-                      })
-                    : t('wizardReview.sections.fixedFeeServices', { defaultValue: 'Fixed Fee Services' }))}
+                {fixedLineDisplayName(line, lineIndex, fixedLines.length, t)}
               </h4>
             </div>
             <Badge
@@ -594,6 +620,10 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
                   <p>
                     <strong>{t('wizardReview.recurring.cadenceOwner.label', { defaultValue: 'Cadence owner:' })}</strong>{' '}
                     {recurringCadenceOwnerLabel}
+                  </p>
+                  <p>
+                    <strong>{t('wizardReview.billingTiming.label', { defaultValue: 'Billing timing:' })}</strong>{' '}
+                    {reviewTimingLabel('Fixed', line.billing_timing)}
                   </p>
                   <FirstInvoiceNotice
                     id={lineIndex === 0 ? "contract-wizard-review-first-invoice" : `contract-wizard-review-first-invoice-${lineIndex}`}
@@ -697,6 +727,19 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
               </li>
             ))}
           </ul>
+          <p className="text-sm text-[rgb(var(--color-text-500))] mt-3" id="contract-wizard-review-products-timing">
+            <strong>{t('wizardReview.billingTiming.label', { defaultValue: 'Billing timing:' })}</strong>{' '}
+            {reviewTimingLabel('Product', data.product_billing_timing)}
+          </p>
+          <FirstInvoiceNotice
+            id="contract-wizard-review-products-first-invoice"
+            cadenceOwner={data.cadence_owner}
+            billingTiming={resolveEffectiveBillingTiming('Product', data.product_billing_timing ?? data.billing_timing)}
+            billingFrequency={data.billing_frequency}
+            startDate={data.start_date}
+            clientId={data.client_id}
+            className="space-y-1 text-sm text-[rgb(var(--color-text-500))] mt-2"
+          />
         </Card>
       )}
 
@@ -725,6 +768,10 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             </Badge>
           </div>
           <div className="space-y-2 text-sm">
+            <p id="contract-wizard-review-hourly-timing" className="text-[rgb(var(--color-text-500))]">
+              <strong>{t('wizardReview.billingTiming.label', { defaultValue: 'Billing timing:' })}</strong>{' '}
+              {reviewTimingLabel('Hourly', undefined)}
+            </p>
             <div>
               <p className="text-[rgb(var(--color-text-500))] mb-1">
                 {t('wizardReview.hourly.servicesAndRates', { defaultValue: 'Services and Rates' })}
@@ -895,6 +942,10 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             </Badge>
           </div>
           <div className="space-y-2 text-sm">
+            <p id="contract-wizard-review-usage-timing" className="text-[rgb(var(--color-text-500))]">
+              <strong>{t('wizardReview.billingTiming.label', { defaultValue: 'Billing timing:' })}</strong>{' '}
+              {reviewTimingLabel('Usage', undefined)}
+            </p>
             <ul className="list-disc list-inside space-y-1 ml-2">
               {(data.usage_services || []).map((service, idx) => (
                 <li key={idx} className="space-y-1">
@@ -942,7 +993,11 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
         <div className="flex items-center justify-between">
           <div>
             <h4 className="font-semibold text-lg mb-1">
-              {t('wizardReview.total.title', { defaultValue: 'Estimated Monthly Total' })}
+              {isMixedFrequency
+                ? t('wizardReview.total.mixedFrequencyTitle', { defaultValue: 'Estimated Total by Billing Frequency' })
+                : headlineFrequency === 'monthly'
+                  ? t('wizardReview.total.title', { defaultValue: 'Estimated Monthly Total' })
+                  : t('wizardReview.total.titleCadence', { defaultValue: 'Estimated Total' })}
             </h4>
             <p className="text-sm text-[rgb(var(--color-text-500))]">
               {t('wizardReview.total.description', {
@@ -952,18 +1007,52 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             </p>
           </div>
           <div className="text-right">
-            <p className="text-3xl font-bold text-[rgb(var(--color-primary-800))]">
-              {formatMinorCurrency(calculateTotalMonthly())}
-            </p>
-            <p className="text-xs text-[rgb(var(--color-text-500))]">
-              {t('wizardReview.total.perMonth', { defaultValue: 'per month' })}
-            </p>
+            {isMixedFrequency ? (
+              <>
+                {recurringSummary.groups.map((group) => (
+                  <p
+                    key={group.frequency}
+                    data-testid={`review-total-row-${group.frequency}`}
+                    className="text-lg font-semibold text-[rgb(var(--color-primary-800))]"
+                  >
+                    {perFrequencyText(group.periodCents, group.frequency)}
+                  </p>
+                ))}
+                <p id="review-total-monthly-equivalent" className="text-xs text-[rgb(var(--color-text-500))]">
+                  {monthlyEquivalentText}
+                </p>
+              </>
+            ) : (
+              <>
+                <p
+                  id="review-total-headline"
+                  className="text-3xl font-bold text-[rgb(var(--color-primary-800))]"
+                >
+                  {formatMinorCurrency(recurringSummary.singleFrequencyPeriodCents ?? 0)}
+                </p>
+                <p className="text-xs text-[rgb(var(--color-text-500))]">
+                  {formatBillingPeriod(headlineFrequency)}
+                </p>
+                {headlineFrequency !== 'monthly' && (
+                  <p id="review-total-monthly-equivalent" className="text-xs text-[rgb(var(--color-text-500))]">
+                    {monthlyEquivalentText}
+                  </p>
+                )}
+              </>
+            )}
             {data.recurring_baseline && (
               <p id="review-saved-draft-value" className="text-xs text-[rgb(var(--color-text-500))]">
-                {t('wizardReview.total.savedDraftValue', {
-                  defaultValue: 'Saved draft value: {{amount}}',
-                  amount: formatMinorCurrency(data.recurring_baseline.monthly_cents),
-                })}
+                {/* A stored monthly value: under a monthly headline the cadence is already
+                    stated; under any other headline it must say "per month" itself. */}
+                {isMixedFrequency || headlineFrequency !== 'monthly'
+                  ? t('wizardReview.total.savedDraftValueMonthly', {
+                      defaultValue: 'Saved draft value: {{amount}} per month',
+                      amount: formatMinorCurrency(data.recurring_baseline.monthly_cents),
+                    })
+                  : t('wizardReview.total.savedDraftValue', {
+                      defaultValue: 'Saved draft value: {{amount}}',
+                      amount: formatMinorCurrency(data.recurring_baseline.monthly_cents),
+                    })}
               </p>
             )}
           </div>

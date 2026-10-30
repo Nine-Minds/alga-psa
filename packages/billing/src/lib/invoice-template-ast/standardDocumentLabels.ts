@@ -97,6 +97,16 @@ export const STANDARD_DOCUMENT_LABELS: readonly TemplateI18nRef[] = [
   { i18nKey: 'labels.ownerClient', defaultValue: 'Client' },
   { i18nKey: 'labels.statusOpen', defaultValue: 'Open' },
   { i18nKey: 'labels.statusSealed', defaultValue: 'Sealed' },
+  { i18nKey: 'labels.rmaReturnSlipTitle', defaultValue: 'RMA RETURN SLIP' },
+  { i18nKey: 'labels.device', defaultValue: 'Device' },
+  { i18nKey: 'labels.vendor', defaultValue: 'Vendor' },
+  { i18nKey: 'labels.vendorReference', defaultValue: 'Vendor reference' },
+  { i18nKey: 'labels.asset', defaultValue: 'Asset' },
+  { i18nKey: 'labels.assetTag', defaultValue: 'Asset tag' },
+  { i18nKey: 'labels.replacementSerial', defaultValue: 'Replacement serial' },
+  { i18nKey: 'labels.shipping', defaultValue: 'Shipping' },
+  { i18nKey: 'labels.returnBy', defaultValue: 'Return by' },
+  { i18nKey: 'labels.returnShipTo', defaultValue: 'Return ship to' },
 ];
 
 const byKey = new Map(STANDARD_DOCUMENT_LABELS.map((label) => [label.i18nKey, label] as const));

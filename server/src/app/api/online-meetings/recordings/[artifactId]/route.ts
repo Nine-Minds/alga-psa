@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { serveMeetingArtifact } from '@/lib/online-meetings/meetingArtifactDelivery';
+import { resolveSharedWorkBrowserActor, isSharedWorkForbidden } from '@alga-psa/scheduling/lib/sharedWorkActor';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { isEnterprise } from '@alga-psa/core/features';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
@@ -93,6 +95,16 @@ export async function GET(
   const tenant = (user as any)?.tenant;
   if (!user || !tenant) {
     return new NextResponse('Unauthorized', { status: 401 });
+  }
+
+  // A participating co-managed workspace serves the artifact through the retained delivery path;
+  // every other tenant falls through to the native proxy below untouched.
+  try {
+    const delivered = await serveMeetingArtifact(request, artifactId, tenant, () => resolveSharedWorkBrowserActor(user as any, tenant));
+    if (delivered) return delivered;
+  } catch (error) {
+    if (isSharedWorkForbidden(error)) return new NextResponse('Forbidden', { status: 403 });
+    throw error;
   }
 
   const { knex } = await createTenantKnex(tenant);

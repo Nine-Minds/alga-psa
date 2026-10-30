@@ -22,9 +22,9 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
   DialogFooter: ({ children }: any) => <div>{children}</div>,
 }));
 
-vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
-  default: ({ id, options, onValueChange }: any) => (
-    <select id={id} onChange={(e) => onValueChange(e.target.value)} defaultValue="">
+vi.mock('@alga-psa/ui/components/SearchableSelect', () => ({
+  default: ({ id, options, onChange }: any) => (
+    <select id={id} onChange={(e) => onChange(e.target.value)} defaultValue="">
       <option value="">--</option>
       {options.map((o: any) => (
         <option key={o.value} value={o.value}>{o.label}</option>

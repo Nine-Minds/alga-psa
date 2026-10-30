@@ -119,6 +119,9 @@ export default defineConfig({
       'src/components/billing-dashboard/contracts/BucketPoolEditor.currency.test.tsx',
       // Wizard quantity input draft/commit behavior.
       'src/components/billing-dashboard/contracts/QuantityInput.test.tsx',
+      'src/components/billing-dashboard/contracts/BillingTimingField.test.tsx',
+      'src/components/billing-dashboard/contracts/wizard-steps/BillingTimingInheritance.test.tsx',
+      'src/components/billing-dashboard/contracts/wizard-steps/ReviewContractStep.billingTiming.test.tsx',
       'src/components/billing-dashboard/contracts/wizard-steps/templateLineAmounts.test.ts',
       'src/components/billing-dashboard/contracts/wizard-steps/templatePickerOption.test.ts',
       'src/components/billing-dashboard/contracts/wizard-steps/TemplateLinesStep.fallback.test.tsx',

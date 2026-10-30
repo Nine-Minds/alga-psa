@@ -397,6 +397,14 @@ export const grantHourBlock = withAuth(async (
         .first();
       if (!client) throw new Error('Client not found');
 
+      const service = await tenantScopedTable(trx, tenant, 'service_catalog')
+        .where({ service_id: serviceId, tenant })
+        .first();
+      if (!service) throw new Error(`Service ${serviceId} not found`);
+      if (service.billing_method !== 'hourly') {
+        throw new Error('Hour blocks can only be granted for hourly services');
+      }
+
       const blockId = uuidv4();
       const now = new Date().toISOString();
       const totalMinutes = Math.round(hours * 60);

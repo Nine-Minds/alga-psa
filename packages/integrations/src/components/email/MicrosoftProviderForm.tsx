@@ -232,7 +232,7 @@ export function MicrosoftProviderForm({
     autoProcessEmails: z.boolean(),
     folderFilters: z.string().optional(),
     maxEmailsPerSync: z.number().min(1).max(1000),
-    inboundTicketDefaultsId: z.string().uuid().optional()
+    inboundTicketDefaultsId: z.string().guid().optional()
   });
 
   const form = useForm<MicrosoftProviderFormData>({

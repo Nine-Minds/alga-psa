@@ -137,6 +137,7 @@
     },
     "placeholders": {
       "selectService": "⟦Şḗŀḗƈŧ ȧ şḗřṽīƈḗ⟧",
+      "searchServices": "⟦Şḗȧřƈħ şḗřṽīƈḗş...⟧",
       "selectDate": "⟦Şḗŀḗƈŧ ḓȧŧḗ⟧",
       "addNotes": "⟦Ȧḓḓ ƞȯŧḗş⟧",
       "selectContractLine": "⟦Şḗŀḗƈŧ ȧ ƈȯƞŧřȧƈŧ ŀīƞḗ⟧"
@@ -159,7 +160,8 @@
       "project": "⟦Ḓḗƒȧŭŀŧ ƒřȯḿ ƥřȯĵḗƈŧ⟧"
     },
     "options": {
-      "resolveContractLineLater": "⟦Ƞȯ ŀīƞḗ - řḗşȯŀṽḗ ŀȧŧḗř⟧"
+      "resolveContractLineLater": "⟦Ƞȯ ŀīƞḗ - řḗşȯŀṽḗ ŀȧŧḗř⟧",
+      "noServicesFound": "⟦Ƞȯ şḗřṽīƈḗş ƒȯŭƞḓ⟧"
     }
   },
   "workItemPicker": {

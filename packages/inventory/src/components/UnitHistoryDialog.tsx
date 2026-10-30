@@ -4,10 +4,10 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { useLabelPrint } from '@alga-psa/ui/components/labels';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IStockLocation, IStockMovement, IStockUnit } from '@alga-psa/types';
-import { requestLabelPdf } from './labelPrintClient';
 import { RecordUnavailable } from './RecordUnavailable';
 
 export type UnitDetail = { unit: IStockUnit; movements: IStockMovement[] };
@@ -63,37 +63,34 @@ export function UnitHistoryDialog({
   const { t } = useTranslation('features/inventory');
   const router = useRouter();
   const { money } = useCurrencyFormat();
-  const [printing, setPrinting] = useState(false);
+  const { print, isPrinting: printing } = useLabelPrint();
   const [printError, setPrintError] = useState<{ message: string; suggestedTemplateCode?: string } | null>(null);
 
   const printLabel = useCallback(
     async (templateCode?: string) => {
       if (!detail) return;
-      setPrinting(true);
       setPrintError(null);
-      try {
-        const result = await requestLabelPdf({
-          labelClass: 'stock-unit-identity',
-          labels: [{ recordId: detail.unit.unit_id }],
-          ...(templateCode ? { templateCode } : {}),
-        });
-        if (result.ok) {
-          window.open(result.url, '_blank', 'noopener');
-          setTimeout(() => URL.revokeObjectURL(result.url), 60_000);
+      const outcome = await print({
+        labelClass: 'stock-unit-identity',
+        labels: [{ recordId: detail.unit.unit_id }],
+        ...(templateCode ? { templateId: templateCode } : {}),
+      });
+      if (outcome.status === 'printed') {
+        if (outcome.popupBlocked) {
+          setPrintError({ message: t('stockUnits.printPopupBlocked', 'Allow pop-ups to open the label.') });
         } else {
-          setPrintError({
-            message: result.message,
-            // Offer the server's suggested template once; a second 422 shows the message only.
-            ...(result.status === 422 && !templateCode && result.suggestedTemplateCode
-              ? { suggestedTemplateCode: result.suggestedTemplateCode }
-              : {}),
-          });
+          setTimeout(() => URL.revokeObjectURL(outcome.blobUrl), 60_000);
         }
-      } finally {
-        setPrinting(false);
+        return;
       }
+      const suggested = outcome.failures.find((f) => f.suggestedTemplateCode)?.suggestedTemplateCode;
+      setPrintError({
+        message: outcome.message || t('stockUnits.printFailed', 'Could not print this label.'),
+        // Offer the server's suggested template once; a second 422 shows the message only.
+        ...(outcome.httpStatus === 422 && !templateCode && suggested ? { suggestedTemplateCode: suggested } : {}),
+      });
     },
-    [detail],
+    [detail, print, t],
   );
 
   const locationMap = useMemo(() => {

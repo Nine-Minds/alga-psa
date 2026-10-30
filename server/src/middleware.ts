@@ -256,6 +256,8 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
     // Session-authenticated inventory SO document endpoints (auth enforced in-handler via withAuth).
     (pathname.startsWith('/api/inventory/sales-orders/') &&
       (pathname.endsWith('/document') || pathname.endsWith('/email-confirmation'))) ||
+    // Session-authenticated RMA return slip (C5): RMA read + asset record check enforced in-handler.
+    /^\/api\/inventory\/rma\/[^/]+\/document$/.test(pathname) ||
     // Session-authenticated label endpoints (auth + record-level permission enforced in-handler):
     // the PDF render and the read-only lookups the print dialog needs.
     pathname === '/api/labels/pdf' ||

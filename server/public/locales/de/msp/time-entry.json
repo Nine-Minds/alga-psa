@@ -137,6 +137,7 @@
     },
     "placeholders": {
       "selectService": "Wählen Sie einen Dienst aus",
+      "searchServices": "Dienste suchen...",
       "selectDate": "Datum auswählen",
       "addNotes": "Notizen hinzufügen",
       "selectContractLine": "Vertragsposition auswählen"
@@ -159,7 +160,8 @@
       "project": "Standard aus Projekt"
     },
     "options": {
-      "resolveContractLineLater": "Keine Position - später zuordnen"
+      "resolveContractLineLater": "Keine Position - später zuordnen",
+      "noServicesFound": "Keine Dienste gefunden"
     }
   },
   "workItemPicker": {

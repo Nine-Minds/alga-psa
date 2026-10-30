@@ -1165,6 +1165,33 @@ describe('an unlinked mapping stops owning its target', () => {
     expect(stillUnlinked.external_entity_id).toBe('TAX');
   });
 
+  it('lets every taxable region share QuickBooks Online\'s TAX code on an Automated Sales Tax realm', async () => {
+    // The second report on the same ticket: with AST, QuickBooks has only TAX
+    // and NON, so the county regions must all map to TAX next to DEFAULT.
+    await setAutomatedSalesTaxRealms(tenantA, [realmA]);
+    const fulton = await seedTaxRegion(tenantA);
+    const forsyth = await seedTaxRegion(tenantA);
+    const taxCode = { alga_entity_type: 'tax_code' };
+    const defaultRegion = await create({ ...taxCode, alga_entity_id: taxRegionA, external_entity_id: 'TAX' });
+    expect(defaultRegion).toMatchObject({ id: expect.any(String), external_entity_id: 'TAX' });
+
+    const fultonMapping = await create({ ...taxCode, alga_entity_id: fulton, external_entity_id: 'TAX' });
+    const forsythMapping = await create({ ...taxCode, alga_entity_id: forsyth, external_entity_id: 'TAX' });
+
+    expect(fultonMapping).toMatchObject({ id: expect.any(String), external_entity_id: 'TAX' });
+    expect(forsythMapping).toMatchObject({ id: expect.any(String), external_entity_id: 'TAX' });
+    const live = await db('tenant_external_entity_mappings')
+      .where({ tenant: tenantA, alga_entity_type: 'tax_code', external_entity_id: 'TAX' })
+      .whereNull('deleted_at');
+    expect(live).toHaveLength(3);
+
+    // Items stay one-to-one: sharing is a property of QuickBooks Online tax codes only.
+    const other = await seedService(tenantA);
+    await seedMapping({ alga_entity_id: serviceA, external_entity_id: 'item-163' });
+    const clash = await create({ alga_entity_id: other, external_entity_id: 'item-163' });
+    expect(clash.actionError).toMatch(/target is already mapped to another entity/);
+  });
+
   it('still refuses a target a LIVE mapping holds, without touching the database', async () => {
     const other = await seedService(tenantA);
     await seedMapping({ alga_entity_id: serviceA, external_entity_id: 'item-held' });

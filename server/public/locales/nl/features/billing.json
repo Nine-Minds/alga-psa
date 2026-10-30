@@ -290,6 +290,13 @@
       "pending": "Facturen die wachten op goedkeuring of verdere verwerking",
       "prepayment": "Facturen voor vooruitbetaling of aanbetaling",
       "partially_applied": "Facturen met gedeeltelijke betalingen toegepast"
+    },
+    "billingPeriod": {
+      "weekly": "per week",
+      "monthly": "per maand",
+      "quarterly": "per kwartaal",
+      "semi-annually": "per halfjaar",
+      "annually": "per jaar"
     }
   },
   "quoteForm": {

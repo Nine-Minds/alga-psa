@@ -247,7 +247,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         const params = await (req as any).params;
         const parsedId = uuidSchema.safeParse(params?.id);
         if (!parsedId.success) {
-          throw new ValidationError('Invalid time sheet id', parsedId.error.errors);
+          throw new ValidationError('Invalid time sheet id', parsedId.error.issues);
         }
         const id = parsedId.data;
 
@@ -333,7 +333,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           submitData = submitTimeSheetSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid submit data', error.errors);
+            throw new ValidationError('Invalid submit data', error.issues);
           }
           throw error;
         }
@@ -416,7 +416,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           approveData = approveTimeSheetSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid approve data', error.errors);
+            throw new ValidationError('Invalid approve data', error.issues);
           }
           throw error;
         }
@@ -499,7 +499,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           requestChangesData = requestChangesTimeSheetSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid request changes data', error.errors);
+            throw new ValidationError('Invalid request changes data', error.issues);
           }
           throw error;
         }
@@ -582,7 +582,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           reverseData = reverseApprovalSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid reverse approval data', error.errors);
+            throw new ValidationError('Invalid reverse approval data', error.issues);
           }
           throw error;
         }
@@ -660,7 +660,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           bulkApproveData = bulkApproveTimeSheetSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid bulk approve data', error.errors);
+            throw new ValidationError('Invalid bulk approve data', error.issues);
           }
           throw error;
         }
@@ -817,7 +817,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           commentData = createTimeSheetCommentSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid comment data', error.errors);
+            throw new ValidationError('Invalid comment data', error.issues);
           }
           throw error;
         }
@@ -904,7 +904,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           searchParams = timeSheetSearchSchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid search parameters', error.errors);
+            throw new ValidationError('Invalid search parameters', error.issues);
           }
           throw error;
         }
@@ -984,7 +984,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           exportParams = timeSheetExportQuerySchema.parse(queryParams);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid export parameters', error.errors);
+            throw new ValidationError('Invalid export parameters', error.issues);
           }
           throw error;
         }
@@ -1360,7 +1360,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           periodData = createTimePeriodSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid time period data', error.errors);
+            throw new ValidationError('Invalid time period data', error.issues);
           }
           throw error;
         }
@@ -1442,7 +1442,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           periodData = updateTimePeriodSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid time period data', error.errors);
+            throw new ValidationError('Invalid time period data', error.issues);
           }
           throw error;
         }
@@ -1519,7 +1519,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         const { id: rawId } = await (req as any).params;
         const idResult = uuidSchema.safeParse(rawId);
         if (!idResult.success) {
-          throw new ValidationError('Invalid time period id', idResult.error.errors);
+          throw new ValidationError('Invalid time period id', idResult.error.issues);
         }
         const id = idResult.data;
 
@@ -1593,7 +1593,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         const { id: rawId } = await (req as any).params;
         const idResult = uuidSchema.safeParse(rawId);
         if (!idResult.success) {
-          throw new ValidationError('Invalid time period id', idResult.error.errors);
+          throw new ValidationError('Invalid time period id', idResult.error.issues);
         }
         const id = idResult.data;
 
@@ -1806,7 +1806,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           settingsData = createTimePeriodSettingsSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid settings data', error.errors);
+            throw new ValidationError('Invalid settings data', error.issues);
           }
           throw error;
         }
@@ -1888,7 +1888,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           settingsData = updateTimePeriodSettingsSchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid settings data', error.errors);
+            throw new ValidationError('Invalid settings data', error.issues);
           }
           throw error;
         }
@@ -1981,7 +1981,7 @@ export class ApiTimeSheetController extends ApiBaseController {
             return schema.parse(rawQuery);
           } catch (error) {
             if (error instanceof ZodError) {
-              throw new ValidationError('Invalid schedule query parameters', error.errors);
+              throw new ValidationError('Invalid schedule query parameters', error.issues);
             }
             throw error;
           }
@@ -2057,7 +2057,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           });
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid query parameters', error.errors);
+            throw new ValidationError('Invalid query parameters', error.issues);
           }
           throw error;
         }
@@ -2209,7 +2209,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           scheduleData = createScheduleEntrySchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid schedule data', error.errors);
+            throw new ValidationError('Invalid schedule data', error.issues);
           }
           throw error;
         }
@@ -2295,7 +2295,7 @@ export class ApiTimeSheetController extends ApiBaseController {
           scheduleData = updateScheduleEntrySchema.parse(body);
         } catch (error) {
           if (error instanceof ZodError) {
-            throw new ValidationError('Invalid schedule data', error.errors);
+            throw new ValidationError('Invalid schedule data', error.issues);
           }
           throw error;
         }

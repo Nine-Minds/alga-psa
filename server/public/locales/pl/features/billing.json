@@ -290,6 +290,13 @@
       "pending": "Faktury oczekujące na zatwierdzenie lub dalsze przetwarzanie",
       "prepayment": "Faktury zaliczkowe lub depozytowe",
       "partially_applied": "Faktury z zastosowanymi częściowymi płatnościami"
+    },
+    "billingPeriod": {
+      "weekly": "tygodniowo",
+      "monthly": "miesięcznie",
+      "quarterly": "kwartalnie",
+      "semi-annually": "półrocznie",
+      "annually": "rocznie"
     }
   },
   "quoteForm": {

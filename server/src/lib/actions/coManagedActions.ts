@@ -5,7 +5,8 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
 import { admits } from '@alga-psa/core/capability';
-import { CoManagedAdmissionError, getCoManagedEntitlementState, getLicenseStateRow } from '@alga-psa/licensing';
+import { CoManagedAdmissionError, getCoManagedEntitlementState, getLicenseStateRow, isCoManagedPurchaseSurfaceOpen } from '@alga-psa/licensing';
+import { isEnterpriseEdition } from '../features';
 import { getCoManagedManagementOptions, getCoManagedManagementStatus, changeCoManagedAllocationForActor,
   getCoManagedClientManagement as readCoManagedClientManagement,
   getCoManagedClientOverview as readCoManagedClientOverview } from '@alga-psa/co-managed';
@@ -35,6 +36,45 @@ export const getCoManagedBillingState = withAuth(async (user, { tenant }) => {
   const selfHosted = Boolean(await getLicenseStateRow());
   const state = await getCoManagedEntitlementState(knex, tenant);
   return { ...state, selfHosted, canReadRelationships, isPro: owner.plan === 'pro' || (selfHosted && state.capacity > 0) };
+});
+
+export interface CoManagedPurchaseAvailability {
+  pending: { operationId: string; quantity: number; state: string } | null;
+  canPurchase: boolean;
+  canResume: boolean;
+  reason: 'available' | 'self_host_license' | 'ineligible' | 'no_permission' | 'implementation_unavailable' | 'pending';
+}
+
+/**
+ * Pool state plus purchase availability for the account surface.
+ *
+ * Deliberately not behind `admits`: eligibility is an entitlement row and a purchase is how the first
+ * row comes to exist. The surface gate is the kill switch, the release flag and a configured price;
+ * when it is closed this returns null before reading anything, and the screen renders nothing.
+ */
+export const getCoManagedPurchaseState = withAuth(async (user, { tenant }) => {
+  if (user.user_type !== 'internal') throw new Error('Permission denied');
+  if (!await isCoManagedPurchaseSurfaceOpen(tenant)) return null;
+  if (!await hasPermission(user, 'account_management', 'read')) throw new Error('Permission denied');
+  const { knex } = await createTenantKnex(tenant);
+  const scoped = tenantDb(knex, tenant);
+  const owner = await scoped.table('tenants').first('product_code', 'plan');
+  if (owner?.product_code !== 'psa') return null;
+  const selfHosted = Boolean(await getLicenseStateRow());
+  const state = await getCoManagedEntitlementState(knex, tenant);
+  const purchaser = await hasPermission(user, 'account_management', 'update');
+  // payment_failed stays in flight so the same operation is recovered instead of charged twice.
+  const pending = await scoped.table('co_managed_purchase_operations')
+    .whereIn('state', ['preparing', 'checkout', 'payment_failed']).select('operation_id', 'quantity', 'state').first();
+  const implementationAvailable = isEnterpriseEdition();
+  const eligible = owner.plan === 'pro';
+  const reason: CoManagedPurchaseAvailability['reason'] = selfHosted ? 'self_host_license'
+    : !eligible ? 'ineligible' : !purchaser ? 'no_permission' : !implementationAvailable ? 'implementation_unavailable'
+      : pending ? 'pending' : 'available';
+  const availability: CoManagedPurchaseAvailability = {
+    pending: pending ? { operationId: pending.operation_id, quantity: Number(pending.quantity), state: pending.state } : null,
+    canPurchase: reason === 'available', canResume: reason === 'pending', reason };
+  return { ...state, selfHosted, purchase: availability };
 });
 
 export const getCoManagedProvisioningOptions = withAuth(async (user, { tenant }, search: string = '', selectedClientId?: string) => {

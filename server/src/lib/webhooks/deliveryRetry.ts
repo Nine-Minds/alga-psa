@@ -8,11 +8,11 @@ import { webhookModel, type WebhookDeliveryRecord } from './webhookModel';
 export const SUPPORTED_WEBHOOK_EVENTS = WEBHOOK_EVENT_NAMES;
 
 export const deliveryEnvelopeSchema = z.object({
-  event_id: z.string().uuid(),
+  event_id: z.string().guid(),
   event_type: z.enum(SUPPORTED_WEBHOOK_EVENTS),
   occurred_at: z.string().datetime(),
-  tenant_id: z.string().uuid(),
-  data: z.unknown(),
+  tenant_id: z.string().guid(),
+  data: z.unknown().optional(),
 });
 
 export const RETRY_FAILED_DEFAULT_LIMIT = 500;

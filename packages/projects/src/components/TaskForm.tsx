@@ -123,6 +123,10 @@ interface TaskFormProps {
   printTitle?: string;
 }
 
+// A fresh [] default would change identity on every render and retrigger the
+// project tree effect that is keyed on this prop.
+const NO_PROJECT_TREE_DATA: any[] = [];
+
 export default function TaskForm({
   task,
   phase,
@@ -135,7 +139,7 @@ export default function TaskForm({
   mode,
   onPhaseChange,
   inDrawer = false,
-  projectTreeData = [],
+  projectTreeData = NO_PROJECT_TREE_DATA,
   prefillData,
   onCommentCountChange,
   confirmBeforeSave,

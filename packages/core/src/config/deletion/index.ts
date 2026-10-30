@@ -1,6 +1,7 @@
 import { predicateReferencesValue, type PredicateNode } from '@alga-psa/predicates';
 import type { EntityDeletionConfig } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import { isCapabilityServed } from '../../lib/capability';
 
 // Raw tenant scoping (not @alga-psa/db's tenantDb) so @alga-psa/core does not
 // depend on @alga-psa/db — that import direction creates a core<->db build cycle.
@@ -78,6 +79,9 @@ export const countLiveCoManagedEscalationsForBoard = async (
   trx: Knex | Knex.Transaction,
   options: { tenant: string; entityId: string }
 ): Promise<number> => {
+  // Neutrality: a tenant that does not participate in co-managed IT pays no
+  // co-managed statement here (the capability verdict is cached per tenant).
+  if (!(await isCapabilityServed('co-managed', options.tenant))) return 0;
   if (!(await trx.schema.hasTable('co_managed_provisioning_operations')) ||
       !(await trx.schema.hasTable('co_managed_allocations'))) return 0;
   const result = await tenantScopedTable(trx, options.tenant, 'co_managed_provisioning_operations')
@@ -100,6 +104,9 @@ export const countCoManagedBoardScopes = async (
   trx: Knex | Knex.Transaction,
   options: { tenant: string; entityId: string }
 ): Promise<number> => {
+  // Neutrality: a tenant that does not participate in co-managed IT pays no
+  // co-managed statement here (the capability verdict is cached per tenant).
+  if (!(await isCapabilityServed('co-managed', options.tenant))) return 0;
   if (!(await trx.schema.hasTable('co_management_relationships')) ||
       !(await trx.schema.hasTable('co_management_board_scopes'))) return 0;
   const live = await tenantScopedTable(trx, options.tenant, 'co_management_relationships')

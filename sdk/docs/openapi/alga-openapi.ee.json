@@ -361,6 +361,635 @@
       }
     },
     "schemas": {
+      "WebhookEventTypeV1": {
+        "type": "string",
+        "enum": [
+          "ticket.created",
+          "ticket.updated",
+          "ticket.assigned",
+          "ticket.status_changed",
+          "ticket.closed",
+          "ticket.comment.added",
+          "ticket.response_state_changed",
+          "project.created",
+          "project.updated",
+          "project.status_changed",
+          "project.assigned",
+          "project.closed",
+          "project.completed",
+          "project.task.created",
+          "project.task.updated",
+          "project.task.status_changed",
+          "project.task.assigned",
+          "project.task.completed",
+          "client.created",
+          "client.updated",
+          "client.deactivated",
+          "client.deleted",
+          "contact.created",
+          "contact.updated",
+          "contact.deactivated",
+          "contact.deleted",
+          "client_location.created",
+          "client_location.updated",
+          "client_location.deactivated",
+          "client_location.deleted",
+          "quote.sent",
+          "quote.viewed",
+          "quote.approved",
+          "quote.accepted",
+          "quote.rejected",
+          "quote.expired",
+          "quote.converted",
+          "quote.conversion_reverted",
+          "quote.superseded",
+          "quote.cancelled"
+        ],
+        "description": "Public webhook event name from the single event registry (ticket.*, project.*, client.*, contact.*, client_location.*, quote.*). Webhooks created earlier may still store retired names (time.entry.*, invoice.*, asset.*, system.*, workflow.*, custom.event); those are returned as stored, never deliver, and are rejected when newly added."
+      },
+      "TicketCreatedDeliveryV1": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "ticket.created"
+            ]
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TicketWebhookDataV1"
+          }
+        },
+        "required": [
+          "event_id",
+          "event_type",
+          "occurred_at",
+          "tenant_id",
+          "data"
+        ]
+      },
+      "TicketWebhookDataV1": {
+        "type": "object",
+        "properties": {
+          "ticket_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Always present; the correlation key."
+          },
+          "ticket_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "status_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "status_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_closed": {
+            "type": "boolean"
+          },
+          "response_state": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "awaiting_client",
+              "awaiting_internal",
+              null
+            ],
+            "description": "Current response state of the ticket. On ticket.response_state_changed it equals new_response_state."
+          },
+          "previous_status_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Only populated on ticket.status_changed."
+          },
+          "previous_status_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Only populated on ticket.status_changed."
+          },
+          "previous_response_state": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "awaiting_client",
+              "awaiting_internal",
+              null
+            ],
+            "description": "Only populated on ticket.response_state_changed. null when there was no prior state."
+          },
+          "new_response_state": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "awaiting_client",
+              "awaiting_internal",
+              null
+            ],
+            "description": "Only populated on ticket.response_state_changed. null when the state was cleared (e.g. ticket closed)."
+          },
+          "priority_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "priority_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "client_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "client_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "contact_name_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "contact_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "contact_email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assigned_to": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "assigned_to_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assigned_team_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "board_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "board_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "category_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "subcategory_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "entered_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "closed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "due_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "changes": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/TicketWebhookChangeEntryV1"
+            },
+            "description": "Field-level diff. Only on ticket.updated."
+          },
+          "comment": {
+            "$ref": "#/components/schemas/TicketWebhookCommentBlockV1"
+          },
+          "comments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TicketWebhookCommentsEntryV1"
+            },
+            "description": "Full comment thread, oldest first. Only included when the webhook subscription opted into the `comments` field."
+          }
+        },
+        "required": [
+          "ticket_id"
+        ]
+      },
+      "TicketWebhookChangeEntryV1": {
+        "type": "object",
+        "properties": {
+          "previous": {},
+          "new": {}
+        }
+      },
+      "TicketWebhookCommentBlockV1": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "author": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "is_internal": {
+            "type": "boolean"
+          },
+          "author_type": {
+            "type": "string",
+            "enum": [
+              "internal",
+              "client",
+              "unknown"
+            ],
+            "description": "Who wrote the comment: MSP staff (`internal`), a client/contact (`client`), or unknown."
+          },
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Present when a contact wrote the comment."
+          },
+          "contact_name": {
+            "type": "string",
+            "description": "Present when a contact wrote the comment."
+          }
+        },
+        "required": [
+          "text",
+          "author",
+          "timestamp",
+          "is_internal"
+        ],
+        "description": "Newly-added comment. Only on ticket.comment.added. Attachments are never included."
+      },
+      "TicketWebhookCommentsEntryV1": {
+        "type": "object",
+        "properties": {
+          "comment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string"
+          },
+          "author": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_internal": {
+            "type": "boolean"
+          },
+          "is_resolution": {
+            "type": "boolean"
+          },
+          "author_type": {
+            "type": "string",
+            "enum": [
+              "internal",
+              "client",
+              "unknown"
+            ]
+          },
+          "contact_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Present when a contact wrote the comment."
+          },
+          "contact_name": {
+            "type": "string",
+            "description": "Present when a contact wrote the comment."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "comment_id",
+          "text",
+          "author",
+          "is_internal",
+          "is_resolution",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "TicketUpdatedDeliveryV1": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "ticket.updated"
+            ]
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TicketWebhookDataV1"
+          }
+        },
+        "required": [
+          "event_id",
+          "event_type",
+          "occurred_at",
+          "tenant_id",
+          "data"
+        ]
+      },
+      "TicketStatusChangedDeliveryV1": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "ticket.status_changed"
+            ]
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TicketWebhookDataV1"
+          }
+        },
+        "required": [
+          "event_id",
+          "event_type",
+          "occurred_at",
+          "tenant_id",
+          "data"
+        ]
+      },
+      "TicketAssignedDeliveryV1": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "ticket.assigned"
+            ]
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TicketWebhookDataV1"
+          }
+        },
+        "required": [
+          "event_id",
+          "event_type",
+          "occurred_at",
+          "tenant_id",
+          "data"
+        ]
+      },
+      "TicketClosedDeliveryV1": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "ticket.closed"
+            ]
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TicketWebhookDataV1"
+          }
+        },
+        "required": [
+          "event_id",
+          "event_type",
+          "occurred_at",
+          "tenant_id",
+          "data"
+        ]
+      },
+      "TicketCommentAddedDeliveryV1": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "ticket.comment.added"
+            ]
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TicketWebhookDataV1"
+          }
+        },
+        "required": [
+          "event_id",
+          "event_type",
+          "occurred_at",
+          "tenant_id",
+          "data"
+        ]
+      },
+      "TicketResponseStateChangedDeliveryV1": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "ticket.response_state_changed"
+            ]
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "data": {
+            "$ref": "#/components/schemas/TicketWebhookDataV1"
+          }
+        },
+        "required": [
+          "event_id",
+          "event_type",
+          "occurred_at",
+          "tenant_id",
+          "data"
+        ]
+      },
       "ErrorResponse": {
         "type": "object",
         "properties": {
@@ -387,7 +1016,8 @@
       },
       "PlaceholderObject": {
         "type": "object",
-        "properties": {}
+        "properties": {},
+        "additionalProperties": {}
       },
       "OAuthCallbackHtmlResponse": {
         "type": "string",
@@ -1288,6 +1918,9 @@
           "team_name": {
             "type": "string"
           },
+          "description": {
+            "type": "string"
+          },
           "manager_id": {
             "type": "string",
             "format": "uuid"
@@ -1696,6 +2329,13 @@
           "team_name": {
             "type": "string"
           },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000
+          },
           "manager_id": {
             "type": "string",
             "format": "uuid"
@@ -1717,6 +2357,13 @@
         "properties": {
           "team_name": {
             "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000
           },
           "manager_id": {
             "type": "string",
@@ -2862,18 +3509,12 @@
             "description": "Tenant UUID from assets.tenant; filtered to the authenticated request context."
           },
           "attributes": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AssetAttributes"
-              },
-              {
-                "type": [
-                  "object",
-                  "null"
-                ],
-                "description": "Stored custom-type attribute values and integration namespaces."
-              }
-            ]
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {},
+            "description": "Stored custom-type attribute values and integration namespaces."
           },
           "client_name": {
             "type": "string",
@@ -2894,18 +3535,12 @@
             "description": "Optional computed maintenance status when present in service results."
           },
           "extension_data": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/AssetExtensionData"
-              },
-              {
-                "type": [
-                  "object",
-                  "null"
-                ],
-                "description": "Asset-type-specific extension data returned by getWithDetails after create."
-              }
-            ]
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": {},
+            "description": "Asset-type-specific extension data returned by getWithDetails after create."
           },
           "relationships": {
             "type": "array",
@@ -5259,7 +5894,8 @@
           "location_id",
           "bin",
           "purpose"
-        ]
+        ],
+        "additionalProperties": {}
       },
       "AssetCustodyEventRequest": {
         "type": "object",
@@ -5278,6 +5914,7 @@
         "required": [
           "event_type"
         ],
+        "additionalProperties": {},
         "description": "Fields depend on event_type: moved {location_id?, bin?}, handed_off {to_holder_user_id}, shipped {counterparty}, received {location_id, bin}, returned {counterparty?}."
       },
       "AssetCustodyQueueQuery": {
@@ -6199,8 +6836,8 @@
             "properties": {
               "tax_id": {
                 "type": "string",
-                "description": "Deprecated legacy input. Send tax_id_number instead.",
-                "deprecated": true
+                "deprecated": true,
+                "description": "Deprecated legacy input. Send tax_id_number instead."
               }
             },
             "additionalProperties": {}
@@ -6485,7 +7122,10 @@
                   "type": "string"
                 },
                 "extension": {
-                  "type": "string",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
                   "description": "Digits only."
                 },
                 "canonical_type": {
@@ -6534,7 +7174,8 @@
                       "type": "string"
                     },
                     {
-                      "type": "string"
+                      "type": "string",
+                      "format": "date-time"
                     },
                     {
                       "type": "null"
@@ -6548,7 +7189,8 @@
                       "type": "string"
                     },
                     {
-                      "type": "string"
+                      "type": "string",
+                      "format": "date-time"
                     },
                     {
                       "type": "null"
@@ -6651,7 +7293,8 @@
                       "type": "string"
                     },
                     {
-                      "type": "string"
+                      "type": "string",
+                      "format": "date-time"
                     },
                     {
                       "type": "null"
@@ -6665,7 +7308,8 @@
                       "type": "string"
                     },
                     {
-                      "type": "string"
+                      "type": "string",
+                      "format": "date-time"
                     },
                     {
                       "type": "null"
@@ -6767,7 +7411,10 @@
                   "type": "string"
                 },
                 "extension": {
-                  "type": "string",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
                   "description": "Digits only."
                 },
                 "canonical_type": {
@@ -6816,7 +7463,8 @@
                       "type": "string"
                     },
                     {
-                      "type": "string"
+                      "type": "string",
+                      "format": "date-time"
                     },
                     {
                       "type": "null"
@@ -6830,7 +7478,8 @@
                       "type": "string"
                     },
                     {
-                      "type": "string"
+                      "type": "string",
+                      "format": "date-time"
                     },
                     {
                       "type": "null"
@@ -6844,8 +7493,7 @@
               ],
               "additionalProperties": false,
               "description": "Each row needs canonical_type (work|mobile|home|fax|other) or custom_type, not both. When any rows are sent, exactly one must have is_default: true. On update, the array replaces all of the contact's phone numbers; include contact_phone_number_id to keep an existing row."
-            },
-            "default": []
+            }
           },
           "email": {
             "type": "string"
@@ -6933,7 +7581,8 @@
                       "type": "string"
                     },
                     {
-                      "type": "string"
+                      "type": "string",
+                      "format": "date-time"
                     },
                     {
                       "type": "null"
@@ -6947,7 +7596,8 @@
                       "type": "string"
                     },
                     {
-                      "type": "string"
+                      "type": "string",
+                      "format": "date-time"
                     },
                     {
                       "type": "null"
@@ -6961,8 +7611,7 @@
               ],
               "additionalProperties": false,
               "description": "Each row needs canonical_type (work|personal|billing|other) or custom_type, not both. On update, the array replaces all of the contact's additional email addresses; include contact_additional_email_address_id to keep an existing row."
-            },
-            "default": []
+            }
           },
           "role": {
             "type": "string",
@@ -6972,8 +7621,7 @@
             "type": "string"
           },
           "is_inactive": {
-            "type": "boolean",
-            "default": false
+            "type": "boolean"
           },
           "work_arrangement": {
             "type": [
@@ -7809,7 +8457,10 @@
                     "type": "string"
                   },
                   "website": {
-                    "type": "string"
+                    "type": [
+                      "string",
+                      "null"
+                    ]
                   },
                   "parent_client_id": {
                     "type": "string",
@@ -8104,7 +8755,10 @@
                       "type": "string"
                     },
                     "website": {
-                      "type": "string"
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "parent_client_id": {
                       "type": "string",
@@ -10365,7 +11019,8 @@
             "required": [
               "timestamp",
               "version"
-            ]
+            ],
+            "additionalProperties": {}
           }
         },
         "required": [
@@ -10519,6 +11174,120 @@
       "DocumentPlainTextError": {
         "type": "string",
         "description": "Plain text error response."
+      },
+      "AttachDocumentBody": {
+        "type": "object",
+        "properties": {
+          "entity_type": {
+            "type": "string",
+            "enum": [
+              "ticket",
+              "project_task",
+              "client",
+              "contact",
+              "asset"
+            ],
+            "description": "Kind of record the file is attached to."
+          },
+          "entity_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID of the ticket, project task, client, contact or asset."
+          },
+          "source": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "url"
+                    ]
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "https URL the server downloads the file from. The host must be on the workspace's allowed download hosts (managed by tenant admins under Settings > MCP Server; the ChatGPT file host is built in), otherwise the call fails with 400 FETCH_HOST_NOT_ALLOWED. Port 443 only, public addresses only, at most 3 redirects (each re-checked against the allowlist), size capped at the storage limit. Signed URLs are used once and never logged."
+                  }
+                },
+                "required": [
+                  "type",
+                  "url"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "base64"
+                    ]
+                  },
+                  "content": {
+                    "type": "string",
+                    "description": "Standard base64 of the file bytes. Only for small content the caller wrote itself; requires file_name."
+                  }
+                },
+                "required": [
+                  "type",
+                  "content"
+                ]
+              }
+            ],
+            "description": "Where the file bytes come from: an https URL (preferred) or base64."
+          },
+          "file_name": {
+            "type": "string",
+            "description": "File name including extension. Required for base64. For url, defaults to the Content-Disposition name, then the last URL path segment."
+          },
+          "mime_type": {
+            "type": "string",
+            "description": "Declared MIME type. The server sniffs the bytes and a recognised type overrides this; the storage allowlist is applied to the resolved type."
+          }
+        },
+        "required": [
+          "entity_type",
+          "entity_id",
+          "source"
+        ]
+      },
+      "AttachedDocument": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "The created document row (document_id, document_name, mime_type, file_size, folder_path, ...)."
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "AttachDocumentError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {}
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
       },
       "EmailErrorResponse": {
         "type": "object",
@@ -11482,11 +12251,13 @@
       "ExtensionOpaqueRequest": {
         "type": "object",
         "properties": {},
+        "additionalProperties": {},
         "description": "Extension-specific request body. The gateway treats this as opaque, enforces a 10 MB limit for non-GET methods, base64-encodes it, and forwards it to the extension runner."
       },
       "ExtensionOpaqueResponse": {
         "type": "object",
         "properties": {},
+        "additionalProperties": {},
         "description": "Extension-specific response relayed from the runner. Status code, content type, and body are controlled by the extension."
       },
       "ExtensionGatewayErrorResponse": {
@@ -12849,10 +13620,12 @@
         "type": "object",
         "properties": {
           "page": {
-            "type": "string"
+            "type": "string",
+            "default": "1"
           },
           "limit": {
-            "type": "string"
+            "type": "string",
+            "default": "25"
           },
           "sort": {
             "type": "string",
@@ -15232,20 +16005,84 @@
         ]
       },
       "InboundWebhookUpdateInput": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/InboundWebhookCreateInput"
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
           },
-          {
+          "slug": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "auth_type": {
+            "type": "string",
+            "enum": [
+              "hmac_sha256",
+              "bearer",
+              "ip_allowlist",
+              "path_token"
+            ]
+          },
+          "auth_config": {
             "type": "object",
+            "additionalProperties": {}
+          },
+          "idempotency_source": {
+            "type": [
+              "object",
+              "null"
+            ],
             "properties": {
-              "inbound_webhook_id": {
+              "type": {
                 "type": "string",
-                "format": "uuid"
+                "enum": [
+                  "header",
+                  "jsonata"
+                ]
+              },
+              "value": {
+                "type": "string"
               }
-            }
+            },
+            "required": [
+              "type",
+              "value"
+            ]
+          },
+          "idempotency_window_seconds": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "handler_type": {
+            "type": "string",
+            "enum": [
+              "direct_action",
+              "workflow"
+            ]
+          },
+          "handler_config": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "rate_limit_per_minute": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "inbound_webhook_id": {
+            "type": "string",
+            "format": "uuid"
           }
-        ]
+        }
       },
       "WorkflowWebhookEnvelope": {
         "type": "object",
@@ -18399,52 +19236,6 @@
         ],
         "description": "Ticket-domain webhook events emitted by the eventBus subscriber."
       },
-      "WebhookEventTypeV1": {
-        "type": "string",
-        "enum": [
-          "ticket.created",
-          "ticket.updated",
-          "ticket.assigned",
-          "ticket.status_changed",
-          "ticket.closed",
-          "ticket.comment.added",
-          "ticket.response_state_changed",
-          "project.created",
-          "project.updated",
-          "project.status_changed",
-          "project.assigned",
-          "project.closed",
-          "project.completed",
-          "project.task.created",
-          "project.task.updated",
-          "project.task.status_changed",
-          "project.task.assigned",
-          "project.task.completed",
-          "client.created",
-          "client.updated",
-          "client.deactivated",
-          "client.deleted",
-          "contact.created",
-          "contact.updated",
-          "contact.deactivated",
-          "contact.deleted",
-          "client_location.created",
-          "client_location.updated",
-          "client_location.deactivated",
-          "client_location.deleted",
-          "quote.sent",
-          "quote.viewed",
-          "quote.approved",
-          "quote.accepted",
-          "quote.rejected",
-          "quote.expired",
-          "quote.converted",
-          "quote.conversion_reverted",
-          "quote.superseded",
-          "quote.cancelled"
-        ],
-        "description": "Public webhook event name from the single event registry (ticket.*, project.*, client.*, contact.*, client_location.*, quote.*). Webhooks created earlier may still store retired names (time.entry.*, invoice.*, asset.*, system.*, workflow.*, custom.event); those are returned as stored, never deliver, and are rejected when newly added."
-      },
       "CreateWebhookBodyV1": {
         "type": "object",
         "properties": {
@@ -20094,364 +20885,6 @@
           "data"
         ]
       },
-      "TicketWebhookChangeEntryV1": {
-        "type": "object",
-        "properties": {
-          "previous": {},
-          "new": {}
-        }
-      },
-      "TicketWebhookCommentBlockV1": {
-        "type": "object",
-        "properties": {
-          "text": {
-            "type": "string"
-          },
-          "author": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "is_internal": {
-            "type": "boolean"
-          },
-          "author_type": {
-            "type": "string",
-            "enum": [
-              "internal",
-              "client",
-              "unknown"
-            ],
-            "description": "Who wrote the comment: MSP staff (`internal`), a client/contact (`client`), or unknown."
-          },
-          "contact_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Present when a contact wrote the comment."
-          },
-          "contact_name": {
-            "type": "string",
-            "description": "Present when a contact wrote the comment."
-          }
-        },
-        "required": [
-          "text",
-          "author",
-          "timestamp",
-          "is_internal"
-        ]
-      },
-      "TicketWebhookCommentsEntryV1": {
-        "type": "object",
-        "properties": {
-          "comment_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "text": {
-            "type": "string"
-          },
-          "author": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "is_internal": {
-            "type": "boolean"
-          },
-          "is_resolution": {
-            "type": "boolean"
-          },
-          "author_type": {
-            "type": "string",
-            "enum": [
-              "internal",
-              "client",
-              "unknown"
-            ]
-          },
-          "contact_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Present when a contact wrote the comment."
-          },
-          "contact_name": {
-            "type": "string",
-            "description": "Present when a contact wrote the comment."
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          }
-        },
-        "required": [
-          "comment_id",
-          "text",
-          "author",
-          "is_internal",
-          "is_resolution",
-          "created_at",
-          "updated_at"
-        ]
-      },
-      "TicketWebhookDataV1": {
-        "type": "object",
-        "properties": {
-          "ticket_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Always present; the correlation key."
-          },
-          "ticket_number": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "title": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "url": {
-            "type": "string",
-            "format": "uri"
-          },
-          "status_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "status_name": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "is_closed": {
-            "type": "boolean"
-          },
-          "response_state": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "awaiting_client",
-              "awaiting_internal",
-              null
-            ],
-            "description": "Current response state of the ticket. On ticket.response_state_changed it equals new_response_state."
-          },
-          "previous_status_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid",
-            "description": "Only populated on ticket.status_changed."
-          },
-          "previous_status_name": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "Only populated on ticket.status_changed."
-          },
-          "previous_response_state": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "awaiting_client",
-              "awaiting_internal",
-              null
-            ],
-            "description": "Only populated on ticket.response_state_changed. null when there was no prior state."
-          },
-          "new_response_state": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "enum": [
-              "awaiting_client",
-              "awaiting_internal",
-              null
-            ],
-            "description": "Only populated on ticket.response_state_changed. null when the state was cleared (e.g. ticket closed)."
-          },
-          "priority_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "priority_name": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "client_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "client_name": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "contact_name_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "contact_name": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "contact_email": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "assigned_to": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "assigned_to_name": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "assigned_team_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "board_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "board_name": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "category_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "subcategory_id": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "uuid"
-          },
-          "entered_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          },
-          "updated_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          },
-          "closed_at": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "format": "date-time"
-          },
-          "due_date": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "tags": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "changes": {
-            "type": "object",
-            "additionalProperties": {
-              "$ref": "#/components/schemas/TicketWebhookChangeEntryV1"
-            },
-            "description": "Field-level diff. Only on ticket.updated."
-          },
-          "comment": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/TicketWebhookCommentBlockV1"
-              },
-              {
-                "description": "Newly-added comment. Only on ticket.comment.added. Attachments are never included."
-              }
-            ]
-          },
-          "comments": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/TicketWebhookCommentsEntryV1"
-            },
-            "description": "Full comment thread, oldest first. Only included when the webhook subscription opted into the `comments` field."
-          }
-        },
-        "required": [
-          "ticket_id"
-        ]
-      },
       "WebhookOutboundHeadersV1": {
         "type": "object",
         "properties": {
@@ -20486,237 +20919,6 @@
           "x-alga-event-type",
           "x-alga-delivery-id",
           "x-alga-delivery-attempt"
-        ]
-      },
-      "TicketCreatedDeliveryV1": {
-        "type": "object",
-        "properties": {
-          "event_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "event_type": {
-            "type": "string",
-            "enum": [
-              "ticket.created"
-            ]
-          },
-          "occurred_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "tenant_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "data": {
-            "$ref": "#/components/schemas/TicketWebhookDataV1"
-          }
-        },
-        "required": [
-          "event_id",
-          "event_type",
-          "occurred_at",
-          "tenant_id",
-          "data"
-        ]
-      },
-      "TicketUpdatedDeliveryV1": {
-        "type": "object",
-        "properties": {
-          "event_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "event_type": {
-            "type": "string",
-            "enum": [
-              "ticket.updated"
-            ]
-          },
-          "occurred_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "tenant_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "data": {
-            "$ref": "#/components/schemas/TicketWebhookDataV1"
-          }
-        },
-        "required": [
-          "event_id",
-          "event_type",
-          "occurred_at",
-          "tenant_id",
-          "data"
-        ]
-      },
-      "TicketStatusChangedDeliveryV1": {
-        "type": "object",
-        "properties": {
-          "event_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "event_type": {
-            "type": "string",
-            "enum": [
-              "ticket.status_changed"
-            ]
-          },
-          "occurred_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "tenant_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "data": {
-            "$ref": "#/components/schemas/TicketWebhookDataV1"
-          }
-        },
-        "required": [
-          "event_id",
-          "event_type",
-          "occurred_at",
-          "tenant_id",
-          "data"
-        ]
-      },
-      "TicketAssignedDeliveryV1": {
-        "type": "object",
-        "properties": {
-          "event_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "event_type": {
-            "type": "string",
-            "enum": [
-              "ticket.assigned"
-            ]
-          },
-          "occurred_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "tenant_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "data": {
-            "$ref": "#/components/schemas/TicketWebhookDataV1"
-          }
-        },
-        "required": [
-          "event_id",
-          "event_type",
-          "occurred_at",
-          "tenant_id",
-          "data"
-        ]
-      },
-      "TicketClosedDeliveryV1": {
-        "type": "object",
-        "properties": {
-          "event_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "event_type": {
-            "type": "string",
-            "enum": [
-              "ticket.closed"
-            ]
-          },
-          "occurred_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "tenant_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "data": {
-            "$ref": "#/components/schemas/TicketWebhookDataV1"
-          }
-        },
-        "required": [
-          "event_id",
-          "event_type",
-          "occurred_at",
-          "tenant_id",
-          "data"
-        ]
-      },
-      "TicketCommentAddedDeliveryV1": {
-        "type": "object",
-        "properties": {
-          "event_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "event_type": {
-            "type": "string",
-            "enum": [
-              "ticket.comment.added"
-            ]
-          },
-          "occurred_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "tenant_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "data": {
-            "$ref": "#/components/schemas/TicketWebhookDataV1"
-          }
-        },
-        "required": [
-          "event_id",
-          "event_type",
-          "occurred_at",
-          "tenant_id",
-          "data"
-        ]
-      },
-      "TicketResponseStateChangedDeliveryV1": {
-        "type": "object",
-        "properties": {
-          "event_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "event_type": {
-            "type": "string",
-            "enum": [
-              "ticket.response_state_changed"
-            ]
-          },
-          "occurred_at": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "tenant_id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "data": {
-            "$ref": "#/components/schemas/TicketWebhookDataV1"
-          }
-        },
-        "required": [
-          "event_id",
-          "event_type",
-          "occurred_at",
-          "tenant_id",
-          "data"
         ]
       },
       "WorkflowV1MissingApiError": {
@@ -21466,7 +21668,8 @@
           "tenant",
           "createdAt",
           "updatedAt"
-        ]
+        ],
+        "additionalProperties": {}
       },
       "ActivityListResponseV1": {
         "type": "object",
@@ -21605,7 +21808,8 @@
                 "tenant",
                 "createdAt",
                 "updatedAt"
-              ]
+              ],
+              "additionalProperties": {}
             }
           },
           "pagination": {
@@ -21809,7 +22013,8 @@
                           "tenant",
                           "createdAt",
                           "updatedAt"
-                        ]
+                        ],
+                        "additionalProperties": {}
                       }
                     }
                   },
@@ -21976,7 +22181,8 @@
               "tenant",
               "createdAt",
               "updatedAt"
-            ]
+            ],
+            "additionalProperties": {}
           },
           "meta": {}
         },
@@ -22542,8 +22748,7 @@
             "format": "uuid"
           },
           "task_type_key": {
-            "type": "string",
-            "default": "general"
+            "type": "string"
           },
           "project_status_mapping_id": {
             "type": "string",
@@ -23729,8 +23934,7 @@
             "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
           },
           "is_billable": {
-            "type": "boolean",
-            "default": true
+            "type": "boolean"
           }
         }
       },
@@ -23876,8 +24080,7 @@
                       "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
                     },
                     "is_billable": {
-                      "type": "boolean",
-                      "default": true
+                      "type": "boolean"
                     }
                   }
                 }
@@ -24096,8 +24299,7 @@
             "type": "string"
           },
           "is_private": {
-            "type": "boolean",
-            "default": false
+            "type": "boolean"
           },
           "is_all_day": {
             "type": "boolean"
@@ -26214,6 +26416,7 @@
           "contract_id",
           "contract_name"
         ],
+        "additionalProperties": {},
         "description": "Contract header as returned by the list endpoint; see contractResponseSchema for the full field set."
       },
       "ContractsApiPaginatedV1": {
@@ -26620,23 +26823,19 @@
               "medium",
               "high",
               "committed"
-            ],
-            "default": "medium"
+            ]
           },
           "mrr_cents": {
             "type": "integer",
-            "minimum": 0,
-            "default": 0
+            "minimum": 0
           },
           "nrr_cents": {
             "type": "integer",
-            "minimum": 0,
-            "default": 0
+            "minimum": 0
           },
           "hardware_cents": {
             "type": "integer",
-            "minimum": 0,
-            "default": 0
+            "minimum": 0
           },
           "currency_code": {
             "type": "string",
@@ -27518,16 +27717,14 @@
           },
           "body_markdown": {
             "type": "string",
-            "maxLength": 50000,
-            "default": ""
+            "maxLength": 50000
           },
           "channel_variants": {
             "type": "object",
             "additionalProperties": {
               "type": "string",
               "maxLength": 10000
-            },
-            "default": {}
+            }
           },
           "campaign_id": {
             "type": [
@@ -27852,8 +28049,7 @@
                 "subject"
               ]
             },
-            "maxItems": 50,
-            "default": []
+            "maxItems": 50
           }
         }
       },
@@ -28174,7 +28370,8 @@
                     "format": "date-time"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   }
                 ]
               },
@@ -28185,7 +28382,8 @@
                     "format": "date-time"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -28199,7 +28397,8 @@
                     "format": "date-time"
                   },
                   {
-                    "type": "string"
+                    "type": "string",
+                    "format": "date-time"
                   },
                   {
                     "type": "null"
@@ -28383,7 +28582,8 @@
                       "format": "date-time"
                     },
                     {
-                      "type": "string"
+                      "type": "string",
+                      "format": "date-time"
                     }
                   ]
                 },
@@ -28394,7 +28594,8 @@
                       "format": "date-time"
                     },
                     {
-                      "type": "string"
+                      "type": "string",
+                      "format": "date-time"
                     },
                     {
                       "type": "null"
@@ -28408,7 +28609,8 @@
                       "format": "date-time"
                     },
                     {
-                      "type": "string"
+                      "type": "string",
+                      "format": "date-time"
                     },
                     {
                       "type": "null"
@@ -29281,6 +29483,7 @@
                 "description": "Optional local tags."
               }
             },
+            "additionalProperties": {},
             "description": "Locally editable configuration metadata. Current MVP data includes autoRenewal and notificationDays."
           }
         },
@@ -30049,6 +30252,7 @@
             "description": "Optional future agreement sync flag. Currently ignored by the MVP handlers."
           }
         },
+        "additionalProperties": {},
         "description": "Sync options. The current SoftwareOne MVP handlers parse JSON but ignore all body fields."
       },
       "SoftwareOneErrorResponse": {
@@ -30672,10 +30876,10 @@
           "required": true,
           "content": {
             "application/x-www-form-urlencoded": {
+              "description": "Form fields consumed by the selected NextAuth POST action.",
               "schema": {
                 "$ref": "#/components/schemas/NextAuthPostBody"
-              },
-              "description": "Form fields consumed by the selected NextAuth POST action."
+              }
             }
           }
         },
@@ -32966,6 +33170,14 @@
             },
             "required": false,
             "name": "team_name",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "description",
             "in": "query"
           },
           {
@@ -38335,10 +38547,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Asset fields plus optional asset-type-specific extension_data.",
               "schema": {
                 "$ref": "#/components/schemas/AssetCreateRequest"
-              },
-              "description": "Asset fields plus optional asset-type-specific extension_data."
+              }
             }
           }
         },
@@ -38425,10 +38637,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Asset IDs and the new status to apply to all assets.",
               "schema": {
                 "$ref": "#/components/schemas/AssetBulkStatusRequest"
-              },
-              "description": "Asset IDs and the new status to apply to all assets."
+              }
             }
           }
         },
@@ -38515,10 +38727,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Array of asset_id plus partial update data objects.",
               "schema": {
                 "$ref": "#/components/schemas/AssetBulkUpdateRequest"
-              },
-              "description": "Array of asset_id plus partial update data objects."
+              }
             }
           }
         },
@@ -38912,10 +39124,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Partial maintenance schedule update data. Response-only fields are ignored; legacy and unknown fields return 400.",
               "schema": {
                 "$ref": "#/components/schemas/AssetMaintenanceScheduleUpdateRequest"
-              },
-              "description": "Partial maintenance schedule update data. Response-only fields are ignored; legacy and unknown fields return 400."
+              }
             }
           }
         },
@@ -39442,10 +39654,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Partial base asset update data. Extension data is not accepted by this REST endpoint.",
               "schema": {
                 "$ref": "#/components/schemas/AssetUpdateData"
-              },
-              "description": "Partial base asset update data. Extension data is not accepted by this REST endpoint."
+              }
             }
           }
         },
@@ -39730,10 +39942,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Document UUID and optional association notes.",
               "schema": {
                 "$ref": "#/components/schemas/AssetDocumentAssociationRequest"
-              },
-              "description": "Document UUID and optional association notes."
+              }
             }
           }
         },
@@ -40103,10 +40315,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Where the item is shelved and who acts next.",
               "schema": {
                 "$ref": "#/components/schemas/OpenAssetCustodyRequest"
-              },
-              "description": "Where the item is shelved and who acts next."
+              }
             }
           }
         },
@@ -40224,10 +40436,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "The step to record.",
               "schema": {
                 "$ref": "#/components/schemas/AssetCustodyEventRequest"
-              },
-              "description": "The step to record."
+              }
             }
           }
         },
@@ -40593,10 +40805,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Group to create, optionally with its first members.",
               "schema": {
                 "$ref": "#/components/schemas/CreateAssetGroupRequest"
-              },
-              "description": "Group to create, optionally with its first members."
+              }
             }
           }
         },
@@ -40785,10 +40997,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Fields to change.",
               "schema": {
                 "$ref": "#/components/schemas/UpdateAssetGroupRequest"
-              },
-              "description": "Fields to change."
+              }
             }
           }
         },
@@ -40967,10 +41179,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Assets to add as members.",
               "schema": {
                 "$ref": "#/components/schemas/AssetGroupMembersRequest"
-              },
-              "description": "Assets to add as members."
+              }
             }
           }
         },
@@ -41170,10 +41382,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "The contact and the role to give them.",
               "schema": {
                 "$ref": "#/components/schemas/AssetGroupContactRequest"
-              },
-              "description": "The contact and the role to give them."
+              }
             }
           }
         },
@@ -41536,10 +41748,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Maintenance schedule creation data.",
               "schema": {
                 "$ref": "#/components/schemas/AssetMaintenanceScheduleCreateRequest"
-              },
-              "description": "Maintenance schedule creation data."
+              }
             }
           }
         },
@@ -41662,10 +41874,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Maintenance history record data.",
               "schema": {
                 "$ref": "#/components/schemas/AssetRecordMaintenanceRequest"
-              },
-              "description": "Maintenance history record data."
+              }
             }
           }
         },
@@ -41858,10 +42070,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Relationship creation data.",
               "schema": {
                 "$ref": "#/components/schemas/AssetRelationshipCreateRequest"
-              },
-              "description": "Relationship creation data."
+              }
             }
           }
         },
@@ -42052,10 +42264,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "The ticket to link plus optional relationship_type and notes.",
               "schema": {
                 "$ref": "#/components/schemas/AssetTicketLinkRequest"
-              },
-              "description": "The ticket to link plus optional relationship_type and notes."
+              }
             }
           }
         },
@@ -42265,10 +42477,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "The asset to link plus optional relationship_type and notes.",
               "schema": {
                 "$ref": "#/components/schemas/TicketAssetLinkRequest"
-              },
-              "description": "The asset to link plus optional relationship_type and notes."
+              }
             }
           }
         },
@@ -43884,10 +44096,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Licence count update payload from the billing service.",
               "schema": {
                 "$ref": "#/components/schemas/LicenceCountUpdateRequest"
-              },
-              "description": "Licence count update payload from the billing service."
+              }
             }
           }
         },
@@ -43970,10 +44182,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Conversation messages to summarize into a title.",
               "schema": {
                 "$ref": "#/components/schemas/ChatTitleStreamRequest"
-              },
-              "description": "Conversation messages to summarize into a title."
+              }
             }
           }
         },
@@ -44095,10 +44307,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Conversation messages and optional legacy metadata for the chat model.",
               "schema": {
                 "$ref": "#/components/schemas/ChatStreamRequest"
-              },
-              "description": "Conversation messages and optional legacy metadata for the chat model."
+              }
             }
           }
         },
@@ -44678,8 +44890,8 @@
                     "properties": {
                       "tax_id": {
                         "type": "string",
-                        "description": "Deprecated legacy input. Send tax_id_number instead.",
-                        "deprecated": true
+                        "deprecated": true,
+                        "description": "Deprecated legacy input. Send tax_id_number instead."
                       }
                     },
                     "additionalProperties": {}
@@ -46275,77 +46487,71 @@
           "content": {
             "application/json": {
               "schema": {
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/ClientLocationBody"
+                "type": "object",
+                "properties": {
+                  "location_name": {
+                    "type": "string"
                   },
-                  {
-                    "properties": {
-                      "location_name": {
-                        "type": "string"
-                      },
-                      "address_line1": {
-                        "type": "string"
-                      },
-                      "address_line2": {
-                        "type": "string"
-                      },
-                      "address_line3": {
-                        "type": "string"
-                      },
-                      "city": {
-                        "type": "string"
-                      },
-                      "state_province": {
-                        "type": "string"
-                      },
-                      "postal_code": {
-                        "type": "string"
-                      },
-                      "country_code": {
-                        "type": "string",
-                        "minLength": 2,
-                        "maxLength": 3
-                      },
-                      "country_name": {
-                        "type": "string",
-                        "minLength": 1
-                      },
-                      "region_code": {
-                        "type": "string"
-                      },
-                      "is_billing_address": {
-                        "type": "boolean"
-                      },
-                      "is_shipping_address": {
-                        "type": "boolean"
-                      },
-                      "is_default": {
-                        "type": "boolean"
-                      },
-                      "phone": {
-                        "type": "string"
-                      },
-                      "fax": {
-                        "type": "string"
-                      },
-                      "email": {
-                        "type": [
-                          "string",
-                          "null"
-                        ],
-                        "format": "email",
-                        "description": "null clears the email"
-                      },
-                      "notes": {
-                        "type": "string"
-                      },
-                      "is_active": {
-                        "type": "boolean"
-                      }
-                    }
+                  "address_line1": {
+                    "type": "string"
+                  },
+                  "address_line2": {
+                    "type": "string"
+                  },
+                  "address_line3": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string"
+                  },
+                  "state_province": {
+                    "type": "string"
+                  },
+                  "postal_code": {
+                    "type": "string"
+                  },
+                  "country_code": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 3
+                  },
+                  "country_name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "region_code": {
+                    "type": "string"
+                  },
+                  "is_billing_address": {
+                    "type": "boolean"
+                  },
+                  "is_shipping_address": {
+                    "type": "boolean"
+                  },
+                  "is_default": {
+                    "type": "boolean"
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "fax": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "email",
+                    "description": "null clears the email"
+                  },
+                  "notes": {
+                    "type": "string"
+                  },
+                  "is_active": {
+                    "type": "boolean"
                   }
-                ]
+                }
               }
             }
           }
@@ -50664,6 +50870,142 @@
         }
       }
     },
+    "/api/v1/documents": {
+      "post": {
+        "summary": "Attach a file to a ticket, project task, client, contact or asset",
+        "description": "Creates a document from an https URL or from base64 and associates it with one entity. One file per call. The server downloads URL sources itself, only from hosts on the workspace's allowed download hosts list (and only public addresses); the list applies to every caller of this endpoint, not only MCP. Validation (size, MIME type allowlist), storage, the document row, the association, previews and DOCUMENT_ASSOCIATED events run in one shared upload core; ticket attachments also write a ticket activity entry. Requires document:create and <entity>:update. Errors: 400 invalid source, host not allowed (code FETCH_HOST_NOT_ALLOWED; nothing is fetched and no document is created), unsafe or unreachable URL (a remote error status is reported in the message, never as our status), oversize, or disallowed type; 403 permission denied; 404 entity not found.",
+        "tags": [
+          "Documents"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "document",
+          "x-rbac-action": "create"
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachDocumentBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Document created and attached.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachedDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure: bad source, URL host not on the workspace allowlist (code FETCH_HOST_NOT_ALLOWED), unsafe URL, fetch failure, size or type not allowed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachDocumentError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachDocumentError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Permission denied (document:create or the entity update permission).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachDocumentError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Entity not found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachDocumentError"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected failure.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachDocumentError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Documents API namespace root",
+        "description": "Namespace root with no resource of its own — it returns 404. Documents are accessed per parent entity, e.g. /api/v1/tickets/{id}/documents.",
+        "tags": [
+          "Documents"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-namespace-root": true
+        },
+        "x-alga-products": [
+          "psa",
+          "algadesk"
+        ],
+        "responses": {
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Always — this root has no resource; call a sub-resource path.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/email/oauth/initiate": {
       "post": {
         "summary": "Initiate email OAuth flow",
@@ -50688,10 +51030,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Email OAuth initiation payload.",
               "schema": {
                 "$ref": "#/components/schemas/EmailOAuthInitiateRequest"
-              },
-              "description": "Email OAuth initiation payload."
+              }
             }
           }
         },
@@ -50759,10 +51101,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Gmail provider refresh request.",
               "schema": {
                 "$ref": "#/components/schemas/EmailRefreshWatchRequest"
-              },
-              "description": "Gmail provider refresh request."
+              }
             }
           }
         },
@@ -50865,10 +51207,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Google Pub/Sub push message containing a base64-encoded Gmail notification.",
               "schema": {
                 "$ref": "#/components/schemas/GooglePubSubPushBody"
-              },
-              "description": "Google Pub/Sub push message containing a base64-encoded Gmail notification."
+              }
             }
           }
         },
@@ -51045,10 +51387,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Microsoft Graph webhook notification batch.",
               "schema": {
                 "$ref": "#/components/schemas/MicrosoftGraphWebhookBody"
-              },
-              "description": "Microsoft Graph webhook notification batch."
+              }
             }
           }
         },
@@ -51116,10 +51458,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Optional synthetic email provider metadata for the test event.",
               "schema": {
                 "$ref": "#/components/schemas/EmailWebhookTestRequest"
-              },
-              "description": "Optional synthetic email provider metadata for the test event."
+              }
             }
           }
         },
@@ -51435,10 +51777,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Template fields to write.",
               "schema": {
                 "$ref": "#/components/schemas/EmailTemplateUpdateRequest"
-              },
-              "description": "Template fields to write."
+              }
             }
           }
         },
@@ -51792,10 +52134,10 @@
           "required": false,
           "content": {
             "application/json": {
+              "description": "Optional extension-specific POST body. The gateway accepts any content type up to 10 MB and forwards it as base64.",
               "schema": {
                 "$ref": "#/components/schemas/ExtensionOpaqueRequest"
-              },
-              "description": "Optional extension-specific POST body. The gateway accepts any content type up to 10 MB and forwards it as base64."
+              }
             }
           }
         },
@@ -51946,10 +52288,10 @@
           "required": false,
           "content": {
             "application/json": {
+              "description": "Optional extension-specific PUT body. The gateway accepts any content type up to 10 MB and forwards it as base64.",
               "schema": {
                 "$ref": "#/components/schemas/ExtensionOpaqueRequest"
-              },
-              "description": "Optional extension-specific PUT body. The gateway accepts any content type up to 10 MB and forwards it as base64."
+              }
             }
           }
         },
@@ -52100,10 +52442,10 @@
           "required": false,
           "content": {
             "application/json": {
+              "description": "Optional extension-specific PATCH body. The gateway accepts any content type up to 10 MB and forwards it as base64.",
               "schema": {
                 "$ref": "#/components/schemas/ExtensionOpaqueRequest"
-              },
-              "description": "Optional extension-specific PATCH body. The gateway accepts any content type up to 10 MB and forwards it as base64."
+              }
             }
           }
         },
@@ -52254,10 +52596,10 @@
           "required": false,
           "content": {
             "application/json": {
+              "description": "Optional extension-specific DELETE body. The gateway accepts any content type up to 10 MB and forwards it as base64.",
               "schema": {
                 "$ref": "#/components/schemas/ExtensionOpaqueRequest"
-              },
-              "description": "Optional extension-specific DELETE body. The gateway accepts any content type up to 10 MB and forwards it as base64."
+              }
             }
           }
         },
@@ -55632,7 +55974,8 @@
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "default": "1"
             },
             "required": false,
             "name": "page",
@@ -55640,7 +55983,8 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "default": "25"
             },
             "required": false,
             "name": "limit",
@@ -57854,7 +58198,42 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/InvoiceRecurringCreateBody"
+                "type": "object",
+                "properties": {
+                  "client_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "frequency": {
+                    "type": "string",
+                    "enum": [
+                      "daily",
+                      "weekly",
+                      "monthly",
+                      "quarterly",
+                      "annually"
+                    ]
+                  },
+                  "start_date": {
+                    "type": "string"
+                  },
+                  "end_date": {
+                    "type": "string"
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  },
+                  "invoice_template": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "max_generations": {
+                    "type": "number"
+                  }
+                }
               }
             }
           }
@@ -61331,48 +61710,6 @@
         "x-alga-products": [
           "psa",
           "algadesk"
-        ],
-        "responses": {
-          "401": {
-            "description": "API key missing/invalid.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Always — this root has no resource; call a sub-resource path.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/documents": {
-      "get": {
-        "summary": "Documents API namespace root",
-        "description": "Namespace root with no resource of its own — it returns 404. Documents are accessed per parent entity, e.g. /api/v1/tickets/{id}/documents.",
-        "tags": [
-          "Documents"
-        ],
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "extensions": {
-          "x-namespace-root": true
-        },
-        "x-alga-products": [
-          "psa"
         ],
         "responses": {
           "401": {
@@ -70334,8 +70671,8 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {},
-              "description": "Source-specific JSON payload. Shape varies per inbound webhook configuration."
+              "description": "Source-specific JSON payload. Shape varies per inbound webhook configuration.",
+              "schema": {}
             }
           }
         },
@@ -70475,10 +70812,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -70533,10 +70870,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -78393,10 +78730,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Board creation payload.",
               "schema": {
                 "$ref": "#/components/schemas/BoardCreateRequest"
-              },
-              "description": "Board creation payload."
+              }
             }
           }
         },
@@ -78555,10 +78892,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Board update payload.",
               "schema": {
                 "$ref": "#/components/schemas/BoardUpdateRequest"
-              },
-              "description": "Board update payload."
+              }
             }
           }
         },
@@ -78753,10 +79090,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Status creation payload.",
               "schema": {
                 "$ref": "#/components/schemas/StatusCreateRequest"
-              },
-              "description": "Status creation payload."
+              }
             }
           }
         },
@@ -78915,10 +79252,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Status update payload.",
               "schema": {
                 "$ref": "#/components/schemas/StatusUpdateRequest"
-              },
-              "description": "Status update payload."
+              }
             }
           }
         },
@@ -79282,10 +79619,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Service category payload",
               "schema": {
                 "$ref": "#/components/schemas/ServiceCategoryCreateRequest"
-              },
-              "description": "Service category payload"
+              }
             }
           }
         },
@@ -81074,6 +81411,7 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Service creation payload.",
               "schema": {
                 "type": "object",
                 "properties": {
@@ -81114,9 +81452,6 @@
                       },
                       {
                         "type": "null"
-                      },
-                      {
-                        "type": "null"
                       }
                     ]
                   },
@@ -81128,9 +81463,6 @@
                       },
                       {
                         "type": "null"
-                      },
-                      {
-                        "type": "null"
                       }
                     ]
                   },
@@ -81139,9 +81471,6 @@
                       {
                         "type": "string",
                         "maxLength": 2048
-                      },
-                      {
-                        "type": "null"
                       },
                       {
                         "type": "null"
@@ -81216,8 +81545,7 @@
                   "custom_service_type_id",
                   "billing_method"
                 ]
-              },
-              "description": "Service creation payload."
+              }
             }
           }
         },
@@ -81386,6 +81714,7 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Service update payload.",
               "schema": {
                 "type": "object",
                 "properties": {
@@ -81426,9 +81755,6 @@
                       },
                       {
                         "type": "null"
-                      },
-                      {
-                        "type": "null"
                       }
                     ]
                   },
@@ -81440,9 +81766,6 @@
                       },
                       {
                         "type": "null"
-                      },
-                      {
-                        "type": "null"
                       }
                     ]
                   },
@@ -81451,9 +81774,6 @@
                       {
                         "type": "string",
                         "maxLength": 2048
-                      },
-                      {
-                        "type": "null"
                       },
                       {
                         "type": "null"
@@ -81523,8 +81843,7 @@
                     "description": "Not accepted. Send prices[].currency_code instead; a top-level currency_code returns 400."
                   }
                 }
-              },
-              "description": "Service update payload."
+              }
             }
           }
         },
@@ -81857,6 +82176,7 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Product creation payload.",
               "schema": {
                 "type": "object",
                 "properties": {
@@ -81900,9 +82220,6 @@
                       },
                       {
                         "type": "null"
-                      },
-                      {
-                        "type": "null"
                       }
                     ]
                   },
@@ -81911,9 +82228,6 @@
                       {
                         "type": "string",
                         "format": "uuid"
-                      },
-                      {
-                        "type": "null"
                       },
                       {
                         "type": "null"
@@ -81928,9 +82242,6 @@
                       },
                       {
                         "type": "null"
-                      },
-                      {
-                        "type": "null"
                       }
                     ]
                   },
@@ -81939,9 +82250,6 @@
                       {
                         "type": "string",
                         "maxLength": 128
-                      },
-                      {
-                        "type": "null"
                       },
                       {
                         "type": "null"
@@ -81956,9 +82264,6 @@
                       },
                       {
                         "type": "null"
-                      },
-                      {
-                        "type": "null"
                       }
                     ]
                   },
@@ -81967,9 +82272,6 @@
                       {
                         "type": "number",
                         "minimum": 0
-                      },
-                      {
-                        "type": "null"
                       },
                       {
                         "type": "null"
@@ -81985,9 +82287,6 @@
                       },
                       {
                         "type": "null"
-                      },
-                      {
-                        "type": "null"
                       }
                     ]
                   },
@@ -81996,9 +82295,6 @@
                       {
                         "type": "string",
                         "maxLength": 255
-                      },
-                      {
-                        "type": "null"
                       },
                       {
                         "type": "null"
@@ -82013,9 +82309,6 @@
                       },
                       {
                         "type": "null"
-                      },
-                      {
-                        "type": "null"
                       }
                     ]
                   },
@@ -82024,9 +82317,6 @@
                       {
                         "type": "string",
                         "maxLength": 255
-                      },
-                      {
-                        "type": "null"
                       },
                       {
                         "type": "null"
@@ -82045,9 +82335,6 @@
                       },
                       {
                         "type": "null"
-                      },
-                      {
-                        "type": "null"
                       }
                     ]
                   },
@@ -82056,9 +82343,6 @@
                       {
                         "type": "string",
                         "maxLength": 64
-                      },
-                      {
-                        "type": "null"
                       },
                       {
                         "type": "null"
@@ -82130,8 +82414,7 @@
                   "service_name",
                   "custom_service_type_id"
                 ]
-              },
-              "description": "Product creation payload."
+              }
             }
           }
         },
@@ -82310,6 +82593,7 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Product update payload.",
               "schema": {
                 "type": "object",
                 "properties": {
@@ -82353,9 +82637,6 @@
                       },
                       {
                         "type": "null"
-                      },
-                      {
-                        "type": "null"
                       }
                     ]
                   },
@@ -82364,9 +82645,6 @@
                       {
                         "type": "string",
                         "format": "uuid"
-                      },
-                      {
-                        "type": "null"
                       },
                       {
                         "type": "null"
@@ -82381,9 +82659,6 @@
                       },
                       {
                         "type": "null"
-                      },
-                      {
-                        "type": "null"
                       }
                     ]
                   },
@@ -82392,9 +82667,6 @@
                       {
                         "type": "string",
                         "maxLength": 128
-                      },
-                      {
-                        "type": "null"
                       },
                       {
                         "type": "null"
@@ -82409,9 +82681,6 @@
                       },
                       {
                         "type": "null"
-                      },
-                      {
-                        "type": "null"
                       }
                     ]
                   },
@@ -82420,9 +82689,6 @@
                       {
                         "type": "number",
                         "minimum": 0
-                      },
-                      {
-                        "type": "null"
                       },
                       {
                         "type": "null"
@@ -82438,9 +82704,6 @@
                       },
                       {
                         "type": "null"
-                      },
-                      {
-                        "type": "null"
                       }
                     ]
                   },
@@ -82449,9 +82712,6 @@
                       {
                         "type": "string",
                         "maxLength": 255
-                      },
-                      {
-                        "type": "null"
                       },
                       {
                         "type": "null"
@@ -82466,9 +82726,6 @@
                       },
                       {
                         "type": "null"
-                      },
-                      {
-                        "type": "null"
                       }
                     ]
                   },
@@ -82477,9 +82734,6 @@
                       {
                         "type": "string",
                         "maxLength": 255
-                      },
-                      {
-                        "type": "null"
                       },
                       {
                         "type": "null"
@@ -82498,9 +82752,6 @@
                       },
                       {
                         "type": "null"
-                      },
-                      {
-                        "type": "null"
                       }
                     ]
                   },
@@ -82509,9 +82760,6 @@
                       {
                         "type": "string",
                         "maxLength": 64
-                      },
-                      {
-                        "type": "null"
                       },
                       {
                         "type": "null"
@@ -82579,8 +82827,7 @@
                     "description": "Full set of future-dated prices (each effective_date must be after today). Replaces the entire future price window; scheduled_prices: [] clears it. Does not change the current prices or default_rate."
                   }
                 }
-              },
-              "description": "Product update payload."
+              }
             }
           }
         },
@@ -83706,7 +83953,274 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateWebhookBodyV1"
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "GET",
+                      "POST",
+                      "PUT",
+                      "PATCH",
+                      "DELETE"
+                    ]
+                  },
+                  "event_types": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/WebhookEventTypeV1"
+                    },
+                    "minItems": 1
+                  },
+                  "security": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "payload_format": {
+                    "type": "string",
+                    "enum": [
+                      "json",
+                      "xml",
+                      "form_data",
+                      "custom"
+                    ]
+                  },
+                  "content_type": {
+                    "type": "string"
+                  },
+                  "custom_headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "event_filter": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "payload_fields": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "ticket": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "ticket_number",
+                            "title",
+                            "url",
+                            "status_id",
+                            "status_name",
+                            "is_closed",
+                            "response_state",
+                            "previous_status_id",
+                            "previous_status_name",
+                            "previous_response_state",
+                            "new_response_state",
+                            "priority_id",
+                            "priority_name",
+                            "client_id",
+                            "client_name",
+                            "contact_name_id",
+                            "contact_name",
+                            "contact_email",
+                            "assigned_to",
+                            "assigned_to_name",
+                            "assigned_team_id",
+                            "board_id",
+                            "board_name",
+                            "category_id",
+                            "subcategory_id",
+                            "entered_at",
+                            "updated_at",
+                            "closed_at",
+                            "due_date",
+                            "tags",
+                            "comment",
+                            "changes",
+                            "comments"
+                          ]
+                        }
+                      },
+                      "project": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "project_name",
+                            "wbs_code",
+                            "description",
+                            "status_id",
+                            "status_name",
+                            "is_closed",
+                            "previous_status_id",
+                            "previous_status_name",
+                            "client_id",
+                            "client_name",
+                            "contact_name_id",
+                            "contact_name",
+                            "contact_email",
+                            "assigned_to",
+                            "assigned_to_name",
+                            "start_date",
+                            "end_date",
+                            "budgeted_hours",
+                            "url",
+                            "changes",
+                            "phases",
+                            "task_counts",
+                            "task_id",
+                            "phase_id",
+                            "phase_name",
+                            "task_name",
+                            "estimated_hours",
+                            "actual_hours",
+                            "due_date",
+                            "priority_id",
+                            "priority_name",
+                            "tags"
+                          ]
+                        }
+                      },
+                      "client": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "changed_fields"
+                          ]
+                        }
+                      },
+                      "contact": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "client_id",
+                            "changed_fields"
+                          ]
+                        }
+                      },
+                      "client_location": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "client_id",
+                            "changed_fields"
+                          ]
+                        }
+                      },
+                      "quote": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "client_id",
+                            "quote_number",
+                            "version",
+                            "contact_id",
+                            "opportunity_id",
+                            "previous_status",
+                            "new_status",
+                            "currency_code",
+                            "total_amount",
+                            "performed_by_type",
+                            "performed_by_id",
+                            "sent_at",
+                            "viewed_at",
+                            "approved_at",
+                            "accepted_at",
+                            "rejected_at",
+                            "expired_at",
+                            "converted_at",
+                            "conversion_reverted_at",
+                            "superseded_at",
+                            "cancelled_at",
+                            "accepted_by_name",
+                            "accepted_on_behalf",
+                            "selected_optional_item_ids",
+                            "rejection_reason",
+                            "conversion_targets",
+                            "contract_id",
+                            "invoice_id",
+                            "sales_order_id",
+                            "released_invoice_id",
+                            "superseded_by_quote_id",
+                            "next_version"
+                          ]
+                        }
+                      }
+                    },
+                    "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags; client: changed_fields; contact: client_id, changed_fields; client_location: client_id, changed_fields; quote: client_id, quote_number, version, contact_id, opportunity_id, previous_status, new_status, currency_code, total_amount, performed_by_type, performed_by_id, sent_at, viewed_at, approved_at, accepted_at, rejected_at, expired_at, converted_at, conversion_reverted_at, superseded_at, cancelled_at, accepted_by_name, accepted_on_behalf, selected_optional_item_ids, rejection_reason, conversion_targets, contract_id, invoice_id, sales_order_id, released_invoice_id, superseded_by_quote_id, next_version."
+                  },
+                  "payload_transformation": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "retry_config": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  },
+                  "is_test_mode": {
+                    "type": "boolean"
+                  },
+                  "verify_ssl": {
+                    "type": "boolean"
+                  },
+                  "secret_token": {
+                    "type": "string"
+                  },
+                  "rate_limit": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
               }
             }
           }
@@ -84300,7 +84814,274 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateWebhookBodyV1"
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "method": {
+                    "type": "string",
+                    "enum": [
+                      "GET",
+                      "POST",
+                      "PUT",
+                      "PATCH",
+                      "DELETE"
+                    ]
+                  },
+                  "event_types": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/WebhookEventTypeV1"
+                    },
+                    "minItems": 1
+                  },
+                  "security": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "payload_format": {
+                    "type": "string",
+                    "enum": [
+                      "json",
+                      "xml",
+                      "form_data",
+                      "custom"
+                    ]
+                  },
+                  "content_type": {
+                    "type": "string"
+                  },
+                  "custom_headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "event_filter": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "payload_fields": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "ticket": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "ticket_number",
+                            "title",
+                            "url",
+                            "status_id",
+                            "status_name",
+                            "is_closed",
+                            "response_state",
+                            "previous_status_id",
+                            "previous_status_name",
+                            "previous_response_state",
+                            "new_response_state",
+                            "priority_id",
+                            "priority_name",
+                            "client_id",
+                            "client_name",
+                            "contact_name_id",
+                            "contact_name",
+                            "contact_email",
+                            "assigned_to",
+                            "assigned_to_name",
+                            "assigned_team_id",
+                            "board_id",
+                            "board_name",
+                            "category_id",
+                            "subcategory_id",
+                            "entered_at",
+                            "updated_at",
+                            "closed_at",
+                            "due_date",
+                            "tags",
+                            "comment",
+                            "changes",
+                            "comments"
+                          ]
+                        }
+                      },
+                      "project": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "project_name",
+                            "wbs_code",
+                            "description",
+                            "status_id",
+                            "status_name",
+                            "is_closed",
+                            "previous_status_id",
+                            "previous_status_name",
+                            "client_id",
+                            "client_name",
+                            "contact_name_id",
+                            "contact_name",
+                            "contact_email",
+                            "assigned_to",
+                            "assigned_to_name",
+                            "start_date",
+                            "end_date",
+                            "budgeted_hours",
+                            "url",
+                            "changes",
+                            "phases",
+                            "task_counts",
+                            "task_id",
+                            "phase_id",
+                            "phase_name",
+                            "task_name",
+                            "estimated_hours",
+                            "actual_hours",
+                            "due_date",
+                            "priority_id",
+                            "priority_name",
+                            "tags"
+                          ]
+                        }
+                      },
+                      "client": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "changed_fields"
+                          ]
+                        }
+                      },
+                      "contact": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "client_id",
+                            "changed_fields"
+                          ]
+                        }
+                      },
+                      "client_location": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "client_id",
+                            "changed_fields"
+                          ]
+                        }
+                      },
+                      "quote": {
+                        "type": [
+                          "array",
+                          "null"
+                        ],
+                        "items": {
+                          "type": "string",
+                          "enum": [
+                            "client_id",
+                            "quote_number",
+                            "version",
+                            "contact_id",
+                            "opportunity_id",
+                            "previous_status",
+                            "new_status",
+                            "currency_code",
+                            "total_amount",
+                            "performed_by_type",
+                            "performed_by_id",
+                            "sent_at",
+                            "viewed_at",
+                            "approved_at",
+                            "accepted_at",
+                            "rejected_at",
+                            "expired_at",
+                            "converted_at",
+                            "conversion_reverted_at",
+                            "superseded_at",
+                            "cancelled_at",
+                            "accepted_by_name",
+                            "accepted_on_behalf",
+                            "selected_optional_item_ids",
+                            "rejection_reason",
+                            "conversion_targets",
+                            "contract_id",
+                            "invoice_id",
+                            "sales_order_id",
+                            "released_invoice_id",
+                            "superseded_by_quote_id",
+                            "next_version"
+                          ]
+                        }
+                      }
+                    },
+                    "description": "Per-entity payload allowlist. null/{} = full payload everywhere. { ticket: null } = full ticket payload. { ticket: [] } = required-only. { ticket: [a,b] } = explicit allowlist plus required keys. Unknown entities and fields are rejected by WEBHOOK_PAYLOAD_FIELDS_BY_ENTITY in lib/webhooks/payloadFields. Supported fields: ticket: ticket_number, title, url, status_id, status_name, is_closed, response_state, previous_status_id, previous_status_name, previous_response_state, new_response_state, priority_id, priority_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, assigned_team_id, board_id, board_name, category_id, subcategory_id, entered_at, updated_at, closed_at, due_date, tags, comment, changes, comments; project: project_name, wbs_code, description, status_id, status_name, is_closed, previous_status_id, previous_status_name, client_id, client_name, contact_name_id, contact_name, contact_email, assigned_to, assigned_to_name, start_date, end_date, budgeted_hours, url, changes, phases, task_counts, task_id, phase_id, phase_name, task_name, estimated_hours, actual_hours, due_date, priority_id, priority_name, tags; client: changed_fields; contact: client_id, changed_fields; client_location: client_id, changed_fields; quote: client_id, quote_number, version, contact_id, opportunity_id, previous_status, new_status, currency_code, total_amount, performed_by_type, performed_by_id, sent_at, viewed_at, approved_at, accepted_at, rejected_at, expired_at, converted_at, conversion_reverted_at, superseded_at, cancelled_at, accepted_by_name, accepted_on_behalf, selected_optional_item_ids, rejection_reason, conversion_targets, contract_id, invoice_id, sales_order_id, released_invoice_id, superseded_by_quote_id, next_version."
+                  },
+                  "payload_transformation": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "retry_config": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "is_active": {
+                    "type": "boolean"
+                  },
+                  "is_test_mode": {
+                    "type": "boolean"
+                  },
+                  "verify_ssl": {
+                    "type": "boolean"
+                  },
+                  "secret_token": {
+                    "type": "string"
+                  },
+                  "rate_limit": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "tags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
               }
             }
           }
@@ -88430,10 +89211,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Project task creation payload.",
               "schema": {
                 "$ref": "#/components/schemas/ProjectTaskCreateRequest"
-              },
-              "description": "Project task creation payload."
+              }
             }
           }
         },
@@ -88699,10 +89480,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Project task update payload.",
               "schema": {
                 "$ref": "#/components/schemas/ProjectTaskUpdateRequest"
-              },
-              "description": "Project task update payload."
+              }
             }
           }
         },
@@ -91829,6 +92610,7 @@
               "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day."
             },
             "required": false,
+            "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day.",
             "name": "start_date",
             "in": "query"
           },
@@ -91838,6 +92620,7 @@
               "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day)."
             },
             "required": false,
+            "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day).",
             "name": "end_date",
             "in": "query"
           },
@@ -92042,6 +92825,7 @@
               "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day."
             },
             "required": false,
+            "description": "ISO 8601 date or date-time; entries starting at or after. A date-only value means 00:00:00Z that day.",
             "name": "start_date",
             "in": "query"
           },
@@ -92051,6 +92835,7 @@
               "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day)."
             },
             "required": false,
+            "description": "ISO 8601 date or date-time; entries ending at or before. A date-only value includes the whole UTC day (entries ending before 00:00:00Z the next day).",
             "name": "end_date",
             "in": "query"
           },
@@ -103471,7 +104256,7 @@
       },
       "post": {
         "summary": "Upload a ticket document",
-        "description": "Uploads a file as a document attachment to a ticket. Send multipart/form-data with a `file` field. Returns the created document.",
+        "description": "Uploads a file as a document attachment to a ticket. Send multipart/form-data with a `file` field. Returns the created document. Multipart only: MCP and JSON clients should use `POST /api/v1/documents` (or the `attach_file` MCP tool) instead.",
         "tags": [
           "Work Management v1"
         ],
@@ -121388,10 +122173,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Optional sync options. Currently ignored by the MVP handler.",
               "schema": {
                 "$ref": "#/components/schemas/SoftwareOneSyncRequest"
-              },
-              "description": "Optional sync options. Currently ignored by the MVP handler."
+              }
             }
           }
         },
@@ -121579,10 +122364,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Optional sync options. Currently ignored by the MVP handler.",
               "schema": {
                 "$ref": "#/components/schemas/SoftwareOneSyncRequest"
-              },
-              "description": "Optional sync options. Currently ignored by the MVP handler."
+              }
             }
           }
         },
@@ -121784,10 +122569,10 @@
           "required": false,
           "content": {
             "application/json": {
+              "description": "Sync options. The current sync endpoint consumes syncAgreements and syncStatements; unknown fields are ignored.",
               "schema": {
                 "$ref": "#/components/schemas/SoftwareOneSyncRequest"
-              },
-              "description": "Sync options. The current sync endpoint consumes syncAgreements and syncStatements; unknown fields are ignored."
+              }
             }
           }
         },
@@ -122236,10 +123021,10 @@
           "required": false,
           "content": {
             "application/json": {
+              "description": "Optional sync flags consumed by the MVP handler: syncAgreements and syncStatements.",
               "schema": {
                 "$ref": "#/components/schemas/SoftwareOneSyncRequest"
-              },
-              "description": "Optional sync flags consumed by the MVP handler: syncAgreements and syncStatements."
+              }
             }
           }
         },
@@ -122296,10 +123081,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -122356,10 +123141,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -122464,10 +123249,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -122618,10 +123403,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -122678,10 +123463,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -122738,10 +123523,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -122844,10 +123629,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -122904,10 +123689,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -122964,10 +123749,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -123024,10 +123809,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -123084,10 +123869,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -123192,10 +123977,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -123252,10 +124037,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -123408,10 +124193,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -123708,10 +124493,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -123768,10 +124553,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -123828,10 +124613,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -124126,10 +124911,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -124186,10 +124971,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -124246,10 +125031,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -124306,10 +125091,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -124366,10 +125151,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -124566,10 +125351,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -124718,10 +125503,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -124778,10 +125563,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -124838,10 +125623,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -124898,10 +125683,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -125100,10 +125885,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -125353,10 +126138,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -125414,10 +126199,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -125524,10 +126309,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -125584,10 +126369,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -125644,10 +126429,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -125750,10 +126535,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -125902,10 +126687,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -125960,10 +126745,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -126018,10 +126803,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -126078,10 +126863,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -126282,10 +127067,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -126530,10 +127315,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -126730,10 +127515,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -126836,10 +127621,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -126942,10 +127727,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -127048,10 +127833,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -127248,10 +128033,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -127354,10 +128139,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -127460,10 +128245,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -127754,10 +128539,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -127860,10 +128645,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -128158,10 +128943,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -128218,10 +129003,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -128278,10 +129063,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -128338,10 +129123,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -128398,10 +129183,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -128458,10 +129243,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -128518,10 +129303,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -128578,10 +129363,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -128686,10 +129471,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -128744,10 +129529,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -128938,10 +129723,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -129044,10 +129829,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -129150,10 +129935,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -129210,10 +129995,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -129270,10 +130055,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -129374,10 +130159,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -129432,10 +130217,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -129586,10 +130371,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -129920,10 +130705,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -129976,10 +130761,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -130032,10 +130817,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -130138,10 +130923,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -130336,10 +131121,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -130490,10 +131275,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -130878,10 +131663,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -130984,10 +131769,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -131136,10 +131921,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -131336,10 +132121,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -131488,10 +132273,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -131590,10 +132375,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -131872,10 +132657,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -131974,10 +132759,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -132256,10 +133041,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -132364,10 +133149,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -132565,10 +133350,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -132671,10 +133456,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -132824,10 +133609,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -132976,10 +133761,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -133034,10 +133819,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -133190,10 +133975,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -133390,10 +134175,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -133643,10 +134428,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -133703,10 +134488,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -133855,10 +134640,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -133915,10 +134700,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -134023,10 +134808,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -134083,10 +134868,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -134143,10 +134928,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -134203,10 +134988,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -134263,10 +135048,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -134323,10 +135108,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -134383,10 +135168,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -134489,10 +135274,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -134597,10 +135382,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -134703,10 +135488,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -134761,10 +135546,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -134821,10 +135606,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -134973,10 +135758,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -135171,10 +135956,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -135229,10 +136014,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -135335,10 +136120,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -135487,10 +136272,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -135593,10 +136378,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -135791,10 +136576,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -135849,10 +136634,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -136189,10 +136974,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -136295,10 +137080,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -136681,10 +137466,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -136739,10 +137524,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -136845,10 +137630,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -136951,10 +137736,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -137103,10 +137888,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -137259,10 +138044,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -137319,10 +138104,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -137379,10 +138164,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -137487,10 +138272,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -137595,10 +138380,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -137655,10 +138440,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -137715,10 +138500,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -137823,10 +138608,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -137929,10 +138714,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -138035,10 +138820,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -138141,10 +138926,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -138293,10 +139078,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -138399,10 +139184,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -138505,10 +139290,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -138611,10 +139396,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -138719,10 +139504,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -138874,10 +139659,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -139031,10 +139816,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -139186,10 +139971,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -139247,10 +140032,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -139355,10 +140140,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -139463,10 +140248,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -139571,10 +140356,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -139779,10 +140564,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -139840,10 +140625,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -139901,10 +140686,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -140009,10 +140794,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -140070,10 +140855,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -140180,10 +140965,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -140241,10 +141026,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -140400,10 +141185,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -140461,10 +141246,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -140522,10 +141307,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -140583,10 +141368,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -140644,10 +141429,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -140705,10 +141490,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -140766,10 +141551,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -140827,10 +141612,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -140888,10 +141673,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Placeholder request body",
               "schema": {
                 "$ref": "#/components/schemas/PlaceholderObject"
-              },
-              "description": "Placeholder request body"
+              }
             }
           }
         },
@@ -141057,10 +141842,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Signed JSON envelope.",
               "schema": {
                 "$ref": "#/components/schemas/TicketCreatedDeliveryV1"
-              },
-              "description": "Signed JSON envelope."
+              }
             }
           }
         },
@@ -141151,10 +141936,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Signed JSON envelope.",
               "schema": {
                 "$ref": "#/components/schemas/TicketUpdatedDeliveryV1"
-              },
-              "description": "Signed JSON envelope."
+              }
             }
           }
         },
@@ -141245,10 +142030,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Signed JSON envelope.",
               "schema": {
                 "$ref": "#/components/schemas/TicketStatusChangedDeliveryV1"
-              },
-              "description": "Signed JSON envelope."
+              }
             }
           }
         },
@@ -141339,10 +142124,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Signed JSON envelope.",
               "schema": {
                 "$ref": "#/components/schemas/TicketAssignedDeliveryV1"
-              },
-              "description": "Signed JSON envelope."
+              }
             }
           }
         },
@@ -141433,10 +142218,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Signed JSON envelope.",
               "schema": {
                 "$ref": "#/components/schemas/TicketClosedDeliveryV1"
-              },
-              "description": "Signed JSON envelope."
+              }
             }
           }
         },
@@ -141527,10 +142312,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Signed JSON envelope.",
               "schema": {
                 "$ref": "#/components/schemas/TicketCommentAddedDeliveryV1"
-              },
-              "description": "Signed JSON envelope."
+              }
             }
           }
         },
@@ -141621,10 +142406,10 @@
           "required": true,
           "content": {
             "application/json": {
+              "description": "Signed JSON envelope.",
               "schema": {
                 "$ref": "#/components/schemas/TicketResponseStateChangedDeliveryV1"
-              },
-              "description": "Signed JSON envelope."
+              }
             }
           }
         },

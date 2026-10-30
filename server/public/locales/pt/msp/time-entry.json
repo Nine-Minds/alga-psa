@@ -137,6 +137,7 @@
     },
     "placeholders": {
       "selectService": "Selecione um serviço",
+      "searchServices": "Pesquisar serviços...",
       "selectDate": "Selecione a data",
       "addNotes": "Adicionar notas",
       "selectContractLine": "Selecionar uma linha de contrato"
@@ -159,7 +160,8 @@
       "project": "Padrão do projeto"
     },
     "options": {
-      "resolveContractLineLater": "Nenhuma linha - resolver mais tarde"
+      "resolveContractLineLater": "Nenhuma linha - resolver mais tarde",
+      "noServicesFound": "Nenhum serviço encontrado"
     }
   },
   "workItemPicker": {

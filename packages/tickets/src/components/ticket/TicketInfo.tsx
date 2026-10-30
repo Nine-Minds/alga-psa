@@ -15,6 +15,7 @@ import { PrioritySelect } from '@alga-psa/ui/components/tickets/PrioritySelect';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { useTicketDataSource } from './TicketDataSourceContext';
 import { buildTicketAssignmentKey } from '../../lib/ticketAssignmentKey';
+import { unresolvedAssigneeLabel } from '../../lib/assigneeDisplay';
 import { CategoryPicker } from '../CategoryPicker';
 import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
 import { TagManager } from '@alga-psa/tags/components';
@@ -1472,7 +1473,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   buttonWidth="fit"
                   size="sm"
                   className="!w-fit"
-                  placeholder={t('info.notAssigned', 'Not assigned')}
+                  placeholder={unresolvedAssigneeLabel({
+                    savedAssigneeId: originalTicketValues.assigned_to,
+                    savedAssigneeName: ticket.assigned_to_name,
+                    currentValue: pendingChanges.assigned_to ?? originalTicketValues.assigned_to,
+                    selectableUserIds: usersList.map((user) => user.user_id),
+                  }) ?? t('info.notAssigned', 'Not assigned')}
                   disabled={workflowLocked || isFieldFrozen('assigned_to')}
                 />
                 {(() => {

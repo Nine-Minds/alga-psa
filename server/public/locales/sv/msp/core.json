@@ -110,7 +110,8 @@
     "ticketsCannedResponses": "Färdiga svar",
     "profile": "Profil",
     "signOut": "Logga ut",
-    "coManaged": "Samförvaltad IT"
+    "coManaged": "Samförvaltad IT",
+    "coManagedAdministration": "Åtkomst och administration"
   },
   "marketing": {
     "dialogs": {
@@ -679,6 +680,17 @@
       "calendar": {
         "error": "Kalendersynkroniseringen för {{providerName}} rapporterade ett fel och synkroniserar inte.",
         "disconnected": "Kalendersynkroniseringen för {{providerName}} är frånkopplad och synkroniserar inte."
+      },
+      "rmm": {
+        "syncError": "{{providerName}} rapporterade ett synkroniseringsfel, så enhets- och larmdata kan vara inaktuella.",
+        "reconnectRequired": "{{providerName}} måste anslutas igen — dess autentiseringsuppgifter kan inte längre förnyas."
+      },
+      "accounting": {
+        "reconnectRequired": "{{providerName}} måste anslutas igen innan bokföringssynkroniseringen kan köras igen.",
+        "syncError": "Den senaste synkroniseringen med {{providerName}} slutfördes inte, så fakturor och betalningar kan vara inaktuella."
+      },
+      "teams": {
+        "botCredentialsMissing": "{{providerName}}-botten kan inte svara: autentiseringsuppgifterna för botkopplingen är inte konfigurerade på servern."
       },
       "review": "Granska",
       "dismiss": "Stäng integrationsavisering"

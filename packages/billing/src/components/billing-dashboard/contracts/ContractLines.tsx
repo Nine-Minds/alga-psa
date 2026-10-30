@@ -12,7 +12,14 @@ import { Plus, ChevronDown, ChevronUp, Trash2, Package, Edit, Check, X, Loader2,
 import { IContract, IContractLineServiceRateTier } from '@alga-psa/types';
 import { UsageServiceConfigPanel } from '../service-configurations/UsageServiceConfigPanel';
 import { getNextContractServiceBoundary } from '@alga-psa/billing/actions/contractLineSemanticsActions';
-import { hasContractLineProtectedHistory, updateContractLine } from '@alga-psa/billing/actions/contractLineAction';
+import { hasContractLineProtectedHistory } from '@alga-psa/billing/actions/contractLineAction';
+import {
+  getContractLineEditVersion,
+  saveContractLineEdit,
+  type ContractLineEditDraft,
+  type ContractLineEditMemberDraft,
+} from '@alga-psa/billing/actions/contractLineSaveAction';
+import { isContractLineConflict } from '../../../lib/billing/contractLineConflict';
 import {
   getDetailedContractLines,
   removeContractLine,
@@ -20,17 +27,12 @@ import {
 } from '@alga-psa/billing/actions/contractLineMappingActions';
 import { resetContractLineRateToStandard, previewContractLineRateReset } from '@alga-psa/billing/actions/rateReviewActions';
 import {
-  applyContractLineServiceMembershipChanges,
   getContractLineServicesWithConfigurations,
   getTemplateLineServicesWithConfigurations,
-  type ContractLineServiceMembershipAddition,
 } from '@alga-psa/billing/actions/contractLineServiceActions';
 import {
-  updateConfiguration,
   getConfigurationWithDetails,
-  upsertPlanServiceBucketConfigurationAction as upsertContractLineServiceBucketConfigurationAction
 } from '@alga-psa/billing/actions/contractLineServiceConfigurationActions';
-import { deleteBucketOverlay } from '@alga-psa/billing/actions/bucketOverlayActions';
 import {
   getActiveClientLocationsForBilling,
   type BillingLocationSummary,
@@ -57,6 +59,7 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './BucketOverlayFields';
 import { BucketOverlayInput } from './ContractWizard';
 import { getCurrencySymbol } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { toast } from 'react-hot-toast';
 import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
 import {
@@ -73,6 +76,9 @@ import {
 } from '@shared/billingClients/contractLineTimingRule';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useClientBillingSchedule } from '../../../hooks/useClientBillingSchedule';
+import { useProductCatalogRates } from '../../../hooks/useProductCatalogRates';
+import { hasRecurringMemberRate, resolveRecurringMemberRate } from '../../../lib/billing/compute/recurringMemberRate';
+import { productUnitMarginCents } from '../../../lib/productUnitMargin';
 import { ArrearsFirstInvoiceHint } from './ArrearsFirstInvoiceHint';
 
 interface ContractLinesProps {
@@ -172,6 +178,8 @@ interface ServiceConfiguration {
   typeConfig: any;
   rateTiers?: IContractLineServiceRateTier[];
   bucketConfig?: any; // Add bucketConfig property for merged bucket data
+  /** Legacy `contract_line_services.custom_rate`; second link of the engine's member-rate chain. */
+  service_line_custom_rate?: number | null;
 }
 
 interface PendingServiceAddition {
@@ -223,6 +231,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   const [contractLines, setContractLines] = useState<DetailedContractLineMapping[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Set when a save was refused because the line changed underneath the editor.
+  const [conflictLineId, setConflictLineId] = useState<string | null>(null);
   const [expandedLines, setExpandedLines] = useState<Record<string, boolean>>({});
   useEffect(() => {
     if (!focusContractLineId || !contractLines.some((line) => line.contract_line_id === focusContractLineId)) return;
@@ -240,6 +250,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   const [effectiveBoundary, setEffectiveBoundary] = useState('');
   const [requiresEffectiveBoundary, setRequiresEffectiveBoundary] = useState(false);
   const [pricingOnly, setPricingOnly] = useState(false);
+  // Version token of the line as the editor loaded it (optimistic concurrency).
+  const [editLineVersion, setEditLineVersion] = useState<string | null>(null);
   const [editServiceConfigs, setEditServiceConfigs] = useState<Record<string, any>>({});
   const [editBucketConfigs, setEditBucketConfigs] = useState<Record<string, BucketOverlayInput | null>>({});
   // Services whose bucket was already saved when this edit began. A null draft
@@ -680,15 +692,23 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     }
   };
 
-  const handleEditContractLine = async (line: DetailedContractLineMapping) => {
+  const handleEditContractLine = async (line: DetailedContractLineMapping, forceServiceReload = false) => {
     if (!contract.contract_id) return;
+    setConflictLineId(null);
 
     try {
       // Use line-level claimed/invoiced history to decide whether ordinary
       // terms stay locked while keeping the narrow text/window editor available.
       const hasInvoices = await hasContractLineProtectedHistory(line.contract_line_id);
+      const version = await getContractLineEditVersion(line.contract_line_id);
+      if (typeof version !== 'string') {
+        setError(isReturnedActionError(version)
+          ? getErrorMessage(version)
+          : t('contractLines.errors.failedToCheckEditable', { defaultValue: 'Failed to check if contract can be edited' }));
+        return;
+      }
 
-      const services = await loadServicesForLine(line.contract_line_id);
+      const services = await loadServicesForLine(line.contract_line_id, forceServiceReload);
       setPricingOnly(Boolean(hasInvoices));
       const boundary = await getNextContractServiceBoundary(line.contract_line_id);
       if (isReturnedActionError(boundary)) { setError(getErrorMessage(boundary)); return; }
@@ -712,6 +732,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       // Load services for the line (returns cached if already loaded)
       // Start editing - populate edit data from the line
       setEditingLineId(line.contract_line_id);
+      setEditLineVersion(version);
       setEditLineData({
         billing_timing: resolveEffectiveBillingTiming(line.contract_line_type, line.billing_timing),
         cadence_owner: line.cadence_owner ?? 'client',
@@ -863,18 +884,52 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     });
   };
 
+  // Conflict recovery: reload the line, its services and the version token, then
+  // re-enter edit mode on the fresh state. The stale draft is discarded; the
+  // user re-applies their edit against what is actually stored.
+  const handleReloadAfterConflict = async () => {
+    const lineId = conflictLineId;
+    if (!lineId || !contract.contract_id) return;
+    setError(null);
+    setConflictLineId(null);
+    try {
+      const latest = await getDetailedContractLines(contract.contract_id);
+      if (isReturnedActionError(latest)) {
+        setError(getErrorMessage(latest));
+        return;
+      }
+      setContractLines(latest);
+      const line = latest.find((l) => l.contract_line_id === lineId);
+      if (!line) return;
+      setLineServices((prev) => {
+        const next = { ...prev };
+        delete next[lineId];
+        return next;
+      });
+      await handleEditContractLine(line, true);
+    } catch (err) {
+      console.error('Error reloading contract line after conflict:', err);
+      setError(t('contractLines.errors.failedToLoad', { defaultValue: 'Failed to load contract lines' }));
+    }
+  };
+
   const handleSaveContractLine = async (contractLineId: string) => {
     if (requiresEffectiveBoundary && !effectiveBoundary) return;
+    if (!editLineVersion) {
+      setError(t('contractLines.errors.failedToUpdate', { defaultValue: 'Failed to update contract line' }));
+      return;
+    }
     setSavingLineId(contractLineId);
     try {
-      // Persist recurring authoring fields in one mutation so service periods
-      // are rematerialized once from the final contract-line state.
+      // The whole edit is one intent, applied by one server action in one
+      // transaction: it either all happened or none of it did. Storage details
+      // (base_rate_basis, revision vs in-place update) are the server's call.
       const narrowInvoiceEdit = {
         invoice_line_description: editLineData.invoice_line_description?.trim() || null,
         start_date: editLineData.start_date || null,
         end_date: editLineData.end_date || null,
       };
-      const updateResult = await updateContractLine(contractLineId, pricingOnly ? narrowInvoiceEdit : {
+      const line: ContractLineEditDraft['line'] = pricingOnly ? narrowInvoiceEdit : {
         billing_timing: resolveEffectiveBillingTiming(
           contractLines.find((l) => l.contract_line_id === contractLineId)?.contract_line_type,
           editLineData.billing_timing,
@@ -884,172 +939,135 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         round_up_to_nearest: editLineData.round_up_to_nearest,
         location_id: editLineData.location_id ?? null,
         ...narrowInvoiceEdit,
+      };
+
+      const services = (lineServices[contractLineId] || []).filter(
+        (service) => !pendingServiceRemovalIds.includes(service.service.service_id)
+      );
+      const serviceById = new Map(services.map((svc) => [svc.service.service_id, svc]));
+
+      const members: ContractLineEditMemberDraft[] = [];
+      for (const [configId, editData] of Object.entries(editServiceConfigs)) {
+        if (configId.startsWith(DRAFT_SERVICE_CONFIG_PREFIX)) continue; // additions, below
+        const serviceConfig = services.find((s) => s.configuration.config_id === configId);
+        if (!serviceConfig || (pricingOnly && serviceConfig.typeConfig?.pricing_basis !== 'unit' && serviceConfig.configuration.configuration_type !== 'Usage')) continue;
+        const configurationType = serviceConfig.configuration.configuration_type;
+        const member: ContractLineEditMemberDraft = {
+          config_id: configId,
+          service_id: serviceConfig.service.service_id,
+        };
+        if (configurationType === 'Usage') {
+          Object.assign(member, {
+            base_rate: editData.base_rate,
+            measurement_mode: editData.measurement_mode,
+            minimum_usage: editData.minimum_usage,
+            enable_tiered_pricing: editData.enable_tiered_pricing,
+            unit_of_measure: editData.unit_of_measure,
+            rateTiers: editData.rateTiers,
+          });
+        } else {
+          member.quantity = editData.quantity;
+          member.custom_rate = editData.custom_rate;
+          if (configurationType === 'Hourly') member.hourly_rate = editData.hourly_rate;
+          if (configurationType === 'Fixed') member.base_rate = editData.base_rate;
+        }
+        members.push(member);
+      }
+
+      const addedServiceIds: string[] = [];
+      if (!pricingOnly) {
+        for (const addition of pendingServiceAdditions) {
+          const editData = editServiceConfigs[addition.draftConfigurationId] || {};
+          const { selection } = addition;
+          const type = selection.configurationType;
+          addedServiceIds.push(selection.service.service_id);
+          members.push({
+            service_id: selection.service.service_id,
+            configuration_type: type,
+            quantity: editData.quantity ?? selection.quantity,
+            custom_rate: editData.custom_rate ?? selection.customRate,
+            ...(type === 'Hourly' ? { hourly_rate: editData.hourly_rate ?? selection.customRate } : {}),
+            ...(type === 'Fixed' ? { base_rate: editData.base_rate ?? selection.customRate } : {}),
+            ...(type === 'Usage'
+              ? {
+                  base_rate: editData.base_rate ?? selection.customRate,
+                  measurement_mode: editData.measurement_mode ?? 'additive',
+                  minimum_usage: editData.minimum_usage ?? 0,
+                  enable_tiered_pricing: editData.enable_tiered_pricing ?? false,
+                  unit_of_measure:
+                    editData.unit_of_measure || selection.service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
+                  rateTiers: editData.rateTiers ?? [],
+                }
+              : {}),
+          });
+        }
+      }
+
+      const bucketOverlays: ContractLineEditDraft['bucket_overlays'] = [];
+      for (const [serviceId, bucketConfig] of Object.entries(pricingOnly ? {} : editBucketConfigs)) {
+        if (pendingServiceRemovalIds.includes(serviceId)) continue;
+        if (bucketConfig && bucketConfig.total_minutes !== undefined && bucketConfig.overage_rate !== undefined) {
+          bucketOverlays.push({
+            service_id: serviceId,
+            overlay: {
+              total_minutes: bucketConfig.total_minutes,
+              overage_rate: bucketConfig.overage_rate,
+              allow_rollover: bucketConfig.allow_rollover ?? false,
+              billing_period: bucketConfig.billing_period ?? 'monthly',
+            },
+          });
+        } else if (!bucketConfig && (
+          serviceById.get(serviceId)?.bucketConfig
+          || savedBucketOverlayServiceIds.includes(serviceId)
+        )) {
+          // The switch was turned off on a service that has a saved overlay.
+          bucketOverlays.push({ service_id: serviceId, overlay: null });
+        }
+      }
+
+      const result = await saveContractLineEdit(contractLineId, {
+        line,
+        members,
+        removed_config_ids: [],
+        added_service_ids: addedServiceIds,
+        removed_service_ids: pricingOnly ? [] : pendingServiceRemovalIds,
+        bucket_overlays: bucketOverlays,
+        effective_boundary: effectiveBoundary || null,
+        expected_version: editLineVersion,
       });
-      if (isReturnedActionError(updateResult)) {
-        const actionError = updateResult as { messageKey?: string; messageParams?: Record<string, string | number> };
-        setError(actionError.messageKey
-          ? t(actionError.messageKey, { ...(actionError.messageParams ?? {}), defaultValue: getErrorMessage(updateResult) })
-          : getErrorMessage(updateResult));
+
+      // Failure or conflict: nothing was written. Keep the editor open with the
+      // draft intact and say why. No reload, no partial-failure path.
+      if (isContractLineConflict(result)) {
+        setError(t(result.messageKey, { defaultValue: result.message }));
+        setConflictLineId(contractLineId);
         return;
       }
+      if (isReturnedActionError(result)) {
+        const actionFailure = result as { messageKey?: string; messageParams?: Record<string, string | number> };
+        setError(actionFailure.messageKey
+          ? t(actionFailure.messageKey, { ...(actionFailure.messageParams ?? {}), defaultValue: getErrorMessage(result) })
+          : getErrorMessage(result));
+        return;
+      }
+
       // If the saved line adopts a pending location, drop it from the pending set
       // so the group is no longer rendered as a placeholder.
       if (editLineData.location_id) {
         setPendingLocationIds((prev) => prev.filter((id) => id !== editLineData.location_id));
       }
 
-      // Update all service configurations based on what was actually edited
-      // Use editServiceConfigs keys to ensure we update the correct config_ids
-      const services = (lineServices[contractLineId] || []).filter(
-        (service) => !pendingServiceRemovalIds.includes(service.service.service_id)
-      );
-
-      // Build a map of service_id to serviceConfig for bucket updates
-      const serviceById = new Map();
-      services.forEach(svc => {
-        serviceById.set(svc.service.service_id, svc);
-      });
-
-      for (const [configId, editData] of Object.entries(editServiceConfigs)) {
-        // Find the matching service config to get configuration_type
-        const serviceConfig = services.find(s => s.configuration.config_id === configId);
-        if (!serviceConfig || (pricingOnly && serviceConfig.typeConfig?.pricing_basis !== 'unit' && serviceConfig.configuration.configuration_type !== 'Usage')) continue;
-
-        const baseConfig: any = {
-          quantity: editData.quantity,
-          custom_rate: editData.custom_rate,
-        };
-
-        const typeConfig: any = effectiveBoundary && (serviceConfig.typeConfig?.pricing_basis === 'unit' || serviceConfig.configuration.configuration_type === 'Usage') ? {effective_period_start: effectiveBoundary} : {};
-
-        // Build type-specific config based on configuration type
-        if (serviceConfig.configuration.configuration_type === 'Hourly') {
-          if (editData.hourly_rate !== undefined) {
-            typeConfig.hourly_rate = editData.hourly_rate;
-          }
-        } else if (serviceConfig.configuration.configuration_type === 'Usage') {
-          // updateConfiguration invokes the transactional effective-period
-          // transition, preserving historical measurement and pricing together.
-          delete baseConfig.quantity;
-          baseConfig.custom_rate = editData.base_rate;
-          typeConfig.measurement_mode = editData.measurement_mode;
-          typeConfig.minimum_usage = editData.minimum_usage;
-          typeConfig.enable_tiered_pricing = editData.enable_tiered_pricing;
-          if (editData.base_rate !== undefined) {
-            typeConfig.base_rate = editData.base_rate;
-          }
-          if (editData.unit_of_measure !== undefined) {
-            typeConfig.unit_of_measure = editData.unit_of_measure;
-          }
-        } else if (serviceConfig.configuration.configuration_type === 'Fixed') {
-          if (editData.base_rate !== undefined) {
-            typeConfig.base_rate = editData.base_rate;
-            // The edit keeps what the stored number means (share vs per unit); a
-            // rate on a member that had none is a unit price.
-            typeConfig.base_rate_basis = serviceConfig.typeConfig?.base_rate_basis ?? 'per_unit';
-          }
-        }
-
-        const updateConfigResult = serviceConfig.configuration.configuration_type === 'Usage'
-          ? await updateConfiguration(configId, baseConfig, typeConfig, editData.rateTiers)
-          : await updateConfiguration(configId, baseConfig, typeConfig);
-        if (isReturnedActionError(updateConfigResult)) {
-          setError(getErrorMessage(updateConfigResult));
-          return;
-        }
-      }
-
-      const additions: ContractLineServiceMembershipAddition[] = pendingServiceAdditions.map((addition) => {
-        const editData = editServiceConfigs[addition.draftConfigurationId] || {};
-        const typeConfig = addition.selection.configurationType === 'Hourly'
-          ? { hourly_rate: editData.hourly_rate ?? addition.selection.customRate }
-          : addition.selection.configurationType === 'Usage'
-            ? {
-                base_rate: editData.base_rate ?? addition.selection.customRate,
-                measurement_mode: editData.measurement_mode ?? 'additive',
-                minimum_usage: editData.minimum_usage ?? 0,
-                enable_tiered_pricing: editData.enable_tiered_pricing ?? false,
-                unit_of_measure:
-                  editData.unit_of_measure || addition.selection.service.unit_of_measure || resolveUnitOfMeasure({ fallback: 'C62' }).label,
-              }
-            // A Fixed member's authoring default is the catalog price per unit.
-            : { base_rate: editData.base_rate ?? addition.selection.customRate, base_rate_basis: 'per_unit' as const };
-
-        return {
-          serviceId: addition.selection.service.service_id,
-          quantity: editData.quantity ?? addition.selection.quantity,
-          customRate: addition.selection.configurationType === 'Usage'
-            ? editData.base_rate ?? addition.selection.customRate
-            : editData.custom_rate ?? addition.selection.customRate,
-          configurationType: addition.selection.configurationType,
-          typeConfig,
-          ...(addition.selection.configurationType === 'Usage' ? { rateTiers: editData.rateTiers ?? [] } : {}),
-        };
-      });
-
-      if (!pricingOnly && (additions.length > 0 || pendingServiceRemovalIds.length > 0)) {
-        const membershipResult = await applyContractLineServiceMembershipChanges(
-          contractLineId,
-          {
-            additions,
-            removals: pendingServiceRemovalIds,
-          }
-        );
-        if (isReturnedActionError(membershipResult)) {
-          setError(getErrorMessage(membershipResult));
-          return;
-        }
-      }
-
-      // Persist memberships before bucket overlays so a newly selected service
-      // has its primary configuration available to the bucket upsert.
-      for (const [serviceId, bucketConfig] of Object.entries(pricingOnly ? {} : editBucketConfigs)) {
-        if (pendingServiceRemovalIds.includes(serviceId)) {
-          continue;
-        }
-        if (bucketConfig && bucketConfig.total_minutes !== undefined && bucketConfig.overage_rate !== undefined) {
-          const bucketResult = await upsertContractLineServiceBucketConfigurationAction(
-            contractLineId,
-            serviceId,
-            {
-              total_minutes: bucketConfig.total_minutes,
-              overage_rate: bucketConfig.overage_rate,
-              allow_rollover: bucketConfig.allow_rollover ?? false,
-              billing_period: bucketConfig.billing_period ?? 'monthly'
-            }
-          );
-          if (isReturnedActionError(bucketResult)) {
-            setError(getErrorMessage(bucketResult));
-            return;
-          }
-        } else if (!bucketConfig && (
-          serviceById.get(serviceId)?.bucketConfig
-          || savedBucketOverlayServiceIds.includes(serviceId)
-        )) {
-          // The switch was turned off on a service that has a saved overlay
-          // (a legacy Bucket configuration row or the single-member pool the
-          // enable path writes). Without this the draft null is simply skipped
-          // and the overlay reappears on reload.
-          const deleteResult = await deleteBucketOverlay(contractLineId, serviceId);
-          if (isReturnedActionError(deleteResult)) {
-            setError(getErrorMessage(deleteResult));
-            return;
-          }
-        }
-      }
-
-      // Clear cached services for this line and force reload
+      // Clear cached services for this line and reload once.
       setLineServices(prev => {
         const updated = { ...prev };
         delete updated[contractLineId];
         return updated;
       });
-
-      // Force reload services for this line (bypass cache check)
       await loadServicesForLine(contractLineId, true);
       await fetchData();
       setEditingLineId(null);
       setEditLineData({});
+      setEditLineVersion(null);
       setEditServiceConfigs({});
       setEditBucketConfigs({});
       setSavedBucketOverlayServiceIds([]);
@@ -1065,8 +1083,10 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   };
 
   const handleCancelEdit = () => {
+    setConflictLineId(null);
     setEditingLineId(null);
     setEditLineData({});
+    setEditLineVersion(null);
     setEditServiceConfigs({});
     setEditBucketConfigs({});
     setSavedBucketOverlayServiceIds([]);
@@ -1079,6 +1099,94 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       return t('common.empty.notAvailable', { defaultValue: 'N/A' });
     }
     return formatCurrency(rate / 100, contract.currency_code || 'USD');
+  };
+
+  // Catalog-priced recurring product members have no stored rate; their effective unit price
+  // comes from the shared resolver (the invoice engine's chain) fed by the shared catalog lookup.
+  const { money: formatMinorMoney } = useCurrencyFormat();
+  const recurringProductIds = useMemo(
+    () => Object.values(lineServices)
+      .flat()
+      .filter((member) => member.service.item_kind === 'product')
+      .map((member) => member.service.service_id),
+    [lineServices],
+  );
+  const { rates: productCatalogRates, canViewCost: canViewProductCost } = useProductCatalogRates(
+    contract.currency_code,
+    recurringProductIds,
+  );
+
+  /** Read-only unit price of a recurring product member: price, catalog/override label, cost. */
+  const renderRecurringProductRate = (serviceConfig: ServiceConfiguration) => {
+    const currencyCode = contract.currency_code;
+    const lookup = productCatalogRates[serviceConfig.service.service_id];
+    // Exactly the engine's inputs (computeRecurringQuantityCharges): the fixed config's
+    // base_rate is not one of them — the engine never reads it for a product member.
+    const member = {
+      configuration_custom_rate: serviceConfig.configuration.custom_rate,
+      service_line_custom_rate: serviceConfig.service_line_custom_rate,
+      price_rate: lookup?.currency_rate,
+      default_rate: lookup?.default_rate,
+    };
+    if (!currencyCode) {
+      return formatRate(null);
+    }
+    if (!hasRecurringMemberRate(member)) {
+      // Still loading: claim nothing. Loaded with no rate anywhere in the chain: the engine
+      // cannot bill this member, so say so instead of showing an amount it will not charge.
+      return lookup
+        ? (
+          <span className="text-amber-700" data-testid={`recurring-product-missing-price-${serviceConfig.configuration.config_id}`}>
+            {t('wizardProducts.validation.noCurrencyPriceEnterUnitPrice', {
+              defaultValue: 'No {{currency}} price in the catalog. Enter a unit price.',
+              currency: currencyCode,
+            })}
+          </span>
+        )
+        : formatRate(null);
+    }
+    const { rateCents, source } = resolveRecurringMemberRate(member);
+    const isOverride = source !== 'currency catalog price';
+    const showCost = canViewProductCost && lookup?.cost != null;
+    const costCurrency = lookup?.cost_currency || currencyCode;
+    const margin = showCost
+      ? productUnitMarginCents(rateCents, lookup?.cost, lookup?.cost_currency, currencyCode)
+      : null;
+    return (
+      <>
+        <span data-testid={`recurring-product-price-${serviceConfig.configuration.config_id}`}>
+          {formatMinorMoney(rateCents, currencyCode)}
+        </span>{' '}
+        <span className="text-xs text-muted-foreground">
+          ({isOverride
+            ? t('contractLines.pricing.override', { defaultValue: 'override' })
+            : t('contractLines.pricing.catalog', { defaultValue: 'catalog' })})
+        </span>
+        {showCost ? (
+          <span
+            className="block text-xs text-muted-foreground"
+            data-testid={`recurring-product-cost-${serviceConfig.configuration.config_id}`}
+          >
+            {costCurrency !== currencyCode
+              ? t('contractLines.pricing.costInCurrency', {
+                  defaultValue: 'Cost in {{currency}}: {{cost}}',
+                  currency: costCurrency,
+                  cost: formatMinorMoney(lookup?.cost ?? 0, costCurrency),
+                })
+              : t('contractLines.pricing.cost', {
+                  defaultValue: 'Cost: {{cost}}',
+                  cost: formatMinorMoney(lookup?.cost ?? 0, currencyCode),
+                })}
+            {margin !== null
+              ? ` · ${t('contractLines.pricing.margin', {
+                  defaultValue: 'Margin: {{margin}} per unit',
+                  margin: formatMinorMoney(margin, currencyCode),
+                })}`
+              : ''}
+          </span>
+        ) : null}
+      </>
+    );
   };
 
   const editingLine = editingLineId
@@ -1178,7 +1286,20 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>
+              {error}
+              {conflictLineId && (
+                <Button
+                  id="contract-line-conflict-reload"
+                  variant="outline"
+                  size="sm"
+                  className="ml-3"
+                  onClick={() => { void handleReloadAfterConflict(); }}
+                >
+                  {t('contractLines.errors.reloadLatest', { defaultValue: 'Reload latest' })}
+                </Button>
+              )}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -2055,7 +2176,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                             />
                                           ) : (
                                             <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
-                                              {formatRate(serviceConfig.typeConfig?.hourly_rate || serviceConfig.typeConfig?.base_rate)}
+                                              {isRecurringProduct
+                                                ? renderRecurringProductRate(serviceConfig)
+                                                : formatRate(serviceConfig.typeConfig?.hourly_rate || serviceConfig.typeConfig?.base_rate)}
                                             </p>
                                           )}
                                         </div>

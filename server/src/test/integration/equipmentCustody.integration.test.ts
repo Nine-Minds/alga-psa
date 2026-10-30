@@ -229,7 +229,8 @@ const intake = (fx: Fx, over: Record<string, unknown> = {}) => ({
   bin: 'Shelf B3',
   next_action_party: 'vendor',
   next_action_note: 'waiting on vendor, follow up in 5 days',
-  follow_up_on: '2026-10-29',
+  // Far future so the default intake is never overdue, whatever day the suite runs.
+  follow_up_on: '2099-10-29',
   accessories: [{ label: 'Power adapter', quantity: 1 }],
   ...over,
 });
@@ -625,7 +626,7 @@ describe('equipment custody (integration)', () => {
   it('writes non-physical edits as custody_updated history, not events, and keeps follow_up_on a calendar date', async () => {
     const fx = await seedFixture();
     const r = unwrap<any>(await receiveEquipment(intake(fx)));
-    expect(r.custody.follow_up_on).toBe('2026-10-29');
+    expect(r.custody.follow_up_on).toBe('2099-10-29');
     const id = r.custody.custody_id;
     const eventsBefore = await table(fx.tenantId, 'asset_custody_events').where({ custody_id: id });
 
@@ -640,7 +641,8 @@ describe('equipment custody (integration)', () => {
 
   it('keeps the queue keyed off the open episode (closed ticket still listed), with tabs and filters', async () => {
     const fx = await seedFixture();
-    const a = unwrap<any>(await receiveEquipment(intake(fx)));
+    // "a" must never be overdue regardless of the wall clock; "b" is always overdue.
+    const a = unwrap<any>(await receiveEquipment(intake(fx, { follow_up_on: '2999-12-31' })));
     const b = unwrap<any>(await receiveEquipment(intake(fx, { new_asset: { name: 'Laptop' }, next_action_party: 'client', follow_up_on: '2020-01-01', bin: null })));
     // The ticket "closes": the queue must not care, and neither must the status column.
     await table(fx.tenantId, 'assets').where({ asset_id: a.asset.asset_id }).update({ status: 'retired' });

@@ -371,8 +371,8 @@ export const projectStatsResponseSchema = z.object({
   on_hold_projects: z.number(),
   cancelled_projects: z.number(),
   overdue_projects: z.number(),
-  projects_by_status: z.record(z.number()),
-  projects_by_client: z.record(z.number()),
+  projects_by_status: z.record(z.string(), z.number()),
+  projects_by_client: z.record(z.string(), z.number()),
   total_budgeted_hours: z.number(),
   total_actual_hours: z.number(),
   average_project_duration: z.number().nullable(),
@@ -387,16 +387,16 @@ export const projectSearchSchema = z.object({
   status: z.array(projectStatusSchema).optional(),
   client_ids: z.array(uuidSchema).optional(),
   assigned_to_ids: z.array(uuidSchema).optional(),
-  include_inactive: booleanTransform.optional().default("false"),
-  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
+  include_inactive: booleanTransform.prefault("false"),
+  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).prefault('25')
 });
 
 // Project export schema
 export const projectExportQuerySchema = z.object({
   format: z.enum(['csv', 'json', 'xlsx']).optional().default('csv'),
-  include_inactive: booleanTransform.optional().default("false"),
-  include_phases: booleanTransform.optional().default("false"),
-  include_tasks: booleanTransform.optional().default("false"),
+  include_inactive: booleanTransform.prefault("false"),
+  include_phases: booleanTransform.prefault("false"),
+  include_tasks: booleanTransform.prefault("false"),
   status: z.array(projectStatusSchema).optional(),
   client_ids: z.array(uuidSchema).optional(),
   fields: z.array(z.string()).optional()

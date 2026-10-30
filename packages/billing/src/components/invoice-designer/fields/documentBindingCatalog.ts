@@ -23,6 +23,10 @@ import {
   STAGING_MANIFEST_VALUE_BINDINGS,
   buildStagingManifestTemplateBindings,
 } from '../../../lib/staging-manifest-template-ast/bindings';
+import {
+  RMA_RETURN_SLIP_VALUE_BINDINGS,
+  buildRmaReturnSlipTemplateBindings,
+} from '../../../lib/rma-return-slip-template-ast/bindings';
 import type { DesignerDocumentKind } from '../utils/documentKind';
 import {
   getTemplateFieldDefinition,
@@ -133,6 +137,8 @@ const ITEM_FIELDS: Record<DesignerDocumentKind, DocumentItemField[]> = {
   ],
   // Labels render one record; there are no repeating item rows.
   'work-tag': [],
+  // The return slip renders one RMA; there are no repeating item rows.
+  'rma-return-slip': [],
   'staging-manifest': [
     { name: 'description', valueType: 'string', description: 'Product name, client asset name, or client item description.' },
     { name: 'sku', valueType: 'string', description: 'Product SKU, or the client asset tag.' },
@@ -185,6 +191,9 @@ const buildDocumentBindingFields = (documentKind: DesignerDocumentKind): Documen
   }
   if (documentKind === 'work-tag') {
     return buildCatalogFields(LABEL_TEMPLATE_VALUE_BINDINGS, { scalarRoot: 'label' });
+  }
+  if (documentKind === 'rma-return-slip') {
+    return buildCatalogFields(RMA_RETURN_SLIP_VALUE_BINDINGS, { scalarRoot: 'rma' });
   }
   if (documentKind === 'staging-manifest') {
     return buildCatalogFields(STAGING_MANIFEST_VALUE_BINDINGS, { scalarRoot: 'manifest' });
@@ -308,6 +317,7 @@ export const resolveDocumentCanonicalBindings = (
   if (documentKind === 'sales-order') return buildSalesOrderTemplateBindings();
   if (documentKind === 'work-tag') return buildLabelTemplateBindings();
   if (documentKind === 'staging-manifest') return buildStagingManifestTemplateBindings();
+  if (documentKind === 'rma-return-slip') return buildRmaReturnSlipTemplateBindings();
   return buildInvoiceTemplateBindings();
 };
 
@@ -327,7 +337,7 @@ export const resolveDocumentLogoRenderPath = (documentKind: DesignerDocumentKind
 
 /** Every document kind's logo path, for recognising a logo binding in imported layouts. */
 export const isDocumentLogoRenderPath = (path: string): boolean =>
-  (['invoice', 'quote', 'sales-order', 'work-tag', 'staging-manifest'] as const).some(
+  (['invoice', 'quote', 'sales-order', 'work-tag', 'staging-manifest', 'rma-return-slip'] as const).some(
     (documentKind) => resolveDocumentLogoRenderPath(documentKind) === path.trim()
   );
 
@@ -383,7 +393,7 @@ export const buildDocumentExpressionPathOptions = (params: {
     contextRoots: buildDocumentExpressionContextRoots(params.documentKind),
   });
 
-const DOCUMENT_KINDS: DesignerDocumentKind[] = ['invoice', 'quote', 'sales-order', 'work-tag', 'staging-manifest'];
+const DOCUMENT_KINDS: DesignerDocumentKind[] = ['invoice', 'quote', 'sales-order', 'work-tag', 'staging-manifest', 'rma-return-slip'];
 
 /**
  * Every render path a binding key could mean, across document types. The editor canvas resolves a

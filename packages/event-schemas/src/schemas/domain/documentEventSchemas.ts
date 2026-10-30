@@ -59,7 +59,7 @@ export type DocumentGeneratedEventPayload = z.infer<typeof documentGeneratedEven
 
 export const documentSignatureRequestedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   documentId: documentIdSchema,
-  requestId: z.string().uuid(),
+  requestId: z.string().guid(),
   requestedByUserId: userIdSchema.optional(),
   requestedAt: z.string().datetime().optional(),
   signers: z
@@ -79,17 +79,17 @@ export type DocumentSignatureRequestedEventPayload = z.infer<
 
 export const documentSignedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   documentId: documentIdSchema,
-  requestId: z.string().uuid(),
+  requestId: z.string().guid(),
   signedAt: z.string().datetime().optional(),
   signerEmail: z.string().email().optional(),
-  signerId: z.string().uuid().optional(),
+  signerId: z.string().guid().optional(),
 }).describe('Payload for DOCUMENT_SIGNED');
 
 export type DocumentSignedEventPayload = z.infer<typeof documentSignedEventPayloadSchema>;
 
 export const documentSignatureExpiredEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   documentId: documentIdSchema,
-  requestId: z.string().uuid(),
+  requestId: z.string().guid(),
   expiredAt: z.string().datetime().optional(),
 }).describe('Payload for DOCUMENT_SIGNATURE_EXPIRED');
 
@@ -105,7 +105,7 @@ export const documentUpdatedEventPayloadSchema = BaseDomainEventPayloadSchema.ex
 export type DocumentUpdatedEventPayload = z.infer<typeof documentUpdatedEventPayloadSchema>;
 
 export const kbArticleEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  articleId: z.string().uuid(),
+  articleId: z.string().guid(),
   documentId: documentIdSchema.optional(),
   userId: userIdSchema.optional(),
   changedFields: z.array(z.string()).optional(),

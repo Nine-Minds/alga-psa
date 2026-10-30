@@ -29,6 +29,14 @@ export async function register() {
       console.error('Failed to register the co-managed capability:', error);
     }
 
+    // Shared-work providers (schedule, appointment, interaction, meeting seams). Registration is
+    // best-effort: without it every seam answers { handled: false } and native behaviour is unchanged.
+    try {
+      await import('@alga-psa/co-managed/schedulingRegistration');
+    } catch (error) {
+      console.error('Failed to register the co-managed scheduling providers:', error);
+    }
+
     // Wire the DB-prefs-aware locale resolver into @alga-psa/ui's server i18n.
     // Done here (instead of at the @alga-psa/ui level) to avoid a
     // ui→tenancy circular dependency; tenancy already depends on ui.

@@ -91,7 +91,7 @@ const clientSummarySchema = z.object({
   url: z.string().nullable().describe('Website'),
   billing_email: z.string().nullable().optional().describe('Billing email address'),
   is_inactive: z.boolean().describe('Is inactive'),
-  properties: z.record(z.unknown()).nullable().describe('Custom properties'),
+  properties: z.record(z.string(), z.unknown()).nullable().describe('Custom properties'),
   updated_at: isoDateTimeSchema.optional().describe('Last updated at'),
 });
 
@@ -137,7 +137,7 @@ const clientCreateInputSchema = z.object({
   default_currency_code: z.string().optional(),
   notes: z.string().optional(),
   client_since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'client_since must be a YYYY-MM-DD date').optional(),
-  properties: z.record(z.unknown()).optional(),
+  properties: z.record(z.string(), z.unknown()).optional(),
   parent_client_id: withWorkflowPicker(nullableUuidSchema.optional(), 'Parent client id', 'client'),
   contract_line_id: nullableUuidSchema.optional(),
   is_default: z.boolean().optional(),
@@ -161,7 +161,7 @@ const clientUpdatePatchSchema = z
     default_currency_code: z.string().nullable().optional(),
     notes: z.string().nullable().optional(),
     client_since: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'client_since must be a YYYY-MM-DD date').nullable().optional(),
-    properties: z.record(z.unknown()).nullable().optional(),
+    properties: z.record(z.string(), z.unknown()).nullable().optional(),
     parent_client_id: withWorkflowPicker(nullableUuidSchema.optional(), 'Parent client id', 'client'),
     contract_line_id: nullableUuidSchema.optional(),
     is_default: z.boolean().nullable().optional(),

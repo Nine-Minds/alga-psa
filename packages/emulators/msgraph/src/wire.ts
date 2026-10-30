@@ -440,6 +440,37 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     res.status(201).json(publicEvent(core.createCalendarEvent(String(req.params.userId), req.body ?? {})));
   });
 
+  // Only the extended-property lookup that durable Teams create/recover uses
+  // is modeled; any other $filter is refused rather than silently ignored.
+  graph.get('/users/:userId/events', (req, res) => {
+    const userId = String(req.params.userId);
+    const rawFilter = req.query.$filter;
+    let events = [...core.calendarEvents.values()].filter(event => event.organizerUserId === userId);
+    if (rawFilter !== undefined) {
+      const match = typeof rawFilter === 'string'
+        ? rawFilter.match(/^singleValueExtendedProperties\/Any\(ep:\s*ep\/id eq '((?:[^']|'')*)' and ep\/value eq '((?:[^']|'')*)'\)$/)
+        : null;
+      if (!match) {
+        throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Only singleValueExtendedProperties/Any(ep: ep/id eq \'<id>\' and ep/value eq \'<value>\') is modeled' } });
+      }
+      const [id, value] = [match[1], match[2]].map(part => part.replace(/''/g, "'"));
+      events = events.filter(event => Array.isArray(event.singleValueExtendedProperties)
+        && event.singleValueExtendedProperties.some((p: any) => p?.id === id && p?.value === value));
+    }
+    const top = Number.parseInt(String(req.query.$top ?? ''), 10);
+    if (Number.isFinite(top) && top >= 0) events = events.slice(0, top);
+    const select = typeof req.query.$select === 'string'
+      ? new Set(req.query.$select.split(',').map(field => field.trim()).filter(Boolean))
+      : null;
+    res.json({
+      value: events.map(event => {
+        const full = publicEvent(event) as Record<string, unknown>;
+        if (!select) return full;
+        return Object.fromEntries(Object.entries(full).filter(([key]) => key === 'id' || select.has(key)));
+      }),
+    });
+  });
+
   graph.patch('/users/:userId/events/:eventId', (req, res) => {
     res.json(publicEvent(core.updateCalendarEvent(String(req.params.eventId), req.body ?? {})));
   });

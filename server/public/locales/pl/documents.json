@@ -93,7 +93,8 @@
       "pickedBy": "Pobrał: ____________________     Data: ____________",
       "preTaxTotals": "Podane sumy nie zawierają podatku. Należny podatek jest naliczany na fakturze.",
       "thankYouForOrder": "Dziękujemy za zamówienie.",
-      "checkedBy": "Sprawdził(a): ____________________     Data: ____________"
+      "checkedBy": "Sprawdził(a): ____________________     Data: ____________",
+      "releasedBy": "Wydał: ____________________     Podpis: ____________________     Data: ____________"
     },
     "serialNumbers": "Numery seryjne",
     "allocatedSerialsNote": "Przypisane numery seryjne; mogą ulec zmianie podczas realizacji.",
@@ -114,7 +115,17 @@
     "ownerMsp": "MSP",
     "ownerClient": "Klient",
     "statusOpen": "Otwarte",
-    "statusSealed": "Zaplombowane"
+    "statusSealed": "Zaplombowane",
+    "rmaReturnSlipTitle": "DOKUMENT ZWROTU RMA",
+    "device": "Urządzenie",
+    "vendor": "Dostawca",
+    "vendorReference": "Referencja dostawcy",
+    "asset": "Zasób",
+    "assetTag": "Tag zasobu",
+    "replacementSerial": "Numer seryjny zamiennika",
+    "shipping": "Wysyłka",
+    "returnBy": "Zwrot do",
+    "returnShipTo": "Adres wysyłki zwrotnej"
   },
   "errors": {
     "permissions": {

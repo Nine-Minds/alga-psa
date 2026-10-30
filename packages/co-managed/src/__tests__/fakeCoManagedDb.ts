@@ -12,6 +12,21 @@ const uniqueKeys: Record<string, string[]> = {
   co_managed_allocations: ['tenant', 'operation_id'],
   co_managed_provisioning_operations: ['tenant', 'operation_id'],
   co_management_relationships: ['tenant', 'relationship_id'],
+  co_management_ticket_work: ['tenant', 'relationship_id', 'ticket_id'],
+  co_management_ticket_handoffs: ['tenant', 'operation_id'],
+  co_management_command_receipts: ['tenant', 'operation_id'],
+  co_managed_ticket_references: ['tenant', 'customer_tenant', 'relationship_id', 'ticket_id'],
+};
+/** jsonb columns come back from Postgres as objects; the domain code writes them as JSON strings. */
+const jsonColumns: Record<string, string[]> = {
+  co_managed_meeting_creation_operations: ['approval_input', 'creation_target', 'provider_request', 'event_receipt'],
+};
+const insertDefaults: Record<string, Row> = {
+  co_managed_meeting_creation_operations: { attempt_count: 0, event_receipt: null, provider_meeting_id: null, meeting_id: null, external_attempted_at: null, completed_at: null, last_error_code: null },
+};
+const decodeJson = (table: string, row: Row) => {
+  for (const key of jsonColumns[table] ?? []) if (typeof row[key] === 'string') row[key] = JSON.parse(row[key]);
+  return row;
 };
 const NOW = '2026-10-27T00:00:00.000Z';
 const col = (name: string) => name.split('.').pop()!;
@@ -47,7 +62,8 @@ function makeBuilder(store: FakeStore, table: string, tenant: string | undefined
       if (typeof a === 'function') return builder;
       if (c !== undefined) {
         const cmp: Record<string, (x: any, y: any) => boolean> = { '>': (x, y) => x > y, '<=': (x, y) => x <= y, '<': (x, y) => x < y, '>=': (x, y) => x >= y };
-        filters.push(row => cmp[b](row[col(a)], c)); return builder;
+        // A raw SQL operand (clock_timestamp() etc.) is not interpreted: treat the bound as already reached.
+        filters.push(row => c && typeof c === 'object' && '__raw' in c ? true : cmp[b](row[col(a)], c)); return builder;
       }
       if (typeof a === 'object') for (const [k, v] of Object.entries(a)) filters.push(row => row[col(k)] === v);
       else filters.push(row => row[col(a)] === b);
@@ -65,12 +81,19 @@ function makeBuilder(store: FakeStore, table: string, tenant: string | undefined
     orderBy() { return builder; },
     select() { return builder; },
     async first() { const row = selected()[0]; return row ? { ...row } : undefined; },
-    async update(patch: Row) {
+    /** Awaitable (row count) and `.returning()`-able, like knex. */
+    update(patch: Row) {
       const rows = selected();
       for (const row of rows) for (const [k, v] of Object.entries(patch)) {
         if (v && typeof v === 'object' && '__raw' in v) { if (/revision \+ 1/.test(v.__raw)) row[k] = Number(row[k]) + 1; else row[k] = v.__raw; }
         else row[k] = v;
       }
+      for (const row of rows) decodeJson(name, row);
+      return Object.assign(Promise.resolve(rows.length), { returning: async () => rows.map(row => ({ ...row })) });
+    },
+    async del() {
+      const rows = selected();
+      store.tables[name] = store.rows(name).filter(row => !rows.includes(row));
       return rows.length;
     },
     insert(input: Row | Row[]) {
@@ -84,8 +107,9 @@ function makeBuilder(store: FakeStore, table: string, tenant: string | undefined
             if (onConflict) continue;
             throw new Error(`duplicate key value violates unique constraint on ${name}`);
           }
-          store.rows(name).push({ ...item });
-          inserted.push({ ...item });
+          const stored = decodeJson(name, { ...insertDefaults[name], ...item });
+          store.rows(name).push(stored);
+          inserted.push({ ...stored });
         }
         return wantRows ? inserted : inserted.length;
       };
