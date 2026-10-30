@@ -168,6 +168,11 @@ vi.mock('../TicketMaterialsCard', () => ({
   default: () => <div data-testid="ticket-materials-card" />,
 }));
 
+vi.mock('../TicketFixedFeeServicesCard', () => ({
+  __esModule: true,
+  default: () => <div data-testid="ticket-fixed-fee-services-card" />,
+}));
+
 vi.mock('../TicketWatchListCard', () => ({
   __esModule: true,
   default: () => <div data-testid="ticket-watch-list-card" />,

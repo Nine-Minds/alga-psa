@@ -130,6 +130,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'project_task_comments',
   'project_materials',
   'ticket_materials',
+  'ticket_fixed_fee_services',
   'project_template_checklist_items',
   'project_template_dependencies',
   'project_template_task_resources',

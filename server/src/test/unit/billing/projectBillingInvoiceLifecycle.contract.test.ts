@@ -96,7 +96,13 @@ describe("project invoice lifecycle contracts", () => {
       ".whereIn('project_material_id', uniqueProjectMaterialIds)",
     );
     expect(materialPersistence).toContain(
-      ".whereIn('ticket_material_id', uniqueTicketMaterialIds)",
+      "ticket_material_id: charge.material_source_id, is_billed: false",
+    );
+    expect(materialPersistence).toContain(
+      "updated_at: charge.material_source_updated_at",
+    );
+    expect(materialPersistence).toContain(
+      "if (updatedCount !== 1)",
     );
     expect(materialPersistence).toContain(
       "updatedCount !== uniqueProjectMaterialIds.length",
@@ -180,7 +186,7 @@ describe("project invoice lifecycle contracts", () => {
     );
     expect(rollback).toContain("project_billing_cap_rolled_back: true");
     expect(invoiceModification).toContain(
-      "for (const tableName of ['project_materials', 'ticket_materials'])",
+      "for (const tableName of ['project_materials', 'ticket_materials', 'ticket_fixed_fee_services'])",
     );
     expect(invoiceModification).toContain(
       ".where({ billed_invoice_id: invoiceId, is_billed: true })",

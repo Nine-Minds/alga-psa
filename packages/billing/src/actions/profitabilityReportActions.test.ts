@@ -380,6 +380,22 @@ describe('profitability report actions', () => {
     });
   });
 
+  it('preserves signed material COGS in totals and requests tenant-scoped consumption and return movements', async () => {
+    seedRawMocks({ materials: [{ ...materialRows[0], cost_cents: -500 }] });
+    const summary = await (getProfitabilitySummary as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      { startDate: '2026-01-01', endDate: '2026-01-31' },
+    );
+    expect(summary.materialCost).toBe(-500);
+    const materialQuery = rawMock.mock.calls.find(([sql]) => sql.includes('WITH material_rows'));
+    expect(materialQuery).toBeDefined();
+    expect(materialQuery![0]).toContain('SUM(sm.cogs_cost)');
+    expect(materialQuery![0]).toContain("sm.movement_type IN ('consume', 'return_restock')");
+    expect(materialQuery![0]).toContain('sm.tenant = ?');
+    expect(materialQuery![1]).toContain('tenant-1');
+  });
+
   it('attributes contract-linked sales-order COGS to the agreement bucket', async () => {
     seedRawMocks({
       salesOrderCogs: [

@@ -1,0 +1,94 @@
+.container {
+  container-type: inline-size;
+  min-width: 0;
+}
+
+.table {
+  table-layout: fixed;
+  color: rgb(var(--color-text-800));
+}
+
+.table th,
+.table td {
+  padding: 0.5rem 0.25rem;
+  text-align: right;
+  vertical-align: middle;
+  overflow-wrap: anywhere;
+}
+
+.table th {
+  font-weight: 500;
+}
+
+.table th:first-child {
+  width: 30%;
+  text-align: left;
+}
+
+.table th:last-child {
+  width: 4.5rem;
+}
+
+.table tbody tr {
+  border-top: 1px solid rgb(var(--color-border-200));
+}
+
+.table .item {
+  text-align: left;
+  min-width: 0;
+}
+
+.actions {
+  white-space: nowrap;
+}
+
+@container (max-width: 36rem) {
+  .table,
+  .table tbody {
+    display: block;
+  }
+
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(4.25rem, 1fr);
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+  }
+
+  .table td {
+    min-width: 0;
+    padding: 0;
+    text-align: left;
+    overflow-wrap: anywhere;
+    grid-row: 2;
+  }
+
+  .table .item {
+    grid-column: 1 / 4;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .table .actions {
+    grid-column: 4;
+    grid-row: 1;
+    align-self: center;
+  }
+
+  .table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: rgb(var(--color-text-500));
+  }
+}
