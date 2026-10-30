@@ -65,4 +65,55 @@ describe('redactToolArguments', () => {
     const args = { title: 'Printer broken', link: 'https://example.com/tickets/1?page=2', long: B64 };
     expect(redactToolArguments('call_api_endpoint', args)).toEqual(args);
   });
+  it('redacts a doubly JSON-encoded carrier body', () => {
+    const body = JSON.stringify(JSON.stringify({ source: { type: 'url', url: S3 } }));
+    const result = redactToolArguments('call_api_endpoint', { body });
+    expect(dump(result)).not.toContain('X-Amz-Signature');
+    expect(result.body).toEqual({ source: { type: 'url', url: '[redacted]' } });
+  });
+
+  it('redacts a carrier encoded more times than the depth cap allows', () => {
+    let body = JSON.stringify({ note: 'ok' });
+    for (let i = 0; i < 6; i++) body = JSON.stringify(body);
+    const result = redactToolArguments('call_api_endpoint', { body });
+    expect(result.body).toBe('[redacted]');
+  });
+
+  it('redacts a carrier string that parses to a bare JSON string', () => {
+    expect(redactToolArguments('x', { body: '"hello"' }).body).toBe('[redacted]');
+    expect(redactToolArguments('x', { body: '42' }).body).toBe(42);
+  });
+
+  it('redacts a signed URL embedded in text inside a carrier, keeping the text', () => {
+    const result = redactToolArguments('call_api_endpoint', { body: { note: 'see ' + S3 } });
+    expect(dump(result)).not.toContain('X-Amz-Signature');
+    expect(result.body).toEqual({ note: 'see [redacted]' });
+  });
+
+  it('redacts embedded signed URLs outside carriers and keeps unsigned URLs', () => {
+    const result = redactToolArguments('x', {
+      title: `fetch (${S3}). then done`,
+      escaped: 'u https://h.example.com/a?x=1\\u0026sig=secret9 end',
+      plain: 'go to https://plain.example.com/f?a=1 now',
+    });
+    expect(dump(result)).not.toMatch(/X-Amz-Signature|secret9/);
+    expect(result.title).toBe('fetch ([redacted]). then done');
+    expect(result.escaped).toBe('u [redacted] end');
+    expect(result.plain).toBe('go to https://plain.example.com/f?a=1 now');
+  });
+
+  it('redacts credential headers case-insensitively', () => {
+    const result = redactToolArguments('x', {
+      headers: { authorization: 'Bearer abc.def.ghi', Authorization: 'x', 'X-API-Key': 'k', Cookie: 'a=b', 'set-cookie': 's', 'proxy-authorization': 'p', accept: 'json' },
+    });
+    expect(result.headers).toEqual({
+      authorization: '[redacted]', Authorization: '[redacted]', 'X-API-Key': '[redacted]', Cookie: '[redacted]',
+      'set-cookie': '[redacted]', 'proxy-authorization': '[redacted]', accept: 'json',
+    });
+  });
+
+  it('redacts Bearer/Basic values under unrelated keys', () => {
+    const result = redactToolArguments('x', { note: 'Bearer abc.def', other: 'basic dXNlcjpwdw==', fine: 'bearer-less' });
+    expect(result).toEqual({ note: '[redacted]', other: '[redacted]', fine: 'bearer-less' });
+  });
 });
