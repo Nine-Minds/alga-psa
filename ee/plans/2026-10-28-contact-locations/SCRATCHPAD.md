@@ -151,3 +151,55 @@ lane; it is a follow-up, not a behaviour gap.
   seam tests listed in the previous round's note. This remains a departure from operator amendment
   #4 and wants a sign-off rather than silence: closing it means standing the fixtures up in the
   integration lane.
+
+## 2026-10-30: fourth review round — the quick-add defect, and the DB lane stood up
+
+- **Blocker fixed (F020).** `workArrangement`, `locationLinks` and `isLocationsOpen` were the only
+  quick-add state the reset effect's close branch did not clear, and `handleClientSelect` did not
+  clear the links either. Both hosts keep the dialog mounted, so adding contact A at client X with
+  Warehouse/Hybrid and then reopening Add Contact wrote Warehouse+Hybrid onto contact B; and picking
+  client A, selecting its site and switching to client B left a link that renders nowhere (the
+  editor lists only B's sites) yet still fails the save, with no checkbox to untick. The close
+  branch clears all three now, a client change drops the links the way `ContactDetailsEdit` and
+  mobile already do, and `QuickAddClient`'s "client added" path goes through the same handler.
+- **Latent sibling closed.** `ContactDetailsEdit` sent `locations` unconditionally from
+  `initialContact.locations ?? []`, so a future caller handing it a contact without links loaded
+  would wipe them. It now only speaks for the links when they arrived with the contact, the operator
+  edited them, or a client change asked for them to go (`locationsKnown`).
+- **22 deferred tests landed (34 → 10), and standing the DB lane up found three real defects.**
+  The integration lane runs locally (`createTestDbConnection` + the seeded tenant), so the halves
+  that "needed fixtures" now have them:
+  - `contactLocationsWrite.integration.test.ts` (T012–T015), `ticketContactLocationAutofill`
+    (T041–T044), `contactEffectiveLocationAction` (T045 + T039's one-read-per-page query count),
+    `contactLocationsCsv` (T074–T076), `contactService.locations.integration` (T069/T070/T072/T088),
+    `contactSearchIndexLocations` (T089/T091), plus jsdom suites for quick add (T031),
+    the client-tab Location filter (T035) and the recurring overrides dialog (T055), and T056/T073
+    at the REST seam.
+  - **Defect 1 (CSV import).** A row whose location name could not be placed was refused *after*
+    `createContact`/`updateContact` had run in the import's shared transaction, so the refused row
+    left a linkless contact (or a half-applied edit) behind. Names are resolved before the write in
+    both branches now.
+  - **Defect 2 (REST).** `ContactLocationClientMismatch` carries a `code`, not a message prefix, so
+    `throwContactModelApiError` let it through and POST/PUT `/api/v1/contacts` answered 500 where
+    T069 promises 400 `contact_location_client_mismatch`. It maps to a ValidationError on the
+    `locations` path now.
+  - **Defect 3 (REST).** `location_id` was `optional()` but not nullable on the ticket create body,
+    so an API or mobile caller could not say "explicitly none" for a ticket with a contact — the
+    autofill always won. It is `nullish()` now, which is the contract the model already read. No
+    artifact impact: ticket create is not in the generated spec.
+- **Still deferred: 10**, each needing a harness this branch does not have:
+  - `ticket-autofill` T050/T051 (a full `TicketDetails` mount), T052/T053 (the inbound-email
+    pipeline; the precedence is one expression inside `processInboundEmailInApp`, which would want
+    extracting before it can be tested — a refactor of that file is not a late-round change),
+    T054 (`createClientTicket` with a portal session);
+  - `pickers` T040 and `merge-ui` T095/T096 (full tile and merge-wizard mounts);
+  - `search-mcp` T090 (`/api/v1/search` with ACL) and T093 (MCP server e2e).
+  Their decisions remain pinned by the seam tests: `requesterLocation.test.ts` holds both ticket
+  layouts to the same hint rule, `ticketLocationAutofill.test.ts` the undefined/null contract,
+  `clientMergeEngine.test.ts` the merge assignments, `contactLocationArtifacts.contract.test.ts`
+  the spec and registry. This is still the amendment-#4 deviation and still wants the operator's
+  call rather than silence.
+- Gates this round: 6 new DB files (28 cases) green, packages/clients 229, packages/tickets 846
+  (the three `RecurringClientsSection` failures are this machine's partial `window.localStorage`,
+  in files this round never touched), predicates 151, `tsc --noEmit` clean for server, clients and
+  tickets, `npm run lint:migrations` 0 violations, plan validator valid (67/99/13).
