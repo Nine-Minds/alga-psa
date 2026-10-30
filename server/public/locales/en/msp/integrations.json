@@ -2097,11 +2097,18 @@
         "environment": "Intuit Environment",
         "environmentProduction": "Production",
         "environmentSandbox": "Sandbox",
+        "environmentHint": "Production connects to real QuickBooks companies. Sandbox connects to an Intuit test company, so you can try exports without touching real books.",
+        "environmentLockedHint": "Disconnect QuickBooks before switching environments. The connected company and its tokens exist only in the environment they were authorized in.",
+        "environmentSandboxKeysTitle": "Sandbox needs your own Intuit app",
+        "environmentSandboxKeysDescription": "Intuit sandbox companies only accept the Development keys of an Intuit app you control. The shared app this deployment provides uses Production keys, so register your own app and save its Development keys below before connecting.",
+        "environmentSavedSandbox": "QuickBooks will now connect to an Intuit sandbox company. Connect with your own Intuit app's Development keys.",
+        "environmentSavedProduction": "QuickBooks will now connect to real QuickBooks companies.",
         "errors": {
           "automatedSalesTax": "Failed to update Automated Sales Tax mode.",
           "disconnect": "Failed to disconnect QuickBooks.",
           "load": "Failed to load QuickBooks settings.",
-          "saveCredentials": "Failed to save QuickBooks credentials."
+          "saveCredentials": "Failed to save QuickBooks credentials.",
+          "environment": "Failed to change the Intuit environment."
         },
         "howItWorksDescription": "Connect your QuickBooks company by signing in to Intuit, and AlgaPSA will use it as the default live context for exports and mappings. The Intuit App card below tells you whether your deployment already provides the app that sign-in goes through, or whether you need to register one first.",
         "howItWorksTitle": "How live QuickBooks works in this release",

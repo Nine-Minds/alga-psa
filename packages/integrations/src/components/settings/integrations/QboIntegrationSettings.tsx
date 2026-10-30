@@ -8,6 +8,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -18,13 +19,15 @@ import {
   getQboAutomatedSalesTaxMode,
   getQboConnectionStatus,
   saveQboCredentials,
-  setQboAutomatedSalesTaxMode
+  setQboAutomatedSalesTaxMode,
+  setQboEnvironment
 } from '../../../actions/qboActions';
 import { QboLiveMappingManager } from '../../qbo/QboLiveMappingManager';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useAccountingCapabilities } from './useAccountingCapabilities';
 
 type QboStatus = Awaited<ReturnType<typeof getQboConnectionStatus>>;
+type QboEnvironmentValue = 'sandbox' | 'production';
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
 /**
@@ -96,6 +99,8 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
   const [showOwnAppFields, setShowOwnAppFields] = React.useState(false);
   const [automatedSalesTax, setAutomatedSalesTax] = React.useState(false);
   const [savingAutomatedSalesTax, setSavingAutomatedSalesTax] = React.useState(false);
+  const [environment, setEnvironment] = React.useState<QboEnvironmentValue | null>(null);
+  const [savingEnvironment, setSavingEnvironment] = React.useState(false);
 
   const oauthStatus = searchParams?.get('qbo_status');
   const oauthError = React.useMemo(
@@ -109,6 +114,7 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
     try {
       const result = await getQboConnectionStatus();
       setStatus(result);
+      setEnvironment(result.environment ?? null);
 
       const realmId = result.defaultConnection?.realmId ?? null;
       if (realmId) {
@@ -156,6 +162,41 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
       setError(t('integrations.qbo.settings.errors.automatedSalesTax', { defaultValue: 'Failed to update Automated Sales Tax mode.' }));
     } finally {
       setSavingAutomatedSalesTax(false);
+    }
+  };
+
+  const handleEnvironmentChange = async (value: string) => {
+    const next: QboEnvironmentValue = value === 'sandbox' ? 'sandbox' : 'production';
+    const previous = environment ?? status?.environment ?? null;
+    if (next === previous) return;
+
+    setSavingEnvironment(true);
+    setError(null);
+    setSuccessMessage(null);
+    setEnvironment(next);
+
+    try {
+      const result = await setQboEnvironment({ environment: next });
+      if (!result.success) {
+        setEnvironment(previous);
+        setError(result.error ?? t('integrations.qbo.settings.errors.environment', { defaultValue: 'Failed to change the Intuit environment.' }));
+        return;
+      }
+      setSuccessMessage(
+        next === 'sandbox'
+          ? t('integrations.qbo.settings.environmentSavedSandbox', { defaultValue: 'QuickBooks will now connect to an Intuit sandbox company. Connect with your own Intuit app\'s Development keys.' })
+          : t('integrations.qbo.settings.environmentSavedProduction', { defaultValue: 'QuickBooks will now connect to real QuickBooks companies.' })
+      );
+      await load();
+    } catch {
+      // The action never reached the server (or the deployment restarted
+      // mid-click): leaving the optimistic value standing would claim a save
+      // we cannot confirm, and the environment decides which Intuit host the
+      // next connection authorizes against.
+      setEnvironment(previous);
+      setError(t('integrations.qbo.settings.errors.environment', { defaultValue: 'Failed to change the Intuit environment.' }));
+    } finally {
+      setSavingEnvironment(false);
     }
   };
 
@@ -266,6 +307,13 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
   const defaultConnection = status?.defaultConnection;
   const canManageConnections = caps.connectionsManage;
   const canManageMappings = caps.mappingsManage;
+  const selectedEnvironment: QboEnvironmentValue = environment ?? status?.environment ?? 'production';
+  // A realm and its tokens exist in one Intuit environment only, so the switch
+  // is a disconnect-first operation (the action rejects it too).
+  const environmentLocked = (status?.connections.length ?? 0) > 0;
+  // Intuit only honours an app's Development keys against sandbox companies,
+  // and a deployment's shared app is registered with Production keys.
+  const sandboxNeedsOwnApp = selectedEnvironment === 'sandbox' && credentialSource === 'app';
 
   // Wait for the capability check to resolve before hiding the panel, so a
   // capable user never sees a brief "no permission" card while it loads.
@@ -406,6 +454,41 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
                 </Alert>
               )}
 
+              {/* Per-tenant, not per-deployment: a tenant can point at an
+                  Intuit sandbox company for testing while every other tenant on
+                  the same deployment stays on production. */}
+              <div className="rounded-lg border bg-muted/20 p-4 space-y-2" id="qbo-environment-section">
+                <Label htmlFor="qbo-environment-select" className="text-sm font-medium text-foreground">
+                  {t('integrations.qbo.settings.environment', { defaultValue: 'Intuit Environment' })}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {t('integrations.qbo.settings.environmentHint', { defaultValue: 'Production connects to real QuickBooks companies. Sandbox connects to an Intuit test company, so you can try exports without touching real books.' })}
+                </p>
+                <CustomSelect
+                  id="qbo-environment-select"
+                  options={[
+                    { value: 'production', label: t('integrations.qbo.settings.environmentProduction', { defaultValue: 'Production' }) },
+                    { value: 'sandbox', label: t('integrations.qbo.settings.environmentSandbox', { defaultValue: 'Sandbox' }) }
+                  ]}
+                  value={selectedEnvironment}
+                  onValueChange={(value) => void handleEnvironmentChange(value)}
+                  disabled={environmentLocked || disconnectPending || savingEnvironment || !canManageConnections}
+                />
+                {environmentLocked || disconnectPending ? (
+                  <p className="text-xs text-muted-foreground" id="qbo-environment-locked-hint">
+                    {t('integrations.qbo.settings.environmentLockedHint', { defaultValue: 'Disconnect QuickBooks before switching environments. The connected company and its tokens exist only in the environment they were authorized in.' })}
+                  </p>
+                ) : null}
+                {sandboxNeedsOwnApp ? (
+                  <Alert variant="warning" id="qbo-environment-sandbox-keys-alert">
+                    <AlertTitle>{t('integrations.qbo.settings.environmentSandboxKeysTitle', { defaultValue: 'Sandbox needs your own Intuit app' })}</AlertTitle>
+                    <AlertDescription>
+                      {t('integrations.qbo.settings.environmentSandboxKeysDescription', { defaultValue: 'Intuit sandbox companies only accept the Development keys of an Intuit app you control. The shared app this deployment provides uses Production keys, so register your own app and save its Development keys below before connecting.' })}
+                    </AlertDescription>
+                  </Alert>
+                ) : null}
+              </div>
+
               {credentialSource === 'app' ? (
                 <CollapseToggleButton
                   id="qbo-own-app-toggle"
@@ -446,17 +529,6 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
                             {scope}
                           </Badge>
                         ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{t('integrations.qbo.settings.environment', { defaultValue: 'Intuit Environment' })}</p>
-                      <div className="mt-2">
-                        <Badge variant={status?.environment === 'production' ? 'default' : 'secondary'}>
-                          {status?.environment === 'production'
-                            ? t('integrations.qbo.settings.environmentProduction', { defaultValue: 'Production' })
-                            : t('integrations.qbo.settings.environmentSandbox', { defaultValue: 'Sandbox' })}
-                        </Badge>
                       </div>
                     </div>
                   </div>

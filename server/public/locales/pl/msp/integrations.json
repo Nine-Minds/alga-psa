@@ -2074,11 +2074,18 @@
         "environment": "Środowisko Intuit",
         "environmentProduction": "Produkcja",
         "environmentSandbox": "Środowisko testowe",
+        "environmentHint": "Produkcja łączy się z prawdziwymi firmami QuickBooks. Środowisko testowe łączy się z firmą testową Intuit, więc możesz wypróbować eksporty bez zmieniania prawdziwych księgi.",
+        "environmentLockedHint": "Rozłącz QuickBooks przed zmianą środowiska. Połączona firma i jej tokeny istnieją tylko w środowisku, w którym zostały autoryzowane.",
+        "environmentSandboxKeysTitle": "Środowisko testowe wymaga własnej aplikacji Intuit",
+        "environmentSandboxKeysDescription": "Firmy w środowisku testowym Intuit akceptują tylko klucze Development aplikacji Intuit, którą kontrolujesz. Wspólna aplikacja tej instalacji używa kluczy Production, więc zarejestruj własną aplikację i zapisz poniżej jej klucze Development przed połączeniem.",
+        "environmentSavedSandbox": "QuickBooks będzie teraz łączyć się z firmą w środowisku testowym Intuit. Połącz się przy użyciu kluczy Development własnej aplikacji Intuit.",
+        "environmentSavedProduction": "QuickBooks będzie teraz łączyć się z prawdziwymi firmami QuickBooks.",
         "errors": {
           "automatedSalesTax": "Nie udało się zaktualizować trybu Automated Sales Tax.",
           "disconnect": "Nie udało się rozłączyć QuickBooks.",
           "load": "Nie udało się załadować ustawień QuickBooks.",
-          "saveCredentials": "Nie udało się zapisać poświadczeń QuickBooks."
+          "saveCredentials": "Nie udało się zapisać poświadczeń QuickBooks.",
+          "environment": "Nie udało się zmienić środowiska Intuit."
         },
         "howItWorksDescription": "Połącz swoją firmę QuickBooks, logując się do Intuit, a AlgaPSA użyje jej jako domyślnego kontekstu na żywo dla eksportów i mapowań. Karta „Aplikacja Intuit” poniżej informuje, czy Twoje wdrożenie już udostępnia aplikację używaną do tego logowania, czy najpierw trzeba ją zarejestrować.",
         "howItWorksTitle": "Jak działa QuickBooks na żywo w tej wersji",

@@ -12,6 +12,7 @@ const saveQboCredentialsMock = vi.hoisted(() => vi.fn());
 const disconnectQboMock = vi.hoisted(() => vi.fn());
 const getQboAutomatedSalesTaxModeMock = vi.hoisted(() => vi.fn());
 const setQboAutomatedSalesTaxModeMock = vi.hoisted(() => vi.fn());
+const setQboEnvironmentMock = vi.hoisted(() => vi.fn());
 
 vi.mock('next/navigation', () => ({
   useSearchParams: useSearchParamsMock
@@ -28,7 +29,8 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   saveQboCredentials: async (...args: unknown[]) => saveQboCredentialsMock(...args),
   disconnectQbo: async (...args: unknown[]) => disconnectQboMock(...args),
   getQboAutomatedSalesTaxMode: async (...args: unknown[]) => getQboAutomatedSalesTaxModeMock(...args),
-  setQboAutomatedSalesTaxMode: async (...args: unknown[]) => setQboAutomatedSalesTaxModeMock(...args)
+  setQboAutomatedSalesTaxMode: async (...args: unknown[]) => setQboAutomatedSalesTaxModeMock(...args),
+  setQboEnvironment: async (...args: unknown[]) => setQboEnvironmentMock(...args)
 }));
 
 vi.mock('../../../actions/qboActions', () => ({
@@ -37,6 +39,33 @@ vi.mock('../../../actions/qboActions', () => ({
   disconnectQbo: async (...args: unknown[]) => disconnectQboMock(...args),
   getQboAutomatedSalesTaxMode: async (...args: unknown[]) => getQboAutomatedSalesTaxModeMock(...args),
   setQboAutomatedSalesTaxMode: async (...args: unknown[]) => setQboAutomatedSalesTaxModeMock(...args),
+  setQboEnvironment: async (...args: unknown[]) => setQboEnvironmentMock(...args),
+}));
+
+// The real CustomSelect is a Radix popover; a native select keeps the contract
+// (value in, value out) observable in jsdom.
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
+  default: ({ id, value, onValueChange, options, disabled }: {
+    id?: string;
+    value?: string | null;
+    onValueChange?: (value: string) => void;
+    options?: Array<{ value: string; label: React.ReactNode }>;
+    disabled?: boolean;
+  }) => (
+    <select
+      id={id}
+      data-testid={id}
+      value={value ?? ''}
+      disabled={disabled}
+      onChange={(event) => onValueChange?.(event.target.value)}
+    >
+      {(options ?? []).map((option) => (
+        <option key={option.value} value={option.value}>
+          {typeof option.label === 'string' ? option.label : option.value}
+        </option>
+      ))}
+    </select>
+  )
 }));
 
 // The accounting-capability hook is exercised per-test through this mutable
@@ -98,6 +127,7 @@ describe('QboIntegrationSettings contracts', () => {
     disconnectQboMock.mockResolvedValue({ success: true });
     getQboAutomatedSalesTaxModeMock.mockResolvedValue({ enabled: false });
     setQboAutomatedSalesTaxModeMock.mockResolvedValue({ success: true });
+    setQboEnvironmentMock.mockResolvedValue({ success: true, environment: 'sandbox' });
   });
 
   afterEach(() => {
@@ -121,14 +151,14 @@ describe('QboIntegrationSettings contracts', () => {
     });
   });
 
-  it('T051: shows Sandbox environment badge when environment is sandbox', async () => {
+  it('T051: the environment selector shows Sandbox when the tenant is on sandbox', async () => {
     getQboConnectionStatusMock.mockResolvedValue(disconnectedStatus);
     const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
 
     render(<QboIntegrationSettings />);
 
     await waitFor(() => {
-      expect(screen.getByText('Sandbox')).toBeInTheDocument();
+      expect(screen.getByTestId('qbo-environment-select')).toHaveValue('sandbox');
     });
   });
 
@@ -152,7 +182,7 @@ describe('QboIntegrationSettings contracts', () => {
     expect(screen.queryByRole('link', { name: 'Open Accounting Exports' })).not.toBeInTheDocument();
   });
 
-  it('T052: shows Production environment badge when environment is production', async () => {
+  it('T052: the environment selector shows Production when the tenant is on production', async () => {
     getQboConnectionStatusMock.mockResolvedValue({
       ...disconnectedStatus,
       environment: 'production'
@@ -162,7 +192,7 @@ describe('QboIntegrationSettings contracts', () => {
     render(<QboIntegrationSettings />);
 
     await waitFor(() => {
-      expect(screen.getByText('Production')).toBeInTheDocument();
+      expect(screen.getByTestId('qbo-environment-select')).toHaveValue('production');
     });
   });
 
@@ -669,5 +699,101 @@ describe('QboIntegrationSettings contracts', () => {
     // No toggle: there is no shared app to fall back to, so the fields are simply shown.
     expect(screen.queryByRole('button', { name: /Use your own Intuit app/i })).not.toBeInTheDocument();
     expect(document.getElementById('qbo-client-id')).not.toBeNull();
+  });
+  // --- Intuit environment selector ---
+
+  it('T077: the environment selector saves the tenant choice', async () => {
+    getQboConnectionStatusMock.mockResolvedValue({
+      ...disconnectedStatus,
+      environment: 'production',
+      credentials: { ...disconnectedStatus.credentials, clientIdConfigured: true, clientSecretConfigured: true, ready: true, source: 'tenant' as const }
+    });
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    const select = await screen.findByTestId('qbo-environment-select');
+    expect(select).not.toBeDisabled();
+
+    fireEvent.change(select, { target: { value: 'sandbox' } });
+
+    await waitFor(() => {
+      expect(setQboEnvironmentMock).toHaveBeenCalledWith({ environment: 'sandbox' });
+    });
+  });
+
+  it('T078: the selector is locked while a company is connected, with a disconnect-first hint', async () => {
+    getQboConnectionStatusMock.mockResolvedValue({
+      ...disconnectedStatus,
+      connected: true,
+      connections: [{ realmId: 'realm-123', displayName: 'Acme Inc', status: 'active' as const, environment: 'production' as const }],
+      defaultRealmId: 'realm-123',
+      defaultConnection: { realmId: 'realm-123', displayName: 'Acme Inc', status: 'active' as const },
+      environment: 'production',
+      credentials: { ...disconnectedStatus.credentials, ready: true, source: 'tenant' as const }
+    });
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    const select = await screen.findByTestId('qbo-environment-select');
+    expect(select).toBeDisabled();
+    expect(document.getElementById('qbo-environment-locked-hint')).not.toBeNull();
+    expect(screen.getByText(/Disconnect QuickBooks before switching environments/i)).toBeInTheDocument();
+  });
+
+  it('T079: sandbox on the shared app warns that Development keys of your own app are required', async () => {
+    getQboConnectionStatusMock.mockResolvedValue({
+      ...disconnectedStatus,
+      environment: 'sandbox',
+      credentials: { ...disconnectedStatus.credentials, ready: true, source: 'app' as const }
+    });
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(document.getElementById('qbo-environment-sandbox-keys-alert')).not.toBeNull();
+    });
+    expect(screen.getByText(/only accept the Development keys/i)).toBeInTheDocument();
+  });
+
+  it('T080: production on the shared app shows no Development-keys warning', async () => {
+    getQboConnectionStatusMock.mockResolvedValue({
+      ...disconnectedStatus,
+      environment: 'production',
+      credentials: { ...disconnectedStatus.credentials, ready: true, source: 'app' as const }
+    });
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('qbo-environment-select')).toHaveValue('production');
+    });
+    expect(document.getElementById('qbo-environment-sandbox-keys-alert')).toBeNull();
+  });
+
+  it('T081: a rejected environment change reverts the selector and surfaces the error', async () => {
+    getQboConnectionStatusMock.mockResolvedValue({
+      ...disconnectedStatus,
+      environment: 'production',
+      credentials: { ...disconnectedStatus.credentials, ready: true, source: 'tenant' as const }
+    });
+    setQboEnvironmentMock.mockResolvedValue({
+      success: false,
+      error: 'Disconnect QuickBooks before changing the Intuit environment.'
+    });
+
+    const { default: QboIntegrationSettings } = await import('./QboIntegrationSettings');
+    render(<QboIntegrationSettings />);
+
+    const select = await screen.findByTestId('qbo-environment-select');
+    fireEvent.change(select, { target: { value: 'sandbox' } });
+
+    await waitFor(() => {
+      expect(screen.getByText('Disconnect QuickBooks before changing the Intuit environment.')).toBeInTheDocument();
+    });
+    expect(screen.getByTestId('qbo-environment-select')).toHaveValue('production');
   });
 });

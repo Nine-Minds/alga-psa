@@ -2074,11 +2074,18 @@
         "environment": "Environnement Intuit",
         "environmentProduction": "Production",
         "environmentSandbox": "Bac à sable",
+        "environmentHint": "La production se connecte à de vraies entreprises QuickBooks. Le bac à sable se connecte à une entreprise de test Intuit, ce qui permet d’essayer les exports sans toucher à une comptabilité réelle.",
+        "environmentLockedHint": "Déconnectez QuickBooks avant de changer d’environnement. L’entreprise connectée et ses jetons n’existent que dans l’environnement où ils ont été autorisés.",
+        "environmentSandboxKeysTitle": "Le bac à sable exige votre propre application Intuit",
+        "environmentSandboxKeysDescription": "Les entreprises du bac à sable Intuit n’acceptent que les clés Development d’une application Intuit que vous contrôlez. L’application partagée de ce déploiement utilise des clés Production : enregistrez votre propre application et saisissez ses clés Development ci-dessous avant de vous connecter.",
+        "environmentSavedSandbox": "QuickBooks se connectera désormais à une entreprise du bac à sable Intuit. Connectez-vous avec les clés Development de votre propre application Intuit.",
+        "environmentSavedProduction": "QuickBooks se connectera désormais à de vraies entreprises QuickBooks.",
         "errors": {
           "automatedSalesTax": "Impossible de mettre à jour le mode Automated Sales Tax.",
           "disconnect": "Échec de la déconnexion de QuickBooks.",
           "load": "Échec du chargement des paramètres QuickBooks.",
-          "saveCredentials": "Échec de l'enregistrement des identifiants QuickBooks."
+          "saveCredentials": "Échec de l'enregistrement des identifiants QuickBooks.",
+          "environment": "Échec du changement d’environnement Intuit."
         },
         "howItWorksDescription": "Connectez votre entreprise QuickBooks en vous connectant à Intuit ; AlgaPSA l'utilisera comme contexte en direct par défaut pour les exports et les correspondances. La carte « Application Intuit » ci-dessous indique si votre déploiement fournit déjà l'application utilisée pour cette connexion ou si vous devez d'abord en enregistrer une.",
         "howItWorksTitle": "Comment fonctionne QuickBooks live dans cette version",

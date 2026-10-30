@@ -2074,11 +2074,18 @@
         "environment": "Intuit-omgeving",
         "environmentProduction": "Productie",
         "environmentSandbox": "Sandbox",
+        "environmentHint": "Productie maakt verbinding met echte QuickBooks-bedrijven. Sandbox maakt verbinding met een testbedrijf van Intuit, zodat u exports kunt uitproberen zonder echte boekhouding te raken.",
+        "environmentLockedHint": "Ontkoppel QuickBooks voordat u van omgeving wisselt. Het gekoppelde bedrijf en zijn tokens bestaan alleen in de omgeving waarin ze zijn geautoriseerd.",
+        "environmentSandboxKeysTitle": "Sandbox vereist uw eigen Intuit-app",
+        "environmentSandboxKeysDescription": "Sandbox-bedrijven van Intuit accepteren alleen de Development-sleutels van een Intuit-app die u zelf beheert. De gedeelde app van deze omgeving gebruikt Production-sleutels. Registreer daarom uw eigen app en sla hieronder de Development-sleutels op voordat u verbinding maakt.",
+        "environmentSavedSandbox": "QuickBooks maakt nu verbinding met een sandbox-bedrijf van Intuit. Maak verbinding met de Development-sleutels van uw eigen Intuit-app.",
+        "environmentSavedProduction": "QuickBooks maakt nu verbinding met echte QuickBooks-bedrijven.",
         "errors": {
           "automatedSalesTax": "Bijwerken van de Automated Sales Tax-modus is mislukt.",
           "disconnect": "QuickBooks ontkoppelen mislukt.",
           "load": "QuickBooks-instellingen laden mislukt.",
-          "saveCredentials": "QuickBooks-inloggegevens opslaan mislukt."
+          "saveCredentials": "QuickBooks-inloggegevens opslaan mislukt.",
+          "environment": "Wijzigen van de Intuit-omgeving is mislukt."
         },
         "howItWorksDescription": "Koppel uw QuickBooks-bedrijf door in te loggen bij Intuit; AlgaPSA gebruikt het dan als standaard live-context voor exports en toewijzingen. De kaart „Intuit-app” hieronder laat zien of uw installatie de app voor die aanmelding al levert of dat u er eerst een moet registreren.",
         "howItWorksTitle": "Hoe live QuickBooks werkt in deze release",
