@@ -8,6 +8,8 @@ const h = vi.hoisted(() => ({
   getAll: vi.fn(),
   get: vi.fn(),
   threads: [] as any[],
+  ticket: { client_id: 'A' } as any,
+  contactRow: { client_id: 'A' } as any,
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -19,8 +21,18 @@ vi.mock('@alga-psa/db', () => ({
   withTransaction: async (_db: any, fn: any) => fn({}),
   registerAfterCommit: vi.fn(),
   tenantDb: () => ({
-    table: () => {
-      const chain: any = { select: () => chain, whereIn: () => Promise.resolve(h.threads) };
+    table: (name: string) => {
+      const chain: any = {
+        select: () => chain,
+        where: () => chain,
+        whereIn: () => Promise.resolve(h.threads),
+        first: () => Promise.resolve(name === 'tickets' ? h.ticket : undefined),
+      };
+      return chain;
+    },
+    // users -> contacts join used by assertClientOwnsTicket
+    tenantJoin: () => {
+      const chain: any = { select: () => chain, where: () => chain, first: () => Promise.resolve(h.contactRow) };
       return chain;
     },
   }),
@@ -56,6 +68,8 @@ beforeEach(() => {
   h.hasPermission.mockResolvedValue(true);
   h.authorize.mockResolvedValue({});
   h.threads = [];
+  h.ticket = { client_id: 'A' };
+  h.contactRow = { client_id: 'A' };
 });
 
 describe('findCommentsByTicketId authorization', () => {
@@ -129,5 +143,48 @@ describe('findCommentById authorization', () => {
     expect(missing).toMatchObject({ actionError: expect.stringMatching(/not found/i) });
     expect(forbidden).toEqual(missing);
     expect(hidden).toEqual(missing);
+  });
+});
+
+describe('same-client guard (kernel mocked to ALLOW)', () => {
+  const notFound = { actionError: expect.stringMatching(/not found/i) };
+  beforeEach(() => {
+    h.user = { user_id: 'c1', user_type: 'client' };
+    h.authorize.mockResolvedValue({}); // kernel allows: board is in the client's visible set
+    h.getAll.mockResolvedValue([row()]);
+    h.get.mockResolvedValue(row());
+  });
+
+  it('allows a client reading its own client ticket', async () => {
+    expect(await findCommentsByTicketId('tk')).toHaveLength(1);
+    expect(await findCommentById('c')).toMatchObject({ comment_id: 'c' });
+  });
+
+  it('denies a ticket owned by another client', async () => {
+    h.ticket = { client_id: 'B' };
+    expect(await findCommentsByTicketId('tk')).toMatchObject(notFound);
+    expect(await findCommentById('c')).toMatchObject(notFound);
+    expect(h.getAll).not.toHaveBeenCalled();
+  });
+
+  it('denies a contact with no client', async () => {
+    h.contactRow = { client_id: null };
+    expect(await findCommentsByTicketId('tk')).toMatchObject(notFound);
+    expect(await findCommentById('c')).toMatchObject(notFound);
+    h.contactRow = undefined;
+    expect(await findCommentsByTicketId('tk')).toMatchObject(notFound);
+  });
+
+  it('still enforces same-client when the contact has no visibility group (kernel applies no rule)', async () => {
+    // visibleBoardIds undefined => kernel relationshipRules [] => authorize allows anything.
+    h.ticket = { client_id: 'B' };
+    h.authorize.mockResolvedValue({});
+    expect(await findCommentsByTicketId('tk')).toMatchObject(notFound);
+  });
+
+  it('does not apply the client guard to MSP users', async () => {
+    h.user = { user_id: 'u1', user_type: 'internal' };
+    h.ticket = { client_id: 'B' };
+    expect(await findCommentsByTicketId('tk')).toHaveLength(1);
   });
 });

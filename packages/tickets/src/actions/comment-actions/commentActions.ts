@@ -71,28 +71,18 @@ function tenantScopedTable<Row extends object = Record<string, unknown>>(
   return tenantDb(conn, tenant).table<Row>(table);
 }
 
-async function assertClientCanCreateComment(
+/**
+ * Fail-closed same-client guard for client principals: resolves the user's client
+ * (user.clientId, else users -> contacts.client_id) and requires the ticket to belong
+ * to it. Independent of board visibility, so it holds even when the kernel's client
+ * branch applies no record rule (see card 36dd23da for finer narrowing).
+ */
+async function assertClientOwnsTicket(
   trx: Knex.Transaction,
   tenant: string,
   user: any,
-  comment: Omit<IComment, 'tenant'>
+  ticketId: string
 ): Promise<void> {
-  if (!isClientUserType(user?.user_type)) {
-    return;
-  }
-
-  if (comment.is_internal) {
-    throw new Error('Client users cannot create internal comments');
-  }
-
-  if (comment.user_id && user.user_id && comment.user_id !== user.user_id) {
-    throw new Error('Client users can only create their own comments');
-  }
-
-  if (!comment.ticket_id) {
-    throw new Error('ticket_id is required for client comments');
-  }
-
   let clientId = user.clientId || user.client_id || null;
   if (!clientId) {
     const clientRow = await tenantDb(trx, tenant)
@@ -115,15 +105,40 @@ async function assertClientCanCreateComment(
 
   const ticket = await tenantScopedTable(trx, 'tickets', tenant)
     .select('client_id')
-    .where({ ticket_id: comment.ticket_id })
+    .where({ ticket_id: ticketId })
     .first();
+
+  if (!ticket || ticket.client_id !== clientId) {
+    throw new Error('Client user cannot access this ticket');
+  }
+}
+
+async function assertClientCanCreateComment(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: any,
+  comment: Omit<IComment, 'tenant'>
+): Promise<void> {
+  if (!isClientUserType(user?.user_type)) {
+    return;
+  }
+
+  if (comment.is_internal) {
+    throw new Error('Client users cannot create internal comments');
+  }
+
+  if (comment.user_id && user.user_id && comment.user_id !== user.user_id) {
+    throw new Error('Client users can only create their own comments');
+  }
+
+  if (!comment.ticket_id) {
+    throw new Error('ticket_id is required for client comments');
+  }
 
   // KEEP until card 36dd23da lands: authorizeTicketRecordAccess's client branch still uses only
   // `selected_boards` on this branch, so it cannot be shown to enforce same-client. Replace with
   // authorizeTicketRecordAccess(..., 'update') once the kernel fix is merged.
-  if (!ticket || ticket.client_id !== clientId) {
-    throw new Error('Client user cannot access this ticket');
-  }
+  await assertClientOwnsTicket(trx, tenant, user, comment.ticket_id);
 
   // Comment.insert re-roots a client reply aimed at an internal thread into a
   // fresh public thread (D1, for inbound email whose headers resolve to an
@@ -172,6 +187,9 @@ async function authorizeCommentRead(user: any, trx: Knex.Transaction, tenant: st
     throw commentReadNotFound();
   }
   try {
+    if (!isMspPrincipalUserType(user?.user_type)) {
+      await assertClientOwnsTicket(trx, tenant, user, ticketId);
+    }
     await authorizeTicketRecordAccess({ trx, tenant: tenant!, user, ticketId, action: 'read' });
   } catch {
     throw commentReadNotFound();
