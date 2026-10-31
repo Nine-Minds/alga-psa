@@ -77,12 +77,21 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (!db) return;
-  // Leave the DB in the migrated state even if a test failed mid-way.
-  await migration.up(db).catch(() => undefined);
+  // Remove this suite's rows first, then restore the LATEST index definition
+  // (older migrations' `up` leave an older shape behind), even if a test failed.
   for (const tenant of tenantIds) {
     await db(MAPPINGS).where({ tenant }).del();
     await db('tenants').where({ tenant }).del();
   }
+  await migration.up(db).catch(() => undefined);
+  await require(path.resolve(
+    __dirname,
+    '../20261027130000_exclude_tombstones_from_external_mapping_unique_indexes.cjs'
+  )).up(db);
+  await require(path.resolve(
+    __dirname,
+    '../20261029120000_allow_shared_quickbooks_online_item_targets.cjs'
+  )).up(db);
   await db.destroy().catch(() => undefined);
 });
 

@@ -12,6 +12,7 @@ import {
   tenantDb,
   withTransaction,
   writeAccountingAudit,
+  lockQboItemTargets,
 } from '@alga-psa/db';
 import type { AccountingAuditProvider } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
@@ -51,6 +52,7 @@ import {
 import {
   AUTOMATIC_DISCOUNT_MAPPING_ID,
   DISCOUNT_MAPPING_ENTITY_TYPE,
+  isSharedMappingTarget,
 } from '@alga-psa/types';
 
 const MAPPING_CACHE_TTL_MS = 30_000;
@@ -873,34 +875,21 @@ export const createExternalEntityMapping = withAuth(async (
 });
 
 /**
- * QuickBooks Desktop stores the posting *account* name as the target of these
- * entity types (the named item lives in metadata), and many services or tax
- * regions post to one account.
- */
-const QBD_SHARED_TARGET_ENTITY_TYPES = new Set<string>([
-  'service',
-  DISCOUNT_MAPPING_ENTITY_TYPE,
-  'tax_code',
-]);
-
-/**
  * Whether this row's external target is one several entities may legitimately
- * share. Mirrors the WHERE predicate of idx_unique_external_mapping: Xero
- * revenue-account targets and the QuickBooks Desktop account targets above sit
- * outside the index and reserve nothing.
+ * share. Delegates to the shared policy, which mirrors the WHERE predicate of
+ * idx_unique_external_mapping.
  */
 function sharesExternalTarget(
   integrationType: string,
   algaEntityType: string,
   metadata: Record<string, unknown> | null
 ): boolean {
-  if (integrationType === 'xero') {
-    return (metadata?.[XERO_TARGET_KIND_METADATA_KEY] ?? 'item') === 'account';
-  }
-  if (integrationType === 'quickbooks_desktop') {
-    return QBD_SHARED_TARGET_ENTITY_TYPES.has(algaEntityType);
-  }
-  return false;
+  return isSharedMappingTarget(integrationType, algaEntityType, metadata);
+}
+
+/** QBO service mappings are the rows QBO item import reasons about as a set. */
+function isQboServiceMapping(row: { integration_type?: string; alga_entity_type?: string }): boolean {
+  return row.integration_type === 'quickbooks_online' && row.alga_entity_type === 'service';
 }
 
 /**
@@ -974,6 +963,14 @@ async function createMappingRow({
         external_realm_id && external_realm_id.trim() !== ''
           ? external_realm_id.trim()
           : null;
+
+      // QBO item import decides over the SET of services on an item, so
+      // serialize with it before reading or writing that set.
+      if (isQboServiceMapping({ integration_type, alga_entity_type })) {
+        await lockQboItemTargets(trx, tenant, [
+          { realm: normalizedRealm, itemId: external_entity_id },
+        ]);
+      }
 
       if (normalizedRealm) {
         await assertRemoteEntityExists(
@@ -1400,6 +1397,26 @@ export const updateExternalEntityMapping = withAuth(async (
         alga_entity_type: before.alga_entity_type,
       };
 
+      // Old and new item targets are locked together in sorted order, then the
+      // row is re-read so the decision below uses the locked state.
+      if (isQboServiceMapping(before)) {
+        await lockQboItemTargets(trx, tenant, [
+          { realm: before.external_realm_id, itemId: before.external_entity_id },
+          { realm: before.external_realm_id, itemId: updatePayload.external_entity_id },
+        ]);
+        const locked = await db
+          .table<ExternalEntityMapping>('tenant_external_entity_mappings')
+          .where({ id: mappingId })
+          .first();
+        if (
+          !locked ||
+          locked.deleted_at ||
+          locked.external_entity_id !== before.external_entity_id
+        ) {
+          throw new ExpectedExternalMappingError('Mapping changed while saving. Refresh mappings and try again.');
+        }
+      }
+
       // Realm, provider and entity-type fields are not editable here. The
       // persisted entity type determines whether the invoice lock is required.
       assertMutableMappingEntityType(before.alga_entity_type);
@@ -1604,6 +1621,19 @@ export const deleteExternalEntityMapping = withAuth(async (
 
       if (before.deleted_at) {
         return { before, after: before };
+      }
+
+      if (isQboServiceMapping(before)) {
+        await lockQboItemTargets(trx, tenant, [
+          { realm: before.external_realm_id, itemId: before.external_entity_id },
+        ]);
+        const locked = await db
+          .table<ExternalEntityMapping>('tenant_external_entity_mappings')
+          .where({ id: mappingId })
+          .first();
+        if (!locked || locked.external_entity_id !== before.external_entity_id) {
+          throw new ExpectedExternalMappingError('Mapping changed while unlinking. Refresh mappings and try again.');
+        }
       }
 
       const now = new Date().toISOString();
