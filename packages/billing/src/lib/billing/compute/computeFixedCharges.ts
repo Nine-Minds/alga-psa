@@ -602,9 +602,16 @@ export function computeFixedCharges(
       service.service_quantity ??
       service.quantity ??
       1;
+    // Presentation-only: the configured quantity before the `|| 1` clamp.
+    const rawConfiguredQuantity =
+      service.configuration_quantity ?? service.service_quantity ?? service.quantity;
     return {
       ...service,
       quantity: Number(quantityValue ?? 1) || 1,
+      raw_quantity:
+        rawConfiguredQuantity == null || !Number.isFinite(Number(rawConfiguredQuantity))
+          ? null
+          : Number(rawConfiguredQuantity),
     };
   });
 
@@ -735,6 +742,8 @@ export function computeFixedCharges(
         serviceId: service.service_id,
         serviceName: service.service_name,
         quantity,
+        raw_quantity: quantity,
+        pricing_basis: 'unit',
         rate,
         total,
         type: "fixed",
@@ -1097,6 +1106,8 @@ export function computeFixedCharges(
         serviceId: allocation.serviceId,
         serviceName: allocation.serviceName,
         quantity,
+        raw_quantity: planService.raw_quantity ?? null,
+        pricing_basis: 'bundle',
         rate: allocation.allocatedAmount,
         total: allocation.allocatedAmount,
         tax_amount: allocation.taxAmount,

@@ -234,6 +234,61 @@ function attachCanonicalRecurringDetailPeriods(
  * Invoice model with tenant-explicit methods.
  * All methods require an explicit tenant parameter for multi-tenant safety.
  */
+/**
+ * Opt-in extras for {@link Invoice.getInvoiceCharges}. Defaults keep the shape
+ * REST (/api/v1/invoices/{id}/items) and MCP already return.
+ */
+export interface InvoiceChargeLoadOptions {
+  /** Select `invoice_charges.bundle_presentation` (names/quantities, no amounts). */
+  includeBundlePresentation?: boolean;
+  /**
+   * Load per-component `allocated_amount` and detail `rate`. Only request this
+   * when the resolved template binds component prices.
+   */
+  includeBundleComponentAmounts?: boolean;
+}
+
+async function attachBundleComponentAmounts(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  charges: IInvoiceCharge[],
+): Promise<IInvoiceCharge[]> {
+  const itemIds = charges.map((charge) => charge.item_id).filter(Boolean) as string[];
+  if (itemIds.length === 0) {
+    return charges;
+  }
+  const db = tenantDb(knexOrTrx, tenant);
+  const query = db.table('invoice_charge_details as icd');
+  db.tenantJoin(query, 'invoice_charge_fixed_details as icfd', 'icfd.item_detail_id', 'icd.item_detail_id');
+  const rows = (await query
+    .select(
+      'icd.item_id',
+      'icd.item_detail_id',
+      knexOrTrx.raw('CAST(icfd.allocated_amount AS BIGINT) as allocated_amount'),
+      knexOrTrx.raw('CAST(icd.rate AS BIGINT) as rate'),
+    )
+    .whereIn('icd.item_id', itemIds)) as Array<{
+    item_id: string;
+    item_detail_id: string;
+    allocated_amount: number | string | null;
+    rate: number | string | null;
+  }>;
+
+  const byItem = new Map<string, Record<string, { allocated_amount: number; rate: number }>>();
+  for (const row of rows) {
+    const bucket = byItem.get(row.item_id) ?? {};
+    bucket[row.item_detail_id] = {
+      allocated_amount: Number(row.allocated_amount ?? 0),
+      rate: Number(row.rate ?? 0),
+    };
+    byItem.set(row.item_id, bucket);
+  }
+  return charges.map((charge) => {
+    const amounts = charge.item_id ? byItem.get(charge.item_id) : undefined;
+    return amounts ? { ...charge, bundle_component_amounts: amounts } : charge;
+  });
+}
+
 const Invoice = {
   /**
    * Create a new invoice.
@@ -386,7 +441,8 @@ const Invoice = {
   getFullInvoiceById: async (
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
-    invoiceId: string
+    invoiceId: string,
+    chargeOptions: InvoiceChargeLoadOptions = {}
   ): Promise<InvoiceViewModel> => {
     if (!tenant) {
       throw new Error('Tenant context is required for getting full invoice details');
@@ -477,7 +533,7 @@ const Invoice = {
     });
 
     const [invoiceChargesRaw, client, contact, logoUrl, tenantClientDetails, recurringInvoiceSummaryRows] = await Promise.all([
-      Invoice.getInvoiceCharges(knexOrTrx, tenant, invoiceId),
+      Invoice.getInvoiceCharges(knexOrTrx, tenant, invoiceId, chargeOptions),
       clientQuery
         .select(
           'c.client_name',
@@ -773,7 +829,8 @@ const Invoice = {
   getInvoiceCharges: async (
     knexOrTrx: Knex | Knex.Transaction,
     tenant: string,
-    invoiceId: string
+    invoiceId: string,
+    options: InvoiceChargeLoadOptions = {}
   ): Promise<IInvoiceCharge[]> => {
     if (!tenant) {
       throw new Error('Tenant context is required for getting invoice items');
@@ -807,6 +864,11 @@ const Invoice = {
           'ic.location_id'
         )
         .where('ic.invoice_id', invoiceId);
+      // Opt-in only: REST /invoices/{id}/items and MCP share this loader and
+      // must keep returning today's shape.
+      if (options.includeBundlePresentation) {
+        query.select('ic.bundle_presentation');
+      }
 
       const items = (await query) as InvoiceChargeDisplayRow[];
       if (items.length === 0) {
@@ -831,12 +893,15 @@ const Invoice = {
               .whereIn('item_id', itemIds)
           );
 
-      return sortInvoiceChargesForDisplay(
-        attachTimeEntrySnapshots(
-          attachCanonicalRecurringDetailPeriods(items, detailRows),
-          snapshotRows,
-        ),
+      const attached = attachTimeEntrySnapshots(
+        attachCanonicalRecurringDetailPeriods(items, detailRows),
+        snapshotRows,
       );
+      const withBundleAmounts = options.includeBundleComponentAmounts
+        ? await attachBundleComponentAmounts(knexOrTrx, tenant, attached)
+        : attached;
+
+      return sortInvoiceChargesForDisplay(withBundleAmounts);
     } catch (error) {
       console.error(`Error getting invoice items for invoice ${invoiceId} in tenant ${tenant}:`, error);
       throw new Error(`Failed to get invoice items: ${error instanceof Error ? error.message : 'Unknown error'}`);

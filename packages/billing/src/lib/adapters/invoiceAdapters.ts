@@ -18,6 +18,7 @@ import type {
 import { Temporal } from '@js-temporal/polyfill';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
 import { paymentMethodDisplayLabel } from '@alga-psa/shared/billingClients/paymentPreferences';
+import { buildBundleComponents } from '../invoiceBundleComponents/components';
 // toPlainDate is likely not needed here as we format to string for Wasm
 
 // Helper function to convert DateValue (Date or ISO string or Temporal) to ISO string for Wasm
@@ -624,6 +625,25 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
             return timings.length === 1 ? timings[0] ?? null : null;
           })();
 
+        // Bundle rows keep qty 1 / rate = total; component rows ride alongside.
+        // Prices are present only when the loader was asked for amounts, which
+        // callers do only for templates that bind a component price.
+        const rawAmounts = item.bundle_component_amounts ?? null;
+        const bundle = buildBundleComponents(item.bundle_presentation ?? null, {
+          includePricing: rawAmounts !== null,
+          amounts: rawAmounts
+            ? Object.fromEntries(
+                Object.entries(rawAmounts).map(([detailId, amount]) => [
+                  detailId,
+                  {
+                    allocated_amount: toMinorUnits(amount.allocated_amount),
+                    rate: toMinorUnits(amount.rate),
+                  },
+                ]),
+              )
+            : null,
+        });
+
         return {
           id: String(item.item_id ?? ''),
           unit_code: item.unit_code ?? null,
@@ -646,6 +666,9 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
             : {}),
           location_id: item.location_id ?? null,
           location: null,
+          ...(bundle
+            ? { subtitle: bundle.subtitle, hasComponents: bundle.hasComponents, components: bundle.components }
+            : {}),
         };
       });
       const computedSubtotal = normalizedItems.reduce((sum, item) => sum + item.total, 0);
