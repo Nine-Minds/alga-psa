@@ -655,6 +655,8 @@ export const TENANT_TABLE_FOREIGN_KEYS: readonly TenantTableForeignKey[] = [
   { child: 'project_task_comment_reactions', parent: 'project_task_comments', column: 'task_comment_id', deleteRule: 'NO ACTION', name: 'project_task_comment_reactions_tenant_task_comment_id_foreign' },
   { child: 'project_task_comment_reactions', parent: 'tenants', column: '', deleteRule: 'NO ACTION', name: 'project_task_comment_reactions_tenant_foreign' },
   { child: 'project_task_comment_reactions', parent: 'users', column: 'user_id', deleteRule: 'NO ACTION', name: 'project_task_comment_reactions_tenant_user_id_foreign' },
+  { child: 'project_task_comments', parent: 'collaboration_actor_references', column: 'actor_reference_id', deleteRule: 'NO ACTION', name: 'project_task_comments_collaboration_actor_fk' },
+  { child: 'project_task_comments', parent: 'contacts', column: 'contact_id', deleteRule: 'NO ACTION', name: 'project_task_comments_contact_fk' },
   { child: 'project_task_comments', parent: 'comment_threads', column: 'thread_id', deleteRule: 'CASCADE', name: 'project_task_comments_thread_fk' },
   { child: 'project_task_comments', parent: 'project_task_comments', column: 'parent_comment_id', deleteRule: 'CASCADE', name: 'project_task_comments_parent_comment_fk' },
   { child: 'project_task_comments', parent: 'project_tasks', column: 'task_id', deleteRule: 'CASCADE', name: 'project_task_comments_tenant_task_id_foreign' },
