@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { serves } from '@alga-psa/core/capability';
+import { CO_MANAGED_PROJECT_NAME_ALIASES, CO_MANAGED_PROJECT_FIELD_SOURCE, CO_MANAGED_PHASE_FIELD_SOURCE, CO_MANAGED_TASK_FIELD_SOURCE, isCoManagedResourceHidden } from '@alga-psa/co-managed/sharedWorkProjection';
 import { getCoManagedLocalProjectSearchPolicy, isCoManagedReadFieldHidden, type CoManagedSearchAuthentication } from '@alga-psa/co-managed/localProjectSearchPolicy';
 import { listCoManagedSharedProjects } from '@alga-psa/co-managed/projectTaskQueue';
 import { isCoManagedWorkspace } from '@alga-psa/co-managed/coManagedWorkspace';
@@ -12,6 +13,9 @@ export type SearchAuthentication = CoManagedSearchAuthentication;
 export const PROJECT_SEARCH_TYPES = ['project', 'project_phase', 'project_task'] as const;
 const COLUMNS = ['tenant', 'object_type', 'object_id', 'parent_type', 'parent_id', 'title', 'subtitle', 'body', 'url', 'metadata',
   'visible_to_user_ids', 'visible_to_roles', 'is_internal_only', 'is_private', 'client_scope_id', 'required_permission', 'search_vector', 'source_updated_at'];
+
+/** Columns the index row is addressed and ordered by (link, parent, timestamps); hiding any of them suppresses the row, since the row cannot be shown without them. */
+const INDEX_PLUMBING_ALIASES = ['url', 'parent_id', 'source_updated_at', 'updated_at', 'created_at'] as const;
 
 /**
  * Builds the admitted project relation. `projects` decides which project rows exist (the policy);
@@ -30,16 +34,14 @@ function projectRelation(trx: Knex.Transaction, tenant: string, projects: Knex.Q
     if (isTask || isPhase) query.joinRaw(`JOIN project_phases ph ON ph.tenant = i.tenant AND ${isTask ? 'ph.phase_id = t.phase_id' : 'ph.phase_id::text = i.object_id'}`);
     query.join(projects.clone().as('p'), join => join.on('p.tenant', '=', 'i.tenant').andOn(trx.raw(isTask || isPhase ? 'p.project_id = ph.project_id' : 'p.project_id::text = i.object_id')));
     const source = isTask ? 'project_tasks' : isPhase ? 'project_phases' : 'projects';
-    const id = isTask ? 'task_id' : isPhase ? 'phase_id' : 'project_id';
-    const titleName = isTask ? 'task_name' : isPhase ? 'phase_name' : 'project_name';
+    const fields = isTask ? CO_MANAGED_TASK_FIELD_SOURCE : isPhase ? CO_MANAGED_PHASE_FIELD_SOURCE : CO_MANAGED_PROJECT_FIELD_SOURCE;
     const titleColumn = isTask ? 't.task_name' : isPhase ? 'ph.phase_name' : 'p.project_name';
-    // LEVERAGE: pattern project-search-field-sources — task editors, queues and global search must hide aliases of the same canonical value.
-    const title = hidden(['title', titleName, `values.${titleName}`, `${source}.${titleName}`, ...(isTask ? [] : isPhase ? ['phaseName'] : ['projectName'])])
-      ? trx.raw('?::text', [isTask ? 'Project task' : isPhase ? 'Project phase' : 'Project']) : trx.ref(titleColumn);
-    const subtitle = kind === 'project' || hidden(['subtitle', 'project', 'projectName', 'project_name', 'values.project_name', 'projects.project_name']) ? trx.raw('NULL::text') : trx.ref('p.project_name');
-    const body = hidden(['body', 'description', 'values.description', `${source}.description`]) ? trx.raw('NULL::text') : trx.ref(isTask ? 't.description' : isPhase ? 'ph.description' : 'p.description');
-    if (hidden([id, `${source}.${id}`, 'project', 'projectId', 'project_id', 'projects.project_id', 'url', 'parent_id', 'source_updated_at', 'updated_at', 'created_at', `${source}.updated_at`, `${source}.created_at`]) ||
-        (isTask && hidden(['taskId', 'task_id', 'project_tasks.task_id']))) query.whereRaw('false');
+    // The field aliases live in the co-managed descriptors, so queues, editors and search hide the same canonical value.
+    const title = hidden(['title', ...fields.title]) ? trx.raw('?::text', [isTask ? 'Project task' : isPhase ? 'Project phase' : 'Project']) : trx.ref(titleColumn);
+    const subtitle = kind === 'project' || hidden(['subtitle', ...CO_MANAGED_PROJECT_NAME_ALIASES]) ? trx.raw('NULL::text') : trx.ref('p.project_name');
+    const body = hidden(['body', ...fields.description]) ? trx.raw('NULL::text') : trx.ref(isTask ? 't.description' : isPhase ? 'ph.description' : 'p.description');
+    // The whole resource (or a hidden identifier / index plumbing value) yields no rows, as the shared task queue does.
+    if (isCoManagedResourceHidden(redactedFields, fields.resource) || hidden([...fields.identifier, ...INDEX_PLUMBING_ALIASES, `${source}.updated_at`, `${source}.created_at`])) query.whereRaw('false');
     const suffix = isTask ? "'/tasks/' || t.task_id::text" : isPhase ? "'/phases/' || ph.phase_id::text" : "''";
     query.select('i.tenant', 'i.object_type', 'i.object_id',
       trx.raw('?::text as parent_type', [kind === 'project' ? null : 'project']),

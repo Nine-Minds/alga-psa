@@ -106,6 +106,10 @@
       "types": "./src/projectTaskQueue.ts",
       "import": "./src/projectTaskQueue.ts"
     },
+    "./sharedWorkProjection": {
+      "types": "./src/sharedWorkProjection.ts",
+      "import": "./src/sharedWorkProjection.ts"
+    },
     "./projectTaskEditing": {
       "types": "./src/projectTaskEditing.ts",
       "import": "./src/projectTaskEditing.ts"
