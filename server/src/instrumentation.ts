@@ -37,6 +37,13 @@ export async function register() {
       console.error('Failed to register the co-managed scheduling providers:', error);
     }
 
+    // Delivery seam provider (CM L5). Best-effort: without it subscribers and the inbound path stay native.
+    try {
+      await import('@alga-psa/co-managed/deliveryRegistration');
+    } catch (error) {
+      console.error('Failed to register the co-managed delivery provider:', error);
+    }
+
     // Wire the DB-prefs-aware locale resolver into @alga-psa/ui's server i18n.
     // Done here (instead of at the @alga-psa/ui level) to avoid a
     // ui→tenancy circular dependency; tenancy already depends on ui.

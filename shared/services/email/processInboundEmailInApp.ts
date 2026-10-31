@@ -1,3 +1,4 @@
+import { classifyReplyToken, coManagedDeliverySeam } from '../../lib/coManagedDelivery';
 import type { TenantDb } from '@alga-psa/db';
 import { htmlToVisibleText } from '../../lib/email/replyParser';
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
@@ -203,9 +204,9 @@ type ProcessInboundEmailInAppBaseResult =
     }
   | {
       outcome: 'quarantined';
-      reason: 'unauthorized_thread_header_sender';
+      reason: 'unauthorized_thread_header_sender' | 'co_managed_token_refused';
       ticketId: string;
-      matchedBy: 'thread_headers';
+      matchedBy: 'thread_headers' | 'reply_token';
     };
 
 export type ProcessInboundEmailInAppResult = ProcessInboundEmailInAppBaseResult & {
@@ -1684,6 +1685,24 @@ export async function processInboundEmailInApp(
   if (token) {
     try {
       const match = await findTicketByReplyToken(String(token), tenantId);
+      // CM L5 admission hook: the prefix check is a string compare, so a native (psa) token costs
+      // 0 extra statements. Only cm1:/cm2: tokens consult the delivery seam, and refusal happens
+      // before any comment write.
+      if (match?.ticketId && classifyReplyToken(String(token)) !== 'native') {
+        const provider = await coManagedDeliverySeam.resolve(tenantId);
+        const admission = provider ? await provider.admitReplyToken(tenantId, String(token), match.metadata) : null;
+        if (!provider) {
+          // Not served (flag off / no entitlement / kill switch): the token is inert, thread headers decide.
+        } else if (admission && admission.admitted === false && admission.acknowledge) {
+          if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
+          return withDiagnostics({
+            outcome: 'quarantined',
+            reason: 'co_managed_token_refused',
+            ticketId: match.ticketId,
+            matchedBy: 'reply_token',
+          }, diagnostics);
+        }
+      }
       if (match?.ticketId) {
         const replyTarget = match.commentId
           ? await resolveReplyTargetFromComment({

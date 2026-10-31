@@ -10,6 +10,10 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts"
     },
+    "./deliveryRegistration": {
+      "types": "./src/deliveryRegistration.ts",
+      "import": "./src/deliveryRegistration.ts"
+    },
     "./capability": {
       "types": "./src/capability.ts",
       "import": "./src/capability.ts"

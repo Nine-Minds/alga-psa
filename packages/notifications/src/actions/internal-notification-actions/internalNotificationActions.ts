@@ -3,6 +3,7 @@
 import type { WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import { tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { serves } from '@alga-psa/core/capability';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermissionAsync } from '../../lib/authHelpers';
 import {
@@ -620,6 +621,12 @@ export const getInternalNotificationCategoriesAction = withAuth(async (
       query = query.where({ 'inc.available_for_client_portal': true });
     }
 
+    // The co-managed catalog rows are global; only a served tenant sees them, so an unserved
+    // tenant's settings listing is identical to what it was before the rows were seeded.
+    if (!(await serves('co-managed', tenant)).served) {
+      query = query.whereNot('inc.name', 'co-managed');
+    }
+
     return await query;
   });
 });
@@ -679,6 +686,10 @@ export const getSubtypesAction = withAuth(async (
 
     if (forClientPortal === true) {
       query = query.where({ 'ins.available_for_client_portal': true });
+    }
+
+    if (!(await serves('co-managed', tenant)).served) {
+      query = query.where('ins.name', 'not like', 'co-managed-%');
     }
 
     return await query.orderBy('ins.name');
