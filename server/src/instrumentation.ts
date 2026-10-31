@@ -37,10 +37,9 @@ export async function register() {
       console.error('Failed to register the co-managed scheduling providers:', error);
     }
 
-    // Delivery seam provider (CM L5). Best-effort: without it subscribers and the inbound path stay native.
+    // Delivery seam provider + inbound reply writer (CM L5; one entry point, shared with email-service). Best-effort: without it subscribers and the inbound path stay native.
     try {
       await import('@alga-psa/co-managed/deliveryRegistration');
-      await import('./lib/co-managed/inboundCommentWriter');
       (await import('./lib/co-managed/routingRecovery')).defineCoManagedRoutingRecoveryJob();
     } catch (error) {
       console.error('Failed to register the co-managed delivery provider:', error);

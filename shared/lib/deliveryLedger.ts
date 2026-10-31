@@ -5,7 +5,10 @@ import { tenantDb } from '@alga-psa/db';
  * The delivery claim protocol, extracted from base's comment-email ledger.
  *
  *   claim:  INSERT state='sending' ON CONFLICT DO NOTHING. A fresh insert wins. An existing
- *           row is re-claimed only when it is `failed` (attempts + 1). `sent` and `sending`
+ *           row is re-claimed only from a reclaimable state (`failed`, plus `pending` for
+ *           routing). Every successful claim is
+ *           one real send attempt: a fresh insert starts at `attempts = 1` (column default) and
+ *           every re-claim adds 1, whichever state it took over. `sent` and `sending`
  *           rows are never re-claimed: `sending` is deliberately not leased, because an unknown
  *           provider outcome needs operator reconciliation, not a duplicate delivery.
  *   finish: moves a `sending` row to `sent` | `failed`. Finishing as `sending` records
@@ -68,7 +71,7 @@ export async function claimDelivery(
   const retried = await table().where(qualified).whereIn('state', [...(ledger.reclaimable ?? ['failed'])]).update({
     state: 'sending',
     updated_at: new Date(),
-    attempts: db.raw("CASE WHEN state = 'failed' THEN attempts + 1 ELSE attempts END"),
+    attempts: db.raw('attempts + 1'),
     last_error: null,
     error_code: null,
     requires_reconciliation: false,

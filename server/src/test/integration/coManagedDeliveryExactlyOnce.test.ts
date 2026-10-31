@@ -31,7 +31,7 @@ vi.mock('@alga-psa/notifications/actions/internal-notification-actions/internalN
   },
 }));
 
-import { recoverRoutingForTenant } from '../../lib/co-managed/routingRecovery';
+import { recoverRoutingForTenant, coManagedRoutingTenants } from '../../lib/co-managed/routingRecovery';
 import { deliverRouting } from '../../lib/notifications/coManagedRoutingDelivery';
 
 describe('co-managed delivery: exactly once, query cost, kill switch (migrated PostgreSQL)', () => {
@@ -101,6 +101,8 @@ describe('co-managed delivery: exactly once, query cost, kill switch (migrated P
       await deliverRouting(p, tenant, {});                   // recovery sweeping the same rows
       expect(h.sent.sort()).toEqual(['email:u1@example.test', 'in_app:u1']);
       expect((await rowsOf(source)).map(r => r.state)).toEqual(['sent', 'sent']);
+      // A pending row claimed once and sent is one real attempt (it was written with attempts = 0).
+      expect((await rowsOf(source)).map(r => r.attempts)).toEqual([1, 1]);
     });
 
     it('a crash between claim and finish leaves the row sending: never re-sent, flagged for reconciliation', async () => {
@@ -127,6 +129,8 @@ describe('co-managed delivery: exactly once, query cost, kill switch (migrated P
       await finishDelivery(conn, CO_MANAGED_LEDGER, tenant, key, 'failed', { error: 'smtp 451' });
       expect(await claimDelivery(conn, CO_MANAGED_LEDGER, tenant, key, extra)).toBe(true);
       expect(await claimDelivery(conn, CO_MANAGED_LEDGER, tenant, key, extra)).toBe(false);
+      await finishDelivery(conn, CO_MANAGED_LEDGER, tenant, key, 'sent');
+      expect((await rowsOf(source))[0]).toMatchObject({ state: 'sent', attempts: 2 });
       await expect(conn('co_management_deliveries').insert({ tenant, ...key, recipient_kind: 'msp_user' })).rejects.toMatchObject({ code: '23505' });
     });
   });
@@ -138,6 +142,19 @@ describe('co-managed delivery: exactly once, query cost, kill switch (migrated P
   });
 
   describe('kill switch: FORCE_CAPABILITIES=co-managed:off', () => {
+    it('tenants() issues no query against co_management_deliveries while forced off', async () => {
+      const queried: string[] = [];
+      const fakeDb = { unscoped: (table: string) => { queried.push(table); throw new Error('unexpected scan'); } } as any;
+      for (const forced of ['co-managed:off', 'co-managed:bogus']) {
+        process.env.FORCE_CAPABILITIES = forced;
+        expect(await coManagedRoutingTenants(fakeDb)).toEqual([]);
+      }
+      expect(queried).toEqual([]);
+      process.env.FORCE_CAPABILITIES = 'co-managed:on';
+      await expect(coManagedRoutingTenants(fakeDb)).rejects.toThrow('unexpected scan'); // control: the scan does happen otherwise
+      expect(queried).toEqual(['co_management_deliveries']);
+    });
+
     it('rows wait while forced off, then drain exactly once when lifted', async () => {
       const source = randomUUID();
       const p = provider(await seedPending([route(source, 'routing_in_app', 'k1'), route(source, 'routing_email', 'k1')]));

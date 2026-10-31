@@ -1,3 +1,4 @@
+import { InboundRetryLaterError, isInboundRetryLaterError } from './inboundRetryLaterError';
 import { classifyReplyToken, coManagedDeliverySeam, coManagedInboundCommentSeam, coManagedInboundOperationId } from '../../lib/coManagedDelivery';
 import type { TenantDb } from '@alga-psa/db';
 import { htmlToVisibleText } from '../../lib/email/replyParser';
@@ -1690,6 +1691,17 @@ export async function processInboundEmailInApp(
       // before any comment write.
       let tokenInert = false;
       if (match?.ticketId && classifyReplyToken(String(token)) !== 'native') {
+        // No provider registered in THIS process (as opposed to a provider that says "not served"):
+        // admission cannot be evaluated, so the token must neither be treated as inert (native
+        // write by thread headers) nor reach a writer that throws and is then deduped.
+        // Retry rather than quarantine: a cm token can only exist on a tenant that co-managed
+        // served when it was minted, so a no-provider process is a deploy-order/boot gap, not
+        // evidence the reply is unauthorised. Quarantine here is only a log line plus a terminal
+        // processed record, which would lose a legitimate customer reply permanently; a retry
+        // lets a co-managed-capable consumer handle it, and the queue's dead-letter state bounds it.
+        if (!coManagedDeliverySeam.hasProvider()) {
+          throw new InboundRetryLaterError('co-managed delivery provider is not registered in this process; cannot evaluate a cm reply token, leaving the message to retry');
+        }
         const provider = await coManagedDeliverySeam.resolve(tenantId);
         // Not served (flag off / no entitlement / kill switch): the token is inert and thread headers decide.
         const admission = provider
@@ -1720,7 +1732,7 @@ export async function processInboundEmailInApp(
           // shared_it / organization_private reply: written through L4a's writer as the verified
           // participant, never through the native writer, so the audience is stamped on the thread.
           const writer = await coManagedInboundCommentSeam.resolve(tenantId);
-          if (!writer) throw new Error('co-managed inbound writer is not available in this process; leaving the message to retry');
+          if (!writer) throw new InboundRetryLaterError('co-managed inbound writer is not available in this process; leaving the message to retry');
           const text = (parsedEmail?.sanitizedText ?? emailData.body?.text ?? htmlToVisibleText(parsedEmail?.sanitizedHtml ?? emailData.body?.html ?? '')).trim();
           const written = await writer.write({
             tenant: tenantId,
@@ -1777,6 +1789,7 @@ export async function processInboundEmailInApp(
         diagnostics.threading.tokenLookupMissReason = 'token_not_found';
       }
     } catch (error) {
+      if (isInboundRetryLaterError(error)) throw error;
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.warn('processInboundEmailInApp: reply-token threading failed (continuing)', {
         tenantId,

@@ -133,4 +133,38 @@ describe('inbound reply token matrix (CM L5)', () => {
     expect(servesMock).not.toHaveBeenCalled();
     expect(acks).toHaveLength(0);
   });
+
+  describe('no co-managed provider registered in this process', () => {
+    beforeEach(() => { coManagedDeliverySeam.reset(); coManagedInboundCommentSeam.reset(); });
+
+    it.each(['cm2:abc', 'cm1:abc'])('a %s token is retried, never written natively, never treated as inert', async (token) => {
+      const { InboundRetryLaterError } = await import('../inboundRetryLaterError');
+      await expect(inbound(token)).rejects.toBeInstanceOf(InboundRetryLaterError);
+      expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+      expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
+      expect(writes).toHaveLength(0);
+      expect(acks).toHaveLength(0);
+    });
+
+    it('an admitted reply with no inbound writer registered is retried, not handed to the native path', async () => {
+      const { InboundRetryLaterError } = await import('../inboundRetryLaterError');
+      admission = { admitted: true, audience: 'shared_it', relationshipId: 'rel', threadId: 'thr', ticketId: 'ticket-1', parentCommentId: null, actor: { tenant: 'msp', userId: 'u1' } };
+      coManagedDeliverySeam.register(() => ({ admitReplyToken: admitSpy } as any));
+      await expect(inbound('cm2:abc')).rejects.toBeInstanceOf(InboundRetryLaterError);
+      expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+    });
+
+    it('a native (psa) token still takes the native path with no provider (0 seam work)', async () => {
+      await inbound('9f1c2d3e-4b5a-4c6d-8e7f-1a2b3c4d5e6f');
+      expect(admitSpy).not.toHaveBeenCalled();
+      expect(servesMock).not.toHaveBeenCalled();
+    });
+
+    it('a provider that says "not served" keeps the token inert: thread headers decide', async () => {
+      coManagedDeliverySeam.register(() => ({ admitReplyToken: async () => ({ admitted: false, reason: 'not_served', acknowledge: false }) } as any));
+      await inbound('cm2:garbage');
+      expect(findTicketByEmailThreadMock).toHaveBeenCalled();
+      expect(writes).toHaveLength(0);
+    });
+  });
 });

@@ -3,6 +3,7 @@
 import { coManagedDeliverySeam, coManagedWorkflowTicketSeam } from '@alga-psa/shared/lib/coManagedDelivery';
 import { retainCoManagedWorkflowTicketAuthority } from './workflowTicketAuthority';
 import { createCoManagedDeliveryProvider } from './deliveryProvider';
+import { registerCoManagedInboundCommentWriter } from './inboundCommentWriter';
 
 if (!coManagedDeliverySeam.hasProvider()) coManagedDeliverySeam.register(() => createCoManagedDeliveryProvider());
 
@@ -10,3 +11,7 @@ if (!coManagedDeliverySeam.hasProvider()) coManagedDeliverySeam.register(() => c
 if (!coManagedWorkflowTicketSeam.hasProvider()) {
   coManagedWorkflowTicketSeam.register(() => ({ retain: async (trx, input) => { await retainCoManagedWorkflowTicketAuthority(trx as never, input); } }));
 }
+
+// Inbound reply writer (CM L5). Registered here, not in server/, so every process that handles
+// inbound mail (server, unified queue consumer bin, email-service) has the same seams.
+registerCoManagedInboundCommentWriter();

@@ -1,11 +1,11 @@
 import { createHash } from 'node:crypto';
 import { getAdminConnection } from '@alga-psa/db';
-import { TenantEmailService, StaticTemplateProcessor } from '@alga-psa/email';
+import { getWorkflowEmailProvider } from '@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry';
 import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage';
 import { CO_MANAGED_LEDGER, claimDelivery, finishDelivery } from '@alga-psa/shared/lib/deliveryLedger';
 import { coManagedInboundCommentSeam } from '@alga-psa/shared/lib/coManagedDelivery';
-import { withCoManagedMailCredential } from '@alga-psa/co-managed/sharedWorkIdentity';
-import { createSharedTicketComment } from './createTicketComment';
+import { withCoManagedMailCredential } from './sharedWorkIdentity';
+import { createSharedTicketComment } from './sharedTicketCommentWriter';
 
 /**
  * Registers the writer for admitted shared_it / organization_private email replies (CM L5).
@@ -14,7 +14,8 @@ import { createSharedTicketComment } from './createTicketComment';
  * transaction, and the command receipt makes a replayed message a no-op. The only difference from a
  * browser comment is the credential: a verified inbound-mail scope instead of a session row.
  */
-if (!coManagedInboundCommentSeam.hasProvider()) {
+export function registerCoManagedInboundCommentWriter(): void {
+  if (coManagedInboundCommentSeam.hasProvider()) return;
   coManagedInboundCommentSeam.register(() => ({
     async write(input) {
       const db = await getAdminConnection();
@@ -36,6 +37,11 @@ if (!coManagedInboundCommentSeam.hasProvider()) {
      * skipped automated senders, so two auto-responders cannot ping-pong.
      */
     async acknowledgeRefusal({ tenant, token, to, ticketId }) {
+      // Outbound mail comes from the process's registered workflow email provider (the same
+      // registry that keeps shared/ free of @alga-psa/email). A process without one (email-service)
+      // skips the courtesy mail before claiming, so the ledger never holds an unsendable row.
+      let email: ReturnType<typeof getWorkflowEmailProvider>;
+      try { email = getWorkflowEmailProvider(); } catch { return; }
       const db = await getAdminConnection();
       const hex = createHash('sha256').update(`co-managed-refusal-ack:${tenant}:${token}`).digest('hex');
       const key = { delivery_kind: 'inbound_refusal_ack', source_id: `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`, recipient: to };
@@ -44,9 +50,9 @@ if (!coManagedInboundCommentSeam.hasProvider()) {
       const text = 'We received your reply but could not add it to the conversation it referred to. It may no longer be open to you. No further action was taken.';
       const html = `<p>${text}</p>`;
       try {
-        await TenantEmailService.getInstance(tenant).sendEmail({
+        await email.TenantEmailService.getInstance(tenant).sendEmail({
           mailClass: 'ticket', to, tenantId: tenant, entityType: 'ticket', entityId: ticketId,
-          templateProcessor: new StaticTemplateProcessor(subject, html, text),
+          templateProcessor: new email.StaticTemplateProcessor(subject, html, text),
           headers: { ...AUTO_GENERATED_MAIL_HEADERS },
         });
         await finishDelivery(db, CO_MANAGED_LEDGER, tenant, key, 'sent');
