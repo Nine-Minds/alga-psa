@@ -98,6 +98,8 @@ export default defineConfig({
       // Timezone-safe date-only rendering: the renderer and field formatting
       // share one UTC-pinned formatter — listed for the same reason as above.
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',
+      'src/lib/invoice-template-ast/childRows.test.ts',
+      'src/lib/invoiceBundleComponents/**/*.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
       'src/lib/invoice-template-ast/server-render.inlineImages.test.ts',
       // Country-driven date shape: a document is dated the way its recipient
