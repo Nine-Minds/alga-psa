@@ -32,9 +32,9 @@ vi.mock('@alga-psa/jobs/handlers/threecxPhonebookHandlers', stubModule);
 vi.mock('@alga-psa/jobs/handlers/workflowQuotaResumeScanHandler', stubModule);
 vi.mock('@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization', stubModule);
 vi.mock('@alga-psa/db/admin', () => ({ getAdminConnection: async () => ctx.knex }));
-vi.mock('@alga-psa/co-managed', () => ({ observeDueCoManagedTicketSlas: vi.fn(), processCoManagedSlaEmailDeliveries: vi.fn() }));
+vi.mock('@alga-psa/co-managed', () => ({ observeDueCoManagedTicketSlas: vi.fn() }));
 vi.mock('@alga-psa/notifications/lib/coManagedSlaNotifications', () => ({ persistCoManagedSlaNotifications: vi.fn() }));
-vi.mock('../../../lib/jobs/handlers/coManagedSlaEmailTransport', () => ({ sendCoManagedSlaEmail: vi.fn() }));
+vi.mock('../../../lib/notifications/coManagedSlaDelivery', () => ({ deliverCoManagedSlaNotifications: vi.fn() }));
 vi.mock('@alga-psa/core/capability', async importOriginal => ({ ...(await importOriginal<any>()), filterServed: ctx.filter }));
 
 import { runMaintenanceJob } from '@alga-psa/jobs/fanout';

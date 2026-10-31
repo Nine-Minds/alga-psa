@@ -1,11 +1,10 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { fanoutCoManagedSlaNotification, isCoManagedUuid } from '@alga-psa/co-managed';
-import { createNotificationRowFromTemplate } from '../actions/internal-notification-actions/createNotificationCore';
-import { coManagedSlaPresentation } from './coManagedSlaPresentation';
+import { enqueueCoManagedSlaDeliveries, isCoManagedUuid } from '@alga-psa/co-managed';
 
-/** Fanout completion means every currently eligible recipient/channel has a
- * durable receipt. In-app transports and pending email receipts complete separately. */
+/** Capture each retained crossing's recipients as pending rows in L5's delivery ledger, then complete the event.
+ * Completion means every currently eligible recipient/channel is owed a ledger row; sending (and its retries) is the
+ * ledger's job, run by the delivery step. */
 export async function persistCoManagedSlaNotifications(db: Knex, tenant: string, limit = 100) {
   if (!isCoManagedUuid(tenant) || !Number.isSafeInteger(limit) || limit < 1 || limit > 500) throw new Error('Invalid SLA notification scan');
   tenant = tenant.toLowerCase();
@@ -16,25 +15,7 @@ export async function persistCoManagedSlaNotifications(db: Knex, tenant: string,
   const failures: unknown[] = [];
   for (const event of events) {
     try {
-      await fanoutCoManagedSlaNotification(db, tenant, event.notification_event_id, async (context, message, channel) => {
-        const owner = tenantDb(context.trx, tenant);
-        const key = { notification_event_id: message.eventId, recipient_user_id: context.actor.userId, channel };
-        const inserted = await owner.table('sla_organization_notification_recipients').insert({ tenant, ...key })
-          .onConflict(['tenant', 'notification_event_id', 'recipient_user_id', 'channel']).ignore().returning('notification_event_id');
-        if (!inserted.length) {
-          const prior = await owner.table('sla_organization_notification_recipients').where(key).forUpdate().first();
-          if (!prior || (channel === 'in_app' && !['created', 'disabled', 'skipped'].includes(prior.status))) throw new Error('SLA notification receipt is incomplete');
-          return;
-        }
-        if (channel === 'email') return;
-        const notification = await createNotificationRowFromTemplate(context.trx, tenant, context.actor.userId, {
-          tenant, user_id: context.actor.userId, template_name: `sla-${message.notificationType}`, type: message.notificationType === 'breach' ? 'error' : 'warning',
-          category: 'sla', ...coManagedSlaPresentation(message),
-        });
-        await owner.table('sla_organization_notification_recipients').where(key).update({ status: notification ? 'created' : 'disabled',
-          notification_id: notification?.internal_notification_id ?? null, completed_at: context.trx.raw('now()') });
-        // L5's realtime delivery queue is absent from this base; the stored in-app row is the delivery of record.
-      });
+      await enqueueCoManagedSlaDeliveries(db, tenant, event.notification_event_id);
       await home.table('sla_organization_notification_events').where({ notification_event_id: event.notification_event_id, status: 'pending' })
         .update({ status: 'completed', completed_at: db.raw('now()') });
       completed++;

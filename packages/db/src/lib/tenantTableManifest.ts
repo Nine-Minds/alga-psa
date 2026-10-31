@@ -702,7 +702,6 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'co_management_ticket_handoffs', deletion: 'ordered' },
   { table: 'co_management_ticket_work', deletion: 'ordered' },
   { table: 'co_managed_ticket_references', deletion: 'ordered', clientKeyed: true },
-  { table: 'sla_organization_notification_recipients', deletion: 'ordered' },
   { table: 'sla_organization_notification_events', deletion: 'ordered' },
   { table: 'sla_organization_events', deletion: 'ordered' },
   { table: 'sla_organization_obligations', deletion: 'ordered' },
