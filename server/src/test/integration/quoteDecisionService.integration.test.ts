@@ -356,6 +356,40 @@ describe('decideQuote (alga-2026-0002820 1/6)', () => {
     expect(onQuoteAcceptedSpy).toHaveBeenCalledTimes(1);
   });
 
+  it('updateQuote(status:accepted) routes through the service: one msp_marked row, hook once, patch fields applied; repeats and drafts are refused', async () => {
+    const { updateQuote } = await import('@alga-psa/billing/actions/quoteActions');
+    const tenantId = await createTenantFixture();
+    const clientId = await addClient(tenantId);
+    const me = await addUser(tenantId, { permissions: [['billing', 'read'], ['billing', 'update']] });
+    const { quoteId } = await addQuote(tenantId, clientId);
+    mockCurrentUser = me;
+
+    const result: any = await updateQuote(quoteId, { status: 'accepted', title: 'Renamed on accept' } as any);
+
+    expect(result.status).toBe('accepted');
+    expect(result.title).toBe('Renamed on accept');
+    const row = await quoteRow(tenantId, quoteId);
+    expect(row.accepted_by).toBe(me.user_id);
+    expect(row.accepted_at).toBeTruthy();
+    const rows = await decisions(tenantId, quoteId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ decision: 'accepted', method: 'msp_marked', actor_user_id: me.user_id });
+    expect(onQuoteAcceptedSpy).toHaveBeenCalledTimes(1);
+
+    await expect(updateQuote(quoteId, { status: 'accepted' } as any)).rejects.toThrow(
+      'Invalid quote status transition from accepted to accepted'
+    );
+    expect(await decisions(tenantId, quoteId)).toHaveLength(1);
+    expect(onQuoteAcceptedSpy).toHaveBeenCalledTimes(1);
+
+    const draft = await addQuote(tenantId, clientId, 'draft');
+    await expect(updateQuote(draft.quoteId, { status: 'accepted' } as any)).rejects.toThrow(
+      'Invalid quote status transition from draft to accepted'
+    );
+    expect(await decisions(tenantId, draft.quoteId)).toHaveLength(0);
+    expect((await quoteRow(tenantId, draft.quoteId)).status).toBe('draft');
+  });
+
   it('a second decide on a decided quote returns not_pending and writes nothing', async () => {
     const tenantId = await createTenantFixture();
     const clientId = await addClient(tenantId);
