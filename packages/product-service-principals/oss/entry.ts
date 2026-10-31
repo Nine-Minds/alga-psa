@@ -9,6 +9,7 @@ import type {
 } from '../types';
 
 export type * from '../types';
+export { assertNoDelegationHeaders } from '../delegation';
 
 export async function resolveServicePrincipalApiContext<TUser = unknown>(
   _keyRecord: BoundaryApiKeyRecord,

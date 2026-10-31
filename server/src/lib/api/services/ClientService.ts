@@ -3,6 +3,7 @@
  * Business logic for client-related operations
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { Knex } from 'knex';
 import { locationAddressSql } from './locationAddressSql';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
@@ -12,7 +13,6 @@ import { availableCreditSubquerySql } from '@alga-psa/billing/lib/creditBalance'
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../../api/middleware/apiMiddleware';
-import { hasPermission } from '@alga-psa/auth/rbac';
 import {
   createLocation as createClientLocation,
   deleteLocation as deleteClientLocation,
@@ -707,7 +707,7 @@ export class ClientService extends BaseService<IClient> {
       // Deactivating a client also deactivates its contacts and their portal users
       // unless the caller chose "client only" — the same choice the web dialog offers.
       if (data.is_inactive === true && data.deactivate_contacts !== false) {
-        if (!before.is_inactive && !(await hasPermission(context.user, 'contact', 'update', trx))) {
+        if (!before.is_inactive && !(await hasApiContextPermission(context, 'contact', 'update', trx))) {
           throw new ForbiddenError('Permission denied: Cannot update contacts');
         }
         // Get all contact IDs for this client

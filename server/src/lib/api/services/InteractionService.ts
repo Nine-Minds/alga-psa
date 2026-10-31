@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
   BaseService,
@@ -14,7 +15,6 @@ import {
   createInteractionScheduleEntry,
   resolveScheduleAssignees,
 } from '@alga-psa/clients/actions/interactionCreateHelper';
-import { hasPermission } from '@alga-psa/auth/rbac';
 import { ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import type {
   CreateInteractionApi,
@@ -140,6 +140,7 @@ export class InteractionService extends BaseService<InteractionApiRow> {
       primaryKey: 'interaction_id',
       tenantColumn: 'tenant',
       searchableFields: ['title', 'notes'],
+      viaPrincipalColumns: { create: ['created_via_principal_id'] },
       defaultSort: 'interaction_date',
       defaultOrder: 'desc',
     });
@@ -209,7 +210,7 @@ export class InteractionService extends BaseService<InteractionApiRow> {
         throw new ValidationError('start_time is required when creating a schedule entry');
       }
       if (assignedUserIds.some((id) => id !== context.userId) &&
-          (!context.user || !await hasPermission(context.user, 'user_schedule', 'update', knex))) {
+          (!context.user || !await hasApiContextPermission(context, 'user_schedule', 'update', knex))) {
         throw new ForbiddenError('Permission denied to assign schedule entries to other users.');
       }
     }

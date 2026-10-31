@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "DB integration: EE migrations apply on a migrated schema \u2014 inserting a user with user_type='service' succeeds and 'robot' fails the CHECK; service_principals, via columns, service_principal_limit and permission rows exist. On a CE-only migrated schema, inserting user_type='service' fails the CHECK",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002",
@@ -14,7 +14,7 @@
   {
     "id": "T002",
     "description": "DB integration: EE agent migration on seeded agents (one active, one inactive) yields service users with is_inactive mirroring agents.active, service_user_id backfilled, service_principals rows; rerun is a no-op; getLicenseUsage.used drops by the agent count",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F087",
       "F088",
@@ -24,7 +24,7 @@
   {
     "id": "T003",
     "description": "DB integration: Pro tenant at its seat limit can still create an API principal and an MCP agent (seat usage unchanged); at the service-principal limit both fail with SERVICE_PRINCIPAL_LIMIT_REACHED and nothing is inserted",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023",
       "F031",
@@ -36,7 +36,7 @@
   {
     "id": "T004",
     "description": "Unit: limit resolution \u2014 hosted uses tenant override else 10; appliance uses the verified service_principals claim, ignores tenants.service_principal_limit, and falls back to 10 when the claim is missing or the token is invalid",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F070",
       "F071"
@@ -45,7 +45,7 @@
   {
     "id": "T005",
     "description": "DB integration: deactivating a principal sets is_inactive, deactivates its keys, and a previously minted mcp_agent session key fails validateApiKey immediately; reactivation is limit-checked and old keys stay inactive",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F025",
       "F026",
@@ -56,7 +56,7 @@
   {
     "id": "T006",
     "description": "DB integration: deleting a principal referenced by a ticket and mcp_agent_audit archives it (audit kept, IdP binding cleared, hidden from list, subject rebindable to a new agent); deleting an unused principal hard-deletes it; the archived principal no longer counts toward the limit",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F027",
       "F029",
@@ -111,7 +111,7 @@
   {
     "id": "T012",
     "description": "Integration: createApiKey refuses a service owner for every purpose (including mobile_session, mcp_user); EE issueServicePrincipalKey creates an active purpose='service' key that validates",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F041",
       "F028"
@@ -144,7 +144,7 @@
   {
     "id": "T015",
     "description": "Integration: act-as validation \u2014 principal without allow_act_as \u2192 403 ACT_AS_NOT_ALLOWED; client or inactive or service target \u2192 422 ACT_AS_INVALID_TARGET; header on a human-owned key \u2192 400 ACT_AS_NOT_SUPPORTED",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F050"
     ]
@@ -152,7 +152,7 @@
   {
     "id": "T016",
     "description": "Integration: act-as RBAC intersection \u2014 principal allowed but act-as human lacks permission \u2192 403; human allowed but principal lacks it \u2192 403; both allowed \u2192 200",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F051"
     ]
@@ -228,7 +228,7 @@
   {
     "id": "T024",
     "description": "Unit: MCP call with act_as_user_id forwards X-Alga-Act-As on selfFetch and writes mcp_agent_audit.act_as_user_id",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F068",
       "F090"
@@ -237,7 +237,7 @@
   {
     "id": "T025",
     "description": "Unit: two different keys for one principal consume the same sp:<id> bucket; rateLimitConfig resolves per-key row \u2192 principal override \u2192 Pro default; CE enforce honors the context override; override above ceiling rejected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F073",
       "F074",
@@ -257,7 +257,7 @@
   {
     "id": "T027",
     "description": "DB integration: REST UserService.update cannot change user_type to/from service; REST UserService.create rejects 'service' and blocks an internal user at the seat limit",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F085",
       "F086",
@@ -336,7 +336,7 @@
   {
     "id": "T035",
     "description": "DB integration (EE): on an essentials tenant createServicePrincipal (api) and createAgent both fail with TIER_ACCESS_DENIED and insert nothing; a pre-existing principal's key still authenticates while reactivation and new key issuance are refused",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F092",
       "F093",
@@ -373,7 +373,7 @@
   {
     "id": "T039",
     "description": "Integration (EE): service-principal server actions refuse callers without an interactive internal session or without service_principal permission",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F100"
     ]

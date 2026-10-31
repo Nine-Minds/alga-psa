@@ -5,7 +5,7 @@
 
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, withTransaction, withViaPrincipal } from '@alga-psa/db';
 import { 
   IProject, 
   IProjectPhase, 
@@ -771,7 +771,7 @@ export class ProjectService extends BaseService<IProject> {
         await assertHumanWorkAssignee(trx, context.tenant, [(taskData as { assigned_to?: string | null }).assigned_to]);
 
         const [task] = await db.table('project_tasks')
-          .insert(taskData)
+          .insert(withViaPrincipal(context, taskData, 'created_via_principal_id'))
           .returning('*');
 
         const occurredAt = task.created_at instanceof Date ? task.created_at : new Date();

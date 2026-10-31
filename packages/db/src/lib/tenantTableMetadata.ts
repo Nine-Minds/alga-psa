@@ -678,6 +678,22 @@ export function parseTableExpression(tableExpression: string): ParsedTableExpres
   };
 }
 
+/**
+ * Registers tables owned by an optional module (for example an Enterprise-only
+ * table) so that module can use tenantDb without its table names living in the
+ * shared registry. Idempotent; a table that is already registered must keep its
+ * scope, so a conflicting registration throws.
+ */
+export function registerTenantTables(tables: Record<string, TenantTableScope>): void {
+  for (const [name, scope] of Object.entries(tables)) {
+    const existing = tenantTableMetadata[name];
+    if (existing && JSON.stringify(existing) !== JSON.stringify(scope)) {
+      throw new Error(`Table ${name} is already registered with a different scope`);
+    }
+    tenantTableMetadata[name] = scope;
+  }
+}
+
 export function getTenantTableScope(tableName: string): TenantTableScope | undefined {
   return tenantTableMetadata[tableName];
 }

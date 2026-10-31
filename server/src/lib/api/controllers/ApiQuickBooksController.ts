@@ -3,6 +3,7 @@
  * Simplified version with proper API key authentication for QuickBooks integration
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { NextRequest, NextResponse } from 'next/server';
 import { QuickBooksService } from '../services/QuickBooksService';
 import {
@@ -73,21 +74,7 @@ import {
 import { 
   getConnection 
 } from '../../db/db';
-import { 
-  hasPermission 
-} from '../../auth/rbac';
-import {
-  assertApiPrincipal,
-  ApiRequest,
-  UnauthorizedError,
-  ForbiddenError,
-  NotFoundError,
-  ValidationError,
-  ConflictError,
-  createSuccessResponse,
-  createPaginatedResponse,
-  handleApiError
-} from '../middleware/apiMiddleware';
+import { ApiRequest, ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 import { getTenantProduct, ProductAccessError } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
@@ -133,14 +120,14 @@ export class ApiQuickBooksController {
     }
 
     // Get user within tenant context
-    const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-    assertApiPrincipal(user);
+    const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
     // Create extended request with context
     const apiRequest = req as ApiRequest;
     apiRequest.context = {
-      userId: keyRecord.user_id,
+      userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
       tenant: keyRecord.tenant,
       user
     };
@@ -165,7 +152,7 @@ export class ApiQuickBooksController {
     // Get a connection within the current tenant context
     const knex = await getConnection(req.context.tenant);
     
-    const hasAccess = await hasPermission(req.context.user, 'quickbooks', action, knex);
+    const hasAccess = await hasApiContextPermission(req.context, 'quickbooks', action, knex);
     if (!hasAccess) {
       throw new ForbiddenError(`Permission denied: Cannot ${action} quickbooks`);
     }

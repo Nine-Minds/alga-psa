@@ -4,10 +4,10 @@
  * Delegates to existing billing package models and services.
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import type { Knex } from 'knex';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
-import { hasPermission } from '../../auth/rbac';
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import { Quote, QuoteItem, QuoteActivity } from '@alga-psa/billing/models';
 import {
@@ -114,7 +114,7 @@ export class QuoteService extends BaseService<IQuote> {
   }
 
   private async validateBillingPermission(context: ServiceContext, action: string): Promise<void> {
-    const hasAccess = await hasPermission(context.user, 'billing', action);
+    const hasAccess = await hasApiContextPermission(context, 'billing', action);
     if (!hasAccess) {
       throw new ForbiddenError(`Permission denied: Cannot ${action} quotes`);
     }

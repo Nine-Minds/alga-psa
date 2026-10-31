@@ -6,3 +6,4 @@ export {
   mapServicePrincipalError,
 } from '@ee/lib/service-principals';
 export type * from '../types';
+export { assertNoDelegationHeaders } from '../delegation';

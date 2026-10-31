@@ -151,6 +151,21 @@ export async function writeTicketActivity(
     }
   }
 
+  // A service-principal user acting as itself is a distinct actor kind. Under
+  // act-as the actor stays the human (`user`) and the principal is recorded via.
+  let actorType: string = input.actor.actorType;
+  const viaPrincipalUserId = input.actor.viaPrincipalUserId ?? null;
+  if (
+    (actorType === TICKET_ACTIVITY_ACTOR.USER || actorType === TICKET_ACTIVITY_ACTOR.API) &&
+    input.actor.userId &&
+    !viaPrincipalUserId
+  ) {
+    const owner = await tenantScopedTable(knex, 'users', input.tenant)
+      .where({ user_id: input.actor.userId })
+      .first('user_type');
+    if (owner?.user_type === 'service') actorType = TICKET_ACTIVITY_ACTOR.SERVICE_PRINCIPAL;
+  }
+
   const changes = isEmptyChanges(input.changes) ? {} : input.changes ?? {};
   const details = input.details ?? {};
 
@@ -161,9 +176,10 @@ export async function writeTicketActivity(
     event_type: input.eventType,
     entity_type: input.entityType,
     entity_id: input.entityId ?? null,
-    actor_type: input.actor.actorType,
+    actor_type: actorType,
     actor_user_id: input.actor.userId ?? null,
     actor_contact_id: input.actor.contactId ?? null,
+    ...(viaPrincipalUserId ? { via_principal_user_id: viaPrincipalUserId } : {}),
     actor_display_name: displayName,
     source: input.source,
     occurred_at: occurredAt,

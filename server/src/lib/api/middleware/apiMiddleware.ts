@@ -3,11 +3,11 @@
  * Provides authentication, authorization, validation, and error handling for REST API endpoints
  */
 
+import { hasApiContextPermission } from './apiContextPermission';
 import { NextRequest, NextResponse } from 'next/server';
 import { applyFieldRangeRequests } from '../utils/fieldRange';
 import { ZodSchema, ZodError } from 'zod';
 import { ApiKeyServiceForApi } from '../../services/apiKeyServiceForApi';
-import { hasPermission } from '../../auth/rbac';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import type { SafeApiUser } from '@alga-psa/users';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -16,7 +16,11 @@ import type { RateLimitDecision } from '../rateLimit/enforce';
 import { enforceApiRateLimit } from '../rateLimit/enforce';
 import { redactSensitiveFields } from '../utils/redactSensitiveFields';
 import type { BucketConfig } from '@alga-psa/core/rateLimit';
-import { resolveServicePrincipalApiContext } from '@product/service-principals/entry';
+import {
+  resolveServicePrincipalApiContext,
+  mapServicePrincipalError,
+  assertNoDelegationHeaders,
+} from '@product/service-principals/entry';
 
 /** Who the request is made as. Defaults to the key owner (`kind: 'user'`). */
 export interface ApiPrincipal {
@@ -39,6 +43,8 @@ export interface ApiContext {
   actAsUserId?: string | null;
   /** User the request is evaluated and attributed as. Defaults to the key owner; equals `userId`. */
   effectiveUserId?: string;
+  /** Principal the work was done through when acting as another user; null otherwise. */
+  viaPrincipalUserId?: string | null;
   /** Optional token-bucket override honored by enforceApiRateLimit. */
   rateLimitConfig?: BucketConfig;
 }
@@ -353,6 +359,7 @@ export async function buildAuthenticatedApiContext(
   }
 
   assertApiPrincipal(user);
+  if (req) assertNoDelegationHeaders(req);
 
   return {
     userId: keyRecord.user_id,
@@ -363,6 +370,7 @@ export async function buildAuthenticatedApiContext(
     principal: { userId: keyRecord.user_id, userType: user.user_type, kind: 'user' },
     actAsUserId: null,
     effectiveUserId: keyRecord.user_id,
+    viaPrincipalUserId: null,
   };
 }
 
@@ -490,7 +498,7 @@ export function withPermission(resource: string, action: string) {
           throw new UnauthorizedError('User context required');
         }
 
-        const hasAccess = await hasPermission(req.context.user, resource, action);
+        const hasAccess = await hasApiContextPermission(req.context, resource, action);
         if (!hasAccess) {
           throw new ForbiddenError(`Permission denied: Cannot ${action} ${resource}`);
         }
@@ -549,7 +557,8 @@ export function withQueryValidation(schema: ZodSchema) {
 /**
  * Error handling middleware
  */
-export function handleApiError(error: any): NextResponse {
+export function handleApiError(rawError: any): NextResponse {
+  const error = mapServicePrincipalError(rawError);
   const redactedDetails = redactSensitiveFields(error.details);
   const redactedStack = process.env.NODE_ENV === 'development' ? error.stack : undefined;
 
