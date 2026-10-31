@@ -13,6 +13,7 @@ import type { Knex } from 'knex';
 import type { IProject, IProjectPhase, IProjectStatusMapping, IProjectTask, IStatus, IStandardStatus, ItemType } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
+import { coManagedHiddenColumns, coManagedProjectFamilyMask, CO_MANAGED_PROJECT_COLUMNS } from '@alga-psa/co-managed/projectFieldMask';
 import { releaseStagingForProject, releaseStagingForTasks } from '@alga-psa/inventory/lib';
 
 /** Status enriched with mapping metadata as returned by getProjectTaskStatuses. */
@@ -165,6 +166,66 @@ const ProjectModel = {
       console.error('Error getting projects by id:', error);
       throw error;
     }
+  },
+
+  /**
+   * `getByIds` for projects whose reader has redactions: the same row shape, with hidden columns NULL in the
+   * query itself (never fetched and filtered afterwards) and a hidden title shown as the neutral title.
+   * Returns no rows when the whole project or an identifier is hidden. One call per redaction set.
+   */
+  getMaskedByIds: async (
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    projectIds: string[],
+    redactedFields: readonly string[]
+  ): Promise<IProject[]> => {
+    if (!tenant) {
+      throw new Error('Tenant context is required for getting projects by id');
+    }
+    const mask = coManagedProjectFamilyMask(redactedFields, 'project');
+    if (projectIds.length === 0 || mask.dropRow) {
+      return [];
+    }
+
+    const hidden = coManagedHiddenColumns(redactedFields, 'projects', CO_MANAGED_PROJECT_COLUMNS);
+    // Overrides merged over the row's JSON; a hidden date/number/text column becomes JSON null.
+    const overrides: Record<string, string | null> = {};
+    for (const column of hidden) {
+      if (!['client_name', 'contact_name', 'status_name', 'is_closed', 'manager_name'].includes(column)) {
+        overrides[column] = null;
+      }
+    }
+    if (mask.body) overrides.description = null;
+    if (mask.title) overrides.project_name = mask.neutralTitle;
+
+    const nullable = (column: string, expression: string, type: string) =>
+      hidden.has(column) ? knexOrTrx.raw(`NULL::${type} as ??`, [column]) : knexOrTrx.raw(`${expression} as ??`, [column]);
+    const db = tenantDb(knexOrTrx, tenant);
+    const query = tenantScopedTable(knexOrTrx, 'projects', tenant)
+      .select(
+        knexOrTrx.raw('(to_jsonb(projects) || ?::jsonb) as masked', [JSON.stringify(overrides)]),
+        nullable('client_name', 'clients.client_name', 'text'),
+        hidden.has('manager_name') ? knexOrTrx.raw('NULL::text as assigned_to_first_name') : 'users.first_name as assigned_to_first_name',
+        hidden.has('manager_name') ? knexOrTrx.raw('NULL::text as assigned_to_last_name') : 'users.last_name as assigned_to_last_name',
+        nullable('contact_name', 'contacts.full_name', 'text'),
+        nullable('status_name', 's.name', 'text'),
+        nullable('is_closed', 's.is_closed', 'boolean')
+      )
+      .whereIn('projects.project_id', projectIds);
+    db.tenantJoin(query, 'clients', 'projects.client_id', 'clients.client_id', { type: 'left' });
+    db.tenantJoin(query, 'users', 'projects.assigned_to', 'users.user_id', { type: 'left' });
+    db.tenantJoin(query, 'contacts', 'projects.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
+    db.tenantJoin(query, 'statuses as s', 'projects.status', 's.status_id', { type: 'left' });
+
+    const rows = (await query) as Array<Record<string, unknown> & { masked: Record<string, unknown> }>;
+    const dateColumns = ['start_date', 'end_date', 'created_at', 'updated_at'];
+    return rows.map(({ masked, ...joined }) => {
+      const row: Record<string, unknown> = { ...masked, ...joined };
+      for (const column of dateColumns) {
+        if (typeof row[column] === 'string') row[column] = new Date(row[column] as string);
+      }
+      return row as unknown as IProject;
+    });
   },
 
   /**
