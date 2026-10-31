@@ -110,7 +110,11 @@ async function startServices() {
     healthServer.setWorker('dataStoreSweep', true);
 
     if (authorityRegistered) healthServer.markReady();
-    logger.info('[WorkflowWorker] All services started successfully');
+    if (authorityRegistered) {
+      logger.info('[WorkflowWorker] All services started successfully');
+    } else {
+      logger.info('[WorkflowWorker] Services started but worker is NOT ready: co-managed workflow ticket authority is missing');
+    }
 
     // Handle graceful shutdown
     process.on('SIGINT', shutdown);

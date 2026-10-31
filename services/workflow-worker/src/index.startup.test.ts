@@ -289,6 +289,8 @@ describe('workflow worker startup', () => {
       await vi.waitFor(() => expect(eventWorkerStartMock).toHaveBeenCalledTimes(1));
       expect(healthState.workers['co-managed-workflow-authority']).toBe(false);
       expect(healthState.ready).toBe(false);
+      expect(loggerInfoMock).not.toHaveBeenCalledWith('[WorkflowWorker] All services started successfully');
+      expect(loggerInfoMock).toHaveBeenCalledWith(expect.stringContaining('NOT ready'));
       expect(loggerErrorMock).toHaveBeenCalledWith(expect.stringContaining('Failed to register the co-managed workflow ticket authority'), expect.anything());
     } finally {
       processOnSpy.mockRestore();

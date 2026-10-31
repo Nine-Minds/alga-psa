@@ -61,6 +61,32 @@ describe('workflow ticket mutation adapter (L4a workflowTicketAuthority)', () =>
     await expect(retainWorkflowTicketAuthority(ctx, tx, 't1', ['comments'])).rejects.toThrow('out of scope');
   });
 
+  it('provider registered + participation-error: fails closed and never builds the provider', async () => {
+    const factory = vi.fn(() => { throw new Error('must not be built'); });
+    coManagedWorkflowTicketSeam.register(factory);
+    process.env.FORCE_CAPABILITIES = '';
+    registerCapabilityParticipation('co-managed', async () => { throw new Error('db down'); });
+    await expect(retainWorkflowTicketAuthority(ctx, tx, 't1', ['comments'])).rejects.toMatchObject({ code: 'WORKFLOW_TICKET_AUTHORITY_UNAVAILABLE', reason: 'participation-error', providerRegistered: true });
+    expect(factory).not.toHaveBeenCalled();
+  });
+
+  it('provider registered + not-participating: proceeds natively and calls nothing', async () => {
+    const factory = vi.fn(() => { throw new Error('must not be built'); });
+    coManagedWorkflowTicketSeam.register(factory);
+    process.env.FORCE_CAPABILITIES = '';
+    registerCapabilityParticipation('co-managed', async () => []);
+    await expect(retainWorkflowTicketAuthority(ctx, tx, 't1', ['comments'])).resolves.toBeUndefined();
+    expect(factory).not.toHaveBeenCalled();
+  });
+
+  it('provider registered + forced-off: proceeds natively', async () => {
+    const factory = vi.fn(() => { throw new Error('must not be built'); });
+    coManagedWorkflowTicketSeam.register(factory);
+    process.env.FORCE_CAPABILITIES = 'co-managed:off';
+    await expect(retainWorkflowTicketAuthority(ctx, tx, 't1', ['comments'])).resolves.toBeUndefined();
+    expect(factory).not.toHaveBeenCalled();
+  });
+
   it('does not construct the provider for a tenant that is not served', async () => {
     const factory = vi.fn(() => { throw new Error('must not be built'); });
     coManagedWorkflowTicketSeam.register(factory);
