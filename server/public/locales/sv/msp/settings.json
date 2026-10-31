@@ -3551,6 +3551,7 @@
         "audienceOptional": "Målgrupp (valfritt)",
         "audience": "Målgrupp",
         "subjectClaim": "Identifiera agenter med",
+        "audienceHelp": "Obligatoriskt. Det `aud`-värde som din IdP utfärdar för den här MCP-resursen.",
         "subjectClaimHelp": "Lämna tomt om inte identitetsleverantören anger något annat.",
         "issuer": "Utfärdare",
         "jwksUri": "URL för signeringsnycklar"

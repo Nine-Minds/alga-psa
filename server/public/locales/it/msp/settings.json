@@ -3551,6 +3551,7 @@
         "audienceOptional": "Destinatario (facoltativo)",
         "audience": "Destinatario",
         "subjectClaim": "Identifica gli agenti tramite",
+        "audienceHelp": "Obbligatorio. Il valore `aud` che il tuo IdP emette per questa risorsa MCP.",
         "subjectClaimHelp": "Lascia vuoto a meno che il provider non indichi diversamente.",
         "issuer": "Emittente",
         "jwksUri": "URL delle chiavi di firma"

@@ -3551,6 +3551,7 @@
         "audienceOptional": "Zielgruppe (optional)",
         "audience": "Zielgruppe",
         "subjectClaim": "Agenten identifizieren anhand von",
+        "audienceHelp": "Erforderlich. Der `aud`-Wert, den Ihr IdP für diese MCP-Ressource ausstellt.",
         "subjectClaimHelp": "Leer lassen, sofern Ihr Anbieter nichts anderes vorgibt.",
         "issuer": "Aussteller",
         "jwksUri": "URL für Signaturschlüssel"

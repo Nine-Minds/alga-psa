@@ -3551,6 +3551,7 @@
         "audienceOptional": "Doelgroep (optioneel)",
         "audience": "Doelgroep",
         "subjectClaim": "Agenten identificeren via",
+        "audienceHelp": "Verplicht. De `aud`-waarde die uw IdP uitgeeft voor deze MCP-resource.",
         "subjectClaimHelp": "Laat leeg, tenzij uw provider anders aangeeft.",
         "issuer": "Uitgever",
         "jwksUri": "URL van ondertekeningssleutels"

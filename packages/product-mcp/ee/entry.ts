@@ -13,6 +13,7 @@ export {
   listAssignableRoles,
   getIdpSuggestions,
 } from '@ee/lib/mcp/agents';
+export { isUsableAudience, MISSING_AUDIENCE_MESSAGE } from '@ee/lib/mcp/audience';
 export { exportAgentAudit } from '@ee/lib/mcp/agentAudit';
 export { authenticateMcpAdmin } from '@ee/lib/mcp/adminAuth';
 export {

@@ -3551,6 +3551,7 @@
         "audienceOptional": "Odbiorca (opcjonalnie)",
         "audience": "Odbiorca",
         "subjectClaim": "Identyfikuj agentów według",
+        "audienceHelp": "Wymagane. Wartość `aud`, którą Twój IdP wystawia dla tego zasobu MCP.",
         "subjectClaimHelp": "Pozostaw puste, chyba że dostawca zaleca inaczej.",
         "issuer": "Wystawca",
         "jwksUri": "Adres URL kluczy podpisujących"

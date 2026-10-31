@@ -3551,6 +3551,7 @@
         "audienceOptional": "Público-alvo (opcional)",
         "audience": "Público-alvo",
         "subjectClaim": "Identificar agentes por",
+        "audienceHelp": "Obrigatório. O valor `aud` que o seu IdP emite para este recurso MCP.",
         "subjectClaimHelp": "Deixe em branco, a menos que seu provedor indique o contrário.",
         "issuer": "Emissor",
         "jwksUri": "URL das chaves de assinatura"

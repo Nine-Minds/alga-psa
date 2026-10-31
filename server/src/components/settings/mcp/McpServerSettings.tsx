@@ -600,6 +600,7 @@ export default function McpServerSettings() {
             {idpForm.kind === 'microsoft' && (
               <div className="space-y-3">
                 <div className="md:w-1/2"><Label htmlFor="idp-entra-tid">{t('mcpServer.providers.fields.entraTenantId', { defaultValue: 'Entra tenant ID' })}</Label><Input id="idp-entra-tid" value={idpForm.entraTenantId} onChange={(e) => setIdpForm({ ...idpForm, entraTenantId: e.target.value })} placeholder="e.g. 00000000-0000-0000-0000-000000000000" /></div>
+                <div className="md:w-1/2"><Label htmlFor="idp-audience">{t('mcpServer.providers.fields.audience', { defaultValue: 'Audience' })}</Label><Input id="idp-audience" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="e.g. api://your-app-id" required /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{t('mcpServer.providers.fields.audienceHelp', { defaultValue: 'Required. The `aud` your IdP issues for this MCP resource.' })}</p></div>
                 <button
                   type="button"
                   id="mcp-idp-advanced-toggle"
@@ -612,7 +613,6 @@ export default function McpServerSettings() {
                 </button>
                 {showAdvanced && (
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <div><Label htmlFor="idp-audience">{t('mcpServer.providers.fields.audienceOptional', { defaultValue: 'Audience (optional)' })}</Label><Input id="idp-audience" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="e.g. api://your-app-id" /></div>
                     <div><Label htmlFor="idp-claim-ms">{t('mcpServer.providers.fields.subjectClaim', { defaultValue: 'Identify agents by' })}</Label><Input id="idp-claim-ms" value={idpForm.subjectClaim} onChange={(e) => setIdpForm({ ...idpForm, subjectClaim: e.target.value })} placeholder="azp (default)" /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{t('mcpServer.providers.fields.subjectClaimHelp', { defaultValue: 'Leave blank unless your provider tells you otherwise.' })}</p></div>
                   </div>
                 )}
@@ -620,14 +620,17 @@ export default function McpServerSettings() {
             )}
 
             {idpForm.kind === 'google' && (
+              <div className="space-y-3">
               <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm text-[rgb(var(--color-text-600))]">{t('mcpServer.providers.googleNoSetup', { defaultValue: 'Google needs no setup. Agents sign in with their Google service-account ID.' })}</div>
+                <div className="md:w-1/2"><Label htmlFor="idp-audience-g">{t('mcpServer.providers.fields.audience', { defaultValue: 'Audience' })}</Label><Input id="idp-audience-g" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="https://your-alga/api/mcp" required /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{t('mcpServer.providers.fields.audienceHelp', { defaultValue: 'Required. The `aud` your IdP issues for this MCP resource.' })}</p></div>
+              </div>
             )}
 
             {idpForm.kind === 'custom' && (
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div><Label htmlFor="idp-issuer">{t('mcpServer.providers.fields.issuer', { defaultValue: 'Issuer' })}</Label><Input id="idp-issuer" value={idpForm.issuer} onChange={(e) => setIdpForm({ ...idpForm, issuer: e.target.value })} placeholder="https://login.example.com/tenant" /></div>
                 <div><Label htmlFor="idp-jwks">{t('mcpServer.providers.fields.jwksUri', { defaultValue: 'Signing keys URL' })}</Label><Input id="idp-jwks" value={idpForm.jwksUri} onChange={(e) => setIdpForm({ ...idpForm, jwksUri: e.target.value })} placeholder="https://login.example.com/.../jwks" /></div>
-                <div><Label htmlFor="idp-audience-c">{t('mcpServer.providers.fields.audience', { defaultValue: 'Audience' })}</Label><Input id="idp-audience-c" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="https://your-alga/api/mcp" /></div>
+                <div><Label htmlFor="idp-audience-c">{t('mcpServer.providers.fields.audience', { defaultValue: 'Audience' })}</Label><Input id="idp-audience-c" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="https://your-alga/api/mcp" required /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{t('mcpServer.providers.fields.audienceHelp', { defaultValue: 'Required. The `aud` your IdP issues for this MCP resource.' })}</p></div>
                 <div><Label htmlFor="idp-claim-c">{t('mcpServer.providers.fields.subjectClaim', { defaultValue: 'Identify agents by' })}</Label><Input id="idp-claim-c" value={idpForm.subjectClaim} onChange={(e) => setIdpForm({ ...idpForm, subjectClaim: e.target.value })} placeholder="sub | azp | client_id" /></div>
               </div>
             )}
@@ -636,7 +639,7 @@ export default function McpServerSettings() {
             <Button
               id="mcp-add-idp"
               onClick={addIdp}
-              disabled={busy || (idpForm.kind === 'microsoft' && !idpForm.entraTenantId) || (idpForm.kind === 'custom' && (!idpForm.issuer || !idpForm.jwksUri))}
+              disabled={busy || !idpForm.audience.trim() || (idpForm.kind === 'microsoft' && !idpForm.entraTenantId) || (idpForm.kind === 'custom' && (!idpForm.issuer || !idpForm.jwksUri))}
             >
               {t('mcpServer.providers.actions.add', { defaultValue: 'Add provider' })}
             </Button>

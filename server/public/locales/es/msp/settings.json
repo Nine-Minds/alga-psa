@@ -3551,6 +3551,7 @@
         "audienceOptional": "Audiencia (opcional)",
         "audience": "Audiencia",
         "subjectClaim": "Identificar agentes por",
+        "audienceHelp": "Obligatorio. El valor `aud` que su IdP emite para este recurso MCP.",
         "subjectClaimHelp": "Déjelo en blanco a menos que su proveedor indique lo contrario.",
         "issuer": "Emisor",
         "jwksUri": "URL de claves de firma"

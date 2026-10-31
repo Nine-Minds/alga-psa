@@ -3551,6 +3551,7 @@
         "audienceOptional": "Audience du jeton (facultatif)",
         "audience": "Audience du jeton",
         "subjectClaim": "Identifier les agents par",
+        "audienceHelp": "Obligatoire. La valeur `aud` que votre IdP émet pour cette ressource MCP.",
         "subjectClaimHelp": "Laissez ce champ vide, sauf indication contraire de votre fournisseur.",
         "issuer": "Émetteur",
         "jwksUri": "URL des clés de signature"

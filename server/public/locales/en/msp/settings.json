@@ -3551,6 +3551,7 @@
         "audienceOptional": "Audience (optional)",
         "audience": "Audience",
         "subjectClaim": "Identify agents by",
+        "audienceHelp": "Required. The `aud` your IdP issues for this MCP resource.",
         "subjectClaimHelp": "Leave blank unless your provider tells you otherwise.",
         "issuer": "Issuer",
         "jwksUri": "Signing keys URL"

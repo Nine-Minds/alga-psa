@@ -46,6 +46,11 @@ export async function deleteAgent(_tenant?: string, _agentId?: string): Promise<
 export async function addTrustedIdp(_input: unknown): Promise<never> {
   throw new Error('MCP is an Enterprise feature.');
 }
+export function isUsableAudience(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+export const MISSING_AUDIENCE_MESSAGE =
+  'An audience is required: the `aud` your IdP issues for this MCP resource.';
 export async function listTrustedIdps(_tenant: string): Promise<unknown[]> {
   return [];
 }
