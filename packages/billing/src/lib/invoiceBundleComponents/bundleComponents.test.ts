@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildBundleSnapshot, type BundleSnapshotDetailInput } from './snapshot';
-import { selectPreviousPeriods, type PreviousPeriodRow } from './previousPeriod';
+import { selectPreviousPeriods, isExcludedPreviousPeriodStatus, type PreviousPeriodRow } from './previousPeriod';
 import { buildBundleComponents } from './components';
 
 const P1 = { s: '2026-09-01T00:00:00.000Z', e: '2026-10-01T00:00:00.000Z' };
@@ -101,5 +101,25 @@ describe('buildBundleComponents pricing', () => {
   });
   it('returns null without a snapshot', () => {
     expect(buildBundleComponents(null, { includePricing: false })).toBeNull();
+  });
+});
+
+describe('previous-period invoice status exclusion', () => {
+  const req = [{ contractLineId: 'L1', earliestPeriodStart: P2.s }];
+  it.each(['cancelled', 'Cancelled', 'CANCELLED', 'canceled', 'Canceled', 'void', 'Void', ' VOID '])(
+    'ignores a prior invoice with status %s',
+    (status) => {
+      expect(isExcludedPreviousPeriodStatus(status)).toBe(true);
+      expect(selectPreviousPeriods(req, [prevRow({ invoiceStatus: status })]).get('L1')).toBeNull();
+    },
+  );
+  it.each(['draft', 'Draft', 'sent', 'paid', 'finalized', null, undefined])('counts a prior invoice with status %s', (status) => {
+    expect(isExcludedPreviousPeriodStatus(status as any)).toBe(false);
+    expect(selectPreviousPeriods(req, [prevRow({ invoiceStatus: status as any })]).get('L1')).not.toBeNull();
+  });
+  it('falls back to the next-latest valid period when the latest is void', () => {
+    const older = prevRow({ itemDetailId: 'o', detailQuantity: 40, servicePeriodStart: '2026-08-01T00:00:00.000Z', servicePeriodEnd: P1.s });
+    const voided = prevRow({ invoiceStatus: 'void' });
+    expect(selectPreviousPeriods(req, [older, voided]).get('L1')?.quantitiesByServiceId.get('ws')).toBe(40);
   });
 });
