@@ -1,0 +1,60 @@
+{
+  "departure": {
+    "loading": "A carregar…",
+    "titleCustomer": "Terminar a TI cogerida com {{name}}",
+    "titleSponsor": "Terminar a TI cogerida para {{name}}",
+    "keepCustomer": "Mantém o seu espaço de trabalho, tickets, utilizadores e ficheiros. O seu MSP perde o acesso de imediato e guarda apenas um registo do trabalho em que participou.",
+    "keepSponsor": "Mantém um arquivo só de leitura do trabalho em que participou. O seu acesso ao espaço de trabalho do cliente termina de imediato e as licenças voltam para o seu conjunto.",
+    "warnHandoffs_one": "{{count}} ticket partilhado ainda está com o MSP. Continuará aberto e o MSP perderá o acesso.",
+    "warnHandoffs_other": "{{count}} tickets partilhados ainda estão com o MSP. Continuarão abertos e o MSP perderá o acesso.",
+    "seats_one": "{{count}} licença será libertada.",
+    "seats_other": "{{count}} licenças serão libertadas.",
+    "end": "Terminar relação",
+    "confirmTitle": "Terminar esta relação?",
+    "confirmMessage": "Isto não pode ser anulado a partir daqui. O acesso termina de imediato para ambas as partes.",
+    "confirmEnd": "Terminar relação",
+    "cancel": "Cancelar",
+    "done": "A relação terminou. O histórico do trabalho partilhado é mantido e fica só de leitura.",
+    "endedOn": "Esta relação terminou em {{date}}.",
+    "errors": {
+      "notFound": "Não foi possível encontrar esta relação.",
+      "denied": "Não tem permissão para terminar esta relação.",
+      "changed": "A relação mudou enquanto a revia. Reveja-a novamente antes de a terminar.",
+      "alreadyClosed": "Esta relação já terminou.",
+      "invalid": "Não foi possível processar o pedido."
+    }
+  },
+  "archive": {
+    "loading": "A carregar…",
+    "denied": "Não tem permissão para ver este arquivo.",
+    "empty": "Ainda não há arquivos. É criado um quando uma relação termina.",
+    "unknownClient": "Cliente sem nome",
+    "columns": {
+      "client": "Cliente",
+      "sealed": "Arquivado",
+      "evidence": "Registos",
+      "files": "Ficheiros",
+      "actions": "Ações"
+    },
+    "open": "Abrir",
+    "back": "Voltar",
+    "cutoff": "Registos até {{date}}. Este arquivo é só de leitura.",
+    "entry": {
+      "when": "Data",
+      "author": "Autor",
+      "content": "Conteúdo",
+      "deleted": "Removido pelo autor",
+      "empty": "Nenhum registo foi mantido."
+    },
+    "more": "Carregar mais",
+    "filesHeading": "Ficheiros",
+    "fileUnnamed": "Transferir ficheiro",
+    "exclusionsHeading": "Não mantido",
+    "exclusion": "{{count}} · {{reason}}",
+    "reason": {
+      "class": "Não faz parte do registo mantido",
+      "audience": "Privado do cliente",
+      "afterCutoff": "Depois do fim da relação"
+    }
+  }
+}

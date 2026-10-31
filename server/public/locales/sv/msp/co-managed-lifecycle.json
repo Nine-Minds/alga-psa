@@ -1,0 +1,60 @@
+{
+  "departure": {
+    "loading": "Läser in…",
+    "titleCustomer": "Avsluta samförvaltad IT med {{name}}",
+    "titleSponsor": "Avsluta samförvaltad IT för {{name}}",
+    "keepCustomer": "Du behåller din arbetsyta, dina ärenden, användare och filer. Din MSP förlorar åtkomsten direkt och behåller bara en journal över arbetet den deltog i.",
+    "keepSponsor": "Du behåller ett skrivskyddat arkiv över arbetet du deltog i. Din åtkomst till kundens arbetsyta upphör direkt och platserna återgår till din pool.",
+    "warnHandoffs_one": "{{count}} delat ärende ligger fortfarande hos MSP:n. Det förblir öppet och MSP:n förlorar åtkomsten.",
+    "warnHandoffs_other": "{{count}} delade ärenden ligger fortfarande hos MSP:n. De förblir öppna och MSP:n förlorar åtkomsten.",
+    "seats_one": "{{count}} plats frigörs.",
+    "seats_other": "{{count}} platser frigörs.",
+    "end": "Avsluta relationen",
+    "confirmTitle": "Avsluta den här relationen?",
+    "confirmMessage": "Detta kan inte ångras härifrån. Åtkomsten upphör direkt för båda sidor.",
+    "confirmEnd": "Avsluta relationen",
+    "cancel": "Avbryt",
+    "done": "Relationen har avslutats. Historiken för delat arbete bevaras och är skrivskyddad.",
+    "endedOn": "Den här relationen avslutades {{date}}.",
+    "errors": {
+      "notFound": "Relationen hittades inte.",
+      "denied": "Du har inte behörighet att avsluta den här relationen.",
+      "changed": "Relationen ändrades medan du granskade den. Granska den igen innan du avslutar den.",
+      "alreadyClosed": "Den här relationen har redan avslutats.",
+      "invalid": "Begäran kunde inte behandlas."
+    }
+  },
+  "archive": {
+    "loading": "Läser in…",
+    "denied": "Du har inte behörighet att visa det här arkivet.",
+    "empty": "Inga arkiv ännu. Ett skapas när en relation avslutas.",
+    "unknownClient": "Namnlös kund",
+    "columns": {
+      "client": "Kund",
+      "sealed": "Arkiverat",
+      "evidence": "Poster",
+      "files": "Filer",
+      "actions": "Åtgärder"
+    },
+    "open": "Öppna",
+    "back": "Tillbaka",
+    "cutoff": "Poster till och med {{date}}. Det här arkivet är skrivskyddat.",
+    "entry": {
+      "when": "Datum",
+      "author": "Författare",
+      "content": "Innehåll",
+      "deleted": "Borttaget av författaren",
+      "empty": "Inga poster bevarades."
+    },
+    "more": "Ladda fler",
+    "filesHeading": "Filer",
+    "fileUnnamed": "Ladda ned fil",
+    "exclusionsHeading": "Inte bevarat",
+    "exclusion": "{{count}} · {{reason}}",
+    "reason": {
+      "class": "Ingår inte i den bevarade journalen",
+      "audience": "Privat för kunden",
+      "afterCutoff": "Efter att relationen avslutats"
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "departure": {
+    "loading": "Caricamento…",
+    "titleCustomer": "Termina l'IT in co-gestione con {{name}}",
+    "titleSponsor": "Termina l'IT in co-gestione per {{name}}",
+    "keepCustomer": "Conservi il tuo spazio di lavoro, i ticket, gli utenti e i file. Il tuo MSP perde subito l'accesso e conserva solo una traccia del lavoro a cui ha partecipato.",
+    "keepSponsor": "Conservi un archivio in sola lettura del lavoro a cui hai partecipato. Il tuo accesso allo spazio di lavoro del cliente termina subito e i posti tornano nel tuo pool.",
+    "warnHandoffs_one": "{{count}} ticket condiviso è ancora presso l'MSP. Resterà aperto e l'MSP perderà l'accesso.",
+    "warnHandoffs_other": "{{count}} ticket condivisi sono ancora presso l'MSP. Resteranno aperti e l'MSP perderà l'accesso.",
+    "seats_one": "{{count}} posto verrà rilasciato.",
+    "seats_other": "{{count}} posti verranno rilasciati.",
+    "end": "Termina la relazione",
+    "confirmTitle": "Terminare questa relazione?",
+    "confirmMessage": "Da qui non è possibile annullare. L'accesso termina subito per entrambe le parti.",
+    "confirmEnd": "Termina la relazione",
+    "cancel": "Annulla",
+    "done": "La relazione è terminata. La cronologia del lavoro condiviso viene conservata in sola lettura.",
+    "endedOn": "Questa relazione è terminata il {{date}}.",
+    "errors": {
+      "notFound": "Impossibile trovare questa relazione.",
+      "denied": "Non hai il permesso di terminare questa relazione.",
+      "changed": "La relazione è cambiata durante la revisione. Rivedila prima di terminarla.",
+      "alreadyClosed": "Questa relazione è già terminata.",
+      "invalid": "Impossibile elaborare la richiesta."
+    }
+  },
+  "archive": {
+    "loading": "Caricamento…",
+    "denied": "Non hai il permesso di visualizzare questo archivio.",
+    "empty": "Nessun archivio per ora. Ne viene creato uno quando una relazione termina.",
+    "unknownClient": "Cliente senza nome",
+    "columns": {
+      "client": "Cliente",
+      "sealed": "Archiviato",
+      "evidence": "Registrazioni",
+      "files": "File",
+      "actions": "Azioni"
+    },
+    "open": "Apri",
+    "back": "Indietro",
+    "cutoff": "Registrazioni fino al {{date}}. Questo archivio è in sola lettura.",
+    "entry": {
+      "when": "Data",
+      "author": "Autore",
+      "content": "Contenuto",
+      "deleted": "Rimosso dall'autore",
+      "empty": "Nessuna registrazione è stata conservata."
+    },
+    "more": "Carica altro",
+    "filesHeading": "File",
+    "fileUnnamed": "Scarica file",
+    "exclusionsHeading": "Non conservato",
+    "exclusion": "{{count}} · {{reason}}",
+    "reason": {
+      "class": "Non fa parte del registro conservato",
+      "audience": "Privato del cliente",
+      "afterCutoff": "Dopo la fine della relazione"
+    }
+  }
+}

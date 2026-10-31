@@ -1,0 +1,60 @@
+{
+  "departure": {
+    "loading": "Loading…",
+    "titleCustomer": "End co-managed IT with {{name}}",
+    "titleSponsor": "End co-managed IT for {{name}}",
+    "keepCustomer": "You keep your workspace, tickets, users and files. Your MSP loses access immediately and keeps only a record of the work it took part in.",
+    "keepSponsor": "You keep a read-only archive of the work you took part in. Your access to the customer workspace ends immediately and the seats return to your pool.",
+    "warnHandoffs_one": "{{count}} shared ticket is still with the MSP. It will stay open and the MSP will lose access to it.",
+    "warnHandoffs_other": "{{count}} shared tickets are still with the MSP. They will stay open and the MSP will lose access to them.",
+    "seats_one": "{{count}} seat will be released.",
+    "seats_other": "{{count}} seats will be released.",
+    "end": "End relationship",
+    "confirmTitle": "End this relationship?",
+    "confirmMessage": "This cannot be undone from here. Access ends immediately for both sides.",
+    "confirmEnd": "End relationship",
+    "cancel": "Cancel",
+    "done": "The relationship has ended. Shared work history is retained and read-only.",
+    "endedOn": "This relationship ended {{date}}.",
+    "errors": {
+      "notFound": "This relationship could not be found.",
+      "denied": "You do not have permission to end this relationship.",
+      "changed": "The relationship changed while you were reviewing it. Review it again before ending it.",
+      "alreadyClosed": "This relationship has already ended.",
+      "invalid": "The request could not be processed."
+    }
+  },
+  "archive": {
+    "loading": "Loading…",
+    "denied": "You do not have permission to view this archive.",
+    "empty": "No archives yet. One is created when a relationship ends.",
+    "unknownClient": "Unnamed client",
+    "columns": {
+      "client": "Client",
+      "sealed": "Archived",
+      "evidence": "Records",
+      "files": "Files",
+      "actions": "Actions"
+    },
+    "open": "Open",
+    "back": "Back",
+    "cutoff": "Records up to {{date}}. This archive is read-only.",
+    "entry": {
+      "when": "Date",
+      "author": "Author",
+      "content": "Content",
+      "deleted": "Removed by its author",
+      "empty": "No records were retained."
+    },
+    "more": "Load more",
+    "filesHeading": "Files",
+    "fileUnnamed": "Download file",
+    "exclusionsHeading": "Not retained",
+    "exclusion": "{{count}} · {{reason}}",
+    "reason": {
+      "class": "Not part of the retained record",
+      "audience": "Private to the customer",
+      "afterCutoff": "After the relationship ended"
+    }
+  }
+}

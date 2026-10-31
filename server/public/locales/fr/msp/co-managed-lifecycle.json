@@ -1,0 +1,60 @@
+{
+  "departure": {
+    "loading": "Chargement…",
+    "titleCustomer": "Mettre fin à l'IT cogérée avec {{name}}",
+    "titleSponsor": "Mettre fin à l'IT cogérée pour {{name}}",
+    "keepCustomer": "Vous conservez votre espace de travail, vos tickets, vos utilisateurs et vos fichiers. Votre MSP perd immédiatement l'accès et ne garde qu'une trace du travail auquel il a participé.",
+    "keepSponsor": "Vous conservez une archive en lecture seule du travail auquel vous avez participé. Votre accès à l'espace de travail du client prend fin immédiatement et les licences retournent dans votre réserve.",
+    "warnHandoffs_one": "{{count}} ticket partagé est encore chez le MSP. Il restera ouvert et le MSP perdra l'accès.",
+    "warnHandoffs_other": "{{count}} tickets partagés sont encore chez le MSP. Ils resteront ouverts et le MSP perdra l'accès.",
+    "seats_one": "{{count}} licence sera libérée.",
+    "seats_other": "{{count}} licences seront libérées.",
+    "end": "Mettre fin à la relation",
+    "confirmTitle": "Mettre fin à cette relation ?",
+    "confirmMessage": "Cette action ne peut pas être annulée ici. L'accès prend fin immédiatement pour les deux parties.",
+    "confirmEnd": "Mettre fin à la relation",
+    "cancel": "Annuler",
+    "done": "La relation est terminée. L'historique du travail partagé est conservé en lecture seule.",
+    "endedOn": "Cette relation s'est terminée le {{date}}.",
+    "errors": {
+      "notFound": "Cette relation est introuvable.",
+      "denied": "Vous n'avez pas l'autorisation de mettre fin à cette relation.",
+      "changed": "La relation a changé pendant votre examen. Examinez-la de nouveau avant d'y mettre fin.",
+      "alreadyClosed": "Cette relation est déjà terminée.",
+      "invalid": "La demande n'a pas pu être traitée."
+    }
+  },
+  "archive": {
+    "loading": "Chargement…",
+    "denied": "Vous n'avez pas l'autorisation de consulter cette archive.",
+    "empty": "Aucune archive pour l'instant. Une archive est créée lorsqu'une relation prend fin.",
+    "unknownClient": "Client sans nom",
+    "columns": {
+      "client": "Client",
+      "sealed": "Archivé",
+      "evidence": "Enregistrements",
+      "files": "Fichiers",
+      "actions": "Actions"
+    },
+    "open": "Ouvrir",
+    "back": "Retour",
+    "cutoff": "Enregistrements jusqu'au {{date}}. Cette archive est en lecture seule.",
+    "entry": {
+      "when": "Date",
+      "author": "Auteur",
+      "content": "Contenu",
+      "deleted": "Supprimé par son auteur",
+      "empty": "Aucun enregistrement n'a été conservé."
+    },
+    "more": "Charger plus",
+    "filesHeading": "Fichiers",
+    "fileUnnamed": "Télécharger le fichier",
+    "exclusionsHeading": "Non conservé",
+    "exclusion": "{{count}} · {{reason}}",
+    "reason": {
+      "class": "Ne fait pas partie du dossier conservé",
+      "audience": "Privé au client",
+      "afterCutoff": "Après la fin de la relation"
+    }
+  }
+}

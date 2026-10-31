@@ -1,0 +1,60 @@
+{
+  "departure": {
+    "loading": "Wird geladen…",
+    "titleCustomer": "Gemeinsam verwaltete IT mit {{name}} beenden",
+    "titleSponsor": "Gemeinsam verwaltete IT für {{name}} beenden",
+    "keepCustomer": "Ihr Arbeitsbereich, Tickets, Benutzer und Dateien bleiben erhalten. Ihr MSP verliert sofort den Zugriff und behält nur eine Aufzeichnung der Arbeit, an der er beteiligt war.",
+    "keepSponsor": "Sie behalten ein schreibgeschütztes Archiv der Arbeit, an der Sie beteiligt waren. Ihr Zugriff auf den Kundenarbeitsbereich endet sofort und die Lizenzplätze gehen in Ihren Pool zurück.",
+    "warnHandoffs_one": "{{count}} geteiltes Ticket liegt noch beim MSP. Es bleibt offen und der MSP verliert den Zugriff darauf.",
+    "warnHandoffs_other": "{{count}} geteilte Tickets liegen noch beim MSP. Sie bleiben offen und der MSP verliert den Zugriff darauf.",
+    "seats_one": "{{count}} Lizenzplatz wird freigegeben.",
+    "seats_other": "{{count}} Lizenzplätze werden freigegeben.",
+    "end": "Beziehung beenden",
+    "confirmTitle": "Diese Beziehung beenden?",
+    "confirmMessage": "Dies kann von hier aus nicht rückgängig gemacht werden. Der Zugriff endet sofort für beide Seiten.",
+    "confirmEnd": "Beziehung beenden",
+    "cancel": "Abbrechen",
+    "done": "Die Beziehung wurde beendet. Der Verlauf der gemeinsamen Arbeit bleibt erhalten und ist schreibgeschützt.",
+    "endedOn": "Diese Beziehung endete am {{date}}.",
+    "errors": {
+      "notFound": "Diese Beziehung wurde nicht gefunden.",
+      "denied": "Sie haben keine Berechtigung, diese Beziehung zu beenden.",
+      "changed": "Die Beziehung hat sich während Ihrer Prüfung geändert. Prüfen Sie sie erneut, bevor Sie sie beenden.",
+      "alreadyClosed": "Diese Beziehung wurde bereits beendet.",
+      "invalid": "Die Anfrage konnte nicht verarbeitet werden."
+    }
+  },
+  "archive": {
+    "loading": "Wird geladen…",
+    "denied": "Sie haben keine Berechtigung, dieses Archiv anzuzeigen.",
+    "empty": "Noch keine Archive. Eines wird erstellt, wenn eine Beziehung endet.",
+    "unknownClient": "Unbenannter Kunde",
+    "columns": {
+      "client": "Kunde",
+      "sealed": "Archiviert",
+      "evidence": "Einträge",
+      "files": "Dateien",
+      "actions": "Aktionen"
+    },
+    "open": "Öffnen",
+    "back": "Zurück",
+    "cutoff": "Einträge bis {{date}}. Dieses Archiv ist schreibgeschützt.",
+    "entry": {
+      "when": "Datum",
+      "author": "Autor",
+      "content": "Inhalt",
+      "deleted": "Vom Autor entfernt",
+      "empty": "Es wurden keine Einträge aufbewahrt."
+    },
+    "more": "Mehr laden",
+    "filesHeading": "Dateien",
+    "fileUnnamed": "Datei herunterladen",
+    "exclusionsHeading": "Nicht aufbewahrt",
+    "exclusion": "{{count}} · {{reason}}",
+    "reason": {
+      "class": "Nicht Teil der aufbewahrten Aufzeichnung",
+      "audience": "Privat beim Kunden",
+      "afterCutoff": "Nach dem Ende der Beziehung"
+    }
+  }
+}
