@@ -1,6 +1,5 @@
 import { getConnection } from '@alga-psa/db';
-import { defineJob, registerJobCapabilityFilter } from '@alga-psa/jobs/fanout';
-import { filterServed } from '@alga-psa/core/capability';
+import { defineJob } from '@alga-psa/jobs/fanout';
 import { observeDueCoManagedTicketSlas, processCoManagedSlaEmailDeliveries } from '@alga-psa/co-managed';
 import { persistCoManagedSlaNotifications } from '@alga-psa/notifications/lib/coManagedSlaNotifications';
 import { sendCoManagedSlaEmail } from './coManagedSlaEmailTransport';
@@ -25,10 +24,11 @@ export async function coManagedSlaObservationHandler(input: { tenantId: string }
  * Declares the job as data. `capability` makes the fan-out ask the registered filter which tenants are
  * served BEFORE any tenant run, so plain PSA tenants never reach a statement against the SLA tables. No
  * `tenants` selector is used: a selector would itself query tables ahead of the capability filter.
+ * The filter itself is wired once by the job-registry boot (`wireJobCapabilityFilter`); this definition
+ * registers none, so it cannot replace another job's. Without the wiring the fan-out skips the job.
  * Idempotent, because the registry is reached from more than one boot path.
  */
 export function defineCoManagedSlaObservationJob(): void {
-  registerJobCapabilityFilter((capability, tenantIds) => filterServed(capability as 'co-managed', tenantIds));
   try {
     defineJob({ name: CO_MANAGED_SLA_OBSERVATION_JOB, scope: 'tenant', capability: CO_MANAGED_SLA_OBSERVATION_CAPABILITY,
       schedule: { cron: '*/1 * * * *' }, run: tenantId => coManagedSlaObservationHandler({ tenantId }) });

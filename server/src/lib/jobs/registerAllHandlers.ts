@@ -232,6 +232,7 @@ export async function registerAllJobHandlers(
   // CM L6b: declare the co-managed SLA observation job as data. It is capability-gated in the fan-out,
   // so a plain PSA tenant is filtered out before any tenant SQL. Best-effort: absent, nothing is scheduled.
   try {
+    (await import('./capabilityJobFilter')).wireJobCapabilityFilter();
     (await import('./handlers/coManagedSlaObservationHandler')).defineCoManagedSlaObservationJob();
   } catch (error) {
     logger.error('Failed to define the co-managed SLA observation job', { error });

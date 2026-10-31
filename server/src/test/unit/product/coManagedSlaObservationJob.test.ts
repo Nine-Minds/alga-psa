@@ -38,6 +38,8 @@ vi.mock('../../../lib/jobs/handlers/coManagedSlaEmailTransport', () => ({ sendCo
 vi.mock('@alga-psa/core/capability', async importOriginal => ({ ...(await importOriginal<any>()), filterServed: ctx.filter }));
 
 import { runMaintenanceJob } from '@alga-psa/jobs/fanout';
+import { wireJobCapabilityFilter } from '../../../lib/jobs/capabilityJobFilter';
+import { getJobCapabilityFilter, registerJobCapabilityFilter, resetJobDescriptors } from '@alga-psa/jobs/fanout';
 import { defineCoManagedSlaObservationJob, CO_MANAGED_SLA_OBSERVATION_JOB } from '../../../lib/jobs/handlers/coManagedSlaObservationHandler';
 
 /** A real knex query builder over a stubbed driver: every statement is recorded through the query listener. */
@@ -55,7 +57,7 @@ function recordingKnex(statements: string[]) {
 
 describe('co-managed SLA observation job', () => {
   const statements: string[] = [];
-  beforeEach(() => { statements.length = 0; ctx.knex = recordingKnex(statements); ctx.filter.mockReset(); defineCoManagedSlaObservationJob(); });
+  beforeEach(() => { statements.length = 0; ctx.knex = recordingKnex(statements); ctx.filter.mockReset(); resetJobDescriptors(); wireJobCapabilityFilter(); defineCoManagedSlaObservationJob(); });
 
   it('runs zero queries against the SLA tables when no tenant participates (A4)', async () => {
     ctx.filter.mockResolvedValue([]);
@@ -68,5 +70,16 @@ describe('co-managed SLA observation job', () => {
 
   it('is idempotent to define more than once', () => {
     expect(() => { defineCoManagedSlaObservationJob(); defineCoManagedSlaObservationJob(); }).not.toThrow();
+  });
+
+  it('defining the job registers no filter and never replaces one already wired', async () => {
+    resetJobDescriptors();
+    defineCoManagedSlaObservationJob();
+    expect(getJobCapabilityFilter()).toBeUndefined(); // ungated wiring => the fan-out skips the job, no tenant SQL
+    expect(await runMaintenanceJob(CO_MANAGED_SLA_OBSERVATION_JOB)).toMatchObject({ total: 0 });
+    const other = vi.fn(async () => []);
+    registerJobCapabilityFilter(other);
+    wireJobCapabilityFilter(); defineCoManagedSlaObservationJob();
+    expect(getJobCapabilityFilter()).toBe(other);
   });
 });
