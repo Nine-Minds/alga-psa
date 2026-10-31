@@ -155,6 +155,8 @@ export async function writeTicketActivity(
   // act-as the actor stays the human (`user`) and the principal is recorded via.
   let actorType: string = input.actor.actorType;
   const viaPrincipalUserId = input.actor.viaPrincipalUserId ?? null;
+  // The human is the actor under act-as, whichever channel the request arrived on.
+  if (viaPrincipalUserId && actorType === TICKET_ACTIVITY_ACTOR.API) actorType = TICKET_ACTIVITY_ACTOR.USER;
   if (
     (actorType === TICKET_ACTIVITY_ACTOR.USER || actorType === TICKET_ACTIVITY_ACTOR.API) &&
     input.actor.userId &&

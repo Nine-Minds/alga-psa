@@ -6,6 +6,7 @@ import {
   type ListOptions,
   type ListResult,
   type ServiceContext,
+  stampViaPrincipalRow,
   tenantDb,
   withTransaction,
 } from '@alga-psa/db';
@@ -238,6 +239,9 @@ export class InteractionService extends BaseService<InteractionApiRow> {
         interactionData,
       });
       publishSideEffects = result.publishSideEffects;
+      // The shared helper writes the row itself, so BaseService's create-time via
+      // stamping never runs here; stamp it in the same transaction.
+      await stampViaPrincipalRow(trx, context, 'interactions', { interaction_id: result.interaction.interaction_id }, 'created_via_principal_id');
       if (input.create_schedule_entry) {
         try {
           const scheduled = await createInteractionScheduleEntry({
@@ -248,6 +252,9 @@ export class InteractionService extends BaseService<InteractionApiRow> {
             assignedByUserId: context.userId,
           });
           publishScheduleEntryCreated = scheduled?.publishScheduleEntryCreated;
+          if (scheduled) {
+            await stampViaPrincipalRow(trx, context, 'schedule_entries', { entry_id: scheduled.entry.entry_id }, 'created_via_principal_id');
+          }
         } catch (error) {
           if (error instanceof Error && /^Users .+ not found/.test(error.message)) {
             throw new ValidationError('One or more assigned users could not be found.');

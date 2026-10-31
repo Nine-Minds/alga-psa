@@ -111,6 +111,9 @@ export default defineConfig({
       { find: /^@alga-psa\/notifications$/, replacement: `${path.resolve(__dirname, '../../packages/notifications/src/index.ts')}` },
       { find: /^@alga-psa\/notifications\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/notifications/src')}/$1` },
       { find: /^@alga-psa\/product-extension-actions$/, replacement: `${path.resolve(__dirname, '../../packages/product-extension-actions/oss/entry.ts')}` },
+      // EE tests exercise the EE service-principal boundary.
+      { find: /^@product\/service-principals\/entry$/, replacement: `${path.resolve(__dirname, '../../packages/product-service-principals/ee/entry.ts')}` },
+      { find: /^@product\/service-principals\/types$/, replacement: `${path.resolve(__dirname, '../../packages/product-service-principals/types.ts')}` },
       { find: /^@product\/billing\/entry$/, replacement: `${path.resolve(__dirname, '../../packages/product-billing/oss/entry.tsx')}` },
       { find: /^@alga-psa\/user-composition$/, replacement: `${path.resolve(__dirname, '../../packages/user-composition/src/index.ts')}` },
       { find: /^@alga-psa\/user-composition\/actions$/, replacement: `${path.resolve(__dirname, '../../packages/user-composition/src/actions/index.ts')}` },
