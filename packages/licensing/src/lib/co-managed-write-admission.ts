@@ -11,9 +11,11 @@
  *   admits every write, so the kill switch needs no deploy.
  * - The state read is lock-free. The lock-ordered path stays with the write-admission
  *   PROVIDER and `withCoManagedOperationalTransaction`; this never takes `FOR UPDATE`.
- * - The real lifecycle answers (`read_only`, `terminated`, `pending_acceptance`) belong
- *   to L7a, which passes its reader to `installCoManagedWriteAdmission`. Until then the
- *   default reader says `independent`, so installing this refuses nothing.
+ * - The real lifecycle answers (`grace`, `read_only`, `terminated`, `pending_acceptance`) come
+ *   from L7a's lock-free reader, the default for `installCoManagedWriteAdmission`. It is imported
+ *   lazily and only ever invoked for a `co_managed` tenant (L0c's negative set keeps every other
+ *   tenant away), so a plain PSA tenant pays nothing and a worker image whose lifecycle module
+ *   does not resolve still boots; a failed import fails open to `independent`.
  *
  * Dependency-light on purpose: workers (email-service, workflow-worker, temporal) import
  * this subpath directly and must boot when the co-managed package does not resolve.
@@ -26,6 +28,12 @@ import { CoManagedLifecycleError, type CoManagedOperationalState } from './co-ma
 export type CoManagedLifecycleReader = (db: Knex | Knex.Transaction, tenant: string) => Promise<CoManagedOperationalState>;
 
 const INDEPENDENT: CoManagedOperationalState = { state: 'independent', canWrite: true, graceEndsAt: null };
+
+/** L7a's reader: licence lapse and relationship closure, read without locks. */
+const lifecycleReader: CoManagedLifecycleReader = async (db, tenant) => {
+  const { readCoManagedLifecycleLockFree } = await import('./co-managed-lifecycle');
+  return readCoManagedLifecycleLockFree(db as Knex, tenant);
+};
 
 /** Process composition supplied before server bootstrap by an isolated review launcher. */
 export interface CoManagedReviewReader {
@@ -54,7 +62,7 @@ export function isCoManagedKillSwitchEngaged(): boolean {
 }
 
 export function createCoManagedWriteAdmissionResolver(
-  readState: CoManagedLifecycleReader = async () => INDEPENDENT,
+  readState: CoManagedLifecycleReader = lifecycleReader,
 ): WriteAdmissionResolver {
   const resolver: WriteAdmissionResolver = async (db, tenant) => {
     if (isCoManagedKillSwitchEngaged()) return { canWrite: true };
@@ -67,7 +75,7 @@ export function createCoManagedWriteAdmissionResolver(
 }
 
 export interface InstallCoManagedWriteAdmissionOptions {
-  /** The real lifecycle reader (L7a). Defaults to "independent", which refuses nothing. */
+  /** Override the lifecycle reader. Defaults to L7a's lock-free reader. */
   readState?: CoManagedLifecycleReader;
   /**
    * DEV/TEST ONLY: force a lifecycle state for specific tenant ids, so a read-only or
@@ -124,7 +132,7 @@ export function resolveInstalledReader(options: InstallCoManagedWriteAdmissionOp
   }
   // A session that still says "psa" for this tenant must not seed the negative set first.
   for (const tenant of Object.keys(forced)) invalidateWriteAdmission(tenant);
-  return withDevForcedStates(options.readState ?? (async () => INDEPENDENT), forced);
+  return withDevForcedStates(options.readState ?? lifecycleReader, forced);
 }
 
 /** Register the co-managed resolver with `@alga-psa/db`. Safe to call more than once. */
