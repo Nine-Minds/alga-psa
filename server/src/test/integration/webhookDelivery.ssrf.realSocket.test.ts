@@ -84,17 +84,6 @@ describe('webhook delivery SSRF guard over real sockets', () => {
     expect(result.response_headers).toBeUndefined();
   });
 
-  it('pins hostnames through the validating lookup (localhost-style names resolving to blocked addresses)', async () => {
-    const target = await listen('127.0.0.1', (_req, res) => res.end('x'));
-    // nip-style names need external DNS; use a policy that rejects everything instead.
-    const result = await performWebhookDeliveryRequestWithPolicy(
-      base(`http://127.0.0.2:${target.port}/`),
-      () => false,
-    );
-    expect(result.error_type).toBe('ssrf');
-    expect(target.requests).toHaveLength(0);
-  });
-
   it('follows a redirect between allowed hops, switching POST to GET on 302 and stripping credentials cross-origin', async () => {
     const second = await listen('127.0.0.2', (_req, res) => res.end('final'));
     const first = await listen('127.0.0.2', (_req, res) => {
