@@ -1345,7 +1345,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                         : activity.description}
 =======
                       {(() => {
-                        const linked = emailLinkDecisionForActivity(quote.decisions, quote.quote_activities, activity);
+                        const linked = emailLinkDecisionForActivity(quote.decisions, activity);
                         return linked ? <QuoteDecisionLine decision={linked} /> : activity.description;
                       })()}
 >>>>>>> 75b96beaaa (feat(quotes): accept/reject with typed e-signature via email link (alga-2026-0002820 4/6))

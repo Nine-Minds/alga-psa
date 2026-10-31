@@ -44,13 +44,35 @@ describe('QuoteDecisionLine', () => {
     expect(formatDecisionSigner({ signer_name: null, signer_email: 'a@b.c' })).toBe('a@b.c');
   });
 
-  it('pairs the Nth accepted activity with the Nth accepted decision, email-link only', () => {
-    const later = { ...base, decision_id: 'd2', method: 'portal' as const, decided_at: '2026-11-02T00:00:00.000Z' };
+  it('links an activity to its decision by metadata.decision_id; legacy activities with no decision render nothing special', () => {
+    const portal = { ...base, decision_id: 'd2', method: 'portal' as const };
+    const legacy = { activity_id: 'a0', activity_type: 'accepted', metadata: {} };
+    const emailLink = { activity_id: 'a1', activity_type: 'accepted', metadata: { decision_id: 'd1' } };
+    const portalActivity = { activity_id: 'a2', activity_type: 'accepted', metadata: { decision_id: 'd2' } };
+    const dangling = { activity_id: 'a3', activity_type: 'accepted', metadata: { decision_id: 'gone' } };
+    const decisions = [portal, base];
+    expect(emailLinkDecisionForActivity(decisions, legacy)).toBeNull();
+    expect(emailLinkDecisionForActivity(decisions, emailLink)?.decision_id).toBe('d1');
+    expect(emailLinkDecisionForActivity(decisions, portalActivity)).toBeNull();
+    expect(emailLinkDecisionForActivity(decisions, dangling)).toBeNull();
+    expect(emailLinkDecisionForActivity(decisions, { activity_type: 'sent', metadata: { decision_id: 'd1' } })).toBeNull();
+  });
+
+  it('activity log: an older legacy accepted activity beside an email-link one — only the latter renders the signer line', () => {
     const activities = [
-      { activity_id: 'a1', activity_type: 'accepted', created_at: '2026-10-31T12:00:00.100Z' },
-      { activity_id: 'a2', activity_type: 'accepted', created_at: '2026-11-02T00:00:00.100Z' },
+      { activity_id: 'old', activity_type: 'accepted', description: 'Legacy accepted', metadata: {} },
+      { activity_id: 'new', activity_type: 'accepted', description: 'Quote accepted via email link', metadata: { decision_id: 'd1' } },
     ];
-    expect(emailLinkDecisionForActivity([later, base], activities, activities[0])?.decision_id).toBe('d1');
-    expect(emailLinkDecisionForActivity([later, base], activities, activities[1])).toBeNull();
+    render(
+      <ul>
+        {activities.map((a) => {
+          const linked = emailLinkDecisionForActivity([base], a);
+          return <li key={a.activity_id} data-testid={a.activity_id}>{linked ? <QuoteDecisionLine decision={linked} /> : a.description}</li>;
+        })}
+      </ul>,
+    );
+    expect(screen.getByTestId('old').textContent).toBe('Legacy accepted');
+    expect(screen.getByTestId('old').querySelector('[data-testid="quote-decision-line"]')).toBeNull();
+    expect(screen.getByTestId('new').textContent).toBe('Accepted by Jane Doe (jane@client.com) via email link, D(2026-10-31)');
   });
 });

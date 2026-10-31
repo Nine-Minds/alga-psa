@@ -174,6 +174,9 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
       agreement_text_hash: a.hash,
       agreement_version: a.version,
     });
+    // The activity carries the decision_id so the MSP UI can look the signer up exactly.
+    const [acceptedActivity] = await tt(s.tenantId, 'quote_activities').where({ quote_id: s.quoteId, activity_type: 'accepted' });
+    expect(acceptedActivity.metadata).toMatchObject({ accepted_via: 'email_link', decision_id: rows[0].decision_id });
     expect(rows[0].selections).toEqual({
       selected_optional_quote_item_ids: [],
       deselected_optional_quote_item_ids: [s.optional],

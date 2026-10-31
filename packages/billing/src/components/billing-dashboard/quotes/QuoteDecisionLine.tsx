@@ -13,25 +13,19 @@ export function formatDecisionSigner(decision: Pick<IQuoteDecisionSummary, 'sign
 }
 
 /**
- * The email-link decision a given activity row records, if any. decideQuote writes exactly
- * one `accepted`/`rejected` activity per decision, in the same order, so the Nth such
- * activity of a type pairs with the Nth decision of that type.
+ * The email-link decision a given activity row records, looked up by the `decision_id`
+ * decideQuote writes into the activity metadata. Activities without one (legacy rows,
+ * other writers) return null and the caller renders their description.
  */
 export function emailLinkDecisionForActivity(
   decisions: IQuoteDecisionSummary[] | undefined,
-  activities: Array<{ activity_id: string; activity_type: string; created_at?: unknown }> | undefined,
-  activity: { activity_id: string; activity_type: string },
+  activity: { activity_type: string; metadata?: Record<string, unknown> | null },
 ): IQuoteDecisionSummary | null {
-  if (!decisions?.length || !activities) return null;
-  const kind = activity.activity_type === 'accepted' ? 'accepted' : activity.activity_type === 'rejected' ? 'rejected' : null;
-  if (!kind) return null;
-  const chrono = (a: { created_at?: unknown }, b: { created_at?: unknown }) =>
-    new Date(String(a.created_at ?? 0)).getTime() - new Date(String(b.created_at ?? 0)).getTime();
-  const sameKindActivities = activities.filter((a) => a.activity_type === kind).sort(chrono);
-  const sameKindDecisions = decisions.filter((d) => d.decision === kind)
-    .sort((a, b) => new Date(a.decided_at).getTime() - new Date(b.decided_at).getTime());
-  const index = sameKindActivities.findIndex((a) => a.activity_id === activity.activity_id);
-  const decision = index >= 0 ? sameKindDecisions[index] : undefined;
+  if (!decisions?.length) return null;
+  if (activity.activity_type !== 'accepted' && activity.activity_type !== 'rejected') return null;
+  const decisionId = activity.metadata?.decision_id;
+  if (typeof decisionId !== 'string') return null;
+  const decision = decisions.find((d) => d.decision_id === decisionId);
   return decision?.method === 'email_link' ? decision : null;
 }
 
