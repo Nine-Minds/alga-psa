@@ -1,5 +1,6 @@
+import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
-import { createTenantKnex, resolveEffectiveTimeZone, runWithTenant } from '@alga-psa/db';
+import { createTenantKnex, resolveEffectiveTimeZone, runWithTenant, withTransaction } from '@alga-psa/db';
 import { TenantEmailService } from '@alga-psa/email';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { StorageProviderFactory } from '@alga-psa/storage';
@@ -8,6 +9,7 @@ import { QUOTE_ACTIVITY_TYPES } from '../lib/quoteActivityTypes';
 import type { QuoteAcceptanceDetails } from '../lib/quoteAcceptance';
 import { renderQuoteEmail } from '../lib/quoteEmailRendering';
 import { getQuotePdfFileName } from '../lib/quoteFileNames';
+import type { IQuoteActivity } from '@alga-psa/types';
 import Quote from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
 import { SIGNED_QUOTE_FILE_SUFFIX, createPDFGenerationService } from './pdfGenerationService';
@@ -45,8 +47,12 @@ const errorMessage = (error: unknown): string => (error instanceof Error ? error
  *    exists as a filed document. If it could not be produced or filed, no email.
  *  - Idempotent: the signed document is reused if it already exists (the PDF
  *    service files `-signed` with `refresh` semantics under an advisory lock),
- *    and the signer email is skipped when a `signer_confirmation_sent` activity
- *    is already on the quote. The sent PDF is never touched.
+ *    and the signer email is sent at most once. A run claims the send by
+ *    appending a `signer_confirmation_claimed` activity under a per-quote
+ *    advisory lock (a brief transaction), sends outside any transaction, then
+ *    appends `signer_confirmation_sent` (terminal) or `signer_confirmation_failed`
+ *    (releases the claim for a retry). A claim left behind by a dead process
+ *    goes stale after 15 minutes. The sent PDF is never touched.
  */
 export async function finalizeLinkAcceptedQuote(
   tenant: string,
@@ -86,13 +92,23 @@ async function finalize(
   }
 
   // ---- Signed PDF: render, file ------------------------------------------
+  // A link acceptance has no accepting user, so the file and document are
+  // attributed to the quote's own users. Their columns are user FKs: a made-up
+  // actor would only fail at the insert, so say so plainly instead.
+  const actorUserId = quote.accepted_by ?? quote.updated_by ?? quote.created_by;
+  if (!actorUserId) {
+    result.errors.push('Quote has no user to attribute the signed copy to; signed PDF not produced');
+    return;
+  }
+
   let stored;
   try {
+    // Tenant zone (no user passed): tenant_settings timezone, else UTC.
     const timeZone = await resolveEffectiveTimeZone(knex, tenant);
     stored = await createPDFGenerationService(tenant).generateAndStore({
       quoteId,
       quoteNumber: quote.quote_number ?? undefined,
-      userId: quote.accepted_by ?? quote.updated_by ?? quote.created_by ?? 'system',
+      userId: actorUserId,
       quoteVariant: 'signed',
       acceptance: { ...acceptance, timeZone },
     });
@@ -118,10 +134,9 @@ async function finalize(
   }
 
   try {
-    const alreadySent = (await QuoteActivity.listByQuoteId(knex, tenant, quoteId)).some(
-      (activity) => activity.activity_type === QUOTE_ACTIVITY_TYPES.signerConfirmationSent
-    );
-    if (alreadySent) {
+    // Fast path: skip the render and download when the confirmation is already
+    // out or another run is sending it.
+    if (!isSignerConfirmationClaimable(await QuoteActivity.listByQuoteId(knex, tenant, quoteId))) {
       return;
     }
 
@@ -148,45 +163,164 @@ async function finalize(
     });
 
     const sentName = getQuotePdfFileName(quote).replace(/\.pdf$/i, '');
-    const emailResult = await TenantEmailService.getInstance(tenant).sendEmail({
-      mailClass: 'sales',
-      tenantId: tenant,
-      to: [signerEmail],
-      subject: rendered.subject,
-      html: rendered.html,
-      text: rendered.text,
-      attachments: [
-        {
-          filename: stored.original_name || `${sentName}${SIGNED_QUOTE_FILE_SUFFIX}.pdf`,
-          content: pdfBuffer,
-          contentType: 'application/pdf',
-        },
-      ],
-      entityType: 'quote',
-      entityId: quoteId,
-      contactId: acceptance.signerContactId ?? quote.contact_id ?? undefined,
+
+    // Claim the send first, in a short transaction under a per-quote advisory
+    // lock, then send with no lock and no connection held: an SMTP call can be
+    // slow and must not pin a pooled DB connection. A run that finds a live
+    // claim (or a sent record) stands down, so racing runs send once.
+    const claimId = await claimSignerConfirmation(knex, tenant, quoteId, {
+      recipient: signerEmail,
+      documentId: stored.document_id,
     });
+    if (!claimId) {
+      return;
+    }
+
+    let emailResult: Awaited<ReturnType<ReturnType<typeof TenantEmailService.getInstance>['sendEmail']>>;
+    try {
+      emailResult = await TenantEmailService.getInstance(tenant).sendEmail({
+        mailClass: 'sales',
+        tenantId: tenant,
+        to: [signerEmail],
+        subject: rendered.subject,
+        html: rendered.html,
+        text: rendered.text,
+        attachments: [
+          {
+            filename: stored.original_name || `${sentName}${SIGNED_QUOTE_FILE_SUFFIX}.pdf`,
+            content: pdfBuffer,
+            contentType: 'application/pdf',
+          },
+        ],
+        entityType: 'quote',
+        entityId: quoteId,
+        contactId: acceptance.signerContactId ?? quote.contact_id ?? undefined,
+      });
+    } catch (sendError) {
+      await recordSignerConfirmation(knex, tenant, quoteId, QUOTE_ACTIVITY_TYPES.signerConfirmationFailed, {
+        claim_id: claimId,
+        recipient: signerEmail,
+        error: errorMessage(sendError),
+      });
+      throw sendError;
+    }
 
     if (!emailResult.success) {
-      result.errors.push(`Signer confirmation email failed: ${emailResult.error ?? 'unknown error'}`);
+      const failure = emailResult.error ?? 'unknown error';
+      await recordSignerConfirmation(knex, tenant, quoteId, QUOTE_ACTIVITY_TYPES.signerConfirmationFailed, {
+        claim_id: claimId,
+        recipient: signerEmail,
+        error: failure,
+      });
+      result.errors.push(`Signer confirmation email failed: ${failure}`);
       return;
     }
     result.emailSent = true;
 
-    try {
-      await QuoteActivity.create(knex, tenant, {
-        quote_id: quoteId,
-        activity_type: QUOTE_ACTIVITY_TYPES.signerConfirmationSent,
-        description: `Signed quote copy emailed to ${signerEmail}`,
-        performed_by: null,
-        metadata: { recipient: signerEmail, document_id: stored.document_id, message_id: emailResult.messageId ?? null },
-      });
-    } catch (activityError) {
-      // The email is out; failing to log it must not turn into a failure report.
-      console.warn(`Could not record the signer confirmation for quote ${quoteId}:`, activityError);
-    }
+    // The email is out; failing to log it must not turn into a failure report.
+    // (If this write is lost the claim goes stale and a much later run may
+    // resend — the one accepted at-least-once edge of a non-transactional SMTP.)
+    await recordSignerConfirmation(knex, tenant, quoteId, QUOTE_ACTIVITY_TYPES.signerConfirmationSent, {
+      claim_id: claimId,
+      recipient: signerEmail,
+      document_id: stored.document_id,
+      message_id: emailResult.messageId ?? null,
+    });
   } catch (error) {
     console.error(`Signer confirmation email failed for quote ${quoteId}:`, error);
     result.errors.push(`Signer confirmation email failed: ${errorMessage(error)}`);
+  }
+}
+
+/** A claim older than this is presumed dead (process died mid-send) and may be retaken. */
+const SIGNER_CONFIRMATION_CLAIM_TTL_MS = 15 * 60 * 1000;
+
+/**
+ * Whether a run may send the confirmation, given the quote's activity log.
+ *
+ * `sent` is terminal for the quote. A `claimed` row is live until a `failed`
+ * row with the same `claim_id` supersedes it, or until it is older than the TTL
+ * (its process presumably died). Matching by `claim_id`, not by position, keeps
+ * a late `failed` from an old, stale run from releasing a newer run's live claim.
+ * The send is free only when no live claim remains.
+ */
+function isSignerConfirmationClaimable(activities: IQuoteActivity[], now = Date.now()): boolean {
+  if (activities.some((a) => a.activity_type === QUOTE_ACTIVITY_TYPES.signerConfirmationSent)) {
+    return false;
+  }
+
+  const claimIdOf = (a: IQuoteActivity): unknown => a.metadata?.claim_id;
+  const released = new Set(
+    activities
+      .filter((a) => a.activity_type === QUOTE_ACTIVITY_TYPES.signerConfirmationFailed)
+      .map(claimIdOf)
+      .filter((id): id is string => typeof id === 'string')
+  );
+
+  return !activities.some((a) => {
+    if (a.activity_type !== QUOTE_ACTIVITY_TYPES.signerConfirmationClaimed) return false;
+    const claimId = claimIdOf(a);
+    if (typeof claimId === 'string' && released.has(claimId)) return false;
+    const claimedAt = a.created_at ? new Date(a.created_at).getTime() : Number.NaN;
+    // An unreadable timestamp is treated as live: not sending is the safe side.
+    return Number.isNaN(claimedAt) || now - claimedAt <= SIGNER_CONFIRMATION_CLAIM_TTL_MS;
+  });
+}
+
+/**
+ * Takes the right to send the confirmation: under a per-quote advisory lock,
+ * re-checks the log and appends a `claimed` row. Returns the claim id, or null
+ * when the send is already done or in progress elsewhere. The transaction is
+ * brief and ends before any email work.
+ */
+async function claimSignerConfirmation(
+  knex: Knex,
+  tenant: string,
+  quoteId: string,
+  details: { recipient: string; documentId: string }
+): Promise<string | null> {
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?), hashtext(?))', [
+      'alga:quote-signer-confirmation',
+      `${tenant}:${quoteId}`,
+    ]);
+
+    if (!isSignerConfirmationClaimable(await QuoteActivity.listByQuoteId(trx, tenant, quoteId))) {
+      return null;
+    }
+
+    const claimId = randomUUID();
+    await QuoteActivity.create(trx, tenant, {
+      quote_id: quoteId,
+      activity_type: QUOTE_ACTIVITY_TYPES.signerConfirmationClaimed,
+      description: `Sending signed quote copy to ${details.recipient}`,
+      performed_by: null,
+      metadata: { claim_id: claimId, recipient: details.recipient, document_id: details.documentId },
+    });
+    return claimId;
+  });
+}
+
+/** Appends the outcome of a claimed send. Best effort: never throws. */
+async function recordSignerConfirmation(
+  knex: Knex,
+  tenant: string,
+  quoteId: string,
+  activityType: typeof QUOTE_ACTIVITY_TYPES.signerConfirmationSent | typeof QUOTE_ACTIVITY_TYPES.signerConfirmationFailed,
+  metadata: Record<string, unknown>
+): Promise<void> {
+  try {
+    const sent = activityType === QUOTE_ACTIVITY_TYPES.signerConfirmationSent;
+    await QuoteActivity.create(knex, tenant, {
+      quote_id: quoteId,
+      activity_type: activityType,
+      description: sent
+        ? `Signed quote copy emailed to ${String(metadata.recipient)}`
+        : `Signed quote copy could not be emailed to ${String(metadata.recipient)}`,
+      performed_by: null,
+      metadata,
+    });
+  } catch (activityError) {
+    console.warn(`Could not record the signer confirmation outcome for quote ${quoteId}:`, activityError);
   }
 }

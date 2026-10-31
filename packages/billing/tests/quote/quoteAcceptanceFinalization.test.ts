@@ -10,11 +10,35 @@ const quoteGetById = vi.fn();
 const listActivities = vi.fn();
 const createActivity = vi.fn();
 const renderQuoteEmail = vi.fn();
+const lockRaw = vi.fn();
+
+// A trx stand-in whose lock is a real mutex, so concurrent finalizations queue
+// the way pg_advisory_xact_lock makes them queue.
+let lockTail: Promise<void> = Promise.resolve();
+// True while any transaction (so any pooled connection) is open.
+let openTransactions = 0;
+const fakeTrx = () => ({
+  raw: (...a: unknown[]) => lockRaw(...a),
+  transaction: async (fn: (t: unknown) => Promise<unknown>) => fn({ scope: 'savepoint' }),
+});
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: async () => ({ knex: { scope: 'knex' }, tenant: TENANT }),
   runWithTenant: async (_t: string, fn: () => Promise<unknown>) => fn(),
   resolveEffectiveTimeZone: async () => 'America/Chicago',
+  withTransaction: async (_knex: unknown, fn: (trx: unknown) => Promise<unknown>) => {
+    const previous = lockTail;
+    let release!: () => void;
+    lockTail = new Promise<void>((resolve) => { release = resolve; });
+    await previous;
+    openTransactions += 1;
+    try {
+      return await fn(fakeTrx());
+    } finally {
+      openTransactions -= 1;
+      release();
+    }
+  },
 }));
 vi.mock('@alga-psa/email', () => ({
   TenantEmailService: { getInstance: () => ({ sendEmail: (...a: unknown[]) => sendEmail(...a) }) },
@@ -54,9 +78,12 @@ const acceptance = {
   ipAddress: '203.0.113.9',
 };
 
+const activityTypes = () => createActivity.mock.calls.map((call) => call[2].activity_type);
+
 describe('finalizeLinkAcceptedQuote', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    openTransactions = 0;
     vi.spyOn(console, 'error').mockImplementation(() => undefined);
     vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     quoteGetById.mockResolvedValue({
@@ -132,30 +159,150 @@ describe('finalizeLinkAcceptedQuote', () => {
     expect(result.documentId).toBe('doc-signed');
     expect(result.emailSent).toBe(false);
     expect(result.errors.join(' ')).toMatch(/smtp down/);
-    expect(createActivity).not.toHaveBeenCalled();
+    expect(activityTypes()).toEqual(['signer_confirmation_claimed', 'signer_confirmation_failed']);
   });
 
-  it('reports a thrown email error without throwing', async () => {
+  it('holds no transaction (no pooled connection) while the email is sent', async () => {
+    let openDuringSend = -1;
+    sendEmail.mockImplementation(async () => {
+      openDuringSend = openTransactions;
+      return { success: true, messageId: 'm-1' };
+    });
+
+    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+
+    expect(result.emailSent).toBe(true);
+    expect(openDuringSend).toBe(0);
+  });
+
+  it('releases the claim when the send fails, so a later run sends', async () => {
+    const recorded: Array<{ activity_type: string }> = [];
+    listActivities.mockImplementation(async () => [...recorded]);
+    createActivity.mockImplementation(async (_k: unknown, _t: unknown, activity: { activity_type: string }) => {
+      recorded.push({ ...activity, created_at: new Date().toISOString() } as { activity_type: string });
+      return {};
+    });
+    sendEmail.mockResolvedValueOnce({ success: false, error: 'smtp down' });
+
+    const first = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    expect(first.emailSent).toBe(false);
+
+    const second = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    expect(second.emailSent).toBe(true);
+    expect(sendEmail).toHaveBeenCalledTimes(2);
+    expect(activityTypes()).toEqual([
+      'signer_confirmation_claimed',
+      'signer_confirmation_failed',
+      'signer_confirmation_claimed',
+      'signer_confirmation_sent',
+    ]);
+  });
+
+  it('stands down while another run holds a live claim, and retakes a stale one', async () => {
+    const claimedAt = (msAgo: number) => ({
+      activity_type: 'signer_confirmation_claimed',
+      created_at: new Date(Date.now() - msAgo).toISOString(),
+    });
+
+    listActivities.mockResolvedValue([claimedAt(60 * 1000)]);
+    const live = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    expect(live).toEqual({ documentId: 'doc-signed', emailSent: false, errors: [] });
+    expect(sendEmail).not.toHaveBeenCalled();
+
+    listActivities.mockResolvedValue([claimedAt(60 * 60 * 1000)]);
+    const stale = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    expect(stale.emailSent).toBe(true);
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it('matches failed records to claims by claim_id: a late failure of an old claim does not release a newer live claim', async () => {
+    const at = (msAgo: number) => new Date(Date.now() - msAgo).toISOString();
+    listActivities.mockResolvedValue([
+      { activity_type: 'signer_confirmation_claimed', created_at: at(60 * 60 * 1000), metadata: { claim_id: 'old' } },
+      { activity_type: 'signer_confirmation_claimed', created_at: at(60 * 1000), metadata: { claim_id: 'new' } },
+      { activity_type: 'signer_confirmation_failed', created_at: at(1000), metadata: { claim_id: 'old' } },
+    ]);
+    const blocked = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    expect(blocked.emailSent).toBe(false);
+    expect(sendEmail).not.toHaveBeenCalled();
+
+    // The newer claim's own failure releases it.
+    listActivities.mockResolvedValue([
+      { activity_type: 'signer_confirmation_claimed', created_at: at(60 * 1000), metadata: { claim_id: 'new' } },
+      { activity_type: 'signer_confirmation_failed', created_at: at(1000), metadata: { claim_id: 'new' } },
+    ]);
+    const released = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+    expect(released.emailSent).toBe(true);
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a thrown email error without throwing, and releases the claim', async () => {
     sendEmail.mockRejectedValue(new Error('boom'));
     const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
 
     expect(result.emailSent).toBe(false);
     expect(result.errors.join(' ')).toMatch(/boom/);
+    expect(activityTypes()).toEqual(['signer_confirmation_claimed', 'signer_confirmation_failed']);
   });
 
   it('does not email twice: a second run reuses the signed document and skips the send', async () => {
     const first = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
     expect(first.emailSent).toBe(true);
-    expect(createActivity).toHaveBeenCalledWith(
-      expect.anything(),
-      TENANT,
-      expect.objectContaining({ activity_type: 'signer_confirmation_sent' })
-    );
+    expect(activityTypes()).toEqual(['signer_confirmation_claimed', 'signer_confirmation_sent']);
 
     listActivities.mockResolvedValue([{ activity_type: 'signer_confirmation_sent' }]);
     const second = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
     expect(second).toEqual({ documentId: 'doc-signed', emailSent: false, errors: [] });
     expect(sendEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends once when two finalizations race: the second sees the recorded confirmation', async () => {
+    const recorded: Array<{ activity_type: string }> = [];
+    listActivities.mockImplementation(async () => [...recorded]);
+    createActivity.mockImplementation(async (_k: unknown, _t: unknown, activity: { activity_type: string }) => {
+      recorded.push({ ...activity, created_at: new Date().toISOString() } as { activity_type: string });
+      return {};
+    });
+    // Slow send, so the second run is in flight while the first is mid-send.
+    sendEmail.mockImplementation(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      return { success: true, messageId: 'm-1' };
+    });
+
+    const [a, b] = await Promise.all([
+      finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance),
+      finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance),
+    ]);
+
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect(activityTypes()).toEqual(['signer_confirmation_claimed', 'signer_confirmation_sent']);
+    expect([a.emailSent, b.emailSent].sort()).toEqual([false, true]);
+    expect(a.documentId).toBe('doc-signed');
+    expect(b.documentId).toBe('doc-signed');
+    expect(lockRaw).toHaveBeenCalledWith(expect.stringContaining('pg_advisory_xact_lock'), [
+      'alga:quote-signer-confirmation',
+      `${TENANT}:${QUOTE_ID}`,
+    ]);
+  });
+
+  it('still reports success for the email when logging it fails', async () => {
+    createActivity.mockImplementation(async (_k: unknown, _t: unknown, activity: { activity_type: string }) => {
+      if (activity.activity_type === 'signer_confirmation_sent') throw new Error('activity insert failed');
+      return {};
+    });
+    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+
+    expect(result).toEqual({ documentId: 'doc-signed', emailSent: true, errors: [] });
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not produce a signed PDF when the quote has no user to attribute it to', async () => {
+    quoteGetById.mockResolvedValue({ quote_id: QUOTE_ID, status: 'accepted', contact_id: 'contact-1' });
+    const result = await finalizeLinkAcceptedQuote(TENANT, QUOTE_ID, acceptance);
+
+    expect(result.errors[0]).toMatch(/no user to attribute/);
+    expect(generateAndStore).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 
   it('refuses to run before the decision is committed', async () => {

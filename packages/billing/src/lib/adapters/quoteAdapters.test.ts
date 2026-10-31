@@ -1489,6 +1489,60 @@ describe('quoteAdapters one source of truth: PDF view model == editor draft == p
       expect((await bindName(viewModel)).html).toContain('Typed Signer');
     });
 
+    it('binds accepted_by_name to the typed name when a contact signer exists too (typed wins)', async () => {
+      const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', buildQuote(), {
+        acceptance: { signerName: 'Typed Signer', signerContactId: 'contact-1', acceptedAt, method: 'email_link' },
+      });
+      expect(viewModel.accepted_by_name).toBe('Typed Signer');
+      expect(viewModel.acceptance?.signer_name).toBe('Typed Signer');
+      const { html } = await bindName(viewModel);
+      expect(html).toContain('Typed Signer');
+      expect(html).not.toContain('Casey Contact');
+    });
+
+    describe('user signers (no regression)', () => {
+      beforeEach(() => {
+        identityRows.tables = {
+          contacts: [{ contact_name_id: 'contact-1', full_name: 'Casey Contact' }],
+          users: [
+            { user_id: 'msp-user', first_name: 'Morgan', last_name: 'Tech', contact_id: null },
+            { user_id: 'portal-user', first_name: 'Pat', last_name: 'Portal', contact_id: 'contact-1' },
+          ],
+        };
+      });
+
+      it('binds an MSP user (no contact) to their own first and last name, with no acceptance passed', async () => {
+        const viewModel = await mapLoadedQuoteToViewModel(
+          fakeKnex,
+          'tenant-1',
+          buildQuote({ status: 'accepted', accepted_by: 'msp-user', accepted_at: acceptedAt })
+        );
+        expect(viewModel.accepted_by_name).toBe('Morgan Tech');
+        expect(viewModel.acceptance).toBeNull();
+        expect((await bindName(viewModel)).html).toContain('Morgan Tech');
+      });
+
+      it('binds a portal user through users.contact_id to their contact name', async () => {
+        const viewModel = await mapLoadedQuoteToViewModel(
+          fakeKnex,
+          'tenant-1',
+          buildQuote({ status: 'accepted', accepted_by: 'portal-user', accepted_at: acceptedAt })
+        );
+        expect(viewModel.accepted_by_name).toBe('Casey Contact');
+        expect((await bindName(viewModel)).html).toContain('Casey Contact');
+      });
+
+      it('lets the typed name win over the accepting user', async () => {
+        const viewModel = await mapLoadedQuoteToViewModel(
+          fakeKnex,
+          'tenant-1',
+          buildQuote({ status: 'accepted', accepted_by: 'msp-user' }),
+          { acceptance: { signerName: 'Typed Signer', acceptedAt, method: 'email_link' } }
+        );
+        expect(viewModel.accepted_by_name).toBe('Typed Signer');
+      });
+    });
+
     it('leaves the sent render unchanged when no acceptance is passed', async () => {
       const viewModel = await mapLoadedQuoteToViewModel(fakeKnex, 'tenant-1', buildQuote());
       expect(viewModel.acceptance).toBeNull();

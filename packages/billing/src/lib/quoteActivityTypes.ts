@@ -13,8 +13,16 @@ export const QUOTE_ACTIVITY_TYPES = {
   accepted: 'accepted',
   /** A recipient opened the quote through a public email access link (card alga-2026-0002820). */
   viewedViaEmailLink: 'viewed_via_email_link',
-  /** The signer's confirmation email (with the signed PDF) went out; written once per quote. */
+  /**
+   * A finalization run took the right to send the signer's confirmation email. Written under a
+   * per-quote advisory lock before the send, so concurrent runs cannot both send. Superseded by
+   * `signerConfirmationSent` or `signerConfirmationFailed`.
+   */
+  signerConfirmationClaimed: 'signer_confirmation_claimed',
+  /** The signer's confirmation email (with the signed PDF) went out; terminal, written once per quote. */
   signerConfirmationSent: 'signer_confirmation_sent',
+  /** The claimed send did not go out; releases the claim so a later run may try again. */
+  signerConfirmationFailed: 'signer_confirmation_failed',
 } as const;
 
 export type QuoteActivityType = (typeof QUOTE_ACTIVITY_TYPES)[keyof typeof QUOTE_ACTIVITY_TYPES];
