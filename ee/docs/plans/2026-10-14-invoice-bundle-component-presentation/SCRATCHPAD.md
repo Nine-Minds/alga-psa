@@ -76,3 +76,28 @@
 - Should the grouped, by-location and by-ticket standard layouts get bundle variants?
 - Should component names use a customer-facing service field if `service_catalog` gains one? v1 uses `service_name` at generation time.
 - Should operators be able to reorder components within a line? v1 uses configuration creation order.
+
+## Implementation log (Draft Implementation)
+
+### Status
+- Verified (unit/migration-on-scratch-DB): see `implemented:true` in features.json / tests.json. Everything else is **written but not verified** (needs a DB or UI harness) and is deliberately left `false`.
+- Commands run: `npx vitest run` in packages/billing (368 files, 1961 tests, pass); `tsc --noEmit` for billing, client-portal and server (no errors reported); `node scripts/validate-translations.cjs` (pass, after `generate-pseudo-locales.cjs`).
+- Both migrations were run up/down/up (idempotent) against a throwaway database with stubbed tables inside the local test Postgres container, then the database was dropped. They have **not** been run against a full schema.
+
+### Deviations / decisions made while building
+- Price gate is one function, `decideBundleLoad(viewer, ast)` in `lib/invoice-template-ast/componentPricing.ts`, used by `invoiceQueries.resolveBundleLoadOptions`. PDF paths call `templateUsesComponentPricing` directly via `withTemplatePricing`.
+- The adapter treats presence of `bundle_component_amounts` as the "include prices" signal.
+- MSP preview/drawer always includes prices (MSP sees every amount anyway).
+- `buildBundleChildRowsPreset` / `detectBundleChildRowsPreset` (lib/invoice-template-ast/bundleChildRows.ts) are shared by the standard template and the designer. Hand-authored childRows show as "Custom" in the designer and round-trip untouched via `metadata.bundleChildRows`.
+- Designer v1 is the preset select + change toggle only. NOT built: blank-on-bundle checklist (F050), per-column remap (F051), auto subtitle line on enabling (F052), canvas preview of component rows (F053), nested `components` collection descriptor (F046), the "Managed services bundles" sample (F055). The presets already set `parentBlankColumns`.
+- Draft preview consolidation is opt-in: `buildPreviewInvoiceForSelectionInputs({ consolidateFixedBundles })`, exposed as an options arg on `previewGroupedInvoicesForSelectionInputs`. No UI caller passes it yet, so the AutomaticInvoices dialog is unchanged by construction (F038). In consolidated mode a Fixed line's charges are folded into one parent without a "Contract:" header.
+- The template creation wizard has no title/subtitle inputs; only the template detail dialog does (F007 partial).
+- `npm run mcp:registry:generate` produced no diff and the registry has no `invoice_line_subtitle`, so F009 is partial (REST schemas updated; registry not).
+- On invoiced contracts (`pricingOnly`) the live editor now sends a text-only `updateContractLine` only when the text changed; the action has a fast path that skips recurring-policy resolution and period sync.
+- French/locale formatting (F062) is not separately verified: component quantity/change use the shared number formatting and `daterange` filter; no French render test was written.
+- F045 (page-break readability): relies on existing print CSS (`break-after: avoid`); no PDF test written.
+
+### Lessons
+- `packages/billing/vitest.config.ts` has an explicit include list: new test files must be added.
+- tsc on billing needs `NODE_OPTIONS=--max-old-space-size=12000`.
+- Never open a file for writing before reading it (a script truncated `models/invoice.ts`; restored from git).

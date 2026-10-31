@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Migration adds nullable invoice_line_subtitle to contract_lines",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R1"
     ]
@@ -10,7 +10,7 @@
   {
     "id": "F002",
     "description": "Migration adds nullable invoice_line_description and invoice_line_subtitle to contract_template_lines",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R1"
     ]
@@ -82,7 +82,7 @@
   {
     "id": "F011",
     "description": "Migration adds nullable JSONB invoice_charges.bundle_presentation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R2"
     ]
@@ -98,7 +98,7 @@
   {
     "id": "F013",
     "description": "Snapshot carries the line subtitle and components with serviceId, name (service_name at generation), raw quantity, pricingBasis, order, service period and detailItemIds",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R2"
     ]
@@ -106,7 +106,7 @@
   {
     "id": "F014",
     "description": "Snapshot component order follows service configuration creation order then service name, deterministically",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R2"
     ]
@@ -130,7 +130,7 @@
   {
     "id": "F017",
     "description": "Previous quantity per service sums the prior period's rows, preferring that invoice's snapshot quantity over clamped detail quantity",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R3"
     ]
@@ -138,7 +138,7 @@
   {
     "id": "F018",
     "description": "Service absent from a prior period that exists is treated as previous quantity 0",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R3"
     ]
@@ -146,7 +146,7 @@
   {
     "id": "F019",
     "description": "Service present in the prior period but absent now is added as a quantity-0 component",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R3"
     ]
@@ -154,7 +154,7 @@
   {
     "id": "F020",
     "description": "Lines with no prior billed period record comparison no_prior_period",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R3"
     ]
@@ -186,7 +186,7 @@
   {
     "id": "F024",
     "description": "Renderer types add WasmInvoiceBundleComponent and item subtitle, hasComponents and components",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R4"
     ]
@@ -194,7 +194,7 @@
   {
     "id": "F025",
     "description": "Pure component builder maps a snapshot (plus optional detail amounts) to item subtitle and components",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R4"
     ]
@@ -202,7 +202,7 @@
   {
     "id": "F026",
     "description": "Component quantityChange is null when not compared or unchanged",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R4"
     ]
@@ -210,7 +210,7 @@
   {
     "id": "F027",
     "description": "When pricing is included, component total is the allocated amount and unitPrice is set only for unit-basis services",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R4"
     ]
@@ -218,7 +218,7 @@
   {
     "id": "F028",
     "description": "Services with differing quantities across periods on one invoice produce one component per period with period labels; equal quantities collapse to one row",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R4"
     ]
@@ -234,7 +234,7 @@
   {
     "id": "F030",
     "description": "templateUsesComponentPricing(ast) detects whether an AST binds component unitPrice or total",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R4"
     ]
@@ -242,7 +242,7 @@
   {
     "id": "F031",
     "description": "When pricing is not included, component unitPrice and total keys are absent from the view model",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R4"
     ]
@@ -306,7 +306,7 @@
   {
     "id": "F039",
     "description": "AST types and strict zod schema support dynamic-table childRows (sourcePath, itemBinding, per-column cells, leading change value, parentBlankColumns, style)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R5"
     ]
@@ -314,7 +314,7 @@
   {
     "id": "F040",
     "description": "Evaluator resolves childRows source per parent row and treats a missing or empty source as no child rows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R5"
     ]
@@ -322,7 +322,7 @@
   {
     "id": "F041",
     "description": "React/HTML renderer renders child rows under their parent with indentation and marker; unmapped columns render empty",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R5"
     ]
@@ -330,15 +330,15 @@
   {
     "id": "F042",
     "description": "parentBlankColumns blanks the listed parent cells only on rows that render child rows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R5"
     ]
   },
   {
     "id": "F043",
-    "description": "signed-number change renders with + / \u2212 and positive/negative tone, and renders nothing for null or 0",
-    "implemented": false,
+    "description": "signed-number change renders with + / − and positive/negative tone, and renders nothing for null or 0",
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R5"
     ]
@@ -346,7 +346,7 @@
   {
     "id": "F044",
     "description": "Transforms, aggregates and totals operate on parent rows only and are unaffected by childRows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R5"
     ]
@@ -426,7 +426,7 @@
   {
     "id": "F054",
     "description": "Designer workspace save/reopen round trip preserves childRows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R5"
     ]
@@ -442,7 +442,7 @@
   {
     "id": "F056",
     "description": "Migration adds the standard template Standard Invoice With Bundle Quantities (standard-bundle-quantities); existing standard and custom templates untouched",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R6"
     ]
@@ -450,7 +450,7 @@
   {
     "id": "F057",
     "description": "docs/billing/invoice_templates.md documents components, childRows, presets, the price inclusion rule, snapshot behavior and per-client assignment",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R6"
     ]
@@ -482,7 +482,7 @@
   {
     "id": "F061",
     "description": "New MSP UI strings (designer section, presets, contract Invoice text) are in all locale packs and pass locale validation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R8"
     ]
