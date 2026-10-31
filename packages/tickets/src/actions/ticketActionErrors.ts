@@ -55,8 +55,6 @@ export const TICKET_NOT_FOUND_MESSAGE_KEY = TICKET_CODE_MESSAGE_KEYS.TICKET_NOT_
  * can shrink rather than grow.
  */
 const EXPECTED_TICKET_MESSAGE_PREFIXES = [
-  'Client user cannot access this ticket',
-  'Client user is not associated with a client',
   'Client users can only create their own comments',
   'Client users cannot create internal comments',
   'Bundle settings not found',
@@ -144,6 +142,16 @@ function ticketErrorCodeOf(error: unknown): TicketErrorCode | undefined {
 export function ticketActionErrorFrom(error: unknown): TicketActionError | null {
   if (isAuthorizationThrow(error)) {
     return permissionError(error instanceof Error ? error.message : String(error));
+  }
+
+  const audienceCode = (error as { code?: unknown } | null)?.code;
+  if (audienceCode === 'CO_MANAGED_AUDIENCE_REQUIRED' || audienceCode === 'COMMENT_AUDIENCE_INVALID') {
+    return actionError(
+      (error as Error).message,
+      audienceCode === 'CO_MANAGED_AUDIENCE_REQUIRED'
+        ? 'features/tickets:errors.comment.audienceRequired'
+        : 'features/tickets:errors.comment.audienceInvalid',
+    );
   }
 
   const ticketCode = ticketErrorCodeOf(error);

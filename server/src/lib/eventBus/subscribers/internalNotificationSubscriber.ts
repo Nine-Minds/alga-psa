@@ -1,3 +1,5 @@
+import { resolveCoManagedCommentStep, audienceRecipients } from '../../notifications/coManagedCommentDelivery';
+import { CO_MANAGED_LEDGER } from '@shared/lib/deliveryLedger';
 import { isInteractiveUserType } from '@alga-psa/types';
 
 import { readTicketNotificationActor, resolveTicketNotificationActorName } from '../../notifications/ticketNotificationContext';
@@ -1900,6 +1902,48 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
       ticketId,
       ticketNumber: ticket.ticket_number
     });
+
+    // CM L5: on a shared ticket the audience-aware co-managed step replaces the native assignee/contact
+    // steps below. Each in-app notification is claimed, created and marked sent in ONE transaction. The
+    // served decision is made once; an unserved tenant gets null at zero SQL and runs the native steps.
+    const coManagedStep = await resolveCoManagedCommentStep(tenantId, ticketId, comment?.id);
+    if (coManagedStep) {
+      const assigneeIds = await getAllTicketAssignees(db, tenantId, ticketId);
+      const customerUsers = assigneeIds.map((id) => ({ kind: 'customer_user' as const, principalId: id }));
+      let requester: { kind: 'requester_contact'; principalId: string } | null = null;
+      let requesterUserId: string | null = null;
+      if (ticket.contact_name_id) {
+        const contactUser = await tenantScopedTable(db, 'users', tenantId)
+          .select('user_id').where({ contact_id: ticket.contact_name_id, user_type: 'client' }).first();
+        if (contactUser) { requester = { kind: 'requester_contact', principalId: contactUser.user_id }; requesterUserId = contactUser.user_id; }
+      }
+      for (const recipient of audienceRecipients(coManagedStep, { customerUsers, requester })) {
+        const isSponsor = recipient.kind === 'msp_user' || recipient.kind === 'team';
+        // Sponsor users have their inbox in the MSP tenant, so their row (and its ledger claim) live there.
+        const targetTenant = isSponsor ? coManagedStep.plan.sponsorTenant : tenantId;
+        if (recipient.principalId === userId || (!isSponsor && notifiedUserIds.has(recipient.principalId))) continue;
+        const isRequester = recipient.principalId === requesterUserId;
+        if (!shouldCreateTicketCommentNotification(suppression, isRequester ? 'contact' : 'internal')) continue;
+        const link = isSponsor ? '/msp/co-managed' : isRequester ? ticketPortalUrl : ticketUrl;
+        if (!link) continue;
+        await createNotificationFromTemplateInternal(isSponsor ? await getConnection(targetTenant) : db, {
+          tenant: targetTenant,
+          user_id: recipient.principalId,
+          template_name: isRequester ? 'ticket-comment-added-client' : 'ticket-comment-added',
+          type: 'info',
+          category: 'tickets',
+          link,
+          data: { authorName, ticketId: ticket.ticket_number || 'New Ticket', commentPreview },
+          metadata: {
+            ticketId: ticket.ticket_id,
+            ticketNumber: ticket.ticket_number || 'New Ticket',
+            comment: { id: comment?.id, text: commentPreview, author: authorName, ...(userId ? { authorId: userId } : {}), isInternal: false },
+          },
+        }, { delivery: { ledger: CO_MANAGED_LEDGER, key: { delivery_kind: 'ticket_comment_in_app', source_id: comment!.id!, recipient: recipient.principalId }, extra: { recipient_kind: recipient.kind } } });
+        if (!isSponsor) notifiedUserIds.add(recipient.principalId);
+      }
+      return;
+    }
 
     // Notify all assigned agents (if not internal comment)
     if (

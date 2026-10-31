@@ -588,5 +588,15 @@
     "doc": "sdk/docs/openapi/alga-openapi.ee.json",
     "pointer": "/components/schemas/UpdateMarketingSequenceBodyV1/properties/steps/default",
     "reason": "zod 4 migration (security/zod_fixes): update bodies no longer document creation defaults. zod 4 fills defaults for absent keys, so the update schemas now strip them to keep the old behaviour where an absent key leaves the column unchanged; the generated docs follow."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/InvoiceUpdateBody",
+    "reason": "alga-2026-0002945: PUT /api/v1/invoices/{id} request body was narrowed to INVOICE_UPDATE_FIELDS (payment_method, billing_profile_id, due_date, invoice_date, items, tax_source) with additionalProperties:false. Lifecycle, identity and calculated monetary fields (status, client_id, subtotal, tax, total_amount, credit_applied, finalized_at, etc.) were removed because they let invoice:update bypass the finalize/send/payment/void commands and their permissions; the runtime now rejects them with 400."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/InvoiceUpdateBody",
+    "reason": "alga-2026-0002945: PUT /api/v1/invoices/{id} request body was narrowed to INVOICE_UPDATE_FIELDS (payment_method, billing_profile_id, due_date, invoice_date, items, tax_source) with additionalProperties:false. Lifecycle, identity and calculated monetary fields (status, client_id, subtotal, tax, total_amount, credit_applied, finalized_at, etc.) were removed because they let invoice:update bypass the finalize/send/payment/void commands and their permissions; the runtime now rejects them with 400."
   }
 ]

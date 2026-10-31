@@ -1,5 +1,6 @@
 'use client';
 
+import { CommentAudienceSelect, audienceIsInternal, nativeComposerAudiences, useComposerAudiences, type ComposerAudience } from '../CommentAudienceControl';
 import React, { use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { PartialBlock } from '@blocknote/core';
@@ -18,6 +19,7 @@ import {
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
 import { buildCommentThreadGroups, HybridThreadNode, type CommentThreadGroup } from '@alga-psa/ui/components';
 import InlineReplyComposer from '@alga-psa/ui/components/InlineReplyComposer';
+import { COMPOSER_MAX_HEIGHT } from '@alga-psa/ui/components/composerSizing';
 import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context/UnsavedChangesContext';
 import { hasEditorContent } from '@alga-psa/ui/editor/hasEditorContent';
@@ -103,6 +105,7 @@ interface BentoTimelineTileProps {
     options?: TicketNotificationSuppressionValue,
     schedule?: { publishAt: string; timeZone: string } | null,
     emailRecipients?: CommentEmailRecipientsPayload,
+    audienceId?: ComposerAudience | null,
   ) => Promise<boolean>;
   closedStatusOptions?: { value: string; label: string }[];
   /** Threaded reply pipeline (same handler the conversation view gets). */
@@ -476,7 +479,20 @@ export function BentoTimelineTile({
   // Visibility and resolution are independent, same as the legacy composer: an
   // internal note can also be the resolution.
   const [composerVisibility, setComposerVisibility] = useState<'client' | 'internal'>(defaultReplyInternal ? 'internal' : 'client');
+  // Shared tickets and co_managed workspaces replace the Client/Internal lane switch with a required
+  // audience choice (no default; send stays blocked until the author picks one). The data source's
+  // conversation config decides, never a tenant-wide capability.
+  const configuredAudiences = useComposerAudiences();
+  const [composerAudience, setComposerAudience] = useState<ComposerAudience | null>(null);
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
+  // A resolution closes the ticket through the native path, so it never offers `shared_it`.
+  const offeredAudiences = configuredAudiences == null ? [] : isResolutionToggle ? nativeComposerAudiences(configuredAudiences) : configuredAudiences;
+  const chosenAudience = composerAudience != null && offeredAudiences.includes(composerAudience) ? composerAudience : null;
+  const audienceMissing = configuredAudiences != null && chosenAudience == null;
+  const handleAudienceChange = useCallback((next: ComposerAudience) => {
+    setComposerAudience(next);
+    setComposerVisibility(audienceIsInternal(next) ? 'internal' : 'client');
+  }, []);
   const [isScheduleToggle, setIsScheduleToggle] = useState(false);
   const [scheduledPublishAt, setScheduledPublishAt] = useState<Date | undefined>(undefined);
   const scheduledInstant = useMemo(() => {
@@ -528,10 +544,12 @@ export function BentoTimelineTile({
   }, []);
 
   const openComposer = useCallback((placement: 'top' | 'bottom') => {
-    if (!showComposer && defaultReplyInternal) setComposerVisibility('internal');
+    if (configuredAudiences != null) {
+      if (!showComposer) { setComposerAudience(null); setComposerVisibility('client'); }
+    } else if (!showComposer && defaultReplyInternal) setComposerVisibility('internal');
     setComposerPlacement(placement);
     setShowComposer(true);
-  }, [showComposer, defaultReplyInternal]);
+  }, [showComposer, defaultReplyInternal, configuredAudiences]);
 
   const { deleteDocument } = useDocumentsCrossFeature();
   const composeUploadSession = useTicketRichTextUploadSession({
@@ -771,6 +789,8 @@ export function BentoTimelineTile({
         ? resolutionCloseStatusId
         : null;
     if (composeUploadSession.isUploading) return;
+    // Fail closed: a co-managed comment with no audience is never sent.
+    if (audienceMissing) return false;
     const success = await onAddNewComment(
       composerVisibility === 'internal',
       isResolution,
@@ -783,8 +803,11 @@ export function BentoTimelineTile({
         : null,
       // Never sent with an internal note, even though the draft is kept.
       allowEmailRecipients && composerVisibility !== 'internal' ? emailRecipients.payload : undefined,
+      ...(configuredAudiences != null ? [chosenAudience] as const : []),
     );
+    // An unconfirmed publish (false) leaves the composer, draft and audience untouched.
     if (success) {
+      setComposerAudience(null);
       emailRecipients.reset();
       setHasDraft(false);
       setComposeHasContent(false);
@@ -797,7 +820,7 @@ export function BentoTimelineTile({
       composeUploadSession.resetDraftTracking();
     }
     return success;
-  }, [composeUploadSession.isUploading, onAddNewComment, composerVisibility, isResolutionToggle, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession, allowEmailRecipients, emailRecipients]);
+  }, [composeUploadSession.isUploading, onAddNewComment, composerVisibility, audienceMissing, configuredAudiences, chosenAudience, isResolutionToggle, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession, allowEmailRecipients, emailRecipients]);
 
   // The composer remounts empty after a successful submit (editorKey bump).
   useEffect(() => {
@@ -917,6 +940,7 @@ export function BentoTimelineTile({
         searchMentions={searchUsersForMentions}
         uploadFile={composeUploadSession.uploadFile}
         snippets={cannedResponseSnippets}
+        maxHeight={COMPOSER_MAX_HEIGHT}
         footerActions={allowEmailRecipients ? (
           <CommentEmailRecipientsControl
             idPrefix={`${id}-composer`}
@@ -932,6 +956,15 @@ export function BentoTimelineTile({
         autoFocus
       />
       <div className="flex items-center gap-2 mt-2">
+        {configuredAudiences != null ? (
+          <CommentAudienceSelect
+            id={`${id}-composer-audience`}
+            audiences={offeredAudiences}
+            value={chosenAudience}
+            onChange={handleAudienceChange}
+            disabled={isSubmitting}
+          />
+        ) : (
         <div
           role="group"
           aria-label={t('bento.timeline.replyVisibility', 'Reply visibility')}
@@ -959,6 +992,7 @@ export function BentoTimelineTile({
             </button>
           ))}
         </div>
+        )}
         <div className="flex items-center gap-2">
           <Switch
             id={`${id}-composer-resolution-toggle`}
@@ -990,6 +1024,7 @@ export function BentoTimelineTile({
             || composeUploadSession.isUploading
             || !hasDraft
             || !scheduleIsValid
+            || audienceMissing
             || (allowEmailRecipients && composerVisibility !== 'internal' && emailRecipients.hasErrors)
           }
         >
@@ -1235,7 +1270,7 @@ export function BentoTimelineTile({
 
       {!readOnly && replyTargetComment && replyingToCommentId && (
         <div id={`${id}-reply-dock`} className="sticky bottom-2 z-20 pt-3">
-          <div className="rounded-lg bg-[rgb(var(--color-card))] shadow-lg">
+          <div className="max-h-[70vh] overflow-y-auto rounded-lg bg-[rgb(var(--color-card))] shadow-lg">
             <p className="px-3 pt-2 text-xs font-medium text-[rgb(var(--color-text-500))]">
               {t('bento.timeline.replyingToComment', 'Replying to {{name}}', {
                 name: replyTargetName ?? t('bento.timeline.someone', 'Someone'),

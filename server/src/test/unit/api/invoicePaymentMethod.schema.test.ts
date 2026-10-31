@@ -31,7 +31,35 @@ describe('invoice payment_method / billing_profile_id schema', () => {
 
   it('stays optional so existing callers are unaffected', () => {
     expect(createInvoiceSchema.safeParse(baseInvoice).success).toBe(true);
-    expect(updateInvoiceSchema.safeParse({ status: 'sent' }).success).toBe(true);
+    expect(updateInvoiceSchema.safeParse({ payment_method: 'cash' }).success).toBe(false);
+    expect(updateInvoiceSchema.safeParse({ payment_method: 'check' }).success).toBe(true);
+  });
+
+  it('rejects lifecycle, identity, monetary and unknown keys on update (strict allowlist)', () => {
+    const uuid = '11111111-1111-4111-8111-111111111111';
+    for (const body of [
+      { status: 'sent' },
+      { status: 'paid' },
+      { total_amount: 0 },
+      { client_id: uuid },
+      { tenant: uuid },
+      { not_a_column: 1 },
+    ]) {
+      const result = updateInvoiceSchema.safeParse(body);
+      expect(result.success, JSON.stringify(body)).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0].code).toBe('unrecognized_keys');
+        expect(JSON.stringify(result.error.issues)).toContain(Object.keys(body)[0]);
+      }
+    }
+  });
+
+  it('accepts the editable allowlist', () => {
+    const uuid = '11111111-1111-4111-8111-111111111111';
+    expect(updateInvoiceSchema.safeParse({ payment_method: 'bank_transfer' }).success).toBe(true);
+    expect(updateInvoiceSchema.safeParse({ billing_profile_id: uuid }).success).toBe(true);
+    expect(updateInvoiceSchema.safeParse({ due_date: '2026-06-30' }).success).toBe(true);
+    expect(updateInvoiceSchema.safeParse({ tax_source: 'pending_external' }).success).toBe(true);
   });
 
   it('rejects values outside the preferred-method enum', () => {
