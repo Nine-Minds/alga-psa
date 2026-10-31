@@ -3,7 +3,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { createComment, updateComment, deleteComment } from './commentActions';
-import { toggleCommentReaction } from './commentReactionActions';
+import { toggleCommentReaction, getCommentsReactionsBatch } from './commentReactionActions';
+import * as ticketAuthz from '../../lib/ticketRecordAuthorization';
 
 // Real authorization kernel + real ticketRecordAuthorization; only the DB and the
 // contact-visibility resolver are faked.
@@ -12,6 +13,8 @@ let currentUser: any;
 let ticketRow: Record<string, unknown> | null;
 let commentRow: Record<string, unknown> | null;
 let writes: Array<{ table: string; op: string }>;
+// Rows returned by multi-row (awaited) queries, keyed by table. Unset => [].
+let listRows: Record<string, any[]> = {};
 
 const hasPermissionMock = vi.fn();
 const createTenantKnexMock = vi.fn();
@@ -32,7 +35,7 @@ vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: (...args: any[]) => hasPe
 function makeBuilder(table: string) {
   const builder: any = new Proxy(function () {}, {
     get(_t, prop: string) {
-      if (prop === 'then') return (resolve: any) => resolve([]);
+      if (prop === 'then') return (resolve: any) => resolve(listRows[table] ?? []);
       if (prop === 'first') {
         return async () => (table === 'tickets' ? ticketRow ?? undefined : table === 'comments' ? commentRow ?? undefined : table === 'comments as parent' ? parentThreadRow ?? undefined : undefined);
       }
@@ -82,6 +85,10 @@ vi.mock('@alga-psa/shared/lib/ticketCommentAttachments', () => ({ persistComment
 vi.mock('@shared/lib/ticketCommentAttachments', () => ({ withdrawCommentAttachments: vi.fn() }));
 vi.mock('@alga-psa/formatting/blocknoteUtils', () => ({ convertBlockNoteToMarkdown: vi.fn(async () => 'md') }));
 vi.mock('@alga-psa/core', () => ({ scheduleJobAt: vi.fn(), cancelScheduledJob: vi.fn() }));
+vi.mock('../../lib/ticketRecordAuthorization', async (importActual) => {
+  const actual: any = await importActual();
+  return { ...actual, authorizeTicketRecordAccessConcealed: vi.fn(actual.authorizeTicketRecordAccessConcealed) };
+});
 vi.mock('../../lib/liveUpdates', () => ({ publishTicketUpdate: vi.fn(async () => undefined) }));
 vi.mock('../../lib/clientPortalVisibility.server', () => ({
   getClientContactVisibilityContext: async () => ({
@@ -105,11 +112,13 @@ const client = { user_id: 'client-user-1', user_type: 'client', tenant: 'tenant-
 const ownTicket = { ticket_id: 'ticket-1', tenant: 'tenant-1', client_id: 'client-1', board_id: 'board-1', contact_name_id: 'contact-1', billing_profile_id: null, attributes: {}, assigned_to: null, entered_by: 'x', assigned_team_id: null };
 const foreignTicket = { ...ownTicket, ticket_id: 'ticket-2', client_id: 'client-2', contact_name_id: 'contact-9' };
 // A comment the client authored (e.g. planted through the old unguarded path) on a ticket it cannot see.
-const ownComment = (ticket_id: string) => ({ comment_id: 'c-1', ticket_id, user_id: 'client-user-1', note: 'x', is_internal: false, tenant: 'tenant-1' });
+const ownComment = (ticket_id: string) => ({ comment_id: 'c-1', ticket_id, user_id: 'client-user-1', note: 'x', is_internal: false, publish_state: 'published', thread_id: 'th-1', deleted_at: null, tenant: 'tenant-1' });
 
 describe('comment mutations: client principals need record access to the owning ticket', () => {
   beforeEach(() => {
     writes = [];
+    listRows = {};
+    vi.mocked(ticketAuthz.authorizeTicketRecordAccessConcealed).mockClear();
     commentInsert.mockReset().mockResolvedValue('new-comment-id');
     commentAuthorType = 'client';
     parentThreadRow = null;
@@ -158,12 +167,112 @@ describe('comment mutations: client principals need record access to the owning 
   it('toggleCommentReaction: allows a client on a visible ticket', async () => {
     ticketRow = ownTicket;
     commentRow = ownComment('ticket-1');
+    listRows = { comments: [commentRow] };
     await expect(toggleCommentReaction('c-1', '👍')).resolves.toEqual({ added: true });
   });
 
-  it('toggleCommentReaction: internal MSP users get no new record check', async () => {
+  it('toggleCommentReaction: internal MSP users are now ticket-authorized (update) and may react to internal comments', async () => {
     currentUser = { user_id: 'i-1', user_type: 'internal', tenant: 'tenant-1', roles: [] };
+    commentRow = { ...ownComment('ticket-2'), is_internal: true };
+    listRows = { comments: [commentRow] };
     await expect(toggleCommentReaction('c-1', '👍')).resolves.toEqual({ added: true });
+  });
+
+  describe('toggleCommentReaction: comment-level visibility for clients', () => {
+    beforeEach(() => { ticketRow = ownTicket; });
+    const deniedFor = async (overrides: Record<string, unknown>, thread?: Record<string, unknown>) => {
+      commentRow = { ...ownComment('ticket-1'), ...overrides };
+      listRows = { comments: [commentRow], comment_threads: thread ? [thread] : [] };
+      const result: any = await toggleCommentReaction('c-1', '👍').catch((e) => e);
+      expect(String(result?.message ?? result)).toBe('Permission denied: Cannot access ticket');
+      expect(writes).toEqual([]);
+    };
+    const allowedFor = async (overrides: Record<string, unknown>) => {
+      commentRow = { ...ownComment('ticket-1'), ...overrides };
+      listRows = { comments: [commentRow], comment_threads: [{ thread_id: 'th-1', is_internal: false }] };
+      await expect(toggleCommentReaction('c-1', '👍')).resolves.toEqual({ added: true });
+    };
+
+    it('denies an internal comment on a ticket the client can see (no insert)', async () => {
+      await deniedFor({ is_internal: true });
+    });
+    it('denies a comment in an internal thread', async () => {
+      await deniedFor({}, { thread_id: 'th-1', is_internal: true });
+    });
+    it('denies an unpublished (scheduled) comment', async () => {
+      await deniedFor({ publish_state: 'scheduled' });
+    });
+    it('denies a soft-deleted comment', async () => {
+      await deniedFor({ deleted_at: '2030-01-01T00:00:00Z' });
+    });
+    it('allows a published, non-internal requester-audience comment (collaboration_audience requester <=> is_internal false)', async () => {
+      await allowedFor({ is_internal: false });
+    });
+    it('fails closed for a comment with no ticket', async () => {
+      await deniedFor({ ticket_id: null });
+    });
+  });
+
+  describe('getCommentsReactionsBatch', () => {
+    const visible = { ...ownComment('ticket-1'), comment_id: 'c-vis' };
+    const hidden = { ...ownComment('ticket-1'), comment_id: 'c-hid', is_internal: true };
+    beforeEach(() => {
+      ticketRow = ownTicket;
+      createTenantKnexMock.mockResolvedValue({ knex: makeTrx(), tenant: 'tenant-1' });
+      listRows = {
+        comments: [visible, hidden],
+        comment_threads: [{ thread_id: 'th-1', is_internal: false }],
+        comment_reactions: [{ comment_id: 'c-vis', emoji: '👍', user_id: 'u-a' }],
+        users: [{ user_id: 'u-a', first_name: 'Ann', last_name: 'A' }],
+      };
+    });
+
+    it('returns reactions only for the visible comment and no names from the hidden one', async () => {
+      const result = await getCommentsReactionsBatch(['c-vis', 'c-hid']);
+      expect(Object.keys(result.reactions)).toEqual(['c-vis']);
+      expect(Object.keys(result.userNames)).toEqual(['u-a']);
+    });
+
+    it('queries reactions only for authorized IDs', async () => {
+      const seen: any[] = [];
+      const trx = makeTrx();
+      listRows.comment_reactions = [
+        { comment_id: 'c-vis', emoji: '👍', user_id: 'u-a' },
+        { comment_id: 'c-hid', emoji: '🎉', user_id: 'u-secret' },
+      ];
+      // The fake returns whatever rows we list, so assert on the filter argument instead.
+      const origTable = trx;
+      const wrapped: any = (t: string) => {
+        const b = origTable(t);
+        if (t !== 'comment_reactions') return b;
+        return new Proxy(b, { get(target, prop: string) {
+          if (prop === 'whereIn') return (...a: any[]) => { seen.push(a); return target; };
+          return target[prop];
+        } });
+      };
+      createTenantKnexMock.mockResolvedValue({ knex: wrapped, tenant: 'tenant-1' });
+      await getCommentsReactionsBatch(['c-vis', 'c-hid']);
+      expect(seen[0]).toEqual(['comment_id', ['c-vis']]);
+    });
+
+    it('returns empty (no throw) for comments on a ticket the caller cannot see', async () => {
+      ticketRow = foreignTicket;
+      listRows.comments = [{ ...visible, ticket_id: 'ticket-2' }];
+      await expect(getCommentsReactionsBatch(['c-vis'])).resolves.toEqual({ reactions: {}, userNames: {} });
+    });
+
+    it('returns empty for missing IDs', async () => {
+      listRows.comments = [];
+      await expect(getCommentsReactionsBatch(['nope'])).resolves.toEqual({ reactions: {}, userNames: {} });
+    });
+
+    it('authorizes once per ticket, not once per comment', async () => {
+      listRows.comments = ['a', 'b', 'c'].map((id) => ({ ...visible, comment_id: id }));
+      await getCommentsReactionsBatch(['a', 'b', 'c']);
+      const spy = vi.mocked(ticketAuthz.authorizeTicketRecordAccessConcealed);
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(spy.mock.calls[0][0]).toMatchObject({ ticketId: 'ticket-1', action: 'read' });
+    });
   });
 
   describe('createComment', () => {
