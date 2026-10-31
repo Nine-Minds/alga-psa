@@ -66,7 +66,17 @@ export interface RoutingDelivery {
   /** The handoff/assignment command's operation id. */
   sourceId: string;
   event: 'escalation_received' | 'escalation_returned' | 'ticket_assigned';
+  /**
+   * Who to deliver to NOW. For customer_user rows `principalId` and `email` are re-resolved from the
+   * current user record at delivery time, so `email` may differ from the address captured when the row was enqueued.
+   */
   recipient: DeliveryRecipient;
+  /**
+   * The stored ledger row's `recipient` column (captured principal id for in-app, captured lowercase email for email).
+   * claim/finish MUST key on this, never on `recipient.email`, or a changed address orphans the pending row.
+   * Falls back to `recipient.email ?? recipient.principalId` when absent.
+   */
+  ledgerRecipient?: string;
   /** Tenant in which the in-app row is created (the recipient's own tenant). */
   recipientTenant: string;
   ticketId: string;
@@ -74,7 +84,7 @@ export interface RoutingDelivery {
   ticketTitle: string;
   actorName: string;
   actorOrganization: string;
-  /** False when the recipient's CURRENT policy no longer admits them to the ticket: skip, never send. */
+  /** False when the recipient's CURRENT policy no longer admits them (inactive, reassigned, or unauthorized for the ticket; no current email for an email row): skip, never send. */
   allowed: boolean;
 }
 

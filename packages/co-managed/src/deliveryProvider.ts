@@ -10,8 +10,29 @@ import { withCoManagedNotificationRecipient } from './sharedWork';
 import { projectTaskAudience } from './projectTaskAudience';
 import { ROUTING_IN_APP_KIND, ROUTING_EMAIL_KIND, type CoManagedRoutingPayload } from './routingOutbox';
 import { isCoManagedSharedWorkError } from './sharedWorkIdentity';
+// LEVERAGE: friction customer-ticket-read-authorizer — only the per-record tickets authorizer evaluates bundle/contact-visibility narrowing, but it is shaped for a server action (throws, wants a full IUserWithRoles); we wrap it in try/catch and feed it a raw users row.
+import { authorizeTicketRecordAccess } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 const normalize = (email: unknown) => String(email ?? '').trim().toLowerCase();
+
+type CustomerUserRow = { user_id: string; email: string | null; is_inactive: boolean } & Record<string, unknown>;
+
+/**
+ * Current-state gate for a captured customer recipient: active user, still the ticket's assignee (a hand-back
+ * notice is addressed to the owner), and allowed to read the ticket under tenant-local per-record authorization.
+ */
+async function customerRecipientPermitted(trx: Knex.Transaction, tenant: string, ticketId: string, user: CustomerUserRow | undefined, ticketRow: Record<string, any>) {
+  if (!user || user.is_inactive) return false;
+  if (ticketRow.assigned_to !== user.user_id) return false;
+  try {
+    await authorizeTicketRecordAccess({ trx, tenant, user: user as unknown as IUserWithRoles, ticketId, action: 'read', ticketRow: ticketRow as any });
+    return true;
+  } catch (error) {
+    if (error instanceof Error && /^(Permission denied|Ticket not found)/.test(error.message)) return false;
+    throw error;
+  }
+}
 
 /** A shared ticket: its work row in the customer tenant, the live relationship, and the revoke history. */
 async function loadSharedTicket(trx: Knex.Transaction, tenant: string, ticketId: string) {
@@ -62,12 +83,25 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
           .orderBy('created_at').limit(opts.limit ?? 100);
         if (opts.sourceId) query.where('source_id', opts.sourceId);
         const out: RoutingDelivery[] = [];
-        const tickets = new Map<string, { ticket_number: string; title: string } | undefined>();
-        for (const row of await query) {
+        const tickets = new Map<string, Record<string, any> | undefined>();
+        const rows = await query;
+        // One users query for the whole batch (customer-side principals only), not one per row.
+        const customerIds = new Set<string>();
+        for (const row of rows) {
+          if (row.recipient_kind === 'msp_user' || row.recipient_kind === 'team') continue;
+          const p = (typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload) as { principalId?: string } | null;
+          if (p?.principalId) customerIds.add(p.principalId);
+        }
+        const customerUsers = new Map<string, CustomerUserRow>();
+        if (customerIds.size) {
+          for (const u of await tenantDb(trx, tenant).table('users').whereIn('user_id', [...customerIds])) customerUsers.set(u.user_id, u as CustomerUserRow);
+        }
+        for (const row of rows) {
           const payload = (typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload) as (CoManagedRoutingPayload & { principalId: string }) | null;
           if (!payload) continue;
           if (!tickets.has(payload.ticketId)) {
-            tickets.set(payload.ticketId, await tenantDb(trx, tenant).table('tickets').where({ ticket_id: payload.ticketId }).first('ticket_number', 'title'));
+            tickets.set(payload.ticketId, await tenantDb(trx, tenant).table('tickets').where({ ticket_id: payload.ticketId })
+              .first('ticket_id', 'ticket_number', 'title', 'assigned_to', 'entered_by', 'client_id', 'board_id', 'assigned_team_id', 'contact_name_id', 'billing_profile_id', 'attributes'));
           }
           const ticket = tickets.get(payload.ticketId);
           const sponsorSide = row.recipient_kind === 'msp_user' || row.recipient_kind === 'team';
@@ -81,8 +115,22 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
               allowed = false;
             }
           }
+          let principalId: string = payload.principalId;
+          let email: string | undefined = row.delivery_kind === ROUTING_EMAIL_KIND ? row.recipient : undefined;
+          if (allowed && !sponsorSide) {
+            // Customer side: never trust the captured snapshot. Re-resolve against the CURRENT user and ticket.
+            const user = customerUsers.get(payload.principalId);
+            allowed = await customerRecipientPermitted(trx, tenant, payload.ticketId, user, ticket as Record<string, any>);
+            if (allowed && user) {
+              principalId = user.user_id;
+              if (row.delivery_kind === ROUTING_EMAIL_KIND) {
+                email = normalize(user.email) || undefined;
+                if (!email) allowed = false; // no current address: skip, never fall back to the captured one
+              }
+            }
+          }
           out.push({ tenant, deliveryKind: row.delivery_kind, sourceId: row.source_id, event: payload.event,
-            recipient: { kind: row.recipient_kind, principalId: payload.principalId, email: row.delivery_kind === ROUTING_EMAIL_KIND ? row.recipient : undefined },
+            recipient: { kind: row.recipient_kind, principalId, email }, ledgerRecipient: row.recipient,
             recipientTenant: sponsorSide ? payload.sponsorTenant : tenant, ticketId: payload.ticketId,
             ticketNumber: ticket?.ticket_number ?? '', ticketTitle: ticket?.title ?? '', actorName: payload.actorName, actorOrganization: payload.actorOrganization, allowed });
         }

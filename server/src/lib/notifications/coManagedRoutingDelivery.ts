@@ -17,7 +17,8 @@ const HEADLINE: Record<RoutingDelivery['event'], (d: RoutingDelivery) => string>
 };
 
 const baseUrl = () => (process.env.NEXTAUTH_URL || 'http://localhost:3000').replace(/\/$/, '');
-const ledgerKey = (d: RoutingDelivery) => ({ delivery_kind: d.deliveryKind, source_id: d.sourceId, recipient: (d.recipient.email ?? d.recipient.principalId) });
+// Keyed on the stored row (`ledgerRecipient`), not the current send address, so claim/finish match the pending row.
+const ledgerKey = (d: RoutingDelivery) => ({ delivery_kind: d.deliveryKind, source_id: d.sourceId, recipient: (d.ledgerRecipient ?? d.recipient.email ?? d.recipient.principalId) });
 
 /**
  * Deliver ONE owed routing row. Safe to call any number of times, concurrently or after a crash:
