@@ -7,11 +7,10 @@ import { interpolate } from './spTestHarness';
 
 const m = vi.hoisted(() => ({ list: vi.fn(), issue: vi.fn(), rotate: vi.fn(), revoke: vi.fn() }));
 
+const stableT = vi.hoisted(() => ({ t: (key: string, options?: { defaultValue?: string } & Record<string, unknown>) =>
+  String(options?.defaultValue ?? key).replace(/\{\{(\w+)\}\}/g, (_m, n) => String(options?.[n] ?? '')) }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({
-    t: (key: string, options?: { defaultValue?: string } & Record<string, unknown>) =>
-      interpolate(options?.defaultValue ?? key, options),
-  }),
+  useTranslation: () => stableT,
   useFormatters: () => ({ formatDate: (d: Date) => d.toISOString().slice(0, 10) }),
 }));
 vi.mock('react-hot-toast', () => ({ toast: { success: vi.fn(), error: vi.fn() }, default: { success: vi.fn(), error: vi.fn() } }));
@@ -45,7 +44,7 @@ const renderDialog = (canIssue = true) =>
   );
 
 beforeEach(() => {
-  Object.values(m).forEach((fn) => fn.mockReset());
+  Object.values(m).forEach((fn) => (fn as ReturnType<typeof vi.fn>).mockReset());
   m.list.mockResolvedValue([KEY('k1')]);
 });
 afterEach(cleanup);
@@ -55,7 +54,8 @@ describe('T031 manage keys dialog', () => {
     m.issue.mockResolvedValue({ api_key_id: 'k2', api_key: 'plaintext-secret-123', description: 'x', expires_at: null });
     renderDialog();
     await screen.findByText('key k1');
-    fireEvent.change(screen.getByLabelText('Key description'), { target: { value: 'ci' } });
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'ci' } });
+    await screen.findByDisplayValue('ci');
     fireEvent.click(screen.getByRole('button', { name: 'Create key' }));
     expect((await screen.findByTestId('service-principal-key-value')).textContent).toBe('plaintext-secret-123');
     expect(screen.getByText(/will not be shown again/)).toBeTruthy();

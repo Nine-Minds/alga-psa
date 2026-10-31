@@ -50,6 +50,7 @@ describe("LicenseManagementPage service principal usage row", () => {
 
   it('reads "Available on Pro" below Pro', async () => {
     vi.mocked(getLicenseStatus).mockResolvedValue(status("essentials"));
+    spUsage.mockClear();
     render(<LicenseManagementPage />);
     const row = await screen.findByTestId("service-principal-usage-row");
     expect(row.textContent).toContain("Available on Pro");

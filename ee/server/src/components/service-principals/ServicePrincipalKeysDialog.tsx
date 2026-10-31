@@ -49,9 +49,13 @@ export function ServicePrincipalKeysDialog({ principal, canIssue, onClose, onCha
     }
   }, [userId, t]);
 
+  // Reset the draft only when the principal changes (not whenever `load`'s identity changes).
+  useEffect(() => {
+    setDescription('');
+  }, [userId]);
+
   useEffect(() => {
     if (userId) {
-      setDescription('');
       void load();
     } else {
       setKeys([]);

@@ -6,7 +6,7 @@
  * stubs, so the EE components are mounted here via vi.mock to exercise the real slots.
  */
 import React from 'react';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IComment, TicketTimeEntriesSummary } from '@alga-psa/types';
 import CommentItem from './CommentItem';
@@ -28,9 +28,6 @@ vi.mock('@alga-psa/ui/context', () => ({
   useSchedulingCallbacks: () => ({ fetchTimeEntriesForTicket: m.fetchTimeEntriesForTicket }),
 }));
 vi.mock('@alga-psa/ui/components', () => ({ useContentCardVariant: () => 'default' }));
-vi.mock('@alga-psa/ui/ui-reflection/withDataAutomationId', () => ({
-  withDataAutomationId: ({ id }: { id: string }) => ({ 'data-testid': id }),
-}));
 vi.mock('../../actions/ticketActivityActions', () => ({ getTicketTimelineEntries: m.getTimeline }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
@@ -105,6 +102,7 @@ describe('T033 time entry detail', () => {
 
   it('renders "<human> via <principal>" only for entries made through a principal', async () => {
     render(<TicketTimeEntries id="tte" ticketId="t1" currentUserId="me" />);
+    fireEvent.click(await screen.findByRole('button', { name: /Other team members/ }));
     const via = await screen.findAllByTestId('via-principal-label');
     expect(via).toHaveLength(1);
     expect(via[0].textContent).toBe('via Billing sync');

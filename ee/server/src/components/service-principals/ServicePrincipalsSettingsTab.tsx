@@ -164,6 +164,7 @@ export function ServicePrincipalsSettingsTab() {
       {
         title: t('servicePrincipals.columns.keys', { defaultValue: 'Active keys' }),
         dataIndex: 'active_key_count',
+        render: (value: number) => value,
       },
       {
         title: t('servicePrincipals.columns.lastUsed', { defaultValue: 'Last used' }),
