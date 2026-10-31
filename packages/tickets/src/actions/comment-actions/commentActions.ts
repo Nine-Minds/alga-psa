@@ -92,34 +92,10 @@ async function assertClientCanCreateComment(
     throw new Error('ticket_id is required for client comments');
   }
 
-  let clientId = user.clientId || user.client_id || null;
-  if (!clientId) {
-    const clientRow = await tenantDb(trx, tenant)
-      .tenantJoin(
-        tenantScopedTable(trx, 'users as u', tenant),
-        'contacts as c',
-        'u.contact_id',
-        'c.contact_name_id',
-        { type: 'left' }
-      )
-      .select('c.client_id')
-      .where({ 'u.user_id': user.user_id })
-      .first();
-    clientId = clientRow?.client_id ?? null;
-  }
-
-  if (!clientId) {
-    throw new Error('Client user is not associated with a client');
-  }
-
-  const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-    .select('client_id')
-    .where({ ticket_id: comment.ticket_id })
-    .first();
-
-  if (!ticket || ticket.client_id !== clientId) {
-    throw new Error('Client user cannot access this ticket');
-  }
+  // Record-level visibility (contact / board / billing-profile narrowing), the same gate every other
+  // comment mutation uses. A missing and an invisible ticket produce the identical denial, and it runs
+  // before any lookup that could probe records the client cannot see (e.g. the parent thread below).
+  await authorizeTicketRecordAccessConcealed({ trx, tenant, user, ticketId: comment.ticket_id, action: 'update' });
 
   // Comment.insert re-roots a client reply aimed at an internal thread into a
   // fresh public thread (D1, for inbound email whose headers resolve to an
