@@ -54,8 +54,21 @@ const EDITABLE = new Set(['DRAFT', 'CHANGES_REQUESTED']);
  * - commercial `co_managed`: needs a service; contract line resolves through the MSP's client/profile.
  * - operational: no service, contract line, tax or billable minutes; never invoiced.
  */
+const OPTIONAL_TEXT_FIELDS = ['entry_id', 'user_id', 'time_sheet_id', 'approval_status', 'service_id', 'contract_line_id', 'tax_region', 'tax_rate_id'] as const;
+
+/** The native drawer sends '' for every field the user left blank. An empty string is "absent", never a value (uuid columns reject it). */
+export function normalizeCoManagedTimeEntryInput<T extends CoManagedTimeEntryInput>(entry: T): T {
+  const normalized = { ...entry } as Record<string, unknown>;
+  for (const field of OPTIONAL_TEXT_FIELDS) {
+    const value = normalized[field];
+    if (typeof value === 'string' && value.trim() === '') normalized[field] = undefined;
+  }
+  return normalized as T;
+}
+
 export async function writeCoManagedTimeEntry(trx: Knex.Transaction, input: CoManagedTimeWriteInput): Promise<PersistedTimeEntry> {
-  const { tenant, actor, entry, mode } = input;
+  const { tenant, actor, mode } = input;
+  const entry = normalizeCoManagedTimeEntryInput(input.entry);
   const db = tenantDb(trx, tenant) as any;
   const existing = entry.entry_id
     ? await db.table('time_entries').where({ entry_id: entry.entry_id }).forUpdate().first('user_id', 'invoiced', 'billing_mode', 'work_item_id', 'work_item_type')
@@ -69,7 +82,7 @@ export async function writeCoManagedTimeEntry(trx: Knex.Transaction, input: CoMa
   }
   if (serviceRequiredForTimeEntry({ participates: input.participates, mode }) && !entry.service_id?.trim()) throw new Error('Service is required for time entries');
 
-  const userId = existing?.user_id ?? entry.user_id ?? actor.user_id;
+  const userId = existing?.user_id || entry.user_id || actor.user_id;
   await assertCanActOnBehalf(actor, tenant, userId, trx);
   if (!entry.entry_id) {
     if (entry.user_id) await assertHumanWorkAssignee(trx, tenant, [entry.user_id]);

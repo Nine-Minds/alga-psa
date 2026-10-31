@@ -13,6 +13,7 @@ import { useCoManagedSharedTimeConfig } from './useCoManagedSharedTimeConfig';
 import { CoManagedEffortSummary } from './CoManagedEffortSummary';
 import CoManagedTimeEntry from './CoManagedTimeEntry';
 import { createSharedConversationSession } from './sharedConversationSession';
+import QuickInvoiceTicketDialog from '@alga-psa/billing/components/ticket/QuickInvoiceTicketDialog';
 
 /**
  * The standard ticket screen, mounted over a co-managed shared ticket. The ticket's fields are
@@ -27,6 +28,7 @@ export default function CoManagedSharedTicket({ summary, backHref }: { summary: 
   tRef.current = t;
   const session = useMemo(() => createSharedConversationSession(summary.resource, { t: (key, fallback) => tRef.current(key, fallback) }), [summary.resource]);
   const { enabled: timeEnabled } = useCapability('co-managed');
+  const ticketForInvoice = useMemo(() => { const record = sharedTicketRecord(summary); return { ticket_id: record.ticket_id, ticket_number: record.ticket_number, title: record.title }; }, [summary]);
   const timeConfig = useCoManagedSharedTimeConfig(summary.resource, timeEnabled);
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');
   const load = useCallback(() => {
@@ -42,7 +44,10 @@ export default function CoManagedSharedTicket({ summary, backHref }: { summary: 
       // Time hunk (L6a2): only a workspace that serves co-managed gets the time work item and the effort split.
       time: timeEnabled ? { config: timeConfig, slots: { timeSummary: ({ timeEntriesRefreshKey }) => <>
         <CoManagedTimeEntry resource={summary.resource} canWrite onSaved={undefined} />
-        <CoManagedEffortSummary target={{ kind: 'shared', resource: summary.resource }} refreshKey={timeEntriesRefreshKey} />
+        <CoManagedEffortSummary target={{ kind: 'shared', resource: summary.resource }} refreshKey={timeEntriesRefreshKey} billingProfile />
+        {/* Quick Invoice (L6a2 fix 4): mounted here, not via renderQuickInvoice, because the screen keeps `hideBilling`
+            and TicketDetails gates renderQuickInvoice on billing. The server path bills only approved commercial co_managed minutes. */}
+        <QuickInvoiceTicketDialog ticket={ticketForInvoice} id="co-managed-shared-ticket" />
       </> } } : undefined,
     }),
     [summary, backHref, session, state, timeEnabled, timeConfig],

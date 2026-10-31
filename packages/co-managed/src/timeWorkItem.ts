@@ -10,16 +10,22 @@ export interface CoManagedTimeWorkItem {
   workItemType: 'ticket' | 'project_task' | 'co_managed';
   workItemId: string;
   workItemName: string | null;
+  /** The shared ticket's number when the field is visible to the actor; null for tasks or a redacted field. */
+  workItemTicketNumber?: string | null;
 }
 
 const hiddenIn = (fields: readonly string[], names: readonly string[]) =>
   isCoManagedReadFieldHidden(fields, names.flatMap(name => [name, `tickets.${name}`, `project_tasks.${name}`, `values.${name}`]));
 
-async function describe(trx: Knex.Transaction, tenant: string, resource: CoManagedSharedResource, fields: readonly string[]): Promise<string | null> {
-  if (hiddenIn(fields, ['name', 'title', 'task_name'])) return null;
+async function describe(trx: Knex.Transaction, tenant: string, resource: CoManagedSharedResource, fields: readonly string[]): Promise<{ name: string | null; ticketNumber: string | null }> {
   const owner = tenantDb(trx, tenant);
-  if (resource.kind === 'ticket') return (await owner.table('tickets').where('ticket_id', resource.id).first('title'))?.title ?? null;
-  return (await owner.table('project_tasks').where('task_id', resource.id).first('task_name'))?.task_name ?? null;
+  if (resource.kind === 'ticket') {
+    const row = await owner.table('tickets').where('ticket_id', resource.id).first('title', 'ticket_number');
+    return { name: hiddenIn(fields, ['name', 'title']) ? null : row?.title ?? null,
+      ticketNumber: hiddenIn(fields, ['ticket_number']) ? null : row?.ticket_number ?? null };
+  }
+  if (hiddenIn(fields, ['name', 'title', 'task_name'])) return { name: null, ticketNumber: null };
+  return { name: (await owner.table('project_tasks').where('task_id', resource.id).first('task_name'))?.task_name ?? null, ticketNumber: null };
 }
 
 /**
@@ -42,15 +48,16 @@ export async function resolveCoManagedTimeWorkItem(db: Knex, inputActor: CoManag
         const local = await findCoManagedLocalWorkReference(write.trx, actor.tenant,
           { customerTenant: resource.tenant, relationshipId: resource.relationshipId, kind: resource.kind as 'ticket' | 'project_task', id: resource.id });
         if (!local) throw new CoManagedSharedWorkError();
-        const workItemName = await describe(write.trx, resource.tenant, write.resource, fields);
+        const described = await describe(write.trx, resource.tenant, write.resource, fields);
         await write.assertCurrent(); await read.assertCurrent();
-        return { workItemType: 'co_managed' as const, workItemId: local.localReferenceId, workItemName };
+        return { workItemType: 'co_managed' as const, workItemId: local.localReferenceId, workItemName: described.name, workItemTicketNumber: described.ticketNumber };
       }));
   }
   const boundary = resource.kind === 'ticket' ? withCoManagedCustomerTicket : withCoManagedCustomerProject;
   return boundary(db, actor, resource, 'update', async context => {
     if (hiddenIn(context.redactedFields, ['time_entries', 'work_item_id', resource.kind === 'ticket' ? 'ticket_id' : 'task_id'])) throw new CoManagedSharedWorkError();
+    const described = await describe(context.trx, actor.tenant, context.resource, context.redactedFields);
     return { workItemType: resource.kind as 'ticket' | 'project_task', workItemId: context.resource.id,
-      workItemName: await describe(context.trx, actor.tenant, context.resource, context.redactedFields) };
+      workItemName: described.name, workItemTicketNumber: described.ticketNumber };
   });
 }

@@ -86,7 +86,7 @@ async function admitSave(ctx: TimeSourceContext, entry: SaveInput): Promise<Time
         if (!reference) throw new CoManagedSharedWorkError();
         const resolved = await resolveCoManagedTimeWorkItem(trx as any, await coManagedBrowserActor(user, tenant), { kind: reference.sourceKind, id: reference.sourceId, tenant: reference.customerTenant, relationshipId: reference.relationshipId } as any);
         if (resolved.workItemId !== reference.localReferenceId) throw new CoManagedSharedWorkError();
-        evidence = { title: resolved.workItemName };
+        evidence = { title: resolved.workItemName, ticketNumber: resolved.workItemTicketNumber ?? null };
       } else if (entry.entry_id) await lockTimeEntryBillingMode(trx, tenant, entry.entry_id);
       const result = await writeCoManagedTimeEntry(trx, { tenant, actor: user, entry, mode, reference, evidence, participates: true });
       if (entry.stopwatch_session_id) await closeSessionWithEntry(trx, tenant, String(user.user_id), entry.stopwatch_session_id, String(result.entry.entry_id), entry.work_item_id);
@@ -113,6 +113,18 @@ async function closeSessionWithEntry(trx: Knex.Transaction, tenant: string, user
   const now = new Date();
   await db.table('time_tracking_session_segments').where({ session_id: sessionId }).whereNull('ended_at').update({ ended_at: now });
   await db.table('time_tracking_sessions').where({ session_id: sessionId }).update({ status: 'logged', time_entry_id: entryId, closed_at: now, updated_at: now });
+}
+
+/** The name and ticket number retained on the MSP's own provenance rows (never a live read of the customer's ticket). */
+async function describeCoManagedWork(db: Knex, tenant: string, localReferenceId: string) {
+  if (!isCoManagedUuid(localReferenceId)) return null;
+  const home = tenantDb(db, tenant);
+  const reference = await loadCoManagedLocalWorkReference(db, tenant, localReferenceId);
+  if (!reference) return null;
+  const evidence = await home.table('co_managed_time_work_references').where('local_reference_id', localReferenceId)
+    .orderBy('captured_at', 'desc').first('ticket_number', 'title');
+  return { work_item_id: localReferenceId, name: evidence?.title ?? evidence?.ticket_number ?? 'Shared work', description: '', type: COMMERCIAL_WORK,
+    ticket_number: evidence?.ticket_number ?? undefined, client_id: reference.clientId, is_billable: true };
 }
 
 export function createCoManagedTimeSource(): TimeSource {
@@ -189,7 +201,30 @@ export function createCoManagedTimeSource(): TimeSource {
     } as any,
     work: {
       // Pure and unowned: the shared ticket id is a foreign tenant's, so the picker (`resolveTimeWorkItemAction`) resolves it.
+      // Display of an already-booked item is `describeItem` (it reads the MSP's own retained evidence).
       resolveItem: missSync,
+      describeItem: async (ctx, db, workItemType, workItemId) => {
+        if (workItemType !== COMMERCIAL_WORK || !(await participates(ctx.tenant))) return COMMANDS_MISS;
+        // The caller (time sheet / entry read) has already enforced its own time_entry RBAC on the MSP's own rows.
+        const described = await describeCoManagedWork(db, ctx.tenant, workItemId);
+        return described ? { handled: true, value: described } : COMMANDS_MISS;
+      },
+      listSheetItems: async (ctx, db, timeSheetId) => {
+        if (!(await participates(ctx.tenant))) return COMMANDS_MISS;
+        const rows = await tenantDb(db, ctx.tenant).table('time_entries').where({ time_sheet_id: timeSheetId, work_item_type: COMMERCIAL_WORK }).distinct('work_item_id');
+        const items: NonNullable<Awaited<ReturnType<typeof describeCoManagedWork>>>[] = [];
+        for (const row of rows) { const described = await describeCoManagedWork(db, ctx.tenant, row.work_item_id); if (described) items.push(described); }
+        return items.length ? { handled: true, value: items } : COMMANDS_MISS;
+      },
+      serviceOptional: async (ctx, workItemType, workItemId) => {
+        // Only a participating tenant's own shared customer work; the customer boundary decides (no relationship => native).
+        if (!(await participates(ctx.tenant))) return COMMANDS_MISS;
+        const { knex: db } = await createTenantKnex();
+        const user = await loadUser(db, ctx.tenant, ctx.userId);
+        if (!user) return COMMANDS_MISS;
+        const admitted = await admitOperational(db, user, ctx.tenant, { work_item_type: workItemType, work_item_id: workItemId } as SaveInput);
+        return admitted ? { handled: true, value: true } : COMMANDS_MISS;
+      },
       billingContext: async (ctx, db: any, workItemType, workItemId) => {
         if (workItemType !== COMMERCIAL_WORK || !workItemId) return COMMANDS_MISS;
         const reference = await loadCoManagedLocalWorkReference(db, ctx.tenant, workItemId);
