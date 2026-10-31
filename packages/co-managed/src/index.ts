@@ -78,3 +78,5 @@ export { retainCoManagedConversationBeforeSourceChange } from './sourceChangeRet
 export { snapshotConversationContent, encodeConversationContent, plainTextContent } from './conversationContent';
 export type { CoManagedConversationContent } from './conversationContent';
 export { projectTaskAudience, projectTaskAudienceSql } from './projectTaskAudience';
+export { readCoManagedSlaPolicyScreen, replaceCoManagedSlaPriorityMappings } from './slaPriorityMappings';
+export type { CoManagedSlaPolicyScreen, CoManagedSlaPriorityMapping } from './slaPriorityMappings';
