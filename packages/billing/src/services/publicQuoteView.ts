@@ -52,6 +52,8 @@ export const PUBLIC_QUOTE_ITEM_FIELDS = [
   'is_selected',
   'is_discount',
   'location_id',
+  // Server-resolved per-row tax input for the live optional-item preview (a number, no tenant data).
+  'tax_amount_if_included',
 ] as const satisfies ReadonlyArray<keyof IQuoteItem>;
 
 export const PUBLIC_QUOTE_LOCATION_FIELDS = [

@@ -249,10 +249,6 @@
         "title": "This quote has changed",
         "body": "This quote has changed since you opened it. Please contact us."
       },
-      "invalid": {
-        "title": "This link is not valid",
-        "body": "This link can no longer be used. Please contact the sender for a new one."
-      },
       "optionalItems": "Optional items",
       "optionalHint": "Choose the optional items you want. Your choices are sent when you accept.",
       "subtotal": "Subtotal",

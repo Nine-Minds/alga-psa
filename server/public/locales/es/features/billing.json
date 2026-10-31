@@ -249,10 +249,6 @@
         "title": "Esta cotización ha cambiado",
         "body": "Esta cotización ha cambiado desde que la abrió. Póngase en contacto con nosotros."
       },
-      "invalid": {
-        "title": "Este enlace no es válido",
-        "body": "Este enlace ya no se puede usar. Solicite uno nuevo al remitente."
-      },
       "optionalItems": "Elementos opcionales",
       "optionalHint": "Elija los elementos opcionales que desea. Su selección se envía al aceptar.",
       "subtotal": "Subtotal",

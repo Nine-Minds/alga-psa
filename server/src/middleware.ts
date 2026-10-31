@@ -56,11 +56,12 @@ const publicPagePaths = new Set(['/payment-methods/setup-complete']);
  * Public, session-less quote review (alga-2026-0002820). Public by exact shape,
  * not by prefix: a 43-char base64url token (mirrors QUOTE_ACCESS_TOKEN_LENGTH in
  * @alga-psa/billing; middleware is Edge so it cannot import the Node service)
- * and nothing after it except, for the API, the fixed `/pdf` leaf.
+ * and nothing after it except, for the API, the fixed `/pdf` and `/decision` leaves.
  * Authorization is the token itself, checked in the page / route handler.
  */
 const PUBLIC_QUOTE_PAGE_PATTERN = /^\/quote\/[A-Za-z0-9_-]{43}$/;
 const PUBLIC_QUOTE_PDF_PATTERN = /^\/api\/quote\/[A-Za-z0-9_-]{43}\/pdf$/;
+const PUBLIC_QUOTE_DECISION_PATTERN = /^\/api\/quote\/[A-Za-z0-9_-]{43}\/decision$/;
 
 export function isPublicQuotePagePath(pathname: string): boolean {
   return PUBLIC_QUOTE_PAGE_PATTERN.test(pathname);
@@ -70,8 +71,12 @@ export function isPublicQuotePdfPath(pathname: string): boolean {
   return PUBLIC_QUOTE_PDF_PATTERN.test(pathname);
 }
 
+export function isPublicQuoteDecisionPath(pathname: string): boolean {
+  return PUBLIC_QUOTE_DECISION_PATTERN.test(pathname);
+}
+
 export function isPublicQuoteReviewPath(pathname: string): boolean {
-  return isPublicQuotePagePath(pathname) || isPublicQuotePdfPath(pathname);
+  return isPublicQuotePagePath(pathname) || isPublicQuotePdfPath(pathname) || isPublicQuoteDecisionPath(pathname);
 }
 
 /** The token is a bearer secret in the URL: never leak it via Referer, never index it. */
@@ -212,7 +217,6 @@ const apiKeySkipPaths = [
   '/api/inbound/',  // User-configurable inbound webhook receiver; auth per webhook config (HMAC / bearer / IP / path token)
   '/api/files/',   // File download routes use session auth
   '/api/share/',  // Public share link routes handle their own auth
-  '/api/quote-link/',  // Public quote email-link decision route; the token is re-verified in the handler
   '/api/ext/',  // Extension API routes handle their own auth
   '/api/ext-proxy/',
   '/api/ext-debug/',  // Extension debug stream uses session auth
@@ -250,6 +254,8 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
   return pathname === '/api/ticket-comment-attachments/download' ||
     // Public quote PDF: authorized by the path token, resolved in the route handler.
     isPublicQuotePdfPath(pathname) ||
+    // Public quote decision (POST): the token is re-verified inside the decision transaction.
+    isPublicQuoteDecisionPath(pathname) ||
     // Client portal document handlers authenticate the portal session and run
     // the shared tenant/client visibility resolver before serving content.
     /^\/api\/client-portal\/documents\/[^/]+\/(?:file|export)$/.test(pathname) ||

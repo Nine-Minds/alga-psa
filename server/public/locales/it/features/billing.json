@@ -249,10 +249,6 @@
         "title": "Questo preventivo è cambiato",
         "body": "Questo preventivo è cambiato da quando lo ha aperto. La preghiamo di contattarci."
       },
-      "invalid": {
-        "title": "Questo link non è valido",
-        "body": "Questo link non può più essere utilizzato. Chieda un nuovo link al mittente."
-      },
       "optionalItems": "Voci facoltative",
       "optionalHint": "Scelga le voci facoltative desiderate. La sua scelta viene inviata all'accettazione.",
       "subtotal": "Subtotale",

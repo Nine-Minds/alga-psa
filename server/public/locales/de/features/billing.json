@@ -249,10 +249,6 @@
         "title": "Dieses Angebot hat sich geändert",
         "body": "Dieses Angebot hat sich geändert, seit Sie es geöffnet haben. Bitte kontaktieren Sie uns."
       },
-      "invalid": {
-        "title": "Dieser Link ist ungültig",
-        "body": "Dieser Link kann nicht mehr verwendet werden. Bitte bitten Sie den Absender um einen neuen."
-      },
       "optionalItems": "Optionale Positionen",
       "optionalHint": "Wählen Sie die gewünschten optionalen Positionen. Ihre Auswahl wird bei der Annahme übermittelt.",
       "subtotal": "Zwischensumme",

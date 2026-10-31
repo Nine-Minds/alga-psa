@@ -249,10 +249,6 @@
         "title": "Den här offerten har ändrats",
         "body": "Den här offerten har ändrats sedan du öppnade den. Kontakta oss."
       },
-      "invalid": {
-        "title": "Den här länken är ogiltig",
-        "body": "Den här länken kan inte längre användas. Be avsändaren om en ny."
-      },
       "optionalItems": "Valfria poster",
       "optionalHint": "Välj de valfria poster du vill ha. Ditt val skickas när du godkänner.",
       "subtotal": "Delsumma",

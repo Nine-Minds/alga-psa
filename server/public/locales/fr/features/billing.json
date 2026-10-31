@@ -249,10 +249,6 @@
         "title": "Ce devis a été modifié",
         "body": "Ce devis a été modifié depuis que vous l'avez ouvert. Veuillez nous contacter."
       },
-      "invalid": {
-        "title": "Ce lien n'est pas valide",
-        "body": "Ce lien ne peut plus être utilisé. Veuillez demander un nouveau lien à l'expéditeur."
-      },
       "optionalItems": "Éléments facultatifs",
       "optionalHint": "Choisissez les éléments facultatifs souhaités. Votre choix est envoyé lors de l'acceptation.",
       "subtotal": "Sous-total",

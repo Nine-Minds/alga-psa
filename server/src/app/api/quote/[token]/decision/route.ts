@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { submitQuoteLinkDecision } from '@alga-psa/billing/services';
 
 /**
- * POST /api/quote-link/[token]/decision
+ * POST /api/quote/[token]/decision
  *
  * Unauthenticated accept/reject of a sent quote by the holder of an email-link token
  * (alga-2026-0002820). All authority lives in submitQuoteLinkDecision, which re-resolves

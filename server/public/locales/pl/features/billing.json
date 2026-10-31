@@ -249,10 +249,6 @@
         "title": "Ta oferta uległa zmianie",
         "body": "Ta oferta zmieniła się od momentu jej otwarcia. Skontaktuj się z nami."
       },
-      "invalid": {
-        "title": "Ten link jest nieprawidłowy",
-        "body": "Ten link nie może być już używany. Poproś nadawcę o nowy."
-      },
       "optionalItems": "Pozycje opcjonalne",
       "optionalHint": "Wybierz pozycje opcjonalne, które chcesz uwzględnić. Twój wybór zostanie wysłany po akceptacji.",
       "subtotal": "Suma częściowa",

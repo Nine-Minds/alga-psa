@@ -249,10 +249,6 @@
         "title": "Este orçamento foi alterado",
         "body": "Este orçamento foi alterado desde que você o abriu. Entre em contato conosco."
       },
-      "invalid": {
-        "title": "Este link não é válido",
-        "body": "Este link não pode mais ser usado. Peça um novo ao remetente."
-      },
       "optionalItems": "Itens opcionais",
       "optionalHint": "Escolha os itens opcionais que deseja. Sua escolha é enviada ao aceitar.",
       "subtotal": "Subtotal",
