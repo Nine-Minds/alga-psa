@@ -30,7 +30,8 @@ export async function deliverRoutingRow(d: RoutingDelivery): Promise<'sent' | 's
   const key = ledgerKey(d);
   if (!d.allowed) {
     // The recipient's current policy no longer admits them: a completed (skipped) delivery, not a retry.
-    if (await claimDelivery(await getConnection(d.tenant), CO_MANAGED_LEDGER, d.tenant, key)) {
+    if (await claimDelivery(await getConnection(d.tenant), CO_MANAGED_LEDGER, d.tenant, key, { recipient_kind: d.recipient.kind })) {
+      // (recipient_kind is NOT NULL: the claim INSERT is evaluated before the conflict on the stored pending row.)
       await finishDelivery(await getConnection(d.tenant), CO_MANAGED_LEDGER, d.tenant, key, 'sent', { errorCode: 'recipient_not_permitted' });
     }
     return 'skipped';

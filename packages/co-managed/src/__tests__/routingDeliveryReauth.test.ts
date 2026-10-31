@@ -6,6 +6,7 @@ const h = vi.hoisted(() => ({
   queries: [] as string[],
   authorize: vi.fn(async (_: any) => ({})),
   sponsor: vi.fn(async () => undefined),
+  rbac: vi.fn(async (..._a: any[]) => true),
 }));
 
 vi.mock('@alga-psa/db', () => {
@@ -27,6 +28,7 @@ vi.mock('@alga-psa/db', () => {
 });
 vi.mock('../sharedWork', () => ({ withCoManagedNotificationRecipient: (...a: any[]) => (h.sponsor as any)(...a) }));
 vi.mock('@alga-psa/tickets/lib/ticketRecordAuthorization', () => ({ authorizeTicketRecordAccess: (i: any) => h.authorize(i) }));
+vi.mock('@alga-psa/authorization/rbac', () => ({ hasPermission: (...a: any[]) => h.rbac(...a) }));
 vi.mock('@alga-psa/shared/lib/deliveryLedger', () => ({ claimDelivery: vi.fn(), finishDelivery: vi.fn(), CO_MANAGED_LEDGER: {} }));
 
 import { createCoManagedDeliveryProvider } from '../deliveryProvider';
@@ -49,7 +51,7 @@ function seed(over: { user?: any; assignedTo?: string | null } = {}) {
 const run = () => createCoManagedDeliveryProvider().pendingRouting(tenant);
 
 describe('pendingRouting re-authorizes customer recipients', () => {
-  beforeEach(() => { h.queries.length = 0; h.authorize.mockReset(); h.authorize.mockResolvedValue({}); h.sponsor.mockReset(); });
+  beforeEach(() => { h.queries.length = 0; h.authorize.mockReset(); h.authorize.mockResolvedValue({}); h.sponsor.mockReset(); h.rbac.mockReset(); h.rbac.mockResolvedValue(true); });
 
   it('still-authorized assignee: both allowed, email goes to the CURRENT address, ledger key stays the stored recipient', async () => {
     seed();
@@ -76,6 +78,22 @@ describe('pendingRouting re-authorizes customer recipients', () => {
     expect((await run()).map((d) => d.allowed)).toEqual([false, false]);
     h.authorize.mockRejectedValue(new Error('connection reset'));
     await expect(run()).rejects.toThrow('connection reset');
+  });
+
+  it('RBAC denies ticket:read: both rows skipped and the record authorizer is never called', async () => {
+    seed();
+    h.rbac.mockResolvedValue(false);
+    expect((await run()).map((d) => d.allowed)).toEqual([false, false]);
+    expect(h.rbac).toHaveBeenCalledWith({ user_id: user, user_type: 'internal', tenant }, 'ticket', 'read', expect.anything());
+    expect(h.authorize).not.toHaveBeenCalled();
+  });
+
+  it('RBAC allows but the record check denies: skipped', async () => {
+    seed();
+    h.authorize.mockRejectedValue(new Error('Permission denied: Cannot access ticket'));
+    expect((await run()).map((d) => d.allowed)).toEqual([false, false]);
+    expect(h.rbac).toHaveBeenCalled();
+    expect(h.authorize).toHaveBeenCalled();
   });
 
   it('no current email: only the email row is skipped (in-app/email outcomes are independent)', async () => {

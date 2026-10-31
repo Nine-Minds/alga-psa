@@ -12,6 +12,7 @@ import { ROUTING_IN_APP_KIND, ROUTING_EMAIL_KIND, type CoManagedRoutingPayload }
 import { isCoManagedSharedWorkError } from './sharedWorkIdentity';
 // LEVERAGE: friction customer-ticket-read-authorizer — only the per-record tickets authorizer evaluates bundle/contact-visibility narrowing, but it is shaped for a server action (throws, wants a full IUserWithRoles); we wrap it in try/catch and feed it a raw users row.
 import { authorizeTicketRecordAccess } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
+import { hasPermission } from '@alga-psa/authorization/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
 
 const normalize = (email: unknown) => String(email ?? '').trim().toLowerCase();
@@ -20,15 +21,20 @@ type CustomerUserRow = { user_id: string; email: string | null; is_inactive: boo
 
 /**
  * Current-state gate for a captured customer recipient: active user, still the ticket's assignee (a hand-back
- * notice is addressed to the owner), and allowed to read the ticket under tenant-local per-record authorization.
+ * notice is addressed to the owner), holds coarse ticket:read RBAC, and passes tenant-local per-record authorization.
+ * The record authorizer's kernel uses `rbacEvaluator: async () => true` (narrowing only), so RBAC must be checked here,
+ * as ticketActions.ts does. `hasPermission` needs user_id/user_type/tenant, all present on the raw users row.
  */
 async function customerRecipientPermitted(trx: Knex.Transaction, tenant: string, ticketId: string, user: CustomerUserRow | undefined, ticketRow: Record<string, any>) {
   if (!user || user.is_inactive) return false;
   if (ticketRow.assigned_to !== user.user_id) return false;
+  if (!(await hasPermission({ user_id: user.user_id, user_type: user.user_type as any, tenant }, 'ticket', 'read', trx))) return false;
   try {
     await authorizeTicketRecordAccess({ trx, tenant, user: user as unknown as IUserWithRoles, ticketId, action: 'read', ticketRow: ticketRow as any });
     return true;
   } catch (error) {
+    // Relies on the documented messages in ticketRecordAuthorization.ts ('Ticket not found' / 'Permission denied: ...');
+    // anything else (DB errors etc.) is rethrown so the row stays pending and is retried.
     if (error instanceof Error && /^(Permission denied|Ticket not found)/.test(error.message)) return false;
     throw error;
   }
