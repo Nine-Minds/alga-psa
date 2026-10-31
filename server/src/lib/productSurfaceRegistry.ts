@@ -80,7 +80,7 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     // Sponsor-only queue of tickets customers shared with the sponsor, and its shared-ticket screen. Only a PSA
     // sponsor has them; the capability gate in the route layout decides whether a PSA tenant sees them.
     group: 'msp_co_managed_customer_tickets',
-    staticPrefixes: ['/msp/co-management/customer-tickets'],
+    staticPrefixes: ['/msp/co-management/customer-tickets', '/msp/co-management/tickets'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
   },
   {

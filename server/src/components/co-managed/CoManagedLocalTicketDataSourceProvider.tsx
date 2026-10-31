@@ -8,6 +8,7 @@ import { nativeTicketDataSource } from '@alga-psa/tickets/lib/nativeTicketDataSo
 import { TicketDataSourceProvider } from '@alga-psa/tickets/components/ticket/TicketDataSourceContext';
 import { composeTicketDataSource, type TicketDataSource, type TicketDataSourceOverrides } from '@alga-psa/tickets/lib/ticketDataSource';
 import { getCoManagedLocalTicketResourceAction } from '@/lib/actions/coManagedLocalTicketActions';
+import CoManagedTicketSection from './CoManagedTicketSection';
 import { createSharedConversationSession, type SharedConversationSession } from './sharedConversationSession';
 
 /** Audiences a co_managed workspace's own tickets offer before the server has resolved the shared ones. */
@@ -55,6 +56,9 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: {
     };
     return composeTicketDataSource(nativeTicketDataSource, {
       conversation: { audiences, editor: { disallowImages: true, disallowFiles: true, disallowMentions: true } },
+      // The co-managed section only exists once the ticket resolved to a relationship (the session is that proof).
+      ...(session ? { slots: { appSection: ({ layout, refresh }: { layout: 'entry' | 'grid'; refresh: () => void }) =>
+        <CoManagedTicketSection target={{ kind: 'local', ticketId }} layout={layout} onChanged={refresh} /> } } : {}),
       comments: {
         findCommentsByTicketId: async (id: string, ...rest: unknown[]) => {
           const local = await (native.findCommentsByTicketId as (...a: unknown[]) => Promise<IComment[]>)(id, ...rest);
@@ -75,7 +79,7 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: {
     } as unknown as TicketDataSourceOverrides);
     // `version` re-derives the audiences once the session has loaded.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, version]);
+  }, [session, version, ticketId]);
 
   return <TicketDataSourceProvider dataSource={dataSource}>{children}</TicketDataSourceProvider>;
 }
