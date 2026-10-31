@@ -12,11 +12,23 @@ vi.mock('@alga-psa/db', () => {
     const preds: Array<(r: Row) => boolean> = [(r) => r.tenant === tenant];
     const rows = () => (store.tables[name] ?? []).filter((r) => preds.every((p) => p(r)));
     const b: any = {
-      where(cond: Row) { preds.push((r) => Object.entries(cond).every(([k, v]) => r[k] === v)); return b; },
+      where(cond: Row) { preds.push((r) => Object.entries(cond).every(([k, v]) => r[k.split('.').pop()!] === v)); return b; },
       whereNull(col: string) { preds.push((r) => r[col] == null); return b; },
       whereRaw(sql: string, [value]: [string]) {
         const col = /lower\((\w+)\)/.exec(sql)![1];
         preds.push((r) => String(r[col] ?? '').toLowerCase() === value);
+        return b;
+      },
+      andWhere(arg: unknown) {
+        if (typeof arg !== 'function') return b;
+        // contactEmailMatch: primary email OR an additional address of the same contact.
+        const clauses: Array<(r: Row) => boolean> = [];
+        const collector: any = {
+          where: (col: string, v: string) => { clauses.push((r) => r[col.split('.').pop()!] === v); return collector; },
+          orWhereExists: (sub: { test: (r: Row) => boolean }) => { clauses.push(sub.test); return collector; },
+        };
+        (arg as any).call(collector);
+        preds.push((r) => clauses.some((c) => c(r)));
         return b;
       },
       count: async () => [{ count: String(rows().length) }],
@@ -25,8 +37,16 @@ vi.mock('@alga-psa/db', () => {
     return b;
   }
   return {
-    withAdminTransaction: async (cb: any) => cb({}),
-    tenantDb: (_trx: unknown, tenant: string) => ({ table: (name: string) => builder(name, tenant) }),
+    withAdminTransaction: async (cb: any) => cb({ raw: (sql: string) => sql }),
+    tenantDb: (_trx: unknown, tenant: string) => ({
+      table: (name: string) => builder(name, tenant),
+      subquery: () => {
+        let wanted = '';
+        const sub: any = { select: () => sub, whereRaw: () => sub, andWhere: (_c: string, v: string) => { wanted = v; return sub; },
+          test: (r: Row) => (store.tables.contact_additional_email_addresses ?? []).some((a) => a.tenant === tenant && a.contact_name_id === r.contact_name_id && a.normalized_email_address === wanted) };
+        return sub;
+      },
+    }),
   };
 });
 vi.mock('@alga-psa/shared/lib/deliveryLedger', () => ({ claimDelivery: vi.fn(), finishDelivery: vi.fn(), CO_MANAGED_LEDGER: {} }));
@@ -57,10 +77,15 @@ function seed(audience: 'shared_it' | 'organization_private' | 'requester') {
       { tenant: CUSTOMER, user_id: 'customer-user', email: 'it@customer.test', user_type: 'internal', is_inactive: false },
     ],
     contacts: [
-      { tenant: CUSTOMER, contact_name_id: 'k1', email: 'Req@customer.test', client_id: 'client-1', is_inactive: false },
+      { tenant: CUSTOMER, contact_name_id: 'k1', email: 'req@customer.test', client_id: 'client-1', is_inactive: false },
       { tenant: CUSTOMER, contact_name_id: 'k2', email: 'other@elsewhere.test', client_id: 'client-2', is_inactive: false },
       { tenant: CUSTOMER, contact_name_id: 'k3', email: 'gone@customer.test', client_id: 'client-1', is_inactive: true },
       { tenant: SPONSOR, contact_name_id: 'k4', email: 'foreign@customer.test', client_id: 'client-1', is_inactive: false },
+    ],
+    contact_additional_email_addresses: [
+      { tenant: CUSTOMER, contact_name_id: 'k1', normalized_email_address: 'req.alt@home.test' },
+      { tenant: CUSTOMER, contact_name_id: 'k2', normalized_email_address: 'other.alt@home.test' },
+      { tenant: CUSTOMER, contact_name_id: 'k3', normalized_email_address: 'gone.alt@home.test' },
     ],
   };
 }
@@ -112,6 +137,11 @@ describe('admitReplyToken sender authentication', () => {
     it('a contact of another client is refused', async () => { expect(await admit(untrusted('other@elsewhere.test'))).toEqual(refused); });
     it('the same email in another tenant is refused', async () => { expect(await admit(untrusted('foreign@customer.test'))).toEqual(refused); });
     it('an inactive contact is refused', async () => { expect(await admit(untrusted('gone@customer.test'))).toEqual(refused); });
+    it('an additional address of an active contact of the ticket client is admitted', async () => {
+      expect(await admit(untrusted('Req.Alt@home.test'))).toMatchObject({ admitted: true, audience: 'requester' });
+    });
+    it('an additional address of another client\'s contact is refused', async () => { expect(await admit(untrusted('other.alt@home.test'))).toEqual(refused); });
+    it('an additional address of an inactive contact is refused', async () => { expect(await admit(untrusted('gone.alt@home.test'))).toEqual(refused); });
     it('no sender is refused', async () => { expect(await admit(untrusted(null))).toEqual(refused); });
     it('an internal user address is not a requester contact', async () => { expect(await admit(trusted('agent@msp.test'))).toEqual(refused); });
   });

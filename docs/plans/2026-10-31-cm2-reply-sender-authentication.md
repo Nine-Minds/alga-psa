@@ -24,7 +24,7 @@ Caller rule (`processInboundEmailInApp.ts`): a token is inert only when there is
 | requester | n/a | active contact of the ticket's client, same tenant | admitted, no actor (native writer applies its own contact-auth) |
 | requester | n/a | other client / other tenant / inactive / missing | `not_participant`, ack |
 
-Requester match: `tickets.client_id` for the token's ticket, then `contacts` in the ticket's tenant with `lower(email)` = sender, `client_id` = ticket client, `is_inactive = false`.
+Requester match: `tickets.client_id` for the token's ticket, then `contacts` in the ticket's tenant with `client_id` = ticket client, `is_inactive = false`, and the address matching the contact's primary email OR an additional address (`contact_additional_email_addresses`). That address rule is `shared/lib/email/contactEmailMatch.ts`, shared with the canonical inbound resolver `findContactByEmail`.
 
 ## Tests
 - `packages/co-managed/src/__tests__/admitReplyToken.test.ts`: every row of the table, including the exploit regression (no `users` lookup when untrusted).

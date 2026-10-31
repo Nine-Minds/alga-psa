@@ -1,6 +1,8 @@
 import type { Knex } from 'knex';
 import { withAdminTransaction, tenantDb } from '@alga-psa/db';
 import { claimDelivery, finishDelivery, CO_MANAGED_LEDGER } from '@alga-psa/shared/lib/deliveryLedger';
+import { normalizeEmailAddress } from '@alga-psa/shared/lib/email/addressUtils';
+import { contactEmailMatch } from '@alga-psa/shared/lib/email/contactEmailMatch';
 import { resolveCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import {
   decideReplyToken, parseCm2Metadata,
@@ -10,8 +12,6 @@ import { withCoManagedNotificationRecipient } from './sharedWork';
 import { projectTaskAudience } from './projectTaskAudience';
 import { ROUTING_IN_APP_KIND, ROUTING_EMAIL_KIND, type CoManagedRoutingPayload } from './routingOutbox';
 import { isCoManagedSharedWorkError } from './sharedWorkIdentity';
-
-const normalize = (email: unknown) => String(email ?? '').trim().toLowerCase();
 
 /** A shared ticket: its work row in the customer tenant, the live relationship, and the revoke history. */
 async function loadSharedTicket(trx: Knex.Transaction, tenant: string, ticketId: string) {
@@ -167,14 +167,15 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
           : null;
         const audience = resolveCommentAudience(thread ?? { is_internal: false });
         const base = { admitted: true as const, audience, relationshipId: parsed.relationshipId, threadId: parsed.threadId, ticketId, parentCommentId: (record?.comment_id as string | null) ?? null };
-        const sender = normalize(inboundSender.email);
+        const sender = normalizeEmailAddress(inboundSender.email) ?? '';
         if (audience === 'requester') {
           // Requester threads keep the native writer (its contact-auth rules still apply), but only an active
           // contact of the ticket's own client, in this tenant, is admitted to it.
           if (!sender) return { admitted: false, reason: 'not_participant', acknowledge: true };
           const ticket = await tenantDb(trx, tenant).table('tickets').where({ ticket_id: ticketId }).first('client_id');
           const contact = ticket?.client_id
-            ? await tenantDb(trx, tenant).table('contacts').whereRaw('lower(email) = ?', [sender]).where({ client_id: ticket.client_id, is_inactive: false }).first('contact_name_id')
+            ? await tenantDb(trx, tenant).table('contacts').where({ 'contacts.client_id': ticket.client_id, 'contacts.is_inactive': false })
+              .andWhere(contactEmailMatch(tenantDb(trx, tenant), trx, sender)).first('contacts.contact_name_id')
             : null;
           return contact ? base : { admitted: false, reason: 'not_participant', acknowledge: true };
         }
