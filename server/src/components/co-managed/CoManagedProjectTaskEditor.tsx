@@ -84,7 +84,7 @@ export default function CoManagedProjectTaskEditor({ customerTenant, relationshi
   };
 
   const assignment = <CoManagedProjectTaskAssignment customerTenant={customerTenant} relationshipId={relationshipId} taskId={taskId} userId={userId}
-    revision={snapshot?.revision ?? null} assigneeName={assigned ?? snapshot?.assignee?.name ?? null}
+    revision={snapshot?.revision ?? null} assigneeName={assigned ?? snapshot?.assignee?.name ?? null} isAssigned={snapshot?.assignee != null}
     onChanged={name => { if (name) setAssigned(name); void reload(); }} />;
   const statusNames = Object.fromEntries(statuses.map(option => [option.statusMappingId, option.name]));
 

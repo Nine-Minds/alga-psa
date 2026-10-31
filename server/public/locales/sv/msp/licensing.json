@@ -694,6 +694,7 @@
       "noTasks": "Det här projektet har inga uppgifter som du kan se.",
       "assignment": "Tilldelning",
       "assignedTo": "Tilldelad till {{name}}",
+      "assignedHidden": "Tilldelad (namn dolt)",
       "assignConflict": "Den här uppgiften har tilldelats eller ändrats av någon annan. Den har lästs in på nytt; försök igen om du fortfarande behöver.",
       "assignFailed": "Det gick inte att tilldela uppgiften.",
       "assignMe": "Tilldela mig",
