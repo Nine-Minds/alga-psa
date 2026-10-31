@@ -1,3 +1,4 @@
+import { buildBundleChildRowsPreset } from './bundleChildRows';
 import type { TemplateAst, TemplateNode, TemplateDynamicTableNode } from '@alga-psa/types';
 import { DEFAULT_INVOICE_PRINT_SETTINGS, TEMPLATE_AST_VERSION } from '@alga-psa/types';
 
@@ -1001,30 +1002,7 @@ const buildStandardBundleQuantitiesAst = (): TemplateAst => {
       },
     ];
   }
-  table.childRows = {
-    sourcePath: 'item.components',
-    itemBinding: 'component',
-    parentBlankColumns: ['quantity', 'unit-price'],
-    cells: {
-      description: {
-        value: { type: 'path', path: 'component.name' },
-        lines: [
-          { id: 'component-name', value: { type: 'path', path: 'component.name' } },
-          {
-            id: 'component-period',
-            value: { type: 'path', path: 'component.periodLabelStart|daterange' },
-            supplemental: true,
-            style: { inline: { color: '#6b7280', fontSize: '12px' } },
-          },
-        ],
-      },
-      quantity: {
-        value: { type: 'path', path: 'component.quantity' },
-        format: 'number',
-        change: { value: { type: 'path', path: 'component.quantityChange' }, format: 'signed-number' },
-      },
-    },
-  };
+  table.childRows = buildBundleChildRowsPreset({ prices: false, showChange: true });
   return ast;
 };
 

@@ -45,6 +45,7 @@ import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITime
 import { IClient, IClientWithLocation } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { attachInvoiceTimeCollections } from '../lib/adapters/invoiceAdapters';
+import { buildBundleComponents, buildPreviewFixedBundles } from '../lib/invoiceBundleComponents';
 import { createTenantKnex } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
@@ -365,7 +366,13 @@ function previewTimeEntrySnapshots(
 
 function buildPreviewViewModelItem(item: IInvoiceCharge) {
   const recurringSummary = resolvePreviewRecurringSummary(item);
+  // The draft is operator-only, so component money is always included.
+  const bundle = buildBundleComponents(item.bundle_presentation, {
+    includePricing: true,
+    amounts: item.bundle_component_amounts,
+  });
   return {
+    ...(bundle ? { subtitle: bundle.subtitle, hasComponents: bundle.hasComponents, components: bundle.components } : {}),
     id: item.item_id,
     description: item.description,
     quantity: item.quantity,
@@ -2269,6 +2276,13 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
    * previews, which bill the client's default profile.
    */
   billingProfileId?: string | null;
+  /**
+   * Fold each Fixed line's per-service charges into one bundle item (the shape
+   * generation persists) so template renderers show the same layout as the
+   * final invoice. Off by default: the Automatic Invoices dialog is an operator
+   * table that keeps the per-service view.
+   */
+  consolidateFixedBundles?: boolean;
 }): Promise<BuiltPreviewInvoice> {
   const { knex, tenant, selectorInputs } = params;
   const canonicalSelection = assertSameRecurringSelectionWindow(selectorInputs);
@@ -2437,8 +2451,37 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     });
   });
 
-  for (const [contractKey, charges] of Object.entries(chargesByContractGroup)) {
+  const previewBundles = params.consolidateFixedBundles
+    ? await buildPreviewFixedBundles(knex, tenant, Object.values(chargesByContractGroup).flat())
+    : [];
+  const bundledCharges = new Set<unknown>(previewBundles.flatMap((bundle) => bundle.charges));
+  for (const bundle of previewBundles) {
+    const first = bundle.charges[0];
+    invoiceItems.push({
+      item_id: 'preview-' + uuidv4(),
+      invoice_id: `preview-${previewInvoiceKey}`,
+      description: bundle.title,
+      quantity: 1,
+      unit_price: bundle.total,
+      total_price: bundle.total,
+      tax_amount: bundle.charges.reduce((sum, c) => sum + (c.tax_amount || 0), 0),
+      tax_rate: first.tax_rate || 0,
+      tax_region: first.tax_region || '',
+      net_amount: bundle.total,
+      is_manual: false,
+      rate: bundle.total,
+      client_contract_id: first.client_contract_id,
+      contract_name: first.contract_name,
+      billing_charge_type: 'fixed',
+      bundle_presentation: bundle.snapshot,
+      bundle_component_amounts: bundle.amounts,
+    } as IInvoiceCharge);
+  }
+
+  for (const [contractKey, allContractCharges] of Object.entries(chargesByContractGroup)) {
     const contractGroupName = contractKey;
+    const charges = allContractCharges.filter((charge) => !bundledCharges.has(charge));
+    if (charges.length === 0) continue;
     const clientContractGroupId = charges[0].client_contract_id;
     const contractGroupHeaderId = 'preview-' + uuidv4();
     invoiceItems.push({
@@ -2796,6 +2839,9 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
   user,
   { tenant },
   groupedSelections: RecurringGroupedPreviewSelectionInput[],
+  // LEVERAGE: pattern preview-vs-persisted-shape — the draft emits per-service rows plus a $0 header,
+  // persisted invoices emit one bundle parent; this flag bridges the two until the dialog is retired.
+  options: { consolidateFixedBundles?: boolean } = {},
 ): Promise<RecurringGroupedPreviewResponse> => {
   const { knex } = await createTenantKnex();
   let normalizedGroupedSelections = groupedSelections;
@@ -2829,6 +2875,7 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
           knex,
           tenant,
           selectorInputs: group.selectorInputs,
+          consolidateFixedBundles: options.consolidateFixedBundles === true,
         });
         return {
           previewGroupKey: group.previewGroupKey,

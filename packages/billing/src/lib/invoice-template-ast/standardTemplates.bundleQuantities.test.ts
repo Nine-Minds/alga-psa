@@ -4,6 +4,7 @@ import { renderEvaluatedTemplateAst } from './react-renderer';
 import { validateTemplateAst } from './schema';
 import { templateHasComponentRows, templateUsesComponentPricing } from './componentPricing';
 import { STANDARD_INVOICE_TEMPLATE_ASTS, getStandardTemplateAstByCode } from './standardTemplates';
+import { buildBundleChildRowsPreset, detectBundleChildRowsPreset } from './bundleChildRows';
 
 const viewModel = {
   invoiceNumber: 'INV-1', issueDate: '2026-10-01', dueDate: '2026-10-31',
@@ -55,5 +56,28 @@ describe('standard-bundle-quantities', () => {
     const html = await render('standard-default');
     expect(html).not.toContain('ast-child-row');
     expect(html).not.toContain('Workstations');
+  });
+});
+
+describe('bundle child rows presets', () => {
+  const withPreset = (options: { prices: boolean; showChange: boolean }) => {
+    const ast = JSON.parse(JSON.stringify(STANDARD_INVOICE_TEMPLATE_ASTS['standard-bundle-quantities']));
+    const table = ast.layout.children.find((c: any) => c.id === 'line-items');
+    table.childRows = buildBundleChildRowsPreset(options);
+    return ast;
+  };
+
+  it('quantities-only binds no component price; quantities-and-prices does', () => {
+    expect(templateUsesComponentPricing(withPreset({ prices: false, showChange: true }))).toBe(false);
+    const priced = withPreset({ prices: true, showChange: false });
+    expect(validateTemplateAst(priced).success).toBe(true);
+    expect(templateUsesComponentPricing(priced)).toBe(true);
+  });
+
+  it('detects its own presets and flags anything else as custom', () => {
+    expect(detectBundleChildRowsPreset(undefined)).toBe('off');
+    expect(detectBundleChildRowsPreset(buildBundleChildRowsPreset({ prices: false, showChange: true }))).toBe('quantities');
+    expect(detectBundleChildRowsPreset(buildBundleChildRowsPreset({ prices: true, showChange: true }))).toBe('quantities-and-prices');
+    expect(detectBundleChildRowsPreset({ sourcePath: 'x', itemBinding: 'y', cells: {} })).toBe('custom');
   });
 });
