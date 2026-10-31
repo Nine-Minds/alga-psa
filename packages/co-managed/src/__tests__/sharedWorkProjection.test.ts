@@ -31,6 +31,12 @@ describe('isCoManagedTaskResourceHidden', () => {
     expect(isCoManagedTaskResourceHidden(['tasks'])).toBe(true);
     expect(isCoManagedTaskResourceHidden(['project_tasks'])).toBe(true);
   });
+  it('is true for the global and fields-prefixed whole-resource entries', () => {
+    for (const f of ['*', 'fields', 'fields.tasks', 'fields.project_tasks']) expect(isCoManagedTaskResourceHidden([f])).toBe(true);
+  });
+  it('is false for nested per-field paths', () => {
+    for (const f of ['project_tasks.task_name', 'tasks.description', 'fields.tasks.task_id']) expect(isCoManagedTaskResourceHidden([f])).toBe(false);
+  });
   it('is false for a single field or no redactions', () => {
     expect(isCoManagedTaskResourceHidden(['task_name'])).toBe(false);
     expect(isCoManagedTaskResourceHidden([])).toBe(false);

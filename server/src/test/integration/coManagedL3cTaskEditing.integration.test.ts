@@ -58,7 +58,7 @@ describe('CM L3c task editing and assignment', () => {
     configureL3cDbEnv();
     db = await connectL3cDb();
     world = await seedL3cWorld(db);
-    collab = await seedL3cProject(db, world, 'Collab project', ['ok', 'stale', 'drift', 'viewer-edit', 'assign-sep', 'redact-tasks', 'redact-project-tasks', 'redact-assignee', 'control']);
+    collab = await seedL3cProject(db, world, 'Collab project', ['ok', 'stale', 'drift', 'viewer-edit', 'assign-sep', 'redact-tasks', 'redact-project-tasks', 'redact-assignee', 'control', 'redact-field-name', 'redact-field-desc']);
     readOnly = await seedL3cProject(db, world, 'Read-only project', ['ro']);
     unshared = await seedL3cProject(db, world, 'Unshared project', ['hidden']);
     await shareProject(db, world, collab.projectId, true);
@@ -257,5 +257,38 @@ describe('CM L3c task editing and assignment', () => {
     expect(history[0]).toMatchObject({ operation: 'co_managed_project_task_update', changes: { task_name: { from: 'control', to: 'control renamed' } } });
     expect(history[1]).toEqual(before[0]);
     expect((await getCoManagedProjectTaskSnapshot(db, actor(), resource(id))).values.task_name).toBe('control renamed');
+  });
+
+  it('serves the snapshot without task_name when only project_tasks.task_name is redacted', async () => {
+    const id = collab.taskIds[9];
+    const mapping = uuidv4();
+    await db('project_status_mappings').insert({ tenant: world.customer, project_status_mapping_id: mapping, project_id: collab.projectId, status_id: world.statusId, custom_name: 'Field Todo', is_standard: false, display_order: 3, is_visible: true });
+    await db('project_tasks').where({ tenant: world.customer, task_id: id }).update({ project_status_mapping_id: mapping, due_date: new Date('2026-04-01T00:00:00.000Z') });
+    await openTask(id);
+    await setRedactions(['project_tasks.task_name']);
+    try {
+      const served = await getCoManagedProjectTaskSnapshot(db, actor(), resource(id));
+      expect(served.values.task_name ?? null).toBeNull();
+      expect(served.values.project_status_mapping_id).toBe(mapping);
+      expect(served.values.due_date).toBe('2026-04-01T00:00:00.000Z');
+      expect(await listCoManagedProjectTaskStatusOptions(db, actor(), resource(id))).toContainEqual({ statusMappingId: mapping, name: 'Field Todo' });
+      expect((await listCoManagedProjectTaskHistory(db, actor(), resource(id))).length).toBeGreaterThan(0);
+    } finally { await setRedactions([]); }
+  });
+
+  it('serves snapshot, history and status options when only tasks.description is redacted', async () => {
+    const id = collab.taskIds[10];
+    const mapping = uuidv4();
+    await db('project_status_mappings').insert({ tenant: world.customer, project_status_mapping_id: mapping, project_id: collab.projectId, status_id: world.statusId, custom_name: 'Desc Todo', is_standard: false, display_order: 4, is_visible: true });
+    await db('project_tasks').where({ tenant: world.customer, task_id: id }).update({ project_status_mapping_id: mapping });
+    await openTask(id);
+    await setRedactions(['tasks.description']);
+    try {
+      const served = await getCoManagedProjectTaskSnapshot(db, actor(), resource(id));
+      expect(served.values.task_name).toBe('redact-field-desc');
+      expect(served.values.project_status_mapping_id).toBe(mapping);
+      expect(await listCoManagedProjectTaskStatusOptions(db, actor(), resource(id))).toContainEqual({ statusMappingId: mapping, name: 'Desc Todo' });
+      expect((await listCoManagedProjectTaskHistory(db, actor(), resource(id))).length).toBeGreaterThan(0);
+    } finally { await setRedactions([]); }
   });
 });

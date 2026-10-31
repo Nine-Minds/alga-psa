@@ -1,9 +1,14 @@
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+import { CoManagedSharedWorkError } from './sharedWorkIdentity';
 
 /** Alias lists a reader's redactions are matched against, one per display name. Single source for the project list, task list and assigned-task queue. */
 /** The whole customer task resource; a reader who has either hidden may not read or write the task at all. */
 export const CO_MANAGED_TASK_RESOURCE_ALIASES = ['tasks', 'project_tasks'] as const;
-export const isCoManagedTaskResourceHidden = (redactedFields: readonly string[]): boolean => isCoManagedReadFieldHidden(redactedFields, CO_MANAGED_TASK_RESOURCE_ALIASES);
+/** Whole-resource entries only (`*`, `fields`, exactly `tasks`/`project_tasks`, optionally `fields.`-prefixed); a nested path such as `project_tasks.task_name` is a per-field redaction and must not match. */
+export const isCoManagedTaskResourceHidden = (redactedFields: readonly string[]): boolean => redactedFields.some(field => {
+  if (typeof field !== 'string') throw new CoManagedSharedWorkError();
+  return field === '*' || field === 'fields' || (CO_MANAGED_TASK_RESOURCE_ALIASES as readonly string[]).includes(field.startsWith('fields.') ? field.slice(7) : field);
+});
 export const CO_MANAGED_TASK_NAME_ALIASES = ['task_name', 'values.task_name', 'project_tasks.task_name', ...CO_MANAGED_TASK_RESOURCE_ALIASES] as const;
 export const CO_MANAGED_PROJECT_NAME_ALIASES = ['project_name', 'projectName', 'values.project_name', 'projects.project_name', 'project', 'project_id', 'projects'] as const;
 export const CO_MANAGED_ORGANIZATION_NAME_ALIASES = ['client_name', 'organizationName', 'tenants'] as const;
