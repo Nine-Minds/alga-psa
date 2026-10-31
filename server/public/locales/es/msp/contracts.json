@@ -2087,7 +2087,11 @@
     },
     "actions": {
       "addService": "Agregar servicio"
-    }
+    },
+    "invoiceTitleLabel": "Título de la factura (opcional)",
+    "invoiceTitlePlaceholder": "Por defecto, el nombre de la línea",
+    "invoiceSubtitleLabel": "Subtítulo de la factura (opcional)",
+    "invoiceSubtitlePlaceholder": "p. ej. Servicios gestionados de equipos y copias de seguridad"
   },
   "templateProducts": {
     "heading": "Productos",

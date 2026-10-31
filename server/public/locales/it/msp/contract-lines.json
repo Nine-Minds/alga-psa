@@ -62,7 +62,10 @@
         "invoiceLineDescriptionLabel": "Descrizione della riga di fattura",
         "invoiceLineDescriptionPlaceholder": "per esempio. Manutenzione mensile del sistema telefonico secondo il contratto del 2019",
         "nameLabel": "Nome della linea di contratto *",
-        "namePlaceholder": "per esempio. Supporto gestito - Oro"
+        "namePlaceholder": "per esempio. Supporto gestito - Oro",
+        "invoiceLineSubtitleLabel": "Sottotitolo della riga di fattura",
+        "invoiceLineSubtitlePlaceholder": "es. Endpoint gestiti e backup",
+        "invoiceLineSubtitleHelp": "Mostrato come seconda riga attenuata sotto il titolo quando questa riga fissa compare in una fattura."
       },
       "cardTitle": "Modifica riga contratto: {{name}} (fisso)",
       "errors": {

@@ -72,6 +72,7 @@ export default defineConfig({
       'src/components/invoice-designer/ast/workspaceAst.childRows.test.ts',
       'src/components/invoice-designer/inspector/widgets/BundleComponentRowsWidget.test.tsx',
       'src/components/invoice-designer/preview/sampleScenarios.bundles.test.ts',
+      'src/components/billing-dashboard/contracts/template-wizard/steps/TemplateFixedFeeServicesStep.invoiceText.test.tsx',
       'src/components/invoice-designer/canvas/DesignCanvas.bundleRows.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteForm.terms.test.tsx',
       // Timezone-safe date-only rendering: the renderer and field formatting

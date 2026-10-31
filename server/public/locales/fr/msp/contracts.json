@@ -2087,7 +2087,11 @@
     },
     "actions": {
       "addService": "Ajouter un service"
-    }
+    },
+    "invoiceTitleLabel": "Titre de la facture (facultatif)",
+    "invoiceTitlePlaceholder": "Par défaut, le nom de la ligne",
+    "invoiceSubtitleLabel": "Sous-titre de la facture (facultatif)",
+    "invoiceSubtitlePlaceholder": "p. ex. Postes gérés et sauvegarde"
   },
   "templateProducts": {
     "heading": "Produits",

@@ -2087,7 +2087,11 @@
     },
     "actions": {
       "addService": "〖Ȧḓḓ Şḗřṽīƈḗ ·····〗"
-    }
+    },
+    "invoiceTitleLabel": "〖Īƞṽȯīƈḗ ŧīŧŀḗ (ȯƥŧīȯƞȧŀ) ··········〗",
+    "invoiceTitlePlaceholder": "〖Ḓḗƒȧŭŀŧş ŧȯ ŧħḗ ŀīƞḗ ƞȧḿḗ ··········〗",
+    "invoiceSubtitleLabel": "〖Īƞṽȯīƈḗ şŭƀŧīŧŀḗ (ȯƥŧīȯƞȧŀ) ···········〗",
+    "invoiceSubtitlePlaceholder": "〖ḗ.ɠ. Ḿȧƞȧɠḗḓ ḗƞḓƥȯīƞŧ ȧƞḓ ƀȧƈķŭƥ şḗřṽīƈḗş ·················〗"
   },
   "templateProducts": {
     "heading": "〖Ƥřȯḓŭƈŧş ····〗",

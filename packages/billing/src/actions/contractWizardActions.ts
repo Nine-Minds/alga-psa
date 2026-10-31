@@ -283,6 +283,9 @@ export type ContractTemplateWizardSubmission = {
   // currency_code removed - templates are now currency-neutral
   // Currency is inherited from the client when a contract is created from this template
   fixed_services: TemplateFixedServiceInput[];
+  /** Invoice title/subtitle for the template's Fixed bundle line (title defaults to the line name). */
+  invoice_line_description?: string | null;
+  invoice_line_subtitle?: string | null;
   product_services?: TemplateProductServiceInput[];
   hourly_services?: TemplateHourlyServiceInput[];
   usage_services?: TemplateUsageServiceInput[];
@@ -711,6 +714,8 @@ export const createContractTemplateFromWizard = withAuth(async (
     if (filteredFixedServices.length > 0) {
       const createdFixedLine = await ContractLine.create(trx, {
         contract_line_name: `${submission.contract_name} - Fixed Fee`,
+        invoice_line_description: submission.invoice_line_description?.trim() || null,
+        invoice_line_subtitle: submission.invoice_line_subtitle?.trim() || null,
         billing_frequency: submission.billing_frequency ?? 'monthly',
         billing_timing: recurringAuthoringPolicy.billingTiming,
         cadence_owner: recurringAuthoringPolicy.cadenceOwner,

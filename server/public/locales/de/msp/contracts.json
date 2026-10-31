@@ -2087,7 +2087,11 @@
     },
     "actions": {
       "addService": "Service hinzufügen"
-    }
+    },
+    "invoiceTitleLabel": "Rechnungstitel (optional)",
+    "invoiceTitlePlaceholder": "Standardmäßig der Positionsname",
+    "invoiceSubtitleLabel": "Rechnungsuntertitel (optional)",
+    "invoiceSubtitlePlaceholder": "z. B. Verwaltete Endgeräte und Backup"
   },
   "templateProducts": {
     "heading": "Produkte",

@@ -2087,7 +2087,11 @@
     },
     "actions": {
       "addService": "Add Service"
-    }
+    },
+    "invoiceTitleLabel": "Invoice title (optional)",
+    "invoiceTitlePlaceholder": "Defaults to the line name",
+    "invoiceSubtitleLabel": "Invoice subtitle (optional)",
+    "invoiceSubtitlePlaceholder": "e.g. Managed endpoint and backup services"
   },
   "templateProducts": {
     "heading": "Products",

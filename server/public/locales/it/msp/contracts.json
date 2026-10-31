@@ -2087,7 +2087,11 @@
     },
     "actions": {
       "addService": "Aggiungi servizio"
-    }
+    },
+    "invoiceTitleLabel": "Titolo della fattura (facoltativo)",
+    "invoiceTitlePlaceholder": "Per impostazione predefinita, il nome della riga",
+    "invoiceSubtitleLabel": "Sottotitolo della fattura (facoltativo)",
+    "invoiceSubtitlePlaceholder": "es. Endpoint gestiti e backup"
   },
   "templateProducts": {
     "heading": "Prodotti",

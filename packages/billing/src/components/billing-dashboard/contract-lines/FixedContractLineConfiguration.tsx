@@ -86,6 +86,7 @@ export function FixedPlanConfiguration({
   // Form state
   const [planName, setPlanName] = useState('');
   const [invoiceLineDescription, setInvoiceLineDescription] = useState('');
+  const [invoiceLineSubtitle, setInvoiceLineSubtitle] = useState('');
   const [planType, setPlanType] = useState<PlanType>('Fixed');
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
   const [isCustom, setIsCustom] = useState(false);
@@ -164,6 +165,7 @@ export function FixedPlanConfiguration({
         // Populate form fields
         setPlanName(fetchedPlan.contract_line_name);
         setInvoiceLineDescription(fetchedPlan.invoice_line_description ?? '');
+        setInvoiceLineSubtitle(fetchedPlan.invoice_line_subtitle ?? '');
         setBillingFrequency(fetchedPlan.billing_frequency);
         setPlanType(fetchedPlan.contract_line_type as PlanType);
         setIsCustom(fetchedPlan.is_custom ?? false);
@@ -279,6 +281,7 @@ export function FixedPlanConfiguration({
       const planData: Partial<IContractLine> = {
         contract_line_name: planName,
         invoice_line_description: invoiceLineDescription.trim() ? invoiceLineDescription.trim() : null,
+        invoice_line_subtitle: invoiceLineSubtitle.trim() ? invoiceLineSubtitle.trim() : null,
         billing_frequency: billingFrequency,
         billing_timing: planType === 'Fixed' ? billingTiming : 'arrears',
         is_custom: isCustom,
@@ -440,6 +443,27 @@ export function FixedPlanConfiguration({
                   {t('configuration.fixed.basics.invoiceLineDescriptionHelp', {
                     defaultValue:
                       'Used verbatim as the invoice line text for this fixed fee. Leave empty to use the contract line name.',
+                  })}
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="invoice-line-subtitle">
+                  {t('configuration.fixed.basics.invoiceLineSubtitleLabel', { defaultValue: 'Invoice Line Subtitle' })}
+                </Label>
+                <Input
+                  id="invoice-line-subtitle"
+                  value={invoiceLineSubtitle}
+                  onChange={(e) => {
+                    setInvoiceLineSubtitle(e.target.value);
+                    markDirty();
+                  }}
+                  placeholder={t('configuration.fixed.basics.invoiceLineSubtitlePlaceholder', {
+                    defaultValue: 'e.g. Managed endpoint and backup services',
+                  })}
+                />
+                <p className="text-sm text-muted-foreground mt-1">
+                  {t('configuration.fixed.basics.invoiceLineSubtitleHelp', {
+                    defaultValue: 'Shown as a muted second line under the title when this fixed line appears on an invoice.',
                   })}
                 </p>
               </div>

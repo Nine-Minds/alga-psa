@@ -2087,7 +2087,11 @@
     },
     "actions": {
       "addService": "Adicionar serviço"
-    }
+    },
+    "invoiceTitleLabel": "Título da fatura (opcional)",
+    "invoiceTitlePlaceholder": "Por predefinição, o nome da linha",
+    "invoiceSubtitleLabel": "Subtítulo da fatura (opcional)",
+    "invoiceSubtitlePlaceholder": "p. ex. Endpoints gerenciados e backup"
   },
   "templateProducts": {
     "heading": "Produtos",

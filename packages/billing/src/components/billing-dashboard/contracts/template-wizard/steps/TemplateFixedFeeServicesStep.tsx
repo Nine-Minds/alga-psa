@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
+import { Input } from '@alga-psa/ui/components/Input';
 import { QuantityInput } from '../../QuantityInput';
 import { Button } from '@alga-psa/ui/components/Button';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
@@ -188,6 +189,33 @@ export function TemplateFixedFeeServicesStep({
                 'Configure services that are billed at a fixed rate each billing cycle. You can still track time, but billing is based on this flat amount.',
             })}
           </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="template-fixed-invoice-title" className="text-sm">
+              {t('templateFixed.invoiceTitleLabel', { defaultValue: 'Invoice title (optional)' })}
+            </Label>
+            <Input
+              id="template-fixed-invoice-title"
+              value={data.invoice_line_description ?? ''}
+              onChange={(event) => updateData({ invoice_line_description: event.target.value })}
+              placeholder={t('templateFixed.invoiceTitlePlaceholder', { defaultValue: 'Defaults to the line name' })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="template-fixed-invoice-subtitle" className="text-sm">
+              {t('templateFixed.invoiceSubtitleLabel', { defaultValue: 'Invoice subtitle (optional)' })}
+            </Label>
+            <Input
+              id="template-fixed-invoice-subtitle"
+              value={data.invoice_line_subtitle ?? ''}
+              onChange={(event) => updateData({ invoice_line_subtitle: event.target.value })}
+              placeholder={t('templateFixed.invoiceSubtitlePlaceholder', {
+                defaultValue: 'e.g. Managed endpoint and backup services',
+              })}
+            />
+          </div>
         </div>
 
         <div className="p-4 bg-accent-50 border border-accent-200 rounded-md">

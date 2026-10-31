@@ -2093,7 +2093,11 @@
     },
     "actions": {
       "addService": "Dodaj usługę"
-    }
+    },
+    "invoiceTitleLabel": "Tytuł faktury (opcjonalnie)",
+    "invoiceTitlePlaceholder": "Domyślnie nazwa pozycji",
+    "invoiceSubtitleLabel": "Podtytuł faktury (opcjonalnie)",
+    "invoiceSubtitlePlaceholder": "np. Zarządzane stacje końcowe i kopie zapasowe"
   },
   "templateProducts": {
     "heading": "Produkty",

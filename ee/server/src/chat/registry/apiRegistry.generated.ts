@@ -14863,6 +14863,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "minLength": 1,
           "maxLength": 255
         },
+        "invoice_line_description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "Invoice title for a Fixed line (the bundle row title); falls back to the line name when null."
+        },
+        "invoice_line_subtitle": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "Muted second line under a Fixed bundle title on invoices; null = none."
+        },
         "billing_frequency": {
           "type": "string",
           "enum": [
@@ -15097,6 +15113,22 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
           "type": "string",
           "minLength": 1,
           "maxLength": 255
+        },
+        "invoice_line_description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "Invoice title for a Fixed line (the bundle row title); falls back to the line name when null."
+        },
+        "invoice_line_subtitle": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "Muted second line under a Fixed bundle title on invoices; null = none."
         },
         "billing_frequency": {
           "type": "string",

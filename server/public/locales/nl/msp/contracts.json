@@ -2087,7 +2087,11 @@
     },
     "actions": {
       "addService": "Service toevoegen"
-    }
+    },
+    "invoiceTitleLabel": "Factuurtitel (optioneel)",
+    "invoiceTitlePlaceholder": "Standaard de regelnaam",
+    "invoiceSubtitleLabel": "Factuurondertitel (optioneel)",
+    "invoiceSubtitlePlaceholder": "bijv. Beheerde endpoints en back-up"
   },
   "templateProducts": {
     "heading": "Producten",
