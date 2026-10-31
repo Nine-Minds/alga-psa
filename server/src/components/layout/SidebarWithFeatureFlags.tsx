@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useCapability, useFeatureFlag } from '@alga-psa/ui/hooks';
 import { resolveUiSlots } from '@alga-psa/ui/capability/uiSlotRegistry';
 import '@/config/coManagedMenu';
+import '@/config/coManagedConversationSlots';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import Sidebar from './Sidebar';
 import {

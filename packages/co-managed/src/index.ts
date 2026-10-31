@@ -78,3 +78,15 @@ export { retainCoManagedConversationBeforeSourceChange } from './sourceChangeRet
 export { snapshotConversationContent, encodeConversationContent, plainTextContent } from './conversationContent';
 export type { CoManagedConversationContent } from './conversationContent';
 export { projectTaskAudience, projectTaskAudienceSql } from './projectTaskAudience';
+
+// L4b: attachments, drafts, thread disclosure, archive files.
+export * from './attachmentParent';
+export * from './attachmentStoragePath';
+export * from './conversationAttachments';
+export * from './conversationDrafts';
+export * from './uploadCleanup';
+export * from './archiveFiles';
+export * from './attachmentExport';
+export * from './threadDisclosure';
+export * from './privateThreadDisclosure';
+export * from './privateThreadTransferCleanup';

@@ -9,6 +9,8 @@ describe('UI slot surfaces', () => {
       'project.details.tab',
       'client.details.tab',
       'msp.navigation.group',
+      'ticket.conversation.comment-attachments',
+      'ticket.conversation.thread-header',
     ]);
   });
 

@@ -60,8 +60,19 @@ function createPlainTextWriter(input: CommentWriterInput): CommentWriter {
     if (!context.canWrite || !context.writeAudiences.includes(message.audience)) fail('forbidden');
     const document = conversationDocument(message.content) ?? fail('invalid');
     const parent = message.parentCommentId ? await input.parent(message.parentCommentId) ?? fail('invalid') : undefined;
-    // Files need a registered stager for this kind; none ships yet, so they are refused rather than dropped.
-    if ((input.files?.().length ?? 0) > 0) fail('invalid');
+    // Files need a registered stager for this kind; with none they are refused rather than dropped.
+    const staged = input.files?.() ?? [];
+    if (staged.length > 0) {
+      const stage = resolveFileStager(PLAIN_TEXT_WRITER);
+      if (!stage) fail('invalid');
+      // The operation id is retained across an uncertain acknowledgement, so the same message + files replays one draft.
+      const stagedKey = JSON.stringify([message.content, message.audience, parent ?? null, staged.length]);
+      if (pending?.key !== stagedKey) pending = { key: stagedKey, id: newCoManagedOperationId() };
+      const operation = pending, outcome = await stage!(input, message, operation.id).catch(() => fail('unknownOutcome'));
+      if (!outcome.ok) { if (outcome.code !== 'unknownOutcome' && outcome.code !== 'notReady' && pending === operation) pending = null; return fail(outcome.code); }
+      if (pending === operation) pending = null;
+      return outcome.receipt;
+    }
     const key = JSON.stringify([message.content, message.audience, parent ?? null]);
     if (pending?.key !== key) pending = { key, id: newCoManagedOperationId() };
     const operation = pending;

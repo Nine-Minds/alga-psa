@@ -469,6 +469,11 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_management_private_comments',
   'co_management_private_threads',
   'co_management_private_command_receipts',
+  // L4b: files -> drafts (FK), then transfer records and retained archive files.
+  'co_management_conversation_attachments',
+  'co_management_conversation_drafts',
+  'co_management_thread_transfers',
+  'co_managed_archive_files',
   'co_managed_project_task_references',
   'collaboration_actor_references',
   'co_managed_participation_evidence',

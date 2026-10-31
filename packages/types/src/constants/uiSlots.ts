@@ -12,6 +12,10 @@ export const UI_SLOT_SURFACES = [
   // menu before the edition/tier/permission/product filters, so a contribution
   // can never bypass them.
   'msp.navigation.group',
+  // Conversation surfaces (L4b). Hosts mount these per comment / per thread; a host that
+  // does not render them leaves the base conversation untouched.
+  'ticket.conversation.comment-attachments',
+  'ticket.conversation.thread-header',
 ] as const;
 
 export type UiSlotSurface = (typeof UI_SLOT_SURFACES)[number];

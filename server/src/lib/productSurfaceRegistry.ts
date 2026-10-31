@@ -160,6 +160,14 @@ export const API_RULES: readonly ApiRule[] = [
     visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
   },
   {
+    // Session-authenticated co-managed conversation file download. Every product
+    // may reach it; capabilityRouteGuard inside the route decides (closed => 404).
+    group: 'api_co_management_attachments',
+    staticPrefixes: ['/api/co-management'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
+  },
+  {
     // Authenticated app-internal endpoint that mints the short-lived realtime
     // notification-signals token. Not part of the public v1 metadata surface.
     group: 'api_notification_stream',
