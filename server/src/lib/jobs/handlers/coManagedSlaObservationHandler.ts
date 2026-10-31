@@ -1,6 +1,6 @@
 import { getConnection } from '@alga-psa/db';
 import { defineJob } from '@alga-psa/jobs/fanout';
-import { observeDueCoManagedTicketSlas } from '@alga-psa/co-managed';
+import { observeDueCoManagedTicketSlas, flagStaleCoManagedSlaSending } from '@alga-psa/co-managed';
 import { persistCoManagedSlaNotifications } from '@alga-psa/notifications/lib/coManagedSlaNotifications';
 import { deliverCoManagedSlaNotifications } from '../../notifications/coManagedSlaDelivery';
 
@@ -15,9 +15,12 @@ export async function coManagedSlaObservationHandler(input: { tenantId: string }
   try { observation = await observeDueCoManagedTicketSlas(db, input.tenantId); } catch (error) { failures.push(error); }
   // A failed clock must not prevent delivery of already retained crossings.
   try { notifications = await persistCoManagedSlaNotifications(db, input.tenantId); } catch (error) { failures.push(error); }
+  // Unknown-outcome `sending` rows are flagged for reconciliation before delivery runs, so they are never resent.
+  let flagged = 0;
+  try { flagged = await flagStaleCoManagedSlaSending(db, input.tenantId); } catch (error) { failures.push(error); }
   try { deliveries = await deliverCoManagedSlaNotifications(db, input.tenantId); } catch (error) { failures.push(error); }
   if (failures.length) throw new AggregateError(failures, 'SLA maintenance has unfinished work');
-  return { observation, notifications, deliveries };
+  return { observation, notifications, flagged, deliveries };
 }
 
 /**

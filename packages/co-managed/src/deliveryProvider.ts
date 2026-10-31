@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { withAdminTransaction, tenantDb } from '@alga-psa/db';
-import { claimDelivery, finishDelivery, CO_MANAGED_LEDGER } from '@alga-psa/shared/lib/deliveryLedger';
+import { claimDelivery, finishDelivery, flagStaleSendingDeliveries, CO_MANAGED_LEDGER } from '@alga-psa/shared/lib/deliveryLedger';
 import { resolveCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import {
   decideReplyToken, parseCm2Metadata,
@@ -92,10 +92,7 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
 
     async flagStaleRoutingSending(tenant, olderThanMs) {
       // write-admission: exempt — delivery-ledger reconciliation flag on a stale claim, not a co-managed work write
-      return withAdminTransaction(async (trx) => tenantDb(trx, tenant).table('co_management_deliveries')
-        .whereIn('delivery_kind', [ROUTING_IN_APP_KIND, ROUTING_EMAIL_KIND]).where({ state: 'sending', requires_reconciliation: false })
-        .where('updated_at', '<', new Date(Date.now() - olderThanMs))
-        .update({ requires_reconciliation: true, error_code: 'unknown_outcome', last_error: 'Delivery was claimed but never finished; reconcile before resending.', updated_at: new Date() }));
+      return withAdminTransaction((trx) => flagStaleSendingDeliveries(trx, CO_MANAGED_LEDGER, tenant, [ROUTING_IN_APP_KIND, ROUTING_EMAIL_KIND], olderThanMs));
     },
 
     async planTicketComment(tenant, ticketId, commentId): Promise<CommentDeliveryPlan | null> {

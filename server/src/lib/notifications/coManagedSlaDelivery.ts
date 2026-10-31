@@ -12,6 +12,7 @@ const baseUrl = () => (process.env.NEXTAUTH_URL || 'http://localhost:3000').repl
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ledgerKey = (row: CoManagedSlaDeliveryRow) => ({ delivery_kind: row.deliveryKind, source_id: row.eventId, recipient: row.recipient });
 const DENIED = Symbol('denied');
+const MISSING_SUBTYPE = Symbol('missing_subtype');
 
 /** Deliver ONE owed SLA row through L5's ledger. The recipient is reauthorized against current co-managed state first
  * (the same recipient context routing uses). A recipient who is no longer permitted is a completed (skipped) delivery. */
@@ -46,11 +47,19 @@ export async function deliverCoManagedSlaRow(db: Knex, row: CoManagedSlaDelivery
       // Tenant, category, subtype and the user's own email preference, from the one shared preference state.
       const subtype = (await readUserEmailPreferenceState(context.trx, row.tenant, row.userId))
         .flatMap(category => category.subtypes).find(candidate => candidate.name === subtypeName(message.notificationType));
-      if (!subtype) throw new Error('SLA email notification subtype is not configured');
+      if (!subtype) return MISSING_SUBTYPE;
       if (!subtype.effective_is_enabled) return DENIED;
       const email = user.email.trim();
       return { message, email, subtypeId: subtype.id, name: [user.first_name, user.last_name].filter(Boolean).join(' ') || email };
     });
+    if (ready === MISSING_SUBTYPE) {
+      // The 'SLA Breach'/'SLA Warning' subtypes are global rows seeded by migration, so this is a broken install, not a
+      // recipient decision. Claim (counts an attempt) and fail with a code: bounded by the retry limit, never silent.
+      if (await claimDelivery(db, CO_MANAGED_LEDGER, row.tenant, key, { recipient_kind: 'msp_user' })) {
+        await finishDelivery(db, CO_MANAGED_LEDGER, row.tenant, key, 'failed', { errorCode: 'sla_subtype_missing', error: 'SLA email notification subtype is not configured' });
+      }
+      return 'failed';
+    }
     if (!ready || ready === DENIED) return await skip();
     const presentation = coManagedSlaPresentation(ready.message);
     await sendEventEmail({

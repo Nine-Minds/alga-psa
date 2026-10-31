@@ -85,7 +85,7 @@ export { withCoManagedSlaNotification, fanoutCoManagedSlaNotification } from './
 export type { CoManagedSlaNotification, CoManagedSlaNotificationChannel } from './slaNotification';
 export { withCoManagedStoredSlaNotification } from './storedSlaNotification';
 export type { CoManagedStoredSlaNotification } from './storedSlaNotification';
-export { enqueueCoManagedSlaDeliveries, pendingCoManagedSlaDeliveries, SLA_IN_APP_KIND, SLA_EMAIL_KIND } from './slaDeliveries';
+export { enqueueCoManagedSlaDeliveries, pendingCoManagedSlaDeliveries, flagStaleCoManagedSlaSending, SLA_STALE_SENDING_MS, SLA_IN_APP_KIND, SLA_EMAIL_KIND } from './slaDeliveries';
 export type { CoManagedSlaDeliveryRow, CoManagedSlaDeliveryPayload } from './slaDeliveries';
 export { observeDueCoManagedTicketSlas } from './ticketSla';
 export { getCoManagedTicketSlaDisplay, type CoManagedTicketSlaDisplay, type CoManagedSlaDisplay, type CoManagedSlaTargetDisplay } from './ticketSlaRead';
