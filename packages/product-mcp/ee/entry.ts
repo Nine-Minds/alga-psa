@@ -33,5 +33,6 @@ export {
 } from '@ee/lib/mcp/oauth/authServer';
 export type { AuthorizePlan, AuthorizeDecision, TokenResult } from '@ee/lib/mcp/oauth/authServer';
 export { getPublicJwks } from '@ee/lib/mcp/oauth/keys';
+export { mcpResource } from '@ee/lib/mcp/oauth/tokens';
 export { listConnectedClients } from '@ee/lib/mcp/oauth/clients';
 export { revokeGrant } from '@ee/lib/mcp/oauth/grants';

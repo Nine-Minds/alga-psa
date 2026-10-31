@@ -21,6 +21,7 @@ import { getMcpDemoMode, demoState, demoAuditPage, demoConnectResult } from './m
 import { EditionGateError, getEditionGateResponse, isEditionGateError } from '@/lib/editionGating/client';
 import type { EditionGateResponseBody } from '@/lib/editionGating/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { audienceGuide, withIdpKind } from './idpAudience';
 
 const DEFAULT_AUDIT_PAGE_SIZE = 10;
 
@@ -95,7 +96,7 @@ export default function McpServerSettings() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   // Create-agent form
   const [agentForm, setAgentForm] = useState({ name: '', idpIssuer: '', idpSubject: '', roleIds: [] as string[] });
-  const [suggestion, setSuggestion] = useState<{ microsoft?: { entraTenantId: string; displayName: string | null } }>({});
+  const [suggestion, setSuggestion] = useState<{ microsoft?: { entraTenantId: string; displayName: string | null }; mcpResource?: string }>({});
   // Hosted shared apps available for zero-config provisioning.
   const [platformProviders, setPlatformProviders] = useState<PlatformProvider[]>([]);
   // Identity auto-discovered via "Connect with…" (null = none yet).
@@ -185,7 +186,7 @@ export default function McpServerSettings() {
       }
       setError(t('mcpServer.errors.load', { defaultValue: 'Failed to load MCP settings.' }));
     });
-    api<{ data: { microsoft?: { entraTenantId: string; displayName: string | null } } }>('/api/v1/mcp/idp-suggestions')
+    api<{ data: { microsoft?: { entraTenantId: string; displayName: string | null }; mcpResource?: string } }>('/api/v1/mcp/idp-suggestions')
       .then((r) => setSuggestion(r.data))
       .catch(() => {});
     api<{ data: PlatformProvider[] }>('/api/v1/mcp/platform-providers')
@@ -208,6 +209,27 @@ export default function McpServerSettings() {
     } finally {
       setBusy(false);
     }
+  };
+
+  // Canonical MCP resource URL from the server (honours the public base URL);
+  // the browser origin is the fallback before it loads (and in demo mode).
+  const mcpResource =
+    suggestion.mcpResource || (typeof window !== 'undefined' ? `${window.location.origin}/api/mcp` : '/api/mcp');
+
+  const audienceField = (id: string) => {
+    const guide = audienceGuide(idpForm.kind, mcpResource);
+    return (
+      <>
+        <Label htmlFor={id}>{t('mcpServer.providers.fields.audience', { defaultValue: 'Audience' })}</Label>
+        <Input id={id} value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder={guide.placeholder} required />
+        <p id={`${id}-help`} className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
+          {t(guide.helpKey, { defaultValue: guide.helpDefault })}{' '}
+          {t('mcpServer.providers.fields.audienceWhy', {
+            defaultValue: "Tokens your provider issued to other apps won't be accepted here.",
+          })}
+        </p>
+      </>
+    );
   };
 
   const addIdp = () =>
@@ -561,7 +583,7 @@ export default function McpServerSettings() {
               <Button
                 id="mcp-use-ms-connection"
                 size="sm"
-                onClick={() => setIdpForm({ ...idpForm, kind: 'microsoft', entraTenantId: suggestion.microsoft!.entraTenantId })}
+                onClick={() => setIdpForm({ ...withIdpKind(idpForm, 'microsoft', mcpResource), entraTenantId: suggestion.microsoft!.entraTenantId })}
               >
                 {t('mcpServer.providers.suggestion.useDirectory', { defaultValue: 'Use this directory' })}
               </Button>
@@ -588,7 +610,7 @@ export default function McpServerSettings() {
                 id="idp-kind"
                 className="w-full"
                 value={idpForm.kind}
-                onValueChange={(v) => setIdpForm({ ...idpForm, kind: v })}
+                onValueChange={(v) => setIdpForm(withIdpKind(idpForm, v, mcpResource))}
                 options={[
                   { value: 'microsoft', label: providerLabel('microsoft') },
                   { value: 'google', label: providerLabel('google') },
@@ -600,7 +622,7 @@ export default function McpServerSettings() {
             {idpForm.kind === 'microsoft' && (
               <div className="space-y-3">
                 <div className="md:w-1/2"><Label htmlFor="idp-entra-tid">{t('mcpServer.providers.fields.entraTenantId', { defaultValue: 'Entra tenant ID' })}</Label><Input id="idp-entra-tid" value={idpForm.entraTenantId} onChange={(e) => setIdpForm({ ...idpForm, entraTenantId: e.target.value })} placeholder="e.g. 00000000-0000-0000-0000-000000000000" /></div>
-                <div className="md:w-1/2"><Label htmlFor="idp-audience">{t('mcpServer.providers.fields.audience', { defaultValue: 'Audience' })}</Label><Input id="idp-audience" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="e.g. api://your-app-id" required /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{t('mcpServer.providers.fields.audienceHelp', { defaultValue: 'Required. The `aud` your IdP issues for this MCP resource.' })}</p></div>
+                <div className="md:w-1/2">{audienceField('idp-audience')}</div>
                 <button
                   type="button"
                   id="mcp-idp-advanced-toggle"
@@ -621,8 +643,8 @@ export default function McpServerSettings() {
 
             {idpForm.kind === 'google' && (
               <div className="space-y-3">
-              <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm text-[rgb(var(--color-text-600))]">{t('mcpServer.providers.googleNoSetup', { defaultValue: 'Google needs no setup. Agents sign in with their Google service-account ID.' })}</div>
-                <div className="md:w-1/2"><Label htmlFor="idp-audience-g">{t('mcpServer.providers.fields.audience', { defaultValue: 'Audience' })}</Label><Input id="idp-audience-g" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="https://your-alga/api/mcp" required /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{t('mcpServer.providers.fields.audienceHelp', { defaultValue: 'Required. The `aud` your IdP issues for this MCP resource.' })}</p></div>
+              <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-3 py-2 text-sm text-[rgb(var(--color-text-600))]">{t('mcpServer.providers.googleSetup', { defaultValue: 'Agents sign in with a Google service-account ID token. Only the audience below needs to match how they request it.' })}</div>
+                <div className="md:w-1/2">{audienceField('idp-audience-g')}</div>
               </div>
             )}
 
@@ -630,7 +652,7 @@ export default function McpServerSettings() {
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 <div><Label htmlFor="idp-issuer">{t('mcpServer.providers.fields.issuer', { defaultValue: 'Issuer' })}</Label><Input id="idp-issuer" value={idpForm.issuer} onChange={(e) => setIdpForm({ ...idpForm, issuer: e.target.value })} placeholder="https://login.example.com/tenant" /></div>
                 <div><Label htmlFor="idp-jwks">{t('mcpServer.providers.fields.jwksUri', { defaultValue: 'Signing keys URL' })}</Label><Input id="idp-jwks" value={idpForm.jwksUri} onChange={(e) => setIdpForm({ ...idpForm, jwksUri: e.target.value })} placeholder="https://login.example.com/.../jwks" /></div>
-                <div><Label htmlFor="idp-audience-c">{t('mcpServer.providers.fields.audience', { defaultValue: 'Audience' })}</Label><Input id="idp-audience-c" value={idpForm.audience} onChange={(e) => setIdpForm({ ...idpForm, audience: e.target.value })} placeholder="https://your-alga/api/mcp" required /><p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">{t('mcpServer.providers.fields.audienceHelp', { defaultValue: 'Required. The `aud` your IdP issues for this MCP resource.' })}</p></div>
+                <div>{audienceField('idp-audience-c')}</div>
                 <div><Label htmlFor="idp-claim-c">{t('mcpServer.providers.fields.subjectClaim', { defaultValue: 'Identify agents by' })}</Label><Input id="idp-claim-c" value={idpForm.subjectClaim} onChange={(e) => setIdpForm({ ...idpForm, subjectClaim: e.target.value })} placeholder="sub | azp | client_id" /></div>
               </div>
             )}

@@ -3534,7 +3534,7 @@
       "platformManaged": "Von AlgaPSA verwaltet — keine Einrichtung erforderlich. Verbinden Sie in Schritt 2 einen Agenten mit einem Anbieter.",
       "addAnother": "Weiteren Anbieter hinzufügen",
       "advancedOptions": "Erweiterte Optionen",
-      "googleNoSetup": "Google erfordert keine Einrichtung. Agenten melden sich mit der ID ihres Google-Dienstkontos an.",
+      "googleSetup": "Agenten melden sich mit einem Google-ID-Token eines Dienstkontos an. Nur die Zielgruppe unten muss zu ihrer Anforderung passen.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3548,10 +3548,14 @@
       "fields": {
         "provider": "Anbieter",
         "entraTenantId": "Entra-Tenant-ID",
-        "audienceOptional": "Zielgruppe (optional)",
         "audience": "Zielgruppe",
         "subjectClaim": "Agenten identifizieren anhand von",
-        "audienceHelp": "Erforderlich. Der `aud`-Wert, den Ihr IdP für diese MCP-Ressource ausstellt.",
+        "audienceHelp": {
+          "microsoft": "Die Anwendungs-ID (Client-ID) der Entra-App-Registrierung, für die Ihre Agenten Token anfordern. Agenten fordern den Bereich api://<diese ID>/.default an.",
+          "google": "Agenten müssen ihr Google-ID-Token mit genau dieser Zielgruppe anfordern. Wir haben die MCP-URL dieses Servers eingetragen, die übliche Wahl.",
+          "custom": "Die API- oder Ressourcenkennung, die in Ihrem Anbieter eingerichtet ist (zum Beispiel eine Auth0-API-Kennung). Sie muss genau mit dem aud-Claim in Agenten-Token übereinstimmen. Die MCP-URL dieses Servers ist eine gute Wahl."
+        },
+        "audienceWhy": "Token, die Ihr Anbieter für andere Apps ausgestellt hat, werden hier nicht akzeptiert.",
         "subjectClaimHelp": "Leer lassen, sofern Ihr Anbieter nichts anderes vorgibt.",
         "issuer": "Aussteller",
         "jwksUri": "URL für Signaturschlüssel"

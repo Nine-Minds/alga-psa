@@ -20,6 +20,11 @@ export async function resolvePublicBaseUrl(req: NextRequest): Promise<string> {
   return base.replace(/\/$/, '');
 }
 
+// Mirrors @ee/lib/mcp/oauth/tokens. Unreachable in CE (routes gate first).
+export function mcpResource(base: string): string {
+  return `${base.replace(/\/$/, '')}/api/mcp`;
+}
+
 // Mirrors @ee/lib/mcp/adminAuth's McpAdminContext so the route shells type-check
 // identically against either edition's seam entry.
 export interface McpAdminContext {
