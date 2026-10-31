@@ -52,6 +52,7 @@ import {
   getDetailedContractLines,
   updateContractLineRate,
 } from "@alga-psa/billing/actions/contractActions";
+import { updateContractLine } from "@alga-psa/billing/actions/contractLineAction";
 import {
   getContractLineServicesWithConfigurations,
   getTemplateLineServicesWithConfigurations,
@@ -131,6 +132,8 @@ type TemplateContractLine = {
   billing_frequency: string;
   billing_timing: "arrears" | "advance";
   rate?: number | null;
+  invoice_line_description?: string | null;
+  invoice_line_subtitle?: string | null;
   services: TemplateLineService[];
 };
 
@@ -140,6 +143,8 @@ type DetailedContractLineRow = {
   contract_line_type: string;
   billing_frequency: string;
   billing_timing?: "arrears" | "advance";
+  invoice_line_description?: string | null;
+  invoice_line_subtitle?: string | null;
 };
 
 type RawContractSummary = Awaited<ReturnType<typeof getContractSummary>>;
@@ -570,6 +575,8 @@ const ContractTemplateDetail: React.FC = () => {
                 | "arrears"
                 | "advance",
               rate: line.rate ?? null,
+              invoice_line_description: line.invoice_line_description ?? null,
+              invoice_line_subtitle: line.invoice_line_subtitle ?? null,
               services,
             } as TemplateContractLine;
           }),
@@ -2028,6 +2035,7 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
     contractLineId: string,
     rateCents: number,
     billingTiming: "arrears" | "advance",
+    invoiceText?: { invoice_line_description: string | null; invoice_line_subtitle: string | null },
   ) => {
     try {
       const result = await updateContractLineRate(
@@ -2038,6 +2046,13 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
       );
       if (isReturnedActionError(result)) {
         throw new Error(getErrorMessage(result));
+      }
+      if (invoiceText) {
+        // Template-line branch of updateContractLine: text-only patch.
+        const textResult = await updateContractLine(contractLineId, invoiceText);
+        if (isReturnedActionError(textResult)) {
+          throw new Error(getErrorMessage(textResult));
+        }
       }
       setEditingLine(null);
       onServicesChanged();
@@ -2145,7 +2160,10 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
             contract_line_name: editingLine.contract_line_name,
             rate: editingLine.rate ?? undefined,
             billing_timing: editingLine.billing_timing,
+            invoice_line_description: editingLine.invoice_line_description,
+            invoice_line_subtitle: editingLine.invoice_line_subtitle,
           }}
+          showInvoiceText={editingLine.contract_line_type === "Fixed"}
           onClose={() => setEditingLine(null)}
           onSave={handleSaveRate}
         />

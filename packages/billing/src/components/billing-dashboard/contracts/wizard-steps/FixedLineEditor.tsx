@@ -286,6 +286,32 @@ export function FixedLineEditor({ line, index, contract, updateLine, onRemove }:
             })}
           />
         </div>
+        <div className="flex-1 space-y-2">
+          <Label htmlFor={`${idPrefix}-invoice-title`} className="text-sm">
+            {t('wizard.fixedLines.invoiceTitleLabel', { defaultValue: 'Invoice title (optional)' })}
+          </Label>
+          <Input
+            id={`${idPrefix}-invoice-title`}
+            value={line.invoice_line_description ?? ''}
+            onChange={(event) => updateLine({ invoice_line_description: event.target.value })}
+            placeholder={line.contract_line_name?.trim() || t('wizard.fixedLines.invoiceTitlePlaceholder', {
+              defaultValue: 'Defaults to the line name',
+            })}
+          />
+        </div>
+        <div className="flex-1 space-y-2">
+          <Label htmlFor={`${idPrefix}-invoice-subtitle`} className="text-sm">
+            {t('wizard.fixedLines.invoiceSubtitleLabel', { defaultValue: 'Invoice subtitle (optional)' })}
+          </Label>
+          <Input
+            id={`${idPrefix}-invoice-subtitle`}
+            value={line.invoice_line_subtitle ?? ''}
+            onChange={(event) => updateLine({ invoice_line_subtitle: event.target.value })}
+            placeholder={t('wizard.fixedLines.invoiceSubtitlePlaceholder', {
+              defaultValue: 'e.g. Managed endpoint and backup services',
+            })}
+          />
+        </div>
         <Button
           id={`remove-fixed-line-${index}`}
           type="button"

@@ -282,6 +282,10 @@ export interface ContractWizardFixedLine {
   source_contract_line_id?: string;
   contract_line_name?: string;
   description?: string | null;
+  /** Invoice title for the bundle row; blank falls back to the line name. */
+  invoice_line_description?: string | null;
+  /** Muted line under the bundle title on invoices. */
+  invoice_line_subtitle?: string | null;
   location_id?: string | null;
   /** Falls back to the contract billing_frequency. */
   billing_frequency?: string;

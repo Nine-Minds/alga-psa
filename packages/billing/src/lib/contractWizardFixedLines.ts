@@ -22,7 +22,9 @@ export function isBlankFixedLine(line: ContractWizardFixedLine): boolean {
     line.services.length === 0 &&
     !line.base_rate &&
     !(line.contract_line_name ?? '').trim() &&
-    !(line.description ?? '').trim()
+    !(line.description ?? '').trim() &&
+    !(line.invoice_line_description ?? '').trim() &&
+    !(line.invoice_line_subtitle ?? '').trim()
   );
 }
 
@@ -49,6 +51,8 @@ export function projectFixedLinesForSubmission(
     source_contract_line_id: line.source_contract_line_id,
     contract_line_name: line.contract_line_name?.trim() || undefined,
     description: line.description,
+    invoice_line_description: line.invoice_line_description?.trim() || null,
+    invoice_line_subtitle: line.invoice_line_subtitle?.trim() || null,
     location_id: line.location_id,
     billing_frequency: line.billing_frequency,
     billing_timing: line.billing_timing,

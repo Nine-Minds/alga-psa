@@ -29,6 +29,7 @@ import { OPTIONAL_INCLUDED_LABEL, OPTIONAL_PENDING_LABEL, mapDbQuoteToViewModel 
 import { mapDbSalesOrderToViewModel } from '../lib/adapters/salesOrderAdapters';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
+import { templateUsesComponentPricing } from '../lib/invoice-template-ast/componentPricing';
 import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { localizeTemplateAstForLocale, DOCUMENT_LABEL_NAMESPACE } from '../lib/invoice-template-ast/i18nLabels';
 import { cadenceI18nKey } from '../lib/quoteItemCadence';
@@ -858,7 +859,8 @@ export class PDFGenerationService {
       }
 
       const renderLocale = await this.resolveRenderLocale({ invoiceId: options.invoiceId });
-      const enrichedData = await this.enrichWithTenantClient(knex, dbInvoiceData);
+      const pricedInvoiceData = await this.withTemplatePricing(knex, options.invoiceId, dbInvoiceData, templateAst);
+      const enrichedData = await this.enrichWithTenantClient(knex, pricedInvoiceData);
       // The service-period label is built here, in named months, so the mapper
       // needs the recipient's language too.
       const invoiceViewModel = mapDbInvoiceToWasmViewModel(enrichedData, renderLocale);
@@ -982,7 +984,8 @@ export class PDFGenerationService {
         throw new Error(`Template ${templateId} does not have a templateAst payload.`);
       }
 
-      const enrichedData = await this.enrichWithTenantClient(knex, dbInvoiceData);
+      const pricedInvoiceData = await this.withTemplatePricing(knex, invoiceId, dbInvoiceData, templateAst);
+      const enrichedData = await this.enrichWithTenantClient(knex, pricedInvoiceData);
       // Named-month service periods follow the recipient's language.
       const invoiceViewModel = mapDbInvoiceToWasmViewModel(enrichedData, locale);
 
@@ -1057,8 +1060,31 @@ export class PDFGenerationService {
     }
   }
 
-  private async getInvoiceForRendering(knex: Knex | Knex.Transaction, invoiceId: string): Promise<any> {
-    return Invoice.getFullInvoiceById(knex, this.tenant, invoiceId);
+  /**
+   * Bundle component names/quantities always load; component prices load only
+   * when the resolved template binds one (see templateUsesComponentPricing), so
+   * a template that shows quantities only never has prices in its view model.
+   */
+  private async getInvoiceForRendering(
+    knex: Knex | Knex.Transaction,
+    invoiceId: string,
+    templateAst?: TemplateAst | null,
+  ): Promise<any> {
+    return Invoice.getFullInvoiceById(knex, this.tenant, invoiceId, {
+      includeBundlePresentation: true,
+      includeBundleComponentAmounts: templateAst ? templateUsesComponentPricing(templateAst) : false,
+    });
+  }
+
+  private async withTemplatePricing(
+    knex: Knex | Knex.Transaction,
+    invoiceId: string,
+    loaded: any,
+    templateAst: TemplateAst,
+  ): Promise<any> {
+    return templateUsesComponentPricing(templateAst)
+      ? this.getInvoiceForRendering(knex, invoiceId, templateAst)
+      : loaded;
   }
 
   private async getInvoiceTemplates(knex: Knex | Knex.Transaction): Promise<any[]> {

@@ -273,6 +273,8 @@ export const updateContractLine = withAuth(async (
                 if (updateData.contract_line_name !== undefined) templatePatch.template_line_name = updateData.contract_line_name;
                 if (updateData.billing_frequency !== undefined) templatePatch.billing_frequency = updateData.billing_frequency;
                 if (updateData.is_active !== undefined) templatePatch.is_active = updateData.is_active;
+                if (updateData.invoice_line_description !== undefined) templatePatch.invoice_line_description = updateData.invoice_line_description;
+                if (updateData.invoice_line_subtitle !== undefined) templatePatch.invoice_line_subtitle = updateData.invoice_line_subtitle;
                 if (updateData.minimum_billable_time !== undefined) templatePatch.minimum_billable_time = updateData.minimum_billable_time;
                 if (updateData.round_up_to_nearest !== undefined) templatePatch.round_up_to_nearest = updateData.round_up_to_nearest;
                 if (updateData.cadence_owner !== undefined || updateData.billing_timing !== undefined) {
@@ -321,6 +323,23 @@ export const updateContractLine = withAuth(async (
                 throw new Error(`Contract Line with ID ${planId} not found.`);
             }
             await assertContractLineIsAuthorable(trx, tenant, planId);
+
+            // Invoice text is presentation only: it must not re-resolve recurring
+            // policy or rematerialize service periods (the line may already be
+            // invoiced), so a patch of only those fields takes the narrow path.
+            const textOnlyKeys = new Set(['invoice_line_description', 'invoice_line_subtitle']);
+            const patchKeys = Object.keys(updateData).filter((key) => key !== 'tenant' && (updateData as Record<string, unknown>)[key] !== undefined);
+            if (patchKeys.length > 0 && patchKeys.every((key) => textOnlyKeys.has(key))) {
+                const [textUpdated] = await tenantDb(trx, tenant).table('contract_lines')
+                    .where({ contract_line_id: planId })
+                    .update({
+                        ...(updateData.invoice_line_description !== undefined ? { invoice_line_description: updateData.invoice_line_description } : {}),
+                        ...(updateData.invoice_line_subtitle !== undefined ? { invoice_line_subtitle: updateData.invoice_line_subtitle } : {}),
+                        updated_at: trx.fn.now(),
+                    })
+                    .returning('*');
+                return normalizeLiveRecurringStorage(textUpdated);
+            }
 
             // Remove tenant field if present in updateData to prevent override
             const { tenant: _, ...safeUpdateData } = updateData;

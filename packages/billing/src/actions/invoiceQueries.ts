@@ -12,6 +12,7 @@ import {
 import { createTenantKnex } from '@alga-psa/db';
 import { toPlainDate, displayAddressField, displayCountry } from '@alga-psa/core';
 import Invoice from '@alga-psa/billing/models/invoice';
+import { templateUsesComponentPricing, templateHasComponentRows } from '@alga-psa/billing/lib/invoice-template-ast/componentPricing';
 import { getClientContractPurchaseOrderContext, getPurchaseOrderConsumedCents } from '@alga-psa/billing/services/purchaseOrderService';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -801,6 +802,44 @@ export const fetchInvoicesByContract = withAuth(async (
   }
 });
 
+/**
+ * Bundle-component load options for an invoice read.
+ *
+ * Component names/quantities always load. Component *prices* are client-visible
+ * data once serialized to the portal browser, so for client-portal callers they
+ * load only when the invoice's resolved template binds one
+ * (`templateUsesComponentPricing`). MSP users already see every price.
+ */
+async function resolveBundleLoadOptions(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  user: InvoiceQueryUser,
+  invoiceId: string,
+): Promise<{ includeBundlePresentation: boolean; includeBundleComponentAmounts: boolean }> {
+  if (user.user_type !== 'client') {
+    return { includeBundlePresentation: true, includeBundleComponentAmounts: true };
+  }
+  const db = tenantDb(knex, tenant);
+  const invoice = await db.table('invoices').where({ invoice_id: invoiceId }).first('client_id');
+  let templateId: string | null = null;
+  if (invoice?.client_id) {
+    const client = await db.table('clients').where({ client_id: invoice.client_id }).first('invoice_template_id');
+    templateId = client?.invoice_template_id ?? null;
+  }
+  const templates = await Invoice.getAllTemplates(knex, tenant);
+  const template = templateId
+    ? templates.find((entry) => entry.template_id === templateId)
+    : templates.find((entry) => entry.is_default || entry.isTenantDefault) ?? templates[0];
+  const ast = (template?.templateAst ?? null) as Parameters<typeof templateUsesComponentPricing>[0] | null;
+  // Unknown/missing template: fail closed (no prices).
+  // Client payloads carry bundle data only for a template that renders
+  // component rows, and prices only when that template binds one.
+  return {
+    includeBundlePresentation: ast ? templateHasComponentRows(ast) : false,
+    includeBundleComponentAmounts: ast ? templateUsesComponentPricing(ast) : false,
+  };
+}
+
 export const getInvoiceForRendering = withAuth(async (
   user,
   { tenant },
@@ -824,7 +863,12 @@ export const getInvoiceForRendering = withAuth(async (
 
     // Existing-invoice preview refresh and rerender must hydrate through the full
     // detail-aware reader so canonical recurring periods survive after persistence.
-    const invoice = await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
+    const invoice = await Invoice.getFullInvoiceById(
+      knex,
+      tenant,
+      invoiceId,
+      await resolveBundleLoadOptions(knex, tenant, user, invoiceId),
+    );
     return enrichInvoiceWithProjectRenderingData(
       knex,
       tenant,
@@ -855,7 +899,12 @@ export const getEnrichedInvoiceViewModel = withAuth(async (
 
   let loadedInvoice: InvoiceViewModel;
   try {
-    loadedInvoice = await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
+    loadedInvoice = await Invoice.getFullInvoiceById(
+      knex,
+      tenant,
+      invoiceId,
+      await resolveBundleLoadOptions(knex, tenant, user, invoiceId),
+    );
   } catch (error) {
     // A draft can be hard-deleted while its preview request is still in
     // flight. Missing is a normal terminal state for this nullable reader,

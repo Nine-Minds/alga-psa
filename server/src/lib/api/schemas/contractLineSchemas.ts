@@ -40,6 +40,10 @@ const baseContractLineSchema = z.object({
   service_category: z.string().optional(),
   contract_line_type: planTypeSchema,
   cadence_owner: cadenceOwnerSchema.optional(),
+
+  // Invoice text for a Fixed bundle row: title (blank = line name) and a muted subtitle.
+  invoice_line_description: z.string().max(500).nullable().optional(),
+  invoice_line_subtitle: z.string().max(500).nullable().optional(),
   
   // Hourly plan specific fields (deprecated for Hourly type)
   hourly_rate: z.number().min(0).optional(),
@@ -86,6 +90,8 @@ export const contractLineResponseSchema = z.object({
   service_category: z.string().nullable(),
   contract_line_type: planTypeSchema,
   cadence_owner: cadenceOwnerSchema,
+  invoice_line_description: z.string().nullable().optional(),
+  invoice_line_subtitle: z.string().nullable().optional(),
   hourly_rate: z.number().nullable(),
   minimum_billable_time: z.number().nullable(),
   round_up_to_nearest: z.number().nullable(),

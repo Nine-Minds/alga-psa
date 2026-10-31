@@ -21,7 +21,13 @@ interface ContractLineEditDialogProps {
     /** Stored in cents. */
     custom_rate?: number | null;
     billing_timing?: 'arrears' | 'advance';
+    /** Bundle title on invoices (Fixed lines); blank falls back to the line name. */
+    invoice_line_description?: string | null;
+    /** Muted second line under the bundle title (Fixed lines). */
+    invoice_line_subtitle?: string | null;
   };
+  /** Show the Invoice text group (Fixed lines only). */
+  showInvoiceText?: boolean;
   /**
    * Currency of the contract being edited. Omit (null) for a contract template,
    * which is currency-neutral: no symbol is shown and the rate is scaled by the
@@ -29,10 +35,15 @@ interface ContractLineEditDialogProps {
    */
   currencyCode?: string | null;
   onClose: () => void;
-  onSave: (contractLineId: string, rateCents: number, billingTiming: 'arrears' | 'advance') => Promise<void>;
+  onSave: (
+    contractLineId: string,
+    rateCents: number,
+    billingTiming: 'arrears' | 'advance',
+    invoiceText?: { invoice_line_description: string | null; invoice_line_subtitle: string | null },
+  ) => Promise<void>;
 }
 
-export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: ContractLineEditDialogProps) {
+export function ContractLineEditDialog({ line, currencyCode, showInvoiceText, onClose, onSave }: ContractLineEditDialogProps) {
   const { t } = useTranslation('msp/contracts');
   const initialRateCents =
     line.rate !== undefined && line.rate !== null
@@ -52,6 +63,8 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
   const [billingTiming, setBillingTiming] = useState<'arrears' | 'advance'>(
     line.billing_timing || 'arrears'
   );
+  const [invoiceTitle, setInvoiceTitle] = useState(line.invoice_line_description ?? '');
+  const [invoiceSubtitle, setInvoiceSubtitle] = useState(line.invoice_line_subtitle ?? '');
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -72,7 +85,17 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
 
     setIsSaving(true);
     try {
-      await onSave(line.contract_line_id, rateCents, billingTiming);
+      await onSave(
+        line.contract_line_id,
+        rateCents,
+        billingTiming,
+        showInvoiceText
+          ? {
+              invoice_line_description: invoiceTitle.trim() || null,
+              invoice_line_subtitle: invoiceSubtitle.trim() || null,
+            }
+          : undefined,
+      );
     } catch (err) {
       console.error('Failed to save contract line:', err);
       setError(err instanceof Error
@@ -210,6 +233,35 @@ export function ContractLineEditDialog({ line, currencyCode, onClose, onSave }: 
               </p>
             </div>
           </div>
+
+          {showInvoiceText && (
+            <div className="space-y-4 border-t pt-4">
+              <h4 className="font-medium text-sm">
+                {t('contractLineEdit.sections.invoiceText', { defaultValue: 'Invoice text' })}
+              </h4>
+              <div>
+                <Label htmlFor="contract-line-invoice-title">
+                  {t('contractLineEdit.fields.invoiceTitle', { defaultValue: 'Title' })}
+                </Label>
+                <Input
+                  id="contract-line-invoice-title"
+                  value={invoiceTitle}
+                  onChange={(e) => setInvoiceTitle(e.target.value)}
+                  placeholder={line.contract_line_name ?? ''}
+                />
+              </div>
+              <div>
+                <Label htmlFor="contract-line-invoice-subtitle">
+                  {t('contractLineEdit.fields.invoiceSubtitle', { defaultValue: 'Subtitle' })}
+                </Label>
+                <Input
+                  id="contract-line-invoice-subtitle"
+                  value={invoiceSubtitle}
+                  onChange={(e) => setInvoiceSubtitle(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
 
         </form>
       </DialogContent>

@@ -97,6 +97,10 @@ interface DetailedContractLineMapping {
   minimum_billable_time?: number | null;
   round_up_to_nearest?: number | null;
   location_id?: string | null;
+  /** Bundle title on invoices; blank falls back to the line name. */
+  invoice_line_description?: string | null;
+  /** Muted second line under the bundle title. */
+  invoice_line_subtitle?: string | null;
   /** Step 2 of the charge-attribution chain; overrides the contract's profile. */
   billing_profile_id?: string | null;
 }
@@ -699,6 +703,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         minimum_billable_time: line.minimum_billable_time,
         round_up_to_nearest: line.round_up_to_nearest,
         location_id: line.location_id ?? defaultLocationId ?? null,
+        invoice_line_description: line.invoice_line_description ?? '',
+        invoice_line_subtitle: line.invoice_line_subtitle ?? '',
       });
       initializeServiceConfigEdits(
         effectiveServices,
@@ -825,7 +831,15 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     try {
       // Persist recurring authoring fields in one mutation so service periods
       // are rematerialized once from the final contract-line state.
-      const updateResult = pricingOnly ? true : await updateContractLine(contractLineId, {
+      // Invoice text is presentation only, so it saves even on a contract that
+      // already has invoices (pricingOnly). Invoiced documents keep their
+      // generation-time snapshot; only future invoices pick the text up.
+      const invoiceText = {
+        invoice_line_description: editLineData.invoice_line_description?.trim() || null,
+        invoice_line_subtitle: editLineData.invoice_line_subtitle?.trim() || null,
+      };
+      const updateResult = pricingOnly ? await updateContractLine(contractLineId, invoiceText) : await updateContractLine(contractLineId, {
+        ...invoiceText,
         billing_timing: editLineData.billing_timing,
         cadence_owner: editLineData.cadence_owner,
         minimum_billable_time: editLineData.minimum_billable_time,
@@ -1517,6 +1531,54 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                             ?? locationsById[line.location_id].address_line1
                                             ?? t('contractLines.location.fallback', { defaultValue: 'Location' }))
                                         : t('contractLines.location.none', { defaultValue: 'No location assigned' })}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Invoice text: the bundle row's title and subtitle on the
+                                invoice. Fixed lines only; presentation, not billing data. */}
+                            {line.contract_line_type === 'Fixed' && (
+                              <div className="grid gap-4 md:grid-cols-2" id={`invoice-text-${line.contract_line_id}`}>
+                                <div>
+                                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                    {t('contractLines.invoiceText.titleLabel', { defaultValue: 'Invoice title' })}
+                                  </Label>
+                                  {editingLineId === line.contract_line_id ? (
+                                    <Input
+                                      id={`invoice-title-${line.contract_line_id}`}
+                                      value={editLineData.invoice_line_description ?? ''}
+                                      onChange={(e) => setEditLineData({
+                                        ...editLineData,
+                                        invoice_line_description: e.target.value,
+                                      })}
+                                      placeholder={line.contract_line_name}
+                                      className="mt-1"
+                                    />
+                                  ) : (
+                                    <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
+                                      {line.invoice_line_description || line.contract_line_name}
+                                    </p>
+                                  )}
+                                </div>
+                                <div>
+                                  <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                    {t('contractLines.invoiceText.subtitleLabel', { defaultValue: 'Invoice subtitle' })}
+                                  </Label>
+                                  {editingLineId === line.contract_line_id ? (
+                                    <Input
+                                      id={`invoice-subtitle-${line.contract_line_id}`}
+                                      value={editLineData.invoice_line_subtitle ?? ''}
+                                      onChange={(e) => setEditLineData({
+                                        ...editLineData,
+                                        invoice_line_subtitle: e.target.value,
+                                      })}
+                                      className="mt-1"
+                                    />
+                                  ) : (
+                                    <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
+                                      {line.invoice_line_subtitle || '—'}
                                     </p>
                                   )}
                                 </div>
