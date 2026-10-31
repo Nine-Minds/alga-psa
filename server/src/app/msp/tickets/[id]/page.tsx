@@ -236,6 +236,10 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
     
     // A co_managed workspace's own tickets get the audience-aware conversation; the check is
     // one cheap lookup that is false for every other tenant, which renders exactly as before.
+    // An ended or lapsed workspace is read-only: the provider sets `screen.readOnly`, which freezes
+    // every field and removes the pure-write actions (delete, duplicate, workflow, create-task).
+    // Other entry points to the ticket detail (client/contact drawers) do not pass through here;
+    // the write choke point still refuses writes there.
     const { knex: workspaceKnex } = await createTenantKnex(user.tenant);
     const coManaged = await isCoManagedWorkspace(workspaceKnex, user.tenant);
     const workspaceReadOnly = coManaged ? await getWorkspaceReadOnly() : false;

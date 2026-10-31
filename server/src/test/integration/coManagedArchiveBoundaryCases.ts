@@ -66,8 +66,7 @@ export async function seedBoundaryFixture(db: Knex): Promise<BoundaryFixture> {
     row('customerPrivateAsPrivateConversation', 'private_conversation', { audience: 'internal', markdown: 'CUSTOMER-AS-PRIVATE-CONVERSATION SECRET' }, past),
     row('afterCutoff', 'conversation', { audience: 'shared_it', markdown: 'POST-CUTOFF SECRET' }, future),
     row('audit', 'work_audit', { changes: { task_name: 'renamed' } }, past),
-    // `time_entry` rows cannot be stored yet (the source_type CHECK predates them); an unknown class
-    // stands in to prove the allowlist excludes by default.
+    // No `time_entry` class: nothing produces time evidence and the source_type CHECK rejects it (split out, see plan).
   ];
   const evidence = {} as BoundaryFixture['evidence'];
   for (const r of rows) { await db('co_managed_participation_evidence').insert(r.record); (evidence as any)[r.name] = r.evidenceId; }

@@ -64,10 +64,9 @@ describe('archive allowlist classification, per row class', () => {
     expect(classifyArchiveCandidate({ ...at(before), source_type: 'work_audit', payload: {} }, cutoff)).toEqual({ include: true });
   });
 
-  it('keeps a time entry (retained class) and excludes it after the cutoff', () => {
-    expect(ARCHIVE_EVIDENCE_CLASSES).toContain('time_entry');
-    expect(classifyArchiveCandidate({ ...at(before), source_type: 'time_entry', payload: {} }, cutoff)).toEqual({ include: true });
-    expect(classifyArchiveCandidate({ ...at(after), source_type: 'time_entry', payload: {} }, cutoff)).toEqual({ include: false, reason: 'after_cutoff' });
+  it('the allowlist holds only classes the evidence store accepts; a time entry is not one (excluded by default)', () => {
+    expect([...ARCHIVE_EVIDENCE_CLASSES].sort()).toEqual(['conversation', 'private_conversation', 'ticket_handoff', 'work_audit', 'work_snapshot']);
+    expect(classifyArchiveCandidate({ ...at(before), source_type: 'time_entry', payload: {} }, cutoff)).toEqual({ include: false, reason: 'class_not_allowlisted' });
   });
 
   it('a customer-private row under either MSP-private label is never archivable (absent cases)', () => {

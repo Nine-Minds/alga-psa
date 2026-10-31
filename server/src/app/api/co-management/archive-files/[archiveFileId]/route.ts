@@ -10,8 +10,9 @@ export const dynamic = 'force-dynamic';
 /**
  * Bytes of one archived file. Session-authenticated and 404 by default: every refusal (no session,
  * capability closed, id not named by this workspace's sealed manifest, no registered file source)
- * is the same 404, so the route discloses nothing about which condition failed. It streams from the
- * L4a stager rows' storage; no blob is copied.
+ * is the same 404, so the route discloses nothing about which condition failed. File content is empty
+ * until a retained-file source registers (none does in production yet; L4a/L5 own that), so every
+ * request currently 404s. No blob is copied.
  *
  * NOTE: the middleware owned by L0a must declare this path as a session-authenticated API route
  * (`/api/co-management/archive-files/*`); until it does, the middleware answers before this handler.

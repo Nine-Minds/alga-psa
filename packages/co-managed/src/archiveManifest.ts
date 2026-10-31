@@ -13,7 +13,7 @@ import { isCoManagedUuid, CoManagedSharedWorkError } from './sharedWorkIdentity'
  * evidence ids are included (the allowlist later reads page over) and, per class, how many rows
  * were excluded and why, so over-sharing and under-sharing are both reviewable after the fact.
  */
-export const ARCHIVE_EVIDENCE_CLASSES = ['conversation', 'ticket_handoff', 'work_audit', 'work_snapshot', 'time_entry', 'private_conversation'] as const;
+export const ARCHIVE_EVIDENCE_CLASSES = ['conversation', 'ticket_handoff', 'work_audit', 'work_snapshot', 'private_conversation'] as const;
 export type CoManagedArchiveEvidenceClass = typeof ARCHIVE_EVIDENCE_CLASSES[number];
 
 /** Every audience any archived class may carry. `internal` (customer-private) and anything unrecognised is excluded. */
@@ -62,7 +62,11 @@ export function classifyArchiveCandidate(row: CoManagedArchiveCandidate, cutoffA
   return { include: true };
 }
 
-/** A source of retained archive files (L4a registers one). The seal only needs identity, hash and size. */
+/**
+ * A source of retained archive files. This is the documented extension point for a future retained-file
+ * store (L4a / L5); NOTHING registers one in production today, so `manifest.files` is always empty and the
+ * bytes route has nothing to serve. Do not list a class here that `co_managed_participation_evidence.source_type`
+ * does not accept. The seal only needs identity, hash and size. */
 export interface CoManagedArchiveFileSource {
   name: string;
   list(trx: Knex.Transaction, key: { sponsorTenant: string; customerTenant: string; relationshipId: string }): Promise<Array<{ id: string; hash: string; size: number }>>;
