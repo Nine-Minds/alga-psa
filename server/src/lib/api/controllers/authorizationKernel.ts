@@ -95,12 +95,13 @@ export function buildAuthorizationPrincipalSubject(
   return subject;
 }
 
-export async function authorizeApiResourceRead(input: {
-  knex: Knex;
+export async function authorizeApiResourceAction(input: {
+  knex: Knex | Knex.Transaction;
   tenant: string;
   user: any;
   apiKeyId?: string;
   resource: string;
+  action: string;
   recordContext: AuthorizationRecord;
 }): Promise<boolean> {
   const kernel = await getAuthorizationKernel();
@@ -110,9 +111,20 @@ export async function authorizeApiResourceRead(input: {
   const decision = await kernel.authorizeResource({
     knex: input.knex as any,
     subject,
-    resource: { type: input.resource, action: 'read' },
+    resource: { type: input.resource, action: input.action },
     record: input.recordContext,
   });
 
   return decision.allowed;
+}
+
+export async function authorizeApiResourceRead(input: {
+  knex: Knex;
+  tenant: string;
+  user: any;
+  apiKeyId?: string;
+  resource: string;
+  recordContext: AuthorizationRecord;
+}): Promise<boolean> {
+  return authorizeApiResourceAction({ ...input, action: 'read' });
 }
