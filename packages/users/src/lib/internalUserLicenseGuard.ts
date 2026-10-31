@@ -1,10 +1,11 @@
 import { tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import { assertCoManagedSeatAdmission } from '@alga-psa/licensing';
 
 export type InternalUserLicenseLimitCode = 'SOLO_PLAN_LIMIT' | 'LICENSE_LIMIT_REACHED';
 
 export type InternalUserLicenseLimitResult =
-  | { ok: true; coManaged?: boolean }
+  | { ok: true; coManaged?: boolean; invitation?: { invitation_id: string; role_id: string; email: string } }
   | { ok: false; code: InternalUserLicenseLimitCode; error: string };
 
 // ee/server typechecks this package's sources with strictNullChecks off, where
@@ -55,7 +56,12 @@ export async function countPendingInvitationSeats(
 export async function checkInternalUserLicenseLimit(
   trx: Knex.Transaction | Knex,
   tenant: string,
-  options?: { reservedSeats?: number; deferCoManaged?: boolean }
+  options?: {
+    reservedSeats?: number;
+    /** Advisory pre-checks only (invite-send): report `coManaged` instead of
+     * applying the static count. Admission itself goes through admitInternalUserSeat. */
+    deferCoManaged?: boolean;
+  }
 ): Promise<InternalUserLicenseLimitResult> {
   const tenantRow = await tenantDb(trx, tenant).table('tenants')
     .first('licensed_user_count', 'plan', 'product_code');
@@ -112,4 +118,39 @@ export async function checkInternalUserLicenseLimit(
   }
 
   return { ok: true };
+}
+
+/**
+ * The one admission primitive for activating an internal (licensed) user seat:
+ * direct creation, API creation, invitation acceptance and reactivation all go
+ * through it, inside the same transaction as the user insert/update.
+ *
+ * A co-managed customer tenant is admitted by its sponsor-backed allocation
+ * (`assertCoManagedSeatAdmission`) alone: that result is final and the static
+ * `licensed_user_count` check is skipped, because the count is a one-time copy
+ * of the allocation that goes stale once the sponsor's entitlement changes.
+ * Every other tenant falls through to the ordinary / solo / appliance limit.
+ *
+ * Co-managed refusals throw `CoManagedAdmissionError` (rolling the caller's
+ * transaction back); limit refusals are returned as `{ ok: false }`. The row
+ * locks taken by the co-managed gate are held until `trx` ends, so the caller
+ * must write the user row and roles in the same `trx`.
+ */
+export async function admitInternalUserSeat(
+  trx: Knex.Transaction,
+  tenant: string,
+  options: {
+    email?: string;
+    kind?: 'user' | 'invitation';
+    existingUserId?: string;
+    invitationToken?: string;
+    reservedSeats?: number;
+  } = {}
+): Promise<InternalUserLicenseLimitResult> {
+  const { reservedSeats, ...coManagedInput } = options;
+  const admission = await assertCoManagedSeatAdmission(trx, tenant, coManagedInput);
+  if (admission.managed) {
+    return { ok: true, coManaged: true, ...(admission.invitation ? { invitation: admission.invitation } : {}) };
+  }
+  return checkInternalUserLicenseLimit(trx, tenant, { reservedSeats });
 }

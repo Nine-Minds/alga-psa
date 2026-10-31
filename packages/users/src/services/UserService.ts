@@ -40,8 +40,8 @@ import User from '@alga-psa/db/models/user';
 import Team from '@alga-psa/teams/models/team';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { logger } from '@alga-psa/core';
-import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../lib/internalUserLicenseGuard';
-import { assertCoManagedSeatAdmission } from '@alga-psa/licensing';
+import { admitInternalUserSeat, isInternalUserLicenseLimitRejected } from '../lib/internalUserLicenseGuard';
+import type { InternalUserLicenseLimitResult } from '../lib/internalUserLicenseGuard';
 import { sanitizeUserForResponse, USER_RESPONSE_COLUMNS, USER_RESPONSE_FIELD_NAMES } from './userResponseSanitizer';
 
 // Stubs for missing imports that are still in server
@@ -250,24 +250,35 @@ export class UserService extends BaseService<IUser> {
     
     const { knex } = await this.getKnex();
 
-    return withTransaction(knex, trx => this.createUsingTransaction(data, context, trx));
+    return withTransaction(knex, async trx => (await this.createUsingTransaction(data, context, trx)).user);
   }
 
-  /** Invitation signup retains the seat lock through account, roles and token consumption. */
-  async createFromCoManagedInvitation(data: any, context: ServiceContext, trx: Knex.Transaction, token: string): Promise<IUser> {
+  /**
+   * Invitation signup: admission, account, roles and (for co-managed tenants)
+   * token consumption share `trx`, so the seat lock is held through all of them.
+   * `coManaged` tells the caller whether the token was consumed here or still
+   * needs marking used.
+   */
+  async createFromInvitation(data: any, context: ServiceContext, trx: Knex.Transaction, token: string): Promise<{ user: IUser; coManaged: boolean }> {
     await this.ensurePermission(context, 'user', 'create');
-    const admission = await assertCoManagedSeatAdmission(trx, context.tenant, { email: data.email, invitationToken: token, kind: 'user' });
-    if (!admission.managed || !admission.invitation || admission.invitation.role_id !== data.role_ids?.[0]) {
-      throw new Error('Invalid or changed invitation');
+    const { user, admission } = await this.createUsingTransaction(data, context, trx, { invitationToken: token });
+    if (admission?.coManaged) {
+      if (!admission.invitation || admission.invitation.role_id !== data.role_ids?.[0]) {
+        throw new Error('Invalid or changed invitation');
+      }
+      const updated = await tenantDb(trx, context.tenant).table('user_invitations')
+        .where({ invitation_id: admission.invitation.invitation_id, token, used_at: null }).update({ used_at: trx.fn.now() });
+      if (updated !== 1) throw new Error('Invitation already consumed');
     }
-    const user = await this.createUsingTransaction(data, context, trx, true);
-    const updated = await tenantDb(trx, context.tenant).table('user_invitations')
-      .where({ invitation_id: admission.invitation.invitation_id, token, used_at: null }).update({ used_at: trx.fn.now() });
-    if (updated !== 1) throw new Error('Invitation already consumed');
-    return user;
+    return { user, coManaged: admission?.coManaged === true };
   }
 
-  private async createUsingTransaction(data: any, context: ServiceContext, trx: Knex.Transaction, coManagedAdmitted = false): Promise<IUser> {
+  private async createUsingTransaction(
+    data: any,
+    context: ServiceContext,
+    trx: Knex.Transaction,
+    admissionOptions: { invitationToken?: string } = {}
+  ): Promise<{ user: IUser; admission: InternalUserLicenseLimitResult | null }> {
       const knex = trx;
       // Only interactive person types can be created here; 'internal' is the
       // default when no type is supplied. Anything else (including 'service')
@@ -278,11 +289,12 @@ export class UserService extends BaseService<IUser> {
       }
       const targetUserType: 'internal' | 'client' = requestedUserType;
 
-      // Seat check for licensed (internal) users, in the same transaction as the insert.
-      if (isLicensedUserType(targetUserType) && !coManagedAdmitted) {
-        const licenseCheck = await checkInternalUserLicenseLimit(trx, context.tenant);
-        if (isInternalUserLicenseLimitRejected(licenseCheck)) {
-          throw new LicenseLimitError(licenseCheck.error, licenseCheck.code);
+      // Seat admission for licensed (internal) users, in the same transaction as the insert.
+      let admission: InternalUserLicenseLimitResult | null = null;
+      if (isLicensedUserType(targetUserType)) {
+        admission = await admitInternalUserSeat(trx, context.tenant, { email: data.email, kind: 'user', ...admissionOptions });
+        if (isInternalUserLicenseLimitRejected(admission)) {
+          throw new LicenseLimitError(admission.error, admission.code);
         }
       }
 
@@ -372,7 +384,7 @@ export class UserService extends BaseService<IUser> {
         includeHateoas: true
       }, trx);
 
-      return enhancedUser as unknown as IUser;
+      return { user: enhancedUser as unknown as IUser, admission };
   }
 
   /**

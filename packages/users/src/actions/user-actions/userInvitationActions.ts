@@ -60,6 +60,14 @@ function normalizeSendUserInvitationError(
   if (error instanceof UserInvitationError) {
     return { message: error.message.trim() || undefined, errorCode: error.errorCode };
   }
+  // Seat-limit refusal from UserService.createFromInvitation (same codes the
+  // invite-send limit check reports).
+  if (error instanceof Error && error.name === 'LicenseLimitError') {
+    const code = (error as Error & { code?: unknown }).code;
+    if (code === 'SOLO_PLAN_LIMIT' || code === 'LICENSE_LIMIT_REACHED') {
+      return { message: error.message, errorCode: code };
+    }
+  }
 
   if (error instanceof Error) {
     const message = error.message.trim();
@@ -137,6 +145,11 @@ export const sendUserInvitation = withAuth(async (
     // resend never blocks itself.
     const reservedSeats = await countPendingInvitationSeats(knex, tenant, { excludeEmail: normalizedEmail });
 
+    //
+    // Deliberately not admitInternalUserSeat: this is an advisory pre-check on a
+    // plain connection (before the email-config check), and it must learn whether
+    // the tenant is co-managed to gate the capability. The authoritative
+    // co-managed admission for an invite runs in the send transaction below.
     const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant, { reservedSeats, deferCoManaged: true });
     if (isInternalUserLicenseLimitRejected(licenseCheck)) {
       return { success: false, error: licenseCheck.error, errorCode: licenseCheck.code };
@@ -312,15 +325,12 @@ export async function completeUserInvitationSetup(
         return { success: false, error: 'A user account already exists for this email address', errorCode: 'CREATE_USER_FAILED' } as const;
       }
 
-      // Re-check the seat limit here, not just at invite time: this is where
-      // the account row actually gets created (via runAsSystem, bypassing the
+      // The seat is re-admitted here, not just at invite time: this is where the
+      // account row actually gets created (via runAsSystem, bypassing the
       // permission-gated path addUser uses), and seats can have filled up
-      // between the invite being sent and this acceptance.
-      const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant, { deferCoManaged: true });
-      if (isInternalUserLicenseLimitRejected(licenseCheck)) {
-        return { success: false, error: licenseCheck.error, errorCode: licenseCheck.code } as const;
-      }
-      if (licenseCheck.coManaged && !await isCoManagedInvitationServed(tenant)) {
+      // between the invite being sent and this acceptance. Admission runs
+      // inside UserService.createFromInvitation, in the insert transaction.
+      if ((await scopedDb.table('tenants').first('product_code'))?.product_code === 'co_managed' && !await isCoManagedInvitationServed(tenant)) {
         return { success: false, error: 'This feature is not available.', errorCode: 'CAPABILITY_UNAVAILABLE' } as const;
       }
 
@@ -340,9 +350,9 @@ export async function completeUserInvitationSetup(
         } as const;
       }
 
-      let newUser;
+      let created;
       try {
-        newUser = await runAsSystem('user-invitation-account-creation', async () => {
+        created = await runAsSystem('user-invitation-account-creation', async () => {
           // Deferred: loading UserService (and its @alga-psa/db BaseService
           // base class) eagerly would pull it into every consumer of this
           // barrel-exported action file, e.g. read-only routes that only
@@ -365,15 +375,14 @@ export async function completeUserInvitationSetup(
             // account and its role land (or fail) together.
             role_ids: [invitationRole.role_id]
           };
-          const user = licenseCheck.coManaged
-            ? await knex.transaction(trx => userService.createFromCoManagedInvitation(userData, systemContext, trx, token))
-            : await userService.create(userData, systemContext);
+          const { user, coManaged } = await knex.transaction(trx =>
+            userService.createFromInvitation(userData, systemContext, trx, token));
 
           if (!user || !user.user_id) {
             throw new UserInvitationError('Team member account could not be created. Please try again.', 'CREATE_USER_FAILED');
           }
 
-          return user;
+          return { user, coManaged };
         });
       } catch (error) {
         console.error('Error creating team member account:', error);
@@ -384,7 +393,7 @@ export async function completeUserInvitationSetup(
       try {
         const UserPreferences = await import('@alga-psa/db').then(m => m.UserPreferences);
         await UserPreferences.upsert(knex, {
-          user_id: newUser.user_id,
+          user_id: created.user.user_id,
           setting_name: 'has_reset_password',
           setting_value: true,
           updated_at: new Date()
@@ -393,7 +402,7 @@ export async function completeUserInvitationSetup(
         console.warn('Failed to set password reset preference:', prefError);
       }
 
-      if (!licenseCheck.coManaged) {
+      if (!created.coManaged) {
         const tokenMarked = await UserInvitationService.markTokenAsUsed(token);
         if (!tokenMarked) console.warn('Failed to mark team invitation token as used');
       }
@@ -402,7 +411,7 @@ export async function completeUserInvitationSetup(
 
       return {
         success: true,
-        userId: newUser.user_id,
+        userId: created.user.user_id,
         username: invitee.email,
         message: 'Account created successfully'
       } as const;

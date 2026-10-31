@@ -26,7 +26,8 @@ import { hasPermission, throwPermissionError } from '@alga-psa/user-composition/
 import { getUserRoles } from '@alga-psa/user-composition/actions/userQueryActions';
 import logger from '@alga-psa/core/logger';
 import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
-import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
+import { CoManagedAdmissionError } from '@alga-psa/licensing';
+import { admitInternalUserSeat, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import type { ActionResultMessageKey } from '@alga-psa/ui/lib/errorHandling';
 import { publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -64,6 +65,7 @@ export type AddUserErrorCode =
   | 'EMAIL_ALREADY_EXISTS'
   | 'LICENSE_LIMIT_REACHED'
   | 'SOLO_PLAN_LIMIT'
+  | CoManagedAdmissionError['code']
   | 'PERMISSION_DENIED'
   | 'USER_CREATE_FAILED';
 
@@ -80,6 +82,7 @@ export type UpdateUserErrorCode =
   | 'INVALID_ACTIVE_STATE'
   | 'LICENSE_LIMIT_REACHED'
   | 'SOLO_PLAN_LIMIT'
+  | CoManagedAdmissionError['code']
   | 'PERMISSION_DENIED'
   | 'USER_UPDATE_FAILED';
 
@@ -593,61 +596,13 @@ export const addUser = withAuth(async (
         };
       }
 
-      // Check license limits for  MSP (internal) users
+      // Admit the seat for MSP (internal) users: co-managed allocation gate or
+      // the ordinary/solo/appliance limit, in the same transaction as the insert.
       if (isLicensedUserType(newUserType)) {
-        const tenantRow = await tenantDb(trx, tenant).table('tenants')
-          .first('licensed_user_count', 'plan');
-
-        if (!tenantRow) {
-          throw new Error(`Tenant not found: ${tenant}`);
+        const admission = await admitInternalUserSeat(trx, tenant, { email: userData.email, kind: 'user' });
+        if (isInternalUserLicenseLimitRejected(admission)) {
+          return { success: false, code: admission.code, error: admission.error };
         }
-
-        const usedResult = await tenantDb(trx, tenant).table('users')
-          .where({
-            user_type: 'internal',
-            is_inactive: false,
-          })
-          .count('* as count');
-
-        const used = parseInt((usedResult as Array<{ count: string }>)[0].count, 10);
-        const limit = tenantRow.licensed_user_count as number | null;
-        const plan = tenantRow.plan as string | null | undefined;
-
-        if (plan === 'solo' && used >= 1) {
-          return {
-            success: false,
-            code: 'SOLO_PLAN_LIMIT',
-            error: 'Solo plan is limited to 1 user. Upgrade to Pro to add more users.',
-          };
-        }
-
-        if (limit !== null && used >= limit) {
-          return {
-            success: false,
-            code: 'LICENSE_LIMIT_REACHED',
-            error: "You've reached your MSP user license limit.",
-          };
-        }
-
-        // Appliance license seat limit — Enterprise Edition only. Resolves to a
-        // no-op stub on CE (`@enterprise` → packages/ee/src), so no appliance
-        // licensing concept ships in or runs on Community Edition.
-        const seatLimit = await (async () => {
-          try {
-            const { checkApplianceLicenseSeatLimit } = await import('@enterprise/lib/license/userSeatGuard');
-            return await checkApplianceLicenseSeatLimit(used, tenant);
-          } catch {
-            return null;
-          }
-        })();
-        if (seatLimit) {
-          return {
-            success: false,
-            code: 'LICENSE_LIMIT_REACHED',
-            error: `You've reached the seat limit (${seatLimit.seats}) of your Alga appliance license. Add seats at nineminds.com/portal, then use "Refresh license now" on the License page.`,
-          };
-        }
-
       }
 
       const [newUser] = await tenantDb(trx, tenant).table('users')
@@ -705,6 +660,9 @@ export const addUser = withAuth(async (
     return result;
   } catch (error: unknown) {
     logger.error('Error adding user:', error);
+    if (error instanceof CoManagedAdmissionError) {
+      return { success: false, code: error.code, error: error.message };
+    }
     const message = getErrorMessage(error);
     if (message.startsWith('Permission denied:')) {
       return { success: false, code: 'PERMISSION_DENIED', error: message };
@@ -1203,7 +1161,11 @@ export const updateUser = withAuth(async (
         && existing.is_inactive === true
         && userData.is_inactive === false
       ) {
-        const licenseCheck = await checkInternalUserLicenseLimit(trx, tenant);
+        const licenseCheck = await admitInternalUserSeat(trx, tenant, {
+          email: existing.email,
+          kind: 'user',
+          existingUserId: userId,
+        });
         if (isInternalUserLicenseLimitRejected(licenseCheck)) {
           return { success: false, code: licenseCheck.code, error: licenseCheck.error };
         }
@@ -1238,6 +1200,9 @@ export const updateUser = withAuth(async (
     return result;
   } catch (error) {
     logger.error(`Failed to update user with id ${userId}:`, error);
+    if (error instanceof CoManagedAdmissionError) {
+      return { success: false, code: error.code, error: error.message };
+    }
     const message = getErrorMessage(error);
     if (message.startsWith('Permission denied:')) {
       return { success: false, code: 'PERMISSION_DENIED', error: message };
