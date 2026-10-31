@@ -12,13 +12,18 @@ concurrency:
   group: fresh-install-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-permissions:
-  contents: read
+# No workflow-level default on purpose. When called, a job that declares no
+# `permissions:` inherits its caller's grant, which is how build-images holds
+# `packages: write` for the trusted caller and only `packages: read` for the
+# pull-request caller (a called job may not ask for more than its caller
+# grants, or the run fails at startup). Every other job declares its own.
 
 jobs:
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     outputs:
       run_tests: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.should_run == 'true' }}
       image_transport: ${{ steps.transport.outputs.image_transport }}
@@ -49,16 +54,20 @@ jobs:
       # tar export, gzip, artifact upload, download and `docker load` (14 of the
       # enterprise browser job's 44 minutes in run 40790512018). GitHub issues a
       # read-only token to pull requests from forks and to Dependabot, so those
-      # runs keep the gzip archive artifacts. Both transports produce the same
+      # runs keep the gzip archive artifacts. Pull requests do too, whoever
+      # opens them: a registry push under a pull request's own code could plant
+      # an image that a trusted consumer later resolves, and the token that
+      # allows the push is the thing to withhold (see
+      # docs/plans/2026-10-31-trusted-tree-image-promotion.md). Both transports produce the same
       # build records, receipts and browser artifact manifest.
       - name: Select the candidate image transport
         id: transport
         env:
-          SAME_REPOSITORY: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
           ACTOR: ${{ github.actor }}
         run: |
           transport=artifact
-          if [ "$SAME_REPOSITORY" = true ] && [ "$ACTOR" != 'dependabot[bot]' ]; then transport=registry; fi
+          if [ "$EVENT_NAME" != pull_request ] && [ "$ACTOR" != 'dependabot[bot]' ]; then transport=registry; fi
           {
             echo "image_transport=$transport"
             # Registry repository names are lowercase; the repository slug may not be.
@@ -74,6 +83,8 @@ jobs:
     if: needs.changes.outputs.run_tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -107,9 +118,9 @@ jobs:
     # so both sides must run the same Docker. See production-browser below.
     runs-on: ubuntu-24.04
     timeout-minutes: 60
-    permissions:
-      contents: read
-      packages: write
+    # No `permissions:` here: inherited from the caller (see the top of the
+    # file). Pull requests get a read-only package token, so this job cannot
+    # push anything from a pull request. It never holds `id-token`.
     env:
       IMAGE_TRANSPORT: ${{ needs.changes.outputs.image_transport }}
       REGISTRY_REFERENCE: ${{ needs.changes.outputs.registry_namespace }}/e2e-${{ matrix.service }}
@@ -177,12 +188,10 @@ jobs:
       - uses: actions/checkout@v4
 
       # The tree hash names the source irrespective of the commit that carries
-      # it: a pull request's merge commit and the squash commit that lands it
-      # on main have different SHAs and the same tree whenever main did not
-      # move in between. Every candidate is labelled with it, and the server
-      # candidates are also tagged with it, so the Argo deployment build can
-      # recognise an image CI already built from exactly this source and copy
-      # it instead of compiling again.
+      # it. Every candidate is labelled with it. This job never writes a
+      # `tree-` tag: only the promotion job in production-regression.yml, on a
+      # push to main, does, after re-checking this label against its own
+      # checkout.
       - name: Resolve the source tree
         id: tree
         run: echo "tree=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
@@ -355,17 +364,6 @@ jobs:
           # the builder's own copy: the record proves the push landed.
           docker buildx imagetools inspect "$BUILD_REGISTRY_REFERENCE@$BUILD_REPORTED_DIGEST" --raw > "$BUILD_MANIFEST"
           node scripts/record-docker-registry-build.mjs "$BUILD_MANIFEST" "$BUILD_RECORD"
-
-      # A second tag on the recorded manifest, after the record is written so
-      # the candidate's identity stays bound to the run's own tag and digest.
-      # Same source, same image: the Argo build looks this tag up by the tree
-      # of the commit it is deploying (see nm-kube-config, check-image-exists).
-      - name: Tag the candidate with its source tree
-        if: env.IMAGE_TRANSPORT == 'registry' && matrix.prebuild
-        env:
-          TREE: ${{ steps.tree.outputs.tree }}
-          BUILD_REPORTED_DIGEST: ${{ steps.export_image.outputs.digest }}
-        run: docker buildx imagetools create --tag "$REGISTRY_REFERENCE:tree-$TREE" "$REGISTRY_REFERENCE@$BUILD_REPORTED_DIGEST"
 
       # Written after the image is published, so a snapshot failure can only
       # cost the next run its warm start, never this run its candidate.
@@ -1902,6 +1900,8 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -1982,6 +1982,8 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with:

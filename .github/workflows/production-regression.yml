@@ -58,16 +58,147 @@ jobs:
     uses: ./.github/workflows/integration-tests.yml
     secrets: inherit
 
-  browser:
+  # The browser lane is called from two jobs because the package-writing grant
+  # depends on the event and a job's `permissions:` cannot be conditional. A
+  # called workflow cannot hold more than its caller grants, so a pull request
+  # that reaches only `browser-pr` has no token that can push a package. The
+  # called workflow's build-images job inherits whichever grant its caller has.
+  browser-pr:
+    if: github.event_name == 'pull_request'
     uses: ./.github/workflows/e2e-fresh-install-tests.yaml
-    # The browser lane hands candidate images between its jobs through the
-    # GitHub Container Registry; a fork's read-only token silently keeps it on
-    # archive artifacts. Granted here, not workflow-wide, so the other lanes
-    # never hold a package-writing token.
+    permissions:
+      contents: read
+      packages: read
+    secrets: inherit
+
+  browser-trusted:
+    if: github.event_name != 'pull_request'
+    uses: ./.github/workflows/e2e-fresh-install-tests.yaml
+    # Pushes and dispatches hand candidate images between the lane's jobs
+    # through the GitHub Container Registry. No `id-token` here: only the
+    # promotion job signs anything.
     permissions:
       contents: read
       packages: write
     secrets: inherit
+
+  # One name for the lane's verdict, so inventory, readiness and the readiness
+  # requirements (scripts/lib/production-readiness.mjs) keep reading
+  # needs.browser.result whichever caller ran.
+  browser:
+    name: Browser lane verdict
+    needs: [browser-pr, browser-trusted]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Require the caller that ran to have succeeded
+        env:
+          PR_RESULT: ${{ needs.browser-pr.result }}
+          TRUSTED_RESULT: ${{ needs.browser-trusted.result }}
+        run: |
+          echo "browser-pr: $PR_RESULT, browser-trusted: $TRUSTED_RESULT"
+          if [ "$PR_RESULT" = success ] && [ "$TRUSTED_RESULT" = skipped ]; then exit 0; fi
+          if [ "$TRUSTED_RESULT" = success ] && [ "$PR_RESULT" = skipped ]; then exit 0; fi
+          exit 1
+
+  # The only job anywhere that writes a `tree-<hash>` tag. Argo copies the image
+  # under `tree-<tree of the commit it deploys>`, so that name must only ever
+  # point at what main built. It runs after the browser lane (a job inside the
+  # called workflow cannot hold id-token, because browser-pr cannot grant it),
+  # which also means only browser-tested images are promoted. Everything it
+  # trusts is recomputed here: the tree from this checkout, the labels from the
+  # registry. Verify first, tag second, attest third.
+  promote-trusted-images:
+    name: Promote trusted tree images
+    needs: browser-trusted
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.browser-trusted.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    env:
+      SERVICES: server server-ee
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Authenticate to the candidate image registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Recomputed, not read from the build job's output.
+      - name: Resolve the source tree
+        id: tree
+        run: |
+          echo "tree=$(git rev-parse 'HEAD^{tree}')" >> "$GITHUB_OUTPUT"
+          # Registry names are lowercase; the repository slug may not be.
+          echo "namespace=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Download the candidate build records
+        uses: actions/download-artifact@v4
+        with:
+          pattern: fresh-install-build-record-*
+          path: ${{ runner.temp }}/build-records
+
+      - name: Verify the candidates were built from this commit and tree
+        id: candidates
+        env:
+          TREE: ${{ steps.tree.outputs.tree }}
+          RECORDS: ${{ runner.temp }}/build-records
+        run: |
+          # Fail closed: any missing record, digest or label mismatch stops the
+          # job before a tag exists.
+          for service in $SERVICES; do
+            record="$RECORDS/fresh-install-build-record-$service/$service-build.json"
+            reference="ghcr.io/${GITHUB_REPOSITORY,,}/e2e-$service"
+            digest="$(node -e 'const r=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")); if(!/^sha256:[0-9a-f]{64}$/.test(r.registry?.manifestDigest)) process.exit(1); console.log(r.registry.manifestDigest)' "$record")"
+            docker buildx imagetools inspect "$reference@$digest" --format '{{json .Image}}' \
+              | node scripts/verify-trusted-tree-image.mjs labels --tree "$TREE" --revision "$GITHUB_SHA"
+            echo "${service//-/_}=$digest" >> "$GITHUB_OUTPUT"
+          done
+
+      - name: Tag the verified candidates with their source tree
+        env:
+          TREE: ${{ steps.tree.outputs.tree }}
+          SERVER_DIGEST: ${{ steps.candidates.outputs.server }}
+          SERVER_EE_DIGEST: ${{ steps.candidates.outputs.server_ee }}
+        run: |
+          for pair in "server:$SERVER_DIGEST" "server-ee:$SERVER_EE_DIGEST"; do
+            service="${pair%%:*}" digest="${pair#*:}"
+            reference="ghcr.io/${GITHUB_REPOSITORY,,}/e2e-$service"
+            docker buildx imagetools create --tag "$reference:tree-$TREE" "$reference@$digest"
+          done
+
+      # The attestation is what consumers check: its certificate records the ref
+      # of this run, which a pull request or a branch cannot make refs/heads/main.
+      - name: Attest the community candidate
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/${{ steps.tree.outputs.namespace }}/e2e-server
+          subject-digest: ${{ steps.candidates.outputs.server }}
+          push-to-registry: true
+
+      - name: Attest the enterprise candidate
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ghcr.io/${{ steps.tree.outputs.namespace }}/e2e-server-ee
+          subject-digest: ${{ steps.candidates.outputs.server-ee }}
+          push-to-registry: true
 
   temporal:
     needs: selection

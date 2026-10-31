@@ -390,14 +390,34 @@ new mtime and the timestamp-only default would invalidate every module.
 
 Every candidate carries the label `com.nineminds.source-tree` (the Git tree
 hash of the checkout it was built from, next to the commit in
-`org.opencontainers.image.revision`), and the two server candidates are also
-tagged `tree-<tree hash>` in the registry after their identity record is
-written. A pull request's merge commit and the squash commit that lands it on
-`main` have the same tree whenever `main` did not move in between, so the Argo
-deployment build can recognise an image CI already built from exactly the
-source it is deploying and copy it instead of compiling again. The candidate's
-own identity record is unaffected: it binds the run's tag and manifest digest,
-and the tree tag is a second name for that same digest.
+`org.opencontainers.image.revision`). The `build-images` job never writes a
+`tree-<tree hash>` tag. Only the `promote-trusted-images` job in
+`production-regression.yml` does, on a push to `main`, after the browser lane
+passes. It recomputes the tree from its own checkout, reads each server
+candidate's digest from its build record, and checks with
+`docker buildx imagetools inspect` that the image's two labels match the tree
+and `github.sha`. Only then does it tag the digest and attest it with
+`actions/attest-build-provenance`. The Argo deployment build looks up
+`tree-<tree of the commit it deploys>` and copies that image instead of
+compiling again.
+
+A pull request's image is therefore never reused after merge. A pull request
+runs on the artifact transport and holds no package-writing token, and the
+pull request controls the bytes of its image, so a build on `main` cannot vouch
+for them. Reuse is limited to images that `main`'s own run built and promoted
+before Argo looks the tag up.
+
+A tag alone is not proof, because anyone who can push a branch can push a tag,
+and a pull request could edit the workflow to grant itself package write. A
+consumer must therefore resolve the tag to a digest, require an attestation on
+that digest signed by this repository's `production-regression.yml` from
+`refs/heads/main` (a pull request run is `refs/pull/<n>/merge`, a branch push is
+`refs/heads/<branch>`), and require the source-tree label to equal the tree.
+`node scripts/verify-trusted-tree-image.mjs verify ghcr.io/<repo>/e2e-server <tree>`
+does all three; a failure means build, not reuse. The attestation is stored in
+the registry next to the image, so the candidate stays one plain manifest
+(`provenance: false` is intentional). The candidate's own identity record is
+unaffected: it binds the run's tag and manifest digest.
 
 The journeys are partitioned across the `browser-<n>` shards by the runner
 itself. Each shard lists the whole collection, then takes its share

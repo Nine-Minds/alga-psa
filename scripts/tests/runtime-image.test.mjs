@@ -30,7 +30,7 @@ test('the browser lane tests the production Dockerfiles, compiled on the runner'
   }
 });
 
-test('server candidates are labelled and tagged with their source tree for reuse after merge', () => {
+test('server candidates are labelled with their source tree and tagged only by the promotion job', () => {
   const workflow = yaml.load(read('.github/workflows/e2e-fresh-install-tests.yaml'));
   const steps = workflow.jobs['build-images'].steps;
   const tree = steps.find(step => step.id === 'tree');
@@ -38,11 +38,15 @@ test('server candidates are labelled and tagged with their source tree for reuse
   const build = steps.find(step => step.id === 'export_image');
   assert.match(build.with.labels, /com\.nineminds\.source-tree=\$\{\{ steps\.tree\.outputs\.tree \}\}/);
   assert.match(build.with.labels, /org\.opencontainers\.image\.revision=\$\{\{ github\.sha \}\}/);
-  const tag = steps.find(step => step.name === 'Tag the candidate with its source tree');
-  assert.equal(tag.if, "env.IMAGE_TRANSPORT == 'registry' && matrix.prebuild");
-  assert.match(tag.run, /imagetools create --tag "\$REGISTRY_REFERENCE:tree-\$TREE" "\$REGISTRY_REFERENCE@\$BUILD_REPORTED_DIGEST"/);
-  // After the identity record, so the record binds the run's own tag.
-  assert.ok(steps.indexOf(tag) > steps.findIndex(step => step.name === 'Record actual published candidate image identity'));
+  // The build job never writes a tree tag: only the promotion job on main does,
+  // after re-checking the labels against its own checkout.
+  assert.ok(!steps.some(step => /tree-/.test(step.run ?? '')), 'build-images writes no tree- tag');
+  const promote = yaml.load(read('.github/workflows/production-regression.yml')).jobs['promote-trusted-images'].steps;
+  const promoteTree = promote.find(step => step.id === 'tree');
+  assert.match(promoteTree.run, /git rev-parse 'HEAD\^\{tree\}'/);
+  const tag = promote.find(step => /imagetools create --tag "\$reference:tree-\$TREE" "\$reference@\$digest"/.test(step.run ?? ''));
+  assert.ok(tag, 'the promotion job tags the verified digest');
+  assert.ok(promote.indexOf(promote.find(step => /labels --tree "\$TREE" --revision "\$GITHUB_SHA"/.test(step.run ?? ''))) < promote.indexOf(tag));
 });
 
 test('the artifact builders build and export, and never run', () => {
