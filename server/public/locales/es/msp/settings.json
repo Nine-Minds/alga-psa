@@ -3534,7 +3534,7 @@
       "platformManaged": "Administrado por AlgaPSA; no requiere configuración. Conecte un agente a uno de estos proveedores en el paso 2.",
       "addAnother": "Agregar otro proveedor",
       "advancedOptions": "Opciones avanzadas",
-      "googleNoSetup": "Google no requiere configuración. Los agentes inician sesión con el ID de su cuenta de servicio de Google.",
+      "googleSetup": "Los agentes inician sesión con un token de ID de cuenta de servicio de Google. Solo la audiencia de abajo debe coincidir con la forma en que lo solicitan.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3548,9 +3548,14 @@
       "fields": {
         "provider": "Proveedor",
         "entraTenantId": "ID de inquilino de Entra",
-        "audienceOptional": "Audiencia (opcional)",
         "audience": "Audiencia",
         "subjectClaim": "Identificar agentes por",
+        "audienceHelp": {
+          "microsoft": "El ID de aplicación (cliente) del registro de aplicación de Entra para el que sus agentes solicitan tokens. Los agentes solicitan el ámbito api://<ese ID>/.default.",
+          "google": "Los agentes deben solicitar su token de ID de Google exactamente con esta audiencia. Hemos rellenado la URL de MCP de este servidor, que es la opción habitual.",
+          "custom": "El identificador de API o recurso configurado en su proveedor (por ejemplo, un identificador de API de Auth0). Debe coincidir exactamente con la notificación aud de los tokens de los agentes. La URL de MCP de este servidor es una buena opción."
+        },
+        "audienceWhy": "Los tokens que su proveedor emitió para otras aplicaciones no se aceptarán aquí.",
         "subjectClaimHelp": "Déjelo en blanco a menos que su proveedor indique lo contrario.",
         "issuer": "Emisor",
         "jwksUri": "URL de claves de firma"

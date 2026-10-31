@@ -3534,7 +3534,7 @@
       "platformManaged": "Managed by AlgaPSA — no setup needed. Connect an agent to one in step 2.",
       "addAnother": "Add another provider",
       "advancedOptions": "Advanced options",
-      "googleNoSetup": "Google needs no setup. Agents sign in with their Google service-account ID.",
+      "googleSetup": "Agents sign in with a Google service-account ID token. Only the audience below needs to match how they request it.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3548,9 +3548,14 @@
       "fields": {
         "provider": "Provider",
         "entraTenantId": "Entra tenant ID",
-        "audienceOptional": "Audience (optional)",
         "audience": "Audience",
         "subjectClaim": "Identify agents by",
+        "audienceHelp": {
+          "microsoft": "The Application (client) ID of the Entra app registration your agents request tokens for. Agents request the scope api://<that ID>/.default.",
+          "google": "Agents must request their Google ID token with exactly this audience. We've filled in this server's MCP URL, which is the usual choice.",
+          "custom": "The API or resource identifier set up in your provider (for example, an Auth0 API identifier). It must exactly match the aud claim in agent tokens. This server's MCP URL is a good choice."
+        },
+        "audienceWhy": "Tokens your provider issued to other apps won't be accepted here.",
         "subjectClaimHelp": "Leave blank unless your provider tells you otherwise.",
         "issuer": "Issuer",
         "jwksUri": "Signing keys URL"
