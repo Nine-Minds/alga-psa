@@ -18,6 +18,7 @@ import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import {
+  bulkHandBackCoManagedTickets,
   CoManagedTicketHandoffError,
   escalateCoManagedTicket,
   exportCoManagedTicketQueue,
@@ -345,5 +346,52 @@ describeDb('co-managed ticket queue and handoffs on real Postgres', { shuffle: f
       const events = await db('co_management_ticket_handoffs').where({ tenant: B.tenant, ticket_id: B.tickets.b2 }).orderBy('revision');
       expect(events.map(event => event.revision)).toEqual(events.map((_, index) => index + 1));
     }
+  }, 120_000);
+
+  it('can_hand_back is the write decision per row: viewer, read-only home role, per-ticket Collaborate grant and the SQL handback join', async () => {
+    // B gains a board whose scope is read-only (can_collaborate=false) with one ticket on it.
+    const readOnlyBoard = randomUUID();
+    await db('boards').insert({ tenant: B.tenant, board_id: readOnlyBoard, board_name: 'B read-only' });
+    await db('co_management_board_scopes').insert({ tenant: B.tenant, relationship_id: B.relationshipId, board_id: readOnlyBoard, can_collaborate: false });
+    const template = await db('tickets').where({ tenant: B.tenant, ticket_id: B.tickets.b1 }).first();
+    B.tickets.r1 = randomUUID();
+    await db('tickets').insert({ tenant: B.tenant, ticket_id: B.tickets.r1, ticket_number: '1003', title: 'B r1 read-only board ticket', client_id: template.client_id,
+      board_id: readOnlyBoard, status_id: template.status_id, priority_id: template.priority_id, is_closed: false, entered_by: B.admin.userId,
+      entered_at: new Date(Date.UTC(2026, 0, 2)), updated_at: new Date(Date.UTC(2026, 0, 2)) });
+    const flags = async (actor: CoManagedSessionActor) => Object.fromEntries((await getCoManagedTicketQueue(db, actor,
+      { view: 'oversight', state: 'all', workspaceTenant: B.tenant })).items.map(item => [item.ticketId, item.canHandBack]));
+
+    // Technician: the board scope decides (b1 collaborates, r1 does not).
+    const before = await flags(tech);
+    expect(before[B.tickets.b1]).toBe(true);
+    expect(before[B.tickets.r1]).toBe(false);
+    // An escalation is an explicit grant that wins over the read-only board scope; revoking it falls back to the scope.
+    await escalate(B, 'r1', 0);
+    expect((await flags(tech))[B.tickets.r1]).toBe(true);
+
+    // A viewer on the same relationship (with the same home RBAC) reads every row but may hand none back.
+    const viewer = await actorFor(msp, [['ticket', 'read'], ['ticket', 'update']]);
+    await db('co_management_staff_assignments').insert({ tenant: msp, customer_tenant: B.tenant, relationship_id: B.relationshipId,
+      principal_type: 'user', principal_id: viewer.userId, relationship_role: 'viewer' });
+    const viewerFlags = await flags(viewer);
+    expect(Object.keys(viewerFlags).sort()).toEqual(Object.keys(before).sort());
+    expect(Object.values(viewerFlags).every(value => value === false)).toBe(true);
+    // ... and the command the flag mirrors refuses the same row.
+    const [refused] = await bulkHandBackCoManagedTickets(db, viewer, { note, items: [{ resource: resource(B, 'r1'), operationId: randomUUID(), expectedRevision: (await work(B, 'r1')).revision }] });
+    expect(refused).toMatchObject({ ok: false, code: 'forbidden' });
+
+    // A technician whose home RBAC is read-only cannot write either.
+    const readOnlyTech = await actorFor(msp, [['ticket', 'read']]);
+    await db('co_management_staff_assignments').insert({ tenant: msp, customer_tenant: B.tenant, relationship_id: B.relationshipId,
+      principal_type: 'user', principal_id: readOnlyTech.userId, relationship_role: 'technician' });
+    expect(Object.values(await flags(readOnlyTech)).every(value => value === false)).toBe(true);
+
+    // The flag is per request, never persisted: the technician's own flags are unchanged by the others' reads.
+    expect((await flags(tech))[B.tickets.r1]).toBe(true);
+    await revokeCoManagedTicketGrant(db, B.admin, resource(B, 'r1'), { operationId: randomUUID(), expectedRevision: (await work(B, 'r1')).revision, note });
+    expect((await flags(tech))[B.tickets.r1]).toBe(false);
+    // Export rows are the same relation but a CSV never carries the viewer's capability: it is not a ticket field.
+    const exported = await exportCoManagedTicketQueue(db, tech, { view: 'oversight', state: 'all', workspaceTenant: B.tenant });
+    expect(exported.every(item => !('canHandBack' in item.fields))).toBe(true);
   }, 120_000);
 });
