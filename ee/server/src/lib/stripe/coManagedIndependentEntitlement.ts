@@ -2,13 +2,19 @@ import Stripe from 'stripe';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import type { HostedPsaUpgradeCandidate } from '@alga-psa/licensing';
 import { CoManagedIndependentUpgradeError } from '@alga-psa/co-managed';
+import { stripeApiOverride } from './stripeApiOverride';
 export interface HostedUpgradePrices { month?: string; year?: string }
+
+/** Builds the platform Stripe client the way StripeService does, so STRIPE_API_BASE_URL routes it to the emulator. */
+export function createIndependentPsaStripeClient(secret: string, env: NodeJS.ProcessEnv = process.env): Stripe {
+  return new Stripe(secret, { apiVersion: '2024-12-18.acacia' as any, typescript: true, ...stripeApiOverride(secret, env) });
+}
 
 export async function createIndependentPsaStripeReader(): Promise<Stripe> {
   const secrets = await getSecretProviderInstance();
   const key = await secrets.getAppSecret('stripe_secret_key') || process.env.STRIPE_SECRET_KEY?.trim();
   if (!key) throw new Error('STRIPE_SECRET_KEY is required for independent PSA verification');
-  return new Stripe(key, { apiVersion: '2024-12-18.acacia' as any, typescript: true });
+  return createIndependentPsaStripeClient(key);
 }
 const referenceId = (value: unknown): string | undefined => typeof value === 'string' ? value
   : value && typeof value === 'object' && 'id' in value && typeof value.id === 'string' ? value.id : undefined;

@@ -5,7 +5,7 @@ import { countCoManagedCommittedSeats, retainHostedPsaUpgradeCandidate } from '@
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { prepareCoManagedUpgradePurchase, withCoManagedUpgradePurchaseAdmin, isCoManagedUuid, snapshotCoManagedSessionActor,
   type CoManagedSessionActor, type CoManagedUpgradePurchase, type CoManagedUpgradePurchaseRequest } from '@alga-psa/co-managed';
-import { isDeletedStripeCustomer, paidPsaUpgradeFromStripe } from './coManagedIndependentEntitlement';
+import { createIndependentPsaStripeClient, isDeletedStripeCustomer, paidPsaUpgradeFromStripe } from './coManagedIndependentEntitlement';
 
 import { INDEPENDENT_UPGRADE_SOURCE } from './coManagedUpgradeSource';
 export { INDEPENDENT_UPGRADE_SOURCE };
@@ -21,7 +21,7 @@ export async function independentCheckoutStripeContext() {
   const secret = await secrets.getAppSecret('stripe_secret_key') || process.env.STRIPE_SECRET_KEY;
   const publishableKey = await secrets.getAppSecret('stripe_publishable_key') || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
   if (!secret || !publishableKey) throw new Error('Stripe checkout is not configured');
-  return { stripe: new Stripe(secret, { apiVersion: '2024-12-18.acacia' as any, typescript: true }), publishableKey };
+  return { stripe: createIndependentPsaStripeClient(secret), publishableKey };
 }
 
 async function operation(db: Knex, tenant: string, operationId: string) {
