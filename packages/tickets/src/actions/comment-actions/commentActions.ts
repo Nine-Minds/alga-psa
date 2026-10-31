@@ -32,7 +32,7 @@ import {
   prepareCommentEmailRecipients,
   type CommentEmailRecipientsInput,
 } from '@shared/lib/tickets/commentEmailRecipients';
-import { authorizeTicketRecordAccess } from '../../lib/ticketRecordAuthorization';
+import { authorizeTicketRecordAccess, authorizeTicketRecordAccessConcealed } from '../../lib/ticketRecordAuthorization';
 import { projectCommentsForPrincipal, type CommentThreadVisibility } from '../../lib/commentVisibility';
 import { ticketActionErrorFrom, type TicketActionError } from '../ticketActionErrors';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
@@ -136,10 +136,10 @@ async function assertClientCanCreateComment(
     throw new Error('ticket_id is required for client comments');
   }
 
-  // KEEP until card 36dd23da lands: authorizeTicketRecordAccess's client branch still uses only
-  // `selected_boards` on this branch, so it cannot be shown to enforce same-client. Replace with
-  // authorizeTicketRecordAccess(..., 'update') once the kernel fix is merged.
-  await assertClientOwnsTicket(trx, tenant, user, comment.ticket_id);
+  // Record-level visibility (contact / board / billing-profile narrowing), the same gate every other
+  // comment mutation uses. A missing and an invisible ticket produce the identical denial, and it runs
+  // before any lookup that could probe records the client cannot see (e.g. the parent thread below).
+  await authorizeTicketRecordAccessConcealed({ trx, tenant, user, ticketId: comment.ticket_id, action: 'update' });
 
   // Comment.insert re-roots a client reply aimed at an internal thread into a
   // fresh public thread (D1, for inbound email whose headers resolve to an
@@ -638,7 +638,12 @@ export const createComment = withAuth(async (
  * that arrived by email). A co-managed collaborator's comment changes only
  * through the collaboration commands.
  */
-async function assertMayChangeComment(trx: Knex.Transaction, user: { user_id: string; user_type: string }, existing: IComment): Promise<void> {
+async function assertMayChangeComment(trx: Knex.Transaction, user: { user_id: string; user_type: string }, existing: IComment, tenant: string): Promise<void> {
+  // A client principal may only reach comments on tickets it can still see: authorship alone
+  // (e.g. a row written before the write path was guarded) does not grant access.
+  if (isClientUserType(user.user_type) && existing.ticket_id) {
+    await authorizeTicketRecordAccessConcealed({ trx, tenant, user: user as any, ticketId: existing.ticket_id, action: 'update' });
+  }
   if (existing.actor_reference_id) throw new Error('This comment belongs to a co-managed collaborator and cannot be changed here.');
   if (existing.user_id === user.user_id) return;
   if (existing.user_id == null && isMspPrincipalUserType(user.user_type) && await hasPermission(user as any, 'ticket', 'update', trx)) return;
@@ -685,7 +690,7 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, reque
         .first();
       const oldAuthorName = oldAuthor ? `${oldAuthor.first_name} ${oldAuthor.last_name}` : 'Unknown User';
 
-      await assertMayChangeComment(trx, user, existingComment);
+      await assertMayChangeComment(trx, user, existingComment, commentTenant);
       // Only the text and its two flags are editable; authorship, timestamps,
       // publication and deletion are history and have their own commands.
       const comment: Partial<IComment> = {};
@@ -863,7 +868,7 @@ export const deleteComment = withAuth(async (user, _ctx, id: string) => {
       if (existingComment?.is_system_generated) {
         throw new Error('This comment is system-generated and cannot be deleted.');
       }
-      if (existingComment) await assertMayChangeComment(trx, user, existingComment);
+      if (existingComment) await assertMayChangeComment(trx, user, existingComment, tenant);
 
       // Delete comment reactions before comment (CitusDB doesn't support ON DELETE CASCADE)
       await tenantScopedTable(trx, 'comment_reactions', tenant)
