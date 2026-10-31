@@ -31,6 +31,10 @@ export const seamBillingModeClassifier: PortableBillingModeClassifier = async (t
 type Rows = Record<string, unknown>[];
 const CHUNK = 1000, LIMIT = 100_000;
 const TIME_TABLES: readonly CoManagedPortableOperationalTable[] = ['time_entries', 'time_sheets', 'time_sheet_comments', 'time_entry_change_requests'];
+/** Which owned tables depend on which grant. The engine empties exactly these when the grant is not provisioned. */
+const TIMESHEET_TABLES: readonly CoManagedPortableOperationalTable[] = [...TIME_TABLES, 'time_periods', 'time_period_settings', 'time_period_types'];
+const SCHEDULE_TABLES: readonly CoManagedPortableOperationalTable[] = ['schedule_entries', 'schedule_entry_assignees', 'user_work_schedules',
+  'business_hours_schedules', 'business_hours_entries', 'holidays', 'sla_policies', 'sla_policy_targets', 'sla_settings', 'sla_notification_thresholds'];
 
 export function validateCoManagedPortableOperationalRecords(input: unknown): asserts input is CoManagedPortableOperationalRecords {
   validatePortableRecordSection(input, { columns: CO_MANAGED_PORTABLE_OPERATIONAL_COLUMNS,
@@ -45,12 +49,15 @@ async function inChunks(ids: readonly string[], read: (part: string[]) => Promis
 }
 
 async function retainCoManagedPortableOperational(trx: Knex.Transaction, inputActor: CoManagedSessionActor, packageId: string,
-  classify: PortableBillingModeClassifier) {
+  classify: PortableBillingModeClassifier, notProvisioned: ReadonlySet<string> = new Set()) {
   if (!trx.isTransaction) throw new Error('Portable retention requires a transaction');
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
   return withCoManagedExportAdmin(trx, actor, async (current, verified) => {
-    for (const resource of ['timesheet', 'user_schedule']) {
+    // A grant the tenant does not provision (engine-declared) empties its tables and skips its check; a provisioned grant not held still throws.
+    const timeAbsent = TIMESHEET_TABLES.every(table => notProvisioned.has(table)), scheduleAbsent = SCHEDULE_TABLES.every(table => notProvisioned.has(table));
+    for (const [resource, absent] of [['timesheet', timeAbsent], ['user_schedule', scheduleAbsent]] as const) {
+      if (absent) continue;
       if (!await hasCoManagedLocalPermission(current, verified, resource, 'read', true)) throw new CoManagedSharedWorkError();
     }
     const own = tenantDb(current, verified.tenant), records = {} as CoManagedPortableOperationalRecords;
@@ -65,7 +72,7 @@ async function retainCoManagedPortableOperational(trx: Knex.Transaction, inputAc
 
     // Time: identifiers only, no billing_mode predicate. The seam decides, and
     // anything it does not positively call operational is not exported.
-    const candidates: PortableTimeEntryCandidate[] = await own.table('time_entries').orderBy('entry_id').limit(LIMIT + 1).forShare()
+    const candidates: PortableTimeEntryCandidate[] = timeAbsent ? [] : await own.table('time_entries').orderBy('entry_id').limit(LIMIT + 1).forShare()
       .select('entry_id', 'work_item_id', 'work_item_type');
     if (candidates.length > LIMIT) throw new Error('Portable operational record limit exceeded');
     const kept: string[] = [];
@@ -86,19 +93,20 @@ async function retainCoManagedPortableOperational(trx: Knex.Transaction, inputAc
     records.time_periods = await inChunks(periodIds, part => own.table('time_periods').whereIn('period_id', part).orderBy('period_id')
       .select(...columns.time_periods).forShare());
     // Definitions: calendars, business hours and SLA policy carry no billing.
-    records.time_period_settings = await read('time_period_settings');
-    records.time_period_types = await read('time_period_types');
-    records.schedule_entries = await read('schedule_entries');
-    records.schedule_entry_assignees = await read('schedule_entry_assignees', ['entry_id', 'user_id']);
-    records.user_work_schedules = await read('user_work_schedules', ['user_id', 'day_of_week', 'start_time']);
+    const readOrEmpty = async (table: CoManagedPortableOperationalTable, order?: string[]): Promise<Rows> => notProvisioned.has(table) ? [] : read(table, order);
+    records.time_period_settings = await readOrEmpty('time_period_settings');
+    records.time_period_types = await readOrEmpty('time_period_types');
+    records.schedule_entries = await readOrEmpty('schedule_entries');
+    records.schedule_entry_assignees = await readOrEmpty('schedule_entry_assignees', ['entry_id', 'user_id']);
+    records.user_work_schedules = await readOrEmpty('user_work_schedules', ['user_id', 'day_of_week', 'start_time']);
     for (const table of ['business_hours_schedules', 'business_hours_entries', 'holidays', 'sla_policies', 'sla_policy_targets',
-      'sla_notification_thresholds'] as const) records[table] = await read(table);
-    records.sla_settings = await read('sla_settings', ['created_at']);
+      'sla_notification_thresholds'] as const) records[table] = await readOrEmpty(table);
+    records.sla_settings = await readOrEmpty('sla_settings', ['created_at']);
     validateCoManagedPortableOperationalRecords(records);
 
-    const exclusions = [{ class: 'commercial', name: 'time_entries_billing',
+    const exclusions = timeAbsent ? [] : [{ class: 'commercial', name: 'time_entries_billing',
       reason: `${candidates.length - kept.length} of ${candidates.length} time entries were not classified operational by the time-source seam and are excluded with their billing, invoicing and approval linkage.` }];
-    if (!kept.length) exclusions.push({ class: 'commercial', name: 'time_domain_empty',
+    if (!timeAbsent && !kept.length) exclusions.push({ class: 'commercial', name: 'time_domain_empty',
       reason: 'No operational time entries exist for this tenant (a native tenant has none); time sheets, comments and change requests follow the kept entries and are empty.' });
     return { records: JSON.parse(JSON.stringify(records)) as PortableRecords,
       annotations: { exclusions, timeTables: TIME_TABLES, scheduleHistory: 'excluded', restorePolicy: { sponsorship: 'none', runningClocks: 'none' } } };
@@ -111,15 +119,16 @@ async function retainCoManagedPortableOperational(trx: Knex.Transaction, inputAc
 export function createPortableOperationalContributor(classify: PortableBillingModeClassifier = seamBillingModeClassifier): PortableContributor {
   return {
     id: 'operational', version: 1, reason: 'customer-owned operational time, schedules, business hours and SLA policy',
+    permissions: [{ resource: 'timesheet', action: 'read', tables: TIMESHEET_TABLES }, { resource: 'user_schedule', action: 'read', tables: SCHEDULE_TABLES }],
     columns: CO_MANAGED_PORTABLE_OPERATIONAL_COLUMNS, references: CO_MANAGED_PORTABLE_OPERATIONAL_REFERENCES,
     export: async ctx => {
       if (ctx.db.isTransaction) throw new Error('Portable export requires a root database connection');
       const actor = snapshotCoManagedSessionActor(ctx.actor);
       if (!isCoManagedUuid(ctx.packageId)) throw new CoManagedSharedWorkError();
       // LEVERAGE: pattern portable-export-is-snapshot-retain — export is the retain run at the shared snapshot.
-      return portableSnapshotTransaction(ctx.db, ctx.snapshot, trx => retainCoManagedPortableOperational(trx, actor, ctx.packageId, classify));
+      return portableSnapshotTransaction(ctx.db, ctx.snapshot, trx => retainCoManagedPortableOperational(trx, actor, ctx.packageId, classify, ctx.notProvisioned));
     },
-    retain: ctx => retainCoManagedPortableOperational(ctx.trx, ctx.actor, ctx.packageId, classify),
+    retain: ctx => retainCoManagedPortableOperational(ctx.trx, ctx.actor, ctx.packageId, classify, ctx.notProvisioned),
     validate: records => validateCoManagedPortableOperationalRecords(records),
   };
 }

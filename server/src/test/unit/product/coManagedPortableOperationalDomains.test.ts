@@ -1,6 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+// The engine asks the tenant which permissions it provisions; the stubbed contributors below need no database, so every grant is provisioned.
+vi.mock('../../../../../packages/co-managed/src/localPermission', async importOriginal => ({
+  ...await importOriginal<typeof import('../../../../../packages/co-managed/src/localPermission')>(), isCoManagedPermissionProvisioned: async () => true,
+}));
 import { createPortableContributorRegistry } from '../../../../../packages/co-managed/src/portableContributorRegistry';
 import { CORE_PORTABLE_CONTRIBUTORS, createCorePortableRegistry } from '../../../../../packages/co-managed/src/portableCoreRegistry';
 import { buildCoManagedPortableWorkspaceManifest as build } from '../../../../../packages/co-managed/src/portableWorkspaceManifest';
@@ -24,7 +29,7 @@ const NEW_IDS = ['operational', 'conversations', 'documents', 'artifacts', 'enga
 describe('L7b3 contributors: registry', () => {
   it('every new contributor passes the registry contract with disjoint tables', () => {
     const registry = createCorePortableRegistry([portableRemoteMeetingContributor]);
-    expect(registry.list().map(c => c.id)).toEqual(['artifacts', 'assets', 'conversations', 'core', 'documents', 'engagement', 'meetings', 'operational', 'work', 'workflows']);
+    expect(registry.list().map(c => c.id)).toEqual(['artifacts', 'assets', 'conversations', 'core', 'documents', 'engagement', 'files', 'meetings', 'operational', 'work', 'workflows']);
     for (const id of NEW_IDS) expect(registry.list().find(c => c.id === id)).toBeTruthy();
     expect(registry.owner('time_entries')?.id).toBe('operational');
     expect(registry.owner('ticket_comment_attachments')?.id).toBe('conversations');
@@ -33,8 +38,8 @@ describe('L7b3 contributors: registry', () => {
     expect(registry.owner('online_meetings')?.id).toBe('meetings');
     expect(registry.owner('interactions')?.id).toBe('engagement');
   });
-  it('the package set has nine contributors and the meeting contributor is only an extra', () => {
-    expect(createCorePortableRegistry().list()).toHaveLength(9);
+  it('the package set has ten contributors (L7b1 core/work/assets/workflows/files plus five L7b3) and the meeting contributor is only an extra', () => {
+    expect(createCorePortableRegistry().list()).toHaveLength(10);
     expect(createCorePortableRegistry().owner('online_meetings')).toBeUndefined();
   });
   it('never owns MSP-private stores, billing tables or retained-command tables', () => {

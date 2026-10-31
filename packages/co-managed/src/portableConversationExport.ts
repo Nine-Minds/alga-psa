@@ -51,11 +51,14 @@ export function validateCoManagedPortableConversationRecords(input: unknown, wor
   }
 }
 
-async function retainCoManagedPortableConversation(trx: Knex.Transaction, inputActor: Parameters<typeof snapshotCoManagedSessionActor>[0], packageId: string) {
+async function retainCoManagedPortableConversation(trx: Knex.Transaction, inputActor: Parameters<typeof snapshotCoManagedSessionActor>[0], packageId: string,
+  notProvisioned: ReadonlySet<string> = new Set()) {
   if (!trx.isTransaction) throw new Error('Portable retention requires a transaction');
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
   return withCoManagedExportAdmin(trx, actor, async (current, verified) => {
+    // ticket.read gates the sole table; the engine declares it unprovisioned (empty, no check) or it is checked and still throws when not held.
+    if (notProvisioned.has('ticket_comment_attachments')) return { records: { ticket_comment_attachments: [] } as PortableRecords };
     if (!await hasCoManagedLocalPermission(current, verified, 'ticket', 'read', true)) throw new CoManagedSharedWorkError();
     const own = tenantDb(current, verified.tenant), columns = CO_MANAGED_PORTABLE_CONVERSATION_COLUMNS.ticket_comment_attachments;
     const all: Rows = await own.table('ticket_comment_attachments').whereIn('state', [...STATES]).orderBy('attachment_id')
@@ -102,14 +105,15 @@ async function retainCoManagedPortableConversation(trx: Knex.Transaction, inputA
 // LEVERAGE: pattern portable-contributor-boilerplate — repeats the admission wrapper, permission check, tenantDb handle and JSON round-trip of the core/work/assets contributors.
 export const portableConversationContributor: PortableContributor = {
   id: 'conversations', version: 1, reason: 'customer-visible conversation attachment links and tombstones',
+  permissions: [{ resource: 'ticket', action: 'read' }],
   columns: CO_MANAGED_PORTABLE_CONVERSATION_COLUMNS, references: CO_MANAGED_PORTABLE_CONVERSATION_REFERENCES,
   export: async ctx => {
     if (ctx.db.isTransaction) throw new Error('Portable export requires a root database connection');
     const actor = snapshotCoManagedSessionActor(ctx.actor);
     if (!isCoManagedUuid(ctx.packageId)) throw new CoManagedSharedWorkError();
     // LEVERAGE: pattern portable-export-is-snapshot-retain — export is the retain run at the shared snapshot.
-    return portableSnapshotTransaction(ctx.db, ctx.snapshot, trx => retainCoManagedPortableConversation(trx, actor, ctx.packageId));
+    return portableSnapshotTransaction(ctx.db, ctx.snapshot, trx => retainCoManagedPortableConversation(trx, actor, ctx.packageId, ctx.notProvisioned));
   },
-  retain: ctx => retainCoManagedPortableConversation(ctx.trx, ctx.actor, ctx.packageId),
+  retain: ctx => retainCoManagedPortableConversation(ctx.trx, ctx.actor, ctx.packageId, ctx.notProvisioned),
   validate: (records, workspace) => validateCoManagedPortableConversationRecords(records, workspace),
 };

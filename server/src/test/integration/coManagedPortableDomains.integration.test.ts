@@ -9,6 +9,7 @@ import { defineOperationalCases } from './coManagedPortableOperational.cases';
 import { defineRemoteMeetingCases } from './coManagedPortableRemoteMeeting.cases';
 import { defineEngagementCases } from './coManagedPortableEngagement.cases';
 import { defineSupplementalFileCases } from './coManagedPortableSupplementalFiles.cases';
+import { defineProvisioningCases } from './coManagedPortableProvisioning.cases';
 
 // Object storage is the one stand-in: staging reads bytes through the provider, which is replaced by an in-memory map.
 vi.mock('@alga-psa/storage/StorageProviderFactory', async () => {
@@ -24,12 +25,6 @@ describe('CM L7b3 portable export domains', () => {
     configureL3cDbEnv();
     registerCoManagedCapability();
     db = await connectL3cDb();
-    // The L7b1 `work` contributor selects project_task_comments.actor_reference_id/actor_display_name/
-    // actor_organization_name/collaboration_revision, which no migration on this base creates (reported as a
-    // fact, not fixed here). The throwaway test DB gets them so the end-to-end manifest case can run.
-    await db.raw(`ALTER TABLE project_task_comments ADD COLUMN IF NOT EXISTS actor_reference_id uuid,
-      ADD COLUMN IF NOT EXISTS actor_display_name text, ADD COLUMN IF NOT EXISTS actor_organization_name text,
-      ADD COLUMN IF NOT EXISTS collaboration_revision integer`);
     world = await seedPortableWorld(db);
   }, 120_000);
   afterAll(async () => {
@@ -42,4 +37,5 @@ describe('CM L7b3 portable export domains', () => {
   defineSupplementalFileCases(state);
   defineDocumentCases(state);
   defineManifestCases(state);
+  defineProvisioningCases(state);
 });

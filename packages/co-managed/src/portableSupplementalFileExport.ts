@@ -26,11 +26,15 @@ export function validateCoManagedPortableSupplementalRecords(input: unknown): as
   validatePortableRecordSection(input, { columns: CO_MANAGED_PORTABLE_SUPPLEMENTAL_COLUMNS, references: CO_MANAGED_PORTABLE_SUPPLEMENTAL_REFERENCES });
 }
 
-async function collect(trx: Knex.Transaction, inputActor: CoManagedSessionActor, packageId: string) {
+async function collect(trx: Knex.Transaction, inputActor: CoManagedSessionActor, packageId: string, notProvisioned: ReadonlySet<string> = new Set()) {
   if (!trx.isTransaction) throw new Error('Portable retention requires a transaction');
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
   return withCoManagedExportAdmin(trx, actor, async (current, verified) => {
+    // document.read gates the sole table; unprovisioned (engine-declared) means empty with no file reads, provisioned-but-not-held still throws.
+    if (notProvisioned.has('online_meeting_artifacts')) {
+      return { records: { online_meeting_artifacts: [] } as PortableRecords, sources: { blobs: [], excluded: [], bytes: 0 }, providerOnly: 0 };
+    }
     if (!await hasCoManagedLocalPermission(current, verified, 'document', 'read', true)) throw new CoManagedSharedWorkError();
     const own = tenantDb(current, verified.tenant), columns = CO_MANAGED_PORTABLE_SUPPLEMENTAL_COLUMNS.online_meeting_artifacts;
     const artifacts: Record<string, unknown>[] = await own.table('online_meeting_artifacts').select(...columns).orderBy('artifact_id').limit(LIMIT + 1).forShare();
@@ -55,13 +59,14 @@ const exclusionsOf = (excluded: readonly { id: string; reason: string }[], provi
 // LEVERAGE: pattern portable-contributor-boilerplate — repeats the admission wrapper, permission check, tenantDb handle and JSON round-trip of the core/work/assets contributors.
 export const portableSupplementalFileContributor: PortableContributor = {
   id: 'artifacts', version: 1, reason: 'meeting artifact records and the tenant-stored files no document covers',
+  permissions: [{ resource: 'document', action: 'read' }],
   columns: CO_MANAGED_PORTABLE_SUPPLEMENTAL_COLUMNS, references: CO_MANAGED_PORTABLE_SUPPLEMENTAL_REFERENCES,
   export: async (ctx): Promise<PortableContribution> => {
     if (ctx.db.isTransaction) throw new Error('Portable export requires a root database connection');
     const actor = snapshotCoManagedSessionActor(ctx.actor);
     if (!isCoManagedUuid(ctx.packageId)) throw new CoManagedSharedWorkError();
     // LEVERAGE: pattern portable-export-is-snapshot-retain — export is the retain run at the shared snapshot.
-    const snapshot = await portableSnapshotTransaction(ctx.db, ctx.snapshot, trx => collect(trx, actor, ctx.packageId));
+    const snapshot = await portableSnapshotTransaction(ctx.db, ctx.snapshot, trx => collect(trx, actor, ctx.packageId, ctx.notProvisioned));
     const staged = await stageCoManagedPortableBlobs(snapshot.sources.blobs);
     try {
       return { records: JSON.parse(JSON.stringify(snapshot.records)) as PortableRecords, files: staged,
@@ -70,7 +75,7 @@ export const portableSupplementalFileContributor: PortableContributor = {
     } catch (error) { await staged.dispose(); throw error; }
   },
   retain: async ctx => {
-    const { records, sources, providerOnly } = await collect(ctx.trx, ctx.actor, ctx.packageId);
+    const { records, sources, providerOnly } = await collect(ctx.trx, ctx.actor, ctx.packageId, ctx.notProvisioned);
     return { records, annotations: { exclusions: exclusionsOf(sources.excluded, providerOnly) } };
   },
   validate: records => validateCoManagedPortableSupplementalRecords(records),

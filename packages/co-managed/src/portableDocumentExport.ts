@@ -9,7 +9,7 @@ import { stageCoManagedPortableBlobs, type PortableSourceBlob } from './portable
 import { coManagedPortableNativeFilePath } from './portableNativeFilePath';
 import { CoManagedSharedWorkError, isCoManagedUuid, snapshotCoManagedSessionActor, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { CO_MANAGED_PORTABLE_DOCUMENT_COLUMNS, CO_MANAGED_PORTABLE_DOCUMENT_REFERENCES,
-  commercialPortableDocumentIds, filterCommercialPortableDocuments, type CoManagedPortableDocumentRecords, type CoManagedPortableDocumentTable } from './portableDocumentCatalog';
+  commercialPortableDocumentIds, draftAttachmentPortableDocumentIds, filterCommercialPortableDocuments, type CoManagedPortableDocumentRecords, type CoManagedPortableDocumentTable } from './portableDocumentCatalog';
 
 /** One file may not exceed this and the package may not exceed the total. A file
  * over either cap is never truncated: it is left out and named in the section's
@@ -50,11 +50,17 @@ export function validateCoManagedPortableDocumentRecords(input: unknown): assert
   if (commercialPortableDocumentIds(records.documents, records.document_associations).size) throw new Error('Portable documents must not include commercial documents');
 }
 
-async function collect(trx: Knex.Transaction, inputActor: CoManagedSessionActor, packageId: string) {
+const emptyDocumentRecords = () => Object.fromEntries(Object.keys(CO_MANAGED_PORTABLE_DOCUMENT_COLUMNS).map(table => [table, []])) as unknown as CoManagedPortableDocumentRecords;
+
+async function collect(trx: Knex.Transaction, inputActor: CoManagedSessionActor, packageId: string, notProvisioned: ReadonlySet<string> = new Set()) {
   if (!trx.isTransaction) throw new Error('Portable retention requires a transaction');
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
   return withCoManagedExportAdmin(trx, actor, async (current, verified) => {
+    // document.read gates every owned table: unprovisioned (engine-declared) means empty with no reads; provisioned-but-not-held still throws.
+    if (notProvisioned.has('documents')) {
+      return { tenant: verified.tenant, records: emptyDocumentRecords(), sources: { blobs: [], excluded: [], bytes: 0 }, excludedDocuments: 0, draftAttachmentDocuments: 0 };
+    }
     if (!await hasCoManagedLocalPermission(current, verified, 'document', 'read', true)) throw new CoManagedSharedWorkError();
     const own = tenantDb(current, verified.tenant), raw = {} as CoManagedPortableDocumentRecords;
     for (const table of Object.keys(CO_MANAGED_PORTABLE_DOCUMENT_COLUMNS) as CoManagedPortableDocumentTable[]) {
@@ -63,16 +69,22 @@ async function collect(trx: Knex.Transaction, inputActor: CoManagedSessionActor,
       if (raw[table].length > LIMIT) throw new Error('Portable document record limit exceeded');
     }
     // Commercial documents are dropped here, before validation, file lookup and staging.
-    const { records, excludedDocuments } = filterCommercialPortableDocuments(raw);
+    // Draft/removed conversation attachments back unsent content: their documents are dropped like the rows themselves are.
+    const attachments: Rows = await own.table('ticket_comment_attachments').select('document_id', 'state').limit(LIMIT + 1).forShare();
+    const artifacts: Rows = await own.table('online_meeting_artifacts').whereNotNull('document_id').select('document_id').limit(LIMIT + 1).forShare();
+    if (attachments.length > LIMIT || artifacts.length > LIMIT) throw new Error('Portable document record limit exceeded');
+    const drafts = draftAttachmentPortableDocumentIds(raw.documents, raw.document_associations, raw.kb_articles, attachments, artifacts.map(row => row.document_id));
+    const { records, excludedDocuments, draftAttachmentDocuments } = filterCommercialPortableDocuments(raw, drafts);
     validateCoManagedPortableDocumentRecords(records);
     const fileIds = records.documents.flatMap(row => [row.file_id, row.thumbnail_file_id, row.preview_file_id]).filter((id): id is string => typeof id === 'string');
     const sources = await readPortableFileSources(own, fileIds);
-    return { tenant: verified.tenant, records, sources, excludedDocuments };
+    return { tenant: verified.tenant, records, sources, excludedDocuments, draftAttachmentDocuments };
   });
 }
 
-const exclusionsOf = (excluded: readonly PortableFileExclusion[], excludedDocuments = 0) => [
+const exclusionsOf = (excluded: readonly PortableFileExclusion[], excludedDocuments = 0, draftAttachmentDocuments = 0) => [
   { class: 'commercial', name: 'commercial_documents', reason: `Documents attached to invoices, quotes, contracts, sales orders, opportunities or any entity type outside the customer-operational allowlist, or rendered from a billing template, are not exported with their versions, content, associations, knowledge-base rows and file bytes (${excludedDocuments} excluded).` },
+  { class: 'commercial', name: 'draft_attachment_documents', reason: `Documents referenced only by draft or removed ticket comment attachments back unsent content and are not exported with their versions, content and file bytes (${draftAttachmentDocuments} excluded). Documents with no association of any kind, such as the tenant document library, are exported.` },
   { class: 'secret', name: 'document_storage_locations', reason: 'Storage paths and provider locators are transport-only and never recorded.' },
   { class: 'commercial', name: 'document_templates', reason: 'Document render templates and their assignments are billing presentation configuration and are not exported.' },
   { class: 'deferred_domain', name: 'shared_document_types', reason: 'Global shared document types are not tenant data; documents.shared_type_id is an external edge.' },
@@ -82,25 +94,26 @@ const exclusionsOf = (excluded: readonly PortableFileExclusion[], excludedDocume
 // LEVERAGE: pattern portable-contributor-boilerplate — repeats the admission wrapper, permission check, tenantDb handle and JSON round-trip of the core/work/assets contributors.
 export const portableDocumentContributor: PortableContributor = {
   id: 'documents', version: 1, reason: 'customer-owned documents, versions, folders, knowledge base and their file bytes',
+  permissions: [{ resource: 'document', action: 'read' }],
   columns: CO_MANAGED_PORTABLE_DOCUMENT_COLUMNS, references: CO_MANAGED_PORTABLE_DOCUMENT_REFERENCES,
   export: async (ctx): Promise<PortableContribution> => {
     if (ctx.db.isTransaction) throw new Error('Portable export requires a root database connection');
     const actor = snapshotCoManagedSessionActor(ctx.actor);
     if (!isCoManagedUuid(ctx.packageId)) throw new CoManagedSharedWorkError();
     // LEVERAGE: pattern portable-export-is-snapshot-retain — export is the retain run at the shared snapshot.
-    const snapshot = await portableSnapshotTransaction(ctx.db, ctx.snapshot, trx => collect(trx, actor, ctx.packageId));
+    const snapshot = await portableSnapshotTransaction(ctx.db, ctx.snapshot, trx => collect(trx, actor, ctx.packageId, ctx.notProvisioned));
     const staged = await stageCoManagedPortableBlobs(snapshot.sources.blobs);
     try {
       const bindings = snapshot.records.documents.flatMap(row => (['file_id', 'thumbnail_file_id', 'preview_file_id'] as const)
         .filter(field => typeof row[field] === 'string').map(field => ({ table: 'documents', recordId: row.document_id, field, blobId: `file:${row[field]}` })));
       return { records: JSON.parse(JSON.stringify(snapshot.records)) as PortableRecords, files: staged,
-        annotations: { exclusions: exclusionsOf(snapshot.sources.excluded, snapshot.excludedDocuments), fileBindings: bindings, caps: CO_MANAGED_PORTABLE_FILE_CAPS,
+        annotations: { exclusions: exclusionsOf(snapshot.sources.excluded, snapshot.excludedDocuments, snapshot.draftAttachmentDocuments), fileBindings: bindings, caps: CO_MANAGED_PORTABLE_FILE_CAPS,
           restorePolicy: { sponsorship: 'none', providerConnections: 'none' } } };
     } catch (error) { await staged.dispose(); throw error; }
   },
   retain: async ctx => {
-    const { records, sources, excludedDocuments } = await collect(ctx.trx, ctx.actor, ctx.packageId);
-    return { records: JSON.parse(JSON.stringify(records)) as PortableRecords, annotations: { exclusions: exclusionsOf(sources.excluded, excludedDocuments) } };
+    const { records, sources, excludedDocuments, draftAttachmentDocuments } = await collect(ctx.trx, ctx.actor, ctx.packageId, ctx.notProvisioned);
+    return { records: JSON.parse(JSON.stringify(records)) as PortableRecords, annotations: { exclusions: exclusionsOf(sources.excluded, excludedDocuments, draftAttachmentDocuments) } };
   },
   validate: records => validateCoManagedPortableDocumentRecords(records),
 };

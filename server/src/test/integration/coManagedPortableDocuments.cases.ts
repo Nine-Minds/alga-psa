@@ -52,6 +52,34 @@ export function defineDocumentCases(get: () => { db: Knex; world: PortableWorld 
       expect(exclusionNames(annotations)).toContain('commercial_documents');
       const retained = await retainContributor(db, world, portableDocumentContributor);
       expect(retained.records).toEqual(records);
+      // The over-cap object has no bytes in the fake store; retire it so a later whole-archive case (files contributor) does not try to stage it.
+      await db('external_files').where({ tenant: world.customer, file_id: bigFile }).update({ is_deleted: true });
+    });
+
+    it('excludes documents referenced only by draft or removed ticket comment attachments, keeps library and live-referenced documents, and retain agrees', async () => {
+      const { db, world } = get();
+      const ticketId = uuidv4();
+      await db('tickets').insert({ tenant: world.customer, ticket_id: ticketId, ticket_number: `T-${ticketId.slice(0, 6)}`, client_id: world.customerClientId, title: 'Draft docs' });
+      const attach = (documentId: string, state: string) => db('ticket_comment_attachments').insert({ tenant: world.customer, attachment_id: uuidv4(), ticket_id: ticketId,
+        document_id: documentId, created_by: world.customerStaff.userId, comment_id: null, state, expires_at: new Date('2027-01-01T00:00:00Z') });
+      const insertDoc = async (name: string) => {
+        const documentId = uuidv4();
+        await db('documents').insert({ tenant: world.customer, document_id: documentId, document_name: name, user_id: world.customerStaff.userId, created_by: world.customerStaff.userId });
+        return documentId;
+      };
+      const draftOnly = await insertDoc('L7B3 draft upload'), removedOnly = await insertDoc('L7B3 removed upload');
+      const draftButAssociated = await insertDoc('L7B3 draft but on a client'), library = await insertDoc('L7B3 library doc, no associations');
+      await attach(draftOnly, 'draft'); await attach(removedOnly, 'removed'); await attach(draftButAssociated, 'draft');
+      await db('document_associations').insert({ tenant: world.customer, association_id: uuidv4(), document_id: draftButAssociated, entity_type: 'client', entity_id: world.customerClientId });
+      const { records, annotations } = await exportContributor(db, world, portableDocumentContributor);
+      const ids = records.documents.map(row => row.document_id);
+      expect(ids).not.toContain(draftOnly);
+      expect(ids).not.toContain(removedOnly);
+      expect(ids).toEqual(expect.arrayContaining([draftButAssociated, library]));
+      expect(exclusionNames(annotations)).toContain('draft_attachment_documents');
+      expect((annotations.exclusions as { name: string; reason: string }[]).find(entry => entry.name === 'draft_attachment_documents')!.reason).toContain('(2 excluded)');
+      const retained = await retainContributor(db, world, portableDocumentContributor);
+      expect(retained.records).toEqual(records);
     });
 
     it('drops an invoice-associated document with its versions, content, associations and bytes; keeps a mixed-class neighbour out too', async () => {

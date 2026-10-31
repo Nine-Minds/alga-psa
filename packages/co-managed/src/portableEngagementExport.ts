@@ -11,6 +11,9 @@ import { CO_MANAGED_PORTABLE_ENGAGEMENT_COLUMNS, CO_MANAGED_PORTABLE_ENGAGEMENT_
 
 const LIMIT = 100_000, CHUNK = 1000;
 type Rows = Record<string, unknown>[];
+/** Which owned tables depend on which grant. Service descriptors follow the records that reference them and depend on neither. */
+const INTERACTION_TABLES: readonly CoManagedPortableEngagementTable[] = ['interactions', 'interaction_types'];
+const SCHEDULE_TABLES: readonly CoManagedPortableEngagementTable[] = ['appointment_requests', 'availability_settings', 'availability_exceptions'];
 const DESCRIPTORS = ['service_catalog', 'service_types', 'service_categories'] as const;
 const configBooleans = ['allow_client_preference', 'auto_approval_enabled'] as const;
 const criteriaBooleans = ['require_availability', 'require_contract', 'check_conflicts', 'respect_buffers'] as const;
@@ -51,17 +54,20 @@ export function validateCoManagedPortableEngagementRecords(input: unknown): asse
   }
 }
 
-async function retainCoManagedPortableEngagement(trx: Knex.Transaction, inputActor: CoManagedSessionActor, packageId: string) {
+async function retainCoManagedPortableEngagement(trx: Knex.Transaction, inputActor: CoManagedSessionActor, packageId: string,
+  notProvisioned: ReadonlySet<string> = new Set()) {
   if (!trx.isTransaction) throw new Error('Portable retention requires a transaction');
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
   return withCoManagedExportAdmin(trx, actor, async (current, verified) => {
-    for (const resource of ['interaction', 'user_schedule']) {
+    // A grant the tenant does not provision (engine-declared) empties its tables and skips its check; a provisioned grant not held still throws.
+    for (const [resource, tables] of [['interaction', INTERACTION_TABLES], ['user_schedule', SCHEDULE_TABLES]] as const) {
+      if (tables.every(table => notProvisioned.has(table))) continue;
       if (!await hasCoManagedLocalPermission(current, verified, resource, 'read', true)) throw new CoManagedSharedWorkError();
     }
     const own = tenantDb(current, verified.tenant), records = {} as CoManagedPortableEngagementRecords;
     for (const table of Object.keys(CO_MANAGED_PORTABLE_ENGAGEMENT_COLUMNS) as CoManagedPortableEngagementTable[]) {
-      if ((DESCRIPTORS as readonly string[]).includes(table)) { records[table] = []; continue; }
+      if ((DESCRIPTORS as readonly string[]).includes(table) || notProvisioned.has(table)) { records[table] = []; continue; }
       const columns = CO_MANAGED_PORTABLE_ENGAGEMENT_COLUMNS[table];
       records[table] = await own.table(table).select(...columns).orderBy(columns[0]).limit(LIMIT + 1).forShare();
       if (records[table].length > LIMIT) throw new Error('Invalid portable engagement record count');
@@ -101,14 +107,15 @@ async function retainCoManagedPortableEngagement(trx: Knex.Transaction, inputAct
 // LEVERAGE: pattern portable-contributor-boilerplate — repeats the admission wrapper, permission check, tenantDb handle and JSON round-trip of the core/work/assets contributors.
 export const portableEngagementContributor: PortableContributor = {
   id: 'engagement', version: 1, reason: 'customer-owned interactions, appointment requests, availability and referenced service descriptors',
+  permissions: [{ resource: 'interaction', action: 'read', tables: INTERACTION_TABLES }, { resource: 'user_schedule', action: 'read', tables: SCHEDULE_TABLES }],
   columns: CO_MANAGED_PORTABLE_ENGAGEMENT_COLUMNS, references: CO_MANAGED_PORTABLE_ENGAGEMENT_REFERENCES,
   export: async ctx => {
     if (ctx.db.isTransaction) throw new Error('Portable export requires a root database connection');
     const actor = snapshotCoManagedSessionActor(ctx.actor);
     if (!isCoManagedUuid(ctx.packageId)) throw new CoManagedSharedWorkError();
     // LEVERAGE: pattern portable-export-is-snapshot-retain — export is the retain run at the shared snapshot.
-    return portableSnapshotTransaction(ctx.db, ctx.snapshot, trx => retainCoManagedPortableEngagement(trx, actor, ctx.packageId));
+    return portableSnapshotTransaction(ctx.db, ctx.snapshot, trx => retainCoManagedPortableEngagement(trx, actor, ctx.packageId, ctx.notProvisioned));
   },
-  retain: ctx => retainCoManagedPortableEngagement(ctx.trx, ctx.actor, ctx.packageId),
+  retain: ctx => retainCoManagedPortableEngagement(ctx.trx, ctx.actor, ctx.packageId, ctx.notProvisioned),
   validate: records => validateCoManagedPortableEngagementRecords(records),
 };

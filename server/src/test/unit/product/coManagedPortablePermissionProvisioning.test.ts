@@ -27,7 +27,10 @@ const empty = (c: PortableContributor) => ({ records: Object.fromEntries(Object.
  * The REAL contributors' column, reference and permission declarations; only the database read is replaced. Each
  * replacement performs the same permission checks the real exporters do for the scopes the engine did not drop.
  */
-const contributors = CORE_PORTABLE_CONTRIBUTORS.map((real): PortableContributor => {
+// This file pins the L7b1 engine set; the L7b3 domains have their own provisioning cases (integration + coManagedPortableL7b3Provisioning).
+const L7B1_IDS = ['core', 'work', 'assets', 'workflows', 'files'];
+const L7B1_CONTRIBUTORS = CORE_PORTABLE_CONTRIBUTORS.filter(c => L7B1_IDS.includes(c.id));
+const contributors = L7B1_CONTRIBUTORS.map((real): PortableContributor => {
   const run = async (id: string, notProvisioned?: ReadonlySet<string>) => {
     calls.push(id);
     for (const p of real.permissions ?? []) {
@@ -50,7 +53,7 @@ beforeEach(() => {
 
 describe('portable export in a co_managed-shaped permission set', () => {
   it('declares the permissions each domain needs, so the engine never names a domain', () => {
-    const declared = Object.fromEntries(CORE_PORTABLE_CONTRIBUTORS.map(c => [c.id, (c.permissions ?? []).map(p => `${p.resource}.${p.action}${p.tables ? '*' : ''}`)]));
+    const declared = Object.fromEntries(L7B1_CONTRIBUTORS.map(c => [c.id, (c.permissions ?? []).map(p => `${p.resource}.${p.action}${p.tables ? '*' : ''}`)]));
     expect(declared).toEqual({ core: [], work: ['ticket.read', 'ticket_settings.read', 'project.read*'], assets: ['asset.read'], workflows: ['workflow.admin', 'workflow.read'], files: ['co_management.manage'] });
   });
 

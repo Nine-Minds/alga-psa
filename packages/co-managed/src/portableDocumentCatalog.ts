@@ -52,9 +52,24 @@ export function commercialPortableDocumentIds(documents: readonly Row[], associa
   return excluded;
 }
 
-/** Drops commercial documents and everything that hangs off them. Pure and deterministic. */
-export function filterCommercialPortableDocuments(records: CoManagedPortableDocumentRecords) {
-  const excluded = commercialPortableDocumentIds(records.documents, records.document_associations);
+/** Ids of documents that back only unsent or removed conversation content: at least one draft/removed
+ * `ticket_comment_attachments` row points at them and nothing else does (no association, KB article, meeting
+ * artifact or live attachment). A document with zero references of any kind (the tenant document library) is NOT
+ * in this set and is exported. The conversations contributor already drops draft rows, so this keeps the two
+ * sections consistent. */
+export function draftAttachmentPortableDocumentIds(documents: readonly Row[], associations: readonly Row[], kbArticles: readonly Row[],
+  attachments: readonly Row[], artifactDocumentIds: readonly unknown[]): Set<string> {
+  const referenced = new Set<string>([...associations.map(row => row.document_id), ...kbArticles.map(row => row.document_id), ...artifactDocumentIds]
+    .filter((id): id is string => typeof id === 'string'));
+  const live = new Set(attachments.filter(row => row.state !== 'draft' && row.state !== 'removed').map(row => String(row.document_id)));
+  const unsent = new Set(attachments.filter(row => row.state === 'draft' || row.state === 'removed').map(row => String(row.document_id)));
+  return new Set(documents.map(row => String(row.document_id)).filter(id => unsent.has(id) && !live.has(id) && !referenced.has(id)));
+}
+
+/** Drops commercial documents (and, via `alsoExclude`, draft-attachment documents) and everything that hangs off them. Pure and deterministic. */
+export function filterCommercialPortableDocuments(records: CoManagedPortableDocumentRecords, alsoExclude: ReadonlySet<string> = new Set()) {
+  const commercial = commercialPortableDocumentIds(records.documents, records.document_associations);
+  const excluded = new Set([...commercial, ...alsoExclude]);
   const keep = (rows: readonly Row[], key: string) => rows.filter(row => !excluded.has(String(row[key])));
   const documents = keep(records.documents, 'document_id');
   const articles = keep(records.kb_articles, 'document_id');
@@ -72,5 +87,5 @@ export function filterCommercialPortableDocuments(records: CoManagedPortableDocu
     document_default_folders: records.document_default_folders.filter(row => CO_MANAGED_PORTABLE_DOCUMENT_ENTITY_TYPES.has(String(row.entity_type))),
     kb_article_relations: records.kb_article_relations.filter(row => articleIds.has(String(row.source_article_id)) && articleIds.has(String(row.target_article_id))),
     kb_article_reviewers: records.kb_article_reviewers.filter(row => articleIds.has(String(row.article_id))) };
-  return { records: filtered, excludedDocuments: excluded.size };
+  return { records: filtered, excludedDocuments: commercial.size, draftAttachmentDocuments: excluded.size - commercial.size };
 }

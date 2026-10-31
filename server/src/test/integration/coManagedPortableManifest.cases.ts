@@ -52,6 +52,19 @@ export function defineManifestCases(get: () => { db: Knex; world: PortableWorld 
       }
     });
 
+    it('no deferred_domain exclusion names, or claims to defer, a section the archive delivers', async () => {
+      const { manifest } = await build();
+      const delivered = [...NEW_SECTIONS];
+      const claims = (entry: { name: string; reason: string }) => delivered.includes(entry.name) || /later portable-export release|delivered later|not yet delivered/i.test(entry.reason);
+      // The engine-level list defers no domain at all.
+      expect(manifest.exclusions.filter(entry => entry.class === 'deferred_domain')).toEqual([]);
+      for (const section of manifest.sections) {
+        for (const entry of ((section.annotations.exclusions ?? []) as { class: string; name: string; reason: string }[]).filter(item => item.class === 'deferred_domain')) {
+          expect(claims(entry), `${section.id}: ${entry.name}`).toBe(false);
+        }
+      }
+    });
+
     it('carries the named exclusion for every empty domain', async () => {
       const { manifest } = await build();
       const section = (id: string) => manifest.sections.find(entry => entry.id === id)!;
