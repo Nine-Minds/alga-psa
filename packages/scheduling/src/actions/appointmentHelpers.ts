@@ -247,6 +247,7 @@ export async function generateICSLink(
  * Generate URL for requesting a new appointment from client portal
  */
 export async function getRequestNewAppointmentLink(): Promise<string> {
+  // LEVERAGE: pattern tenant-link-context — hand-built tenant-facing base URL for a client-portal link; no tenant param available here, left canonical.
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   return `${baseUrl}/client-portal/appointments`;
 }

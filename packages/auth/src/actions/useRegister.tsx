@@ -6,7 +6,7 @@ import User from '@alga-psa/db/models/user';
 import Tenant from '@alga-psa/db/models/tenant';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
-import { IUserRegister, IUserWithRoles, IRoleWithPermissions } from '@alga-psa/types';
+import { IUserRegister, IUserWithRoles, IRoleWithPermissions, isInteractiveUserType } from '@alga-psa/types';
 
 import { getInfoFromToken, createToken } from '../lib/tokenizer';
 import { hashPassword } from '@alga-psa/core/encryption';
@@ -86,12 +86,10 @@ export async function getAccountInfoFromToken(token: string, portal: string) {
     }
     
     // Get the user from database to get full name
-    let dbUser;
-    if (userInfo.user_type) {
-      dbUser = await User.findUserByEmailAndType(userInfo.email, userInfo.user_type as 'internal' | 'client');
-    } else {
-      dbUser = await User.findUserByEmail(userInfo.email);
+    if (!isInteractiveUserType(userInfo.user_type)) {
+      return null;
     }
+    const dbUser = await User.findUserByEmailAndType(userInfo.email, userInfo.user_type);
     
     return {
       name: dbUser ? `${dbUser.first_name || ''} ${dbUser.last_name || ''}`.trim() || dbUser.username : userInfo.username || t('auth.registration.user'),
@@ -114,16 +112,14 @@ export async function setNewPassword(password: string, token: string): Promise<b
   if (userInfo && userInfo.email) {
     const hashedPassword = await hashPassword(password);
     
-    // If user_type is in the token, use it to find the correct user
-    let dbUser;
-    if (userInfo.user_type) {
-      dbUser = await User.findUserByEmailAndType(userInfo.email, userInfo.user_type as 'internal' | 'client');
-    } else {
-      // Fallback for old tokens without user_type
-      dbUser = await User.findUserByEmail(userInfo.email);
+    // The token must name an interactive user type; there is no untyped lookup.
+    if (!isInteractiveUserType(userInfo.user_type)) {
+      logger.error(`Refusing password set for [ ${userInfo.email} ]: token has no interactive user_type`);
+      return false;
     }
-    
-    if (!dbUser) {
+    const dbUser = await User.findUserByEmailAndType(userInfo.email, userInfo.user_type);
+
+    if (!dbUser || !isInteractiveUserType(dbUser.user_type)) {
       logger.error(`User [ ${userInfo.email} ] with type [ ${userInfo.user_type || 'any'} ] not found in the database`);
       return false;
     }

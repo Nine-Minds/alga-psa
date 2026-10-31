@@ -331,16 +331,29 @@ export class TenantEmailService extends BaseEmailService {
    * - Fails open if rate limiter unavailable
    */
   private async checkRateLimits(params: BaseEmailParams): Promise<{ allowed: boolean; reason?: string; retryAfterMs?: number }> {
+    return TenantEmailService.checkEmailRateLimit(this.tenantId, params.userId);
+  }
+
+  /**
+   * Shared token-bucket check for any tenant-scoped outbound send (regular
+   * sends and the diagnostics live-send both go through this). Fails open if
+   * the limiter is unavailable.
+   */
+  static async checkEmailRateLimit(
+    tenantId: string,
+    userId?: string
+  ): Promise<{ allowed: boolean; reason?: string; retryAfterMs?: number }> {
+    const serviceName = `TenantEmailService[${tenantId}]`;
     const rateLimiter = TokenBucketRateLimiter.getInstance();
 
     // Fail open if rate limiter is not initialized
     if (!rateLimiter.isReady()) {
-      logger.debug(`[${this.getServiceName()}] Rate limiter not ready, allowing request`);
+      logger.debug(`[${serviceName}] Rate limiter not ready, allowing request`);
       return { allowed: true };
     }
 
     try {
-      const result = await rateLimiter.tryConsume('email', this.tenantId, params.userId);
+      const result = await rateLimiter.tryConsume('email', tenantId, userId);
 
       if (!result.allowed) {
         return {
@@ -353,7 +366,7 @@ export class TenantEmailService extends BaseEmailService {
       return { allowed: true };
     } catch (error) {
       // Fail open on error
-      logger.error(`[${this.getServiceName()}] Rate limit check failed, allowing request:`, error);
+      logger.error(`[${serviceName}] Rate limit check failed, allowing request:`, error);
       return { allowed: true };
     }
   }
@@ -490,14 +503,13 @@ export class TenantEmailService extends BaseEmailService {
   }
 
   /**
-   * Verify the tenant's outbound provider configuration and, optionally, send a
-   * test message. Uses a fresh provider manager (not the cached singleton) so it
+   * Verify the tenant's outbound provider configuration. This never sends mail;
+   * the only test-send path is the diagnostics live-send. Uses a fresh provider manager (not the cached singleton) so it
    * always reflects the currently-saved settings and returns the real failure
    * reason (SMTP auth/TLS/connection error) rather than a generic message.
    */
   static async testConnection(
-    tenantId: string,
-    toAddress?: string
+    tenantId: string
   ): Promise<{ success: boolean; message?: string; error?: string }> {
     const knex = await getConnection(tenantId);
     const settings = await this.getTenantEmailSettings(tenantId, knex);
@@ -528,35 +540,8 @@ export class TenantEmailService extends BaseEmailService {
     }
 
     const providerLabel = enabled.providerType.toUpperCase();
-    if (!toAddress) {
-      return { success: true, message: `${providerLabel} connection verified.` };
-    }
-
-    const tenantCompanyName = await resolveTenantCompanyName(knex, tenantId);
-    const from = resolveDefaultFromAddress(settings, tenantCompanyName);
-
-    const message: EmailMessage = {
-      from,
-      to: [{ email: toAddress }],
-      subject: 'AlgaPSA outbound email test',
-      text: 'This is a test message confirming your outbound email configuration works.',
-      html: '<p>This is a test message confirming your outbound email configuration works.</p>'
-    };
-
-    try {
-      const result = await manager.sendEmail(message, tenantId);
-      if (result.success) {
-        return { success: true, message: `Test email sent to ${toAddress} via ${providerLabel}.` };
-      }
-      return { success: false, error: result.error || 'The provider rejected the test message.' };
-    } catch (error) {
-      if (error instanceof EmailProviderError) {
-        return { success: false, error: error.message };
-      }
-      return { success: false, error: 'Failed to send the test email. Check provider settings and try again.' };
-    }
+    return { success: true, message: `${providerLabel} connection verified.` };
   }
-
 
   /**
    * Send an email with automatic provider initialization and template support

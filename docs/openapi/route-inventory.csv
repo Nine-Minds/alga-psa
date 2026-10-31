@@ -197,6 +197,11 @@ CE,/api/v1/ai/document-assist,POST,server/src/app/api/v1/ai/document-assist/rout
 CE,/api/v1/appliance-installs,GET OPTIONS,server/src/app/api/v1/appliance-installs/route.ts,,,
 CE,/api/v1/appliance-installs/access,OPTIONS POST,server/src/app/api/v1/appliance-installs/access/route.ts,,,
 CE,/api/v1/appliance-installs/{tenantId},GET OPTIONS,server/src/app/api/v1/appliance-installs/[tenantId]/route.ts,,,
+CE,/api/v1/asset-groups,GET POST,server/src/app/api/v1/asset-groups/route.ts,ApiAssetGroupController,@/lib/api/controllers/ApiAssetGroupController,server/src/lib/api/controllers/ApiAssetGroupController.ts
+CE,/api/v1/asset-groups/{id},DELETE GET PUT,server/src/app/api/v1/asset-groups/[id]/route.ts,ApiAssetGroupController,@/lib/api/controllers/ApiAssetGroupController,server/src/lib/api/controllers/ApiAssetGroupController.ts
+CE,/api/v1/asset-groups/{id}/contacts,DELETE POST,server/src/app/api/v1/asset-groups/[id]/contacts/route.ts,ApiAssetGroupController,@/lib/api/controllers/ApiAssetGroupController,server/src/lib/api/controllers/ApiAssetGroupController.ts
+CE,/api/v1/asset-groups/{id}/members,DELETE POST,server/src/app/api/v1/asset-groups/[id]/members/route.ts,ApiAssetGroupController,@/lib/api/controllers/ApiAssetGroupController,server/src/lib/api/controllers/ApiAssetGroupController.ts
+CE,/api/v1/asset-statuses,GET,server/src/app/api/v1/asset-statuses/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets,GET POST,server/src/app/api/v1/assets/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/bulk-status,PUT,server/src/app/api/v1/assets/bulk-status/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/bulk-update,PUT,server/src/app/api/v1/assets/bulk-update/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
@@ -207,6 +212,7 @@ CE,/api/v1/assets/relationships/{relationshipId},DELETE,server/src/app/api/v1/as
 CE,/api/v1/assets/search,GET,server/src/app/api/v1/assets/search/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/stats,GET,server/src/app/api/v1/assets/stats/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/{id},DELETE GET PUT,server/src/app/api/v1/assets/[id]/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
+CE,/api/v1/assets/{id}/assignments,GET,server/src/app/api/v1/assets/[id]/assignments/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/{id}/documents,GET POST,server/src/app/api/v1/assets/[id]/documents/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/{id}/history,GET,server/src/app/api/v1/assets/[id]/history/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/{id}/maintenance,GET POST,server/src/app/api/v1/assets/[id]/maintenance/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
@@ -222,24 +228,11 @@ CE,/api/v1/assets/{id}/software,GET,server/src/app/api/v1/assets/[id]/software/r
 CE,/api/v1/assets/{id}/summary,GET,server/src/app/api/v1/assets/[id]/summary/route.ts,,,
 CE,/api/v1/assets/{id}/tickets,GET POST,server/src/app/api/v1/assets/[id]/tickets/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
 CE,/api/v1/assets/{id}/tickets/{ticketId},DELETE,server/src/app/api/v1/assets/[id]/tickets/[ticketId]/route.ts,ApiAssetController,@/lib/api/controllers/ApiAssetController,server/src/lib/api/controllers/ApiAssetController.ts
-CE,/api/v1/automation/executions,GET,server/src/app/api/v1/automation/executions/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
-CE,/api/v1/automation/executions/{id},GET,server/src/app/api/v1/automation/executions/[id]/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
-CE,/api/v1/automation/executions/{id}/retry,POST,server/src/app/api/v1/automation/executions/[id]/retry/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
-CE,/api/v1/automation/meta,GET,server/src/app/api/v1/automation/meta/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
-CE,/api/v1/automation/performance,GET,server/src/app/api/v1/automation/performance/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
-CE,/api/v1/automation/rules,GET POST,server/src/app/api/v1/automation/rules/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
-CE,/api/v1/automation/rules/bulk-execute,POST,server/src/app/api/v1/automation/rules/bulk-execute/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
-CE,/api/v1/automation/rules/bulk-status,POST,server/src/app/api/v1/automation/rules/bulk-status/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
-CE,/api/v1/automation/rules/{id},DELETE GET PUT,server/src/app/api/v1/automation/rules/[id]/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
-CE,/api/v1/automation/rules/{id}/execute,POST,server/src/app/api/v1/automation/rules/[id]/execute/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
-CE,/api/v1/automation/statistics,GET,server/src/app/api/v1/automation/statistics/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
-CE,/api/v1/automation/templates,GET POST,server/src/app/api/v1/automation/templates/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
-CE,/api/v1/automation/templates/{id},GET,server/src/app/api/v1/automation/templates/[id]/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
-CE,/api/v1/automation/templates/{id}/use,POST,server/src/app/api/v1/automation/templates/[id]/use/route.ts,ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController,server/src/lib/api/controllers/ApiAutomationController.ts
 CE,/api/v1/billing,GET,server/src/app/api/v1/billing/route.ts,,,
 CE,/api/v1/billing-analytics/overview,GET,server/src/app/api/v1/billing-analytics/overview/route.ts,ApiContractLineController,@/lib/api/controllers/ApiContractLineController,server/src/lib/api/controllers/ApiContractLineController.ts
 CE,/api/v1/boards,GET POST,server/src/app/api/v1/boards/route.ts,ApiBoardController,@/lib/api/controllers/ApiBoardController,server/src/lib/api/controllers/ApiBoardController.ts
 CE,/api/v1/boards/{id},DELETE GET PUT,server/src/app/api/v1/boards/[id]/route.ts,ApiBoardController,@/lib/api/controllers/ApiBoardController,server/src/lib/api/controllers/ApiBoardController.ts
+CE,/api/v1/calendars,GET,server/src/app/api/v1/calendars/route.ts,ApiTimeSheetController,server/src/lib/api/controllers/ApiTimeSheetController,server/src/lib/api/controllers/ApiTimeSheetController.ts
 CE,/api/v1/categories/analytics,GET,server/src/app/api/v1/categories/analytics/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
 CE,/api/v1/categories/bulk/delete,POST,server/src/app/api/v1/categories/bulk/delete/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
 CE,/api/v1/categories/search,GET,server/src/app/api/v1/categories/search/route.ts,ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController,server/src/lib/api/controllers/ApiCategoryController.ts
@@ -698,6 +691,7 @@ CE,/api/v1/tickets/{id}/project-links,GET,server/src/app/api/v1/tickets/[id]/pro
 CE,/api/v1/tickets/{id}/status,PUT,server/src/app/api/v1/tickets/[id]/status/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
 CE,/api/v1/tickets/{id}/team,DELETE PUT,server/src/app/api/v1/tickets/[id]/team/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
 CE,/api/v1/tickets/{id}/time-entries,GET,server/src/app/api/v1/tickets/[id]/time-entries/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
+CE,/api/v1/tickets/{id}/watchers,DELETE GET PATCH POST,server/src/app/api/v1/tickets/[id]/watchers/route.ts,ApiTicketController,server/src/lib/api/controllers/ApiTicketController,server/src/lib/api/controllers/ApiTicketController.ts
 CE,/api/v1/time-entries,GET POST,server/src/app/api/v1/time-entries/route.ts,ApiTimeEntryController,@/lib/api/controllers/ApiTimeEntryController,server/src/lib/api/controllers/ApiTimeEntryController.ts
 CE,/api/v1/time-entries/active-session,GET,server/src/app/api/v1/time-entries/active-session/route.ts,ApiTimeEntryController,@/lib/api/controllers/ApiTimeEntryController,server/src/lib/api/controllers/ApiTimeEntryController.ts
 CE,/api/v1/time-entries/approve,POST,server/src/app/api/v1/time-entries/approve/route.ts,ApiTimeEntryController,@/lib/api/controllers/ApiTimeEntryController,server/src/lib/api/controllers/ApiTimeEntryController.ts

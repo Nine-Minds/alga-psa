@@ -107,7 +107,7 @@ export function ImapProviderForm({
     oauthScopes: z.string().optional(),
     isActive: z.boolean(),
     folderFilters: z.string().optional(),
-    inboundTicketDefaultsId: z.string().uuid().optional()
+    inboundTicketDefaultsId: z.string().guid().optional()
   });
 
   const form = useForm<ImapProviderFormData>({

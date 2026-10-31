@@ -8,7 +8,7 @@ import { materializeContractCadenceServicePeriods } from '@shared/billingClients
 import { buildScheduleSourceRuleVersion } from '@shared/billingClients/clientCadenceScheduleRegeneration';
 import {
   isAdvanceTimingAllowedForLineType,
-  resolveRecurringChargeFamily,
+  contractLineOwnStream,
 } from '@shared/billingClients/contractLineTimingRule';
 import { normalizeCadenceBillingCycle } from '../lib/cadenceVocabulary';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
@@ -212,7 +212,7 @@ async function loadArrearsCandidateForServicePeriod(
   const sourceObligation = {
     tenant,
     obligationId: line.contract_line_id,
-    chargeFamily: resolveRecurringChargeFamily(line.contract_line_type),
+    chargeFamily: contractLineOwnStream(line).family,
   };
   const sourceRunKey = `${REPAIR_SOURCE_RUN_PREFIX}:${line.contract_line_id}:${materializedAt}`;
   const recordIdFactory = () => uuidv4();
@@ -434,7 +434,7 @@ export async function repairArrearsOnlyLineSchedulesForTenant(
 
     // 5. Catch-up rows for billed advance periods.
     const coveredSpans = new Set((await arrearsRows()).map(periodSpanKey));
-    const chargeFamily = resolveRecurringChargeFamily(line.contract_line_type);
+    const chargeFamily = contractLineOwnStream(line).family;
     let bucketOrTotal: boolean | null = null;
 
     for (const billed of [...billedRows].sort((a, b) =>

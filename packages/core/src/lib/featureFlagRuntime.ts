@@ -1,4 +1,5 @@
 import type { PostHog } from 'posthog-node';
+import { resolveFlagTargeting } from './featureFlagTargeting';
 
 const FEATURE_FLAG_DISABLE_VALUES = new Set(['true', '1', 'yes', 'on']);
 const DEFAULT_POSTHOG_API_KEY = 'phc_RiwIhTqFG1NOWw6TS53fpnj3B7fAGv2Ixx7JD2S4IIn';
@@ -117,6 +118,11 @@ export class FeatureFlags {
   }
 
   async isEnabled(flagKey: string, context: FeatureFlagContext = {}): Promise<boolean> {
+    // Same targeting source as isFeatureFlagEnabled, so direct callers and the
+    // /api/v1/feature-flags route agree with admission and the bootstrap.
+    const targeted = resolveFlagTargeting(flagKey, context.tenantId);
+    if (targeted !== null) return targeted;
+
     if (featureFlagsAreDisabled()) {
       return true;
     }

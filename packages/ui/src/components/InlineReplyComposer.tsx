@@ -3,12 +3,14 @@
 import React, { useMemo, useState } from 'react';
 import type { PartialBlock } from '@blocknote/core';
 import { TextEditor } from '../editor';
+import type { EditorSnippetsConfig } from '../editor/snippets';
 import { hasEditorContent } from '../editor/hasEditorContent';
 import { useRegisterDismissGuard } from './DismissGuard';
 import { useRegisterUnsavedChanges } from '../context/UnsavedChangesContext';
 import { Button } from './Button';
 import { Label } from './Label';
 import { Switch } from './Switch';
+import { COMPOSER_MAX_HEIGHT } from './composerSizing';
 import { withDataAutomationId } from '../ui-reflection/withDataAutomationId';
 import { useTranslation } from '../lib/i18n/client';
 
@@ -43,6 +45,8 @@ export interface InlineReplyComposerProps {
    * exactly as before.
    */
   footerActions?: React.ReactNode;
+  /** Reusable-content library for the editor (canned responses); omit to hide the picker. */
+  snippets?: EditorSnippetsConfig;
   /** Blocks Reply while the footer slot holds invalid input. */
   submitDisabled?: boolean;
   onSubmit: (params: {
@@ -65,6 +69,7 @@ export function InlineReplyComposer({
   uploadFile,
   searchMentions,
   footerActions,
+  snippets,
   submitDisabled = false,
   onSubmit,
   onCancel,
@@ -111,6 +116,8 @@ export function InlineReplyComposer({
         searchMentions={searchMentions}
         uploadFile={uploadFile}
         footerActions={footerActions}
+        snippets={snippets}
+        maxHeight={COMPOSER_MAX_HEIGHT}
         autoFocus
       />
       <div className="mt-2 flex justify-end gap-2">

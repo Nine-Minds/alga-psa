@@ -4,7 +4,9 @@
  * hudu_integrations is EE-only: every read/write/delete must live under ee/.
  * CE runtime (server/src), CE migrations (server/migrations) and shared
  * packages (packages/, including the packages/ee stubs) must never name the
- * table, except for the shared tenant facade metadata registry. Mapping cleanup
+ * table, except in the shared tenant metadata registries (facade metadata, the
+ * tenant table manifest and its generated FK snapshot), and there only as
+ * declarative entries — never as a query target. Mapping cleanup
  * is exempt because mappings live in the shared CE table
  * `tenant_external_entity_mappings`.
  *
@@ -19,8 +21,17 @@ const repoRoot = path.resolve(process.cwd(), '..', '..');
 
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx', '.js', '.jsx', '.cjs', '.mjs']);
 const SHARED_PACKAGE_HUDU_METADATA_ALLOWLIST = [
+  path.join('packages', 'db', 'src', 'lib', 'tenantTableForeignKeys.ts'),
+  path.join('packages', 'db', 'src', 'lib', 'tenantTableManifest.ts'),
   path.join('packages', 'db', 'src', 'lib', 'tenantTableMetadata.ts'),
 ];
+// Declarative registry entries: `hudu_integrations: {...}`, `table: '...'`,
+// `child: '...'` / `parent: '...'` / `name: '..._foreign'`.
+const DECLARATIVE_METADATA_LINE =
+  /^\s*(hudu_integrations:\s*\{|\{\s*(table|child|parent):\s*'[a-z_]+'.*\},?\s*$)/;
+// Anything that would read/write/delete the table from shared code.
+const QUERY_TARGET_PATTERN =
+  /(knex|trx|db|\.from|\.into|\.table|\.del|\.delete|\.raw)\s*\(\s*['"`][^'"`]*hudu_integrations/;
 const SKIP_DIRS = new Set([
   'node_modules',
   'dist',
@@ -77,6 +88,27 @@ describe('T027: hudu_integrations is referenced by EE code only', () => {
     expect(findReferences(path.join(repoRoot, 'packages'), 'hudu_integrations')).toEqual(
       SHARED_PACKAGE_HUDU_METADATA_ALLOWLIST
     );
+  });
+
+  it('allowlisted shared metadata registries name hudu_integrations only as declarative entries', () => {
+    for (const relativePath of SHARED_PACKAGE_HUDU_METADATA_ALLOWLIST) {
+      const offending = fs
+        .readFileSync(path.join(repoRoot, relativePath), 'utf8')
+        .split('\n')
+        .filter((line) => line.includes('hudu_integrations'))
+        .filter((line) => !DECLARATIVE_METADATA_LINE.test(line) || QUERY_TARGET_PATTERN.test(line));
+
+      expect({ relativePath, offending }).toEqual({ relativePath, offending: [] });
+    }
+  });
+
+  it('the declarative-entry guard rejects query usage of hudu_integrations', () => {
+    expect(DECLARATIVE_METADATA_LINE.test("  hudu_integrations: { scope: 'tenant' },")).toBe(true);
+    expect(DECLARATIVE_METADATA_LINE.test("  { table: 'hudu_integrations', deletion: 'ordered' },")).toBe(true);
+    expect(QUERY_TARGET_PATTERN.test("  await knex('hudu_integrations').where({ tenant }).del();")).toBe(true);
+    expect(QUERY_TARGET_PATTERN.test("  await trx('hudu_integrations').delete();")).toBe(true);
+    expect(QUERY_TARGET_PATTERN.test("  await knex.raw('delete from hudu_integrations where tenant = ?', [t]);")).toBe(true);
+    expect(DECLARATIVE_METADATA_LINE.test("  await knex('hudu_integrations').del();")).toBe(false);
   });
 
   it('EE owns the table: the EE migration and EE repository reference it', () => {

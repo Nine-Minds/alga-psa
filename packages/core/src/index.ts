@@ -14,6 +14,7 @@ export type { ISecretProvider } from './lib/secrets/ISecretProvider';
 // Date/time utilities
 export * from './lib/dateTimeUtils';
 export { parseCalendarDateTime } from './lib/calendarDateTime';
+export { formatLocalizedCalendarDate } from './lib/calendarDate';
 
 // Error utilities
 export * from './lib/errors';
@@ -40,6 +41,9 @@ export * from './lib/quoteTotals';
 
 // Formatting utilities
 export * from './lib/formatters';
+
+// Postal address formatting (skips empty components)
+export * from './lib/address';
 export * from './lib/fileNames';
 export * from './lib/projectBillingStatus';
 export * from './lib/appointmentRequestLinks';
@@ -69,3 +73,5 @@ export * from './constants/currency';
 export * from './types/index';
 
 export { isInlineTextDocumentMimeType, isPreviewableDocumentMimeType } from './lib/documentMimeType';
+export { resolveDocumentServingPolicy, buildContentDisposition } from './lib/documentServingPolicy';
+export type { DocumentServingPolicy, DocumentDisposition } from './lib/documentServingPolicy';

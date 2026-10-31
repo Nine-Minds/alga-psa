@@ -1188,6 +1188,7 @@ describe('workflow data context', () => {
       id: 'wf-ref-output',
       name: 'Ref output workflow',
       version: 1,
+      payloadSchemaRef: 'system:default',
       description: '',
       steps: [
         {
@@ -1222,5 +1223,176 @@ describe('workflow data context', () => {
     const referenceOptions = buildWorkflowReferenceFieldOptions(null, context).map((option) => option.value);
 
     expect(referenceOptions).toContain('vars.duplicatedContact.duplicate_contact.contact_name_id');
+  });
+
+  describe('variables set by Set variables and the wait steps', () => {
+    const inboundPayloadSchema = {
+      type: 'object',
+      properties: {
+        senderEmail: { type: 'string' },
+        attemptCount: { type: 'integer' },
+      },
+    };
+
+    const definitionWithAssign = (
+      stepType: 'transform.assign' | 'event.wait' | 'time.wait',
+      assign: Record<string, { $expr: string }>
+    ): WorkflowDefinition => ({
+      id: 'workflow-set-variables',
+      version: 1,
+      name: 'Set variables workflow',
+      payloadSchemaRef: 'system:default',
+      trigger: { type: 'event', eventName: 'ticket.created' },
+      steps: [
+        {
+          id: 'set-vars',
+          type: stepType,
+          name: 'Set variables',
+          config: { assign },
+        },
+        {
+          id: 'find-contact',
+          type: 'action.call',
+          config: { actionId: 'tickets.create', version: 1 },
+        },
+      ],
+    } as unknown as WorkflowDefinition);
+
+    const contextFor = (
+      stepType: 'transform.assign' | 'event.wait' | 'time.wait',
+      assign: Record<string, { $expr: string }>
+    ) => buildDataContext(definitionWithAssign(stepType, assign), 'find-contact', actionRegistry, inboundPayloadSchema);
+
+    // The repro: "Set variables" assigning senderEmail = payload.senderEmail left the variable out
+    // of every picker, because a variable holding one value has no fields to offer.
+    it.each(['transform.assign', 'event.wait', 'time.wait'] as const)(
+      'offers a variable set to one value by %s, whether the key is scoped or bare',
+      (stepType) => {
+        for (const key of ['vars.senderEmail', 'senderEmail']) {
+          const context = contextFor(stepType, { [key]: { $expr: 'payload.senderEmail' } });
+          expect(context.steps, key).toHaveLength(1);
+          expect(context.steps[0], key).toMatchObject({
+            stepId: 'set-vars:senderEmail',
+            stepName: 'Set variables',
+            saveAs: 'senderEmail',
+            outputSchema: { type: 'string' },
+            fields: [],
+          });
+          const options = buildWorkflowReferenceFieldOptions(context.payloadSchema, context).map(
+            (option) => option.value
+          );
+          expect(options, key).toContain('vars.senderEmail');
+        }
+      }
+    );
+
+    it('types the variable from the assigned reference and leaves computed values open', () => {
+      const typed = contextFor('transform.assign', {
+        senderEmail: { $expr: 'payload.senderEmail' },
+        attemptCount: { $expr: 'payload.attemptCount' },
+        greeting: { $expr: '"Hi " & payload.senderEmail' },
+      });
+      expect(
+        Object.fromEntries(typed.steps.map((step) => [step.saveAs, step.outputSchema]))
+      ).toEqual({
+        senderEmail: { type: 'string' },
+        attemptCount: { type: 'integer' },
+        greeting: {},
+      });
+      // A computed value's shape is unknown, but the variable is still offered.
+      const options = buildWorkflowReferenceFieldOptions(typed.payloadSchema, typed).map((option) => option.value);
+      expect(options).toContain('vars.greeting');
+    });
+
+    it('keeps object-shaped assignments browsing by field', () => {
+      const context = contextFor('transform.assign', {
+        'vars.contact.email': { $expr: 'payload.senderEmail' },
+        'contact.name': { $expr: 'payload.senderEmail' },
+      });
+      expect(context.steps[0]).toMatchObject({
+        saveAs: 'contact',
+        outputSchema: { type: 'object', properties: { email: {}, name: {} } },
+      });
+      const options = buildWorkflowReferenceFieldOptions(context.payloadSchema, context).map((option) => option.value);
+      expect(options).toContain('vars.contact.email');
+      expect(options).toContain('vars.contact.name');
+    });
+
+    it('ignores assignment keys that are not workflow variables', () => {
+      const context = contextFor('transform.assign', {
+        'payload.senderEmail': { $expr: 'payload.senderEmail' },
+        'meta.state': { $expr: '"done"' },
+        'local.scratch': { $expr: 'payload.senderEmail' },
+        '/senderEmail': { $expr: 'payload.senderEmail' },
+      });
+      expect(context.steps).toHaveLength(0);
+    });
+
+    it('reachability: bare keys follow the same branch rules as scoped ones', () => {
+      const definition = {
+        id: 'workflow-set-variables-branches',
+        version: 1,
+        name: 'Branching set variables',
+        payloadSchemaRef: 'system:default',
+        trigger: { type: 'event', eventName: 'ticket.created' },
+        steps: [
+          {
+            id: 'if-1',
+            type: 'control.if',
+            condition: { $expr: 'true' },
+            then: [
+              {
+                id: 'then-assign',
+                type: 'transform.assign',
+                name: 'Set variables',
+                config: { assign: { senderEmail: { $expr: 'payload.senderEmail' } } },
+              },
+              { id: 'then-later', type: 'action.call', config: { actionId: 'tickets.create', version: 1 } },
+            ],
+            else: [
+              { id: 'else-later', type: 'action.call', config: { actionId: 'tickets.create', version: 1 } },
+            ],
+          },
+          { id: 'after-if', type: 'action.call', config: { actionId: 'tickets.create', version: 1 } },
+        ],
+      } as unknown as WorkflowDefinition;
+
+      const saved = (stepId: string) =>
+        buildDataContext(definition, stepId, actionRegistry, inboundPayloadSchema).steps.map((step) => step.saveAs);
+      expect(saved('then-later')).toEqual(['senderEmail']);
+      expect(saved('else-later')).toEqual([]);
+      expect(saved('after-if')).toEqual(['senderEmail']);
+    });
+
+    it('reachability: a bare key assigned inside a loop is offered to later steps in the loop', () => {
+      const definition = {
+        id: 'workflow-set-variables-loop',
+        version: 1,
+        name: 'Looping set variables',
+        payloadSchemaRef: 'system:default',
+        trigger: { type: 'event', eventName: 'ticket.created' },
+        steps: [
+          {
+            id: 'foreach-1',
+            type: 'control.forEach',
+            items: { $expr: 'payload.recipients' },
+            itemVar: 'recipient',
+            concurrency: 1,
+            body: [
+              {
+                id: 'loop-assign',
+                type: 'transform.assign',
+                name: 'Set variables',
+                config: { assign: { recipientEmail: { $expr: 'recipient' } } },
+              },
+              { id: 'loop-later', type: 'action.call', config: { actionId: 'tickets.create', version: 1 } },
+            ],
+          },
+        ],
+      } as unknown as WorkflowDefinition;
+
+      const context = buildDataContext(definition, 'loop-later', actionRegistry, inboundPayloadSchema);
+      expect(context.steps.map((step) => step.saveAs)).toEqual(['recipientEmail']);
+    });
   });
 });

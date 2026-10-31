@@ -12,7 +12,7 @@ import type { IUserWithRoles } from '@alga-psa/types';
 
 const ExecuteReportSchema = z.object({
   reportId: z.string().min(1, 'Report ID is required'),
-  parameters: z.record(z.any()).optional(),
+  parameters: z.record(z.string(), z.any()).optional(),
   options: z.object({
     skipCache: z.boolean().optional(),
     forceRefresh: z.boolean().optional(),
@@ -70,7 +70,7 @@ export const executeReport = withAuth(async (
   // Validate input
   const validationResult = ExecuteReportSchema.safeParse(input);
   if (!validationResult.success) {
-    const errorMessages = validationResult.error.errors.map(e => 
+    const errorMessages = validationResult.error.issues.map(e => 
       `${e.path.join('.')}: ${e.message}`
     ).join(', ');
     throw new ReportValidationError(`Validation Error: ${errorMessages}`);

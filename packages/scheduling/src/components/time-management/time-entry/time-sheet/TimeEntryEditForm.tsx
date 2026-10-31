@@ -15,6 +15,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { MinusCircle, XCircle, Info, AlertTriangle } from 'lucide-react';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { TimeEntryFormProps } from './types';
 import { resolvePrefilledServiceSource } from './serviceSourceBadge';
@@ -648,7 +649,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
       )}
 
       <div className="space-y-1.5">
-        <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+        <label htmlFor={`${id}-service-${index}`} className="flex items-center gap-2 text-sm font-medium text-gray-700">
           <span>
             {t('timeEntryForm.labels.service', { defaultValue: 'Service' })} <span className="text-red-500">*</span>
           </span>
@@ -660,9 +661,11 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
             </span>
           )}
         </label>
-        <CustomSelect
-          value={entry?.service_id || ''}
-          onValueChange={(value) => {
+        <SearchableSelect
+          id={`${id}-service-${index}`}
+          // A saved service missing from the list (e.g. no longer hourly) shows the placeholder, not its raw id.
+          value={selectedService?.id ?? ''}
+          onChange={(value) => {
             if (entry) {
               const isServiceOverridden = entry._isServicePrefilled && value !== entry._originalServiceId;
               const updatedEntry = markEntryAsDirty({
@@ -678,9 +681,11 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
             }
           }}
           disabled={!isEditable}
-          className="w-full"
           options={serviceOptions}
           placeholder={t('timeEntryForm.placeholders.selectService', { defaultValue: 'Select a service' })}
+          searchPlaceholder={t('timeEntryForm.placeholders.searchServices', { defaultValue: 'Search services...' })}
+          emptyMessage={t('timeEntryForm.options.noServicesFound', { defaultValue: 'No services found' })}
+          dropdownMode="overlay"
         />
         {showErrors && validationErrors.service && (
           <span className="text-sm text-red-500">{validationErrors.service}</span>

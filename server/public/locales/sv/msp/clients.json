@@ -316,7 +316,20 @@
     "inboundDomainAutoCreateHelp": "Mappade domäner kan valfritt skapa en kontakt för en betrodd ny avsändare. Domäner måste vara unika för varje kund.",
     "inboundDomainAutoCreateUpdated": "Inställningen för avsändarkontakter har uppdaterats.",
     "inboundDomainAutoCreateUpdateFailed": "Det gick inte att uppdatera inställningen för avsändarkontakter.",
-    "recurringTickets": "Återkommande ärenden"
+    "recurringTickets": "Återkommande ärenden",
+    "software": "Programvara",
+    "checklistsTab": "Checklistor",
+    "checklists": {
+      "name": "Namn",
+      "items": "Punkter",
+      "status": "Status",
+      "active": "Aktiv",
+      "inactive": "Inaktiv",
+      "description": "Checklistmallar som bara erbjuds på den här kundens ärenden. Redigera dem under Inställningar > Ärenden > Checklistmallar.",
+      "empty": "Inga kundspecifika checklistmallar.",
+      "loadFailed": "Det gick inte att läsa in checklistmallar",
+      "retry": "Försök igen"
+    }
   },
   "clientCommandCenter": {
     "cards": {
@@ -329,7 +342,8 @@
       "people": "Personer",
       "record": "Kundpost",
       "service": "Support",
-      "timeline": "Allt i tidsordning"
+      "timeline": "Allt i tidsordning",
+      "software": "Programvara"
     },
     "csatEmpty": "Inga enkätsvar ännu.",
     "discardCancel": "Fortsätt redigera",
@@ -406,6 +420,12 @@
       "primary": "Primär"
     },
     "pulseError": "Det gick inte att läsa in kundöversikten.",
+    "quickLinks": {
+      "assets": "Tillgångar",
+      "contacts": "Kontakter",
+      "label": "Snabblänkar",
+      "software": "Programvara"
+    },
     "rail": {
       "close": "Stäng",
       "installBase": "Installerad utrustning",
@@ -441,6 +461,13 @@
       "onTrackLeft": "SLA: {{left}} kvar",
       "paused": "SLA pausat"
     },
+    "software": {
+      "assetsMeta_one": "1 tillgång",
+      "assetsMeta_other": "{{count}} tillgångar",
+      "loadError": "Det gick inte att läsa in programvaruinventeringen.",
+      "titles": "titlar",
+      "viewAll": "All programvara"
+    },
     "timeline": {
       "daysAgo": "för {{count}} d sedan",
       "empty": "Inget har registrerats för kunden ännu.",
@@ -465,7 +492,8 @@
       "ticketClosed": "Ärende stängt",
       "ticketOpened": "Ärende öppnat",
       "unitDelivered": "Utrustning levererad"
-    }
+    },
+    "discardFeatureMessage": "Du har osparade ändringar i den här vyn. Stänga och förkasta dem?"
   },
   "quickAddClient": {
     "lifecycleStatus": "Livscykel",
@@ -572,11 +600,6 @@
     "invoiceDeliveryMethod": "Leveranssätt för fakturor",
     "invoiceTemplate": "Fakturamall",
     "invoiceTemplateHelp": "Välj en mall eller använd standardmallen",
-    "paymentTerms": {
-      "dueOnReceipt": "Betalas vid mottagande",
-      "net15": "15 dagar netto",
-      "net30": "30 dagar netto"
-    },
     "preferredPaymentMethod": "Önskad betalningsmetod",
     "defaultCurrency": "Standardvaluta",
     "selectTaxRegion": "Välj skatteregion (valfritt)",
@@ -588,11 +611,6 @@
       "both": "Båda",
       "email": "E-post",
       "mail": "Post"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Banköverföring",
-      "check": "Check",
-      "creditCard": "Kreditkort"
     },
     "paymentTermsLabel": "Betalningsvillkor",
     "standardTemplateLabel": "(standard)",
@@ -1782,7 +1800,8 @@
     },
     "cardExpiry": ", giltigt t.o.m. {{month}}/{{year}}",
     "legacyPaymentTerms": "”{{value}}” är inte ett känt betalningsvillkor och har aldrig tillämpats. Det rensas när du sparar.",
-    "cardOnFile": "{{type}} som slutar på {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} som slutar på {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Hyresgästens standard: {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Aviseringar om förbetalt saldo",
@@ -1948,6 +1967,7 @@
       "sourceAlreadyMerged": "Den här kunden har redan slagits samman med en annan kund.",
       "targetAlreadyMerged": "Målkunden har själv slagits samman med en annan kund. Slå samman med den i stället.",
       "sourceIsTenantDefault": "Din egen organisationspost kan inte slås samman med en kund.",
+      "sourceHasCoManagement": "Den här kunden har en arbetsyta för samförvaltad IT. Avbryt dess konfiguration eller avsluta samförvaltningen innan du slår ihop den.",
       "parentLinkCycle": "Den kunden är registrerad som underordnad den du slår samman, så en sammanslagning i den riktningen skulle vända hierarkin upp och ner.",
       "invalidContractCutover": "Ett av övergångsdatumen ligger utanför avtalets löptid."
     },
@@ -2031,5 +2051,21 @@
     "manager": "Ansvarig",
     "seesTickets": "Ser profilens ärenden",
     "editHint": "Ändra detta på faktureringsprofilen, under kundens faktureringsinställningar."
+  },
+  "clientSoftware": {
+    "columns": {
+      "assets": "Tillgångar",
+      "lastSeen": "Senast sedd",
+      "title": "Titel",
+      "versions": "Versioner"
+    },
+    "empty": "Ingen programvaruinventering ännu — inventeringen samlas in per enhet",
+    "emptyAssetsLink": "Visa tillgångar",
+    "exportCsv": "Exportera CSV",
+    "exportError": "Det gick inte att exportera programvaruinventeringen.",
+    "installedOn": "Installerad på",
+    "loadError": "Det gick inte att läsa in programvaruinventeringen.",
+    "moreAssets": "och {{count}} till (de första {{limit}} efter namn)",
+    "searchPlaceholder": "Sök programvara..."
   }
 }

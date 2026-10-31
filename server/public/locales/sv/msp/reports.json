@@ -276,7 +276,7 @@
       },
       "bucketUsage": {
         "title": "Nyttjandegrad för timpottstimmar",
-        "description": "Övervaka användningen av buckettimmar och identifiera överskridanden. Förbetald timblock (avtals- och ad hoc) listas med sin förbrukning.",
+        "description": "Följ förbrukningen av timpottstimmar och identifiera överskridanden. Förbetalda timblock (avtalsutfärdade och ad hoc) visas med sin förbrukning.",
         "empty": "Inga avtal med timpotter hittades"
       },
       "profitability": {
@@ -307,18 +307,21 @@
       "plusVariableUsage": "+ rörlig förbrukning",
       "variableUsage": "Rörlig förbrukning",
       "service": "Tjänst",
-      "hourlyRate": "Tariff / tim",
+      "hourlyRate": "Timpris",
       "expirationDate": "Går ut",
       "neverExpires": "Aldrig",
-      "adhocBlock": "Enstaka"
+      "adhocBlock": "Ad hoc",
+      "remainingValue": "Återstående värde",
+      "validFrom": "Giltig från"
     },
     "statusValues": {
       "active": "Aktivt",
       "upcoming": "Kommande",
       "yes": "Ja",
       "no": "Nej",
-      "expired": "Utgången",
-      "voided": "Ogiltigförklarad"
+      "expired": "Utgånget",
+      "voided": "Makulerat",
+      "all": "Alla statusar"
     },
     "profitability": {
       "formats": {

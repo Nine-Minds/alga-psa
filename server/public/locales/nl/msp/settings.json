@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Sneltoetsen",
     "mcpServer": "MCP-server",
     "opportunities": "Verkoopkansen",
-    "settingsFallback": "Instellingen"
+    "settingsFallback": "Instellingen",
+    "tags": "Labels"
   },
   "unsavedChanges": {
     "title": "Niet-opgeslagen wijzigingen",
@@ -413,17 +414,21 @@
       "cancel": "Annuleren",
       "delete": "Verwijderen",
       "placeholder": "Nieuwe teamnaam invoeren",
+      "descriptionPlaceholder": "Optionele teambeschrijving invoeren",
       "selectManager": "Selecteer een manager"
     },
     "details": {
       "loading": "Teamgegevens laden...",
       "notFound": "Geen team gevonden",
+      "noDescription": "Geen beschrijving",
       "fields": {
         "teamLead": "Teamleider",
+        "description": "Beschrijving",
         "addMember": "Lid toevoegen"
       },
       "placeholders": {
         "teamName": "Teamnaam invoeren",
+        "description": "Teambeschrijving invoeren",
         "selectTeamLead": "Selecteer een teamleider",
         "selectUserToAdd": "Selecteer een gebruiker om toe te voegen",
         "noTeamLead": "Niet toegewezen"
@@ -435,8 +440,10 @@
         "discard": "Verwerpen",
         "saveChanges": "Wijzigingen opslaan",
         "saveName": "Naam opslaan",
+        "saveDescription": "Beschrijving opslaan",
         "cancel": "Annuleren",
         "editName": "Naam bewerken",
+        "editDescription": "Beschrijving bewerken",
         "remove": "Verwijderen"
       },
       "table": {
@@ -461,6 +468,7 @@
         "createFailed": "Kan team niet aanmaken: {{error}}",
         "deleteFailed": "Kan team niet verwijderen",
         "updateName": "Kan teamnaam niet bijwerken",
+        "updateDescription": "Kan teambeschrijving niet bijwerken",
         "saveChanges": "Kan wijzigingen niet opslaan. Probeer het opnieuw."
       }
     }
@@ -710,7 +718,8 @@
         "importNewName": "Importeren met een andere naam:",
         "importWithResolutions": "Importeren met oplossingen",
         "orderConflict": "Volgorde {{order}} is al in gebruik",
-        "importWithOrder": "Importeren met volgorde {{order}}"
+        "importWithOrder": "Importeren met volgorde {{order}}",
+        "removesIntro": "Als u dit bord verwijdert, wordt ook het volgende verwijderd:"
       },
       "importTable": {
         "active": "Actief"
@@ -779,7 +788,9 @@
           "deleteFailed": "Bord kon niet worden verwijderd",
           "importFailed": "Borden konden niet worden geïmporteerd",
           "updateStatusFailed": "Bordstatus kon niet worden bijgewerkt",
-          "updateDefaultFailed": "Standaardbord kon niet worden bijgewerkt"
+          "updateDefaultFailed": "Standaardbord kon niet worden bijgewerkt",
+          "hasEmailSenderRoute": "Dit bord kan niet worden verwijderd: het heeft een eigen route voor uitgaande e-mailafzenders. Verwijder eerst de ticketafzender in de bordeditor.",
+          "referencedByAutomations": "Dit bord kan niet worden verwijderd: er verwijzen nog andere instellingen naar. Richt deze eerst op een ander bord of verwijder ze."
         }
       },
       "closeRules": {
@@ -893,6 +904,48 @@
         "displayName": "Weergavenaam",
         "save": "Afzender opslaan",
         "saved": "Afzender opgeslagen"
+      },
+      "deleteDependencies": {
+        "categories_one": "categorie",
+        "categories_other": "categorieën",
+        "categories_few": "categorieën",
+        "categories_many": "categorieën",
+        "statuses_one": "ticketstatus",
+        "statuses_other": "ticketstatussen",
+        "statuses_few": "ticketstatussen",
+        "statuses_many": "ticketstatussen",
+        "autoCloseRules_one": "automatisch-sluitenregel",
+        "autoCloseRules_other": "automatisch-sluitenregels",
+        "autoCloseRules_few": "automatisch-sluitenregels",
+        "autoCloseRules_many": "automatisch-sluitenregels",
+        "notificationRules_one": "meldingsregel",
+        "notificationRules_other": "meldingsregels",
+        "notificationRules_few": "meldingsregels",
+        "notificationRules_many": "meldingsregels",
+        "portalVisibility_one": "zichtbaarheidstoewijzing in het klantenportaal",
+        "portalVisibility_other": "zichtbaarheidstoewijzingen in het klantenportaal",
+        "portalVisibility_few": "zichtbaarheidstoewijzingen in het klantenportaal",
+        "portalVisibility_many": "zichtbaarheidstoewijzingen in het klantenportaal",
+        "emailSenderRoutes_one": "uitgaande afzenderroute",
+        "emailSenderRoutes_other": "uitgaande afzenderroutes",
+        "emailSenderRoutes_few": "uitgaande afzenderroutes",
+        "emailSenderRoutes_many": "uitgaande afzenderroutes",
+        "ticketTemplates_one": "ticketsjabloon",
+        "ticketTemplates_other": "ticketsjablonen",
+        "ticketTemplates_few": "ticketsjablonen",
+        "ticketTemplates_many": "ticketsjablonen",
+        "recurringTickets_one": "planning voor terugkerende tickets",
+        "recurringTickets_other": "planningen voor terugkerende tickets",
+        "recurringTickets_few": "planningen voor terugkerende tickets",
+        "recurringTickets_many": "planningen voor terugkerende tickets",
+        "checklistRules_one": "controlelijstregel",
+        "checklistRules_other": "controlelijstregels",
+        "checklistRules_few": "controlelijstregels",
+        "checklistRules_many": "controlelijstregels",
+        "cannedResponses_one": "standaardantwoord van het bord",
+        "cannedResponses_other": "standaardantwoorden van het bord",
+        "cannedResponses_few": "standaardantwoorden van het bord",
+        "cannedResponses_many": "standaardantwoorden van het bord"
       }
     },
     "priorities": {
@@ -984,7 +1037,8 @@
         "description": "Beschrijving",
         "items": "Artikelen",
         "status": "Status",
-        "actions": "Acties"
+        "actions": "Acties",
+        "scope": "Beschikbaar voor"
       },
       "statusLabels": {
         "active": "Actief",
@@ -1002,7 +1056,9 @@
         "down": "Omlaag",
         "remove": "Verwijderen",
         "addItem": "Item toevoegen",
-        "addRule": "Regel toevoegen"
+        "addRule": "Regel toevoegen",
+        "duplicateToClient": "Dupliceren naar klant…",
+        "duplicate": "Dupliceren"
       },
       "fields": {
         "name": {
@@ -1032,8 +1088,10 @@
           "priority": "Prioriteit",
           "any": "Willekeurig",
           "appliesToAll": "Geldt voor alle tickets",
+          "appliesToAllClientTickets": "Geldt voor alle tickets van {{client}}",
           "clients": "Klanten",
           "clientsAny": "Elke klant",
+          "clientsFixedByTemplate": "Alleen {{client}} (bepaald door de klant van het sjabloon)",
           "clientsAddAnother": "Nog een klant toevoegen",
           "removeClient": "{{name}} verwijderen",
           "origins": "Bron van het ticket",
@@ -1057,7 +1115,13 @@
             "inbound_email": "Inkomende e-mail",
             "api": "API",
             "recurring": "Terugkerende planning"
-          }
+          },
+          "clientScopedWarning": "Dit sjabloon is beperkt tot {{client}}: deze regels gelden alleen voor tickets van {{client}}."
+        },
+        "availableTo": {
+          "label": "Beschikbaar voor",
+          "clear": "Alle klanten",
+          "help": "Laat op Alle klanten staan om deze sjabloon bij elk ticket aan te bieden, of kies een klant om hem tot de tickets van die klant te beperken."
         }
       },
       "dialog": {
@@ -1065,13 +1129,17 @@
         "editTemplate": "Checklistsjabloon bewerken",
         "createFirstHelp": "Maak eerst het sjabloon aan en voeg daarna checklistitems en automatisch-toepassenregels toe.",
         "deleteTitle": "Checklistsjabloon verwijderen",
-        "deleteMessage": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Checklists die al aan tickets zijn toegevoegd, worden niet beïnvloed."
+        "deleteMessage": "Weet u zeker dat u \"{{name}}\" wilt verwijderen? Checklists die al aan tickets zijn toegevoegd, worden niet beïnvloed.",
+        "duplicateTitle": "Dupliceren naar klant",
+        "duplicateHelp": "Kopieer \"{{name}}\" en de bijbehorende items naar een nieuw sjabloon dat tot één klant is beperkt. De kopie is onafhankelijk: latere wijzigingen aan het ene sjabloon hebben geen invloed op het andere.",
+        "duplicateClientPlaceholder": "Selecteer een klant"
       },
       "messages": {
         "success": {
           "created": "Checklistsjabloon succesvol aangemaakt",
           "updated": "Checklistsjabloon succesvol bijgewerkt",
-          "deleted": "Checklistsjabloon succesvol verwijderd"
+          "deleted": "Checklistsjabloon succesvol verwijderd",
+          "duplicated": "Checklistsjabloon naar klant gedupliceerd"
         },
         "error": {
           "fetchFailed": "Kan checklistsjablonen niet ophalen",
@@ -1081,8 +1149,62 @@
           "deleteFailed": "Kan checklistsjabloon niet verwijderen",
           "updateStatusFailed": "Kan sjabloonstatus niet bijwerken",
           "itemSaveFailed": "Kan checklistitem niet opslaan",
-          "ruleSaveFailed": "Kan automatisch-toepassenregel niet opslaan"
+          "ruleSaveFailed": "Kan automatisch-toepassenregel niet opslaan",
+          "duplicateFailed": "Checklistsjabloon dupliceren mislukt"
         }
+      },
+      "scope": {
+        "allClients": "Alle klanten",
+        "unknownClient": "Onbekende klant"
+      },
+      "filter": {
+        "client": "Klant",
+        "allClients": "Alle klanten",
+        "clear": "Filter wissen"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Bord",
+          "category_id": "Categorie",
+          "subcategory_id": "Subcategorie",
+          "priority_id": "Prioriteit",
+          "client_id": "Klant",
+          "client_tags": "Klantlabels",
+          "contact_tags": "Contactlabels",
+          "ticket_origin": "Ticketbron",
+          "title_folded": "Titel",
+          "description_folded": "Beschrijving",
+          "from_service_request": "Uit serviceaanvraag",
+          "service_request_definition_id": "Serviceaanvraag"
+        },
+        "operators": {
+          "equals": "Is gelijk aan",
+          "not_equals": "Is niet gelijk aan",
+          "in": "Bevat een van",
+          "not_in": "Bevat geen van",
+          "contains": "Bevat",
+          "starts_with": "Begint met",
+          "ends_with": "Eindigt op",
+          "is_empty": "Is leeg",
+          "is_not_empty": "Is niet leeg"
+        },
+        "conditions": "Voorwaarden",
+        "match": "Overeenkomst",
+        "and": "Alle voorwaarden",
+        "or": "Een van de voorwaarden",
+        "field": "Veld",
+        "operator": "Voorwaarde",
+        "value": "Waarde",
+        "yes": "Ja",
+        "no": "Nee",
+        "advanced": "Deze regel bevat gegroepeerde of geavanceerde voorwaarden en is alleen-lezen in deze editor.",
+        "add": "Voorwaarde toevoegen",
+        "save": "Voorwaarden opslaan",
+        "enabled": "Ingeschakeld",
+        "matchesAll": "Komt overeen met alle tickets binnen het bereik van de sjabloon.",
+        "matchesNone": "Komt met geen enkel ticket overeen.",
+        "tagsFailed": "De labelopties konden niet worden geladen. Opgeslagen selecties blijven behouden.",
+        "retry": "Opnieuw proberen"
       }
     },
     "externalSystems": {
@@ -1423,7 +1545,9 @@
         "saveDomain": "Domein opslaan",
         "updateDomain": "Domein bijwerken",
         "submitting": "Bezig met verzenden…",
-        "cancelEdit": "Bewerken annuleren"
+        "cancelEdit": "Bewerken annuleren",
+        "confirmUris": "Ik heb deze geregistreerd — bevestigen",
+        "confirmingUris": "Bevestigen…"
       },
       "form": {
         "label": "Aangepast domein",
@@ -1461,7 +1585,8 @@
         "deploying": "Implementeren",
         "active": "Actief",
         "disabled": "Uitgeschakeld",
-        "unknown": "Onbekend"
+        "unknown": "Onbekend",
+        "pending_redirect_uri": "Redirect-URI's in afwachting"
       },
       "messages": {
         "requestSubmitted": "Aanvraag voor aangepast domein verzonden.",
@@ -1473,9 +1598,32 @@
         "registerFailed": "Kan aangepast domein niet registreren.",
         "refreshFailed": "Kan domeinstatus niet vernieuwen.",
         "retryFailed": "Opnieuw proberen mislukt.",
-        "disableFailed": "Kan aangepast domein niet uitschakelen."
+        "disableFailed": "Kan aangepast domein niet uitschakelen.",
+        "confirmUrisFailed": "Bevestigen van redirect-URI's mislukt.",
+        "urisConfirmed": "Redirect-URI's bevestigd."
       },
-      "hostedTlsNote": "We voorzien automatisch in TLS-certificaten zodra DNS is geverifieerd."
+      "hostedTlsNote": "We voorzien automatisch in TLS-certificaten zodra DNS is geverifieerd.",
+      "surface": {
+        "label": "Bedient",
+        "current": "Bedient: {{value}}",
+        "updatingSurface": "Opslaan wijzigt welke app dit domein bedient en start de provisioning opnieuw.",
+        "options": {
+          "client_portal": "Klantenportaal",
+          "msp": "MSP-app",
+          "both": "Beide"
+        },
+        "descriptions": {
+          "client_portal": "Het domein opent uw klantenportaal. Dit is de standaardinstelling.",
+          "msp": "Het domein opent de MSP-app (technici). De redirect-URI's voor single sign-on moeten eerst worden geregistreerd.",
+          "both": "Eén domein bedient beide apps. Paden onder /msp openen de MSP-app en paden onder /client-portal openen het klantenportaal."
+        }
+      },
+      "redirectUris": {
+        "title": "SSO-redirect-URI's moeten worden geregistreerd",
+        "description": "Dit domein bedient de MSP-app, dus single sign-on werkt pas zodra de onderstaande redirect-URI's bij uw SSO-provider zijn geregistreerd. Het domein blijft in behandeling totdat ze zijn bevestigd.",
+        "listLabel": "Registreer deze redirect-URI's:",
+        "contactSupport": "Vraag uw beheerder of neem contact op met support om deze redirect-URI's te registreren en te bevestigen."
+      }
     },
     "yourCompanyName": "Naam van uw bedrijf",
     "brandingPreviewMode": "Branding-voorbeeldthemamodus",
@@ -2379,7 +2527,23 @@
         "nothingImportedBody": "Deze uitvoering heeft geen nieuwe records gemaakt. Elke rij kwam overeen met iets dat al bestond, dus er is niets gewijzigd.",
         "claimedBySamePackage": "Al gemigreerd door dit pakket",
         "claimedByOtherPackage": "Al gemigreerd door {{file}}",
-        "claimedByExistingEntity": "Gekoppeld aan een bestaande entiteit"
+        "claimedByExistingEntity": "Gekoppeld aan een bestaande entiteit",
+        "matchedBySku": "Op SKU gekoppeld aan een bestaand product"
+      },
+      "spreadsheet": {
+        "entities": {
+          "products": "Producten (catalogus / prijslijst)",
+          "vendorProducts": "Leveranciersprijslijst (distributiekosten)"
+        },
+        "productsHint": "Prijzen en kosten worden gelezen als decimale bedragen (bijvoorbeeld 1,299.50) met de valutakolom indien aanwezig, anders met de tenantvaluta. Negatieve, niet-numerieke of te nauwkeurige bedragen worden verwijderd en gemeld; de rij wordt toch geïmporteerd. Producten worden op SKU gekoppeld aan bestaande producten; rijen van de leveranciersprijslijst verwijzen via SKU naar een product en maken de leverancier aan of koppelen die op naam."
+      },
+      "configure": {
+        "products": {
+          "title": "Producten",
+          "serviceType": "Servicetype voor nieuwe producten",
+          "serviceTypePlaceholder": "Selecteer een servicetype",
+          "serviceTypeHelp": "Producten waarvan de SKU al bestaat worden gekoppeld en ongewijzigd gelaten; alleen nieuwe producten worden onder dit servicetype geplaatst."
+        }
       }
     },
     "jobDetails": {
@@ -2938,7 +3102,8 @@
     "emptyState": "Geen gebruikers beschikbaar.",
     "roles": {
       "client": "Klantgebruiker",
-      "internal": "Interne gebruiker"
+      "internal": "Interne gebruiker",
+      "service": "Serviceaccount"
     },
     "badge": {
       "inactive": "Inactief"
@@ -3499,6 +3664,36 @@
         "confirm": "Verbinding verbreken",
         "cancel": "Annuleren"
       }
+    },
+    "loading": "Laden…",
+    "downloadHosts": {
+      "title": "Toegestane downloadhosts",
+      "intro": "Wanneer een document via een URL wordt bijgevoegd, downloadt AlgaPSA het alleen van de hosts die hier staan. Dit geldt voor iedereen die documenten bijvoegt, inclusief AI-agents, API-clients en de REST API. Geef de voorkeur aan bucketspecifieke hosts zoals acme-uploads.s3.us-east-1.amazonaws.com boven brede hosts.",
+      "readOnly": "U kunt deze lijst bekijken. Voor wijzigingen is de machtiging 'Downloadhosts beheren' nodig.",
+      "builtIn": "Ingebouwd",
+      "empty": "Nog geen aangepaste hosts.",
+      "add": "Host toevoegen",
+      "addTitle": "Toegestane downloadhost toevoegen",
+      "remove": "Verwijderen",
+      "removeTitle": "Host verwijderen?",
+      "removeMessage": "Downloads van {{host}} werken pas weer als de host opnieuw is toegevoegd.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "Een hostnaam, of *.example.com om alle subdomeinen toe te staan.",
+        "note": "Notitie (optioneel)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Gebruikt voor",
+        "allowed": "Toegestaan",
+        "note": "Notitie",
+        "addedBy": "Toegevoegd door",
+        "addedOn": "Toegevoegd op"
+      },
+      "errors": {
+        "load": "Kan de toegestane downloadhosts niet laden.",
+        "save": "Kan de wijziging niet opslaan."
+      }
     }
   },
   "errors": {
@@ -3669,11 +3864,17 @@
       "noLeadingTrailingDot": "Het domein mag niet met een punt beginnen of eindigen.",
       "notApplianceHost": "Kies een ander domein dan de primaire host van deze server. Het aangepaste portaaldomein moet een andere hostnaam zijn die uw reverse proxy hierheen doorstuurt.",
       "nothingToRetry": "Er is geen mislukte registratie van een aangepast domein om opnieuw te proberen.",
-      "retryOnlyAfterFailure": "Opnieuw proberen is alleen mogelijk na een mislukte registratie."
+      "retryOnlyAfterFailure": "Opnieuw proberen is alleen mogelijk na een mislukte registratie.",
+      "alreadyInUse": "Dit domein is al in gebruik. Kies een ander domein.",
+      "usedByOtherSurface": "Dit domein wordt al gebruikt door een ander aangepast domein van u. Kies \"Beide\" om het klantportaal en de MSP-app via één domein aan te bieden.",
+      "invalidSurface": "Kies wat het aangepaste domein aanbiedt: klantportaal, MSP-app of beide.",
+      "redirectUrisHosted": "Omleidings-URI's voor gehoste domeinen worden door platformondersteuning geregistreerd.",
+      "nothingToConfirm": "Er staat geen bevestiging van SSO-omleidings-URI's open voor dit domein."
     }
   },
   "common": {
-    "saving": "Opslaan…"
+    "saving": "Opslaan…",
+    "cancel": "Annuleren"
   },
   "featureFlags": {
     "categories": {
@@ -3853,6 +4054,29 @@
       "default": "Standaard",
       "empty": "Geen standaardstatussen beschikbaar om te importeren",
       "importSelected": "Selectie importeren ({{count}})"
+    }
+  },
+  "tagDisplay": {
+    "title": "Weergeven op chips",
+    "subtitle": "Tags die naast contactpersonen en klanten worden getoond in ticketlijsten, ticketkoppen en keuzelijsten.",
+    "loading": "Laden…",
+    "description": "Kies welke tags als badges naast contactpersonen en klanten worden getoond en in welke volgorde. Een lijst zonder tags toont geen badges voor dat publiek.",
+    "contacts": "Contactpersonen",
+    "clients": "Klanten",
+    "audienceInternal": "Interne gebruikers",
+    "audienceClient": "Klantenportaal",
+    "clientNote": "Begint leeg. Tags in deze lijst zijn zichtbaar voor de eigen gebruikers van de klant in het klantenportaal.",
+    "noneSelected": "Geen tags getoond.",
+    "moveUp": "Omhoog",
+    "moveDown": "Omlaag",
+    "remove": "Verwijderen",
+    "addTag": "Tag toevoegen…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Terug naar e-mailinstellingen",
+      "title": "E-mail- en identiteitsproviders",
+      "description": "Registreer uw eigen Google- of Microsoft-applicatie voor inkomende e-mail en aanmelding door medewerkers. Deze inloggegevens horen bij uw werkruimte."
     }
   }
 }

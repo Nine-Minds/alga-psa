@@ -1,6 +1,9 @@
+import { isMspPrincipalUserType } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type { IDocument, IUser } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
+import { hasPermission } from '@alga-psa/authorization/rbac';
+import { createAssetReadContext, filterReadableAssets } from '@alga-psa/authorization/assetReadAuthorization';
 import { canReadCommentAttachment, isPublicAttachmentComment } from './ticketCommentAttachments';
 import {
   BuiltinAuthorizationKernelProvider,
@@ -111,7 +114,7 @@ function applyDocumentRedactions<T extends object>(document: T, redactedFields: 
 }
 
 function getDocumentBuiltinRelationshipRules(user: IUser): RelationshipRule[] {
-  if (user.user_type !== 'client') {
+  if (isMspPrincipalUserType(user.user_type)) {
     return [];
   }
 
@@ -347,6 +350,22 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
     return [];
   }
 
+  // Document RBAC belongs to callers (see rbacEvaluator below): verified mailbox
+  // recipients hold no roles yet are granted access through the lifecycle check.
+  // Every associated asset must be readable, regardless of other associations.
+  const assetLinks = await tenantScopedTable(trx, 'document_associations', tenant)
+    .where({ entity_type: 'asset' }).whereIn('document_id', documents.map(doc => doc.document_id))
+    .select<DocumentAssociationRow[]>('document_id', 'entity_id', 'entity_type');
+  const readableAssetIds = new Set<string>();
+  if (assetLinks.length && await hasPermission({ ...user, tenant }, 'asset', 'read', trx)) {
+    const ids = [...new Set(assetLinks.map(link => link.entity_id))];
+    const assets = await tenantScopedTable(trx, 'assets', tenant).whereIn('asset_id', ids)
+      .select<Array<{ asset_id: string; client_id: string | null }>>('asset_id', 'client_id');
+    const context = await createAssetReadContext(trx, tenant, user);
+    for (const asset of await filterReadableAssets(trx, tenant, context, assets)) readableAssetIds.add(asset.asset_id);
+  }
+  const deniedDocuments = new Set(assetLinks.filter(link => !readableAssetIds.has(link.entity_id)).map(link => link.document_id));
+
   const authorizationSubject = await resolveAuthorizationSubjectForUser(trx, tenant, user as UserWithOptionalRoles);
   const relationshipRules = getDocumentBuiltinRelationshipRules(user);
   const selectedClientIds = user.clientId ? [user.clientId] : undefined;
@@ -402,7 +421,7 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
       const isOwnedBySubject = record.ownerUserId === authorizationSubject.userId;
       const deniedByClientVisibility =
         user.user_type === 'client' && !isOwnedBySubject && !isClientVisible;
-      const allowed = decision.allowed && !deniedByClientVisibility &&
+      const allowed = decision.allowed && !deniedDocuments.has(document.document_id) && !deniedByClientVisibility &&
         await (verifiedRecipientLifecycleAccess ? verifiedRecipientLifecycleAccess(document.document_id) : canReadCommentAttachment(trx, tenant, user.user_id, document.document_id));
 
       return {

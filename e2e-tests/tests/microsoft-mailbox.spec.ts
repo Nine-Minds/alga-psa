@@ -111,7 +111,7 @@ test('Microsoft mailbox OAuth receives a ticket, sends a UI reply through Graph 
     await emulators.action('msgraph', 'expire-access-tokens');
     const reply = `Microsoft agent response ${actors.runId}`;
     const conversation = page.locator('#ticket-details-bento-timeline-tile');
-    await conversation.getByRole('button', { name: 'Add Comment', exact: true }).click();
+    await conversation.locator('#ticket-details-bento-timeline-tile-add-comment-btn, #ticket-details-bento-timeline-tile-composer-dock-trigger').filter({ visible: true }).first().click();
     await conversation.getByRole('group', { name: 'Reply visibility' }).getByRole('button', { name: 'Client', exact: true }).click();
     await conversation.locator('[contenteditable="true"]:visible').fill(reply);
     await conversation.getByRole('button', { name: 'Send', exact: true }).click();

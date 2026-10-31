@@ -30,7 +30,8 @@
     "status": "Status",
     "expiration": "Ablaufdatum",
     "source": "Quelle",
-    "actions": "Aktionen"
+    "actions": "Aktionen",
+    "validFrom": "Gültig ab {{date}}"
   },
   "status": {
     "pending": "Ausstehend",
@@ -53,8 +54,10 @@
     "rateRequired": "Geben Sie einen gültigen Stundensatz ein.",
     "scopeLabel": "Umfang – Dienste, die dieser Block abdeckt (leer = alle Leistungen)",
     "serviceLabel": "Dienst",
+    "serviceNoResults": "Keine Dienste gefunden",
     "servicePlaceholder": "Dienst auswählen",
     "serviceRequired": "Wählen Sie einen Dienst aus.",
+    "serviceSearchPlaceholder": "Dienste suchen...",
     "submit": "Rechnungsentwurf erstellen",
     "submitted": "Rechnungsentwurf {{invoiceNumber}} erstellt. Stellen Sie ihn fertig, um den Block zu aktivieren.",
     "title": "Stundenblock verkaufen",
@@ -127,7 +130,9 @@
     "voidedLabel": "Storniert",
     "purchaseReversed": "Kauf storniert (Rechnung entfinalisiert)",
     "unknownUser": "System",
-    "sourceContract": "Vertrag: {{contract}}"
+    "sourceContract": "Vertrag: {{contract}}",
+    "remainingValue": "Wert der verbleibenden Stunden: {{value}}",
+    "validFrom": "Gültig ab {{date}}"
   },
   "expire": {
     "error": "Der Stundenblock konnte nicht als verfallen markiert werden.",

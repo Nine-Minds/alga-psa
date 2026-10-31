@@ -4,14 +4,41 @@
  * It contains no charge-family dispatch, pricing, or production-record shape.
  */
 import type { Knex } from "knex";
-import type { ContractSimulationResult } from "@alga-psa/types";
+import {
+  blockedSimulationResult,
+  simulationRefusalToDiagnostic,
+  type ContractSimulationResult,
+} from "@alga-psa/types";
 import { calculateContractBilling } from "@alga-psa/billing/lib/billing/domain";
 import {
   buildSimulatedPeriod,
   loadSimulationCalculationInput,
 } from "./loadSimulationCalculationInput";
+import { asSimulationRefusal } from "./simulationRefusal";
 
+/**
+ * Prices a scenario. When the simulator refuses (a coded refusal raised while
+ * loading or resolving charges), the result carries a blocking diagnostic and
+ * no periods instead of throwing: a throw out of a server action reaches the
+ * user as an unreadable minified error in production.
+ */
 export async function simulateContractScenario(
+  knex: Knex,
+  tenant: string,
+  scenario: Parameters<typeof loadSimulationCalculationInput>[2],
+): Promise<ContractSimulationResult> {
+  try {
+    return await priceContractScenario(knex, tenant, scenario);
+  } catch (error) {
+    const refusal = asSimulationRefusal(error);
+    if (!refusal) throw error;
+    return blockedSimulationResult(scenario, [
+      simulationRefusalToDiagnostic(refusal),
+    ]);
+  }
+}
+
+async function priceContractScenario(
   knex: Knex,
   tenant: string,
   scenario: Parameters<typeof loadSimulationCalculationInput>[2],
@@ -38,7 +65,6 @@ export async function simulateContractScenario(
         },
       },
       obligations: period.obligations,
-      supplementalCharges: period.supplementalCharges,
       taxContexts: period.taxContexts,
       discountsAndAdjustments: {
         billingPeriod: {

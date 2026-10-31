@@ -18,6 +18,7 @@ import type { FileStore } from './types/storage';
 import { StorageError } from './providers/StorageProvider';
 import { renderSquareMark, type LogoCropRect } from './imageCrop';
 import fs from 'fs';
+import { stageFileUpload, deferFileUploadEvents } from './fileUploadTransaction';
 import type { Knex } from 'knex';
 
 import {
@@ -120,6 +121,8 @@ export class StorageService {
       await validateUpload(options.origin, options.mime_type || 'application/octet-stream', options.size);
       const provider = await StorageProviderFactory.createProvider();
       const storagePath = generateStoragePath(tenant, '', originalName);
+      const fileId = uuidv4();
+      await stageFileUpload(tenant, fileId, storagePath);
       const uploaded = await provider.upload(stream, storagePath, { mime_type: options.mime_type || 'application/octet-stream', size: options.size });
       if (uploaded.size !== options.size) {
         await provider.delete(uploaded.path);
@@ -127,7 +130,7 @@ export class StorageService {
       }
       const { knex } = await createTenantKnex(tenant);
       const file = await FileStoreModel.create(knex, {
-        fileId: uuidv4(), file_name: uploaded.path.split('/').pop()!, original_name: originalName,
+        fileId, file_name: uploaded.path.split('/').pop()!, original_name: originalName,
         mime_type: uploaded.mime_type, file_size: uploaded.size, storage_path: uploaded.path,
         uploaded_by_id: options.uploaded_by_id,
       });
@@ -297,13 +300,15 @@ export class StorageService {
 
       const storagePath = generateStoragePath(tenant, '', processedOriginalName);
 
+      const fileId = uuidv4();
+      await stageFileUpload(tenant, fileId, storagePath);
       const uploadResult = await provider.upload(processedBuffer, storagePath, {
         mime_type: processedMimeType,
       });
 
       const { knex } = await createTenantKnex(tenant);
       const fileRecord = await FileStoreModel.create(knex, {
-        fileId: uuidv4(),
+        fileId,
         file_name: storagePath.split('/').pop()!,
         original_name: processedOriginalName,
         mime_type: processedMimeType,
@@ -313,13 +318,41 @@ export class StorageService {
         metadata: options.metadata
       });
 
-      if (!options.isDerivedArtifact) {
+      const publishUploaded = async () => {
+        if (!options.isDerivedArtifact) {
+          try {
+            const uploadedByUserId = isValidUUID(options.uploaded_by_id) ? options.uploaded_by_id : undefined;
+            await publishWorkflowEvent({
+              eventType: 'DOCUMENT_UPLOADED',
+              payload: buildDocumentUploadedPayload({
+                documentId: fileRecord.file_id,
+                uploadedByUserId,
+                uploadedAt: fileRecord.created_at,
+                fileName: fileRecord.original_name,
+                contentType: fileRecord.mime_type,
+                sizeBytes: fileRecord.file_size,
+                storageKey: fileRecord.storage_path,
+              }),
+              ctx: {
+                tenantId: tenant,
+                occurredAt: fileRecord.created_at,
+                actor: uploadedByUserId
+                  ? { actorType: 'USER', actorUserId: uploadedByUserId }
+                  : { actorType: 'SYSTEM' },
+              },
+              idempotencyKey: `document_uploaded:${fileRecord.file_id}:${fileRecord.created_at}`,
+            });
+          } catch (error) {
+            console.error('[StorageService] Failed to publish DOCUMENT_UPLOADED workflow event', error);
+          }
+        }
+
         try {
           const uploadedByUserId = isValidUUID(options.uploaded_by_id) ? options.uploaded_by_id : undefined;
           await publishWorkflowEvent({
-            eventType: 'DOCUMENT_UPLOADED',
-            payload: buildDocumentUploadedPayload({
-              documentId: fileRecord.file_id,
+            eventType: 'FILE_UPLOADED',
+            payload: buildFileUploadedPayload({
+              fileId: fileRecord.file_id,
               uploadedByUserId,
               uploadedAt: fileRecord.created_at,
               fileName: fileRecord.original_name,
@@ -334,66 +367,41 @@ export class StorageService {
                 ? { actorType: 'USER', actorUserId: uploadedByUserId }
                 : { actorType: 'SYSTEM' },
             },
-            idempotencyKey: `document_uploaded:${fileRecord.file_id}:${fileRecord.created_at}`,
+            idempotencyKey: `file_uploaded:${fileRecord.file_id}:${fileRecord.created_at}`,
           });
+
+          if (isEntityImage && !options.isDerivedArtifact) {
+            await publishWorkflowEvent({
+              eventType: 'MEDIA_PROCESSING_SUCCEEDED',
+              payload: buildMediaProcessingSucceededPayload({
+                fileId: fileRecord.file_id,
+                processedAt: new Date().toISOString(),
+                durationMs: Math.max(0, Date.now() - uploadStartedAtMs),
+                outputs: [
+                  {
+                    type: 'entity_image_normalized',
+                    contentType: fileRecord.mime_type,
+                    fileName: fileRecord.original_name,
+                    sizeBytes: fileRecord.file_size,
+                  },
+                ],
+              }),
+              ctx: {
+                tenantId: tenant,
+                occurredAt: new Date().toISOString(),
+                actor: uploadedByUserId
+                  ? { actorType: 'USER', actorUserId: uploadedByUserId }
+                  : { actorType: 'SYSTEM' },
+              },
+              idempotencyKey: `media_processing_succeeded:entity_image:${fileRecord.file_id}:${fileRecord.created_at}`,
+            });
+          }
         } catch (error) {
-          console.error('[StorageService] Failed to publish DOCUMENT_UPLOADED workflow event', error);
+          console.error('[StorageService] Failed to publish FILE_UPLOADED/MEDIA_PROCESSING_SUCCEEDED workflow event', error);
         }
-      }
 
-      try {
-        const uploadedByUserId = isValidUUID(options.uploaded_by_id) ? options.uploaded_by_id : undefined;
-        await publishWorkflowEvent({
-          eventType: 'FILE_UPLOADED',
-          payload: buildFileUploadedPayload({
-            fileId: fileRecord.file_id,
-            uploadedByUserId,
-            uploadedAt: fileRecord.created_at,
-            fileName: fileRecord.original_name,
-            contentType: fileRecord.mime_type,
-            sizeBytes: fileRecord.file_size,
-            storageKey: fileRecord.storage_path,
-          }),
-          ctx: {
-            tenantId: tenant,
-            occurredAt: fileRecord.created_at,
-            actor: uploadedByUserId
-              ? { actorType: 'USER', actorUserId: uploadedByUserId }
-              : { actorType: 'SYSTEM' },
-          },
-          idempotencyKey: `file_uploaded:${fileRecord.file_id}:${fileRecord.created_at}`,
-        });
-
-        if (isEntityImage && !options.isDerivedArtifact) {
-          await publishWorkflowEvent({
-            eventType: 'MEDIA_PROCESSING_SUCCEEDED',
-            payload: buildMediaProcessingSucceededPayload({
-              fileId: fileRecord.file_id,
-              processedAt: new Date().toISOString(),
-              durationMs: Math.max(0, Date.now() - uploadStartedAtMs),
-              outputs: [
-                {
-                  type: 'entity_image_normalized',
-                  contentType: fileRecord.mime_type,
-                  fileName: fileRecord.original_name,
-                  sizeBytes: fileRecord.file_size,
-                },
-              ],
-            }),
-            ctx: {
-              tenantId: tenant,
-              occurredAt: new Date().toISOString(),
-              actor: uploadedByUserId
-                ? { actorType: 'USER', actorUserId: uploadedByUserId }
-                : { actorType: 'SYSTEM' },
-            },
-            idempotencyKey: `media_processing_succeeded:entity_image:${fileRecord.file_id}:${fileRecord.created_at}`,
-          });
-        }
-      } catch (error) {
-        console.error('[StorageService] Failed to publish FILE_UPLOADED/MEDIA_PROCESSING_SUCCEEDED workflow event', error);
-      }
-
+      };
+      if (!deferFileUploadEvents(fileId, publishUploaded)) await publishUploaded();
       return fileRecord;
     } catch (error) {
       console.error("Error in uploadFile:", error);

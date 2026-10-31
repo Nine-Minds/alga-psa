@@ -1,0 +1,2 @@
+Command: node --max-old-space-size=12288 node_modules/typescript/bin/tsc --noEmit -p shared/tsconfig.json
+Working directory: /home/robert/alga-copies/feature-prepaid-hours-on-contracts-priced-block-in-advan

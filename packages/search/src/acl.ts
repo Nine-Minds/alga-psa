@@ -1,8 +1,10 @@
+import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import User from '@alga-psa/db/models/user';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
 
 import type { AclMetadata, SearchObjectType } from '@alga-psa/types';
 
@@ -130,19 +132,20 @@ export async function resolveSearchAclPrincipal(
   clientAccess: ClientAccess = { mode: 'all' },
 ): Promise<SearchAclPrincipal> {
   const rolesWithPermissions = await User.getUserRolesWithPermissions(knex, user.user_id);
-  const isClientPortal = user.user_type === 'client';
+  const isClientPortal = isClientUserType(user.user_type);
+  const isMspPrincipal = isMspPrincipalUserType(user.user_type);
   const permissions = new Set<string>();
   const roles = new Set<string>();
 
   for (const role of rolesWithPermissions) {
     if (isClientPortal && !role.client) continue;
-    if (!isClientPortal && !role.msp) continue;
+    if (!isClientPortal && !(isMspPrincipal && role.msp)) continue;
 
     roles.add(role.role_name);
 
     for (const permission of role.permissions) {
       if (isClientPortal && !permission.client) continue;
-      if (!isClientPortal && !permission.msp) continue;
+      if (!isClientPortal && !(isMspPrincipal && permission.msp)) continue;
       permissions.add(`${permission.resource}:${permission.action}`);
     }
   }
@@ -231,6 +234,18 @@ function tenantScopedRoot<Row extends object>(
   return tenantDb(knex, user.tenant).table<Row>(tableExpression);
 }
 
+async function commentIsRequesterAudience(knex: Knex, user: SearchAclPrincipal, commentId: string): Promise<boolean> {
+  const query = tenantScopedRoot<{ audience: string | null }>(knex, user, 'comments as c');
+  const scoped = tenantDb(knex, user.tenant ?? SEARCH_ACL_MISSING_TENANT);
+  scoped.tenantJoin(query, 'comment_threads as ct', 'ct.thread_id', 'c.thread_id', { type: 'left' });
+  scoped.tenantJoin(query, 'comments as rc', 'rc.comment_id', 'ct.root_comment_id', { type: 'left' });
+  const found = await query
+    .select(knex.raw('(?) as audience', [commentAudienceSql(knex, 'ct', 'rc', 'c')]) as unknown as string)
+    .where('c.comment_id', commentId)
+    .first();
+  return found?.audience === 'requester';
+}
+
 async function ticketExists(knex: Knex, user: SearchAclPrincipal, ticketId: string): Promise<boolean> {
   const row = await tenantScopedRoot<{ ticket_id: string }>(knex, user, 'tickets')
     .select('ticket_id')
@@ -263,9 +278,15 @@ registerSearchVisibilityVerifier('ticket_comment', async (knex, user, row) => {
   )
     .select('ticket_id', 'is_internal')
     .where('comment_id', row.id)
+    .whereNull('deleted_at')
+    .where('publish_state', 'published')
     .first();
   if (!comment) return false;
   if (comment.is_internal && !user.isInternal) return false;
+  // Audience is an additional restriction on non-staff readers (staff of the owning tenant see
+  // every audience stored there). It uses the same predicate as the indexer and portal reads, so
+  // a public-flagged comment on a private thread cannot be reached through search.
+  if (!user.isInternal && !(await commentIsRequesterAudience(knex, user, row.id))) return false;
   return ticketExists(knex, user, comment.ticket_id);
 });
 
@@ -307,6 +328,7 @@ registerSearchVisibilityVerifier('project_task_comment', async (knex, user, row)
   const query = db.table<{ project_id: string }>('project_task_comments as ptc')
     .select('pp.project_id')
     .where('ptc.task_comment_id', row.id)
+    .whereNull('ptc.deleted_at')
     .first();
   db.tenantJoin(query, 'project_tasks as pt', 'pt.task_id', 'ptc.task_id');
   db.tenantJoin(query, 'project_phases as pp', 'pp.phase_id', 'pt.phase_id');

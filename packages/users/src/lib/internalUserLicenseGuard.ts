@@ -4,7 +4,7 @@ import type { Knex } from 'knex';
 export type InternalUserLicenseLimitCode = 'SOLO_PLAN_LIMIT' | 'LICENSE_LIMIT_REACHED';
 
 export type InternalUserLicenseLimitResult =
-  | { ok: true }
+  | { ok: true; coManaged?: boolean }
   | { ok: false; code: InternalUserLicenseLimitCode; error: string };
 
 // ee/server typechecks this package's sources with strictNullChecks off, where
@@ -15,6 +15,26 @@ export function isInternalUserLicenseLimitRejected(
   result: InternalUserLicenseLimitResult
 ): result is { ok: false; code: InternalUserLicenseLimitCode; error: string } {
   return result.ok === false;
+}
+
+/**
+ * Pending email invitations, which reserve a seat until they are accepted
+ * (`used_at` set — the invitee then counts as an active user, never both) or
+ * expire. The one definition of "pending": sendUserInvitation reserves it and
+ * the onboarding wizard reports it. `excludeEmail` leaves out the invitee being
+ * (re)invited so a resend never blocks itself.
+ */
+export async function countPendingInvitationSeats(
+  trx: Knex.Transaction | Knex,
+  tenant: string,
+  options?: { excludeEmail?: string }
+): Promise<number> {
+  let query = tenantDb(trx, tenant).table('user_invitations')
+    .whereNull('used_at')
+    .where('expires_at', '>', trx.fn.now());
+  if (options?.excludeEmail !== undefined) query = query.whereNot('email', options.excludeEmail);
+  const row = await query.count('* as count').first();
+  return parseInt(String(row?.count ?? '0'), 10);
 }
 
 /**
@@ -35,14 +55,15 @@ export function isInternalUserLicenseLimitRejected(
 export async function checkInternalUserLicenseLimit(
   trx: Knex.Transaction | Knex,
   tenant: string,
-  options?: { reservedSeats?: number }
+  options?: { reservedSeats?: number; deferCoManaged?: boolean }
 ): Promise<InternalUserLicenseLimitResult> {
   const tenantRow = await tenantDb(trx, tenant).table('tenants')
-    .first('licensed_user_count', 'plan');
+    .first('licensed_user_count', 'plan', 'product_code');
 
   if (!tenantRow) {
     throw new Error(`Tenant not found: ${tenant}`);
   }
+  if (options?.deferCoManaged && tenantRow.product_code === 'co_managed') return { ok: true, coManaged: true };
 
   const usedResult = await tenantDb(trx, tenant).table('users')
     .where({
@@ -77,7 +98,7 @@ export async function checkInternalUserLicenseLimit(
   const seatLimit = await (async () => {
     try {
       const { checkApplianceLicenseSeatLimit } = await import('@enterprise/lib/license/userSeatGuard');
-      return await checkApplianceLicenseSeatLimit(used);
+      return await checkApplianceLicenseSeatLimit(used, tenant);
     } catch {
       return null;
     }

@@ -226,6 +226,39 @@ describe('MicrosoftProviderForm', () => {
     );
   });
 
+  it('submits nested folder filters trimmed and verbatim, and explains the syntax', async () => {
+    vi.mocked(emailProviderActions.createEmailProvider).mockResolvedValueOnce({
+      provider: { id: '123', tenant: 'test-tenant-123', providerType: 'microsoft' },
+    } as any);
+
+    const user = userEvent.setup();
+    renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
+
+    expect(
+      screen.getByText(/exact folder name as it appears in Outlook.*nested folders as Inbox\/Subfolder/i),
+    ).toBeInTheDocument();
+
+    await user.type(screen.getByPlaceholderText('e.g., Support Mailbox (internal)'), 'TopLeft');
+    await user.type(screen.getByPlaceholderText('support@client.com'), 'help@topleft.team');
+    await user.type(
+      screen.getByPlaceholderText('Inbox, Support, Custom Folder'),
+      '  INBOX\\AlgaInbox , , Inbox/Support '
+    );
+
+    await user.click(screen.getByRole('button', { name: /add provider/i }));
+
+    await waitFor(() => {
+      expect(emailProviderActions.createEmailProvider).toHaveBeenCalledWith(
+        expect.objectContaining({
+          microsoftConfig: expect.objectContaining({
+            // Both nesting notations reach the adapter untouched; it resolves them.
+            folder_filters: ['INBOX\\AlgaInbox', 'Inbox/Support'],
+          }),
+        })
+      );
+    });
+  });
+
   it('should handle API errors', async () => {
     vi.mocked(emailProviderActions.createEmailProvider).mockRejectedValueOnce(new Error('API Error'));
 

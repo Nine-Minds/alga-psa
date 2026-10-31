@@ -238,6 +238,7 @@ describe('portal domain git integration helpers', () => {
       verification_details: null,
       certificate_secret_name: null,
       last_synced_resource_version: null,
+      surface: 'client_portal',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -291,6 +292,7 @@ describe('portal domain git integration helpers', () => {
         verification_details: null,
         certificate_secret_name: null,
         last_synced_resource_version: null,
+        surface: 'msp',
         created_at: now,
         updated_at: now,
       },
@@ -314,8 +316,10 @@ describe('portal domain git integration helpers', () => {
         if (table === 'portal_domains') {
           return {
             select: () => Promise.resolve(rows),
-            where(this: any, criteria: Record<string, unknown>) {
-              this._where = criteria;
+            // tenantDb adds where(<table>.tenant, value); the activity adds where({ id }).
+            where(this: any, criteria: Record<string, unknown> | string, value?: unknown) {
+              const next = typeof criteria === 'string' ? { [criteria.split('.').pop() as string]: value } : criteria;
+              this._where = { ...(this._where ?? {}), ...next };
               return this;
             },
             whereIn(this: any, _column: string, values: unknown[]) {
@@ -350,6 +354,18 @@ describe('portal domain git integration helpers', () => {
     expect(newFiles).not.toContain('stale.yaml');
 
     expect(updates.length).toBeGreaterThan(0);
+    // alga-2026-0002799: reconcile is tenant + row scoped and never rewrites a row's surface
+    // (an msp domain must not be flipped back to client_portal by the secret sync/cleanup).
+    for (const update of updates) {
+      expect(update.data).not.toHaveProperty('surface');
+      expect(update.whereIn).toBeUndefined();
+    }
+    expect(updates.map((u) => u.where)).toEqual(
+      expect.arrayContaining([
+        { tenant: 'Tenant One', id: 'active-id' },
+        { tenant: 'Tenant Two', id: 'disabled-id' },
+      ])
+    );
   });
 
   it('adds the new portal domain host and gateway to the base virtual service', async () => {
@@ -376,6 +392,7 @@ describe('portal domain git integration helpers', () => {
         verification_details: null,
         certificate_secret_name: null,
         last_synced_resource_version: null,
+        surface: 'client_portal',
         created_at: now,
         updated_at: now,
       },
@@ -462,6 +479,7 @@ describe('portal domain git integration helpers', () => {
         verification_details: null,
         certificate_secret_name: null,
         last_synced_resource_version: null,
+        surface: 'client_portal',
         created_at: now,
         updated_at: now,
       },
@@ -1001,6 +1019,7 @@ describe('portal domain git integration helpers', () => {
         verification_details: null,
         certificate_secret_name: null,
         last_synced_resource_version: null,
+        surface: 'client_portal',
         created_at: now,
         updated_at: now,
       },
@@ -1097,6 +1116,7 @@ describe('portal domain git integration helpers', () => {
           verification_details: null,
           certificate_secret_name: null,
           last_synced_resource_version: null,
+          surface: 'client_portal',
           created_at: now,
           updated_at: now,
         },
@@ -1174,6 +1194,7 @@ describe('portal domain git integration helpers', () => {
           verification_details: null,
           certificate_secret_name: null,
           last_synced_resource_version: null,
+          surface: 'client_portal',
           created_at: now,
           updated_at: now,
         },
@@ -1300,6 +1321,7 @@ describe('portal domain git integration helpers', () => {
           verification_details: null,
           certificate_secret_name: null,
           last_synced_resource_version: null,
+          surface: 'client_portal',
           created_at: now,
           updated_at: now,
         },
@@ -1367,6 +1389,7 @@ describe('portal domain git integration helpers', () => {
           verification_details: null,
           certificate_secret_name: null,
           last_synced_resource_version: null,
+          surface: 'client_portal',
           created_at: now,
           updated_at: now,
         },
@@ -1446,6 +1469,7 @@ describe('portal domain git integration helpers', () => {
           verification_details: null,
           certificate_secret_name: null,
           last_synced_resource_version: null,
+          surface: 'client_portal',
           created_at: now,
           updated_at: now,
         },
@@ -1459,6 +1483,7 @@ describe('portal domain git integration helpers', () => {
           verification_details: null,
           certificate_secret_name: null,
           last_synced_resource_version: null,
+          surface: 'client_portal',
           created_at: now,
           updated_at: now,
         },
@@ -1539,6 +1564,7 @@ describe('portal domain git integration helpers', () => {
           verification_details: null,
           certificate_secret_name: null,
           last_synced_resource_version: null,
+          surface: 'client_portal',
           created_at: now,
           updated_at: now,
         },
@@ -1778,6 +1804,7 @@ describe('portal domain git integration helpers', () => {
           verification_details: null,
           certificate_secret_name: null,
           last_synced_resource_version: null,
+          surface: 'client_portal',
           created_at: now,
           updated_at: now,
         },
@@ -1868,6 +1895,7 @@ describe('portal domain git integration helpers', () => {
           verification_details: null,
           certificate_secret_name: null,
           last_synced_resource_version: null,
+          surface: 'client_portal',
           created_at: now,
           updated_at: now,
         },

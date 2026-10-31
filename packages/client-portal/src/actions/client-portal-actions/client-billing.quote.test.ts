@@ -20,6 +20,9 @@ const updateQuoteMock = vi.fn();
 const createQuoteActivityMock = vi.fn();
 const recalculateQuoteFinancialsMock = vi.fn();
 
+const recordQuoteLifecycleMock = vi.hoisted(() => vi.fn(async () => {}));
+vi.mock('@alga-psa/shared/lib/quotes/quoteLifecycleEvents', () => ({ recordQuoteLifecycleTransition: (...args: any[]) => recordQuoteLifecycleMock(...args) }));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth:
     (action: any) =>
@@ -215,6 +218,8 @@ function buildTrx() {
         const chain: any = {};
         let criteria: Record<string, unknown> = {};
         let requiredNullField: string | null = null;
+        chain.forUpdate = vi.fn(() => chain);
+        chain.first = vi.fn(async () => quoteStore[String(criteria.quote_id)]);
         chain.where = vi.fn((nextCriteria: Record<string, unknown>) => {
           criteria = { ...criteria, ...nextCriteria };
           return chain;
@@ -250,6 +255,7 @@ function buildTrx() {
 
 describe('client quote billing actions', () => {
   beforeEach(() => {
+    recordQuoteLifecycleMock.mockClear();
     vi.clearAllMocks();
     vi.resetModules();
 
@@ -467,6 +473,7 @@ describe('client quote billing actions', () => {
     const viewedQuote = await getClientQuoteById('quote-1');
 
     expect(viewedQuote.viewed_at).toEqual(expect.any(String));
+    expect(recordQuoteLifecycleMock).toHaveBeenCalledOnce();
     // Tenant scoping now lives in the tenantDb facade, so the criteria no longer
     // carries tenant; assert the facade scoped the quotes table to this tenant.
     expect(rawQuoteUpdateLog).toContainEqual({
@@ -491,6 +498,7 @@ describe('client quote billing actions', () => {
     const viewedQuote = await getClientQuoteById('quote-1');
 
     expect(viewedQuote.viewed_at).toBe('2026-03-13T10:00:00.000Z');
+    expect(recordQuoteLifecycleMock).not.toHaveBeenCalled();
     expect(rawQuoteUpdateLog).toHaveLength(0);
     expect(createQuoteActivityMock).not.toHaveBeenCalled();
   });

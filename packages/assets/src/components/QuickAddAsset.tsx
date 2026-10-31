@@ -37,6 +37,7 @@ interface FormData {
   asset_type: string;
   /** An asset_statuses slug (F020); no longer a closed union. */
   status: string;
+  ownership: 'client' | 'msp';
   serial_number: string;
   location_id: string | null;
   contact_name_id: string | null;
@@ -113,6 +114,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
     asset_tag: '',
     asset_type: '',
     status: 'active',
+    ownership: 'client',
     serial_number: '',
     location_id: null,
     contact_name_id: null,
@@ -323,6 +325,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         asset_tag: formData.asset_tag,
         name: formData.name,
         status: formData.status,
+        ownership: formData.ownership,
         location_id: formData.location_id,
         contact_name_id: formData.contact_name_id,
         location: formData.location.trim() || undefined,
@@ -409,6 +412,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
         asset_tag: '',
         asset_type: '',
         status: 'active',
+        ownership: 'client',
         serial_number: '',
         manufacturer: '',
         model: '',
@@ -863,6 +867,21 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
                 placeholder={t('quickAddAsset.placeholders.selectStatus', {
                   defaultValue: 'Select status'
                 })}
+              />
+            </div>
+
+            <div {...withDataAutomationId({ id: 'asset-ownership-container' })}>
+              <label className="block text-sm font-medium text-gray-700">
+                {t('quickAddAsset.fields.ownership', { defaultValue: 'Ownership' })}
+              </label>
+              <CustomSelect
+                {...withDataAutomationId({ id: 'asset-ownership-select' })}
+                options={[
+                  { value: 'client', label: t('assetForm.ownership.client', { defaultValue: 'Client-owned' }) },
+                  { value: 'msp', label: t('assetForm.ownership.msp', { defaultValue: 'MSP-owned' }) },
+                ]}
+                value={formData.ownership}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, ownership: value as 'client' | 'msp' }))}
               />
             </div>
 

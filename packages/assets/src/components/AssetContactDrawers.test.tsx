@@ -32,7 +32,6 @@ vi.mock('../actions/clientLookupActions', () => ({
 }));
 vi.mock('./shared/useAssetStatusOptions', () => ({
   useAssetStatusRegistry: () => ({ statuses: [] }),
-  resolveAssetStatusLabel: (_t: unknown, slug: string) => slug,
 }));
 
 /** Reports what the real drawer was asked to show. */
