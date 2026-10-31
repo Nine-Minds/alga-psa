@@ -29,8 +29,8 @@ export const CO_MANAGED_PHASE_FIELD_SOURCE: CoManagedFieldSource = {
   identifier: ['phase_id', 'project_phases.phase_id', ...PROJECT_REFERENCE_ALIASES],
 };
 export const CO_MANAGED_TASK_FIELD_SOURCE: CoManagedFieldSource = {
-  resource: ['tasks', 'project_tasks'], title: CO_MANAGED_TASK_NAME_ALIASES, description: ['description', 'values.description', 'project_tasks.description'],
-  identifier: ['task_id', 'taskId', 'project_tasks.task_id', ...PROJECT_REFERENCE_ALIASES],
+  resource: ['tasks', 'project_tasks'], title: CO_MANAGED_TASK_NAME_ALIASES, description: ['description', 'values.description', 'project_tasks.description', 'tasks.description'],
+  identifier: ['task_id', 'taskId', 'project_tasks.task_id', 'tasks.task_id', ...PROJECT_REFERENCE_ALIASES],
 };
 
 /**

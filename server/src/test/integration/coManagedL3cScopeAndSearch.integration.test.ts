@@ -242,4 +242,36 @@ describe('CM L3c project scope access and search', () => {
     expect(byTerm.byType.project_task).toBe(1);
     expect((await searchAll(w, 'wombatreed')).total).toBe(0);
   });
+
+  it('D: a redacted tasks.description nulls the body and stops body-only matches, keeping the task row', async () => {
+    const { w, taskId } = await redactionWorld('marmotvale', 'pangolinash');
+    // Hits have no `body` field: the body is exposed only through `snippet` (ts_headline over the indexed body, undefined when empty).
+    // Sanity: unredacted, the snippet carries the description, so the undefined assertion below is meaningful.
+    const open = await searchAll(w, 'pangolinash');
+    expect(open.hits.find(h => h.id === taskId)?.snippet).toContain('pangolinash');
+
+    await setRelationshipRedactions(w, ['tasks.description']);
+    const hit = (await searchAll(w, 'Redaction')).hits.find(h => h.id === taskId);
+    expect(hit).toBeDefined();
+    expect(hit?.title).toBe('Project task');
+    expect(hit?.snippet).toBeUndefined();
+    const byBody = await searchAll(w, 'pangolinash');
+    expect(byBody.hits.map(h => h.id)).not.toContain(taskId);
+    expect(byBody.typeahead.map(h => h.id)).not.toContain(taskId);
+    expect(byBody.byType).toEqual({});
+    expect(byBody.total).toBe(0);
+  });
+
+  it('E: a redacted tasks.task_id removes every task hit (results, typeahead, counts, groups) and leaves project and phase alone', async () => {
+    const { w, taskId } = await redactionWorld('civetmarsh', 'dugongfern');
+    const open = await searchAll(w, 'Redaction');
+    await setRelationshipRedactions(w, ['tasks.task_id']);
+    const masked = await searchAll(w, 'Redaction');
+    expect(masked.hits.filter(hit => hit.type === 'project_task')).toEqual([]);
+    expect(masked.hits.map(hit => hit.id)).not.toContain(taskId);
+    expect(masked.typeahead.map(hit => hit.id)).not.toContain(taskId);
+    expect(masked.byType.project_task ?? 0).toBe(0);
+    expect(masked.byType).toMatchObject({ project: open.byType.project, project_phase: open.byType.project_phase });
+    expect(masked.hits.map(hit => hit.id).sort()).toEqual(open.hits.filter(hit => hit.type !== 'project_task').map(hit => hit.id).sort());
+  });
 });
