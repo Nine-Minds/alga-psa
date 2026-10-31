@@ -2,7 +2,7 @@
 import React from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import CoManagedPortableExport from '../../../components/co-managed/CoManagedPortableExport';
+import CoManagedPortableExport, { CoManagedPortableExportEntry } from '../../../components/co-managed/CoManagedPortableExport';
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
 const mocks = vi.hoisted(() => ({ load: vi.fn(), enabled: true, loading: false, error: null as any, sessionId: 'session' }));
 vi.mock('../../../lib/actions/coManagedPortableExportActions', () => ({ getCoManagedPortableExportScreenAction: mocks.load }));
@@ -45,4 +45,11 @@ it('renders an unavailable notice, not the form, when the edition has no export 
   render(<CoManagedPortableExport available={false} />);
   expect(screen.queryByRole('button')).toBeNull(); expect(mocks.load).not.toHaveBeenCalled();
   expect(screen.getByRole('status')).toBeTruthy();
+});
+it('the export entry renders a link for a served customer and nothing when the capability is off', () => {
+  const view = render(<CoManagedPortableExportEntry />);
+  expect(screen.getByRole('link')).toHaveAttribute('href', '/msp/co-management/export'); view.unmount();
+  for (const state of [{ enabled: false }, { enabled: true, loading: true }, { enabled: true, error: new Error('x') }]) {
+    Object.assign(mocks, state); const v = render(<CoManagedPortableExportEntry />); expect(screen.queryByRole('link')).toBeNull(); v.unmount();
+  }
 });

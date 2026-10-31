@@ -1,6 +1,6 @@
 import { getSession, getApiKeyUserOverride } from '@alga-psa/auth';
 import { getConnection } from '@alga-psa/db';
-import { CoManagedSharedWorkError } from '../../../../../packages/co-managed/src/sharedWorkIdentity';
+import { CoManagedSharedWorkError } from '@alga-psa/co-managed/sharedWorkIdentity';
 import { prepareCoManagedPortableWorkspaceExport } from './portableWorkspaceExport';
 
 /** Enterprise edition serves the export; the community stub reports `available: false`. */

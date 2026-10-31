@@ -1,13 +1,13 @@
-import { portableSnapshotTransaction, type CoManagedPortableSnapshot } from '../../../../../packages/co-managed/src/portableSnapshot';
+import { portableSnapshotTransaction, type CoManagedPortableSnapshot } from '@alga-psa/co-managed/portableSnapshot';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { RequestLocalAuthorizationCache, resolveBundleNarrowingRulesForEvaluation,
   type AuthorizationSubject } from '@alga-psa/authorization';
-import { withCoManagedExportAdmin } from '../../../../../packages/co-managed/src/portableExport';
-import { hasCoManagedLocalPermission } from '../../../../../packages/co-managed/src/localPermission';
+import { withCoManagedExportAdmin } from '@alga-psa/co-managed/portableExport';
+import { hasCoManagedLocalPermission } from '@alga-psa/co-managed/localPermission';
 import { snapshotCoManagedSessionActor, isCoManagedUuid, CoManagedSharedWorkError,
-  type CoManagedSessionActor } from '../../../../../packages/co-managed/src/sharedWorkIdentity';
+  type CoManagedSessionActor } from '@alga-psa/co-managed/sharedWorkIdentity';
 import { buildCredentialAuthorizationKernel, toCredentialAuthorizationRecord,
   type CredentialRow, type CredentialGrantRow } from '../credentials/credentialAuthorization';
 import { isCredentialEncryptionScheme } from '../credentials/encryption';

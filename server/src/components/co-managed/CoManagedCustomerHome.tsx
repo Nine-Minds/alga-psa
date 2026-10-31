@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/component
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedWorkspaceState, type CoManagedWorkspaceState } from '@/lib/actions/coManagedWorkspaceActions';
 import CoManagedRelationshipHistory from './CoManagedRelationshipHistory';
+import { CoManagedPortableExportEntry } from './CoManagedPortableExport';
 
 /** `/msp/co-managed` for a customer workspace: its own relationship — who
  * sponsors it, its seats — and the relationship's event history. */
@@ -24,6 +25,8 @@ export default function CoManagedCustomerHome() {
 
   return (
     <div id="co-managed-customer-home" className="mx-auto max-w-4xl space-y-4 p-6">
+      {/* Customer side only (this component is the co_managed home); renders nothing unless the capability serves. */}
+      <CoManagedPortableExportEntry />
       {state.kind === 'none' && (
         <p className="text-sm text-[rgb(var(--color-text-600))]">
           {t('coManaged.workspace.none', { defaultValue: 'This workspace has no co-managed IT relationship.' })}

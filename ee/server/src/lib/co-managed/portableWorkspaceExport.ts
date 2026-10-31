@@ -1,16 +1,16 @@
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
-import { withPortableTransfer, assertPortableTransferActive, portableTransferSignal, type PortableTransferOptions } from '../../../../../packages/co-managed/src/portableTransfer';
-import { withCoManagedPortableSnapshot } from '../../../../../packages/co-managed/src/portableSnapshot';
-import { withCoManagedExportAdmin } from '../../../../../packages/co-managed/src/portableExport';
+import { withPortableTransfer, assertPortableTransferActive, portableTransferSignal, type PortableTransferOptions } from '@alga-psa/co-managed/portableTransfer';
+import { withCoManagedPortableSnapshot } from '@alga-psa/co-managed/portableSnapshot';
+import { withCoManagedExportAdmin } from '@alga-psa/co-managed/portableExport';
 import { snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired, CoManagedSharedWorkError,
-  type CoManagedSessionActor } from '../../../../../packages/co-managed/src/sharedWorkIdentity';
-import { sealPortableArchive } from '../../../../../packages/co-managed/src/portableArchive';
-import { buildCoManagedPortableWorkspaceManifest } from '../../../../../packages/co-managed/src/portableWorkspaceManifest';
-import { collectPortableWorkspace, assertPortableWorkspaceCurrent } from '../../../../../packages/co-managed/src/portableWorkspaceGraph';
-import { createCorePortableRegistry } from '../../../../../packages/co-managed/src/portableCoreRegistry';
-import type { PortableContributorRegistry } from '../../../../../packages/co-managed/src/portableContributorRegistry';
-import { acquirePortableDownload } from '../../../../../packages/co-managed/src/portableDownload';
+  type CoManagedSessionActor } from '@alga-psa/co-managed/sharedWorkIdentity';
+import { sealPortableArchive } from '@alga-psa/co-managed/portableArchive';
+import { buildCoManagedPortableWorkspaceManifest } from '@alga-psa/co-managed/portableWorkspaceManifest';
+import { collectPortableWorkspace, assertPortableWorkspaceCurrent } from '@alga-psa/co-managed/portableWorkspaceGraph';
+import { createCorePortableRegistry } from '@alga-psa/co-managed/portableCoreRegistry';
+import type { PortableContributorRegistry } from '@alga-psa/co-managed/portableContributorRegistry';
+import { acquirePortableDownload } from '@alga-psa/co-managed/portableDownload';
 import { exportCoManagedPortableVault } from './portableVaultExport';
 
 export interface CoManagedPortableWorkspaceArtifact {

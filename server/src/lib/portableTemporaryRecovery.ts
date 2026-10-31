@@ -1,4 +1,4 @@
-import { createPortableTemporarySweeper } from '../../../packages/co-managed/src/portableTemporaryDirectory';
+import { createPortableTemporarySweeper } from '@alga-psa/co-managed/portableTemporaryDirectory';
 
 /** Files are local to the application replica, so a remote job runner cannot
  * reclaim them. The process-global guard also survives development hot reload. */

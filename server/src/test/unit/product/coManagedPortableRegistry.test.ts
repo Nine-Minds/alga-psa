@@ -101,3 +101,21 @@ describe('collecting through the registry', () => {
     await expect(assertPortableWorkspaceCurrent(changed, collected, rctx)).rejects.toBeInstanceOf(CoManagedSharedWorkError);
   });
 });
+
+import { resolveProductApiBehavior, resolveProductRouteBehavior as resolveRoute } from '../../../lib/productSurfaceRegistry';
+
+describe('workspace export product surface', () => {
+  it('resolves the page for each product', () => {
+    expect(resolveRoute('psa', '/msp/co-management/export')).toBe('allowed');
+    expect(resolveRoute('algadesk', '/msp/co-management/export')).toBe('not_found');
+    expect(resolveRoute('co_managed', '/msp/co-management/export')).toBe('allowed');
+  });
+  it('resolves the API route for each product', () => {
+    expect(resolveProductApiBehavior('psa', '/api/co-management/export')).toBe('allowed');
+    expect(resolveProductApiBehavior('algadesk', '/api/co-management/export')).toBe('denied');
+    expect(resolveProductApiBehavior('co_managed', '/api/co-management/export')).toBe('allowed');
+  });
+  it('does not open the rest of the co-management prefix for a customer', () => {
+    expect(resolveRoute('co_managed', '/msp/co-management/tasks')).toBe('not_found');
+  });
+});

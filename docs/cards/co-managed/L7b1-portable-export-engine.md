@@ -19,9 +19,11 @@ Ships dark: every entry point sits behind the `co-managed` capability (`serves`)
 | `packages/ee/src/lib/co-managed/portableExportHandler.ts` | code | CE stub: `available: false`, 404, never throws |
 | `server/src/app/api/co-management/export/route.ts`, `server/src/app/msp/co-management/export/page.tsx`, `server/src/lib/actions/coManagedPortableExportActions.ts`, `server/src/components/co-managed/CoManagedPortableExport.tsx` | code | gated entry points |
 | `server/src/lib/portableTemporaryRecovery.ts` | code | dead-but-tested (see section 3) |
-| `ee/temporal-workflows/src/activities/tenant-export-activities.ts` | code | one guarded dynamic-import line |
+| `server/src/middleware.ts` | code | exact-path API-key exemption for `/api/co-management/export` |
+| `server/src/lib/productSurfaceRegistry.ts` | code | page rule `msp_co_management_export` and API rule `api_co_management_export` |
+| `server/src/components/co-managed/CoManagedCustomerHome.tsx` | code | mounts the capability-gated export entry (customer side only) |
 | `server/public/locales/en/msp/licensing.json` | i18n | `coManaged.portableExport.*` |
-| `server/src/test/unit/product/coManagedPortable*.test.ts`, `ee/temporal-workflows/src/__tests__/tenantExport.portableHook.test.ts` | test | |
+| `server/src/test/unit/product/coManagedPortable*.test.ts`| test | |
 Shared files (hunk-level): `packages/co-managed/package.json` (+`@alga-psa/storage` dependency, no export-map change: callers use relative paths); `server/src/test/unit/capability/capabilityEntryPoints.contract.test.ts` (`EXPECTED_FAMILY_FILE_COUNTS` 10→11, 0→1, 16→17, 36→37).
 
 ## 2. Reference pull and divergences
@@ -33,7 +35,10 @@ Shared files (hunk-level): `packages/co-managed/package.json` (+`@alga-psa/stora
 | vault mandatory in the manifest | optional; absence recorded as `credential_vault` exclusion | a records-and-files export must not depend on it |
 | vault envelope params implicit in code | `kdf` / `cipher` recorded in the envelope and checked by the manifest | reader never guesses |
 | `portableWorkspaceGraph` validated 7 hard-wired sections | validates contributors' own declarations plus edges; undelivered parents are `external` | documents/time/meetings/conversations belong to L7b3 |
-| `tenant-export-activities.ts`: `native_time_tracking_sessions` added to the table list | not ported; replaced by the guarded hook | time domain (L7b3); the hook is what this card owns |
+| `tenant-export-activities.ts`: `native_time_tracking_sessions` added to the table list | not ported; the file is unchanged versus main (no hook either) | time domain (L7b3). An earlier draft of this card added an ungated temp-dir sweep to every tenant export, deep-importing the package from the worker; removed: the export streams from the app replica, so the worker never creates portable temp dirs. L7b1 makes no change to `tenant-export-activities.ts`; the reference line was L7b3 time domain |
+| Deep relative imports of `packages/co-managed/src/*` | consumers use `@alga-psa/co-managed/<subpath>` | package boundary; subpath exports added to `packages/co-managed/package.json` (portableExport, portableTransfer, portableSnapshot, portableTemporaryDirectory, portableWorkspaceGraph, portableCoreRegistry, portableContributorRegistry, portableArchive, portableWorkspaceManifest, portableDownload) |
+| `middleware.ts` exemption | added, exact path `/api/co-management/export` | same as reference; the form POST is session-authenticated in-route |
+| `productSurfaceRegistry.ts` | edited (earlier "do not edit" overridden by review): page `/msp/co-management/export` psa allowed / algadesk not_found / co_managed allowed; API `/api/co-management/export` psa allowed / algadesk denied / co_managed allowed | L4a shipped no rule; a co_managed customer otherwise gets not_found/denied. The capability gate still decides admission |
 | route/page/action ungated by capability adapters; UI used `useProduct` | `capabilityRouteGuard` / `requireCapabilityForPage` / `requireCapabilityForAction` (`serves`); client `useCapability('co-managed')` | neutrality; `FORCE_CAPABILITIES=co-managed:off` gives 404 / notFound / not-found |
 | `restorePortableCredentialVault`, `portableRestoreIdentity.ts`, `portableWorkflowHistory.ts`, all restore files | dropped | restore is out of scope |
 
@@ -54,10 +59,10 @@ The Done-when list names three integration helpers (`coManagedPortable{Asset,Wor
 | `POST /api/co-management/export` | `capabilityRouteGuard('co-managed', tenant, 'serves')`, tenant from the session | exact 404 body of a missing record; handler never runs |
 | `/msp/co-management/export` page | `requireCapabilityForPage('co-managed', tenant, 'serves')` | `notFound()` |
 | `getCoManagedPortableExportScreenAction` | `requireCapabilityForAction('co-managed', tenant, 'serves')` first statement | `CapabilityUnavailableError`, before any DB or actor work |
-| `CoManagedPortableExportEntry` / `CoManagedFeatureBoundary` | `useCapability('co-managed')` | renders nothing; no nav entry for unserved tenants (the entry is not mounted in any nav by this card) |
+| `CoManagedPortableExportEntry` / `CoManagedFeatureBoundary` | `useCapability('co-managed')` | renders nothing; no nav entry for unserved tenants (mounted only in `CoManagedCustomerHome`, the customer side of `/msp/co-managed`; unserved tenants never reach that page) |
 | CE build | `packages/ee/.../portableExportHandler.ts` | `available: false`; page renders an "unavailable" notice, route answers 404 JSON; never throws |
 | Temporal worker | guarded `import()` of `portableTemporaryDirectory` | resolution or load failure is swallowed; no module-scope co-managed import |
-The AST gate-coverage contract (`capabilityEntryPoints.contract.test.ts`) covers the route, page and action. `/api/co-management` has no rule in `productSurfaceRegistry.ts`, which this card does not edit.
+The AST gate-coverage contract (`capabilityEntryPoints.contract.test.ts`) covers the route, page and action. The product-surface rules above admit the page and route for psa and co_managed products; the capability gate then decides per tenant.
 
 ## 5. Migrations
 None.

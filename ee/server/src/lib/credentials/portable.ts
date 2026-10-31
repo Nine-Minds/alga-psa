@@ -1,5 +1,5 @@
 import { createCipheriv, randomBytes, scrypt } from 'node:crypto';
-import { assertPortableTransferActive, awaitPortableTransfer } from '../../../../../packages/co-managed/src/portableTransfer';
+import { assertPortableTransferActive, awaitPortableTransfer } from '@alga-psa/co-managed/portableTransfer';
 import {
   decryptCredentialValue, encryptCredentialValues, isCredentialEncryptionScheme,
   type EncryptedCredentialValues,
