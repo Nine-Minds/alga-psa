@@ -3,7 +3,7 @@ import type { Knex } from 'knex';
 import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenantScopedIndexerQuery';
 import { flattenBlockNote } from '../normalize';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
-import { recordPath } from '@alga-psa/types';
+import { recordPath, redactTaskComment, TASK_COMMENT_INDEX_POLICY } from '@alga-psa/types';
 
 interface ProjectTaskCommentSearchRow {
   task_comment_id: string;
@@ -17,6 +17,10 @@ interface ProjectTaskCommentSearchRow {
   project_id: string;
   project_name: string | null;
   client_id: string | null;
+  user_id?: string | null;
+  actor_reference_id?: string | null;
+  contact_id?: string | null;
+  collaboration_revision?: number | null;
 }
 
 function toSourceUpdatedAt(row: ProjectTaskCommentSearchRow): Date {
@@ -30,6 +34,23 @@ function bodyFromRow(row: ProjectTaskCommentSearchRow): string | undefined {
     return markdown;
   }
   return row.note ? flattenBlockNote(row.note) : undefined;
+}
+
+/**
+ * Index-side comment metadata goes through the same redaction function as the UI and the REST service
+ * (TASK_COMMENT_INDEX_POLICY): the author never reaches a search document, the revision is only a
+ * freshness stamp (a missing legacy revision counts as 1).
+ */
+function indexMetadata(row: ProjectTaskCommentSearchRow): Record<string, unknown> {
+  return redactTaskComment(
+    {
+      userId: row.user_id ?? null,
+      actorReferenceId: row.actor_reference_id ?? null,
+      contactId: row.contact_id ?? null,
+      sourceRevision: row.collaboration_revision ?? 1,
+    },
+    TASK_COMMENT_INDEX_POLICY,
+  );
 }
 
 function toSearchDoc(tenant: string, row: ProjectTaskCommentSearchRow): SearchDoc {
@@ -48,6 +69,7 @@ function toSearchDoc(tenant: string, row: ProjectTaskCommentSearchRow): SearchDo
       requiredPermission: 'project:read',
       clientScopeId: row.client_id ?? undefined,
     },
+    metadata: indexMetadata(row),
     sourceUpdatedAt: toSourceUpdatedAt(row),
   };
 }
@@ -72,6 +94,10 @@ function baseProjectTaskCommentQuery(knex: Knex, tenant: string) {
       'ph.project_id',
       'p.project_name',
       'p.client_id',
+      'pc.user_id',
+      'pc.actor_reference_id',
+      'pc.contact_id',
+      'pc.collaboration_revision',
     );
 }
 
