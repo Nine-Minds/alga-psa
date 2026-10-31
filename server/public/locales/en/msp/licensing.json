@@ -376,7 +376,8 @@
       "loadError": "You cannot export this workspace with your current access.",
       "lengthError": "Use a passphrase between 16 and 1024 UTF-8 bytes.",
       "matchError": "The recovery passphrases must match.",
-      "unavailable": "Workspace export is not available in this edition."
+      "unavailable": "Workspace export is not available in this edition.",
+      "loading": "Loading…"
     },
     "acceptance": {
       "accept": "Accept and activate workspace",

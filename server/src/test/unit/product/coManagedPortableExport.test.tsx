@@ -56,6 +56,7 @@ it('the export entry renders a link for a served customer and nothing when the c
 it('loads the screen once per mount, including while the session identity resolves', async () => {
   mocks.status = 'loading'; mocks.identified = false;
   const view = mount(); expect(mocks.load).not.toHaveBeenCalled();
+  expect(screen.getByRole('status')).toHaveTextContent('coManaged.portableExport.loading');
   mocks.status = 'authenticated'; mocks.identified = true;
   view.rerender(<CoManagedFeatureBoundary mode="serves"><CoManagedPortableExport /></CoManagedFeatureBoundary>);
   await screen.findByText('Customer workspace');
