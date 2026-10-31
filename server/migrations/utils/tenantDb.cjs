@@ -449,6 +449,7 @@ const TENANT_TABLE_METADATA = {
   status_sla_pause_config: { scope: 'tenant' },
   stripe_accounts: { scope: 'tenant' },
   stripe_customers: { scope: 'tenant' },
+  stripe_customer_bindings: { scope: 'tenant' },
   stripe_prices: { scope: 'tenant' },
   stripe_products: { scope: 'tenant' },
   stripe_subscriptions: { scope: 'tenant' },

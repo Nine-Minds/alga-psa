@@ -513,6 +513,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   stock_units: { scope: 'tenant' },
   stripe_accounts: { scope: 'tenant' },
   stripe_customers: { scope: 'tenant' },
+  stripe_customer_bindings: { scope: 'tenant' },
   stripe_prices: { scope: 'tenant' },
   stripe_products: { scope: 'tenant' },
   stripe_subscriptions: { scope: 'tenant' },
