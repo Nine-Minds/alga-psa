@@ -16,10 +16,20 @@ import { isCoManagedUuid, CoManagedSharedWorkError } from './sharedWorkIdentity'
 export const ARCHIVE_EVIDENCE_CLASSES = ['conversation', 'ticket_handoff', 'work_audit', 'work_snapshot', 'time_entry', 'private_conversation'] as const;
 export type CoManagedArchiveEvidenceClass = typeof ARCHIVE_EVIDENCE_CLASSES[number];
 
-/** Audiences the MSP may keep. `internal` (customer-private) and anything unrecognised is excluded. */
+/** Every audience any archived class may carry. `internal` (customer-private) and anything unrecognised is excluded. */
 export const ARCHIVE_ALLOWED_AUDIENCES = ['requester', 'shared_it', 'organization_private'] as const;
-/** Classes whose payload carries an audience that must be on the allowlist. */
-const AUDIENCE_CLASSES: ReadonlySet<string> = new Set(['conversation', 'private_conversation']);
+/**
+ * Audiences allowed PER class, because `organization_private` is relative to whoever owns the thread:
+ * - `conversation` is the shared customer thread, captured only for requester/shared_it (the MSP could read
+ *   it); an `organization_private` note there belongs to the CUSTOMER, so it is never archivable.
+ * - `private_conversation` is written only from the sponsor's own `co_management_private_comments`
+ *   (privateParticipationEvidence.ts) with the literal label `organization_private`: the MSP's own private
+ *   content, in the MSP's partition. Any other label on that class is anomalous and excluded.
+ */
+const AUDIENCES_BY_CLASS: Readonly<Record<string, readonly string[]>> = {
+  conversation: ['requester', 'shared_it'],
+  private_conversation: ['organization_private'],
+};
 
 export type CoManagedArchiveExclusionReason = 'class_not_allowlisted' | 'audience_not_allowlisted' | 'after_cutoff';
 
@@ -45,9 +55,9 @@ export interface CoManagedArchiveCandidate { evidence_id: string; payload_hash: 
 export function classifyArchiveCandidate(row: CoManagedArchiveCandidate, cutoffAt: Date): { include: true } | { include: false; reason: CoManagedArchiveExclusionReason } {
   if (!(ARCHIVE_EVIDENCE_CLASSES as readonly string[]).includes(row.source_type)) return { include: false, reason: 'class_not_allowlisted' };
   if (new Date(row.occurred_at).getTime() > cutoffAt.getTime()) return { include: false, reason: 'after_cutoff' };
-  if (AUDIENCE_CLASSES.has(row.source_type)) {
+  if (row.source_type in AUDIENCES_BY_CLASS) {
     const payload = typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload;
-    if (!(ARCHIVE_ALLOWED_AUDIENCES as readonly string[]).includes(payload?.audience)) return { include: false, reason: 'audience_not_allowlisted' };
+    if (!(AUDIENCES_BY_CLASS[row.source_type] ?? []).includes(payload?.audience)) return { include: false, reason: 'audience_not_allowlisted' };
   }
   return { include: true };
 }

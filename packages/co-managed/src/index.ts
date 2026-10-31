@@ -100,7 +100,7 @@ export { findCoManagedLocalWorkReference, loadCoManagedLocalWorkReference, recor
 export { retainCoManagedTimeParticipation } from './timeParticipationEvidence';
 export * from './timeBillingProfile';
 // L7a: departure, closure and the participation-evidence-only MSP archive.
-export { closeCoManagedRelationship, endCoManagedSponsorshipsForDeletion, CoManagedClosureError } from './relationshipClosure';
+export { closeCoManagedRelationship, endCoManagedSponsorshipsForDeletion, releaseCoManagedSeatsForCustomerDeletion, CoManagedClosureError } from './relationshipClosure';
 export type { CoManagedClosureRequest, CoManagedClosureReceipt, CoManagedClosureContext } from './relationshipClosure';
 export { getCoManagedDepartureScreen, departCoManagedRelationship } from './departure';
 export type { CoManagedDepartureQualifiedTarget, CoManagedDepartureReview, CoManagedDepartureRequest } from './departure';

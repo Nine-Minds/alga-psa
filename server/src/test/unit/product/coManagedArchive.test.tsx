@@ -70,6 +70,15 @@ describe('archive allowlist classification, per row class', () => {
     expect(classifyArchiveCandidate({ ...at(after), source_type: 'time_entry', payload: {} }, cutoff)).toEqual({ include: false, reason: 'after_cutoff' });
   });
 
+  it('a customer-private row under either MSP-private label is never archivable (absent cases)', () => {
+    // organization_private on the shared `conversation` thread is the CUSTOMER's private note.
+    expect(classifyArchiveCandidate({ ...at(before), source_type: 'conversation', payload: { audience: 'organization_private' } }, cutoff)).toEqual({ include: false, reason: 'audience_not_allowlisted' });
+    // private_conversation is the MSP's own private store; any other label on it is anomalous.
+    for (const audience of ['internal', 'requester', 'shared_it', undefined]) {
+      expect(classifyArchiveCandidate({ ...at(before), source_type: 'private_conversation', payload: { audience } }, cutoff)).toEqual({ include: false, reason: 'audience_not_allowlisted' });
+    }
+  });
+
   it('excludes customer-private messages, post-cutoff messages and any class not on the allowlist', () => {
     expect(classifyArchiveCandidate({ ...at(before), source_type: 'conversation', payload: { audience: 'internal' } }, cutoff)).toEqual({ include: false, reason: 'audience_not_allowlisted' });
     expect(classifyArchiveCandidate({ ...at(after), source_type: 'conversation', payload: { audience: 'shared_it' } }, cutoff)).toEqual({ include: false, reason: 'after_cutoff' });
