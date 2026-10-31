@@ -37,9 +37,10 @@ What holds is a property the author cannot forge: a signed attestation whose cer
 
 - `changes` selects `registry` only when `github.event_name != 'pull_request'` and the actor is not Dependabot. Every pull request uses the artifact transport, which already carries the build record and digest.
 - Job-level `permissions:` cannot be conditional, and a called workflow cannot request more than its caller grants. A job that requests more fails the whole run at startup, whether or not its `if` skips it. So the event-dependent grant moves to the caller:
-  - `browser-pr`: `if: github.event_name == 'pull_request'`, `contents: read`, `packages: read`.
-  - `browser-trusted`: `if: github.event_name != 'pull_request'`, `contents: read`, `packages: write`.
-  - `browser`: `if: always()`, needs both, and fails unless the one caller that ran succeeded. `scripts/lib/production-readiness.mjs` and `.github/workflows/production-regression.yml` (`inventory`, `readiness`) read `needs.browser.result`, and they stay unchanged.
+  - `browser-pr` (display name `browser`): `if: github.event_name == 'pull_request'`, `contents: read`, `packages: read`.
+  - `browser-trusted` (display name `browser`): `if: github.event_name != 'pull_request'`, `contents: read`, `packages: write`.
+  - Both callers carry `name: browser`, so checks still render as `browser / Production browser (<edition>)`. `scripts/lib/collect-browser-metric-executions.mjs` matches that name, and branch-protection rules may too.
+  - `browser` (display name `Browser lane verdict`): `if: always()`, needs both, and fails unless the one caller that ran succeeded. `scripts/lib/production-readiness.mjs` and `.github/workflows/production-regression.yml` (`inventory`, `readiness`) read `needs.browser.result`, and they stay unchanged.
 - In the called workflow, `build-images` declares no `permissions:` and the workflow-level block is gone. A job with no declaration inherits the caller's grant, so it holds `packages: write` for `browser-trusted` and `packages: read` for `browser-pr`. Every other job declares `contents: read` itself (`production-browser` keeps `packages: read`), so nothing else inherits the package grant.
 - The called workflow never holds `id-token`. Only the promotion job does.
 
@@ -52,8 +53,8 @@ What holds is a property the author cannot forge: a signed attestation whose cer
 - It recomputes `TREE` with `git rev-parse 'HEAD^{tree}'` from its own checkout of `github.sha`.
 - It downloads `fresh-install-build-record-server` and `fresh-install-build-record-server-ee` and reads `registry.manifestDigest` and `registry.reference` from each.
 - It checks the config of each digest with `docker buildx imagetools inspect`: `com.nineminds.source-tree` must equal the recomputed `TREE` and `org.opencontainers.image.revision` must equal `github.sha`. It fails closed.
-- Only then does it run `docker buildx imagetools create --tag …:tree-$TREE …@digest`.
 - It attests each digest with `actions/attest-build-provenance` and `push-to-registry: true`.
+- Only then does it run `docker buildx imagetools create --tag …:tree-$TREE …@digest`. Attest comes before tag, so a tag can only exist for a digest that already carries a main attestation.
 - The build job no longer writes any `tree-` tag. The label step stays, because the label is what the promotion and the consumer check.
 
 ### Consumer verification

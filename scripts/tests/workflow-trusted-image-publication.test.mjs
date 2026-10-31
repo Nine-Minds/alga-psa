@@ -102,7 +102,17 @@ test('exactly one job writes a tree- tag, and it only runs on main', () => {
   assert.ok(steps.some(step => step.uses?.startsWith('actions/checkout@')));
   assert.match(steps[verify].run, /--tree "\$TREE" --revision "\$GITHUB_SHA"/);
   assert.match(steps[verify].run, /imagetools inspect/);
-  assert.ok(tree >= 0 && tree < verify && verify < tag && tag < attest, 'recompute, then verify labels, then tag, then attest');
+  const lastAttest = steps.map(step => /actions\/attest/.test(step.uses ?? '')).lastIndexOf(true);
+  assert.ok(tree >= 0 && tree < verify && verify < attest && lastAttest < tag, 'recompute, verify labels, attest every digest, then tag');
+  // An output read under a key the candidates step never writes is empty at run time.
+  // The step writes `${service//-/_}` for each service in SERVICES.
+  const candidates = steps[index(step => step.id === 'candidates')].run;
+  assert.match(candidates, /echo "\$\{service\/\/-\/_\}=\$digest" >> "\$GITHUB_OUTPUT"/);
+  const keys = job.env.SERVICES.split(/\s+/).map(service => service.replace(/-/g, '_'));
+  const referenced = [...JSON.stringify(steps).matchAll(/steps\.candidates\.outputs\.([A-Za-z0-9_-]+)/g)].map(([, key]) => key);
+  assert.ok(referenced.length >= 3);
+  for (const key of referenced) assert.ok(keys.includes(key), `steps.candidates.outputs.${key} is never written (the step writes ${keys.join(', ')})`);
+
   assert.ok(steps.filter(step => /actions\/attest/.test(step.uses ?? '')).every(step => step.with['push-to-registry'] === true));
   assert.equal(steps.filter(step => /actions\/attest/.test(step.uses ?? '')).length, 2, 'both server candidates are attested');
   assert.ok(!JSON.stringify(steps).includes('needs.build-images.outputs'), 'nothing is trusted from the build job outputs');
@@ -126,4 +136,12 @@ test('the label check accepts only the recomputed tree and revision', () => {
   assert.throws(() => assertSourceLabels(good, { tree, revision: 'c'.repeat(40) }));
   assert.throws(() => assertSourceLabels(config({}), { tree, revision }));
   assert.throws(() => labelsOf({ 'linux/amd64': good, 'linux/arm64': good }));
+});
+
+test('every caller of the browser lane is displayed as browser, so check names and the metrics collector still match', () => {
+  for (const [name, job] of calls) assert.equal(job.name, 'browser', `${name} must render as "browser / Production browser (<edition>)"`);
+  const collector = readFileSync('scripts/lib/collect-browser-metric-executions.mjs', 'utf8');
+  assert.ok(collector.includes('browser / Production browser (${edition})'));
+  assert.notEqual(caller.jobs.browser.name, 'browser', 'the aggregator must not share the callers\' display name');
+  assert.equal(callee.jobs['browser-evidence'].name, 'Production browser (${{ matrix.edition }})');
 });

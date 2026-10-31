@@ -64,6 +64,10 @@ jobs:
   # that reaches only `browser-pr` has no token that can push a package. The
   # called workflow's build-images job inherits whichever grant its caller has.
   browser-pr:
+    # Both callers are named `browser` so checks keep rendering as
+    # `browser / Production browser (<edition>)`, which the metrics collector and
+    # any required-check rules match.
+    name: browser
     if: github.event_name == 'pull_request'
     uses: ./.github/workflows/e2e-fresh-install-tests.yaml
     permissions:
@@ -72,6 +76,7 @@ jobs:
     secrets: inherit
 
   browser-trusted:
+    name: browser
     if: github.event_name != 'pull_request'
     uses: ./.github/workflows/e2e-fresh-install-tests.yaml
     # Pushes and dispatches hand candidate images between the lane's jobs
@@ -109,7 +114,7 @@ jobs:
   # called workflow cannot hold id-token, because browser-pr cannot grant it),
   # which also means only browser-tested images are promoted. Everything it
   # trusts is recomputed here: the tree from this checkout, the labels from the
-  # registry. Verify first, tag second, attest third.
+  # registry. Verify first, attest second, tag last.
   promote-trusted-images:
     name: Promote trusted tree images
     needs: browser-trusted
@@ -172,20 +177,10 @@ jobs:
             echo "${service//-/_}=$digest" >> "$GITHUB_OUTPUT"
           done
 
-      - name: Tag the verified candidates with their source tree
-        env:
-          TREE: ${{ steps.tree.outputs.tree }}
-          SERVER_DIGEST: ${{ steps.candidates.outputs.server }}
-          SERVER_EE_DIGEST: ${{ steps.candidates.outputs.server_ee }}
-        run: |
-          for pair in "server:$SERVER_DIGEST" "server-ee:$SERVER_EE_DIGEST"; do
-            service="${pair%%:*}" digest="${pair#*:}"
-            reference="ghcr.io/${GITHUB_REPOSITORY,,}/e2e-$service"
-            docker buildx imagetools create --tag "$reference:tree-$TREE" "$reference@$digest"
-          done
-
       # The attestation is what consumers check: its certificate records the ref
       # of this run, which a pull request or a branch cannot make refs/heads/main.
+      # Attested before tagged, so a tree- tag can only ever point at a digest
+      # that already carries a main attestation.
       - name: Attest the community candidate
         uses: actions/attest-build-provenance@v2
         with:
@@ -197,8 +192,21 @@ jobs:
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: ghcr.io/${{ steps.tree.outputs.namespace }}/e2e-server-ee
-          subject-digest: ${{ steps.candidates.outputs.server-ee }}
+          subject-digest: ${{ steps.candidates.outputs.server_ee }}
           push-to-registry: true
+
+      # Last: a failure above leaves no tag behind.
+      - name: Tag the attested candidates with their source tree
+        env:
+          TREE: ${{ steps.tree.outputs.tree }}
+          SERVER_DIGEST: ${{ steps.candidates.outputs.server }}
+          SERVER_EE_DIGEST: ${{ steps.candidates.outputs.server_ee }}
+        run: |
+          for pair in "server:$SERVER_DIGEST" "server-ee:$SERVER_EE_DIGEST"; do
+            service="${pair%%:*}" digest="${pair#*:}"
+            reference="ghcr.io/${GITHUB_REPOSITORY,,}/e2e-$service"
+            docker buildx imagetools create --tag "$reference:tree-$TREE" "$reference@$digest"
+          done
 
   temporal:
     needs: selection
