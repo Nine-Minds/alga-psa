@@ -77,11 +77,37 @@ function emailData(id: string, text: string) {
 }
 const sharedComments = (text: string) => db('comments').where({ tenant: ticketTenant, ticket_id: ticketId }).whereRaw('note::text ILIKE ?', [`%${text}%`]);
 
+/**
+ * Boot exactly what production boots: the email-service entry point, FIRST, before the world seed below
+ * imports any other co-managed module. The seed's imports pull in packages that register the capability
+ * as a side effect, which is how this test used to pass while the built service had no gate. The server
+ * vitest setup file registers no capability, so the only registrar here is the entry point itself.
+ */
+async function bootEmailService() {
+  const { capabilityResolverStatus } = await import('@alga-psa/core/capability');
+  expect(capabilityResolverStatus('co-managed').participation).not.toBe('registered');
+  const onSpy = vi.spyOn(process, 'on').mockReturnValue(process);
+  const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+  try {
+    await import('../../../../services/email-service/src/index');
+    const { coManagedDeliverySeam, coManagedInboundCommentSeam } = await import('@alga-psa/shared/lib/coManagedDelivery');
+    await vi.waitFor(() => {
+      expect(coManagedDeliverySeam.hasProvider()).toBe(true);
+      expect(coManagedInboundCommentSeam.hasProvider()).toBe(true);
+    }, { timeout: 30_000 });
+    expect(capabilityResolverStatus('co-managed').participation).toBe('registered');
+  } finally {
+    onSpy.mockRestore();
+    exitSpy.mockRestore();
+  }
+}
+
 beforeAll(async () => {
   db = await createTestDbConnection();
   process.env.FORCE_CAPABILITIES = 'co-managed:on';
   (globalThis as any).__algaWriteAdmissionState = undefined;
   (globalThis as any).__algaWriteAdmissionResolver = undefined;
+  await bootEmailService();
 
   // World: a ticket tenant (psa) sharing one ticket with a co_managed workspace whose IT user (Alice) replies by mail.
   ticketTenant = await createTenant(db, 'Inbound MSP', { productCode: 'psa' });
@@ -143,20 +169,6 @@ afterAll(async () => {
 
 describe('email-service boot registers co-managed inbound', () => {
   beforeAll(async () => {
-    const onSpy = vi.spyOn(process, 'on').mockReturnValue(process);
-    const exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
-    try {
-      await import('../../../../services/email-service/src/index');
-      const { coManagedDeliverySeam, coManagedInboundCommentSeam } = await import('@alga-psa/shared/lib/coManagedDelivery');
-      // Registration is the entry point's job: wait for its async start() to have performed it.
-      await vi.waitFor(() => {
-        expect(coManagedDeliverySeam.hasProvider()).toBe(true);
-        expect(coManagedInboundCommentSeam.hasProvider()).toBe(true);
-      }, { timeout: 30_000 });
-    } finally {
-      onSpy.mockRestore();
-      exitSpy.mockRestore();
-    }
     processInbound = (await import('../../../../shared/services/email/processInboundEmailInApp')).processInboundEmailInApp;
   }, 120_000);
 
@@ -233,7 +245,7 @@ describe('a process where co-managed registration never ran', () => {
   it('rejects a cm2 reply with InboundRetryLaterError and writes nothing', async () => {
     // Seam slots live on globalThis; take them out for this test (what a process that never imported
     // deliveryRegistration looks like) and put them back so test order does not matter.
-    const keys = ['delivery', 'inboundComment'].map(name => Symbol.for(`alga.sharedWorkSeam.${name}`));
+    const keys = ['delivery', 'inbound-comment'].map(name => Symbol.for(`alga.sharedWorkSeam.${name}`));
     const host = globalThis as any;
     const saved = keys.map(key => host[key]);
     const { coManagedDeliverySeam, coManagedInboundCommentSeam, coManagedInboundOperationId } = await import('@alga-psa/shared/lib/coManagedDelivery');

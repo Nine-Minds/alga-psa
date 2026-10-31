@@ -10,6 +10,7 @@ const findTicketByReplyTokenMock = vi.fn();
 const findTicketByEmailThreadMock = vi.fn();
 const createCommentFromEmailMock = vi.fn();
 const servesMock = vi.fn(async () => ({ served: true }));
+const threadRow: { value: unknown } = { value: undefined };
 const parsed: { tokens: Record<string, string> } = { tokens: {} };
 
 vi.mock('@alga-psa/core/capability', () => ({ serves: (...a: unknown[]) => (servesMock as any)(...a), admits: async () => ({ admitted: true }) }));
@@ -23,7 +24,8 @@ function qb(first: unknown) {
 }
 vi.mock('@alga-psa/db', () => ({
   withAdminTransaction: async (cb: any) => cb(vi.fn((table: string) => {
-    if (['comments', 'tickets as t', 'comments as c', 'email_sending_logs', 'comment_threads', 'tickets', 'statuses', 'boards'].includes(table)) return qb(undefined);
+    if (table === 'comment_threads') return qb(threadRow.value);
+    if (['comments', 'tickets as t', 'comments as c', 'email_sending_logs', 'tickets', 'statuses', 'boards'].includes(table)) return qb(undefined);
     throw new Error(`Unexpected table in unit test: ${table}`);
   })),
   tenantDb: (conn: any, tenant: string) => ({ table: (table: string) => conn(table).where({ tenant }) }),
@@ -52,10 +54,10 @@ function email(overrides: Record<string, unknown> = {}) {
     attachments: [], headers: { 'authentication-results': 'mx; spf=pass smtp.mailfrom=msp.test' }, inReplyTo: '<thread@x>', ...overrides,
   } as any;
 }
-async function inbound(token: string, overrides: Record<string, unknown> = {}) {
+async function inbound(token: string, overrides: Record<string, unknown> = {}, options: Record<string, unknown> = {}) {
   parsed.tokens = { conversationToken: token };
   const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
-  return processInboundEmailInApp({ tenantId: 'tenant-1', providerId: 'p1', emailData: email(overrides) });
+  return processInboundEmailInApp({ tenantId: 'tenant-1', providerId: 'p1', emailData: email(overrides) }, options);
 }
 
 describe('inbound reply token matrix (CM L5)', () => {
@@ -165,6 +167,56 @@ describe('inbound reply token matrix (CM L5)', () => {
       await inbound('cm2:garbage');
       expect(findTicketByEmailThreadMock).toHaveBeenCalled();
       expect(writes).toHaveLength(0);
+    });
+  });
+
+  describe('the capability gate does not serve the tenant (seam resolves null)', () => {
+    const cm2Meta = (threadId: string | null) => ({ namespace: 'cm', version: 2, relationshipId: 'rel', grantGeneration: 1, threadId });
+    const verdict = (served: string) => ({ served: false, reasons: { admitted: 'not-evaluated', served } });
+    beforeEach(() => { threadRow.value = undefined; found.metadata = {}; });
+    afterEach(() => { found.metadata = {}; threadRow.value = undefined; });
+
+    it.each(['resolver-unregistered', 'participation-error'])('(%s) is a boot/transient gap: retried, no write, no native path', async (reason) => {
+      const { InboundRetryLaterError } = await import('../inboundRetryLaterError');
+      servesMock.mockResolvedValue(verdict(reason) as any);
+      found.metadata = cm2Meta('thr');
+      await expect(inbound('cm2:abc')).rejects.toBeInstanceOf(InboundRetryLaterError);
+      expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+      expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
+      expect(writes).toHaveLength(0);
+    });
+
+    it('forced off + shared_it token: terminal quarantine, no writer called', async () => {
+      servesMock.mockResolvedValue(verdict('forced-off') as any);
+      found.metadata = cm2Meta('thr');
+      threadRow.value = { collaboration_audience: 'shared_it', is_internal: true };
+      const result: any = await inbound('cm2:abc', {}, { collectDiagnostics: true });
+      expect(result).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_token_unserved', ticketId: 'ticket-1' });
+      expect(result.diagnostics?.threading?.failureReason).toBe('co_managed_token_unserved');
+      expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+      expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
+      expect(writes).toHaveLength(0);
+      expect(acks).toHaveLength(0);
+    });
+
+    it('not served + requester-thread token: inert, the native writer takes it', async () => {
+      servesMock.mockResolvedValue(verdict('not-participating') as any);
+      found.metadata = cm2Meta(null);
+      const result: any = await inbound('cm2:abc', {}, { collectDiagnostics: true });
+      expect(result.outcome).not.toBe('quarantined');
+      // Today's inert behaviour: the token carries no authority, the native thread-header path decides.
+      expect(result.diagnostics.threading.tokenLookupMatched).toBe(false);
+      expect(findTicketByEmailThreadMock).toHaveBeenCalled();
+      expect(writes).toHaveLength(0);
+    });
+
+    it('a psa token makes no seam or gate call', async () => {
+      servesMock.mockResolvedValue(verdict('resolver-unregistered') as any);
+      const resolveSpy = vi.spyOn(coManagedDeliverySeam, 'resolve');
+      await inbound('9f1c2d3e-4b5a-4c6d-8e7f-1a2b3c4d5e6f');
+      expect(resolveSpy).not.toHaveBeenCalled();
+      expect(servesMock).not.toHaveBeenCalled();
+      resolveSpy.mockRestore();
     });
   });
 });

@@ -1,5 +1,10 @@
 // Registers the co-managed delivery provider on the shared-work seam. Imported once at server
 // boot inside try/catch; without it every seam answers null and native behaviour is unchanged.
+// The co-managed capability gate (participation/eligibility resolvers + lifecycle). Imported first and
+// idempotently (module cache + registerCoManagedCapability is a re-register), so every host that loads
+// the delivery seams (server, queue consumer bin, email-service) also has the gate that judges them;
+// otherwise serves('co-managed') answers resolver-unregistered and the seam resolves null.
+import './capability';
 import { coManagedDeliverySeam, coManagedWorkflowTicketSeam } from '@alga-psa/shared/lib/coManagedDelivery';
 import { retainCoManagedWorkflowTicketAuthority } from './workflowTicketAuthority';
 import { createCoManagedDeliveryProvider } from './deliveryProvider';
