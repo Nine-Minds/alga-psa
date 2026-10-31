@@ -353,6 +353,26 @@ describe('invoice bundle component rows (DB)', () => {
     expect(itemsWith).toEqual(itemsWithout);
   }, HOOK_TIMEOUT);
 
+  it('T008: invoice model returns today\'s charge shape by default; opt-ins attach presentation and amounts independently', async () => {
+    setupCommonMocks({ tenantId, userId: authRef.userId, permissionCheck: () => true });
+    const { fixture, clientId, cycleIds } = await createClientWithCycles('T008 Client', [DEC, JAN, FEB]);
+    await createBundleLine(fixture, clientId, 'T008');
+    const generated = unwrap(await generateInvoice(cycleIds[1]));
+
+    const plain = (await Invoice.getInvoiceCharges(db, tenantId, generated.invoice_id))[0] as any;
+    const presentationOnly = (await Invoice.getInvoiceCharges(db, tenantId, generated.invoice_id, { includeBundlePresentation: true }))[0] as any;
+    const both = (await Invoice.getInvoiceCharges(db, tenantId, generated.invoice_id, { includeBundlePresentation: true, includeBundleComponentAmounts: true }))[0] as any;
+
+    expect('bundle_presentation' in plain).toBe(false);
+    expect('bundle_component_amounts' in plain).toBe(false);
+    expect(presentationOnly.bundle_presentation.components.length).toBeGreaterThan(0);
+    expect('bundle_component_amounts' in presentationOnly).toBe(false);
+    expect(Object.keys(both.bundle_component_amounts).length).toBeGreaterThan(0);
+    // Everything but the opt-in keys is identical.
+    const { bundle_presentation: _p, bundle_component_amounts: _a, ...rest } = both;
+    expect(rest).toEqual(plain);
+  }, HOOK_TIMEOUT);
+
   it('T016: draft preview bundle item and components equal the persisted invoice; dialog path unchanged', async () => {
     setupCommonMocks({ tenantId, userId: authRef.userId, permissionCheck: () => true });
     const { fixture, clientId, cycleIds } = await createClientWithCycles('T016 Client', [DEC, JAN, FEB]);
