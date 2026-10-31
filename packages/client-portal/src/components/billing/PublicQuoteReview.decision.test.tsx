@@ -35,7 +35,7 @@ const props = {
   quote: { quote_id: 'q1', title: 'T', currency_code: 'EUR', status: 'sent', subtotal: 1000, discount_total: 0, tax: 100, total_amount: 1100 },
   items: [base(), base({ quote_item_id: 'i2', description: 'Extra', is_optional: true, is_selected: false, display_order: 1 })],
   locations: [], locale: 'en', branding: { name: null, logoUrl: null }, pdfHref: '/p', decidedNotice: null,
-  token: TOKEN, agreement,
+  token: TOKEN, agreement, quoteFingerprint: 'fp-123',
 } as any;
 
 const fetchMock = vi.fn();
@@ -59,7 +59,7 @@ describe('PublicQuoteReview decision panel', () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe(`/api/quote/${TOKEN}/decision`);
     const body = JSON.parse(init.body);
-    expect(body).toMatchObject({ action: 'accept', signerName: 'Jane Doe', agreed: true, agreementVersion: 'v1', agreementTextHash: 'abc' });
+    expect(body).toMatchObject({ action: 'accept', signerName: 'Jane Doe', agreed: true, agreementVersion: 'v1', agreementTextHash: 'abc', quoteFingerprint: 'fp-123' });
     expect(body.selectedOptionalQuoteItemIds).toEqual([]);
     expect(screen.getByText('Quote accepted')).toBeTruthy();
     expect(document.getElementById('quote-link-accept')).toBeNull();

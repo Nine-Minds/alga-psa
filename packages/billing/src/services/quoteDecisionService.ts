@@ -41,6 +41,8 @@ export interface QuoteDecisionContext {
   agreementTextHash?: string | null;
   /** Version of the agreement wording the hash was computed from. */
   agreementVersion?: string | null;
+  /** sha256 of the public quote content the signer was shown (email-link decisions only). */
+  contentFingerprint?: string | null;
 }
 
 export interface QuoteDecisionSelections {
@@ -361,6 +363,7 @@ async function decideInTransaction(
         : {}),
       agreement_text_hash: input.context?.agreementTextHash ?? null,
       agreement_version: input.context?.agreementVersion ?? null,
+      content_fingerprint: input.context?.contentFingerprint ?? null,
       ip: input.context?.ip ?? null,
       user_agent: input.context?.userAgent ?? null,
       decided_at: decidedAt,

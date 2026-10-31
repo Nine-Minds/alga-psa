@@ -96,6 +96,7 @@ async function setup(opts: { status?: string } = {}) {
     quote: { quote_id: quoteId, valid_until: null },
     recipient: { contactId, email },
   });
+  fixtures.set(token, { tenantId, quoteId });
   return { tenantId, clientId, contactId, email, quoteId, required, optional, link, token };
 }
 
@@ -119,9 +120,17 @@ async function acceptInput(over: Record<string, unknown> = {}) {
     ...over,
   };
 }
+const fixtures = new Map<string, { tenantId: string; quoteId: string }>();
+async function fingerprintOf(s: { tenantId: string; quoteId: string }) {
+  const { computePublicQuoteFingerprint } = await import('@alga-psa/billing/services');
+  return computePublicQuoteFingerprint(db, s.tenantId, s.quoteId);
+}
+/** Submits like the page would: the fingerprint of the current content is supplied unless the caller sets the key. */
 async function submit(token: string, input: any, ctx = CTX) {
   const { submitQuoteLinkDecision } = await import('@alga-psa/billing/services');
-  return submitQuoteLinkDecision(token, input, ctx);
+  const fx = fixtures.get(token);
+  const withFp = fx && !('quoteFingerprint' in input) ? { ...input, quoteFingerprint: await fingerprintOf(fx) } : input;
+  return submitQuoteLinkDecision(token, withFp, ctx);
 }
 
 describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
@@ -279,6 +288,62 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
     ]);
     expect(mixed.filter((r) => r.status === 'decided')).toHaveLength(1);
     expect(await decisionRows(s2.tenantId, s2.quoteId)).toHaveLength(1);
+  });
+
+  it('5a. MSP edits an item price while the quote stays sent: "changed", no decision, hook not called', async () => {
+    const QuoteItem = (await import('@alga-psa/billing/models/quoteItem')).default;
+    const s = await setup();
+    const rendered = await fingerprintOf(s);
+    await QuoteItem.update(db, s.tenantId, s.required, { unit_price: 99999 });
+    expect((await quoteRow(s.tenantId, s.quoteId)).status).toBe('sent');
+    expect(await fingerprintOf(s)).not.toBe(rendered);
+    const out: any = await submit(s.token, await acceptInput({ quoteFingerprint: rendered }));
+    expect(out).toEqual({ status: 'changed' });
+    expect((await quoteRow(s.tenantId, s.quoteId)).status).toBe('sent');
+    expect(await decisionRows(s.tenantId, s.quoteId)).toHaveLength(0);
+    expect(onQuoteAcceptedSpy).not.toHaveBeenCalled();
+    // Reject is refused the same way.
+    expect(await submit(s.token, { action: 'reject', comment: 'x', quoteFingerprint: rendered })).toEqual({ status: 'changed' });
+    // Re-rendering gives the new fingerprint, and signing that succeeds.
+    const ok: any = await submit(s.token, await acceptInput({ quoteFingerprint: await fingerprintOf(s) }));
+    expect(ok.status).toBe('decided');
+    expect(onQuoteAcceptedSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('5b. MSP adds an item while the quote stays sent: "changed", nothing written', async () => {
+    const s = await setup();
+    const rendered = await fingerprintOf(s);
+    await tt(s.tenantId, 'quote_items').insert({
+      tenant: s.tenantId, quote_item_id: uuidv4(), quote_id: s.quoteId, description: 'Sneaky add', quantity: 1,
+      unit_price: 100, total_price: 100, net_amount: 100, is_optional: false, is_selected: true, display_order: 2,
+    });
+    const out: any = await submit(s.token, await acceptInput({ quoteFingerprint: rendered }));
+    expect(out).toEqual({ status: 'changed' });
+    expect((await quoteRow(s.tenantId, s.quoteId)).status).toBe('sent');
+    expect(await decisionRows(s.tenantId, s.quoteId)).toHaveLength(0);
+    expect(onQuoteAcceptedSpy).not.toHaveBeenCalled();
+  });
+
+  it('5c. the signed content fingerprint is stored on the decision row', async () => {
+    const s = await setup();
+    const rendered = await fingerprintOf(s);
+    expect(rendered).toMatch(/^[0-9a-f]{64}$/);
+    const out: any = await submit(s.token, await acceptInput({ quoteFingerprint: rendered }));
+    expect(out.status).toBe('decided');
+    const [row] = await decisionRows(s.tenantId, s.quoteId);
+    expect(row.content_fingerprint).toBe(rendered);
+  });
+
+  it('5d. a missing, null or wrong fingerprint is "changed" and writes nothing', async () => {
+    const s = await setup();
+    for (const quoteFingerprint of [undefined, null, '', 'f'.repeat(64)]) {
+      const out: any = await submit(s.token, await acceptInput({ quoteFingerprint }));
+      expect(out).toEqual({ status: 'changed' });
+    }
+    expect(await submit(s.token, { action: 'reject', comment: 'x', quoteFingerprint: undefined })).toEqual({ status: 'changed' });
+    expect((await quoteRow(s.tenantId, s.quoteId)).status).toBe('sent');
+    expect(await decisionRows(s.tenantId, s.quoteId)).toHaveLength(0);
+    expect(onQuoteAcceptedSpy).not.toHaveBeenCalled();
   });
 
   it('5. MSP moved the quote out of sent: "changed", nothing written', async () => {
