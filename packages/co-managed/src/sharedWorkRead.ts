@@ -153,15 +153,79 @@ export interface CoManagedCustomerTicketRow {
   customerName: string;
   fields: Record<string, CoManagedSummaryValue>;
 }
-export interface CoManagedCustomerTicketPage { rows: CoManagedCustomerTicketRow[]; page: number; pageSize: number; hasMore: boolean }
+export interface CoManagedCustomerTicketPage { rows: CoManagedCustomerTicketRow[]; page: number; pageSize: number; hasMore: boolean; nextCursor: string | null }
 
-/** Every ticket the actor may read right now, across the relationships they are assigned to. Facts are
- * reloaded on every call (no cross-request cache), and each ticket is admitted through the single
- * evaluator, so a revoked board, assignment, permission or relationship drops out on the next read. */
+/** Largest legacy `page * pageSize` offset accepted; deeper callers must follow `nextCursor`. */
+export const MAX_OFFSET = 5000;
+const DEFAULT_PAGE_SIZE = 25, MAX_PAGE_SIZE = 100;
+/** `entered_at` at full Postgres (microsecond) precision, UTC; fixed width so string order is time order. '' = NULL (sorted last). */
+const ENTERED_KEY_SQL = `to_char(tickets.entered_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as entered_key`;
+const ENTERED_KEY = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/;
+
+/** Position of a ticket in the queue order `(entered_at DESC NULLS LAST, ticket_id ASC)`. `enteredAt` is the raw DB value, never a rounded Date. */
+export interface CoManagedTicketKey { enteredAt: string | null; ticketId: string }
+const compareKeys = (a: { entered: string; id: string }, b: { entered: string; id: string }) =>
+  a.entered === b.entered ? (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+    : a.entered === '' ? 1 : b.entered === '' ? -1 : a.entered < b.entered ? 1 : -1;
+
+export const encodeCoManagedTicketCursor = (key: CoManagedTicketKey): string => Buffer.from(JSON.stringify({ enteredAt: key.enteredAt, ticketId: key.ticketId })).toString('base64url');
+/** Strict decode: anything that is not exactly what `encode` produced is the opaque error. */
+export function decodeCoManagedTicketCursor(cursor: unknown): CoManagedTicketKey {
+  try {
+    if (typeof cursor !== 'string' || cursor.length > 200 || !/^[A-Za-z0-9_-]+$/.test(cursor)) throw new CoManagedSharedWorkError();
+    const value = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'));
+    const keys = value && typeof value === 'object' ? Object.keys(value).sort().join() : '';
+    if (keys !== 'enteredAt,ticketId' || !isCoManagedUuid(value.ticketId)
+      || !(value.enteredAt === null || (typeof value.enteredAt === 'string' && ENTERED_KEY.test(value.enteredAt) && !Number.isNaN(Date.parse(value.enteredAt))))) throw new CoManagedSharedWorkError();
+    return { enteredAt: value.enteredAt, ticketId: value.ticketId.toLowerCase() };
+  } catch { throw new CoManagedSharedWorkError(); }
+}
+/** Legacy `page` is a bounded offset: a safe non-negative integer with `page * pageSize <= MAX_OFFSET`. */
+export function validateCoManagedLegacyPage(page: unknown, pageSize: number): number {
+  if (page === undefined) return 0;
+  if (typeof page !== 'number' || !Number.isSafeInteger(page) || page < 0 || page * pageSize > MAX_OFFSET) throw new CoManagedSharedWorkError();
+  return page;
+}
+
+type Candidate = CoManagedCustomerTicketRow & { entered: string; id: string };
+/** Next batch of at most `limit` rows for one relationship, strictly after `after` in queue order. */
+export type CoManagedBatchFetcher = (after: CoManagedTicketKey | null, limit: number) => Promise<Array<{ entered: string; id: string; row: unknown }>>;
+
+/** Up to `need` admitted candidates after `after`, scanning in batches of `batch` rows (O(batch) memory): rows the evaluator
+ * refuses are skipped and the keyset advances past every scanned row, so a filtered batch is refilled, not returned short. */
+export async function collectAdmitted<T>(fetch: CoManagedBatchFetcher, admit: (row: any) => T | null, after: CoManagedTicketKey | null, need: number, batch: number): Promise<Array<T & { entered: string; id: string }>> {
+  const admitted: Array<T & { entered: string; id: string }> = [];
+  let cursor = after;
+  while (admitted.length < need) {
+    const rows = await fetch(cursor, batch);
+    for (const { entered, id, row } of rows) {
+      cursor = { enteredAt: entered || null, ticketId: id };
+      const value = admit(row);
+      if (value) { admitted.push({ ...value, entered, id }); if (admitted.length >= need) break; }
+    }
+    if (rows.length < batch) break;
+  }
+  return admitted;
+}
+/** Merge sorted per-relationship candidates and cut one page; the global top `pageSize + 1` lies inside the union of each one's top `pageSize + 1`. */
+export function cutCoManagedPage<T extends { entered: string; id: string }>(lists: T[][], pageSize: number) {
+  const merged = lists.flat().sort(compareKeys).slice(0, pageSize + 1);
+  const rows = merged.slice(0, pageSize), hasMore = merged.length > pageSize, last = rows[rows.length - 1];
+  return { rows, hasMore, nextCursor: hasMore && last ? encodeCoManagedTicketCursor({ enteredAt: last.entered || null, ticketId: last.id }) : null };
+}
+
+/** Every ticket the actor may read right now, across the relationships they are assigned to, one bounded keyset page at a time
+ * over `(entered_at DESC, ticket_id ASC)`. Facts are reloaded on every call (no cross-request cache), and each ticket is admitted
+ * through the single evaluator, so a revoked board, assignment, permission or relationship drops out on the next read. Each
+ * relationship query is limited to `pageSize + 1`. The legacy `page` is served by walking cursors inside one transaction. */
 export async function listCoManagedCustomerTickets(db: Knex, actor: CoManagedSessionActor,
-  options: { page?: number; pageSize?: number } = {}): Promise<CoManagedCustomerTicketPage> {
+  options: { cursor?: string; page?: number; pageSize?: number } = {}): Promise<CoManagedCustomerTicketPage> {
   if (!actor || ![actor.tenant, actor.userId].every(isCoManagedUuid)) throw new CoManagedSharedWorkError();
-  const pageSize = Math.min(Math.max(Math.trunc(options.pageSize ?? 25), 1), 100), page = Math.max(Math.trunc(options.page ?? 0), 0);
+  const requested = options.pageSize ?? DEFAULT_PAGE_SIZE;
+  if (typeof requested !== 'number' || !Number.isFinite(requested)) throw new CoManagedSharedWorkError();
+  const pageSize = Math.min(Math.max(Math.trunc(requested), 1), MAX_PAGE_SIZE), page = validateCoManagedLegacyPage(options.page, pageSize);
+  if (options.cursor !== undefined && options.cursor !== null && page > 0) throw new CoManagedSharedWorkError();
+  const start = options.cursor == null ? null : decodeCoManagedTicketCursor(options.cursor);
   return withTransaction(db, async trx => {
     const credential = await lockCoManagedLocalAuthentication(trx, actor);
     const subject = credential.subject;
@@ -169,7 +233,7 @@ export async function listCoManagedCustomerTickets(db: Knex, actor: CoManagedSes
       .where(query => query.where({ principal_type: 'user', principal_id: actor.userId })
         .orWhere(team => team.where('principal_type', 'team').whereIn('principal_id', subject.teamIds ?? [])))
       .distinct('customer_tenant', 'relationship_id').orderBy('customer_tenant').orderBy('relationship_id');
-    const collected: Array<CoManagedCustomerTicketRow & { entered: string }> = [];
+    const sources: Array<{ fetch: CoManagedBatchFetcher; admit: (row: any) => CoManagedCustomerTicketRow | null }> = [];
     for (const { customer_tenant: customerTenant, relationship_id: relationshipId } of assigned) {
       const lifecycle = await loadCoManagedLifecycleFacts(trx, actor.tenant, customerTenant, relationshipId);
       if (!lifecycle?.relationship) continue;
@@ -186,21 +250,41 @@ export async function listCoManagedCustomerTickets(db: Knex, actor: CoManagedSes
         .select('board_id', 'can_collaborate');
       if (!boards.length) continue;
       const scopeByBoard = new Map<string, { canCollaborate: boolean }>(boards.map((b: any) => [b.board_id, { canCollaborate: b.can_collaborate }]));
-      const rows = await ticketQuery(trx, customerTenant).whereIn('tickets.board_id', boards.map((b: any) => b.board_id)).forShare('tickets')
-        .orderBy('tickets.entered_at', 'desc').orderBy('tickets.ticket_id').limit((page + 1) * pageSize + 1).select(...TICKET_COLUMNS);
+      const boardIds = boards.map((b: any) => b.board_id);
       const customer = await tenantDb(trx, customerTenant).table('tenants').first('client_name');
-      for (const row of rows) {
-        const resource: CoManagedSharedResource = { tenant: customerTenant, relationshipId, kind: 'ticket', id: row.ticket_id };
-        const scope = scopeByBoard.get(row.board_id);
-        if (!scope) continue;
-        const grant = { visibilityMode: mode, scope, explicit: null };
-        if (!evaluateCoManagedAccess({ lifecycle: lifecycle.lifecycle, staff: { roles }, grant, home: home.facts }).read) continue;
-        collected.push({ resource, customerName: customer?.client_name ?? '', entered: date(row.entered_at) ?? '',
-          fields: visibleCoManagedFields(ticketSummaryCandidates(customerTenant, row), home.redactedFields.concat(lifecycle.relationship.redacted_fields ?? [])) });
-      }
+      const redactions = home.redactedFields.concat(lifecycle.relationship.redacted_fields ?? []);
+      sources.push({
+        fetch: async (after, limit) => {
+          const query = ticketQuery(trx, customerTenant).whereIn('tickets.board_id', boardIds).forShare('tickets');
+          if (after) {
+            const { enteredAt, ticketId } = after;
+            query.where(outer => enteredAt === null ? outer.whereNull('tickets.entered_at').where('tickets.ticket_id', '>', ticketId)
+              : outer.where('tickets.entered_at', '<', trx.raw('?::timestamptz', [enteredAt]))
+                .orWhere(tie => tie.where('tickets.entered_at', trx.raw('?::timestamptz', [enteredAt])).where('tickets.ticket_id', '>', ticketId))
+                .orWhereNull('tickets.entered_at'));
+          }
+          const rows = await query.orderByRaw('tickets.entered_at DESC NULLS LAST').orderBy('tickets.ticket_id').limit(limit).select(...TICKET_COLUMNS, trx.raw(ENTERED_KEY_SQL));
+          return rows.map((row: any) => ({ entered: row.entered_key ?? '', id: String(row.ticket_id).toLowerCase(), row }));
+        },
+        admit: row => {
+          const resource: CoManagedSharedResource = { tenant: customerTenant, relationshipId, kind: 'ticket', id: row.ticket_id };
+          const scope = scopeByBoard.get(row.board_id);
+          if (!scope) return null;
+          const grant = { visibilityMode: mode, scope, explicit: null };
+          if (!evaluateCoManagedAccess({ lifecycle: lifecycle.lifecycle, staff: { roles }, grant, home: home.facts }).read) return null;
+          return { resource, customerName: customer?.client_name ?? '', fields: visibleCoManagedFields(ticketSummaryCandidates(customerTenant, row), redactions) };
+        },
+      });
     }
-    collected.sort((a, b) => b.entered.localeCompare(a.entered) || a.resource.id.localeCompare(b.resource.id));
-    const slice = collected.slice(page * pageSize, (page + 1) * pageSize + 1);
-    return { rows: slice.slice(0, pageSize).map(({ entered, ...row }) => row), page, pageSize, hasMore: slice.length > pageSize };
+    const pageFrom = async (after: CoManagedTicketKey | null) => {
+      const lists: Candidate[][] = [];
+      for (const source of sources) lists.push(await collectAdmitted<CoManagedCustomerTicketRow>(source.fetch, source.admit, after, pageSize + 1, pageSize + 1));
+      return cutCoManagedPage(lists, pageSize);
+    };
+    let cut = await pageFrom(start), walked = 0;
+    for (; walked < page && cut.hasMore; walked++) cut = await pageFrom(decodeCoManagedTicketCursor(cut.nextCursor));
+    // A legacy offset past the end is an empty page, as an offset past the end would be.
+    if (walked < page) cut = { rows: [], hasMore: false, nextCursor: null };
+    return { rows: cut.rows.map(({ entered, id, ...row }) => row), page, pageSize, hasMore: cut.hasMore, nextCursor: cut.nextCursor };
   });
 }
