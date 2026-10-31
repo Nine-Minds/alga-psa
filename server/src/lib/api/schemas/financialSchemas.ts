@@ -782,7 +782,14 @@ export const creditAnalyticsSchema = z.object({
 
 export const bulkInvoiceOperationSchema = z.object({
   invoice_ids: z.array(uuidSchema).min(1).max(50),
-  operation: z.enum(['finalize', 'send', 'cancel', 'apply_credit']),
+  // `apply_credit` was removed: it never applied credit (it reported success
+  // without writing). Credit is applied per invoice by InvoiceService.applyCredit.
+  operation: z.enum(['finalize', 'send', 'cancel'], {
+    error: (issue) =>
+      issue.input === 'apply_credit'
+        ? 'Unsupported operation "apply_credit": there is no bulk credit command. Apply credit per invoice via POST /api/v1/financial/invoices/:id/credit.'
+        : 'Invalid operation. Expected one of: finalize, send, cancel.',
+  }),
   parameters: z.record(z.string(), z.any()).optional()
 });
 
@@ -810,6 +817,8 @@ export const bulkOperationResultSchema = z.object({
     id: uuidSchema,
     success: z.boolean(),
     error: z.string().optional(),
+    // Canonical outcome of a successful invoice lifecycle command.
+    outcome: z.enum(['finalized', 'sent', 'voided']).optional(),
     result: z.any().optional()
   }))
 });
