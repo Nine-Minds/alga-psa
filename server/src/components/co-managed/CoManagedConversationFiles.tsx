@@ -15,6 +15,7 @@ import type { SharedConversationSession } from './sharedConversationSession';
 import SharedCommentAttachmentPicker from './SharedCommentAttachmentPicker';
 import CoManagedCommentAttachments from './CoManagedCommentAttachments';
 import CoManagedThreadDisclosure from './CoManagedThreadDisclosure';
+import CoManagedDraftRestore from './CoManagedDraftRestore';
 
 /** The MSP-side components a `ticket.conversation.*` contribution may name. Unknown names (the portal's) are skipped. */
 const COMPONENTS: Record<string, ComponentType<any>> = {
@@ -43,7 +44,7 @@ export default function CoManagedConversationFiles({ session, resource, staging 
   const headerSlots = useMemo(() => resolveUiSlots<{ component: string }>('ticket.conversation.thread-header', served), [served]);
   const [disclosing, setDisclosing] = useState<string | null>(null);
   // Re-render whenever the session finishes a load: the files panel follows the conversation, not a host-passed counter.
-  useSyncExternalStore(session.subscribe, session.version, session.version);
+  const version = useSyncExternalStore(session.subscribe, session.version, session.version);
   const staged = useSyncExternalStore(staging.subscribe, staging.getSnapshot, staging.getSnapshot);
   const snapshot = session.snapshot();
   if (!enabled || !snapshot) return null;
@@ -53,6 +54,7 @@ export default function CoManagedConversationFiles({ session, resource, staging 
   const maxBytes = coManagedAttachmentUploadLimit();
   void staged;
   return <section id="co-managed-conversation-files" className="space-y-4 p-4">
+    {writeAudiences.length > 0 && <CoManagedDraftRestore resource={resource} version={version} onPublished={() => { void session.load(); }} />}
     {writeAudiences.length > 0 && <SharedCommentAttachmentPicker staging={staging} limits={{ maxBytes, maxFiles: MAX_FILES }}
       attachable={writeAudiences.length > 0} disabled={false} />}
     {threads.map(key => {

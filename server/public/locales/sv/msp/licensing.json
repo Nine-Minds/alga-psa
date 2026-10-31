@@ -757,6 +757,16 @@
         "shared_it": "Synligt för behörig IT-personal i båda organisationerna, utan åtkomst för anmälare.",
         "organization_private": "Synligt endast för behörig personal i din organisation."
       },
+      "drafts": {
+        "title": "Ej skickade meddelanden",
+        "help": "Dessa meddelanden påbörjades men skickades inte. Granska ett, välj saknade filer igen och skicka eller kassera det.",
+        "fileReady": "Uppladdad",
+        "fileMissing": "Måste väljas igen",
+        "choose": "Välj de saknade filerna",
+        "resume": "Skicka",
+        "discard": "Kassera",
+        "missing": "Välj varje saknad fil med samma namn innan du skickar."
+      },
       "files": {
         "choose": "Bifoga filer",
         "help": "Upp till {{count}} filer, {{size}} MiB vardera. Filer delas med meddelandets målgrupp.",

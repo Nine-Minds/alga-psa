@@ -592,3 +592,33 @@ describe('A4 thread disclosure', () => {
     }, 180_000);
   });
 });
+
+describe('A3 draft restore: the actor\'s open drafts are readable after a reload without knowing the operation id', () => {
+  it('returns text, audience and pending/ready files for the author only; published and discarded drafts drop out', async () => {
+    const { listCoManagedOpenConversationDrafts, abandonCoManagedConversationDraft } = await drafts();
+    const first = file(`restore-a-${MARK}.pdf`), second = file(`restore-b-${MARK}.png`, 32, 'image/png');
+    const operationId = uuidv4();
+    const begun = await (await drafts()).beginCoManagedConversationDraft(db, alice.actor, alice.resource,
+      { operationId, audience: 'shared_it', content: { text: `restore text ${MARK}` }, files: manifestOf([first, second]) } as any);
+    await (await drafts()).uploadCoManagedDraftAttachment(db, alice.actor, alice.resource, { storeTenant: begun.storeTenant, operationId }, first.id, first.bytes, putObject);
+
+    const mine = (await listCoManagedOpenConversationDrafts(db, alice.actor, alice.resource)).find(d => d.operationId === operationId)!;
+    expect(mine).toMatchObject({ storeTenant: msp.tenant, status: 'draft', audience: 'shared_it', uploadedAttachmentIds: [first.id] });
+    expect(mine.content).toMatchObject({ text: `restore text ${MARK}` });
+    expect(mine.files.map(f => f.attachmentId).sort()).toEqual([first.id, second.id].sort());
+    // scoped to the author: another actor of the same workspace sees nothing of it
+    expect((await listCoManagedOpenConversationDrafts(db, bob.actor, bob.resource)).some(d => d.operationId === operationId)).toBe(false);
+    // a private-audience draft lives in the author's own store and is restored from there
+    const privateOp = uuidv4();
+    const privateDraft = await post(alice, { audience: 'organization_private', text: `restore private ${MARK}`, files: [file(`restore-p-${MARK}.bin`)], operationId: privateOp, skipPublish: true });
+    expect((await listCoManagedOpenConversationDrafts(db, alice.actor, alice.resource)).find(d => d.operationId === privateOp))
+      .toMatchObject({ storeTenant: customer, audience: 'organization_private' });
+    // discarded and published drafts are not restored
+    await abandonCoManagedConversationDraft(db, alice.actor, alice.resource, privateDraft.reference);
+    const published = await post(alice, { audience: 'shared_it', text: `restore done ${MARK}`, files: [file(`restore-d-${MARK}.bin`)] });
+    const after = (await listCoManagedOpenConversationDrafts(db, alice.actor, alice.resource)).map(d => d.operationId);
+    expect(after).toContain(operationId);
+    expect(after).not.toContain(privateOp);
+    expect(after).not.toContain(published.operationId);
+  });
+});

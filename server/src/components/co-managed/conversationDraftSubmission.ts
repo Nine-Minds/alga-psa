@@ -1,6 +1,6 @@
 'use client';
 
-import type { CoManagedSharedResource, CoManagedConversationDraftRequest, CoManagedCommentReference } from '@alga-psa/co-managed';
+import type { CoManagedSharedResource, CoManagedConversationDraftRequest, CoManagedCommentReference, CoManagedOpenConversationDraft } from '@alga-psa/co-managed';
 import { snapshotConversationDocument, type CoManagedRichTextDocument } from '@alga-psa/co-managed/conversationRichText';
 import { beginCoManagedConversationDraftAction, uploadCoManagedDraftAttachmentAction, publishCoManagedConversationDraftAction } from '@/lib/actions/coManagedConversationDraftActions';
 import { newCoManagedOperationId } from './coManagedOperationId';
@@ -54,4 +54,28 @@ export async function submitConversationDraft(prepared: PreparedConversationDraf
   if (!current()) return stopped;
   progress({ phase: 'publishing', completed: prepared.files.length, total: prepared.files.length });
   return publishCoManagedConversationDraftAction(prepared.resource, reference);
+}
+
+/** Files a restored draft still needs the browser to supply: the manifest entries the server has no ready bytes for. */
+export const missingDraftFiles = (draft: Pick<CoManagedOpenConversationDraft, 'files' | 'uploadedAttachmentIds'>) =>
+  draft.files.filter(file => !draft.uploadedAttachmentIds.includes(file.attachmentId));
+
+/**
+ * Rebuild a submission from a draft read back after a reload. The request is the stored one verbatim (same operation id, so the
+ * server replays rather than duplicates); each file not yet uploaded is matched to a re-selected File by name and size (the server
+ * verifies the content hash on upload). Returns the names still missing instead of a partial submission.
+ */
+export function restoreConversationDraft(resource: CoManagedSharedResource, draft: CoManagedOpenConversationDraft, picked: readonly File[]):
+  { ok: true; prepared: PreparedConversationDraft } | { ok: false; missing: string[] } {
+  const remaining = [...picked], missing: string[] = [];
+  const files = draft.files.map(entry => {
+    if (draft.uploadedAttachmentIds.includes(entry.attachmentId)) return { attachmentId: entry.attachmentId, file: new File([], entry.fileName) }; // already stored; never re-read
+    const index = remaining.findIndex(file => file.name === entry.fileName && file.size === entry.size);
+    if (index < 0) { missing.push(entry.fileName); return { attachmentId: entry.attachmentId, file: new File([], entry.fileName) }; }
+    return { attachmentId: entry.attachmentId, file: remaining.splice(index, 1)[0] };
+  });
+  if (missing.length) return { ok: false, missing };
+  const request = { operationId: draft.operationId, content: draft.content, files: draft.files,
+    ...(draft.parent ? { parent: draft.parent, ...(draft.expectedAudience !== undefined ? { expectedAudience: draft.expectedAudience } : {}) } : { audience: draft.audience }) } as CoManagedConversationDraftRequest;
+  return { ok: true, prepared: { resource: { ...resource }, storeTenant: draft.storeTenant, request, files } };
 }

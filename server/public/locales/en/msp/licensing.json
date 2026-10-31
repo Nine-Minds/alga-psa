@@ -757,6 +757,16 @@
         "shared_it": "Visible to authorized IT staff in both organizations, without requester access.",
         "organization_private": "Visible only to authorized staff in your organization."
       },
+      "drafts": {
+        "title": "Unsent messages",
+        "help": "These messages were started but not sent. Review one, re-select any files that are missing, then send or discard it.",
+        "fileReady": "Uploaded",
+        "fileMissing": "Needs to be selected again",
+        "choose": "Select the missing files",
+        "resume": "Send",
+        "discard": "Discard",
+        "missing": "Select every missing file with the same name before sending."
+      },
       "files": {
         "choose": "Attach files",
         "help": "Up to {{count}} files, {{size}} MiB each. Files are shared with this message’s audience.",

@@ -757,6 +757,16 @@
         "shared_it": "Zichtbaar voor bevoegde IT-medewerkers van beide organisaties, zonder toegang voor de aanvrager.",
         "organization_private": "Alleen zichtbaar voor bevoegde medewerkers van uw organisatie."
       },
+      "drafts": {
+        "title": "Niet-verzonden berichten",
+        "help": "Deze berichten zijn gestart maar niet verzonden. Controleer er een, selecteer ontbrekende bestanden opnieuw en verzend of verwijder het bericht.",
+        "fileReady": "Geüpload",
+        "fileMissing": "Moet opnieuw worden geselecteerd",
+        "choose": "Ontbrekende bestanden selecteren",
+        "resume": "Verzenden",
+        "discard": "Verwijderen",
+        "missing": "Selecteer vóór het verzenden elk ontbrekend bestand met dezelfde naam."
+      },
       "files": {
         "choose": "Bestanden bijvoegen",
         "help": "Maximaal {{count}} bestanden van elk {{size}} MiB. Bestanden worden gedeeld met de doelgroep van dit bericht.",

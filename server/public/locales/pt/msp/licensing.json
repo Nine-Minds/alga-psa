@@ -757,6 +757,16 @@
         "shared_it": "Visível para as equipes de TI autorizadas de ambas as organizações, sem acesso para o solicitante.",
         "organization_private": "Visível somente para o pessoal autorizado da sua organização."
       },
+      "drafts": {
+        "title": "Mensagens não enviadas",
+        "help": "Estas mensagens foram iniciadas, mas não enviadas. Reveja uma, selecione novamente os ficheiros em falta e envie-a ou descarte-a.",
+        "fileReady": "Carregado",
+        "fileMissing": "Tem de ser selecionado novamente",
+        "choose": "Selecionar os ficheiros em falta",
+        "resume": "Enviar",
+        "discard": "Descartar",
+        "missing": "Selecione cada ficheiro em falta com o mesmo nome antes de enviar."
+      },
       "files": {
         "choose": "Anexar arquivos",
         "help": "Até {{count}} arquivos de {{size}} MiB cada. Os arquivos são compartilhados com os destinatários desta mensagem.",

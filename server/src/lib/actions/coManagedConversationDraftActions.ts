@@ -4,7 +4,7 @@ import { withAuth } from '@alga-psa/auth';
 import { requireCapabilityEitherMode } from '@alga-psa/core/capability/server';
 import { createTenantKnex } from '@alga-psa/db';
 import { CoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
-import { beginCoManagedConversationDraft, abandonCoManagedConversationDraft, uploadCoManagedDraftAttachment, publishCoManagedConversationDraft,
+import { beginCoManagedConversationDraft, listCoManagedOpenConversationDrafts, abandonCoManagedConversationDraft, uploadCoManagedDraftAttachment, publishCoManagedConversationDraft,
   CoManagedConversationDraftError, CoManagedAttachmentError, CoManagedSharedWorkError, CoManagedCommentCreateError, CoManagedPrivateCommentError,
   type CoManagedSharedResource, type CoManagedConversationDraftReference, type CoManagedConversationDraftRequest } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
@@ -54,5 +54,15 @@ export const abandonCoManagedConversationDraftAction = withAuth(async (user, { t
   try {
     const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
     return { ok: true as const, result: await abandonCoManagedConversationDraft(knex, actor, resource, reference) };
+  } catch (error) { return failure(error); }
+});
+
+/** The caller's own open drafts for this resource, so a reload can restore text, audience and pending files. Scoped by the session's
+ * tenant and user and gated by the capability (an unadmitted tenant never reaches the read). */
+export const listCoManagedConversationDraftsAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource) => {
+  await requireCapabilityEitherMode('co-managed', tenant);
+  try {
+    const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+    return { ok: true as const, drafts: await listCoManagedOpenConversationDrafts(knex, actor, resource) };
   } catch (error) { return failure(error); }
 });

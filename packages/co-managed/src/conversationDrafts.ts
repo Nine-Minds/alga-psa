@@ -216,6 +216,39 @@ export async function publishCoManagedConversationDraft(db: Knex, inputActor: Co
   });
 }
 
+export interface CoManagedOpenConversationDraft extends CoManagedConversationDraftProgress {
+  audience: CommentAudience; content: CoManagedConversationContent; files: CoManagedDraftFile[];
+  parent?: CoManagedCommentReference; expectedAudience?: CommentAudience; createdAt: string; lastActivityAt: string;
+}
+/** The current actor's own unpublished, un-discarded drafts for one resource, newest first, so a reload can restore the
+ * text, audience and pending files. Same authority as writing a draft (the actor can only ever see rows they authored,
+ * in the stores they may use: the customer store, plus their own private store when they are the foreign party), and an
+ * empty answer when the reader's grants no longer cover conversation bodies or attachments. Read-only: it changes no row. */
+export async function listCoManagedOpenConversationDrafts(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource): Promise<CoManagedOpenConversationDraft[]> {
+  const actor = snapshotCoManagedSessionActor(inputActor), resource = targetSnapshot(inputResource);
+  if ((db as Knex.Transaction).isTransaction) invalid();
+  const foreign = actor.tenant !== resource.tenant, authorize = foreign ? withCoManagedSharedWork : withCoManagedCustomerTicket;
+  return authorize(db, actor, resource, 'read', async context => {
+    if (isCoManagedReadFieldHidden(context.redactedFields, [...coManagedConversationBodySources, ...coManagedConversationAttachmentSources, TABLE])) return [];
+    const out: CoManagedOpenConversationDraft[] = [];
+    for (const store of foreign ? [resource.tenant, actor.tenant] : [resource.tenant]) {
+      const owner = tenantDb(context.trx, store);
+      const rows = await owner.table(TABLE).where({ customer_tenant: resource.tenant, relationship_id: resource.relationshipId, ticket_id: resource.id,
+        actor_tenant: actor.tenant, actor_user_id: actor.userId, status: 'draft' }).whereNull('abandoned_at').orderBy('created_at', 'desc').limit(20)
+        .select('*', { created_at_exact: context.trx.raw('created_at::text'), activity_exact: context.trx.raw('last_activity_at::text') });
+      for (const row of rows) {
+        const files = await owner.table(FILES).where({ draft_operation_id: row.operation_id, status: 'ready' }).whereNull('discarded_at').select('attachment_id');
+        const request = row.request as CoManagedConversationDraftRequest;
+        out.push({ storeTenant: store, operationId: row.operation_id, status: 'draft', uploadedAttachmentIds: files.map(file => file.attachment_id),
+          audience: row.audience, content: request.content, files: row.manifest, createdAt: row.created_at_exact, lastActivityAt: row.activity_exact,
+          ...(request.parent ? { parent: request.parent } : {}), ...(request.expectedAudience !== undefined ? { expectedAudience: request.expectedAudience } : {}) });
+      }
+    }
+    await assertCoManagedSessionUnexpired(context.trx, actor);
+    return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  });
+}
+
 /** An active author may discard their own unpublished draft even after content
  * grants or the license lapse. Cancellation neither reads nor modifies live work. */
 export async function abandonCoManagedConversationDraft(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource,

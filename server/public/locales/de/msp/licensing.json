@@ -757,6 +757,16 @@
         "shared_it": "Sichtbar für berechtigte IT-Mitarbeitende beider Organisationen, ohne Zugriff für Anfragende.",
         "organization_private": "Nur für berechtigte Mitarbeitende Ihrer Organisation sichtbar."
       },
+      "drafts": {
+        "title": "Nicht gesendete Nachrichten",
+        "help": "Diese Nachrichten wurden begonnen, aber nicht gesendet. Prüfen Sie eine Nachricht, wählen Sie fehlende Dateien erneut aus und senden oder verwerfen Sie sie.",
+        "fileReady": "Hochgeladen",
+        "fileMissing": "Muss erneut ausgewählt werden",
+        "choose": "Fehlende Dateien auswählen",
+        "resume": "Senden",
+        "discard": "Verwerfen",
+        "missing": "Wählen Sie vor dem Senden jede fehlende Datei mit demselben Namen aus."
+      },
       "files": {
         "choose": "Dateien anhängen",
         "help": "Bis zu {{count}} Dateien mit jeweils {{size}} MiB. Dateien sind für den Empfängerkreis dieser Nachricht sichtbar.",

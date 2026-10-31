@@ -757,6 +757,16 @@
         "shared_it": "Visible para el personal de TI autorizado de ambas organizaciones, sin acceso para el solicitante.",
         "organization_private": "Visible solo para el personal autorizado de su organización."
       },
+      "drafts": {
+        "title": "Mensajes sin enviar",
+        "help": "Estos mensajes se empezaron pero no se enviaron. Revise uno, vuelva a seleccionar los archivos que falten y envíelo o descártelo.",
+        "fileReady": "Subido",
+        "fileMissing": "Debe seleccionarse de nuevo",
+        "choose": "Seleccionar los archivos que faltan",
+        "resume": "Enviar",
+        "discard": "Descartar",
+        "missing": "Seleccione cada archivo que falta con el mismo nombre antes de enviar."
+      },
       "files": {
         "choose": "Adjuntar archivos",
         "help": "Hasta {{count}} archivos de {{size}} MiB cada uno. Los archivos se comparten con los destinatarios de este mensaje.",

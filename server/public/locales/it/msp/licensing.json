@@ -757,6 +757,16 @@
         "shared_it": "Visibile al personale IT autorizzato di entrambe le organizzazioni, senza accesso per il richiedente.",
         "organization_private": "Visibile solo al personale autorizzato della tua organizzazione."
       },
+      "drafts": {
+        "title": "Messaggi non inviati",
+        "help": "Questi messaggi sono stati iniziati ma non inviati. Controllane uno, seleziona di nuovo i file mancanti, poi invialo o scartalo.",
+        "fileReady": "Caricato",
+        "fileMissing": "Da selezionare di nuovo",
+        "choose": "Seleziona i file mancanti",
+        "resume": "Invia",
+        "discard": "Scarta",
+        "missing": "Prima di inviare, seleziona ogni file mancante con lo stesso nome."
+      },
       "files": {
         "choose": "Allega file",
         "help": "Fino a {{count}} file da {{size}} MiB ciascuno. I file sono condivisi con i destinatari di questo messaggio.",

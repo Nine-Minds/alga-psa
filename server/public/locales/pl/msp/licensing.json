@@ -761,6 +761,16 @@
         "shared_it": "Widoczne dla uprawnionych pracowników IT obu organizacji, bez dostępu dla zgłaszającego.",
         "organization_private": "Widoczne tylko dla uprawnionych pracowników Twojej organizacji."
       },
+      "drafts": {
+        "title": "Niewysłane wiadomości",
+        "help": "Te wiadomości zostały rozpoczęte, ale nie wysłane. Sprawdź jedną, ponownie wybierz brakujące pliki, a następnie wyślij ją lub odrzuć.",
+        "fileReady": "Przesłano",
+        "fileMissing": "Wymaga ponownego wybrania",
+        "choose": "Wybierz brakujące pliki",
+        "resume": "Wyślij",
+        "discard": "Odrzuć",
+        "missing": "Przed wysłaniem wybierz każdy brakujący plik o tej samej nazwie."
+      },
       "files": {
         "choose": "Dołącz pliki",
         "help": "Maksymalnie {{count}} plików, każdy do {{size}} MiB. Pliki są udostępniane odbiorcom tej wiadomości.",
