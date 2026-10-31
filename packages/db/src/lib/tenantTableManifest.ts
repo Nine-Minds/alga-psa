@@ -683,6 +683,8 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'service_request_definitions', deletion: 'ordered' },
   { table: 'co_management_board_scopes', deletion: 'ordered' },
   { table: 'co_managed_allocations', deletion: 'ordered' },
+  { table: 'co_managed_relationship_closures', deletion: 'ordered' },
+  { table: 'co_managed_archive_manifests', deletion: 'ordered' },
   { table: 'co_managed_entitlements', deletion: 'ordered' },
   { table: 'co_managed_provisioning_operations', deletion: 'ordered' },
   { table: 'co_managed_purchase_operations', deletion: 'ordered' },

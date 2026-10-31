@@ -455,6 +455,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'service_request_definition_versions', 'service_request_definitions',
   'co_management_board_scopes',
   'co_managed_allocations',
+  'co_managed_relationship_closures',
+  'co_managed_archive_manifests',
   'co_managed_entitlements',
   'co_managed_provisioning_operations',
   'co_managed_purchase_operations',
@@ -805,6 +807,28 @@ async function findCustomerClientInManagementTenant(
     tenantName: tenant?.client_name,
   });
   return null;
+}
+
+/**
+ * A co-managed sponsor's customers must not outlive it pointing at a tenant that no longer
+ * exists. Before the sponsor's data is deleted, accepted relationships it sponsored end (seats
+ * released, customers keep their workspaces). Guarded by `hasTable`: a deployment where the
+ * co-managed schema was never created has nothing to end and must not fail deletion closed
+ * (DO-NOT-PORT #22). An unaccepted setup is not silently skipped: it needs the provisioning
+ * cleanup helper, so the activity fails explicitly and the workflow stops before deleting data.
+ */
+export async function endTenantCoManagedSponsorships(tenantId: string): Promise<{ terminated: number; unaccepted: number }> {
+  const adminKnex = await getAdminConnection();
+  if (!(await adminKnex.schema.hasTable('co_management_relationships'))) {
+    return { terminated: 0, unaccepted: 0 };
+  }
+  const { endCoManagedSponsorshipsForDeletion } = await import('@alga-psa/co-managed');
+  const result = await endCoManagedSponsorshipsForDeletion(adminKnex, tenantId);
+  logger().info('Ended co-managed sponsorships before tenant deletion', { tenantId, ...result });
+  if (result.unaccepted > 0) {
+    throw new Error(`CLEANUP_INCOMPLETE: ${result.unaccepted} co-managed setup(s) were never accepted and must be cancelled first`);
+  }
+  return result;
 }
 
 /**
