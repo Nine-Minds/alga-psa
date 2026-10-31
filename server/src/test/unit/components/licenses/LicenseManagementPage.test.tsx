@@ -255,6 +255,29 @@ describe("LicenseManagementPage", () => {
     expect(screen.queryByText(/Nothing is deleted/)).not.toBeInTheDocument();
   });
 
+  it("shows a failing renewal payment without a retry date using date-free wording", async () => {
+    mockGetLicenseStatus.mockResolvedValue({
+      ...baseStatus,
+      state: "licensed",
+      tier: "pro",
+      subscription: {
+        phase: "payment_failed",
+        cause: "payment_failed",
+        endsAt: null,
+        resubscribeUrl: null,
+        nextRetryAt: null,
+        updatePaymentUrl: "https://pay.example/i/1",
+      },
+    });
+
+    render(<LicenseManagementPage />);
+
+    expect(
+      await screen.findByText("Payment failed. Update your payment method to keep Pro."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/we’ll retry on/)).not.toBeInTheDocument();
+  });
+
   it("explains a Pro end that followed failed payments", async () => {
     mockGetLicenseStatus.mockResolvedValue({
       ...baseStatus,
