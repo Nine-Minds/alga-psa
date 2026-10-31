@@ -71,6 +71,7 @@ export default defineConfig({
       { find: /^@ee\/(.*)$/, replacement: `${path.resolve(__dirname, './src')}/$1` },
       { find: /^@alga-psa\/core\/capability\/server$/, replacement: path.resolve(__dirname, '../../packages/core/src/capability/server.ts') },
       { find: /^@alga-psa\/co-managed$/, replacement: path.resolve(__dirname, '../../packages/co-managed/src/index.ts') },
+      { find: /^@alga-psa\/co-managed\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/co-managed/src')}/$1` },
       { find: /^@enterprise$/, replacement: `${path.resolve(__dirname, '../../packages/ee/src/index.ts')}` },
       { find: /^@enterprise\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/ee/src')}/$1` },
 

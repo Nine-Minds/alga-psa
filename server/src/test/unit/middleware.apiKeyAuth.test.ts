@@ -117,6 +117,13 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/')).toBe(true);
   });
 
+  it('exempts the session-authenticated workspace export POST exactly, never a sibling or deeper route', () => {
+    expect(shouldSkipApiKeyAuth('/api/co-management/export')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/co-management/export/evil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/exportevil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/other')).toBe(false);
+  });
+
   it('exempts the Level.io route exactly, never a prefixed or deeper sibling', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelioevil')).toBe(false);
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio-extra')).toBe(false);
