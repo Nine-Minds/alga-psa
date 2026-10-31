@@ -102,6 +102,13 @@ export interface IFixedPriceCharge extends IBillingCharge, TenantEntity {
   fmv?: number; // Calculated FMV for allocation (INTEGER cents)
   proportion?: number; // Calculated proportion (NUMERIC)
   allocated_amount?: number; // Calculated allocated amount (INTEGER cents)
+  /**
+   * Presentation only (bundle component snapshot): the configured/revision
+   * quantity before the `|| 1` clamp applied to detail rows. Never affects amounts.
+   */
+  raw_quantity?: number | null;
+  /** Presentation only: how this service is priced inside its Fixed line. */
+  pricing_basis?: 'unit' | 'bundle';
   // taxAllocationDetails?: any[]; // Removed in favor of direct fields and new tables
 }
 
