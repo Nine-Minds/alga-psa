@@ -13,6 +13,7 @@ import {
 import { newCoManagedOperationId } from './coManagedOperationId';
 import CoManagedProjectTaskAssignment from './CoManagedProjectTaskAssignment';
 import CoManagedProjectTaskHistory from './CoManagedProjectTaskHistory';
+import CoManagedProjectTaskConversation from './CoManagedProjectTaskConversation';
 
 type Snapshot = NonNullable<Awaited<ReturnType<typeof getCoManagedProjectTaskSnapshotAction>>>;
 type Patch = Snapshot['values'];
@@ -115,6 +116,7 @@ export default function CoManagedProjectTaskEditor({ customerTenant, relationshi
           {t('coManaged.sharedTasks.save', { defaultValue: 'Save' })}</Button>
       </section>
       {assignment}
+      <CoManagedProjectTaskConversation resource={{ kind: 'project_task', tenant: customerTenant, relationshipId, id: taskId }} />
     </>}
     {loaded && <CoManagedProjectTaskHistory customerTenant={customerTenant} relationshipId={relationshipId} taskId={taskId} reloadKey={historyKey} statusNames={statusNames} />}
   </div>;

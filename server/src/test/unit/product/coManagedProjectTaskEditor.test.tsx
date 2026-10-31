@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({ snapshot: vi.fn(), statuses: vi.fn(), edit: vi
 vi.mock('../../../lib/actions/coManagedProjectTaskActions', () => ({
   getCoManagedProjectTaskSnapshotAction: mocks.snapshot, listCoManagedProjectTaskStatusOptionsAction: mocks.statuses,
   editCoManagedProjectTaskAction: mocks.edit, assignCoManagedProjectTaskAction: mocks.assign, listCoManagedProjectTaskHistoryAction: mocks.history }));
+vi.mock('../../../components/co-managed/CoManagedProjectTaskConversation', () => ({ default: () => <section id="conversation-stub" /> }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ id, label, value, options, onValueChange }: any) =>
   <label>{label}<select id={id} aria-label={label} value={value} onChange={event => onValueChange(event.target.value)}>
     {options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label> }));
