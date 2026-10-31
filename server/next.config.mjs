@@ -299,6 +299,7 @@ const nextConfig = {
       '@alga-psa/core/fileNames': '../packages/core/src/lib/fileNames.ts',
       '@alga-psa/core/capability': '../packages/core/src/lib/capability.ts',
       '@alga-psa/core/address': '../packages/core/src/lib/address.ts',
+      '@alga-psa/core/net/safeFetch': '../packages/core/src/lib/net/safeFetch.ts',
       '@alga-psa/core/': '../packages/core/src/',
       '@alga-psa/validation': '../packages/validation/src',
       '@alga-psa/validation/': '../packages/validation/src/',
@@ -650,6 +651,9 @@ const nextConfig = {
       '@alga-psa/core/fileNames': usePrebuilt
         ? path.join(prebuiltDirAbs('core'), 'lib/fileNames.js')
         : path.join(__dirname, '../packages/core/src/lib/fileNames.ts'),
+      '@alga-psa/core/net/safeFetch': usePrebuilt
+        ? path.join(prebuiltDirAbs('core'), 'lib/net/safeFetch.js')
+        : path.join(__dirname, '../packages/core/src/lib/net/safeFetch.ts'),
       '@alga-psa/core/': `${prebuiltDirAbs('core')}/`,
       '@alga-psa/validation': prebuiltDirAbs('validation'),
       '@alga-psa/validation/': `${prebuiltDirAbs('validation')}/`,
