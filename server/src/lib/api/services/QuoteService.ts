@@ -264,6 +264,7 @@ export class QuoteService extends BaseService<IQuote> {
   }
 
   async update(id: string, data: UpdateQuoteApi, context: ServiceContext): Promise<IQuote> {
+    // LEVERAGE: pattern crud-door-to-lifecycle — second instance after the bulk-invoice status fix; a generic update carrying a lifecycle field bypasses the command's permission.
     // `status` is not an update field. Lifecycle transitions are named commands that own their
     // permission, lock and audit row; letting a generic update carry `status` let a
     // `billing:update` user approve quotes without `quotes:approve` (alga-2026-0003002).
