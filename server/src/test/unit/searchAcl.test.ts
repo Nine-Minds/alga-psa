@@ -272,6 +272,35 @@ describe('search ACL SQL predicate', () => {
     expect(knex).not.toHaveBeenCalledWith('tickets');
   });
 
+  it('L4a ticket-comment verifier hides a public-flagged comment whose thread audience is not requester from non-staff', async () => {
+    const run = async (audience: string) => {
+      const comment = { ticket_id: 'ticket-1', is_internal: false };
+      const makeQuery = (row: unknown) => {
+        const q: any = {
+          select: () => q, where: () => q, whereNull: () => q, first: () => q, join: () => q, leftJoin: () => q,
+          then: (res: any, rej: any) => Promise.resolve(row).then(res, rej),
+        };
+        return q;
+      };
+      let commentCalls = 0;
+      const knex: any = vi.fn((table: string) => {
+        if (table === 'comments') return makeQuery(comment);
+        if (table === 'comments as c') { commentCalls++; return makeQuery({ audience }); }
+        if (table === 'tickets') return makeQuery({ ticket_id: 'ticket-1' });
+        throw new Error(`Unexpected table ${table}`);
+      });
+      knex.raw = vi.fn((sql: string) => ({ sql }));
+      const result = await verifyResultVisibility(
+        knex, { userId: '00000000-0000-0000-0000-000000000002', tenant: 'tenant-1', permissions: ['ticket:read'], isInternal: false },
+        [{ type: 'ticket_comment' as const, id: 'comment-1' }],
+      );
+      return { result, commentCalls };
+    };
+    expect((await run('requester')).result).toHaveLength(1);
+    expect((await run('organization_private')).result).toEqual([]);
+    expect((await run('shared_it')).result).toEqual([]);
+  });
+
   /**
    * Minimal fake of a filtered single-row lookup: it applies where/whereNull/andWhere
    * equality filters to the stored row, so the verifier only sees it if its filters match.

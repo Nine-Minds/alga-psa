@@ -5,6 +5,7 @@ import { isMspPrincipalUserType } from '@alga-psa/types';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
+import { type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
@@ -2125,6 +2126,7 @@ export const addTicketComment = withAuth(async (
   comment: string,
   isInternal: boolean,
   emailRecipients?: CommentEmailRecipientsInput | null,
+  audienceId?: NativeCommentAudience | null,
 ): Promise<void | TicketActionError> => {
   try {
     const {knex: db} = await createTenantKnex();
@@ -2142,6 +2144,7 @@ export const addTicketComment = withAuth(async (
         isInternal,
         isResolution: false,
         emailRecipients,
+        audienceId,
       });
     });
   } catch (error) {
