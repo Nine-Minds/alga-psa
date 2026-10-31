@@ -61,7 +61,7 @@ Additive, not a redesign. Built the same way as the existing stock-unit track.
   custody `close_reason` CHECK did not allow `returned_to_vendor`, and the
   append-only `rma_events` `event_type` CHECK did not allow the two new event
   types. Migration `20261031100000_add_returned_to_vendor_custody_close_reason`
-  widens both (NOT VALID then VALIDATE), and its `down` refuses if any row uses
+  widens both (NOT VALID; the VALIDATE is in `20261031100100_validate_returned_to_vendor_checks`, a `transaction: false` file per lint R2), and its `down` refuses if any row uses
   a new value.
 - **Idempotence vs. the guard matrix (resolved).** The guard matrix allows
   shipping only from `replaced`/`repaired`; `dead_unit_owed` is rejected. The
