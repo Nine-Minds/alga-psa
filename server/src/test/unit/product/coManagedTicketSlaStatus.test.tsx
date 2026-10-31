@@ -55,3 +55,9 @@ it('shows an error alert when the display cannot be loaded and never renders raw
   expect(await screen.findByText('sharedSla.loadError')).toBeInTheDocument();
   await waitFor(() => expect(document.body.textContent).not.toContain(resource.relationshipId + resource.id));
 });
+it('shows the empty state when the work was escalated but the MSP has no service level set up', async () => {
+  mocks.load.mockResolvedValue({ msp: { state: 'not_configured' }, customer: { state: 'not_configured' } });
+  render(<CoManagedTicketSlaStatus resource={resource} />);
+  expect(await screen.findByText('sharedSla.empty')).toBeInTheDocument();
+  expect(screen.queryByText('sharedSla.state.running')).toBeNull();
+});

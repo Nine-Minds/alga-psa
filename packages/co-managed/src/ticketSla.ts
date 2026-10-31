@@ -91,10 +91,18 @@ export async function observeDueCoManagedTicketSlas(db: Knex, tenant: string, pa
   return result;
 }
 
+/** Genuine invariant break only (the ticket or its status row is gone mid-transition). Missing MSP setup is
+ * NOT an error: an organization SLA is something the MSP opts into, so it is reported as a `skipped` result. */
 export class CoManagedSlaSetupError extends Error {
   readonly code = 'CO_MANAGED_SLA_SETUP_REQUIRED';
-  constructor() { super('The MSP must configure its SLA policy and priority mapping before starting a new SLA obligation.'); this.name = 'CoManagedSlaSetupError'; }
+  constructor() { super('The ticket or its status is missing while applying an organization SLA transition.'); this.name = 'CoManagedSlaSetupError'; }
 }
+
+/** Why a transition created no obligation. The handoff itself always succeeds. */
+export type CoManagedSlaSkipReason = 'no_priority_mapping' | 'no_sla_policy' | 'no_policy_target' | 'pre_migration_work';
+export type CoManagedSlaTransitionResult = { outcome: 'applied' } | { outcome: 'skipped'; reason: CoManagedSlaSkipReason };
+const APPLIED: CoManagedSlaTransitionResult = { outcome: 'applied' };
+const skipped = (reason: CoManagedSlaSkipReason): CoManagedSlaTransitionResult => ({ outcome: 'skipped', reason });
 
 /** Retained source mutation only. No new live facts cross a completely removed
  * ticket grant, even when an old MSP obligation still exists for retention. */
@@ -221,7 +229,7 @@ export async function recordCoManagedTicketReopened(trx: Knex.Transaction, custo
 export async function applyCoManagedTicketSlaTransition(trx: Knex.Transaction,
   relationship: { sponsor_tenant: string; sponsor_client_id: string; escalation_board_id: string }, resource: CoManagedSharedResource,
   work: { workId: string; firstEscalatedAt: Date | string | null }, operationId: string,
-  transition: 'escalated' | 'handed_back' | 'access_revoked' | 'reopened', occurredAt: Date): Promise<void> {
+  transition: 'escalated' | 'handed_back' | 'access_revoked' | 'reopened', occurredAt: Date): Promise<CoManagedSlaTransitionResult> {
   if (!trx.isTransaction || resource.kind !== 'ticket') throw new Error('SLA handoffs require retained ticket work');
   const owner = tenantDb(trx, relationship.sponsor_tenant), customer = tenantDb(trx, resource.tenant);
   const key = { source_tenant: resource.tenant, ticket_id: resource.id, work_id: work.workId };
@@ -233,9 +241,9 @@ export async function applyCoManagedTicketSlaTransition(trx: Knex.Transaction,
     // Security reduction and handback remain possible for pre-migration work.
     if (obligation) await applyOrganizationSlaEvent(trx, identity, operationId,
       { kind: 'paused', reason: 'customer_responsible', occurredAt: at });
-    return;
+    return APPLIED;
   }
-  if (transition === 'reopened' && !obligation?.clock.resolution.completedAt) return;
+  if (transition === 'reopened' && !obligation?.clock.resolution.completedAt) return APPLIED;
   const ticket = await customer.table('tickets').where('ticket_id', resource.id).first('priority_id', 'status_id', 'response_state');
   if (!ticket) throw new CoManagedSlaSetupError();
   const status = await customer.table('statuses').where('status_id', ticket.status_id).forShare().first('is_closed');
@@ -247,35 +255,37 @@ export async function applyCoManagedTicketSlaTransition(trx: Knex.Transaction,
     if (!status.is_closed) await syncAwaitingClientPause(trx, identity, ticket.response_state, obligation.clock, at);
     await applyOrganizationSlaEvent(trx, identity, operationId, status.is_closed
       ? { kind: 'resolved', occurredAt: at } : { kind: 'resumed', reason: 'customer_responsible', occurredAt: at });
-    return;
+    return APPLIED;
   }
   // Never turn historic escalations into a fresh deadline merely because their
-  // obligation needs explicit migration/reconciliation.
-  if (!obligation && work.firstEscalatedAt) throw new CoManagedSlaSetupError();
-  if (obligation && status?.is_closed) return; // A closed ticket is not a reopened obligation.
+  // obligation needs explicit migration/reconciliation. Not an error: the handoff proceeds, untimed.
+  if (!obligation && work.firstEscalatedAt) return skipped('pre_migration_work');
+  if (obligation && status?.is_closed) return APPLIED; // A closed ticket is not a reopened obligation.
   const mapping = await owner.table('co_managed_sla_priority_mappings').where({ customer_tenant: resource.tenant,
     relationship_id: resource.relationshipId, customer_priority_id: ticket.priority_id }).forShare().first();
-  if (!mapping) throw new CoManagedSlaSetupError();
+  if (!mapping) return skipped('no_priority_mapping');
   const priority = await owner.table('priorities').where({ priority_id: mapping.msp_priority_id, item_type: 'ticket' }).forShare().first('priority_id');
-  if (!priority) throw new CoManagedSlaSetupError();
+  if (!priority) return skipped('no_priority_mapping'); // mapped to a priority the MSP has since removed
   await owner.table('clients').where('client_id', relationship.sponsor_client_id).forShare().first('client_id');
   await owner.table('boards').where('board_id', relationship.escalation_board_id).forShare().first('board_id');
   const resolved = await resolveSlaPolicy(trx, identity.tenant, relationship.sponsor_client_id, relationship.escalation_board_id);
-  if (!resolved) throw new CoManagedSlaSetupError();
+  if (!resolved) return skipped('no_sla_policy');
   const policy = await owner.table('sla_policies').where('sla_policy_id', resolved.sla_policy_id).forShare().first();
   const target = await owner.table('sla_policy_targets').where({ sla_policy_id: resolved.sla_policy_id, priority_id: priority.priority_id }).forShare().first();
-  if (!policy || !target) throw new CoManagedSlaSetupError();
+  if (!policy) return skipped('no_sla_policy');
+  if (!target) return skipped('no_policy_target');
   const schedule = await getBusinessHoursSchedule(trx, identity.tenant, policy, target);
   identity.obligationId = randomUUID();
   const started = await startOrganizationSlaObligation(trx, identity, operationId, { workId: work.workId, generation: (obligation?.generation ?? 0) + 1,
     policyId: policy.sla_policy_id, priorityId: priority.priority_id, schedule,
     targets: { responseMinutes: target.response_time_minutes, resolutionMinutes: target.resolution_time_minutes }, occurredAt: at });
   // An open obligation already existed for this ticket (redelivery): nothing was written.
-  if (started.deduplicated) return;
+  if (started.deduplicated) return APPLIED;
   // Match native SLA's created-in-closed-status behavior without recording a response.
   if (status?.is_closed) await applyOrganizationSlaEvent(trx, identity, randomUUID(), { kind: 'resolved', occurredAt: at });
   else {
     const fresh = await owner.table('sla_organization_obligations').where('obligation_id', identity.obligationId).first('clock');
     await syncAwaitingClientPause(trx, identity, ticket.response_state, fresh.clock, at);
   }
+  return APPLIED;
 }

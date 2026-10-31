@@ -70,7 +70,8 @@ export async function readCoManagedTicketSlaDisplay(context: CoManagedSharedWork
     else {
       const row = await tenantDb(trx, relationship.sponsor_tenant).table('sla_organization_obligations')
         .where({ source_tenant: resource.tenant, ticket_id: resource.id, work_id: work.work_id }).orderBy('generation', 'desc').first('clock');
-      if (!row) result.msp = { state: 'unavailable' };
+      // Escalated but never timed (MSP SLA setup missing, or work escalated before organization SLAs existed).
+      if (!row) result.msp = { state: 'not_configured' };
       else {
         const boardGrant = relationship.visibility_mode === 'board_scope' && await customer.table('co_management_board_scopes')
           .where({ relationship_id: resource.relationshipId, board_id: ticket.board_id }).forShare().first('board_id');

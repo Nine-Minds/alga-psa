@@ -88,7 +88,7 @@ export default function CoManagedTicketSlaStatus({ resource }: { resource: CoMan
   };
 
   // Nothing started on either side: one empty state instead of two empty cards.
-  const empty = (!display.msp || display.msp.state === 'not_started') && (!display.customer || display.customer.state === 'not_configured');
+  const empty = (!display.msp || display.msp.state === 'not_started' || display.msp.state === 'not_configured') && (!display.customer || display.customer.state === 'not_configured');
   return (
     <Card id="co-managed-ticket-sla" className="m-4">
       <CardHeader><CardTitle>{t('sharedSla.title', 'Service level')}</CardTitle></CardHeader>
