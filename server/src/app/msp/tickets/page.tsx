@@ -350,7 +350,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     ]);
 
     // A lapsed or ended co-managed workspace keeps reading its tickets but loses the write controls.
-    const workspaceReadOnly = await getWorkspaceReadOnly();
+    // The product code is already in hand, so psa and algadesk tenants never reach the probe at all.
+    const workspaceReadOnly = productCode === 'co_managed' ? await getWorkspaceReadOnly() : false;
     const canUpdateTickets = userPermissions.includes('ticket:update') && !workspaceReadOnly;
     const initialTeams = isTeamActionError(teams) ? [] : teams;
 
