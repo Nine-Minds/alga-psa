@@ -907,5 +907,17 @@
     "emailLinkReview": {
       "invalidLifetime": "De geldigheid van de link moet een geheel aantal uren zijn tussen 24 en 2160"
     }
+  },
+  "quoteDecision": {
+    "accepted": {
+      "emailLink": "Geaccepteerd door {{signer}} via e-maillink, {{date}}",
+      "portal": "Geaccepteerd door {{signer}} via het klantenportaal, {{date}}",
+      "mspMarked": "Door de MSP namens de klant als geaccepteerd gemarkeerd, {{date}}"
+    },
+    "rejected": {
+      "emailLink": "Afgewezen door {{signer}} via e-maillink, {{date}}",
+      "portal": "Afgewezen door {{signer}} via het klantenportaal, {{date}}"
+    },
+    "title": "({{title}})"
   }
 }

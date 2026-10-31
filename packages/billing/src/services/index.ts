@@ -14,6 +14,24 @@ export { ensureInvoiceEmailLinks } from './ensureInvoiceEmailLinks';
 export { BillingEngine } from '../lib/billing/billingEngine';
 export { recalculateQuoteFinancials, resolveQuoteItemTaxesIfIncluded } from './quoteCalculationService';
 export {
+<<<<<<< HEAD
+=======
+  decideQuote,
+  listQuoteDecisions,
+  authorizePortalUserForQuote,
+  type DecideQuoteInput,
+  type QuoteDecisionAction,
+  type QuoteDecisionActor,
+  type QuoteDecisionContext,
+  type QuoteDecisionForbiddenReason,
+  type QuoteDecisionMethod,
+  type QuoteDecisionResult,
+  type QuoteDecisionSelections,
+  type QuoteDecisionSigner,
+  type PortalQuoteAccessResult,
+} from './quoteDecisionService';
+export {
+>>>>>>> 75b96beaaa (feat(quotes): accept/reject with typed e-signature via email link (alga-2026-0002820 4/6))
   PDFGenerationService,
   createPDFGenerationService,
   publishGeneratedDocumentsToClient,
@@ -176,3 +194,15 @@ export { LabelRenderError } from '../lib/label-batch/renderLabelBatchHtml';
 export type { LabelPrintItem } from '../lib/label-batch/renderLabelBatchHtml';
 export { LabelLayoutError } from '../lib/label-batch/layout';
 export type { LabelBatchLayout, OnePerPageLayout, GridLayout } from '../lib/label-batch/layout';
+
+export {
+  submitQuoteLinkDecision,
+  getCurrentQuoteAgreement,
+  hashQuoteAgreementText,
+  QUOTE_LINK_DECISION_LIMITS,
+  type QuoteAgreementDescriptor,
+  type QuoteLinkDecisionInput,
+  type QuoteLinkDecisionOutcome,
+  type QuoteLinkInputProblem,
+  type QuoteLinkRequestContext,
+} from './quoteLinkDecisionService';

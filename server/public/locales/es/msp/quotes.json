@@ -907,5 +907,17 @@
     "emailLinkReview": {
       "invalidLifetime": "La duración del enlace debe ser un número entero de horas entre 24 y 2160"
     }
+  },
+  "quoteDecision": {
+    "accepted": {
+      "emailLink": "Aceptado por {{signer}} mediante enlace de correo electrónico, {{date}}",
+      "portal": "Aceptado por {{signer}} a través del portal del cliente, {{date}}",
+      "mspMarked": "Marcado como aceptado por el MSP en nombre del cliente, {{date}}"
+    },
+    "rejected": {
+      "emailLink": "Rechazado por {{signer}} mediante enlace de correo electrónico, {{date}}",
+      "portal": "Rechazado por {{signer}} a través del portal del cliente, {{date}}"
+    },
+    "title": "({{title}})"
   }
 }

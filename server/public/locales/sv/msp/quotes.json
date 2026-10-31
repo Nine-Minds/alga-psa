@@ -907,5 +907,17 @@
     "emailLinkReview": {
       "invalidLifetime": "Länkens giltighetstid måste vara ett heltal timmar mellan 24 och 2160"
     }
+  },
+  "quoteDecision": {
+    "accepted": {
+      "emailLink": "Godkänd av {{signer}} via e-postlänk, {{date}}",
+      "portal": "Godkänd av {{signer}} via kundportalen, {{date}}",
+      "mspMarked": "Markerad som godkänd av MSP på kundens vägnar, {{date}}"
+    },
+    "rejected": {
+      "emailLink": "Avvisad av {{signer}} via e-postlänk, {{date}}",
+      "portal": "Avvisad av {{signer}} via kundportalen, {{date}}"
+    },
+    "title": "({{title}})"
   }
 }
