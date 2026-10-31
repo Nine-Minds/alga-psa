@@ -4,6 +4,10 @@
 
 The Email Settings component allows administrators to configure email providers, manage custom domains, and set up email delivery preferences for the tenant.
 
+For notification template content rather than delivery settings, see
+[Editing ticket email HTML](editing-ticket-email-html.md), including rendered
+examples and instructions for choosing or omitting ticket detail fields.
+
 ## Accessing Email Settings
 
 The Email Settings interface is now available in the main Settings page:

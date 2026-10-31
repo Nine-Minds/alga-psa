@@ -18,9 +18,15 @@ const DOCUMENTATION_URL =
   "https://algapsa.com/documentation/email-template-variables";
 
 function tokenFor(variable: VariableDef): string {
+  if (variable.type === "array" && variable.example.includes("{{#each ")) {
+    return variable.example;
+  }
+  const path = variable.path.includes("[].")
+    ? `this.${variable.path.split("[].").pop()}`
+    : variable.path;
   return variable.type === "raw-html"
-    ? `{{{${variable.path}}}}`
-    : `{{${variable.path}}}`;
+    ? `{{{${path}}}}`
+    : `{{${path}}}`;
 }
 
 function matchesSearch(variable: VariableDef, search: string): boolean {
