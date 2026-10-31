@@ -13,10 +13,15 @@ import { CUSTODY_COLUMNS, FOLLOW_UP_SELECT, loadCustody, mapCustodyRow } from '.
  * `disposed`; this core is the one path that writes it. Same table, same state (`closed`), same
  * history row family, and the caller publishes `ASSET_CUSTODY_CHANGED` exactly as for any other step.
  *
+ * `returned_to_vendor` (advance-replacement follow-up, alga-2026-0002683) closes an episode whose device the MSP
+ * shipped to the vendor (`with_vendor`) once the vendor confirmed receipt. It is deliberately NOT a `returned`
+ * event, which always closes as `returned_to_client`.
+ * LEVERAGE: friction custody-close-reason — `recordCustodyEvent('returned')` hard-codes `returned_to_client`, so every other ending needs this side door
+ *
  * It appends no `asset_custody_events` row: the event vocabulary is physical movement and nothing
  * moved. The asset's status is left alone — a disposed device's lifecycle status is a separate decision.
  */
-export type ClosableCustodyReason = Extract<CustodyCloseReason, 'disposed'>;
+export type ClosableCustodyReason = Extract<CustodyCloseReason, 'disposed' | 'returned_to_vendor'>;
 
 export interface CloseCustodyEpisodeResult {
   custody: IAssetCustody;

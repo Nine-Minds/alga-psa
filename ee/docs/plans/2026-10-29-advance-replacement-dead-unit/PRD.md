@@ -1,8 +1,8 @@
 # PRD — Advance-replacement track: ship the dead unit back to the vendor
 
 Card: `379a7983` — alga-2026-0002683 (C5 follow-up).
-Customer: Joymode Business Solutions (Munjal Thakkar), PSA alga-2026-0002683.
-Stacks on C5 (`7d3b2c3d`, PR #3896) until it merges, then targets main.
+Reported on PSA ticket alga-2026-0002683.
+C5 has merged; this work targets main.
 Background: C5's PRD, section "Follow-up: advance-replacement dead-unit shipping"
 (`ee/docs/plans/2026-10-25-warranty-review-and-rma/PRD.md`).
 
@@ -57,16 +57,28 @@ Additive, not a redesign. Built the same way as the existing stock-unit track.
   `return_by` on the *inbound* side and with `return_by` repurposed as the
   vendor's dead-unit return deadline.
 - **Lands in:** `dead_unit_owed`. This is already a valid `rma_cases.status`
-  from the stock-unit track, so **no migration is expected**; the implementer
-  must confirm against main before writing one (the card says so explicitly,
-  and a redundant migration is worse than none).
-- **Idempotence:** re-invoking with the same tracking number is a no-op; a
-  different tracking number after the fact is a correction event, not a second
-  shipment.
+  from the stock-unit track, but **a migration IS needed** (correction): the
+  custody `close_reason` CHECK did not allow `returned_to_vendor`, and the
+  append-only `rma_events` `event_type` CHECK did not allow the two new event
+  types. Migration `20261031100000_add_returned_to_vendor_custody_close_reason`
+  widens both (NOT VALID then VALIDATE), and its `down` refuses if any row uses
+  a new value.
+- **Idempotence vs. the guard matrix (resolved).** The guard matrix allows
+  shipping only from `replaced`/`repaired`; `dead_unit_owed` is rejected. The
+  one exception is a repeat of the *same* tracking number (case-insensitive,
+  trimmed) on a case already in `dead_unit_owed`: it returns the case
+  unchanged, writes no event and no custody row, and publishes nothing. A
+  *different* tracking number from `dead_unit_owed` is refused. There is no
+  correction event; the earlier "tracking correction" idea is removed.
 
 ### 2.2 Closing the episode
 
-- Add `dead_unit_owed` to the `from` set of `close`.
+- Add `dead_unit_owed` to the `from` set of `close`. **Generic close does not
+  touch custody**: closing from `dead_unit_owed` leaves the episode
+  `with_vendor`. Only `confirm_vendor_receipt` closes custody, as
+  `returned_to_vendor` (via `closeCustodyEpisode`, never the `returned` event,
+  which hard-codes `returned_to_client`). `return_to_client` is refused from
+  `dead_unit_owed`.
 - Add the step that confirms **vendor receipt** of the dead unit and closes the
   case as resolved, with the custody episode closed as `returned_to_vendor` —
   not `returned_to_client`. This is the whole point of the card: the custody
@@ -76,25 +88,56 @@ Additive, not a redesign. Built the same way as the existing stock-unit track.
 
 ### 2.3 Surfaces
 
-- **Server action** `shipDeadUnitToVendor(rmaCaseId, {carrier, trackingNumber,
-  returnBy?})` plus `confirmVendorReceipt(rmaCaseId, {receivedAt, note?})`,
-  both tenant-scoped and record-level checked.
+- **Server action** `shipDeadUnitToVendor(rmaId, {carrier, tracking_number,
+  return_by?, ...common})` plus `confirmVendorReceipt(rmaId, {...common})`
+  (`occurred_at` is when the vendor received it), both tenant-scoped and
+  record-level checked. Both are advance-replacement only (`wrong_track`
+  otherwise).
 - **RBAC:** the same capability that authorises `shipToVendorCore` on the stock
   track. No new permission; the guard is applied after any QR scan (a QR code
   is never a secret).
 - **UI:** RMA detail screen on the advance track gains the "Ship dead unit to
   vendor" action once the replacement is received, and a "Vendor received"
   confirmation afterwards. Overdue `return_by` renders as a warning badge.
-- **Return slip:** if C1's label types make a dead-unit shipping slip trivial,
-  reuse them; otherwise skip — it is not required for the card's "done".
+- **Return slip: skipped.** C1's label types do not make a dead-unit slip
+  trivial, and it is not required for "done".
 
 ### 2.4 Deadline behaviour (design decision)
 
-`return_by` is stored and displayed; nothing fires automatically. When it
+`return_by` is the existing `rma_cases.return_by` column (not
+`dead_unit_due_date`, which belongs to the stock track's client-owes-us clock).
+It is stored and displayed; nothing fires automatically. When it
 passes, the case shows an overdue badge and remains closeable — an MSP must
 never be *unable* to close a case because a vendor's clock ran out, and Alga
 must never silently declare a device forfeited. Any automatic consequence is a
 later product decision with its own card.
+
+### 2.5 Discriminating the shared `dead_unit_owed` status
+
+`dead_unit_owed` means "a client owes us a unit" on the stock track and "we owe
+the vendor the dead unit" here. They are told apart by `returned_unit_id IS
+NULL` (`isAssetTracked`); no new column. Guards:
+
+- Every stock-track mutator (`markDeadUnitOwed`, `recordDeadUnitReturned`,
+  `chargeForUnreturned`, `closeRma`, and the billing charge which goes through
+  `chargeForUnreturned`) already refuses warranty cases at `loadRma`.
+- Every warranty core refuses stock cases (`unit_tracked`) at `lockWarrantyRma`.
+- The dead-units-owed report and the dashboard attention query gain
+  `returned_unit_id IS NOT NULL`, so warranty dead units do not appear as
+  client debts or get billed. The RMA list shows them as "Dead unit to vendor".
+
+### 2.6 Custody and the serial (finding)
+
+The open custody episode is keyed by `asset_id` and stores no serial. After
+`receive_replacement` the asset row carries the NEW serial while the MSP
+physically holds the DEAD unit. The dead serial survives in the
+`replacement_received` event payload (`before.serial_number`) and in
+`asset_history`. We represent the dead unit honestly with no parallel structure:
+the dead serial is written into the custody `shipped` event note, the
+`dead_unit_shipped` event payload and the close note. Reviewers should confirm
+this is acceptable.
+
+Open question: the asset status `held_by_msp` is left untouched by this leg.
 
 ## 3. Invariants (all must be tested)
 
@@ -122,8 +165,7 @@ later product decision with its own card.
 ## 5. Tests
 
 - Unit: transition guard matrix — allowed (`replaced`, `repaired`), rejected
-  (`received`, `approved`, `dead_unit_owed`, `closed`), idempotent re-ship,
-  tracking correction.
+  (other states, standard track), same-tracking idempotent re-ship.
 - Unit: custody episode after ship+confirm reads `returned_to_vendor`, never
   `returned_to_client`.
 - Unit: no writes to stock tables (spy on knex statements or assert table
@@ -144,7 +186,7 @@ later product decision with its own card.
 
 ## 7. Done
 
-The advance-track Dell flow is demonstrable end to end for Joymode: warranty
+The advance-track Dell flow is demonstrable end to end: warranty
 review, approval to advance replacement, replacement received and attached to
 the client asset, dead unit shipped to Dell with tracking, Dell's receipt
 confirmed, case closed — and the custody history shows the dead unit going to

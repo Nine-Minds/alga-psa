@@ -162,6 +162,12 @@ export function RmaManager({
     closed: t('rma.status.closed', 'Closed'),
   };
   const statusLabel = (v?: string | null): string => (v && RMA_STATUS_LABELS[v]) || humanize(v);
+  // `dead_unit_owed` is shared with the stock-unit track (a client owes US a unit). On a client-asset warranty claim
+  // (no returned unit) it means the dead unit is on its way back to the VENDOR, so it gets its own label.
+  const caseStatusLabel = (rec: Pick<IRmaCase, 'status' | 'returned_unit_id'>): string =>
+    rec.status === 'dead_unit_owed' && !rec.returned_unit_id
+      ? t('rma.status.deadUnitToVendor', 'Dead unit to vendor')
+      : statusLabel(rec.status);
   const RMA_TYPE_LABELS: Record<string, string> = {
     standard: t('rma.types.standard', 'Standard'),
     advance_replacement: t('rma.types.advanceReplacement', 'Advance replacement'),
@@ -450,7 +456,7 @@ export function RmaManager({
     {
       title: t('common.status', 'Status'),
       dataIndex: 'status',
-      render: (v: any) => <Badge variant={STATUS_VARIANT[v] ?? 'secondary'} size="sm">{statusLabel(v)}</Badge>,
+      render: (v: any, rec: IRmaCase) => <Badge variant={STATUS_VARIANT[v] ?? 'secondary'} size="sm">{caseStatusLabel(rec)}</Badge>,
     },
     { title: t('rma.columns.vendor', 'Vendor'), dataIndex: 'vendor_name', render: (_: any, rec: IRmaCase) => rec.vendor_name || t('common.emptyValue', '—') },
     { title: t('rma.columns.returnedUnit', 'Returned unit'), dataIndex: 'returned_unit_id', render: (_: any, rec: IRmaCase) => unitLabel(rec) },
@@ -720,7 +726,7 @@ export function RmaManager({
               </div>
               <div>
                 <div className="text-xs text-gray-500">{t('common.status', 'Status')}</div>
-                <Badge variant={STATUS_VARIANT[rmaDetail.status] ?? 'secondary'} size="sm">{statusLabel(rmaDetail.status)}</Badge>
+                <Badge variant={STATUS_VARIANT[rmaDetail.status] ?? 'secondary'} size="sm">{caseStatusLabel(rmaDetail)}</Badge>
               </div>
             </div>
             {rmaDetail.reason && (
@@ -748,7 +754,7 @@ export function RmaManager({
             <div className="grid gap-3 text-sm sm:grid-cols-2">
               {([
                 [t('rma.columns.type', 'Type'), typeLabel(rmaDetail.rma_type)],
-                [t('common.status', 'Status'), statusLabel(rmaDetail.status)],
+                [t('common.status', 'Status'), caseStatusLabel(rmaDetail)],
                 [t('rma.columns.client', 'Client'), rmaDetail.client_name || t('common.emptyValue', '—')],
                 [t('rma.columns.vendor', 'Vendor'), rmaDetail.vendor_name || t('common.emptyValue', '—')],
                 [t('rma.detail.reference', 'RMA reference'), rmaDetail.rma_reference || t('common.emptyValue', '—')],

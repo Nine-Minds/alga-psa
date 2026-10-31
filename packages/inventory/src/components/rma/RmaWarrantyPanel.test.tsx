@@ -13,7 +13,7 @@ vi.mock('../../actions', () => {
   return {
     approveWarrantyClaim: fn(), cancelWarrantyClaim: fn(), closeWarrantyRma: fn(), denyWarrantyClaim: fn(),
     markDeviceReceived: fn(), receiveVendorReplacement: fn(), recordVendorCredit: fn(), recordVendorRepair: fn(),
-    returnDeviceToClient: fn(), shipToVendor: fn(),
+    returnDeviceToClient: fn(), shipToVendor: fn(), shipDeadUnitToVendor: fn(), confirmVendorReceipt: fn(),
     listRmaCaseEvents: vi.fn(async () => []),
   };
 });
@@ -82,9 +82,9 @@ const renderedActions = () =>
 describe('RmaWarrantyPanel (T029)', () => {
   it.each(STATUSES)('status %s offers exactly the state-machine actions', (status) => {
     render(<RmaWarrantyPanel rma={{ ...base, status } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
-    const expected = [...allowedWarrantyActions(status as any)].sort();
+    const expected = [...allowedWarrantyActions(status as any, base.rma_type as any)].sort();
     expect(renderedActions()).toEqual(expected);
-    for (const a of expected) expect(nextWarrantyStatus(status as any, a)).not.toBeNull();
+    for (const a of expected) expect(nextWarrantyStatus(status as any, a, base.rma_type as any)).not.toBeNull();
     for (const a of WARRANTY_ACTIONS.filter((x) => !expected.includes(x))) {
       expect(document.getElementById(`rma-warranty-action-${a}`)).toBeNull();
     }
@@ -210,5 +210,48 @@ describe('RmaWarrantyPanel (T029)', () => {
     // Exactly one "Generic link" row (the placeholder), not a second one duplicated into `options`.
     expect(labels.filter((l) => l === 'Generic link')).toHaveLength(1);
     expect(labels).toEqual(['Generic link', 'Dell portal']);
+  });
+
+  describe('advance-replacement dead-unit leg', () => {
+    const advance = { ...base, rma_type: 'advance_replacement' };
+    const todayYmd = () => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+    const shift = (days: number) => {
+      const d = new Date();
+      d.setDate(d.getDate() + days);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    it.each(['replaced', 'repaired'])('offers "Ship dead unit to vendor" on an advance-track %s case', (status) => {
+      render(<RmaWarrantyPanel rma={{ ...advance, status } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
+      expect(renderedActions()).toContain('ship_dead_unit_to_vendor');
+      expect(document.getElementById('rma-warranty-action-ship_dead_unit_to_vendor')!.textContent).toBe('Ship dead unit to vendor');
+      expect(renderedActions()).toContain('return_to_client');
+    });
+
+    it('does not offer the dead-unit steps on the standard track', () => {
+      render(<RmaWarrantyPanel rma={{ ...base, status: 'replaced' } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
+      expect(renderedActions()).not.toContain('ship_dead_unit_to_vendor');
+    });
+
+    it('offers "Vendor received dead unit" and close (never return to client) once the dead unit is shipped', () => {
+      render(<RmaWarrantyPanel rma={{ ...advance, status: 'dead_unit_owed' } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
+      expect(renderedActions()).toEqual(['close', 'confirm_vendor_receipt']);
+      expect(document.getElementById('rma-warranty-action-confirm_vendor_receipt')!.textContent).toBe('Vendor received dead unit');
+    });
+
+    it('shows the overdue badge only when the vendor deadline has passed, and the case stays closeable', () => {
+      render(<RmaWarrantyPanel rma={{ ...advance, status: 'dead_unit_owed', return_by: shift(-1) } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
+      expect(document.getElementById('rma-warranty-dead-unit-overdue')).toBeTruthy();
+      expect(renderedActions()).toContain('close');
+      cleanup();
+      render(<RmaWarrantyPanel rma={{ ...advance, status: 'dead_unit_owed', return_by: todayYmd() } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
+      expect(document.getElementById('rma-warranty-dead-unit-overdue')).toBeNull();
+      cleanup();
+      render(<RmaWarrantyPanel rma={{ ...advance, status: 'replaced', return_by: shift(-5) } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
+      expect(document.getElementById('rma-warranty-dead-unit-overdue')).toBeNull();
+    });
   });
 });

@@ -86,6 +86,22 @@ export const shipToVendorSchema = z.object({
 });
 export type ShipToVendorInput = z.infer<typeof shipToVendorSchema>;
 
+/**
+ * Advance-replacement dead-unit shipment. The vendor is the one already on the case, so there is no vendor field;
+ * `return_by` is the vendor's deadline for the dead unit and is optional (it falls back to the one set at approval).
+ */
+export const shipDeadUnitToVendorSchema = z.object({
+  carrier: requiredText(RMA_TEXT_MAX, 'Enter the carrier'),
+  tracking_number: requiredText(RMA_TEXT_MAX, 'Enter the tracking number'),
+  return_by: calendarDate.nullish().transform((v) => v ?? undefined),
+  ...common,
+});
+export type ShipDeadUnitToVendorInput = z.infer<typeof shipDeadUnitToVendorSchema>;
+
+/** `occurred_at` is when the vendor received the dead unit. */
+export const confirmVendorReceiptSchema = z.object({ ...common });
+export type ConfirmVendorReceiptInput = z.infer<typeof confirmVendorReceiptSchema>;
+
 const inboundShipping = {
   inbound_carrier: optionalText(RMA_TEXT_MAX),
   inbound_tracking_number: optionalText(RMA_TEXT_MAX),

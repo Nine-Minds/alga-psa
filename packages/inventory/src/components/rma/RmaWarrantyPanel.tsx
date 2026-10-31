@@ -18,6 +18,7 @@ import {
   approveWarrantyClaim,
   cancelWarrantyClaim,
   closeWarrantyRma,
+  confirmVendorReceipt,
   denyWarrantyClaim,
   listRmaCaseEvents,
   markDeviceReceived,
@@ -25,6 +26,7 @@ import {
   recordVendorCredit,
   recordVendorRepair,
   returnDeviceToClient,
+  shipDeadUnitToVendor,
   shipToVendor,
   type IRmaEventView,
 } from '../../actions';
@@ -139,6 +141,8 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
     record_repair: t('rma.warranty.actions.recordRepair', 'Record repair'),
     record_credit: t('rma.warranty.actions.recordCredit', 'Record vendor credit'),
     return_to_client: t('rma.warranty.actions.returnToClient', 'Return to client'),
+    ship_dead_unit_to_vendor: t('rma.warranty.actions.shipDeadUnitToVendor', 'Ship dead unit to vendor'),
+    confirm_vendor_receipt: t('rma.warranty.actions.confirmVendorReceipt', 'Vendor received dead unit'),
     close: t('rma.warranty.actions.close', 'Close RMA'),
   };
 
@@ -153,6 +157,8 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
     repair_received: t('rma.warranty.events.repairReceived', 'Repair received'),
     vendor_credited: t('rma.warranty.events.vendorCredited', 'Vendor credited'),
     returned_to_client: t('rma.warranty.events.returnedToClient', 'Returned to client'),
+    dead_unit_shipped: t('rma.warranty.events.deadUnitShipped', 'Dead unit shipped to vendor'),
+    vendor_receipt_confirmed: t('rma.warranty.events.vendorReceiptConfirmed', 'Vendor received dead unit'),
     closed: t('rma.warranty.events.closed', 'Closed'),
     note: t('rma.warranty.events.note', 'Note'),
   };
@@ -171,7 +177,9 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
     vendor_credited: t('rma.warranty.closeReason.vendorCredited', 'Vendor credited'),
   };
 
-  const allowed = useMemo(() => allowedWarrantyActions(rma.status), [rma.status]);
+  const allowed = useMemo(() => allowedWarrantyActions(rma.status, rma.rma_type), [rma.status, rma.rma_type]);
+  // The vendor's dead-unit deadline has passed. A warning only: nothing happens automatically and the case stays closeable.
+  const deadUnitOverdue = rma.status === 'dead_unit_owed' && !!rma.return_by && rma.return_by < toYmd(new Date());
   const fmtDate = (v?: string | Date | null): string => {
     if (!v) return dash;
     if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return fromYmd(v)!.toLocaleDateString();
@@ -255,6 +263,17 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
           break;
         case 'return_to_client':
           result = await returnDeviceToClient(id, { counterparty: form.counterparty, note });
+          break;
+        case 'ship_dead_unit_to_vendor':
+          result = await shipDeadUnitToVendor(id, {
+            carrier: form.carrier,
+            tracking_number: form.tracking_number,
+            return_by: form.return_by || null,
+            note,
+          });
+          break;
+        case 'confirm_vendor_receipt':
+          result = await confirmVendorReceipt(id, { note });
           break;
         case 'close':
           result = await closeWarrantyRma(id, { reason: (form.reason || undefined) as any, note });
@@ -389,6 +408,17 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
             <TextArea id="rma-warranty-ship-to" label={t('rma.warranty.fields.returnShipTo', 'Return ship-to')} value={form.return_ship_to} onChange={(e) => set('return_ship_to', e.target.value)} />
           </>
         );
+      case 'ship_dead_unit_to_vendor':
+        return (
+          <>
+            <p className="text-sm text-gray-600">{t('rma.warranty.confirmShipDeadUnit', 'Ship the dead unit back to the vendor. The device in custody is recorded as with the vendor.')}</p>
+            <Input id="rma-warranty-carrier" label={t('rma.warranty.fields.carrier', 'Carrier')} required value={form.carrier} onChange={(e) => set('carrier', e.target.value)} />
+            <Input id="rma-warranty-tracking" label={t('rma.warranty.fields.tracking', 'Tracking number')} required value={form.tracking_number} onChange={(e) => set('tracking_number', e.target.value)} />
+            {dateField('rma-warranty-return-by', t('rma.warranty.fields.returnBy', 'Return by'), 'return_by')}
+          </>
+        );
+      case 'confirm_vendor_receipt':
+        return <p className="text-sm text-gray-600">{t('rma.warranty.confirmVendorReceipt', 'Confirm the vendor received the dead unit. The case is closed as resolved and the custody episode as returned to the vendor.')}</p>;
       case 'receive_replacement':
         return (
           <>
@@ -447,6 +477,12 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
           </div>
         ))}
       </div>
+
+      {deadUnitOverdue && (
+        <div id="rma-warranty-dead-unit-overdue">
+          <Badge variant="warning" size="sm">{t('rma.warranty.deadUnitOverdue', 'Dead unit overdue to vendor (was due {{date}})', { date: fmtDate(rma.return_by) })}</Badge>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2" id="rma-warranty-actions">
         {allowed.map((a) => (

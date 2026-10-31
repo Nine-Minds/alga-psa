@@ -598,6 +598,7 @@
       "warrantyLocationRequired": "Choose where the device is now so it can be received back.",
       "warrantyInvalidTransition": "That step is not available in the RMA’s current status. Refresh and try again.",
       "warrantyReviewClose": "Approve or deny the claim before closing it.",
+      "warrantyWrongTrack": "This step is only for advance-replacement claims.",
       "duplicateReference": "That RMA reference or number is already in use.",
       "checkViolation": "That value is not allowed for this RMA.",
       "ticketNotFound": "Ticket not found.",
@@ -1324,6 +1325,7 @@
       "replacementReceived": "Replacement received",
       "replacementDeployed": "Replacement deployed",
       "deadUnitOwed": "Dead unit owed",
+      "deadUnitToVendor": "Dead unit to vendor",
       "deadUnitReturned": "Dead unit returned",
       "replaced": "Replaced",
       "credited": "Credited",
@@ -1373,6 +1375,9 @@
       "noEvents": "No history yet.",
       "confirmReceived": "Confirm the device is in the office. Its custody must be in the office.",
       "confirmCredit": "Record that the vendor credited this device. The custody episode is closed as disposed.",
+      "confirmShipDeadUnit": "Ship the dead unit back to the vendor. The device in custody is recorded as with the vendor.",
+      "confirmVendorReceipt": "Confirm the vendor received the dead unit. The case is closed as resolved and the custody episode as returned to the vendor.",
+      "deadUnitOverdue": "Dead unit overdue to vendor (was due {{date}})",
       "actions": {
         "approveStandard": "Approve (standard)",
         "approveAdvance": "Approve (advance replacement)",
@@ -1384,6 +1389,8 @@
         "recordRepair": "Record repair",
         "recordCredit": "Record vendor credit",
         "returnToClient": "Return to client",
+        "shipDeadUnitToVendor": "Ship dead unit to vendor",
+        "confirmVendorReceipt": "Vendor received dead unit",
         "close": "Close RMA"
       },
       "events": {
@@ -1397,6 +1404,8 @@
         "repairReceived": "Repair received",
         "vendorCredited": "Vendor credited",
         "returnedToClient": "Returned to client",
+        "deadUnitShipped": "Dead unit shipped to vendor",
+        "vendorReceiptConfirmed": "Vendor received dead unit",
         "closed": "Closed",
         "note": "Note"
       },

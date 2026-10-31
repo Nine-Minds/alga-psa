@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   approveWarrantyClaimSchema, cancelWarrantyClaimSchema, closeWarrantyRmaSchema, denyWarrantyClaimSchema,
   openWarrantyClaimSchema, receiveVendorReplacementSchema, shipToVendorSchema,
+  confirmVendorReceiptSchema, shipDeadUnitToVendorSchema,
 } from './warrantySchemas';
 
 const id = '3f1c6a1e-8f0e-4a0b-9d3a-2f5b0c1d2e3f';
@@ -40,5 +41,15 @@ describe('warranty schemas', () => {
   it('close leaves the reason to the status default and refuses warranty_denied', () => {
     expect(closeWarrantyRmaSchema.parse({}).reason).toBeUndefined();
     expect(closeWarrantyRmaSchema.safeParse({ reason: 'warranty_denied' }).success).toBe(false);
+  });
+  it('ship dead unit requires carrier and tracking; return-by is optional but must be a real date', () => {
+    expect(shipDeadUnitToVendorSchema.safeParse({ carrier: 'UPS' }).success).toBe(false);
+    expect(shipDeadUnitToVendorSchema.safeParse({ tracking_number: '1Z' }).success).toBe(false);
+    expect(shipDeadUnitToVendorSchema.parse({ carrier: ' UPS ', tracking_number: ' 1Z ', return_by: null })).toMatchObject({ carrier: 'UPS', tracking_number: '1Z', return_by: undefined });
+    expect(shipDeadUnitToVendorSchema.parse({ carrier: 'UPS', tracking_number: '1Z', return_by: '2026-11-30' }).return_by).toBe('2026-11-30');
+    expect(shipDeadUnitToVendorSchema.safeParse({ carrier: 'UPS', tracking_number: '1Z', return_by: '2026-02-31' }).success).toBe(false);
+  });
+  it('confirm vendor receipt takes only the common fields', () => {
+    expect(confirmVendorReceiptSchema.safeParse({}).success).toBe(true);
   });
 });

@@ -81,7 +81,8 @@ const mk = (status: string, i: number) => ({
   rma_reference: `VEND-${i}`,
   rma_type: 'standard',
   status,
-  returned_unit_id: null,
+  // `dead_unit_owed` is shared with the stock track; a returned unit keeps it on the stock-track label.
+  returned_unit_id: status === 'dead_unit_owed' ? '5c1e0000-0000-4000-8000-000000000001' : null,
   client_name: 'Acme',
   opened_at: '2026-01-01T00:00:00Z',
 });
@@ -114,6 +115,15 @@ describe('RmaManager warranty statuses (T008)', () => {
       expect(badge!.getAttribute('data-variant')).toBe(variants[s] ?? 'secondary');
     }
     expect(table.textContent).not.toMatch(/dead_unit_returned|Dead unit returned/i);
+  });
+
+  it('labels a warranty-claim dead_unit_owed (no returned unit) as going to the vendor', () => {
+    const warranty = { ...mk('dead_unit_owed', 1), rma_type: 'advance_replacement', returned_unit_id: null };
+    const stock = mk('dead_unit_owed', 2);
+    render(<RmaManager initialCases={[warranty, stock] as any} initialDeadOwed={[]} />);
+    const rows = screen.getByTestId('rma-cases-table').querySelectorAll('tbody tr');
+    expect(rows[0].textContent).toContain('Dead unit to vendor');
+    expect(rows[1].textContent).toContain('Dead unit owed');
   });
 
   it('renders rma_number in the RMA # column, falling back to the vendor reference', () => {

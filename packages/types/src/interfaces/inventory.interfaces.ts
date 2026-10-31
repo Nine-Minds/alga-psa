@@ -113,6 +113,8 @@ export type RmaEventType =
   | 'repair_received'
   | 'vendor_credited'
   | 'returned_to_client'
+  | 'dead_unit_shipped'
+  | 'vendor_receipt_confirmed'
   | 'closed'
   | 'note';
 

@@ -598,6 +598,7 @@
       "warrantyLocationRequired": "Wybierz, gdzie obecnie znajduje się urządzenie, aby można je było przyjąć z powrotem.",
       "warrantyInvalidTransition": "Ten krok nie jest dostępny w bieżącym statusie RMA. Odśwież stronę i spróbuj ponownie.",
       "warrantyReviewClose": "Zatwierdź lub odrzuć roszczenie przed jego zamknięciem.",
+      "warrantyWrongTrack": "Ten krok dotyczy tylko zgłoszeń z wymianą z wyprzedzeniem.",
       "duplicateReference": "Ta referencja lub numer RMA jest już używany.",
       "checkViolation": "Ta wartość jest niedozwolona dla tego RMA.",
       "ticketNotFound": "Nie znaleziono zgłoszenia.",
@@ -1324,6 +1325,7 @@
       "replacementReceived": "Otrzymano zamiennik",
       "replacementDeployed": "Zamiennik wdrożony",
       "deadUnitOwed": "Należna wadliwa jednostka",
+      "deadUnitToVendor": "Uszkodzona jednostka do dostawcy",
       "deadUnitReturned": "Zwrócono wadliwą jednostkę",
       "replaced": "Wymieniono",
       "credited": "Zaliczono",
@@ -1373,6 +1375,9 @@
       "noEvents": "Brak historii.",
       "confirmReceived": "Potwierdź, że urządzenie jest w biurze. Jego przechowanie musi być w biurze.",
       "confirmCredit": "Zapisz, że dostawca uznał to urządzenie. Okres przechowania zostanie zamknięty jako zutylizowany.",
+      "confirmShipDeadUnit": "Odeślij uszkodzoną jednostkę do dostawcy. Urządzenie w depozycie zostanie zapisane jako u dostawcy.",
+      "confirmVendorReceipt": "Potwierdź, że dostawca otrzymał uszkodzoną jednostkę. Zgłoszenie zostanie zamknięte jako rozwiązane, a depozyt jako zwrócony dostawcy.",
+      "deadUnitOverdue": "Uszkodzona jednostka przeterminowana u dostawcy (termin: {{date}})",
       "actions": {
         "approveStandard": "Zatwierdź (standardowo)",
         "approveAdvance": "Zatwierdź (wymiana z wyprzedzeniem)",
@@ -1384,6 +1389,8 @@
         "recordRepair": "Zapisz naprawę",
         "recordCredit": "Zapisz uznanie od dostawcy",
         "returnToClient": "Zwróć klientowi",
+        "shipDeadUnitToVendor": "Wyślij uszkodzoną jednostkę do dostawcy",
+        "confirmVendorReceipt": "Dostawca otrzymał uszkodzoną jednostkę",
         "close": "Zamknij RMA"
       },
       "events": {
@@ -1397,6 +1404,8 @@
         "repairReceived": "Otrzymano naprawę",
         "vendorCredited": "Uznane przez dostawcę",
         "returnedToClient": "Zwrócono klientowi",
+        "deadUnitShipped": "Uszkodzona jednostka wysłana do dostawcy",
+        "vendorReceiptConfirmed": "Dostawca otrzymał uszkodzoną jednostkę",
         "closed": "Zamknięte",
         "note": "Notatka"
       },
