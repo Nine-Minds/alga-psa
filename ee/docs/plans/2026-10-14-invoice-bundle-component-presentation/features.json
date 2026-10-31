@@ -18,7 +18,7 @@
   {
     "id": "F003",
     "description": "Contract line and template line types expose invoice title and subtitle",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R1"
     ]
@@ -26,7 +26,7 @@
   {
     "id": "F004",
     "description": "Contract line update action persists title and subtitle for Fixed lines, including when the contract already has invoices",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R1"
     ]
@@ -50,7 +50,7 @@
   {
     "id": "F007",
     "description": "Contract template line editor captures invoice title and subtitle",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R1"
     ]
@@ -58,7 +58,7 @@
   {
     "id": "F008",
     "description": "Template clone copies invoice title and subtitle onto the client contract line",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R1"
     ]
@@ -66,7 +66,7 @@
   {
     "id": "F009",
     "description": "Contract line REST schemas accept and return invoice title and subtitle and the MCP registry is regenerated",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R1"
     ]
@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "Fixed charge computation carries the raw configured/revision quantity and pricing_basis on every fixed charge without changing amounts",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R2"
     ]
@@ -90,7 +90,7 @@
   {
     "id": "F012",
     "description": "persistFixedInvoiceCharges writes a version-1 bundle_presentation snapshot for every consolidated fixed parent in the persistence transaction",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R2"
     ]
@@ -114,7 +114,7 @@
   {
     "id": "F015",
     "description": "Snapshot contains no amounts; existing parent, detail and fixed-detail columns and values are unchanged",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R2"
     ]
@@ -122,7 +122,7 @@
   {
     "id": "F016",
     "description": "Previous-period lookup finds the same contract line's latest prior service period on non-cancelled other invoices in one batched query per invoice",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R3"
     ]
@@ -162,7 +162,7 @@
   {
     "id": "F021",
     "description": "Regenerating a draft recomputes the snapshot; issued invoice snapshots are never rewritten",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R3"
     ]
@@ -170,7 +170,7 @@
   {
     "id": "F022",
     "description": "Invoice model opt-in option loads bundle_presentation and, when requested, fixed-detail allocated amounts and unit rates",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R4"
     ]
@@ -178,7 +178,7 @@
   {
     "id": "F023",
     "description": "REST/MCP invoice item responses are unchanged (opt-in not used)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R4"
     ]
@@ -226,7 +226,7 @@
   {
     "id": "F029",
     "description": "Bundle items keep quantity 1 and unitPrice equal to total in the data; items without a snapshot map exactly as today",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R4"
     ]
@@ -250,7 +250,7 @@
   {
     "id": "F032",
     "description": "PDF generation and emailed PDFs resolve the client's template before building data and apply the price inclusion rule",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R4"
     ]
@@ -258,7 +258,7 @@
   {
     "id": "F033",
     "description": "MSP invoice preview/drawer builds data for the template it renders and applies the price inclusion rule",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R4"
     ]
@@ -266,7 +266,7 @@
   {
     "id": "F034",
     "description": "Client portal template view and PDF download resolve the client's template and apply the price inclusion rule",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R4"
     ]
@@ -274,7 +274,7 @@
   {
     "id": "F035",
     "description": "Designer existing-invoice preview and samples always include component pricing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R4"
     ]
@@ -282,7 +282,7 @@
   {
     "id": "F036",
     "description": "Components flow through recurringItems, onetimeItems, groupsByLocation and ticketPresentationRows canonical rows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R4"
     ]
@@ -290,7 +290,7 @@
   {
     "id": "F037",
     "description": "Draft/recurring preview view model consolidates each Fixed line into one bundle item with the line's invoice title and components from the shared builder",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R4"
     ]
@@ -298,7 +298,7 @@
   {
     "id": "F038",
     "description": "AutomaticInvoices operator preview dialog keeps its current per-service breakdown",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R4"
     ]
@@ -354,7 +354,7 @@
   {
     "id": "F045",
     "description": "PDF output keeps parent and child rows readable across page breaks with repeated headers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R5"
     ]
@@ -362,7 +362,7 @@
   {
     "id": "F046",
     "description": "Collection descriptors give items a nested components descriptor with component fields for binding pickers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R5"
     ]
@@ -370,7 +370,7 @@
   {
     "id": "F047",
     "description": "Designer table inspector offers a Bundle component rows section on item-shaped tables with on/off toggle",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R5"
     ]
@@ -378,7 +378,7 @@
   {
     "id": "F048",
     "description": "Designer presets Quantities only and Quantities and prices fill the component cell mapping",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R5"
     ]
@@ -386,7 +386,7 @@
   {
     "id": "F049",
     "description": "Designer Show quantity changes checkbox adds or removes the change adornment on the quantity cell",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R5"
     ]
@@ -394,7 +394,7 @@
   {
     "id": "F050",
     "description": "Designer Blank on bundle rows checklist edits parentBlankColumns, defaulting to Qty and Rate",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R5"
     ]
@@ -402,7 +402,7 @@
   {
     "id": "F051",
     "description": "Designer lets authors remap or clear each column's component cell using component-scoped bindings",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R5"
     ]
@@ -410,7 +410,7 @@
   {
     "id": "F052",
     "description": "Enabling component rows adds the subtitle as a muted second description line when the column has no lines",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R5"
     ]
@@ -418,7 +418,7 @@
   {
     "id": "F053",
     "description": "Designer canvas table preview renders component rows from the active sample",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R5"
     ]
@@ -434,7 +434,7 @@
   {
     "id": "F055",
     "description": "Designer sample scenario Managed services bundles mirrors the community screenshot including a mixed seat/allocated bundle",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R5"
     ]
@@ -458,7 +458,7 @@
   {
     "id": "F058",
     "description": "Client portal InvoiceDetailsDialog resolves the client's template and renders component rows under bundle rows when that template has them",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R7"
     ]
@@ -466,7 +466,7 @@
   {
     "id": "F059",
     "description": "Client portal InvoiceDetailsDialog mirrors the template's quantity, change and price visibility and is unchanged otherwise",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R7"
     ]
@@ -474,7 +474,7 @@
   {
     "id": "F060",
     "description": "Client portal details payload carries component prices only when the client's template binds them",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R7"
     ]
@@ -490,7 +490,7 @@
   {
     "id": "F062",
     "description": "Document quantities, signed changes and period labels format with the document's effective locale",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Requirements > Functional Requirements > R8"
     ]

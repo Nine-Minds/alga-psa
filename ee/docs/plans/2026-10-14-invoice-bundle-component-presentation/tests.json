@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "DB integration: a Fixed line mixing unit and bundle services generates an invoice whose bundle_presentation snapshot has the subtitle, names, raw (unclamped, including 0/null configured) quantities, pricing basis and deterministic order, while parent/detail/fixed-detail rows, tax and totals equal the pre-feature baseline for the same data",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F010",
       "F011",
@@ -15,7 +15,7 @@
   {
     "id": "T002",
     "description": "DB integration: two consecutive periods with +2, -1, a newly added service and a removed service produce correct previousQuantity/comparison; first period records no_prior_period; a cancelled prior invoice is ignored",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F016",
       "F017",
@@ -27,7 +27,7 @@
   {
     "id": "T003",
     "description": "DB integration: regenerating a draft after a quantity change recomputes the snapshot, while editing the line's title/subtitle after finalizing leaves the issued invoice's rendering unchanged",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F021"
     ]
@@ -35,7 +35,7 @@
   {
     "id": "T004",
     "description": "DB integration: contract line update persists title/subtitle on a line with existing invoices, and template clone copies both onto the client line",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F001",
       "F002",
@@ -47,7 +47,7 @@
   {
     "id": "T005",
     "description": "DB integration: accounting export selector and /api/v1/invoices/{id}/items return the same parent-only lines and fields for an invoice with bundle snapshots as without",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F023"
     ]
@@ -67,7 +67,7 @@
   {
     "id": "T007",
     "description": "Unit: mapDbInvoiceToWasmViewModel keeps bundle qty 1/rate=total, leaves snapshot-less invoices unchanged, and components appear in recurringItems, groupsByLocation and ticketPresentationRows",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F024",
       "F029",
@@ -77,7 +77,7 @@
   {
     "id": "T008",
     "description": "Unit: invoice model without the opt-in returns exactly today's charge shape; with opt-in attaches bundle_presentation and requested detail amounts",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F022",
       "F023"
@@ -94,7 +94,7 @@
   {
     "id": "T010",
     "description": "Integration: PDF generation for a client assigned the bundle-quantities template builds a view model with no component prices, and for a client on a priced custom template includes them; MSP preview follows the rendered template",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F031",
       "F032",
@@ -124,7 +124,7 @@
   {
     "id": "T013",
     "description": "PDF: server-rendered PDF of a long invoice keeps bundle child rows readable across page breaks with repeated headers",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F045"
     ]
@@ -140,7 +140,7 @@
   {
     "id": "T015",
     "description": "Designer integration: enabling Bundle component rows with each preset, toggling quantity changes and blank-on-bundle columns, and remapping a cell updates the canvas from the bundles sample; save/reopen preserves childRows and the subtitle line",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F035",
       "F046",
@@ -158,7 +158,7 @@
   {
     "id": "T016",
     "description": "Preview: draft/recurring preview view model for a contract with a Fixed line equals the persisted invoice's bundle item and components; AutomaticInvoices dialog still shows its per-service operator breakdown",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F037",
       "F038"
@@ -167,7 +167,7 @@
   {
     "id": "T017",
     "description": "Client portal: for a client on the bundle-quantities template, the template view and InvoiceDetailsDialog show bundle sub-rows and their payloads contain no component price fields; for a client on a standard template the dialog is unchanged",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F034",
       "F058",
@@ -189,7 +189,7 @@
   {
     "id": "T019",
     "description": "i18n: French document renders locale-formatted quantities, signed changes and period labels; new MSP keys exist in all locale packs and locale validation passes",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F061",
       "F062"

@@ -94,15 +94,15 @@ export const BundleComponentRowsWidget: React.FC<Props> = ({ node }) => {
       if (!field) return;
       const previous = cells[columnId] ?? {};
       // Keep anything the author layered on (lines, change adornment); swap the bound value.
-      const { lines: _lines, ...rest } = previous as Record<string, unknown>;
+      const { lines: _lines, ...rest } = previous as unknown as Record<string, unknown>;
       cells[columnId] = {
         ...rest,
         value: { type: 'path', path: field.path },
         format: field.format === 'text' ? undefined : field.format,
         ...(columnId === columnIds.description ? { lines: (previous as { lines?: unknown }).lines } : {}),
       } as BundleChildRows['cells'][string];
-      if (cells[columnId].format === undefined) delete (cells[columnId] as Record<string, unknown>).format;
-      if ((cells[columnId] as Record<string, unknown>).lines === undefined) delete (cells[columnId] as Record<string, unknown>).lines;
+      if (cells[columnId].format === undefined) delete (cells[columnId] as unknown as Record<string, unknown>).format;
+      if ((cells[columnId] as unknown as Record<string, unknown>).lines === undefined) delete (cells[columnId] as unknown as Record<string, unknown>).lines;
     }
     writeChildRows({ ...current, cells });
   };
