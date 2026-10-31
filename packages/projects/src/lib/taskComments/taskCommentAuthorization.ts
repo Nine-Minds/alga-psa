@@ -21,6 +21,7 @@ import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import ProjectModel from '../../models/project';
 import { createProjectReadAuthorizer } from '../projectReadAuthorization';
+import { collaborationActive, resolveTaskCommentCollaboration, type TaskCommentCollaboration } from './taskCommentCollaboration';
 
 export type TaskCommentAction = 'read' | 'create' | 'update' | 'delete' | 'react';
 
@@ -31,12 +32,19 @@ export type TaskCommentBatchTarget = { taskIds: string[] } | { taskCommentIds: s
 export type TaskCommentAccessRow = { taskId: string; projectId: string };
 export type TaskCommentAccessContext = TaskCommentAccessRow & {
   trx: Knex.Transaction;
-  comment?: { task_comment_id: string; task_id: string; user_id: string };
+  /** user_id is null for collaborator- and contact-authored rows. */
+  comment?: { task_comment_id: string; task_id: string; user_id: string | null };
+  /** Present only for an active co-managed workspace (see taskCommentCollaboration.ts). */
+  collaboration?: TaskCommentCollaboration;
 };
 export type TaskCommentBatchAccessContext = {
   trx: Knex.Transaction;
   /** Authorized task ids (taskIds target) or comment ids (taskCommentIds target). */
   ids: string[];
+  /** Present only for an active co-managed workspace; admits exactly `ids`' tasks. */
+  collaboration?: TaskCommentCollaboration;
+  /** comment id -> task id, for per-task redaction of a comment batch. */
+  taskIdByComment?: ReadonlyMap<string, string>;
 };
 
 const COARSE_PERMISSION: Record<TaskCommentAction, 'read' | 'create' | 'update' | 'delete'> = {
@@ -53,7 +61,7 @@ const NOT_FOUND = {
 } as const;
 
 type ResolvedTask = { task_id: string; project_id: string };
-type CommentRow = { task_comment_id: string; task_id: string; user_id: string };
+type CommentRow = { task_comment_id: string; task_id: string; user_id: string | null };
 
 async function resolveTasks(trx: Knex.Transaction, tenant: string, taskIds: string[]): Promise<ResolvedTask[]> {
   if (taskIds.length === 0) return [];
@@ -141,7 +149,11 @@ export async function withTaskCommentAccess<T>(
       }
     }
 
-    return work({ trx, taskId, projectId: task.project_id, ...(comment ? { comment } : {}) });
+    // Co-managed workspaces only: null (and no statement issued) for every other tenant.
+    const collaboration = await resolveTaskCommentCollaboration(db, trx, tenant, user, [taskId], writes || action === 'react' ? 'update' : 'read');
+    const result = await work({ trx, taskId, projectId: task.project_id, ...(comment ? { comment } : {}), ...(collaboration ? { collaboration } : {}) });
+    await collaboration?.assertCurrent();
+    return result;
   });
 }
 
@@ -174,6 +186,21 @@ export async function withTaskCommentBatchReadAccess<T>(
       allowed = comments.filter((_, i) => flags[i]).map((c) => c.task_comment_id);
     }
 
-    return work({ trx, ids: allowed });
+    let collaboration: TaskCommentCollaboration | null = null;
+    let taskIdByComment: Map<string, string> | undefined;
+    if (allowed.length > 0 && await collaborationActive(db, tenant)) {
+      let taskIds: string[];
+      if ('taskIds' in target) {
+        taskIds = allowed;
+      } else {
+        const rows = await resolveComments(trx, tenant, allowed);
+        taskIdByComment = new Map(rows.map((row) => [row.task_comment_id, row.task_id]));
+        taskIds = [...new Set(rows.map((row) => row.task_id))];
+      }
+      collaboration = await resolveTaskCommentCollaboration(db, trx, tenant, user, taskIds, 'read');
+    }
+    const result = await work({ trx, ids: allowed, ...(collaboration ? { collaboration, ...(taskIdByComment ? { taskIdByComment } : {}) } : {}) });
+    await collaboration?.assertCurrent();
+    return result;
   });
 }

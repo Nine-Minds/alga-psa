@@ -212,7 +212,7 @@ const TaskComment: React.FC<TaskCommentProps> = ({
         <div className="mr-2">
           <UserAvatar
             {...withDataAutomationId({ id: `${commentId}-avatar` })}
-            userId={comment.userId}
+            userId={comment.userId ?? ''}
             userName={authorName}
             avatarUrl={comment.avatarUrl || null}
             size="md"
