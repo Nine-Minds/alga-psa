@@ -336,3 +336,23 @@ export async function listCoManagedLiveSponsoredRelationships(db: Knex, actor: C
     return result.sort((a, b) => a.name.localeCompare(b.name));
   });
 }
+
+/** Every live relationship this customer holds with a sponsor, for its own administration. The customer-side twin of
+ * `listCoManagedLiveSponsoredRelationships`: it needs the actor's `co_management:read` or `:manage` (current rows), and the
+ * gate runs before any relationship or sponsor row is read, so an unauthorized actor causes no cross-tenant read. */
+export async function listCoManagedLiveCustomerRelationships(db: Knex, actor: CoManagedHomeActor): Promise<{ relationshipId: string; sponsorTenant: string; name: string }[]> {
+  if (![actor.tenant, actor.userId].every(isCoManagedUuid)) throw new CoManagedPolicyError('INVALID_POLICY');
+  return withTransaction(db, async trx => {
+    await requireCoManagedPolicyReader(trx, actor);
+    const home = tenantDb(trx, actor.tenant);
+    if (!await home.table('tenants').where({ product_code: 'co_managed' }).whereNull('suspended_at').first('tenant')) throw new CoManagedPolicyError('FORBIDDEN');
+    const rows = await home.table('co_management_relationships').where({ state: 'active' }).whereNull('ended_at').select('relationship_id', 'sponsor_tenant');
+    const result: { relationshipId: string; sponsorTenant: string; name: string }[] = [];
+    for (const row of rows) {
+      if (!isCoManagedUuid(row.sponsor_tenant)) continue;
+      const sponsor = await tenantDb(trx, row.sponsor_tenant as string).table('tenants').first('client_name');
+      result.push({ relationshipId: row.relationship_id, sponsorTenant: row.sponsor_tenant, name: sponsor?.client_name ?? '' });
+    }
+    return result.sort((a, b) => a.name.localeCompare(b.name));
+  });
+}
