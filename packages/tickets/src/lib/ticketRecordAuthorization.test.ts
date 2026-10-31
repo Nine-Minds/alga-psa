@@ -106,7 +106,6 @@ describe('authorizeTicketRecordAccess (client principals)', () => {
 describe('authorizeTicketRecordAccessConcealed conceal option', () => {
   const internal = { user_id: 'i1', user_type: 'internal', roles: [{ role_id: 'r' }] } as any;
   const row = { ticket_id: 't1', client_id: 'c', board_id: 'b', assigned_to: null, entered_by: null, assigned_team_id: null };
-  const kernel = vi.hoisted(() => ({ allowed: true }));
 
   const run = (user: any, ticket: any, extra: Record<string, unknown> = {}) =>
     authorizeTicketRecordAccessConcealed({ trx: fakeTrx(ticket), tenant: 'tenant-1', user, ticketId: 't1', action: 'read', ...extra });
@@ -119,7 +118,12 @@ describe('authorizeTicketRecordAccessConcealed conceal option', () => {
     ]);
   };
 
-  beforeEach(() => { getVisibilityMock.mockReset(); void kernel; });
+  beforeEach(async () => {
+    getVisibilityMock.mockReset();
+    // denyAll() overrides this; restore the file-level default ([]) so it cannot leak.
+    const svc = await import('@alga-psa/authorization/bundles/service');
+    (svc.resolveBundleNarrowingRulesForEvaluation as any).mockReset().mockResolvedValue([]);
+  });
 
   it('default and "client" keep the kernel denial message for internal users', async () => {
     await denyAll();
