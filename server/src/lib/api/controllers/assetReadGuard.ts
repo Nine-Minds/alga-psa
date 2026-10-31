@@ -15,7 +15,8 @@ import type { ApiContext } from '../middleware/apiMiddleware';
 import { ForbiddenError, NotFoundError, UnauthorizedError } from '../middleware/apiErrors';
 import { hasPermission } from '../../auth/rbac';
 import { getConnection } from '../../db/db';
-import { projectApiResourceRead } from './authorizationKernel';
+import { projectApiResourceRead, reprojectUnderDecision, type AuthorizedProjection } from './authorizationKernel';
+import { ASSET_RECORD_SOURCE } from '@alga-psa/co-managed/recordProjection';
 
 export const ASSET_NOT_FOUND_MESSAGE = 'Asset not found';
 
@@ -31,17 +32,21 @@ export function assetNotFoundResponse(): NextResponse {
 }
 
 /**
- * Throw-based core of the asset read guard, shared by REST routes (via
- * guardAssetRead) and callers that must throw (e.g. document attach adapters).
- * Throws UnauthorizedError (401), ForbiddenError (403) or NotFoundError (404;
- * both a missing record and a record-level denial).
+ * Throw-based core of the asset read guard, shared by REST routes (via guardAssetRead / readAssetProjectionResponse)
+ * and callers that must throw (e.g. document attach adapters). Throws UnauthorizedError (401), ForbiddenError (403)
+ * or NotFoundError (404; both a missing record and a record-level denial or suppression).
+ *
+ * Returns the redacted projection. By default that is the authorization record (callers that only gate ignore it);
+ * with `serialize` it is the record that function loads (only after access is allowed), projected under the SAME
+ * single kernel decision.
  */
-export async function assertAssetRecordAccess(
+export async function assertAssetRecordAccess<S extends Record<string, any> = Record<string, any>>(
   context: ApiContext,
   assetId: string,
   loader: AssetAuthorizationLoader,
   extraReadResources: Array<'ticket'> = [],
-): Promise<void> {
+  serialize?: () => Promise<S | null>,
+): Promise<AuthorizedProjection<S>> {
   if (!context.user) {
     throw new UnauthorizedError('User context required');
   }
@@ -61,9 +66,8 @@ export async function assertAssetRecordAccess(
     throw new NotFoundError(ASSET_NOT_FOUND_MESSAGE);
   }
 
-  // Gate only: the authorization record is never serialized, so `projection !== null` is all that is used. A denied
-  // or suppressed asset answers the same 404 as a missing one.
-  const projection = await projectApiResourceRead({
+  // A denied or suppressed asset answers the same 404 as a missing one.
+  const gate = await projectApiResourceRead({
     knex,
     tenant: context.tenant,
     user: context.user,
@@ -72,12 +76,37 @@ export async function assertAssetRecordAccess(
     record: record as Record<string, any>,
     recordContext: record as any,
   });
+  if (gate === null) {
+    throw new NotFoundError(ASSET_NOT_FOUND_MESSAGE);
+  }
+  if (!serialize) {
+    return gate as unknown as AuthorizedProjection<S>;
+  }
+
+  // Nothing is read for the response until the decision allows it; the detailed record is then redacted under that
+  // same decision (no second kernel call).
+  const detail = await serialize();
+  const projection = detail ? reprojectUnderDecision(gate, detail, ASSET_RECORD_SOURCE) : null;
   if (projection === null) {
     throw new NotFoundError(ASSET_NOT_FOUND_MESSAGE);
   }
+  return projection;
 }
 
-/** Returns an error response when the caller may not read the asset, else null. */
+function errorToResponse(error: unknown): NextResponse {
+  if (error instanceof UnauthorizedError) {
+    return createErrorResponse('User context required', 401, 'UNAUTHORIZED');
+  }
+  if (error instanceof ForbiddenError) {
+    return createErrorResponse(error.message, 403, 'FORBIDDEN');
+  }
+  if (error instanceof NotFoundError) {
+    return assetNotFoundResponse();
+  }
+  throw error;
+}
+
+/** Gate only: an error response when the caller may not read the asset, else null. Nothing is serialized from it. */
 export async function guardAssetRead(
   context: ApiContext,
   assetId: string,
@@ -88,16 +117,22 @@ export async function guardAssetRead(
     await assertAssetRecordAccess(context, assetId, loader, extraReadResources);
     return null;
   } catch (error) {
-    if (error instanceof UnauthorizedError) {
-      return createErrorResponse('User context required', 401, 'UNAUTHORIZED');
-    }
-    if (error instanceof ForbiddenError) {
-      return createErrorResponse(error.message, 403, 'FORBIDDEN');
-    }
-    if (error instanceof NotFoundError) {
-      return assetNotFoundResponse();
-    }
-    throw error;
+    return errorToResponse(error);
+  }
+}
+
+/** Routes that return the asset's own fields: the redacted projection of `serialize()`'s record, or an error response. */
+export async function readAssetProjection<S extends Record<string, any>>(
+  context: ApiContext,
+  assetId: string,
+  loader: AssetAuthorizationLoader,
+  serialize: () => Promise<S | null>,
+  extraReadResources: Array<'ticket'> = [],
+): Promise<{ projection: AuthorizedProjection<S>; denied: null } | { projection: null; denied: NextResponse }> {
+  try {
+    return { projection: await assertAssetRecordAccess(context, assetId, loader, extraReadResources, serialize), denied: null };
+  } catch (error) {
+    return { projection: null, denied: errorToResponse(error) };
   }
 }
 

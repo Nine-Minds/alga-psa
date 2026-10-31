@@ -6,6 +6,7 @@ import {
   QUOTE_RECORD_SOURCE,
   TICKET_RECORD_SOURCE,
   projectRecordByRedactions,
+  type RedactableRecordSource,
 } from '@alga-psa/co-managed/recordProjection';
 import { buildProjectRecordContext, buildQuoteRecordContext, buildTicketRecordContext } from './recordContexts';
 import type {
@@ -113,6 +114,26 @@ const projectionMark = Symbol('authorizedProjection');
  */
 export type AuthorizedProjection<T = Record<string, any>> = Partial<T> & { readonly [authorizedProjectionBrand]: true };
 
+const projectionRedactions = Symbol('authorizedProjectionRedactions');
+
+/**
+ * Projects another record owned by the same authorized resource (a mutation result, quote lines, ...) under the
+ * decision that produced `projection`, so it is never re-authorized and never served unredacted. Returns null when the
+ * redactions suppress the record under `source` (default: the projection's own record kind).
+ */
+export function reprojectUnderDecision<R extends Record<string, any>>(
+  projection: AuthorizedProjection<any>,
+  record: R,
+  source: RedactableRecordSource,
+): AuthorizedProjection<R> | null {
+  const redactions: readonly string[] = (projection as any)[projectionRedactions] ?? [];
+  const projected = projectRecordByRedactions(redactions, record, source);
+  if (projected === null) return null;
+  Object.defineProperty(projected, projectionMark, { value: true, enumerable: false });
+  Object.defineProperty(projected, projectionRedactions, { value: redactions, enumerable: false });
+  return projected as AuthorizedProjection<R>;
+}
+
 export function isAuthorizedProjection(value: unknown): value is AuthorizedProjection {
   return typeof value === 'object' && value !== null && (value as any)[projectionMark] === true;
 }
@@ -171,6 +192,7 @@ export async function projectApiResourceRead<T extends Record<string, any>>(
     return null;
   }
   Object.defineProperty(projected, projectionMark, { value: true, enumerable: false });
+  Object.defineProperty(projected, projectionRedactions, { value: decision.redactedFields ?? [], enumerable: false });
   return projected as AuthorizedProjection<T>;
 }
 

@@ -17,6 +17,8 @@ const state = vi.hoisted(() => ({
   projects: [] as Record<string, any>[],
   tickets: [] as Record<string, any>[],
   quote: null as Record<string, any> | null,
+  assets: [] as Record<string, any>[],
+  assetTickets: [] as Record<string, any>[],
 }));
 
 const authorizeResource = vi.hoisted(() =>
@@ -60,8 +62,25 @@ vi.mock('../../../lib/api/services/TicketService', () => ({
     list = vi.fn(async () => ({ data: state.tickets, total: state.tickets.length }));
   },
 }));
+vi.mock('@alga-psa/assets/lib/assetReadAuthorization', () => ({
+  resolveAssetAuthorizationRecords: vi.fn(async (_knex: unknown, _tenant: string, rows: { asset_id: string }[]) =>
+    new Map(rows.map((row) => [row.asset_id, { id: row.asset_id }]))),
+}));
+vi.mock('@/lib/productAccess', () => ({ getTenantProduct: vi.fn(async () => 'psa'), ProductAccessError: class extends Error {} }));
+vi.mock('@/lib/productSurfaceRegistry', () => ({ resolveProductApiBehavior: vi.fn(() => 'allowed') }));
+vi.mock('../../../lib/api/services/AssetService', () => ({
+  AssetService: class {
+    getAuthorizationRecord = vi.fn(async (id: string) => (state.assets.some((a) => a.asset_id === id) ? { id } : null));
+    getWithDetails = vi.fn(async (id: string) => state.assets.find((a) => a.asset_id === id) ?? null);
+    list = vi.fn(async () => ({ data: state.assets, total: state.assets.length }));
+    search = vi.fn(async () => state.assets);
+    getAssetTickets = vi.fn(async () => state.assetTickets);
+  },
+}));
 vi.mock('../../../lib/api/services/QuoteService', () => ({
   QuoteService: class {
+    listItems = vi.fn(async () => state.quote?.items ?? []);
+    requestChanges = vi.fn(async () => ({ ...state.quote, status: 'draft' }));
     getById = vi.fn(async () => state.quote);
     list = vi.fn(async () => ({ data: state.quote ? [state.quote] : [], total: state.quote ? 1 : 0 }));
   },
@@ -71,6 +90,7 @@ import { ApiBaseController } from '../../../lib/api/controllers/ApiBaseControlle
 import { ApiProjectController } from '../../../lib/api/controllers/ApiProjectController';
 import { ApiTicketController } from '../../../lib/api/controllers/ApiTicketController';
 import { ApiQuoteController } from '../../../lib/api/controllers/ApiQuoteController';
+import { ApiAssetController } from '../../../lib/api/controllers/ApiAssetController';
 import { ApiInventoryController } from '../../../lib/api/controllers/ApiInventoryController';
 import { ENTITY_ADAPTERS } from '../../../lib/api/services/documents/entityAdapters';
 
@@ -94,6 +114,8 @@ beforeEach(() => {
   state.projects = [project(P1), project(P2, { budgeted_hours: 10 }), project(P3, { budgeted_hours: 5 })];
   state.tickets = [];
   state.quote = null;
+  state.assets = [];
+  state.assetTickets = [];
   authorizeResource.mockClear();
   vi.spyOn(ApiBaseController.prototype as any, 'authenticate').mockImplementation(async (req: any) => {
     req.context = context;
@@ -214,11 +236,7 @@ describe('quotes: REST reads serialize the projection', () => {
 
 describe('assets / inventory lookup and document adapters', () => {
   it('inventory lookup authorizer returns redacted asset projections and drops suppressed assets', async () => {
-    vi.doMock('@alga-psa/assets/lib/assetReadAuthorization', () => ({
-      resolveAssetAuthorizationRecords: vi.fn(async () => new Map([['a-1', { id: 'a-1' }], ['a-2', { id: 'a-2' }]])),
-    }));
-    vi.resetModules();
-    const { ApiInventoryController: Controller } = await import('../../../lib/api/controllers/ApiInventoryController');
+    const Controller = ApiInventoryController;
     state.decisions.set('a-1', { allowed: true, redactedFields: ['vendor_id'] });
     state.decisions.set('a-2', { allowed: true, redactedFields: ['assets'] });
     const authorizer = (new Controller() as any).buildAssetLookupAuthorizer({ context });
@@ -227,7 +245,24 @@ describe('assets / inventory lookup and document adapters', () => {
       { asset_id: 'a-2', name: 'Hidden' },
     ]);
     expect(readable).toEqual([{ asset_id: 'a-1', vendor_name: null, name: 'PC' }]);
-    vi.doUnmock('@alga-psa/assets/lib/assetReadAuthorization');
+  });
+
+  it('project_task attach adapter answers 404 for a suppressed or denied parent project (gate only)', async () => {
+    const { tenantDb } = await import('@alga-psa/db');
+    const taskChain = () => {
+      const chain: any = { where: () => chain, tenantJoin: () => undefined, first: async () => ({ project_id: 'p-1' }) };
+      return { table: () => chain, tenantJoin: () => undefined };
+    };
+    for (const decision of [
+      { allowed: true, redactedFields: ['projects'] },
+      { allowed: false, redactedFields: [] },
+    ]) {
+      state.decisions.set('p-1', decision);
+      (tenantDb as any).mockReturnValueOnce(taskChain());
+      await expect(
+        ENTITY_ADAPTERS.project_task.assertCanAttach({ context } as any, 't-1', {} as any)
+      ).rejects.toMatchObject({ statusCode: 404 });
+    }
   });
 
   it('ticket attach adapter answers 404 for a suppressed ticket (gate only)', async () => {
@@ -240,4 +275,101 @@ describe('assets / inventory lookup and document adapters', () => {
   });
 });
 
-void ApiInventoryController;
+
+describe('asset routes serialize the projection', () => {
+  const A1 = 'a-1', A2 = 'a-2';
+  const asset = (id: string, extra: Record<string, any> = {}) => ({
+    asset_id: id, name: `Asset ${id}`, serial_number: 'SN-1', purchase_price: 900, vendor_id: 'v-1', vendor_name: 'Dell', ...extra,
+  });
+  const controller = () => new ApiAssetController();
+  beforeEach(() => {
+    state.assets = [asset(A1), asset(A2)];
+  });
+
+  it('get serializes the detailed record under one decision, redacted', async () => {
+    state.decisions.set(A1, { allowed: true, redactedFields: ['serial_number', 'vendor_id'] });
+    state.assets = [asset(A1, { documents: [{ document_id: 'd-1' }] })];
+    const res = await controller().getById(request(`/api/v2/assets/${A1}`), { id: A1 });
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data).toMatchObject({ asset_id: A1, name: 'Asset a-1', documents: [{ document_id: 'd-1' }] });
+    expect(data).not.toHaveProperty('serial_number');
+    expect(data.vendor_name).toBeNull();
+    expect(authorizeResource).toHaveBeenCalledTimes(1);
+  });
+
+  it('a suppressed or denied get is 404', async () => {
+    state.decisions.set(A1, { allowed: true, redactedFields: ['assets'] });
+    expect((await controller().getById(request(`/api/v2/assets/${A1}`), { id: A1 })).status).toBe(404);
+    state.decisions.set(A1, { allowed: false, redactedFields: [] });
+    expect((await controller().getById(request(`/api/v2/assets/${A1}`), { id: A1 })).status).toBe(404);
+  });
+
+  it('list omits hidden fields and drops suppressed rows from rows and total', async () => {
+    state.decisions.set(A1, { allowed: true, redactedFields: ['purchase_price'] });
+    state.decisions.set(A2, { allowed: true, redactedFields: ['asset_id'] });
+    const body = await (await controller().list(request('/api/v2/assets?page=1&limit=25'))).json();
+    expect(body.data.map((a: any) => a.asset_id)).toEqual([A1]);
+    expect(body.data[0]).not.toHaveProperty('purchase_price');
+    expect(body.meta?.total ?? body.pagination?.total).toBe(1);
+  });
+
+  it('search and export (csv and json) omit hidden fields and suppressed rows', async () => {
+    state.decisions.set(A1, { allowed: true, redactedFields: ['purchase_price'] });
+    state.decisions.set(A2, { allowed: true, redactedFields: ['*'] });
+    const search = await (await controller().search(request('/api/v2/assets/search?query=x'))).json();
+    expect(search.data.map((a: any) => a.asset_id)).toEqual([A1]);
+    expect(search.data[0]).not.toHaveProperty('purchase_price');
+
+    state.decisions.set(A2, { allowed: true, redactedFields: ['purchase_price'] });
+    const json = await (await controller().export(request('/api/v2/assets/export?format=json'))).json();
+    expect(json.data).toHaveLength(2);
+    expect(json.data.every((a: any) => !('purchase_price' in a))).toBe(true);
+    const csv = await (await controller().export(request('/api/v2/assets/export?format=csv'))).text();
+    expect(csv.split('\n')[0]).not.toContain('purchase_price');
+    expect(csv).not.toContain('900');
+  });
+
+  it('asset tickets are redacted under the ticket policy and hidden tickets dropped', async () => {
+    state.assets = [asset(A1)];
+    state.assetTickets = [
+      { ticket_id: 't-1', title: 'Visible', assigned_to: 'u-9' },
+      { ticket_id: 't-2', title: 'Hidden' },
+    ];
+    state.decisions.set('t-1', { allowed: true, redactedFields: ['assigned_to'] });
+    state.decisions.set('t-2', { allowed: true, redactedFields: ['tickets'] });
+    const { data } = await (await controller().listTickets(request(`/api/v1/assets/${A1}/tickets`), { id: A1 })).json();
+    expect(data).toEqual([{ ticket_id: 't-1', title: 'Visible' }]);
+  });
+});
+
+describe('quote responses and items are projected', () => {
+  const QUOTE = '44444444-4444-4444-4444-444444444442';
+  beforeEach(() => {
+    state.quote = {
+      quote_id: QUOTE, title: 'Q', status: 'pending_approval', subtotal: 10, tax: 1, created_by: 'u-1',
+      items: [{ quote_item_id: 'i-1', unit_price: 5, quantity: 2, total_price: 10, description: 'Line' }],
+    };
+  });
+
+  it('requestChanges serializes the post-mutation quote redacted', async () => {
+    state.decisions.set(QUOTE, { allowed: true, redactedFields: ['subtotal'] });
+    const req = request(`/api/v1/quotes/${QUOTE}/request-changes`, { id: QUOTE }) as any;
+    req.text = async () => JSON.stringify({ reason: 'please revise' });
+    const res = await new ApiQuoteController().requestChanges()(req);
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data.status).toBe('draft');
+    expect(data).not.toHaveProperty('subtotal');
+    expect(data.created_by).toBe('u-1');
+  });
+
+  it('items GET hides redacted line prices and nulls totals derived from them', async () => {
+    state.decisions.set(QUOTE, { allowed: true, redactedFields: ['unit_price'] });
+    const res = await new ApiQuoteController().listItems()(request(`/api/v1/quotes/${QUOTE}/items`, { id: QUOTE }));
+    const { data } = await res.json();
+    expect(data[0]).not.toHaveProperty('unit_price');
+    expect(data[0].total_price).toBeNull();
+    expect(data[0].description).toBe('Line');
+  });
+});

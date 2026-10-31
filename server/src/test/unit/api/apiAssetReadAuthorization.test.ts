@@ -59,6 +59,8 @@ vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
     state.calls.push('record-level');
     return state.recordLevelAllowed ? input.record : null;
   }),
+  projectApiResourceReads: vi.fn(async (input: { records: object[] }) => input.records),
+  reprojectUnderDecision: vi.fn((_gate: object, record: object) => record),
 }));
 
 const { ApiAssetController } = await import('@/lib/api/controllers/ApiAssetController');

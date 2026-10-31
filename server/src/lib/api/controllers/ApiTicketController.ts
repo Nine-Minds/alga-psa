@@ -30,6 +30,7 @@ import {
   projectApiResourceReads,
   type AuthorizedProjection,
 } from './authorizationKernel';
+import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import { compileTenantScopedResourceReadAuthorizationSql, resolveDefaultBuiltinRelationshipRules } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
@@ -77,7 +78,7 @@ import {
 // empty in CE, populated in EE). Returns null when a rule isn't representable in
 // SQL so the caller falls back to the per-row JS kernel. RBAC is gated upstream
 // by checkPermission('read'), exactly as the per-row path relies on.
-async function resolveTicketReadAuthorizationApplier(
+export async function resolveTicketReadAuthorizationApplier(
   apiRequest: AuthenticatedApiRequest,
   knex: Knex
 ): Promise<((query: TenantScopedQuery) => void) | null> {
@@ -109,6 +110,20 @@ async function resolveTicketReadAuthorizationApplier(
   // The SQL path pages and counts rows before redaction could suppress any, and would serialize unprojected rows.
   // Any rule that redacts fields forces the per-row projector path instead.
   if (bundleRules.some((rule) => (rule.redactedFields?.length ?? 0) > 0 || rule.constraintKey === 'hide_sensitive_fields')) {
+    return null;
+  }
+
+  // Redactions can also come from the builtin provider's resolver, which no rule list reveals. Ask the kernel the same
+  // question the projector will ask (field redactions for this subject on tickets); anything non-empty means the SQL
+  // path would serialize rows the projector redacts, so the per-row path must run instead.
+  const kernel = await getAuthorizationKernel();
+  const builtinRedactions = await kernel.resolveFieldRedactions({
+    knex: knex as any,
+    subject,
+    resource: { type: 'ticket', action: 'read' },
+    record: { id: '00000000-0000-0000-0000-000000000000' },
+  });
+  if (builtinRedactions.length > 0) {
     return null;
   }
 
