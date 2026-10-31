@@ -54,8 +54,8 @@
   },
   {
     "id": "T006",
-    "description": "Unit: component builder maps snapshots \u2014 quantityChange null when not compared/unchanged, priced output gives allocated totals summing to the bundle total and unit rates only for unit-basis, unpriced output has no unitPrice/total keys, multi-period split vs collapse",
-    "implemented": false,
+    "description": "Unit: component builder maps snapshots — quantityChange null when not compared/unchanged, priced output gives allocated totals summing to the bundle total and unit rates only for unit-basis, unpriced output has no unitPrice/total keys, multi-period split vs collapse",
+    "implemented": true,
     "featureIds": [
       "F025",
       "F026",
@@ -86,7 +86,7 @@
   {
     "id": "T009",
     "description": "Unit: templateUsesComponentPricing is true for the Quantities and prices preset and custom bindings to component.total/unitPrice, false for the Quantities only preset and templates without childRows",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F030"
     ]
@@ -104,7 +104,7 @@
   {
     "id": "T011",
     "description": "Unit: AST schema accepts childRows and rejects unknown props; evaluator yields no child rows for a missing source; transforms and aggregates over items are unchanged when childRows exist",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F039",
       "F040",
@@ -113,8 +113,8 @@
   },
   {
     "id": "T012",
-    "description": "Render: react renderer / server HTML for the screenshot scenario shows indented child rows, blanked parent Qty/Rate only on bundle rows, empty unmapped cells, green +2 and red \u22121, nothing for 0/null, and ordinary lines with qty/rate/amount",
-    "implemented": false,
+    "description": "Render: react renderer / server HTML for the screenshot scenario shows indented child rows, blanked parent Qty/Rate only on bundle rows, empty unmapped cells, green +2 and red −1, nothing for 0/null, and ordinary lines with qty/rate/amount",
+    "implemented": true,
     "featureIds": [
       "F041",
       "F042",
@@ -132,7 +132,7 @@
   {
     "id": "T014",
     "description": "Migration: standard-bundle-quantities renders the screenshot layout for the bundle sample and plain rows for an invoice without snapshots; existing standard template rows and a saved custom template AST are byte-identical after migration",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056"
     ]
