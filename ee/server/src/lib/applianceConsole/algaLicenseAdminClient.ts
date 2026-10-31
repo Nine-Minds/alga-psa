@@ -301,6 +301,25 @@ export async function revokeApplianceEntitlement(stripeSubId: string): Promise<{
   return send<{ revoked: boolean }>('POST', '/revoke', { stripe_sub_id: stripeSubId });
 }
 
+/**
+ * Payment-failure context for the check-in (informational — never changes
+ * `active`; that is revokeApplianceEntitlement). Idempotent in C4; an unknown
+ * subscription is a no-op (`updated:false`).
+ *  - `failed`: `next_retry_at` is unix seconds; omit to keep the stored value,
+ *    null to clear it (retries exhausted). Same for `update_payment_url`.
+ *  - `ok`: payments recovered; clears everything.
+ */
+export type ApplianceSubscriptionPaymentState =
+  | { state: 'failed'; next_retry_at?: number | null; update_payment_url?: string | null }
+  | { state: 'ok' };
+
+export async function setApplianceEntitlementPaymentState(
+  stripeSubId: string,
+  payment: ApplianceSubscriptionPaymentState,
+): Promise<{ updated: boolean }> {
+  return send<{ updated: boolean }>('PATCH', `/entitlements/${encodeURIComponent(stripeSubId)}/payment-state`, payment);
+}
+
 /** Record a new seat count on the tenant's active entitlement (after Stripe changed). */
 export async function updateApplianceEntitlementSeats(
   tenantId: string,
