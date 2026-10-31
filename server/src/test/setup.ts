@@ -489,6 +489,20 @@ vi.mock('server/src/app/api/auth/[...nextauth]/edge-auth', () => ({
   auth: vi.fn().mockResolvedValue(null),
 }));
 
+// One hasPermission instance shared by the '@alga-psa/auth' facade mock and the
+// '@alga-psa/auth/rbac' mock below. Production code imports it from either
+// specifier (e.g. the email-provider guards use '@alga-psa/auth/rbac'), so a
+// per-test override must be visible through both. Defaults to allow; suites
+// that exercise real RBAC opt out with vi.mock/vi.importActual.
+const sharedAuthMocks = vi.hoisted(() => ({
+  hasPermission: vi.fn().mockResolvedValue(true),
+}));
+
+vi.mock('@alga-psa/auth/rbac', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  hasPermission: sharedAuthMocks.hasPermission,
+}));
+
 vi.mock('@alga-psa/auth', async () => {
   const { AsyncLocalStorage } = await import('node:async_hooks');
 
@@ -507,7 +521,7 @@ vi.mock('@alga-psa/auth', async () => {
 
   const getCurrentUser = vi.fn(async () => getApiKeyUserOverride() ?? defaultUser);
   const getCurrentUserWithRevocationCheck = vi.fn(async () => getApiKeyUserOverride() ?? defaultUser);
-  const hasPermission = vi.fn().mockResolvedValue(true);
+  const hasPermission = sharedAuthMocks.hasPermission;
   // Mirrors packages/auth rbac: one PermissionResult per check, in order.
   // Delegates to hasPermission so per-test permission overrides apply to both.
   const checkMultiplePermissions = vi.fn(async (user: any, checks: Array<{ resource: string; action: string }>, knex?: any) =>

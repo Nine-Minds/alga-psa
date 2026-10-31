@@ -40,6 +40,8 @@ const remote = vi.hoisted(() => {
 
 // The withAuth/getSession/getCurrentUser seam. `@alga-psa/auth/rbac` is NOT
 // mocked: the role matrix must read real role_permissions from the database.
+// server/src/test/setup.ts mocks it globally, so opt back out explicitly.
+vi.unmock('@alga-psa/auth/rbac');
 vi.mock('@alga-psa/auth', async () => {
   const { createAuthModuleMock } = await import('../../../../test-utils/authModuleMock');
   const authMock = createAuthModuleMock();
