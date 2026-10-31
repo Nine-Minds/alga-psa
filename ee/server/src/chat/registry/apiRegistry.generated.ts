@@ -55727,6 +55727,63 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "post-_api_v1_quotes_id_cancel",
+    "method": "post",
+    "path": "/api/v1/quotes/{id}/cancel",
+    "displayName": "Cancel quote",
+    "summary": "Cancel quote",
+    "description": "Cancels quote via cancel(); requires billing:update. Quote status is not editable through PUT /api/v1/quotes/{id}.",
+    "tags": [
+      "Quotes & Contracts v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Quote UUID from quotes.quote_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Quote UUID from quotes.quote_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "additionalProperties": {},
+      "description": "Controller/service-specific payload; see quote/contract controller schemas for exact required fields."
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "post-_api_v1_quotes_id_remind",
     "method": "post",
     "path": "/api/v1/quotes/{id}/remind",
