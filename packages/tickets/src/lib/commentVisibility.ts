@@ -38,7 +38,7 @@ export function commentVisibleToClient(
   return true;
 }
 
-function redactCommentForClient<T extends IComment>(comment: T): T {
+export function redactCommentForClient<T extends IComment>(comment: T): T {
   const redacted: Record<string, unknown> = { ...(comment as unknown as Record<string, unknown>) };
   for (const field of CLIENT_REDACTED_COMMENT_FIELDS) {
     delete redacted[field];
@@ -57,6 +57,31 @@ function redactCommentForClient<T extends IComment>(comment: T): T {
     redacted.metadata = null;
   }
   return redacted as unknown as T;
+}
+
+/** Placeholder body shown for a soft-deleted comment. */
+export const DELETED_COMMENT_PLACEHOLDER = '[deleted]';
+
+/**
+ * Minimal client-facing tombstone for a soft-deleted comment. Built from an
+ * allowlist; it never spreads the stored row, so metadata, scheduling columns
+ * and any future column are absent by construction. `deleted_at` is kept
+ * because the portal comment UI (CommentItem) keys the tombstone rendering on it.
+ */
+export function tombstoneCommentForClient(comment: IComment): Record<string, unknown> {
+  return {
+    comment_id: comment.comment_id,
+    thread_id: comment.thread_id,
+    parent_comment_id: comment.parent_comment_id,
+    created_at: comment.created_at,
+    deleted_at: comment.deleted_at,
+    user_id: comment.user_id,
+    contact_id: comment.contact_id,
+    is_internal: false,
+    publish_state: comment.publish_state,
+    note: DELETED_COMMENT_PLACEHOLDER,
+    markdown_content: DELETED_COMMENT_PLACEHOLDER,
+  };
 }
 
 /**
