@@ -5,6 +5,7 @@ import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorizatio
 import { getCoManagedOperationalState } from '@alga-psa/licensing/lifecycle';
 import { hasCoManagedLocalPermission } from './localPermission';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+import { CO_MANAGED_ORGANIZATION_NAME_ALIASES } from './sharedWorkProjection';
 import { assertCoManagedSessionUnexpired, CoManagedSharedWorkError, isCoManagedUuid, lockCoManagedSessionIdentity, snapshotCoManagedSessionActor, type CoManagedSessionActor } from './sharedWorkIdentity';
 
 /**
@@ -97,9 +98,10 @@ const sources = {
 };
 // Redaction aliases for the owner-ticket response state that drives the awaiting-reply signal.
 const responseStateAliases = ['response_state', 'tickets.response_state', 'values.response_state'];
-// Redaction aliases for the customer workspace display name. The detail path (sharedWorkRead) never redacts
-// its `customerName`, so no alias is established there; these are the plausible spellings, and `'*'`/`'fields'` always hide it.
-const workspaceNameAliases = ['workspace_name', 'workspaceName', 'client_name', 'customer_name', 'customerName'];
+// The workspace name is the customer tenant's `client_name`. `redacted_fields` is a free-form list (replaceCoManagedRedactedFields
+// only validates the token shape; there is no catalog), so the established vocabulary is the one the project task queue and
+// assignments already use for the same value. `'*'`/`'fields'` hide it via isCoManagedReadFieldHidden.
+const workspaceNameAliases = CO_MANAGED_ORGANIZATION_NAME_ALIASES;
 const REDACTED_WORKSPACE_LABEL = '(redacted workspace)';
 function snapshotRequest(input: CoManagedTicketQueueRequest): Required<Omit<CoManagedTicketQueueRequest, 'workspaceTenant' | 'clientId' | 'signal'>> & { workspaceTenant?: string; clientId?: string; signal?: CoManagedTicketQueueSignal } {
   if (!input || !['working', 'oversight'].includes(input.view) ||

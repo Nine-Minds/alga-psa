@@ -16,7 +16,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import {
   CoManagedTicketHandoffError,
   escalateCoManagedTicket,
@@ -459,5 +459,52 @@ describeDb('co-managed ticket queue and handoffs on real Postgres', { shuffle: f
         expect(rowsOf({ items: exported }, B).every(item => typeof item.fields.title === 'string')).toBe(true);
       } finally { await restore(); }
     });
+
+    it('the export action\'s CSV bytes omit A\'s redacted title and workspace name, and keep B\'s', async () => {
+      // The CSV is built by the server action (unparseCSV over the queue read), so assert at that level. Only the
+      // auth/capability/connection seams are replaced; the queue read, redaction SQL and CSV builder are real.
+      vi.doMock('@alga-psa/auth', async importOriginal => ({ ...(await importOriginal<any>()), withAuth: (fn: any) => (...args: any[]) => fn({ user_id: tech.userId, user_type: 'internal' }, { tenant: msp }, ...args) }));
+      vi.doMock('@alga-psa/core/capability/server', () => ({ requireCapabilityForAction: async () => undefined }));
+      vi.doMock('@alga-psa/db', async importOriginal => ({ ...(await importOriginal<any>()), createTenantKnex: async () => ({ knex: db }) }));
+      vi.doMock('../../lib/co-managed/browserActor', () => ({ coManagedBrowserActor: async () => tech }));
+      const nameA = (await db('tenants').where({ tenant: A.tenant }).first('client_name')).client_name;
+      const nameB = (await db('tenants').where({ tenant: B.tenant }).first('client_name')).client_name;
+      try {
+        const { exportCoManagedTicketQueueAction } = await import('../../lib/actions/coManagedTicketQueueActions');
+        const exportCsv = () => (exportCoManagedTicketQueueAction as any)({ view: 'oversight', state: 'all', sort: 'number', direction: 'asc' }) as Promise<{ csv: string; rowCount: number }>;
+        // Oversight only lists A's board-scoped tickets, so derive the titles that can appear in the CSV from the unredacted queue.
+        const shown = await all({ pageSize: 100 });
+        const aShown = rowsOf(shown, A).map(item => item.fields.title as string), bShown = rowsOf(shown, B).map(item => item.fields.title as string);
+        expect(aShown.length).toBeGreaterThan(0); expect(bShown.length).toBeGreaterThan(0);
+        const control = await exportCsv();
+        for (const title of aShown) expect(control.csv).toContain(title);
+        expect(control.csv).toContain(nameA);
+        // 'client_name' is the workspace-name alias the other co-managed readers use; it hides only the workspace name.
+        await redactFor(A, ['client_name']);
+        const byName = await exportCsv();
+        expect(byName.csv).not.toContain(nameA);
+        expect(byName.csv).toContain(nameB);
+        expect(byName.csv).toContain('(redacted workspace)');
+        for (const title of aShown) expect(byName.csv).toContain(title);
+        await redactFor(A, ['title']);
+        const titleOnly = await exportCsv();
+        for (const title of await aTitles()) expect(titleOnly.csv).not.toContain(title);
+        for (const title of bShown) expect(titleOnly.csv).toContain(title);
+        expect(titleOnly.csv).toContain(nameA); // only the title is redacted, so the workspace name stays
+        expect(titleOnly.csv).not.toContain('redaction_mask');
+        // Absent keys are blank cells, never the string "undefined"/"null".
+        expect(titleOnly.csv).not.toMatch(/undefined|null/);
+        expect(titleOnly.csv.replace('\uFEFF', '').split(/\r?\n/)[0].split(',')).toContain('title');
+        await redactFor(A, ['*']);
+        const star = await exportCsv();
+        expect(star.csv).not.toContain(nameA);
+        for (const title of await aTitles()) expect(star.csv).not.toContain(title);
+        expect(star.csv).toContain('(redacted workspace)');
+        expect(star.rowCount).toBe(control.rowCount);
+      } finally {
+        vi.doUnmock('@alga-psa/auth'); vi.doUnmock('@alga-psa/core/capability/server'); vi.doUnmock('@alga-psa/db'); vi.doUnmock('../../lib/co-managed/browserActor');
+        await restore();
+      }
+    }, 180_000);
   });
 });
