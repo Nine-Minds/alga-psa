@@ -94,4 +94,26 @@ describeDb('co-managed closure and archive on real Postgres', { shuffle: false }
   it('A2: a reader without co_management:read gets nothing', async () => {
     await expect(listCoManagedArchives(db, f.stranger)).rejects.toThrow();
   });
+
+  it('A1 (R1): concurrent replays and concurrent distinct operations release the seats exactly once', async () => {
+    const g = await seedBoundaryFixture(db);
+    const same = randomUUID();
+    const t = { customerTenant: g.customer, relationshipId: g.relationshipId };
+    const req = { operationId: same, expectedRevision: 1, reason: 'departure' as const };
+    const settled = await Promise.allSettled([
+      closeCoManagedRelationship(db, g.mspAdmin, t, req, noEvidence),
+      closeCoManagedRelationship(db, g.mspAdmin, t, req, noEvidence),
+      closeCoManagedRelationship(db, g.customerAdmin, t, { ...req, operationId: randomUUID() }, noEvidence),
+    ]);
+    const receipts = settled.filter(r => r.status === 'fulfilled').map(r => (r as PromiseFulfilledResult<any>).value);
+    expect(receipts.length).toBeGreaterThanOrEqual(1);
+    // Every successful caller saw the same single release; the competing different operation was refused.
+    expect(new Set(receipts.map(r => r.operationId)).size).toBe(1);
+    expect(receipts.every(r => r.releasedSeats === g.seats)).toBe(true);
+    expect(await db('co_managed_relationship_closures').where({ tenant: g.msp, relationship_id: g.relationshipId }).count('* as n').first()).toMatchObject({ n: '1' });
+    expect(await db('co_managed_archive_manifests').where({ tenant: g.msp, relationship_id: g.relationshipId }).count('* as n').first()).toMatchObject({ n: '1' });
+    const allocations = await db('co_managed_allocations').where({ tenant: g.msp, relationship_id: g.relationshipId });
+    expect(allocations).toHaveLength(1);
+    expect(allocations[0]).toMatchObject({ state: 'released' });
+  });
 });
