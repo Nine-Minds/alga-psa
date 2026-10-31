@@ -1672,7 +1672,9 @@
       "valueNotAllowed": "Een van de materiaalwaarden is niet toegestaan. Controleer het formulier en probeer het opnieuw."
     },
     "settings": {
-      "updateDenied": "Toestemming geweigerd: ticketinstellingen kunnen niet worden bijgewerkt"
+      "createDenied": "Toestemming geweigerd: borden kunnen niet worden aangemaakt",
+      "updateDenied": "Toestemming geweigerd: ticketinstellingen kunnen niet worden bijgewerkt",
+      "deleteDenied": "Toestemming geweigerd: borden kunnen niet worden verwijderd"
     },
     "list": {
       "filtersInvalid": "De filters van de ticketlijst zijn niet langer geldig. Vernieuw de pagina en probeer het opnieuw."

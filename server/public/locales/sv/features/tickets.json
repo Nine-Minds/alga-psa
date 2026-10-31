@@ -1680,7 +1680,9 @@
       "valueNotAllowed": "Ett av materialvärdena är inte tillåtet. Granska formuläret och försök igen."
     },
     "settings": {
-      "updateDenied": "Behörighet saknas: Det går inte att uppdatera ärendeinställningarna"
+      "createDenied": "Behörighet saknas: Det går inte att skapa tavlor",
+      "updateDenied": "Behörighet saknas: Det går inte att uppdatera ärendeinställningarna",
+      "deleteDenied": "Behörighet saknas: Det går inte att ta bort tavlor"
     },
     "list": {
       "filtersInvalid": "Ärendelistans filter är inte längre giltiga. Ladda om sidan och försök igen."

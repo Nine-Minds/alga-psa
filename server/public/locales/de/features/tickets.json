@@ -1672,7 +1672,9 @@
       "valueNotAllowed": "Einer der Materialwerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut."
     },
     "settings": {
-      "updateDenied": "Berechtigung verweigert: Ticketeinstellungen können nicht aktualisiert werden"
+      "createDenied": "Berechtigung verweigert: Boards können nicht erstellt werden",
+      "updateDenied": "Berechtigung verweigert: Ticketeinstellungen können nicht aktualisiert werden",
+      "deleteDenied": "Berechtigung verweigert: Boards können nicht gelöscht werden"
     },
     "list": {
       "filtersInvalid": "Die Ticketlistenfilter sind nicht mehr gültig. Aktualisieren Sie die Seite und versuchen Sie es erneut."

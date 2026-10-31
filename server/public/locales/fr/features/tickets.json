@@ -1672,7 +1672,9 @@
       "valueNotAllowed": "L’une des valeurs du matériel n’est pas autorisée. Veuillez vérifier le formulaire et réessayer."
     },
     "settings": {
-      "updateDenied": "Autorisation refusée : impossible de mettre à jour les paramètres des tickets"
+      "createDenied": "Autorisation refusée : impossible de créer des tableaux",
+      "updateDenied": "Autorisation refusée : impossible de mettre à jour les paramètres des tickets",
+      "deleteDenied": "Autorisation refusée : impossible de supprimer des tableaux"
     },
     "list": {
       "filtersInvalid": "Les filtres de la liste des tickets ne sont plus valides. Actualisez la page et réessayez."

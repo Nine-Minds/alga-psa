@@ -1672,7 +1672,9 @@
       "valueNotAllowed": "Jedna z wartości materiału jest niedozwolona. Sprawdź formularz i spróbuj ponownie."
     },
     "settings": {
-      "updateDenied": "Odmowa uprawnień: nie można aktualizować ustawień zgłoszeń"
+      "createDenied": "Odmowa uprawnień: nie można tworzyć tablic",
+      "updateDenied": "Odmowa uprawnień: nie można aktualizować ustawień zgłoszeń",
+      "deleteDenied": "Odmowa uprawnień: nie można usuwać tablic"
     },
     "list": {
       "filtersInvalid": "Filtry listy zgłoszeń nie są już prawidłowe. Odśwież stronę i spróbuj ponownie."

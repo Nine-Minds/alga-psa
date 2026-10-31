@@ -1680,7 +1680,9 @@
       "valueNotAllowed": "One of the material values is not allowed. Please review the form and try again."
     },
     "settings": {
-      "updateDenied": "Permission denied: Cannot update ticket settings"
+      "createDenied": "Permission denied: Cannot create boards",
+      "updateDenied": "Permission denied: Cannot update ticket settings",
+      "deleteDenied": "Permission denied: Cannot delete boards"
     },
     "list": {
       "filtersInvalid": "Ticket list filters are no longer valid. Refresh the page and try again."
