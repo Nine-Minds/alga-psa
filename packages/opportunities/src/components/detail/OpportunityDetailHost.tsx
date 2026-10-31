@@ -26,6 +26,7 @@ import { getProjectStatuses, getTemplates } from '@alga-psa/projects/actions';
 import {
   declareOpportunityStage,
   deleteOpportunity,
+  listCitableSourcesForOpportunity,
   getOpportunity,
   linkQuoteToOpportunity,
   listLinkableQuotesForOpportunity,
@@ -47,6 +48,8 @@ import { LoseOpportunityDialog } from '../dialogs/LoseOpportunityDialog';
 import { EditValuesDialog } from '../dialogs/EditValuesDialog';
 import { EditOpportunityDialog } from '../dialogs/EditOpportunityDialog';
 import { DraftEditorDialog } from '../dialogs/DraftEditorDialog';
+import { DeclareStageDialog } from '../dialogs/DeclareStageDialog';
+import { OpportunityCitationDocument } from './OpportunityCitationDocument';
 
 const formatQuoteAmount = (quote: LinkableOpportunityQuote) =>
   formatCurrencyFromMinorUnits(quote.total_amount, undefined, quote.currency_code);
@@ -71,6 +74,7 @@ export function OpportunityDetailHost({
   commitments,
   activity,
   returnTab,
+  onOpenInteraction,
   isInDrawer = false,
 }: {
   detail: IOpportunityDetail;
@@ -83,6 +87,12 @@ export function OpportunityDetailHost({
   /** Notes & interactions feed, injected by the server-app layer (clients package boundary). */
   activity?: ReactNode;
   returnTab?: string;
+  /**
+   * Opens an interaction in the host app's interaction drawer. Injected by the
+   * server-app layer (the interaction UI lives in a package this one must not
+   * depend on); without it a cited interaction renders as plain text.
+   */
+  onOpenInteraction?: (interactionId: string) => void;
   /** Rendered inside the shared drawer: no back-to-list escape hatch. */
   isInDrawer?: boolean;
 }) {
@@ -113,6 +123,8 @@ export function OpportunityDetailHost({
   const [linkingQuote, setLinkingQuote] = useState(false);
   const [draftOpen, setDraftOpen] = useState(Boolean(drafting && autoOpenDraft));
   const [assignees, setAssignees] = useState<OpportunityStepAssignee[]>([]);
+  const [declaringStage, setDeclaringStage] = useState<Exclude<OpportunityStage, 'won' | 'lost'> | null>(null);
+  const [citedDocumentId, setCitedDocumentId] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     if (isInDrawer) {
@@ -197,13 +209,28 @@ export function OpportunityDetailHost({
     run(fn, successMessage).catch(() => {});
   };
 
-  /** Setting the stage from the plan's spine — the same declaration the board makes. */
-  const declareStage = (stage: Exclude<OpportunityStage, 'won' | 'lost'>) => {
-    const label = t(`opportunities.stage.${stage}`, stage.charAt(0).toUpperCase() + stage.slice(1));
-    runQuietly(
-      () => declareOpportunityStage(detail.opportunity_id, stage),
-      t('opportunities.toast.stageSet', 'Stage set to {{stage}}', { stage: label }),
+  const stageLabelFor = (stage: Exclude<OpportunityStage, 'won' | 'lost'>) =>
+    t(`opportunities.stage.${stage}`, stage.charAt(0).toUpperCase() + stage.slice(1));
+
+  /**
+   * Setting the stage from the plan's spine — the same declaration the board
+   * makes. A rung click opens the declare dialog, where a supporting source is
+   * optional.
+   */
+  const declareStage = (stage: Exclude<OpportunityStage, 'won' | 'lost'>) => setDeclaringStage(stage);
+
+  const submitDeclaration = async (ref: { type: 'interaction' | 'document'; id: string } | null) => {
+    if (!declaringStage) return;
+    const stage = declaringStage;
+    await run(
+      () => declareOpportunityStage(detail.opportunity_id, stage, undefined, ref?.type ?? null, ref?.id ?? null),
+      t('opportunities.toast.stageSet', 'Stage set to {{stage}}', { stage: stageLabelFor(stage) }),
     );
+  };
+
+  const openCitation = (type: 'interaction' | 'document', id: string) => {
+    if (type === 'interaction') onOpenInteraction?.(id);
+    else setCitedDocumentId(id);
   };
 
   return (
@@ -231,6 +258,7 @@ export function OpportunityDetailHost({
             assignees={assignees}
             refreshKey={detail.updated_at}
             onStageSelect={detail.status === 'open' ? declareStage : undefined}
+            onOpenCitation={openCitation}
             onChanged={refresh}
           />
         }
@@ -278,6 +306,21 @@ export function OpportunityDetailHost({
           t('opportunities.toast.quoteUnlinked', 'Quote unlinked'),
         )}
       />
+
+      <DeclareStageDialog
+        isOpen={declaringStage !== null}
+        stageLabel={declaringStage ? stageLabelFor(declaringStage) : ''}
+        loadSources={() => listCitableSourcesForOpportunity(detail.opportunity_id)}
+        onClose={() => setDeclaringStage(null)}
+        onSubmit={submitDeclaration}
+      />
+      {citedDocumentId ? (
+        <OpportunityCitationDocument
+          opportunityId={detail.opportunity_id}
+          documentId={citedDocumentId}
+          onClose={() => setCitedDocumentId(null)}
+        />
+      ) : null}
 
       <Dialog
         id="opportunity-link-quote-dialog"

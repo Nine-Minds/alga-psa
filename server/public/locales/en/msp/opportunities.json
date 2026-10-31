@@ -566,6 +566,17 @@
       "projectStatus": "Initial status",
       "projectTemplate": "Create an onboarding project (optional)",
       "title": "Mark won"
+    },
+    "declare": {
+      "title": "Move to {{stage}}",
+      "sourceLabel": "Supporting source",
+      "noSource": "No source",
+      "sourceHelp": "Optional. Cite an interaction or document from this deal. Attach a document to the deal first if it isn't listed.",
+      "submit": "Declare",
+      "source": "Source",
+      "sourceRemoved": "Source removed",
+      "interactionFallback": "Interaction",
+      "documentFallback": "Document"
     }
   }
 }
