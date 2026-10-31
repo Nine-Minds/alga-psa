@@ -9,7 +9,8 @@ import { seedL3cWorld, sessionActor, type L3cWorld } from './coManagedL3cFixture
 export { configureL3cDbEnv, connectL3cDb, cleanupL3cTenants, registerCoManagedCapability } from './coManagedL3cFixture';
 
 const GRANTS: [string, string][] = [['co_management', 'manage'], ['ticket', 'read'], ['project', 'read'], ['ticket_settings', 'read'],
-  ['document', 'read'], ['timesheet', 'read'], ['user_schedule', 'read'], ['interaction', 'read'], ['asset', 'read']];
+  ['document', 'read'], ['timesheet', 'read'], ['user_schedule', 'read'], ['interaction', 'read'], ['asset', 'read'],
+  ['user', 'read'], ['team', 'read'], ['client', 'read'], ['contact', 'read'], ['security_settings', 'read'], ['workflow', 'admin'], ['workflow', 'read']];
 
 export interface PortableWorld extends L3cWorld { actor: ReturnType<typeof sessionActor>; packageId: string }
 
@@ -45,3 +46,12 @@ export async function retainContributor(db: Knex, world: PortableWorld, contribu
 
 export const exclusionNames = (annotations: Record<string, unknown>) =>
   ((annotations.exclusions ?? []) as { class: string; name: string; reason: string }[]).map(entry => entry.name);
+
+/** In-memory stand-in for the storage provider (installed by the runner's vi.mock): path -> object bytes. */
+export const fakeStorageObjects = new Map<string, Buffer>();
+export const fakeStorageProvider = { getReadStream: async (path: string) => {
+  const { Readable } = await import('node:stream');
+  const bytes = fakeStorageObjects.get(path);
+  if (!bytes) throw new Error(`fake storage: no object at ${path}`);
+  return Readable.from([bytes]);
+} };

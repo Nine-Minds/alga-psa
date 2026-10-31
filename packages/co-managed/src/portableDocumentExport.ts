@@ -9,7 +9,7 @@ import { stageCoManagedPortableBlobs, type PortableSourceBlob } from './portable
 import { coManagedPortableNativeFilePath } from './portableNativeFilePath';
 import { CoManagedSharedWorkError, isCoManagedUuid, snapshotCoManagedSessionActor, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { CO_MANAGED_PORTABLE_DOCUMENT_COLUMNS, CO_MANAGED_PORTABLE_DOCUMENT_REFERENCES,
-  type CoManagedPortableDocumentRecords, type CoManagedPortableDocumentTable } from './portableDocumentCatalog';
+  commercialPortableDocumentIds, filterCommercialPortableDocuments, type CoManagedPortableDocumentRecords, type CoManagedPortableDocumentTable } from './portableDocumentCatalog';
 
 /** One file may not exceed this and the package may not exceed the total. A file
  * over either cap is never truncated: it is left out and named in the section's
@@ -45,6 +45,9 @@ export async function readPortableFileSources(own: ReturnType<typeof tenantDb>, 
 
 export function validateCoManagedPortableDocumentRecords(input: unknown): asserts input is CoManagedPortableDocumentRecords {
   validatePortableRecordSection(input, { columns: CO_MANAGED_PORTABLE_DOCUMENT_COLUMNS, references: CO_MANAGED_PORTABLE_DOCUMENT_REFERENCES });
+  const records = input as CoManagedPortableDocumentRecords;
+  // Commercial documents are filtered before this runs; their presence means the filter was bypassed.
+  if (commercialPortableDocumentIds(records.documents, records.document_associations).size) throw new Error('Portable documents must not include commercial documents');
 }
 
 async function collect(trx: Knex.Transaction, inputActor: CoManagedSessionActor, packageId: string) {
@@ -53,20 +56,23 @@ async function collect(trx: Knex.Transaction, inputActor: CoManagedSessionActor,
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
   return withCoManagedExportAdmin(trx, actor, async (current, verified) => {
     if (!await hasCoManagedLocalPermission(current, verified, 'document', 'read', true)) throw new CoManagedSharedWorkError();
-    const own = tenantDb(current, verified.tenant), records = {} as CoManagedPortableDocumentRecords;
+    const own = tenantDb(current, verified.tenant), raw = {} as CoManagedPortableDocumentRecords;
     for (const table of Object.keys(CO_MANAGED_PORTABLE_DOCUMENT_COLUMNS) as CoManagedPortableDocumentTable[]) {
       const columns = CO_MANAGED_PORTABLE_DOCUMENT_COLUMNS[table];
-      records[table] = await own.table(table).select(...columns).orderBy(columns[0]).limit(LIMIT + 1).forShare();
-      if (records[table].length > LIMIT) throw new Error('Portable document record limit exceeded');
+      raw[table] = await own.table(table).select(...columns).orderBy(columns[0]).limit(LIMIT + 1).forShare();
+      if (raw[table].length > LIMIT) throw new Error('Portable document record limit exceeded');
     }
+    // Commercial documents are dropped here, before validation, file lookup and staging.
+    const { records, excludedDocuments } = filterCommercialPortableDocuments(raw);
     validateCoManagedPortableDocumentRecords(records);
     const fileIds = records.documents.flatMap(row => [row.file_id, row.thumbnail_file_id, row.preview_file_id]).filter((id): id is string => typeof id === 'string');
     const sources = await readPortableFileSources(own, fileIds);
-    return { tenant: verified.tenant, records, sources };
+    return { tenant: verified.tenant, records, sources, excludedDocuments };
   });
 }
 
-const exclusionsOf = (excluded: readonly PortableFileExclusion[]) => [
+const exclusionsOf = (excluded: readonly PortableFileExclusion[], excludedDocuments = 0) => [
+  { class: 'commercial', name: 'commercial_documents', reason: `Documents attached to invoices, quotes, contracts, sales orders, opportunities or any entity type outside the customer-operational allowlist, or rendered from a billing template, are not exported with their versions, content, associations, knowledge-base rows and file bytes (${excludedDocuments} excluded).` },
   { class: 'secret', name: 'document_storage_locations', reason: 'Storage paths and provider locators are transport-only and never recorded.' },
   { class: 'commercial', name: 'document_templates', reason: 'Document render templates and their assignments are billing presentation configuration and are not exported.' },
   { class: 'deferred_domain', name: 'shared_document_types', reason: 'Global shared document types are not tenant data; documents.shared_type_id is an external edge.' },
@@ -88,13 +94,13 @@ export const portableDocumentContributor: PortableContributor = {
       const bindings = snapshot.records.documents.flatMap(row => (['file_id', 'thumbnail_file_id', 'preview_file_id'] as const)
         .filter(field => typeof row[field] === 'string').map(field => ({ table: 'documents', recordId: row.document_id, field, blobId: `file:${row[field]}` })));
       return { records: JSON.parse(JSON.stringify(snapshot.records)) as PortableRecords, files: staged,
-        annotations: { exclusions: exclusionsOf(snapshot.sources.excluded), fileBindings: bindings, caps: CO_MANAGED_PORTABLE_FILE_CAPS,
+        annotations: { exclusions: exclusionsOf(snapshot.sources.excluded, snapshot.excludedDocuments), fileBindings: bindings, caps: CO_MANAGED_PORTABLE_FILE_CAPS,
           restorePolicy: { sponsorship: 'none', providerConnections: 'none' } } };
     } catch (error) { await staged.dispose(); throw error; }
   },
   retain: async ctx => {
-    const { records, sources } = await collect(ctx.trx, ctx.actor, ctx.packageId);
-    return { records: JSON.parse(JSON.stringify(records)) as PortableRecords, annotations: { exclusions: exclusionsOf(sources.excluded) } };
+    const { records, sources, excludedDocuments } = await collect(ctx.trx, ctx.actor, ctx.packageId);
+    return { records: JSON.parse(JSON.stringify(records)) as PortableRecords, annotations: { exclusions: exclusionsOf(sources.excluded, excludedDocuments) } };
   },
   validate: records => validateCoManagedPortableDocumentRecords(records),
 };

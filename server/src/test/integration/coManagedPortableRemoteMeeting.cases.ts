@@ -50,5 +50,19 @@ export function defineRemoteMeetingCases(get: () => { db: Knex; world: PortableW
         attendee_name: null, role: null, total_attendance_seconds: null, first_joined_at: null, last_left_at: null }] });
       await expect(exportContributor(db, world, contributor)).rejects.toThrow('Invalid portable meeting attendance');
     });
+
+    it('an ad-hoc meeting linked to no appointment, interaction or schedule entry is named, not exported, and does not abort the export', async () => {
+      const { db, world } = get();
+      const meetingId = uuidv4();
+      await db('online_meetings').insert({ tenant: world.customer, meeting_id: meetingId, provider: 'teams', provider_meeting_id: `ADHOC-${meetingId}`, subject: 'Ad hoc',
+        status: 'scheduled', start_time: new Date('2026-01-07T09:00:00Z'), end_time: new Date('2026-01-07T10:00:00Z') });
+      try {
+        const { records, annotations } = await exportContributor(db, world, portableRemoteMeetingContributor);
+        expect(records.online_meetings.map(row => row.meeting_id)).not.toContain(meetingId);
+        expect(exclusionNames(annotations)).toContain('online_meetings_without_source');
+        const retained = await retainContributor(db, world, portableRemoteMeetingContributor);
+        expect(retained.records).toEqual(records);
+      } finally { await db('online_meetings').where({ tenant: world.customer, meeting_id: meetingId }).delete(); }
+    });
   });
 }

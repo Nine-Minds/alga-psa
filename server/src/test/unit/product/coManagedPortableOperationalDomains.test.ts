@@ -7,6 +7,7 @@ import { buildCoManagedPortableWorkspaceManifest as build } from '../../../../..
 import { collectPortableWorkspace } from '../../../../../packages/co-managed/src/portableWorkspaceGraph';
 import { portableOperationalContributor, createPortableOperationalContributor, validateCoManagedPortableOperationalRecords }
   from '../../../../../packages/co-managed/src/portableOperationalExport';
+import { filterCommercialPortableDocuments } from '../../../../../packages/co-managed/src/portableDocumentCatalog';
 import { CO_MANAGED_PORTABLE_OPERATIONAL_COLUMNS } from '../../../../../packages/co-managed/src/portableOperationalCatalog';
 import { portableConversationContributor, portableConversationAudience, portableConversationVisible, validateCoManagedPortableConversationRecords }
   from '../../../../../packages/co-managed/src/portableConversationExport';
@@ -151,5 +152,29 @@ describe('engagement and meetings', () => {
     expect(columns).toContain('join_url');
     for (const hidden of ['provider_meeting_id', 'provider_event_id', 'organizer_upn', 'organizer_user_id']) expect(columns).not.toContain(hidden);
     expect(createPortableRemoteMeetingContributor({ resolveAttendance: async () => [] }).id).toBe('meetings');
+  });
+
+  it('the document commercial filter drops invoice, quote, billing-template and unclassified documents with everything attached', () => {
+    const doc = (id: string, source: string | null = null) => ({ document_id: id, source_template_id: source, file_id: `f-${id}` });
+    const assoc = (id: string, type: string) => ({ association_id: `a-${id}-${type}`, document_id: id, entity_type: type });
+    const records = { documents: [doc('ok'), doc('inv'), doc('tpl', 'template-1'), doc('mixed'), doc('odd')],
+      document_associations: [assoc('ok', 'client'), assoc('inv', 'invoice'), assoc('mixed', 'client'), assoc('mixed', 'quote'), assoc('odd', 'brand_new_type'), assoc('tpl', 'client')],
+      document_versions: ['ok', 'inv', 'tpl'].map(id => ({ version_id: `v-${id}`, document_id: id })),
+      document_content: [], document_block_content: [{ content_id: 'b', document_id: 'inv', version_id: 'v-inv' }],
+      kb_articles: [{ article_id: 'k-inv', document_id: 'inv' }, { article_id: 'k-ok', document_id: 'ok' }],
+      kb_article_relations: [{ relation_id: 'r', source_article_id: 'k-ok', target_article_id: 'k-inv' }], kb_article_reviewers: [{ reviewer_id: 'x', article_id: 'k-inv' }],
+      document_folders: [{ folder_id: 'f1', parent_folder_id: null, entity_type: 'client' }, { folder_id: 'f2', parent_folder_id: null, entity_type: 'invoice' }, { folder_id: 'f3', parent_folder_id: 'f2', entity_type: 'client' }],
+      document_types: [], document_default_folders: [{ default_folder_id: 'd1', entity_type: 'contract' }, { default_folder_id: 'd2', entity_type: 'ticket' }] } as any;
+    const { records: kept, excludedDocuments } = filterCommercialPortableDocuments(records);
+    expect(kept.documents.map((row: any) => row.document_id)).toEqual(['ok']);
+    expect(excludedDocuments).toBe(4);
+    expect(kept.document_associations.map((row: any) => row.document_id)).toEqual(['ok']);
+    expect(kept.document_versions.map((row: any) => row.document_id)).toEqual(['ok']);
+    expect(kept.document_block_content).toEqual([]);
+    expect(kept.kb_articles.map((row: any) => row.article_id)).toEqual(['k-ok']);
+    expect(kept.kb_article_relations).toEqual([]);
+    expect(kept.kb_article_reviewers).toEqual([]);
+    expect(kept.document_folders.map((row: any) => row.folder_id)).toEqual(['f1']);
+    expect(kept.document_default_folders.map((row: any) => row.default_folder_id)).toEqual(['d2']);
   });
 });

@@ -52,13 +52,17 @@ async function retain(trx: Knex.Transaction, inputActor: CoManagedSessionActor, 
     const own = tenantDb(current, verified.tenant), columns = CO_MANAGED_PORTABLE_MEETING_COLUMNS.online_meetings;
     const rows = await own.table('online_meetings').select(...columns).orderBy('meeting_id').limit(LIMIT + 1).forShare();
     if (rows.length > LIMIT) throw new Error('Invalid portable meeting record count');
-    const records = { online_meetings: rows } as PortableRecords;
+    // The schema allows ad-hoc meetings with none of the three source links (all nullable, no check
+    // constraint). They have no exported parent to restore under, so they are named, not thrown on.
+    const kept = rows.filter(row => row.interaction_id || row.appointment_request_id || row.schedule_entry_id);
+    const records = { online_meetings: kept } as PortableRecords;
     validateCoManagedPortableMeetingRecords(records);
-    return { records: JSON.parse(JSON.stringify(records)) as PortableRecords, tenant: verified.tenant };
+    return { records: JSON.parse(JSON.stringify(records)) as PortableRecords, tenant: verified.tenant, unlinked: rows.length - kept.length };
   });
 }
 
-const exclusions = (attendance: 'included' | 'unavailable') => [
+const exclusions = (attendance: 'included' | 'unavailable', unlinked = 0) => [
+  ...(unlinked ? [{ class: 'deferred_domain', name: 'online_meetings_without_source', reason: `${unlinked} ad-hoc meeting(s) linked to no appointment request, interaction or schedule entry are not exported.` }] : []),
   { class: 'secret', name: 'online_meeting_provider_identity', reason: 'Provider meeting/event ids and organizer identities are provider bindings and are not exported.' },
   { class: 'deferred_domain', name: 'online_meeting_recordings_and_transcripts', reason: 'Recordings and transcripts are not fetched from the provider; only tenant-stored files travel, via the artifacts section.' },
   ...(attendance === 'unavailable' ? [{ class: 'deferred_domain', name: 'online_meeting_attendance', reason: 'No attendance reader is configured; attendance is not exported.' }] : []),
@@ -77,8 +81,8 @@ export function createPortableRemoteMeetingContributor(options: { resolveAttenda
       const actor = snapshotCoManagedSessionActor(ctx.actor);
       if (!isCoManagedUuid(ctx.packageId)) throw new CoManagedSharedWorkError();
       // LEVERAGE: pattern portable-export-is-snapshot-retain — export is the retain run at the shared snapshot.
-      const { records, tenant } = await portableSnapshotTransaction(ctx.db, ctx.snapshot, trx => retain(trx, actor, ctx.packageId));
-      if (!options.resolveAttendance) return { records, annotations: { exclusions: exclusions('unavailable') } };
+      const { records, tenant, unlinked } = await portableSnapshotTransaction(ctx.db, ctx.snapshot, trx => retain(trx, actor, ctx.packageId));
+      if (!options.resolveAttendance) return { records, annotations: { exclusions: exclusions('unavailable', unlinked) } };
       const meetings = records.online_meetings.map(row => ({ meeting_id: String(row.meeting_id), provider: String(row.provider) }));
       const known = new Set(meetings.map(row => row.meeting_id));
       const attendance = (await options.resolveAttendance(tenant, meetings)).map(row => {
@@ -86,7 +90,7 @@ export function createPortableRemoteMeetingContributor(options: { resolveAttenda
         return Object.fromEntries(ATTENDANCE_KEYS.map(key => [key, row[key]]));
       });
       if (attendance.length > LIMIT) throw new Error('Invalid portable meeting attendance count');
-      return { records, annotations: { exclusions: exclusions('included'), attendance } };
+      return { records, annotations: { exclusions: exclusions('included', unlinked), attendance } };
     },
     retain: async ctx => {
       const { records } = await retain(ctx.trx, ctx.actor, ctx.packageId);

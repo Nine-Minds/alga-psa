@@ -33,3 +33,44 @@ export const CO_MANAGED_PORTABLE_DOCUMENT_REFERENCES = [
   ['kb_article_relations', 'target_article_id', 'kb_articles', 'article_id'],
   ['kb_article_reviewers', 'article_id', 'kb_articles', 'article_id'],
 ] as const;
+
+/** Association entity types whose documents are customer operational content. This is an
+ * allowlist: a document attached to anything else (invoice, quote, contract, sales order,
+ * opportunity, payment or any type not named here) is commercial or unclassified and is
+ * left out with its versions, content, associations, KB rows and file bytes. A document
+ * rendered from a billing template (source_template_id) is likewise commercial. */
+export const CO_MANAGED_PORTABLE_DOCUMENT_ENTITY_TYPES: ReadonlySet<string> = new Set([
+  'user', 'ticket', 'client', 'contact', 'asset', 'project', 'project_task', 'tenant', 'document', 'interaction', 'schedule_entry', 'kb_article',
+]);
+
+type Row = Record<string, unknown>;
+/** Ids of documents that must not enter the package. */
+export function commercialPortableDocumentIds(documents: readonly Row[], associations: readonly Row[]): Set<string> {
+  const excluded = new Set<string>();
+  for (const row of documents) if (row.source_template_id !== null && row.source_template_id !== undefined) excluded.add(String(row.document_id));
+  for (const row of associations) if (!CO_MANAGED_PORTABLE_DOCUMENT_ENTITY_TYPES.has(String(row.entity_type))) excluded.add(String(row.document_id));
+  return excluded;
+}
+
+/** Drops commercial documents and everything that hangs off them. Pure and deterministic. */
+export function filterCommercialPortableDocuments(records: CoManagedPortableDocumentRecords) {
+  const excluded = commercialPortableDocumentIds(records.documents, records.document_associations);
+  const keep = (rows: readonly Row[], key: string) => rows.filter(row => !excluded.has(String(row[key])));
+  const documents = keep(records.documents, 'document_id');
+  const articles = keep(records.kb_articles, 'document_id');
+  const articleIds = new Set(articles.map(row => String(row.article_id)));
+  let folders = records.document_folders.filter(row => row.entity_type === null || row.entity_type === undefined || CO_MANAGED_PORTABLE_DOCUMENT_ENTITY_TYPES.has(String(row.entity_type)));
+  for (;;) { // a folder cannot outlive its parent
+    const ids = new Set(folders.map(row => String(row.folder_id)));
+    const next = folders.filter(row => !row.parent_folder_id || ids.has(String(row.parent_folder_id)));
+    if (next.length === folders.length) break;
+    folders = next;
+  }
+  const filtered: CoManagedPortableDocumentRecords = { ...records, documents, kb_articles: articles, document_folders: folders,
+    document_versions: keep(records.document_versions, 'document_id'), document_content: keep(records.document_content, 'document_id'),
+    document_block_content: keep(records.document_block_content, 'document_id'), document_associations: keep(records.document_associations, 'document_id'),
+    document_default_folders: records.document_default_folders.filter(row => CO_MANAGED_PORTABLE_DOCUMENT_ENTITY_TYPES.has(String(row.entity_type))),
+    kb_article_relations: records.kb_article_relations.filter(row => articleIds.has(String(row.source_article_id)) && articleIds.has(String(row.target_article_id))),
+    kb_article_reviewers: records.kb_article_reviewers.filter(row => articleIds.has(String(row.article_id))) };
+  return { records: filtered, excludedDocuments: excluded.size };
+}
