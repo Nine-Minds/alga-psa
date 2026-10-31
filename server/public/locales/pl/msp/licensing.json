@@ -267,7 +267,8 @@
         "badge": "Licencja aktywna",
         "descriptionEnding": "Twoja subskrypcja została anulowana. Pro pozostaje aktywne do {{date}}.",
         "descriptionTermEnds": "Pro jest aktywne do {{date}}, kiedy kończy się okres stały.",
-        "descriptionPaymentFailed": "Pro jest aktywne, ale ostatnia płatność za odnowienie nie powiodła się. Zaktualizuj metodę płatności, aby zachować Pro."
+        "descriptionPaymentFailed": "Pro jest aktywne, ale ostatnia płatność za odnowienie nie powiodła się. Zaktualizuj metodę płatności, aby zachować Pro.",
+        "descriptionPaymentFailedEnded": "Twoja subskrypcja Pro zakończyła się — płatność nie powiodła się. Pro pozostaje aktywne do {{date}}."
       },
       "licenseExpired": {
         "eyebrow": "Licencja wymaga uwagi",
@@ -368,6 +369,9 @@
       "subscriptionEnding": "Twoja subskrypcja Pro została anulowana. Pro kończy się {{date}}.",
       "subscriptionEndingNoDate": "Twoja subskrypcja Pro została anulowana.",
       "subscriptionEnded": "Twoja subskrypcja Pro się zakończyła. To urządzenie korzysta z wersji bezpłatnej.",
+      "subscriptionEndingPaymentFailed": "Twoja subskrypcja Pro zakończyła się — płatność nie powiodła się. Pro kończy się {{date}}.",
+      "subscriptionEndingPaymentFailedNoDate": "Twoja subskrypcja Pro zakończyła się — płatność nie powiodła się.",
+      "subscriptionEndedPaymentFailed": "Pro zakończyło się — płatność nie powiodła się. Twoje urządzenie korzysta z Essentials.",
       "resubscribeAt": "Wznów subskrypcję na {{url}}.",
       "resubscribeToRestore": "Wznów subskrypcję, aby przywrócić Pro."
     },

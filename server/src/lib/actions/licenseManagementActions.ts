@@ -275,7 +275,12 @@ function lapseMessage(status: LicenseStatus): string {
   const sub = status.subscription;
   const endsAt = sub?.endsAt ?? status.expiresAt;
   const date = endsAt ? new Date(endsAt).toISOString().slice(0, 10) : null;
-  const head = sub?.phase === 'lapsed' || status.tier === 'essentials'
+  const stillEssentials = sub?.phase === 'lapsed' || status.tier === 'essentials';
+  const head = sub?.cause === 'payment_failed'
+    ? (stillEssentials
+      ? "Pro ended — payment failed. This appliance runs Essentials."
+      : `The Pro subscription ended — payment failed. Pro ends${date ? ` on ${date}` : ''}.`)
+    : stillEssentials
     ? "The Pro subscription has ended and this appliance is on the free edition."
     : `The Pro subscription has been cancelled. Pro ends${date ? ` on ${date}` : ''}.`;
   return sub?.resubscribeUrl ? `${head} Resubscribe at ${sub.resubscribeUrl}.` : `${head} Resubscribe to restore Pro.`;

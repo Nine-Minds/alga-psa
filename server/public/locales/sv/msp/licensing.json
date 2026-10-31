@@ -265,7 +265,8 @@
         "badge": "Licensierad",
         "descriptionEnding": "Din prenumeration har avslutats. Pro är aktivt till och med {{date}}.",
         "descriptionTermEnds": "Pro är aktivt till och med {{date}}, då den fasta perioden upphör.",
-        "descriptionPaymentFailed": "Pro är aktivt, men den senaste förnyelsebetalningen misslyckades. Uppdatera din betalningsmetod för att behålla Pro."
+        "descriptionPaymentFailed": "Pro är aktivt, men den senaste förnyelsebetalningen misslyckades. Uppdatera din betalningsmetod för att behålla Pro.",
+        "descriptionPaymentFailedEnded": "Din Pro-prenumeration har upphört — betalningen misslyckades. Pro är aktivt till och med {{date}}."
       },
       "licenseExpired": {
         "eyebrow": "Licensen kräver åtgärd",
@@ -364,6 +365,9 @@
       "subscriptionEnding": "Din Pro-prenumeration har avslutats. Pro upphör den {{date}}.",
       "subscriptionEndingNoDate": "Din Pro-prenumeration har avslutats.",
       "subscriptionEnded": "Din Pro-prenumeration har upphört. Den här apparaten använder den kostnadsfria utgåvan.",
+      "subscriptionEndingPaymentFailed": "Din Pro-prenumeration har upphört — betalningen misslyckades. Pro upphör den {{date}}.",
+      "subscriptionEndingPaymentFailedNoDate": "Din Pro-prenumeration har upphört — betalningen misslyckades.",
+      "subscriptionEndedPaymentFailed": "Pro har upphört — betalningen misslyckades. Din apparat använder Essentials.",
       "resubscribeAt": "Teckna igen på {{url}}.",
       "resubscribeToRestore": "Teckna prenumerationen igen för att återställa Pro."
     },

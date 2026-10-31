@@ -11,6 +11,7 @@ import {
 import LicenseManagementPage from "@/components/licenses/LicenseManagementPage";
 import {
   getLicenseStatus,
+  refreshLicenseNow,
   startTrial,
 } from "@/lib/actions/licenseManagementActions";
 import type { LicenseStatus } from "@/lib/actions/licenseManagementActions";
@@ -31,10 +32,12 @@ vi.mock("@/lib/actions/licenseManagementActions", () => ({
   submitLicense: vi.fn(),
   startTrial: vi.fn(),
   connectAppliance: vi.fn(),
+  refreshLicenseNow: vi.fn(),
 }));
 
 const mockGetLicenseStatus = vi.mocked(getLicenseStatus);
 const mockStartTrial = vi.mocked(startTrial);
+const mockRefreshLicenseNow = vi.mocked(refreshLicenseNow);
 
 const baseStatus: LicenseStatus = {
   selfHostMode: true,
@@ -292,6 +295,103 @@ describe("LicenseManagementPage", () => {
     expect(
       await screen.findByText("Pro ended — payment failed. Your appliance runs Essentials."),
     ).toBeInTheDocument();
+  });
+
+  describe("Pro ended by failed payment while the token is still valid", () => {
+    const endsAt = "2030-01-31T12:00:00.000Z";
+    const endedStatus = (cause: "payment_failed" | "cancelled"): LicenseStatus => ({
+      ...baseStatus,
+      state: "licensed",
+      tier: "pro",
+      customer: "Acme",
+      connected: true,
+      expiresAt: "2030-01-31T00:00:00.000Z",
+      daysRemaining: 20,
+      subscription: { phase: "ending", cause, endsAt, resubscribeUrl: null },
+    });
+
+    it("status card says payment failed and nothing on the page says cancelled", async () => {
+      mockGetLicenseStatus.mockResolvedValue(endedStatus("payment_failed"));
+
+      const { container } = render(<LicenseManagementPage />);
+
+      expect(
+        await screen.findByText(
+          /^Your Pro subscription ended — payment failed\. Pro stays active through /,
+        ),
+      ).toBeInTheDocument();
+      expect(container.textContent).not.toMatch(/cancelled/i);
+    });
+
+    it("refresh alert says payment failed, not cancelled", async () => {
+      const status = endedStatus("payment_failed");
+      mockGetLicenseStatus.mockResolvedValue(status);
+      mockRefreshLicenseNow.mockResolvedValue({
+        success: false,
+        code: "subscription_lapsed",
+        error: "fallback",
+        status,
+      });
+
+      const { container } = render(<LicenseManagementPage />);
+      await waitFor(() => expect(document.getElementById("license-lapse-refresh-now")).toBeInTheDocument());
+      fireEvent.click(document.getElementById("license-lapse-refresh-now")!);
+
+      const alert = await screen.findByText(/Resubscribe to restore Pro\./);
+      expect(alert.textContent).toMatch(
+        /^Your Pro subscription ended — payment failed\. Pro ends on .+\. Resubscribe to restore Pro\.$/,
+      );
+      expect(container.textContent).not.toMatch(/cancelled/i);
+    });
+
+    it("refresh alert for a lapsed payment-failed subscription says Pro ended", async () => {
+      const lapsed: LicenseStatus = {
+        ...baseStatus,
+        state: "license_expired",
+        tier: "essentials",
+        trialUsed: true,
+        connected: true,
+        subscription: { phase: "lapsed", cause: "payment_failed", endsAt, resubscribeUrl: null },
+      };
+      mockGetLicenseStatus.mockResolvedValue(lapsed);
+      mockRefreshLicenseNow.mockResolvedValue({
+        success: false,
+        code: "subscription_lapsed",
+        error: "fallback",
+        status: lapsed,
+      });
+
+      const { container } = render(<LicenseManagementPage />);
+      await waitFor(() => expect(document.getElementById("license-lapse-refresh-now")).toBeInTheDocument());
+      fireEvent.click(document.getElementById("license-lapse-refresh-now")!);
+
+      const alert = await screen.findByText(/Resubscribe to restore Pro\./);
+      expect(alert.textContent).toMatch(
+        /^Pro ended — payment failed\. Your appliance runs Essentials\./,
+      );
+      expect(container.textContent).not.toMatch(/cancelled/i);
+    });
+
+    it("keeps the cancelled wording for an ordinary cancellation", async () => {
+      const status = endedStatus("cancelled");
+      mockGetLicenseStatus.mockResolvedValue(status);
+      mockRefreshLicenseNow.mockResolvedValue({
+        success: false,
+        code: "subscription_lapsed",
+        error: "fallback",
+        status,
+      });
+
+      render(<LicenseManagementPage />);
+      expect(
+        await screen.findByText(/^Your subscription has been cancelled\. Pro stays active through /),
+      ).toBeInTheDocument();
+      await waitFor(() => expect(document.getElementById("license-lapse-refresh-now")).toBeInTheDocument());
+      fireEvent.click(document.getElementById("license-lapse-refresh-now")!);
+      expect((await screen.findByText(/Resubscribe to restore Pro\./)).textContent).toMatch(
+        /^Your Pro subscription has been cancelled\. Pro ends on /,
+      );
+    });
   });
 
   it("shows no lapse section when the subscription is healthy", async () => {

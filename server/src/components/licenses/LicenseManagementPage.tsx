@@ -100,7 +100,21 @@ function refreshErrorMessage(
     const sub = result.status?.subscription;
     const date = formatDate(sub?.endsAt ?? result.status?.expiresAt ?? null);
     const stillPro = sub?.phase === "ending";
-    const head = stillPro
+    const paymentFailed = sub?.cause === "payment_failed";
+    const head = paymentFailed
+      ? stillPro
+        ? date
+          ? t("managementPage.errors.subscriptionEndingPaymentFailed", {
+              date,
+              defaultValue: "Your Pro subscription ended — payment failed. Pro ends on {{date}}.",
+            })
+          : t("managementPage.errors.subscriptionEndingPaymentFailedNoDate", {
+              defaultValue: "Your Pro subscription ended — payment failed.",
+            })
+        : t("managementPage.errors.subscriptionEndedPaymentFailed", {
+            defaultValue: "Pro ended — payment failed. Your appliance runs Essentials.",
+          })
+      : stillPro
       ? date
         ? t("managementPage.errors.subscriptionEnding", {
             date,
@@ -176,6 +190,12 @@ function statusPresentation(
           ? t("managementPage.status.licensed.descriptionTermEnds", {
               date: formatDate(status.subscription.endsAt ?? status.expiresAt),
               defaultValue: "Pro is active through {{date}}, when its fixed term ends.",
+            })
+          : status.subscription?.phase === "ending" && status.subscription.cause === "payment_failed"
+          ? t("managementPage.status.licensed.descriptionPaymentFailedEnded", {
+              date: formatDate(status.subscription.endsAt ?? status.expiresAt),
+              defaultValue:
+                "Your Pro subscription ended — payment failed. Pro stays active through {{date}}.",
             })
           : status.subscription?.phase === "ending"
           ? t("managementPage.status.licensed.descriptionEnding", {

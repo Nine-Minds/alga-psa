@@ -265,7 +265,8 @@
         "badge": "Licensed",
         "descriptionEnding": "Your subscription has been cancelled. Pro stays active through {{date}}.",
         "descriptionTermEnds": "Pro is active through {{date}}, when its fixed term ends.",
-        "descriptionPaymentFailed": "Pro is active, but the last renewal payment failed. Update your payment method to keep Pro."
+        "descriptionPaymentFailed": "Pro is active, but the last renewal payment failed. Update your payment method to keep Pro.",
+        "descriptionPaymentFailedEnded": "Your Pro subscription ended — payment failed. Pro stays active through {{date}}."
       },
       "licenseExpired": {
         "eyebrow": "License needs attention",
@@ -364,6 +365,9 @@
       "subscriptionEnding": "Your Pro subscription has been cancelled. Pro ends on {{date}}.",
       "subscriptionEndingNoDate": "Your Pro subscription has been cancelled.",
       "subscriptionEnded": "Your Pro subscription has ended. This appliance is on the free edition.",
+      "subscriptionEndingPaymentFailed": "Your Pro subscription ended — payment failed. Pro ends on {{date}}.",
+      "subscriptionEndingPaymentFailedNoDate": "Your Pro subscription ended — payment failed.",
+      "subscriptionEndedPaymentFailed": "Pro ended — payment failed. Your appliance runs Essentials.",
       "resubscribeAt": "Resubscribe at {{url}}.",
       "resubscribeToRestore": "Resubscribe to restore Pro."
     },

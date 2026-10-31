@@ -265,7 +265,8 @@
         "badge": "Lizenziert",
         "descriptionEnding": "Ihr Abonnement wurde gekündigt. Pro bleibt bis zum {{date}} aktiv.",
         "descriptionTermEnds": "Pro ist bis zum {{date}} aktiv, dann endet die feste Laufzeit.",
-        "descriptionPaymentFailed": "Pro ist aktiv, aber die letzte Verlängerungszahlung ist fehlgeschlagen. Aktualisieren Sie Ihre Zahlungsmethode, um Pro zu behalten."
+        "descriptionPaymentFailed": "Pro ist aktiv, aber die letzte Verlängerungszahlung ist fehlgeschlagen. Aktualisieren Sie Ihre Zahlungsmethode, um Pro zu behalten.",
+        "descriptionPaymentFailedEnded": "Ihr Pro-Abonnement wurde beendet — Zahlung fehlgeschlagen. Pro bleibt bis zum {{date}} aktiv."
       },
       "licenseExpired": {
         "eyebrow": "Lizenz erfordert Ihre Aufmerksamkeit",
@@ -364,6 +365,9 @@
       "subscriptionEnding": "Ihr Pro-Abonnement wurde gekündigt. Pro endet am {{date}}.",
       "subscriptionEndingNoDate": "Ihr Pro-Abonnement wurde gekündigt.",
       "subscriptionEnded": "Ihr Pro-Abonnement ist beendet. Diese Appliance nutzt die kostenlose Edition.",
+      "subscriptionEndingPaymentFailed": "Ihr Pro-Abonnement wurde beendet — Zahlung fehlgeschlagen. Pro endet am {{date}}.",
+      "subscriptionEndingPaymentFailedNoDate": "Ihr Pro-Abonnement wurde beendet — Zahlung fehlgeschlagen.",
+      "subscriptionEndedPaymentFailed": "Pro wurde beendet — Zahlung fehlgeschlagen. Ihre Appliance nutzt Essentials.",
       "resubscribeAt": "Erneut abonnieren unter {{url}}.",
       "resubscribeToRestore": "Schließen Sie das Abonnement erneut ab, um Pro wiederherzustellen."
     },

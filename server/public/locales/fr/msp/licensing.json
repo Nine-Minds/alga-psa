@@ -266,7 +266,8 @@
         "badge": "Sous licence",
         "descriptionEnding": "Votre abonnement a été annulé. Pro reste actif jusqu'au {{date}}.",
         "descriptionTermEnds": "Pro est actif jusqu’au {{date}}, date de fin de sa durée fixe.",
-        "descriptionPaymentFailed": "Pro est actif, mais le dernier paiement de renouvellement a échoué. Mettez à jour votre moyen de paiement pour conserver Pro."
+        "descriptionPaymentFailed": "Pro est actif, mais le dernier paiement de renouvellement a échoué. Mettez à jour votre moyen de paiement pour conserver Pro.",
+        "descriptionPaymentFailedEnded": "Votre abonnement Pro a pris fin — échec du paiement. Pro reste actif jusqu'au {{date}}."
       },
       "licenseExpired": {
         "eyebrow": "La licence nécessite votre attention",
@@ -366,6 +367,9 @@
       "subscriptionEnding": "Votre abonnement Pro a été annulé. Pro prend fin le {{date}}.",
       "subscriptionEndingNoDate": "Votre abonnement Pro a été annulé.",
       "subscriptionEnded": "Votre abonnement Pro est terminé. Cet appareil utilise l'édition gratuite.",
+      "subscriptionEndingPaymentFailed": "Votre abonnement Pro a pris fin — échec du paiement. Pro prend fin le {{date}}.",
+      "subscriptionEndingPaymentFailedNoDate": "Votre abonnement Pro a pris fin — échec du paiement.",
+      "subscriptionEndedPaymentFailed": "Pro a pris fin — échec du paiement. Votre appareil utilise Essentials.",
       "resubscribeAt": "Réabonnez-vous sur {{url}}.",
       "resubscribeToRestore": "Réabonnez-vous pour rétablir Pro."
     },

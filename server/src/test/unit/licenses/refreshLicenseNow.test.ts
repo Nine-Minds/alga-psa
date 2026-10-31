@@ -110,6 +110,39 @@ describe('refreshLicenseNow', () => {
     expect(result.error).toMatch(/free edition/);
   });
 
+  it('payment_failed end (token still valid) says payment failed, never cancelled', async () => {
+    mockFetch(200, {
+      status: 'revoked',
+      subscription: { state: 'cancelled', endReason: 'payment_failed', cancels_at: '2030-01-05T00:00:00Z' },
+    });
+    const result = await refreshLicenseNow();
+    expect(result.code).toBe('subscription_lapsed');
+    expect(result.status?.subscription).toMatchObject({ phase: 'ending', cause: 'payment_failed' });
+    expect(result.error).toMatch(/^The Pro subscription ended — payment failed\. Pro ends on \d{4}-\d{2}-\d{2}\./);
+    expect(result.error).not.toMatch(/cancelled/i);
+  });
+
+  it('payment_failed end after the token expired says Pro ended, never cancelled', async () => {
+    db.row = baseRow({ license_token: EXPIRED_TOKEN });
+    mockFetch(200, {
+      status: 'revoked',
+      subscription: { state: 'cancelled', endReason: 'payment_failed' },
+    });
+    const result = await refreshLicenseNow();
+    expect(result.status?.subscription).toMatchObject({ phase: 'lapsed', cause: 'payment_failed' });
+    expect(result.error).toMatch(/^Pro ended — payment failed\. This appliance runs Essentials\./);
+    expect(result.error).not.toMatch(/cancelled/i);
+  });
+
+  it('an ordinary cancellation still says cancelled', async () => {
+    mockFetch(200, {
+      status: 'revoked',
+      subscription: { state: 'cancelled', endReason: null, cancels_at: '2030-01-05T00:00:00Z' },
+    });
+    const result = await refreshLicenseNow();
+    expect(result.error).toMatch(/Pro subscription has been cancelled\. Pro ends on \d{4}-\d{2}-\d{2}/);
+  });
+
   it('cancel_scheduled ok stores the context and succeeds', async () => {
     mockFetch(200, {
       status: 'ok', jwt: VALID_PRO_TOKEN, exp: 1815359153,
