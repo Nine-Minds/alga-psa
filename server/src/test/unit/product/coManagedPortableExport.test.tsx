@@ -63,7 +63,8 @@ it('loads the screen once per mount, including while the session identity resolv
   view.rerender(<CoManagedFeatureBoundary mode="serves"><CoManagedPortableExport /></CoManagedFeatureBoundary>);
   expect(mocks.load).toHaveBeenCalledTimes(1);
 });
-it('does not describe files the archive does not contain', () => {
+it('says the archive carries files, and does not claim they are missing', () => {
   const copy = JSON.stringify(JSON.parse(require('node:fs').readFileSync('public/locales/en/msp/licensing.json', 'utf8')).coManaged.portableExport);
-  expect(copy).not.toMatch(/records and files/i);
+  expect(copy).toMatch(/records and (the )?files/i);
+  expect(copy).not.toMatch(/files and attachments are not included/i);
 });

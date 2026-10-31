@@ -5,6 +5,7 @@ import { CO_MANAGED_PORTABLE_CORE_COLUMNS } from '../../../../../packages/co-man
 import { CO_MANAGED_PORTABLE_WORK_COLUMNS } from '../../../../../packages/co-managed/src/portableWorkCatalog';
 import { CO_MANAGED_PORTABLE_ASSET_COLUMNS } from '../../../../../packages/co-managed/src/portableAssetCatalog';
 import { CO_MANAGED_PORTABLE_WORKFLOW_COLUMNS } from '../../../../../packages/co-managed/src/portableWorkflowCatalog';
+import { CO_MANAGED_PORTABLE_FILE_COLUMNS } from '../../../../../packages/co-managed/src/portableFileExport';
 
 /**
  * Every column a portable catalog projects must exist in the migrated main schema. A catalog column the schema lacks
@@ -17,10 +18,10 @@ import { CO_MANAGED_PORTABLE_WORKFLOW_COLUMNS } from '../../../../../packages/co
  */
 const ROOT = resolve(__dirname, '../../../../..');
 const CATALOGS = { core: CO_MANAGED_PORTABLE_CORE_COLUMNS, work: CO_MANAGED_PORTABLE_WORK_COLUMNS,
-  assets: CO_MANAGED_PORTABLE_ASSET_COLUMNS, workflows: CO_MANAGED_PORTABLE_WORKFLOW_COLUMNS } as Record<string, Record<string, readonly string[]>>;
+  assets: CO_MANAGED_PORTABLE_ASSET_COLUMNS, workflows: CO_MANAGED_PORTABLE_WORKFLOW_COLUMNS, files: CO_MANAGED_PORTABLE_FILE_COLUMNS } as Record<string, Record<string, readonly string[]>>;
 
-/** Catalog names that are not literal columns of a same-named table. */
-const MAPPED_TABLES: Record<string, string> = { handoff_history: 'co_management_ticket_handoffs' };
+/** Catalog names whose migrations name another table: handoff_history is a view of handoffs; external_files was created as file_stores and renamed. */
+const MAPPED_TABLES: Record<string, string> = { handoff_history: 'co_management_ticket_handoffs', external_files: 'file_stores' };
 /** Computed in the export query by joining users, not selected from the table. */
 const isComputed = (table: string, column: string) =>
   (table === 'workflow_tasks' || table === 'workflow_task_history') && column.endsWith('_name');
@@ -42,8 +43,8 @@ function migrationSources() {
 const word = (name: string) => new RegExp(`(?<![A-Za-z0-9_])${name}(?![A-Za-z0-9_])`);
 
 describe('portable catalogs against the main schema', () => {
-  it('only maps handoff_history and computes the workflow *_name fields', () => {
-    expect(Object.keys(MAPPED_TABLES)).toEqual(['handoff_history']);
+  it('only maps handoff_history and external_files and computes the workflow *_name fields', () => {
+    expect(Object.keys(MAPPED_TABLES)).toEqual(['handoff_history', 'external_files']);
     const checked = catalogColumnsToCheck().length;
     const all = Object.values(CATALOGS).flatMap(t => Object.values(t)).reduce((n, c) => n + c.length, 0);
     expect(all - checked).toBe(3); // created_by_name, completed_by_name, user_name

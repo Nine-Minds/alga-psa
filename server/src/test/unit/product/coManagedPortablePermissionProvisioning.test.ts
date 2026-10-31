@@ -51,15 +51,15 @@ beforeEach(() => {
 describe('portable export in a co_managed-shaped permission set', () => {
   it('declares the permissions each domain needs, so the engine never names a domain', () => {
     const declared = Object.fromEntries(CORE_PORTABLE_CONTRIBUTORS.map(c => [c.id, (c.permissions ?? []).map(p => `${p.resource}.${p.action}${p.tables ? '*' : ''}`)]));
-    expect(declared).toEqual({ core: [], work: ['ticket.read', 'ticket_settings.read', 'project.read*'], assets: ['asset.read'], workflows: ['workflow.admin', 'workflow.read'] });
+    expect(declared).toEqual({ core: [], work: ['ticket.read', 'ticket_settings.read', 'project.read*'], assets: ['asset.read'], workflows: ['workflow.admin', 'workflow.read'], files: ['co_management.manage'] });
   });
 
   it('(a) completes, and (b) names an exclusion for each domain whose permission is not provisioned', async () => {
     const reg = registry();
     const collected = await collectPortableWorkspace(reg, ctx);
-    expect(collected.sections.map(s => s.id).sort()).toEqual(['assets', 'core', 'work', 'workflows']);
+    expect(collected.sections.map(s => s.id).sort()).toEqual(['assets', 'core', 'files', 'work', 'workflows']);
     // Unprovisioned domains are not called at all; the partly provisioned one is, with its project scope declared empty.
-    expect(calls.sort()).toEqual(['core', 'work']);
+    expect(calls.sort()).toEqual(['core', 'files', 'work']);
     const manifest = buildCoManagedPortableWorkspaceManifest({ context, collected, registry: reg });
     const missing = manifest.exclusions.filter(e => e.class === 'not_provisioned').map(e => e.name).sort();
     expect(missing).toEqual(['domain:assets', 'domain:work:project', 'domain:workflows']);
@@ -67,6 +67,17 @@ describe('portable export in a co_managed-shaped permission set', () => {
     for (const id of ['assets', 'workflows']) expect(Object.values(manifest.sections.find(s => s.id === id)!.records).flat()).toEqual([]);
     // The archive passes its own manifest validation after a JSON round trip.
     expect(() => validateCoManagedPortableWorkspaceManifest(JSON.parse(JSON.stringify(manifest)), context, [], reg)).not.toThrow();
+  });
+
+  it('files are exported (and no files exclusion is named) when the export-admin permission is provisioned, and excluded when it is not', async () => {
+    let reg = registry(), collected = await collectPortableWorkspace(reg, ctx);
+    expect(calls).toContain('files');
+    expect(buildCoManagedPortableWorkspaceManifest({ context, collected, registry: reg }).exclusions.map(e => e.name)).not.toContain('domain:files');
+    calls.length = 0; state.provisioned.delete('co_management.manage');
+    reg = registry(); collected = await collectPortableWorkspace(reg, ctx);
+    expect(calls).not.toContain('files');
+    expect(collected.files).toEqual([]);
+    expect(buildCoManagedPortableWorkspaceManifest({ context, collected, registry: reg }).exclusions).toContainEqual(expect.objectContaining({ class: 'not_provisioned', name: 'domain:files' }));
   });
 
   it('retain agrees with export: the final current-source check does not flag an exclusion as changed', async () => {
@@ -90,7 +101,7 @@ describe('portable export in a co_managed-shaped permission set', () => {
     state.provisioned = new Set([...coManagedProvisioned, 'asset.read', 'workflow.admin', 'workflow.read', 'project.read']);
     state.held = new Set(state.provisioned);
     const reg = registry(), collected = await collectPortableWorkspace(reg, ctx);
-    expect(calls.sort()).toEqual(['assets', 'core', 'work', 'workflows']);
+    expect(calls.sort()).toEqual(['assets', 'core', 'files', 'work', 'workflows']);
     expect(buildCoManagedPortableWorkspaceManifest({ context, collected, registry: reg }).exclusions.some(e => e.class === 'not_provisioned')).toBe(false);
   });
 

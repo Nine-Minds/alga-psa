@@ -31,8 +31,8 @@ describe('portable contributor registry contract', () => {
     expect(registry.owner('nope')).toBeUndefined();
   });
   it('registers the core set with disjoint table ownership', () => {
-    expect(CORE_PORTABLE_CONTRIBUTORS.map(c => c.id)).toEqual(['core', 'work', 'assets', 'workflows']);
-    expect(createCorePortableRegistry().list()).toHaveLength(4);
+    expect(CORE_PORTABLE_CONTRIBUTORS.map(c => c.id)).toEqual(['core', 'work', 'assets', 'workflows', 'files']);
+    expect(createCorePortableRegistry().list()).toHaveLength(5);
   });
   const bad: [string, Partial<PortableContributor>][] = [
     ['bad id', { id: 'Bad Id' }], ['bad version', { version: 0 }], ['no reason', { reason: '' }],
