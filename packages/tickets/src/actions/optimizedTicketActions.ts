@@ -3388,8 +3388,10 @@ export interface AddTicketCommentInput {
 /**
  * Transaction-scoped comment write. Runs on the caller's transaction so the
  * comment and every after-commit hook it registers commit (or roll back) with
- * the caller's work. Throws on failure (never returns a TicketActionError) and
- * does not check permissions: callers authorize, like updateTicketInTransaction.
+ * the caller's work. Throws on failure (never returns a TicketActionError).
+ * Callers check tenant-wide RBAC, like updateTicketInTransaction; this function
+ * enforces record-level ticket authorization, so a client principal must be
+ * linked to a contact that can see the ticket.
  */
 export async function addTicketCommentInTransaction(
   trx: Knex.Transaction,
