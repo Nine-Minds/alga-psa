@@ -79,6 +79,8 @@ export async function setCoManagedTimeBillingProfile(db: Knex, actor: CoManagedS
     if (current.billing_profile_id === request.profileId) return { profileId: request.profileId };
     if (current.billing_profile_id !== request.expectedProfileId) throw new CoManagedTimeBillingProfileError('TIME_BILLING_PROFILE_CHANGED');
     await query().update({ billing_profile_id: request.profileId });
+    // audit_logs has a BEFORE INSERT trigger that overwrites `tenant` from app.current_tenant; set it for this transaction to the MSP.
+    await context.trx.raw('select set_config(?, ?, true)', ['app.current_tenant', actor.tenant]);
     await home.table('audit_logs').insert({ tenant: actor.tenant, audit_id: randomUUID(), table_name: table,
       record_id: current.reference_id, operation: 'UPDATE', user_id: actor.userId, timestamp: context.trx.raw('clock_timestamp()'),
       changed_data: { billing_profile_id: request.profileId }, details: { previous_billing_profile_id: current.billing_profile_id } });

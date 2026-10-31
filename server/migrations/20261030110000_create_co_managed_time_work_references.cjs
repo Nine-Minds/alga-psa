@@ -6,7 +6,7 @@ const { ensureTenantDistribution, ensureCompositeFk } = require('./utils/citusDi
 // entry was booked against; there is deliberately no FK to the customer's work rows, so the
 // MSP's billing evidence survives the customer's departure. No triggers (Citus skips them;
 // invariants live in app code). Expand-only: nothing existing reads this table.
-const TABLE = 'co_managed_work_references';
+const TABLE = 'co_managed_time_work_references';
 
 exports.config = { transaction: false };
 

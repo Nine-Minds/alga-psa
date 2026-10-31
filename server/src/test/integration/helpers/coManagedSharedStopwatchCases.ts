@@ -26,6 +26,7 @@ export function registerCoManagedSharedStopwatchTests(_getDb: () => Knex, withTi
   it('starts on the local reference in main\'s session table, logs through the combined save, and leaves no second clock table', async () => withTime(async f => {
     const { sw, sessions } = await setup(f);
     const started: any = await sw.startStopwatch({ work_item_type: 'co_managed', work_item_id: f.referenceId, notes: 'Tracked shared work' });
+    if (!started?.session) throw new Error('start result: ' + JSON.stringify(started));
     expect(started.session).toMatchObject({ user_id: f.principal.userId, work_item_type: 'co_managed', work_item_id: f.referenceId, status: 'running' });
     expect(await sessions()).toHaveLength(1);
     expect(await sw.startStopwatch({ work_item_type: 'co_managed', work_item_id: f.referenceId })).toMatchObject({ conflict: { session_id: started.session.session_id } });
@@ -35,7 +36,7 @@ export function registerCoManagedSharedStopwatchTests(_getDb: () => Knex, withTi
     expect(entry).toMatchObject({ work_item_type: 'co_managed', work_item_id: f.referenceId, billing_mode: 'commercial' });
     expect(await sessions().first()).toMatchObject({ status: 'logged', time_entry_id: entry.entry_id });
     expect(await sw.getMyStopwatch()).toBeNull();
-    expect(await f.sponsor.table('co_managed_work_references').where('entry_id', entry.entry_id)).toHaveLength(1);
+    expect(await f.sponsor.table('co_managed_time_work_references').where('entry_id', entry.entry_id)).toHaveLength(1);
   }));
 
   it('an unknown or foreign reference is not startable and a native clock never logs shared time', async () => withTime(async f => {

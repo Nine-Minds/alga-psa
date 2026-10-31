@@ -12,7 +12,6 @@ type Fixture = (work: (fixture: any) => Promise<void>) => Promise<void>;
  * these helpers: `f.logOperational(minutes)` (customer actor, no service_id), `f.logBillable(minutes)`
  * (MSP actor, `co_managed` work item, service_id), `f.approve(entryId)`, `f.generateInvoice()`
  * (the MSP `generateInvoiceForSelectionInputs` path), `f.effort()` (`getCoManagedEffortTotals`).
- * NOT RUNNABLE without the Temporal + Postgres fixtures (neither was reachable when authored).
  */
 export function registerCoManagedInvoiceJourneyTests(_getDb: () => Knex, withJourney: Fixture) {
   it('bills the 15 minute MSP entry, never the operational one, and reports 5 + 15 = 20 effort once per entry', async () => withJourney(async f => {
@@ -37,7 +36,12 @@ export function registerCoManagedInvoiceJourneyTests(_getDb: () => Knex, withJou
     expect(await f.sponsor.table('invoice_time_entries').where('entry_id', operational.entry_id)).toHaveLength(0);
     expect(await f.customer.table('time_entries').where('entry_id', operational.entry_id).first()).toMatchObject({ invoiced: false });
     expect(await f.customer.table('invoices')).toHaveLength(0);
-    expect(links[0].work_item_snapshot).toMatchObject({ workItemType: 'ad_hoc', billedMinutes: 15 });
+    // The MSP invoice carries exactly one time line, for the 15 billable minutes (0.25 h); the 5 operational minutes add nothing.
+    const lines = await f.sponsor.table('invoice_charges').where('invoice_id', invoices[0].invoice_id);
+    expect(lines).toHaveLength(1);
+    expect(Number(lines[0].quantity)).toBeCloseTo(0.25, 5);
+    // Shared work snapshots as its retained source kind (the customer ticket), billed once for 15 minutes.
+    expect(links[0].work_item_snapshot).toMatchObject({ workItemType: 'ticket', billedMinutes: 15 });
 
     const effort = await f.effort();
     expect(effort).toMatchObject({ customerMinutes: 5, mspMinutes: 15, combinedMinutes: 20 });

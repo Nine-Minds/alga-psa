@@ -42,6 +42,8 @@ export async function register() {
     try {
       const { registerCoManagedTimeSource } = await import('./lib/co-managed/timeSource');
       registerCoManagedTimeSource();
+      const { registerCoManagedTimeEntryWorkContributor } = await import('./lib/co-managed/timeWorkContext');
+      registerCoManagedTimeEntryWorkContributor();
     } catch (error) {
       console.error('Failed to register the co-managed time source:', error);
     }

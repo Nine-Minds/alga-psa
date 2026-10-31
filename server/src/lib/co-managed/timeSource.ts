@@ -54,8 +54,12 @@ async function admitOperational(db: Knex, user: any, tenant: string, entry: Save
   try { actor = await coManagedBrowserActor(user, tenant); } catch { return null; }
   const kind = entry.work_item_type as 'ticket' | 'project_task';
   const boundary = kind === 'ticket' ? withCoManagedCustomerTicket : withCoManagedCustomerProject;
+  // The customer boundary is keyed by the tenant's own relationship row. A workspace with no live relationship has no
+  // co-managed time to own: native decides. Authority below stays the customer's local RBAC on its own ticket/task.
+  const relationship = await tenantDb(db, tenant).table('co_management_relationships').where({ state: 'active' }).whereNull('ended_at').first('relationship_id');
+  if (!relationship) return null;
   try {
-    return await boundary(db, actor, { kind, id: entry.work_item_id, tenant } as any, 'update', async context => ({ name: null as string | null, redacted: context.redactedFields }));
+    return await boundary(db, actor, { kind, id: entry.work_item_id, tenant, relationshipId: relationship.relationship_id } as any, 'update', async context => ({ name: null as string | null, redacted: context.redactedFields }));
   } catch (error) {
     if (error instanceof CoManagedSharedWorkError) return null; // not shared customer work: native decides (and asks for a service)
     throw error;
@@ -85,7 +89,7 @@ async function admitSave(ctx: TimeSourceContext, entry: SaveInput): Promise<Time
         evidence = { title: resolved.workItemName };
       } else if (entry.entry_id) await lockTimeEntryBillingMode(trx, tenant, entry.entry_id);
       const result = await writeCoManagedTimeEntry(trx, { tenant, actor: user, entry, mode, reference, evidence, participates: true });
-      if (entry.stopwatch_session_id) await closeSessionWithEntry(trx, tenant, String(user.user_id), entry.stopwatch_session_id, String(result.entry.entry_id));
+      if (entry.stopwatch_session_id) await closeSessionWithEntry(trx, tenant, String(user.user_id), entry.stopwatch_session_id, String(result.entry.entry_id), entry.work_item_id);
       if (commercial) await retainCoManagedTimeParticipation(trx, tenant, String(result.entry.entry_id));
       return result;
     });
@@ -100,10 +104,12 @@ async function admitSave(ctx: TimeSourceContext, entry: SaveInput): Promise<Time
 }
 
 /** Closes the user's own open stopwatch session onto the entry just written, in the same transaction. */
-async function closeSessionWithEntry(trx: Knex.Transaction, tenant: string, userId: string, sessionId: string, entryId: string) {
+async function closeSessionWithEntry(trx: Knex.Transaction, tenant: string, userId: string, sessionId: string, entryId: string, workItemId: string) {
   const db = tenantDb(trx, tenant);
-  const session = await db.table('time_tracking_sessions').where({ session_id: sessionId, user_id: userId }).forUpdate().first('status');
+  const session = await db.table('time_tracking_sessions').where({ session_id: sessionId, user_id: userId }).forUpdate().first('status', 'work_item_type', 'work_item_id');
   if (!session || !['running', 'paused'].includes(session.status)) throw new Error('Validation failed: the stopwatch session is no longer open');
+  // A native clock never logs shared time (and a shared clock never logs other work): the session must be this work's own.
+  if (session.work_item_type !== COMMERCIAL_WORK || session.work_item_id !== workItemId) throw new Error('Validation failed: the stopwatch session is for different work');
   const now = new Date();
   await db.table('time_tracking_session_segments').where({ session_id: sessionId }).whereNull('ended_at').update({ ended_at: now });
   await db.table('time_tracking_sessions').where({ session_id: sessionId }).update({ status: 'logged', time_entry_id: entryId, closed_at: now, updated_at: now });
@@ -122,7 +128,7 @@ export function createCoManagedTimeSource(): TimeSource {
       persist: async (trx, ctx, input) => {
         // Reached from the stopwatch log path and the REST API. Only co_managed work is ours here; operational
         // customer time is admitted in `admit`, where the customer-local authority is checked.
-        if (input.entry.work_item_type !== COMMERCIAL_WORK || !(await participates(ctx.tenant))) return COMMANDS_MISS;
+        if (String(input.entry.work_item_type) !== COMMERCIAL_WORK || !(await participates(ctx.tenant))) return COMMANDS_MISS;
         const reference = await loadCoManagedLocalWorkReference(trx, ctx.tenant, String(input.entry.work_item_id));
         if (!reference) throw new CoManagedSharedWorkError();
         const value = await writeCoManagedTimeEntry(trx, { tenant: ctx.tenant, actor: input.actor, entry: input.entry as any, mode: 'commercial', reference, participates: true });
@@ -139,7 +145,7 @@ export function createCoManagedTimeSource(): TimeSource {
         // Neither mode ever drew a bucket or an hour block (no client resolves for co_managed, no service for operational),
         // so there is nothing to reverse. The provenance row restricts the entry, so it goes first.
         // write-admission: exempt — provenance row of the entry being removed, deleted inside the admitted removeCore transaction
-        await db.table('co_managed_work_references').where({ entry_id: entryId }).delete();
+        await db.table('co_managed_time_work_references').where({ entry_id: entryId }).delete();
         const deleteCount = await db.table('time_entries').where({ entry_id: entryId }).delete();
         return { handled: true, value: { timeEntry: row, deleteCount } };
       },
@@ -163,11 +169,17 @@ export function createCoManagedTimeSource(): TimeSource {
         const reference = await loadCoManagedLocalWorkReference(db, ctx.tenant, input.work_item_id);
         if (!reference) return { handled: true, value: permissionError('Permission denied: This shared work is not available for time entry') };
         try {
+          // A running clock is a promise to log shared time, so starting needs the same current authority as logging it:
+          // a revoked grant, ended relationship or lost staff assignment refuses the start (an open clock can still be paused/discarded).
+          const resolved = await resolveCoManagedTimeWorkItem(db as any, await coManagedBrowserActor(user, ctx.tenant),
+            { kind: reference.sourceKind, id: reference.sourceId, tenant: reference.customerTenant, relationshipId: reference.relationshipId } as any);
+          if (resolved.workItemId !== reference.localReferenceId) throw new CoManagedSharedWorkError();
           // Extends main's single stopwatch table; the type has no CHECK there, hence the legacy-type allowance.
           const session = await withTransaction(db, (trx: Knex.Transaction) => startSession(trx, ctx.tenant, user.user_id,
             { workItemType: COMMERCIAL_WORK, workItemId: reference.localReferenceId, serviceId: input.service_id ?? null, notes: input.notes }, { allowLegacyWorkItemTypes: true }));
           return { handled: true, value: { session } as any };
         } catch (error) {
+          if (error instanceof CoManagedSharedWorkError) return { handled: true, value: permissionError('Permission denied: This shared work is not available for time entry') };
           if (error instanceof StopwatchConflictError) return { handled: true, value: { conflict: error.openSession } as any };
           const expected = timeSheetActionErrorFrom(error);
           if (expected) return { handled: true, value: expected };

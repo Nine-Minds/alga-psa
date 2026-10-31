@@ -26,7 +26,7 @@ const entryMinutes = (alias: string) => `GREATEST(ROUND(EXTRACT(EPOCH FROM (${al
  *
  * Customer minutes are the customer's own entries on its own work item (`work_item_id` is indexed;
  * `billing_mode` is only a refinement of that keyed lookup, never a tenant-wide probe). MSP minutes
- * are the sponsor's entries joined through `co_managed_work_references`, which is unique on
+ * are the sponsor's entries joined through `co_managed_time_work_references`, which is unique on
  * `(tenant, entry_id)`, so an entry visible to both relations is summed once and a duplicate
  * reference cannot double it. Billable minutes never enter: operational rows store 0 billable
  * minutes by design, so effort is measured from the start/end instants alone.
@@ -69,7 +69,7 @@ export async function getCoManagedEffortTotals(db: Knex, inputActor: CoManagedSe
     const sourceKind = resource.kind === 'ticket' ? 'ticket' : 'project_task';
     const customer = owner.table('time_entries as effort').where('effort.work_item_type', sourceKind).whereIn('effort.work_item_id', customerIds).select(sum('customer', 'effort'));
     const mspOwner = tenantDb(trx, relationship.sponsor_tenant), msp = mspOwner.table('time_entries as effort');
-    mspOwner.tenantJoin(msp, 'co_managed_work_references as reference', 'effort.entry_id', 'reference.entry_id');
+    mspOwner.tenantJoin(msp, 'co_managed_time_work_references as reference', 'effort.entry_id', 'reference.entry_id');
     msp.where({ 'effort.work_item_type': 'co_managed', 'reference.customer_tenant': resource.tenant,
       'reference.relationship_id': resource.relationshipId, 'reference.client_id': relationship.sponsor_client_id,
       'reference.source_kind': sourceKind }).whereIn('reference.source_id', mspIds).select(sum('msp', 'effort'));

@@ -49,7 +49,7 @@ export async function recordCoManagedWorkReference(trx: Knex.Transaction, tenant
   reference: CoManagedLocalWorkReference, evidence: { title?: string | null; ticketNumber?: string | null } = {}): Promise<void> {
   if (!trx.isTransaction || reference.customerTenant === tenant) throw new CoManagedSharedWorkError();
   // write-admission: exempt — provenance row written in the same transaction as the admitted shared time save
-  await tenantDb(trx, tenant).table('co_managed_work_references').insert({
+  await tenantDb(trx, tenant).table('co_managed_time_work_references').insert({
     tenant, entry_id: entryId, customer_tenant: reference.customerTenant, relationship_id: reference.relationshipId,
     source_kind: reference.sourceKind, source_id: reference.sourceId, local_reference_id: reference.localReferenceId, client_id: reference.clientId,
     ticket_number: evidence.ticketNumber ?? null, title: evidence.title ?? null,

@@ -47,7 +47,7 @@ export function registerCoManagedTimeBillingProfileTests(getDb: () => Knex, with
     const retained = await f.sponsor.table('time_entries').where('entry_id', entry.entry_id).first();
     await p.change(null, p.extra);
     expect(await f.sponsor.table('time_entries').where('entry_id', entry.entry_id).first()).toEqual(retained);
-    await expect(f.save({ entry_id: entry.entry_id, end_time: '2026-09-08T10:30:00Z' })).rejects.toThrow();
+    await expect(f.save({ entry_id: entry.entry_id, end_time: '2026-08-08T10:30:00Z' })).rejects.toThrow();
   }));
 
   it('rejects local customer callers and callers without current staff authority; the stored profile is untouched', async () => withTime(async f => {

@@ -17,7 +17,7 @@ export async function retainCoManagedTimeParticipation(trx: Knex.Transaction, te
   if (!entry) throw new CoManagedSharedWorkError();
   if (entry.work_item_type !== 'co_managed') return;
   if (!entry.end_time) throw new CoManagedSharedWorkError();
-  const reference = await owner.table('co_managed_work_references').where('entry_id', entryId).forShare().first();
+  const reference = await owner.table('co_managed_time_work_references').where('entry_id', entryId).forShare().first();
   if (!reference || reference.customer_tenant === tenant || !['ticket', 'project_task'].includes(reference.source_kind)) throw new CoManagedSharedWorkError();
   const key: ParticipationEvidenceIdentity = { tenant, customer_tenant: reference.customer_tenant, relationship_id: reference.relationship_id,
     resource_type: reference.source_kind, resource_id: reference.source_id, source_type: 'time_entry', source_id: entryId };
