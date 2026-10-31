@@ -192,7 +192,7 @@ describe('comment mutations: client principals need record access to the owning 
       const peer = await outcome(newComment('ticket-1'));
       ticketRow = { ...ownTicket, board_id: 'board-hidden' };
       const hidden = await outcome(newComment('ticket-1'));
-      expect(JSON.stringify(missing)).toContain(DENIED);
+      expect(missing).toEqual({ returned: { permissionError: DENIED } });
       expect(peer).toEqual(missing);
       expect(hidden).toEqual(missing);
       expect(commentInsert).not.toHaveBeenCalled();

@@ -317,12 +317,15 @@ describe('ticket comment threading actions', () => {
         'u.user_id as internal_user_id'
       )
       .whereNotNull('t.client_id')
+      // The seeded client user must be able to see this ticket's board in the portal.
+      .whereRaw(`COALESCE((SELECT b.client_portal_visible FROM boards b WHERE b.tenant = t.tenant AND b.board_id = t.board_id), true) <> false`)
       .first();
     expect(context).toBeTruthy();
 
     const generated = await knex.raw(`
       SELECT
         gen_random_uuid() AS client_user_id,
+        gen_random_uuid() AS client_contact_id,
         gen_random_uuid() AS other_client_id,
         gen_random_uuid() AS other_ticket_id
     `);
@@ -353,9 +356,21 @@ describe('ticket comment threading actions', () => {
       updated_at: new Date(),
     });
 
+    // Client principals are authorized by contact_visibility, which needs a contact. This contact
+    // belongs to the ticket's client and has no visibility group (client scope), so it sees every
+    // portal-visible-board ticket of that client but nothing of other_client_id.
+    await scopedDb(context.tenant).table('contacts').insert({
+      tenant: context.tenant,
+      contact_name_id: ids.client_contact_id,
+      full_name: 'T078 Client',
+      email: `t078-contact-${Date.now()}@example.test`,
+      client_id: context.client_id,
+    });
+
     await scopedDb(context.tenant).table('users').insert({
       tenant: context.tenant,
       user_id: ids.client_user_id,
+      contact_id: ids.client_contact_id,
       username: `t078-client-${Date.now()}`,
       hashed_password: 'not-used',
       first_name: 'T078',
@@ -395,6 +410,7 @@ describe('ticket comment threading actions', () => {
         first_name: 'T078',
         last_name: 'Client',
         clientId: context.client_id,
+        contact_id: ids.client_contact_id,
       };
 
       allowedReplyId = await createComment({
@@ -443,9 +459,8 @@ describe('ticket comment threading actions', () => {
         is_resolution: false,
         parent_comment_id: inaccessibleRootId,
       });
-      expect(deniedInaccessibleReply).toMatchObject({
-        actionError: 'Client user cannot access this ticket',
-      });
+      // Record-level denial: a returned permissionError, identical for an invisible and a missing ticket.
+      expect(deniedInaccessibleReply).toEqual({ permissionError: 'Permission denied: Cannot access ticket' });
     } finally {
       userRef.user = originalUser;
       // Remove anything the client user authored, including comments a
@@ -473,6 +488,7 @@ describe('ticket comment threading actions', () => {
       await scopedDb(context.tenant).table('ticket_audit_logs').where({ actor_user_id: ids.client_user_id }).delete();
       await scopedDb(context.tenant).table('ticket_audit_logs').where({ ticket_id: ids.other_ticket_id }).delete();
       await scopedDb(context.tenant).table('users').where({ user_id: ids.client_user_id }).delete();
+      await scopedDb(context.tenant).table('contacts').where({ contact_name_id: ids.client_contact_id }).delete();
       await scopedDb(context.tenant).table('tickets').where({ ticket_id: ids.other_ticket_id }).delete();
       await scopedDb(context.tenant).table('clients').where({ client_id: ids.other_client_id }).delete();
     }
