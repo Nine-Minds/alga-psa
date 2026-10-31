@@ -84,6 +84,7 @@ export const TICKET_ACTIVITY_ACTOR = {
   API: 'api',
   EMAIL_SENDER: 'email_sender',
   WORKFLOW: 'workflow',
+  SERVICE_PRINCIPAL: 'service_principal',
 } as const;
 
 export type TicketActivityActor =
@@ -152,6 +153,8 @@ export interface TicketActivityActorInfo {
   userId?: string | null;
   contactId?: string | null;
   displayName?: string | null;
+  /** Principal the (human) actor's request came through; recorded in via_principal_user_id. */
+  viaPrincipalUserId?: string | null;
 }
 
 export interface WriteTicketActivityInput {

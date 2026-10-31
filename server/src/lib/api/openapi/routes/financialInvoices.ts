@@ -1325,6 +1325,26 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   });
 
   registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/invoices/{id}/history',
+    summary: 'Get invoice lifecycle history',
+    description: 'Returns the audit trail (invoice_finalized, invoice_unfinalized, invoice_deleted) for one invoice id, oldest first. Each entry has the acting user, timestamp and before/after status and finalized_at.',
+    tags: [invoiceTag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: UuidIdParam },
+    responses: {
+      200: { description: 'Invoice history returned.', schema: ApiSuccess },
+      400: { description: 'Invalid invoice id.', schema: ApiError },
+      401: { description: 'API key missing/invalid.', schema: ApiError },
+      403: { description: 'invoice:read permission denied.', schema: ApiError },
+      404: { description: 'Invoice not found.', schema: ApiError },
+      500: { description: 'Unexpected history failure.', schema: ApiError },
+    },
+    extensions: { ...commonExtensions, 'x-rbac-resource': 'invoice', 'x-rbac-action': 'read' },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
     method: 'post',
     path: '/api/v1/invoices/{id}/pdf',
     summary: 'Generate and download invoice PDF',

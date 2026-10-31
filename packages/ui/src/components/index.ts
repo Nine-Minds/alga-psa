@@ -19,6 +19,7 @@ export * from './Checkbox';
 export * from './ClientAvatar';
 export { default as ClientAvatar } from './ClientAvatar';
 export * from './ClientPicker';
+export * from './AsyncClientPicker';
 export * from './ColorPicker';
 export { default as ColorPicker } from './ColorPicker';
 // CommentThreadDrawer pulls the BlockNote editor (via InlineReplyComposer). Not re-exported
@@ -193,3 +194,4 @@ export { default as ResponseStateBadge } from './tickets/ResponseStateBadge';
 export { PrioritySelect } from './tickets/PrioritySelect';
 export { RecurrenceRuleEditor, defaultRuleForFrequency } from './recurrence/RecurrenceRuleEditor';
 export type { RecurrenceRuleEditorProps } from './recurrence/RecurrenceRuleEditor';
+export * from './labels';

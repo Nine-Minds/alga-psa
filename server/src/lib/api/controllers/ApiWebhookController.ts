@@ -3,6 +3,7 @@
  * Simplified version with proper API key authentication for webhook management
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { NextRequest, NextResponse } from 'next/server';
@@ -19,7 +20,6 @@ import {
   webhookSubscriptionSchema,
   webhookTemplateSchema,
   webhookEventSchema,
-  webhookEventTypeSchema,
   webhookRetryFailedSchema,
   webhookSignatureSchema,
   CreateWebhookData,
@@ -39,23 +39,10 @@ import {
 import { 
   getConnection 
 } from '../../db/db';
-import { 
-  hasPermission 
-} from '../../auth/rbac';
-import {
-  assertInternalApiUser,
-  ApiRequest,
-  UnauthorizedError,
-  ForbiddenError,
-  NotFoundError,
-  ValidationError,
-  ConflictError,
-  createSuccessResponse,
-  createPaginatedResponse,
-  handleApiError
-} from '../middleware/apiMiddleware';
+import { ApiRequest, ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 import { webhookModel } from '../../webhooks/webhookModel';
+import { WEBHOOK_EVENT_NAMES } from '../../webhooks/eventRegistry';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { verifyWebhookSignature as verifyAlgaWebhookSignature } from '../../webhooks/sign';
 import { signRequest } from '../../webhooks/sign';
@@ -108,14 +95,14 @@ export class ApiWebhookController {
     }
 
     // Get user within tenant context
-    const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-    assertInternalApiUser(user);
+    const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
     // Create extended request with context
     const apiRequest = req as ApiRequest;
     apiRequest.context = {
-      userId: keyRecord.user_id,
+      userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
       tenant: keyRecord.tenant,
       user
     };
@@ -140,7 +127,7 @@ export class ApiWebhookController {
     // Get a connection within the current tenant context
     const knex = await getConnection(req.context.tenant);
     
-    const hasAccess = await hasPermission(req.context.user, 'webhook', action, knex);
+    const hasAccess = await hasApiContextPermission(req.context, 'webhook', action, knex);
     if (!hasAccess) {
       throw new ForbiddenError(`Permission denied: Cannot ${action} webhook`);
     }
@@ -1510,7 +1497,7 @@ export class ApiWebhookController {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
-          const events = [...webhookEventTypeSchema.options];
+          const events = [...WEBHOOK_EVENT_NAMES];
           
           return createSuccessResponse(events);
         });

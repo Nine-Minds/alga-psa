@@ -48,6 +48,7 @@ export default defineConfig({
       // Match tsconfig-style subpath overrides before the generic `@/` mapping.
       { find: /^@\/lib\/db\/db$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/db/db.tsx')}` },
       { find: /^@\/lib\/db\/index$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/db/index.ts')}` },
+      { find: /^@\/lib\/mcp\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/mcp')}/$1` },
       { find: /^@\/lib\/tenant$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/tenant.ts')}` },
       { find: /^@\/lib\/iap\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/iap')}/$1` },
       { find: /^@\/lib\/storage\/providers\/StorageProvider$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/storage/providers/StorageProvider.ts')}` },

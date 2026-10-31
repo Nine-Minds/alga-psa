@@ -23,6 +23,7 @@ import {
 import { 
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { 
   runWithTenant 
@@ -33,17 +34,7 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
-import {
-  assertInternalApiUser,
-  AuthenticatedApiRequest,
-  UnauthorizedError,
-  ForbiddenError,
-  NotFoundError,
-  ValidationError,
-  createSuccessResponse,
-  createPaginatedResponse,
-  handleApiError
-} from '../middleware/apiMiddleware';
+import { AuthenticatedApiRequest, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 
 export class ApiTimeEntryController extends ApiBaseController {
@@ -53,10 +44,12 @@ export class ApiTimeEntryController extends ApiBaseController {
     req: NextRequest,
     keyRecord: { user_id: string; tenant: string; api_key_id?: string },
     user: AuthenticatedApiRequest['context']['user'],
+    apiAuthContext: { userId: string; viaPrincipalUserId?: string | null },
   ): Promise<AuthenticatedApiRequest> {
     const apiRequest = req as AuthenticatedApiRequest;
     apiRequest.context = {
-      userId: keyRecord.user_id,
+      userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
       tenant: keyRecord.tenant,
       user,
       apiKeyId: keyRecord.api_key_id,
@@ -116,16 +109,15 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'read',
           db
@@ -203,16 +195,15 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'read',
           db
@@ -273,16 +264,15 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'read',
           db
@@ -363,16 +353,15 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasCreatePermission = await hasPermission(
-          user,
+        const hasCreatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'create',
           db
@@ -441,11 +430,10 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Extract session ID from path
         const pathParts = req.url.split('/');
@@ -454,8 +442,8 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'update',
           db
@@ -524,11 +512,10 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Get active session within tenant context
         const session = await runWithTenant(tenantId!, async () => {
@@ -577,16 +564,15 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasApprovePermission = await hasPermission(
-          user,
+        const hasApprovePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'approve',
           db
@@ -655,16 +641,15 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasApprovePermission = await hasPermission(
-          user,
+        const hasApprovePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'approve',
           db
@@ -733,11 +718,10 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Get templates within tenant context
         const templates = await runWithTenant(tenantId!, async () => {
@@ -786,16 +770,15 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasCreatePermission = await hasPermission(
-          user,
+        const hasCreatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'create',
           db
@@ -864,16 +847,15 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'update',
           db
@@ -942,16 +924,15 @@ export class ApiTimeEntryController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasDeletePermission = await hasPermission(
-          user,
+        const hasDeletePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_entry',
           'delete',
           db

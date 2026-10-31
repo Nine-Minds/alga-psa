@@ -21,19 +21,8 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
-import { 
-  ApiRequest,
-  AuthenticatedApiRequest,
-  UnauthorizedError,
-  ForbiddenError,
-  NotFoundError,
-  ValidationError,
-  ConflictError,
-  assertInternalApiUser,
-  createSuccessResponse,
-  createPaginatedResponse,
-  handleApiError
-} from '../middleware/apiMiddleware';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
+import { ApiRequest, AuthenticatedApiRequest, ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError } from '../middleware/apiMiddleware';
 import { enforceApiRateLimit } from '../rateLimit/enforce';
 import { getTenantProduct } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
@@ -88,13 +77,13 @@ export abstract class ApiBaseController {
     // Get user within tenant context. The internal-user assertion is the
     // context-construction defense: a permissively mocked validator cannot
     // admit a client user into a user-key API context.
-    const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-    assertInternalApiUser(user);
+    const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
     // Create extended request with context
     const apiRequest = req as AuthenticatedApiRequest;
     apiRequest.context = {
-      userId: keyRecord.user_id,
+      ...apiAuthContext,
       tenant: keyRecord.tenant,
       user,
       apiKeyId: keyRecord.api_key_id,
@@ -128,7 +117,7 @@ export abstract class ApiBaseController {
     const knex = await getConnection(req.context.tenant);
     
     const permissionResource = this.options.permissionResource ?? this.options.resource;
-    const hasAccess = await hasPermission(req.context.user, permissionResource, action, knex);
+    const hasAccess = await hasApiContextPermission(req.context, permissionResource, action, knex);
     if (!hasAccess) {
       throw new ForbiddenError(`Permission denied: Cannot ${action} ${this.options.resource}`);
     }
@@ -254,6 +243,7 @@ export abstract class ApiBaseController {
           const url = new URL(apiRequest.url);
           const page = parseInt(url.searchParams.get('page') || '1');
           const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
+          // LEVERAGE: friction list-default-sort-created-at — falls back to 'created_at' for every resource, even ones without that column.
           const sort = typeof validatedQuery.sort === 'string'
             ? validatedQuery.sort : url.searchParams.get('sort') || 'created_at';
           const order = (validatedQuery.order || url.searchParams.get('order') || 'desc') as 'asc' | 'desc';

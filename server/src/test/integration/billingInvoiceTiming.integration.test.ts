@@ -2515,12 +2515,16 @@ it('T-REST-DEL-1: REST DELETE of a fresh recurring draft removes it, releases it
   const response = await restDelete(invoiceId);
   expect(response.status).toBe(204);
 
-  // The audit row is written through onBeforeCommit, atomically with the delete.
-  const auditRow = await tenantTable(db, tenantId, 'audit_logs')
-    .where({ tenant: tenantId, table_name: 'invoices', record_id: invoiceId, operation: 'DELETE' })
-    .first();
-  expect(auditRow).toBeTruthy();
-  expect(auditRow.details).toMatchObject({ action: 'invoice.deleted' });
+  // The engine writes the lifecycle invoice_deleted row atomically with the
+  // delete; REST adds the recurring provenance to its details.
+  const auditRows = await tenantTable(db, tenantId, 'audit_logs')
+    .where({ tenant: tenantId, table_name: 'invoices', record_id: invoiceId })
+    .select('operation', 'user_id', 'details');
+  expect(auditRows.map((row: any) => row.operation)).toEqual(['invoice_deleted']);
+  expect(auditRows[0].details).toMatchObject({
+    before: { status: 'draft' },
+    recurring_provenance: expect.anything(),
+  });
 
   expect(await tenantTable(db, tenantId, 'invoices').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
   expect(await tenantTable(db, tenantId, 'invoice_charges').where({ tenant: tenantId, invoice_id: invoiceId }).first()).toBeUndefined();
@@ -6362,7 +6366,9 @@ it('T5/T2: Migration A flips stored-advance Hourly/Usage rows to arrears and sup
   const fixedPresetId = uuidv4();
   await dropArrearsOnlyChecks(['contract_template_lines', 'contract_line_presets']);
   await tenantTable(db, tenantId, 'contract_templates').insert({
-    tenant: tenantId, template_id: templateId, template_name: 'Migration A Template',
+    // Base currency is required on every template; this one is only here for the
+    // timing migration to flip, so it matches the suite's USD contracts.
+    tenant: tenantId, template_id: templateId, template_name: 'Migration A Template', currency_code: 'USD',
   });
   await tenantTable(db, tenantId, 'contract_template_lines').insert({
     tenant: tenantId, template_id: templateId, template_line_id: templateLineId,

@@ -412,6 +412,18 @@
       "@product/mcp/ee/*": [
         "../packages/product-mcp/ee/*"
       ],
+      "@product/service-principals/entry": [
+        "../packages/product-service-principals/oss/entry"
+      ],
+      "@product/service-principals/types": [
+        "../packages/product-service-principals/types"
+      ],
+      "@product/service-principals/ee/entry": [
+        "../packages/product-service-principals/ee/entry"
+      ],
+      "@product/service-principals/ee/*": [
+        "../packages/product-service-principals/ee/*"
+      ],
       "@product/ext-proxy/handler": [
         "../packages/product-ext-proxy/oss/handler"
       ],

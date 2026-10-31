@@ -460,6 +460,8 @@
         "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
         "ticketFilter": "Ticket-Filter",
         "ticketFilterPlaceholder": "Eine Ticket-UUID pro Zeile. Leer lassen, um alle passenden Ticket-Ereignisse zu erhalten.",
+        "legacyEventsHelp": "Diese Ereignistypen werden nicht mehr unterstützt. Sie bleiben an diesem Webhook gespeichert, werden aber nie zugestellt. Deaktivieren Sie einen Typ, um ihn zu entfernen.",
+        "legacyEventLabel": "nicht unterstützt",
         "retryConfig": "Retry-Konfig (JSON)",
         "verifySsl": "SSL-Zertifikate prüfen",
         "webhookActive": "Webhook ist aktiv",
@@ -731,6 +733,9 @@
     }
   },
   "connectSso": {
+    "proFeature": {
+      "description": "Die SSO-Kontoverknüpfung ist in Pro verfügbar. Führen Sie ein Upgrade durch, um Ihr Google Workspace- oder Microsoft 365-Konto für eine nahtlose Authentifizierung zu verbinden."
+    },
     "linkError": {
       "title": "SSO-Verknüpfung fehlgeschlagen.",
       "no_matching_user": "Das Konto, mit dem Sie sich angemeldet haben, lautet {{providerEmail}}, Ihre AlgaPSA-Anmeldung lautet jedoch {{accountEmail}}. Verknüpfen Sie ein Konto, das {{accountEmail}} verwendet, oder bitten Sie den Administrator Ihres Identitätsanbieters, {{accountEmail}} als primäre E-Mail-Adresse dieses Kontos festzulegen.",
@@ -798,6 +803,7 @@
       "deliveryNotFound": "Zustellung nicht gefunden.",
       "testNotRetryable": "Testzustellungen können nicht wiederholt werden.",
       "payloadInvalid": "Diese Zustellung kann nicht wiederholt werden, da die gespeicherte Nutzlast ungültig ist.",
+      "unsupportedEventType": "Nicht unterstützter Ereignistyp: {{eventTypes}}",
       "validation": { "unknownEntity": "Unbekannte Webhook-Entität „{{entity}}“.", "unknownField": "Unbekanntes Feld „{{field}}“ für die Webhook-Entität „{{entity}}“." }
     },
     "inboundWebhooks": {

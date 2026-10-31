@@ -67,6 +67,7 @@
     "taxBreakdown": "Dettaglio imposte",
     "manualInvoice": "Fattura manuale",
     "credits": "Crediti",
+    "currency": "Valuta",
     "financialArtifactSummary": "Fattura solo finanziaria. I periodi di servizio ricorrenti appaiono solo sulle righe di dettaglio ricorrenti.",
     "servicePeriod": "Periodo di servizio",
     "servicePeriods": "Periodi di servizio",
@@ -241,7 +242,8 @@
     "contractLineType": {
       "Fixed": "Fisso",
       "Hourly": "A ore",
-      "Usage": "A consumo"
+      "Usage": "A consumo",
+      "PrepaidBlock": "Blocco prepagato"
     },
     "quoteStatus": {
       "draft": "Bozza",
@@ -442,6 +444,14 @@
     "hoursLeft": "{{hours}} h rimanenti",
     "expires": "Scade il {{date}}",
     "recentBurn": "Utilizzo recente",
-    "timeEntry": "Inserimento ore"
+    "timeEntry": "Inserimento ore",
+    "contractLabel": "Contratto: {{contract}}"
+  },
+  "bucketUsage": {
+    "contractLine": "Linea contrattuale per pacchetto ore",
+    "usage": "Utilizzo",
+    "hoursUsed": "{{hours}} ore utilizzate",
+    "hoursTotal": "{{hours}} ore totali",
+    "rolloverHours": "Include {{hours}} ore riportate"
   }
 }

@@ -19,6 +19,7 @@
  * defaultLocale is respected.
  */
 
+import { isClientUserType } from '@alga-psa/types';
 import { tenantDb, getConnection } from '@alga-psa/db';
 import { SupportedLocale, normalizeLocale, LOCALE_CONFIG } from './lib/localeConfig';
 import logger from '@alga-psa/core/logger';
@@ -85,7 +86,8 @@ export async function resolveEmailLocale(
         })
         .first();
 
-      userType = user?.user_type || 'internal';
+      // 'service' (non-interactive) resolves with the MSP locale defaults, never the client path.
+      userType = isClientUserType(user?.user_type) ? 'client' : 'internal';
     }
 
     // If we have a userId, check user preference and get user details
@@ -233,7 +235,7 @@ export async function getUserInfoForEmail(
     return {
       email,
       userId: user.user_id,
-      userType: user.user_type || 'internal',
+      userType: isClientUserType(user.user_type) ? 'client' : 'internal', // 'service' uses MSP locale defaults
       clientId: clientId || undefined
     };
   } catch (error) {

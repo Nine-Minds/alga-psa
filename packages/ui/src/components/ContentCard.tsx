@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useContext } from 'react';
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 import { Button } from './Button';
 import styles from '../editor/TicketDetails.module.css';
+import { useTranslation } from '../lib/i18n/client';
 
 export type ContentCardVariant = 'default' | 'bento';
 
@@ -110,6 +111,7 @@ export function ContentCard({
   addButton,
   variant,
 }: ContentCardProps) {
+  const { t } = useTranslation('common');
   const contextVariant = useContext(ContentCardVariantContext);
   const resolvedVariant = variant ?? contextVariant;
   const isBento = resolvedVariant === 'bento';
@@ -166,15 +168,15 @@ export function ContentCard({
               variant="outline"
               size={isBento ? 'xs' : 'sm'}
               className="flex-shrink-0 whitespace-nowrap"
-              title={addButton.label || 'Add'}
-              aria-label={addButton.label || 'Add'}
+              title={addButton.label || t('actions.add')}
+              aria-label={addButton.label || t('actions.add')}
               onClick={() => {
                 addButton.onClick();
                 if (!isExpanded) setIsExpanded(true);
               }}
             >
               <Plus className={`${isBento ? 'w-3.5 h-3.5' : 'w-4 h-4'} @sm:mr-1 flex-shrink-0`} />
-              <span className="hidden @sm:inline">{addButton.label || 'Add'}</span>
+              <span className="hidden @sm:inline">{addButton.label || t('actions.add')}</span>
             </Button>
           )}
         </div>

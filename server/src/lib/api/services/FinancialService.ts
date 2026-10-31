@@ -16,10 +16,10 @@
  * that are explicitly service-period aware.
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
-import { hasPermission } from '../../auth/rbac';
 import {
   clearDefaultPaymentMethod,
   resolvePaymentBillingProfileId,
@@ -126,6 +126,7 @@ import {
 } from '../../../interfaces/billing.interfaces';
 
 import { BillingEngine as BillingEngineClass } from '@alga-psa/billing/services';
+import { paymentTermOptions } from '@alga-psa/shared/billingClients/paymentPreferences';
 
 /**
  * HATEOAS Link interface for API discoverability
@@ -289,7 +290,7 @@ export class FinancialService extends BaseService<ITransaction> {
       throw new UnauthorizedError('Authentication required');
     }
 
-    if (!await hasPermission(context.user, resource, operation)) {
+    if (!await hasApiContextPermission(context, resource, operation)) {
       throw new ForbiddenError(`Permission denied: Cannot ${operation} ${resource}`);
     }
   }
@@ -378,6 +379,7 @@ export class FinancialService extends BaseService<ITransaction> {
       // Audit log
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'transaction_created',
         tableName: 'transactions',
         recordId: transaction.transaction_id,
@@ -1087,6 +1089,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'payment_method_created',
         tableName: 'payment_methods',
         recordId: paymentMethod.payment_method_id,
@@ -1654,6 +1657,7 @@ export class FinancialService extends BaseService<ITransaction> {
       // Audit log for bulk operation
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'bulk_invoice_operation',
         tableName: 'invoices',
         recordId: 'bulk',
@@ -1789,6 +1793,7 @@ export class FinancialService extends BaseService<ITransaction> {
 
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'bulk_transaction_operation',
         tableName: 'transactions',
         recordId: 'bulk',
@@ -1929,6 +1934,7 @@ export class FinancialService extends BaseService<ITransaction> {
     await withTransaction(knex, async (trx) => {
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'bulk_credit_operation',
         tableName: 'credit_tracking',
         recordId: 'bulk',
@@ -1970,11 +1976,7 @@ export class FinancialService extends BaseService<ITransaction> {
     const hasPaymentTermsTable = await knex.schema.hasTable('payment_terms');
     if (!hasPaymentTermsTable) {
       return {
-        data: [
-          { id: 'due_on_receipt', name: 'Due on receipt' },
-          { id: 'net_15', name: 'Net 15' },
-          { id: 'net_30', name: 'Net 30' },
-        ],
+        data: paymentTermOptions(),
         links: []
       };
     }

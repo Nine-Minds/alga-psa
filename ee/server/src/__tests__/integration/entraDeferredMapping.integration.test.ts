@@ -97,6 +97,10 @@ describe('Entra deferred mapping decisions', () => {
       const afterClients = await scoped.table('clients').count('* as count').first();
       expect(Number(afterClients?.count)).toBe(Number(beforeClients?.count));
 
+      // clients.default_currency_code defaults to 'USD' on its own, so a tenant
+      // default that differs is what proves the provisioner adopts it.
+      await scoped.table('default_billing_settings').update({ default_currency_code: 'EUR' });
+
       const firstProvision = await provisionEntraClientForMapping(trx, {
         tenantId: tenant,
         managedTenantId: createNewManagedTenantId,
@@ -121,6 +125,34 @@ describe('Entra deferred mapping decisions', () => {
       const afterProvisionClients = await scoped.table('clients').count('* as count').first();
       expect(Number(afterProvisionClients?.count)).toBe(Number(beforeClients?.count) + 1);
 
+      // A provisioned client must leave the same billing posture as createClient:
+      // exactly one system-managed default billing profile, the tenant's default
+      // currency, and initialized tax settings.
+      const profiles = await scoped.table('client_billing_profiles')
+        .where({ client_id: firstProvision.client.client_id })
+        .select('name', 'is_default', 'is_system_managed_default', 'is_active');
+      expect(profiles).toEqual([
+        expect.objectContaining({
+          name: firstProvision.client.client_name,
+          is_default: true,
+          is_system_managed_default: true,
+        }),
+      ]);
+
+      const tenantBillingSettings = await scoped.table('default_billing_settings')
+        .select('default_currency_code')
+        .first();
+      const provisionedClient = await scoped.table('clients')
+        .where({ client_id: firstProvision.client.client_id })
+        .first('default_currency_code');
+      expect(provisionedClient?.default_currency_code)
+        .toBe(tenantBillingSettings?.default_currency_code || 'USD');
+
+      const taxSettings = await scoped.table('client_tax_settings')
+        .where({ client_id: firstProvision.client.client_id })
+        .first('client_id');
+      expect(taxSettings?.client_id).toBe(firstProvision.client.client_id);
+
       await expect(confirmEntraMappingsWithDb(trx, {
         tenant,
         userId: randomUUID(),
@@ -130,6 +162,43 @@ describe('Entra deferred mapping decisions', () => {
           clientId: null,
         }],
       })).rejects.toThrow('requires a client ID');
+
+      // AlgaDesk has no billing tax setup: provisioning still writes the default
+      // billing profile but keeps the product's tax exemption.
+      const algadeskManagedTenantId = randomUUID();
+      await scoped.table('entra_managed_tenants').insert({
+        tenant,
+        managed_tenant_id: algadeskManagedTenantId,
+        entra_tenant_id: randomUUID(),
+        display_name: `AlgaDesk ${randomUUID()}`,
+        primary_domain: `algadesk-${randomUUID()}.example.test`,
+        source_user_count: 1,
+      });
+      await confirmEntraMappingsWithDb(trx, {
+        tenant,
+        userId: randomUUID(),
+        mappings: [{
+          managedTenantId: algadeskManagedTenantId,
+          mappingState: 'create_new',
+        }],
+      });
+      await scoped.table('tenants').update({ product_code: 'algadesk' });
+
+      const algadeskProvision = await provisionEntraClientForMapping(trx, {
+        tenantId: tenant,
+        managedTenantId: algadeskManagedTenantId,
+      });
+      expect(algadeskProvision.created).toBe(true);
+      const algadeskProfiles = await scoped.table('client_billing_profiles')
+        .where({ client_id: algadeskProvision.client.client_id })
+        .select('is_default', 'is_system_managed_default');
+      expect(algadeskProfiles).toEqual([
+        expect.objectContaining({ is_default: true, is_system_managed_default: true }),
+      ]);
+      const algadeskTaxSettings = await scoped.table('client_tax_settings')
+        .where({ client_id: algadeskProvision.client.client_id })
+        .first('client_id');
+      expect(algadeskTaxSettings).toBeUndefined();
     } finally {
       await trx.rollback();
     }

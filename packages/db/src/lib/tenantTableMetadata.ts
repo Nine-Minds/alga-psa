@@ -132,6 +132,10 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   contract_pricing_schedules: { scope: 'tenant' },
   contract_lines: { scope: 'tenant' },
   contract_line_buckets: { scope: 'tenant' },
+  contract_line_prepaid_blocks: { scope: 'tenant' },
+  contract_line_block_issuances: { scope: 'tenant' },
+  contract_template_line_prepaid_blocks: { scope: 'tenant' },
+  contract_line_preset_prepaid_blocks: { scope: 'tenant' },
   contract_line_bucket_services: { scope: 'tenant' },
   contract_line_mappings: { scope: 'tenant' },
   contract_line_service_bucket_config: { scope: 'tenant' },
@@ -161,6 +165,8 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   contract_template_lines: { scope: 'tenant' },
   contract_template_line_mappings: { scope: 'tenant' },
   contract_template_pricing_schedules: { scope: 'tenant' },
+  contract_template_price_sets: { scope: 'tenant' },
+  contract_template_prices: { scope: 'tenant' },
   contract_template_services: { scope: 'tenant' },
   contract_templates: { scope: 'tenant' },
   conditional_display_rules: { scope: 'tenant' },
@@ -368,6 +374,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   opportunity_commitments: { scope: 'tenant' },
   opportunity_qbr_triggers: { scope: 'tenant' },
   password_reset_tokens: { scope: 'tenant' },
+  payment_confirmation_emails: { scope: 'tenant' },
   payment_methods: { scope: 'tenant' },
   payment_provider_configs: { scope: 'tenant' },
   payment_webhook_events: { scope: 'tenant' },
@@ -669,6 +676,22 @@ export function parseTableExpression(tableExpression: string): ParsedTableExpres
     tableName: baseTableName(trimmed),
     rootAlias: baseTableName(trimmed),
   };
+}
+
+/**
+ * Registers tables owned by an optional module (for example an Enterprise-only
+ * table) so that module can use tenantDb without its table names living in the
+ * shared registry. Idempotent; a table that is already registered must keep its
+ * scope, so a conflicting registration throws.
+ */
+export function registerTenantTables(tables: Record<string, TenantTableScope>): void {
+  for (const [name, scope] of Object.entries(tables)) {
+    const existing = tenantTableMetadata[name];
+    if (existing && JSON.stringify(existing) !== JSON.stringify(scope)) {
+      throw new Error(`Table ${name} is already registered with a different scope`);
+    }
+    tenantTableMetadata[name] = scope;
+  }
 }
 
 export function getTenantTableScope(tableName: string): TenantTableScope | undefined {

@@ -6,7 +6,7 @@ import { StorageProviderFactory, FileStoreModel } from '@alga-psa/storage';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { ApiKeyServiceForApi } from 'server/src/lib/services/apiKeyServiceForApi';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
-import { assertInternalApiUser } from '@/lib/api/middleware/apiMiddleware';
+import { assertApiPrincipal } from '@/lib/api/middleware/apiMiddleware';
 import { runWithTenant } from 'server/src/lib/db';
 import { getAuthorizedDocumentByFileId } from '@alga-psa/documents/actions/documentActions';
 import { isPreviewableDocumentMimeType } from '@alga-psa/core';
@@ -94,7 +94,7 @@ export async function GET(
             const resolved = await runWithTenant(tenant!, async () => {
               const u = await findUserByIdForApi(keyRecord.user_id, tenant!);
               try {
-                assertInternalApiUser(u);
+                assertApiPrincipal(u);
               } catch {
                 return null;
               }

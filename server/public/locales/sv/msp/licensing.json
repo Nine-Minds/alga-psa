@@ -10,7 +10,8 @@
   },
   "purchasePage": {
     "title": "Köp licenser",
-    "description": "Lägg till fler användarlicenser i ditt AlgaPSA-konto"
+    "description": "Lägg till fler användarlicenser i ditt AlgaPSA-konto",
+    "communityEditionDescription": "Community Edition med egen drift har obegränsat antal användare utan licensbegränsningar eller extra kostnader."
   },
   "purchaseSuccess": {
     "metaTitle": "Köpet har genomförts",
@@ -37,7 +38,8 @@
     },
     "sessionDetails": "Sessionsuppgifter (för support)",
     "sessionId": "Sessions-ID:",
-    "goToAccountManagement": "Gå till kontohanteringen"
+    "goToAccountManagement": "Gå till kontohanteringen",
+    "enterpriseOnly": "Den här funktionen är endast tillgänglig i Pro."
   },
   "subscriptionForm": {
     "title": "Hantera licensabonnemang",
@@ -255,7 +257,9 @@
         "description_one": "Du har {{count}} dag kvar att använda alla Pro-funktioner.",
         "description_other": "Du har {{count}} dagar kvar att använda alla Pro-funktioner.",
         "descriptionNoDays": "Du kan använda alla Pro-funktioner under provperioden.",
-        "badge": "Aktiv provperiod"
+        "badge": "Aktiv provperiod",
+        "description_few": "Du har {{count}} dagar kvar att använda alla Pro-funktioner.",
+        "description_many": "Du har {{count}} dagar kvar att använda alla Pro-funktioner."
       },
       "licensed": {
         "eyebrow": "Betald licens",
@@ -302,7 +306,9 @@
       "refreshLabel": "Licensuppdatering",
       "connected": "Ansluten",
       "lastCheckIn": "Senaste kontakt: {{timestamp}}",
-      "refreshHelp": "Tillämpar omedelbart de ändringar av användarlicenser eller abonnemang som gjorts i portalen."
+      "refreshHelp": "Tillämpar omedelbart de ändringar av användarlicenser eller abonnemang som gjorts i portalen.",
+      "daysRemaining_few": "{{count}} dagar kvar",
+      "daysRemaining_many": "{{count}} dagar kvar"
     },
     "portal": {
       "manageTitle": "Användarlicenser, fakturering och aktiveringskoder",

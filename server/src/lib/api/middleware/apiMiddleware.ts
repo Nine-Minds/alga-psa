@@ -3,11 +3,11 @@
  * Provides authentication, authorization, validation, and error handling for REST API endpoints
  */
 
+import { hasApiContextPermission } from './apiContextPermission';
 import { NextRequest, NextResponse } from 'next/server';
 import { applyFieldRangeRequests } from '../utils/fieldRange';
 import { ZodSchema, ZodError } from 'zod';
 import { ApiKeyServiceForApi } from '../../services/apiKeyServiceForApi';
-import { hasPermission } from '../../auth/rbac';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import type { SafeApiUser } from '@alga-psa/users';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -15,6 +15,19 @@ import { runAsSystem } from '@alga-psa/db';
 import type { RateLimitDecision } from '../rateLimit/enforce';
 import { enforceApiRateLimit } from '../rateLimit/enforce';
 import { redactSensitiveFields } from '../utils/redactSensitiveFields';
+import type { BucketConfig } from '@alga-psa/core/rateLimit';
+import {
+  resolveServicePrincipalApiContext,
+  mapServicePrincipalError,
+  assertNoDelegationHeaders,
+} from '@product/service-principals/entry';
+
+/** Who the request is made as. Defaults to the key owner (`kind: 'user'`). */
+export interface ApiPrincipal {
+  userId: string;
+  userType: string;
+  kind: 'user' | 'service';
+}
 
 export interface ApiContext {
   userId: string;
@@ -24,6 +37,16 @@ export interface ApiContext {
   rateLimitSubjectId?: string;
   rateLimit?: RateLimitDecision | null;
   kind?: 'system' | 'user';
+  /** The authenticated key owner. Defaults to the owner as a plain user. */
+  principal?: ApiPrincipal;
+  /** User named by a delegation header, if any. Unset by default. */
+  actAsUserId?: string | null;
+  /** User the request is evaluated and attributed as. Defaults to the key owner; equals `userId`. */
+  effectiveUserId?: string;
+  /** Principal the work was done through when acting as another user; null otherwise. */
+  viaPrincipalUserId?: string | null;
+  /** Optional token-bucket override honored by enforceApiRateLimit. */
+  rateLimitConfig?: BucketConfig;
 }
 
 export interface ApiRequest extends NextRequest {
@@ -204,6 +227,7 @@ export function createServerActionErrorResponse(error: ServerActionErrorResult):
 }
 
 const APPLICATION_ERROR_STATUS: Record<string, number> = {
+  HUMAN_WORK_ASSIGNEE_INVALID: 422,
   QBO_AUTH_ERROR: 401,
   QBO_CONFIG_MISSING: 400,
   QBO_INVALID_INPUT: 400,
@@ -275,34 +299,78 @@ function getApplicationErrorStatus(error: unknown): number | undefined {
 }
 
 /**
- * The authenticated API user context is an internal-user credential. A client
- * user must never be admitted to a user-key API context, even if a validator
- * was accidentally bypassed, replaced, or mocked permissively. This is the
- * final context-construction defense before a handler runs.
+ * Contexts produced by the edition boundary (resolveServicePrincipalApiContext).
+ * Only membership here, never a field on the context, makes a non-internal
+ * principal acceptable to assertApiPrincipal, so a forged `principal` is inert.
  */
-export function assertInternalApiUser(user: SafeApiUser | null | undefined): asserts user is SafeApiUser {
-  if (!user) {
+const boundaryProducedContexts = new WeakSet<object>();
+
+/**
+ * The authenticated API principal is an internal-user credential, or a context
+ * the edition boundary produced for a non-user principal. A client user must
+ * never be admitted to an API context, even if a validator was accidentally
+ * bypassed, replaced, or mocked permissively. This is the final
+ * context-construction defense before a handler runs.
+ *
+ * Accepts the loaded API user (the copied-auth controllers) or a built context.
+ */
+export function assertApiPrincipal(
+  subject: SafeApiUser | ApiContext | null | undefined
+): asserts subject is SafeApiUser | AuthenticatedApiContext {
+  if (!subject) {
     throw new UnauthorizedError('User not found');
   }
-  if (user.user_type !== 'internal') {
+  if (boundaryProducedContexts.has(subject)) {
+    return;
+  }
+  const userType =
+    'user_type' in subject ? subject.user_type : (subject as ApiContext).user?.user_type;
+  if (userType !== 'internal') {
     throw new UnauthorizedError('Invalid API key');
   }
 }
 
-export async function buildAuthenticatedApiContext(keyRecord: {
-  user_id: string;
-  tenant: string;
-  api_key_id?: string;
-}): Promise<AuthenticatedApiContext> {
+export async function buildAuthenticatedApiContext(
+  keyRecord: {
+    user_id: string;
+    tenant: string;
+    api_key_id?: string;
+    agent_id?: string | null;
+  },
+  req?: Request
+): Promise<AuthenticatedApiContext> {
   const user = await findUserByIdForApi(keyRecord.user_id, keyRecord.tenant);
-  assertInternalApiUser(user);
+
+  // Owners that are neither internal nor client belong to the edition boundary.
+  // The CE implementation returns null, which rejects the key exactly as before.
+  if (user && user.user_type !== 'internal' && user.user_type !== 'client') {
+    const boundaryContext = await resolveServicePrincipalApiContext(
+      keyRecord,
+      user,
+      req ?? new Request('http://localhost')
+    );
+    if (!boundaryContext) {
+      throw new UnauthorizedError('Invalid API key');
+    }
+    const context = boundaryContext as unknown as AuthenticatedApiContext;
+    boundaryProducedContexts.add(context);
+    assertApiPrincipal(context);
+    return context;
+  }
+
+  assertApiPrincipal(user);
+  if (req) assertNoDelegationHeaders(req);
 
   return {
     userId: keyRecord.user_id,
     tenant: keyRecord.tenant,
     apiKeyId: keyRecord.api_key_id,
     user,
-    kind: 'user'
+    kind: 'user',
+    principal: { userId: keyRecord.user_id, userType: user.user_type, kind: 'user' },
+    actAsUserId: null,
+    effectiveUserId: keyRecord.user_id,
+    viaPrincipalUserId: null,
   };
 }
 
@@ -380,7 +448,7 @@ export function withApiKeyAuth(options: ApiKeyAuthOptions = {}) {
         if (!keyRecord) {
           throw new UnauthorizedError('Invalid API key');
         }
-        req.context = await buildAuthenticatedApiContext(keyRecord);
+        req.context = await buildAuthenticatedApiContext(keyRecord, req);
         req.context.rateLimit = await enforceApiRateLimit(req, req.context);
 
         return await handler(req);
@@ -409,7 +477,7 @@ export async function withAuth(handler: (req: ApiRequest) => Promise<NextRespons
         throw new UnauthorizedError('Invalid API key');
       }
 
-      req.context = await buildAuthenticatedApiContext(keyRecord);
+      req.context = await buildAuthenticatedApiContext(keyRecord, req);
       req.context.rateLimit = await enforceApiRateLimit(req, req.context);
 
       return await handler(req);
@@ -430,7 +498,7 @@ export function withPermission(resource: string, action: string) {
           throw new UnauthorizedError('User context required');
         }
 
-        const hasAccess = await hasPermission(req.context.user, resource, action);
+        const hasAccess = await hasApiContextPermission(req.context, resource, action);
         if (!hasAccess) {
           throw new ForbiddenError(`Permission denied: Cannot ${action} ${resource}`);
         }
@@ -489,7 +557,8 @@ export function withQueryValidation(schema: ZodSchema) {
 /**
  * Error handling middleware
  */
-export function handleApiError(error: any): NextResponse {
+export function handleApiError(rawError: any): NextResponse {
+  const error = mapServicePrincipalError(rawError);
   const redactedDetails = redactSensitiveFields(error.details);
   const redactedStack = process.env.NODE_ENV === 'development' ? error.stack : undefined;
 

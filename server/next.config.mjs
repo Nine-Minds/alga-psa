@@ -104,6 +104,7 @@ class EditionBuildDiagnosticsPlugin {
       watchedRequests: options.watchedRequests || [
         '@product/chat/entry',
         '@product/mcp/entry',
+        '@product/service-principals/entry',
         '@product/extensions/entry',
         '@product/settings-extensions/entry',
         'ee/server/src/app/msp/chat/page',
@@ -223,6 +224,11 @@ const nextConfig = {
       '@alga-psa/auth/nextAuthOptions': '../packages/auth/src/lib/nextAuthOptions.ts',
       '@alga-psa/auth/actions': '../packages/auth/src/actions/index.ts',
       '@alga-psa/auth/components': '../packages/auth/src/components/index.ts',
+      '@product/service-principals/entry': (() => {
+        const eePath = path.join(__dirname, '../packages/product-service-principals/ee/entry.ts');
+        const ossPath = path.join(__dirname, '../packages/product-service-principals/oss/entry.ts');
+        return isEE ? eePath : ossPath;
+      })(),
       // SSO provider buttons - swap between CE stub and EE implementation
       '@alga-psa/auth/sso/entry': isEE
         ? '../ee/server/src/components/auth/SsoProviderButtons.tsx'
@@ -428,6 +434,9 @@ const nextConfig = {
       '@product/mcp/entry': isEE
         ? '@product/mcp/ee/entry'
         : '@product/mcp/oss/entry',
+      '@product/service-principals/entry': isEE
+        ? '@product/service-principals/ee/entry'
+        : '@product/service-principals/oss/entry',
       '@product/ext-proxy/handler': isEE
         ? '@product/ext-proxy/ee/handler'
         : '@product/ext-proxy/oss/handler',
@@ -818,6 +827,10 @@ const nextConfig = {
       const pkgMcpEeEntry = path.join(__dirname, '../packages/product-mcp/ee/entry.ts');
       config.resolve.alias[pkgMcpEntry] = pkgMcpEeEntry;
 
+      const pkgServicePrincipalsEntry = path.join(__dirname, '../packages/product-service-principals/entry.ts');
+      const pkgServicePrincipalsEeEntry = path.join(__dirname, '../packages/product-service-principals/ee/entry.ts');
+      config.resolve.alias[pkgServicePrincipalsEntry] = pkgServicePrincipalsEeEntry;
+
       const pkgEmailDomainsEntry = path.join(__dirname, '../packages/integrations/src/email/domains/entry.ts');
       const pkgEmailDomainsEeEntry = path.join(__dirname, '../packages/integrations/src/email/domains/ee/entry.ts');
       config.resolve.alias[pkgEmailDomainsEntry] = pkgEmailDomainsEeEntry;
@@ -1075,6 +1088,13 @@ const nextConfig = {
             path.join(__dirname, '../packages/product-mcp/oss/entry.ts')
           )
         );
+        // Same CE force for the service-principal seam (no EE source in CE).
+        config.plugins.push(
+          new webpack.NormalModuleReplacementPlugin(
+            /^@product[\\\/]service-principals[\\\/]entry$/,
+            path.join(__dirname, '../packages/product-service-principals/oss/entry.ts')
+          )
+        );
       }
     }
 
@@ -1103,6 +1123,12 @@ const nextConfig = {
           new webpack.NormalModuleReplacementPlugin(
             /^@product[\\\/]mcp[\\\/]entry$/,
             path.join(__dirname, '../packages/product-mcp/ee/entry.ts')
+          )
+        );
+        config.plugins.push(
+          new webpack.NormalModuleReplacementPlugin(
+            /^@product[\\\/]service-principals[\\\/]entry$/,
+            path.join(__dirname, '../packages/product-service-principals/ee/entry.ts')
           )
         );
         config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
@@ -1356,6 +1382,8 @@ const nextConfig = {
     'bcryptjs',
     'speakeasy',
     'qrcode',
+    // Barcode node (label rendering): server-only; loaded via bwip-js/node from barcode/encode.server.ts.
+    'bwip-js',
     'pdf-lib',
     'pdf2pic',
     'marked',
@@ -1367,6 +1395,9 @@ const nextConfig = {
     // out of the Turbopack server bundle that every static-gen worker loads.
     'nodemailer',
     'imapflow',
+    // Reached from the ticket email-html route (archived .eml → display HTML);
+    // a CJS Node parser with no business in a bundle.
+    'mailparser',
     'express',
     'fluent-ffmpeg',
     'tar',

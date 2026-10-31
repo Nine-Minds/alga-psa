@@ -3,6 +3,7 @@
  * Handles HTTP requests for asset-related operations
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { NextRequest, NextResponse } from 'next/server';
 import { AssetService } from '../services/AssetService';
 import { 
@@ -26,8 +27,8 @@ import { requireRequestContext } from '../utils/requestContext';
 import { ApiContext } from '../middleware/apiMiddleware';
 import { ProductAccessError, getTenantProduct } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
-import { hasPermission } from '../../auth/rbac';
 import { getConnection } from '../../db/db';
+import { guardAssetRead } from './assetReadGuard';
 
 export class ApiAssetController {
   private assetService: AssetService;
@@ -90,7 +91,9 @@ export class ApiAssetController {
    */
   async getById(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    
+    const denied = await guardAssetRead(context, params.id, this.assetService);
+    if (denied) return denied;
+
     const asset = await this.assetService.getWithDetails(params.id, context);
     
     if (!asset) {
@@ -208,7 +211,7 @@ export class ApiAssetController {
     }
     const knex = await getConnection(context.tenant);
     for (const resource of resources) {
-      const allowed = await hasPermission(context.user, resource, 'read', knex);
+      const allowed = await hasApiContextPermission(context, resource, 'read', knex);
       if (!allowed) {
         return createErrorResponse(`Permission denied: Cannot read ${resource}`, 403, 'FORBIDDEN');
       }
@@ -227,7 +230,7 @@ export class ApiAssetController {
     }
     const knex = await getConnection(context.tenant);
     for (const { resource, action } of checks) {
-      const allowed = await hasPermission(context.user, resource, action, knex);
+      const allowed = await hasApiContextPermission(context, resource, action, knex);
       if (!allowed) {
         return createErrorResponse(`Permission denied: Cannot ${action} ${resource}`, 403, 'FORBIDDEN');
       }
@@ -242,7 +245,7 @@ export class ApiAssetController {
     const context = await this.requireAllowedContext(req);
 
     // Response joins ticket data onto an asset — require read on both resources.
-    const denied = await this.requireReadPermissions(context, ['asset', 'ticket']);
+    const denied = await guardAssetRead(context, params.id, this.assetService, ['ticket']);
     if (denied) return denied;
 
     const tickets = await this.assetService.getAssetTickets(params.id, context);
@@ -366,7 +369,9 @@ export class ApiAssetController {
    */
   async listMaintenanceSchedules(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    
+    const denied = await guardAssetRead(context, params.id, this.assetService);
+    if (denied) return denied;
+
     const schedules = await this.assetService.getMaintenanceSchedules(params.id, context);
     
     return createApiResponse(schedules);
@@ -442,7 +447,9 @@ export class ApiAssetController {
    */
   async getMaintenanceHistory(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    
+    const denied = await guardAssetRead(context, params.id, this.assetService);
+    if (denied) return denied;
+
     const history = await this.assetService.getMaintenanceHistory(params.id, context);
     
     return createApiResponse(history);

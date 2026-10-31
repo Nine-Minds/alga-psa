@@ -23,11 +23,13 @@ import {
   timeSheetSearchSchema,
   timeSheetExportQuerySchema,
   createScheduleEntrySchema,
-  updateScheduleEntrySchema
+  updateScheduleEntrySchema,
+  calendarListQuerySchema
 } from '../schemas/timeSheet';
 import { 
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { 
   runWithTenant 
@@ -38,31 +40,38 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
+import { AuthenticatedApiRequest, ForbiddenError, NotFoundError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createPaginatedResponse, createSuccessResponse, handleApiError } from '../middleware/apiMiddleware';
 import {
-  assertInternalApiUser,
-  AuthenticatedApiRequest,
-  UnauthorizedError,
-  ForbiddenError,
-  NotFoundError,
-  ValidationError,
-  createSuccessResponse,
-  createPaginatedResponse,
-  handleApiError
-} from '../middleware/apiMiddleware';
+  canAssignUser,
+  evaluateEntryAccess,
+  resolveCalendarAccess,
+} from '@alga-psa/scheduling/lib/calendarAccess';
 import { ZodError } from 'zod';
 import { uuidSchema } from '../schemas/common';
 
 export class ApiTimeSheetController extends ApiBaseController {
   private timeSheetService: TimeSheetService;
 
+  /**
+   * Shared-calendar access for the caller, resolved exactly as the schedule server actions do
+   * (user_schedule:update is the global escalation, not a prerequisite).
+   */
+  private async resolveScheduleAccess(apiAuthContext: any, user: any, tenantId: string, db: any) {
+    const canUpdateGlobally = await hasApiContextPermission(
+          apiAuthContext, 'user_schedule', 'update', db);
+    return resolveCalendarAccess(db, tenantId, user, canUpdateGlobally);
+  }
+
   private async assertManualProductAccess(
     req: NextRequest,
     keyRecord: { user_id: string; tenant: string; api_key_id?: string },
     user: AuthenticatedApiRequest['context']['user'],
+    apiAuthContext: { userId: string; viaPrincipalUserId?: string | null },
   ): Promise<AuthenticatedApiRequest> {
     const apiRequest = req as AuthenticatedApiRequest;
     apiRequest.context = {
-      userId: keyRecord.user_id,
+      userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
       tenant: keyRecord.tenant,
       user,
       apiKeyId: keyRecord.api_key_id,
@@ -122,16 +131,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'read',
           db
@@ -196,16 +204,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'update',
           db
@@ -279,16 +286,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasApprovePermission = await hasPermission(
-          user,
+        const hasApprovePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'approve',
           db
@@ -362,16 +368,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasApprovePermission = await hasPermission(
-          user,
+        const hasApprovePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'approve',
           db
@@ -445,16 +450,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasManagePermission = await hasPermission(
-          user,
+        const hasManagePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'manage',
           db
@@ -528,16 +532,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasApprovePermission = await hasPermission(
-          user,
+        const hasApprovePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'approve',
           db
@@ -609,16 +612,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'read',
           db
@@ -680,16 +682,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'update',
           db
@@ -763,16 +764,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'read',
           db
@@ -843,16 +843,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'read',
           db
@@ -935,16 +934,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_sheet',
           'read',
           db
@@ -1003,16 +1001,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'read',
           db
@@ -1069,16 +1066,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'read',
           db
@@ -1143,16 +1139,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'read',
           db
@@ -1221,16 +1216,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasCreatePermission = await hasPermission(
-          user,
+        const hasCreatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'create',
           db
@@ -1299,16 +1293,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'update',
           db
@@ -1383,16 +1376,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'update',
           db
@@ -1457,16 +1449,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasUpdatePermission = await hasPermission(
-          user,
+        const hasUpdatePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'update',
           db
@@ -1531,16 +1522,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasDeletePermission = await hasPermission(
-          user,
+        const hasDeletePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'delete',
           db
@@ -1601,16 +1591,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'read',
           db
@@ -1667,16 +1656,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasManagePermission = await hasPermission(
-          user,
+        const hasManagePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'manage',
           db
@@ -1745,16 +1733,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasManagePermission = await hasPermission(
-          user,
+        const hasManagePermission = await hasApiContextPermission(
+          apiAuthContext,
           'time_period',
           'manage',
           db
@@ -1829,16 +1816,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'user_schedule',
           'read',
           db
@@ -1869,6 +1855,71 @@ export class ApiTimeSheetController extends ApiBaseController {
         });
 
         return createSuccessResponse(entries);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * List the calendars the caller can see (GET /api/v1/calendars).
+   * Floor is user_schedule:read; visibility comes from resolveCalendarAccess via the service.
+   */
+  listCalendars() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiKey = req.headers.get('x-api-key');
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        let tenantId = req.headers.get('x-tenant-id');
+        let keyRecord;
+        if (tenantId) {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
+        } else {
+          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
+          if (keyRecord) {
+            tenantId = keyRecord.tenant;
+          }
+        }
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
+
+        const db = await getConnection(tenantId!);
+        const canRead = await hasApiContextPermission(
+          apiAuthContext, 'user_schedule', 'read', db);
+        if (!canRead) {
+          throw new ForbiddenError('Permission denied: Cannot read schedules');
+        }
+
+        const url = new URL(req.url);
+        let query;
+        try {
+          query = calendarListQuerySchema.parse({
+            type: url.searchParams.get('type') || undefined,
+            include_archived: url.searchParams.get('include_archived') || undefined,
+          });
+        } catch (error) {
+          if (error instanceof ZodError) {
+            throw new ValidationError('Invalid query parameters', error.errors);
+          }
+          throw error;
+        }
+
+        const calendars = await runWithTenant(tenantId!, async () => {
+          return await this.timeSheetService.listCalendars(
+            { userId: user.user_id, user, tenant: tenantId! },
+            query
+          );
+        });
+
+        return createSuccessResponse(calendars);
       } catch (error) {
         return handleApiError(error);
       }
@@ -1907,16 +1958,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'user_schedule',
           'read',
           db
@@ -1982,16 +2032,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const hasReadPermission = await hasPermission(
-          user,
+        const hasReadPermission = await hasApiContextPermission(
+          apiAuthContext,
           'user_schedule',
           'read',
           db
@@ -2013,18 +2062,12 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw error;
         }
 
-        // Assigning entries to other users requires the broader update permission
-        const assignsOthers = (scheduleData.assigned_user_ids || []).some(
-          (assignedId) => assignedId !== user.user_id
-        );
-        if (assignsOthers) {
-          const canAssignOthers = await hasPermission(
-            user,
-            'user_schedule',
-            'update',
-            db
-          );
-          if (!canAssignOthers) {
+        // Same rule as addScheduleEntry: self, user_schedule:update, or an edit share on the
+        // assignee's personal calendar. TimeSheetService re-checks this for group calendars.
+        const assignedIds: string[] = scheduleData.assigned_user_ids || [];
+        if (assignedIds.length > 0) {
+          const access = await this.resolveScheduleAccess(apiAuthContext, user, tenantId!, db);
+          if (assignedIds.some((assignedId) => !canAssignUser(assignedId, access))) {
             throw new ForbiddenError('Permission denied: Cannot assign schedules to other users');
           }
         }
@@ -2076,20 +2119,18 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const canUpdateAll = await hasPermission(
-          user,
-          'user_schedule',
-          'update',
-          db
-        );
+        const canReadSchedule = await hasApiContextPermission(
+          apiAuthContext, 'user_schedule', 'read', db);
+        if (!canReadSchedule) {
+          throw new ForbiddenError('Permission denied: Cannot update schedules');
+        }
 
         // Extract ID from path
         const pathParts = req.url.split('/');
@@ -2108,7 +2149,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         const existing = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getScheduleEntry(id, {
+          return await this.timeSheetService.getScheduleEntryForAccess(id, {
             userId: user.user_id,
             user,
             tenant: tenantId!,
@@ -2119,21 +2160,29 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new NotFoundError('Schedule entry not found');
         }
 
-        const assignedIds = (existing.assigned_users || []).map((u: any) => u.user_id);
-        const isOwnEntry = existing.created_by === user.user_id ||
-          (assignedIds.length === 1 && assignedIds[0] === user.user_id);
-
-        if (existing.is_private && !isOwnEntry) {
+        // Same rule as the updateScheduleEntry server action.
+        const isOwnEntry =
+          existing.assigned_user_ids.length === 1 && existing.assigned_user_ids[0] === user.user_id;
+        if (existing.is_private && !existing.calendar_id && !isOwnEntry) {
           throw new ForbiddenError('Permission denied: Cannot update a private schedule entry');
         }
 
-        if (!canUpdateAll) {
-          const assignmentRemainsOwn = scheduleData.assigned_user_ids
-            ? scheduleData.assigned_user_ids.length === 1 &&
-              scheduleData.assigned_user_ids[0] === user.user_id
-            : true;
-          if (!isOwnEntry || !assignmentRemainsOwn) {
-            throw new ForbiddenError('Permission denied: Cannot update schedules');
+        // LEVERAGE: pattern rest-calendar-access — resolve + evaluateEntryAccess block repeated in update/delete (and the service)
+        const access = await this.resolveScheduleAccess(apiAuthContext, user, tenantId!, db);
+        const decision = evaluateEntryAccess(existing, access);
+        if (decision.access === 'none') {
+          throw new NotFoundError('Schedule entry not found');
+        }
+        if (!decision.canEdit) {
+          throw new ForbiddenError('Permission denied: Cannot update this schedule entry');
+        }
+
+        if (scheduleData.assigned_user_ids) {
+          const addedAssignees = scheduleData.assigned_user_ids.filter(
+            (assignedId: string) => !existing.assigned_user_ids.includes(assignedId)
+          );
+          if (addedAssignees.some((assignedId: string) => !canAssignUser(assignedId, access))) {
+            throw new ForbiddenError('Permission denied: Cannot assign schedules to other users');
           }
         }
 
@@ -2184,27 +2233,26 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
-        assertInternalApiUser(user);
-
-        await this.assertManualProductAccess(req, keyRecord, user);
+        await this.assertManualProductAccess(req, keyRecord, user, apiAuthContext);
 
         // Check permissions
         const db = await getConnection(tenantId!);
-        const canDeleteAll = await hasPermission(
-          user,
-          'user_schedule',
-          'delete',
-          db
-        );
+
+        // Read is the floor, as in the deleteScheduleEntry server action.
+        if (!await hasApiContextPermission(
+          apiAuthContext, 'user_schedule', 'read', db)) {
+          throw new ForbiddenError('Permission denied: Cannot delete schedules');
+        }
 
         // Extract ID from path
         const pathParts = req.url.split('/');
         const id = pathParts[pathParts.length - 1];
 
         const existing = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getScheduleEntry(id, {
+          return await this.timeSheetService.getScheduleEntryForAccess(id, {
             userId: user.user_id,
             user,
             tenant: tenantId!,
@@ -2215,16 +2263,22 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new NotFoundError('Schedule entry not found');
         }
 
-        const assignedIds = (existing.assigned_users || []).map((u: any) => u.user_id);
-        const isOwnEntry = existing.created_by === user.user_id ||
-          (assignedIds.length === 1 && assignedIds[0] === user.user_id);
-
+        // Same rule as the deleteScheduleEntry server action. Note: the action checks plain
+        // is_private here (not `&& !calendar_id` as update does); mirrored as written.
+        const isOwnEntry =
+          existing.assigned_user_ids.length === 1 && existing.assigned_user_ids[0] === user.user_id;
         if (existing.is_private && !isOwnEntry) {
           throw new ForbiddenError('Permission denied: Cannot delete a private schedule entry');
         }
 
-        if (!canDeleteAll && !isOwnEntry) {
-          throw new ForbiddenError('Permission denied: Cannot delete schedules');
+        // LEVERAGE: pattern rest-calendar-access — resolve + evaluateEntryAccess block repeated in update/delete (and the service)
+        const access = await this.resolveScheduleAccess(apiAuthContext, user, tenantId!, db);
+        const decision = evaluateEntryAccess(existing, access);
+        if (decision.access === 'none') {
+          throw new NotFoundError('Schedule entry not found');
+        }
+        if (!decision.canEdit) {
+          throw new ForbiddenError('Permission denied: Cannot delete this schedule entry');
         }
 
         // Delete schedule entry within tenant context

@@ -460,6 +460,8 @@
         "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
         "ticketFilter": "Filtro de tickets",
         "ticketFilterPlaceholder": "Un UUID de ticket por línea. Deje en blanco para recibir todos los eventos de ticket coincidentes.",
+        "legacyEventsHelp": "Estos tipos de evento ya no son compatibles. Se conservan en este webhook, pero nunca se entregan. Desmarque uno para quitarlo.",
+        "legacyEventLabel": "no compatible",
         "retryConfig": "Configuración de reintentos (JSON)",
         "verifySsl": "Verificar certificados SSL",
         "webhookActive": "El webhook está activo",
@@ -731,6 +733,9 @@
     }
   },
   "connectSso": {
+    "proFeature": {
+      "description": "La vinculación de cuentas SSO está disponible en Pro. Actualice su plan para conectar su cuenta de Google Workspace o Microsoft 365 y disfrutar de una autenticación sin interrupciones."
+    },
     "linkError": {
       "title": "No se pudo vincular el SSO.",
       "no_matching_user": "La cuenta con la que inició sesión es {{providerEmail}}, pero su inicio de sesión de AlgaPSA es {{accountEmail}}. Vincule una cuenta que use {{accountEmail}} o pida al administrador de su proveedor de identidad que establezca {{accountEmail}} como dirección de correo electrónico principal de esa cuenta.",
@@ -798,6 +803,7 @@
       "deliveryNotFound": "Entrega no encontrada.",
       "testNotRetryable": "Las entregas de prueba no se pueden reintentar.",
       "payloadInvalid": "Esta entrega no se puede reintentar porque la carga útil almacenada no es válida.",
+      "unsupportedEventType": "Tipo de evento no compatible: {{eventTypes}}",
       "validation": { "unknownEntity": "Entidad de webhook desconocida «{{entity}}».", "unknownField": "Campo desconocido «{{field}}» para la entidad de webhook «{{entity}}»." }
     },
     "inboundWebhooks": {

@@ -22,7 +22,7 @@ export { isTenantScopedQuery } from './lib/tenantScopedQuery';
 export type { TenantScopedQuery } from './lib/tenantScopedQuery';
 export { tenantDb } from './lib/tenantDb';
 export type { TenantDb, TenantJoinOptions } from './lib/tenantDb';
-export { getTenantTableScope, parseTableExpression, requireTenantTableScope, tenantTableMetadata } from './lib/tenantTableMetadata';
+export { getTenantTableScope, parseTableExpression, registerTenantTables, requireTenantTableScope, tenantTableMetadata } from './lib/tenantTableMetadata';
 export type { ParsedTableExpression, TenantTableScope } from './lib/tenantTableMetadata';
 
 // After-commit hooks (flushed by the transaction-owning withTransaction frame)
@@ -37,6 +37,8 @@ export { resolveTenantId, requireTenantId } from './lib/tenantId';
 export { auditLog } from './lib/auditLog';
 export { writeAccountingAudit } from './lib/accountingAudit';
 export type { AccountingAuditOperation, AccountingAuditProvider, AccountingAuditParams } from './lib/accountingAudit';
+export { writeInvoiceAudit, listInvoiceAuditHistory, INVOICE_AUDIT_OPERATIONS } from './lib/invoiceAudit';
+export type { InvoiceAuditOperation, InvoiceAuditParams, InvoiceAuditState, InvoiceHistoryEntry } from './lib/invoiceAudit';
 export * from './lib/workDate';
 
 // Shared invoice external-sync row lock (billing adapters + integrations

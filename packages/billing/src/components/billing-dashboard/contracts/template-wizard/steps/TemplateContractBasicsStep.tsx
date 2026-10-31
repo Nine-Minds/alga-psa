@@ -7,8 +7,8 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-// CURRENCY_OPTIONS removed - templates are now currency-neutral
-import { FileText, Repeat, StickyNote } from 'lucide-react';
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
+import { Coins, FileText, Repeat, StickyNote } from 'lucide-react';
 import { TemplateWizardData } from '../TemplateWizard';
 
 interface TemplateContractBasicsStepProps {
@@ -113,9 +113,23 @@ export function TemplateContractBasicsStep({
         </p>
       </div>
 
-      {/* Currency selector removed - templates are now currency-neutral.
-          Currency is inherited from the client when a contract is created from this template.
-          Services have their own currency_code which must match the client's currency. */}
+      <div className="space-y-2">
+        <Label htmlFor="template-currency" className="flex items-center gap-2">
+          <Coins className="h-4 w-4" />
+          {t('templateWizard.currency', { defaultValue: 'Base currency *' })}
+        </Label>
+        <CurrencyPicker
+          id="template-currency"
+          value={data.currency_code}
+          onValueChange={(value) => updateData({ currency_code: value })}
+        />
+        <p className="text-xs text-[rgb(var(--color-text-400))]">
+          {t('templateBasics.help.currency', {
+            defaultValue:
+              'Rates entered in this wizard are in this currency. Prices for other currencies can be added on the template afterwards. Amounts are never converted.',
+          })}
+        </p>
+      </div>
     </div>
   );
 }

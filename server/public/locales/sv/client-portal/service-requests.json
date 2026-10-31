@@ -20,6 +20,7 @@
     "datePlaceholder": "Välj datum",
     "optionLabel": "Alternativ {{index}}",
     "submit": "Skicka in förfrågan",
+    "requiredField": "Det här fältet är obligatoriskt.",
     "initialValuesTitle": "Startvärden",
     "noInitialValues": "Inga statiska standardvärden har konfigurerats."
   },

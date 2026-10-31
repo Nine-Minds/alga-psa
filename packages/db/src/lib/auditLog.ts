@@ -4,6 +4,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 interface AuditLogParams {
   userId?: string;
+  /** Principal the user's request came through; recorded as `via_principal_user_id` in details. */
+  viaPrincipalUserId?: string | null;
   operation: string;
   tableName: string;
   recordId: string;
@@ -40,7 +42,9 @@ export async function auditLog(
       table_name: params.tableName,
       record_id: params.recordId,
       changed_data: params.changedData,
-      details: params.details,
+      details: params.viaPrincipalUserId
+        ? { ...params.details, via_principal_user_id: params.viaPrincipalUserId }
+        : params.details,
       timestamp: new Date().toISOString()
     });
   } catch (error) {
