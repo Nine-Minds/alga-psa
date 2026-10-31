@@ -2,10 +2,9 @@ import { defineJob, getJobDescriptor } from '@alga-psa/jobs/fanout';
 import { cleanupPortableRestoreUploadsForInstallation } from '@alga-psa/co-managed';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { StorageProviderFactory } from '@alga-psa/storage/StorageProviderFactory';
+import { forcedValue } from '@alga-psa/core/capability';
 
 export const PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB = 'portable-restore-upload-cleanup';
-
-import { forcedValue } from '@alga-psa/core/capability';
 
 /** The shared kill switch: `FORCE_CAPABILITIES=co-managed:off` (or a malformed entry) disables the sweep entirely. */
 const forcedOff = () => { const state = forcedValue(process.env.FORCE_CAPABILITIES, 'co-managed'); return state === 'off' || state === 'malformed'; };
