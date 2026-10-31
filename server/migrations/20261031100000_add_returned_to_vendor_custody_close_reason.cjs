@@ -9,9 +9,8 @@
  *     vendor confirmed receipt; never 'returned_to_client')
  *   - rma_events_type_check             + 'dead_unit_shipped', 'vendor_receipt_confirmed'
  *
- * Each is re-stated NOT VALID and then VALIDATEd in the same file: widening a CHECK cannot invalidate an existing
- * row, so VALIDATE only takes a SHARE UPDATE EXCLUSIVE lock and scans, but it is kept in a separate statement so
- * the ACCESS EXCLUSIVE lock of the DROP/ADD is held only momentarily. Idempotent.
+ * Each is re-stated NOT VALID here so the ACCESS EXCLUSIVE lock of the DROP/ADD is held only momentarily; the
+ * VALIDATE lives in the next migration, a `transaction: false` file (lint rule R2). Idempotent.
  *
  * `down` narrows the constraints back, after refusing if any row already uses a new value (rolling back over live
  * data would otherwise fail on VALIDATE with a less helpful message).
@@ -26,10 +25,10 @@ const EVENT_TYPES = [
 const NEW_EVENT_TYPES = [...EVENT_TYPES.slice(0, EVENT_TYPES.indexOf('closed')), 'dead_unit_shipped', 'vendor_receipt_confirmed', 'closed', 'note'];
 const list = (values) => values.map((v) => `'${v}'`).join(', ');
 
+// NOT VALID only; the matching VALIDATE is in 20261031100100_validate_returned_to_vendor_checks.cjs (lint rule R2).
 async function restate(knex, table, constraint, expression) {
   await knex.raw(`ALTER TABLE ${table} DROP CONSTRAINT IF EXISTS ${constraint}`);
   await knex.raw(`ALTER TABLE ${table} ADD CONSTRAINT ${constraint} CHECK (${expression}) NOT VALID`);
-  await knex.raw(`ALTER TABLE ${table} VALIDATE CONSTRAINT ${constraint}`);
 }
 
 exports.up = async function up(knex) {
