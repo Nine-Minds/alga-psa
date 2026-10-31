@@ -1,14 +1,12 @@
 import crypto from 'node:crypto';
 import type { Knex } from 'knex';
-import { registerTenantTables, tenantDb } from '@alga-psa/db';
+import { servicePrincipalDb as tenantDb } from './tables';
 import { TIER_FEATURES } from '@alga-psa/types';
 import { assertTenantTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
 import {
   assertServicePrincipalLimit,
   rateLimitCeiling,
 } from './entitlements';
-
-registerTenantTables({ service_principals: { scope: 'tenant' } });
 
 /**
  * Service-principal service (PRD R1.5, R6, R8). Every function takes the knex

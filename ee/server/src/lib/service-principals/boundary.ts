@@ -1,4 +1,5 @@
-import { getConnection, tenantDb } from '@alga-psa/db';
+import { getConnection } from '@alga-psa/db';
+import { servicePrincipalDb } from './tables';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { getForKey } from 'server/src/lib/api/rateLimit/apiRateLimitSettingsModel';
 import type {
@@ -37,7 +38,7 @@ interface PrincipalRow {
 
 async function loadActivePrincipal(tenant: string, userId: string): Promise<PrincipalRow | null> {
   const knex = await getConnection(tenant);
-  const row = (await tenantDb(knex, tenant)
+  const row = (await servicePrincipalDb(knex, tenant)
     .table('service_principals')
     .where({ user_id: userId })
     .first('user_id', 'allow_act_as', 'archived_at', 'rate_limit_max_tokens', 'rate_limit_refill_per_min')) as
