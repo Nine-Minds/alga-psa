@@ -118,7 +118,15 @@ async function main() {
   const repoRoot = path.resolve(__dirname, '..', '..');
   const options = parseCliOptions(repoRoot);
 
-  const registry = buildBaseRegistry({ edition: options.edition });
+  // Per-product edition extensions to the document: each product exposes the same
+  // `decorateOpenApiRoute` from its oss/ and ee/ trees; the edition selects one.
+  const productDecorators = await Promise.all(
+    ['product-service-principals'].map(async (pkg) => {
+      const mod = await import(`../../packages/${pkg}/${options.edition === 'ee' ? 'ee' : 'oss'}/openapi.ts`);
+      return mod.decorateOpenApiRoute as (route: any) => any;
+    }),
+  );
+  const registry = buildBaseRegistry({ edition: options.edition, routeDecorators: productDecorators });
 
   const metadata: DocumentBuildOptions = {
     title: options.title ?? 'AlgaPSA API',
