@@ -36,6 +36,8 @@ export type DetailedContractLine = IContractLineMapping & {
   contract_line_name?: string;
   contract_line_type?: string;
   description?: string | null;
+  invoice_line_description?: string | null;
+  invoice_line_subtitle?: string | null;
   billing_frequency?: string;
   rate?: number | null;
   enable_proration?: boolean;
@@ -144,6 +146,8 @@ export async function fetchDetailedContractLines(
         'lines.invoice_line_description',
         'lines.created_at',
         'lines.template_line_name as contract_line_name',
+        'lines.invoice_line_description',
+        'lines.invoice_line_subtitle',
         'lines.line_type as contract_line_type',
         'lines.billing_frequency',
         'fixed.base_rate as default_rate',
@@ -162,6 +166,8 @@ export async function fetchDetailedContractLines(
       ),
       contract_line_name: row.contract_line_name,
       contract_line_type: row.contract_line_type,
+      invoice_line_description: row.invoice_line_description ?? null,
+      invoice_line_subtitle: row.invoice_line_subtitle ?? null,
       billing_frequency: row.billing_frequency,
       rate:
         row.custom_rate !== undefined && row.custom_rate !== null
@@ -197,6 +203,8 @@ export async function fetchDetailedContractLines(
       'cl.created_at',
       'cl.contract_line_name',
       'cl.contract_line_type',
+      'cl.invoice_line_description',
+      'cl.invoice_line_subtitle',
       'cl.description',
       'cl.billing_frequency',
       'cl.enable_proration',
@@ -214,6 +222,8 @@ export async function fetchDetailedContractLines(
       contract_line_name: row.contract_line_name,
       contract_line_type: row.contract_line_type,
       description: row.description ?? null,
+      invoice_line_description: row.invoice_line_description ?? null,
+      invoice_line_subtitle: row.invoice_line_subtitle ?? null,
       billing_frequency: row.billing_frequency,
     rate: row.custom_rate !== undefined && row.custom_rate !== null ? Number(row.custom_rate) : null,
     enable_proration: row.enable_proration ?? false,
@@ -653,6 +663,8 @@ export async function cloneTemplateLineToContract(
     contract_id: contractId,
     contract_line_name: edits.line_name?.trim() ? edits.line_name.trim() : templateLine.template_line_name,
     description: templateLine.description ?? null,
+    invoice_line_description: templateLine.invoice_line_description ?? null,
+    invoice_line_subtitle: templateLine.invoice_line_subtitle ?? null,
     billing_frequency: edits.billing_frequency ?? templateLine.billing_frequency,
     is_custom: false,
     contract_line_type: lineType,

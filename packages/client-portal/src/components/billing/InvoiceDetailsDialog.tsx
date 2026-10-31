@@ -11,6 +11,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Download, X, Mail } from 'lucide-react';
 import { getClientInvoiceById, downloadClientInvoicePdf, sendClientInvoiceEmail } from '@alga-psa/client-portal/actions';
 import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '@alga-psa/billing/actions/billingClientLocationActions';
+import { buildBundleComponents } from '@alga-psa/billing/lib/invoiceBundleComponents/components';
 import { triggerInvoicePdfDownload } from './invoicePdfDownload';
 import {
   LocationAddress,
@@ -301,6 +302,45 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
       </tr>
     );
 
+    // Bundle component rows. The server sends bundle data only when this
+    // client's resolved template renders component rows, and amounts only when
+    // that template binds a component price, so presence here is the contract.
+    const renderBundleRows = (item: IInvoiceCharge, idx: number, keyPrefix: string) => {
+      const bundle = buildBundleComponents(item.bundle_presentation ?? null, {
+        includePricing: Boolean(item.bundle_component_amounts),
+        amounts: item.bundle_component_amounts ?? null,
+      });
+      if (!bundle?.hasComponents) return null;
+      return bundle.components.map((component, componentIdx) => (
+        <tr
+          key={`${keyPrefix}-${idx}-component-${componentIdx}`}
+          data-automation-id={`invoice-line-item-${keyPrefix}-${idx}-component-${componentIdx}`}
+          className="text-sm text-muted-foreground"
+        >
+          <td className="px-3 py-1 pl-8">
+            <span>• {component.name}</span>
+            {component.periodLabelStart ? (
+              <span className="ml-2 text-xs">
+                {formatServicePeriodRange(component.periodLabelStart, component.periodLabelEnd ?? null)}
+              </span>
+            ) : null}
+            {component.quantityChange ? (
+              <span className={component.quantityChange > 0 ? 'ml-2 text-green-700' : 'ml-2 text-red-700'}>
+                {component.quantityChange > 0 ? '+' : '\u2212'}{Math.abs(component.quantityChange)}
+              </span>
+            ) : null}
+          </td>
+          <td className="px-3 py-1">{component.quantity ?? ''}</td>
+          <td className="px-3 py-1">
+            {component.unitPrice !== undefined ? formatCurrency(component.unitPrice, invoice.currencyCode) : ''}
+          </td>
+          <td className="px-3 py-1">
+            {component.total !== undefined ? formatCurrency(component.total, invoice.currencyCode) : ''}
+          </td>
+        </tr>
+      ));
+    };
+
     const renderChargesTable = (rows: IInvoiceCharge[], keyPrefix: string) => (
       <table className="min-w-full divide-y divide-gray-200 mt-2">
         <thead>
@@ -313,7 +353,12 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
         </thead>
         <tbody className="divide-y divide-gray-200">
           {rows.length > 0
-            ? rows.map((item, idx) => renderChargeRow(item, idx, keyPrefix))
+            ? rows.map((item, idx) => (
+                <React.Fragment key={`${keyPrefix}-${idx}`}>
+                  {renderChargeRow(item, idx, keyPrefix)}
+                  {renderBundleRows(item, idx, keyPrefix)}
+                </React.Fragment>
+              ))
             : (
                 <tr>
                   <td colSpan={4} className="px-3 py-2 text-center text-gray-500">
