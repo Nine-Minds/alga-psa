@@ -25,7 +25,7 @@ const NATIVE_AUDIENCES: readonly CommentAudience[] = ['requester', 'organization
  * through the co-managed comment command; requester and organization_private stay on the native
  * path with their audience. A workspace without a relationship simply never learns `shared_it`.
  */
-export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: { ticketId: string; children: React.ReactNode }) {
+export function CoManagedLocalTicketDataSourceProvider({ ticketId, readOnly = false, children }: { ticketId: string; readOnly?: boolean; children: React.ReactNode }) {
   const { t } = useTranslation('features/tickets');
   const [session, setSession] = useState<SharedConversationSession | null>(null);
   const [version, setVersion] = useState(0);
@@ -52,7 +52,8 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: {
 
   const dataSource = useMemo<TicketDataSource>(() => {
     const shared = session?.writeAudiences() ?? [];
-    const audiences: CommentAudience[] = [...NATIVE_AUDIENCES, ...(shared.includes('shared_it') ? ['shared_it' as const] : [])];
+    // A read-only workspace (lapsed, ended) offers no composer audience; the write choke point refuses regardless.
+    const audiences: CommentAudience[] = readOnly ? [] : [...NATIVE_AUDIENCES, ...(shared.includes('shared_it') ? ['shared_it' as const] : [])];
     const native = nativeTicketDataSource.comments;
     const viaWriter = (audience: unknown, parent?: string | null) =>
       !!session && (audience === 'shared_it' || (!!parent && session.audienceOf(parent) === 'shared_it'));
@@ -89,7 +90,7 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: {
     } as unknown as TicketDataSourceOverrides);
     // `version` re-derives the audiences once the session has loaded.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session, version, resource]);
+  }, [session, version, resource, readOnly]);
 
   return <CoManagedEffortPerspectiveProvider value="customer"><TicketDataSourceProvider dataSource={dataSource}>{children}
     {session && resource && <CoManagedConversationFiles session={session} resource={resource} staging={staging} onCommentsChanged={commentsChanged.fire} />}
