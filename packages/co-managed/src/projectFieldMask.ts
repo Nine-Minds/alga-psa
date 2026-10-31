@@ -48,7 +48,7 @@ export type CoManagedColumnSpec = Readonly<Record<string, readonly string[]>>;
 /** The non-text `projects` columns (and their joined display values) a project list or candidate carries. */
 export const CO_MANAGED_PROJECT_COLUMNS: CoManagedColumnSpec = {
   project_number: [], wbs_code: [], is_inactive: [], start_date: [], end_date: [], created_at: [], updated_at: [],
-  budgeted_hours: [], client_portal_config: [], service_id: [],
+  budgeted_hours: [], client_portal_config: [], service_id: [], billing_profile_id: [],
   status: [], status_name: ['status'], is_closed: ['status'],
   client_id: [], client_name: [...CO_MANAGED_ORGANIZATION_NAME_ALIASES, 'client_id'],
   contact_name_id: [], contact_name: ['contact_name_id'],

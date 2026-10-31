@@ -143,7 +143,7 @@ function maskedColumn(trx: Knex.Transaction, hidden: ReadonlySet<string>, column
   return hidden.has(column) ? trx.raw(`NULL::${type} as ??`, [column]) : trx.raw(`${expression} as ??`, [column]);
 }
 
-async function loadProjectTextRows(
+export async function loadProjectTextRows(
   trx: Knex.Transaction,
   tenant: string,
   projectIds: string[],
@@ -182,7 +182,7 @@ async function loadProjectTextRows(
     );
 }
 
-async function loadProjectTaskRows(
+export async function loadProjectTaskRows(
   trx: Knex.Transaction,
   tenant: string,
   projectIds: string[],

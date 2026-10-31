@@ -16,6 +16,17 @@ import { tenantDb } from '@alga-psa/db';
 import { coManagedHiddenColumns, coManagedProjectFamilyMask, CO_MANAGED_PROJECT_COLUMNS } from '@alga-psa/co-managed/projectFieldMask';
 import { releaseStagingForProject, releaseStagingForTasks } from '@alga-psa/inventory/lib';
 
+/**
+ * Every physical `projects` column a masked row emits. `tenant`, `project_id` (identifiers: hiding one drops the
+ * row) and the title/description (masked by the field-source descriptors) are handled specially; every other
+ * entry must be a key of CO_MANAGED_PROJECT_COLUMNS so it passes the hidden check.
+ */
+export const PROJECT_MASKED_ROW_COLUMNS = [
+  'tenant', 'project_id', 'project_name', 'description', 'project_number', 'wbs_code', 'is_inactive', 'start_date', 'end_date',
+  'created_at', 'updated_at', 'budgeted_hours', 'client_portal_config', 'service_id', 'billing_profile_id', 'status', 'client_id',
+  'contact_name_id', 'assigned_to',
+] as const;
+
 /** Status enriched with mapping metadata as returned by getProjectTaskStatuses. */
 export type ProjectTaskStatus = (IStatus | IStandardStatus) & Pick<IProjectStatusMapping, 'project_status_mapping_id' | 'phase_id' | 'custom_name' | 'display_order' | 'is_visible'> & { is_standard: boolean };
 
@@ -188,22 +199,20 @@ const ProjectModel = {
     }
 
     const hidden = coManagedHiddenColumns(redactedFields, 'projects', CO_MANAGED_PROJECT_COLUMNS);
-    // Overrides merged over the row's JSON; a hidden date/number/text column becomes JSON null.
-    const overrides: Record<string, string | null> = {};
-    for (const column of hidden) {
-      if (!['client_name', 'contact_name', 'status_name', 'is_closed', 'manager_name'].includes(column)) {
-        overrides[column] = null;
-      }
-    }
-    if (mask.body) overrides.description = null;
-    if (mask.title) overrides.project_name = mask.neutralTitle;
-
-    const nullable = (column: string, expression: string, type: string) =>
-      hidden.has(column) ? knexOrTrx.raw(`NULL::${type} as ??`, [column]) : knexOrTrx.raw(`${expression} as ??`, [column]);
+    // Fail closed: only the columns listed here are ever emitted, each through the hidden check. A column
+    // added to `projects` later is not emitted until it is listed (and so given a redaction alias).
+    const column = (name: string) => {
+      if (name === 'project_name' && mask.title) return knexOrTrx.raw('?::text as ??', [mask.neutralTitle, name]);
+      const isHidden = name === 'project_name' ? false : name === 'description' ? mask.body : hidden.has(name);
+      // CASE WHEN FALSE yields a NULL of the column's own type, so the row shape and types are unchanged.
+      return isHidden ? knexOrTrx.raw('CASE WHEN FALSE THEN ?? END as ??', [`projects.${name}`, name]) : `projects.${name}`;
+    };
+    const nullable = (name: string, expression: string, type: string) =>
+      hidden.has(name) ? knexOrTrx.raw(`NULL::${type} as ??`, [name]) : knexOrTrx.raw(`${expression} as ??`, [name]);
     const db = tenantDb(knexOrTrx, tenant);
     const query = tenantScopedTable(knexOrTrx, 'projects', tenant)
       .select(
-        knexOrTrx.raw('(to_jsonb(projects) || ?::jsonb) as masked', [JSON.stringify(overrides)]),
+        ...PROJECT_MASKED_ROW_COLUMNS.map(column),
         nullable('client_name', 'clients.client_name', 'text'),
         hidden.has('manager_name') ? knexOrTrx.raw('NULL::text as assigned_to_first_name') : 'users.first_name as assigned_to_first_name',
         hidden.has('manager_name') ? knexOrTrx.raw('NULL::text as assigned_to_last_name') : 'users.last_name as assigned_to_last_name',
@@ -217,15 +226,7 @@ const ProjectModel = {
     db.tenantJoin(query, 'contacts', 'projects.contact_name_id', 'contacts.contact_name_id', { type: 'left' });
     db.tenantJoin(query, 'statuses as s', 'projects.status', 's.status_id', { type: 'left' });
 
-    const rows = (await query) as Array<Record<string, unknown> & { masked: Record<string, unknown> }>;
-    const dateColumns = ['start_date', 'end_date', 'created_at', 'updated_at'];
-    return rows.map(({ masked, ...joined }) => {
-      const row: Record<string, unknown> = { ...masked, ...joined };
-      for (const column of dateColumns) {
-        if (typeof row[column] === 'string') row[column] = new Date(row[column] as string);
-      }
-      return row as unknown as IProject;
-    });
+    return (await query) as IProject[];
   },
 
   /**
