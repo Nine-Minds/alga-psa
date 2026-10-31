@@ -84,6 +84,7 @@
     "button": "Filtri",
     "unassigned": "Non assegnato",
     "category": "Filtra per categoria",
+    "removeFilterChip": "Rimuovi filtro: {{label}}",
     "assignee": "Assegnatario",
     "allAssignees": "Tutti gli assegnatari",
     "responseState": "Stato risposta",
@@ -110,7 +111,12 @@
     "allResponseStatuses": "Tutti gli stati di risposta",
     "responseStatus": "Stato risposta",
     "board": "Filtra per bacheca",
-    "searchSmart": "Cerca ticket e commenti… Invio per la ricerca intelligente"
+    "searchSmart": "Cerca ticket e commenti… Invio per la ricerca intelligente",
+    "requesterTags": "Tag del richiedente",
+    "clientTags": "Tag del cliente",
+    "tagModeAny": "Almeno uno tra",
+    "tagModeNone": "Nessuno tra",
+    "droppedFromLink": "Alcuni filtri di questo link non sono validi e sono stati ignorati."
   },
   "create": {
     "title": "Crea ticket di supporto",
@@ -249,7 +255,8 @@
     "moreActions": "Altre azioni",
     "createTemplate": "Crea modello dal ticket",
     "createWorkflowFromTicket": "Crea workflow dal ticket",
-    "printWorkTag": "Stampa etichetta di lavoro"
+    "printWorkTag": "Stampa etichetta di lavoro",
+    "retry": "Riprova"
   },
   "messages": {
     "noTickets": "Nessun ticket trovato",
@@ -359,7 +366,8 @@
     "pastedImagesDeleteFailed_many": "Impossibile eliminare {{count}} immagini incollate.",
     "pastedImagesDeleted_few": "{{count}} immagini incollate eliminate.",
     "pastedImagesDeleted_many": "{{count}} immagini incollate eliminate.",
-    "sharedWorkspaceReadOnly": "Vedi questo ticket perché riguarda un dispositivo di una postazione condivisa. Solo chi lo ha aperto può aggiungere contenuti."
+    "sharedWorkspaceReadOnly": "Vedi questo ticket perché riguarda un dispositivo di una postazione condivisa. Solo chi lo ha aperto può aggiungere contenuti.",
+    "loadPartyTagsFailed": "Impossibile caricare i tag del richiedente e del cliente"
   },
   "conversation": {
     "comments": "Commenti",
@@ -431,7 +439,27 @@
     "bcc": "Ccn",
     "ccBccInvalid": "Correggi gli indirizzi evidenziati prima di inviare.",
     "ccBccTooMany": "È possibile copiare al massimo {{max}} destinatari Cc e Ccn in un commento.",
-    "ccBccNotSentOnInternal": "Cc e Ccn non vengono inviati con una nota interna. Disattiva Interna per usarli."
+    "ccBccNotSentOnInternal": "Cc e Ccn non vengono inviati con una nota interna. Disattiva Interna per usarli.",
+    "audience": {
+      "requester": "Richiedente",
+      "sharedIt": "IT condiviso",
+      "organizationPrivate": "Privato dell'organizzazione",
+      "placeholder": "Chi può vederlo?",
+      "required": "Scegli chi può vedere questo commento prima di pubblicarlo."
+    },
+    "shared": {
+      "loading": "Caricamento della conversazione condivisa...",
+      "loadError": "Impossibile caricare la conversazione condivisa.",
+      "reload": "Ricarica",
+      "errors": {
+        "forbidden": "Non hai il permesso di pubblicare per questo pubblico.",
+        "invalid": "Questo commento non può essere pubblicato.",
+        "readOnly": "Questo spazio di lavoro è attualmente in sola lettura.",
+        "operationConflict": "Questo commento è in conflitto con un tentativo precedente. Ricarica e riprova.",
+        "audienceUnresolved": "Scegli chi può vedere questo commento prima di pubblicarlo.",
+        "unknownOutcome": "Non è stato possibile confermare la pubblicazione del commento. Controlla la conversazione prima di inviarlo di nuovo."
+      }
+    }
   },
   "responseState": {
     "awaitingYourResponse": "In attesa della tua risposta",
@@ -511,6 +539,7 @@
     },
     "filters": {
       "allAssignees": "Tutti gli assegnatari",
+      "allContacts": "Tutti i contatti",
       "selectStatus": "Seleziona stato",
       "responseState": "Stato risposta",
       "allResponseStates": "Tutti gli stati risposta",
@@ -979,7 +1008,22 @@
     "tagCreatePartialFailure_few": "Impossibile creare {{count}} tag",
     "tagCreatePartialFailure_many": "Impossibile creare {{count}} tag",
     "tagCreationFailed_few": "Impossibile creare {{count}} tag",
-    "tagCreationFailed_many": "Impossibile creare {{count}} tag"
+    "tagCreationFailed_many": "Impossibile creare {{count}} tag",
+    "assets": {
+      "heading": "Asset",
+      "selectClientFirst": "Seleziona un cliente per collegare gli asset.",
+      "unavailable": "Gli asset possono essere collegati dal ticket dopo la creazione."
+    },
+    "attachments": {
+      "heading": "Allegati",
+      "add": "Aggiungi file",
+      "remove": "Rimuovi {{name}}"
+    },
+    "watchers": {
+      "heading": "Osservatori",
+      "placeholder": "Aggiungi osservatori..."
+    },
+    "attachmentsPartialFailure": "Ticket creato, ma non è stato possibile allegare questi file: {{files}}. Aggiungili dal ticket."
   },
   "itil": {
     "calculatedPriority": "Priorità (calcolata)",
@@ -1274,6 +1318,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Tracciamento dello stato di risposta",
+      "defaultReplyInternalTitle": "Visibilità predefinita delle risposte",
+      "defaultReplyInternalDescription": "Avviare le nuove risposte ai ticket come interne per tutti i membri del team. Gli utenti possono comunque passare una risposta a Cliente. Le risposte nel portale clienti e nei thread esistenti restano invariate.",
+      "defaultReplyInternalLabel": "Usare risposte interne per impostazione predefinita",
       "responseStateTrackingDescription": "Quando è attivo, i ticket tengono traccia automatica di chi deve rispondere per primo (in attesa del cliente o del team interno). Disattivandolo si nascondono i badge di stato risposta, i filtri e le relative opzioni di pausa SLA.",
       "responseStateTrackingEnabled": "Tracciamento dello stato di risposta attivo",
       "responseStateTrackingDisabled": "Tracciamento dello stato di risposta disattivato",
@@ -1693,7 +1740,12 @@
       "templateClientMismatch": "Questo modello di checklist è limitato a un cliente diverso da quello del ticket.",
       "templateClientInvalid": "Il cliente selezionato non è stato trovato.",
       "ruleClientOutsideTemplateScope": "Questo modello appartiene a un cliente, quindi le sue regole non possono riguardare altri clienti.",
-      "templateRulesTargetOtherClients": "Alcune regole di applicazione automatica di questo modello riguardano altri clienti. Rimuovi quei clienti dalle regole prima di assegnare il modello a un cliente."
+      "templateRulesTargetOtherClients": "Alcune regole di applicazione automatica di questo modello riguardano altri clienti. Rimuovi quei clienti dalle regole prima di assegnare il modello a un cliente.",
+      "predicateClientOutsideScope": "Il cliente {{client}} non rientra nell’ambito di questo modello.",
+      "predicateInvalid": "Regola della lista di controllo non valida: {{detail}}"
+    },
+    "comment": {
+      "audienceRequired": "Scegli chi può vedere questo commento prima di pubblicarlo."
     }
   },
   "ticketSection": {

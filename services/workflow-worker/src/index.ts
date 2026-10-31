@@ -50,6 +50,15 @@ async function startServices() {
     // the same PostHog-backed feature evaluator in this process as well.
     registerFeatureFlagChecker((flag, context) => featureFlags.isEnabled(flag, context));
 
+    // CM L0c: install the co-managed write-admission resolver. Fails open: an image
+    // whose co-managed packages do not resolve must still boot and write.
+    try {
+      const { installCoManagedWriteAdmission } = await import('@alga-psa/licensing/co-managed-write-admission');
+      installCoManagedWriteAdmission();
+    } catch (error) {
+      logger.error('Failed to install co-managed write admission:', error);
+    }
+
     initializeWorkflowRuntimeV2();
 
     // Workflow actions resolve email integrations through a runtime registry.

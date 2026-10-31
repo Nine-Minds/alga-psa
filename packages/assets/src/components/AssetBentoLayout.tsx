@@ -37,6 +37,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import useSWR from 'swr';
 import { getAssetLinkedTickets, getAssetMaintenanceReport } from '../actions/assetActions';
 import { CustodyCard } from './custody/CustodyCard';
+import { WarrantyCard } from './warranty/WarrantyCard';
 import { getAssetSoftwareSummary } from '../actions/softwareActions';
 import { getAssetGroup } from '../actions/assetGroupActions';
 import { unwrapAssetActionResult } from '../actions/assetActionErrors';
@@ -54,7 +55,8 @@ import {
   worstStorage,
 } from '../lib/assetSignals';
 import { formatMinorUnits } from '../lib/money';
-import { resolveAssetStatusLabel, useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { useAssetStatusRegistry } from './shared/useAssetStatusOptions';
+import { assetStatusLabel } from '../lib/assetStatus';
 import { calendarDateToLocalDate } from '../lib/calendarDate';
 import { AssetAssigneeRow } from './AssetAssigneeRow';
 import { AssetSignedInUserRow } from './AssetSignedInUserRow';
@@ -292,7 +294,7 @@ export function AssetBentoLayout({
               <div className="space-y-1.5 text-sm">
                 <BentoLabelValue label={t('assetBento.tag', { defaultValue: 'Tag' })} value={asset.asset_tag} mono />
                 <BentoLabelValue label={t('assetBento.serial', { defaultValue: 'Serial' })} value={asset.serial_number} mono />
-                <BentoLabelValue label={t('assetBento.status', { defaultValue: 'Status' })} value={resolveAssetStatusLabel(t, asset.status, assetStatuses)} />
+                <BentoLabelValue label={t('assetBento.status', { defaultValue: 'Status' })} value={assetStatusLabel(t, asset.status, assetStatuses)} />
                 {/* FR-C6: the assignee is always shown, even when empty. */}
                 <AssetAssigneeRow
                   assetId={asset.asset_id}
@@ -535,6 +537,8 @@ export function AssetBentoLayout({
             </BentoTile>
 
             <CustodyCard id="asset-bento-custody" assetId={asset.asset_id} />
+
+            <WarrantyCard id="asset-bento-warranty" assetId={asset.asset_id} />
 
             <BentoTile
               id="asset-bento-related"

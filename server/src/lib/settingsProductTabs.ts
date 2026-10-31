@@ -5,6 +5,7 @@ const ALGA_DESK_ALLOWED_SETTINGS_TABS = [
   'users',
   'teams',
   'ticketing',
+  'tags',
   'email',
   'appearance',
   'client-portal',
@@ -15,10 +16,31 @@ const ALGA_DESK_ALLOWED_SETTINGS_TABS = [
   'language',
 ] as const;
 
-export function getAllowedSettingsTabIds(productCode: ProductCode): Set<string> {
-  if (productCode === 'algadesk') {
-    return new Set(ALGA_DESK_ALLOWED_SETTINGS_TABS);
-  }
+/** Products whose settings surface is an allow-list. PSA sees every tab. */
+export type SettingsRestrictedProduct = Exclude<ProductCode, 'psa'>;
 
-  return new Set();
+/**
+ * Allowed settings tabs per restricted product. Keyed by every non-PSA product
+ * code, so adding a product to `PRODUCT_CODES` fails to compile until it takes
+ * a position here; a product missing from this record would otherwise resolve
+ * every `/msp/settings/<tab>` to `not_found`.
+ *
+ * `co_managed` gets the help-desk tabs that back the routes its route rules
+ * allow today (`msp_core_helpdesk`). Tabs that back routes later cards open
+ * (time entry, SLA, notifications) are added by those cards with their routes.
+ */
+const ALLOWED_SETTINGS_TABS_BY_PRODUCT: Record<SettingsRestrictedProduct, readonly string[]> = {
+  algadesk: ALGA_DESK_ALLOWED_SETTINGS_TABS,
+  co_managed: ALGA_DESK_ALLOWED_SETTINGS_TABS,
+};
+
+export function isSettingsRestrictedProduct(productCode: ProductCode): productCode is SettingsRestrictedProduct {
+  return productCode !== 'psa';
+}
+
+/** Empty for PSA, which does not use an allow-list. */
+export function getAllowedSettingsTabIds(productCode: ProductCode): Set<string> {
+  return isSettingsRestrictedProduct(productCode)
+    ? new Set(ALLOWED_SETTINGS_TABS_BY_PRODUCT[productCode])
+    : new Set();
 }

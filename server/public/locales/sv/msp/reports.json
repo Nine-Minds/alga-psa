@@ -310,7 +310,9 @@
       "hourlyRate": "Timpris",
       "expirationDate": "Går ut",
       "neverExpires": "Aldrig",
-      "adhocBlock": "Ad hoc"
+      "adhocBlock": "Ad hoc",
+      "remainingValue": "Återstående värde",
+      "validFrom": "Giltig från"
     },
     "statusValues": {
       "active": "Aktivt",

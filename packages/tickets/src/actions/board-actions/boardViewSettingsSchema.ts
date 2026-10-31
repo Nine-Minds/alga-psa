@@ -1,7 +1,12 @@
 import { z } from 'zod';
 import type { ITicketListFilters } from '@alga-psa/types';
 import { TICKET_COLUMNS } from '../../lib/ticketColumnCatalog';
-import type { CaptureExcludedFilterKey, TicketViewSettings } from '../../lib/ticketViewSettings';
+import { ticketFiltersShape } from '@alga-psa/list-views';
+import {
+  CAPTURE_EXCLUDED_FILTER_KEYS,
+  type CaptureExcludedFilterKey,
+  type TicketViewSettings,
+} from '../../lib/ticketViewSettings';
 
 /**
  * Write-side validation for boards.list_view_settings.
@@ -13,7 +18,7 @@ import type { CaptureExcludedFilterKey, TicketViewSettings } from '../../lib/tic
  *     silently stored, so a typo or a stale client cannot deposit a key that
  *     nothing will ever read and that the next reader will mistake for meaning.
  *   - on **read**, nothing here applies. Stored documents are coerced by
- *     sanitizeStoredTicketView (key-dropping, no Zod — z.record(z.enum) errors
+ *     sanitizeStoredTicketView (key-dropping, no Zod — z.record(z.string(), z.enum) errors
  *     on an unknown key rather than dropping it) and their ids are checked by
  *     validateCapturedFilters, because a board's saved statusId can die at any
  *     time through no fault of the document.
@@ -44,44 +49,18 @@ const ticketColumnKeySchema = z.enum(columnKeys);
  */
 type CapturableFilterKey = Exclude<keyof ITicketListFilters, CaptureExcludedFilterKey>;
 
-const capturedFiltersShape: { [K in CapturableFilterKey]: z.ZodTypeAny } = {
-    statusId: z.string(),
-    priorityId: z.string(),
-    categoryId: z.string(),
-    categoryIds: z.array(z.string()),
-    excludeCategoryIds: z.array(z.string()),
-    clientId: z.string(),
-    contactId: z.string(),
-    showOpenOnly: z.boolean(),
-    tags: z.array(z.string()),
-    assignedToIds: z.array(z.string().uuid()),
-    assignedTeamIds: z.array(z.string()),
-    includeUnassigned: z.boolean(),
-    assignedToMe: z.boolean(),
-    dueDateFilter: z.enum([
-      'all',
-      'overdue',
-      'upcoming',
-      'today',
-      'no_due_date',
-      'before',
-      'after',
-      'custom',
-    ]),
-    dueDateFrom: z.string(),
-    dueDateTo: z.string(),
-    sortBy: z.string(),
-    sortDirection: z.enum(['asc', 'desc']),
-    responseState: z.enum(['awaiting_client', 'awaiting_internal', 'none', 'all']),
-    slaStatusFilter: z.enum(['all', 'has_sla', 'no_sla', 'on_track', 'breached', 'paused']),
-    bundleView: z.enum(['bundled', 'individual']),
-} as const;
+const capturedFiltersShape = Object.fromEntries(
+  Object.entries(ticketFiltersShape).filter(
+    ([key]) => !(CAPTURE_EXCLUDED_FILTER_KEYS as readonly string[]).includes(key),
+  ),
+) as { [K in CapturableFilterKey]: z.ZodTypeAny };
 
 const viewSettingsShape = (filters: z.ZodTypeAny) => ({
   columnVisibility: z.record(ticketColumnKeySchema, z.boolean()),
   columnOrder: z.array(ticketColumnKeySchema),
   tagsInlineUnderTitle: z.boolean(),
   densityLevel: z.number().int().min(0).max(100),
+  schemaVersion: z.number().int().min(1),
   filters,
 });
 

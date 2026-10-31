@@ -24,6 +24,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { setUsageMeasurementModeInTransaction } from '../lib/billing/usageMeasurementTransitions';
+import { FixedMemberRatePairError } from '@alga-psa/shared/billingClients/fixedMemberRate';
 
 export type ContractLineServiceConfigActionError = ActionMessageError | ActionPermissionError;
 
@@ -60,7 +61,14 @@ function contractLineServiceConfigActionErrorFrom(error: unknown): ContractLineS
   if (dbError?.code === '23505') {
     return actionError('This service configuration already exists for the selected contract line.', 'msp/contract-lines:errors.configuration.duplicate');
   }
-  if (dbError?.code === '23514') {
+  // The fixed-config model refuses a split rate/basis pair before the DB
+  // CHECK does; to the operator both are the same "value not allowed". Matched
+  // by name too, since a bundled copy of the class defeats instanceof.
+  if (
+    dbError?.code === '23514' ||
+    error instanceof FixedMemberRatePairError ||
+    (error as { name?: string } | null)?.name === 'FixedMemberRatePairError'
+  ) {
     return actionError('One of the service configuration values is not allowed. Please review the form and try again.', 'msp/contract-lines:errors.configuration.notAllowed');
   }
 
@@ -238,7 +246,9 @@ export const updateConfiguration = withAuth(async (
     }
     await assertContractLineIsAuthorableByConfigId(knex, tenant, configId);
     const service = new ContractLineServiceConfigurationService(knex, tenant);
-    return service.updateConfiguration(configId, baseConfig, typeConfig, rateTiers as any);
+    // Awaited so a rejected update reaches the catch below and is returned as
+    // an action error rather than thrown past it.
+    return await service.updateConfiguration(configId, baseConfig, typeConfig, rateTiers as any);
   } catch (error) {
     console.error(`Error updating service configuration ${configId}:`, error);
     const expected = contractLineServiceConfigActionErrorFrom(error);

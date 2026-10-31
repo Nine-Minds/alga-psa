@@ -3,7 +3,7 @@
  *
  * Product is orthogonal to plan/tier and controls the application surface.
  */
-export const PRODUCT_CODES = ['psa', 'algadesk'] as const;
+export const PRODUCT_CODES = ['psa', 'algadesk', 'co_managed'] as const;
 
 export type ProductCode = (typeof PRODUCT_CODES)[number];
 

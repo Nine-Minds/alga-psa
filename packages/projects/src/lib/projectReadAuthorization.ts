@@ -102,7 +102,8 @@ function toProjectAuthorizationRecord(project: ProjectAuthorizationFields): Auth
 export async function createProjectReadAuthorizer(
   conn: Knex | Knex.Transaction,
   tenant: string,
-  user: IUserWithRoles
+  user: IUserWithRoles,
+  action: 'read' | 'update' = 'read'
 ): Promise<(project: ProjectAuthorizationFields) => Promise<boolean>> {
   const subject = await resolveAuthorizationSubjectForUser(conn, tenant, user);
   const authorizationKernel = createAuthorizationKernel({
@@ -128,7 +129,7 @@ export async function createProjectReadAuthorizer(
 
     const decision = await authorizationKernel.authorizeResource({
       subject,
-      resource: { type: 'project', action: 'read', id: projectId },
+      resource: { type: 'project', action, id: projectId },
       record: toProjectAuthorizationRecord(project),
       requestCache,
       knex: conn,

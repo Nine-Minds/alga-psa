@@ -30,7 +30,8 @@
     "status": "Status",
     "expiration": "Vervaldatum",
     "source": "Bron",
-    "actions": "Acties"
+    "actions": "Acties",
+    "validFrom": "Geldig vanaf {{date}}"
   },
   "status": {
     "pending": "In afwachting",
@@ -53,8 +54,10 @@
     "rateRequired": "Voer een geldig tarief in.",
     "scopeLabel": "Dekking — services die dit blok dekt (leeg = alle werkzaamheden)",
     "serviceLabel": "Service",
+    "serviceNoResults": "Geen services gevonden",
     "servicePlaceholder": "Selecteer een service",
     "serviceRequired": "Selecteer een service.",
+    "serviceSearchPlaceholder": "Services zoeken...",
     "submit": "Conceptfactuur maken",
     "submitted": "Conceptfactuur {{invoiceNumber}} gemaakt. Finaliseer deze om het blok te activeren.",
     "title": "Urenblok verkopen",
@@ -127,7 +130,9 @@
     "voidedLabel": "Ongeldig gemaakt",
     "purchaseReversed": "Aankoop teruggedraaid (factuur ondefinitief gemaakt)",
     "unknownUser": "Systeem",
-    "sourceContract": "Contract: {{contract}}"
+    "sourceContract": "Contract: {{contract}}",
+    "remainingValue": "Waarde van resterende uren: {{value}}",
+    "validFrom": "Geldig vanaf {{date}}"
   },
   "expire": {
     "error": "Kan het urenblok niet laten vervallen.",

@@ -19,6 +19,7 @@ import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { withTransaction } from '@alga-psa/db';
+import { unservedPermissionResources } from '@alga-psa/auth/lib/permissionCapabilities';
 import { 
   IRole, 
   IPermission, 
@@ -125,6 +126,11 @@ export class PermissionRoleService extends BaseService<IRole> {
     const { filters = {} as PermissionFilterData, categorize = false } = options;
 
     let query = tenantDb(knex, context.tenant).table('permissions');
+
+    // Capability-gated permissions are listed only for tenants served for the capability
+    // (an ended sponsorship or a kill switch leaves the rows in place).
+    const hidden = await unservedPermissionResources(context.tenant);
+    if (hidden.length) query = query.whereNotIn('resource', hidden);
 
     // Apply filters
     if (filters.resource) {

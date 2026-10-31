@@ -36,7 +36,6 @@ vi.mock('@alga-psa/assets/hooks/useAssetDetail', () => ({
   }),
 }));
 vi.mock('./shared/useAssetStatusOptions', () => ({
-  resolveAssetStatusLabel: () => 'Active',
   useAssetStatusRegistry: () => ({ statuses: [] }),
 }));
 vi.mock('./AssetDetailHeader', () => ({ AssetDetailHeader: () => <div /> }));

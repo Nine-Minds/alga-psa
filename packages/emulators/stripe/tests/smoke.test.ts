@@ -143,6 +143,24 @@ describe('stripe emulator wire contract', { shuffle: false }, () => {
     } finally { await replayHost.stop(); }
   });
 
+  it('serves the product a price references, so price.product can be resolved by id', async () => {
+    await controlPost('/control/stripe/seed/product', { id: 'prod_smoke_pro', name: 'alga-psa-pro' });
+    await controlPost('/control/stripe/seed/price', { id: 'price_smoke_pro', unitAmount: 2500, currency: 'eur', interval: 'month', product: 'prod_smoke_pro' });
+    await controlPost('/control/stripe/seed/price', { id: 'price_smoke_auto', unitAmount: 100, interval: 'month', product: 'prod_smoke_auto' });
+
+    const price = await (await fetch(`${base}/v1/prices/price_smoke_pro`, { headers: auth })).json();
+    const product = await (await fetch(`${base}/v1/products/${price.product}`, { headers: auth })).json();
+    expect(product).toMatchObject({ id: 'prod_smoke_pro', object: 'product', name: 'alga-psa-pro', active: true });
+
+    // A price seeded against an unknown product id still references a retrievable product.
+    const implicit = await (await fetch(`${base}/v1/products/prod_smoke_auto`, { headers: auth })).json();
+    expect(implicit).toMatchObject({ id: 'prod_smoke_auto', object: 'product' });
+
+    const missing = await fetch(`${base}/v1/products/prod_nope`, { headers: auth });
+    expect(missing.status).toBe(404);
+    expect((await missing.json()).error.message).toContain('No such product');
+  });
+
   it('rejects unauthenticated requests with a Stripe-shaped 401', async () => {
     const response = await fetch(`${base}/v1/customers`);
     expect(response.status).toBe(401);

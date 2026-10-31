@@ -26,6 +26,11 @@ export const LABEL_TEMPLATE_VALUE_BINDINGS: LabelTemplateValueBindings = {
   sequenceLine: { id: 'sequenceLine', kind: 'value', path: 'display.sequenceLine', fallback: '' },
   sequenceNumber: { id: 'sequenceNumber', kind: 'value', path: 'sequence.n', fallback: '' },
   sequenceTotal: { id: 'sequenceTotal', kind: 'value', path: 'sequence.total', fallback: '' },
+  // RMA work tag (C5): bench lines the generic fields have no slot for.
+  rmaStatus: { id: 'rmaStatus', kind: 'value', path: 'rma.statusLabel', fallback: '' },
+  rmaReturnBy: { id: 'rmaReturnBy', kind: 'value', path: 'display.rmaReturnByLine', fallback: '' },
+  rmaShipping: { id: 'rmaShipping', kind: 'value', path: 'rma.shipping', fallback: '' },
+  rmaTicket: { id: 'rmaTicket', kind: 'value', path: 'display.rmaTicketLine', fallback: '' },
   tenantName: { id: 'tenantName', kind: 'value', path: 'tenantClient.name', fallback: '' },
   // The standard templates' text brand line: the issuer name, but only when there is no logo to show.
   tenantBrandText: { id: 'tenantBrandText', kind: 'value', path: 'tenantClient.brandText', fallback: '' },

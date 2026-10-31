@@ -10,7 +10,13 @@
  */
 
 import type { IBillingPeriod } from "@alga-psa/types";
-import type { ChargeComputeTaxContext } from "../compute";
+import type { RecurringChargeStream } from "@alga-psa/shared/billingClients/contractLineTimingRule";
+import type { CadenceAdvanceRule } from "@alga-psa/shared/billingClients/cadenceBoundaryAdvance";
+import type {
+  ChargeComputeTaxContext,
+  HourBlockDrawRow,
+  PrepaidBlockIssuanceInput,
+} from "../compute";
 import type {
   ResolvedBillingProfileAssignments,
   ResolvedBillingTiming,
@@ -32,15 +38,18 @@ export type FactsOf<F extends ChargeFamily> = Extract<
 
 /**
  * What one demand asks of the source's timing rule. `policy` names the existing
- * timing resolver the family uses today; `duePosition` lets a demand ask for a
- * position other than the line's own (e.g. a fee in advance and its overage in
- * arrears on one line). Only `line` is implemented: sources reject the others
- * explicitly rather than silently falling back to the line's position.
+ * timing resolver the family uses today; `stream` names the line's recurring
+ * stream whose due period is wanted. Timing is resolved per (line, stream): the
+ * due position is a property of the stream (decided once by materialization),
+ * never of a family, and a line is due when any of its streams is due.
  */
 export interface TimingRequest {
   policy: "fixed-recurring" | "service-driven" | "recurring";
-  duePosition: "line" | "advance" | "arrears";
+  stream: RecurringChargeStream;
 }
+
+/** A source's per-stream due timings (absent stream: not due in the window). */
+export type StreamTimings = Partial<Record<RecurringChargeStream, ResolvedBillingTiming>>;
 
 export type TimingResolution =
   /** The line is due for this window; charges are priced against `timing`. */
@@ -114,6 +123,84 @@ export interface TaxContextDemand {
   locationId?: string | null;
 }
 
+/**
+ * One block issuance as a source supplies it, before the resolver's checks
+ * (see prepaidBlockRules.ts): the raw status, due date and sold-as/currency
+ * configuration, and the business date it is judged against.
+ */
+export interface PrepaidBlockIssuanceSupply
+  extends Omit<PrepaidBlockIssuanceInput, "soldAsServiceId" | "currencyCode"> {
+  soldAsServiceId: string | null;
+  currencyCode: string | null;
+  /** `contract_line_block_issuances.status`. */
+  status: string;
+  /** ISO date the issuance falls due. */
+  dueDate: string;
+  /** The business date the source judges readiness on (ISO date). */
+  readyAsOf: string;
+  /** The issuance line's own profile assignments; null leaves the profile off. */
+  billingProfile: ResolvedBillingProfileAssignments | null;
+}
+
+/** An allocation row; `block_status` is the draw block's lifecycle status. */
+export interface HourBlockDrawSupplyRow extends HourBlockDrawRow {
+  block_status: string;
+}
+
+/**
+ * The draws of a line's prepaid blocks inside the window the source chose,
+ * oldest block first. `timing` is the line's service period when the source
+ * derived the window from one (it feeds discount evaluation windows).
+ */
+export interface HourBlockDrawSupply {
+  period: { startDate: string; endDate: string };
+  timing?: ResolvedBillingTiming;
+  allocations: HourBlockDrawSupplyRow[];
+}
+
+/**
+ * The terms of a line's cadence-mode Prepaid Block, as a source supplies them
+ * (one block per service period, no issuance). Raw data: the resolver decides
+ * whether the line is billable, dates the block's validity and prices it.
+ * Amounts are minor units of the line's contract currency.
+ */
+export interface CadencePrepaidBlockSupply {
+  /** `contract_lines.contract_line_id` carrying the block configuration. */
+  contractLineId: string;
+  blockMinutes: number;
+  blockPrice: number;
+  /** Cadence periods the block's hours stay usable after its own period. */
+  rolloverPeriods: number;
+  scopeServiceIds: string[];
+  /** Catalog service the invoice line is sold as; null when not configured. */
+  soldAsServiceId: string | null;
+  serviceName: string;
+  soldAsTaxRateId: string | null;
+  /** The cadence rollover is counted on (see nthCadenceBoundaryAfter). */
+  cadence: CadenceAdvanceRule;
+}
+
+/**
+ * One draw of a Prepaid Block line's block on a time entry, as a source
+ * supplies it. `blockStatus` is the block's lifecycle status (raw);
+ * the resolver decides what each status means (see applyPrepaidCoverage).
+ */
+export interface PrepaidCoverageRow {
+  entryId: string;
+  blockStatus: string;
+  minutes: number;
+  /**
+   * The entry's work date and the drawn block's validity window (`YYYY-MM-DD`,
+   * either bound null = unbounded). A source that knows them supplies them so
+   * the resolver can refuse a draw from a block that was not valid on the work
+   * date; a source with no dates (the simulator's synthetic draws, which are
+   * valid by construction) omits them.
+   */
+  workDate?: string | null;
+  blockValidFrom?: string | null;
+  blockExpirationDate?: string | null;
+}
+
 export interface ConfiguredService {
   serviceId: string;
   /** `contract_line_service_configuration.configuration_type`. */
@@ -164,6 +251,31 @@ export interface ContractChargeSource {
     pool: PoolDefinition,
     timing: ResolvedBillingTiming | undefined,
   ): Promise<PoolPeriodState>;
+
+  /**
+   * The prepaid-block issuances this source selected for invoicing (the
+   * engine: those named by the caller; the simulator: the block timeline's
+   * issues for this window), in invoice order. Raw data: the resolver decides
+   * which of them become charges.
+   */
+  prepaidBlockIssuances(): Promise<PrepaidBlockIssuanceSupply[]>;
+  /**
+   * The line's cadence-mode Prepaid Block terms, or null when the line has no
+   * such block (no block, or a consumption-mode one).
+   */
+  cadencePrepaidBlock(): Promise<CadencePrepaidBlockSupply | null>;
+  /**
+   * Draws of the line's prepaid blocks in the source's window, or null when
+   * the source has no window for the line (e.g. no service period due).
+   */
+  hourBlockDraws(): Promise<HourBlockDrawSupply | null>;
+  /**
+   * The line's block draws on the given time entries (the activity the hourly
+   * charge would price). Raw data: the resolver decides which minutes are
+   * already paid for and which entries are held. Empty when the line has no
+   * blocks, or the source has no per-entry draws to report.
+   */
+  prepaidCoverage(entryIds: string[]): Promise<PrepaidCoverageRow[]>;
 
   fixed(timing: ResolvedBillingTiming): Promise<SuppliedCharge<"fixed"> | null>;
   hourly(

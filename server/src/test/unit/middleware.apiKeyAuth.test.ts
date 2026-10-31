@@ -34,6 +34,13 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/projects/123')).toBe(false);
   });
 
+  it('lets the session-authenticated RMA document route through, and only that shape', () => {
+    expect(shouldSkipApiKeyAuth('/api/inventory/rma/0b57a1e2-7b41-4c1f-a0d3-1d2e3f4a5b6c/document')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/inventory/rma/x/document/extra')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/inventory/rma/x')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/inventory/rma/a/b/document')).toBe(false);
+  });
+
   it('allows the Teams package download route to use session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/download')).toBe(true);
   });

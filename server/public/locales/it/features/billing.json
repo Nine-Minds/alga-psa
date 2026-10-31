@@ -290,6 +290,13 @@
       "pending": "Fatture in attesa di approvazione o ulteriore elaborazione",
       "prepayment": "Fatture di acconto o anticipo",
       "partially_applied": "Fatture con pagamenti parziali applicati"
+    },
+    "billingPeriod": {
+      "weekly": "a settimana",
+      "monthly": "al mese",
+      "quarterly": "a trimestre",
+      "semi-annually": "a semestre",
+      "annually": "all'anno"
     }
   },
   "quoteForm": {
@@ -445,7 +452,13 @@
     "expires": "Scade il {{date}}",
     "recentBurn": "Utilizzo recente",
     "timeEntry": "Inserimento ore",
-    "contractLabel": "Contratto: {{contract}}"
+    "contractLabel": "Contratto: {{contract}}",
+    "hoursLeftValue": "{{hours}} h rimaste · {{value}}",
+    "validFrom": "Valido dal {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — blocco prepagato, {{hours}} h",
+    "overPrepaidBlock": "{{name}} (oltre il blocco prepagato)"
   },
   "bucketUsage": {
     "contractLine": "Linea contrattuale per pacchetto ore",

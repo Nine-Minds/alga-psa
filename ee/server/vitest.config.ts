@@ -1,5 +1,36 @@
 import { defineConfig } from 'vitest/config';
+import fs from 'fs';
 import path from 'path';
+import { exportedSourceAliases } from '../../scripts/lib/vitest-exported-source-aliases.mjs';
+
+const EE_SRC = path.resolve(__dirname, './src');
+const CE_SRC = path.resolve(__dirname, '../../server/src');
+const EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
+
+/**
+ * Resolve a bare `@/<subpath>` against the EE source root, then the CE app
+ * source root, by asking the filesystem which one actually exists.
+ *
+ * This replaces a hand-maintained allowlist of `@/lib/db/db`, `@/config/*`,
+ * `@/models/*` and a dozen more. That allowlist had to grow every time a test
+ * reached a new `server/src` subdirectory, and a missing entry did not fail
+ * loudly: the generic `@/` rule silently resolved the specifier into
+ * `ee/server/src`, where it 404ed. One missing `@/lib/actions/*` entry took out
+ * the whole enterprise-unit-2 shard at collection, which in turn emptied the
+ * repository test inventory. EE still wins wherever it defines the module --
+ * `ee/server/src/lib/actions` exists and must keep shadowing the CE copy -- so
+ * order matters here, not the enumeration.
+ */
+function resolveEeThenCe(subpath: string): string | undefined {
+  for (const root of [EE_SRC, CE_SRC]) {
+    const base = path.resolve(root, subpath);
+    for (const candidate of [base, ...EXTENSIONS.map(ext => base + ext),
+      ...EXTENSIONS.map(ext => path.join(base, `index${ext}`))]) {
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) return candidate;
+    }
+  }
+  return undefined;
+}
 
 export default defineConfig({
   test: {
@@ -13,14 +44,10 @@ export default defineConfig({
       shuffle: true
     },
     pool: 'forks',
-    poolOptions: {
-      threads: {
-        singleThread: true
-      },
-      forks: {
-        singleFork: true
-      }
-    },
+    // Vitest 4 removed poolOptions.singleFork: files run one at a time, each
+    // in a fresh fork (isolate: true).
+    fileParallelism: false,
+    maxWorkers: 1,
     logHeapUsage: true,
     testTimeout: 30000, // Increased for integration tests
     server: {
@@ -42,6 +69,8 @@ export default defineConfig({
     alias: [
       // EE alias used in code/tests.
       { find: /^@ee\/(.*)$/, replacement: `${path.resolve(__dirname, './src')}/$1` },
+      { find: /^@alga-psa\/core\/capability\/server$/, replacement: path.resolve(__dirname, '../../packages/core/src/capability/server.ts') },
+      { find: /^@alga-psa\/co-managed$/, replacement: path.resolve(__dirname, '../../packages/co-managed/src/index.ts') },
       { find: /^@enterprise$/, replacement: `${path.resolve(__dirname, '../../packages/ee/src/index.ts')}` },
       { find: /^@enterprise\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/ee/src')}/$1` },
 
@@ -53,6 +82,9 @@ export default defineConfig({
       { find: /^@\/lib\/storage\/providers\/StorageProvider$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/storage/providers/StorageProvider.ts')}` },
       { find: /^@\/lib\/observability\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/observability')}/$1` },
       { find: /^@\/lib\/services\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/services')}/$1` },
+      // tsconfig's `@/lib/*` falls back to server/src/lib; these subtrees exist only there.
+      { find: /^@\/lib\/api\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/api')}/$1` },
+      { find: /^@\/lib\/analytics\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/lib/analytics')}/$1` },
       { find: /^@\/config\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/config')}/$1` },
       { find: /^@\/utils\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/utils')}/$1` },
       { find: /^@\/interfaces\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/interfaces')}/$1` },
@@ -65,8 +97,16 @@ export default defineConfig({
       { find: /^@\/pages\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/pages')}/$1` },
       { find: /^@\/components\/(.*)$/, replacement: `${path.resolve(__dirname, '../../server/src/components')}/$1` },
 
-      // Generic `@/` => EE source root.
-      { find: /^@\//, replacement: `${path.resolve(__dirname, './src')}/` },
+      // Generic `@/` => EE source if it exists there, else the CE app source.
+      // The explicit entries above still win; this only catches what they miss,
+      // so adding a new `server/src` subdirectory no longer breaks collection.
+      {
+        find: /^@\/(.*)$/,
+        replacement: '$1',
+        customResolver(subpath: string) {
+          return resolveEeThenCe(subpath) ?? path.resolve(EE_SRC, subpath);
+        },
+      },
 
       // Root shared + server imports.
       { find: /^@shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
@@ -140,9 +180,13 @@ export default defineConfig({
       { find: /^@alga-psa\/event-schemas\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/event-schemas/src')}/$1` },
       { find: /^@alga-psa\/email$/, replacement: `${path.resolve(__dirname, '../../packages/email/src/index.ts')}` },
       { find: /^@alga-psa\/email\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/email/src')}/$1` },
+      // Published subpaths come from core's exports map (config/deletion lives outside src/lib);
+      // the catch-all below only covers unexported test-time paths.
+      ...exportedSourceAliases('@alga-psa/core', path.resolve(__dirname, '../../packages/core')),
       { find: /^@alga-psa\/core\/server$/, replacement: `${path.resolve(__dirname, '../../packages/core/src/server.ts')}` },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/core/src/lib')}/$1` },
       { find: /^@alga-psa\/core$/, replacement: `${path.resolve(__dirname, '../../packages/core/src/index.ts')}` },
+      { find: /^@alga-psa\/db\/testing$/, replacement: `${path.resolve(__dirname, '../../packages/db/src/testing/index.ts')}` },
       { find: /^@alga-psa\/db\/admin$/, replacement: `${path.resolve(__dirname, '../../packages/db/src/lib/admin.ts')}` },
       { find: /^@alga-psa\/db\/models$/, replacement: `${path.resolve(__dirname, '../../packages/db/src/models/index.ts')}` },
       { find: /^@alga-psa\/db\/models\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/db/src/models')}/$1` },

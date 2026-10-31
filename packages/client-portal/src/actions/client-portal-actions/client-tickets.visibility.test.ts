@@ -552,6 +552,11 @@ describe('client portal ticket visibility enforcement', () => {
     // Comment-derived involved-user ids are likewise restricted to
     // client-visible comments so internal-only commenters aren't enumerated.
     expect(commentUserIdsBuilder.where).toHaveBeenCalledWith('c.is_internal', false);
+
+    // L4a: both reads also apply the shared audience predicate (commentAudienceSql), so only
+    // requester-audience comments reach the portal and shared_it / organization_private never do.
+    expect(conversationsBuilder.whereRaw).toHaveBeenCalledWith("(?) = 'requester'", expect.any(Array));
+    expect(commentUserIdsBuilder.whereRaw).toHaveBeenCalledWith("(?) = 'requester'", expect.any(Array));
   });
 
   it('T012: client portal ticket documents reject hidden-board access', async () => {

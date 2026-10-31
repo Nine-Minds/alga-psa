@@ -45,7 +45,7 @@ export async function PUT(req: NextRequest): Promise<NextResponse> {
     return appendRateLimitHeaders(NextResponse.json({ ok: true }), apiRequest);
   } catch (error) {
     if (error instanceof ZodError) {
-      return handleApiError(new ValidationError('Validation failed', error.errors));
+      return handleApiError(new ValidationError('Validation failed', error.issues));
     }
     return handleApiError(error);
   }
@@ -70,7 +70,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     return appendRateLimitHeaders(NextResponse.json({ ok: true }), apiRequest);
   } catch (error) {
     if (error instanceof ZodError) {
-      return handleApiError(new ValidationError('Validation failed', error.errors));
+      return handleApiError(new ValidationError('Validation failed', error.issues));
     }
     return handleApiError(error);
   }
@@ -88,7 +88,7 @@ export async function DELETE(req: NextRequest): Promise<NextResponse> {
     return appendRateLimitHeaders(NextResponse.json({ ok: true }), apiRequest);
   } catch (error) {
     if (error instanceof ZodError) {
-      return handleApiError(new ValidationError('Validation failed', error.errors));
+      return handleApiError(new ValidationError('Validation failed', error.issues));
     }
     return handleApiError(error);
   }

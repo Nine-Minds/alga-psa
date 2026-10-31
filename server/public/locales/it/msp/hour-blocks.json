@@ -30,7 +30,8 @@
     "status": "Stato",
     "expiration": "Scadenza",
     "source": "Origine",
-    "actions": "Azioni"
+    "actions": "Azioni",
+    "validFrom": "Valido dal {{date}}"
   },
   "status": {
     "pending": "In sospeso",
@@ -53,8 +54,10 @@
     "rateRequired": "Inserisci una tariffa valida.",
     "scopeLabel": "Ambito — servizi coperti da questo blocco (vuoto = tutta la manodopera)",
     "serviceLabel": "Servizio",
+    "serviceNoResults": "Nessun servizio trovato",
     "servicePlaceholder": "Seleziona un servizio",
     "serviceRequired": "Seleziona un servizio.",
+    "serviceSearchPlaceholder": "Cerca servizi...",
     "submit": "Crea bozza di fattura",
     "submitted": "Bozza di fattura {{invoiceNumber}} creata. Finalizzala per attivare il blocco.",
     "title": "Vendi blocco ore",
@@ -127,7 +130,9 @@
     "voidedLabel": "Annullato",
     "purchaseReversed": "Acquisto annullato (fattura non finalizzata)",
     "unknownUser": "Sistema",
-    "sourceContract": "Contratto: {{contract}}"
+    "sourceContract": "Contratto: {{contract}}",
+    "remainingValue": "Valore delle ore residue: {{value}}",
+    "validFrom": "Valido dal {{date}}"
   },
   "expire": {
     "error": "Impossibile far scadere il blocco ore.",

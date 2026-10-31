@@ -11,7 +11,7 @@ describe('default contact email consumer compatibility contracts', () => {
     const portalInvitationSource = readRepoSource('packages/portal-shared/src/actions/portalInvitationActions.ts');
     const registrationHelpersSource = readRepoSource('packages/auth/src/lib/registrationHelpers.ts');
     const registrationActionsSource = readRepoSource('packages/users/src/actions/user-actions/registrationActions.ts');
-    const tenantRecoverySource = readRepoSource('packages/client-portal/src/actions/portal-actions/tenantRecoveryActions.ts');
+    const tenantRecoverySource = readRepoSource('packages/auth/src/lib/tenantDiscovery/profiles.ts');
 
     expect(portalInvitationSource).toContain('email: contact.email');
     expect(portalInvitationSource).toContain("username: contact.email.toLowerCase()");

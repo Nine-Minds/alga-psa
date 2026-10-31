@@ -3,6 +3,8 @@ import { tenantDb } from '@alga-psa/db';
 import type { TenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME } from '@alga-psa/types';
+import { getJobCapabilityFilter, getJobDescriptor, listJobDescriptorNames, setNativeJobProbe } from './jobDescriptors';
+import type { JobDescriptor } from './jobDescriptors';
 import { replenishContractCadenceServicePeriodsSweep } from '@alga-psa/billing/actions/contractCadenceServicePeriodMaterialization';
 
 // Sibling handlers live in this same package; imported relatively so the
@@ -68,7 +70,7 @@ export type MaintenanceJobExecutionOutcome = {
 };
 
 export type MaintenanceJobDef =
-  | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number }
+  | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number; includeSuspended?: boolean }
   // System jobs may return anything; a result carrying numeric total/succeeded/
   // failed is treated as an execution outcome, everything else is a single unit.
   | { scope: 'system'; run: () => Promise<unknown> };
@@ -80,6 +82,25 @@ const tenantsWithActiveTeams: TenantSelector = (db) => db
   .where('install_status', 'active')
   .whereNotNull('selected_profile_id')
   .distinct('tenant');
+
+// Co-managed durable meeting work (cleanup_pending / uncertain creation operations, calendar-sync
+// intents) must keep draining after the workspace's Teams integration is deactivated, so those
+// owners are added to the Teams sweep. Narrow by construction: only rows of co_managed workspaces
+// qualify (psa tenants never have such rows and are excluded by the product_code join), and a
+// failure here (tables/columns absent) degrades to the native selector.
+const IS_CO_MANAGED_WORKSPACE = "EXISTS (SELECT 1 FROM tenants WHERE tenants.tenant = %T.tenant AND tenants.product_code = 'co_managed')";
+const tenantsWithTeamsMaintenance: TenantSelector = async (db) => {
+  const active = await tenantsWithActiveTeams(db);
+  try {
+    const operations = await db.unscoped<{ tenant: string }>('co_managed_meeting_creation_operations', 'Teams sweep discovers co-managed creation recovery owners after the Teams integration is deactivated')
+      .whereNull('completed_at').whereRaw(IS_CO_MANAGED_WORKSPACE.replace('%T', 'co_managed_meeting_creation_operations')).distinct('tenant');
+    const syncs = await db.unscoped<{ tenant: string }>('online_meetings', 'Teams sweep discovers co-managed calendar-sync owners after the Teams integration is deactivated')
+      .whereNotNull('co_managed_sync_operation_id').whereRaw(IS_CO_MANAGED_WORKSPACE.replace('%T', 'online_meetings')).distinct('tenant');
+    return [...new Map([...active, ...operations, ...syncs].map(row => [row.tenant, row])).values()];
+  } catch {
+    return active;
+  }
+};
 
 const tenantsWithInboundEmail: TenantSelector = (db) => db
   .unscoped<{ tenant: string }>('email_providers', 'maintenance fanout narrows inbound-email recovery to tenants with an active provider')
@@ -139,7 +160,7 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'renew-teams-meeting-artifact-subscriptions': { scope: 'tenant', run: (tenantId) => renewTeamsMeetingArtifactSubscriptions({ tenantId }), tenants: tenantsWithActiveTeams },
   'renew-telephony-call-subscriptions': { scope: 'tenant', run: (tenantId) => renewTelephonyCallSubscriptions({ tenantId }), tenants: tenantsWithActiveTeamsPhone },
   [TELEPHONY_CALL_ARTIFACT_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => telephonyCallArtifactSweepHandler({ tenantId }), tenants: tenantsWithPendingCallArtifacts },
-  [TEAMS_MEETING_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => teamsMeetingSweepHandler({ tenantId }), tenants: tenantsWithActiveTeams },
+  [TEAMS_MEETING_SWEEP_JOB]: { scope: 'tenant', run: (tenantId) => teamsMeetingSweepHandler({ tenantId }), tenants: tenantsWithTeamsMaintenance },
   [THREECX_CALL_CONTROL_RECONCILE_JOB]: { scope: 'tenant', run: (tenantId) => reconcileThreecxCallControlHandler({ tenantId }), tenants: tenantsWithActiveThreecx },
   [THREECX_CDR_BACKFILL_JOB]: { scope: 'tenant', run: (tenantId) => backfillThreecxCdrHandler({ tenantId }), tenants: tenantsWithThreecxCdrImport },
   [THREECX_PHONEBOOK_RECONCILE_JOB]: { scope: 'tenant', run: (tenantId) => reconcileThreecxPhonebookHandler({ tenantId }), tenants: tenantsWithThreecxPhonebookSync },
@@ -189,13 +210,27 @@ export type MaintenanceJobResult = {
  * definition, which keeps dev hot-reload and repeated boots idempotent.
  */
 export function registerMaintenanceJob(jobName: string, def: MaintenanceJobDef): void {
+  if (getJobDescriptor(jobName)) {
+    throw new Error(`registerMaintenanceJob: "${jobName}" is already registered through defineJob`);
+  }
   MAINTENANCE_JOBS[jobName] = def;
 }
 
-export const listMaintenanceJobNames = (): string[] => Object.keys(MAINTENANCE_JOBS);
+const isNativeMaintenanceJob = (jobName: string): boolean =>
+  Object.prototype.hasOwnProperty.call(MAINTENANCE_JOBS, jobName);
+
+// defineJob rejects native names (and this throws if one was defined before load).
+setNativeJobProbe(isNativeMaintenanceJob);
+
+// Native names first, then descriptor names (disjoint by construction).
+export const listMaintenanceJobNames = (): string[] => {
+  const extra = listJobDescriptorNames();
+  const native = Object.keys(MAINTENANCE_JOBS);
+  return extra.length ? [...native, ...extra] : native;
+};
 
 export const isKnownMaintenanceJob = (jobName: string): boolean =>
-  Object.prototype.hasOwnProperty.call(MAINTENANCE_JOBS, jobName);
+  Object.prototype.hasOwnProperty.call(MAINTENANCE_JOBS, jobName) || getJobDescriptor(jobName) !== undefined;
 
 async function runWithConcurrency<T>(
   items: T[],
@@ -218,7 +253,7 @@ export async function runMaintenanceJob(
   jobName: string,
   opts: { concurrency?: number } = {},
 ): Promise<MaintenanceJobResult> {
-  const def = MAINTENANCE_JOBS[jobName];
+  const def: MaintenanceJobDef | JobDescriptor | undefined = MAINTENANCE_JOBS[jobName] ?? getJobDescriptor(jobName);
   if (!def) {
     throw new Error(`Unknown maintenance job: ${jobName}`);
   }
@@ -244,15 +279,27 @@ export async function runMaintenanceJob(
     return { jobName, scope: 'system', total, succeeded, failed };
   }
 
+  // A capability-gated job never reaches tenant SQL unless the gate is wired.
+  const capability = 'capability' in def && typeof def.capability === 'string' ? def.capability : undefined;
+  const capabilityFilter = capability ? getJobCapabilityFilter() : undefined;
+  if (capability && !capabilityFilter) {
+    logger.info('[maintenance] capability-gated job skipped: no capability filter registered', { jobName, capability });
+    return { jobName, scope: 'tenant', total: 0, succeeded: 0, failed: 0 };
+  }
+
   const db = tenantDb(await getAdminConnection(), '__maintenance_job_fanout_tenant_enumeration__');
-  const active = await db
-    .unscoped<{ tenant: string }>('tenants', 'maintenance fanout enumerates tenants for tenant-scoped jobs')
-    .whereNull('suspended_at')
-    .select('tenant');
+  const tenantQuery = db
+    .unscoped<{ tenant: string }>('tenants', 'maintenance fanout enumerates tenants for tenant-scoped jobs');
+  if (!def.includeSuspended) tenantQuery.whereNull('suspended_at');
+  const active = await tenantQuery.select('tenant');
   let tenants = active;
   if (def.tenants) {
     const eligible = new Set((await def.tenants(db)).map((row) => String(row.tenant)));
     tenants = active.filter((row) => eligible.has(String(row.tenant)));
+  }
+  if (capability && capabilityFilter) {
+    const served = new Set(await capabilityFilter(capability, tenants.map((row) => String(row.tenant))));
+    tenants = tenants.filter((row) => served.has(String(row.tenant)));
   }
   let succeeded = 0;
   let failed = 0;
