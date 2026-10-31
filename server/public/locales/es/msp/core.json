@@ -111,6 +111,7 @@
     "profile": "Perfil",
     "signOut": "Cerrar sesión",
     "coManaged": "TI cogestionada",
+    "coManagedArchive": "Archivo de TI cogestionada",
     "coManagedAdministration": "Acceso y administración"
   },
   "sidebar": {

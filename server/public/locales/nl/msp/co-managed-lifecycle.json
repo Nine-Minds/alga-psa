@@ -1,0 +1,60 @@
+{
+  "departure": {
+    "loading": "Laden…",
+    "titleCustomer": "Gezamenlijk beheerde IT met {{name}} beëindigen",
+    "titleSponsor": "Gezamenlijk beheerde IT voor {{name}} beëindigen",
+    "keepCustomer": "U behoudt uw werkruimte, tickets, gebruikers en bestanden. Uw MSP verliest direct toegang en bewaart alleen een overzicht van het werk waaraan het heeft deelgenomen.",
+    "keepSponsor": "U behoudt een alleen-lezen archief van het werk waaraan u hebt deelgenomen. Uw toegang tot de werkruimte van de klant eindigt direct en de licenties gaan terug naar uw pool.",
+    "warnHandoffs_one": "{{count}} gedeeld ticket ligt nog bij de MSP. Het blijft open en de MSP verliest er de toegang toe.",
+    "warnHandoffs_other": "{{count}} gedeelde tickets liggen nog bij de MSP. Ze blijven open en de MSP verliest er de toegang toe.",
+    "seats_one": "{{count}} licentie wordt vrijgegeven.",
+    "seats_other": "{{count}} licenties worden vrijgegeven.",
+    "end": "Relatie beëindigen",
+    "confirmTitle": "Deze relatie beëindigen?",
+    "confirmMessage": "Dit kan hier niet ongedaan worden gemaakt. De toegang eindigt direct voor beide partijen.",
+    "confirmEnd": "Relatie beëindigen",
+    "cancel": "Annuleren",
+    "done": "De relatie is beëindigd. De geschiedenis van gedeeld werk blijft bewaard en is alleen-lezen.",
+    "endedOn": "Deze relatie is beëindigd op {{date}}.",
+    "errors": {
+      "notFound": "Deze relatie is niet gevonden.",
+      "denied": "U hebt geen toestemming om deze relatie te beëindigen.",
+      "changed": "De relatie is gewijzigd tijdens uw beoordeling. Beoordeel haar opnieuw voordat u haar beëindigt.",
+      "alreadyClosed": "Deze relatie is al beëindigd.",
+      "invalid": "Het verzoek kon niet worden verwerkt."
+    }
+  },
+  "archive": {
+    "loading": "Laden…",
+    "denied": "U hebt geen toestemming om dit archief te bekijken.",
+    "empty": "Nog geen archieven. Er wordt er een gemaakt wanneer een relatie eindigt.",
+    "unknownClient": "Naamloze klant",
+    "columns": {
+      "client": "Klant",
+      "sealed": "Gearchiveerd",
+      "evidence": "Records",
+      "files": "Bestanden",
+      "actions": "Acties"
+    },
+    "open": "Openen",
+    "back": "Terug",
+    "cutoff": "Records tot {{date}}. Dit archief is alleen-lezen.",
+    "entry": {
+      "when": "Datum",
+      "author": "Auteur",
+      "content": "Inhoud",
+      "deleted": "Verwijderd door de auteur",
+      "empty": "Er zijn geen records bewaard."
+    },
+    "more": "Meer laden",
+    "filesHeading": "Bestanden",
+    "fileUnnamed": "Bestand downloaden",
+    "exclusionsHeading": "Niet bewaard",
+    "exclusion": "{{count}} · {{reason}}",
+    "reason": {
+      "class": "Geen onderdeel van het bewaarde dossier",
+      "audience": "Privé voor de klant",
+      "afterCutoff": "Na het einde van de relatie"
+    }
+  }
+}
