@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { maskCoManagedSnapshot, CO_MANAGED_TASK_NAME_ALIASES, CO_MANAGED_PROJECT_NAME_ALIASES } from '../sharedWorkProjection';
+import { maskCoManagedSnapshot, CO_MANAGED_TASK_NAME_ALIASES, CO_MANAGED_PROJECT_NAME_ALIASES, CO_MANAGED_TASK_RESOURCE_ALIASES, isCoManagedTaskResourceHidden } from '../sharedWorkProjection';
 
 const row = { taskName: 'Fix', projectName: 'Rollout', revision: 3 };
 const spec = { taskName: CO_MANAGED_TASK_NAME_ALIASES, projectName: CO_MANAGED_PROJECT_NAME_ALIASES };
@@ -23,5 +23,19 @@ describe('maskCoManagedSnapshot', () => {
   it('does not mutate its input', () => {
     maskCoManagedSnapshot(['*'], row, spec);
     expect(row.taskName).toBe('Fix');
+  });
+});
+
+describe('isCoManagedTaskResourceHidden', () => {
+  it('is true for the whole-resource aliases', () => {
+    expect(isCoManagedTaskResourceHidden(['tasks'])).toBe(true);
+    expect(isCoManagedTaskResourceHidden(['project_tasks'])).toBe(true);
+  });
+  it('is false for a single field or no redactions', () => {
+    expect(isCoManagedTaskResourceHidden(['task_name'])).toBe(false);
+    expect(isCoManagedTaskResourceHidden([])).toBe(false);
+  });
+  it('is built into the task-name aliases from one definition', () => {
+    for (const alias of CO_MANAGED_TASK_RESOURCE_ALIASES) expect(CO_MANAGED_TASK_NAME_ALIASES).toContain(alias);
   });
 });

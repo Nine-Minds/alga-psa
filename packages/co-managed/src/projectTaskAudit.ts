@@ -5,6 +5,7 @@ import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSh
 import { recordCoManagedWorkAudit } from './sharedWorkAudit';
 import { CoManagedSharedWorkError, snapshotCoManagedSessionActor, isCoManagedUuid, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+import { isCoManagedTaskResourceHidden } from './sharedWorkProjection';
 import { assertCoManagedProjectWorkServed } from './projectTaskGate';
 
 export const CO_MANAGED_TASK_AUDIT_OPERATIONS = ['co_managed_project_task_update', 'co_managed_project_task_assignment'] as const;
@@ -61,6 +62,7 @@ export async function listCoManagedProjectTaskHistory(db: Knex, inputActor: CoMa
   const limit = Number.isInteger(options.limit) && options.limit! > 0 ? Math.min(options.limit!, 100) : 50;
   await assertCoManagedProjectWorkServed(actor.tenant);
   return withCoManagedSharedWork(db, actor, resource, 'read', async context => {
+    if (isCoManagedTaskResourceHidden(context.redactedFields)) throw new CoManagedSharedWorkError();
     const rows = await tenantDb(context.trx, resource.tenant).table('audit_logs')
       .where({ table_name: 'project_tasks', record_id: resource.id }).whereIn('operation', [...CO_MANAGED_TASK_AUDIT_OPERATIONS])
       .whereRaw("details->>'relationship_id' = ?", [resource.relationshipId]).orderBy('timestamp', 'desc').orderBy('audit_id').limit(limit)

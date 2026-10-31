@@ -13,6 +13,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
 }));
 
 import { editCoManagedProjectTask, getCoManagedProjectTaskSnapshot, CoManagedTaskEditError } from '@alga-psa/co-managed/projectTaskEditing';
+import { listCoManagedProjectTaskHistory } from '@alga-psa/co-managed/projectTaskAudit';
+import { listCoManagedProjectTaskStatusOptions } from '@alga-psa/co-managed/projectTaskEditing';
 import { assignCoManagedProjectTask } from '@alga-psa/co-managed/projectTaskAssignments';
 import { listCoManagedAssignedTasks } from '@alga-psa/co-managed/projectTaskQueue';
 import { isCoManagedSharedWorkError } from '@alga-psa/co-managed/sharedWorkIdentity';
@@ -56,7 +58,7 @@ describe('CM L3c task editing and assignment', () => {
     configureL3cDbEnv();
     db = await connectL3cDb();
     world = await seedL3cWorld(db);
-    collab = await seedL3cProject(db, world, 'Collab project', ['ok', 'stale', 'drift', 'viewer-edit', 'assign-sep']);
+    collab = await seedL3cProject(db, world, 'Collab project', ['ok', 'stale', 'drift', 'viewer-edit', 'assign-sep', 'redact-tasks', 'redact-project-tasks', 'redact-assignee', 'control']);
     readOnly = await seedL3cProject(db, world, 'Read-only project', ['ro']);
     unshared = await seedL3cProject(db, world, 'Unshared project', ['hidden']);
     await shareProject(db, world, collab.projectId, true);
@@ -181,5 +183,63 @@ describe('CM L3c task editing and assignment', () => {
     const error = await conflictOf(assignCoManagedProjectTask(db, actor(), resource(id), { assignee: self(), expectedRevision: 1 }));
     expect(error.reason).toBe('revision');
     expect((await referenceRow(id)).revision).toBe(2);
+  });
+
+  // The relationship's redacted_fields join the home policy in the effective policy admission computes.
+  const setRedactions = (fields: string[]) =>
+    db('co_management_relationships').where({ tenant: world.customer, relationship_id: world.relationshipId }).update({ redacted_fields: fields });
+
+  describe.each([['tasks', 5], ['project_tasks', 6]] as const)('whole-task redaction (%s)', (resourceAlias, index) => {
+    it('denies snapshot, history, status options and edit before any read, writes nothing, and keeps the queue row', async () => {
+      const id = collab.taskIds[index];
+      const snapshot = await openTask(id);
+      const taskBefore = await taskRow(id), referenceBefore = await referenceRow(id);
+      await setRedactions([resourceAlias]);
+      try {
+        const writes: string[] = [];
+        await expect(getCoManagedProjectTaskSnapshot(db, actor(), resource(id))).rejects.toSatisfy(isCoManagedSharedWorkError);
+        await expect(listCoManagedProjectTaskHistory(db, actor(), resource(id))).rejects.toSatisfy(isCoManagedSharedWorkError);
+        await expect(listCoManagedProjectTaskStatusOptions(db, actor(), resource(id))).rejects.toSatisfy(isCoManagedSharedWorkError);
+        await expect(editCoManagedProjectTask(db, actor(), resource(id),
+          { expectedRevision: snapshot.revision, expectedTaskUpdatedAt: snapshot.taskUpdatedAt, patch: { task_name: 'Overwritten', due_date: null } },
+          async () => { writes.push('write'); })).rejects.toSatisfy(isCoManagedSharedWorkError);
+        expect(writes).toEqual([]);
+
+        const taskAfter = await taskRow(id);
+        for (const column of ['task_name', 'due_date', 'project_status_mapping_id', 'updated_at']) expect(taskAfter[column]).toEqual(taskBefore[column]);
+        expect((await referenceRow(id)).revision).toBe(referenceBefore.revision);
+
+        // Deliberate asymmetry: the assignment is still shown, only the name is nulled.
+        const row = (await listCoManagedAssignedTasks(db, actor(), { assigned: 'any', limit: 100 })).rows.find(r => r.taskId === id);
+        expect(row).toBeDefined();
+        expect(row?.taskName).toBeNull();
+      } finally { await setRedactions([]); }
+    });
+  });
+
+  it('masks the snapshot assignee name when assignee is redacted', async () => {
+    const id = collab.taskIds[7];
+    const snapshot = await openTask(id);
+    expect(snapshot.assignee?.name).toBeTruthy();
+    await setRedactions(['assignee']);
+    try {
+      const hidden = await getCoManagedProjectTaskSnapshot(db, actor(), resource(id));
+      expect(hidden.assignee?.name ?? null).toBeNull();
+    } finally { await setRedactions([]); }
+  });
+
+  it('control: with no redactions snapshot, history and status options are served unchanged', async () => {
+    const id = collab.taskIds[8];
+    const snapshot = await openTask(id);
+    await setRedactions([]);
+    const again = await getCoManagedProjectTaskSnapshot(db, actor(), resource(id));
+    expect(again).toEqual(snapshot);
+    expect(Object.keys(again.values).sort()).toEqual(['due_date', 'project_status_mapping_id', 'task_name']);
+    expect(again.assignee).toEqual({ kind: 'user', name: snapshot.assignee?.name });
+    const history = await listCoManagedProjectTaskHistory(db, actor(), resource(id));
+    expect(Array.isArray(history)).toBe(true);
+    const options = await listCoManagedProjectTaskStatusOptions(db, actor(), resource(id));
+    expect(options.length).toBeGreaterThan(0);
+    expect(options.map(o => o.statusMappingId)).toContain(again.values.project_status_mapping_id);
   });
 });
