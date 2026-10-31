@@ -5,7 +5,7 @@ import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSh
 import { recordCoManagedWorkAudit } from './sharedWorkAudit';
 import { CoManagedSharedWorkError, snapshotCoManagedSessionActor, isCoManagedUuid, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
-import { isCoManagedTaskResourceHidden } from './sharedWorkProjection';
+import { isCoManagedTaskResourceHidden, projectCoManagedChanges } from './sharedWorkProjection';
 import { assertCoManagedProjectWorkServed } from './projectTaskGate';
 
 export const CO_MANAGED_TASK_AUDIT_OPERATIONS = ['co_managed_project_task_update', 'co_managed_project_task_assignment'] as const;
@@ -68,9 +68,8 @@ export async function listCoManagedProjectTaskHistory(db: Knex, inputActor: CoMa
       .whereRaw("details->>'relationship_id' = ?", [resource.relationshipId]).orderBy('timestamp', 'desc').orderBy('audit_id').limit(limit)
       .select('audit_id', 'timestamp', 'operation', 'changed_data', 'details');
     return rows.map((row: any) => {
-      const changes = Object.fromEntries(Object.entries(row.changed_data ?? {}).filter(([field]) =>
-        !isCoManagedReadFieldHidden(context.redactedFields, [field, `values.${field}`, `project_tasks.${field}`])).map(([field, change]) =>
-        // The stored audit row keeps MSP user/team ids; the history shown to the customer carries display names only.
+      const changes = Object.fromEntries(Object.entries(projectCoManagedChanges(context.redactedFields, row.changed_data)).map(([field, change]) =>
+        // The stored audit row keeps MSP user/team ids; the history shown to the customer carries display names only (after redaction).
         field === 'msp_assignee' && change && typeof change === 'object'
           ? [field, { kind: (change as any).kind, name: (change as any).name }] : [field, change]));
       return { auditId: row.audit_id, at: new Date(row.timestamp).toISOString(), operation: row.operation, authorName: row.details?.actor_display_name ?? '',
