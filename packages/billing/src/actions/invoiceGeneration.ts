@@ -2917,12 +2917,14 @@ async function buildPreviewInvoiceForSelectionInput(params: {
   tenant: string;
   selectorInput: IRecurringDueSelectionInput;
   billingProfileId?: string | null;
+  consolidateFixedBundles?: boolean;
 }): Promise<BuiltPreviewInvoice> {
   return buildPreviewInvoiceForSelectionInputs({
     knex: params.knex,
     tenant: params.tenant,
     selectorInputs: [params.selectorInput],
     billingProfileId: params.billingProfileId,
+    consolidateFixedBundles: params.consolidateFixedBundles,
   });
 }
 
@@ -2977,8 +2979,9 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
   user,
   { tenant },
   groupedSelections: RecurringGroupedPreviewSelectionInput[],
-  // LEVERAGE: pattern preview-vs-persisted-shape — the draft emits per-service rows plus a $0 header,
-  // persisted invoices emit one bundle parent; this flag bridges the two until the dialog is retired.
+  // LEVERAGE: pattern preview-vs-persisted-shape — the legacy draft emits per-service rows plus a $0 header,
+  // persisted invoices emit one bundle parent. Default (true) matches persisted output; the operator
+  // dialog passes false to keep its per-service layout.
   options: { consolidateFixedBundles?: boolean } = {},
 ): Promise<RecurringGroupedPreviewResponse> => {
   const { knex } = await createTenantKnex();
@@ -3013,7 +3016,7 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
           knex,
           tenant,
           selectorInputs: group.selectorInputs,
-          consolidateFixedBundles: options.consolidateFixedBundles === true,
+          consolidateFixedBundles: options.consolidateFixedBundles !== false,
         });
         return {
           previewGroupKey: group.previewGroupKey,
@@ -3075,6 +3078,7 @@ export const previewInvoiceForSelectionInput = withAuth(async (
   user,
   { tenant },
   selectorInput: IRecurringDueSelectionInput,
+  options: { consolidateFixedBundles?: boolean } = {},
 ): Promise<PreviewInvoiceResponse> => {
   const { knex } = await createTenantKnex();
   let normalizedSelectorInput = selectorInput;
@@ -3092,6 +3096,7 @@ export const previewInvoiceForSelectionInput = withAuth(async (
       knex,
       tenant,
       selectorInput: normalizedSelectorInput,
+      consolidateFixedBundles: options.consolidateFixedBundles !== false,
     });
     return {
       success: true,
@@ -3183,6 +3188,7 @@ export const previewInvoice = withAuth(async (
       tenant,
       selectorInput,
       billingProfileId: await getCycleBillingProfileId(knex, tenant, billing_cycle_id, client_id),
+      consolidateFixedBundles: true,
     });
     return {
       success: true,

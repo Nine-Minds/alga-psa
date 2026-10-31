@@ -111,7 +111,8 @@ export function selectPreviousPeriods(
 export async function loadPreviousBundlePeriods(
   trx: Knex | Knex.Transaction,
   tenant: string,
-  currentInvoiceId: string,
+  /** The invoice being generated (excluded from history); null for a draft preview with no invoice yet. */
+  currentInvoiceId: string | null,
   requests: PreviousPeriodRequest[],
 ): Promise<Map<string, BundlePreviousPeriod | null>> {
   if (requests.length === 0) return new Map();
@@ -128,7 +129,7 @@ export async function loadPreviousBundlePeriods(
   db.tenantJoin(query, 'service_catalog as sc', 'd.service_id', 'sc.service_id');
   const rows = await query
     .whereIn('cfg.contract_line_id', requests.map((request) => request.contractLineId))
-    .whereNot('i.invoice_id', currentInvoiceId)
+    .modify((q) => { if (currentInvoiceId) q.whereNot('i.invoice_id', currentInvoiceId); })
     .whereRaw('lower(trim(coalesce(??, \'\'))) not in (' + EXCLUDED_PREVIOUS_PERIOD_STATUSES.map(() => '?').join(',') + ')', ['i.status', ...EXCLUDED_PREVIOUS_PERIOD_STATUSES])
     .whereNotNull('d.service_period_end')
     .where('d.service_period_end', '<=', new Date(latestStart))
