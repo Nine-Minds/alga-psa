@@ -64,7 +64,11 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, readOnly = fa
       try { return await session!.write({ content, audience: 'shared_it' }); } catch (error) { return failure(error); }
     };
     return composeTicketDataSource(nativeTicketDataSource, {
-      screen: { subscribeCommentsChanged: commentsChanged.subscribe, onComposerCancel: staging.clear },
+      screen: {
+        subscribeCommentsChanged: commentsChanged.subscribe,
+        onComposerCancel: staging.clear,
+        ...(readOnly ? { readOnly: true } : {}),
+      },
       // L6a2: the customer's own view of the shared ticket carries the same effort split (customer / MSP / combined).
       // The resource is resolved only for a workspace that serves co-managed with a relationship; otherwise no slot.
       ...(resource ? { slots: { timeSummary: ({ timeEntriesRefreshKey }: { timeEntriesRefreshKey?: number }) =>

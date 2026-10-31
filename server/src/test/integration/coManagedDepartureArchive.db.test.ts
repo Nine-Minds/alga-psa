@@ -24,6 +24,7 @@ describeDb('co-managed closure and archive on real Postgres', { shuffle: false }
     process.env.FORCE_CAPABILITIES = 'co-managed:on';
     db = await createTestDbConnection({ databaseName: 'l7a_closure_archive_test' });
     f = await seedBoundaryFixture(db);
+    // CONTRACT TEST of the file-source registry only: no production source is registered (retained-file store is split out).
     unregister = registerCoManagedArchiveFileSource({ name: 'test', list: async () => [{ id: fileId, hash: 'a'.repeat(64), size: 5 }] });
   }, 300_000);
   afterAll(async () => { unregister?.(); delete process.env.FORCE_CAPABILITIES; await db?.destroy(); });
@@ -81,6 +82,7 @@ describeDb('co-managed closure and archive on real Postgres', { shuffle: false }
       { evidenceClass: 'conversation', reason: 'audience_not_allowlisted', count: 2 },
       { evidenceClass: 'private_conversation', reason: 'audience_not_allowlisted', count: 1 },
       { evidenceClass: 'conversation', reason: 'after_cutoff', count: 1 }]));
+    // Registry contract only (test source); production has no source, so files is [] there.
     expect(history.files.map(file => file.archiveFileId)).toEqual([fileId]);
   });
 
