@@ -21,6 +21,7 @@
 
 const INDEX_NAME = 'time_sheets_tenant_user_period_unique';
 const KEY_COLUMNS = ['tenant', 'user_id', 'period_id'];
+const DELETE_BATCH_SIZE = 500;
 
 const DISCARDABLE_SQL = (referenceTables) => `
   s.approval_status = 'DRAFT'
@@ -114,7 +115,8 @@ function isCorrectDefinition(index) {
     && KEY_COLUMNS.every((column, i) => index.columns[i] === column);
 }
 
-exports.up = async function up(knex) {
+// batchSize is overridable only so tests can exercise multi-batch cleanup with small data.
+exports.up = async function up(knex, { batchSize = DELETE_BATCH_SIZE } = {}) {
   const referenceTables = await referenceTablesPresent(knex);
 
   // Preflight (read-only): classify everything and refuse before any write.
@@ -123,21 +125,34 @@ exports.up = async function up(knex) {
     throw new Error(ambiguityMessage(ambiguous));
   }
 
-  // Cleanup: one autocommit statement per sheet, re-checking discardability at delete time so a
-  // sheet that gained history since the preflight is left alone (and then fails index creation
-  // loudly instead of losing data).
+  // Cleanup: planned ids are deleted per tenant in bounded batches (loop + LIMIT), each batch one
+  // autocommit statement. Every DELETE stays tenant-scoped and re-checks discardability at delete
+  // time, so a sheet that gained history since the preflight is left alone (and then fails index
+  // creation loudly instead of losing data). Re-running after a partial run just re-plans.
+  const idsByTenant = new Map();
   for (const { tenant, id } of deletions) {
-    await knex.raw(
-      `DELETE FROM time_sheets s WHERE s.tenant = ? AND s.id = ? AND ${DISCARDABLE_SQL(referenceTables)}`,
-      [tenant, id],
-    );
+    if (!idsByTenant.has(tenant)) idsByTenant.set(tenant, []);
+    idsByTenant.get(tenant).push(id);
+  }
+  for (const [tenant, ids] of idsByTenant) {
+    for (let start = 0; start < ids.length; start += batchSize) {
+      const batch = ids.slice(start, start + batchSize);
+      await knex.raw(
+        `DELETE FROM time_sheets s
+         WHERE s.tenant = ?
+           AND s.id IN (SELECT t.id FROM time_sheets t WHERE t.tenant = ? AND t.id = ANY(?::uuid[]) LIMIT ?)
+           AND ${DISCARDABLE_SQL(referenceTables)}`,
+        [tenant, tenant, batch, batchSize],
+      );
+    }
   }
 
   // Index: inspect an existing one by definition, not by name.
   let existing = await readIndex(knex);
   if (existing && !existing.indisvalid) {
-    // Left over from an interrupted build; rebuild.
-    await knex.raw(`DROP INDEX IF EXISTS ${INDEX_NAME}`);
+    // A failed CREATE INDEX CONCURRENTLY leaves an INVALID index, which IF NOT EXISTS would skip
+    // silently; drop it and rebuild.
+    await knex.raw(`DROP INDEX CONCURRENTLY IF EXISTS ${INDEX_NAME}`);
     existing = null;
   }
   if (existing && !isCorrectDefinition(existing)) {
@@ -148,7 +163,7 @@ exports.up = async function up(knex) {
     );
   }
   if (!existing) {
-    await knex.raw(`CREATE UNIQUE INDEX ${INDEX_NAME} ON time_sheets (tenant, user_id, period_id)`);
+    await knex.raw(`CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS ${INDEX_NAME} ON time_sheets (tenant, user_id, period_id)`);
   }
 
   const created = await readIndex(knex);
@@ -159,7 +174,7 @@ exports.up = async function up(knex) {
 
 exports.down = async function down(knex) {
   // Removed pristine drafts are not resurrected; only the index goes.
-  await knex.raw(`DROP INDEX IF EXISTS ${INDEX_NAME}`);
+  await knex.raw(`DROP INDEX CONCURRENTLY IF EXISTS ${INDEX_NAME}`);
 };
 
 exports.config = { transaction: false };

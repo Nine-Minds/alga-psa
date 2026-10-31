@@ -215,6 +215,36 @@ describe('time sheet uniqueness migration (executed against Postgres)', () => {
     await dropIndex(); // afterEach rebuilds the correct one
   });
 
+  it('cleans up in several batches and still keeps exactly one sheet per group', async () => {
+    const f = await seedTenant();
+    const g = await seedTenant();
+    await dropIndex();
+    const extra = Array.from({ length: 5 }, (_, i) => `00000000-0000-4000-8000-0000000001${i}0`);
+    for (const id of [ID.a, ...extra]) await sheet(f, id);
+    for (const id of [ID.b, ID.c]) await sheet(g, id);
+    await migration.up(admin, { batchSize: 2 }); // 5 deletions for f => 3 batches
+    expect((await sheets(f.tenant)).map((r) => r.id)).toEqual([ID.a]);
+    expect((await sheets(g.tenant)).map((r) => r.id)).toEqual([ID.b]);
+    expect(await indexExists()).toBe(true);
+  });
+
+  it('drops and rebuilds an INVALID index left by a failed CONCURRENTLY build', async () => {
+    const f = await seedTenant();
+    await dropIndex();
+    await sheet(f, ID.a);
+    await sheet(f, ID.b);
+    await expect(
+      admin.raw(`CREATE UNIQUE INDEX CONCURRENTLY ${INDEX} ON time_sheets (tenant, user_id, period_id)`),
+    ).rejects.toMatchObject({ code: '23505' });
+    const { rows: before } = await admin.raw('SELECT indisvalid FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid WHERE c.relname = ?', [INDEX]);
+    expect(before[0].indisvalid).toBe(false);
+
+    await migration.up(admin);
+    const { rows: after } = await admin.raw('SELECT indisvalid FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid WHERE c.relname = ?', [INDEX]);
+    expect(after[0].indisvalid).toBe(true);
+    expect((await sheets(f.tenant)).map((r) => r.id)).toEqual([ID.a]);
+  });
+
   it('down drops only the index and keeps data', async () => {
     const f = await seedTenant();
     await sheet(f, ID.a);
