@@ -41,7 +41,7 @@ export interface SetAttribute {
 export interface ComputedResolverContext {
   /** Alias of the declaring level's table in the query being built. */
   alias: string;
-  /** Always a non-complement operator: the compiler resolves `not_in` and `is_empty` by negation. */
+  /** Always a non-complement operator: the compiler resolves `not_in` and `is_empty` by negation (`COMPLEMENTS`). */
   operator: PredicateOperator;
   value?: PredicateLiteral | PredicateLiteral[];
 }
@@ -98,7 +98,7 @@ export interface QuerySchema {
 export const tenantColumnOf = (schema: QuerySchema): string => schema.tenantColumn ?? 'tenant';
 
 export const OPERATORS_BY_TYPE: Record<AttributeType, readonly PredicateOperator[]> = {
-  string: ['equals', 'not_equals', 'in', 'not_in', 'contains', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty'],
+  string: ['equals', 'not_equals', 'in', 'not_in', 'contains', 'starts_with', 'ends_with', 'not_contains', 'not_starts_with', 'not_ends_with', 'is_empty', 'is_not_empty'],
   number: ['equals', 'not_equals', 'in', 'not_in', 'gt', 'gte', 'lt', 'lte', 'is_empty', 'is_not_empty'],
   timestamp: ['equals', 'not_equals', 'gt', 'gte', 'lt', 'lte', 'is_empty', 'is_not_empty'],
   boolean: ['equals', 'not_equals', 'is_empty', 'is_not_empty'],
