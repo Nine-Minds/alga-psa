@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CLIENT_REDACTED_COMMENT_FIELDS,
+  CLIENT_VISIBLE_COMMENT_FIELDS,
   commentVisibleToClient,
   projectCommentsForPrincipal,
   redactCommentForClient,
@@ -69,6 +70,28 @@ describe('redactCommentForClient', () => {
     expect(JSON.stringify(out.metadata)).toContain('cc@x');
     expect(source.metadata.email).toBeDefined();
     expect(source.schedule_job_id).toBe('x');
+  });
+
+  it('removes comment_publication_payload and scheduling columns', () => {
+    const out: any = redactCommentForClient({
+      ...base,
+      note: 'POST',
+      comment_publication_payload: { comment: { content: 'PREEDIT' }, tenantId: 't' },
+      scheduled_publish_at: '2026-01-01T00:00:00Z',
+      scheduled_publish_tz: 'UTC',
+    } as any);
+    expect(out).not.toHaveProperty('comment_publication_payload');
+    expect(out).not.toHaveProperty('scheduled_publish_at');
+    expect(out).not.toHaveProperty('scheduled_publish_tz');
+    expect(JSON.stringify(out)).not.toContain('PREEDIT');
+  });
+
+  it('emits only allowlisted keys and drops unknown future columns', () => {
+    const source: any = { future_secret_column: 'boom' };
+    for (const f of CLIENT_VISIBLE_COMMENT_FIELDS) source[f] = f === 'metadata' ? {} : 'v';
+    const out: any = redactCommentForClient(source);
+    expect(Object.keys(out).sort()).toEqual([...CLIENT_VISIBLE_COMMENT_FIELDS].sort());
+    expect(out).not.toHaveProperty('future_secret_column');
   });
 
   it('nulls unparseable string metadata', () => {

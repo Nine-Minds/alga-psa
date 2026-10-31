@@ -14,8 +14,48 @@ export interface CommentThreadVisibility {
   is_internal?: boolean | null;
 }
 
-/** Row columns that are scheduling/attribution bookkeeping, never shown to clients. */
+/**
+ * Columns a client principal may receive on a live comment. This is an allowlist:
+ * any column not listed (scheduling bookkeeping, `comment_publication_payload`
+ * event-outbox jsonb, future columns) is hidden by default. The set is what the
+ * shared CommentItem / TicketConversation UI renders, including collaborator
+ * attribution labels. `metadata` is listed but is sanitized separately.
+ */
+export const CLIENT_VISIBLE_COMMENT_FIELDS = [
+  'comment_id',
+  'ticket_id',
+  'thread_id',
+  'parent_comment_id',
+  'user_id',
+  'contact_id',
+  'author_type',
+  'actor_reference_id',
+  'actor_display_name',
+  'actor_organization_name',
+  'note',
+  'markdown_content',
+  'is_internal',
+  'is_resolution',
+  'is_system_generated',
+  'audience',
+  'response_source',
+  'publish_state',
+  'published_at',
+  'created_at',
+  'updated_at',
+  'deleted_at',
+  'metadata',
+] as const;
+
+/**
+ * Known-sensitive columns that must never reach a client. Not used to filter
+ * (the allowlist above does that); kept as the explicit list regression tests
+ * assert against.
+ */
 export const CLIENT_REDACTED_COMMENT_FIELDS = [
+  'comment_publication_payload',
+  'scheduled_publish_at',
+  'scheduled_publish_tz',
   'schedule_job_id',
   'scheduled_publish_event_id',
   'scheduled_publish_dispatched_at',
@@ -39,9 +79,10 @@ export function commentVisibleToClient(
 }
 
 export function redactCommentForClient<T extends IComment>(comment: T): T {
-  const redacted: Record<string, unknown> = { ...(comment as unknown as Record<string, unknown>) };
-  for (const field of CLIENT_REDACTED_COMMENT_FIELDS) {
-    delete redacted[field];
+  const source = comment as unknown as Record<string, unknown>;
+  const redacted: Record<string, unknown> = {};
+  for (const field of CLIENT_VISIBLE_COMMENT_FIELDS) {
+    if (field in source) redacted[field] = source[field];
   }
 
   // Strip Bcc first (handles jsonb strings), then drop internal-only keys.

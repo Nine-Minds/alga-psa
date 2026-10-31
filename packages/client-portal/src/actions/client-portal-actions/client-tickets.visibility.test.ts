@@ -468,6 +468,8 @@ describe('client portal ticket visibility enforcement', () => {
       'scheduled_response_dispatched_at',
     ];
 
+    let lastDetail: any;
+
     async function loadConversations(commentRows: any[]) {
       const ticketBuilder = makeDetailBuilder({
         ticket_id: TICKET_1,
@@ -510,6 +512,7 @@ describe('client portal ticket visibility enforcement', () => {
       });
       const { getClientTicketDetails } = await import('./client-tickets');
       const detail: any = await getClientTicketDetails(TICKET_1);
+      lastDetail = detail;
       return detail.conversations as any[];
     }
 
@@ -551,6 +554,27 @@ describe('client portal ticket visibility enforcement', () => {
       const scheduling = Object.fromEntries(SCHEDULING_COLUMNS.map((k) => [k, 'x']));
       const [c] = await loadConversations([row(scheduling)]);
       for (const k of SCHEDULING_COLUMNS) expect(c).not.toHaveProperty(k);
+    });
+
+    it('drops comment_publication_payload and scheduling columns from live public comments', async () => {
+      const [c] = await loadConversations([
+        row({
+          note: 'POSTEDIT',
+          markdown_content: 'POSTEDIT',
+          comment_publication_payload: {
+            comment: { content: 'PREEDIT' },
+            tenantId: 'tenant-1',
+            suppressContactNotifications: true,
+          },
+          scheduled_publish_at: '2026-04-01T00:00:00.000Z',
+          scheduled_publish_tz: 'UTC',
+        }),
+      ]);
+      expect(c.note).toBe('POSTEDIT');
+      expect(c).not.toHaveProperty('comment_publication_payload');
+      expect(c).not.toHaveProperty('scheduled_publish_at');
+      expect(c).not.toHaveProperty('scheduled_publish_tz');
+      expect(JSON.stringify(lastDetail)).not.toContain('PREEDIT');
     });
 
     it('nulls unparseable string metadata', async () => {
