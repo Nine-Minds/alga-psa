@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { sharedWorkSeam } from '../utils/sharedWorkSeam';
 import type { CommentAudience } from './commentAudience';
 
@@ -20,25 +21,112 @@ export interface DeliveryRecipient {
 }
 
 export interface CommentDeliveryPlan {
+  /** Audience of the comment's thread (L4a `resolveCommentAudience`), never `is_internal`. */
   audience: CommentAudience;
   threadId: string | null;
-  /** Reply token to mint for outbound mail (`cm2:` namespace) — see token helpers below. */
-  replyToken?: { token: string; metadata: CoManagedReplyTokenMetadata };
-  recipients: DeliveryRecipient[];
+  relationshipId: string;
+  /** The MSP tenant whose users appear in `sponsorRecipients` (their inbox rows live in that tenant). */
+  sponsorTenant: string;
+  /** Sponsor-tenant (MSP) recipients, each already re-checked against its OWN current policy. */
+  sponsorRecipients: DeliveryRecipient[];
+  /** Metadata for the `cm2:` reply token minted on every mail of this plan. */
+  replyTokenMetadata: CoManagedReplyTokenMetadata;
+}
+
+/** A verified inbound sender who may write into a shared conversation. */
+export interface InboundCommentActor {
+  tenant: string;
+  userId: string;
 }
 
 export type InboundAdmission =
-  | { admitted: true; audience: CommentAudience; relationshipId: string; threadId: string | null }
-  | { admitted: false; reason: 'legacy_token' | 'stale_generation' | 'grant_revoked' | 'not_served' | 'audience_unsupported'; acknowledge: boolean };
+  | { admitted: true; audience: CommentAudience; relationshipId: string; threadId: string | null; ticketId: string; parentCommentId: string | null;
+      /** Set for shared_it / organization_private: the participant to write as. Absent = requester thread (native writer). */
+      actor?: InboundCommentActor }
+  | { admitted: false; reason: 'legacy_token' | 'stale_generation' | 'grant_revoked' | 'not_served' | 'not_participant' | 'audience_forbidden'; acknowledge: boolean };
+
+export interface InboundCommentWrite {
+  tenant: string;
+  ticketId: string;
+  relationshipId: string;
+  threadId: string | null;
+  parentCommentId: string | null;
+  audience: CommentAudience;
+  actor: InboundCommentActor;
+  /** Deterministic from the inbound message so a replay hits the writer's operation receipt. */
+  operationId: string;
+  text: string;
+}
 
 export interface CoManagedDeliveryProvider {
-  /** Null when the ticket is not shared; the native recipient step then runs unchanged. */
+  /** Null when the ticket is not shared (or its grant is revoked); the native recipient step then runs unchanged. */
   planTicketComment(tenant: string, ticketId: string, commentId: string): Promise<CommentDeliveryPlan | null>;
+  /**
+   * Audience of a native project-task comment's thread (`projectTaskAudience`: only explicit, consistent
+   * metadata makes a task comment shared; everything else is organization_private). Null when the tenant
+   * is not served or the comment/thread cannot be read. Tasks have no sponsor tenant, so the plan carries
+   * no sponsor recipients and no reply token.
+   */
+  planTaskComment(tenant: string, taskCommentId: string): Promise<{ audience: CommentAudience } | null>;
   /** Claim a ledger row; true = this caller owns the send. */
   claim(tenant: string, kind: string, sourceId: string, recipient: DeliveryRecipient): Promise<boolean>;
   finish(tenant: string, kind: string, sourceId: string, recipient: DeliveryRecipient, state: 'sent' | 'failed' | 'sending', outcome?: { error?: string; code?: string }): Promise<void>;
-  /** Inbound reply-token admission for a `cm2:` token (metadata from email_reply_tokens). */
-  admitReplyToken(tenant: string, token: string, metadata: unknown): Promise<InboundAdmission>;
+  /** Inbound reply-token admission for a `cm2:`/`cm1:` token (metadata from email_reply_tokens) and a sender address. */
+  admitReplyToken(tenant: string, token: string, metadata: unknown, senderEmail: string | null): Promise<InboundAdmission>;
+}
+
+/**
+ * Writer for admitted shared_it / organization_private email replies. The server registers it
+ * (it needs the tickets-package comment adapter); images that never register it make the inbound
+ * path fail retryably rather than write a reply through the wrong writer.
+ */
+export interface CoManagedInboundCommentWriter {
+  write(input: InboundCommentWrite): Promise<{ commentId: string }>;
+  /**
+   * Send the ONE acknowledgement mail for a refused reply (no comment is written). Idempotent per
+   * (token, sender) through the delivery ledger; never sent to automated senders.
+   */
+  acknowledgeRefusal(input: { tenant: string; token: string; to: string; ticketId: string; reason: string }): Promise<void>;
+}
+export const coManagedInboundCommentSeam = sharedWorkSeam<CoManagedInboundCommentWriter>('inbound-comment');
+
+/** Candidate recipients the native subscriber already loaded, classified by kind. */
+export interface ThreadParticipants {
+  sponsorUsers: DeliveryRecipient[];
+  sponsorTeams: DeliveryRecipient[];
+  customerUsers: DeliveryRecipient[];
+  requester: DeliveryRecipient | null;
+}
+
+/**
+ * Pure audience -> recipients. The audience alone decides reach:
+ *   requester            -> requester contact + customer users + sponsor users/teams
+ *   shared_it            -> customer users + sponsor users/teams; never the requester
+ *   organization_private -> customer-tenant users only; no sponsor tenant, no requester
+ */
+export function recipientsForAudience(audience: CommentAudience, p: ThreadParticipants): DeliveryRecipient[] {
+  const out: DeliveryRecipient[] = [];
+  switch (audience) {
+    case 'requester':
+      if (p.requester) out.push(p.requester);
+      out.push(...p.customerUsers, ...p.sponsorUsers, ...p.sponsorTeams);
+      break;
+    case 'shared_it':
+      out.push(...p.customerUsers, ...p.sponsorUsers, ...p.sponsorTeams);
+      break;
+    case 'organization_private':
+      out.push(...p.customerUsers);
+      break;
+    default:
+      return [];
+  }
+  const seen = new Set<string>();
+  return out.filter((r) => {
+    const key = `${r.kind}:${r.principalId}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export const coManagedDeliverySeam = sharedWorkSeam<CoManagedDeliveryProvider>('delivery');
@@ -102,4 +190,10 @@ export function decideReplyToken(token: string | null | undefined, metadata: unk
     return { action: 'refuse', reason: 'stale_generation', acknowledge: true };
   }
   return { action: 'admit', metadata: parsed };
+}
+
+/** Operation id for an admitted inbound write: deterministic per (message, ticket) so a replay finds its command receipt. */
+export function coManagedInboundOperationId(tenant: string, ticketId: string, messageKey: string): string {
+  const hex = createHash('sha256').update(`co-managed-inbound:${tenant}:${ticketId}:${messageKey}`).digest('hex');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`;
 }

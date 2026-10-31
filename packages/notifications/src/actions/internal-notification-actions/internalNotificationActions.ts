@@ -1,5 +1,6 @@
 "use server"
 
+import { claimDelivery, finishDelivery, type DeliveryLedger, type DeliveryKey } from '@alga-psa/shared/lib/deliveryLedger';
 import type { WorkflowCatalogEventType } from '@alga-psa/event-schemas';
 import { tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -92,7 +93,15 @@ function safePublishNotificationWorkflowEvent<T extends WorkflowCatalogEventType
  */
 export async function createNotificationFromTemplateInternal(
   knex: Knex,
-  request: CreateInternalNotificationRequest
+  request: CreateInternalNotificationRequest,
+  options?: {
+    /**
+     * Exactly-once delivery (co-managed): claim the ledger row, create the notification and mark the
+     * row `sent` in THIS transaction, so a crash leaves neither a row nor a claim, and a replay finds the
+     * `sent` row and creates nothing. Native callers never pass it.
+     */
+    delivery?: { ledger: DeliveryLedger; key: DeliveryKey; extra?: Record<string, unknown> };
+  }
 ): Promise<InternalNotification | null> {
   // This helper lives in a "use server" module, so it is registered as a server
   // action and is client-reachable. Refuse anything that is not a real
@@ -104,12 +113,19 @@ export async function createNotificationFromTemplateInternal(
     throw new Error('createNotificationFromTemplateInternal requires a server-side database connection');
   }
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const delivery = options?.delivery;
+    if (delivery && !await claimDelivery(trx, delivery.ledger, request.tenant, delivery.key, delivery.extra)) {
+      return null;
+    }
     const notification = await createNotificationRowFromTemplate(
       trx,
       request.tenant,
       request.user_id,
       request
     );
+
+    // A recipient who disabled this notification type is a completed delivery (nothing to retry).
+    if (delivery) await finishDelivery(trx, delivery.ledger, request.tenant, delivery.key, 'sent');
 
     if (!notification) {
       return null;

@@ -13,7 +13,7 @@ exports.up = async function up(knex) {
       table.uuid('source_id').notNullable();
       table.text('recipient').notNullable();
       table.text('recipient_kind').notNullable();
-      table.string('state', 16).notNullable();
+      table.string('state', 16).notNullable().defaultTo('pending');
       table.integer('attempts').notNullable().defaultTo(1);
       table.timestamp('next_attempt_at', { useTz: true }).nullable();
       table.text('last_error').nullable();
@@ -24,7 +24,7 @@ exports.up = async function up(knex) {
       table.timestamp('updated_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
       table.primary(['tenant', 'delivery_kind', 'source_id', 'recipient']);
       table.index(['tenant', 'state', 'updated_at'], 'co_management_deliveries_recovery_idx');
-      table.check("state IN ('sending', 'sent', 'failed')", [], 'co_management_deliveries_state_check');
+      table.check("state IN ('pending', 'sending', 'sent', 'failed')", [], 'co_management_deliveries_state_check');
       table.check("recipient_kind IN ('msp_user', 'customer_user', 'requester_contact', 'team')", [], 'co_management_deliveries_recipient_kind_check');
       table.check("delivery_kind ~ '^[a-z_]+$'", [], 'co_management_deliveries_kind_check');
     });

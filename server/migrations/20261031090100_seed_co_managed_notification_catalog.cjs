@@ -15,17 +15,20 @@ const SUBTYPES = [
 ];
 
 exports.up = async function up(knex) {
+  // migration-lint: allow 8 - co-managed notification catalog rows are new global lookup data (no existing rows touched), idempotent via onConflict ignore
   await knex('internal_notification_categories')
     .insert({ name: CATEGORY.name, description: CATEGORY.description, is_enabled: true, is_default_enabled: true })
     .onConflict(['name']).ignore();
   const category = await knex('internal_notification_categories').where({ name: CATEGORY.name }).first();
   for (const subtype of SUBTYPES) {
+    // migration-lint: allow 8 - co-managed notification catalog rows are new global lookup data (no existing rows touched), idempotent via onConflict ignore
     await knex('internal_notification_subtypes')
       .insert({ internal_category_id: category.internal_notification_category_id, name: subtype.name, description: subtype.description,
         is_enabled: true, is_default_enabled: true })
       .onConflict(['internal_category_id', 'name']).ignore();
     const row = await knex('internal_notification_subtypes')
       .where({ internal_category_id: category.internal_notification_category_id, name: subtype.name }).first();
+    // migration-lint: allow 8 - co-managed notification catalog rows are new global lookup data (no existing rows touched), idempotent via onConflict ignore
     await knex('internal_notification_templates')
       .insert({ name: subtype.name, language_code: 'en', title: subtype.title, message: subtype.message, subtype_id: row.internal_notification_subtype_id })
       .onConflict(['name', 'language_code']).ignore();

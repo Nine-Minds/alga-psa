@@ -40,6 +40,7 @@ export async function register() {
     // Delivery seam provider (CM L5). Best-effort: without it subscribers and the inbound path stay native.
     try {
       await import('@alga-psa/co-managed/deliveryRegistration');
+      await import('./lib/co-managed/inboundCommentWriter');
     } catch (error) {
       console.error('Failed to register the co-managed delivery provider:', error);
     }

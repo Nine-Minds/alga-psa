@@ -1,4 +1,4 @@
-import { classifyReplyToken, coManagedDeliverySeam } from '../../lib/coManagedDelivery';
+import { classifyReplyToken, coManagedDeliverySeam, coManagedInboundCommentSeam, coManagedInboundOperationId } from '../../lib/coManagedDelivery';
 import type { TenantDb } from '@alga-psa/db';
 import { htmlToVisibleText } from '../../lib/email/replyParser';
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
@@ -1686,20 +1686,61 @@ export async function processInboundEmailInApp(
     try {
       const match = await findTicketByReplyToken(String(token), tenantId);
       // CM L5 admission hook: the prefix check is a string compare, so a native (psa) token costs
-      // 0 extra statements. Only cm1:/cm2: tokens consult the delivery seam, and refusal happens
+      // 0 extra statements. Only cm1:/cm2: tokens consult the delivery seam, and a refusal happens
       // before any comment write.
       if (match?.ticketId && classifyReplyToken(String(token)) !== 'native') {
         const provider = await coManagedDeliverySeam.resolve(tenantId);
-        const admission = provider ? await provider.admitReplyToken(tenantId, String(token), match.metadata) : null;
-        if (!provider) {
-          // Not served (flag off / no entitlement / kill switch): the token is inert, thread headers decide.
-        } else if (admission && admission.admitted === false && admission.acknowledge) {
+        // Not served (flag off / no entitlement / kill switch): the token is inert and thread headers decide.
+        const admission = provider
+          ? await provider.admitReplyToken(tenantId, String(token), match.metadata, senderEmail ?? null)
+          : null;
+        if (admission && admission.admitted === false && admission.acknowledge) {
+          const responder = await coManagedInboundCommentSeam.resolve(tenantId);
+          if (responder && senderEmail && !detectAutomatedInboundMessage(emailData).isAutomated) {
+            try {
+              await responder.acknowledgeRefusal({ tenant: tenantId, token: String(token), to: senderEmail, ticketId: match.ticketId, reason: admission.reason });
+            } catch (ackError) {
+              console.warn('processInboundEmailInApp: co-managed refusal acknowledgement failed (continuing)', {
+                tenantId, emailId: emailData.id, error: ackError instanceof Error ? ackError.message : String(ackError),
+              });
+            }
+          }
           if (diagnostics) diagnostics.threading.failureReason = 'quarantined';
           return withDiagnostics({
             outcome: 'quarantined',
             reason: 'co_managed_token_refused',
             ticketId: match.ticketId,
             matchedBy: 'reply_token',
+          }, diagnostics);
+        }
+        if (admission && admission.admitted === true && admission.actor) {
+          // shared_it / organization_private reply: written through L4a's writer as the verified
+          // participant, never through the native writer, so the audience is stamped on the thread.
+          const writer = await coManagedInboundCommentSeam.resolve(tenantId);
+          if (!writer) throw new Error('co-managed inbound writer is not available in this process; leaving the message to retry');
+          const text = (parsedEmail?.sanitizedText ?? emailData.body?.text ?? htmlToVisibleText(parsedEmail?.sanitizedHtml ?? emailData.body?.html ?? '')).trim();
+          const written = await writer.write({
+            tenant: tenantId,
+            ticketId: admission.ticketId,
+            relationshipId: admission.relationshipId,
+            threadId: admission.threadId,
+            parentCommentId: admission.parentCommentId,
+            audience: admission.audience,
+            actor: admission.actor,
+            operationId: coManagedInboundOperationId(tenantId, admission.ticketId, emailData.id),
+            text,
+          });
+          if (diagnostics) {
+            diagnostics.threading.tokenLookupMatched = true;
+            diagnostics.threading.matchedBy = 'reply_token';
+            diagnostics.threading.matchedTicketId = admission.ticketId;
+            diagnostics.threading.matchedCommentId = written.commentId;
+          }
+          return withDiagnostics({
+            outcome: 'replied',
+            matchedBy: 'reply_token',
+            ticketId: admission.ticketId,
+            commentId: written.commentId,
           }, diagnostics);
         }
       }
