@@ -297,7 +297,7 @@ export async function initializeApp() {
     // co-managed capability is not forced off. Absent schema or attempts make the sweep a no-op.
     try {
       const { registerPortableRestoreJobs } = await import('./jobs/portableRestoreJobs');
-      registerPortableRestoreJobs();
+      await registerPortableRestoreJobs();
     } catch (error) {
       logger.error('Failed to register portable restore jobs:', error);
     }

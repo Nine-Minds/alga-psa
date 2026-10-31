@@ -48,14 +48,12 @@ function args(argv: string[]) {
   return values;
 }
 
-/** `FORCE_CAPABILITIES=co-managed:off` (or a malformed co-managed entry) is the global kill switch. */
-function capabilityForcedOff(raw = process.env.FORCE_CAPABILITIES) {
-  for (const part of (raw ?? '').split(',')) {
-    const [key, ...rest] = part.trim().split(':');
-    if (key.trim().toLowerCase() === 'co-managed' && rest.join(':').trim().toLowerCase() !== 'on') return true;
-  }
-  return false;
-}
+/** The shared kill switch: `FORCE_CAPABILITIES=co-managed:off` (or a malformed co-managed entry) disables the tool. */
+const capabilityForcedOff = async () => {
+  const { forcedValue } = await import('@alga-psa/core/capability');
+  const state = forcedValue(process.env.FORCE_CAPABILITIES, 'co-managed');
+  return state === 'off' || state === 'malformed';
+};
 
 async function passphrase(): Promise<string> {
   const fromEnv = process.env.ALGA_PORTABLE_RESTORE_PASSPHRASE;
@@ -89,7 +87,7 @@ async function main() {
   if (options['--help']) { process.stdout.write(HELP); return; }
   phase = 'environment';
   config({ path: fileURLToPath(new URL('../../.env', import.meta.url)), quiet: true });
-  if (capabilityForcedOff()) throw new Error('Capability disabled');
+  if (await capabilityForcedOff()) throw new Error('Capability disabled');
   phase = 'passphrase input';
   let phrase = await passphrase();
   let db: import('knex').Knex | undefined;
