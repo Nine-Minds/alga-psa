@@ -37,6 +37,15 @@ const RMA_TAG_CLASS: LabelClass = 'rma-work-tag';
 /** Calendar-date helpers: the server wants YYYY-MM-DD, the DatePicker wants a local Date. */
 export const toYmd = (d?: Date): string =>
   d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : '';
+/**
+ * `rma_cases.return_by` is a Postgres DATE and no type parser is registered, so at runtime it arrives as a Date at
+ * server-local midnight (or an ISO timestamp once serialised), not the typed 'YYYY-MM-DD'. Normalise to the calendar day.
+ */
+export const calendarYmd = (v?: string | Date | null): string => {
+  if (!v) return '';
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? '' : toYmd(v);
+  return /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : '';
+};
 export const fromYmd = (s?: string | null): Date | undefined => {
   if (!s) return undefined;
   const [y, m, d] = s.split('-').map(Number);
@@ -65,7 +74,7 @@ interface ActionForm {
 const emptyForm = (rma: IRmaCase, locations: IStockLocation[]): ActionForm => ({
   vendor_id: rma.vendor_id ?? '',
   rma_reference: rma.rma_reference ?? '',
-  return_by: rma.return_by ?? '',
+  return_by: calendarYmd(rma.return_by as string | Date | null),
   return_ship_to: rma.return_ship_to ?? rma.vendor_name ?? '',
   reason: '',
   carrier: '',
@@ -179,11 +188,16 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
 
   const allowed = useMemo(() => allowedWarrantyActions(rma.status, rma.rma_type), [rma.status, rma.rma_type]);
   // The vendor's dead-unit deadline has passed. A warning only: nothing happens automatically and the case stays closeable.
-  const deadUnitOverdue = rma.status === 'dead_unit_owed' && !!rma.return_by && rma.return_by < toYmd(new Date());
+  const deadUnitOverdue = rma.status === 'dead_unit_owed' && !!calendarYmd(rma.return_by as string | Date | null) && calendarYmd(rma.return_by as string | Date | null) < toYmd(new Date());
   const fmtDate = (v?: string | Date | null): string => {
     if (!v) return dash;
     if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return fromYmd(v)!.toLocaleDateString();
     return new Date(v).toLocaleDateString();
+  };
+  /** DATE columns (return_by): render the calendar day, never a timezone-shifted instant. */
+  const fmtCalendarDate = (v?: string | Date | null): string => {
+    const ymd = calendarYmd(v);
+    return ymd ? fromYmd(ymd)!.toLocaleDateString() : dash;
   };
   const shipping = (carrier?: string | null, tracking?: string | null): string =>
     [carrier, tracking].filter(Boolean).join(' · ') || dash;
@@ -323,7 +337,7 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
     ...(rma.denial_reason ? [[t('rma.warranty.fields.denialReason', 'Denial reason'), rma.denial_reason] as [string, React.ReactNode]] : []),
     [t('rma.columns.vendor', 'Vendor'), rma.vendor_name || dash],
     [t('rma.warranty.fields.vendorRef', 'Vendor RMA reference'), rma.rma_reference || dash],
-    [t('rma.warranty.fields.returnBy', 'Return by'), fmtDate(rma.return_by)],
+    [t('rma.warranty.fields.returnBy', 'Return by'), fmtCalendarDate(rma.return_by as string | Date | null)],
     [t('rma.warranty.fields.outbound', 'Outbound shipment'), shipping(rma.outbound_carrier, rma.outbound_tracking_number)],
     [t('rma.warranty.fields.inbound', 'Inbound shipment'), shipping(rma.inbound_carrier, rma.inbound_tracking_number)],
     [t('rma.warranty.fields.replacementSerial', 'Replacement serial'), rma.replacement_serial_number || dash],
@@ -480,7 +494,7 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
 
       {deadUnitOverdue && (
         <div id="rma-warranty-dead-unit-overdue">
-          <Badge variant="warning" size="sm">{t('rma.warranty.deadUnitOverdue', 'Dead unit overdue to vendor (was due {{date}})', { date: fmtDate(rma.return_by) })}</Badge>
+          <Badge variant="warning" size="sm">{t('rma.warranty.deadUnitOverdue', 'Dead unit overdue to vendor (was due {{date}})', { date: fmtCalendarDate(rma.return_by as string | Date | null) })}</Badge>
         </div>
       )}
 

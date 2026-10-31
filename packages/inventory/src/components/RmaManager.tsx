@@ -20,7 +20,7 @@ import { toast } from 'react-hot-toast';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { recordPath, type ColumnDefinition, type IRmaCase, type IStockLocation, type IVendor, type RmaType } from '@alga-psa/types';
 import { RecordUnavailable } from './RecordUnavailable';
-import { RmaWarrantyPanel } from './rma/RmaWarrantyPanel';
+import { RmaWarrantyPanel, calendarYmd, fromYmd } from './rma/RmaWarrantyPanel';
 import { NewWarrantyClaimDialog } from './rma/NewWarrantyClaimDialog';
 import { isAssetTracked } from '../lib/rma/stateMachine';
 import {
@@ -467,8 +467,8 @@ export function RmaManager({
       dataIndex: 'return_by',
       render: (_: any, rec: IRmaCase) => {
         if (!rec.return_by) return t('common.emptyValue', '—');
-        const [y, m, d] = rec.return_by.split('-').map(Number);
-        return new Date(y, m - 1, d).toLocaleDateString();
+        const day = fromYmd(calendarYmd(rec.return_by as string | Date | null));
+        return day ? day.toLocaleDateString() : t('common.emptyValue', '—');
       },
     },
     {

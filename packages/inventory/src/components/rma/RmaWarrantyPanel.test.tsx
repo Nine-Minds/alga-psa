@@ -253,5 +253,22 @@ describe('RmaWarrantyPanel (T029)', () => {
       render(<RmaWarrantyPanel rma={{ ...advance, status: 'replaced', return_by: shift(-5) } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
       expect(document.getElementById('rma-warranty-dead-unit-overdue')).toBeNull();
     });
+
+    // rma_cases.return_by is a Postgres DATE with no type parser: at runtime it is a Date (local midnight) or an ISO timestamp.
+    const asDate = (ymd: string) => { const [y, m, d] = ymd.split('-').map(Number); return new Date(y, m - 1, d); };
+    const asIso = (ymd: string) => `${ymd}T00:00:00.000Z`;
+    it.each([
+      ['Date object', asDate],
+      ['ISO timestamp string', asIso],
+    ])('overdue badge works when return_by arrives as a %s (past, today, future)', (_n, wrap) => {
+      const show = (ymd: string) => {
+        cleanup();
+        render(<RmaWarrantyPanel rma={{ ...advance, status: 'dead_unit_owed', return_by: wrap(ymd) } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
+        return !!document.getElementById('rma-warranty-dead-unit-overdue');
+      };
+      expect(show(shift(-1))).toBe(true);
+      expect(show(todayYmd())).toBe(false);
+      expect(show(shift(1))).toBe(false);
+    });
   });
 });
