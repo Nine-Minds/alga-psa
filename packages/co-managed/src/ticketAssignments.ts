@@ -7,6 +7,7 @@ import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSh
 import { snapshotCoManagedSessionActor, CoManagedSharedWorkError, isCoManagedUuid, assertCoManagedSessionUnexpired, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { coManagedAssigneeOption, type CoManagedAssignee, type CoManagedAssigneeOption } from './sharedWorkAssignees';
+import { enqueueCoManagedRouting } from './routingOutbox';
 import { recordCoManagedWorkAudit } from './sharedWorkAudit';
 
 export interface CoManagedTicketAssignee extends CoManagedAssignee {}
@@ -57,8 +58,11 @@ async function state(context: CoManagedSharedWorkContext, canEdit: boolean) {
     catch (error) { if (!(error instanceof CoManagedSharedWorkError)) throw error; }
   }
   await current(context, canEdit);
-  return { resource: context.resource, canEdit: canEdit && (!!reference || !work && routing.canCollaborate), canAssign: canEdit && (!!reference || !work) && routing.canCollaborate,
-    revision: work?.revision ?? (routing.canCollaborate ? 0 : undefined), hasAssignment: !!(reference?.assigned_to || reference?.assigned_team_id), mspAssignment };
+  const shared = { resource: context.resource, canEdit: canEdit && (!!reference || !work && routing.canCollaborate),
+    revision: work?.revision ?? (routing.canCollaborate ? 0 : undefined), hasAssignment: !!(reference?.assigned_to || reference?.assigned_team_id) };
+  // Customer-side actors see who is assigned, never the sponsor's principal ids; the sponsor-side payload below is unchanged.
+  if (context.actor.tenant === context.resource.tenant) return { ...shared, canAssign: false as const, mspAssignment: mspAssignment ? { name: mspAssignment.name, organizationName: mspAssignment.organizationName } : null };
+  return { ...shared, canAssign: canEdit && (!!reference || !work) && routing.canCollaborate, mspAssignment };
 }
 export async function getCoManagedTicketAssignment(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource) {
   const actor = snapshotCoManagedSessionActor(inputActor), resource = snapshot(inputResource), withWork = boundary(actor, resource);
@@ -69,9 +73,10 @@ export async function getCoManagedTicketAssignment(db: Knex, inputActor: CoManag
   }
 }
 export async function listCoManagedTicketAssignees(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource, kind: 'user' | 'team', afterId?: string) {
-  const actor = snapshotCoManagedSessionActor(inputActor), resource = snapshot(inputResource), withWork = boundary(actor, resource);
-  if (!['user', 'team'].includes(kind) || afterId !== undefined && !isCoManagedUuid(afterId)) denied();
-  return withWork(db, actor, resource, 'update', write => withWork(write.trx, actor, resource, 'read', async read => {
+  const actor = snapshotCoManagedSessionActor(inputActor), resource = snapshot(inputResource);
+  // The candidate directory is the sponsor's staff: a customer-side actor never reaches it, whatever the caller's action gate.
+  if (actor.tenant === resource.tenant || !['user', 'team'].includes(kind) || afterId !== undefined && !isCoManagedUuid(afterId)) denied();
+  return withCoManagedSharedWork(db, actor, resource, 'update', write => withCoManagedSharedWork(write.trx, actor, resource, 'read', async read => {
     if (hidden(write.redactedFields) || hidden(read.redactedFields)) denied();
     const routing = await retainedRouting(write), home = tenantDb(write.trx, routing.relationship.sponsor_tenant);
     if (!routing.canCollaborate || routing.work && !routing.reference) denied();
@@ -138,7 +143,14 @@ export async function assignCoManagedTicket(db: Knex, inputActor: CoManagedSessi
     // write-admission: exempt — append-only receipt of the admitted assignment
     const [receipt] = await owner.table('co_management_command_receipts').insert({ tenant: resource.tenant, operation_id: request.operationId, relationship_id: resource.relationshipId, resource_type: 'ticket', resource_id: resource.id,
       actor_tenant: actor.tenant, actor_user_id: actor.userId, command_type: 'ticket_assignment', request_hash: hash, applied_at: write.trx.raw('clock_timestamp()') }).returning('applied_at');
-    // LEVERAGE: friction handoff-routing-notification — assignment notification retention (L5) hooks in here once routing notifications exist.
+    if (selected) {
+      const home = tenantDb(write.trx, actor.tenant);
+      const author = await home.table('users').where('user_id', actor.userId).first('first_name', 'last_name', 'username');
+      const organization = await home.table('tenants').first('client_name');
+      await enqueueCoManagedRouting(write.trx, { customerTenant: resource.tenant, sponsorTenant: routing.relationship.sponsor_tenant, relationshipId: resource.relationshipId,
+        ticketId: resource.id, operationId: request.operationId, event: 'ticket_assigned',
+        actorName: [author?.first_name, author?.last_name].filter(Boolean).join(' ').trim() || author?.username || actor.userId, actorOrganization: organization?.client_name ?? '' });
+    }
     await current(write, true);
     return { operationId: request.operationId, appliedAt: new Date(receipt.applied_at).toISOString() };
   })); } catch (error) {

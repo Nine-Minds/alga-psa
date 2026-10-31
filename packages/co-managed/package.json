@@ -10,6 +10,10 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts"
     },
+    "./deliveryRegistration": {
+      "types": "./src/deliveryRegistration.ts",
+      "import": "./src/deliveryRegistration.ts"
+    },
     "./capability": {
       "types": "./src/capability.ts",
       "import": "./src/capability.ts"
@@ -33,6 +37,10 @@
     "./managementPolicy": {
       "types": "./src/managementPolicy.ts",
       "import": "./src/managementPolicy.ts"
+    },
+    "./conversationRichText": {
+      "types": "./src/conversationRichText.ts",
+      "import": "./src/conversationRichText.ts"
     },
     "./sharedWorkIdentity": {
       "types": "./src/sharedWorkIdentity.ts",
@@ -102,6 +110,10 @@
       "types": "./src/projectTaskQueue.ts",
       "import": "./src/projectTaskQueue.ts"
     },
+    "./sharedWorkProjection": {
+      "types": "./src/sharedWorkProjection.ts",
+      "import": "./src/sharedWorkProjection.ts"
+    },
     "./projectTaskEditing": {
       "types": "./src/projectTaskEditing.ts",
       "import": "./src/projectTaskEditing.ts"
@@ -125,6 +137,18 @@
     "./projectTaskAudit": {
       "types": "./src/projectTaskAudit.ts",
       "import": "./src/projectTaskAudit.ts"
+    },
+    "./sharedTicketCommentWriter": {
+      "types": "./src/sharedTicketCommentWriter.ts",
+      "import": "./src/sharedTicketCommentWriter.ts"
+    },
+    "./inboundCommentWriter": {
+      "types": "./src/inboundCommentWriter.ts",
+      "import": "./src/inboundCommentWriter.ts"
+    },
+    "./refusalAck": {
+      "types": "./src/refusalAck.ts",
+      "import": "./src/refusalAck.ts"
     }
   },
   "scripts": {
@@ -137,7 +161,11 @@
     "@alga-psa/licensing": "*",
     "knex": "^3.1.0",
     "@alga-psa/authorization": "*",
-    "@alga-psa/types": "*"
+    "@alga-psa/types": "*",
+    "@alga-psa/tickets": "*",
+    "@alga-psa/event-bus": "*",
+    "@alga-psa/event-schemas": "*",
+    "@alga-psa/shared": "*"
   },
   "devDependencies": {
     "typescript": "^5.4.0"

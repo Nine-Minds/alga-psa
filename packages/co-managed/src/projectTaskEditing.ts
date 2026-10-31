@@ -4,6 +4,7 @@ import { tenantDb } from '@alga-psa/db';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { snapshotCoManagedSessionActor, isCoManagedUuid, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+import { isCoManagedTaskResourceHidden, maskCoManagedSnapshot, CO_MANAGED_ASSIGNEE_NAME_ALIASES } from './sharedWorkProjection';
 import { readCoManagedCustomerOrganizationName } from './projectTaskQueue';
 import { assertCoManagedProjectWorkServed } from './projectTaskGate';
 import { coManagedRequestHash, findCoManagedTaskReplay, recordCoManagedTaskAudit } from './projectTaskAudit';
@@ -19,9 +20,10 @@ export type CoManagedTaskEditPatch = Partial<Record<CoManagedTaskEditField, stri
 export interface CoManagedTaskEditRequest { /** Client-generated per submit attempt; a repeat of the same id replays the original receipt. */ operationId?: string; expectedRevision: number; expectedTaskUpdatedAt: string; patch: CoManagedTaskEditPatch }
 export interface CoManagedTaskEditReceipt { revision: number; taskUpdatedAt: string }
 /** `assignee` is the current MSP assignee as a display name and kind only; ids never leave the server. */
-export interface CoManagedTaskSnapshot { revision: number; taskUpdatedAt: string; values: CoManagedTaskEditPatch; assignee: { kind: 'user' | 'team'; name: string } | null }
-const assigneeOf = (reference: { assigned_to?: string | null; assigned_team_id?: string | null; assignee_name?: string | null }): CoManagedTaskSnapshot['assignee'] =>
-  reference.assignee_name ? { kind: reference.assigned_team_id ? 'team' : 'user', name: reference.assignee_name } : null;
+export interface CoManagedTaskSnapshot { revision: number; taskUpdatedAt: string; values: CoManagedTaskEditPatch; assignee: { kind: 'user' | 'team'; name: string | null } | null }
+/** The assignee name is masked with the reader's current redactions; a hidden name is `null`, never dropped. */
+const assigneeOf = (reference: { assigned_to?: string | null; assigned_team_id?: string | null; assignee_name?: string | null }, redacted: readonly string[]): CoManagedTaskSnapshot['assignee'] =>
+  reference.assignee_name ? maskCoManagedSnapshot(redacted, { kind: reference.assigned_team_id ? 'team' as const : 'user' as const, name: reference.assignee_name as string | null }, { name: CO_MANAGED_ASSIGNEE_NAME_ALIASES }) : null;
 
 export type CoManagedTaskEditErrorCode = 'INVALID_TASK_EDIT' | 'TASK_EDIT_CONFLICT';
 /** A conflict carries a fresh snapshot so the editor can reload; it never merges. */
@@ -84,9 +86,10 @@ export async function getCoManagedProjectTaskSnapshot(db: Knex, inputActor: CoMa
   const actor = snapshotCoManagedSessionActor(inputActor), resource = taskResource(inputResource);
   await assertCoManagedProjectWorkServed(actor.tenant);
   return withCoManagedSharedWork(db, actor, resource, 'read', async context => {
+    if (isCoManagedTaskResourceHidden(context.redactedFields)) throw new CoManagedSharedWorkError();
     const reference = await referenceRow(context, false);
     const row = await lockTaskShared(context.trx, resource);
-    return { revision: reference.revision, taskUpdatedAt: iso(row.updated_at), values: values(row, context.redactedFields), assignee: assigneeOf(reference) };
+    return { revision: reference.revision, taskUpdatedAt: iso(row.updated_at), values: values(row, context.redactedFields), assignee: assigneeOf(reference, context.redactedFields) };
   });
 }
 async function lockTaskShared(trx: Knex.Transaction, resource: CoManagedSharedResource) {
@@ -116,6 +119,7 @@ export async function editCoManagedProjectTask(db: Knex, inputActor: CoManagedSe
   const actor = snapshotCoManagedSessionActor(inputActor), resource = taskResource(inputResource), request = snapshotRequest(input);
   await assertCoManagedProjectWorkServed(actor.tenant);
   return withCoManagedSharedWork(db, actor, resource, 'update', async context => {
+    if (isCoManagedTaskResourceHidden(context.redactedFields)) throw new CoManagedSharedWorkError();
     for (const field of Object.keys(request.patch) as CoManagedTaskEditField[]) if (fieldHidden(context.redactedFields, field)) throw new CoManagedSharedWorkError();
     const { trx } = context, home = tenantDb(trx, actor.tenant), customer = tenantDb(trx, resource.tenant);
     const reference = await referenceRow(context, true);
@@ -126,7 +130,7 @@ export async function editCoManagedProjectTask(db: Knex, inputActor: CoManagedSe
       if (replay) return replay;
     }
     const task = await lockTask(trx, resource);
-    const fresh = (): CoManagedTaskSnapshot => ({ revision: reference.revision, taskUpdatedAt: iso(task.updated_at), values: values(task, context.redactedFields), assignee: assigneeOf(reference) });
+    const fresh = (): CoManagedTaskSnapshot => ({ revision: reference.revision, taskUpdatedAt: iso(task.updated_at), values: values(task, context.redactedFields), assignee: assigneeOf(reference, context.redactedFields) });
     // Side one: shared-command concurrency. Side two: the customer changed the task since it was loaded.
     if (reference.revision !== request.expectedRevision) throw new CoManagedTaskEditError('TASK_EDIT_CONFLICT', 'revision', fresh());
     if (iso(task.updated_at) !== request.expectedTaskUpdatedAt) throw new CoManagedTaskEditError('TASK_EDIT_CONFLICT', 'customer_drift', fresh());
@@ -163,6 +167,7 @@ export async function listCoManagedProjectTaskStatusOptions(db: Knex, inputActor
   const actor = snapshotCoManagedSessionActor(inputActor), resource = taskResource(inputResource);
   await assertCoManagedProjectWorkServed(actor.tenant);
   return withCoManagedSharedWork(db, actor, resource, 'read', async context => {
+    if (isCoManagedTaskResourceHidden(context.redactedFields)) throw new CoManagedSharedWorkError();
     if (fieldHidden(context.redactedFields, 'project_status_mapping_id')) return [];
     const customer = tenantDb(context.trx, resource.tenant);
     const taskQuery = customer.table('project_tasks as task').where('task.task_id', resource.id);

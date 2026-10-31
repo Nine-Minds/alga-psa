@@ -14,9 +14,9 @@ describe('project authorization kernel contracts', () => {
   const projectReadAuthorizationSource = readSource('../lib/projectReadAuthorization.ts');
 
   it('T020: preserves own-comment/internal-user behavior and supports bundle narrowing on project list/detail', () => {
-    expect(commentActionsSource).toContain('if (isMspPrincipalUserType(user.user_type)) {');
-    expect(commentActionsSource).toContain('relationshipRules: [{ template: \'own\' }],');
-    expect(commentActionsSource).toContain("type: 'project_task_comment'");
+    // Ownership/record authorization now lives only in withTaskCommentAccess; the service grants no blanket edit/delete.
+    expect(commentActionsSource).not.toContain('assertOwnCommentOrInternalUser');
+    expect(readSource('../lib/taskComments/taskCommentAuthorization.ts')).toContain('export async function withTaskCommentAccess<T>(');
 
     expect(projectActionsSource).toContain('export const getProjects = withAuth(async (user, { tenant })');
     expect(projectActionsSource).toContain('export const getProject = withAuth(async (user, { tenant }, projectId: string)');
@@ -125,7 +125,7 @@ describe('project authorization kernel contracts', () => {
     const exportActionsSource = readSource('projectTaskExportActions.ts');
 
     expect(sharedAuthorizationSource).toContain('export async function assertProjectReadAllowed(');
-    expect(sharedAuthorizationSource).toContain("resource: { type: 'project', action: 'read', id: projectId },");
+    expect(sharedAuthorizationSource).toContain("resource: { type: 'project', action, id: projectId },");
     expect(sharedAuthorizationSource).toContain("throw new Error('Permission denied: Cannot read project');");
 
     expect(importActionsSource).toContain("import { assertProjectReadAllowed } from '../lib/projectReadAuthorization';");
