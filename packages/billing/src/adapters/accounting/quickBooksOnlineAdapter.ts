@@ -24,7 +24,7 @@ import {
 } from '@alga-psa/types';
 import { createQboProviderOperations } from './qboProviderOperations';
 import { allocateDiscountsBeforeTax, type DiscountPool } from '../../lib/discountAllocationBeforeTax';
-import { discountPoolFromInvoiceRow } from '../../lib/billing/invoiceDiscountPools';
+import { discountPoolFromInvoiceRow, discountTaxDonorItemId } from '../../lib/billing/invoiceDiscountPools';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
@@ -96,6 +96,11 @@ type DbCharge = {
   is_taxable?: boolean | null;
   is_discount?: boolean | null;
   tax_region?: string | null;
+  adjustment_source_kind?: string | null;
+  applies_to_item_id?: string | null;
+  applies_to_service_id?: string | null;
+  manual_line_metadata?: unknown;
+  is_manual?: boolean | null;
 };
 
 type DbClient = {
@@ -472,6 +477,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       const invoiceCurrency = invoice.currency_code ?? 'USD';
       const shouldIncludeAuthoritativeTax =
         !context.excludeTaxFromExport && context.taxDelegationMode !== 'delegate';
+      const allChargeRows = [...chargesById.values()].filter((row: any) => row.invoice_id === invoiceId || row.invoice_id === undefined);
+      let exportsDiscountLine = false;
       for (const line of exportLines) {
         if (!line.document_line_id) {
           throw new Error(`QuickBooks adapter: export line ${line.line_id} has no invoice_charge_id`);
@@ -533,6 +540,16 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         // Handle tax based on delegation mode
         const shouldExcludeTax = context.excludeTaxFromExport || context.taxDelegationMode === 'delegate';
 
+        // A discount row stores no tax identity of its own. QuickBooks only
+        // taxes the discounted base if the discount line carries the tax code of
+        // the taxable charge it reduces, so borrow it (and never mark such a
+        // line NON, which would leave QuickBooks taxing the full amount).
+        const discountDonorId = charge.is_discount
+          ? discountTaxDonorItemId(charge as any, allChargeRows as any)
+          : null;
+        const discountDonor = discountDonorId ? chargesById.get(discountDonorId) ?? null : null;
+        const lineIsExempt = charge.is_taxable === false && !discountDonorId;
+
         // Delegating tax to an Automated Sales Tax company is the one case where
         // the line still needs a TaxCodeRef: Alga is deliberately not sending a
         // tax total, so the only thing that makes QuickBooks tax the line at all
@@ -542,7 +559,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           automatedSalesTaxEnabled && context.taxDelegationMode === 'delegate';
 
         if (!shouldExcludeTax || shouldSendAstTaxCode) {
-          const taxRegion = charge.tax_region;
+          const taxRegion = charge.tax_region ?? discountDonor?.tax_region;
           let taxCodeRef: string | null = null;
           if (taxRegion) {
             const cached = taxCodeCache.get(taxRegion);
@@ -570,11 +587,11 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
             // code so the AST engine picks the jurisdiction and rate itself.
             salesDetail.TaxCodeRef = {
               value:
-                charge.is_taxable === false
+                lineIsExempt
                   ? QBO_PSEUDO_TAX_CODE_NON_TAXABLE
                   : taxCodeRef ?? QBO_PSEUDO_TAX_CODE_TAXABLE
             };
-          } else if (astPseudoCodesApply && charge.is_taxable === false) {
+          } else if (astPseudoCodesApply && lineIsExempt) {
             // Alga owns the tax total here, but the line still carries a code,
             // and on a US AST company Intuit accepts only TAX/NON — a mapped
             // catalog code faults the whole invoice with "Invalid Line
@@ -617,6 +634,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           }
         }
 
+        if (charge.is_discount && !isCreditNote) exportsDiscountLine = true;
         qboLines.push({
           Amount: fromMinorUnits(netAmountCents, 'en-US', invoiceCurrency),
           DetailType: 'SalesItemLineDetail',
@@ -644,6 +662,12 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         },
         Line: qboLines
       };
+
+      if (exportsDiscountLine) {
+        // QuickBooks' default taxes BEFORE the discount. Alga taxes the
+        // discounted base, so tell QuickBooks to do the same.
+        qboInvoice.ApplyTaxAfterDiscount = true;
+      }
 
       if (shouldIncludeAuthoritativeTax && invoiceTaxCents > 0) {
         // Push Alga's authoritative tax total so QBO's books match Alga's internal calculation.
@@ -1378,7 +1402,10 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         'is_taxable',
         'is_discount',
         'tax_region',
-        'adjustment_source_kind'
+        'adjustment_source_kind',
+        'applies_to_item_id',
+        'applies_to_service_id',
+        'manual_line_metadata'
       )
       .whereIn('item_id', chargeIds);
 

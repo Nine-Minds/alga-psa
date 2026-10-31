@@ -1540,26 +1540,35 @@ async function normalizeRecurringSelectorInput(params: {
   return params.selectorInput;
 }
 
-// TODO: Move to billingAndTax.ts
-async function calculatePreviewTax(
+/**
+ * Invoice total (tax included) the way generation will compute it: automatic
+ * discounts reduce both the total and the taxable base before tax, via the
+ * same preview adjustments and allocation the main preview uses. Used by the
+ * purchase-order overage checks so they agree with the generated invoice.
+ */
+async function previewInvoiceTotalAfterDiscounts(
+  knex: Knex,
+  tenant: string,
   charges: IBillingCharge[],
+  grossTotal: number,
   clientId: string,
   cycleEnd: ISO8601String,
-  defaultTaxRegion: string
+  defaultTaxRegion: string,
+  currencyCode: string,
 ): Promise<number> {
-  // Sum the pre-calculated tax amounts from the BillingEngine charges
-  // BillingEngine already handles multi-region tax allocation for fixed fees
-  // and calculates tax for other charge types.
-  let totalTax = 0;
-  for (const charge of charges) {
-    // Add the tax_amount if it exists and is greater than 0
-    if (charge.tax_amount && charge.tax_amount > 0) {
-      totalTax += charge.tax_amount;
-    }
-  }
-  console.log(`[calculatePreviewTax] Summed pre-calculated tax: ${totalTax}`);
-
-  return totalTax;
+  const adjustments = await previewAutomaticInvoiceDiscounts(
+    knex, tenant, clientId, charges, Temporal.Now.plainDateISO().toString(),
+  );
+  const tax = await calculatePreviewTaxAfterDiscounts(
+    charges,
+    clientId,
+    cycleEnd,
+    defaultTaxRegion,
+    currencyCode,
+    { discounts: adjustments.discounts, chargeItemIds: adjustments.chargeItemIds },
+  );
+  const discountTotal = adjustments.discounts.reduce((sum, discount) => sum + Math.abs(Number(discount.amount) || 0), 0);
+  return Math.trunc(Math.max(0, grossTotal - discountTotal) + tax);
 }
 
 function parseClientContractLineIdFromScheduleKey(scheduleKey: string | null | undefined): string | null {
@@ -2027,13 +2036,16 @@ async function getPurchaseOrderOverageForSelectionInputInternal(params: {
 
   const client = await getClientDetails(knex, tenant, client_id);
   const defaultRegion = await getClientDefaultTaxRegionCode(knex, tenant, client_id);
-  const previewTax = await calculatePreviewTax(
+  const invoiceTotal = await previewInvoiceTotalAfterDiscounts(
+    knex,
+    tenant,
     billingResult.charges,
+    billingResult.totalAmount,
     client_id,
     cycleEnd,
     defaultRegion || client?.tax_region || '',
+    billingResult.currency_code || 'USD',
   );
-  const invoiceTotal = Math.trunc(billingResult.totalAmount + previewTax);
 
   const consumed = await getPurchaseOrderConsumedCents({ knex, tenant, clientContractId });
   const computed = computePurchaseOrderOverage({
@@ -3713,13 +3725,16 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
 
     if (poContext.po_amount != null) {
       const defaultRegion = await getClientDefaultTaxRegionCode(knex, tenant, client_id);
-      const previewTax = await calculatePreviewTax(
+      const invoiceTotal = await previewInvoiceTotalAfterDiscounts(
+        knex,
+        tenant,
         billingResult.charges,
+        billingResult.totalAmount,
         client_id,
         cycleEnd,
         defaultRegion || '',
+        billingResult.currency_code || 'USD',
       );
-      const invoiceTotal = Math.trunc(billingResult.totalAmount + previewTax);
       const consumed = await getPurchaseOrderConsumedCents({ knex, tenant, clientContractId });
       const computed = computePurchaseOrderOverage({
         authorizedCents: poContext.po_amount,

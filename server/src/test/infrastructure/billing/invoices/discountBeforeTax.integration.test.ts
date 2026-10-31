@@ -15,6 +15,13 @@ const generateManualInvoice = async (request: any): Promise<any> =>
   unwrapManualInvoice(await generateManualInvoiceRaw(request));
 
 
+vi.mock('@alga-psa/users/actions', () => ({
+  getCurrentUser: vi.fn(() => Promise.resolve({
+    user_id: 'mock-user-id', tenant: 'mock', username: 'mock-user', first_name: 'Mock', last_name: 'User',
+    email: 'mock.user@example.com', user_type: 'internal', roles: []
+  }))
+}));
+
 vi.mock('@alga-psa/auth', async () => {
   const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
@@ -338,7 +345,62 @@ describe('Discounts apply before tax (integration, integer cents)', () => {
     // reads the stored invoice tax and never re-enters tax calculation.
   });
 
-  it('a finalized invoice keeps its stored (pre-change) tax', async () => {
+  it('3-way 8.875% split with a discount: per-line tax sums to the invoice tax with no stray cent', async () => {
+    const a = await createTestService(context, { service_name: 'A', default_rate: 1000, tax_region: 'US-NY' });
+    const b = await createTestService(context, { service_name: 'B', default_rate: 1000, tax_region: 'US-NY' });
+    const c = await createTestService(context, { service_name: 'C', default_rate: 1000, tax_region: 'US-NY' });
+    await configureNyTax(8.875);
+    const invoice = await generateManualInvoice({
+      clientId: context.clientId,
+      items: [
+        { service_id: a, description: 'A', quantity: 1, rate: 1000 },
+        { service_id: b, description: 'B', quantity: 1, rate: 1000 },
+        { service_id: c, description: 'C', quantity: 1, rate: 1000 },
+        { description: 'Discount', quantity: 1, rate: 100, is_discount: true, discount_type: 'fixed', service_id: '' }
+      ]
+    });
+    // TaxService rounds up once on the region base: 2900 * 8.875% = 257.375 -> 258.
+    // The per-line shares are then distributed to sum to exactly that.
+    const items = await expectInvoiceInvariants(invoice);
+    expect(invoice.subtotal).toBe(2900);
+    expect(invoice.tax).toBe(258);
+    const lineTaxes = items.filter((i: any) => !i.is_discount).map((i: any) => cents(i.tax_amount));
+    expect(lineTaxes.reduce((x: number, y: number) => x + y, 0)).toBe(258);
+    expect(Math.max(...lineTaxes) - Math.min(...lineTaxes)).toBeLessThanOrEqual(1);
+  });
+
+  it('applied client credit stays post-tax: invoice tax and per-line tax are unchanged', async () => {
+    const { createPrepaymentInvoice, applyCreditToInvoice } = await import('@alga-psa/billing/actions/creditActions');
+    const { finalizeInvoice } = await import('@alga-psa/billing/actions/invoiceModification');
+    const a = await createTestService(context, { service_name: 'A', default_rate: 10000, tax_region: 'US-NY' });
+    await configureNyTax(10);
+    const prepayment = await createPrepaymentInvoice(context.clientId, 4000);
+    await finalizeInvoice(prepayment.invoice_id);
+    const invoice = await generateManualInvoice({
+      clientId: context.clientId,
+      items: [
+        { service_id: a, description: 'A', quantity: 1, rate: 10000 },
+        { description: 'Discount', quantity: 1, rate: 2500, is_discount: true,
+          discount_type: 'fixed', service_id: '', applies_to_service_id: a }
+      ]
+    });
+    const before = await expectInvoiceInvariants(invoice);
+    const taxBefore = before.map((i: any) => [i.item_id, cents(i.tax_amount)]);
+    expect(invoice.tax).toBe(750);
+
+    await applyCreditToInvoice(context.clientId, invoice.invoice_id, 3000);
+
+    const stored = await context.db('invoices').where({ tenant: context.tenantId, invoice_id: invoice.invoice_id }).first();
+    expect(cents(stored.credit_applied)).toBe(3000);
+    expect(cents(stored.tax)).toBe(750);
+    expect(cents(stored.subtotal)).toBe(7500);
+    const after = await getInvoiceItems(invoice.invoice_id);
+    expect(after.map((i: any) => [i.item_id, cents(i.tax_amount)])).toEqual(taxBefore);
+  });
+
+  it('a finalized invoice keeps its stored (pre-change) tax through re-render and a repeat finalize', async () => {
+    const { getInvoiceForRendering } = await import('@alga-psa/billing/actions');
+    const { finalizeInvoice } = await import('@alga-psa/billing/actions/invoiceModification');
     const a = await createTestService(context, { service_name: 'A', default_rate: 10000, tax_region: 'US-NY' });
     await configureNyTax(10);
     const invoice = await generateManualInvoice({
@@ -353,13 +415,20 @@ describe('Discounts apply before tax (integration, integer cents)', () => {
     await context.db('invoice_charges').where({ tenant: context.tenantId, invoice_id: invoice.invoice_id, service_id: a })
       .update({ tax_amount: 1000, total_price: 11000 });
     await context.db('invoices').where({ tenant: context.tenantId, invoice_id: invoice.invoice_id })
-      .update({ tax: 1000, total_amount: 8500, finalized_at: new Date() });
+      .update({ tax: 1000, total_amount: 8500, status: 'sent', finalized_at: new Date() });
 
-    const { finalizeInvoice } = await import('@alga-psa/billing/actions');
-    await finalizeInvoice(invoice.invoice_id).catch(() => undefined);
+    // Real read/re-render path: it must show the stored figures, not a recomputation.
+    const viewModel: any = await getInvoiceForRendering(invoice.invoice_id);
+    expect(cents(viewModel.tax)).toBe(1000);
+    const renderedLine = (viewModel.invoice_charges ?? viewModel.items ?? [])
+      .find((i: any) => i.service_id === a);
+    expect(cents(renderedLine.tax_amount)).toBe(1000);
+
+    // A repeat finalize is rejected and performs no recalculation.
+    expect(await finalizeInvoice(invoice.invoice_id)).toMatchObject({ actionError: expect.stringMatching(/already finalized/i) });
 
     const stored = await context.db('invoices').where({ tenant: context.tenantId, invoice_id: invoice.invoice_id }).first();
-    expect(cents(stored.tax)).toBe(1000);
+    expect([cents(stored.tax), cents(stored.total_amount)]).toEqual([1000, 8500]);
     const line = await context.db('invoice_charges')
       .where({ tenant: context.tenantId, invoice_id: invoice.invoice_id, service_id: a }).first();
     expect(cents(line.tax_amount)).toBe(1000);

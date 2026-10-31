@@ -2160,17 +2160,6 @@ export async function persistInvoiceCharges(
   return fixedSubtotal + otherSubtotal; // Return total subtotal
 }
 
-/**
- * Resolves a discount line (or manual negative line) into a discount pool for
- * the shared before-tax allocation.
- *
- * - Automatic contract discounts carry the exact per-line allocation the
- *   evaluator resolved in `manual_line_metadata.allocations`.
- * - `applies_to_item_id` targets one line (a percentage/fixed discount on it).
- * - Manual lines tied to a service are scoped to that service's tax region.
- * - Everything else is untargeted: spread over every positive non-discount
- *   line, taxable and exempt alike.
- */
 export async function calculateAndDistributeTax(
   tx: Knex.Transaction,
   invoiceId: string,
