@@ -1,6 +1,7 @@
 import { defineJob, registerJobCapabilityFilter, type JobDescriptorTenantSelector } from '@alga-psa/jobs/fanout';
 import { filterServed, forcedValue } from '@alga-psa/core/capability';
 import { coManagedDeliverySeam } from '@shared/lib/coManagedDelivery';
+import { deliverPendingRefusalAcks } from '@alga-psa/co-managed/refusalAck';
 import { deliverRouting } from '../notifications/coManagedRoutingDelivery';
 
 /** A `sending` row older than this lost its worker between claim and finish. */
@@ -18,9 +19,11 @@ export const ROUTING_RECOVERY_BATCH = 100;
  */
 export async function recoverRoutingForTenant(tenantId: string) {
   const provider = await coManagedDeliverySeam.resolve(tenantId);
-  if (!provider) return { sent: 0, skipped: 0, failed: 0, flagged: 0 };
+  if (!provider) return { sent: 0, skipped: 0, failed: 0, flagged: 0, refusalAcks: { sent: 0, failed: 0 } };
   const flagged = await provider.flagStaleRoutingSending(tenantId, ROUTING_STALE_SENDING_MS);
-  return { ...(await deliverRouting(provider, tenantId, { limit: ROUTING_RECOVERY_BATCH })), flagged };
+  // Refused inbound replies are acknowledged from here: email-service records the intent but has no mail provider.
+  const refusalAcks = await deliverPendingRefusalAcks(tenantId, ROUTING_RECOVERY_BATCH);
+  return { ...(await deliverRouting(provider, tenantId, { limit: ROUTING_RECOVERY_BATCH })), flagged, refusalAcks };
 }
 
 export const CO_MANAGED_ROUTING_RECOVERY_JOB = 'co-managed-routing-recovery';
@@ -31,7 +34,7 @@ export const coManagedRoutingTenants: JobDescriptorTenantSelector = async (db) =
   const forced = forcedValue(process.env.FORCE_CAPABILITIES, 'co-managed');
   if (forced === 'off' || forced === 'malformed') return [];
   const waiting = await db.unscoped<{ tenant: string }>('co_management_deliveries', 'routing recovery enumerates tenants holding waiting rows')
-    .whereIn('delivery_kind', ['routing_in_app', 'routing_email']).whereIn('state', ['pending', 'failed', 'sending']).distinct('tenant');
+    .whereIn('delivery_kind', ['routing_in_app', 'routing_email', 'inbound_refusal_ack']).whereIn('state', ['pending', 'failed', 'sending']).distinct('tenant');
   return (await filterServed('co-managed', waiting.map((r) => String(r.tenant)))).map((tenant) => ({ tenant }));
 };
 

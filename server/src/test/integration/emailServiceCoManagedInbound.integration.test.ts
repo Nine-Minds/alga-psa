@@ -182,6 +182,51 @@ describe('email-service boot registers co-managed inbound', () => {
     await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
     expect(await sharedComments(text)).toHaveLength(1);
   });
+
+  it('email-service writes no comment and queues one ack; the sender path sends it once; a replay adds nothing', async () => {
+    const { registerWorkflowEmailProvider } = await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry');
+    const { REFUSAL_ACK_KIND, deliverPendingRefusalAcks } = await import('@alga-psa/co-managed/refusalAck');
+    const { processInboundEmailInApp } = await import('../../../../shared/services/email/processInboundEmailInApp');
+    const legacy = `cm1:${uuidv4()}`;
+    await db('email_reply_tokens').insert({ tenant: ticketTenant, token: legacy, ticket_id: ticketId, comment_id: parentCommentId, entity_type: 'ticket', recipient_email: aliceEmail,
+      metadata: JSON.stringify({ namespace: 'cm', version: 1, relationshipId }) });
+    const text = `refused-${MARK}`;
+    const message = { ...emailData(`<msg-${MARK}-3@customer-it.example.test>`, text) };
+    message.body = { text: `${text}\n\n[ALGA-REPLY-TOKEN ${legacy} ticketId=${ticketId} commentId=${parentCommentId} threadId=${threadId}]` };
+    const acks = () => db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: REFUSAL_ACK_KIND });
+
+    // email-service has no workflow email provider: the ack must be durably queued, not dropped.
+    const result: any = await processInboundEmailInApp({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
+    expect(result).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_token_refused' });
+    expect(await sharedComments(text)).toHaveLength(0);
+    let rows = await acks();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ state: 'pending', recipient: aliceEmail, attempts: 0 });
+
+    // Replaying the refused message adds no second ack.
+    await processInboundEmailInApp({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
+    expect(await acks()).toHaveLength(1);
+
+    // A process with a mail provider (server recovery job) sends it.
+    const sendEmail = vi.fn(async () => ({ success: true }));
+    registerWorkflowEmailProvider({
+      TenantEmailService: { getInstance: () => ({ sendEmail }) },
+      StaticTemplateProcessor: class { constructor(public subject: string, public html: string, public text?: string) {} async process() { return { subject: this.subject, html: this.html, text: this.text }; } },
+    } as any);
+    expect(await deliverPendingRefusalAcks(ticketTenant)).toEqual({ sent: 1, failed: 0 });
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect((sendEmail.mock.calls[0] as any)[0]).toMatchObject({ to: aliceEmail, headers: expect.objectContaining({ 'Auto-Submitted': expect.any(String) }) });
+    rows = await acks();
+    expect(rows[0]).toMatchObject({ state: 'sent', attempts: 1 });
+
+    // Sweeping again, or replaying the refused message now that this process can send, sends nothing more.
+    expect(await deliverPendingRefusalAcks(ticketTenant)).toEqual({ sent: 0, failed: 0 });
+    await processInboundEmailInApp({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect(await acks()).toHaveLength(1);
+    expect(await sharedComments(text)).toHaveLength(0);
+    (await import('@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry')).resetWorkflowEmailProvider();
+  });
 });
 
 describe('a process where co-managed registration never ran', () => {

@@ -141,6 +141,10 @@
     "./inboundCommentWriter": {
       "types": "./src/inboundCommentWriter.ts",
       "import": "./src/inboundCommentWriter.ts"
+    },
+    "./refusalAck": {
+      "types": "./src/refusalAck.ts",
+      "import": "./src/refusalAck.ts"
     }
   },
   "scripts": {

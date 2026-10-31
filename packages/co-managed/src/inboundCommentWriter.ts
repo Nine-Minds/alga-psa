@@ -1,11 +1,8 @@
-import { createHash } from 'node:crypto';
 import { getAdminConnection } from '@alga-psa/db';
-import { getWorkflowEmailProvider } from '@alga-psa/shared/workflow/runtime/registries/workflowEmailRegistry';
-import { AUTO_GENERATED_MAIL_HEADERS } from '@shared/lib/email/automatedMessage';
-import { CO_MANAGED_LEDGER, claimDelivery, finishDelivery } from '@alga-psa/shared/lib/deliveryLedger';
 import { coManagedInboundCommentSeam } from '@alga-psa/shared/lib/coManagedDelivery';
 import { withCoManagedMailCredential } from './sharedWorkIdentity';
 import { createSharedTicketComment } from './sharedTicketCommentWriter';
+import { recordRefusalAck, sendRefusalAck } from './refusalAck';
 
 /**
  * Registers the writer for admitted shared_it / organization_private email replies (CM L5).
@@ -31,37 +28,13 @@ export function registerCoManagedInboundCommentWriter(): void {
       return { commentId: receipt.commentId };
     },
     /**
-     * The one acknowledgement for a refused token. The ledger row is keyed by (token, sender), so a
-     * redelivered or repeated reply to the same token never produces a second mail. The mail carries
-     * RFC 3834 auto-generated headers; the caller has already
-     * skipped automated senders, so two auto-responders cannot ping-pong.
+     * The one acknowledgement for a refused token: recorded as a durable intent first, then sent
+     * here when this process has a mail provider (email-service does not; the recovery job sends
+     * it from one that does). See `refusalAck.ts`. Never returns without the ack sent or queued.
      */
     async acknowledgeRefusal({ tenant, token, to, ticketId }) {
-      // Outbound mail comes from the process's registered workflow email provider (the same
-      // registry that keeps shared/ free of @alga-psa/email). A process without one (email-service)
-      // skips the courtesy mail before claiming, so the ledger never holds an unsendable row.
-      let email: ReturnType<typeof getWorkflowEmailProvider>;
-      try { email = getWorkflowEmailProvider(); } catch { return; }
-      const db = await getAdminConnection();
-      const hex = createHash('sha256').update(`co-managed-refusal-ack:${tenant}:${token}`).digest('hex');
-      const key = { delivery_kind: 'inbound_refusal_ack', source_id: `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`, recipient: to };
-      if (!await claimDelivery(db, CO_MANAGED_LEDGER, tenant, key, { recipient_kind: 'requester_contact', payload: JSON.stringify({ ticketId }) })) return;
-      const subject = 'Your reply could not be added to the conversation';
-      const text = 'We received your reply but could not add it to the conversation it referred to. It may no longer be open to you. No further action was taken.';
-      const html = `<p>${text}</p>`;
-      try {
-        await email.TenantEmailService.getInstance(tenant).sendEmail({
-          mailClass: 'ticket', to, tenantId: tenant, entityType: 'ticket', entityId: ticketId,
-          templateProcessor: new email.StaticTemplateProcessor(subject, html, text),
-          headers: { ...AUTO_GENERATED_MAIL_HEADERS },
-        });
-        await finishDelivery(db, CO_MANAGED_LEDGER, tenant, key, 'sent');
-      } catch (error) {
-        const e = error as { message?: string; errorCode?: string; metadata?: Record<string, unknown> };
-        await finishDelivery(db, CO_MANAGED_LEDGER, tenant, key, e.metadata?.definitelyNotSent === true ? 'failed' : 'sending',
-          { error: e.message, errorCode: e.errorCode });
-        throw error;
-      }
+      await recordRefusalAck({ tenant, token, to, ticketId });
+      await sendRefusalAck({ tenant, token, to, ticketId });
     },
   }));
 }
