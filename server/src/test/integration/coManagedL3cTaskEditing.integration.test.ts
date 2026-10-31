@@ -58,7 +58,7 @@ describe('CM L3c task editing and assignment', () => {
     configureL3cDbEnv();
     db = await connectL3cDb();
     world = await seedL3cWorld(db);
-    collab = await seedL3cProject(db, world, 'Collab project', ['ok', 'stale', 'drift', 'viewer-edit', 'assign-sep', 'redact-tasks', 'redact-project-tasks', 'redact-assignee', 'control', 'redact-field-name', 'redact-field-desc']);
+    collab = await seedL3cProject(db, world, 'Collab project', ['ok', 'stale', 'drift', 'viewer-edit', 'assign-sep', 'redact-tasks', 'redact-project-tasks', 'redact-assignee', 'control', 'redact-field-name', 'redact-field-desc', 'redact-assignee-conflict']);
     readOnly = await seedL3cProject(db, world, 'Read-only project', ['ro']);
     unshared = await seedL3cProject(db, world, 'Unshared project', ['hidden']);
     await shareProject(db, world, collab.projectId, true);
@@ -225,6 +225,35 @@ describe('CM L3c task editing and assignment', () => {
     try {
       const hidden = await getCoManagedProjectTaskSnapshot(db, actor(), resource(id));
       expect(hidden.assignee?.name ?? null).toBeNull();
+    } finally { await setRedactions([]); }
+  });
+
+  it('masks the assignee name in revision and customer-drift conflict snapshots when assignee is redacted', async () => {
+    const id = collab.taskIds[11];
+    const snapshot = await openTask(id);
+    expect(snapshot.assignee?.name).toBeTruthy();
+    const taskBefore = await taskRow(id);
+    await setRedactions(['assignee']);
+    try {
+      const stale = await conflictOf(editCoManagedProjectTask(db, actor(), resource(id),
+        { expectedRevision: snapshot.revision + 1, expectedTaskUpdatedAt: snapshot.taskUpdatedAt, patch: { task_name: 'Never written' } }, writeCoManagedSharedTask));
+      expect(stale.reason).toBe('revision');
+      expect(stale.snapshot?.revision).toBe(snapshot.revision);
+      expect(stale.snapshot?.taskUpdatedAt).toBe(snapshot.taskUpdatedAt);
+      expect(stale.snapshot?.assignee?.name ?? null).toBeNull();
+      expect(stale.snapshot?.assignee?.kind).toBe('user');
+
+      const drift = await conflictOf(editCoManagedProjectTask(db, actor(), resource(id),
+        { expectedRevision: snapshot.revision, expectedTaskUpdatedAt: new Date(Date.parse(snapshot.taskUpdatedAt) + 1).toISOString(), patch: { task_name: 'Never written' } }, writeCoManagedSharedTask));
+      expect(drift.reason).toBe('customer_drift');
+      expect(drift.snapshot?.revision).toBe(snapshot.revision);
+      expect(drift.snapshot?.taskUpdatedAt).toBe(snapshot.taskUpdatedAt);
+      expect(drift.snapshot?.assignee?.name ?? null).toBeNull();
+      expect(drift.snapshot?.assignee?.kind).toBe('user');
+
+      const taskAfter = await taskRow(id);
+      for (const column of ['task_name', 'due_date', 'project_status_mapping_id', 'updated_at']) expect(taskAfter[column]).toEqual(taskBefore[column]);
+      expect((await referenceRow(id)).revision).toBe(snapshot.revision);
     } finally { await setRedactions([]); }
   });
 
