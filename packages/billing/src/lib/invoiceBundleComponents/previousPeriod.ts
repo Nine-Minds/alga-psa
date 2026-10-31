@@ -10,7 +10,21 @@ export interface PreviousPeriodRequest {
   earliestPeriodStart: string | Date;
 }
 
+/**
+ * Invoices that never billed the customer, so their quantities are not a
+ * "previous billed period". Draft invoices DO count (PRD R3: only cancelled
+ * and the current invoice are excluded), because a finalize-later workflow
+ * generates the next period before the prior draft is issued. `void` and the
+ * `canceled` spelling are treated like `cancelled`, case-insensitively.
+ */
+export const EXCLUDED_PREVIOUS_PERIOD_STATUSES = ['cancelled', 'canceled', 'void', 'voided'] as const;
+
+export const isExcludedPreviousPeriodStatus = (status: string | null | undefined): boolean =>
+  typeof status === 'string' && (EXCLUDED_PREVIOUS_PERIOD_STATUSES as readonly string[]).includes(status.trim().toLowerCase());
+
 export interface PreviousPeriodRow {
+  /** `invoices.status` of the row's invoice; excluded statuses are dropped. */
+  invoiceStatus?: string | null;
   contractLineId: string;
   serviceId: string;
   serviceName: string;
@@ -42,6 +56,7 @@ export function selectPreviousPeriods(
     const startMs = toMs(request.earliestPeriodStart);
     const candidates = rows.filter((row) => {
       if (row.contractLineId !== request.contractLineId) return false;
+      if (isExcludedPreviousPeriodStatus(row.invoiceStatus)) return false;
       const endMs = toMs(row.servicePeriodEnd);
       return !Number.isNaN(endMs) && !Number.isNaN(startMs) && endMs <= startMs;
     });
@@ -114,7 +129,7 @@ export async function loadPreviousBundlePeriods(
   const rows = await query
     .whereIn('cfg.contract_line_id', requests.map((request) => request.contractLineId))
     .whereNot('i.invoice_id', currentInvoiceId)
-    .whereNot('i.status', 'cancelled')
+    .whereRaw('lower(trim(coalesce(??, \'\'))) not in (' + EXCLUDED_PREVIOUS_PERIOD_STATUSES.map(() => '?').join(',') + ')', ['i.status', ...EXCLUDED_PREVIOUS_PERIOD_STATUSES])
     .whereNotNull('d.service_period_end')
     .where('d.service_period_end', '<=', new Date(latestStart))
     .select(
@@ -126,6 +141,7 @@ export async function loadPreviousBundlePeriods(
       'd.service_period_start as servicePeriodStart',
       'd.service_period_end as servicePeriodEnd',
       'c.bundle_presentation as bundlePresentation',
+      'i.status as invoiceStatus',
     );
 
   return selectPreviousPeriods(
