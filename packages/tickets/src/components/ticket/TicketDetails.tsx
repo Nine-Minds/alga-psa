@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getUserTimeZone } from '@alga-psa/core';
 import { deriveWorkReason } from '../../lib/deriveWorkReason';
+import { defaultNotificationSuppression, primeDontNotifyCustomerDefault } from '../../lib/notificationSuppressionDefaults';
 import { formatTicketDateTime, formatTicketRelativeToNow } from '../../lib/ticketDateTimeFormat';
 import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
 import { DeleteEntityDialog } from "@alga-psa/ui/components/DeleteEntityDialog";
@@ -132,11 +133,6 @@ const LIVE_UPDATE_HIGHLIGHT_MS = 600;
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
     isActionMessageError(value) || isActionPermissionError(value);
-
-const emptyNotificationSuppression = (): TicketNotificationSuppressionValue => ({
-    suppressContactNotifications: false,
-    suppressInternalNotifications: false,
-});
 
 const handleTicketActionError = (error: unknown, fallback: string) => {
     if (isReturnedActionError(error)) {
@@ -480,7 +476,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         isOpen: boolean;
         statusId: string | null;
         suppression: TicketNotificationSuppressionValue;
-    }>({ isOpen: false, statusId: null, suppression: emptyNotificationSuppression() });
+    }>({ isOpen: false, statusId: null, suppression: defaultNotificationSuppression() });
     const [isSubmittingResolutionClosePrompt, setIsSubmittingResolutionClosePrompt] = useState(false);
 
     // Bundle status propagation confirmation. The preview is fetched first; when
@@ -760,6 +756,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [showWeekday, setShowWeekday] = useState<boolean>(bootstrap?.displaySettings?.showWeekday ?? false);
     const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(bootstrap?.displaySettings?.responseStateTrackingEnabled ?? true);
     const [defaultReplyInternal, setDefaultReplyInternal] = useState(bootstrap?.displaySettings?.defaultReplyInternal ?? false);
+    // Server-rendered bootstrap primes the shared dont-notify cache so dialogs
+    // opened on this screen start from the tenant default without a round trip.
+    primeDontNotifyCustomerDefault(bootstrap?.displaySettings?.defaultDontNotifyCustomer ?? false);
     const [createdRelativeTime, setCreatedRelativeTime] = useState<string>('');
     const [updatedRelativeTime, setUpdatedRelativeTime] = useState<string>('');
     const [addChildTicketNumber, setAddChildTicketNumber] = useState<string>('');
@@ -1615,6 +1614,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 setShowWeekday(settings?.showWeekday ?? false);
                 setResponseStateTrackingEnabled(settings?.responseStateTrackingEnabled ?? true);
                 setDefaultReplyInternal(settings?.defaultReplyInternal ?? false);
+                primeDontNotifyCustomerDefault(settings?.defaultDontNotifyCustomer ?? false);
             } catch (error) {
                 console.error('Failed to load ticketing display settings:', error);
             }
@@ -2376,7 +2376,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 setResolutionClosePrompt({
                     isOpen: true,
                     statusId: closedStatusOptions.length === 1 ? closedStatusOptions[0].value : null,
-                    suppression: emptyNotificationSuppression(),
+                    suppression: defaultNotificationSuppression(),
                 });
             }
         } catch (error) {
@@ -2385,7 +2385,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     };
 
     const closeResolutionClosePrompt = () => {
-        setResolutionClosePrompt({ isOpen: false, statusId: null, suppression: emptyNotificationSuppression() });
+        setResolutionClosePrompt({ isOpen: false, statusId: null, suppression: defaultNotificationSuppression() });
     };
 
     const confirmResolutionClosePrompt = async () => {
@@ -2700,7 +2700,7 @@ const handleClose = () => {
         isOpen: boolean;
         contactId: string | null;
         suppression: TicketNotificationSuppressionValue;
-    }>({ isOpen: false, contactId: null, suppression: emptyNotificationSuppression() });
+    }>({ isOpen: false, contactId: null, suppression: defaultNotificationSuppression() });
     const [isSubmittingContactChange, setIsSubmittingContactChange] = useState(false);
 
     const handleContactChange = async (newContactId: string | null) => {
@@ -2708,7 +2708,7 @@ const handleClose = () => {
             setIsChangeContactDialogOpen(false);
             return;
         }
-        setContactChangePrompt({ isOpen: true, contactId: newContactId, suppression: emptyNotificationSuppression() });
+        setContactChangePrompt({ isOpen: true, contactId: newContactId, suppression: defaultNotificationSuppression() });
     };
 
     const applyContactChange = async (
@@ -2748,7 +2748,7 @@ const handleClose = () => {
     };
 
     const closeContactChangePrompt = () => {
-        setContactChangePrompt({ isOpen: false, contactId: null, suppression: emptyNotificationSuppression() });
+        setContactChangePrompt({ isOpen: false, contactId: null, suppression: defaultNotificationSuppression() });
     };
 
     const confirmContactChangePrompt = async () => {

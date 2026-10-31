@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Pressable, Switch, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { TicketNotificationSuppressionOptions } from "../../../api/tickets";
+import { useDontNotifyCustomerDefault } from "../../../capabilities/CapabilitiesContext";
 import { useTheme } from "../../../ui/ThemeContext";
 import { PrimaryButton } from "../../../ui/components/PrimaryButton";
 
@@ -9,6 +10,30 @@ export const DEFAULT_TICKET_NOTIFICATION_SUPPRESSION: TicketNotificationSuppress
   suppressContactNotifications: false,
   suppressInternalNotifications: false,
 };
+
+/**
+ * The starting value for a "Don't notify the customer" checkbox, honoring the
+ * tenant's `defaultDontNotifyCustomer` setting (the web product's ticketing
+ * display setting, surfaced through the capabilities endpoint). Only the
+ * customer box is pre-ticked; "also don't notify agents" stays off — silencing
+ * the internal team is a much larger footgun than a routine customer request.
+ */
+export function defaultTicketNotificationSuppressionFor(
+  dontNotifyCustomer: boolean,
+): TicketNotificationSuppressionOptions {
+  return dontNotifyCustomer
+    ? { suppressContactNotifications: true, suppressInternalNotifications: false }
+    : DEFAULT_TICKET_NOTIFICATION_SUPPRESSION;
+}
+
+/** Reactive form of {@link defaultTicketNotificationSuppressionFor}. */
+export function useDefaultTicketNotificationSuppression(): TicketNotificationSuppressionOptions {
+  const dontNotifyCustomer = useDontNotifyCustomerDefault();
+  return useMemo(
+    () => defaultTicketNotificationSuppressionFor(dontNotifyCustomer),
+    [dontNotifyCustomer],
+  );
+}
 
 export function activeTicketNotificationSuppression(
   value: TicketNotificationSuppressionOptions,

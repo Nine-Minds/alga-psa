@@ -1346,7 +1346,10 @@
       },
       "requiredSuffix": "(requis)",
       "tagsUnderTitle": "Afficher sous le titre",
-      "tagsSeparateColumn": "Afficher dans une colonne séparée"
+      "tagsSeparateColumn": "Afficher dans une colonne séparée",
+      "defaultDontNotifyCustomerTitle": "Ne pas notifier le client",
+      "defaultDontNotifyCustomerDescription": "Cocher par défaut « Ne pas notifier le client » pour tous les membres de l'équipe — changements de statut, changements de contact, clôture et commentaires. Les utilisateurs peuvent toujours décocher la case pour envoyer la notification d'une action ponctuelle.",
+      "defaultDontNotifyCustomerLabel": "Démarrer les actions sans notification client"
     }
   },
   "export": {

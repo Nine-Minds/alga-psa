@@ -21,9 +21,9 @@ import { MAX_COMMENT_LENGTH } from "../types";
 import type { TicketNotificationSuppressionOptions, TicketStatus } from "../../../api/tickets";
 import {
   activeTicketNotificationSuppression,
-  DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
   TicketNotificationSuppressionControl,
 } from "./TicketUpdateFooter";
+import { useTicketNotificationSuppression } from "./useTicketNotificationSuppression";
 
 export function CommentComposer({
   draftContent,
@@ -90,7 +90,7 @@ export function CommentComposer({
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
-  const [suppression, setSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+  const { suppression, setSuppression, reset: resetSuppression } = useTicketNotificationSuppression();
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const canSchedule = variant === "ticket" && (Boolean(onChangeScheduleAt));
   const isScheduled = Boolean(scheduleAt);
@@ -103,7 +103,7 @@ export function CommentComposer({
 
   useEffect(() => {
     if (!isResolution || !closeStatusId) {
-      setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+      resetSuppression();
     }
   }, [isResolution, closeStatusId]);
   return (

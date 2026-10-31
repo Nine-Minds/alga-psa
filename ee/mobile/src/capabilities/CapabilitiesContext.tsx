@@ -58,6 +58,19 @@ export function useCapabilities(): CapabilitiesContextValue {
   return value;
 }
 
+/**
+ * Tenant "don't notify the customer" default without the provider requirement.
+ *
+ * The suppression checkboxes in the ticket sheet read this through
+ * `useReseedTicketNotificationSuppression`; rendering outside a provider (tests,
+ * future surfaces) must degrade to the historical unticked default rather than
+ * crash a ticket edit.
+ */
+export function useDontNotifyCustomerDefault(): boolean {
+  const value = useContext(CapabilitiesContext);
+  return value?.features.dontNotifyCustomerDefault ?? false;
+}
+
 export function CapabilitiesProvider({ children }: { children: ReactNode }) {
   const { session, refreshSession, baseUrl } = useAuth();
   const [features, setFeatures] = useState<FeatureCapabilities>(EMPTY_FEATURE_CAPABILITIES);

@@ -1,6 +1,8 @@
 'use client'
 
 import { encodeTicketWhere } from '../lib/ticketWhereUrl';
+import { defaultNotificationSuppression } from '../lib/notificationSuppressionDefaults';
+import { useReseedNotificationSuppression } from '../lib/useTicketNotificationSuppressionDefault';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -159,11 +161,6 @@ function SmartSearchResults<TScope, TRow extends object, TMetadata>(
 ) {
   return <EnterpriseSmartSearchResults {...(props as unknown as AnySmartSearchResultsProps)} />;
 }
-
-const defaultNotificationSuppression = (): TicketNotificationSuppressionValue => ({
-  suppressContactNotifications: false,
-  suppressInternalNotifications: false,
-});
 
 interface TicketingDashboardProps {
   id?: string;
@@ -405,6 +402,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [destinationStatusError, setDestinationStatusError] = useState<string>('');
   const [bulkMoveNotificationSuppression, setBulkMoveNotificationSuppression] =
     useState<TicketNotificationSuppressionValue>(() => defaultNotificationSuppression());
+  useReseedNotificationSuppression(bulkMoveNotificationSuppression, setBulkMoveNotificationSuppression);
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>(initialAgentAvatarUrls);
   const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>(initialTeamAvatarUrls);
   const [printTickets, setPrintTickets] = useState<ITicketListItem[] | null>(null);

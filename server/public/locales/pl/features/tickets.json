@@ -1346,7 +1346,10 @@
       },
       "requiredSuffix": "(wymagane)",
       "tagsUnderTitle": "Wyświetl pod tytułem",
-      "tagsSeparateColumn": "Wyświetl w osobnej kolumnie"
+      "tagsSeparateColumn": "Wyświetl w osobnej kolumnie",
+      "defaultDontNotifyCustomerTitle": "Nie powiadamiaj klienta",
+      "defaultDontNotifyCustomerDescription": "Domyślnie zaznaczaj pole „Nie powiadamiaj klienta” dla wszystkich członków zespołu — zmiany statusu, zmiany kontaktu, zamknięcie i komentarze. Użytkownicy nadal mogą odznaczyć pole, aby wysłać powiadomienie przy pojedynczej akcji.",
+      "defaultDontNotifyCustomerLabel": "Rozpoczynaj akcje bez powiadomień klienta"
     }
   },
   "export": {

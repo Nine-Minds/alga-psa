@@ -1354,7 +1354,10 @@
       },
       "requiredSuffix": "(obligatoriskt)",
       "tagsUnderTitle": "Visa under titel",
-      "tagsSeparateColumn": "Visa i separat kolumn"
+      "tagsSeparateColumn": "Visa i separat kolumn",
+      "defaultDontNotifyCustomerTitle": "Meddela inte kunden",
+      "defaultDontNotifyCustomerDescription": "Börja med i-rutorna \"Meddela inte kunden\" ikryssa för alla teammedlemmar — statusändringar, kontaktändringar, avslutning och kommentarer. Användare kan fortfarande ta bort krysset för att skicka aviseringen för en enskild åtgärd.",
+      "defaultDontNotifyCustomerLabel": "Börja åtgärder utan kundaviseringar"
     }
   },
   "export": {

@@ -21104,6 +21104,10 @@ components:
                   type: boolean
                 contactsUpdate:
                   type: boolean
+                dontNotifyCustomerDefault:
+                  type: boolean
+                  description: "Tenant setting: every \"Don't notify the customer\" checkbox
+                    starts ticked."
               required:
                 - inventory
                 - opportunities
@@ -21113,6 +21117,7 @@ components:
                 - clientsUpdate
                 - contactsCreate
                 - contactsUpdate
+                - dontNotifyCustomerDefault
             formatting:
               type: object
               properties:

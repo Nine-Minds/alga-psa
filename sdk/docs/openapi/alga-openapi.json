@@ -28973,6 +28973,10 @@
                   },
                   "contactsUpdate": {
                     "type": "boolean"
+                  },
+                  "dontNotifyCustomerDefault": {
+                    "type": "boolean",
+                    "description": "Tenant setting: every \"Don't notify the customer\" checkbox starts ticked."
                   }
                 },
                 "required": [
@@ -28983,7 +28987,8 @@
                   "clientsCreate",
                   "clientsUpdate",
                   "contactsCreate",
-                  "contactsUpdate"
+                  "contactsUpdate",
+                  "dontNotifyCustomerDefault"
                 ]
               },
               "formatting": {
