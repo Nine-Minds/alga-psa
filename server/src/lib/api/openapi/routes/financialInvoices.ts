@@ -1,4 +1,6 @@
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
+import { PREFERRED_PAYMENT_METHODS } from '@alga-psa/shared/billingClients/paymentPreferences';
+import type { InvoiceUpdateField } from '../../schemas/invoiceUpdateFields';
 import { taxRateListQuerySchema, taxRateListResponseSchema } from '../../schemas/financialSchemas';
 
 export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
@@ -309,7 +311,39 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     }).catchall(zOpenApi.unknown()),
   );
 
-  const InvoiceUpdateBody = registry.registerSchema('InvoiceUpdateBody', InvoiceCreateBody.partial());
+  // Editable billing terms only (INVOICE_UPDATE_FIELDS). Lifecycle, identity and monetary fields
+  // are owned by dedicated commands and rejected by the runtime strict schema, so they are not
+  // published here. `satisfies Record<InvoiceUpdateField, ...>` fails to compile if a key is added
+  // to or removed from the allowlist without updating this shape (see invoiceUpdateFields.test.ts).
+  // Field types mirror updateInvoiceSchema in schemas/invoiceSchemas.ts.
+  const invoiceUpdateShape = {
+    payment_method: zOpenApi.enum(PREFERRED_PAYMENT_METHODS).nullable().optional(),
+    billing_profile_id: zOpenApi.string().guid().nullable().optional(),
+    due_date: zOpenApi.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe('YYYY-MM-DD. Draft invoices only.').optional(),
+    invoice_date: zOpenApi.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe('YYYY-MM-DD. Draft invoices only.').optional(),
+    items: zOpenApi
+      .array(
+        zOpenApi.object({
+          service_id: zOpenApi.string().guid().optional(),
+          contract_line_id: zOpenApi.string().guid().optional(),
+          description: zOpenApi.string().min(1).max(500),
+          quantity: zOpenApi.number().min(0),
+          unit_price: zOpenApi.number().int().min(0),
+          total_price: zOpenApi.number().int().min(0).optional(),
+          tax_amount: zOpenApi.number().int().min(0),
+          net_amount: zOpenApi.number().int().min(0).optional(),
+          rate: zOpenApi.number().min(0),
+          is_manual: zOpenApi.boolean().optional(),
+          is_taxable: zOpenApi.boolean().optional(),
+          is_discount: zOpenApi.boolean().optional(),
+        }),
+      )
+      .describe('Replaces items on draft, non-recurring invoices only.')
+      .optional(),
+    tax_source: zOpenApi.enum(['internal', 'external', 'pending_external']).optional(),
+  } satisfies Record<InvoiceUpdateField, unknown>;
+
+  const InvoiceUpdateBody = registry.registerSchema('InvoiceUpdateBody', zOpenApi.object(invoiceUpdateShape).strict());
 
   const InvoiceManualBody = registry.registerSchema(
     'InvoiceManualBody',
@@ -1212,7 +1246,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
 
   const invoiceByIdBaseRoutes: Array<[string, string, string, string, any?, number?]> = [
     ['get', '/api/v1/invoices/{id}', 'Get invoice by id', 'Returns one invoice with optional include flags.', undefined, 200],
-    ['put', '/api/v1/invoices/{id}', 'Update invoice', 'Updates an invoice using ApiBaseController.update().', InvoiceUpdateBody, 200],
+    ['put', '/api/v1/invoices/{id}', 'Update invoice', 'Updates editable billing terms only (payment_method, billing_profile_id, due_date, invoice_date, items, tax_source). Status, client, totals, credits and other lifecycle fields are rejected with 400; use the finalize, send and payment endpoints (or the bulk status operation for void) instead.', InvoiceUpdateBody, 200],
     ['delete', '/api/v1/invoices/{id}', 'Delete invoice', 'Deletes one invoice using ApiBaseController.delete().', undefined, 204],
   ];
 

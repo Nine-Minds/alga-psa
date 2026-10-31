@@ -55,8 +55,6 @@ export const TICKET_NOT_FOUND_MESSAGE_KEY = TICKET_CODE_MESSAGE_KEYS.TICKET_NOT_
  * can shrink rather than grow.
  */
 const EXPECTED_TICKET_MESSAGE_PREFIXES = [
-  'Client user cannot access this ticket',
-  'Client user is not associated with a client',
   'Client users can only create their own comments',
   'Client users cannot create internal comments',
   'Bundle settings not found',

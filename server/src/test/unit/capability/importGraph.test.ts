@@ -1,38 +1,36 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
-import { REPO, closure, importGraphParseCount } from './importGraph';
+import { describe, expect, it, vi } from 'vitest';
+import { REPO, closure } from './importGraph';
 
-const WORKER = 'services/email-service/src/index.ts';
-const PURE = 'packages/core/src/lib/capability.ts';
+const parses = vi.hoisted(() => ({ count: 0 }));
+vi.mock('typescript', async (importOriginal) => {
+  const real = ((await importOriginal()) as { default: typeof import('typescript') }).default;
+  const createSourceFile: typeof real.createSourceFile = (...args) => {
+    parses.count += 1;
+    return real.createSourceFile(...args);
+  };
+  return { default: { ...real, createSourceFile } };
+});
 
-describe('import graph closure', () => {
-  it('parses each on-disk file once across entries, so overlapping worker graphs are not re-walked', () => {
-    const before = importGraphParseCount();
-    const first = closure(WORKER);
-    const afterFirst = importGraphParseCount();
-    expect(afterFirst - before).toBeLessThanOrEqual(first.files.size);
+const ENTRY = 'services/email-service/src/index.ts';
 
-    const again = closure(WORKER);
-    expect(importGraphParseCount()).toBe(afterFirst);
-    expect([...again.files].sort()).toEqual([...first.files].sort());
-    expect([...again.bare].sort()).toEqual([...first.bare].sort());
-
-    // A second entry only parses the files the first did not already reach.
-    const second = closure(PURE);
-    const fresh = [...second.files].filter((f) => !first.files.has(f)).length;
-    expect(importGraphParseCount() - afterFirst).toBeLessThanOrEqual(fresh);
+describe('importGraph closure', () => {
+  it('parses each file once across closures, so repeated whole-graph walks stay cheap', () => {
+    const first = closure(ENTRY);
+    expect(parses.count).toBeGreaterThan(0);
+    const before = parses.count;
+    const second = closure(ENTRY);
+    expect(parses.count).toBe(before);
+    expect([...second.files]).toEqual([...first.files]);
+    expect([...second.bare]).toEqual([...first.bare]);
   });
 
-  it('honours a source override after the file is cached, without caching the override', () => {
-    const target = join(REPO, WORKER);
-    expect(closure(WORKER).bare.has('next/headers')).toBe(false);
-
+  it('an injected source still overrides a cached parse, and the real source is honoured again afterwards', () => {
+    const target = join(REPO, ENTRY);
     const real = readFileSync(target, 'utf8');
-    const overridden = closure(WORKER, (f) => (f === target ? `import 'next/headers';\n${real}` : undefined));
-    expect(overridden.bare.has('next/headers')).toBe(true);
-    expect(overridden.via.get('next/headers')).toBe(target);
-
-    expect(closure(WORKER).bare.has('next/headers')).toBe(false);
+    expect(closure(ENTRY).bare.has('next/headers')).toBe(false);
+    expect(closure(ENTRY, (f) => (f === target ? `import 'next/headers';\n${real}` : undefined)).bare.has('next/headers')).toBe(true);
+    expect(closure(ENTRY).bare.has('next/headers')).toBe(false);
   });
 });

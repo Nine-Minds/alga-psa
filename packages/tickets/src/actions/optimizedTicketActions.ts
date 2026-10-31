@@ -97,6 +97,7 @@ import {
   type RelationshipSqlCompileResult,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { authorizeTicketRecordAccess, type TicketRecordRow } from '../lib/ticketRecordAuthorization';
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
 import { compilePredicateFragment } from '@alga-psa/predicates/sql';
 import type { PredicateGroup } from '@alga-psa/predicates';
@@ -3390,8 +3391,10 @@ export interface AddTicketCommentInput {
 /**
  * Transaction-scoped comment write. Runs on the caller's transaction so the
  * comment and every after-commit hook it registers commit (or roll back) with
- * the caller's work. Throws on failure (never returns a TicketActionError) and
- * does not check permissions: callers authorize, like updateTicketInTransaction.
+ * the caller's work. Throws on failure (never returns a TicketActionError).
+ * Callers check tenant-wide RBAC, like updateTicketInTransaction; this function
+ * enforces record-level ticket authorization, so a client principal must be
+ * linked to a contact that can see the ticket.
  */
 export async function addTicketCommentInTransaction(
   trx: Knex.Transaction,
@@ -3460,8 +3463,21 @@ export async function addTicketCommentInTransaction(
     .first();
 
   if (!ticket) {
-    throw new Error('Ticket not found');
+    // Do not let a client principal distinguish "missing" from "not yours".
+    throw new Error(isClientUserType(user.user_type) ? 'Permission denied: Cannot access ticket' : 'Ticket not found');
   }
+
+  // Record-level authorization, before any thread/comment/workflow/notification write.
+  // Tenant-wide ticket:update RBAC (checked by callers) does not scope a principal to
+  // this specific ticket; evaluate the same per-record policy as the sibling actions.
+  await authorizeTicketRecordAccess({
+    trx,
+    tenant,
+    user,
+    ticketId,
+    action: 'update',
+    ticketRow: ticket as TicketRecordRow,
+  });
 
   // Canned responses: resolve merge fields once, on this trx, before anything reads the content. Every later
   // use (markdown, insert, bundle mirrors, events) sees only this resolved value. Internal authors only.

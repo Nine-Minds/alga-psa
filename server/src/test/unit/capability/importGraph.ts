@@ -4,8 +4,21 @@ import ts from 'typescript';
 
 export const REPO = resolve(__dirname, '../../../../..');
 
+// Every closure walks a large shared subgraph; parsing each file once per run (not once per entry) keeps the walk cheap
+// enough to stay inside the test timeout on loaded CI runners. Keyed on the exact source so injected sources still win.
+const parsedImports = new Map<string, { source: string; imports: string[] }>();
+
 export function importsOf(file: string, source?: string): string[] {
-  const sf = ts.createSourceFile(file, source ?? readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true);
+  const text = source ?? readFileSync(file, 'utf8');
+  const hit = parsedImports.get(file);
+  if (hit && hit.source === text) return hit.imports;
+  const imports = parseImports(file, text);
+  parsedImports.set(file, { source: text, imports });
+  return imports;
+}
+
+function parseImports(file: string, text: string): string[] {
+  const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
   const out: string[] = [];
   const visit = (n: ts.Node) => {
     if (
@@ -32,8 +45,16 @@ function tryFile(base: string): string | null {
   return null;
 }
 
+const resolved = new Map<string, string | null>();
+
 /** Resolve a specifier to a repo source file, or null for third-party/unresolvable. */
 export function resolveSpecifier(from: string, spec: string): string | null {
+  const key = `${dirname(from)}\0${spec}`;
+  if (!resolved.has(key)) resolved.set(key, resolveUncached(from, spec));
+  return resolved.get(key)!;
+}
+
+function resolveUncached(from: string, spec: string): string | null {
   if (spec.startsWith('.')) return tryFile(resolve(dirname(from), spec));
   const m = /^@alga-psa\/([^/]+)(?:\/(.+))?$/.exec(spec);
   if (!m) return null;
@@ -52,34 +73,7 @@ export interface Closure {
   via: Map<string, string>;
 }
 
-interface Edge {
-  spec: string;
-  /** Resolved repo source file, or null for a bare (third-party/unresolvable) specifier. */
-  target: string | null;
-}
-
-/**
- * Per-file import edges of on-disk sources, parsed once per process. Entries share most of their graph
- * (every worker reaches the same packages), so re-parsing per entry multiplied the walk by the entry count.
- */
-const diskEdges = new Map<string, Edge[]>();
-let parses = 0;
-
-function edgesOf(file: string, source?: string): Edge[] {
-  const parse = () => {
-    parses++;
-    return importsOf(file, source).map((spec) => ({ spec, target: resolveSpecifier(file, spec) }));
-  };
-  if (source !== undefined) return parse();
-  let edges = diskEdges.get(file);
-  if (!edges) diskEdges.set(file, (edges = parse()));
-  return edges;
-}
-
-/** Number of source files parsed so far (overridden sources included); for asserting the graph is shared. */
-export const importGraphParseCount = () => parses;
-
-/** Transitive import closure starting at one entry (repo-relative). `readSource` overrides are never cached. */
+/** Transitive import closure starting at one entry (repo-relative). */
 export function closure(entry: string, readSource?: (file: string) => string | undefined): Closure {
   const files = new Set<string>();
   const bare = new Set<string>();
@@ -89,8 +83,10 @@ export function closure(entry: string, readSource?: (file: string) => string | u
     const f = stack.pop()!;
     if (files.has(f)) continue;
     files.add(f);
-    for (const { spec, target } of edgesOf(f, readSource?.(f))) {
-      if (target) stack.push(target);
+    const src = readSource?.(f);
+    for (const spec of importsOf(f, src)) {
+      const r = resolveSpecifier(f, spec);
+      if (r) stack.push(r);
       else {
         bare.add(spec);
         if (!via.has(spec)) via.set(spec, f);
