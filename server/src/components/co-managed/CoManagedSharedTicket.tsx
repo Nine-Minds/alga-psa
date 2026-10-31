@@ -8,6 +8,10 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { createCoManagedSharedTicketDataSource, sharedTicketOptions, sharedTicketRecord } from '@/lib/co-managed/sharedTicketDataSource';
 import { conversationAuthorMaps } from '@/lib/co-managed/sharedConversationMapping';
+import { useCapability } from '@alga-psa/ui/hooks';
+import { useCoManagedSharedTimeConfig } from './useCoManagedSharedTimeConfig';
+import { CoManagedEffortSummary } from './CoManagedEffortSummary';
+import CoManagedTimeEntry from './CoManagedTimeEntry';
 import { createSharedConversationSession } from './sharedConversationSession';
 
 /**
@@ -22,6 +26,8 @@ export default function CoManagedSharedTicket({ summary, backHref }: { summary: 
   const tRef = useRef(t);
   tRef.current = t;
   const session = useMemo(() => createSharedConversationSession(summary.resource, { t: (key, fallback) => tRef.current(key, fallback) }), [summary.resource]);
+  const { enabled: timeEnabled } = useCapability('co-managed');
+  const timeConfig = useCoManagedSharedTimeConfig(summary.resource, timeEnabled);
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');
   const load = useCallback(() => {
     setState('loading');
@@ -31,8 +37,15 @@ export default function CoManagedSharedTicket({ summary, backHref }: { summary: 
 
   // Until the conversation is admitted (or when it cannot be loaded) the screen stays fully read-only.
   const dataSource = useMemo(
-    () => createCoManagedSharedTicketDataSource(summary, backHref, { conversation: state === 'ready' ? session : undefined }),
-    [summary, backHref, session, state],
+    () => createCoManagedSharedTicketDataSource(summary, backHref, {
+      conversation: state === 'ready' ? session : undefined,
+      // Time hunk (L6a2): only a workspace that serves co-managed gets the time work item and the effort split.
+      time: timeEnabled ? { config: timeConfig, slots: { timeSummary: ({ timeEntriesRefreshKey }) => <>
+        <CoManagedTimeEntry resource={summary.resource} canWrite onSaved={undefined} />
+        <CoManagedEffortSummary target={{ kind: 'shared', resource: summary.resource }} refreshKey={timeEntriesRefreshKey} />
+      </> } } : undefined,
+    }),
+    [summary, backHref, session, state, timeEnabled, timeConfig],
   );
   const ticketData = useMemo(() => {
     const snapshot = state === 'ready' ? session.snapshot() : null;
@@ -57,7 +70,7 @@ export default function CoManagedSharedTicket({ summary, backHref }: { summary: 
       </div>
     )}
     <TicketDataSourceProvider dataSource={dataSource}>
-      <TicketDetailsContainer ticketData={ticketData} hideSlaStatus hideBilling hideScheduling hideTimeEntry hideMaterials disableAgentSchedule />
+      <TicketDetailsContainer ticketData={ticketData} hideSlaStatus hideBilling hideScheduling hideTimeEntry={!timeEnabled} hideMaterials disableAgentSchedule />
     </TicketDataSourceProvider>
   </div>;
 }

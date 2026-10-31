@@ -1,0 +1,21 @@
+{
+  "loading": "Loading…",
+  "reload": "Reload",
+  "effort": {
+    "title": "Effort",
+    "description": "Time logged by the customer's team, your team, and both combined. Each entry is counted once.",
+    "error": "Effort could not be loaded.",
+    "unavailable": "Hidden",
+    "hours": "{{value}} hrs",
+    "customerMinutes": "Customer team",
+    "mspMinutes": "Your team",
+    "combinedMinutes": "Combined"
+  },
+  "time": {
+    "log": "Log time",
+    "unavailable": "Time entry is unavailable for this work."
+  },
+  "ticket": {
+    "restricted": "Restricted work item"
+  }
+}

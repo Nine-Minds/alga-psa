@@ -37,6 +37,15 @@ export async function register() {
       console.error('Failed to register the co-managed scheduling providers:', error);
     }
 
+    // Co-managed time source (L6a2): registers into the scheduling time-source registry. Best-effort:
+    // without it every time call resolves to native and behaves exactly as before.
+    try {
+      const { registerCoManagedTimeSource } = await import('./lib/co-managed/timeSource');
+      registerCoManagedTimeSource();
+    } catch (error) {
+      console.error('Failed to register the co-managed time source:', error);
+    }
+
     // Wire the DB-prefs-aware locale resolver into @alga-psa/ui's server i18n.
     // Done here (instead of at the @alga-psa/ui level) to avoid a
     // ui→tenancy circular dependency; tenancy already depends on ui.

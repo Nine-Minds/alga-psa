@@ -1,0 +1,21 @@
+{
+  "loading": "Läser in…",
+  "reload": "Läs in igen",
+  "effort": {
+    "title": "Arbete",
+    "description": "Tid som kundens team, ditt team och båda tillsammans har registrerat. Varje registrering räknas bara en gång.",
+    "error": "Det gick inte att läsa in arbetet.",
+    "unavailable": "Dolt",
+    "hours": "{{value}} tim",
+    "customerMinutes": "Kundens team",
+    "mspMinutes": "Ditt team",
+    "combinedMinutes": "Totalt"
+  },
+  "time": {
+    "log": "Registrera tid",
+    "unavailable": "Tidsregistrering är inte tillgänglig för det här arbetet."
+  },
+  "ticket": {
+    "restricted": "Begränsat arbetsobjekt"
+  }
+}

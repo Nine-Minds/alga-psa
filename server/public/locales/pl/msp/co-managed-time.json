@@ -1,0 +1,21 @@
+{
+  "loading": "Ładowanie…",
+  "reload": "Odśwież",
+  "effort": {
+    "title": "Nakład pracy",
+    "description": "Czas zapisany przez zespół klienta, Twój zespół oraz łącznie. Każdy wpis jest liczony tylko raz.",
+    "error": "Nie udało się wczytać nakładu pracy.",
+    "unavailable": "Ukryte",
+    "hours": "{{value}} godz.",
+    "customerMinutes": "Zespół klienta",
+    "mspMinutes": "Twój zespół",
+    "combinedMinutes": "Łącznie"
+  },
+  "time": {
+    "log": "Zapisz czas",
+    "unavailable": "Rejestrowanie czasu nie jest dostępne dla tej pracy."
+  },
+  "ticket": {
+    "restricted": "Ograniczony element pracy"
+  }
+}

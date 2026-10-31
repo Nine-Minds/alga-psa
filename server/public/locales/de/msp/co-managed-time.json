@@ -1,0 +1,21 @@
+{
+  "loading": "Wird geladen…",
+  "reload": "Neu laden",
+  "effort": {
+    "title": "Aufwand",
+    "description": "Zeit, die vom Team des Kunden, Ihrem Team und beiden zusammen erfasst wurde. Jeder Eintrag wird nur einmal gezählt.",
+    "error": "Der Aufwand konnte nicht geladen werden.",
+    "unavailable": "Ausgeblendet",
+    "hours": "{{value}} Std.",
+    "customerMinutes": "Team des Kunden",
+    "mspMinutes": "Ihr Team",
+    "combinedMinutes": "Gesamt"
+  },
+  "time": {
+    "log": "Zeit erfassen",
+    "unavailable": "Zeiterfassung ist für diese Arbeit nicht verfügbar."
+  },
+  "ticket": {
+    "restricted": "Eingeschränktes Arbeitselement"
+  }
+}

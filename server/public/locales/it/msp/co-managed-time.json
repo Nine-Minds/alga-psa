@@ -1,0 +1,21 @@
+{
+  "loading": "Caricamento…",
+  "reload": "Ricarica",
+  "effort": {
+    "title": "Impegno",
+    "description": "Tempo registrato dal team del cliente, dal tuo team e da entrambi insieme. Ogni voce viene conteggiata una sola volta.",
+    "error": "Impossibile caricare l'impegno.",
+    "unavailable": "Nascosto",
+    "hours": "{{value}} h",
+    "customerMinutes": "Team del cliente",
+    "mspMinutes": "Il tuo team",
+    "combinedMinutes": "Combinato"
+  },
+  "time": {
+    "log": "Registra tempo",
+    "unavailable": "La registrazione del tempo non è disponibile per questo lavoro."
+  },
+  "ticket": {
+    "restricted": "Elemento di lavoro riservato"
+  }
+}
