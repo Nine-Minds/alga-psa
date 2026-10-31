@@ -110,6 +110,10 @@
       "types": "./src/projectTaskQueue.ts",
       "import": "./src/projectTaskQueue.ts"
     },
+    "./recordProjection": {
+      "types": "./src/recordProjection.ts",
+      "import": "./src/recordProjection.ts"
+    },
     "./sharedWorkProjection": {
       "types": "./src/sharedWorkProjection.ts",
       "import": "./src/sharedWorkProjection.ts"

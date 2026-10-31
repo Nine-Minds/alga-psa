@@ -3,6 +3,10 @@ type PageResult<T> = {
   total: number;
 };
 
+/**
+ * Boolean-gate form. Only for callers that serialize nothing from the scanned rows; REST read paths that
+ * serialize rows must use `buildProjectedPage` so what is returned is the redacted projection.
+ */
 export async function buildAuthorizationAwarePage<T>(input: {
   page: number;
   limit: number;
@@ -10,13 +14,30 @@ export async function buildAuthorizationAwarePage<T>(input: {
   authorizeRecord: (record: T) => Promise<boolean>;
   scanLimit?: number;
 }): Promise<PageResult<T>> {
+  return buildProjectedPage<T, T>({
+    ...input,
+    projectRecord: async (record) => ((await input.authorizeRecord(record)) ? record : null),
+  });
+}
+
+/**
+ * Pages over authorized rows where `projectRecord` returns the row to serialize, or null to drop it. Suppressed rows
+ * are not counted in the returned total, so pagination never leaks how many rows were hidden.
+ */
+export async function buildProjectedPage<T, U>(input: {
+  page: number;
+  limit: number;
+  fetchPage: (page: number, limit: number) => Promise<PageResult<T>>;
+  projectRecord: (record: T) => Promise<U | null>;
+  scanLimit?: number;
+}): Promise<PageResult<U>> {
   const requestedPage = Number.isFinite(input.page) && input.page > 0 ? Math.floor(input.page) : 1;
   const requestedLimit = Number.isFinite(input.limit) && input.limit > 0 ? Math.floor(input.limit) : 25;
   const scanLimit = Math.max(requestedLimit, input.scanLimit ?? 100);
   const pageOffset = (requestedPage - 1) * requestedLimit;
   const pageUpperBoundExclusive = pageOffset + requestedLimit;
 
-  const authorizedRowsForPage: T[] = [];
+  const authorizedRowsForPage: U[] = [];
   let authorizedTotal = 0;
   let sourcePage = 1;
   let sourceTotal = 0;
@@ -29,15 +50,16 @@ export async function buildAuthorizationAwarePage<T>(input: {
       break;
     }
 
-    const allowedByRow = await Promise.all(pageResult.data.map((row) => input.authorizeRecord(row)));
+    const projectedByRow = await Promise.all(pageResult.data.map((row) => input.projectRecord(row)));
 
     for (let index = 0; index < pageResult.data.length; index += 1) {
-      if (!allowedByRow[index]) {
+      const projected = projectedByRow[index];
+      if (projected === null || projected === undefined) {
         continue;
       }
 
       if (authorizedTotal >= pageOffset && authorizedTotal < pageUpperBoundExclusive) {
-        authorizedRowsForPage.push(pageResult.data[index] as T);
+        authorizedRowsForPage.push(projected);
       }
       authorizedTotal += 1;
     }

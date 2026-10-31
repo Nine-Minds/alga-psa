@@ -22,13 +22,13 @@ vi.mock('@/lib/auth/rbac', () => ({
 }));
 vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
 vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
-  authorizeApiResourceRead: vi.fn(async () => state.allowed),
+  projectApiResourceRead: vi.fn(async (input: { record: object }) => (state.allowed ? input.record : null)),
 }));
 vi.mock('@/lib/productAccess', () => ({ ProductAccessError: class extends Error {}, getTenantProduct: vi.fn() }));
 vi.mock('@/lib/productSurfaceRegistry', () => ({ resolveProductApiBehavior: vi.fn() }));
 
 const { ENTITY_ADAPTERS } = await import('@/lib/api/services/documents/entityAdapters');
-const { authorizeApiResourceRead } = await import('@/lib/api/controllers/authorizationKernel');
+const { projectApiResourceRead } = await import('@/lib/api/controllers/authorizationKernel');
 
 const request = {
   context: { tenant: 't1', user: { user_id: 'u1' }, userId: 'u1', apiKeyId: 'k1' },
@@ -41,14 +41,14 @@ beforeEach(() => {
   state.record = { id: 'a1' };
   state.allowed = true;
   state.loader.mockClear();
-  vi.mocked(authorizeApiResourceRead).mockClear();
+  vi.mocked(projectApiResourceRead).mockClear();
 });
 
 describe('ENTITY_ADAPTERS.asset.assertCanAttach', () => {
   it('passes for update + readable record, forwarding the API-key identity', async () => {
     await expect(attach()).resolves.toBeUndefined();
-    expect(authorizeApiResourceRead).toHaveBeenCalledWith(
-      expect.objectContaining({ apiKeyId: 'k1', resource: 'asset', tenant: 't1' }),
+    expect(projectApiResourceRead).toHaveBeenCalledWith(
+      expect.objectContaining({ apiKeyId: 'k1', kind: 'asset', tenant: 't1' }),
     );
   });
 
@@ -56,7 +56,7 @@ describe('ENTITY_ADAPTERS.asset.assertCanAttach', () => {
     state.update = false;
     await expect(attach()).rejects.toMatchObject({ message: 'Permission denied: Cannot update asset' });
     expect(state.loader).not.toHaveBeenCalled();
-    expect(authorizeApiResourceRead).not.toHaveBeenCalled();
+    expect(projectApiResourceRead).not.toHaveBeenCalled();
   });
 
   it('404s Asset not found when the record-level check denies', async () => {
@@ -67,6 +67,6 @@ describe('ENTITY_ADAPTERS.asset.assertCanAttach', () => {
   it('404s the identical error when the asset does not exist', async () => {
     state.record = null;
     await expect(attach()).rejects.toMatchObject({ message: 'Asset not found', statusCode: 404 });
-    expect(authorizeApiResourceRead).not.toHaveBeenCalled();
+    expect(projectApiResourceRead).not.toHaveBeenCalled();
   });
 });

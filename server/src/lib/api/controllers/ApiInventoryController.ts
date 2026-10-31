@@ -5,7 +5,7 @@ import { InventoryService } from '../services/InventoryService';
 import { runWithTenant } from '../../db';
 import { hasPermission } from '../../auth/rbac';
 import { resolveAssetAuthorizationRecords } from '@alga-psa/assets/lib/assetReadAuthorization';
-import { authorizeApiResourceRead } from './authorizationKernel';
+import { projectApiResourceRead, type AuthorizedProjection } from './authorizationKernel';
 import type { InventoryLookupAssetAuthorizer } from '../services/InventoryService';
 import {
   createPaginatedResponse,
@@ -94,13 +94,15 @@ export class ApiInventoryController extends ApiBaseController {
         return [];
       }
       const records = await resolveAssetAuthorizationRecords(trx, tenant, assets as any);
-      const readable: typeof assets = [];
+      // Serialized rows are the redacted projections (hidden fields omitted, hidden derived values null), never the scan rows.
+      const readable: AuthorizedProjection<(typeof assets)[number]>[] = [];
       // LEVERAGE: pattern authorize-records-one-by-one — per-row kernel calls; a batch authorizeResources would remove N kernel round trips.
       for (const asset of assets) {
         const recordContext = records.get(asset.asset_id);
         if (!recordContext) continue;
-        if (await authorizeApiResourceRead({ knex: trx, tenant, user, apiKeyId, resource: 'asset', recordContext })) {
-          readable.push(asset);
+        const projection = await projectApiResourceRead({ knex: trx, tenant, user, apiKeyId, kind: 'asset', record: asset, recordContext });
+        if (projection) {
+          readable.push(projection);
         }
       }
       return readable;

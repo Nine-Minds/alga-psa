@@ -15,7 +15,7 @@ import type { ApiContext } from '../middleware/apiMiddleware';
 import { ForbiddenError, NotFoundError, UnauthorizedError } from '../middleware/apiErrors';
 import { hasPermission } from '../../auth/rbac';
 import { getConnection } from '../../db/db';
-import { authorizeApiResourceRead } from './authorizationKernel';
+import { projectApiResourceRead } from './authorizationKernel';
 
 export const ASSET_NOT_FOUND_MESSAGE = 'Asset not found';
 
@@ -61,15 +61,18 @@ export async function assertAssetRecordAccess(
     throw new NotFoundError(ASSET_NOT_FOUND_MESSAGE);
   }
 
-  const allowed = await authorizeApiResourceRead({
+  // Gate only: the authorization record is never serialized, so `projection !== null` is all that is used. A denied
+  // or suppressed asset answers the same 404 as a missing one.
+  const projection = await projectApiResourceRead({
     knex,
     tenant: context.tenant,
     user: context.user,
     apiKeyId: (context as any).apiKeyId,
-    resource: 'asset',
+    kind: 'asset',
+    record: record as Record<string, any>,
     recordContext: record as any,
   });
-  if (!allowed) {
+  if (projection === null) {
     throw new NotFoundError(ASSET_NOT_FOUND_MESSAGE);
   }
 }

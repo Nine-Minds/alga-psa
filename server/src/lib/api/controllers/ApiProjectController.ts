@@ -32,9 +32,8 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
-import { authorizeApiResourceRead } from './authorizationKernel';
-import { buildProjectRecordContext, buildTicketRecordContext } from './recordContexts';
-import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
+import { projectApiResourceRead, projectApiResourceReads, type AuthorizedProjection } from './authorizationKernel';
+import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import { tenantDb } from '@alga-psa/db';
 import {
   assertInternalApiUser,
@@ -74,75 +73,62 @@ export class ApiProjectController extends ApiBaseController {
     this.projectService = projectService;
   }
 
-  // LEVERAGE: pattern ticket-record-context — thin wrapper over the shared builder; callers should import ./recordContexts directly
-  private buildProjectRecordContext(project: Record<string, any>) {
-    return buildProjectRecordContext(project);
-  }
-
+  /**
+   * Loads a project and returns its redacted projection. A denied OR suppressed project answers 404 (never 403: that
+   * would confirm the record exists). The row-independent RBAC 403 is raised earlier by checkPermission/hasPermission.
+   */
   private async assertProjectReadAllowed(
     apiRequest: AuthenticatedApiRequest,
     projectId: string,
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<Record<string, any>> {
+  ): Promise<AuthorizedProjection<Record<string, any>>> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
     const project = await this.projectService.getById(projectId, apiRequest.context);
     if (!project) {
       throw new NotFoundError('Project not found');
     }
 
-    const allowed = await authorizeApiResourceRead({
+    const projection = await projectApiResourceRead({
       knex: resolvedKnex,
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,
       apiKeyId: apiRequest.context.apiKeyId,
-      resource: 'project',
-      recordContext: this.buildProjectRecordContext(project as Record<string, any>),
+      kind: 'project',
+      record: project as Record<string, any>,
     });
 
-    if (!allowed) {
-      throw new ForbiddenError('Permission denied: Cannot read project');
+    if (!projection) {
+      throw new NotFoundError('Project not found');
     }
 
-    return project as Record<string, any>;
-  }
-
-  // LEVERAGE: pattern ticket-record-context — thin wrapper over the shared builder; callers should import ./recordContexts directly
-  private buildTicketRecordContext(ticket: Record<string, any>) {
-    return buildTicketRecordContext(ticket);
+    return projection;
   }
 
   private async filterAuthorizedProjects(
     apiRequest: AuthenticatedApiRequest,
     projects: Record<string, any>[],
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<Record<string, any>[]> {
+  ): Promise<AuthorizedProjection<Record<string, any>>[]> {
     if (projects.length === 0) {
       return [];
     }
 
-    const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const allowedByRow = await Promise.all(
-      projects.map((project) =>
-        authorizeApiResourceRead({
-          knex: resolvedKnex,
-          tenant: apiRequest.context.tenant,
-          user: apiRequest.context.user,
-          apiKeyId: apiRequest.context.apiKeyId,
-          resource: 'project',
-          recordContext: this.buildProjectRecordContext(project),
-        })
-      )
-    );
-
-    return projects.filter((_, index) => allowedByRow[index]);
+    return projectApiResourceReads({
+      knex: knex ?? await getConnection(apiRequest.context.tenant),
+      tenant: apiRequest.context.tenant,
+      user: apiRequest.context.user,
+      apiKeyId: apiRequest.context.apiKeyId,
+      kind: 'project',
+      records: projects,
+    });
   }
 
   private async listAllAuthorizedProjects(
     apiRequest: AuthenticatedApiRequest,
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<Record<string, any>[]> {
+  ): Promise<AuthorizedProjection<Record<string, any>>[]> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
-    const authorizedProjects: Record<string, any>[] = [];
+    const authorizedProjects: AuthorizedProjection<Record<string, any>>[] = [];
     const pageSize = 100;
     let page = 1;
 
@@ -168,9 +154,10 @@ export class ApiProjectController extends ApiBaseController {
 
   private async buildProjectStatsFromAuthorizedRows(
     apiRequest: AuthenticatedApiRequest,
-    projects: Record<string, any>[],
+    projects: AuthorizedProjection<Record<string, any>>[],
     knex?: Awaited<ReturnType<typeof getConnection>>
   ) {
+    // Aggregates are computed from projected rows only: a redacted numeric (budgeted_hours) is absent and adds 0.
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
     const statusIds = Array.from(new Set(projects.map((project) => project.status).filter(Boolean)));
     const clientIds = Array.from(new Set(projects.map((project) => project.client_id).filter(Boolean)));
@@ -250,12 +237,13 @@ export class ApiProjectController extends ApiBaseController {
     };
   }
 
-  private convertProjectsToCsv(projects: Record<string, any>[]): string {
+  private convertProjectsToCsv(projects: AuthorizedProjection<Record<string, any>>[]): string {
     if (projects.length === 0) {
       return '';
     }
 
-    const headers = Object.keys(projects[0] ?? {});
+    // Redactions can differ per row, so the header set is the union of the projected rows' keys.
+    const headers = Array.from(new Set(projects.flatMap((project) => Object.keys(project))));
     const rows = projects.map((project) =>
       headers
         .map((header) => {
@@ -355,7 +343,7 @@ export class ApiProjectController extends ApiBaseController {
           delete filters.order;
 
           const knex = await getConnection(apiRequest.context.tenant);
-          const authorizedPage = await buildAuthorizationAwarePage<Record<string, any>>({
+          const authorizedPage = await buildProjectedPage<Record<string, any>, AuthorizedProjection<Record<string, any>>>({
             page,
             limit,
             fetchPage: (sourcePage, sourceLimit) =>
@@ -364,14 +352,14 @@ export class ApiProjectController extends ApiBaseController {
                 apiRequest.context,
                 filters
               ),
-            authorizeRecord: (project) =>
-              authorizeApiResourceRead({
+            projectRecord: (project) =>
+              projectApiResourceRead({
                 knex,
                 tenant: apiRequest.context.tenant,
                 user: apiRequest.context.user,
                 apiKeyId: apiRequest.context.apiKeyId,
-                resource: 'project',
-                recordContext: this.buildProjectRecordContext(project),
+                kind: 'project',
+                record: project,
               }),
             scanLimit: 100,
           });
@@ -770,7 +758,7 @@ export class ApiProjectController extends ApiBaseController {
           const page = parseInt(url.searchParams.get('page') || '1');
           const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
 
-          const authorizedPage = await buildAuthorizationAwarePage<Record<string, any>>({
+          const authorizedPage = await buildProjectedPage<Record<string, any>, AuthorizedProjection<Record<string, any>>>({
             page,
             limit,
             fetchPage: (sourcePage, sourceLimit) =>
@@ -779,14 +767,14 @@ export class ApiProjectController extends ApiBaseController {
                 { page: sourcePage, limit: sourceLimit },
                 apiRequest.context!
               ),
-            authorizeRecord: (ticket) =>
-              authorizeApiResourceRead({
+            projectRecord: (ticket) =>
+              projectApiResourceRead({
                 knex,
                 tenant: tenantId!,
                 user,
                 apiKeyId: keyRecord.api_key_id,
-                resource: 'ticket',
-                recordContext: this.buildTicketRecordContext(ticket),
+                kind: 'ticket',
+                record: ticket,
               }),
             scanLimit: 100,
           });
@@ -833,31 +821,40 @@ export class ApiProjectController extends ApiBaseController {
           if (!ticket) {
             throw new NotFoundError('Ticket not found');
           }
-          const ticketAllowed = await authorizeApiResourceRead({
+          // Gate only: the ticket itself is never serialized here. Denied or suppressed => 404.
+          const ticketProjection = await projectApiResourceRead({
             knex,
             tenant,
             user,
             apiKeyId: apiRequest.context.apiKeyId,
-            resource: 'ticket',
-            recordContext: this.buildTicketRecordContext(ticket),
+            kind: 'ticket',
+            record: ticket as Record<string, any>,
           });
-          if (!ticketAllowed) {
-            throw new ForbiddenError('Permission denied: Cannot read ticket');
+          if (ticketProjection === null) {
+            throw new NotFoundError('Ticket not found');
           }
 
           const links = await this.projectService.getTicketProjectLinks(ticketId, apiRequest.context);
           const projects = [...new Map(links.map((l) => [l.project_id, {
             project_id: l.project_id,
+            project_name: l.project_name,
+            project_number: l.project_number,
             assigned_to: l.project_assigned_to,
             client_id: l.project_client_id,
             status: l.project_status,
             is_closed: l.project_is_closed,
           }])).values()];
-          const readable = new Set((await this.filterAuthorizedProjects(apiRequest, projects, knex)).map((p) => p.project_id));
+          // Project-owned values in each link (name, number) are served from the project's projection, never the raw join row.
+          const readable = new Map(
+            (await this.filterAuthorizedProjects(apiRequest, projects, knex)).map((p) => [p.project_id, p] as const)
+          );
 
           const data = links
             .filter((l) => readable.has(l.project_id))
-            .map(({ project_assigned_to, project_client_id, project_status, project_is_closed, ...link }) => link);
+            .map(({ project_assigned_to, project_client_id, project_status, project_is_closed, ...link }) => {
+              const project = readable.get(link.project_id)!;
+              return { ...link, project_name: project.project_name ?? null, project_number: project.project_number ?? null };
+            });
           return createSuccessResponse(data, 200, undefined, apiRequest);
         });
       } catch (error) {

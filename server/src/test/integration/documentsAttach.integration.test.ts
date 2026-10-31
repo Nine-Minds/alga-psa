@@ -51,7 +51,7 @@ vi.mock('../../lib/auth/rbac', () => ({
   hasPermission: vi.fn(async () => state.allow),
 }));
 vi.mock('../../lib/api/controllers/authorizationKernel', () => ({
-  authorizeApiResourceRead: vi.fn(async () => state.kernelAllow),
+  projectApiResourceRead: vi.fn(async (input: { record: object }) => (state.kernelAllow ? input.record : null)),
 }));
 vi.mock('../../lib/api/controllers/ApiBaseController', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../lib/api/controllers/ApiBaseController')>();

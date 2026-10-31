@@ -11,6 +11,8 @@ describe('Ticket controller authorization parity contract', () => {
   it('T035: applies ticket read narrowing before ticket-scoped subresource reads and mutations', () => {
     const source = readControllerSource();
 
+    expect(source).not.toContain(['authorize', 'ApiResourceRead'].join(''));
+    expect(source).toContain("kind: 'ticket'");
     expect(source).toContain('private async filterAuthorizedTickets(');
     expect(source).toContain('private buildTicketStatsFromAuthorizedRows(');
     expect(source).toContain('const authorizedResult = await this.filterAuthorizedTickets(');

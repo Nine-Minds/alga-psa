@@ -18,7 +18,7 @@ vi.mock('@/lib/api/services/AssetService', () => ({
 vi.mock('@/lib/auth/rbac', () => ({ hasPermission: vi.fn(async () => state.rbac) }));
 vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
 vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
-  authorizeApiResourceRead: vi.fn(async () => state.allowed),
+  projectApiResourceRead: vi.fn(async (input: { record: object }) => (state.allowed ? input.record : null)),
 }));
 
 const { guardAssetReadForRequest } = await import('@/lib/api/controllers/assetReadGuard');

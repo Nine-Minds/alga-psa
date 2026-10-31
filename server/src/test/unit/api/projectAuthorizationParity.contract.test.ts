@@ -15,13 +15,14 @@ describe('Project controller authorization parity contract', () => {
     expect(source).toContain('private async listAllAuthorizedProjects(');
     expect(source).toContain('private async assertPhaseProjectAllowed(');
     expect(source).toContain('private async assertTaskProjectAllowed(');
-    expect(source).toContain('private buildTicketRecordContext(ticket: Record<string, any>)');
+    expect(source).not.toContain(['authorize', 'ApiResourceRead'].join(''));
+    expect(source).toContain("kind: 'ticket'");
     expect(source).toContain('const authorizedResult = await this.filterAuthorizedProjects(');
     expect(source).toContain('const authorizedProjects = await this.listAllAuthorizedProjects(apiRequest, knex);');
     expect(source).toContain('const stats = await this.buildProjectStatsFromAuthorizedRows(apiRequest, authorizedProjects, knex);');
     expect(source).toContain('await this.assertPhaseProjectAllowed(apiRequest as AuthenticatedApiRequest, phaseId, knex);');
     expect(source).toContain('await this.assertTaskProjectAllowed(apiRequest as AuthenticatedApiRequest, taskId, knex);');
-    expect(source).toContain('recordContext: this.buildTicketRecordContext(ticket),');
+    expect(source).toContain('projectRecord: (ticket) =>');
     expect(source).toContain('update() {');
     expect(source).toContain('delete() {');
     expect(source).toContain('await this.assertProjectReadAllowed(apiRequest, id, knex);');

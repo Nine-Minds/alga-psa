@@ -33,8 +33,13 @@ import {
   isSelfApprovalBlocked,
 } from '@alga-psa/authorization/kernel';
 import { resolveAllowSelfApprovalFlag } from '@alga-psa/authorization/quoteSelfApproval';
-import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
-import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
+import {
+  buildAuthorizationPrincipalSubject,
+  projectApiResourceRead,
+  type AuthorizedProjection,
+} from './authorizationKernel';
+import { buildQuoteRecordContext } from './recordContexts';
+import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 import {
   ConflictError,
   ForbiddenError,
@@ -89,27 +94,16 @@ export class ApiQuoteController extends ApiBaseController {
     }
   }
 
+  // `approved_by` is the approver, NOT an assignee (see buildQuoteRecordContext); kept as a method for existing call sites.
   private buildQuoteRecordContext(quote: Record<string, any>) {
-    // `approved_by` is the approver, NOT an assignee. Coercing it into
-    // assignedUserIds would let any approver pass the `own_or_assigned`
-    // relationship rule on quotes they didn't author. Quotes have no
-    // assignee concept today, so leave assignedUserIds empty. Self-approval
-    // is enforced separately via the `billing_not_self_approver_denied`
-    // mutation guard in assertQuoteApproveAllowed.
-    return {
-      id: quote.quote_id,
-      ownerUserId: typeof quote.created_by === 'string' ? quote.created_by : undefined,
-      assignedUserIds: [] as string[],
-      clientId: typeof quote.client_id === 'string' ? quote.client_id : undefined,
-      status: quote.status,
-    };
+    return buildQuoteRecordContext(quote);
   }
 
   private async assertQuoteReadAllowed(
     apiRequest: AuthenticatedApiRequest,
     quoteId: string,
     knex?: Awaited<ReturnType<typeof getConnection>>
-  ): Promise<Record<string, any>> {
+  ): Promise<AuthorizedProjection<Record<string, any>>> {
     const resolvedKnex = knex ?? await getConnection(apiRequest.context.tenant);
     const quote = await this.quoteService.getById(quoteId, apiRequest.context);
 
@@ -117,20 +111,21 @@ export class ApiQuoteController extends ApiBaseController {
       throw new NotFoundError('Quote not found');
     }
 
-    const allowed = await authorizeApiResourceRead({
+    // Denied OR suppressed answers 404: 403 would confirm the quote exists.
+    const projection = await projectApiResourceRead({
       knex: resolvedKnex,
       tenant: apiRequest.context.tenant,
       user: apiRequest.context.user,
       apiKeyId: apiRequest.context.apiKeyId,
-      resource: 'billing',
-      recordContext: this.buildQuoteRecordContext(quote as Record<string, any>),
+      kind: 'quote',
+      record: quote as Record<string, any>,
     });
 
-    if (!allowed) {
-      throw new ForbiddenError('Permission denied: Cannot read quote');
+    if (!projection) {
+      throw new NotFoundError('Quote not found');
     }
 
-    return quote as Record<string, any>;
+    return projection;
   }
 
   /**
@@ -277,7 +272,7 @@ export class ApiQuoteController extends ApiBaseController {
           };
 
           const knex = await getConnection(apiRequest.context.tenant);
-          const authorizedPage = await buildAuthorizationAwarePage<Record<string, any>>({
+          const authorizedPage = await buildProjectedPage<Record<string, any>, AuthorizedProjection<Record<string, any>>>({
             page,
             limit,
             fetchPage: (sourcePage, sourceLimit) =>
@@ -290,14 +285,14 @@ export class ApiQuoteController extends ApiBaseController {
                 apiRequest.context,
                 filters
               ),
-            authorizeRecord: (quote) =>
-              authorizeApiResourceRead({
+            projectRecord: (quote) =>
+              projectApiResourceRead({
                 knex,
                 tenant: apiRequest.context.tenant,
                 user: apiRequest.context.user,
                 apiKeyId: apiRequest.context.apiKeyId,
-                resource: 'billing',
-                recordContext: this.buildQuoteRecordContext(quote),
+                kind: 'quote',
+                record: quote,
               }),
             scanLimit: 100,
           });
@@ -643,7 +638,13 @@ export class ApiQuoteController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context.tenant);
-          const existingQuote = await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          // The projection only gates access. Approval logic (status, owner for the self-approval guard) needs the
+          // unredacted row, which is never serialized.
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const existingQuote = await this.quoteService.getById(id, apiRequest.context);
+          if (!existingQuote) {
+            throw new NotFoundError('Quote not found');
+          }
 
           if (existingQuote.status !== 'pending_approval') {
             throw new ConflictError('Only quotes pending approval can be approved');
@@ -672,7 +673,12 @@ export class ApiQuoteController extends ApiBaseController {
           const knex = await getConnection(apiRequest.context.tenant);
           const body = await this.readJsonBody(req);
           const data = approvalRequestChangesSchema.parse(body);
-          const existingQuote = await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          // Gate only; the status check needs the unredacted row, which is never serialized.
+          await this.assertQuoteReadAllowed(apiRequest, id, knex);
+          const existingQuote = await this.quoteService.getById(id, apiRequest.context);
+          if (!existingQuote) {
+            throw new NotFoundError('Quote not found');
+          }
 
           if (existingQuote.status !== 'pending_approval') {
             throw new ConflictError('Only quotes pending approval can be sent back for changes');

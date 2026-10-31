@@ -55,9 +55,9 @@ vi.mock('@/lib/auth/rbac', () => ({
 vi.mock('@/lib/db/db', () => ({ getConnection: vi.fn(async () => ({})) }));
 
 vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
-  authorizeApiResourceRead: vi.fn(async () => {
+  projectApiResourceRead: vi.fn(async (input: { record: object }) => {
     state.calls.push('record-level');
-    return state.recordLevelAllowed;
+    return state.recordLevelAllowed ? input.record : null;
   }),
 }));
 
