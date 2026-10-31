@@ -1886,7 +1886,7 @@ export async function parseEmailReplyBody(
 export async function findTicketByReplyToken(
   token: string,
   tenant: string
-): Promise<{ ticketId?: string; commentId?: string; projectId?: string } | null> {
+): Promise<{ ticketId?: string; commentId?: string; projectId?: string; metadata?: unknown } | null> {
   if (!token) {
     return null;
   }
@@ -1906,6 +1906,7 @@ export async function findTicketByReplyToken(
       ticketId: record.ticket_id || undefined,
       commentId: record.comment_id || undefined,
       projectId: record.project_id || undefined,
+      metadata: record.metadata ?? undefined,
     };
   });
 }

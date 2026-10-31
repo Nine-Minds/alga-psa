@@ -27,7 +27,7 @@ describe('AlgaDesk email route product gates', () => {
 
     for (const source of [googleWebhook, microsoftWebhook, imapWebhook]) {
       expect(source).toContain('assertTenantEmailProductAccess');
-      expect(source).toContain("productCode !== 'psa' && productCode !== 'algadesk'");
+      expect(source).toContain('isEmailInboundProductCode(tenant?.product_code)');
     }
   });
 });

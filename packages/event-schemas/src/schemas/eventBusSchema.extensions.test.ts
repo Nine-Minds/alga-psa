@@ -22,11 +22,11 @@ import {
 } from './extensions';
 
 describe('event schema extensions', () => {
-  it('ships no extensions', () => {
-    expect(eventExtensions).toEqual([]);
-    expect(EXTENSION_EVENT_TYPES).toEqual([]);
-    expect(Object.keys(EXTENSION_PAYLOAD_SCHEMAS)).toEqual([]);
-    expectTypeOf<ExtensionEventType>().toBeNever();
+  it('ships exactly the co-managed routing extension', () => {
+    expect(eventExtensions.map((e) => e.name)).toEqual(['co-managed-routing']);
+    expect(EXTENSION_EVENT_TYPES).toEqual(['CO_MANAGED_ESCALATION_RECEIVED', 'CO_MANAGED_ESCALATION_RETURNED', 'CO_MANAGED_TICKET_ASSIGNED']);
+    expect(Object.keys(EXTENSION_PAYLOAD_SCHEMAS).sort()).toEqual([...EXTENSION_EVENT_TYPES].sort());
+    expectTypeOf<ExtensionEventType>().toEqualTypeOf<'CO_MANAGED_ESCALATION_RECEIVED' | 'CO_MANAGED_ESCALATION_RETURNED' | 'CO_MANAGED_TICKET_ASSIGNED'>();
   });
 
   it('keeps core payload schemas reference-identical and the enum unchanged', () => {
@@ -99,11 +99,12 @@ describe('event schema extensions', () => {
     expectTypeOf<ExtensionPayloadSchemasOf<typeof exts>>().toMatchTypeOf<{ P_ONE: typeof one; Q_TWO: typeof two; Q_THREE: typeof three }>();
   });
 
-  it('the native composition is the empty composition', () => {
+  it('the registered composition is what EVENT_TYPES carries after the core list', () => {
     const composed = composeEventExtensions(eventExtensions);
-    expect(composed.eventTypes).toEqual([]);
-    expect(composed.payloadSchemas).toEqual({});
+    expect(composed.eventTypes).toEqual([...EXTENSION_EVENT_TYPES]);
+    expect(Object.keys(composed.payloadSchemas).sort()).toEqual([...EXTENSION_EVENT_TYPES].sort());
     expect(EXTENSION_EVENT_TYPES).toEqual(composed.eventTypes);
+    expect(composeEventExtensions([]).eventTypes).toEqual([]);
     expectTypeOf<ExtensionEventTypeOf<readonly []>>().toBeNever();
     expectTypeOf<'TICKET_CREATED'>().toMatchTypeOf<EventType>();
   });
