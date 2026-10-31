@@ -23,6 +23,9 @@ import { Knex } from 'knex';
 import {
   BaseService, ServiceContext, ListResult, withTransaction, tenantDb, registerAfterCommit } from '@alga-psa/db';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
+import { runAuthorizedTicketWatcherWrite, TicketWatcherPermissionError } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
+import { buildAuthorizationPrincipalSubject } from 'server/src/lib/api/controllers/authorizationKernel';
+import { getAuthorizationKernel } from 'server/src/lib/authorization/kernel';
 import { applyTicketVisibilityFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { ITicket, ITicketWithDetails } from 'server/src/interfaces/ticket.interfaces';
@@ -1139,7 +1142,16 @@ export class TicketService extends BaseService<ITicket> {
 
     let result: TicketWatcherWriteResult;
     try {
-      result = await withTransaction(knex, write);
+      const subject = buildAuthorizationPrincipalSubject(context.user, context.apiKeyId);
+      const kernel = await getAuthorizationKernel();
+      result = await withTransaction(knex, (trx) =>
+        runAuthorizedTicketWatcherWrite({
+          trx,
+          tenant: context.tenant,
+          ticketId,
+          principal: { subject, kernel },
+          write,
+        }));
     } catch (error) {
       throw this.mapTicketWatcherError(error);
     }
@@ -1157,6 +1169,9 @@ export class TicketService extends BaseService<ITicket> {
   }
 
   private mapTicketWatcherError(error: unknown): unknown {
+    if (error instanceof TicketWatcherPermissionError) {
+      return new ForbiddenError(error.message);
+    }
     if (!(error instanceof TicketWatcherError)) {
       return error;
     }
