@@ -1,12 +1,18 @@
 /**
- * Ticket and ticket_comment search docs now carry acl.clientScopeId (the
- * ticket's client_id). `search:reconcile` only re-indexes source rows newer
- * than max(source_updated_at) for the object type, so existing rows (which
- * have client_scope_id NULL) would never be rebuilt without a watermark reset.
+ * Ticket and ticket_comment search docs now carry acl.clientScopeId (the owning
+ * ticket's client_id). Docs indexed before that change have client_scope_id NULL,
+ * which a client-portal principal must never be able to match.
  *
- * Rewinding source_updated_at (rather than deleting rows) keeps the docs
- * findable for staff until the next reconcile run rebuilds them. Client-portal
- * readers are protected in the meantime by the fail-closed ticket verifier.
+ * `search:reconcile` cannot be relied on to backfill them: it only rebuilds source
+ * rows newer than max(source_updated_at) per object type, so a single live index
+ * write after deploy moves the watermark and every legacy doc is skipped for good.
+ * So this migration sets client_scope_id directly, in SQL, from the source rows.
+ *
+ * No watermark rewind: it would only trigger a reconcile rebuild of fields this
+ * change does not touch, and the scope backfill must not depend on reconcile.
+ *
+ * Every join carries the tenant column (Citus co-located joins), and the SET lists
+ * contain only column references.
  *
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
@@ -16,12 +22,28 @@ exports.up = async function up(knex) {
     return;
   }
 
-  // Bound literal, not 'epoch'::timestamptz: Citus rejects non-IMMUTABLE
-  // expressions in the SET list of an UPDATE on a distributed table.
-  // migration-lint: allow 5 - single UPDATE limited to object_type ticket/ticket_comment rows of app_search_index; only rewinds the reindex watermark so reconcile backfills client_scope_id, no data is lost
-  await knex('app_search_index')
-    .whereIn('object_type', ['ticket', 'ticket_comment'])
-    .update({ source_updated_at: knex.raw('?::timestamptz', ['1970-01-01T00:00:00.000Z']) });
+  // migration-lint: allow 5 - UPDATE limited to object_type ticket rows of app_search_index; sets client_scope_id from the owning ticket's client_id (tenant-joined), no data is lost
+  await knex.raw(`
+    UPDATE app_search_index s
+       SET client_scope_id = t.client_id
+      FROM tickets t
+     WHERE s.object_type = 'ticket'
+       AND t.tenant = s.tenant
+       AND t.ticket_id::text = s.object_id
+       AND s.client_scope_id IS DISTINCT FROM t.client_id
+  `);
+
+  // migration-lint: allow 5 - UPDATE limited to object_type ticket_comment rows of app_search_index; sets client_scope_id from the comment's owning ticket client_id (tenant-joined), no data is lost
+  await knex.raw(`
+    UPDATE app_search_index s
+       SET client_scope_id = t.client_id
+      FROM comments c
+      JOIN tickets t ON t.tenant = c.tenant AND t.ticket_id = c.ticket_id
+     WHERE s.object_type = 'ticket_comment'
+       AND c.tenant = s.tenant
+       AND c.comment_id::text = s.object_id
+       AND s.client_scope_id IS DISTINCT FROM t.client_id
+  `);
 };
 
 /**
@@ -29,5 +51,5 @@ exports.up = async function up(knex) {
  * @returns { Promise<void> }
  */
 exports.down = async function down(_knex) {
-  // Nothing to restore: reconcile rebuilds ticket docs from the source rows.
+  // Nothing to restore: the backfilled scope is the correct value.
 };

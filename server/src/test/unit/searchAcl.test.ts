@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { aclPredicateSql, verifyResultVisibility } from '@alga-psa/search/acl';
+import { aclPredicateSql, STRICT_CLIENT_SCOPE_OBJECT_TYPES, verifyResultVisibility } from '@alga-psa/search/acl';
 
 describe('search ACL SQL predicate', () => {
   it('T105 filters required_permission through the user permission set', () => {
@@ -72,8 +72,24 @@ describe('search ACL SQL predicate', () => {
       clientAccess: { mode: 'scoped', clientIds },
     });
 
-    expect(fragment.sql).toContain('(client_scope_id IS NULL OR client_scope_id = ANY(?::uuid[]))');
-    expect(fragment.bindings[5]).toEqual(clientIds);
+    expect(fragment.sql).toContain('client_scope_id = ANY(?::uuid[])');
+    expect(fragment.bindings[6]).toEqual(clientIds);
+  });
+
+  it('T111c scoped principals do not get NULL-scope admission for strict-scope (ticket) types', () => {
+    const clientIds = ['10000000-0000-0000-0000-000000000001'];
+    const fragment = aclPredicateSql({
+      userId: '00000000-0000-0000-0000-000000000001',
+      permissions: ['ticket:read'],
+      clientAccess: { mode: 'scoped', clientIds },
+    });
+
+    expect(fragment.sql).toContain(
+      '((client_scope_id IS NULL AND NOT (object_type = ANY(?::text[]))) OR client_scope_id = ANY(?::uuid[]))',
+    );
+    expect(fragment.bindings[5]).toEqual([...STRICT_CLIENT_SCOPE_OBJECT_TYPES]);
+    expect(fragment.bindings[5]).toEqual(['ticket', 'ticket_comment']);
+    expect(fragment.bindings[6]).toEqual(clientIds);
   });
 
   it('T111b bypasses the client_scope_id predicate for unrestricted (mode: all) principals', () => {
