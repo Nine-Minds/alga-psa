@@ -583,7 +583,22 @@
       "previous": "Wstecz",
       "priority": "Priorytet",
       "status": "Status",
-      "titleColumn": "Tytuł"
+      "titleColumn": "Tytuł",
+      "title": "Zgłoszenia klientów",
+      "view": "Widok",
+      "columns": "Kolumny",
+      "density": "Gęstość",
+      "filters": "Filtry",
+      "client": "Klient",
+      "allClients": "Wszyscy klienci",
+      "share": "Udostępnij",
+      "clearSignal": "Wyczyść",
+      "unavailable": "Ten widok nie jest jeszcze dostępny dla Twojego konta.",
+      "allTickets": "Wszystkie zgłoszenia",
+      "signals": {
+        "escalatedUnassigned": "Eskalowane, nieprzypisane",
+        "awaitingReply": "Czeka na Twoją odpowiedź"
+      }
     },
     "delegation": {
       "actions": "Akcje",
@@ -720,6 +735,158 @@
       "rejected": "Nie udało się zapisać tego zadania.",
       "saved": "Zapisano.",
       "save": "Zapisz"
+    },
+    "section": {
+      "title": "Współzarządzanie",
+      "viewHistory": "Wyświetl historię przekazań",
+      "responsible": "Odpowiedzialny",
+      "change": "Zmień",
+      "privateTo": "Prywatne dla {{organization}}"
+    },
+    "ticket": {
+      "title": "Zgłoszenie współzarządzane",
+      "escalate": "Eskaluj do MSP",
+      "handback": "Przekaż klientowi",
+      "takeBack": "Przejmij z powrotem",
+      "revoke": "Cofnij dostęp do zgłoszenia",
+      "escalateHelp": "MSP natychmiast przejmuje odpowiedzialność. Dodaj informacje potrzebne do kontynuowania pracy.",
+      "handbackHelp": "Odpowiedzialność wraca do klienta. MSP zachowuje zatwierdzony dostęp do zgłoszenia.",
+      "revokeHelp": "Indywidualny dostęp do zgłoszenia zostanie cofnięty, a odpowiedzialność wróci do klienta. Osobno zatwierdzony dostęp do tablicy nadal obowiązuje.",
+      "note": "Notatka przekazania",
+      "noteAudience": "Widoczna dla uprawnionego personelu IT obu organizacji. Ta notatka nie jest wysyłana do zgłaszających.",
+      "uncertain": "Nie udało się potwierdzić wyniku. Ponów to samo żądanie lub wczytaj aktualny stan przed kolejną zmianą.",
+      "saving": "Zapisywanie…",
+      "retry": "Ponów",
+      "reload": "Wczytaj aktualny stan",
+      "cancel": "Anuluj",
+      "loadError": "Nie udało się wczytać zgłoszenia lub listy dostępów. Twoje uprawnienia mogły się zmienić.",
+      "loading": "Wczytywanie…",
+      "restricted": "Zgłoszenie z ograniczonym dostępem",
+      "responsibility": "Odpowiedzialna organizacja: {{organization}}",
+      "formerSponsor": "Poprzedni MSP",
+      "readOnly": "Ten obszar jest tylko do odczytu. Administratorzy klienta nadal mogą cofać dostęp.",
+      "history": "Wspólna historia przekazań IT",
+      "noHistory": "Brak widocznych przekazań.",
+      "historyError": "Nie udało się wczytać historii przekazań.",
+      "older": "Wczytaj starsze",
+      "transitions": {
+        "escalated": "Eskalowano do MSP",
+        "handed_back": "Przekazano klientowi",
+        "access_revoked": "Cofnięto indywidualny dostęp do zgłoszenia"
+      },
+      "assignment": {
+        "needsHandoff": "Eskaluj to zgłoszenie przed przypisaniem pracowników MSP.",
+        "unavailable": "Przypisany współpracownik MSP nie jest już dostępny."
+      },
+      "slaSetupRequired": "Twój MSP musi skonfigurować zasady SLA i mapowanie priorytetów, zanim będzie można eskalować to zgłoszenie."
+    },
+    "callout": {
+      "title": "Zgłoszenia klientów wymagają Twojej uwagi",
+      "escalatedUnassigned_one": "{{count}} eskalowane zgłoszenie, nieprzypisane",
+      "escalatedUnassigned_few": "{{count}} eskalowane zgłoszenia, nieprzypisane",
+      "escalatedUnassigned_many": "{{count}} eskalowanych zgłoszeń, nieprzypisanych",
+      "escalatedUnassigned_other": "{{count}} eskalowanego zgłoszenia, nieprzypisanego",
+      "awaitingReply_one": "{{count}} zgłoszenie czeka na Twoją odpowiedź",
+      "awaitingReply_few": "{{count}} zgłoszenia czekają na Twoją odpowiedź",
+      "awaitingReply_many": "{{count}} zgłoszeń czeka na Twoją odpowiedź",
+      "awaitingReply_other": "{{count}} zgłoszenia czeka na Twoją odpowiedź",
+      "dismiss": "Zamknij"
+    },
+    "queue": {
+      "title": "Kolejki współzarządzanych zgłoszeń",
+      "workingDescription": "Wspólne zgłoszenia, za które odpowiada lub do których jest przypisany Twój zespół.",
+      "oversightDescription": "Zgłoszenia klientów w zatwierdzonym zakresie dostępu, także obsługiwane przez ich zespoły IT.",
+      "view": "Widok",
+      "working": "Kolejka pracy",
+      "oversight": "Nadzór nad klientami",
+      "workspace": "Obszar roboczy",
+      "allWorkspaces": "Wszystkie obszary",
+      "state": "Status",
+      "open": "Otwarte",
+      "closed": "Zamknięte",
+      "all": "Wszystkie statusy",
+      "sort": "Sortuj według",
+      "direction": "Kolejność",
+      "asc": "Rosnąco",
+      "desc": "Malejąco",
+      "search": "Szukaj zgłoszeń",
+      "loadError": "Nie udało się wczytać zgłoszeń. Odśwież, aby sprawdzić dostęp.",
+      "counts_one": "{{count}} zgłoszenie · {{open}} otwarte · {{closed}} zamknięte",
+      "counts_few": "{{count}} zgłoszenia · {{open}} otwartych · {{closed}} zamkniętych",
+      "counts_many": "{{count}} zgłoszeń · {{open}} otwartych · {{closed}} zamkniętych",
+      "counts_other": "{{count}} zgłoszenia · {{open}} otwartych · {{closed}} zamkniętych",
+      "empty": "Brak dostępnych zgłoszeń pasujących do tych filtrów.",
+      "emptyUnfiltered": "Nie ma jeszcze zgłoszeń klientów do wyświetlenia.",
+      "retry": "Spróbuj ponownie",
+      "page": "Strona {{page}}",
+      "sortFields": {
+        "updated": "Ostatnia aktualizacja",
+        "created": "Utworzenie",
+        "title": "Tytuł",
+        "number": "Numer zgłoszenia"
+      },
+      "columns": {
+        "ticket": "Zgłoszenie",
+        "workspace": "Obszar roboczy",
+        "state": "Status",
+        "status": "Status",
+        "priority": "Priorytet",
+        "responsibility": "Odpowiedzialna organizacja",
+        "updated": "Aktualizacja",
+        "title": "Title"
+      },
+      "organizations": {
+        "msp": "MSP",
+        "customer": "IT klienta"
+      },
+      "export": "Eksportuj CSV",
+      "exporting": "Eksportowanie…",
+      "exportError": "Nie udało się wyeksportować zgłoszeń. Odśwież kolejkę i spróbuj ponownie.",
+      "bulkHandback": {
+        "title": "Zwróć zgłoszenia do zespołu IT klienta",
+        "select": "Wybierz zgłoszenia z tej strony. Do każdego wybranego zgłoszenia zostanie dodana ta sama wspólna notatka IT.",
+        "returned": "Zwrócono do zespołu IT klienta",
+        "forbidden": "Odmowa dostępu",
+        "changed": "Zgłoszenie uległo zmianie. Odśwież przed ponowną próbą.",
+        "invalid": "Nieprawidłowy wybór",
+        "selected": "{{count}} wybranych zgłoszeń zostanie zwróconych.",
+        "resume": "Zwrot do działu IT klienta został przerwany. Wznów, aby potwierdzić wynik.",
+        "noReloadRecovery": "Odzyskiwanie po odświeżeniu jest niedostępne w tej przeglądarce; nadal możesz ponowić próbę w tej sesji.",
+        "done": "Done",
+        "selectAll": "Select all returnable tickets",
+        "selectRow": "Select ticket",
+        "readOnly": "Read-only access"
+      },
+      "scopeUnavailable": "Otwieranie listy zgłoszeń…",
+      "searchPlaceholder": "Szukaj według numeru lub tytułu",
+      "mspAlsoAssigned": "MSP również przypisany",
+      "unavailableWorkspace": "Unavailable workspace",
+      "reset": "Reset"
+    },
+    "projects": {
+      "assignment": {
+        "title": "Przypisanie do MSP",
+        "unassigned": "Nieprzypisane do MSP",
+        "kind": "Przypisz do",
+        "user": "Technik",
+        "team": "Zespół",
+        "assignee": "Osoba przypisana",
+        "more": "Więcej osób",
+        "assign": "Przypisz",
+        "clear": "Usuń przypisanie do MSP"
+      }
+    },
+    "editor": {
+      "errors": {
+        "invalid": "Niektóre wartości są nieprawidłowe. Sprawdź zmiany i spróbuj ponownie.",
+        "conflict": "To zgłoszenie zostało zmienione. Odśwież je przed zapisaniem zmian.",
+        "operationConflict": "To żądanie zapisu zostało już użyte do innej zmiany. Odśwież zgłoszenie.",
+        "forbidden": "Twój dostęp do tego zgłoszenia uległ zmianie. Odśwież, aby kontynuować.",
+        "readOnly": "Ten obszar jest tylko do odczytu. Odśwież, aby zobaczyć jego obecny stan.",
+        "closeRules": "Przed zamknięciem zgłoszenie musi spełnić wymagania zamknięcia określone na jego tablicy.",
+        "unknownOutcome": "Nie udało się potwierdzić zapisu. Ponów to samo żądanie albo odrzuć zmiany i odśwież.",
+        "slaSetupRequired": "Twój MSP musi skonfigurować zasady SLA i mapowanie priorytetów, zanim zgłoszenie będzie można ponownie otworzyć pod odpowiedzialnością MSP."
+      }
     }
   },
   "common": {

@@ -579,7 +579,22 @@
       "previous": "Previous",
       "priority": "Priority",
       "status": "Status",
-      "titleColumn": "Title"
+      "titleColumn": "Title",
+      "title": "Customer Tickets",
+      "view": "View",
+      "columns": "Columns",
+      "density": "Density",
+      "filters": "Filters",
+      "client": "Client",
+      "allClients": "All clients",
+      "share": "Share",
+      "clearSignal": "Clear",
+      "unavailable": "This view is not available for your account yet.",
+      "allTickets": "All Tickets",
+      "signals": {
+        "escalatedUnassigned": "Escalated, unassigned",
+        "awaitingReply": "Awaiting your reply"
+      }
     },
     "delegation": {
       "actions": "Actions",
@@ -716,6 +731,152 @@
       "rejected": "This task could not be saved.",
       "saved": "Saved.",
       "save": "Save"
+    },
+    "section": {
+      "title": "Co-managed",
+      "viewHistory": "View handoff history",
+      "responsible": "Responsible",
+      "change": "Change",
+      "privateTo": "Private to {{organization}}"
+    },
+    "ticket": {
+      "title": "Co-managed ticket",
+      "escalate": "Escalate to MSP",
+      "handback": "Return to customer",
+      "takeBack": "Take back",
+      "revoke": "Revoke ticket access",
+      "escalateHelp": "The MSP takes responsibility immediately. Add the context they need to continue.",
+      "handbackHelp": "Responsibility returns to the customer. The MSP retains approved access to the ticket.",
+      "revokeHelp": "This removes the explicit ticket grant and returns responsibility to the customer. Separately approved board access still applies.",
+      "note": "Handoff note",
+      "noteAudience": "Visible to authorized IT staff in both organizations. This note is not sent to requesters.",
+      "uncertain": "The result could not be confirmed. Retry the same request, or reload to check the current ticket before making another change.",
+      "saving": "Saving…",
+      "retry": "Retry",
+      "reload": "Reload current state",
+      "cancel": "Cancel",
+      "loadError": "This ticket or access list could not be loaded. Your access may have changed.",
+      "loading": "Loading…",
+      "restricted": "Restricted ticket",
+      "responsibility": "Responsible: {{organization}}",
+      "formerSponsor": "Former MSP",
+      "readOnly": "This workspace is read-only. Customer administrators can still revoke access.",
+      "history": "Shared IT handoff history",
+      "noHistory": "No visible handoffs.",
+      "historyError": "Handoff history could not be loaded.",
+      "older": "Load older",
+      "transitions": {
+        "escalated": "Escalated to MSP",
+        "handed_back": "Returned to customer",
+        "access_revoked": "Explicit ticket access revoked"
+      },
+      "assignment": {
+        "needsHandoff": "Escalate this ticket before assigning MSP staff.",
+        "unavailable": "The assigned MSP collaborator is no longer available."
+      },
+      "slaSetupRequired": "Your MSP must configure its SLA policy and priority mapping before this ticket can be escalated."
+    },
+    "callout": {
+      "title": "Customer tickets need you",
+      "escalatedUnassigned_one": "{{count}} escalated ticket, unassigned",
+      "escalatedUnassigned_other": "{{count}} escalated tickets, unassigned",
+      "awaitingReply_one": "{{count}} ticket awaiting your reply",
+      "awaitingReply_other": "{{count}} tickets awaiting your reply",
+      "dismiss": "Dismiss"
+    },
+    "queue": {
+      "title": "Co-managed ticket queues",
+      "workingDescription": "Shared tickets where your team is responsible or assigned.",
+      "oversightDescription": "Customer tickets within your approved access, including work handled by customer IT.",
+      "view": "View",
+      "working": "Working queue",
+      "oversight": "Customer oversight",
+      "workspace": "Workspace",
+      "allWorkspaces": "All workspaces",
+      "state": "Status",
+      "open": "Open",
+      "closed": "Closed",
+      "all": "All statuses",
+      "sort": "Sort by",
+      "direction": "Order",
+      "asc": "Ascending",
+      "desc": "Descending",
+      "search": "Search tickets",
+      "loadError": "Unable to load tickets. Refresh to check your current access.",
+      "counts_one": "{{count}} ticket · {{open}} open · {{closed}} closed",
+      "counts_other": "{{count}} tickets · {{open}} open · {{closed}} closed",
+      "empty": "No permitted tickets match these filters.",
+      "emptyUnfiltered": "No customer tickets to show yet.",
+      "retry": "Retry",
+      "page": "Page {{page}}",
+      "sortFields": {
+        "updated": "Last updated",
+        "created": "Created",
+        "title": "Title",
+        "number": "Ticket number"
+      },
+      "columns": {
+        "ticket": "Ticket",
+        "workspace": "Workspace",
+        "state": "Status",
+        "status": "Status",
+        "priority": "Priority",
+        "responsibility": "Responsible organization",
+        "updated": "Updated",
+        "title": "Title"
+      },
+      "organizations": {
+        "msp": "MSP",
+        "customer": "Customer IT"
+      },
+      "export": "Export CSV",
+      "exporting": "Exporting…",
+      "exportError": "Could not export tickets. Refresh the queue and try again.",
+      "bulkHandback": {
+        "title": "Return tickets to customer IT",
+        "select": "Select tickets from this page. The same shared IT note will be added to each selected ticket.",
+        "returned": "Returned to customer IT",
+        "forbidden": "Access denied",
+        "changed": "Ticket changed. Refresh before trying again.",
+        "invalid": "Invalid selection",
+        "selected": "{{count}} selected ticket(s) will be returned.",
+        "resume": "A return to customer IT was interrupted. Resume it to confirm the result.",
+        "noReloadRecovery": "Reload recovery is unavailable in this browser; you can still retry in this session.",
+        "done": "Done",
+        "selectAll": "Select all returnable tickets",
+        "selectRow": "Select ticket",
+        "readOnly": "Read-only access"
+      },
+      "scopeUnavailable": "Opening the ticket list…",
+      "searchPlaceholder": "Search by number or title",
+      "mspAlsoAssigned": "MSP also assigned",
+      "unavailableWorkspace": "Unavailable workspace",
+      "reset": "Reset"
+    },
+    "projects": {
+      "assignment": {
+        "title": "MSP assignment",
+        "unassigned": "Not assigned to the MSP",
+        "kind": "Assign to",
+        "user": "Technician",
+        "team": "Team",
+        "assignee": "Assignee",
+        "more": "More assignees",
+        "assign": "Assign",
+        "clear": "Remove MSP assignment"
+      }
+    },
+    "editor": {
+      "errors": {
+        "invalid": "Some values are not valid. Check your changes and try again.",
+        "conflict": "This ticket changed. Reload it before saving your changes.",
+        "operationConflict": "This save request was already used for a different edit. Reload the ticket.",
+        "forbidden": "Your access to this ticket changed. Reload to continue.",
+        "readOnly": "This workspace is read-only. Reload to see its current state.",
+        "closeRules": "The ticket must meet its board’s closing requirements before it can be closed.",
+        "unknownOutcome": "We could not confirm whether the edit was saved. Retry the same save, or discard your changes and reload.",
+        "slaSetupRequired": "Your MSP must configure its SLA policy and priority mapping before this ticket can be reopened under MSP responsibility."
+      }
     }
   },
   "common": {

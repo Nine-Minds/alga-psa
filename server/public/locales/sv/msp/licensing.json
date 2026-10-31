@@ -579,7 +579,22 @@
       "previous": "Föregående",
       "priority": "Prioritet",
       "status": "Status",
-      "titleColumn": "Titel"
+      "titleColumn": "Titel",
+      "title": "Kundärenden",
+      "view": "Vy",
+      "columns": "Kolumner",
+      "density": "Täthet",
+      "filters": "Filter",
+      "client": "Kund",
+      "allClients": "Alla kunder",
+      "share": "Dela",
+      "clearSignal": "Rensa",
+      "unavailable": "Den här vyn är inte tillgänglig för ditt konto ännu.",
+      "allTickets": "Alla ärenden",
+      "signals": {
+        "escalatedUnassigned": "Eskalerade, otilldelade",
+        "awaitingReply": "Väntar på ditt svar"
+      }
     },
     "delegation": {
       "actions": "Åtgärder",
@@ -716,6 +731,152 @@
       "rejected": "Det gick inte att spara uppgiften.",
       "saved": "Sparat.",
       "save": "Spara"
+    },
+    "section": {
+      "title": "Samförvaltning",
+      "viewHistory": "Visa överlämningshistorik",
+      "responsible": "Ansvarig",
+      "change": "Ändra",
+      "privateTo": "Privat för {{organization}}"
+    },
+    "ticket": {
+      "title": "Samförvaltat ärende",
+      "escalate": "Eskalera till MSP",
+      "handback": "Återlämna till kund",
+      "takeBack": "Ta tillbaka",
+      "revoke": "Återkalla ärendeåtkomst",
+      "escalateHelp": "MSP:n tar över ansvaret direkt. Lägg till den information de behöver för att kunna fortsätta.",
+      "handbackHelp": "Ansvaret går tillbaka till kunden. MSP:n behåller sin godkända åtkomst till ärendet.",
+      "revokeHelp": "Detta tar bort den uttryckliga ärendebehörigheten och lämnar tillbaka ansvaret till kunden. Separat godkänd tavelåtkomst gäller fortfarande.",
+      "note": "Överlämningsanteckning",
+      "noteAudience": "Synlig för behörig IT-personal i båda organisationerna. Anteckningen skickas inte till anmälare.",
+      "uncertain": "Det gick inte att bekräfta resultatet. Försök samma begäran igen, eller ladda om för att kontrollera aktuellt ärende innan du gör en ny ändring.",
+      "saving": "Sparar…",
+      "retry": "Försök igen",
+      "reload": "Ladda om aktuellt tillstånd",
+      "cancel": "Avbryt",
+      "loadError": "Det gick inte att läsa in ärendet eller åtkomstlistan. Din åtkomst kan ha ändrats.",
+      "loading": "Läser in…",
+      "restricted": "Begränsat ärende",
+      "responsibility": "Ansvarig: {{organization}}",
+      "formerSponsor": "Tidigare MSP",
+      "readOnly": "Den här arbetsytan är skrivskyddad. Kundadministratörer kan fortfarande återkalla åtkomst.",
+      "history": "Historik över delade IT-överlämningar",
+      "noHistory": "Inga synliga överlämningar.",
+      "historyError": "Det gick inte att läsa in överlämningshistoriken.",
+      "older": "Läs in äldre",
+      "transitions": {
+        "escalated": "Eskalerat till MSP",
+        "handed_back": "Återlämnat till kund",
+        "access_revoked": "Uttrycklig ärendeåtkomst återkallad"
+      },
+      "assignment": {
+        "needsHandoff": "Eskalera ärendet innan du tilldelar MSP-personal.",
+        "unavailable": "Den tilldelade MSP-medarbetaren är inte längre tillgänglig."
+      },
+      "slaSetupRequired": "Din MSP måste konfigurera sin SLA-policy och prioritetsmappning innan ärendet kan eskaleras."
+    },
+    "callout": {
+      "title": "Kundärenden behöver dig",
+      "escalatedUnassigned_one": "{{count}} eskalerat ärende, otilldelat",
+      "escalatedUnassigned_other": "{{count}} eskalerade ärenden, otilldelade",
+      "awaitingReply_one": "{{count}} ärende väntar på ditt svar",
+      "awaitingReply_other": "{{count}} ärenden väntar på ditt svar",
+      "dismiss": "Stäng"
+    },
+    "queue": {
+      "title": "Köer för samförvaltade ärenden",
+      "workingDescription": "Delade ärenden som ditt team ansvarar för eller är tilldelat.",
+      "oversightDescription": "Kundärenden inom din godkända åtkomst, inklusive arbete som kundens IT hanterar.",
+      "view": "Vy",
+      "working": "Arbetskö",
+      "oversight": "Kundöverblick",
+      "workspace": "Arbetsyta",
+      "allWorkspaces": "Alla arbetsytor",
+      "state": "Status",
+      "open": "Öppna",
+      "closed": "Stängda",
+      "all": "Alla statusar",
+      "sort": "Sortera efter",
+      "direction": "Ordning",
+      "asc": "Stigande",
+      "desc": "Fallande",
+      "search": "Sök ärenden",
+      "loadError": "Det gick inte att läsa in ärenden. Uppdatera för att kontrollera din aktuella åtkomst.",
+      "counts_one": "{{count}} ärende · {{open}} öppet · {{closed}} stängt",
+      "counts_other": "{{count}} ärenden · {{open}} öppna · {{closed}} stängda",
+      "empty": "Inga tillåtna ärenden matchar de här filtren.",
+      "emptyUnfiltered": "Det finns inga kundärenden att visa än.",
+      "retry": "Försök igen",
+      "page": "Sida {{page}}",
+      "sortFields": {
+        "updated": "Senast uppdaterad",
+        "created": "Skapad",
+        "title": "Titel",
+        "number": "Ärendenummer"
+      },
+      "columns": {
+        "ticket": "Ärende",
+        "workspace": "Arbetsyta",
+        "state": "Status",
+        "status": "Status",
+        "priority": "Prioritet",
+        "responsibility": "Ansvarig organisation",
+        "updated": "Uppdaterad",
+        "title": "Title"
+      },
+      "organizations": {
+        "msp": "MSP",
+        "customer": "Kundens IT"
+      },
+      "export": "Exportera CSV",
+      "exporting": "Exporterar…",
+      "exportError": "Det gick inte att exportera ärenden. Uppdatera kön och försök igen.",
+      "bulkHandback": {
+        "title": "Återlämna ärenden till kundens IT",
+        "select": "Välj ärenden från den här sidan. Samma delade IT-anteckning läggs till på varje markerat ärende.",
+        "returned": "Återlämnat till kundens IT",
+        "forbidden": "Åtkomst nekad",
+        "changed": "Ärendet har ändrats. Uppdatera innan du försöker igen.",
+        "invalid": "Ogiltigt urval",
+        "selected": "{{count}} markerade ärenden kommer att återlämnas.",
+        "resume": "En återlämning till kundens IT avbröts. Återuppta den för att bekräfta resultatet.",
+        "noReloadRecovery": "Återställning vid omladdning är inte tillgänglig i den här webbläsaren; du kan fortfarande försöka igen i den här sessionen.",
+        "done": "Done",
+        "selectAll": "Select all returnable tickets",
+        "selectRow": "Select ticket",
+        "readOnly": "Read-only access"
+      },
+      "scopeUnavailable": "Öppnar ärendelistan…",
+      "searchPlaceholder": "Sök efter nummer eller titel",
+      "mspAlsoAssigned": "MSP också tilldelad",
+      "unavailableWorkspace": "Unavailable workspace",
+      "reset": "Reset"
+    },
+    "projects": {
+      "assignment": {
+        "title": "MSP-tilldelning",
+        "unassigned": "Inte tilldelad till MSP:n",
+        "kind": "Tilldela till",
+        "user": "Tekniker",
+        "team": "Team",
+        "assignee": "Ansvarig",
+        "more": "Fler ansvariga",
+        "assign": "Tilldela",
+        "clear": "Ta bort MSP-tilldelning"
+      }
+    },
+    "editor": {
+      "errors": {
+        "invalid": "Vissa värden är ogiltiga. Kontrollera dina ändringar och försök igen.",
+        "conflict": "Ärendet har ändrats. Ladda om det innan du sparar dina ändringar.",
+        "operationConflict": "Den här sparbegäran har redan använts för en annan ändring. Ladda om ärendet.",
+        "forbidden": "Din åtkomst till ärendet har ändrats. Ladda om för att fortsätta.",
+        "readOnly": "Den här arbetsytan är skrivskyddad. Ladda om för att se aktuellt tillstånd.",
+        "closeRules": "Ärendet måste uppfylla tavlans stängningskrav innan det kan stängas.",
+        "unknownOutcome": "Det gick inte att bekräfta om ändringen sparades. Försök spara igen, eller kasta ändringarna och ladda om.",
+        "slaSetupRequired": "Din MSP måste konfigurera sin SLA-policy och prioritetsmappning innan ärendet kan öppnas igen under MSP-ansvar."
+      }
     }
   },
   "common": {
