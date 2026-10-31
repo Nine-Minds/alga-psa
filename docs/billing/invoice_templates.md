@@ -87,6 +87,26 @@ The default recipient instruction is **Contact your service provider for a bille
 
 **Privacy and accounting.** Snapshots include only approved customer-visible work-item fields. Internal ticket comments and time-entry notes are excluded. Presentation does not change canonical charge descriptions, service/account mappings, or accounting exports.
 
+### Bundle Component Rows (Fixed Contract Lines)
+
+A Fixed contract line is persisted as one parent charge (quantity 1, no service) with a detail row per service. At generation a **presentation snapshot** is written to `invoice_charges.bundle_presentation` (JSONB, version 1). It holds names, raw configured quantities, the pricing basis (`unit` | `bundle`), order, service period, the detail ids and the previous-period quantity with a comparison marker. It holds **no amounts**; component money always comes from `invoice_charge_fixed_details.allocated_amount`.
+
+Items of a bundle expose `subtitle`, `hasComponents` and `components` (`name`, `quantity`, `quantityChange`, `pricingBasis`, `periodLabelStart`/`periodLabelEnd`, and `unitPrice`/`total` only when priced - see below). The parent keeps quantity 1 and rate = total, so templates that ignore `components` render exactly as before.
+
+**Rendering.** `dynamic-table.childRows` is a native renderer feature: `sourcePath`, `itemBinding`, per-column `cells` (`value`, `format`, `lines`, and a `change` value formatted `signed-number`, shown green for +N and red for −N), `parentBlankColumns` and `style`. The `daterange` path filter renders "start – end". `buildBundleChildRowsPreset` (`lib/invoice-template-ast/bundleChildRows.ts`) is the single definition used by the standard template and the designer's **Bundle component rows** section (Off / Quantities only / Quantities and prices, plus a change toggle). Hand-authored `childRows` round-trip through the designer unchanged and show as "Custom".
+
+**Standard template.** `standard-bundle-quantities` ("Standard Invoice With Bundle Quantities") shows title, a muted subtitle and the bundle total, then indented service rows with quantity and change. Existing standard templates are not changed.
+
+**Where the text comes from.** Contract lines have an optional *Invoice title* (`invoice_line_description`) and *Invoice subtitle* (`invoice_line_subtitle`), edited in the contract line editors and the Fixed-line wizard step, mirrored on `contract_template_lines` and copied when a template is cloned.
+
+**Previous period.** `+N`/`−N` compares each service with the same line's latest earlier billed period, read from invoice detail rows (snapshot quantity preferred, cancelled invoices and the current invoice ignored). A first invoice, or a period that cannot be compared, shows no change.
+
+**Price gating (client visibility).** The client portal serializes the view model to the browser, so prices are omitted from the data, not merely hidden. `templateUsesComponentPricing(ast)` is true only when the template binds `unitPrice` or `total` of a component; component prices are loaded for client-visible reads only then, and component rows only when `templateHasComponentRows(ast)`. MSP users always receive amounts. An unresolvable template fails closed (no component data). `Invoice.getInvoiceCharges` (shared with the REST `/items` endpoint and MCP) loads none of this unless a caller opts in via `InvoiceChargeLoadOptions`.
+
+**Draft preview.** `buildPreviewInvoiceForSelectionInputs({ consolidateFixedBundles: true })` folds a draft's Fixed charges into the same bundle shape; the Automatic Invoices dialog keeps its per-service operator view.
+
+Out of scope: inventory kits, non-Fixed lines, mid-period adjustment rows, and backfill of invoices generated before this feature (they have no snapshot and render as plain lines).
+
 ### Style Declaration Properties
 
 The `TemplateStyleDeclaration` supports:
@@ -158,6 +178,7 @@ There are two types of invoice layouts:
 | `standard-detailed` | Full branding + party blocks |
 | `standard-grouped` | Recurring / one-time sections |
 | `standard-invoice-by-location` | Per-location bands (address header, items, location subtotal) using the repeatable stack + `groupsByLocation` |
+| `standard-bundle-quantities` | Default layout plus Fixed-line bundle rows: title, muted subtitle, total, then indented service rows with quantity and +N/−N change (no component prices) |
 | `standard-invoice-by-ticket` | One primary table of eligible ticket rollups and retained charges using `ticketPresentationRows`; entry detail is optional |
 
 A parallel set exists for quotes (`standard-quote-default`, `standard-quote-detailed`, `standard-quote-by-location`).
