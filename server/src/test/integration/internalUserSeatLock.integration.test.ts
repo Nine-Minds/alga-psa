@@ -112,6 +112,46 @@ describe('internal user seat lock', () => {
     expect(Number(racerRows!.c)).toBe(1);
   }, 60_000);
 
+  it('race: concurrent UserService.update reactivations at limit=2/used=1 admit exactly one', async () => {
+    const tenant = await seedTenant({ limit: 2 });
+    await seedUser(tenant, 'existing@example.test');
+    const ids: string[] = [];
+    for (let i = 0; i < 4; i++) {
+      const email = `dormant${i}@example.test`;
+      await seedUser(tenant, email, true);
+      ids.push((await db('users').where({ tenant, email }).first('user_id')).user_id);
+    }
+    const results = await Promise.allSettled(ids.map((id) => runWithTenant(tenant, () => runAsSystem('seat-lock-test', async () =>
+      new UserService().update(id, { is_inactive: false } as any, createSystemContext(tenant))))));
+    const rejected = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+    console.log(`UPDATE RACE RESULT: ${results.length - rejected.length} succeeded, ${rejected.length} rejected`);
+    expect(results.length - rejected.length).toBe(1);
+    for (const r of rejected) expect(r.reason).toMatchObject({ code: 'LICENSE_LIMIT_REACHED' });
+    expect(await activeInternal(tenant)).toBe(2);
+  }, 60_000);
+
+  it('UserService.update refuses a client -> internal change at the limit; bulk activation is all-or-nothing', async () => {
+    const tenant = await seedTenant({ limit: 1 });
+    await seedUser(tenant, 'owner@example.test');
+    const clientEmail = 'portal@example.test';
+    await db('users').insert({
+      tenant, user_id: randomUUID(), username: clientEmail, email: clientEmail, first_name: 'T', last_name: 'U',
+      user_type: 'client', hashed_password: 'unused', is_inactive: false,
+    });
+    const clientId = (await db('users').where({ tenant, email: clientEmail }).first('user_id')).user_id;
+    await expect(runWithTenant(tenant, () => runAsSystem('seat-lock-test', async () =>
+      new UserService().update(clientId, { user_type: 'internal' } as any, createSystemContext(tenant)))))
+      .rejects.toMatchObject({ code: 'LICENSE_LIMIT_REACHED' });
+    expect(await activeInternal(tenant)).toBe(1);
+
+    await seedUser(tenant, 'dormant@example.test', true);
+    const dormantId = (await db('users').where({ tenant, email: 'dormant@example.test' }).first('user_id')).user_id;
+    await expect(runWithTenant(tenant, () => runAsSystem('seat-lock-test', async () =>
+      new UserService().bulkDeactivateUsers([dormantId], false, createSystemContext(tenant)))))
+      .rejects.toMatchObject({ code: 'LICENSE_LIMIT_REACHED' });
+    expect(await activeInternal(tenant)).toBe(1);
+  }, 60_000);
+
   it('honours reservedSeats (pending invitations count against the limit)', async () => {
     const tenant = await seedTenant({ limit: 3 });
     await seedUser(tenant, 'a@example.test');

@@ -40,7 +40,7 @@ import User from '@alga-psa/db/models/user';
 import Team from '@alga-psa/teams/models/team';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { logger } from '@alga-psa/core';
-import { assertInternalUserSeatsWithinLimit, checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../lib/internalUserLicenseGuard';
+import { assertInternalUserSeatsWithinLimit, checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected, lockInternalUserSeats } from '../lib/internalUserLicenseGuard';
 import { assertCoManagedSeatAdmission } from '@alga-psa/licensing';
 import { sanitizeUserForResponse, USER_RESPONSE_COLUMNS, USER_RESPONSE_FIELD_NAMES } from './userResponseSanitizer';
 
@@ -266,6 +266,11 @@ export class UserService extends BaseService<IUser> {
   /** Invitation signup retains the seat lock through account, roles and token consumption. */
   async createFromCoManagedInvitation(data: any, context: ServiceContext, trx: Knex.Transaction, token: string): Promise<IUser> {
     await this.ensurePermission(context, 'user', 'create');
+    // createUsingTransaction below skips the generic seat check for this
+    // path (co-managed admission replaces it), so the seat lock is taken here,
+    // explicitly and BEFORE the admission's row locks, rather than relying on
+    // the caller having locked. Re-taking it in the same trx is a no-op.
+    await lockInternalUserSeats(trx, context.tenant);
     const admission = await assertCoManagedSeatAdmission(trx, context.tenant, { email: data.email, invitationToken: token, kind: 'user' });
     if (!admission.managed || !admission.invitation || admission.invitation.role_id !== data.role_ids?.[0]) {
       throw new Error('Invalid or changed invitation');
@@ -403,7 +408,7 @@ export class UserService extends BaseService<IUser> {
       // Verify user exists and belongs to tenant
       const existingUser = await this.buildTenantScopedQuery(trx, context)
         .where({ user_id: id })
-        .select('user_id', 'email', 'user_type')
+        .select('user_id', 'email', 'user_type', 'is_inactive')
         .first();
 
       // Non-interactive principals are not managed through user management;
@@ -451,11 +456,30 @@ export class UserService extends BaseService<IUser> {
         }
       });
 
+      // A change that newly occupies an internal seat (reactivation, or
+      // client -> internal) is admitted like a new user: the guard takes the
+      // per-tenant seat lock and it is held through the write below.
+      const occupiesSeatNow = existingUser.user_type === 'internal' && existingUser.is_inactive === false;
+      const occupiesSeatAfter =
+        (data.user_type ?? existingUser.user_type) === 'internal'
+        && ((data as { is_inactive?: boolean }).is_inactive ?? existingUser.is_inactive) === false;
+      const takesNewSeat = occupiesSeatAfter && !occupiesSeatNow;
+      if (takesNewSeat) {
+        const licenseCheck = await checkInternalUserLicenseLimit(trx, context.tenant);
+        if (isInternalUserLicenseLimitRejected(licenseCheck)) {
+          throw new LicenseLimitError(licenseCheck.error, licenseCheck.code);
+        }
+      }
+
       // Update user
       const [updatedUser] = await this.buildTenantScopedQuery(trx, context)
         .where({ user_id: id })
         .update(updateData)
         .returning(USER_RESPONSE_FIELD_NAMES);
+
+      if (takesNewSeat) {
+        await assertInternalUserSeatsWithinLimit(trx, context.tenant);
+      }
 
       // Log user update activity
       await this.logUserActivity({
@@ -1115,6 +1139,26 @@ export class UserService extends BaseService<IUser> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      // Reactivating internal users occupies seats: admit them one at a time
+      // under the seat lock (each check sees the previous activation);
+      // an over-limit request fails the whole operation (the transaction rolls back).
+      if (!deactivate) {
+        const candidates = await this.restrictToInteractiveUsers(this.buildTenantScopedQuery(trx, context), false)
+          .whereIn('user_id', userIds)
+          .where({ user_type: 'internal', is_inactive: true })
+          .select('user_id');
+        for (const candidate of candidates) {
+          const licenseCheck = await checkInternalUserLicenseLimit(trx, context.tenant);
+          if (isInternalUserLicenseLimitRejected(licenseCheck)) {
+            throw new LicenseLimitError(licenseCheck.error, licenseCheck.code);
+          }
+          await this.buildTenantScopedQuery(trx, context)
+            .where({ user_id: candidate.user_id })
+            .update({ is_inactive: false, updated_at: knex.raw('now()') });
+          await assertInternalUserSeatsWithinLimit(trx, context.tenant);
+        }
+      }
+
       // Only interactive users are managed here; non-interactive ids are skipped.
       const result = await this.restrictToInteractiveUsers(this.buildTenantScopedQuery(trx, context), false)
         .whereIn('user_id', userIds)
