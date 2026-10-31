@@ -803,6 +803,35 @@ export const fetchInvoicesByContract = withAuth(async (
 });
 
 /**
+ * The one definition of "which template renders this client's invoices": the
+ * client's own assignment, else the tenant default, else the first template.
+ * Shared by the portal's template id lookup and the bundle price gate so the
+ * data a client receives always matches the template that renders it.
+ */
+async function resolveClientInvoiceTemplate(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  clientId: string | null | undefined,
+): Promise<{ templateId: string | null; templates: Awaited<ReturnType<typeof Invoice.getAllTemplates>> }> {
+  let assigned: string | null = null;
+  if (clientId) {
+    try {
+      const client = await tenantDb(knex, tenant).table('clients')
+        .select('invoice_template_id')
+        .where({ client_id: clientId, tenant })
+        .first();
+      assigned = client?.invoice_template_id ?? null;
+    } catch {
+      // Fall back to tenant default template selection below.
+    }
+  }
+  const templates = await Invoice.getAllTemplates(knex, tenant);
+  if (assigned) return { templateId: assigned, templates };
+  const defaultTemplate = templates.find((template) => template.is_default || template.isTenantDefault) ?? templates[0];
+  return { templateId: defaultTemplate?.template_id ?? null, templates };
+}
+
+/**
  * Bundle-component load options for an invoice read.
  *
  * Component names/quantities always load. Component *prices* are client-visible
@@ -817,17 +846,9 @@ async function resolveBundleLoadOptions(
   invoiceId: string,
 ): Promise<{ includeBundlePresentation: boolean; includeBundleComponentAmounts: boolean }> {
   if (user.user_type !== 'client') return decideBundleLoad('msp', null);
-  const db = tenantDb(knex, tenant);
-  const invoice = await db.table('invoices').where({ invoice_id: invoiceId }).first('client_id');
-  let templateId: string | null = null;
-  if (invoice?.client_id) {
-    const client = await db.table('clients').where({ client_id: invoice.client_id }).first('invoice_template_id');
-    templateId = client?.invoice_template_id ?? null;
-  }
-  const templates = await Invoice.getAllTemplates(knex, tenant);
-  const template = templateId
-    ? templates.find((entry) => entry.template_id === templateId)
-    : templates.find((entry) => entry.is_default || entry.isTenantDefault) ?? templates[0];
+  const invoice = await tenantDb(knex, tenant).table('invoices').where({ invoice_id: invoiceId }).first('client_id');
+  const { templateId, templates } = await resolveClientInvoiceTemplate(knex, tenant, invoice?.client_id);
+  const template = templates.find((entry) => entry.template_id === templateId);
   const ast = (template?.templateAst ?? null) as Parameters<typeof templateUsesComponentPricing>[0] | null;
   // Unknown/missing template fails closed; see decideBundleLoad.
   return decideBundleLoad('client', ast);
@@ -951,39 +972,16 @@ export const getResolvedInvoiceTemplateId = withAuth(async (
     return null;
   }
 
-  const db = tenantDb(knex, tenant);
-
-  const invoice = await db.table('invoices')
+  const invoice = await tenantDb(knex, tenant).table('invoices')
     .select('client_id')
-    .where({
-      invoice_id: invoiceId,
-      tenant
-    })
+    .where({ invoice_id: invoiceId, tenant })
     .first();
 
   if (!invoice?.client_id) {
     return null;
   }
 
-  try {
-    const client = await db.table('clients')
-      .select('invoice_template_id')
-      .where({
-        client_id: invoice.client_id,
-        tenant
-      })
-      .first();
-
-    if (client?.invoice_template_id) {
-      return client.invoice_template_id;
-    }
-  } catch {
-    // Fall back to tenant default template selection below.
-  }
-
-  const templates = await Invoice.getAllTemplates(knex, tenant);
-  const defaultTemplate = templates.find((template) => template.is_default || template.isTenantDefault) ?? templates[0];
-  return defaultTemplate?.template_id ?? null;
+  return (await resolveClientInvoiceTemplate(knex, tenant, invoice.client_id)).templateId;
 });
 
 export type InvoicePurchaseOrderSummary = {

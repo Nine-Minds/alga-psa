@@ -15,6 +15,7 @@ import { AccountingExportInvoiceSelector } from '@alga-psa/billing/services/acco
 import Invoice from '@alga-psa/billing/models/invoice';
 import { loadPreviousBundlePeriods } from '@alga-psa/billing/lib/invoiceBundleComponents';
 import { buildBundleComponents } from '@alga-psa/billing/lib/invoiceBundleComponents';
+import { buildBundleChildRowsPreset } from '@alga-psa/billing/lib/invoice-template-ast/bundleChildRows';
 
 
 /**
@@ -26,13 +27,14 @@ const { authRef, authWrapper } = vi.hoisted(() => {
   const ref = {
     tenantId: '11111111-1111-1111-1111-111111111111',
     userId: 'test-user',
+    extra: {} as Record<string, unknown>,
   };
   return {
     authRef: ref,
     authWrapper:
       (fn: (...args: any[]) => any) =>
       (...args: any[]) =>
-        fn({ user_id: ref.userId, tenant: ref.tenantId, roles: [] }, { tenant: ref.tenantId }, ...args),
+        fn({ user_id: ref.userId, tenant: ref.tenantId, roles: [], ...ref.extra }, { tenant: ref.tenantId }, ...args),
   };
 });
 
@@ -375,4 +377,82 @@ describe('invoice bundle component rows (DB)', () => {
     expect(previewItem.description).toBe(persistedParent.description);
     expect(preview.data.items.some((item: any) => String(item.description ?? '').startsWith('Contract:'))).toBe(false);
   }, HOOK_TIMEOUT);
+
+  describe('T010/T017: client price gate on the real read path', () => {
+    async function seedIssuedBundleInvoice(prefix: string) {
+      const { fixture, clientId, cycleIds } = await createClientWithCycles(`${prefix} Client`, [DEC, JAN, FEB]);
+      await createBundleLine(fixture, clientId, prefix);
+      const generated = unwrap(await generateInvoice(cycleIds[1]));
+      await table('invoices').where({ invoice_id: generated.invoice_id }).update({ status: 'sent', finalized_at: db.fn.now() });
+      return { clientId, invoiceId: generated.invoice_id as string };
+    }
+    const asClient = (clientId: string) => { authRef.extra = { user_type: 'client', clientId }; };
+    const asMsp = () => { authRef.extra = { user_type: 'internal' }; };
+    const componentsOf = (viewModel: any) => (viewModel.items ?? []).flatMap((item: any) => item.components ?? item.bundleComponents ?? []);
+
+    async function standardBundleTemplateId() {
+      const row = await tenantDb(db, '__test_tenant_fixture__')
+        .unscoped('standard_invoice_templates', 'look up seeded standard template')
+        .where({ standard_invoice_template_code: 'standard-bundle-quantities' }).first('template_id', 'templateAst');
+      expect(row, 'standard-bundle-quantities must be seeded by migration').toBeTruthy();
+      return row as { template_id: string; templateAst: any };
+    }
+
+    it('client on standard-bundle-quantities gets presentation but no prices (view model and dialog payload)', async () => {
+      setupCommonMocks({ tenantId, userId: authRef.userId, permissionCheck: () => true });
+      const { getEnrichedInvoiceViewModel, getInvoiceForRendering } = await import('@alga-psa/billing/actions/invoiceQueries');
+      const { clientId, invoiceId } = await seedIssuedBundleInvoice('T010a');
+      const standard = await standardBundleTemplateId();
+      await table('clients').where({ client_id: clientId }).update({ invoice_template_id: standard.template_id });
+
+      asClient(clientId);
+      const viewModel: any = await getEnrichedInvoiceViewModel(invoiceId);
+      const comps = componentsOf(viewModel);
+      expect(comps.length).toBeGreaterThan(0);
+      expect(comps.some((c: any) => c.name?.includes('Seats') && c.quantity === 5)).toBe(true);
+      const serialized = JSON.stringify(viewModel);
+      expect(serialized).not.toMatch(/"allocated_amount"|bundle_component_amounts/);
+      for (const c of comps) { expect(c).not.toHaveProperty('unitPrice'); expect(c).not.toHaveProperty('total'); }
+
+      const dialogPayload: any = await getInvoiceForRendering(invoiceId);
+      const charge = dialogPayload.invoice_charges.find((ch: any) => ch.bundle_presentation);
+      expect(charge, 'bundle_presentation must reach the client').toBeTruthy();
+      expect(JSON.stringify(dialogPayload)).not.toMatch(/bundle_component_amounts|allocated_amount/);
+    }, HOOK_TIMEOUT);
+
+    it('client on a price-binding template gets component prices; MSP always does', async () => {
+      setupCommonMocks({ tenantId, userId: authRef.userId, permissionCheck: () => true });
+      const { getEnrichedInvoiceViewModel, getInvoiceForRendering } = await import('@alga-psa/billing/actions/invoiceQueries');
+      const { clientId, invoiceId } = await seedIssuedBundleInvoice('T010b');
+      const standard = await standardBundleTemplateId();
+      const ast = JSON.parse(JSON.stringify(standard.templateAst));
+      const visit = (node: any) => {
+        if (!node || typeof node !== 'object') return;
+        if (node.type === 'dynamic-table' && node.childRows) node.childRows = buildBundleChildRowsPreset({ prices: true, showChange: true });
+        Object.values(node).forEach(visit);
+      };
+      visit(ast);
+      const pricedId = uuidv4();
+      await table('invoice_templates').insert({
+        tenant: tenantId, template_id: pricedId, name: `Priced ${pricedId.slice(0, 6)}`, version: 1, is_default: false, templateAst: JSON.stringify(ast),
+      });
+      await table('clients').where({ client_id: clientId }).update({ invoice_template_id: pricedId });
+
+      asClient(clientId);
+      const priced: any = await getEnrichedInvoiceViewModel(invoiceId);
+      const pricedComps = componentsOf(priced);
+      expect(pricedComps.length).toBeGreaterThan(0);
+      expect(pricedComps.every((c: any) => typeof c.total === 'number')).toBe(true);
+      expect(Math.round(pricedComps.reduce((sum: number, c: any) => sum + c.total, 0))).toBe(100000);
+
+      // Same client but quantity-only template again: MSP still gets everything.
+      await table('clients').where({ client_id: clientId }).update({ invoice_template_id: standard.template_id });
+      asMsp();
+      const msp: any = await getEnrichedInvoiceViewModel(invoiceId);
+      expect(componentsOf(msp).every((c: any) => typeof c.total === 'number')).toBe(true);
+      const mspDialog: any = await getInvoiceForRendering(invoiceId);
+      expect(mspDialog.invoice_charges.find((ch: any) => ch.bundle_component_amounts)).toBeTruthy();
+      authRef.extra = {};
+    }, HOOK_TIMEOUT);
+  });
 });
