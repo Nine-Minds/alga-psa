@@ -1,3 +1,4 @@
+import { isEmailInboundProductCode } from '../productAccess';
 import { NextRequest, NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
@@ -57,8 +58,7 @@ interface MicrosoftWebhookPayload {
 
 async function assertTenantEmailProductAccess(trx: any, tenantId: string): Promise<void> {
   const tenant = await tenantDb(trx, tenantId).table('tenants').first('product_code');
-  const productCode = typeof tenant?.product_code === 'string' ? tenant.product_code : 'psa';
-  if (productCode !== 'psa' && productCode !== 'algadesk') {
+  if (!isEmailInboundProductCode(tenant?.product_code)) {
     throw new Error(`Product access denied for tenant ${tenantId}`);
   }
 }
