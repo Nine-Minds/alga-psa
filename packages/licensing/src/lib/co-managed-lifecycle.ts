@@ -8,7 +8,7 @@
  */
 import type { Knex } from 'knex';
 import { admitWrite, tenantDb, withTransaction } from '@alga-psa/db';
-import { getCoManagedEntitlementState } from './co-managed-entitlements';
+import { getCoManagedEntitlementState, GRACE_MS } from './co-managed-entitlements';
 
 export {
   CoManagedLifecycleError,
@@ -157,6 +157,77 @@ async function readState(trx: Knex.Transaction, tenant: string): Promise<CoManag
   const entitlement = await getCoManagedEntitlementState(trx, found.sponsor_tenant);
   if (entitlement.isReadOnly) return { state: 'read_only', canWrite: false, graceEndsAt: entitlement.graceEndsAt };
   return { state: entitlement.graceEndsAt ? 'grace' : 'active', canWrite: true, graceEndsAt: entitlement.graceEndsAt };
+}
+
+// ---------------------------------------------------------------------------
+// Licence lapse (CM L7a): grace -> read_only, as a pure function of durable inputs.
+//
+// A lapse is a stored timestamp (`co_managed_entitlements.lapse_started_at`), never a timer. The
+// deadline is `lapse_started_at + GRACE_MS`; the phase at any instant is a pure function of that
+// timestamp and a clock the caller injects, so tests and the lock-free reader share one rule and
+// nothing ever waits on wall-clock time. Renewal clears `lapse_started_at` (entitlement
+// materialization), which returns the phase to `none`.
+// ---------------------------------------------------------------------------
+
+export type CoManagedLapsePhase = 'none' | 'grace' | 'read_only';
+
+export interface CoManagedLapseInput {
+  /** `lapse_started_at`; null/undefined when the entitlement is healthy. */
+  lapseStartedAt: Date | string | null | undefined;
+  /** Injected clock. */
+  now: Date;
+}
+
+/** The durable grace deadline for a lapse that started at `lapseStartedAt`. */
+export function coManagedGraceDeadline(lapseStartedAt: Date | string): Date {
+  return new Date(new Date(lapseStartedAt).getTime() + GRACE_MS);
+}
+
+export function resolveCoManagedLapse(input: CoManagedLapseInput): { phase: CoManagedLapsePhase; graceEndsAt: string | null } {
+  if (!input.lapseStartedAt) return { phase: 'none', graceEndsAt: null };
+  const deadline = coManagedGraceDeadline(input.lapseStartedAt);
+  return { phase: deadline.getTime() <= input.now.getTime() ? 'read_only' : 'grace', graceEndsAt: deadline.toISOString() };
+}
+
+/** Operational state implied by an active, allocated relationship at a lapse phase. */
+export function coManagedStateForLapse(lapse: { phase: CoManagedLapsePhase; graceEndsAt: string | null }): CoManagedOperationalState {
+  if (lapse.phase === 'read_only') return { state: 'read_only', canWrite: false, graceEndsAt: lapse.graceEndsAt };
+  if (lapse.phase === 'grace') return { state: 'grace', canWrite: true, graceEndsAt: lapse.graceEndsAt };
+  return { state: 'active', canWrite: true, graceEndsAt: null };
+}
+
+/**
+ * Lock-free lifecycle read for the L0c write-admission resolver and for page-level "is this
+ * workspace read-only" probes. It mirrors `readState` but takes no row lock and writes nothing,
+ * and it reads the durable lapse columns instead of re-materializing the entitlement (which
+ * locks and may write). It may therefore be briefly staler than the in-transaction provider
+ * (L0c caps that staleness at its decision TTL); the exact, lock-ordered answer remains with the
+ * provider. Never call this for a tenant that is not co-managed: it answers `independent` after
+ * one `tenants` read, and the L0c cache keeps plain PSA tenants from ever reaching it.
+ */
+export async function readCoManagedLifecycleLockFree(
+  db: Knex, tenant: string, now: () => Date = () => new Date(),
+): Promise<CoManagedOperationalState> {
+  if (!tenant) throw new Error('A tenant is required for lifecycle admission');
+  const customer = tenantDb(db, tenant);
+  const workspace = await customer.table('tenants').first('product_code');
+  if (!workspace || workspace.product_code !== 'co_managed') return INDEPENDENT;
+  const relationship = await customer.table('co_management_relationships').whereNull('ended_at').first();
+  if (!relationship || relationship.state === 'terminated') return { state: 'terminated', canWrite: false, graceEndsAt: null };
+  if (relationship.state !== 'active') return { state: 'pending_acceptance', canWrite: false, graceEndsAt: null };
+  const sponsor = tenantDb(db, relationship.sponsor_tenant);
+  const allocation = await sponsor.table('co_managed_allocations').where({
+    customer_tenant: tenant, relationship_id: relationship.relationship_id, state: 'active',
+  }).first('allocation_id');
+  if (!allocation) return { state: 'read_only', canWrite: false, graceEndsAt: null };
+  const entitlement = await sponsor.table('co_managed_entitlements').first('lapse_started_at', 'valid_until');
+  // No entitlement row: capacity is zero, which `getCoManagedEntitlementState` also reports as read-only.
+  if (!entitlement) return { state: 'read_only', canWrite: false, graceEndsAt: null };
+  const at = now();
+  // An entitlement that expired but has not been re-materialized yet lapses at its expiry.
+  const expired = entitlement.valid_until && new Date(entitlement.valid_until).getTime() <= at.getTime();
+  const lapseStartedAt = entitlement.lapse_started_at ?? (expired ? entitlement.valid_until : null);
+  return coManagedStateForLapse(resolveCoManagedLapse({ lapseStartedAt, now: at }));
 }
 
 // Only stable negative answers can be cached across requests. Pending state can

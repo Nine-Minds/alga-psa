@@ -33,6 +33,7 @@ vi.mock('@alga-psa/db', () => ({
 
 const entitlement = vi.hoisted(() => ({ state: { capacity: 5, allocated: 1, available: 4, canGrow: true, isReadOnly: false, graceEndsAt: null as string | null } }));
 vi.mock('./co-managed-entitlements', () => ({
+  GRACE_MS: 30 * 86_400_000,
   getCoManagedEntitlementState: async () => { sql.log.push('entitlement-state'); return entitlement.state; },
 }));
 
@@ -180,5 +181,28 @@ describe('readState', () => {
     seed('co_managed', 'active');
     sql.tables.co_managed_allocations = [];
     expect(await getCoManagedOperationalState(db, customer)).toMatchObject({ state: 'read_only', canWrite: false });
+  });
+});
+
+describe('licence lapse state machine (CM L7a, injected clock)', () => {
+  const DAY = 86_400_000;
+  const start = new Date('2026-10-01T00:00:00Z');
+
+  it('is healthy without a lapse, then grace, then read-only at the durable deadline', async () => {
+    const { resolveCoManagedLapse, coManagedStateForLapse, coManagedGraceDeadline } = await import('./co-managed-lifecycle');
+    expect(coManagedStateForLapse(resolveCoManagedLapse({ lapseStartedAt: null, now: start })).state).toBe('active');
+    const during = coManagedStateForLapse(resolveCoManagedLapse({ lapseStartedAt: start, now: new Date(start.getTime() + 29 * DAY) }));
+    expect(during).toMatchObject({ state: 'grace', canWrite: true });
+    const deadline = coManagedGraceDeadline(start);
+    expect(deadline.getTime()).toBe(start.getTime() + 30 * DAY);
+    const at = coManagedStateForLapse(resolveCoManagedLapse({ lapseStartedAt: start, now: deadline }));
+    expect(at).toMatchObject({ state: 'read_only', canWrite: false, graceEndsAt: deadline.toISOString() });
+  });
+
+  it('renewal (lapse cleared) restores writes', async () => {
+    const { resolveCoManagedLapse, coManagedStateForLapse } = await import('./co-managed-lifecycle');
+    const late = new Date(start.getTime() + 60 * DAY);
+    expect(coManagedStateForLapse(resolveCoManagedLapse({ lapseStartedAt: start, now: late })).canWrite).toBe(false);
+    expect(coManagedStateForLapse(resolveCoManagedLapse({ lapseStartedAt: null, now: late }))).toMatchObject({ state: 'active', canWrite: true });
   });
 });
