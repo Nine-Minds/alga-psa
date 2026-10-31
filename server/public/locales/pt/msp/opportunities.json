@@ -566,6 +566,17 @@
       "projectStatus": "Estado inicial",
       "projectTemplate": "Crie um projeto de integração (opcional)",
       "title": "Marcar como ganha"
+    },
+    "declare": {
+      "title": "Mover para {{stage}}",
+      "sourceLabel": "Fonte de apoio",
+      "noSource": "Sem fonte",
+      "sourceHelp": "Opcional. Cite uma interação ou documento desta oportunidade. Se não estiver listado, anexe primeiro o documento à oportunidade.",
+      "submit": "Declarar",
+      "source": "Fonte",
+      "sourceRemoved": "Fonte removida",
+      "interactionFallback": "Interação",
+      "documentFallback": "Documento"
     }
   }
 }

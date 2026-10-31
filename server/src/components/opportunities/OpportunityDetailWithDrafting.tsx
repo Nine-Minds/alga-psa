@@ -1,6 +1,11 @@
 'use client';
 
+import { useCallback } from 'react';
 import { OpportunityDetailHost } from '@alga-psa/opportunities/components';
+// Components/actions subpaths only (see OpportunityInteractionsSection).
+import { InteractionDetails } from '@alga-psa/clients/components';
+import { getInteractionById } from '@alga-psa/clients/actions';
+import { useDrawer } from '@alga-psa/ui';
 import type { IOpportunityDetail } from '@alga-psa/types';
 import {
   generateFollowUpDraft,
@@ -28,9 +33,23 @@ export function OpportunityDetailWithDrafting({
   autoOpenDraft?: boolean;
   returnTab?: string;
 }) {
+  const { openDrawer } = useDrawer();
+  // Same drawer the Notes & interactions feed opens; a cited interaction that
+  // has since been deleted simply doesn't open (the rung already says so).
+  const openInteraction = useCallback(async (interactionId: string) => {
+    try {
+      const interaction = await getInteractionById(interactionId);
+      if (!interaction || 'error' in (interaction as object)) return;
+      openDrawer(<InteractionDetails interaction={interaction as any} />);
+    } catch {
+      // Deleted or unreadable: nothing to open.
+    }
+  }, [openDrawer]);
+
   return (
     <OpportunityDetailHost
       detail={detail}
+      onOpenInteraction={openInteraction}
       autoOpenDraft={autoOpenDraft}
       returnTab={returnTab}
       commitments={managementAvailable ? <OpportunityCommitmentsSection detail={detail} /> : undefined}

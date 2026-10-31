@@ -130,6 +130,13 @@ const declaredCheckpointSchema: z.ZodType<Exclude<OpportunityStage, 'won' | 'los
 export const recordDeclaredEvidenceSchema = z.object({
   checkpoint: declaredCheckpointSchema,
   detail: z.string().trim().optional().nullable(),
+  // Both or neither. The type is validated here for shape only; the engine's
+  // guard decides whether the source belongs to the opportunity.
+  refType: z.string().trim().min(1).optional().nullable(),
+  refId: z.string().uuid().optional().nullable(),
+}).refine((value) => (value.refType == null) === (value.refId == null), {
+  message: 'A cited source needs both a type and an id',
+  path: ['refId'],
 });
 
 export const completeNextActionSchema = z.object({

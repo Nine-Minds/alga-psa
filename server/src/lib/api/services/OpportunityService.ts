@@ -72,6 +72,9 @@ export interface OpportunityListOptions extends ListOptions, OpportunityListFilt
 function throwOpportunityApiError(error: unknown): never {
   if (!(error instanceof Error)) throw error;
 
+  // Matched by name: a cited source that is not this deal's is a client error.
+  if (error.name === 'OpportunityEvidenceRefError') throw new ValidationError(error.message);
+
   if ([
     'Opportunity not found',
     'Quote not found',
@@ -595,6 +598,8 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
       data.checkpoint,
       context.userId,
       data.detail,
+      // Optional citation; omitted keeps the call shape existing consumers get.
+      data.refType != null && data.refId != null ? { type: data.refType, id: data.refId } as { type: 'interaction' | 'document'; id: string } : undefined,
     )).catch(throwOpportunityApiError);
   }
 
