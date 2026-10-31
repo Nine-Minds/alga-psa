@@ -380,6 +380,7 @@ const TENANT_TABLE_METADATA = {
   projects: { scope: 'tenant' },
   project_tasks: { scope: 'tenant' },
   quote_activities: { scope: 'tenant' },
+  quote_decisions: { scope: 'tenant' },
   quote_document_template_assignments: { scope: 'tenant' },
   quote_document_templates: { scope: 'tenant' },
   quotes: { scope: 'tenant' },

@@ -19,6 +19,9 @@ const getByIdMock = vi.fn();
 const updateQuoteMock = vi.fn();
 const createQuoteActivityMock = vi.fn();
 const recalculateQuoteFinancialsMock = vi.fn();
+const onQuoteAcceptedMock = vi.fn();
+const updateIfStatusMock = vi.fn();
+let quoteDecisionInsertLog: Array<Record<string, unknown>>;
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth:
@@ -49,7 +52,12 @@ vi.mock('@alga-psa/billing/models/quote', () => ({
     listByClient: (...args: any[]) => listByClientMock(...args),
     getById: (...args: any[]) => getByIdMock(...args),
     update: (...args: any[]) => updateQuoteMock(...args),
+    updateIfStatus: (...args: any[]) => updateIfStatusMock(...args),
   },
+}));
+
+vi.mock('@alga-psa/opportunities/lib/quoteLifecycleHooks', () => ({
+  onQuoteAccepted: (...args: any[]) => onQuoteAcceptedMock(...args),
 }));
 
 vi.mock('@alga-psa/billing/models/quoteActivity', () => ({
@@ -58,7 +66,14 @@ vi.mock('@alga-psa/billing/models/quoteActivity', () => ({
   },
 }));
 
-vi.mock('@alga-psa/billing/services', () => ({
+// The decision service imports the calculation service directly, not via the barrel.
+vi.mock('../../../../billing/src/services/quoteCalculationService', () => ({
+  recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
+}));
+
+vi.mock('@alga-psa/billing/services', async () => ({
+  // Real decision service + portal access rule; only the collaborators below are doubles.
+  ...(await import('../../../../billing/src/services/quoteDecisionService')),
   recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
   resolveQuoteItemTaxesIfIncluded: async () =>
     new Map([
@@ -191,6 +206,25 @@ function buildTrx() {
         return chain;
       }
 
+      if (table === 'users') {
+        const chain: any = {};
+        chain.where = vi.fn(() => chain);
+        chain.select = vi.fn(() => chain);
+        chain.first = vi.fn(async () => ({ user_id: currentUser.user_id, contact_id: currentUser.contact_id }));
+        return chain;
+      }
+
+      if (table === 'quote_decisions') {
+        return {
+          insert: vi.fn((row: Record<string, unknown>) => ({
+            returning: vi.fn(async () => {
+              quoteDecisionInsertLog.push(row);
+              return [{ decision_id: `decision-${quoteDecisionInsertLog.length}` }];
+            }),
+          })),
+        };
+      }
+
       if (table === 'quote_items') {
         return {
           where: vi.fn((criteria: Record<string, unknown>) => ({
@@ -289,6 +323,7 @@ describe('client quote billing actions', () => {
     quoteActivityLog = [];
     quoteItemUpdateLog = [];
     rawQuoteUpdateLog = [];
+    quoteDecisionInsertLog = [];
     tenantScopeLog = [];
 
     getConnectionMock.mockResolvedValue({ tenant: 'tenant-1' });
@@ -305,6 +340,14 @@ describe('client quote billing actions', () => {
     updateQuoteMock.mockImplementation(async (_db: any, _tenant: string, quoteId: string, payload: Record<string, unknown>) => {
       const quote = quoteStore[quoteId];
       if (!quote) {
+        return null;
+      }
+      Object.assign(quote, payload);
+      return clone(quote);
+    });
+    updateIfStatusMock.mockImplementation(async (_db: any, _tenant: string, quoteId: string, expected: string, payload: Record<string, unknown>) => {
+      const quote = quoteStore[quoteId];
+      if (!quote || quote.status !== expected) {
         return null;
       }
       Object.assign(quote, payload);
@@ -461,6 +504,80 @@ describe('client quote billing actions', () => {
     );
   });
 
+  it('golden: portal accept writes the exact pre-refactor activity, calls the hook once, and audits method=portal', async () => {
+    const { acceptClientQuote } = await import('./client-billing');
+
+    const acceptedQuote = await acceptClientQuote('quote-1', ['item-optional']);
+
+    expect(quoteActivityLog).toEqual([
+      {
+        quote_id: 'quote-1',
+        activity_type: 'accepted',
+        description: 'Quote accepted by client for MSP review',
+        performed_by: 'portal-user-1',
+        metadata: {
+          selected_optional_quote_item_ids: ['item-optional'],
+          deselected_optional_quote_item_ids: [],
+        },
+      },
+    ]);
+    expect(updateIfStatusMock).toHaveBeenCalledWith(
+      expect.anything(), 'tenant-1', 'quote-1', 'sent',
+      { status: 'accepted', accepted_at: expect.any(String), accepted_by: 'portal-user-1', updated_by: 'portal-user-1' }
+    );
+    expect(onQuoteAcceptedMock).toHaveBeenCalledTimes(1);
+    expect(onQuoteAcceptedMock).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ quote_id: 'quote-1', status: 'accepted' }));
+    expect(acceptedQuote.quote_id).toBe('quote-1');
+    expect(quoteDecisionInsertLog).toHaveLength(1);
+    expect(quoteDecisionInsertLog[0]).toMatchObject({
+      tenant: 'tenant-1', quote_id: 'quote-1', decision: 'accepted', method: 'portal',
+      actor_user_id: 'portal-user-1', contact_id: null, link_id: null,
+    });
+  });
+
+  it('golden: portal reject writes the exact pre-refactor activity and never fires the accepted hook', async () => {
+    const { rejectClientQuote } = await import('./client-billing');
+
+    await rejectClientQuote('quote-1', '  Budget is not approved yet.  ');
+
+    expect(quoteActivityLog).toEqual([
+      {
+        quote_id: 'quote-1',
+        activity_type: 'rejected',
+        description: 'Quote rejected by client',
+        performed_by: 'portal-user-1',
+        metadata: { rejection_reason: 'Budget is not approved yet.' },
+      },
+    ]);
+    expect(updateIfStatusMock).toHaveBeenCalledWith(
+      expect.anything(), 'tenant-1', 'quote-1', 'sent',
+      { status: 'rejected', rejected_at: expect.any(String), rejection_reason: 'Budget is not approved yet.', updated_by: 'portal-user-1' }
+    );
+    expect(onQuoteAcceptedMock).not.toHaveBeenCalled();
+    expect(quoteDecisionInsertLog[0]).toMatchObject({ decision: 'rejected', method: 'portal', comment: 'Budget is not approved yet.' });
+  });
+
+  it('golden: a decided or foreign quote writes nothing and keeps the portal error strings', async () => {
+    const { acceptClientQuote } = await import('./client-billing');
+
+    await expect(acceptClientQuote('quote-2', [])).resolves.toEqual({
+      actionError: 'Quote is not in a valid state for this action',
+      messageKey: 'client-portal:errors.billing.quoteInvalidState',
+    });
+    await expect(acceptClientQuote('quote-other-client', [])).resolves.toEqual({
+      actionError: 'Quote not found or access denied',
+      messageKey: 'client-portal:errors.billing.quoteNotFound',
+    });
+    billingPermissionGranted = false;
+    await expect(acceptClientQuote('quote-1', [])).resolves.toEqual({
+      permissionError: 'Unauthorized to access quote data',
+      messageKey: 'client-portal:errors.access.quoteData',
+    });
+    expect(quoteActivityLog).toEqual([]);
+    expect(quoteDecisionInsertLog).toEqual([]);
+    expect(onQuoteAcceptedMock).not.toHaveBeenCalled();
+  });
+
   it('T101: first client quote view stamps viewed_at and logs activity', async () => {
     const { getClientQuoteById } = await import('./client-billing');
 
@@ -555,7 +672,8 @@ describe('client quote billing actions', () => {
       }, { tenant: 'tenant-1' })
     );
     const generateAndStore = vi.fn(async () => ({ file_id: 'new-pdf-file' }));
-    vi.doMock('@alga-psa/billing/services', () => ({
+    vi.doMock('@alga-psa/billing/services', async () => ({
+      ...(await import('../../../../billing/src/services/quoteDecisionService')),
       recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
       resolveQuoteItemTaxesIfIncluded: async () =>
         new Map([
@@ -595,7 +713,8 @@ describe('client quote billing actions', () => {
 
     // Mock the dynamic import of billing services — include recalculateQuoteFinancials
     // to avoid breaking other tests that depend on the same mock
-    vi.doMock('@alga-psa/billing/services', () => ({
+    vi.doMock('@alga-psa/billing/services', async () => ({
+      ...(await import('../../../../billing/src/services/quoteDecisionService')),
       recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
       resolveQuoteItemTaxesIfIncluded: async () =>
         new Map([

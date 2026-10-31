@@ -16,6 +16,7 @@ import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
 import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
+import { decideQuote } from '../services/quoteDecisionService';
 import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate, formatQuoteDate } from '../lib/quote-email-templates';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { mapLoadedQuoteToViewModel } from '../lib/adapters/quoteAdapters';
@@ -717,6 +718,7 @@ export const updateQuote = withAuth(async (
       const updated = await Quote.update(trx, tenant, quoteId, lifecyclePatch);
       if (updated.status === 'sent') await onQuoteSent(trx, updated);
       if (updated.status === 'accepted') {
+        // LEVERAGE: friction quote-decision-paths — a fourth accept path that bypasses decideQuote (no quote_decisions row, no conditional UPDATE, hook can double-fire); portal, MSP "mark accepted" and email-link accept all go through the service.
         await onQuoteAccepted(trx, updated);
       }
       return updated;
@@ -1620,41 +1622,26 @@ export const markQuoteAccepted = withAuth(async (
     throw new Error('Only sent quotes can be marked as accepted');
   }
 
-  const trimmedNote = note?.trim() || null;
   const actorUserId = getActorUserId(user);
-  const acceptedAt = new Date().toISOString();
+  if (!actorUserId) {
+    throw new Error('Permission denied: Cannot update quote');
+  }
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await Quote.update(trx, tenant, quoteId, {
-      status: 'accepted',
-      accepted_at: acceptedAt,
-      accepted_by: actorUserId,
-      updated_by: actorUserId,
-    });
+    const result = await decideQuote({
+      tenantId: tenant,
+      quoteId,
+      action: 'accept',
+      actor: { kind: 'msp_user', userId: actorUserId },
+      comment: note,
+    }, trx);
 
-    await QuoteActivity.create(trx, tenant, {
-      quote_id: quoteId,
-      activity_type: QUOTE_ACTIVITY_TYPES.accepted,
-      description: trimmedNote
-        ? `Quote marked as accepted by MSP on behalf of the client: ${trimmedNote}`
-        : 'Quote marked as accepted by MSP on behalf of the client',
-      performed_by: actorUserId,
-      metadata: {
-        accepted_via: 'msp',
-        accepted_by: actorUserId,
-        accepted_at: acceptedAt,
-        note: trimmedNote,
-      },
-    });
-
-    const acceptedQuote = await Quote.getById(trx, tenant, quoteId);
-    if (!acceptedQuote) {
-      throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+    if (result.status !== 'decided') {
+      // Somebody decided the quote between the status check above and the transition.
+      throw new Error('Only sent quotes can be marked as accepted');
     }
 
-    await onQuoteAccepted(trx, acceptedQuote);
-
-    return acceptedQuote;
+    return result.quote;
   });
   });
 });

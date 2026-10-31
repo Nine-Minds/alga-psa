@@ -14,6 +14,20 @@ export { ensureInvoiceEmailLinks } from './ensureInvoiceEmailLinks';
 export { BillingEngine } from '../lib/billing/billingEngine';
 export { recalculateQuoteFinancials, resolveQuoteItemTaxesIfIncluded } from './quoteCalculationService';
 export {
+  decideQuote,
+  authorizePortalUserForQuote,
+  type DecideQuoteInput,
+  type QuoteDecisionAction,
+  type QuoteDecisionActor,
+  type QuoteDecisionContext,
+  type QuoteDecisionForbiddenReason,
+  type QuoteDecisionMethod,
+  type QuoteDecisionResult,
+  type QuoteDecisionSelections,
+  type QuoteDecisionSigner,
+  type PortalQuoteAccessResult,
+} from './quoteDecisionService';
+export {
   PDFGenerationService,
   createPDFGenerationService,
   publishGeneratedDocumentsToClient,
