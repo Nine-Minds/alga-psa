@@ -230,6 +230,52 @@
       "termsAndConditions": "Allgemeine Geschäftsbedingungen",
       "total": "Gesamt",
       "validUntil": "Gültig bis"
+    },
+    "publicDecision": {
+      "accepted": {
+        "title": "Angebot angenommen",
+        "body": "Vielen Dank. Ihre Annahme wurde erfasst und wir wurden benachrichtigt."
+      },
+      "rejected": {
+        "title": "Angebot abgelehnt",
+        "body": "Ihre Antwort wurde erfasst und wir wurden benachrichtigt."
+      },
+      "already": {
+        "title": "Dieses Angebot wurde bereits beantwortet",
+        "accepted": "Dieses Angebot wurde am {{date}} angenommen.",
+        "rejected": "Dieses Angebot wurde am {{date}} abgelehnt."
+      },
+      "changed": {
+        "title": "Dieses Angebot hat sich geändert",
+        "body": "Dieses Angebot hat sich geändert, seit Sie es geöffnet haben. Bitte kontaktieren Sie uns."
+      },
+      "invalid": {
+        "title": "Dieser Link ist ungültig",
+        "body": "Dieser Link kann nicht mehr verwendet werden. Bitte bitten Sie den Absender um einen neuen."
+      },
+      "optionalItems": "Optionale Positionen",
+      "optionalHint": "Wählen Sie die gewünschten optionalen Positionen. Ihre Auswahl wird bei der Annahme übermittelt.",
+      "subtotal": "Zwischensumme",
+      "tax": "Steuer",
+      "total": "Gesamt",
+      "fullName": "Vollständiger Name",
+      "titleOptional": "Position (optional)",
+      "agreementVersion": "Vereinbarungsversion {{version}}",
+      "accept": "Angebot annehmen",
+      "reject": "Angebot ablehnen",
+      "submitting": "Wird gesendet...",
+      "rejectTitle": "Angebot ablehnen",
+      "rejectHint": "Teilen Sie uns mit, was geändert werden soll. Wir überarbeiten das Angebot gegebenenfalls und senden es erneut.",
+      "rejectConfirm": "Ablehnen",
+      "cancel": "Abbrechen",
+      "errors": {
+        "generic": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+        "nameRequired": "Bitte geben Sie Ihren vollständigen Namen ein.",
+        "agreementRequired": "Bitte bestätigen Sie die Vereinbarung, um dieses Angebot anzunehmen.",
+        "agreementOutdated": "Der Wortlaut der Vereinbarung wurde aktualisiert. Bitte laden Sie die Seite neu und versuchen Sie es erneut.",
+        "commentRequired": "Bitte fügen Sie einen kurzen Kommentar hinzu, bevor Sie dieses Angebot ablehnen.",
+        "tooLong": "Eine Ihrer Eingaben ist zu lang."
+      }
     }
   },
   "enums": {

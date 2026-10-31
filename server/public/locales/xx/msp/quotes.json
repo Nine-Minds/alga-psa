@@ -889,5 +889,17 @@
       "templateCannotBeAccepted": "⟦Ɋŭȯŧḗ ŧḗḿƥŀȧŧḗş ƈȧƞƞȯŧ ƀḗ ḿȧřķḗḓ ȧş ȧƈƈḗƥŧḗḓ⟧",
       "onlySentCanBeAccepted": "⟦Ȯƞŀẏ şḗƞŧ ʠŭȯŧḗş ƈȧƞ ƀḗ ḿȧřķḗḓ ȧş ȧƈƈḗƥŧḗḓ⟧"
     }
+  },
+  "quoteDecision": {
+    "accepted": {
+      "emailLink": "⟦Ȧƈƈḗƥŧḗḓ ƀẏ {{signer}} ṽīȧ ḗḿȧīŀ ŀīƞķ, {{date}}⟧",
+      "portal": "⟦Ȧƈƈḗƥŧḗḓ ƀẏ {{signer}} ṽīȧ ŧħḗ ƈŀīḗƞŧ ƥȯřŧȧŀ, {{date}}⟧",
+      "mspMarked": "⟦Ḿȧřķḗḓ ȧş ȧƈƈḗƥŧḗḓ ƀẏ ḾŞƤ ȯƞ ƀḗħȧŀƒ ȯƒ ŧħḗ ƈŀīḗƞŧ, {{date}}⟧"
+    },
+    "rejected": {
+      "emailLink": "⟦Řḗĵḗƈŧḗḓ ƀẏ {{signer}} ṽīȧ ḗḿȧīŀ ŀīƞķ, {{date}}⟧",
+      "portal": "⟦Řḗĵḗƈŧḗḓ ƀẏ {{signer}} ṽīȧ ŧħḗ ƈŀīḗƞŧ ƥȯřŧȧŀ, {{date}}⟧"
+    },
+    "title": "⟦({{title}})⟧"
   }
 }

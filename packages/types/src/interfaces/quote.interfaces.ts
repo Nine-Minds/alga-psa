@@ -88,6 +88,18 @@ export interface IQuoteActivity extends TenantEntity {
  */
 export type QuoteTermsBlockContent = Array<Record<string, unknown>>;
 
+/** Display projection of a quote_decisions row. */
+export interface IQuoteDecisionSummary {
+  decision_id: string;
+  decision: 'accepted' | 'rejected';
+  method: 'portal' | 'email_link' | 'msp_marked';
+  signer_name?: string | null;
+  signer_email?: string | null;
+  signer_title?: string | null;
+  comment?: string | null;
+  decided_at: ISO8601String;
+}
+
 export interface IQuote extends TenantEntity {
   quote_id: string;
   quote_number?: string | null;
@@ -122,6 +134,8 @@ export interface IQuote extends TenantEntity {
   accepted_at?: ISO8601String | null;
   accepted_by?: string | null;
   accepted_by_name?: string | null;
+  /** Decision audit rows, newest first (from quote_decisions). Populated by getQuote. */
+  decisions?: IQuoteDecisionSummary[];
   rejected_at?: ISO8601String | null;
   rejection_reason?: string | null;
   cancelled_at?: ISO8601String | null;

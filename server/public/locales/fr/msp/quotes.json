@@ -889,5 +889,17 @@
       "templateCannotBeAccepted": "Les modèles de devis ne peuvent pas être marqués comme acceptés",
       "onlySentCanBeAccepted": "Seuls les devis envoyés peuvent être marqués comme acceptés"
     }
+  },
+  "quoteDecision": {
+    "accepted": {
+      "emailLink": "Accepté par {{signer}} via le lien e-mail, {{date}}",
+      "portal": "Accepté par {{signer}} via le portail client, {{date}}",
+      "mspMarked": "Marqué comme accepté par le MSP au nom du client, {{date}}"
+    },
+    "rejected": {
+      "emailLink": "Refusé par {{signer}} via le lien e-mail, {{date}}",
+      "portal": "Refusé par {{signer}} via le portail client, {{date}}"
+    },
+    "title": "({{title}})"
   }
 }

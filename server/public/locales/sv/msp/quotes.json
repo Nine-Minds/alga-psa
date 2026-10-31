@@ -889,5 +889,17 @@
       "templateCannotBeAccepted": "Offertmallar kan inte markeras som accepterade",
       "onlySentCanBeAccepted": "Endast skickade offerter kan markeras som accepterade"
     }
+  },
+  "quoteDecision": {
+    "accepted": {
+      "emailLink": "Godkänd av {{signer}} via e-postlänk, {{date}}",
+      "portal": "Godkänd av {{signer}} via kundportalen, {{date}}",
+      "mspMarked": "Markerad som godkänd av MSP på kundens vägnar, {{date}}"
+    },
+    "rejected": {
+      "emailLink": "Avvisad av {{signer}} via e-postlänk, {{date}}",
+      "portal": "Avvisad av {{signer}} via kundportalen, {{date}}"
+    },
+    "title": "({{title}})"
   }
 }

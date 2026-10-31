@@ -16,7 +16,7 @@ import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
 import { resolveInvoiceBillingRecipient } from '../services/invoiceBillingRecipientService';
-import { decideQuote } from '../services/quoteDecisionService';
+import { decideQuote, listQuoteDecisions } from '../services/quoteDecisionService';
 import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate, formatQuoteDate } from '../lib/quote-email-templates';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { mapLoadedQuoteToViewModel } from '../lib/adapters/quoteAdapters';
@@ -765,6 +765,13 @@ export const getQuote = withAuth(async (
     } catch {
       // Non-blocking
     }
+  }
+
+  // Who signed comes from quote_decisions: an email-link signer has no users row.
+  try {
+    quote.decisions = await listQuoteDecisions(knex, tenant, quote.quote_id);
+  } catch {
+    // Non-blocking
   }
 
   return quote;

@@ -182,6 +182,7 @@ const apiKeySkipPaths = [
   '/api/inbound/',  // User-configurable inbound webhook receiver; auth per webhook config (HMAC / bearer / IP / path token)
   '/api/files/',   // File download routes use session auth
   '/api/share/',  // Public share link routes handle their own auth
+  '/api/quote-link/',  // Public quote email-link decision route; the token is re-verified in the handler
   '/api/ext/',  // Extension API routes handle their own auth
   '/api/ext-proxy/',
   '/api/ext-debug/',  // Extension debug stream uses session auth

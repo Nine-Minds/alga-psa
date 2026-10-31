@@ -15,6 +15,7 @@ export { BillingEngine } from '../lib/billing/billingEngine';
 export { recalculateQuoteFinancials, resolveQuoteItemTaxesIfIncluded } from './quoteCalculationService';
 export {
   decideQuote,
+  listQuoteDecisions,
   authorizePortalUserForQuote,
   type DecideQuoteInput,
   type QuoteDecisionAction,
@@ -167,3 +168,15 @@ export { LabelRenderError } from '../lib/label-batch/renderLabelBatchHtml';
 export type { LabelPrintItem } from '../lib/label-batch/renderLabelBatchHtml';
 export { LabelLayoutError } from '../lib/label-batch/layout';
 export type { LabelBatchLayout, OnePerPageLayout, GridLayout } from '../lib/label-batch/layout';
+
+export {
+  submitQuoteLinkDecision,
+  getCurrentQuoteAgreement,
+  hashQuoteAgreementText,
+  QUOTE_LINK_DECISION_LIMITS,
+  type QuoteAgreementDescriptor,
+  type QuoteLinkDecisionInput,
+  type QuoteLinkDecisionOutcome,
+  type QuoteLinkInputProblem,
+  type QuoteLinkRequestContext,
+} from './quoteLinkDecisionService';

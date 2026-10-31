@@ -230,6 +230,52 @@
       "termsAndConditions": "Conditions générales",
       "total": "Total",
       "validUntil": "Valable jusqu'au"
+    },
+    "publicDecision": {
+      "accepted": {
+        "title": "Devis accepté",
+        "body": "Merci. Votre acceptation a été enregistrée et nous en avons été informés."
+      },
+      "rejected": {
+        "title": "Devis refusé",
+        "body": "Votre réponse a été enregistrée et nous en avons été informés."
+      },
+      "already": {
+        "title": "Il a déjà été répondu à ce devis",
+        "accepted": "Ce devis a été accepté le {{date}}.",
+        "rejected": "Ce devis a été refusé le {{date}}."
+      },
+      "changed": {
+        "title": "Ce devis a été modifié",
+        "body": "Ce devis a été modifié depuis que vous l'avez ouvert. Veuillez nous contacter."
+      },
+      "invalid": {
+        "title": "Ce lien n'est pas valide",
+        "body": "Ce lien ne peut plus être utilisé. Veuillez demander un nouveau lien à l'expéditeur."
+      },
+      "optionalItems": "Éléments facultatifs",
+      "optionalHint": "Choisissez les éléments facultatifs souhaités. Votre choix est envoyé lors de l'acceptation.",
+      "subtotal": "Sous-total",
+      "tax": "Taxe",
+      "total": "Total",
+      "fullName": "Nom complet",
+      "titleOptional": "Fonction (facultatif)",
+      "agreementVersion": "Version de l'accord {{version}}",
+      "accept": "Accepter le devis",
+      "reject": "Refuser le devis",
+      "submitting": "Envoi en cours...",
+      "rejectTitle": "Refuser le devis",
+      "rejectHint": "Dites-nous ce qui doit changer. Nous pourrons réviser et renvoyer le devis.",
+      "rejectConfirm": "Refuser",
+      "cancel": "Annuler",
+      "errors": {
+        "generic": "Une erreur s'est produite. Veuillez réessayer.",
+        "nameRequired": "Veuillez saisir votre nom complet.",
+        "agreementRequired": "Veuillez confirmer l'accord pour accepter ce devis.",
+        "agreementOutdated": "Le texte de l'accord a été mis à jour. Veuillez recharger la page et réessayer.",
+        "commentRequired": "Veuillez ajouter un bref commentaire avant de refuser ce devis.",
+        "tooLong": "Une de vos saisies est trop longue."
+      }
     }
   },
   "enums": {

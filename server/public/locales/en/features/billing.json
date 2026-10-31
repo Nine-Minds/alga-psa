@@ -230,6 +230,52 @@
       "termsAndConditions": "Terms & Conditions",
       "total": "Total",
       "validUntil": "Valid Until"
+    },
+    "publicDecision": {
+      "accepted": {
+        "title": "Quote accepted",
+        "body": "Thank you. Your acceptance has been recorded and we have been notified."
+      },
+      "rejected": {
+        "title": "Quote rejected",
+        "body": "Your response has been recorded and we have been notified."
+      },
+      "already": {
+        "title": "This quote has already been answered",
+        "accepted": "This quote was accepted on {{date}}.",
+        "rejected": "This quote was rejected on {{date}}."
+      },
+      "changed": {
+        "title": "This quote has changed",
+        "body": "This quote has changed since you opened it. Please contact us."
+      },
+      "invalid": {
+        "title": "This link is not valid",
+        "body": "This link can no longer be used. Please contact the sender for a new one."
+      },
+      "optionalItems": "Optional items",
+      "optionalHint": "Choose the optional items you want. Your choices are sent when you accept.",
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "total": "Total",
+      "fullName": "Full name",
+      "titleOptional": "Title (optional)",
+      "agreementVersion": "Agreement version {{version}}",
+      "accept": "Accept quote",
+      "reject": "Reject quote",
+      "submitting": "Submitting...",
+      "rejectTitle": "Reject quote",
+      "rejectHint": "Tell us what needs to change. We may revise and resend the quote.",
+      "rejectConfirm": "Reject",
+      "cancel": "Cancel",
+      "errors": {
+        "generic": "Something went wrong. Please try again.",
+        "nameRequired": "Please type your full name.",
+        "agreementRequired": "Please confirm the agreement to accept this quote.",
+        "agreementOutdated": "The agreement wording has been updated. Please reload this page and try again.",
+        "commentRequired": "Please add a short comment before rejecting this quote.",
+        "tooLong": "One of your entries is too long."
+      }
     }
   },
   "quoteForm": {

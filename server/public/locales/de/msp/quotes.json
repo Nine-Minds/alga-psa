@@ -889,5 +889,17 @@
       "templateCannotBeAccepted": "Angebotsvorlagen können nicht als angenommen markiert werden",
       "onlySentCanBeAccepted": "Nur gesendete Angebote können als angenommen markiert werden"
     }
+  },
+  "quoteDecision": {
+    "accepted": {
+      "emailLink": "Angenommen von {{signer}} per E-Mail-Link, {{date}}",
+      "portal": "Angenommen von {{signer}} über das Kundenportal, {{date}}",
+      "mspMarked": "Vom MSP im Namen des Kunden als angenommen markiert, {{date}}"
+    },
+    "rejected": {
+      "emailLink": "Abgelehnt von {{signer}} per E-Mail-Link, {{date}}",
+      "portal": "Abgelehnt von {{signer}} über das Kundenportal, {{date}}"
+    },
+    "title": "({{title}})"
   }
 }

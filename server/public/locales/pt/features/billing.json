@@ -230,6 +230,52 @@
       "termsAndConditions": "Termos e condições",
       "total": "Total",
       "validUntil": "Válido até"
+    },
+    "publicDecision": {
+      "accepted": {
+        "title": "Orçamento aceito",
+        "body": "Obrigado. Sua aceitação foi registrada e fomos notificados."
+      },
+      "rejected": {
+        "title": "Orçamento rejeitado",
+        "body": "Sua resposta foi registrada e fomos notificados."
+      },
+      "already": {
+        "title": "Este orçamento já foi respondido",
+        "accepted": "Este orçamento foi aceito em {{date}}.",
+        "rejected": "Este orçamento foi rejeitado em {{date}}."
+      },
+      "changed": {
+        "title": "Este orçamento foi alterado",
+        "body": "Este orçamento foi alterado desde que você o abriu. Entre em contato conosco."
+      },
+      "invalid": {
+        "title": "Este link não é válido",
+        "body": "Este link não pode mais ser usado. Peça um novo ao remetente."
+      },
+      "optionalItems": "Itens opcionais",
+      "optionalHint": "Escolha os itens opcionais que deseja. Sua escolha é enviada ao aceitar.",
+      "subtotal": "Subtotal",
+      "tax": "Imposto",
+      "total": "Total",
+      "fullName": "Nome completo",
+      "titleOptional": "Cargo (opcional)",
+      "agreementVersion": "Versão do acordo {{version}}",
+      "accept": "Aceitar orçamento",
+      "reject": "Rejeitar orçamento",
+      "submitting": "Enviando...",
+      "rejectTitle": "Rejeitar orçamento",
+      "rejectHint": "Informe o que precisa mudar. Poderemos revisar e reenviar o orçamento.",
+      "rejectConfirm": "Rejeitar",
+      "cancel": "Cancelar",
+      "errors": {
+        "generic": "Algo deu errado. Tente novamente.",
+        "nameRequired": "Digite seu nome completo.",
+        "agreementRequired": "Confirme o acordo para aceitar este orçamento.",
+        "agreementOutdated": "O texto do acordo foi atualizado. Recarregue a página e tente novamente.",
+        "commentRequired": "Adicione um breve comentário antes de rejeitar este orçamento.",
+        "tooLong": "Um dos seus campos é longo demais."
+      }
     }
   },
   "quoteForm": {

@@ -11,7 +11,7 @@
  * written - which is what makes `onQuoteAccepted` fire exactly once.
  */
 import type { Knex } from 'knex';
-import type { IQuote, IQuoteItem, IUserWithRoles } from '@alga-psa/types';
+import type { IQuote, IQuoteDecisionSummary, IQuoteItem, IUserWithRoles } from '@alga-psa/types';
 import { getConnection, tenantDb, withTransaction } from '@alga-psa/db';
 import { onQuoteAccepted } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 import Quote from '../models/quote';
@@ -39,6 +39,8 @@ export interface QuoteDecisionContext {
   ip?: string | null;
   userAgent?: string | null;
   agreementTextHash?: string | null;
+  /** Version of the agreement wording the hash was computed from. */
+  agreementVersion?: string | null;
 }
 
 export interface QuoteDecisionSelections {
@@ -358,6 +360,7 @@ async function decideInTransaction(
           }
         : {}),
       agreement_text_hash: input.context?.agreementTextHash ?? null,
+      agreement_version: input.context?.agreementVersion ?? null,
       ip: input.context?.ip ?? null,
       user_agent: input.context?.userAgent ?? null,
       decided_at: decidedAt,
@@ -403,4 +406,23 @@ export async function decideQuote(
   }
   const knex = await getConnection(input.tenantId);
   return withTransaction(knex, (ownTrx: Knex.Transaction) => decideInTransaction(ownTrx, input));
+}
+
+/**
+ * The decision audit rows for a quote, newest first. This - not `quotes.accepted_by` -
+ * is the source for "who signed": a contact who accepted through an email link has no
+ * `users` row, so `accepted_by` is null for them.
+ */
+export async function listQuoteDecisions(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+): Promise<IQuoteDecisionSummary[]> {
+  const rows = await tenantDb(knexOrTrx, tenant).table('quote_decisions')
+    .where({ quote_id: quoteId })
+    .orderBy('decided_at', 'desc')
+    .select(
+      'decision_id', 'decision', 'method', 'signer_name', 'signer_email', 'signer_title', 'comment', 'decided_at',
+    ) as Array<Omit<IQuoteDecisionSummary, 'decided_at'> & { decided_at: Date | string }>;
+  return rows.map((row) => ({ ...row, decided_at: new Date(row.decided_at).toISOString() }));
 }

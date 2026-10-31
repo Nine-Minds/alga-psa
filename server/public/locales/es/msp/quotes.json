@@ -889,5 +889,17 @@
       "templateCannotBeAccepted": "Las plantillas de cotización no se pueden marcar como aceptadas",
       "onlySentCanBeAccepted": "Solo las cotizaciones enviadas se pueden marcar como aceptadas"
     }
+  },
+  "quoteDecision": {
+    "accepted": {
+      "emailLink": "Aceptado por {{signer}} mediante enlace de correo electrónico, {{date}}",
+      "portal": "Aceptado por {{signer}} a través del portal del cliente, {{date}}",
+      "mspMarked": "Marcado como aceptado por el MSP en nombre del cliente, {{date}}"
+    },
+    "rejected": {
+      "emailLink": "Rechazado por {{signer}} mediante enlace de correo electrónico, {{date}}",
+      "portal": "Rechazado por {{signer}} a través del portal del cliente, {{date}}"
+    },
+    "title": "({{title}})"
   }
 }

@@ -230,6 +230,52 @@
       "termsAndConditions": "Algemene voorwaarden",
       "total": "Totaal",
       "validUntil": "Geldig tot"
+    },
+    "publicDecision": {
+      "accepted": {
+        "title": "Offerte geaccepteerd",
+        "body": "Dank u. Uw acceptatie is vastgelegd en wij zijn op de hoogte gesteld."
+      },
+      "rejected": {
+        "title": "Offerte afgewezen",
+        "body": "Uw reactie is vastgelegd en wij zijn op de hoogte gesteld."
+      },
+      "already": {
+        "title": "Deze offerte is al beantwoord",
+        "accepted": "Deze offerte is geaccepteerd op {{date}}.",
+        "rejected": "Deze offerte is afgewezen op {{date}}."
+      },
+      "changed": {
+        "title": "Deze offerte is gewijzigd",
+        "body": "Deze offerte is gewijzigd sinds u hem opende. Neem contact met ons op."
+      },
+      "invalid": {
+        "title": "Deze link is ongeldig",
+        "body": "Deze link kan niet meer worden gebruikt. Vraag de afzender om een nieuwe."
+      },
+      "optionalItems": "Optionele items",
+      "optionalHint": "Kies de optionele items die u wilt. Uw keuze wordt verzonden wanneer u accepteert.",
+      "subtotal": "Subtotaal",
+      "tax": "Belasting",
+      "total": "Totaal",
+      "fullName": "Volledige naam",
+      "titleOptional": "Functie (optioneel)",
+      "agreementVersion": "Versie van de overeenkomst {{version}}",
+      "accept": "Offerte accepteren",
+      "reject": "Offerte afwijzen",
+      "submitting": "Bezig met verzenden...",
+      "rejectTitle": "Offerte afwijzen",
+      "rejectHint": "Laat ons weten wat er moet veranderen. Mogelijk herzien we de offerte en sturen we die opnieuw.",
+      "rejectConfirm": "Afwijzen",
+      "cancel": "Annuleren",
+      "errors": {
+        "generic": "Er is iets misgegaan. Probeer het opnieuw.",
+        "nameRequired": "Typ uw volledige naam.",
+        "agreementRequired": "Bevestig de overeenkomst om deze offerte te accepteren.",
+        "agreementOutdated": "De tekst van de overeenkomst is bijgewerkt. Laad de pagina opnieuw en probeer het nogmaals.",
+        "commentRequired": "Voeg een korte opmerking toe voordat u deze offerte afwijst.",
+        "tooLong": "Een van uw invoeren is te lang."
+      }
     }
   },
   "enums": {

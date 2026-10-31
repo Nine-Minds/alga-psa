@@ -889,5 +889,17 @@
       "templateCannotBeAccepted": "Modelos de cotação não podem ser marcados como aceitos",
       "onlySentCanBeAccepted": "Somente cotações enviadas podem ser marcadas como aceitas"
     }
+  },
+  "quoteDecision": {
+    "accepted": {
+      "emailLink": "Aceito por {{signer}} por link de e-mail, {{date}}",
+      "portal": "Aceito por {{signer}} pelo portal do cliente, {{date}}",
+      "mspMarked": "Marcado como aceito pelo MSP em nome do cliente, {{date}}"
+    },
+    "rejected": {
+      "emailLink": "Rejeitado por {{signer}} por link de e-mail, {{date}}",
+      "portal": "Rejeitado por {{signer}} pelo portal do cliente, {{date}}"
+    },
+    "title": "({{title}})"
   }
 }
