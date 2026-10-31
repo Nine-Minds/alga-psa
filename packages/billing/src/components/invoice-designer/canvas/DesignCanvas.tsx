@@ -633,6 +633,37 @@ const resolveTotalsRowPreviewModel = (
   };
 };
 
+type CanvasBundleChildRows = {
+  sourcePath?: string;
+  itemBinding?: string;
+  parentBlankColumns?: string[];
+  cells?: Record<string, {
+    value?: { type?: string; path?: string };
+    format?: string;
+    lines?: Array<{ id?: string; value?: { path?: string }; supplemental?: boolean; style?: { inline?: React.CSSProperties } }>;
+    change?: { value?: { path?: string }; format?: string };
+  }>;
+};
+
+/** Resolve a `component.field[|daterange]` path against one sample component row. */
+const resolveCanvasComponentValue = (component: Record<string, unknown>, rawPath: string | undefined, binding: string): unknown => {
+  if (!rawPath) return undefined;
+  const [path, filter] = rawPath.split('|');
+  const field = path.startsWith(`${binding}.`) ? path.slice(binding.length + 1) : path;
+  if (filter === 'daterange') {
+    const start = component.periodLabelStart;
+    const end = component.periodLabelEnd;
+    return typeof start === 'string' && start ? (typeof end === 'string' && end ? `${start} – ${end}` : start) : undefined;
+  }
+  return component[field];
+};
+
+const formatCanvasSignedChange = (value: unknown): { text: string; positive: boolean } | null => {
+  const n = typeof value === 'number' ? value : Number.NaN;
+  if (!Number.isFinite(n) || n === 0) return null;
+  return n > 0 ? { text: `+${n}`, positive: true } : { text: `\u2212${Math.abs(n)}`, positive: false };
+};
+
 const renderTablePreview = (
   metadata: Record<string, unknown>,
   previewData: WasmInvoiceViewModel | null,
@@ -712,9 +743,18 @@ const renderTablePreview = (
         <div className="pt-1">
           {visibleRows.map((item, rowIndex) => {
             const rowKey = String(item.id ?? item.key ?? rowIndex);
+            const childRows = isRecord((metadata as { bundleChildRows?: unknown }).bundleChildRows)
+              ? ((metadata as { bundleChildRows: CanvasBundleChildRows }).bundleChildRows)
+              : null;
+            const childBinding = childRows?.itemBinding || 'component';
+            const sourceField = (childRows?.sourcePath || 'item.components').replace(/^item\./, '');
+            const components = childRows && Array.isArray((item as Record<string, unknown>)[sourceField])
+              ? ((item as Record<string, unknown>)[sourceField] as Array<Record<string, unknown>>)
+              : [];
+            const blankColumns = new Set(components.length > 0 ? childRows?.parentBlankColumns ?? [] : []);
             return (
+            <React.Fragment key={rowKey}>
             <div
-              key={rowKey}
                 className={clsx(
                   'grid gap-0',
                   borderConfig.rowDividers &&
@@ -723,6 +763,9 @@ const renderTablePreview = (
                 style={{ gridTemplateColumns: tableGridTemplateColumns }}
               >
               {visibleColumns.map((column, columnIndex) => {
+                if (blankColumns.has(String(column.id))) {
+                  return <span key={`${rowKey}-${String(column.id ?? column.key)}-blank`} className="px-1 py-0.5" />;
+                }
                 const key = asTrimmedString(column.key);
                 const type = normalizeFieldFormat(column.type);
                 const rowBinding = asTrimmedString(metadata.__astTableItemBinding) || 'item';
@@ -794,6 +837,53 @@ const renderTablePreview = (
                 );
               })}
             </div>
+            {components.map((component, componentIndex) => (
+              <div
+                key={`${rowKey}-component-${componentIndex}`}
+                data-testid="canvas-bundle-component-row"
+                className="grid gap-0 text-slate-600 dark:text-slate-400"
+                style={{ gridTemplateColumns: tableGridTemplateColumns }}
+              >
+                {visibleColumns.map((column) => {
+                  const cell = childRows?.cells?.[String(column.id)];
+                  const cellKey = `${rowKey}-component-${componentIndex}-${String(column.id ?? column.key)}`;
+                  const align = { textAlign: resolveTableColumnTextAlign(column) } as React.CSSProperties;
+                  if (!cell) return <span key={cellKey} className="px-1 py-0.5" />;
+                  const currency = previewData?.currencyCode ?? 'USD';
+                  const format = normalizeFieldFormat(cell.format ?? 'text');
+                  const change = formatCanvasSignedChange(resolveCanvasComponentValue(component, cell.change?.value?.path, childBinding));
+                  const lines = (cell.lines ?? [])
+                    .map((line, lineIndex) => {
+                      const raw = resolveCanvasComponentValue(component, line.value?.path, childBinding);
+                      const text = formatBoundValue(raw, 'text', currency, options.locale) ?? '';
+                      return { id: `${line.id ?? lineIndex}`, text, supplemental: Boolean(line.supplemental), style: line.style?.inline };
+                    })
+                    .filter((line) => line.text !== '');
+                  if (lines.length > 0) {
+                    return (
+                      <span key={cellKey} style={align} className="flex min-w-0 flex-col pl-4 pr-1 py-0.5">
+                        {lines.map((line) => (
+                          <span key={line.id} className="truncate" style={line.style}>{line.text}</span>
+                        ))}
+                      </span>
+                    );
+                  }
+                  const raw = resolveCanvasComponentValue(component, cell.value?.path, childBinding);
+                  const text = formatBoundValue(raw, format, currency, options.locale, options.dateFormat) ?? '';
+                  return (
+                    <span key={cellKey} style={align} className="truncate px-1 py-0.5">
+                      {text}
+                      {change && (
+                        <span className={clsx('ml-1 text-[9px] font-medium', change.positive ? 'text-green-600' : 'text-red-600')}>
+                          {change.text}
+                        </span>
+                      )}
+                    </span>
+                  );
+                })}
+              </div>
+            ))}
+            </React.Fragment>
             );
           })}
         </div>

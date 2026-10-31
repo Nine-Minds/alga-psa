@@ -2000,10 +2000,21 @@
       "off": "Disattivato",
       "quantities": "Solo quantità",
       "quantitiesAndPrices": "Quantità e prezzi",
-      "custom": "Personalizzato (importato)",
+      "custom": "Personalizzato",
       "showChange": "Mostra la variazione rispetto al periodo precedente (+N / −N)",
       "pricesNote": "I prezzi dei componenti sono inclusi nei dati di fattura di questo modello, anche per i clienti.",
-      "quantitiesNote": "Questo modello non espone i prezzi dei componenti ai clienti."
+      "quantitiesNote": "Questo modello non espone i prezzi dei componenti ai clienti.",
+      "blankOnBundle": "Vuoto nella riga del pacchetto",
+      "componentCells": "Celle delle righe componente",
+      "cellClear": "— Vuoto —",
+      "field": {
+        "name": "Nome del servizio",
+        "quantity": "Quantità",
+        "period": "Periodo del servizio",
+        "pricingBasis": "Base di prezzo",
+        "unitPrice": "Prezzo unitario",
+        "total": "Importo"
+      }
     }
   },
   "projectBilling": {

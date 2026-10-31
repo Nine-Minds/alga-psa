@@ -2050,10 +2050,21 @@
       "off": "Wyłączone",
       "quantities": "Tylko ilości",
       "quantitiesAndPrices": "Ilości i ceny",
-      "custom": "Niestandardowe (zaimportowane)",
+      "custom": "Niestandardowe",
       "showChange": "Pokaż zmianę względem poprzedniego okresu (+N / −N)",
       "pricesNote": "Ceny składników są zawarte w danych faktury tego szablonu, także dla klientów.",
-      "quantitiesNote": "Ten szablon nie udostępnia klientom cen składników."
+      "quantitiesNote": "Ten szablon nie udostępnia klientom cen składników.",
+      "blankOnBundle": "Puste w wierszu pakietu",
+      "componentCells": "Komórki wierszy komponentów",
+      "cellClear": "— Puste —",
+      "field": {
+        "name": "Nazwa usługi",
+        "quantity": "Ilość",
+        "period": "Okres usługi",
+        "pricingBasis": "Podstawa ceny",
+        "unitPrice": "Cena jednostkowa",
+        "total": "Kwota"
+      }
     }
   },
   "projectBilling": {

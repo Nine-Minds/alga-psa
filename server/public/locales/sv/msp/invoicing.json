@@ -2000,10 +2000,21 @@
       "off": "Av",
       "quantities": "Endast kvantiteter",
       "quantitiesAndPrices": "Kvantiteter och priser",
-      "custom": "Anpassad (importerad)",
+      "custom": "Anpassad",
       "showChange": "Visa ändring från föregående period (+N / −N)",
       "pricesNote": "Komponentpriser ingår i den här mallens fakturadata, även för kunder.",
-      "quantitiesNote": "Den här mallen visar inte komponentpriser för kunder."
+      "quantitiesNote": "Den här mallen visar inte komponentpriser för kunder.",
+      "blankOnBundle": "Tomt på paketraden",
+      "componentCells": "Celler för komponentrader",
+      "cellClear": "— Tom —",
+      "field": {
+        "name": "Tjänstenamn",
+        "quantity": "Antal",
+        "period": "Tjänsteperiod",
+        "pricingBasis": "Prisgrund",
+        "unitPrice": "Á-pris",
+        "total": "Belopp"
+      }
     }
   },
   "projectBilling": {

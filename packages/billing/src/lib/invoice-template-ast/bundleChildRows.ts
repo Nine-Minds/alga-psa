@@ -7,7 +7,56 @@ export interface BundleChildRowsPresetOptions {
   prices: boolean;
   /** Show the green +N / red −N change beside each quantity. */
   showChange: boolean;
+  /**
+   * Ids of the table's columns the cells attach to. Defaults match the
+   * standard templates; the designer passes the ids of the table's actual
+   * columns so a custom-built table gets working component rows too.
+   */
+  columnIds?: Partial<BundleColumnIds>;
 }
+
+export interface BundleColumnIds {
+  description: string;
+  quantity: string;
+  unitPrice: string;
+  total: string;
+}
+
+export const DEFAULT_BUNDLE_COLUMN_IDS: BundleColumnIds = {
+  description: 'description',
+  quantity: 'quantity',
+  unitPrice: 'unit-price',
+  total: 'line-total',
+};
+
+/** Which table column plays which role, judged by its binding key (falls back to the default ids). */
+export function resolveBundleColumnIds(columns: Array<{ id: string; key?: unknown }>): BundleColumnIds {
+  const byKey = (suffix: string, fallback: string) => {
+    const hit = columns.find((column) => typeof column.key === 'string' && column.key.replace(/^item\./, '') === suffix);
+    return hit?.id ?? fallback;
+  };
+  return {
+    description: byKey('description', DEFAULT_BUNDLE_COLUMN_IDS.description),
+    quantity: byKey('quantity', DEFAULT_BUNDLE_COLUMN_IDS.quantity),
+    unitPrice: byKey('unitPrice', DEFAULT_BUNDLE_COLUMN_IDS.unitPrice),
+    total: byKey('total', DEFAULT_BUNDLE_COLUMN_IDS.total),
+  };
+}
+
+/** Component fields an author can bind a column's component cell to. */
+export const BUNDLE_COMPONENT_CELL_FIELDS: ReadonlyArray<{
+  path: string;
+  format: 'text' | 'number' | 'currency';
+  /** Binding a money field is what exposes component prices to clients. */
+  priced: boolean;
+}> = [
+  { path: 'component.name', format: 'text', priced: false },
+  { path: 'component.quantity', format: 'number', priced: false },
+  { path: 'component.periodLabelStart|daterange', format: 'text', priced: false },
+  { path: 'component.pricingBasis', format: 'text', priced: false },
+  { path: 'component.unitPrice', format: 'currency', priced: true },
+  { path: 'component.total', format: 'currency', priced: true },
+];
 
 /**
  * The one definition of "bundle component rows" for a line-items table whose
@@ -16,6 +65,7 @@ export interface BundleChildRowsPresetOptions {
  * designer produces is exactly what ships.
  */
 export function buildBundleChildRowsPreset(options: BundleChildRowsPresetOptions): BundleChildRows {
+  const ids: BundleColumnIds = { ...DEFAULT_BUNDLE_COLUMN_IDS, ...(options.columnIds ?? {}) };
   const quantity: BundleChildRows['cells'][string] = {
     value: { type: 'path', path: 'component.quantity' },
     format: 'number',
@@ -26,9 +76,9 @@ export function buildBundleChildRowsPreset(options: BundleChildRowsPresetOptions
   return {
     sourcePath: 'item.components',
     itemBinding: 'component',
-    parentBlankColumns: options.prices ? [] : ['quantity', 'unit-price'],
+    parentBlankColumns: options.prices ? [] : [ids.quantity, ids.unitPrice],
     cells: {
-      description: {
+      [ids.description]: {
         value: { type: 'path', path: 'component.name' },
         lines: [
           { id: 'component-name', value: { type: 'path', path: 'component.name' } },
@@ -40,11 +90,11 @@ export function buildBundleChildRowsPreset(options: BundleChildRowsPresetOptions
           },
         ],
       },
-      quantity,
+      [ids.quantity]: quantity,
       ...(options.prices
         ? {
-            'unit-price': { value: { type: 'path' as const, path: 'component.unitPrice' }, format: 'currency' as const },
-            'line-total': { value: { type: 'path' as const, path: 'component.total' }, format: 'currency' as const },
+            [ids.unitPrice]: { value: { type: 'path' as const, path: 'component.unitPrice' }, format: 'currency' as const },
+            [ids.total]: { value: { type: 'path' as const, path: 'component.total' }, format: 'currency' as const },
           }
         : {}),
     },
@@ -52,12 +102,12 @@ export function buildBundleChildRowsPreset(options: BundleChildRowsPresetOptions
 }
 
 /** Which preset (if any) a table's childRows matches; 'custom' for hand-authored ones. */
-export function detectBundleChildRowsPreset(childRows: unknown): 'off' | 'quantities' | 'quantities-and-prices' | 'custom' {
+export function detectBundleChildRowsPreset(childRows: unknown, columnIds?: Partial<BundleColumnIds>): 'off' | 'quantities' | 'quantities-and-prices' | 'custom' {
   if (!childRows) return 'off';
   for (const showChange of [true, false]) {
     const candidates: Array<['quantities' | 'quantities-and-prices', boolean]> = [['quantities', false], ['quantities-and-prices', true]];
     for (const [name, prices] of candidates) {
-      if (JSON.stringify(childRows) === JSON.stringify(buildBundleChildRowsPreset({ prices, showChange }))) return name;
+      if (JSON.stringify(childRows) === JSON.stringify(buildBundleChildRowsPreset({ prices, showChange, columnIds }))) return name;
     }
   }
   return 'custom';

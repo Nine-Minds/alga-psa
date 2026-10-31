@@ -2000,10 +2000,21 @@
       "off": "Aus",
       "quantities": "Nur Mengen",
       "quantitiesAndPrices": "Mengen und Preise",
-      "custom": "Benutzerdefiniert (importiert)",
+      "custom": "Benutzerdefiniert",
       "showChange": "Änderung zur Vorperiode anzeigen (+N / −N)",
       "pricesNote": "Komponentenpreise sind in den Rechnungsdaten dieser Vorlage enthalten, auch für Kunden.",
-      "quantitiesNote": "Diese Vorlage gibt Komponentenpreise nicht an Kunden weiter."
+      "quantitiesNote": "Diese Vorlage gibt Komponentenpreise nicht an Kunden weiter.",
+      "blankOnBundle": "Leer in der Paketzeile",
+      "componentCells": "Zellen der Komponentenzeilen",
+      "cellClear": "— Leer —",
+      "field": {
+        "name": "Servicename",
+        "quantity": "Menge",
+        "period": "Leistungszeitraum",
+        "pricingBasis": "Preisbasis",
+        "unitPrice": "Einzelpreis",
+        "total": "Betrag"
+      }
     }
   },
   "projectBilling": {

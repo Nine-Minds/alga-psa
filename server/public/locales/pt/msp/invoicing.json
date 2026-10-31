@@ -2000,10 +2000,21 @@
       "off": "Desativado",
       "quantities": "Apenas quantidades",
       "quantitiesAndPrices": "Quantidades e preços",
-      "custom": "Personalizado (importado)",
+      "custom": "Personalizado",
       "showChange": "Mostrar a variação em relação ao período anterior (+N / −N)",
       "pricesNote": "Os preços dos componentes são incluídos nos dados de fatura deste modelo, inclusive para os clientes.",
-      "quantitiesNote": "Este modelo não expõe os preços dos componentes aos clientes."
+      "quantitiesNote": "Este modelo não expõe os preços dos componentes aos clientes.",
+      "blankOnBundle": "Em branco na linha do pacote",
+      "componentCells": "Células das linhas de componentes",
+      "cellClear": "— Vazio —",
+      "field": {
+        "name": "Nome do serviço",
+        "quantity": "Quantidade",
+        "period": "Período do serviço",
+        "pricingBasis": "Base de preço",
+        "unitPrice": "Preço unitário",
+        "total": "Valor"
+      }
     }
   },
   "projectBilling": {

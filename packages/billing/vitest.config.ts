@@ -70,6 +70,9 @@ export default defineConfig({
       'src/lib/quoteTermsContent.test.ts',
       'src/components/invoice-designer/ast/workspaceAst.richText.test.ts',
       'src/components/invoice-designer/ast/workspaceAst.childRows.test.ts',
+      'src/components/invoice-designer/inspector/widgets/BundleComponentRowsWidget.test.tsx',
+      'src/components/invoice-designer/preview/sampleScenarios.bundles.test.ts',
+      'src/components/invoice-designer/canvas/DesignCanvas.bundleRows.test.tsx',
       'src/components/billing-dashboard/quotes/QuoteForm.terms.test.tsx',
       // Timezone-safe date-only rendering: the renderer and field formatting
       // share one UTC-pinned formatter — listed for the same reason as above.

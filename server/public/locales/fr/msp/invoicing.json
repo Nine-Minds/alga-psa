@@ -2000,10 +2000,21 @@
       "off": "Désactivé",
       "quantities": "Quantités uniquement",
       "quantitiesAndPrices": "Quantités et prix",
-      "custom": "Personnalisé (importé)",
+      "custom": "Personnalisé",
       "showChange": "Afficher la variation par rapport à la période précédente (+N / −N)",
       "pricesNote": "Les prix des composants sont inclus dans les données de facture de ce modèle, y compris pour les clients.",
-      "quantitiesNote": "Ce modèle n’expose pas les prix des composants aux clients."
+      "quantitiesNote": "Ce modèle n’expose pas les prix des composants aux clients.",
+      "blankOnBundle": "Vide sur la ligne du forfait",
+      "componentCells": "Cellules des lignes de composants",
+      "cellClear": "— Vide —",
+      "field": {
+        "name": "Nom du service",
+        "quantity": "Quantité",
+        "period": "Période de service",
+        "pricingBasis": "Base de tarification",
+        "unitPrice": "Prix unitaire",
+        "total": "Montant"
+      }
     }
   },
   "projectBilling": {

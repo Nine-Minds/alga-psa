@@ -2000,10 +2000,21 @@
       "off": "Uit",
       "quantities": "Alleen aantallen",
       "quantitiesAndPrices": "Aantallen en prijzen",
-      "custom": "Aangepast (geïmporteerd)",
+      "custom": "Aangepast",
       "showChange": "Wijziging t.o.v. de vorige periode tonen (+N / −N)",
       "pricesNote": "Componentprijzen zijn opgenomen in de factuurgegevens van deze sjabloon, ook voor klanten.",
-      "quantitiesNote": "Deze sjabloon toont componentprijzen niet aan klanten."
+      "quantitiesNote": "Deze sjabloon toont componentprijzen niet aan klanten.",
+      "blankOnBundle": "Leeg op de bundelregel",
+      "componentCells": "Cellen van componentregels",
+      "cellClear": "— Leeg —",
+      "field": {
+        "name": "Servicenaam",
+        "quantity": "Aantal",
+        "period": "Serviceperiode",
+        "pricingBasis": "Prijsbasis",
+        "unitPrice": "Eenheidsprijs",
+        "total": "Bedrag"
+      }
     }
   },
   "projectBilling": {

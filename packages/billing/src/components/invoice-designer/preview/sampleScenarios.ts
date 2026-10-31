@@ -1,4 +1,6 @@
-import type { WasmInvoiceViewModel } from '@alga-psa/types';
+import type { InvoiceBundleComponentSnapshot, InvoiceBundlePresentation, WasmInvoiceViewModel } from '@alga-psa/types';
+import { INVOICE_BUNDLE_PRESENTATION_VERSION } from '@alga-psa/types';
+import { buildBundleComponents } from '../../../lib/invoiceBundleComponents/components';
 import {
   buildInvoiceTimeCollections,
   attachInvoiceTimeCollections,
@@ -152,6 +154,41 @@ const TICKET_TIME_SAMPLE_SOURCES: InvoiceTimeCollectionSource[] = [
 ];
 
 const TICKET_TIME_SAMPLE_COLLECTIONS = buildInvoiceTimeCollections(TICKET_TIME_SAMPLE_SOURCES);
+
+/**
+ * A Fixed-bundle sample item built through the production snapshot->component mapper
+ * (`buildBundleComponents`), so the designer preview cannot drift from generated invoices.
+ * Priced rows are included because the designer is MSP-only.
+ */
+const bundleSampleItem = (
+  id: string,
+  title: string,
+  subtitle: string | null,
+  total: number,
+  components: Array<Omit<InvoiceBundleComponentSnapshot, 'order' | 'detailItemIds' | 'servicePeriodStart' | 'servicePeriodEnd'> & { amount: number; rate?: number }>,
+) => {
+  const amounts: Record<string, { allocated_amount: number; rate: number }> = {};
+  const snapshot: InvoiceBundlePresentation = {
+    version: INVOICE_BUNDLE_PRESENTATION_VERSION,
+    subtitle,
+    components: components.map(({ amount, rate, ...component }, index) => {
+      const detailId = `${id}-detail-${index}`;
+      amounts[detailId] = { allocated_amount: amount, rate: rate ?? 0 };
+      return { ...component, order: index, detailItemIds: [detailId], servicePeriodStart: '2026-01-01', servicePeriodEnd: '2026-02-01' };
+    }),
+  };
+  const built = buildBundleComponents(snapshot, { includePricing: true, amounts });
+  return {
+    id,
+    description: title,
+    quantity: 1,
+    unitPrice: total,
+    total,
+    subtitle: built?.subtitle ?? null,
+    hasComponents: built?.hasComponents ?? false,
+    components: built?.components ?? [],
+  };
+};
 
 export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = [
   enrichScenario({
@@ -419,6 +456,36 @@ export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = 
       subtotal: 974300,
       tax: 77944,
       total: 1052244,
+    },
+  }),
+  enrichScenario({
+    id: 'sample-managed-services-bundles',
+    label: 'Managed services bundles',
+    description: 'Fixed bundles with component rows: seat counts, +/- change vs last period, and a mixed seat/allocated bundle.',
+    data: {
+      ...createBaseInvoice(),
+      invoiceNumber: 'INV-2026-0301',
+      issueDate: '2026-02-03',
+      dueDate: '2026-02-17',
+      recurringServicePeriodStart: '2026-01-01',
+      recurringServicePeriodEnd: '2026-02-01',
+      recurringServicePeriodLabel: 'Jan 1, 2026 - Feb 1, 2026',
+      items: [
+        bundleSampleItem('bundle-managed-it', 'Managed IT Services', 'Per-seat monitoring, backup and security', 412500, [
+          { serviceId: 'svc-seats', name: 'Managed User Seat', quantity: 25, pricingBasis: 'unit', previousQuantity: 22, comparison: 'compared', amount: 237500, rate: 9500 },
+          { serviceId: 'svc-edr', name: 'Endpoint Protection', quantity: 25, pricingBasis: 'unit', previousQuantity: 25, comparison: 'compared', amount: 75000, rate: 3000 },
+          { serviceId: 'svc-backup', name: 'Cloud Backup', quantity: 3, pricingBasis: 'unit', previousQuantity: 4, comparison: 'compared', amount: 60000, rate: 20000 },
+          { serviceId: 'svc-vciso', name: 'vCISO Advisory', quantity: null, pricingBasis: 'bundle', previousQuantity: null, comparison: 'no_prior_period', amount: 40000 },
+        ]),
+        bundleSampleItem('bundle-voip', 'Hosted Voice', null, 90000, [
+          { serviceId: 'svc-voip-seat', name: 'Voice Seat', quantity: 12, pricingBasis: 'unit', previousQuantity: null, comparison: 'no_prior_period', amount: 72000, rate: 6000 },
+          { serviceId: 'svc-voip-trunk', name: 'SIP Trunk (allocated)', quantity: 1, pricingBasis: 'bundle', previousQuantity: null, comparison: 'no_prior_period', amount: 18000 },
+        ]),
+        { id: 'adhoc-1', description: 'After Hours Support', quantity: 2, unitPrice: 18000, total: 36000 },
+      ],
+      subtotal: 538500,
+      tax: 43080,
+      total: 581580,
     },
   }),
 ];
