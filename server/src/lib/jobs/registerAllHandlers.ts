@@ -229,6 +229,14 @@ export async function registerAllJobHandlers(
 
   logger.info('Registering all job handlers', { includeEnterprise, force });
 
+  // CM L6b: declare the co-managed SLA observation job as data. It is capability-gated in the fan-out,
+  // so a plain PSA tenant is filtered out before any tenant SQL. Best-effort: absent, nothing is scheduled.
+  try {
+    (await import('./handlers/coManagedSlaObservationHandler')).defineCoManagedSlaObservationJob();
+  } catch (error) {
+    logger.error('Failed to define the co-managed SLA observation job', { error });
+  }
+
   // Create services if not provided
   const resolvedJobService = jobService ?? (await JobService.create());
   const resolvedStorageService = storageService ?? new StorageService();

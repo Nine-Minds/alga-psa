@@ -15,20 +15,8 @@ const refusal = (error: unknown): Failure => {
   throw error;
 };
 
-// SLA priority mapping is the MSP's own configuration, so it is a sponsor-only surface: the capability
-// gate is `admits` (flag AND entitlement), the first statement after the session establishes the tenant.
-async function setup(user: { user_id: string; user_type?: string }, tenant: string, relationshipId: string) {
-  await requireCapabilityForAction('co-managed', tenant, 'admits');
-  if (user.user_type !== 'internal') throw new CoManagedPolicyError('FORBIDDEN');
-  const { knex } = await createTenantKnex(tenant);
-  const target = await resolveCoManagedRelationshipTarget(knex, tenant, relationshipId);
-  if (target.side !== 'sponsor') throw new CoManagedPolicyError('FORBIDDEN');
-  await admitCoManagedSponsor(tenant, knex);
-  const actor = await coManagedBrowserActor(user, tenant);
-  return { knex, actor: { tenant: actor.tenant, userId: actor.userId }, target };
-}
-
 export const getCoManagedSlaPolicyAction = withAuth(async (user, { tenant }, relationshipId: string) => {
+  await requireCapabilityForAction('co-managed', tenant, 'admits');
   try {
     const { knex, actor, target } = await setup(user, tenant, relationshipId);
     return { ok: true as const, screen: await readCoManagedSlaPolicyScreen(knex, actor, target) };
@@ -37,9 +25,24 @@ export const getCoManagedSlaPolicyAction = withAuth(async (user, { tenant }, rel
 
 export const saveCoManagedSlaPriorityMappingsAction = withAuth(async (user, { tenant }, relationshipId: string,
   mappings: CoManagedSlaPriorityMapping[]) => {
+  await requireCapabilityForAction('co-managed', tenant, 'admits');
   try {
     const { knex, actor, target } = await setup(user, tenant, relationshipId);
     await replaceCoManagedSlaPriorityMappings(knex, actor, target, mappings);
     return { ok: true as const };
   } catch (error) { return refusal(error); }
 });
+
+// Declared after the actions on purpose: each action calls the capability adapter first, then this helper
+// reads the database (the gate-coverage rule orders the first adapter call before the first database await).
+// SLA priority mapping is the MSP's own configuration, so it is a sponsor-only surface: the capability
+// gate is `admits` (flag AND entitlement), the first statement after the session establishes the tenant.
+async function setup(user: { user_id: string; user_type?: string }, tenant: string, relationshipId: string) {
+  if (user.user_type !== 'internal') throw new CoManagedPolicyError('FORBIDDEN');
+  const { knex } = await createTenantKnex(tenant);
+  const target = await resolveCoManagedRelationshipTarget(knex, tenant, relationshipId);
+  if (target.side !== 'sponsor') throw new CoManagedPolicyError('FORBIDDEN');
+  await admitCoManagedSponsor(tenant, knex);
+  const actor = await coManagedBrowserActor(user, tenant);
+  return { knex, actor: { tenant: actor.tenant, userId: actor.userId }, target };
+}
