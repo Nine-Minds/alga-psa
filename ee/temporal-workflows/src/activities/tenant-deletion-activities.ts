@@ -483,6 +483,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'sla_organization_obligations',
   'co_managed_sla_priority_mappings',
   'co_management_command_receipts',
+  // Delivery ledger rows cite tickets/users only by soft id; leaf, before relationships.
+  'co_management_deliveries',
   'co_management_relationships',
 
   // === LEVEL 3: Mid-level entities ===

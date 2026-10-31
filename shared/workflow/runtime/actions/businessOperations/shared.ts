@@ -4,6 +4,7 @@ import { admitWrite, tenantDb, withTransaction } from '@alga-psa/db';
 import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 import { v4 as uuidv4 } from 'uuid';
 import type { ActionContext } from '../../registries/actionRegistry';
+import { coManagedWorkflowTicketSeam } from '../../../../lib/coManagedDelivery';
 
 export type TenantTxContext = {
   tenantId: string;
@@ -558,4 +559,16 @@ export async function attachDocumentToTicket(
 export function actionProvidedKey(input: { idempotency_key?: string | null }, ctx: ActionContext): string {
   if (input.idempotency_key && String(input.idempotency_key).trim()) return String(input.idempotency_key).trim();
   return `run:${ctx.runId}:${ctx.stepPath}`;
+}
+
+/**
+ * Ticket-mutation adapter (CM L4a): for a tenant the co-managed capability serves, retain the executing
+ * run / published-version / author authority before a workflow action mutates a ticket. A tenant that is
+ * not served costs 0 statements and runs the action unchanged. Workflow actions never publish
+ * TICKET_COMMENT_ADDED (DO-NOT-PORT #2); this adapter publishes nothing either.
+ */
+export async function retainWorkflowTicketAuthority(ctx: ActionContext, tx: TenantTxContext, ticketId: string, fields: string[], readFields: string[] = []): Promise<void> {
+  const authority = await coManagedWorkflowTicketSeam.resolve(tx.tenantId);
+  if (!authority) return;
+  await authority.retain(tx.trx, { tenant: tx.tenantId, ticketId, workflowRunId: ctx.runId, actorUserId: tx.actorUserId, fields, readFields });
 }

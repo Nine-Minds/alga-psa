@@ -45,6 +45,14 @@ export async function register() {
       console.error('Failed to register the co-managed SLA lifecycle handlers:', error);
     }
 
+    // Delivery seam provider + inbound reply writer (CM L5; one entry point, shared with email-service). Best-effort: without it subscribers and the inbound path stay native.
+    try {
+      await import('@alga-psa/co-managed/deliveryRegistration');
+      (await import('./lib/co-managed/routingRecovery')).defineCoManagedRoutingRecoveryJob();
+    } catch (error) {
+      console.error('Failed to register the co-managed delivery provider:', error);
+    }
+
     // Wire the DB-prefs-aware locale resolver into @alga-psa/ui's server i18n.
     // Done here (instead of at the @alga-psa/ui level) to avoid a
     // ui→tenancy circular dependency; tenancy already depends on ui.

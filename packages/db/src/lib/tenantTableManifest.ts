@@ -708,6 +708,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'sla_organization_obligations', deletion: 'ordered' },
   { table: 'co_managed_sla_priority_mappings', deletion: 'ordered' },
   { table: 'co_management_command_receipts', deletion: 'ordered' },
+  { table: 'co_management_deliveries', deletion: 'ordered' },
   { table: 'co_management_relationships', deletion: 'ordered' },
   { table: 'document_share_access_log', deletion: 'ordered' },
   { table: 'document_share_links', deletion: 'ordered' },
