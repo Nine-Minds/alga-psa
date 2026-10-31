@@ -26,7 +26,7 @@ import { hasPermission, throwPermissionError } from '@alga-psa/user-composition/
 import { getUserRoles } from '@alga-psa/user-composition/actions/userQueryActions';
 import logger from '@alga-psa/core/logger';
 import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
-import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
+import { assertInternalUserSeatsWithinLimit, checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import type { ActionResultMessageKey } from '@alga-psa/ui/lib/errorHandling';
 import { publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -593,61 +593,14 @@ export const addUser = withAuth(async (
         };
       }
 
-      // Check license limits for  MSP (internal) users
+      // Seat limits for MSP (internal) users: the shared guard takes the
+      // per-tenant seat lock, held until this transaction ends, so the check
+      // and the insert below are serialized against every other seat consumer.
       if (isLicensedUserType(newUserType)) {
-        const tenantRow = await tenantDb(trx, tenant).table('tenants')
-          .first('licensed_user_count', 'plan');
-
-        if (!tenantRow) {
-          throw new Error(`Tenant not found: ${tenant}`);
+        const licenseCheck = await checkInternalUserLicenseLimit(trx, tenant);
+        if (isInternalUserLicenseLimitRejected(licenseCheck)) {
+          return { success: false, code: licenseCheck.code, error: licenseCheck.error };
         }
-
-        const usedResult = await tenantDb(trx, tenant).table('users')
-          .where({
-            user_type: 'internal',
-            is_inactive: false,
-          })
-          .count('* as count');
-
-        const used = parseInt((usedResult as Array<{ count: string }>)[0].count, 10);
-        const limit = tenantRow.licensed_user_count as number | null;
-        const plan = tenantRow.plan as string | null | undefined;
-
-        if (plan === 'solo' && used >= 1) {
-          return {
-            success: false,
-            code: 'SOLO_PLAN_LIMIT',
-            error: 'Solo plan is limited to 1 user. Upgrade to Pro to add more users.',
-          };
-        }
-
-        if (limit !== null && used >= limit) {
-          return {
-            success: false,
-            code: 'LICENSE_LIMIT_REACHED',
-            error: "You've reached your MSP user license limit.",
-          };
-        }
-
-        // Appliance license seat limit — Enterprise Edition only. Resolves to a
-        // no-op stub on CE (`@enterprise` → packages/ee/src), so no appliance
-        // licensing concept ships in or runs on Community Edition.
-        const seatLimit = await (async () => {
-          try {
-            const { checkApplianceLicenseSeatLimit } = await import('@enterprise/lib/license/userSeatGuard');
-            return await checkApplianceLicenseSeatLimit(used, tenant);
-          } catch {
-            return null;
-          }
-        })();
-        if (seatLimit) {
-          return {
-            success: false,
-            code: 'LICENSE_LIMIT_REACHED',
-            error: `You've reached the seat limit (${seatLimit.seats}) of your Alga appliance license. Add seats at nineminds.com/portal, then use "Refresh license now" on the License page.`,
-          };
-        }
-
       }
 
       const [newUser] = await tenantDb(trx, tenant).table('users')
@@ -663,6 +616,10 @@ export const addUser = withAuth(async (
           contact_id: userData.contactId || undefined,
           reports_to: userData.reportsTo || undefined
         }).returning(USER_RESPONSE_FIELD_NAMES);
+
+      if (isLicensedUserType(newUserType)) {
+        await assertInternalUserSeatsWithinLimit(trx, tenant);
+      }
 
       await tenantDb(trx, tenant).table('user_roles').insert({
         user_id: newUser.user_id,
@@ -1210,6 +1167,13 @@ export const updateUser = withAuth(async (
       }
 
       await User.update(trx, userId, normalizedUserData);
+      if (
+        existing?.user_type === 'internal'
+        && existing.is_inactive === true
+        && userData.is_inactive === false
+      ) {
+        await assertInternalUserSeatsWithinLimit(trx, tenant);
+      }
       const updatedUser = await getSafeUserWithRoles(trx, userId, tenant);
       return { success: true, user: updatedUser };
     });

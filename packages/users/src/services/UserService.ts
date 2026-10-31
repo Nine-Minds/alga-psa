@@ -40,7 +40,7 @@ import User from '@alga-psa/db/models/user';
 import Team from '@alga-psa/teams/models/team';
 import UserPreferences from '@alga-psa/db/models/userPreferences';
 import { logger } from '@alga-psa/core';
-import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../lib/internalUserLicenseGuard';
+import { assertInternalUserSeatsWithinLimit, checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../lib/internalUserLicenseGuard';
 import { assertCoManagedSeatAdmission } from '@alga-psa/licensing';
 import { sanitizeUserForResponse, USER_RESPONSE_COLUMNS, USER_RESPONSE_FIELD_NAMES } from './userResponseSanitizer';
 
@@ -253,6 +253,16 @@ export class UserService extends BaseService<IUser> {
     return withTransaction(knex, trx => this.createUsingTransaction(data, context, trx));
   }
 
+  /**
+   * Create a user inside a caller-owned transaction, so the caller can make
+   * the seat check, the account and its own bookkeeping (e.g. consuming an
+   * invitation) one atomic unit under the per-tenant seat lock.
+   */
+  async createInTransaction(data: any, context: ServiceContext, trx: Knex.Transaction): Promise<IUser> {
+    await this.ensurePermission(context, 'user', 'create');
+    return this.createUsingTransaction(data, context, trx);
+  }
+
   /** Invitation signup retains the seat lock through account, roles and token consumption. */
   async createFromCoManagedInvitation(data: any, context: ServiceContext, trx: Knex.Transaction, token: string): Promise<IUser> {
     await this.ensurePermission(context, 'user', 'create');
@@ -278,7 +288,8 @@ export class UserService extends BaseService<IUser> {
       }
       const targetUserType: 'internal' | 'client' = requestedUserType;
 
-      // Seat check for licensed (internal) users, in the same transaction as the insert.
+      // Seat check for licensed (internal) users, in the same transaction as the
+      // insert. The guard takes the per-tenant seat lock, held until this trx ends.
       if (isLicensedUserType(targetUserType) && !coManagedAdmitted) {
         const licenseCheck = await checkInternalUserLicenseLimit(trx, context.tenant);
         if (isInternalUserLicenseLimitRejected(licenseCheck)) {
@@ -343,6 +354,11 @@ export class UserService extends BaseService<IUser> {
       const [createdUser] = await tenantDb(trx, context.tenant).table('users')
         .insert(userData)
         .returning(USER_RESPONSE_FIELD_NAMES);
+
+      // Tripwire: roll back if the insert left the tenant over its seat limits.
+      if (isLicensedUserType(targetUserType) && !coManagedAdmitted && !userData.is_inactive) {
+        await assertInternalUserSeatsWithinLimit(trx, context.tenant);
+      }
 
       // Assign roles
       if (data.role_ids && data.role_ids.length > 0) {
