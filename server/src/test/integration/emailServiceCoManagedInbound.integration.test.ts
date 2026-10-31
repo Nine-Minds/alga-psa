@@ -67,12 +67,16 @@ let ticketTenant: string, customerTenant: string, aliceId: string, techId: strin
 let relationshipId: string, threadId: string, parentCommentId: string, token: string;
 let processInbound: typeof import('../../../../shared/services/email/processInboundEmailInApp').processInboundEmailInApp;
 
-function emailData(id: string, text: string) {
+// Aligned auth: DMARC pass for the From domain (what allowsInternalSenderAttribution requires for an internal sender).
+const ALIGNED_AUTH = 'mx; spf=pass smtp.mailfrom=customer-it.example.test; dkim=pass header.d=customer-it.example.test; dmarc=pass header.from=customer-it.example.test';
+const SPF_ONLY_AUTH = 'mx; spf=pass smtp.mailfrom=customer-it.example.test';
+
+function emailData(id: string, text: string, authenticationResults: string | null = ALIGNED_AUTH) {
   return {
     id, provider: 'google', providerId: PROVIDER_ID, tenant: ticketTenant, receivedAt: new Date().toISOString(),
     from: { email: aliceEmail, name: 'Alice' }, to: [{ email: 'support@msp.example.test' }], subject: 'Re: Shared ticket',
     body: { text: `${text}\n\n[ALGA-REPLY-TOKEN ${token} ticketId=${ticketId} commentId=${parentCommentId} threadId=${threadId}]` },
-    attachments: [], headers: { 'authentication-results': 'mx; spf=pass smtp.mailfrom=customer-it.example.test' },
+    attachments: [], headers: authenticationResults === null ? {} : { 'authentication-results': authenticationResults },
   } as any;
 }
 const sharedComments = (text: string) => db('comments').where({ tenant: ticketTenant, ticket_id: ticketId }).whereRaw('note::text ILIKE ?', [`%${text}%`]);
@@ -193,6 +197,31 @@ describe('email-service boot registers co-managed inbound', () => {
     // Same message delivered again: the command receipt makes it a no-op.
     await processInbound({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
     expect(await sharedComments(text)).toHaveLength(1);
+  });
+
+  it.each([
+    ['SPF-only', SPF_ONLY_AUTH],
+    ['failing', 'mx; spf=fail smtp.mailfrom=customer-it.example.test; dkim=fail header.d=customer-it.example.test; dmarc=fail header.from=customer-it.example.test'],
+    ['absent', null],
+  ])('quarantines a cm2 reply with %s sender auth: no comment and no refusal ack', async (label, auth) => {
+    const { REFUSAL_ACK_KIND } = await import('@alga-psa/co-managed/refusalAck');
+    const { processInboundEmailInApp } = await import('../../../../shared/services/email/processInboundEmailInApp');
+    const text = `forged-${label.replace(/\W/g, '')}-${MARK}`;
+    const message = emailData(`<msg-${MARK}-forged-${label.replace(/\W/g, '')}@customer-it.example.test>`, text, auth);
+    const acks = () => db('co_management_deliveries').where({ tenant: ticketTenant, delivery_kind: REFUSAL_ACK_KIND, recipient: aliceEmail });
+    const acksBefore = (await acks()).length;
+
+    const result: any = await processInboundEmailInApp({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
+    expect(result).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_sender_unauthenticated' });
+    expect(await sharedComments(text)).toHaveLength(0);
+    // A spoofer must not be able to make us mail the real sponsor address: nothing is queued.
+    expect(await acks()).toHaveLength(acksBefore);
+
+    // Replay stays quarantined, still no comment and no ack.
+    const replay: any = await processInboundEmailInApp({ tenantId: ticketTenant, providerId: PROVIDER_ID, emailData: message });
+    expect(replay).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_sender_unauthenticated' });
+    expect(await sharedComments(text)).toHaveLength(0);
+    expect(await acks()).toHaveLength(acksBefore);
   });
 
   it('email-service writes no comment and queues one ack; the sender path sends it once; a replay adds nothing', async () => {
