@@ -364,16 +364,38 @@ export class TimeSheetService extends BaseService<any> {
         } else {
           await assertHumanWorkOwner(trx, context.tenant, context.userId, 'user_id');
         }
+        // A sheet's identity is (tenant, effective owner, period) in every approval status.
+        const ownerId = data.user_id ?? context.userId;
+        const db = tenantDb(trx, context.tenant);
+        const duplicate = () =>
+          new ConflictError('A time sheet already exists for this user and period');
+
+        const existing = await db.table(this.tableName)
+          .where({ user_id: ownerId, period_id: data.period_id })
+          .first();
+        if (existing) {
+          throw duplicate();
+        }
+
         const timeSheetData = {
           ...data,
-          user_id: data.user_id || context.userId,
+          user_id: ownerId,
           approval_status: 'DRAFT',
           tenant: context.tenant
         };
 
-        const [timeSheet] = await tenantDb(trx, context.tenant).table(this.tableName)
+        // Targeted insert-ignore closes the race a lookup cannot (the row does not exist yet to
+        // lock) without raising 23505, which would abort this transaction. Empty result = a
+        // concurrent writer won.
+        const [timeSheet] = await db.table(this.tableName)
           .insert(timeSheetData)
+          .onConflict(['tenant', 'user_id', 'period_id'])
+          .ignore()
           .returning('*');
+
+        if (!timeSheet) {
+          throw duplicate();
+        }
 
         return timeSheet;
       });
