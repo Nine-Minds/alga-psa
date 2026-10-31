@@ -277,6 +277,31 @@ describe('decideQuote (alga-2026-0002820 1/6)', () => {
     expect(onQuoteAcceptedSpy).not.toHaveBeenCalled();
   });
 
+  it('wrong-tenant actors are refused: a portal user or link contact from tenant A cannot decide tenant B\'s quote', async () => {
+    const tenantA = await createTenantFixture();
+    const tenantB = await createTenantFixture();
+    const clientA = await addClient(tenantA);
+    const clientB = await addClient(tenantB);
+    const contactA = await addContact(tenantA, clientA);
+    const userA = await addUser(tenantA, { permissions: [['billing', 'read']], userType: 'client', contactId: contactA });
+    const quoteB = await addQuote(tenantB, clientB);
+
+    // Acting inside tenant B: the tenant A user does not exist there.
+    const asUserInB = await decide({ tenantId: tenantB, quoteId: quoteB.quoteId, action: 'accept', actor: { kind: 'portal_user', userId: userA.user_id } });
+    expect(asUserInB.status).toBe('forbidden');
+    // Acting inside tenant A: tenant B's quote does not exist there.
+    expect(await decide({ tenantId: tenantA, quoteId: quoteB.quoteId, action: 'accept', actor: { kind: 'portal_user', userId: userA.user_id } }))
+      .toEqual({ status: 'not_found' });
+    // A tenant A contact on a link, against tenant B's quote.
+    expect(await decide({ tenantId: tenantB, quoteId: quoteB.quoteId, action: 'accept', actor: { kind: 'access_link', linkId: uuidv4(), contactId: contactA, email: 'x@example.com' } }))
+      .toEqual({ status: 'not_found' });
+
+    expect((await quoteRow(tenantB, quoteB.quoteId)).status).toBe('sent');
+    expect(await tt(tenantB, 'quote_decisions')).toHaveLength(0);
+    expect(await tt(tenantA, 'quote_decisions')).toHaveLength(0);
+    expect(onQuoteAcceptedSpy).not.toHaveBeenCalled();
+  });
+
   it('access_link actor whose contact has no users row: accepted, accepted_by NULL, decision row carries link/contact/signer/ip/ua', async () => {
     const tenantId = await createTenantFixture();
     const clientId = await addClient(tenantId);

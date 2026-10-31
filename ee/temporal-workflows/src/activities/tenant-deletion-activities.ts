@@ -117,7 +117,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'project_template_tasks', 'project_template_phases', 'project_templates',
 
   // Quote details
-  'quote_activities', 'quote_items', 'quote_document_template_assignments',
+  'quote_activities', 'quote_decisions', 'quote_items', 'quote_document_template_assignments',
   'quote_document_templates', 'standard_quote_document_templates', 'quotes',
 
   // Opportunity management and core records. Quotes and interactions are
