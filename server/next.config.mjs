@@ -39,6 +39,22 @@ const prebuiltDirAbs = (pkg) => path.join(__dirname, usePrebuilt ? `../packages/
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = '../packages/ee/src/shims/empty.ts';
 
+// Webpack's persistent cache lives in the checkout by default, which CI and the
+// production build scripts rely on. ALGA_WEBPACK_CACHE_ROOT moves it to a shared
+// root (one subdirectory per checkout) so machines with many checkouts can keep
+// caches out of the trees and prune them in one place. Caches stay per checkout:
+// entries embed absolute module paths and webpack does not lock the pack files.
+const resolveWebpackCacheDirectory = () => {
+  const root = process.env.ALGA_WEBPACK_CACHE_ROOT?.trim();
+  if (!root) return path.join(__dirname, 'node_modules/.cache/webpack');
+  const checkout = path.resolve(__dirname, '..');
+  const dir = path.join(path.resolve(root), checkout.replace(/^[/\\]+/, '').replace(/[/\\:]+/g, '-'));
+  fs.mkdirSync(dir, { recursive: true });
+  // Records which checkout owns the directory so stale caches can be pruned.
+  fs.writeFileSync(path.join(dir, '.owner'), `${checkout}\n`);
+  return dir;
+};
+
 const appVersion = (() => {
   try {
     const pkgPath = path.join(__dirname, '../packages/core/package.json');
@@ -570,7 +586,8 @@ const nextConfig = {
     }
     // Filesystem cache: persists across builds (even after `rm -rf .next`)
     // so the second cold build reuses module compilation work. Stored under
-    // node_modules/.cache/webpack so it survives `.next` clears.
+    // node_modules/.cache/webpack (or ALGA_WEBPACK_CACHE_ROOT, see above) so it
+    // survives `.next` clears.
     // Keep Next's cache version and dev memory policy. Replacing this object
     // discarded maxMemoryGenerations: 0 (Next manages its own memory cache)
     // and the version metadata that invalidates incompatible cached builds.
@@ -578,7 +595,7 @@ const nextConfig = {
     config.cache = {
       ...nextCache,
       type: 'filesystem',
-      cacheDirectory: path.join(__dirname, 'node_modules/.cache/webpack'),
+      cacheDirectory: resolveWebpackCacheDirectory(),
       buildDependencies: {
         ...nextCache.buildDependencies,
         config: [...new Set([...(nextCache.buildDependencies?.config ?? []), __filename])],
