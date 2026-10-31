@@ -477,6 +477,11 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_management_ticket_handoffs',
   'co_management_ticket_work',
   'co_managed_ticket_references',
+  'sla_organization_notification_recipients',
+  'sla_organization_notification_events',
+  'sla_organization_events',
+  'sla_organization_obligations',
+  'co_managed_sla_priority_mappings',
   'co_management_command_receipts',
   'co_management_relationships',
 
