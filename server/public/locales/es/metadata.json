@@ -536,6 +536,11 @@
       },
       "providers": {
         "title": "Proveedores de correo electrónico e identidad"
+      },
+      "sharedTasks": {
+        "title": "Tareas compartidas",
+        "taskTitle": "Tarea compartida",
+        "projectTitle": "Proyecto compartido"
       }
     }
   },

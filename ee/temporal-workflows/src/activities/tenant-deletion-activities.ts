@@ -249,6 +249,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'tag_display_rules',
   'ticket_resources',
   'ticket_watchers',
+  'document_fetch_hosts',
   'client_portal_visibility_group_boards',
   'import_job_items',
   'import_jobs',
@@ -464,8 +465,19 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_management_delegated_grants',
   'co_management_project_scopes',
   'co_management_staff_assignments',
+  // Org-private notes (author tenant): comments -> threads -> receipts, ahead of the actor references they cite.
+  'co_management_private_comments',
+  'co_management_private_threads',
+  'co_management_private_command_receipts',
+  'co_managed_project_task_references',
   'collaboration_actor_references',
   'co_managed_participation_evidence',
+  // Handoffs FK to ticket work, which FKs to relationships: children first. References and
+  // receipts reference the client/board/relationship rows deleted later.
+  'co_management_ticket_handoffs',
+  'co_management_ticket_work',
+  'co_managed_ticket_references',
+  'co_management_command_receipts',
   'co_management_relationships',
 
   // === LEVEL 3: Mid-level entities ===

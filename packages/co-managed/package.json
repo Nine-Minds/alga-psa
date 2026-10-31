@@ -34,6 +34,10 @@
       "types": "./src/managementPolicy.ts",
       "import": "./src/managementPolicy.ts"
     },
+    "./conversationRichText": {
+      "types": "./src/conversationRichText.ts",
+      "import": "./src/conversationRichText.ts"
+    },
     "./sharedWorkIdentity": {
       "types": "./src/sharedWorkIdentity.ts",
       "import": "./src/sharedWorkIdentity.ts"
@@ -93,6 +97,42 @@
     "./nativeScheduleMeetingSync": {
       "types": "./src/nativeScheduleMeetingSync.ts",
       "import": "./src/nativeScheduleMeetingSync.ts"
+    },
+    "./localProjectSearchPolicy": {
+      "types": "./src/localProjectSearchPolicy.ts",
+      "import": "./src/localProjectSearchPolicy.ts"
+    },
+    "./projectTaskQueue": {
+      "types": "./src/projectTaskQueue.ts",
+      "import": "./src/projectTaskQueue.ts"
+    },
+    "./sharedWorkProjection": {
+      "types": "./src/sharedWorkProjection.ts",
+      "import": "./src/sharedWorkProjection.ts"
+    },
+    "./projectTaskEditing": {
+      "types": "./src/projectTaskEditing.ts",
+      "import": "./src/projectTaskEditing.ts"
+    },
+    "./projectTaskAssignments": {
+      "types": "./src/projectTaskAssignments.ts",
+      "import": "./src/projectTaskAssignments.ts"
+    },
+    "./projectTaskGate": {
+      "types": "./src/projectTaskGate.ts",
+      "import": "./src/projectTaskGate.ts"
+    },
+    "./nativeTaskCommentAccess": {
+      "types": "./src/nativeTaskCommentAccess.ts",
+      "import": "./src/nativeTaskCommentAccess.ts"
+    },
+    "./coManagedWorkspace": {
+      "types": "./src/coManagedWorkspace.ts",
+      "import": "./src/coManagedWorkspace.ts"
+    },
+    "./projectTaskAudit": {
+      "types": "./src/projectTaskAudit.ts",
+      "import": "./src/projectTaskAudit.ts"
     }
   },
   "scripts": {

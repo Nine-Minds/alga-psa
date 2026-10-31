@@ -856,6 +856,7 @@
       "syncNow": "Mit QuickBooks synchronisieren",
       "viewInQbo": "In QuickBooks anzeigen",
       "voidInvoice": "Rechnung stornieren",
+      "delegateTax": "Steuer aus dem Buchhaltungssystem verwenden",
       "viewInXero": "In Xero anzeigen"
     },
     "loading": "Vorschau wird geladen...",
@@ -877,6 +878,13 @@
     },
     "applyCreditDialog": {
       "title": "Guthaben anwenden"
+    },
+    "delegateTaxDialog": {
+      "title": "Steuer aus dem Buchhaltungssystem verwenden",
+      "description": "Das Buchhaltungssystem berechnet die Steuer für diese Rechnung beim nächsten Export, und AlgaPSA ersetzt danach Steuer und Gesamtbetrag durch dieses Ergebnis. Nummern, Positionen, Preise und erfasste Zahlungen bleiben unverändert.",
+      "cancel": "Abbrechen",
+      "confirm": "Auf Steuer aus dem Buchhaltungssystem umstellen",
+      "switching": "Wird umgestellt…"
     },
     "voidDialog": {
       "title": "Rechnung stornieren",

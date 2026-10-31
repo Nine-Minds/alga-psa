@@ -201,8 +201,25 @@ const createInvoiceSchema = baseInvoiceSchema.omit({
   items: z.array(createInvoiceItemSchema).optional()
 });
 
-// Update invoice schema
-const updateInvoiceSchema = createUpdateSchema(createInvoiceSchema);
+// Update invoice schema. tax_source is update-only: a new invoice takes its
+// tax source from the client/tenant default, while an existing one may be
+// switched (any direction on a draft; internal -> pending_external on a
+// finalized invoice that has not been exported).
+// The editable set is an explicit allowlist (INVOICE_UPDATE_FIELDS); lifecycle,
+// identity and monetary fields are owned by dedicated commands. Strict so that a
+// PUT carrying e.g. {"status":"paid"} is a 400 naming the key, never a silent no-op 200.
+// Never use omit here: it would fail open when a column is added.
+const updateInvoiceSchema = createUpdateSchema(
+  createInvoiceSchema.pick({
+    payment_method: true,
+    billing_profile_id: true,
+    due_date: true,
+    invoice_date: true,
+    items: true,
+  })
+).extend({
+  tax_source: z.enum(['internal', 'external', 'pending_external']).optional(),
+}).strict();
 
 // Invoice response schema
 const invoiceResponseSchema = baseInvoiceSchema.merge(baseEntitySchema).extend({
