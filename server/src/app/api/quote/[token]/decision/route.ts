@@ -40,6 +40,7 @@ export async function POST(
         agreed: body?.agreed,
         agreementVersion: body?.agreementVersion,
         agreementTextHash: body?.agreementTextHash,
+        quoteFingerprint: body?.quoteFingerprint,
         selectedOptionalQuoteItemIds: body?.selectedOptionalQuoteItemIds,
         comment: body?.comment,
       },

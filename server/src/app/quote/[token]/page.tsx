@@ -3,6 +3,7 @@ import { headers } from 'next/headers.js';
 import { getConnection } from '@alga-psa/db';
 import {
   QuoteAccessLinks,
+  fingerprintPublicQuoteView,
   getCurrentQuoteAgreement,
   loadPublicQuoteView,
   recordQuoteViewedViaEmailLink,
@@ -92,6 +93,7 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
       pdfHref={`/api/quote/${token}/pdf`}
       decidedNotice={decidedNotice}
       token={token}
+      quoteFingerprint={fingerprintPublicQuoteView(view)}
       agreement={getCurrentQuoteAgreement()}
     />
   );

@@ -14,6 +14,7 @@
  * reuse; this module is that projection, written as an allow-list so a new
  * column never leaks by default.
  */
+import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import type { IQuote, IQuoteItem } from '@alga-psa/types';
@@ -132,6 +133,40 @@ export async function loadPublicQuoteView(
   }
 
   return { quote: projectPublicQuote(quote), items, locations };
+}
+
+/** Canonical JSON: object keys sorted recursively, so equal content always serialises identically. */
+function canonicalJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    return `{${Object.keys(obj).sort().map((k) => `${JSON.stringify(k)}:${canonicalJson(obj[k])}`).join(',')}}`;
+  }
+  return JSON.stringify(value === undefined ? null : value);
+}
+
+/** Pure: sha256 over exactly what the public page shows (quote fields + items, stable item order). */
+export function fingerprintPublicQuoteView(view: Pick<PublicQuoteView, 'quote' | 'items'>): string {
+  const items = [...view.items].sort(
+    (a, b) =>
+      (Number(a.display_order) || 0) - (Number(b.display_order) || 0) ||
+      String(a.quote_item_id).localeCompare(String(b.quote_item_id)),
+  );
+  return createHash('sha256').update(canonicalJson({ quote: view.quote, items }), 'utf8').digest('hex');
+}
+
+/**
+ * Content fingerprint of the public projection of a quote (null if it is not client-facing).
+ * The public page and the decision submit both use this one function, so a signature can
+ * only bind to the content that was rendered. Deliberately not based on updated_at.
+ */
+export async function computePublicQuoteFingerprint(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+): Promise<string | null> {
+  const view = await loadPublicQuoteView(knexOrTrx, tenant, quoteId);
+  return view ? fingerprintPublicQuoteView(view) : null;
 }
 
 const VIEW_DEBOUNCE_MS = 60_000;

@@ -18,6 +18,7 @@ import {
   QUOTE_ACCEPTANCE_AGREEMENT_VERSION,
 } from '../lib/quoteAgreement';
 import { decideQuote } from './quoteDecisionService';
+import { computePublicQuoteFingerprint } from './publicQuoteView';
 import { QuoteAccessLinks, isWellFormedQuoteAccessToken } from './quoteAccessLinks';
 
 export const QUOTE_LINK_DECISION_LIMITS = {
@@ -52,6 +53,8 @@ export interface QuoteLinkDecisionInput {
   agreed?: boolean;
   agreementVersion?: string | null;
   agreementTextHash?: string | null;
+  /** Fingerprint of the public quote content the signer was shown (computePublicQuoteFingerprint). */
+  quoteFingerprint?: string | null;
   selectedOptionalQuoteItemIds?: string[];
   comment?: string | null;
 }
@@ -165,6 +168,34 @@ async function submitInTransaction(
     return settledOutcome(trx, tenant, quote.quote_id);
   }
 
+  // Content check. The signature must bind to the content the signer saw, and a `sent`
+  // quote stays editable server-side, so status alone is not enough. Lock the quote row
+  // (updateQuote / resend wait for it) and its item rows (item edits wait for them), then
+  // recompute the fingerprint of the public projection and compare. Under READ COMMITTED
+  // the statements after the lock see everything committed before it was granted, and any
+  // edit that needed one of these locks is ordered after our commit, i.e. after the
+  // signature. An item INSERT takes no lock on existing rows, but it can only commit
+  // after our fingerprint read or before it; before => we see it and refuse, after =>
+  // the edit is ordered after the signature, which signed exactly the verified content.
+  const locked = await tenantDb(trx, tenant)
+    .table('quotes')
+    .where({ quote_id: quote.quote_id })
+    .forUpdate()
+    .first<{ status: string } | undefined>('status');
+  await tenantDb(trx, tenant)
+    .table('quote_items')
+    .where({ quote_id: quote.quote_id })
+    .forUpdate()
+    .select('quote_item_id');
+  // A competing decision/edit may have committed while we waited for the lock.
+  if (!locked || locked.status !== 'sent') {
+    return settledOutcome(trx, tenant, quote.quote_id);
+  }
+  const fingerprint = await computePublicQuoteFingerprint(trx, tenant, quote.quote_id);
+  if (!fingerprint || typeof input.quoteFingerprint !== 'string' || input.quoteFingerprint !== fingerprint) {
+    return { status: 'changed' };
+  }
+
   const optionalRows = await tenantDb(trx, tenant)
     .table('quote_items')
     .where({ quote_id: quote.quote_id, is_optional: true })
@@ -194,6 +225,7 @@ async function submitInTransaction(
         userAgent: ctx.userAgent ?? null,
         agreementTextHash: accepting ? agreement.hash : null,
         agreementVersion: accepting ? agreement.version : null,
+        contentFingerprint: fingerprint,
       },
       selections: accepting ? { selectedOptionalQuoteItemIds: input.selectedOptionalQuoteItemIds ?? [] } : undefined,
       comment: accepting ? null : input.comment!.trim(),

@@ -11,6 +11,7 @@ const m = vi.hoisted(() => ({
 vi.mock('next/headers.js', () => ({ headers: async () => new Headers({ 'x-forwarded-for': '1.2.3.4' }) }));
 vi.mock('@alga-psa/db', () => ({ getConnection: vi.fn(async () => ({})) }));
 vi.mock('@alga-psa/billing/services', () => ({
+  fingerprintPublicQuoteView: () => 'fp',
   getCurrentQuoteAgreement: () => ({ version: 'v', text: 't', hash: 'h' }),
   QuoteAccessLinks: { resolve: (...a: unknown[]) => m.resolve(...a) },
   loadPublicQuoteView: (...a: unknown[]) => m.load(...a),

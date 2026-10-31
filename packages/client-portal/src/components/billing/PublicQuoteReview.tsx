@@ -50,11 +50,13 @@ export interface PublicQuoteReviewProps {
   token?: string;
   /** Current agreement wording; required for the decision panel to mount. */
   agreement?: QuoteLinkAgreement;
+  /** Fingerprint of the content rendered here; the server refuses a signature if the quote changed since. */
+  quoteFingerprint?: string;
   /** Optional signer prefill (recipient name). */
   defaultSignerName?: string;
 }
 
-function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, token, agreement, defaultSignerName }: PublicQuoteReviewProps) {
+function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, token, agreement, quoteFingerprint, defaultSignerName }: PublicQuoteReviewProps) {
   const { t } = useTranslation('features/billing');
 
   // Optional-item selection is local until Accept commits it (same model as the portal).
@@ -65,7 +67,7 @@ function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, toke
   const [settled, setSettled] = useState(false);
   const onSettled = useCallback(() => setSettled(true), []);
 
-  const canDecide = quote.status === 'sent' && !decidedNotice && !!token && !!agreement && !settled;
+  const canDecide = quote.status === 'sent' && !decidedNotice && !!token && !!agreement && !!quoteFingerprint && !settled;
   const hasOptionalItems = items.some((i) => i.is_optional);
   const canEditSelections = canDecide && hasOptionalItems;
 
@@ -150,10 +152,11 @@ function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, toke
         }
         footerSlot={
           // Keep the panel mounted after a result so the confirmation / outcome stays on screen.
-          (canDecide || settled) && token && agreement ? (
+          (canDecide || settled) && token && agreement && quoteFingerprint ? (
             <QuoteLinkDecisionPanel
               token={token}
               agreement={agreement}
+              quoteFingerprint={quoteFingerprint}
               selectedOptionalIds={[...selectedIds]}
               defaultSignerName={defaultSignerName}
               onSubmittingChange={setSubmitting}

@@ -164,6 +164,8 @@ export {
   type QuoteAccessResolveResult,
 } from './quoteAccessLinks';
 export {
+  computePublicQuoteFingerprint,
+  fingerprintPublicQuoteView,
   loadPublicQuoteView,
   projectPublicQuote,
   projectPublicQuoteItems,

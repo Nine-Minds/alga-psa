@@ -29,6 +29,8 @@ export interface QuoteLinkDecisionPanelProps {
   token: string;
   /** Current agreement wording from the server (getCurrentQuoteAgreement). */
   agreement: QuoteLinkAgreement;
+  /** Fingerprint of the quote content rendered on the page; the server compares it on submit. */
+  quoteFingerprint: string;
   /** Optional items the recipient currently has switched on; committed by Accept. */
   selectedOptionalIds: ReadonlyArray<string>;
   /** Optional signer prefill, e.g. the recipient's name. */
@@ -46,7 +48,7 @@ type PanelState =
   | { kind: 'invalid' };
 
 const QuoteLinkDecisionPanel: React.FC<QuoteLinkDecisionPanelProps> = ({
-  token, agreement, selectedOptionalIds, defaultSignerName, onSubmittingChange, onSettled,
+  token, agreement, quoteFingerprint, selectedOptionalIds, defaultSignerName, onSubmittingChange, onSettled,
 }) => {
   const { t } = useTranslation('features/billing');
   const { formatDate } = useFormatters();
@@ -79,6 +81,7 @@ const QuoteLinkDecisionPanel: React.FC<QuoteLinkDecisionPanelProps> = ({
           agreed,
           agreementVersion: agreement.version,
           agreementTextHash: agreement.hash,
+          quoteFingerprint,
           selectedOptionalQuoteItemIds: action === 'accept' ? [...selectedOptionalIds] : [],
           comment,
         }),
@@ -106,7 +109,7 @@ const QuoteLinkDecisionPanel: React.FC<QuoteLinkDecisionPanelProps> = ({
       setRejectOpen(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, name, title, agreed, agreement, selectedOptionalIds, comment, t, onSubmittingChange]);
+  }, [token, name, title, agreed, agreement, quoteFingerprint, selectedOptionalIds, comment, t, onSubmittingChange]);
 
   // A settled result replaces the form; tell the owner so it can lock the optional-item toggles.
   const settled = state.kind !== 'form';
