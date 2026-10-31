@@ -561,13 +561,36 @@ export function actionProvidedKey(input: { idempotency_key?: string | null }, ct
   return `run:${ctx.runId}:${ctx.stepPath}`;
 }
 
+/** Thrown when co-managed serves (or may serve) the tenant but this process has no workflow-ticket authority provider. */
+export class WorkflowTicketAuthorityUnavailableError extends Error {
+  readonly code = 'WORKFLOW_TICKET_AUTHORITY_UNAVAILABLE';
+  constructor(readonly reason: string) {
+    super(`Co-managed workflow ticket authority provider is not registered in this process (capability verdict: ${reason}); refusing the ticket mutation`);
+    this.name = 'WorkflowTicketAuthorityUnavailableError';
+  }
+}
+
+/** The only serves() reasons that are a definite "co-managed does not serve this tenant". Anything else is unknown. */
+const DEFINITE_NOT_SERVED_REASONS = new Set(['forced-off', 'not-participating']);
+
 /**
  * Ticket-mutation adapter (CM L4a): for a tenant the co-managed capability serves, retain the executing
  * run / published-version / author authority before a workflow action mutates a ticket. A tenant that is
- * not served costs 0 statements and runs the action unchanged. Workflow actions never publish
- * TICKET_COMMENT_ADDED (DO-NOT-PORT #2); this adapter publishes nothing either.
+ * not served costs one cached `serves()` verdict and runs the action unchanged. Workflow actions never
+ * publish TICKET_COMMENT_ADDED (DO-NOT-PORT #2); this adapter publishes nothing either.
+ *
+ * Fails closed: with no provider registered, a tenant that is served OR whose verdict is unknown throws,
+ * so a worker that missed the co-managed registration can never fall back to the coarse role check.
  */
 export async function retainWorkflowTicketAuthority(ctx: ActionContext, tx: TenantTxContext, ticketId: string, fields: string[], readFields: string[] = []): Promise<void> {
+  if (!coManagedWorkflowTicketSeam.hasProvider()) {
+    const { serves } = await import('@alga-psa/core/capability');
+    const verdict = await serves('co-managed', tx.tenantId);
+    if (verdict.served || !DEFINITE_NOT_SERVED_REASONS.has(verdict.reasons.served)) {
+      throw new WorkflowTicketAuthorityUnavailableError(verdict.served ? 'served' : verdict.reasons.served);
+    }
+    return;
+  }
   const authority = await coManagedWorkflowTicketSeam.resolve(tx.tenantId);
   if (!authority) return;
   await authority.retain(tx.trx, { tenant: tx.tenantId, ticketId, workflowRunId: ctx.runId, actorUserId: tx.actorUserId, fields, readFields });

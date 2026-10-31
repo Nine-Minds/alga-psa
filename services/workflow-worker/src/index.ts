@@ -20,6 +20,7 @@ import { featureFlags } from '@alga-psa/core/server';
 import { TenantEmailService, StaticTemplateProcessor, EmailProviderManager } from '@alga-psa/email';
 // LEVERAGE: friction tenancy-server-barrel — the '@alga-psa/tenancy/server' barrel mixes next/auth-dependent and pure code; import the auth-free subpath.
 import { buildTenantPortalUrl } from '@alga-psa/tenancy/lib/tenantPortalUrl';
+import { coManagedWorkflowTicketSeam } from '@alga-psa/shared/lib/coManagedDelivery';
 import { HealthServer } from './healthServer.js';
 import { getWorkflowWorkerMetrics } from './metrics.js';
 import { registerEnterpriseStorageProviders } from './registerEnterpriseStorageProviders.js';
@@ -59,6 +60,21 @@ async function startServices() {
       logger.error('Failed to install co-managed write admission:', error);
     }
 
+    // Workflow ticket mutations must go through the co-managed record-scope / field-redaction authority.
+    // Reuse the shared registration (delivery seam + workflow-ticket seam); do not register by hand.
+    try {
+      await import('@alga-psa/co-managed/deliveryRegistration');
+    } catch (error) {
+      logger.error('Failed to register the co-managed workflow ticket authority:', error);
+    }
+    // Fail closed: without the provider, retainWorkflowTicketAuthority refuses co-managed/unknown tenants,
+    // so the worker must not report ready (/health stays 503 under this named entry).
+    const authorityRegistered = coManagedWorkflowTicketSeam.hasProvider();
+    healthServer.setWorker('co-managed-workflow-authority', authorityRegistered);
+    if (!authorityRegistered) {
+      logger.error('[WorkflowWorker] co-managed workflow ticket authority provider missing; worker will not report ready');
+    }
+
     initializeWorkflowRuntimeV2();
 
     // Workflow actions resolve email integrations through a runtime registry.
@@ -93,7 +109,7 @@ async function startServices() {
     await dataStoreSweepWorker.start();
     healthServer.setWorker('dataStoreSweep', true);
 
-    healthServer.markReady();
+    if (authorityRegistered) healthServer.markReady();
     logger.info('[WorkflowWorker] All services started successfully');
 
     // Handle graceful shutdown
