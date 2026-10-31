@@ -10,6 +10,7 @@ import { composeTicketDataSource, type TicketDataSource, type TicketDataSourceOv
 import { getCoManagedLocalTicketResourceAction } from '@/lib/actions/coManagedLocalTicketActions';
 import type { CoManagedSharedResource } from '@alga-psa/co-managed';
 import { CoManagedEffortSummary } from './CoManagedEffortSummary';
+import { CoManagedEffortPerspectiveProvider } from './coManagedEffortPerspective';
 import { createSharedConversationSession, type SharedConversationSession } from './sharedConversationSession';
 
 /** Audiences a co_managed workspace's own tickets offer before the server has resolved the shared ones. */
@@ -85,5 +86,6 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, version, resource]);
 
-  return <TicketDataSourceProvider dataSource={dataSource}>{children}</TicketDataSourceProvider>;
+  // Mounted from the customer's own workspace: the effort split inside labels its sides from the customer's perspective.
+  return <CoManagedEffortPerspectiveProvider value="customer"><TicketDataSourceProvider dataSource={dataSource}>{children}</TicketDataSourceProvider></CoManagedEffortPerspectiveProvider>;
 }

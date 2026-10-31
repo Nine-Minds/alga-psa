@@ -9,7 +9,11 @@
     "hours": "⟦{{value}} ħřş⟧",
     "customerMinutes": "⟦Ƈŭşŧȯḿḗř ŧḗȧḿ⟧",
     "mspMinutes": "⟦Ẏȯŭř ŧḗȧḿ⟧",
-    "combinedMinutes": "⟦Ƈȯḿƀīƞḗḓ⟧"
+    "combinedMinutes": "⟦Ƈȯḿƀīƞḗḓ⟧",
+    "customerView": {
+      "customerMinutes": "⟦Ẏȯŭř ŧḗȧḿ⟧",
+      "mspMinutes": "⟦ḾŞƤ⟧"
+    }
   },
   "time": {
     "log": "⟦Ŀȯɠ ŧīḿḗ⟧",

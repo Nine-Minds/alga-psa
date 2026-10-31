@@ -9,7 +9,11 @@
     "hours": "{{value}} tim",
     "customerMinutes": "Kundens team",
     "mspMinutes": "Ditt team",
-    "combinedMinutes": "Totalt"
+    "combinedMinutes": "Totalt",
+    "customerView": {
+      "customerMinutes": "Ditt team",
+      "mspMinutes": "MSP"
+    }
   },
   "time": {
     "log": "Registrera tid",

@@ -282,6 +282,16 @@ export interface TimeSourceWork {
     workItemType: string,
     workItemId: string,
   ) => Promise<TimeSourceValue<boolean>>;
+  /**
+   * Whether a registered source serves THIS tenant for THIS work item, so the tenant-level product guard
+   * (`assertPsaOnlyTenantAccess`) must not refuse a read of that work item's time. Generic: the caller never learns
+   * why. Native always misses (0 statements), so the guard runs exactly as before.
+   */
+  servesWorkItem: (
+    ctx: TimeSourceContext,
+    workItemType: string,
+    workItemId: string,
+  ) => Promise<TimeSourceValue<boolean>>;
 }
 
 /** L2's access-reduction retainer registry is called here; this card registers nothing into it. */

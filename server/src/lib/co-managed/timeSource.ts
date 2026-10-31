@@ -9,7 +9,7 @@ import { timeSheetActionErrorFrom } from '@alga-psa/scheduling/actions/timeSheet
 import { startSession, StopwatchConflictError } from '@alga-psa/scheduling/lib/stopwatch/stopwatchCore';
 import { publishPersistedTimeEntryEvents } from '@alga-psa/scheduling/lib/timeEntryWriteCore';
 import {
-  CoManagedSharedWorkError, isCoManagedUuid, loadCoManagedLocalWorkReference, lockTimeEntryBillingMode, readTimeEntryBillingMode,
+  CoManagedSharedWorkError, hasEffectiveSharedGrant, isCoManagedUuid, loadCoManagedLocalWorkReference, lockTimeEntryBillingMode, readTimeEntryBillingMode,
   resolveCoManagedTimeWorkItem, retainCoManagedTimeParticipation, withCoManagedCustomerProject, withCoManagedCustomerTicket,
 } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from './browserActor';
@@ -62,6 +62,28 @@ async function admitOperational(db: Knex, user: any, tenant: string, entry: Save
     return await boundary(db, actor, { kind, id: entry.work_item_id, tenant, relationshipId: relationship.relationship_id } as any, 'update', async context => ({ name: null as string | null, redacted: context.redactedFields }));
   } catch (error) {
     if (error instanceof CoManagedSharedWorkError) return null; // not shared customer work: native decides (and asks for a service)
+    throw error;
+  }
+}
+
+/**
+ * Whether `ticketId` is shared customer work for this tenant: the ticket has a ticket-work row that is not revoked, its
+ * relationship is live, the effective grant is open, and the user reads it through the customer-local boundary. A ticket the
+ * customer merely owns (no handoff, revoked, ended relationship) is NOT shared, and the caller keeps the native denial.
+ */
+async function isSharedCustomerTicket(db: Knex, user: any, tenant: string, ticketId: string): Promise<boolean> {
+  if (!isCoManagedUuid(ticketId)) return false;
+  let actor;
+  try { actor = await coManagedBrowserActor(user, tenant); } catch { return false; }
+  const work = await tenantDb(db, tenant).table('co_management_ticket_work').where({ ticket_id: ticketId }).whereNull('grant_revoked_at').first('relationship_id');
+  if (!work) return false;
+  try {
+    return await withCoManagedCustomerTicket(db, actor, { kind: 'ticket', id: ticketId, tenant, relationshipId: work.relationship_id } as any, 'read', async context => {
+      const live = await tenantDb(context.trx, tenant).table('co_management_relationships').where({ relationship_id: work.relationship_id, state: 'active' }).whereNull('ended_at').first('relationship_id');
+      return Boolean(live) && await hasEffectiveSharedGrant(context.trx, context.resource);
+    });
+  } catch (error) {
+    if (error instanceof CoManagedSharedWorkError) return false;
     throw error;
   }
 }
@@ -225,9 +247,21 @@ export function createCoManagedTimeSource(): TimeSource {
         const admitted = await admitOperational(db, user, ctx.tenant, { work_item_type: workItemType, work_item_id: workItemId } as SaveInput);
         return admitted ? { handled: true, value: true } : COMMANDS_MISS;
       },
+      servesWorkItem: async (ctx, workItemType, workItemId) => {
+        // Reading the time list of the customer's own shared ticket. Only a participating tenant, only shared customer work
+        // (the customer boundary decides, read authority); anything else is a miss and the native product guard stands.
+        if (workItemType !== 'ticket' || !(await participates(ctx.tenant))) return COMMANDS_MISS;
+        const { knex: db } = await createTenantKnex();
+        const user = await loadUser(db, ctx.tenant, ctx.userId);
+        if (!user) return COMMANDS_MISS;
+        return await isSharedCustomerTicket(db, user, ctx.tenant, workItemId) ? { handled: true, value: true } : COMMANDS_MISS;
+      },
       billingContext: async (ctx, db: any, workItemType, workItemId) => {
         if (workItemType !== COMMERCIAL_WORK || !workItemId) return COMMANDS_MISS;
-        const reference = await loadCoManagedLocalWorkReference(db, ctx.tenant, workItemId);
+        // Callers hand over either a Knex/transaction or a `tenantDb` wrapper (the drawer preview and the write core do the latter);
+        // the routing-row read needs a connection, so a wrapper falls back to the tenant connection.
+        const conn: Knex = typeof db === 'function' ? db : (await createTenantKnex()).knex;
+        const reference = await loadCoManagedLocalWorkReference(conn, ctx.tenant, workItemId);
         if (!reference) return COMMANDS_MISS;
         return { handled: true, value: { clientId: reference.clientId, billingProfileId: reference.billingProfileId } };
       },

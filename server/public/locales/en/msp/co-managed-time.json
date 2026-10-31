@@ -9,7 +9,11 @@
     "hours": "{{value}} hrs",
     "customerMinutes": "Customer team",
     "mspMinutes": "Your team",
-    "combinedMinutes": "Combined"
+    "combinedMinutes": "Combined",
+    "customerView": {
+      "customerMinutes": "Your team",
+      "mspMinutes": "MSP"
+    }
   },
   "time": {
     "log": "Log time",

@@ -9,7 +9,11 @@
     "hours": "{{value}} Std.",
     "customerMinutes": "Team des Kunden",
     "mspMinutes": "Ihr Team",
-    "combinedMinutes": "Gesamt"
+    "combinedMinutes": "Gesamt",
+    "customerView": {
+      "customerMinutes": "Ihr Team",
+      "mspMinutes": "MSP"
+    }
   },
   "time": {
     "log": "Zeit erfassen",

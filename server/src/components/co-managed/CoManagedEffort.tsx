@@ -7,6 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { getSharedEffortTotalsAction, type CoManagedEffortTarget } from '@/lib/actions/coManagedTimeActions';
 import { CoManagedFeatureBoundary } from './CoManagedFeatureBoundary';
+import { useCoManagedEffortPerspective } from './coManagedEffortPerspective';
 
 type Props = { target: CoManagedEffortTarget; refreshKey?: number; /** `inline` is the borderless split shown under a native time summary. */ variant?: 'card' | 'inline' };
 const FIELDS = ['customerMinutes', 'mspMinutes', 'combinedMinutes'] as const;
@@ -21,6 +22,10 @@ export default function CoManagedEffort(props: Props) {
 
 function Effort({ target, refreshKey, variant = 'card' }: Props) {
   const { t } = useTranslation('msp/co-managed-time'), { formatNumber } = useFormatters();
+  // A local project/task target is the customer's own work by construction; a shared ticket is seen from whichever side mounted it.
+  const mountedPerspective = useCoManagedEffortPerspective();
+  const customerView = target.kind !== 'shared' || mountedPerspective === 'customer';
+  const label = (field: typeof FIELDS[number]) => t(customerView && field !== 'combinedMinutes' ? `effort.customerView.${field}` : `effort.${field}`);
   const qualifiedTarget = useRef(target);
   const [totals, setTotals] = useState<CoManagedEffortTotals | null>(null);
   const [error, setError] = useState(false), [refresh, setRefresh] = useState(0);
@@ -41,7 +46,7 @@ function Effort({ target, refreshKey, variant = 'card' }: Props) {
     <p className="text-xs font-medium text-muted-foreground">{t('effort.title')}</p>
     {error ? <p role="alert" className="text-xs">{t('effort.error')}</p> : !totals ? <p role="status" className="text-xs text-muted-foreground">{t('loading')}</p> :
       <dl className="grid grid-cols-3 gap-2">{FIELDS.map(field => <div key={field}>
-        <dt className="text-xs text-muted-foreground">{t(`effort.${field}`)}</dt>
+        <dt className="text-xs text-muted-foreground">{label(field)}</dt>
         <dd className="text-sm font-semibold tabular-nums">{minutes(field)}</dd>
       </div>)}</dl>}
   </div>;
@@ -54,7 +59,7 @@ function Effort({ target, refreshKey, variant = 'card' }: Props) {
     <p className="text-sm text-muted-foreground">{t('effort.description')}</p>
     {error ? <p role="alert">{t('effort.error')}</p> : !totals ? <p role="status">{t('loading')}</p> :
       <dl className="grid gap-4 sm:grid-cols-3">{FIELDS.map(field => <div key={field}>
-        <dt className="text-sm text-muted-foreground">{t(`effort.${field}`)}</dt>
+        <dt className="text-sm text-muted-foreground">{label(field)}</dt>
         <dd className="font-semibold tabular-nums">{minutes(field)}</dd>
       </div>)}</dl>}
   </section>;

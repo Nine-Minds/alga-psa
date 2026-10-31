@@ -22,8 +22,15 @@ vi.mock('@alga-psa/db', async importOriginal => {
 });
 vi.mock('@alga-psa/auth', async importOriginal => {
   const real = await importOriginal<typeof import('@alga-psa/auth')>();
-  return { ...real, withAuth: (handler: any) => (...args: any[]) => handler(actor.user, { tenant: actor.user.tenant }, ...args),
+  // Like the real wrapper, the handler runs inside the caller's tenant context.
+  const { runWithTenant: inTenant } = await import('@alga-psa/db');
+  return { ...real, withAuth: (handler: any) => (...args: any[]) => inTenant(actor.user.tenant, () => handler(actor.user, { tenant: actor.user.tenant }, ...args)),
     getSession: async () => actor.session, getApiKeyUserOverride: () => null };
+});
+
+vi.mock('@alga-psa/user-composition/actions', async importOriginal => {
+  const real = await importOriginal<any>();
+  return { ...real, getCurrentUser: async () => actor.user };
 });
 
 import { configureL3cDbEnv, connectL3cDb, seedL3cWorld, seedL3cProject, shareProject, cleanupL3cTenants, type L3cWorld } from './helpers/coManagedL3cFixture';
@@ -183,5 +190,61 @@ describe.sequential('L6a2 deploy-fix round', () => {
     const invoices = await f.sponsor.table('invoices').where('client_id', f.clientId);
     expect(invoices).toHaveLength(1);
     expect(invoices[0].ticket_id ?? null).toBeNull();
+  }));
+
+  // ---- round 2 -------------------------------------------------------------------------------------------------------
+  const ticketTime = async () => (await import('../../../../packages/scheduling/src/actions/timeEntryTicketActions')).fetchTimeEntriesForTicket as any;
+  const DENIED = { name: 'ProductAccessError', code: 'PRODUCT_ACCESS_DENIED', capability: 'scheduling_time_actions', productCode: 'co_managed',
+    message: 'Product access denied for capability "scheduling_time_actions"' };
+
+  it('3.1 (a): a participating co_managed tenant loads the time list of its shared ticket, including operational entries', () => withTime(async f => {
+    const fetchForTicket = await ticketTime();
+    await f.as(f.customerPrincipal);
+    const logged = await f.logOperational(5);
+    const summary = await fetchForTicket(f.ticketId);
+    expect(summary.entries.map((e: any) => e.entry_id)).toContain(logged.entry_id);
+    expect(summary.totalMinutes).toBe(5);
+  }));
+
+  it('3.1 (b): a co_managed tenant the source does not serve (kill switch) gets the identical ProductAccessError', () => withTime(async f => {
+    const fetchForTicket = await ticketTime();
+    await f.as(f.customerPrincipal);
+    process.env.FORCE_CAPABILITIES = 'co-managed:off';
+    clearCapabilityCache();
+    const error: any = await fetchForTicket(f.ticketId).then(() => null, (e: unknown) => e);
+    expect(error).toBeTruthy();
+    expect(error).toMatchObject(DENIED);
+    expect(error.status).toBe(403);
+  }));
+
+  it('3.1 (c): a co_managed tenant on a ticket that is not shared is still denied', () => withTime(async f => {
+    const fetchForTicket = await ticketTime();
+    const unsharedId = randomUUID();
+    const t = await f.customer.table('tickets').where('ticket_id', f.ticketId).first();
+    await f.customer.table('tickets').insert({ ...t, ticket_id: unsharedId, ticket_number: `L6-${unsharedId.slice(0, 6)}`, title: 'Not shared' });
+    await f.as(f.customerPrincipal);
+    expect(await fetchForTicket(f.ticketId)).toBeTruthy(); // shared: allowed
+    const error: any = await fetchForTicket(unsharedId).then(() => null, (e: unknown) => e);
+    expect(error).toMatchObject(DENIED);
+    // A revoked grant stops being shared customer work too.
+    await f.revokeGrant();
+    await f.as(f.customerPrincipal);
+    expect(await fetchForTicket(f.ticketId).then(() => null, (e: unknown) => e)).toMatchObject(DENIED);
+  }));
+
+  it('3.1 (d): a native psa tenant is unaffected', () => withTime(async f => {
+    const fetchForTicket = await ticketTime();
+    await f.as(f.principal);
+    const summary = await fetchForTicket(randomUUID());
+    expect(summary).toMatchObject({ entries: [], totalMinutes: 0 });
+  }));
+
+  it('3.2: the drawer contract preview resolves the client of a co_managed item through the provider and lists the eligible lines', () => withTime(async f => {
+    const { getClientIdForWorkItem, getEligibleContractLinesForUI } = await import('../../../../packages/scheduling/src/lib/contractLineDisambiguation');
+    await f.as(f.principal);
+    const clientId = await getClientIdForWorkItem(f.referenceId, 'co_managed');
+    expect(clientId).toBe(f.clientId);
+    const lines = await getEligibleContractLinesForUI(clientId!, f.serviceId, '2026-08-08T10:00:00Z');
+    expect(lines.map(l => l.client_contract_line_id)).toEqual([f.lineId]);
   }));
 });
