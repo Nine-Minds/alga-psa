@@ -230,6 +230,36 @@
       "termsAndConditions": "Termos e condições",
       "total": "Total",
       "validUntil": "Válido até"
+    },
+    "public": {
+      "metaTitle": "Revisão da proposta",
+      "notice": {
+        "accepted": "Esta proposta foi aceita. É exibida aqui para seu registro.",
+        "declined": "Esta proposta foi recusada. É exibida aqui para seu registro.",
+        "converted": "Esta proposta foi aceita e está em andamento. É exibida aqui para seu registro.",
+        "readOnly": "Esta é uma visualização somente leitura da sua proposta."
+      },
+      "outcome": {
+        "unavailable": {
+          "title": "Este link não está disponível",
+          "body": "O link pode ter sido digitado incorretamente ou não estar mais ativo."
+        },
+        "expired": {
+          "title": "Este link expirou",
+          "body": "Por segurança, os links de propostas deixam de funcionar após algum tempo."
+        },
+        "superseded": {
+          "title": "Esta proposta foi substituída",
+          "body": "Uma versão mais recente foi enviada. Use o link do e-mail mais recente."
+        },
+        "decided": {
+          "title": "Esta proposta já foi decidida",
+          "body": "Uma resposta já foi registrada, então ela não pode mais ser aberta por este link."
+        },
+        "help": "Precisa de ajuda? Responda ao e-mail em que você recebeu este link.",
+        "signIn": "Entrar no portal do cliente",
+        "signInHint": "Já tem uma conta no portal do cliente?"
+      }
     }
   },
   "quoteForm": {

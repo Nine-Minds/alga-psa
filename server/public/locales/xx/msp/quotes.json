@@ -499,6 +499,13 @@
     },
     "availability": {
       "onHand": "⟦Ȯƞ ħȧƞḓ: {{count}}⟧"
+    },
+    "activity": {
+      "viewedViaEmailLink": {
+        "description": "⟦Ɋŭȯŧḗ ṽīḗẇḗḓ ṽīȧ ḗḿȧīŀ ŀīƞķ⟧",
+        "descriptionWithRecipient": "⟦Ɋŭȯŧḗ ṽīḗẇḗḓ ṽīȧ ḗḿȧīŀ ŀīƞķ ƀẏ {{email}}⟧",
+        "type": "⟦Ṽīḗẇḗḓ ṽīȧ ḗḿȧīŀ ŀīƞķ⟧"
+      }
     }
   },
   "quoteLineItems": {

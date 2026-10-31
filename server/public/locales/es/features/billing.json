@@ -230,6 +230,36 @@
       "termsAndConditions": "Términos y condiciones",
       "total": "Total",
       "validUntil": "Válido hasta"
+    },
+    "public": {
+      "metaTitle": "Revisión de cotización",
+      "notice": {
+        "accepted": "Este cotización ha sido aceptado. Se muestra aquí para su referencia.",
+        "declined": "Este cotización ha sido rechazado. Se muestra aquí para su referencia.",
+        "converted": "Este cotización ha sido aceptado y está en curso. Se muestra aquí para su referencia.",
+        "readOnly": "Esta es una vista de solo lectura de su cotización."
+      },
+      "outcome": {
+        "unavailable": {
+          "title": "Este enlace no está disponible",
+          "body": "Es posible que el enlace esté mal escrito o que ya no esté activo."
+        },
+        "expired": {
+          "title": "Este enlace ha caducado",
+          "body": "Por seguridad, los enlaces de cotizaciones dejan de funcionar pasado un tiempo."
+        },
+        "superseded": {
+          "title": "Este cotización ha sido reemplazado",
+          "body": "Se ha enviado una versión más reciente. Utilice el enlace del último correo."
+        },
+        "decided": {
+          "title": "Este cotización ya ha sido resuelto",
+          "body": "Ya se registró una respuesta, por lo que no se puede abrir desde este enlace."
+        },
+        "help": "¿Necesita ayuda? Responda al correo en el que recibió este enlace.",
+        "signIn": "Iniciar sesión en el portal de clientes",
+        "signInHint": "¿Ya tiene una cuenta en el portal de clientes?"
+      }
     }
   },
   "enums": {

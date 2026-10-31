@@ -499,6 +499,13 @@
     },
     "availability": {
       "onHand": "Disponible: {{count}}"
+    },
+    "activity": {
+      "viewedViaEmailLink": {
+        "description": "Cotización visto mediante enlace de correo",
+        "descriptionWithRecipient": "Cotización visto por {{email}} mediante enlace de correo",
+        "type": "Visto mediante enlace de correo"
+      }
     }
   },
   "quoteLineItems": {

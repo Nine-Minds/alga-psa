@@ -499,6 +499,13 @@
     },
     "availability": {
       "onHand": "En stock : {{count}}"
+    },
+    "activity": {
+      "viewedViaEmailLink": {
+        "description": "Devis consulté via un lien e-mail",
+        "descriptionWithRecipient": "Devis consulté par {{email}} via un lien e-mail",
+        "type": "Consulté via un lien e-mail"
+      }
     }
   },
   "quoteLineItems": {
