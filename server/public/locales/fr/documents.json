@@ -56,6 +56,20 @@
     "product": "Produit",
     "projectPhase": "Phase du projet",
     "qty": "Qté",
+    "quoteAcceptance": {
+      "title": "Devis accepté",
+      "signedBy": "Signé par",
+      "email": "E-mail",
+      "jobTitle": "Titre",
+      "acceptedOn": "Accepté le",
+      "method": "Méthode",
+      "ipAddress": "Adresse IP",
+      "methods": {
+        "emailLink": "Lien par e-mail",
+        "portal": "Portail client",
+        "msp": "Enregistré par le MSP"
+      }
+    },
     "quoteNumber": "Devis n°",
     "quoteTitle": "DEVIS",
     "rate": "Tarif",

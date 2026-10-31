@@ -56,6 +56,20 @@
     "product": "Product",
     "projectPhase": "Project Phase",
     "qty": "Qty",
+    "quoteAcceptance": {
+      "title": "Quote accepted",
+      "signedBy": "Signed by",
+      "email": "Email",
+      "jobTitle": "Title",
+      "acceptedOn": "Accepted on",
+      "method": "Method",
+      "ipAddress": "IP address",
+      "methods": {
+        "emailLink": "Emailed link",
+        "portal": "Client portal",
+        "msp": "Recorded by MSP"
+      }
+    },
     "quoteNumber": "Quote #",
     "quoteTitle": "QUOTE",
     "rate": "Rate",

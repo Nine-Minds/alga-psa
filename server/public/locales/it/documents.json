@@ -56,6 +56,20 @@
     "product": "Prodotto",
     "projectPhase": "Fase del progetto",
     "qty": "Qtà",
+    "quoteAcceptance": {
+      "title": "Preventivo accettato",
+      "signedBy": "Firmato da",
+      "email": "E-mail",
+      "jobTitle": "Titolo",
+      "acceptedOn": "Accettato il",
+      "method": "Metodo",
+      "ipAddress": "Indirizzo IP",
+      "methods": {
+        "emailLink": "Link via e-mail",
+        "portal": "Portale clienti",
+        "msp": "Registrato dall'MSP"
+      }
+    },
     "quoteNumber": "Preventivo n.",
     "quoteTitle": "PREVENTIVO",
     "rate": "Tariffa",
