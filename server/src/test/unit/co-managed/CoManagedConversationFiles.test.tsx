@@ -62,12 +62,24 @@ describe('CoManagedConversationFiles', () => {
 
 describe('CoManagedConversationFiles upload failure notice', () => {
   it('tells the user a failed send with files will be under "Unsent messages", and shows a refusal as itself', () => {
-    const failed = (code: string) => ({ ...session(['requester']), unsentFailure: () => ({ code }) });
+    const failed = (code: string) => { const stable = { code }; return { ...session(['requester']), unsentFailure: () => stable }; }; // the real session hands back one stable reference
     const view = render(<CoManagedConversationFiles session={failed('unknownOutcome')} resource={resource} staging={staging} />);
     expect(screen.getByRole('alert')).toHaveTextContent('coManaged.conversation.drafts.unsent');
     view.unmount();
     render(<CoManagedConversationFiles session={failed('readOnly')} resource={resource} staging={staging} />);
     expect(screen.getByRole('alert')).toHaveTextContent('coManaged.editor.errors.readOnly');
+  });
+  it('shows the alert as soon as a write fails and drops it after the next success, without a load completing', () => {
+    const listeners = new Set<() => void>();
+    let failure: { code: string } | null = null;
+    const live = { ...session(['requester']), unsentFailure: () => failure, version: () => 0,
+      subscribe: (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; } };
+    render(<CoManagedConversationFiles session={live} resource={resource} staging={staging} />);
+    expect(screen.queryByRole('alert')).toBeNull();
+    act(() => { failure = { code: 'unknownOutcome' }; listeners.forEach(l => l()); });
+    expect(screen.getByRole('alert')).toHaveTextContent('coManaged.conversation.drafts.unsent');
+    act(() => { failure = null; listeners.forEach(l => l()); });
+    expect(screen.queryByRole('alert')).toBeNull();
   });
   it('shows no alert when nothing failed', () => {
     render(<CoManagedConversationFiles session={{ ...session(['requester']), unsentFailure: () => null }} resource={resource} staging={staging} />);

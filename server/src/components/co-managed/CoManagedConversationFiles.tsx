@@ -46,9 +46,10 @@ export default function CoManagedConversationFiles({ session, resource, staging 
   const [disclosing, setDisclosing] = useState<string | null>(null);
   // Re-render whenever the session finishes a load: the files panel follows the conversation, not a host-passed counter.
   const version = useSyncExternalStore(session.subscribe, session.version, session.version);
+  // `unsent` changes without a load completing, so it needs its own snapshot subscription (`version` must stay load-only).
+  const unsent = useSyncExternalStore(session.subscribe, session.unsentFailure, session.unsentFailure);
   const staged = useSyncExternalStore(staging.subscribe, staging.getSnapshot, staging.getSnapshot);
   const snapshot = session.snapshot();
-  const unsent = session.unsentFailure();
   if (!enabled || !snapshot) return null;
   const items = snapshot.items.filter(item => !item.deleted);
   const threads = [...new Set(items.map(item => `${item.storeTenant}:${item.threadId}`))];
@@ -56,6 +57,9 @@ export default function CoManagedConversationFiles({ session, resource, staging 
   const maxBytes = coManagedAttachmentUploadLimit();
   void staged;
   return <section id="co-managed-conversation-files" className="space-y-4 p-4">
+    {/* LEVERAGE: friction host-comment-refresh — publishing a draft cannot make the host timeline re-read: TicketDetails keeps comments in
+        useState(initialComments) and screen.refresh('soft') (router.refresh) does not re-seed it; only a full 'reload' would. Needs a composable
+        "comments changed" callback on TicketScreenBehavior. */}
     {writeAudiences.length > 0 && <CoManagedDraftRestore resource={resource} version={version} onPublished={() => { void session.load(); }} />}
     {unsent && <Alert variant="destructive" role="alert"><AlertDescription>{t(['forbidden', 'readOnly', 'invalid', 'operationConflict'].includes(unsent.code)
       ? `coManaged.editor.errors.${unsent.code}` : 'coManaged.conversation.drafts.unsent')}</AlertDescription></Alert>}
