@@ -67,25 +67,27 @@ async function admitOperational(db: Knex, user: any, tenant: string, entry: Save
 }
 
 /**
- * Whether `ticketId` is shared customer work for this tenant: the ticket has a ticket-work row that is not revoked, its
- * relationship is live, the effective grant is open, and the user reads it through the customer-local boundary. A ticket the
- * customer merely owns (no handoff, revoked, ended relationship) is NOT shared, and the caller keeps the native denial.
+ * Whether `ticketId` is shared customer work for this tenant, decided only by the effective grant (`hasEffectiveSharedGrant`:
+ * the board scope gated by visibility mode, or an unrevoked escalated ticket-work grant) over the tenant's live relationship(s),
+ * and read through the customer-local boundary. A ticket the customer merely owns (no scope, no grant, ended relationship) is NOT
+ * shared, and the caller keeps the native denial.
  */
 async function isSharedCustomerTicket(db: Knex, user: any, tenant: string, ticketId: string): Promise<boolean> {
   if (!isCoManagedUuid(ticketId)) return false;
   let actor;
   try { actor = await coManagedBrowserActor(user, tenant); } catch { return false; }
-  const work = await tenantDb(db, tenant).table('co_management_ticket_work').where({ ticket_id: ticketId }).whereNull('grant_revoked_at').first('relationship_id');
-  if (!work) return false;
-  try {
-    return await withCoManagedCustomerTicket(db, actor, { kind: 'ticket', id: ticketId, tenant, relationshipId: work.relationship_id } as any, 'read', async context => {
-      const live = await tenantDb(context.trx, tenant).table('co_management_relationships').where({ relationship_id: work.relationship_id, state: 'active' }).whereNull('ended_at').first('relationship_id');
-      return Boolean(live) && await hasEffectiveSharedGrant(context.trx, context.resource);
-    });
-  } catch (error) {
-    if (error instanceof CoManagedSharedWorkError) return false;
-    throw error;
+  // LEVERAGE: pattern live-relationship-then-grant — admitOperational also resolves the live relationship before the customer boundary.
+  const relationships = await tenantDb(db, tenant).table('co_management_relationships').where({ state: 'active' }).whereNull('ended_at').select('relationship_id');
+  for (const { relationship_id: relationshipId } of relationships) {
+    try {
+      const shared = await withCoManagedCustomerTicket(db, actor, { kind: 'ticket', id: ticketId, tenant, relationshipId } as any, 'read',
+        context => hasEffectiveSharedGrant(context.trx, context.resource));
+      if (shared) return true;
+    } catch (error) {
+      if (!(error instanceof CoManagedSharedWorkError)) throw error;
+    }
   }
+  return false;
 }
 
 async function admitSave(ctx: TimeSourceContext, entry: SaveInput): Promise<TimeSourceValue<any>> {

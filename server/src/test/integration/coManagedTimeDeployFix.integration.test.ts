@@ -33,7 +33,6 @@ vi.mock('@alga-psa/user-composition/actions', async importOriginal => {
   return { ...real, getCurrentUser: async () => actor.user };
 });
 
-import { configureL3cDbEnv, connectL3cDb, seedL3cWorld, seedL3cProject, shareProject, cleanupL3cTenants, type L3cWorld } from './helpers/coManagedL3cFixture';
 import { configureL3cDbEnv, connectL3cDb, seedL3cWorld, cleanupL3cTenants } from './helpers/coManagedL3cFixture';
 import { buildTimeFixture, type Session } from './helpers/coManagedTimeFixture';
 import { registerCoManagedTimeSource } from '../../lib/co-managed/timeSource';
@@ -229,6 +228,49 @@ describe.sequential('L6a2 deploy-fix round', () => {
     // A revoked grant stops being shared customer work too.
     await f.revokeGrant();
     await f.as(f.customerPrincipal);
+    expect(await fetchForTicket(f.ticketId).then(() => null, (e: unknown) => e)).toMatchObject(DENIED);
+  }));
+
+  // ---- round 3: sharing is decided by the effective grant (board scope OR explicit grant), over the live relationship ----
+  const scopeTicketBoard = async (f: any, w: { tenant?: string } = {}) => {
+    const ticket = await f.customer.table('tickets').where('ticket_id', f.ticketId).first('board_id', 'tenant');
+    await f.customer.table('co_management_board_scopes').insert({ tenant: ticket.tenant, relationship_id: f.resource.relationshipId, board_id: ticket.board_id, can_collaborate: true });
+  };
+  const servesTicket = async (f: any) => {
+    const { createCoManagedTimeSource } = await import('../../lib/co-managed/timeSource');
+    return createCoManagedTimeSource().work!.servesWorkItem!({ tenant: f.resource.tenant, userId: f.customerPrincipal.userId } as any, 'ticket', f.ticketId);
+  };
+
+  it('3.3 (a): a revoked ticket-work row plus a collaborating board scope still shares the ticket; the time list loads', () => withTime(async f => {
+    const fetchForTicket = await ticketTime();
+    await f.as(f.customerPrincipal);
+    const logged = await f.logOperational(5);
+    await f.revokeGrant();
+    await f.as(f.customerPrincipal);
+    await f.customer.table('co_management_relationships').where('relationship_id', f.resource.relationshipId).update({ visibility_mode: 'board_scope' });
+    await scopeTicketBoard(f);
+    expect(await servesTicket(f)).toEqual({ handled: true, value: true });
+    const summary = await fetchForTicket(f.ticketId);
+    expect(summary.entries.map((e: any) => e.entry_id)).toContain(logged.entry_id);
+  }));
+
+  it('3.3 (b): a revoked row and no board scope keeps the original ProductAccessError', () => withTime(async f => {
+    const fetchForTicket = await ticketTime();
+    await f.revokeGrant();
+    await f.as(f.customerPrincipal);
+    expect(await servesTicket(f)).toEqual({ handled: false });
+    const error: any = await fetchForTicket(f.ticketId).then(() => null, (e: unknown) => e);
+    expect(error).toMatchObject(DENIED);
+    expect(error.status).toBe(403);
+  }));
+
+  it('3.3 (c): a board scope on an ended relationship is denied', () => withTime(async f => {
+    const fetchForTicket = await ticketTime();
+    await f.revokeGrant();
+    await scopeTicketBoard(f);
+    await f.customer.table('co_management_relationships').where('relationship_id', f.resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+    await f.as(f.customerPrincipal);
+    expect(await servesTicket(f)).toEqual({ handled: false });
     expect(await fetchForTicket(f.ticketId).then(() => null, (e: unknown) => e)).toMatchObject(DENIED);
   }));
 
