@@ -778,6 +778,7 @@ export const deleteUser = withAuth(async (
         ['project_tasks', 'assigned_to'],
         ['projects', 'assigned_to'],
         ['quote_activities', 'performed_by'],
+        ['quote_decisions', 'actor_user_id'],
         ['quote_document_template_assignments', 'created_by'],
         ['quote_items', 'created_by'],
         ['quote_items', 'updated_by'],

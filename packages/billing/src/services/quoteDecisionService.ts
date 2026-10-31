@@ -27,7 +27,7 @@ export type QuoteDecisionActor =
   /** The caller has already validated the link; the service does not re-check the token. */
   | { kind: 'access_link'; linkId: string; contactId?: string | null; email: string }
   /** The caller has already done the MSP permission checks. */
-  | { kind: 'msp_user'; userId: string };
+  | { kind: 'msp_user'; userId: string | null };
 
 export interface QuoteDecisionSigner {
   name?: string | null;

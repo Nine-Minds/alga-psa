@@ -1623,9 +1623,6 @@ export const markQuoteAccepted = withAuth(async (
   }
 
   const actorUserId = getActorUserId(user);
-  if (!actorUserId) {
-    throw new Error('Permission denied: Cannot update quote');
-  }
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     const result = await decideQuote({
