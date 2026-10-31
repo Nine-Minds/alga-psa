@@ -1652,7 +1652,9 @@
       "missingFieldNamed": "Brakuje wymaganego pola zgłoszenia: {{field}}.",
       "referenceMissing": "Jeden z wybranych rekordów zgłoszenia już nie istnieje. Odśwież stronę i spróbuj ponownie.",
       "conflict": "Ta zmiana zgłoszenia koliduje z istniejącym rekordem. Odśwież stronę i spróbuj ponownie.",
-      "valueNotAllowed": "Jedna z wartości zgłoszenia jest niedozwolona. Sprawdź formularz i spróbuj ponownie."
+      "valueNotAllowed": "Jedna z wartości zgłoszenia jest niedozwolona. Sprawdź formularz i spróbuj ponownie.",
+      "priorityItilBoardCustom": "Priorytet „{{priority}}” jest priorytetem ITIL, ale tablica „{{board}}” używa priorytetów niestandardowych.",
+      "priorityCustomBoardItil": "Priorytet „{{priority}}” jest priorytetem niestandardowym, ale tablica „{{board}}” używa priorytetów ITIL."
     },
     "board": {
       "invalidReference": "Wybrana tablica, status lub reguła jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
@@ -2652,15 +2654,17 @@
       "fromTicket": "Wstępnie wypełniono ze zgłoszenia #{{number}}. Nic nie zostanie zapisane, dopóki nie klikniesz Zapisz.",
       "inlineImages": "Opis zawiera obrazy należące do zgłoszenia źródłowego. Mogą przestać się wyświetlać po usunięciu tego zgłoszenia. Usuń je lub wgraj ponownie, jeśli szablon ma przetrwać zgłoszenie.",
       "viewOnly": "Możesz wyświetlić ten szablon, ale nie możesz go zmieniać.",
-      "referenceProblems": "Niektóre pola tego szablonu wskazują elementy, które już nie istnieją. Przy użyciu szablonu pozostaną puste. Popraw je i zapisz:",
+      "referenceProblems": "Niektóre pola tego szablonu są nieprawidłowe: odwołują się do elementów, które już nie istnieją, lub nie pasują do siebie (na przykład priorytet niezgodny z tablicą). Popraw je i zapisz:",
       "inactiveWarning": "Nieaktywny: ukryty w selektorze szablonów; nadal używany przez {{count}} harmonogramów.",
       "sharedWarning": "Zmiany dotyczą każdego cyklicznego harmonogramu używającego tego szablonu, od następnego utworzonego zgłoszenia.",
-      "boardChangeWarning": "Zmiana tablicy czyści priorytet i kategorię i może unieważnić status harmonogramów używających tego szablonu. Te harmonogramy kończą się błędem, dopóki ich nie edytujesz. Dotknięte harmonogramy: {{schedules}}."
+      "boardChangeWarning": "Zmiana tablicy czyści priorytet i kategorię i może unieważnić status harmonogramów używających tego szablonu. Te harmonogramy kończą się błędem, dopóki ich nie edytujesz. Dotknięte harmonogramy: {{schedules}}.",
+      "priorityTypeMismatchItil": "Priorytet ‘{{priority}}’ jest priorytetem ITIL, ale tablica ‘{{board}}’ używa priorytetów niestandardowych. Zapis zostanie odrzucony, dopóki nie zmienisz priorytetu lub tablicy.",
+      "priorityTypeMismatchCustom": "Priorytet ‘{{priority}}’ jest priorytetem niestandardowym, ale tablica ‘{{board}}’ używa priorytetów ITIL. Zapis zostanie odrzucony, dopóki nie zmienisz priorytetu lub tablicy."
     },
     "errors": {
       "notFound": "Nie znaleziono szablonu zgłoszenia",
       "duplicateName": "Szablon o nazwie {{name}} już istnieje",
-      "invalidReferences": "Szablon odwołuje się do tablicy, kategorii lub priorytetu, który jest niedostępny",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "Szablony zgłoszeń są niedostępne",
       "subcategoryNeedsCategory": "Podkategoria wymaga kategorii",
       "inUseBySchedules": "Używany przez {{count}} cykliczny(ch) harmonogram(ów): {{schedules}}. Najpierw wskaż im inny szablon lub zarchiwizuj je."

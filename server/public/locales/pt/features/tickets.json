@@ -1652,7 +1652,9 @@
       "missingFieldNamed": "Falta um campo obrigatório do ticket: {{field}}.",
       "referenceMissing": "Um dos registros de ticket selecionados não existe mais. Atualize a página e tente novamente.",
       "conflict": "Esta alteração do ticket conflita com um registro existente. Atualize a página e tente novamente.",
-      "valueNotAllowed": "Um dos valores do ticket não é permitido. Revise o formulário e tente novamente."
+      "valueNotAllowed": "Um dos valores do ticket não é permitido. Revise o formulário e tente novamente.",
+      "priorityItilBoardCustom": "A prioridade ‘{{priority}}’ é uma prioridade ITIL, mas o quadro ‘{{board}}’ usa prioridades personalizadas.",
+      "priorityCustomBoardItil": "A prioridade ‘{{priority}}’ é uma prioridade personalizada, mas o quadro ‘{{board}}’ usa prioridades ITIL."
     },
     "board": {
       "invalidReference": "O quadro, o status ou a regra selecionados são inválidos. Atualize a página e tente novamente.",
@@ -2652,15 +2654,17 @@
       "fromTicket": "Preenchido a partir do ticket #{{number}}. Nada é guardado até clicar em Guardar.",
       "inlineImages": "A descrição contém imagens que pertencem ao ticket de origem. Podem deixar de ser apresentadas se esse ticket for eliminado. Remova-as ou carregue-as novamente se o modelo deve sobreviver ao ticket.",
       "viewOnly": "Pode ver este modelo, mas não o alterar.",
-      "referenceProblems": "Alguns campos deste modelo apontam para itens que já não existem. Ficam em branco quando o modelo é usado. Corrija-os e guarde:",
+      "referenceProblems": "Alguns campos deste modelo não são válidos: referem-se a itens que já não existem ou não são compatíveis entre si (por exemplo, uma prioridade que não corresponde ao quadro). Corrija-os e guarde:",
       "inactiveWarning": "Inativo: oculto no seletor de modelos; ainda usado por {{count}} agendamentos.",
       "sharedWarning": "As alterações aplicam-se a todos os agendamentos recorrentes que usam este modelo, a partir do próximo ticket criado.",
-      "boardChangeWarning": "Alterar o quadro limpa a prioridade e a categoria e pode invalidar o status dos agendamentos que usam este modelo. Esses agendamentos falham até que você os edite. Agendamentos afetados: {{schedules}}."
+      "boardChangeWarning": "Alterar o quadro limpa a prioridade e a categoria e pode invalidar o status dos agendamentos que usam este modelo. Esses agendamentos falham até que você os edite. Agendamentos afetados: {{schedules}}.",
+      "priorityTypeMismatchItil": "A prioridade ‘{{priority}}’ é uma prioridade ITIL, mas o quadro ‘{{board}}’ usa prioridades personalizadas. O salvamento será recusado até que você altere a prioridade ou o quadro.",
+      "priorityTypeMismatchCustom": "A prioridade ‘{{priority}}’ é uma prioridade personalizada, mas o quadro ‘{{board}}’ usa prioridades ITIL. O salvamento será recusado até que você altere a prioridade ou o quadro."
     },
     "errors": {
       "notFound": "Modelo de ticket não encontrado",
       "duplicateName": "Já existe um modelo com o nome {{name}}",
-      "invalidReferences": "O modelo refere um quadro, categoria ou prioridade que não está disponível",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "Os modelos de tickets não estão disponíveis",
       "subcategoryNeedsCategory": "Uma subcategoria requer uma categoria",
       "inUseBySchedules": "Usado por {{count}} agendamento(s) recorrente(s): {{schedules}}. Aponte-os para outro modelo ou arquive-os primeiro."

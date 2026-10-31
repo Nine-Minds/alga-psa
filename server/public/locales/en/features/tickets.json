@@ -1660,7 +1660,9 @@
       "missingFieldNamed": "Missing required ticket field: {{field}}.",
       "referenceMissing": "One of the selected ticket records no longer exists. Please refresh and try again.",
       "conflict": "This ticket change conflicts with an existing record. Please refresh and try again.",
-      "valueNotAllowed": "One of the ticket values is not allowed. Please review the form and try again."
+      "valueNotAllowed": "One of the ticket values is not allowed. Please review the form and try again.",
+      "priorityItilBoardCustom": "Priority ‘{{priority}}’ is an ITIL priority but board ‘{{board}}’ uses custom priorities.",
+      "priorityCustomBoardItil": "Priority ‘{{priority}}’ is a custom priority but board ‘{{board}}’ uses ITIL priorities."
     },
     "board": {
       "invalidReference": "The selected board, status, or rule is invalid. Please refresh and try again.",
@@ -2652,15 +2654,17 @@
       "fromTicket": "Prefilled from ticket #{{number}}. Nothing is saved until you click Save.",
       "inlineImages": "The description contains images that belong to the source ticket. They may stop displaying if that ticket is deleted. Remove them or re-upload them if the template should outlive the ticket.",
       "viewOnly": "You can view this template but not change it.",
-      "referenceProblems": "Some fields in this template point at things that no longer exist. They are left blank when the template is used. Fix them and save:",
+      "referenceProblems": "Some fields in this template are not valid: they refer to something that no longer exists, or do not fit together (for example a priority that does not match the board). Fix them and save:",
       "inactiveWarning": "Inactive: hidden from the template picker; still used by {{count}} schedules.",
       "sharedWarning": "Changes here apply to every recurring schedule that uses this template, from the next ticket each one creates.",
-      "boardChangeWarning": "Changing the board clears priority and category, and can make the status of schedules that use this template invalid. Those schedules fail until you edit them. Affected schedules: {{schedules}}."
+      "boardChangeWarning": "Changing the board clears priority and category, and can make the status of schedules that use this template invalid. Those schedules fail until you edit them. Affected schedules: {{schedules}}.",
+      "priorityTypeMismatchItil": "Priority ‘{{priority}}’ is an ITIL priority but board ‘{{board}}’ uses custom priorities. Saving is refused until you change the priority or the board.",
+      "priorityTypeMismatchCustom": "Priority ‘{{priority}}’ is a custom priority but board ‘{{board}}’ uses ITIL priorities. Saving is refused until you change the priority or the board."
     },
     "errors": {
       "notFound": "Ticket template not found",
       "duplicateName": "A template named {{name}} already exists",
-      "invalidReferences": "The template refers to a board, category or priority that is not available",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "Ticket templates are not available",
       "subcategoryNeedsCategory": "A subcategory requires a category",
       "inUseBySchedules": "Used by {{count}} recurring schedule(s): {{schedules}}. Point them at another template or archive them first."

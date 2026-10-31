@@ -1660,7 +1660,9 @@
       "missingFieldNamed": "Ett obligatoriskt ärendefält saknas: {{field}}.",
       "referenceMissing": "En av de valda ärendeposterna finns inte längre. Ladda om sidan och försök igen.",
       "conflict": "Den här ärendeändringen står i konflikt med en befintlig post. Ladda om sidan och försök igen.",
-      "valueNotAllowed": "Ett av ärendevärdena är inte tillåtet. Granska formuläret och försök igen."
+      "valueNotAllowed": "Ett av ärendevärdena är inte tillåtet. Granska formuläret och försök igen.",
+      "priorityItilBoardCustom": "Prioriteten ‘{{priority}}’ är en ITIL-prioritet, men tavlan ‘{{board}}’ använder anpassade prioriteter.",
+      "priorityCustomBoardItil": "Prioriteten ‘{{priority}}’ är en anpassad prioritet, men tavlan ‘{{board}}’ använder ITIL-prioriteter."
     },
     "board": {
       "invalidReference": "Den valda tavlan, statusen eller regeln är ogiltig. Ladda om sidan och försök igen.",
@@ -2652,15 +2654,17 @@
       "fromTicket": "Förifyllt från ärende #{{number}}. Inget sparas förrän du klickar på Spara.",
       "inlineImages": "Beskrivningen innehåller bilder som tillhör källärendet. De kan sluta visas om ärendet tas bort. Ta bort dem eller ladda upp dem igen om mallen ska finnas kvar efter ärendet.",
       "viewOnly": "Du kan visa den här mallen men inte ändra den.",
-      "referenceProblems": "Vissa fält i den här mallen pekar på sådant som inte längre finns. De lämnas tomma när mallen används. Rätta dem och spara:",
+      "referenceProblems": "Vissa fält i den här mallen är ogiltiga: de refererar till något som inte längre finns eller passar inte ihop (till exempel en prioritet som inte matchar tavlan). Åtgärda dem och spara:",
       "inactiveWarning": "Inaktiv: dold i mallväljaren; används fortfarande av {{count}} scheman.",
       "sharedWarning": "Ändringar gäller alla återkommande scheman som använder mallen, från nästa ärende de skapar.",
-      "boardChangeWarning": "Att byta tavla rensar prioritet och kategori och kan göra status ogiltig för scheman som använder mallen. Dessa scheman misslyckas tills du redigerar dem. Berörda scheman: {{schedules}}."
+      "boardChangeWarning": "Att byta tavla rensar prioritet och kategori och kan göra status ogiltig för scheman som använder mallen. Dessa scheman misslyckas tills du redigerar dem. Berörda scheman: {{schedules}}.",
+      "priorityTypeMismatchItil": "Prioriteten ‘{{priority}}’ är en ITIL-prioritet, men tavlan ‘{{board}}’ använder anpassade prioriteter. Det går inte att spara förrän du ändrar prioriteten eller tavlan.",
+      "priorityTypeMismatchCustom": "Prioriteten ‘{{priority}}’ är en anpassad prioritet, men tavlan ‘{{board}}’ använder ITIL-prioriteter. Det går inte att spara förrän du ändrar prioriteten eller tavlan."
     },
     "errors": {
       "notFound": "Ärendemallen hittades inte",
       "duplicateName": "Det finns redan en mall med namnet {{name}}",
-      "invalidReferences": "Mallen refererar till en tavla, kategori eller prioritet som inte är tillgänglig",
+      "invalidReferences": "{{problems}}",
       "notAvailable": "Ärendemallar är inte tillgängliga",
       "subcategoryNeedsCategory": "En underkategori kräver en kategori",
       "inUseBySchedules": "Används av {{count}} återkommande schema(n): {{schedules}}. Peka dem på en annan mall eller arkivera dem först."
