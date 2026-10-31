@@ -9,14 +9,14 @@ exports.up = async function(knex) {
     .select('conname', knex.raw('pg_get_constraintdef(oid) as definition'));
   for (const constraint of constraints) if (constraint.definition.includes('channel') && constraint.definition.includes("'pending'") &&
       constraint.definition.includes("'created'") && !constraint.definition.includes("'failed'")) {
-    await knex.raw('ALTER TABLE ?? DROP CONSTRAINT ??', [TABLE, constraint.conname]);
+    await knex.schema.alterTable(TABLE, table => { table.dropChecks(constraint.conname); });
   }
   await knex(TABLE).where('channel', 'email').whereNot('status', 'pending').update({ next_attempt_at: null });
   for (const [name, check] of [
     ['sla_org_recipient_channels_status', "channel IN ('in_app', 'email') AND status IN ('pending', 'created', 'disabled', 'delivered', 'skipped', 'failed')"],
     ['sla_org_email_retry_state', "attempt_count >= 0 AND (channel <> 'email' OR ((status = 'pending' AND next_attempt_at IS NOT NULL) OR (status <> 'pending' AND next_attempt_at IS NULL)))"],
   ]) if (!await knex('pg_constraint').where('conname', name).whereRaw('conrelid = ?::regclass', [TABLE]).first()) {
-    await knex.raw('ALTER TABLE ?? ADD CONSTRAINT ?? CHECK (' + check + ')', [TABLE, name]);
+    await knex.schema.alterTable(TABLE, table => { table.check(check, [], name); });
   }
   await knex.raw("CREATE INDEX IF NOT EXISTS sla_org_email_due_idx ON ?? (tenant, next_attempt_at) WHERE channel = 'email' AND status = 'pending'", [TABLE]);
 };
@@ -32,12 +32,9 @@ exports.down = async function(knex) {
   // transaction, so every step is ordered and guarded to stay retryable: a
   // failure must never leave the table without both the columns and the check.
   // `up` rediscovers this constraint by definition, so only stability matters.
-  await knex.raw(
-    'ALTER TABLE ?? ADD CONSTRAINT ?? CHECK (' +
-      "channel IN ('in_app', 'email') AND status IN ('pending', 'created', 'disabled', 'delivered', 'skipped')" +
-    ')',
-    [TABLE, 'sla_org_recipient_channels_status'],
-  );
+  await knex.schema.alterTable(TABLE, table => {
+    table.check("channel IN ('in_app', 'email') AND status IN ('pending', 'created', 'disabled', 'delivered', 'skipped')", [], 'sla_org_recipient_channels_status');
+  });
   const dropColumns = [];
   for (const column of ['attempt_count', 'next_attempt_at', 'error_code']) {
     if (await knex.schema.hasColumn(TABLE, column)) dropColumns.push(column);
