@@ -368,7 +368,7 @@
       "title": "Export workspace",
       "description": "Download an encrypted, portable archive of your workspace records and files.",
       "recovery": "Keep the recovery passphrase somewhere safe. Without it, the archive cannot be opened.",
-      "connections": "The archive contains your records and files. Billing, MSP-private data and integration secrets are not included.",
+      "connections": "The archive contains your workspace records and the files stored in your workspace. Document records and associations, time, schedule, meeting and conversation history are not included yet and arrive in a later release. Billing, MSP-private data and integration secrets are not included.",
       "passphrase": "Recovery passphrase",
       "confirmPassphrase": "Confirm recovery passphrase",
       "download": "Prepare and download archive",
@@ -376,7 +376,8 @@
       "loadError": "You cannot export this workspace with your current access.",
       "lengthError": "Use a passphrase between 16 and 1024 UTF-8 bytes.",
       "matchError": "The recovery passphrases must match.",
-      "unavailable": "Workspace export is not available in this edition."
+      "unavailable": "Workspace export is not available in this edition.",
+      "loading": "Loading…"
     },
     "acceptance": {
       "accept": "Accept and activate workspace",

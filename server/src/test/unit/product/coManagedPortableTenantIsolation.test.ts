@@ -7,7 +7,7 @@ import { tenantDb } from '@alga-psa/db';
 const ROOT = resolve(__dirname, '../../../../..');
 const SOURCES = [
   'packages/co-managed/src/portableCoreExport.ts', 'packages/co-managed/src/portableWorkExport.ts',
-  'packages/co-managed/src/portableAssetExport.ts', 'packages/co-managed/src/portableWorkflowExport.ts',
+  'packages/co-managed/src/portableAssetExport.ts', 'packages/co-managed/src/portableWorkflowExport.ts', 'packages/co-managed/src/portableFileExport.ts',
   'ee/server/src/lib/co-managed/portableVaultExport.ts',
   'packages/co-managed/src/portableOperationalExport.ts', 'packages/co-managed/src/portableConversationExport.ts',
   'packages/co-managed/src/portableDocumentExport.ts', 'packages/co-managed/src/portableSupplementalFileExport.ts',

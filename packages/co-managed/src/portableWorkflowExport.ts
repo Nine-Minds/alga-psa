@@ -162,6 +162,7 @@ async function retainCoManagedPortableWorkflows(trx: Knex.Transaction, inputActo
  * directly: it reaches them only through workflows's contributor contract. */
 export const portableWorkflowContributor: PortableContributor = {
   id: 'workflows', version: 1, reason: 'authored workflow configuration and task business history',
+  permissions: [{ resource: 'workflow', action: 'admin' }, { resource: 'workflow', action: 'read' }],
   columns: COLUMNS, references: CO_MANAGED_PORTABLE_WORKFLOW_REFERENCES,
   export: async ctx => exportCoManagedPortableWorkflows(ctx.db, ctx.actor, ctx.packageId, ctx.snapshot),
   retain: ctx => retainCoManagedPortableWorkflows(ctx.trx, ctx.actor, ctx.packageId),

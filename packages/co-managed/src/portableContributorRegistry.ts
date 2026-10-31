@@ -22,6 +22,12 @@ export interface PortableContributor {
   readonly references: readonly PortableRecordReference[];
   /** Owned tables and their exact, ordered column projection. New DB columns are never implicitly exported. */
   readonly columns: Readonly<Record<string, readonly string[]>>;
+  /**
+   * Permissions the contributor's own checks require. If the tenant has NO permission row for one (it is not
+   * provisioned, as opposed to provisioned-but-not-held, which still throws) the engine does not call the
+   * contributor for the unprovisioned scope: it emits empty tables and a `not_provisioned` manifest exclusion.
+   */
+  readonly permissions?: readonly PortablePermissionRequirement[];
   /** Reads rows (and optionally staged blobs) at the shared snapshot. Tenant-scoped by construction. */
   export(ctx: PortableExportContext): Promise<PortableContribution>;
   /** Re-reads the same rows under the caller's final transaction so the engine can detect a changed source. */
@@ -30,10 +36,18 @@ export interface PortableContributor {
   validate(records: PortableRecords, workspace: PortableRecords): void;
 }
 
+export interface PortablePermissionRequirement {
+  resource: string; action: string;
+  /** Owned tables that depend on this permission. Omitted: the whole contributor depends on it. */
+  tables?: readonly string[];
+}
+
 export interface PortableExportContext {
   db: Knex; actor: CoManagedSessionActor; packageId: string; snapshot: CoManagedPortableSnapshot;
+  /** Owned tables the engine has declared not provisioned: the contributor must return them empty and skip their permission checks. */
+  notProvisioned?: ReadonlySet<string>;
 }
-export interface PortableRetainContext { trx: Knex.Transaction; actor: CoManagedSessionActor; packageId: string }
+export interface PortableRetainContext { trx: Knex.Transaction; actor: CoManagedSessionActor; packageId: string; notProvisioned?: ReadonlySet<string> }
 export interface PortableRecordsContribution {
   records: PortableRecords;
   /** Informational, trusted-application metadata carried to restore (policies, dependencies). Not digested into row digests. */
@@ -76,6 +90,8 @@ function checkContract(c: PortableContributor, owners: ReadonlyMap<string, strin
         new Set(columns).size !== columns.length) bad(`invalid columns for ${table}`);
     if (owners.has(table)) bad(`table ${table} is already owned by "${owners.get(table)}"`);
   }
+  if (c.permissions !== undefined && (!Array.isArray(c.permissions) || c.permissions.some(p => !p || !IDENT.test(String(p.resource)) || !IDENT.test(String(p.action)) ||
+      p.tables !== undefined && (!Array.isArray(p.tables) || !p.tables.length || p.tables.some((t: string) => !tables.includes(t)))))) bad('invalid permissions');
   if (!Array.isArray(c.references)) return bad('missing references');
   for (const reference of c.references) {
     if (!Array.isArray(reference) || reference.length !== 4 || reference.some(part => typeof part !== 'string' || !IDENT.test(part))) bad('malformed reference');

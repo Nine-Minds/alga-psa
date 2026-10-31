@@ -1,10 +1,13 @@
+import type { Knex } from 'knex';
 import { createHash } from 'node:crypto';
 import { assertPortableTransferActive } from './portableTransfer';
 import type { PortableStagedBlob } from './portableBlobStaging';
 import type { PortableRecordReference, PortableRecords } from './portableRecordValidation';
 import { CoManagedSharedWorkError } from './sharedWorkIdentity';
+import type { PortableExclusion } from './portableWorkspaceManifest';
+import { isCoManagedPermissionProvisioned } from './localPermission';
 import { PortableContributorError, type PortableBlobLease, type PortableContributor, type PortableContributorRegistry,
-  type PortableExportContext, type PortableRetainContext } from './portableContributorRegistry';
+  type PortableExportContext, type PortableRetainContext, type PortablePermissionRequirement } from './portableContributorRegistry';
 
 /** Explicit caps. A section larger than this is refused, never truncated. */
 export const PORTABLE_GRAPH_LIMITS = Object.freeze({ rowsPerTable: 100_000, blobs: 100_000 });
@@ -72,10 +75,14 @@ export function validatePortableEdges(records: PortableRecords, edges: readonly 
 export interface PortableCollectedSection {
   id: string; version: number; reason: string; columns: Readonly<Record<string, readonly string[]>>;
   records: PortableRecords; annotations: Record<string, unknown>; sha256: string;
+  /** Tables the contributor declared empty because a required permission is not provisioned. */
+  notProvisioned: readonly string[];
 }
 export interface PortableBlobEntry extends PortableStagedBlob { contributor: string }
 export interface PortableCollectedWorkspace {
   sections: PortableCollectedSection[]; edges: PortableGraphEdge[]; files: PortableBlobEntry[];
+  /** Named gaps: scopes whose permission is not provisioned in this tenant. Merged into the manifest. */
+  exclusions: PortableExclusion[];
   /** Every contributor's lease; dispose after the archive is sealed (or on failure). */
   leases: PortableBlobLease[];
   dispose(): Promise<void>;
@@ -84,7 +91,7 @@ export interface PortableCollectedWorkspace {
 const isObject = (value: unknown): value is Row => !!value && typeof value === 'object' && !Array.isArray(value);
 
 /** The contract, as the engine enforces it on what a contributor actually returned. */
-function checkRecords(contributor: PortableContributor, input: unknown): PortableRecords {
+function checkRecords(contributor: PortableContributor, input: unknown, notProvisioned: ReadonlySet<string> = new Set()): PortableRecords {
   const fail = (message: string): never => { throw new PortableContributorError(contributor.id, message); };
   if (!isObject(input)) return fail('returned no records');
   const tables = Object.keys(contributor.columns);
@@ -92,11 +99,42 @@ function checkRecords(contributor: PortableContributor, input: unknown): Portabl
   for (const table of tables) {
     const rows = input[table], columns = contributor.columns[table];
     if (!Array.isArray(rows) || rows.length > PORTABLE_GRAPH_LIMITS.rowsPerTable) fail(`invalid or oversized rows for ${table}`);
+    if (notProvisioned.has(table) && (rows as unknown[]).length) fail(`${table} must be empty: its permission is not provisioned`);
     for (const row of rows as unknown[]) {
       if (!isObject(row) || Object.keys(row).length !== columns.length || columns.some(column => !Object.hasOwn(row, column))) fail(`rows of ${table} do not match the declared columns`);
     }
   }
   return normalizePortableRecords(input as PortableRecords);
+}
+
+/**
+ * Which of a contributor's declared permissions the tenant does not provision at all. A provisioned permission
+ * the actor lacks is NOT handled here: the contributor's own check still throws. Export and retain both resolve
+ * through here, so they always agree on what is empty.
+ */
+async function resolveProvisioning(contributor: PortableContributor, db: Knex, tenant: string, lock: boolean) {
+  const missing: PortablePermissionRequirement[] = [];
+  for (const requirement of contributor.permissions ?? []) {
+    if (!await isCoManagedPermissionProvisioned(db, tenant, requirement.resource, requirement.action, lock)) missing.push(requirement);
+  }
+  const all = Object.keys(contributor.columns);
+  const tables = new Set(missing.flatMap(requirement => requirement.tables ?? all));
+  return { missing, tables, whole: tables.size === all.length };
+}
+
+function emptyRecords(contributor: PortableContributor): PortableRecords {
+  return Object.fromEntries(Object.keys(contributor.columns).map(table => [table, []]));
+}
+
+/** One exclusion per unprovisioned scope (names are unique in a manifest), listing every permission that is absent. */
+function provisioningExclusions(contributor: PortableContributor, missing: readonly PortablePermissionRequirement[]): PortableExclusion[] {
+  const scopes = new Map<string, string[]>();
+  for (const requirement of missing) {
+    const name = requirement.tables ? `domain:${contributor.id}:${requirement.resource}` : `domain:${contributor.id}`;
+    scopes.set(name, [...scopes.get(name) ?? [], `${requirement.resource}.${requirement.action}`]);
+  }
+  return [...scopes].map(([name, permissions]) => ({ class: 'not_provisioned' as const, name,
+    reason: `This workspace has no ${permissions.join(' / ')} permission, so ${contributor.reason} that depends on it is not included` }));
 }
 
 function sectionDigest(contributor: PortableContributor, records: PortableRecords) {
@@ -110,7 +148,7 @@ function sectionDigest(contributor: PortableContributor, records: PortableRecord
  * On any failure all staged blobs are disposed.
  */
 export async function collectPortableWorkspace(registry: PortableContributorRegistry, ctx: PortableExportContext): Promise<PortableCollectedWorkspace> {
-  const edges = buildPortableReferenceEdges(registry), sections: PortableCollectedSection[] = [], leases: PortableBlobLease[] = [];
+  const edges = buildPortableReferenceEdges(registry), sections: PortableCollectedSection[] = [], leases: PortableBlobLease[] = [], exclusions: PortableExclusion[] = [];
   const dispose = async () => {
     const results = await Promise.allSettled(leases.splice(0).map(lease => lease.dispose()));
     if (results.some(result => result.status === 'rejected')) throw new Error('Portable export staging cleanup failed');
@@ -118,11 +156,17 @@ export async function collectPortableWorkspace(registry: PortableContributorRegi
   try {
     for (const contributor of registry.list()) {
       assertPortableTransferActive();
-      const contribution = await contributor.export(ctx);
+      const provisioning = await resolveProvisioning(contributor, ctx.db, ctx.actor.tenant, false);
+      exclusions.push(...provisioningExclusions(contributor, provisioning.missing));
+      // A wholly unprovisioned domain is an empty section; the contributor is not called. Its section still exists,
+      // so the manifest's section set always equals the registry.
+      const contribution = provisioning.whole ? { records: emptyRecords(contributor), annotations: {} as Record<string, unknown>, files: undefined }
+        : await contributor.export(provisioning.tables.size ? { ...ctx, notProvisioned: provisioning.tables } : ctx);
       if (contribution?.files) leases.push(contribution.files);
-      const records = checkRecords(contributor, contribution?.records);
+      const records = checkRecords(contributor, contribution?.records, provisioning.tables);
       sections.push({ id: contributor.id, version: contributor.version, reason: contributor.reason, columns: contributor.columns, records,
-        annotations: JSON.parse(portableCanonicalJson(contribution.annotations ?? {})), sha256: sectionDigest(contributor, records) });
+        annotations: JSON.parse(portableCanonicalJson(contribution.annotations ?? {})), sha256: sectionDigest(contributor, records),
+        notProvisioned: [...provisioning.tables].sort() });
     }
     const workspace: PortableRecords = Object.assign({}, ...sections.map(section => section.records));
     for (const contributor of registry.list()) {
@@ -143,7 +187,7 @@ export async function collectPortableWorkspace(registry: PortableContributorRegi
       }
     }
     if (files.size > PORTABLE_GRAPH_LIMITS.blobs) throw new Error('Portable export has too many files');
-    return { sections, edges, files: [...files.values()].sort((a, b) => a.id.localeCompare(b.id)), leases, dispose };
+    return { sections, edges, exclusions, files: [...files.values()].sort((a, b) => a.id.localeCompare(b.id)), leases, dispose };
   } catch (error) { await dispose().catch(() => {}); throw error; }
 }
 
@@ -154,7 +198,10 @@ export async function collectPortableWorkspace(registry: PortableContributorRegi
 export async function assertPortableWorkspaceCurrent(registry: PortableContributorRegistry, collected: Pick<PortableCollectedWorkspace, 'sections'>, ctx: PortableRetainContext) {
   for (const contributor of registry.list()) {
     const captured = collected.sections.find(section => section.id === contributor.id);
-    const current = await contributor.retain(ctx);
-    if (!captured || sectionDigest(contributor, checkRecords(contributor, current?.records)) !== captured.sha256) throw new CoManagedSharedWorkError();
+    const provisioning = await resolveProvisioning(contributor, ctx.trx, ctx.actor.tenant, true);
+    // Provisioning must agree with what export decided, or the source changed.
+    if (!captured || [...provisioning.tables].sort().join() !== (captured.notProvisioned ?? []).join()) throw new CoManagedSharedWorkError();
+    const current = provisioning.whole ? { records: emptyRecords(contributor) } : await contributor.retain(provisioning.tables.size ? { ...ctx, notProvisioned: provisioning.tables } : ctx);
+    if (sectionDigest(contributor, checkRecords(contributor, current?.records, provisioning.tables)) !== captured.sha256) throw new CoManagedSharedWorkError();
   }
 }

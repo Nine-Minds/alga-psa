@@ -11,7 +11,7 @@ export const PORTABLE_MANIFEST_VERSION = 2;
 export interface CoManagedPortableWorkspaceContext { packageId: string; sourceTenant: string; capturedAt: string }
 export interface CoManagedPortableBlobDescriptor { id: string; size: number; sha256: string }
 /** Data deliberately left out of the archive, with the class of reason. A reader never has to guess what is absent. */
-export interface PortableExclusion { class: 'msp_private' | 'commercial' | 'secret' | 'deferred_domain'; name: string; reason: string }
+export interface PortableExclusion { class: 'msp_private' | 'commercial' | 'secret' | 'deferred_domain' | 'not_provisioned'; name: string; reason: string }
 export interface PortableManifestSection {
   id: string; version: number; reason: string; columns: Record<string, string[]>; records: PortableRecords;
   annotations: Record<string, unknown>; sha256: string;
@@ -43,7 +43,7 @@ function keys(value: unknown, names: readonly string[]) {
   return row;
 }
 const same = (a: unknown, b: unknown) => typeof a === 'string' && typeof b === 'string' && a.toLowerCase() === b.toLowerCase();
-const CLASSES = ['msp_private', 'commercial', 'secret', 'deferred_domain'];
+const CLASSES = ['msp_private', 'commercial', 'secret', 'deferred_domain', 'not_provisioned'];
 
 function descriptor(input: unknown): CoManagedPortableBlobDescriptor {
   const value = keys(input, ['id', 'size', 'sha256']);
@@ -141,11 +141,11 @@ export function validateCoManagedPortableWorkspaceManifest(input: unknown,
 }
 
 export function buildCoManagedPortableWorkspaceManifest(input: {
-  context: CoManagedPortableWorkspaceContext; collected: Pick<PortableCollectedWorkspace, 'sections' | 'edges' | 'files'>;
+  context: CoManagedPortableWorkspaceContext; collected: Pick<PortableCollectedWorkspace, 'sections' | 'edges' | 'files'> & Partial<Pick<PortableCollectedWorkspace, 'exclusions'>>;
   credentialVault?: ObjectValue | null; vaultExclusion?: string; registry?: PortableContributorRegistry;
 }) {
   const { collected, context } = input;
-  const exclusions: PortableExclusion[] = [...PORTABLE_BASE_EXCLUSIONS];
+  const exclusions: PortableExclusion[] = [...PORTABLE_BASE_EXCLUSIONS, ...(collected.exclusions ?? [])];
   if (!input.credentialVault) exclusions.push({ class: 'secret', name: 'credential_vault',
     reason: input.vaultExclusion ?? 'The credential vault is optional and was not included in this archive' });
   exclusions.sort((a, b) => a.name.localeCompare(b.name));
