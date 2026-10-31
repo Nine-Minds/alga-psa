@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   INVOICE_STATUSES,
   INVOICE_STATUS_TRANSITIONS,
-  assertStatusChangeAllowed,
+  describeStatusChangeBlock,
   classifyStatusChange,
 } from '../../../lib/invoices/invoiceStatusPolicy';
 import {
@@ -10,7 +10,6 @@ import {
   bulkInvoiceStatusUpdateSchema,
   updateInvoiceSchema,
 } from '../../../lib/api/schemas/invoiceSchemas';
-import { ConflictError } from '../../../lib/api/middleware/apiMiddleware';
 
 type Expected = 'noop' | 'plain' | 'invalid' | 'recordPayment' | 'void' | 'finalizeInvoice';
 
@@ -61,37 +60,32 @@ describe('invoice status transition policy', () => {
     });
   });
 
-  it('command transitions throw a 409 naming the command and permission', () => {
+  it('command transitions are described with the command and permission', () => {
     for (const [pair, command, permission] of [
       ['draft>cancelled', 'void', 'invoice:void'],
       ['sent>paid', 'recordPayment', 'invoice:payment'],
       ['draft>sent', 'finalizeInvoice', 'invoice:finalize'],
     ] as const) {
       const [from, to] = pair.split('>');
-      let error: any;
-      try { assertStatusChangeAllowed(from, to); } catch (e) { error = e; }
-      expect(error).toBeInstanceOf(ConflictError);
-      expect(error.statusCode).toBe(409);
-      expect(error.message).toContain(command);
-      expect(error.message).toContain(permission);
+      const message = describeStatusChangeBlock(from, to);
+      expect(message).toContain(command);
+      expect(message).toContain(permission);
     }
   });
 
   it('paid invoices stay locked and unknown statuses fail closed', () => {
-    expect(() => assertStatusChangeAllowed('paid', 'sent')).toThrow('Cannot modify paid invoice status');
-    expect(() => assertStatusChangeAllowed('bogus', 'sent')).toThrow(ConflictError);
-    expect(() => assertStatusChangeAllowed('sent', 'sent')).not.toThrow();
-    expect(() => assertStatusChangeAllowed('sent', 'overdue')).not.toThrow();
+    expect(describeStatusChangeBlock('paid', 'sent')).toBe('Cannot modify paid invoice status');
+    expect(describeStatusChangeBlock('bogus', 'sent')).not.toBeNull();
+    expect(describeStatusChangeBlock('sent', 'sent')).toBeNull();
+    expect(describeStatusChangeBlock('sent', 'overdue')).toBeNull();
   });
 });
 
 describe('invoice update schemas', () => {
-  it('updateInvoiceSchema rejects paid, cancelled and finalized_at', () => {
-    expect(updateInvoiceSchema.safeParse({ status: 'paid' }).success).toBe(false);
+  it('updateInvoiceSchema (main, #3985) rejects status and finalized_at', () => {
     expect(updateInvoiceSchema.safeParse({ status: 'cancelled' }).success).toBe(false);
+    expect(updateInvoiceSchema.safeParse({ status: 'paid' }).success).toBe(false);
     expect(updateInvoiceSchema.safeParse({ finalized_at: '2026-01-01' }).success).toBe(false);
-    expect(updateInvoiceSchema.safeParse({ status: 'overdue' }).success).toBe(true);
-    expect(updateInvoiceSchema.safeParse({}).success).toBe(true);
   });
 
   it('bulk status schema no longer accepts finalized_at', () => {

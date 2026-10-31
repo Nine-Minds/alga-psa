@@ -1,7 +1,9 @@
 /**
  * Invoice status transition policy (alga-2026-0002945).
  *
- * The generic invoice update and the bulk status route are metadata writers:
+ * The bulk status route (InvoiceService.bulkUpdateStatus) and the financial bulk
+ * finalize/cancel route are metadata writers (generic update is closed by the strict
+ * updateInvoiceSchema, #3985):
  * they must never move an invoice through a transition that has a dedicated
  * command, because the command carries the guards and side effects (payment and
  * consumed-credit checks, credit reversal, hour blocks, provider propagation,
@@ -11,7 +13,6 @@
  * Adding a status to INVOICE_STATUSES fails typecheck until every row and
  * column of INVOICE_STATUS_TRANSITIONS classifies it.
  */
-import { ConflictError } from '../api/middleware/apiMiddleware';
 
 export const INVOICE_STATUSES = [
   'draft',
@@ -90,11 +91,6 @@ export const INVOICE_STATUS_TRANSITIONS = {
   },
 } as const satisfies Record<InvoiceStatus, Row>;
 
-/** Statuses the generic update/bulk paths can write from at least one state. */
-export const PLAIN_REACHABLE_INVOICE_STATUSES = INVOICE_STATUSES.filter((to) =>
-  INVOICE_STATUSES.some((from) => INVOICE_STATUS_TRANSITIONS[from][to].kind === 'plain'),
-) as [InvoiceStatus, ...InvoiceStatus[]];
-
 export function classifyStatusChange(from: string, to: string): InvoiceStatusTransition {
   const row = (INVOICE_STATUS_TRANSITIONS as Record<string, Row | undefined>)[from];
   // Unknown legacy/foreign statuses fail closed.
@@ -112,12 +108,5 @@ export function describeStatusChangeBlock(from: string, to: string): string | nu
       return `Changing invoice status from ${from} to ${to} must use the ${t.command} command (requires ${t.permission}); it cannot be set through the generic status update`;
     default:
       return t.reason ?? `Invalid status transition from ${from} to ${to}`;
-  }
-}
-
-export function assertStatusChangeAllowed(from: string, to: string): void {
-  const message = describeStatusChangeBlock(from, to);
-  if (message) {
-    throw new ConflictError(message);
   }
 }
