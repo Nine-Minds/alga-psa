@@ -466,7 +466,7 @@ describe('search ACL SQL predicate', () => {
       };
       return query;
     };
-    const ticketQuery = makeQuery({ ticket_id: 'ticket-1' });
+    const ticketQuery = makeQuery({ ticket_id: 'ticket-1', client_id: 'client-1' });
     const documentQuery = makeQuery({ document_id: 'document-1' });
     const associationQuery = makeQuery({ entity_id: 'client-1' });
     const knex = vi.fn((table: string) => {
@@ -497,5 +497,61 @@ describe('search ACL SQL predicate', () => {
     } finally {
       (globalThis as { Sentry?: unknown }).Sentry = previousSentry;
     }
+  });
+
+  describe('ticket client-scope verifier (alga-2026-0002976)', () => {
+    const OWN = '10000000-0000-4000-8000-000000000001';
+    const OTHER = '20000000-0000-4000-8000-000000000002';
+    const portalUser = (clientIds: string[] = [OWN]) => ({
+      userId: '00000000-0000-0000-0000-000000000002',
+      tenant: 'tenant-1',
+      permissions: ['ticket:read'],
+      isInternal: false,
+      clientAccess: { mode: 'scoped' as const, clientIds },
+    });
+    const makeQuery = (row: unknown) => {
+      const q: any = {
+        select: () => q, where: () => q, whereNull: () => q, first: () => q, join: () => q, leftJoin: () => q,
+        then: (res: any, rej: any) => Promise.resolve(row).then(res, rej),
+      };
+      return q;
+    };
+    const ticketKnex = (ticketClientId: string | null) => {
+      const knex: any = vi.fn((table: string) => {
+        if (table === 'comments') return makeQuery({ ticket_id: 'ticket-1', is_internal: false });
+        if (table === 'comments as c') return makeQuery({ audience: 'requester' });
+        if (table === 'tickets') return makeQuery({ ticket_id: 'ticket-1', client_id: ticketClientId });
+        throw new Error(`Unexpected table ${table}`);
+      });
+      knex.raw = vi.fn((sql: string) => ({ sql }));
+      return knex;
+    };
+    const ticketRows = [{ type: 'ticket' as const, id: 'ticket-1' }];
+    const commentRows = [{ type: 'ticket_comment' as const, id: 'comment-1' }];
+
+    it('drops another client ticket even when the legacy index row has NULL client_scope_id', async () => {
+      expect(await verifyResultVisibility(ticketKnex(OTHER), portalUser(), ticketRows)).toEqual([]);
+    });
+
+    it('drops another client requester-audience comment', async () => {
+      expect(await verifyResultVisibility(ticketKnex(OTHER), portalUser(), commentRows)).toEqual([]);
+    });
+
+    it('denies a scoped principal a ticket / comment whose ticket has null client_id', async () => {
+      expect(await verifyResultVisibility(ticketKnex(null), portalUser(), ticketRows)).toEqual([]);
+      expect(await verifyResultVisibility(ticketKnex(null), portalUser(), commentRows)).toEqual([]);
+    });
+
+    it("keeps the principal's own client ticket and requester comment", async () => {
+      expect(await verifyResultVisibility(ticketKnex(OWN), portalUser(), ticketRows)).toHaveLength(1);
+      expect(await verifyResultVisibility(ticketKnex(OWN), portalUser(), commentRows)).toHaveLength(1);
+    });
+
+    it('lets an internal (mode: all) user see every ticket, including null-client ones', async () => {
+      const internal = { ...internalUser, clientAccess: { mode: 'all' as const } };
+      expect(await verifyResultVisibility(ticketKnex(OTHER), internal, ticketRows)).toHaveLength(1);
+      expect(await verifyResultVisibility(ticketKnex(null), internal, ticketRows)).toHaveLength(1);
+      expect(await verifyResultVisibility(ticketKnex(OTHER), internal, commentRows)).toHaveLength(1);
+    });
   });
 });
