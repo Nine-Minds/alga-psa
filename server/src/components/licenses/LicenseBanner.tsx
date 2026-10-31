@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRouter } from 'next/navigation';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -31,6 +31,7 @@ export function notifyLicenseStatusChanged(): void {
  */
 export default function LicenseBanner() {
   const { t } = useTranslation('common');
+  const { formatDate } = useFormatters();
   const router = useRouter();
   const [status, setStatus] = useState<LicenseStatus | null>(null);
   const [dismissed, setDismissed] = useState(false);
@@ -57,15 +58,17 @@ export default function LicenseBanner() {
   if (!status?.selfHostMode || dismissed) return null;
 
   const { state, daysRemaining, subscription } = status;
-  const subscriptionEndDate = subscription?.endsAt
-    ? new Date(subscription.endsAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-    : null;
+  const dateOptions: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+  const subscriptionEndDate = subscription?.endsAt ? formatDate(subscription.endsAt, dateOptions) : null;
+  const nextRetryDate = subscription?.nextRetryAt ? formatDate(subscription.nextRetryAt, dateOptions) : null;
 
   // Determine whether to show the banner and with what urgency.
   let message: string | null = null;
   let urgency: 'info' | 'warning' | 'error' = 'info';
   // Resubscribe link is only offered for the subscription messages.
   let resubscribeUrl: string | null = null;
+  // Payment-failure banner: where to fix the payment method.
+  let updatePaymentUrl: string | null = null;
 
   switch (state) {
     case 'trial':
@@ -87,7 +90,26 @@ export default function LicenseBanner() {
       urgency = 'warning';
       break;
     case 'licensed':
-      if (subscription?.phase === 'ending') {
+      if (subscription?.phase === 'payment_failed') {
+        // Renewal payment failed, Stripe retrying: Pro keeps running. Admin-only
+        // (getLicenseStatus returns a permission error to everyone else).
+        const retryClause = nextRetryDate
+          ? t('licenseBanner.paymentFailed', { defaultValue: "Payment failed — we'll retry on {{date}}. Update your payment method to keep Pro.", date: nextRetryDate })
+          : t('licenseBanner.paymentFailedNoRetry', { defaultValue: 'Payment failed. Update your payment method to keep Pro.' });
+        // Pro runs to the held token's expiry; without a renewal that is when it ends.
+        message = subscriptionEndDate
+          ? `${retryClause} ${t('licenseBanner.paymentFailedEndsOn', { defaultValue: 'Pro ends on {{date}} if payment keeps failing.', date: subscriptionEndDate })}`
+          : retryClause;
+        urgency = 'error';
+        updatePaymentUrl = subscription.updatePaymentUrl ?? null;
+      } else if (subscription?.phase === 'ending' && subscription.cause === 'payment_failed') {
+        // Stripe gave up on the payment; the held token still runs to its expiry.
+        message = subscriptionEndDate
+          ? t('licenseBanner.paymentFailedEndedEnding', { defaultValue: 'Your Pro subscription ended — payment failed. Pro stays active until {{date}}. Resubscribe to keep Pro.', date: subscriptionEndDate })
+          : t('licenseBanner.paymentFailedEndedEndingNoDate', { defaultValue: 'Your Pro subscription ended — payment failed. Resubscribe to keep Pro.' });
+        urgency = 'error';
+        resubscribeUrl = subscription.resubscribeUrl;
+      } else if (subscription?.phase === 'ending') {
         // Cancel known, Pro still running: warn until the lapse.
         message = subscription.cause === 'term'
           ? subscriptionEndDate
@@ -104,7 +126,11 @@ export default function LicenseBanner() {
       }
       break;
     case 'license_expired':
-      if (subscription?.phase === 'lapsed') {
+      if (subscription?.phase === 'lapsed' && subscription.cause === 'payment_failed') {
+        message = t('licenseBanner.paymentFailedEnded', { defaultValue: 'Pro ended — payment failed. Your appliance runs Essentials.' });
+        urgency = 'error';
+        resubscribeUrl = subscription.resubscribeUrl;
+      } else if (subscription?.phase === 'lapsed') {
         message = t('licenseBanner.subscriptionLapsed', { defaultValue: "You're now on the free edition. Resubscribe to restore Pro." });
         urgency = 'warning';
         resubscribeUrl = subscription.resubscribeUrl;
@@ -138,6 +164,13 @@ export default function LicenseBanner() {
       <AlertDescription className="flex items-center justify-between gap-4">
         <span>{message}</span>
         <div className="flex flex-shrink-0 items-center gap-3">
+          {updatePaymentUrl ? (
+            <Button id="license-banner-update-payment-button" variant="link" size="xs" asChild>
+              <a href={updatePaymentUrl} target="_blank" rel="noopener noreferrer">
+                {t('licenseBanner.updatePaymentMethod', { defaultValue: 'Update payment method' })}
+              </a>
+            </Button>
+          ) : null}
           {resubscribeUrl ? (
             <Button id="license-banner-resubscribe-button" variant="link" size="xs" asChild>
               <a href={resubscribeUrl} target="_blank" rel="noopener noreferrer">

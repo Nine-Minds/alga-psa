@@ -52,7 +52,14 @@
     "subscriptionLapsed": "You're now on the free edition. Resubscribe to restore Pro.",
     "resubscribe": "Resubscribe",
     "termEnds": "Your Pro access ends on {{date}}. Renew to keep Pro.",
-    "termEndsNoDate": "Your Pro term is ending. Renew to keep Pro."
+    "termEndsNoDate": "Your Pro term is ending. Renew to keep Pro.",
+    "paymentFailed": "Payment failed — we'll retry on {{date}}. Update your payment method to keep Pro.",
+    "paymentFailedNoRetry": "Payment failed. Update your payment method to keep Pro.",
+    "paymentFailedEndsOn": "Pro ends on {{date}} if payment keeps failing.",
+    "paymentFailedEnded": "Pro ended — payment failed. Your appliance runs Essentials.",
+    "paymentFailedEndedEnding": "Your Pro subscription ended — payment failed. Pro stays active until {{date}}. Resubscribe to keep Pro.",
+    "paymentFailedEndedEndingNoDate": "Your Pro subscription ended — payment failed. Resubscribe to keep Pro.",
+    "updatePaymentMethod": "Update payment method"
   },
   "nav": {
     "dashboard": "Dashboard",

@@ -265,7 +265,8 @@
         "descriptionWithExpiry": "Su licencia está activa hasta el {{date}}.",
         "badge": "Con licencia",
         "descriptionEnding": "Su suscripción se ha cancelado. Pro sigue activo hasta el {{date}}.",
-        "descriptionTermEnds": "Pro está activo hasta el {{date}}, cuando termina su periodo fijo."
+        "descriptionTermEnds": "Pro está activo hasta el {{date}}, cuando termina su periodo fijo.",
+        "descriptionPaymentFailed": "Pro está activo, pero el último pago de renovación falló. Actualice su método de pago para conservar Pro."
       },
       "licenseExpired": {
         "eyebrow": "La licencia requiere atención",
@@ -375,7 +376,13 @@
       "endsOn": "Pro finaliza el {{date}}.",
       "dataKept": "No se elimina nada. Sus datos permanecen y las funciones Pro se reactivan tras volver a suscribirse y actualizar la licencia.",
       "resubscribe": "Volver a suscribirse",
-      "termEndsTitle": "Su periodo de Pro está por terminar."
+      "termEndsTitle": "Su periodo de Pro está por terminar.",
+      "paymentFailedTitle": "Pago fallido — lo reintentaremos el {{date}}. Actualice su método de pago para conservar Pro.",
+      "paymentFailedTitleNoRetry": "Pago fallido. Actualice su método de pago para conservar Pro.",
+      "paymentFailedEndedTitle": "Pro ha finalizado — pago fallido. Su appliance funciona con Essentials.",
+      "paymentFailedEndingTitle": "Su suscripción Pro ha finalizado — pago fallido.",
+      "paymentFailedEndsOn": "Pro finaliza el {{date}} si el pago sigue fallando.",
+      "updatePaymentMethod": "Actualizar método de pago"
     }
   },
   "errors": {

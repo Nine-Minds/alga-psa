@@ -49,11 +49,19 @@ export interface LicenseStatus {
 }
 
 export interface LicenseSubscriptionStatus {
-  phase: 'ending' | 'lapsed';
-  /** 'term' = a fixed-term grant reaching its planned end — not a cancellation. */
-  cause: 'cancelled' | 'term';
+  /** 'payment_failed' = still Pro, renewal payment failing while Stripe retries. */
+  phase: 'ending' | 'lapsed' | 'payment_failed';
+  /**
+   * 'term' = a fixed-term grant reaching its planned end — not a cancellation.
+   * 'payment_failed' = failing payments (while retrying, or the end that followed).
+   */
+  cause: 'cancelled' | 'term' | 'payment_failed';
   endsAt: string | null;
   resubscribeUrl: string | null;
+  /** `payment_failed` phase only; ISO string, null when no retry is scheduled. */
+  nextRetryAt?: string | null;
+  /** `payment_failed` phase only: where to update the payment method. */
+  updatePaymentUrl?: string | null;
 }
 
 type LicenseAdminUser = NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;
@@ -117,6 +125,12 @@ async function getLicenseStatusForUser(user: LicenseAdminUser): Promise<LicenseS
           cause: resolved.subscription.cause,
           endsAt: resolved.subscription.endsAt?.toISOString() ?? null,
           resubscribeUrl: resolved.subscription.resubscribeUrl,
+          ...(resolved.subscription.phase === 'payment_failed'
+            ? {
+                nextRetryAt: resolved.subscription.nextRetryAt?.toISOString() ?? null,
+                updatePaymentUrl: resolved.subscription.updatePaymentUrl ?? null,
+              }
+            : {}),
         }
       : null,
   };

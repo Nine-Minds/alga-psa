@@ -266,7 +266,8 @@
         "descriptionWithExpiry": "Licencja jest aktywna do {{date}}.",
         "badge": "Licencja aktywna",
         "descriptionEnding": "Twoja subskrypcja została anulowana. Pro pozostaje aktywne do {{date}}.",
-        "descriptionTermEnds": "Pro jest aktywne do {{date}}, kiedy kończy się okres stały."
+        "descriptionTermEnds": "Pro jest aktywne do {{date}}, kiedy kończy się okres stały.",
+        "descriptionPaymentFailed": "Pro jest aktywne, ale ostatnia płatność za odnowienie nie powiodła się. Zaktualizuj metodę płatności, aby zachować Pro."
       },
       "licenseExpired": {
         "eyebrow": "Licencja wymaga uwagi",
@@ -377,7 +378,13 @@
       "endsOn": "Pro kończy się {{date}}.",
       "dataKept": "Nic nie jest usuwane. Dane pozostają na miejscu, a funkcje Pro włączą się ponownie po wznowieniu subskrypcji i odświeżeniu licencji.",
       "resubscribe": "Wznów subskrypcję",
-      "termEndsTitle": "Twój okres Pro dobiega końca."
+      "termEndsTitle": "Twój okres Pro dobiega końca.",
+      "paymentFailedTitle": "Płatność nie powiodła się — ponowimy próbę {{date}}. Zaktualizuj metodę płatności, aby zachować Pro.",
+      "paymentFailedTitleNoRetry": "Płatność nie powiodła się. Zaktualizuj metodę płatności, aby zachować Pro.",
+      "paymentFailedEndedTitle": "Pro zakończono — płatność nie powiodła się. Twoje urządzenie działa w wersji Essentials.",
+      "paymentFailedEndingTitle": "Twoja subskrypcja Pro zakończyła się — płatność nie powiodła się.",
+      "paymentFailedEndsOn": "Pro kończy się {{date}}, jeśli płatność nadal będzie nieudana.",
+      "updatePaymentMethod": "Zaktualizuj metodę płatności"
     }
   },
   "errors": {

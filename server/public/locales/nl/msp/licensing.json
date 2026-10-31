@@ -264,7 +264,8 @@
         "descriptionWithExpiry": "Uw licentie is actief tot en met {{date}}.",
         "badge": "Gelicentieerd",
         "descriptionEnding": "Uw abonnement is opgezegd. Pro blijft actief tot {{date}}.",
-        "descriptionTermEnds": "Pro is actief tot {{date}}, wanneer de vaste looptijd eindigt."
+        "descriptionTermEnds": "Pro is actief tot {{date}}, wanneer de vaste looptijd eindigt.",
+        "descriptionPaymentFailed": "Pro is actief, maar de laatste verlengingsbetaling is mislukt. Werk uw betaalmethode bij om Pro te behouden."
       },
       "licenseExpired": {
         "eyebrow": "Licentie vereist aandacht",
@@ -373,7 +374,13 @@
       "endsOn": "Pro eindigt op {{date}}.",
       "dataKept": "Er wordt niets verwijderd. Uw gegevens blijven staan en de Pro-functies worden weer ingeschakeld nadat u opnieuw abonneert en de licentie vernieuwt.",
       "resubscribe": "Opnieuw abonneren",
-      "termEndsTitle": "Uw Pro-periode loopt af."
+      "termEndsTitle": "Uw Pro-periode loopt af.",
+      "paymentFailedTitle": "Betaling mislukt — we proberen het opnieuw op {{date}}. Werk uw betaalmethode bij om Pro te behouden.",
+      "paymentFailedTitleNoRetry": "Betaling mislukt. Werk uw betaalmethode bij om Pro te behouden.",
+      "paymentFailedEndedTitle": "Pro is beëindigd — betaling mislukt. Uw appliance draait Essentials.",
+      "paymentFailedEndingTitle": "Uw Pro-abonnement is beëindigd — betaling mislukt.",
+      "paymentFailedEndsOn": "Pro eindigt op {{date}} als de betaling blijft mislukken.",
+      "updatePaymentMethod": "Betaalmethode bijwerken"
     }
   },
   "errors": {

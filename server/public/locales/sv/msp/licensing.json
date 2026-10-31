@@ -264,7 +264,8 @@
         "descriptionWithExpiry": "Din licens är aktiv till och med {{date}}.",
         "badge": "Licensierad",
         "descriptionEnding": "Din prenumeration har avslutats. Pro är aktivt till och med {{date}}.",
-        "descriptionTermEnds": "Pro är aktivt till och med {{date}}, då den fasta perioden upphör."
+        "descriptionTermEnds": "Pro är aktivt till och med {{date}}, då den fasta perioden upphör.",
+        "descriptionPaymentFailed": "Pro är aktivt, men den senaste förnyelsebetalningen misslyckades. Uppdatera din betalningsmetod för att behålla Pro."
       },
       "licenseExpired": {
         "eyebrow": "Licensen kräver åtgärd",
@@ -373,7 +374,13 @@
       "endsOn": "Pro upphör den {{date}}.",
       "dataKept": "Inget raderas. Dina data finns kvar och Pro-funktionerna aktiveras igen när du tecknat prenumerationen på nytt och uppdaterat licensen.",
       "resubscribe": "Teckna igen",
-      "termEndsTitle": "Din Pro-period håller på att ta slut."
+      "termEndsTitle": "Din Pro-period håller på att ta slut.",
+      "paymentFailedTitle": "Betalningen misslyckades — vi försöker igen den {{date}}. Uppdatera din betalningsmetod för att behålla Pro.",
+      "paymentFailedTitleNoRetry": "Betalningen misslyckades. Uppdatera din betalningsmetod för att behålla Pro.",
+      "paymentFailedEndedTitle": "Pro har upphört — betalningen misslyckades. Din appliance kör Essentials.",
+      "paymentFailedEndingTitle": "Din Pro-prenumeration har upphört — betalningen misslyckades.",
+      "paymentFailedEndsOn": "Pro upphör den {{date}} om betalningen fortsätter att misslyckas.",
+      "updatePaymentMethod": "Uppdatera betalningsmetod"
     }
   },
   "errors": {

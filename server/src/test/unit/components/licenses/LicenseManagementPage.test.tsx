@@ -231,6 +231,46 @@ describe("LicenseManagementPage", () => {
     expect(screen.queryByText(/contact support/i)).not.toBeInTheDocument();
   });
 
+  it("shows a failing renewal payment with the retry date and an update-payment link", async () => {
+    mockGetLicenseStatus.mockResolvedValue({
+      ...baseStatus,
+      state: "licensed",
+      tier: "pro",
+      subscription: {
+        phase: "payment_failed",
+        cause: "payment_failed",
+        endsAt: null,
+        resubscribeUrl: null,
+        nextRetryAt: "2030-01-05T12:00:00.000Z",
+        updatePaymentUrl: "https://pay.example/i/1",
+      },
+    });
+
+    render(<LicenseManagementPage />);
+
+    expect(await screen.findByText(/^Payment failed — we’ll retry on .*2030\. Update your payment method to keep Pro\.$/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /Update payment method/ }).getAttribute("href"),
+    ).toBe("https://pay.example/i/1");
+    expect(screen.queryByText(/Nothing is deleted/)).not.toBeInTheDocument();
+  });
+
+  it("explains a Pro end that followed failed payments", async () => {
+    mockGetLicenseStatus.mockResolvedValue({
+      ...baseStatus,
+      state: "license_expired",
+      tier: "essentials",
+      trialUsed: true,
+      subscription: { phase: "lapsed", cause: "payment_failed", endsAt: "2025-07-12T00:00:00.000Z", resubscribeUrl: null },
+    });
+
+    render(<LicenseManagementPage />);
+
+    expect(
+      await screen.findByText("Pro ended — payment failed. Your appliance runs Essentials."),
+    ).toBeInTheDocument();
+  });
+
   it("shows no lapse section when the subscription is healthy", async () => {
     mockGetLicenseStatus.mockResolvedValue({
       ...baseStatus,

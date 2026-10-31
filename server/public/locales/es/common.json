@@ -52,7 +52,14 @@
     "subscriptionLapsed": "Ahora usa la edición gratuita. Vuelva a suscribirse para restaurar Pro.",
     "resubscribe": "Volver a suscribirse",
     "termEnds": "Su acceso a Pro termina el {{date}}. Renueve para conservar Pro.",
-    "termEndsNoDate": "Su periodo de Pro está por terminar. Renueve para conservar Pro."
+    "termEndsNoDate": "Su periodo de Pro está por terminar. Renueve para conservar Pro.",
+    "paymentFailed": "Pago fallido — lo reintentaremos el {{date}}. Actualice su método de pago para conservar Pro.",
+    "paymentFailedNoRetry": "Pago fallido. Actualice su método de pago para conservar Pro.",
+    "paymentFailedEndsOn": "Pro finaliza el {{date}} si el pago sigue fallando.",
+    "paymentFailedEnded": "Pro ha finalizado — pago fallido. Su appliance funciona con Essentials.",
+    "paymentFailedEndedEnding": "Su suscripción Pro ha finalizado — pago fallido. Pro seguirá activo hasta el {{date}}. Vuelva a suscribirse para conservar Pro.",
+    "paymentFailedEndedEndingNoDate": "Su suscripción Pro ha finalizado — pago fallido. Vuelva a suscribirse para conservar Pro.",
+    "updatePaymentMethod": "Actualizar método de pago"
   },
   "nav": {
     "dashboard": "Panel",

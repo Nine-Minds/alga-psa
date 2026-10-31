@@ -264,7 +264,8 @@
         "descriptionWithExpiry": "Your license is active through {{date}}.",
         "badge": "Licensed",
         "descriptionEnding": "Your subscription has been cancelled. Pro stays active through {{date}}.",
-        "descriptionTermEnds": "Pro is active through {{date}}, when its fixed term ends."
+        "descriptionTermEnds": "Pro is active through {{date}}, when its fixed term ends.",
+        "descriptionPaymentFailed": "Pro is active, but the last renewal payment failed. Update your payment method to keep Pro."
       },
       "licenseExpired": {
         "eyebrow": "License needs attention",
@@ -373,7 +374,13 @@
       "endsOn": "Pro ends on {{date}}.",
       "dataKept": "Nothing is deleted. Your data stays in place and Pro features turn back on after you resubscribe and refresh the license.",
       "resubscribe": "Resubscribe",
-      "termEndsTitle": "Your Pro term is ending."
+      "termEndsTitle": "Your Pro term is ending.",
+      "paymentFailedTitle": "Payment failed — we’ll retry on {{date}}. Update your payment method to keep Pro.",
+      "paymentFailedTitleNoRetry": "Payment failed. Update your payment method to keep Pro.",
+      "paymentFailedEndedTitle": "Pro ended — payment failed. Your appliance runs Essentials.",
+      "paymentFailedEndingTitle": "Your Pro subscription ended — payment failed.",
+      "paymentFailedEndsOn": "Pro ends on {{date}} if payment keeps failing.",
+      "updatePaymentMethod": "Update payment method"
     }
   },
   "errors": {

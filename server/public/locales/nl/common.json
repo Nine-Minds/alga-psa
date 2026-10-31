@@ -52,7 +52,14 @@
     "subscriptionLapsed": "U gebruikt nu de gratis editie. Abonneer opnieuw om Pro te herstellen.",
     "resubscribe": "Opnieuw abonneren",
     "termEnds": "Uw Pro-toegang eindigt op {{date}}. Verleng om Pro te behouden.",
-    "termEndsNoDate": "Uw Pro-periode loopt af. Verleng om Pro te behouden."
+    "termEndsNoDate": "Uw Pro-periode loopt af. Verleng om Pro te behouden.",
+    "paymentFailed": "Betaling mislukt — we proberen het opnieuw op {{date}}. Werk uw betaalmethode bij om Pro te behouden.",
+    "paymentFailedNoRetry": "Betaling mislukt. Werk uw betaalmethode bij om Pro te behouden.",
+    "paymentFailedEndsOn": "Pro eindigt op {{date}} als de betaling blijft mislukken.",
+    "paymentFailedEnded": "Pro is beëindigd — betaling mislukt. Uw appliance draait Essentials.",
+    "paymentFailedEndedEnding": "Uw Pro-abonnement is beëindigd — betaling mislukt. Pro blijft actief tot {{date}}. Abonneer opnieuw om Pro te behouden.",
+    "paymentFailedEndedEndingNoDate": "Uw Pro-abonnement is beëindigd — betaling mislukt. Abonneer opnieuw om Pro te behouden.",
+    "updatePaymentMethod": "Betaalmethode bijwerken"
   },
   "nav": {
     "dashboard": "Dashboard",
