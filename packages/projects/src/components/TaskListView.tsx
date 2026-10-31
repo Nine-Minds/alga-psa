@@ -193,14 +193,16 @@ interface TaskListViewProps {
   /** Inline-edit handler. When provided, status/priority/type/due/hours cells
    *  become editable pickers/inputs that persist via a partial task update. */
   onTaskUpdate?: (taskId: string, updates: Partial<IProjectTask>) => void;
+  /** Only the status cell stays an inline editor; every other cell renders read-only (shared sources admit status only). */
+  statusOnlyUpdate?: boolean;
   taskResources: Record<string, ITaskResource[]>;
   taskTags: Record<string, ITag[]>;
   taskDependencies?: Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }>;
   checklistItems: Record<string, { total: number; completed: number; items?: Array<{ item_name: string; completed: boolean }> }>;
   documentCounts?: Record<string, number>;
   onTaskClick: (task: IProjectTask) => void;
-  onTaskDelete: (task: IProjectTask) => void;
-  onTaskDuplicate: (task: IProjectTask) => void;
+  onTaskDelete?: (task: IProjectTask) => void;
+  onTaskDuplicate?: (task: IProjectTask) => void;
   onTaskMove?: (taskId: string, newStatusMappingId: string, newPhaseId: string, beforeTaskId: string | null, afterTaskId: string | null) => Promise<void>;
   onAddPhase?: () => void;
   onAddTask?: (phaseId: string) => void;
@@ -256,6 +258,7 @@ export default function TaskListView({
   priorities = [],
   taskTypes = [],
   onTaskUpdate,
+  statusOnlyUpdate = false,
   taskResources,
   taskTags,
   taskDependencies = {},
@@ -1753,7 +1756,7 @@ export default function TaskListView({
                                     }
                                     case 'priority': {
                                       const taskPriority = task.priority_id ? priorityById.get(task.priority_id) : null;
-                                      if (onTaskUpdate) {
+                                      if (onTaskUpdate && !statusOnlyUpdate) {
                                         const priorityOptions = priorities.map(p => ({
                                           value: p.priority_id,
                                           label: p.priority_name,
@@ -1786,7 +1789,7 @@ export default function TaskListView({
                                     case 'task_type': {
                                       const taskType = taskTypeByKey.get(task.task_type_key);
                                       const TaskTypeIcon = taskTypeIcons[task.task_type_key] || ClipboardList;
-                                      if (onTaskUpdate && taskTypes.length > 0) {
+                                      if (onTaskUpdate && !statusOnlyUpdate && taskTypes.length > 0) {
                                         return (
                                           <td key="task_type" className={`py-2.5 px-3 align-middle ${tdBorder}`} onClick={(e) => e.stopPropagation()}>
                                             <TaskTypeSelector
@@ -1901,7 +1904,7 @@ export default function TaskListView({
                                         </td>
                                       );
                                     case 'start_date':
-                                      if (onTaskUpdate) {
+                                      if (onTaskUpdate && !statusOnlyUpdate) {
                                         return (
                                           <td key="start_date" className={`py-2.5 px-3 align-middle ${tdBorder}`} onClick={(e) => e.stopPropagation()}>
                                             <DatePicker
@@ -1924,7 +1927,7 @@ export default function TaskListView({
                                         </td>
                                       );
                                     case 'due_date':
-                                      if (onTaskUpdate) {
+                                      if (onTaskUpdate && !statusOnlyUpdate) {
                                         return (
                                           <td key="due_date" className={`py-2.5 px-3 align-middle ${tdBorder}`} onClick={(e) => e.stopPropagation()}>
                                             <DatePicker
@@ -1969,7 +1972,7 @@ export default function TaskListView({
                                     case 'est_hours':
                                       return (
                                         <td key="est_hours" className={`py-2.5 px-3 align-middle ${tdBorder}`}>
-                                          {onTaskUpdate ? (
+                                          {onTaskUpdate && !statusOnlyUpdate ? (
                                             <InlineHoursEdit
                                               minutes={task.estimated_hours}
                                               onCommit={(mins) => onTaskUpdate(task.task_id, { estimated_hours: mins ?? 0 })}

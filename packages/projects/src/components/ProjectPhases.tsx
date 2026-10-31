@@ -9,6 +9,7 @@ import { getServices } from '../actions/serviceCatalogActions';
 import type { PhaseBillingBadge, TimeEntryServiceChoice } from '@alga-psa/core';
 import styles from './ProjectDetail.module.css';
 import { useTranslation } from 'react-i18next';
+import { useProjectDataSource } from '../context/ProjectDataSourceContext';
 
 interface ProjectPhasesProps {
   viewMode: 'kanban' | 'list' | 'billing';
@@ -103,10 +104,14 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   onReopenPhase,
 }) => {
   const { t } = useTranslation(['features/projects', 'common']);
+  const projectSource = useProjectDataSource();
+  const sharedMode = projectSource.kind !== 'native';
+  const screen = projectSource.screen;
+  const createHidden = sharedMode || screen.hideCreate || screen.readOnly;
   // One catalog load for the whole list — the picker in the phase editor and the
   // service name on phases that already have a default both read from it.
   const [services, setServices] = useState<TimeEntryServiceChoice[]>([]);
-  const needsServices = Boolean(editingPhaseId) || phases.some((phase) => Boolean(phase.service_id));
+  const needsServices = !sharedMode && (Boolean(editingPhaseId) || phases.some((phase) => Boolean(phase.service_id)));
   useEffect(() => {
     if (!needsServices || services.length > 0) return;
     let cancelled = false;
@@ -195,15 +200,15 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
       <div className={styles.phasesPanelHeader}>
         <h2 className="text-xl font-bold mb-2">{t('projectPhases.title', 'Project Phases')}</h2>
         <div className="flex gap-2 flex-wrap">
-          <Button
+          {!createHidden && <Button
             id="add-task-button"
             onClick={onAddTask}
             size="sm"
             disabled={!selectedPhase || isAddingTask}
           >
             {isAddingTask ? t('projectPhases.adding', 'Adding...') : t('projectPhases.addTask', '+ Add Task')}
-          </Button>
-          {viewMode !== 'billing' && (
+          </Button>}
+          {viewMode !== 'billing' && !createHidden && (
             <Button
               id="add-phase-button"
               onClick={onAddPhase}
@@ -212,7 +217,7 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               {t('projectPhases.addPhase', '+ Add Phase')}
             </Button>
           )}
-          {viewMode !== 'billing' && onImport && (
+          {viewMode !== 'billing' && !createHidden && onImport && (
             <Button
               id="import-phases-tasks-button"
               onClick={onImport}

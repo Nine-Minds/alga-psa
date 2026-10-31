@@ -53,6 +53,9 @@ export type { CoManagedTaskHistoryEntry } from './projectTaskAudit';
 export { countCoManagedNativeTaskComments } from './nativeTaskCommentAccess';
 export { listCoManagedProjectTaskStatusOptions } from './projectTaskEditing';
 export type { CoManagedProjectTaskStatusOption } from './projectTaskEditing';
+// L3d: the native project screen's one-project read, and task -> project location.
+export { getCoManagedSharedProjectScreen, locateCoManagedSharedTask, coManagedHiddenTaskFields, CO_MANAGED_SCREEN_TASK_FIELDS } from './projectScreenRead';
+export type { CoManagedSharedProjectScreen, CoManagedSharedProjectScreenTask, CoManagedSharedProjectScreenPhase, CoManagedSharedProjectScreenStatus } from './projectScreenRead';
 // L3b1: shared ticket handoff engine, Working queue and shared-ticket write path.
 export * from './ticketHandoffs';
 export * from './ticketQueue';
