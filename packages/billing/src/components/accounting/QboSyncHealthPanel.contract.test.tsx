@@ -126,6 +126,7 @@ const healthConnected = {
       paymentsReversed: 0,
       paymentsSkipped: 0,
       driftFound: 1,
+      externalVoidsApplied: 0,
       customersUpdated: 2,
       opsProcessed: 10,
       opsFailed: 0,

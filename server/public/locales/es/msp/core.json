@@ -329,6 +329,17 @@
         "error": "La sincronización de calendario de {{providerName}} informó un error y no está sincronizando.",
         "disconnected": "La sincronización de calendario de {{providerName}} está desconectada y no está sincronizando."
       },
+      "rmm": {
+        "syncError": "{{providerName}} informó un error de sincronización, por lo que los datos de dispositivos y alertas pueden estar desactualizados.",
+        "reconnectRequired": "Debe volver a conectar {{providerName}}: sus credenciales ya no se pueden renovar."
+      },
+      "accounting": {
+        "reconnectRequired": "Debe volver a conectar {{providerName}} antes de que la sincronización contable pueda ejecutarse de nuevo.",
+        "syncError": "La última sincronización con {{providerName}} no finalizó, por lo que las facturas y los pagos pueden estar desactualizados."
+      },
+      "teams": {
+        "botCredentialsMissing": "El bot de {{providerName}} no puede responder: las credenciales del conector del bot no están configuradas en el servidor."
+      },
       "review": "Revisar",
       "dismiss": "Descartar la alerta de integración"
     }

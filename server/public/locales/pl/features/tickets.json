@@ -484,7 +484,27 @@
     "bcc": "Udw",
     "ccBccInvalid": "Popraw wyróżnione adresy przed wysłaniem.",
     "ccBccTooMany": "W jednym komentarzu można skopiować maksymalnie {{max}} odbiorców Dw i Udw.",
-    "ccBccNotSentOnInternal": "Dw i Udw nie są wysyłane z notatką wewnętrzną. Wyłącz opcję Wewnętrzna, aby ich użyć."
+    "ccBccNotSentOnInternal": "Dw i Udw nie są wysyłane z notatką wewnętrzną. Wyłącz opcję Wewnętrzna, aby ich użyć.",
+    "audience": {
+      "requester": "Zgłaszający",
+      "sharedIt": "Wspólny dział IT",
+      "organizationPrivate": "Prywatne dla organizacji",
+      "placeholder": "Kto może to zobaczyć?",
+      "required": "Wybierz, kto może zobaczyć ten komentarz, zanim go opublikujesz."
+    },
+    "shared": {
+      "loading": "Wczytywanie wspólnej rozmowy...",
+      "loadError": "Nie udało się wczytać wspólnej rozmowy.",
+      "reload": "Wczytaj ponownie",
+      "errors": {
+        "forbidden": "Nie masz uprawnień do publikowania dla tych odbiorców.",
+        "invalid": "Tego komentarza nie można opublikować.",
+        "readOnly": "Ta przestrzeń robocza jest obecnie tylko do odczytu.",
+        "operationConflict": "Ten komentarz koliduje z wcześniejszą próbą. Wczytaj ponownie i spróbuj jeszcze raz.",
+        "audienceUnresolved": "Wybierz, kto może zobaczyć ten komentarz, zanim go opublikujesz.",
+        "unknownOutcome": "Nie udało się potwierdzić opublikowania komentarza. Sprawdź rozmowę, zanim wyślesz go ponownie."
+      }
+    }
   },
   "responseState": {
     "awaitingYourResponse": "Oczekuje na Twoją odpowiedź",
@@ -1768,6 +1788,9 @@
       "templateRulesTargetOtherClients": "Niektóre reguły automatycznego stosowania tego szablonu dotyczą innych klientów. Usuń tych klientów z reguł, zanim przypiszesz szablon do jednego klienta.",
       "predicateClientOutsideScope": "Klient {{client}} jest poza zakresem tego szablonu.",
       "predicateInvalid": "Nieprawidłowa reguła listy kontrolnej: {{detail}}"
+    },
+    "comment": {
+      "audienceRequired": "Wybierz, kto może zobaczyć ten komentarz, zanim go opublikujesz."
     }
   },
   "ticketSection": {

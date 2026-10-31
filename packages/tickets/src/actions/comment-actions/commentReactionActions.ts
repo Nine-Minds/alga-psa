@@ -4,6 +4,8 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { aggregateReactions, validateEmoji } from '@alga-psa/types';
 import type { IReactionsBatchResult } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
+import { authorizeTicketRecordAccessConcealed } from '../../lib/ticketRecordAuthorization';
 import { publishTicketUpdate } from '../../lib/liveUpdates';
 
 function formatLiveUpdateDisplayName(user: any): string {
@@ -28,6 +30,17 @@ export const toggleCommentReaction = withAuth(async (
     const comment = await tenantDb(trx, tenant).table('comments')
       .where({ comment_id: commentId })
       .first();
+
+    if (isClientUserType(user.user_type)) {
+      // Reacting writes to the ticket's thread: a client must be able to see that ticket.
+      // Missing comment and invisible ticket look the same to the caller.
+      if (!comment) throw new Error('Permission denied: Cannot access ticket');
+      if (comment.ticket_id) {
+        await authorizeTicketRecordAccessConcealed({
+          trx, tenant, user: user as any, ticketId: comment.ticket_id, action: 'update',
+        });
+      }
+    }
 
     if (!comment) {
       throw new Error('Comment not found');
