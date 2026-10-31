@@ -274,6 +274,21 @@ describe.sequential('L6a2 deploy-fix round', () => {
     expect(await fetchForTicket(f.ticketId).then(() => null, (e: unknown) => e)).toMatchObject(DENIED);
   }));
 
+  it('3.3 (d): board-scope sharing does not leak past the kill switch; the denial is the identical native ProductAccessError', () => withTime(async f => {
+    const fetchForTicket = await ticketTime();
+    await f.revokeGrant();
+    await f.customer.table('co_management_relationships').where('relationship_id', f.resource.relationshipId).update({ visibility_mode: 'board_scope' });
+    await scopeTicketBoard(f);
+    await f.as(f.customerPrincipal);
+    expect(await servesTicket(f)).toEqual({ handled: true, value: true });
+    process.env.FORCE_CAPABILITIES = 'co-managed:off';
+    clearCapabilityCache();
+    expect(await servesTicket(f)).toEqual({ handled: false });
+    const error: any = await fetchForTicket(f.ticketId).then(() => null, (e: unknown) => e);
+    expect(error).toMatchObject(DENIED);
+    expect(error.status).toBe(403);
+  }));
+
   it('3.1 (d): a native psa tenant is unaffected', () => withTime(async f => {
     const fetchForTicket = await ticketTime();
     await f.as(f.principal);
