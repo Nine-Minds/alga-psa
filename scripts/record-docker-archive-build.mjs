@@ -6,7 +6,7 @@ import { mkdir, writeFile, rm, stat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { candidateBuildIdentity, candidateRecordHeader, candidateIdentityFromEnvironment, plain } from './lib/docker-build-identity.mjs';
+import { candidateBuildIdentity, candidateRecordHeader, candidateIdentityFromEnvironment, candidateReuseProvenance, plain } from './lib/docker-build-identity.mjs';
 
 // Archive transport: the build job exports the image to a gzip Docker archive
 // and uploads it as a run artifact. Used when the run cannot push to the
@@ -18,6 +18,7 @@ export async function recordDockerArchiveBuild(input, archivePath, outputPath) {
   await mkdir(path.dirname(outputPath), { recursive: true });
   await rm(outputPath, { force: true });
   const identity = candidateBuildIdentity(input);
+  const reuse = candidateReuseProvenance(input.reuse, identity);
   if (!plain(archivePath) || !archivePath.endsWith('.tar.gz')) throw new Error('A gzip Docker archive is required');
   const info = await stat(archivePath);
   if (!info.isFile() || info.size === 0) throw new Error('Missing or empty Docker archive');
@@ -33,7 +34,7 @@ export async function recordDockerArchiveBuild(input, archivePath, outputPath) {
   const after = await stat(archivePath);
   if (after.size !== info.size || after.mtimeMs !== info.mtimeMs || after.ino !== info.ino) throw new Error('Archive changed while recording');
   const record = { ...candidateRecordHeader('docker-archive-build'), ...identity,
-    archive: { filename: path.basename(archivePath), bytes, sha256: `sha256:${hash.digest('hex')}` } };
+    archive: { filename: path.basename(archivePath), bytes, sha256: `sha256:${hash.digest('hex')}` }, ...(reuse ? { reuse } : {}) };
   await writeFile(outputPath, JSON.stringify(record, null, 2) + '\n', { flag: 'wx' });
   return record;
 }
