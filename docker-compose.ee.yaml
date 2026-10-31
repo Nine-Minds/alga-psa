@@ -31,6 +31,9 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${PGBOUNCER_HOST_DOCKER:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
+      # LEVERAGE: pattern pgbouncer-admin-direct — DB_HOST_ADMIN/DB_PORT_ADMIN (+ depends_on postgres) repeated per pooled service across overlays; a shared fragment would remove the drift risk (guarded by scripts/tests/compose-pgbouncer-auth.test.mjs)
+      DB_HOST_ADMIN: ${DB_HOST_ADMIN:-postgres}
+      DB_PORT_ADMIN: ${DB_PORT_ADMIN:-5432}
       REQUIRE_HOCUSPOCUS: ${REQUIRE_HOCUSPOCUS:-false}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
@@ -148,8 +151,11 @@ services:
       NODE_ENV: ${APP_ENV:-development}
       HOST: ${HOST}
       DB_TYPE: ${DB_TYPE:-postgres}
-      DB_HOST: ${PGBOUNCER_HOST_DOCKER:-pgbouncer}
-      DB_PORT: ${PGBOUNCER_PORT:-6432}
+      # Setup creates databases and runs migrations: talk to Postgres directly, not through PgBouncer.
+      DB_HOST: ${DB_HOST_ADMIN:-postgres}
+      DB_PORT: ${DB_PORT_ADMIN:-5432}
+      DB_HOST_ADMIN: ${DB_HOST_ADMIN:-postgres}
+      DB_PORT_ADMIN: ${DB_PORT_ADMIN:-5432}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
@@ -204,6 +210,7 @@ services:
     secrets:
       - postgres_password
       - db_password_server
+      - db_password_hocuspocus
     networks:
       - app-network
     depends_on:
@@ -239,6 +246,8 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${PGBOUNCER_HOST_DOCKER:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
+      DB_HOST_ADMIN: ${DB_HOST_ADMIN:-postgres}
+      DB_PORT_ADMIN: ${DB_PORT_ADMIN:-5432}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
@@ -320,6 +329,8 @@ services:
       DB_TYPE: ${DB_TYPE:-postgres}
       DB_HOST: ${PGBOUNCER_HOST:-pgbouncer}
       DB_PORT: ${PGBOUNCER_PORT:-6432}
+      DB_HOST_ADMIN: ${DB_HOST_ADMIN:-postgres}
+      DB_PORT_ADMIN: ${DB_PORT_ADMIN:-5432}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       LOG_IS_FORMAT_JSON: ${LOG_IS_FORMAT_JSON:-false}
       LOG_IS_FULL_DETAILS: ${LOG_IS_FULL_DETAILS:-false}
@@ -393,14 +404,9 @@ services:
       AI_DOCUMENT_API_KEY: ${AI_DOCUMENT_API_KEY:-}
       COLLAB_PERSIST_API_URL: ${COLLAB_PERSIST_API_URL:-http://server:3000/api/internal/collab/persist}
       COLLAB_PERSIST_API_KEY: ${COLLAB_PERSIST_API_KEY:-alga-collab-persist-dev}
-    volumes:
-      - type: bind
-        source: ./secrets/db_password_server
-        target: /run/secrets/db_password_hocuspocus
-        read_only: true
     secrets:
       - postgres_password
-      - db_password_server
+      - db_password_hocuspocus
       - redis_password
     networks:
       - app-network
@@ -484,6 +490,8 @@ services:
       - ALGA_AUTH_KEY=${ALGA_AUTH_KEY:-local-alga-auth-key}
       - DB_HOST=${DB_HOST:-pgbouncer}
       - DB_PORT=${DB_PORT:-6432}
+      - DB_HOST_ADMIN=${DB_HOST_ADMIN:-postgres}
+      - DB_PORT_ADMIN=${DB_PORT_ADMIN:-5432}
       - DB_NAME_SERVER=${DB_NAME_SERVER:-server}
       - DB_USER_SERVER=${DB_USER_SERVER:-app_user}
       - DB_USER_ADMIN=${DB_USER_ADMIN:-postgres}
@@ -539,6 +547,8 @@ services:
       - ninjaone_client_secret
     depends_on:
       temporal-dev:
+        condition: service_started
+      postgres:
         condition: service_started
       pgbouncer:
         condition: service_started

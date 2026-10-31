@@ -21,7 +21,7 @@ test('isolated mapping preserves actual candidate pooler policy and direct admin
   const service = result.compose.services['upgrade-pgbouncer'];
   assert.equal(service.image, compose.services.pgbouncer.image); assert.equal(service.ports, undefined);
   assert.deepEqual(service.networks, ['app-network']); assert.equal(service.entrypoint, undefined);
-  assert.deepEqual(service.secrets, ['postgres_password', 'db_password_server']);
+  assert.deepEqual(service.secrets, ['db_password_server']);
   assert.deepEqual(result.compose.services.server.environment, { DB_HOST: 'upgrade-pgbouncer', DB_PORT: '6432', DB_NAME_SERVER: 'upgrade_ci', DB_HOST_ADMIN: 'postgres', DB_PORT_ADMIN: '5432' });
   assert.deepEqual(Object.keys(result.compose.services).sort(), ['server', 'upgrade-pgbouncer']); assert.deepEqual(compose, before);
 });
