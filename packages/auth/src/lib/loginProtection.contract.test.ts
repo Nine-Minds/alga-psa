@@ -14,15 +14,15 @@ function countOccurrences(haystack: string, needle: string): number {
 }
 
 describe('credentials login protection contract', () => {
-  it('gates both credentials providers through enforceLoginProtection', () => {
+  it('gates the credentials provider through enforceLoginProtection', () => {
     const source = read('nextAuthOptions.ts');
 
-    // Both active CredentialsProvider authorize() callbacks must enforce the gate,
+    // The CredentialsProvider authorize() callback must enforce the gate,
     // record failures for bad passwords and bad 2FA codes, and clear on success.
-    expect(countOccurrences(source, 'await enforceLoginProtection({')).toBe(2);
-    expect(countOccurrences(source, 'await recordLoginFailure(attemptContext);')).toBe(4);
-    expect(countOccurrences(source, 'await recordLoginSuccess(attemptContext);')).toBe(2);
-    expect(countOccurrences(source, "captchaToken: { label: \"Captcha Token\", type: \"text\" },")).toBe(2);
+    expect(countOccurrences(source, 'await enforceLoginProtection({')).toBe(1);
+    expect(countOccurrences(source, 'await recordLoginFailure(attemptContext);')).toBe(3);
+    expect(countOccurrences(source, 'await recordLoginSuccess(attemptContext);')).toBe(1);
+    expect(countOccurrences(source, "captchaToken: { label: \"Captcha Token\", type: \"text\" },")).toBe(1);
   });
 
   it('never logs the NextAuth secret', () => {

@@ -2,6 +2,7 @@
  * Constants barrel export
  */
 export * from './tenantTiers';
+export * from './userTypes';
 export * from './tierFeatures';
 export * from './addOns';
 export * from './productCodes';

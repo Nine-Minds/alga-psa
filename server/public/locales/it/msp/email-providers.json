@@ -727,6 +727,11 @@
     }
   },
   "managed": {
+    "proFeature": {
+      "title": "Funzionalità Pro",
+      "domainsDescription": "I domini gestiti richiedono Pro.",
+      "settingsDescription": "Le impostazioni delle email gestite richiedono Pro."
+    },
     "messages": {
       "loadDomainsFailed": "Impossibile caricare i domini gestiti",
       "loadOutboundSettingsFailed": "Impossibile caricare le impostazioni di posta in uscita",
@@ -930,6 +935,12 @@
       "copyHostAriaLabel": "Copia host",
       "copyFqdnAriaLabel": "Copia nome completo",
       "hostHint": "Suggerimento: nel tuo provider DNS, inserisci solo l'Host mostrato sopra. La maggior parte dei provider (Namecheap, GoDaddy, Cloudflare e altri) aggiunge automaticamente “{{domain}}”. Se incolli il nome completo, il dominio viene ripetuto (…{{domain}}.{{domain}}) e il record non verrà mai verificato."
+    },
+    "dnsRecordInstructions": {
+      "proFeature": {
+        "title": "Funzionalità Pro",
+        "description": "Le istruzioni per i record DNS richiedono Pro."
+      }
     }
   },
   "inboundRules": {

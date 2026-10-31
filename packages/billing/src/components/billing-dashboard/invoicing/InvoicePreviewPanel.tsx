@@ -17,6 +17,7 @@ import {
 } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoiceAnnotations } from '@alga-psa/billing/actions/invoiceTemplates';
 import { getQuoteByConvertedInvoiceId } from '@alga-psa/billing/actions/quoteActions';
+import InvoiceHistorySection from './InvoiceHistorySection';
 import { PurchaseOrderSummaryBanner } from './PurchaseOrderSummaryBanner';
 import { TemplateRenderer } from '../TemplateRenderer';
 import PaperInvoice from '../PaperInvoice';
@@ -658,6 +659,10 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
               {sourceQuote.quote_number ? `(${sourceQuote.quote_number})` : ''}
             </Button>
           </div>
+        ) : null}
+
+        {!readOnly && invoiceId ? (
+          <InvoiceHistorySection invoiceId={invoiceId} refreshKey={previewRefreshCounter} />
         ) : null}
 
         {isLoading ? (

@@ -93,6 +93,39 @@ async function evaluateCore(
   };
 }
 
+function tagReasons(reasons: AuthorizationReason[], subjectUserId: string): AuthorizationReason[] {
+  return reasons.map((reason) => ({ ...reason, subjectUserId }));
+}
+
+function combineDecisions(
+  primary: AuthorizationDecision,
+  joint: AuthorizationDecision,
+  primaryUserId: string,
+  jointUserId: string
+): AuthorizationDecision {
+  return {
+    allowed: primary.allowed && joint.allowed,
+    scope:
+      primary.scope.allowAll && joint.scope.allowAll
+        ? { ...primary.scope }
+        : intersectAuthorizationScopes(primary.scope, joint.scope),
+    redactedFields: [...new Set([...primary.redactedFields, ...joint.redactedFields])],
+    reasons: [...tagReasons(primary.reasons, primaryUserId), ...tagReasons(joint.reasons, jointUserId)],
+  };
+}
+
+function combineMutationDecisions(
+  primary: AuthorizationMutationDecision,
+  joint: AuthorizationMutationDecision,
+  primaryUserId: string,
+  jointUserId: string
+): AuthorizationMutationDecision {
+  return {
+    allowed: primary.allowed && joint.allowed,
+    reasons: [...tagReasons(primary.reasons, primaryUserId), ...tagReasons(joint.reasons, jointUserId)],
+  };
+}
+
 class DefaultAuthorizationKernel implements AuthorizationKernel {
   private readonly builtinProvider: AuthorizationKernelFactoryInput['builtinProvider'];
   private readonly bundleProvider: AuthorizationKernelFactoryInput['bundleProvider'];
@@ -105,11 +138,31 @@ class DefaultAuthorizationKernel implements AuthorizationKernel {
   }
 
   async authorizeResource(input: AuthorizationEvaluationInput): Promise<AuthorizationDecision> {
+    if (input.jointSubject) {
+      return this.authorizeJointly(input, (subjectInput) => this.authorizeResource(subjectInput), combineDecisions);
+    }
     return evaluateCore(input, {
       builtinProvider: this.builtinProvider,
       bundleProvider: this.bundleProvider,
       rbacEvaluator: this.rbacEvaluator,
     });
+  }
+
+  /**
+   * Evaluates the primary and the joint subject independently through the
+   * single-subject path (same record, resource and mutation input) and combines
+   * the two results. Both are always evaluated so the reasons record the rules
+   * run for each subject.
+   */
+  private async authorizeJointly<T>(
+    input: AuthorizationEvaluationInput,
+    evaluate: (subjectInput: AuthorizationEvaluationInput) => Promise<T>,
+    combine: (primary: T, joint: T, primaryUserId: string, jointUserId: string) => T
+  ): Promise<T> {
+    const { jointSubject, ...primaryInput } = input;
+    const primary = await evaluate(primaryInput);
+    const joint = await evaluate({ ...primaryInput, subject: jointSubject! });
+    return combine(primary, joint, input.subject.userId, jointSubject!.userId);
   }
 
   async resolveScope(input: AuthorizationEvaluationInput): Promise<AuthorizationScope> {
@@ -118,6 +171,9 @@ class DefaultAuthorizationKernel implements AuthorizationKernel {
   }
 
   async authorizeMutation(input: AuthorizationEvaluationInput): Promise<AuthorizationMutationDecision> {
+    if (input.jointSubject) {
+      return this.authorizeJointly(input, (subjectInput) => this.authorizeMutation(subjectInput), combineMutationDecisions);
+    }
     const resourceDecision = await this.authorizeResource(input);
     if (!resourceDecision.allowed) {
       return {

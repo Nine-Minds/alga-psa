@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController } from './ApiBaseController';
 import { ProjectService } from '../services/ProjectService';
+import { uuidSchema } from '../schemas/common';
 import {
   createProjectSchema,
   updateProjectSchema,
@@ -35,7 +36,7 @@ import { authorizeApiResourceRead } from './authorizationKernel';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { tenantDb } from '@alga-psa/db';
 import {
-  assertInternalApiUser,
+  assertApiPrincipal,
   ApiRequest,
   AuthenticatedApiRequest,
   UnauthorizedError,
@@ -602,7 +603,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -675,7 +676,7 @@ export class ApiProjectController extends ApiBaseController {
 
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
@@ -747,7 +748,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -816,6 +817,68 @@ export class ApiProjectController extends ApiBaseController {
   }
 
   /**
+   * The project tasks a ticket is linked to, with each task's status:
+   * GET /api/v1/tickets/{id}/project-links. Needs read on the ticket and on
+   * each linked project; links to projects the caller can't read are left out.
+   */
+  getTicketProjectLinks() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context.tenant, async () => {
+          const { tenant, user } = apiRequest.context;
+          const knex = await getConnection(tenant);
+          await this.checkPermission(apiRequest, 'read');
+          if (!(await hasPermission(user, 'ticket', 'read', knex))) {
+            throw new ForbiddenError('Permission denied: Cannot read ticket');
+          }
+
+          const pathParts = new URL(req.url).pathname.split('/');
+          const parsedId = uuidSchema.safeParse(pathParts[pathParts.indexOf('tickets') + 1]);
+          if (!parsedId.success) {
+            throw new ValidationError('Invalid ticket ID format');
+          }
+          const ticketId = parsedId.data;
+
+          const ticket = await tenantDb(knex, tenant).table('tickets').where({ ticket_id: ticketId }).first();
+          if (!ticket) {
+            throw new NotFoundError('Ticket not found');
+          }
+          const ticketAllowed = await authorizeApiResourceRead({
+            knex,
+            tenant,
+            user,
+            apiKeyId: apiRequest.context.apiKeyId,
+            resource: 'ticket',
+            recordContext: this.buildTicketRecordContext(ticket),
+          });
+          if (!ticketAllowed) {
+            throw new ForbiddenError('Permission denied: Cannot read ticket');
+          }
+
+          const links = await this.projectService.getTicketProjectLinks(ticketId, apiRequest.context);
+          const projects = [...new Map(links.map((l) => [l.project_id, {
+            project_id: l.project_id,
+            assigned_to: l.project_assigned_to,
+            client_id: l.project_client_id,
+            status: l.project_status,
+            is_closed: l.project_is_closed,
+          }])).values()];
+          const readable = new Set((await this.filterAuthorizedProjects(apiRequest, projects, knex)).map((p) => p.project_id));
+
+          const data = links
+            .filter((l) => readable.has(l.project_id))
+            .map(({ project_assigned_to, project_client_id, project_status, project_is_closed, ...link }) => link);
+          return createSuccessResponse(data, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
    * Bulk update projects
    */
   bulkUpdate() {
@@ -848,7 +911,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -926,7 +989,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1004,7 +1067,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1082,7 +1145,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1158,7 +1221,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1238,7 +1301,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1321,7 +1384,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1396,7 +1459,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1472,7 +1535,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1564,7 +1627,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1643,7 +1706,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1735,7 +1798,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1810,7 +1873,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -1941,7 +2004,7 @@ export class ApiProjectController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as ApiRequest;
@@ -2027,7 +2090,7 @@ export class ApiProjectController extends ApiBaseController {
       throw new UnauthorizedError('Invalid API key');
     }
     const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-    assertInternalApiUser(user);
+    assertApiPrincipal(user);
     const apiRequest = req as ApiRequest;
     apiRequest.context = {
       userId: keyRecord.user_id,

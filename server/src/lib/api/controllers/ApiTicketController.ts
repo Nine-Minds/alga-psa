@@ -33,7 +33,7 @@ import { type TenantScopedQuery, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { fetchTimeEntriesForTicketCore } from '@alga-psa/scheduling/actions/timeEntryTicketActions';
 import {
-  assertInternalApiUser,
+  assertApiPrincipal,
   ApiRequest,
   UnauthorizedError,
   ForbiddenError,
@@ -462,7 +462,7 @@ export class ApiTicketController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
@@ -551,7 +551,7 @@ export class ApiTicketController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
@@ -617,7 +617,7 @@ export class ApiTicketController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
@@ -1538,7 +1538,7 @@ export class ApiTicketController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
@@ -1646,7 +1646,7 @@ export class ApiTicketController extends ApiBaseController {
         }
 
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         const apiRequest = req as AuthenticatedApiRequest;
         apiRequest.context = {
@@ -1731,7 +1731,7 @@ export class ApiTicketController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
@@ -1818,7 +1818,7 @@ export class ApiTicketController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
@@ -1960,7 +1960,7 @@ export class ApiTicketController extends ApiBaseController {
         // Get user
         const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-        assertInternalApiUser(user);
+        assertApiPrincipal(user);
 
         // Create request with context
         const apiRequest = req as AuthenticatedApiRequest;
@@ -2161,6 +2161,7 @@ export class ApiTicketController extends ApiBaseController {
             masterTicketId,
             mode: data.mode,
             reopenOnChildReply: data.reopen_on_child_reply,
+            onClosedMaster: data.on_closed_master,
           });
           return createSuccessResponse(result, 200, undefined, apiRequest);
         });

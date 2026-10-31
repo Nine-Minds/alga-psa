@@ -12,7 +12,29 @@ import {
   PauseCircle
 } from 'lucide-react';
 import { SlaTimerStatus } from '@alga-psa/types';
-import { formatRemainingTime } from '@alga-psa/formatting/timeFormatting';
+import { useTranslation } from '../../lib/i18n/client';
+
+type TranslateFn = ReturnType<typeof useTranslation>['t'];
+
+function formatRemainingTime(minutes: number, t: TranslateFn): string {
+  const absoluteMinutes = Math.abs(minutes);
+  const prefix = minutes < 0 ? '-' : '';
+  if (absoluteMinutes < 60) {
+    return prefix + t('sla.time.minutes', { minutes: absoluteMinutes });
+  }
+  if (absoluteMinutes < 1440) {
+    const hours = Math.floor(absoluteMinutes / 60);
+    const mins = absoluteMinutes % 60;
+    return prefix + (mins > 0
+      ? t('sla.time.hoursMinutes', { hours, minutes: mins })
+      : t('sla.time.hours', { hours }));
+  }
+  const days = Math.floor(absoluteMinutes / 1440);
+  const hours = Math.floor((absoluteMinutes % 1440) / 60);
+  return prefix + (hours > 0
+    ? t('sla.time.daysHours', { days, hours })
+    : t('sla.time.days', { days }));
+}
 
 export interface SlaStatusBadgeProps {
   /**
@@ -52,11 +74,11 @@ export interface SlaStatusBadgeProps {
 /**
  * Get the configuration for a given SLA status
  */
-function getStatusConfig(status: SlaTimerStatus, isPaused?: boolean) {
+function getStatusConfig(t: TranslateFn, status: SlaTimerStatus, isPaused?: boolean) {
   if (isPaused || status === 'paused') {
     return {
       icon: PauseCircle,
-      label: 'Paused',
+      label: t('enums.slaStatus.paused'),
       variant: 'secondary' as const
     };
   }
@@ -65,26 +87,26 @@ function getStatusConfig(status: SlaTimerStatus, isPaused?: boolean) {
     case 'on_track':
       return {
         icon: CheckCircle,
-        label: 'On Track',
+        label: t('enums.slaStatus.on_track'),
         variant: 'success' as const
       };
     case 'at_risk':
       return {
         icon: AlertTriangle,
-        label: 'At Risk',
+        label: t('enums.slaStatus.at_risk'),
         variant: 'warning' as const
       };
     case 'response_breached':
     case 'resolution_breached':
       return {
         icon: XCircle,
-        label: 'Breached',
+        label: t('enums.slaStatus.breached'),
         variant: 'error' as const
       };
     default:
       return {
         icon: Clock,
-        label: 'Unknown',
+        label: t('enums.slaStatus.unknown'),
         variant: 'secondary' as const
       };
   }
@@ -139,6 +161,7 @@ export function SlaStatusBadge({
   showIcon = true,
   className
 }: SlaStatusBadgeProps): React.ReactElement | null {
+  const { t } = useTranslation('features/tickets');
   // Determine which SLA type to display
   const selectedDisplayType =
     displayType === 'auto'
@@ -154,14 +177,15 @@ export function SlaStatusBadge({
       : undefined;
 
   // Get status configuration
-  const config = getStatusConfig(status, isPaused);
+  const config = getStatusConfig(t, status, isPaused);
   const Icon = config.icon;
 
   // Format the remaining time
-  const timeDisplay = remainingMinutes !== undefined ? formatRemainingTime(remainingMinutes) : null;
+  const timeDisplay = remainingMinutes !== undefined ? formatRemainingTime(remainingMinutes, t) : null;
 
   // Build tooltip content
   const tooltipContent = buildTooltipContent(
+    t,
     status,
     isPaused,
     responseRemainingMinutes,
@@ -206,6 +230,7 @@ export function SlaStatusBadge({
  * Build tooltip content with detailed SLA information
  */
 function buildTooltipContent(
+  t: TranslateFn,
   status: SlaTimerStatus,
   isPaused?: boolean,
   responseRemainingMinutes?: number,
@@ -215,35 +240,35 @@ function buildTooltipContent(
 
   // Status line
   if (isPaused || status === 'paused') {
-    lines.push('SLA Timer: Paused');
+    lines.push(t('sla.tooltip.paused'));
   } else {
     const statusLabels: Record<SlaTimerStatus, string> = {
-      on_track: 'On Track',
-      at_risk: 'At Risk',
-      response_breached: 'Response SLA Breached',
-      resolution_breached: 'Resolution SLA Breached',
-      paused: 'Paused'
+      on_track: t('enums.slaStatus.on_track'),
+      at_risk: t('enums.slaStatus.at_risk'),
+      response_breached: t('enums.slaStatus.response_breached'),
+      resolution_breached: t('enums.slaStatus.resolution_breached'),
+      paused: t('enums.slaStatus.paused')
     };
-    lines.push(`SLA Status: ${statusLabels[status] || 'Unknown'}`);
+    lines.push(t('sla.tooltip.status', { status: statusLabels[status] || t('enums.slaStatus.unknown') }));
   }
 
   // Response SLA line
   if (responseRemainingMinutes !== undefined) {
-    const time = formatRemainingTime(responseRemainingMinutes);
+    const time = formatRemainingTime(responseRemainingMinutes, t);
     if (responseRemainingMinutes < 0) {
-      lines.push(`Response: Breached by ${time.replace('-', '')}`);
+      lines.push(t('sla.tooltip.responseBreached', { time: time.replace('-', '') }));
     } else {
-      lines.push(`Response: ${time} remaining`);
+      lines.push(t('sla.tooltip.responseRemaining', { time }));
     }
   }
 
   // Resolution SLA line
   if (resolutionRemainingMinutes !== undefined) {
-    const time = formatRemainingTime(resolutionRemainingMinutes);
+    const time = formatRemainingTime(resolutionRemainingMinutes, t);
     if (resolutionRemainingMinutes < 0) {
-      lines.push(`Resolution: Breached by ${time.replace('-', '')}`);
+      lines.push(t('sla.tooltip.resolutionBreached', { time: time.replace('-', '') }));
     } else {
-      lines.push(`Resolution: ${time} remaining`);
+      lines.push(t('sla.tooltip.resolutionRemaining', { time }));
     }
   }
 
@@ -264,7 +289,8 @@ export function SlaIndicator({
   isPaused?: boolean;
   className?: string;
 }): React.ReactElement {
-  const config = getStatusConfig(status, isPaused);
+  const { t } = useTranslation('features/tickets');
+  const config = getStatusConfig(t, status, isPaused);
   const Icon = config.icon;
 
   return (
@@ -280,7 +306,7 @@ export function SlaIndicator({
     >
       <Icon size={12} />
       {remainingMinutes !== undefined && (
-        <span>{formatRemainingTime(remainingMinutes)}</span>
+        <span>{formatRemainingTime(remainingMinutes, t)}</span>
       )}
     </span>
   );

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isClientUserType, isInteractiveUserType } from '@alga-psa/types';
 import { auth } from './app/api/auth/[...nextauth]/edge-auth';
 import { getSessionCookieName } from './lib/auth/sessionCookies';
 import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
@@ -51,6 +52,13 @@ function corsPreflightResponse(origin: string | null): NextResponse {
 const protectedPrefix = '/msp';
 const clientPortalPrefix = '/client-portal';
 const publicPagePaths = new Set(['/payment-methods/setup-complete']);
+// Durable emailed invoice payment link: /pay/<opaque signed token>. Exactly one
+// base64url segment; the page verifies the token itself (no session exists).
+const PUBLIC_PAY_LINK_PATH = /^\/pay\/[A-Za-z0-9_-]{1,512}$/;
+
+export function isPublicPagePath(pathname: string): boolean {
+  return publicPagePaths.has(pathname) || PUBLIC_PAY_LINK_PATH.test(pathname);
+}
 
 export interface ClientPortalThemeRequestContext {
   isClientPortal: boolean;
@@ -208,6 +216,11 @@ const exactApiKeySkipPaths = [
   // the ninjaone/tacticalrmm entries, but Level has no sub-routes.
   '/api/webhooks/levelio',
   '/api/webhooks/levelio/',
+  // Datto RMM alert webhook: single POST route that authenticates the tenant +
+  // X-Alga-Webhook-Secret in the route handler (no x-api-key). Exact match only,
+  // so `/api/webhooks/dattoevil` and deeper routes stay behind the API-key gate.
+  '/api/webhooks/datto',
+  '/api/webhooks/datto/',
 ];
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
@@ -217,13 +230,22 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
     /^\/api\/client-portal\/documents\/[^/]+\/(?:file|export)$/.test(pathname) ||
     exactApiKeySkipPaths.includes(pathname) ||
     apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
-    (pathname.startsWith('/api/tickets/') && pathname.endsWith('/live-token')) ||
+    (pathname.startsWith('/api/tickets/') &&
+      (pathname.endsWith('/live-token') ||
+        // Original-email view for MSP and client-portal readers; the route
+        // authenticates the session and reuses the ticket read authorization.
+        pathname.endsWith('/email-html'))) ||
     (pathname.startsWith('/api/documents/') &&
       (pathname.endsWith('/thumbnail') || pathname.endsWith('/preview') ||
         pathname.endsWith('/download') || pathname.endsWith('/content'))) ||
     // Session-authenticated inventory SO document endpoints (auth enforced in-handler via withAuth).
     (pathname.startsWith('/api/inventory/sales-orders/') &&
-      (pathname.endsWith('/document') || pathname.endsWith('/email-confirmation')));
+      (pathname.endsWith('/document') || pathname.endsWith('/email-confirmation'))) ||
+    // Session-authenticated label endpoints (auth + record-level permission enforced in-handler):
+    // the PDF render and the read-only lookups the print dialog needs.
+    pathname === '/api/labels/pdf' ||
+    pathname === '/api/labels/templates' ||
+    pathname === '/api/labels/linked-assets';
 }
 
 export function hasContradictoryPortalIdentity(user: {
@@ -432,8 +454,9 @@ const _middleware = auth((request) => {
   // Skip auth pages to prevent redirect loops
   const isAuthPage = pathname.startsWith('/auth/');
 
-  // Public Stripe Checkout return page verifies its opaque session context itself.
-  if (publicPagePaths.has(pathname)) {
+  // Public Stripe Checkout return page and the emailed /pay/<token> link verify
+  // their opaque signed context themselves.
+  if (isPublicPagePath(pathname)) {
     return applyCorsHeaders(response, origin);
   }
 
@@ -523,6 +546,15 @@ const _middleware = auth((request) => {
       const redirectResponse = NextResponse.redirect(loginUrl);
       redirectResponse.headers.set('x-pathname', loginUrl.pathname);
       return redirectResponse;
+    } else if (!isInteractiveUserType(request.auth.user?.user_type)) {
+      // A session whose type cannot hold a UI session goes to sign-in, never to the client portal.
+      const signinUrl = request.nextUrl.clone();
+      signinUrl.pathname = '/auth/msp/signin';
+      signinUrl.search = '';
+      signinUrl.searchParams.set('error', 'AccessDenied');
+      const redirectResponse = NextResponse.redirect(signinUrl);
+      redirectResponse.headers.set('x-pathname', signinUrl.pathname);
+      return redirectResponse;
     } else if (request.auth.user?.user_type !== 'internal') {
       // Redirect authenticated client users to their dashboard instead of trapping them in a login loop
       const canonicalUrlEnv = getCanonicalUrl();
@@ -595,7 +627,16 @@ const _middleware = auth((request) => {
       const redirectResponse = NextResponse.redirect(loginUrl);
       redirectResponse.headers.set('x-pathname', loginUrl.pathname);
       return redirectResponse;
-    } else if (request.auth.user?.user_type !== 'client') {
+    } else if (!isInteractiveUserType(request.auth.user?.user_type)) {
+      // Non-interactive session: back to client-portal sign-in, never into the portal.
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/auth/client-portal/signin';
+      loginUrl.search = '';
+      loginUrl.searchParams.set('error', 'AccessDenied');
+      const redirectResponse = NextResponse.redirect(loginUrl);
+      redirectResponse.headers.set('x-pathname', loginUrl.pathname);
+      return redirectResponse;
+    } else if (!isClientUserType(request.auth.user?.user_type)) {
       const redirectTarget = getVanityClientPortalInternalRedirectTarget({
         pathname,
         isAuthPage,

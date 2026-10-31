@@ -29,7 +29,7 @@ import {
   NotFoundError,
   ValidationError,
   ConflictError,
-  assertInternalApiUser,
+  assertApiPrincipal,
   createSuccessResponse,
   createPaginatedResponse,
   handleApiError
@@ -89,7 +89,7 @@ export abstract class ApiBaseController {
     // context-construction defense: a permissively mocked validator cannot
     // admit a client user into a user-key API context.
     const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-    assertInternalApiUser(user);
+    assertApiPrincipal(user);
 
     // Create extended request with context
     const apiRequest = req as AuthenticatedApiRequest;
@@ -254,6 +254,7 @@ export abstract class ApiBaseController {
           const url = new URL(apiRequest.url);
           const page = parseInt(url.searchParams.get('page') || '1');
           const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
+          // LEVERAGE: friction list-default-sort-created-at — falls back to 'created_at' for every resource, even ones without that column.
           const sort = typeof validatedQuery.sort === 'string'
             ? validatedQuery.sort : url.searchParams.get('sort') || 'created_at';
           const order = (validatedQuery.order || url.searchParams.get('order') || 'desc') as 'asc' | 'desc';

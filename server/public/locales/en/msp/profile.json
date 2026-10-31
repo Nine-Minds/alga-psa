@@ -285,7 +285,7 @@
     },
     "webhooks": {
       "title": "Outbound Webhooks",
-      "description": "Create signed ticket lifecycle subscriptions, filter them to specific ticket IDs, inspect delivery history, and rotate secrets without leaving settings.",
+      "description": "Create signed subscriptions for ticket, project, client, contact and location events, filter them to specific IDs, inspect delivery history, and rotate secrets without leaving settings.",
       "newWebhook": "New Webhook",
       "tabs": {
         "configuration": "Configuration",
@@ -531,8 +531,10 @@
         "events": "Events",
         "customHeaders": "Custom Headers",
         "customHeadersPlaceholder": "Authorization: Bearer abc123\nX-Source: alga-psa",
-        "ticketFilter": "Ticket Filter",
-        "ticketFilterPlaceholder": "One ticket UUID per line. Leave blank to receive all matching ticket events.",
+        "ticketFilter": "Entity ID Filter",
+        "ticketFilterPlaceholder": "One UUID per line (ticket, project, client, contact or location). For contacts and locations either the record ID or its client ID matches. Leave blank to receive all matching events.",
+        "legacyEventsHelp": "These event types are no longer supported. They are kept on this webhook but never deliver. Uncheck one to remove it.",
+        "legacyEventLabel": "unsupported",
         "retryConfig": "Retry Config JSON",
         "verifySsl": "Verify SSL certificates",
         "webhookActive": "Webhook is active",
@@ -731,6 +733,9 @@
     }
   },
   "connectSso": {
+    "proFeature": {
+      "description": "SSO account linking is available in Pro. Upgrade to connect your Google Workspace or Microsoft 365 account for seamless authentication."
+    },
     "linkError": {
       "title": "SSO link failed.",
       "no_matching_user": "The account you signed in with is {{providerEmail}}, but your AlgaPSA login is {{accountEmail}}. Link an account that uses {{accountEmail}}, or ask your identity provider administrator to make {{accountEmail}} that account's primary email address.",
@@ -798,6 +803,7 @@
       "deliveryNotFound": "Delivery not found.",
       "testNotRetryable": "Test deliveries cannot be retried.",
       "payloadInvalid": "This delivery cannot be retried because the stored payload is invalid.",
+      "unsupportedEventType": "Unsupported event type: {{eventTypes}}",
       "validation": { "unknownEntity": "Unknown webhook entity \"{{entity}}\".", "unknownField": "Unknown field \"{{field}}\" for webhook entity \"{{entity}}\"." }
     },
     "inboundWebhooks": {

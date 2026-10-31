@@ -19,7 +19,6 @@ import {
   webhookSubscriptionSchema,
   webhookTemplateSchema,
   webhookEventSchema,
-  webhookEventTypeSchema,
   webhookRetryFailedSchema,
   webhookSignatureSchema,
   CreateWebhookData,
@@ -43,7 +42,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import {
-  assertInternalApiUser,
+  assertApiPrincipal,
   ApiRequest,
   UnauthorizedError,
   ForbiddenError,
@@ -56,6 +55,7 @@ import {
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 import { webhookModel } from '../../webhooks/webhookModel';
+import { WEBHOOK_EVENT_NAMES } from '../../webhooks/eventRegistry';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { verifyWebhookSignature as verifyAlgaWebhookSignature } from '../../webhooks/sign';
 import { signRequest } from '../../webhooks/sign';
@@ -110,7 +110,7 @@ export class ApiWebhookController {
     // Get user within tenant context
     const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
 
-    assertInternalApiUser(user);
+    assertApiPrincipal(user);
 
     // Create extended request with context
     const apiRequest = req as ApiRequest;
@@ -1510,7 +1510,7 @@ export class ApiWebhookController {
           // Check permissions
           await this.checkPermission(apiRequest, 'read');
 
-          const events = [...webhookEventTypeSchema.options];
+          const events = [...WEBHOOK_EVENT_NAMES];
           
           return createSuccessResponse(events);
         });

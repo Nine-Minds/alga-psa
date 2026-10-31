@@ -371,6 +371,7 @@ export default defineConfig({
       { find: /^@alga-psa\/emulator-xero$/, replacement: path.resolve(__dirname, '../packages/emulators/xero/src/index.ts') },
       { find: /^@alga-psa\/emulator-threecx$/, replacement: path.resolve(__dirname, '../packages/emulators/threecx/src/index.ts') },
       { find: /^@alga-psa\/emulator-levelio$/, replacement: path.resolve(__dirname, '../packages/emulators/levelio/src/index.ts') },
+      { find: /^@alga-psa\/emulator-huntress$/, replacement: path.resolve(__dirname, '../packages/emulators/huntress/src/index.ts') },
 
       { find: /^@alga-psa\/media$/, replacement: path.resolve(__dirname, '../packages/media/src/index.ts') },
       { find: /^@alga-psa\/storage$/, replacement: path.resolve(__dirname, '../packages/storage/src/index.ts') },
@@ -434,6 +435,7 @@ export default defineConfig({
       { find: '@product/chat/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-chat-entry.ts') },
       { find: '@product/billing/entry', replacement: path.resolve(__dirname, './src/test/stubs/product-billing-entry.tsx') },
       { find: '@product/mcp/entry', replacement: path.resolve(__dirname, '../packages/product-mcp/oss/entry.ts') },
+      { find: '@product/service-principals/entry', replacement: path.resolve(__dirname, '../packages/product-service-principals/oss/entry.ts') },
       { find: 'pdf-lib', replacement: 'empty-module' },
     ],
   },

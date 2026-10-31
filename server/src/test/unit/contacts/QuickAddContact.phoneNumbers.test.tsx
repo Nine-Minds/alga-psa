@@ -28,6 +28,10 @@ vi.mock('@alga-psa/clients/actions/contact-actions/contactActions', () => ({
   listContactPhoneTypeSuggestions: vi.fn().mockResolvedValue(['Desk Line']),
 }));
 
+vi.mock('@alga-psa/clients/actions/clientPickerActions', () => ({
+  searchClientsForPicker: vi.fn().mockResolvedValue({ clients: [], total: 0 }),
+}));
+
 vi.mock('@alga-psa/clients/actions/countryActions', () => ({
   getAllCountries: vi.fn().mockResolvedValue([{ code: 'US', name: 'United States', phone_code: '+1' }]),
   getTenantDefaultCountry: vi.fn().mockResolvedValue(null),
@@ -176,7 +180,6 @@ describe('QuickAddContact hybrid email and phone payloads', () => {
         isOpen={true}
         onClose={vi.fn()}
         onContactAdded={onContactAdded}
-        clients={[]}
       />
     );
 
@@ -250,7 +253,6 @@ describe('QuickAddContact hybrid email and phone payloads', () => {
         isOpen={true}
         onClose={vi.fn()}
         onContactAdded={vi.fn()}
-        clients={[]}
       />
     );
 
@@ -278,7 +280,6 @@ describe('QuickAddContact hybrid email and phone payloads', () => {
         isOpen={true}
         onClose={vi.fn()}
         onContactAdded={vi.fn()}
-        clients={[]}
       />
     );
 
@@ -296,7 +297,6 @@ describe('QuickAddContact hybrid email and phone payloads', () => {
         isOpen={true}
         onClose={vi.fn()}
         onContactAdded={vi.fn()}
-        clients={[]}
       />
     );
 
@@ -322,7 +322,6 @@ describe('QuickAddContact hybrid email and phone payloads', () => {
         isOpen={true}
         onClose={vi.fn()}
         onContactAdded={vi.fn()}
-        clients={[]}
       />
     );
 

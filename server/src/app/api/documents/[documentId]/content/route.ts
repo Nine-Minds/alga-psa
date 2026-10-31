@@ -4,7 +4,7 @@ import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils'
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
-import { assertInternalApiUser } from '@/lib/api/middleware/apiMiddleware';
+import { assertApiPrincipal } from '@/lib/api/middleware/apiMiddleware';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 
 type BlockContentPayload = {
@@ -49,7 +49,7 @@ export async function GET(
 
       const apiUser = await findUserByIdForApi(keyRecord.user_id, keyRecord.tenant);
       try {
-        assertInternalApiUser(apiUser);
+        assertApiPrincipal(apiUser);
       } catch {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }

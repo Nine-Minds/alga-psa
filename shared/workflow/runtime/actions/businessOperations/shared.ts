@@ -38,6 +38,17 @@ export function rethrowAsStandardError(ctx: ActionContext, error: unknown): neve
   if (error instanceof z.ZodError) {
     throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message });
   }
+  // Human-work guard (R5.3): keep the guard's stable codes instead of collapsing to INTERNAL_ERROR.
+  const guardCode = (error as { code?: unknown } | null)?.code;
+  if (guardCode === 'HUMAN_WORK_ASSIGNEE_INVALID' || guardCode === 'HUMAN_WORK_OWNER_REQUIRED') {
+    const guardError = error as { userIds?: string[]; field?: string };
+    throwActionError(ctx, {
+      category: 'ValidationError',
+      code: guardCode,
+      message,
+      details: guardCode === 'HUMAN_WORK_ASSIGNEE_INVALID' ? { userIds: guardError.userIds ?? [] } : { field: guardError.field ?? null },
+    });
+  }
   if (/VALIDATION_ERROR:|validation failed|input validation failed/i.test(message)) {
     throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message });
   }

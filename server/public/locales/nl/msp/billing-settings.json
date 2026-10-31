@@ -1446,7 +1446,7 @@
       "daysPlural": "{{count}} dagen",
       "daysDecimal": "{{count}} dagen",
       "hoursUnit": "uur ({{formatted}})",
-      "willExpireAfter": "Betaallinks verlopen na {{duration}}"
+      "willExpireAfter": "De betaallink in de e-mail werkt gedurende {{duration}}"
     },
     "notConnected": {
       "title": "Stripe niet verbonden",
@@ -1464,7 +1464,7 @@
       },
       "paymentLinkExpiration": {
         "label": "Vervaldatum betaallink",
-        "description": "Hoe lang betaallinks geldig blijven voordat ze verlopen"
+        "description": "Hoe lang de betaallink in factuurmails werkt (1 uur tot 30 dagen). Elke klik opent een nieuwe beveiligde betaalpagina zolang de factuur openstaat."
       },
       "actions": {
         "save": "Instellingen opslaan",

@@ -830,7 +830,8 @@
           "groups_read": "Lire les groupes de l’annuaire",
           "entitlement_group_resolves": "Résoudre le groupe de droits",
           "user_yield_preview": "Aperçu des utilisateurs retenus",
-          "per_tenant_users": "Utilisateurs CIPP par locataire"
+          "per_tenant_users": "Utilisateurs CIPP par locataire",
+          "cipp_token_mint": "Obtention du jeton de l'API CIPP"
         },
         "readiness": {
           "authenticated": "Connecté",
@@ -911,8 +912,8 @@
           "noManagedTenants": "Aucun locataire géré n’a été renvoyé. Le partenaire doit être inscrit à Microsoft 365 Lighthouse avec des relations GDAP actives.",
           "mappedTenantMissing": "Le locataire associé « {{client}} » n’a pas été renvoyé par la découverte. La relation GDAP a peut-être expiré ou été résiliée.",
           "mappingsLookupFailed": "Les associations de locataires confirmées n’ont pas pu être lues. Relancez le diagnostic ; si le problème persiste, vérifiez les associations.",
-          "cippCredentialsMissing": "L’URL de base CIPP et un jeton d’API sont requis. Configurez-les dans l’onglet Connexion.",
-          "cippAuthRejected": "CIPP a rejeté l’identifiant d’API. Renouvelez la clé d’API CIPP dans Paramètres > CIPP > Accès API ; il ne s’agit pas d’un secret client Azure.",
+          "cippCredentialsMissing": "L'URL de l'API CIPP et les identifiants sont requis. Configurez-les dans l'onglet Connexion.",
+          "cippAuthRejected": "CIPP a rejeté la clé d'API héritée. Reconnectez-vous avec un client API CIPP depuis l'onglet Connexion (créez-en un dans CIPP > Integrations > CIPP-API).",
           "cippEmptyTenantList": "CIPP n’a renvoyé aucun locataire. Vérifiez la visibilité des clients et la configuration CIPP.",
           "cippUnreachable": "CIPP est inaccessible. Vérifiez l’URL de base, DNS/TLS et la connectivité sortante.",
           "cippPerTenantFailed": "CIPP n’a pas pu lire l’annuaire de ce locataire.",

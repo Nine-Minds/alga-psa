@@ -1,5 +1,5 @@
 import logger from '@alga-psa/core/logger';
-import { TokenBucketRateLimiter } from '@alga-psa/core/rateLimit';
+import { TokenBucketRateLimiter, type BucketConfig } from '@alga-psa/core/rateLimit';
 import type { NextRequest } from 'next/server';
 
 import { apiRateLimitConfigGetter } from './apiRateLimitConfigGetter';
@@ -24,6 +24,15 @@ const RATE_LIMIT_BYPASS_PREFIXES = [
   '/api/internal/ext-clients/',
   '/api/internal/ext-services/',
 ];
+
+// A malformed override is ignored so the default configuration still applies.
+function isValidBucketConfig(config: BucketConfig | null | undefined): config is BucketConfig {
+  return (
+    !!config &&
+    Number.isFinite(config.maxTokens) && config.maxTokens > 0 &&
+    Number.isFinite(config.refillRate) && config.refillRate > 0
+  );
+}
 
 function isRateLimitEnforced(): boolean {
   return process.env.RATE_LIMIT_ENFORCE === 'true';
@@ -83,8 +92,17 @@ export async function enforceApiRateLimit(
   // key) and is not a uuid, so only the real apiKeyId may drive the config
   // lookup. When absent, resolveApiRateLimitConfig() falls back to the tenant
   // default. subjectId remains the token-bucket identity string.
-  const bucketConfig = await apiRateLimitConfigGetter(context.tenant, context.apiKeyId);
-  const result = await TokenBucketRateLimiter.getInstance().tryConsume('api', context.tenant, subjectId);
+  //
+  // A context-supplied rateLimitConfig (set only by an edition boundary) takes
+  // precedence over the stored settings. Without one, both calls below are
+  // exactly the default calls.
+  const configOverride = isValidBucketConfig(context.rateLimitConfig) ? context.rateLimitConfig : undefined;
+  const bucketConfig = configOverride
+    ? await apiRateLimitConfigGetter(context.tenant, context.apiKeyId, configOverride)
+    : await apiRateLimitConfigGetter(context.tenant, context.apiKeyId);
+  const result = configOverride
+    ? await TokenBucketRateLimiter.getInstance().tryConsume('api', context.tenant, subjectId, 1, configOverride)
+    : await TokenBucketRateLimiter.getInstance().tryConsume('api', context.tenant, subjectId);
 
   const retryAfterMs = result.retryAfterMs;
   const decision: RateLimitDecision = {
