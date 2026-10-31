@@ -2201,7 +2201,11 @@
     },
     "actions": {
       "addService": "Lägg till tjänst"
-    }
+    },
+    "invoiceTitleLabel": "Fakturatitel (valfri)",
+    "invoiceTitlePlaceholder": "Standard är radens namn",
+    "invoiceSubtitleLabel": "Fakturaundertitel (valfri)",
+    "invoiceSubtitlePlaceholder": "t.ex. Hanterade slutpunkter och säkerhetskopiering"
   },
   "templateProducts": {
     "heading": "Produkter",
