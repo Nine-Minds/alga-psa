@@ -101,3 +101,12 @@
 - `packages/billing/vitest.config.ts` has an explicit include list: new test files must be added.
 - tsc on billing needs `NODE_OPTIONS=--max-old-space-size=12000`.
 - Never open a file for writing before reading it (a script truncated `models/invoice.ts`; restored from git).
+
+## Round 3 deviations and decisions (review changes)
+- Previous period: drafts count as previous periods; `void`/`canceled`/`cancelled`/`voided` invoices are excluded in every spelling.
+- Preview wiring: `consolidateFixedBundles` is on for the MSP draft/recurring preview and off for the AutomaticInvoices dialog (F038). Preview mirrors persistence one detail row per charge (`preview/buildPreviewFixedBundles`).
+- Template resolution is shared via `resolveClientInvoiceTemplate`; the price gate is `decideBundleLoad`, so REST/MCP shapes stay unchanged (T008).
+- F009: the OpenAPI registrar `server/src/lib/api/openapi/routes/contractLines.ts` is hand-declared, so zod changes do not propagate. `sdk npm run openapi:generate` fails locally (stale shared/dist, @shared alias, billing export interop). The two spec JSONs were edited by script (props added to ContractLineBody and UpdateContractLineBody), then `npm run mcp:registry:generate` regenerated both registries. Re-run the real generator in a healthy environment to confirm no diff.
+- T013: `bundleRows.pdf.test.ts` drives headless Chrome + pdftotext; opt-in via `RUN_PDF_TESTS=1` (skipped otherwise).
+- T018 left unflipped: wizard/template/live-editor tests exist but there is no combined REST round trip evidence. F005/F006 left unflipped for the same reason.
+- Incident: an earlier `ALTER ROLE app_user PASSWORD` was run in another person's container `discount-tax-test-pg` (port 15888). Original password unknown, not restored. I switched to my own scratch container.
