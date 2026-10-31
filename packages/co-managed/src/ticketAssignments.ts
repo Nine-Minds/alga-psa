@@ -7,6 +7,7 @@ import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSh
 import { snapshotCoManagedSessionActor, CoManagedSharedWorkError, isCoManagedUuid, assertCoManagedSessionUnexpired, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { coManagedAssigneeOption, type CoManagedAssignee, type CoManagedAssigneeOption } from './sharedWorkAssignees';
+import { enqueueCoManagedRouting } from './routingOutbox';
 import { recordCoManagedWorkAudit } from './sharedWorkAudit';
 
 export interface CoManagedTicketAssignee extends CoManagedAssignee {}
@@ -138,7 +139,14 @@ export async function assignCoManagedTicket(db: Knex, inputActor: CoManagedSessi
     // write-admission: exempt — append-only receipt of the admitted assignment
     const [receipt] = await owner.table('co_management_command_receipts').insert({ tenant: resource.tenant, operation_id: request.operationId, relationship_id: resource.relationshipId, resource_type: 'ticket', resource_id: resource.id,
       actor_tenant: actor.tenant, actor_user_id: actor.userId, command_type: 'ticket_assignment', request_hash: hash, applied_at: write.trx.raw('clock_timestamp()') }).returning('applied_at');
-    // LEVERAGE: friction handoff-routing-notification — assignment notification retention (L5) hooks in here once routing notifications exist.
+    if (selected) {
+      const home = tenantDb(write.trx, actor.tenant);
+      const author = await home.table('users').where('user_id', actor.userId).first('first_name', 'last_name', 'username');
+      const organization = await home.table('tenants').first('client_name');
+      await enqueueCoManagedRouting(write.trx, { customerTenant: resource.tenant, sponsorTenant: routing.relationship.sponsor_tenant, relationshipId: resource.relationshipId,
+        ticketId: resource.id, operationId: request.operationId, event: 'ticket_assigned',
+        actorName: [author?.first_name, author?.last_name].filter(Boolean).join(' ').trim() || author?.username || actor.userId, actorOrganization: organization?.client_name ?? '' });
+    }
     await current(write, true);
     return { operationId: request.operationId, appliedAt: new Date(receipt.applied_at).toISOString() };
   })); } catch (error) {

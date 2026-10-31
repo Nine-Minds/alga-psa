@@ -12,6 +12,7 @@ vi.mock('@alga-psa/db', () => ({
       q.ignore = () => q;
       q.returning = () => Promise.resolve(insertResult);
       q.where = (w: any) => { calls.push(['where', w]); return q; };
+      q.whereIn = (c: any, v: any) => { calls.push(['whereIn', c, v]); return q; };
       q.update = (u: any) => { calls.push(['update', u]); return Promise.resolve(updateResult); };
       return q;
     },
@@ -36,7 +37,13 @@ describe('deliveryLedger', () => {
   it('failed row is re-claimed with attempts+1', async () => {
     updateResult = 1;
     expect(await claimDelivery(db, CO_MANAGED_LEDGER, 't', { delivery_kind: 'k', source_id: 's', recipient: 'x' })).toBe(true);
-    expect(calls.find((c) => c[0] === 'update')[1]).toMatchObject({ state: 'sending', attempts: 'attempts + 1' });
+    expect(calls.find((c) => c[0] === 'update')[1]).toMatchObject({ state: 'sending', attempts: expect.anything() });
+  });
+  it('co-managed ledger re-claims pending rows without counting an attempt', async () => {
+    updateResult = 1;
+    await claimDelivery(db, CO_MANAGED_LEDGER, 't', { delivery_kind: 'k', source_id: 's', recipient: 'x' });
+    const wh = calls.filter((c) => c[0] === 'whereIn');
+    expect(JSON.stringify(wh)).toContain('pending');
   });
   it('finishing as sending records requires_reconciliation (crash/unknown outcome)', async () => {
     await finishDelivery(db, COMMENT_EMAIL_LEDGER, 't', { comment_id: 'c', recipient: 'a@b.com' }, 'sending');

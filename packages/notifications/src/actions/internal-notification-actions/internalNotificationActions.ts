@@ -100,7 +100,11 @@ export async function createNotificationFromTemplateInternal(
      * row `sent` in THIS transaction, so a crash leaves neither a row nor a claim, and a replay finds the
      * `sent` row and creates nothing. Native callers never pass it.
      */
-    delivery?: { ledger: DeliveryLedger; key: DeliveryKey; extra?: Record<string, unknown> };
+    delivery?: {
+      ledger: DeliveryLedger; key: DeliveryKey; extra?: Record<string, unknown>;
+      /** Tenant owning the ledger row when it differs from the notification's tenant (a sponsor user's inbox). */
+      ledgerTenant?: string;
+    };
   }
 ): Promise<InternalNotification | null> {
   // This helper lives in a "use server" module, so it is registered as a server
@@ -114,7 +118,7 @@ export async function createNotificationFromTemplateInternal(
   }
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
     const delivery = options?.delivery;
-    if (delivery && !await claimDelivery(trx, delivery.ledger, request.tenant, delivery.key, delivery.extra)) {
+    if (delivery && !await claimDelivery(trx, delivery.ledger, delivery.ledgerTenant ?? request.tenant, delivery.key, delivery.extra)) {
       return null;
     }
     const notification = await createNotificationRowFromTemplate(
@@ -125,7 +129,7 @@ export async function createNotificationFromTemplateInternal(
     );
 
     // A recipient who disabled this notification type is a completed delivery (nothing to retry).
-    if (delivery) await finishDelivery(trx, delivery.ledger, request.tenant, delivery.key, 'sent');
+    if (delivery) await finishDelivery(trx, delivery.ledger, delivery.ledgerTenant ?? request.tenant, delivery.key, 'sent');
 
     if (!notification) {
       return null;

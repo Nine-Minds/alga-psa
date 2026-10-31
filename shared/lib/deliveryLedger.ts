@@ -22,6 +22,12 @@ export interface DeliveryLedger {
   keyColumns: readonly string[];
   /** Key columns compared case-insensitively (stored trimmed and lower-cased). */
   normalized?: readonly string[];
+  /**
+   * States a claim may take over besides a fresh insert. Default `['failed']`. A ledger whose
+   * rows are written ahead of delivery (routing: `pending`) adds `pending`. `sending` and
+   * `sent` are never reclaimable.
+   */
+  reclaimable?: readonly ('pending' | 'failed')[];
 }
 
 export type DeliveryKey = Record<string, string>;
@@ -59,10 +65,10 @@ export async function claimDelivery(
     .ignore()
     .returning(ledger.keyColumns[0]);
   if (inserted.length) return true;
-  const retried = await table().where(qualified).where({ state: 'failed' }).update({
+  const retried = await table().where(qualified).whereIn('state', [...(ledger.reclaimable ?? ['failed'])]).update({
     state: 'sending',
     updated_at: new Date(),
-    attempts: db.raw('attempts + 1'),
+    attempts: db.raw("CASE WHEN state = 'failed' THEN attempts + 1 ELSE attempts END"),
     last_error: null,
     error_code: null,
     requires_reconciliation: false,
@@ -93,4 +99,6 @@ export const CO_MANAGED_LEDGER: DeliveryLedger = {
   table: 'co_management_deliveries',
   keyColumns: ['delivery_kind', 'source_id', 'recipient'],
   normalized: ['recipient'],
+  // Routing rows are written `pending` when the transition commits and delivered later (or by recovery).
+  reclaimable: ['pending', 'failed'],
 };

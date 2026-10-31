@@ -14,6 +14,10 @@ const SUBTYPES = [
     title: 'New comment on shared ticket #{{ticketNumber}}', message: '{{authorName}} commented on "{{ticketTitle}}".' },
 ];
 
+const { upsertEmailCategoriesAndSubtypes } = require('./utils/templates/_shared/emailCategoriesAndSubtypes.cjs');
+const { upsertEmailTemplate } = require('./utils/templates/_shared/upsertEmailTemplates.cjs');
+const { getTemplate: coManagedRouting, TEMPLATE_NAME: ROUTING_TEMPLATE } = require('./utils/templates/email/coManaged/routing.cjs');
+
 exports.up = async function up(knex) {
   // migration-lint: allow 8 - co-managed notification catalog rows are new global lookup data (no existing rows touched), idempotent via onConflict ignore
   await knex('internal_notification_categories')
@@ -33,10 +37,17 @@ exports.up = async function up(knex) {
       .insert({ name: subtype.name, language_code: 'en', title: subtype.title, message: subtype.message, subtype_id: row.internal_notification_subtype_id })
       .onConflict(['name', 'language_code']).ignore();
   }
+  // The one email template the routing subscriber sends (system_email_templates, upserted by name+language).
+  await upsertEmailCategoriesAndSubtypes(knex);
+  await upsertEmailTemplate(knex, coManagedRouting());
 };
 
 exports.down = async function down(knex) {
+  await knex('system_email_templates').where({ name: ROUTING_TEMPLATE }).del();
   await knex('internal_notification_templates').whereIn('name', SUBTYPES.map((s) => s.name)).del();
   await knex('internal_notification_subtypes').whereIn('name', SUBTYPES.map((s) => s.name)).del();
   await knex('internal_notification_categories').where({ name: CATEGORY.name }).del();
 };
+
+// Citus: category/subtype upserts cannot share a transaction with a parallel multi-shard operation from an earlier migration. All upserts here are idempotent.
+exports.config = { transaction: false };

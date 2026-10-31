@@ -93,7 +93,7 @@ export interface SendEmailParams {
    * send claims `key` in `ledger` before the provider call and finishes it after, with the same
    * protocol base uses for comment attachments. Native sends never set it.
    */
-  delivery?: { ledger: DeliveryLedger; key: DeliveryKey; extra?: Record<string, unknown> };
+  delivery?: { ledger: DeliveryLedger; key: DeliveryKey; extra?: Record<string, unknown>; ledgerTenant?: string };
   from?: EmailAddress;
   /**
    * Optional: explicitly specify recipient's locale
@@ -568,12 +568,13 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     // caller named in `params.delivery`.
     const ledgered = managedCommentDelivery || Boolean(params.delivery);
     const ledger: DeliveryLedger = params.delivery?.ledger ?? COMMENT_EMAIL_LEDGER;
+    const ledgerTenant = params.delivery?.ledgerTenant ?? params.tenantId;
     const ledgerKey: DeliveryKey = params.delivery?.key ?? { comment_id: attachmentCommentId!, recipient: params.to };
     const finishLedger = (state: DeliveryFinishState, outcome?: { error?: string; errorCode?: string }) =>
-      finishDelivery(knex, ledger, params.tenantId, ledgerKey, state, outcome);
-    if (ledgered && !await claimDelivery(knex, ledger, params.tenantId, ledgerKey, params.delivery?.extra)) {
+      finishDelivery(knex, ledger, ledgerTenant, ledgerKey, state, outcome);
+    if (ledgered && !await claimDelivery(knex, ledger, ledgerTenant, ledgerKey, params.delivery?.extra)) {
       const normalizedKey = Object.fromEntries(Object.entries(ledgerKey).map(([k, v]) => [k, ledger.normalized?.includes(k) ? v.trim().toLowerCase() : v]));
-      const delivery = await tenantDb(knex, params.tenantId).table(ledger.table).where(normalizedKey).first();
+      const delivery = await tenantDb(knex, ledgerTenant).table(ledger.table).where(normalizedKey).first();
       if (delivery?.state === 'sent') return;
       throw new EmailProviderError('Comment email has an unresolved provider outcome; reconcile before retrying.',
         'unknown', 'unknown', false, 'COMMENT_DELIVERY_RECONCILIATION_REQUIRED', { requiresReconciliation: true });

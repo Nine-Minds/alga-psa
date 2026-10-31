@@ -41,6 +41,7 @@ export async function register() {
     try {
       await import('@alga-psa/co-managed/deliveryRegistration');
       await import('./lib/co-managed/inboundCommentWriter');
+      (await import('./lib/co-managed/routingRecovery')).defineCoManagedRoutingRecoveryJob();
     } catch (error) {
       console.error('Failed to register the co-managed delivery provider:', error);
     }

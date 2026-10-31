@@ -1688,12 +1688,15 @@ export async function processInboundEmailInApp(
       // CM L5 admission hook: the prefix check is a string compare, so a native (psa) token costs
       // 0 extra statements. Only cm1:/cm2: tokens consult the delivery seam, and a refusal happens
       // before any comment write.
+      let tokenInert = false;
       if (match?.ticketId && classifyReplyToken(String(token)) !== 'native') {
         const provider = await coManagedDeliverySeam.resolve(tenantId);
         // Not served (flag off / no entitlement / kill switch): the token is inert and thread headers decide.
         const admission = provider
           ? await provider.admitReplyToken(tenantId, String(token), match.metadata, senderEmail ?? null)
           : null;
+        // Not served, or a malformed cm2 token: the token carries no authority; thread headers decide.
+        tokenInert = !admission || (admission.admitted === false && !admission.acknowledge);
         if (admission && admission.admitted === false && admission.acknowledge) {
           const responder = await coManagedInboundCommentSeam.resolve(tenantId);
           if (responder && senderEmail && !detectAutomatedInboundMessage(emailData).isAutomated) {
@@ -1744,7 +1747,7 @@ export async function processInboundEmailInApp(
           }, diagnostics);
         }
       }
-      if (match?.ticketId) {
+      if (match?.ticketId && !tokenInert) {
         const replyTarget = match.commentId
           ? await resolveReplyTargetFromComment({
               tenantId,

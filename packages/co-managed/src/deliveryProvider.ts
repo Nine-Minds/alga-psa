@@ -4,10 +4,11 @@ import { claimDelivery, finishDelivery, CO_MANAGED_LEDGER } from '@alga-psa/shar
 import { resolveCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import {
   decideReplyToken, parseCm2Metadata,
-  type CoManagedDeliveryProvider, type CommentDeliveryPlan, type DeliveryRecipient, type InboundAdmission,
+  type CoManagedDeliveryProvider, type CommentDeliveryPlan, type RoutingDelivery, type DeliveryRecipient, type InboundAdmission,
 } from '@alga-psa/shared/lib/coManagedDelivery';
 import { withCoManagedNotificationRecipient } from './sharedWork';
 import { projectTaskAudience } from './projectTaskAudience';
+import { ROUTING_IN_APP_KIND, ROUTING_EMAIL_KIND, type CoManagedRoutingPayload } from './routingOutbox';
 import { isCoManagedSharedWorkError } from './sharedWorkIdentity';
 
 const normalize = (email: unknown) => String(email ?? '').trim().toLowerCase();
@@ -32,7 +33,7 @@ async function threadForComment(trx: Knex.Transaction, tenant: string, commentId
 }
 
 /** Sponsor-side participants: the MSP user/team assigned on the sponsor's ticket reference. */
-async function sponsorParticipants(trx: Knex.Transaction, tenant: string, ticketId: string, shared: NonNullable<Awaited<ReturnType<typeof loadSharedTicket>>>) {
+export async function sponsorParticipants(trx: Knex.Transaction, tenant: string, ticketId: string, shared: { relationshipId: string; relationship: { sponsor_tenant: string } }) {
   const sponsor = tenantDb(trx, shared.relationship.sponsor_tenant);
   const reference = await sponsor.table('co_managed_ticket_references')
     .where({ relationship_id: shared.relationshipId, ticket_id: ticketId, customer_tenant: tenant }).first('assigned_to', 'assigned_team_id');
@@ -54,6 +55,48 @@ async function sponsorParticipants(trx: Knex.Transaction, tenant: string, ticket
 
 export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
   return {
+    async pendingRouting(tenant, opts = {}) {
+      return withAdminTransaction(async (trx) => {
+        const query = tenantDb(trx, tenant).table('co_management_deliveries')
+          .whereIn('delivery_kind', [ROUTING_IN_APP_KIND, ROUTING_EMAIL_KIND]).whereIn('state', ['pending', 'failed'])
+          .orderBy('created_at').limit(opts.limit ?? 100);
+        if (opts.sourceId) query.where('source_id', opts.sourceId);
+        const out: RoutingDelivery[] = [];
+        const tickets = new Map<string, { ticket_number: string; title: string } | undefined>();
+        for (const row of await query) {
+          const payload = (typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload) as (CoManagedRoutingPayload & { principalId: string }) | null;
+          if (!payload) continue;
+          if (!tickets.has(payload.ticketId)) {
+            tickets.set(payload.ticketId, await tenantDb(trx, tenant).table('tickets').where({ ticket_id: payload.ticketId }).first('ticket_number', 'title'));
+          }
+          const ticket = tickets.get(payload.ticketId);
+          const sponsorSide = row.recipient_kind === 'msp_user' || row.recipient_kind === 'team';
+          let allowed = !!ticket;
+          if (allowed && sponsorSide) {
+            try {
+              await withCoManagedNotificationRecipient(trx as unknown as Knex, { kind: 'notification_recipient', tenant: payload.sponsorTenant, userId: payload.principalId },
+                { tenant, relationshipId: payload.relationshipId, kind: 'ticket', id: payload.ticketId }, async () => undefined);
+            } catch (error) {
+              if (!isCoManagedSharedWorkError(error)) throw error;
+              allowed = false;
+            }
+          }
+          out.push({ tenant, deliveryKind: row.delivery_kind, sourceId: row.source_id, event: payload.event,
+            recipient: { kind: row.recipient_kind, principalId: payload.principalId, email: row.delivery_kind === ROUTING_EMAIL_KIND ? row.recipient : undefined },
+            recipientTenant: sponsorSide ? payload.sponsorTenant : tenant, ticketId: payload.ticketId,
+            ticketNumber: ticket?.ticket_number ?? '', ticketTitle: ticket?.title ?? '', actorName: payload.actorName, actorOrganization: payload.actorOrganization, allowed });
+        }
+        return out;
+      });
+    },
+
+    async flagStaleRoutingSending(tenant, olderThanMs) {
+      return withAdminTransaction(async (trx) => tenantDb(trx, tenant).table('co_management_deliveries')
+        .whereIn('delivery_kind', [ROUTING_IN_APP_KIND, ROUTING_EMAIL_KIND]).where({ state: 'sending', requires_reconciliation: false })
+        .where('updated_at', '<', new Date(Date.now() - olderThanMs))
+        .update({ requires_reconciliation: true, error_code: 'unknown_outcome', last_error: 'Delivery was claimed but never finished; reconcile before resending.', updated_at: new Date() }));
+    },
+
     async planTicketComment(tenant, ticketId, commentId): Promise<CommentDeliveryPlan | null> {
       return withAdminTransaction(async (trx) => {
         const shared = await loadSharedTicket(trx, tenant, ticketId);

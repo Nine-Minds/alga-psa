@@ -74,7 +74,7 @@ export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string
   'user-invitation-service': { glob: 'packages/users/src/services/UserInvitationService.ts', files: 1 },
   'user-invitation-gate': { glob: 'packages/users/src/lib/coManagedInvitationCapability.ts', files: 1 },
   jobs: { glob: 'packages/jobs/**/coManaged*', files: 0 },
-  subscribers: { glob: 'server/src/lib/eventBus/subscribers/coManaged*', files: 0 },
+  subscribers: { glob: 'server/src/lib/eventBus/subscribers/coManaged*', files: 1 },
   'temporal-activities': { glob: 'ee/temporal-workflows/src/activities/coManaged*', files: 0 },
   'temporal-workflows': { glob: 'ee/temporal-workflows/src/workflows/coManaged*', files: 0 },
   'temporal-activities-kebab': { glob: 'ee/temporal-workflows/src/activities/co-managed*', files: 1 },

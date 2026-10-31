@@ -58,7 +58,37 @@ export interface InboundCommentWrite {
   text: string;
 }
 
+/** One routing notification still owed (a `pending`/`failed` ledger row), with everything needed to deliver it. */
+export interface RoutingDelivery {
+  tenant: string;
+  /** `routing_in_app` | `routing_email` */
+  deliveryKind: string;
+  /** The handoff/assignment command's operation id. */
+  sourceId: string;
+  event: 'escalation_received' | 'escalation_returned' | 'ticket_assigned';
+  recipient: DeliveryRecipient;
+  /** Tenant in which the in-app row is created (the recipient's own tenant). */
+  recipientTenant: string;
+  ticketId: string;
+  ticketNumber: string;
+  ticketTitle: string;
+  actorName: string;
+  actorOrganization: string;
+  /** False when the recipient's CURRENT policy no longer admits them to the ticket: skip, never send. */
+  allowed: boolean;
+}
+
 export interface CoManagedDeliveryProvider {
+  /**
+   * Routing deliveries still owed: ledger rows in `pending`/`failed`. With `sourceId` only that command's
+   * rows (the post-commit subscriber); without it a bounded batch for the tenant (recovery).
+   */
+  pendingRouting(tenant: string, opts?: { sourceId?: string; limit?: number }): Promise<RoutingDelivery[]>;
+  /**
+   * Routing rows stuck in `sending` longer than `olderThanMs` (a crash between claim and finish): the provider
+   * outcome is unknown, so they are flagged `requires_reconciliation` and never re-sent. Returns the count flagged.
+   */
+  flagStaleRoutingSending(tenant: string, olderThanMs: number): Promise<number>;
   /** Null when the ticket is not shared (or its grant is revoked); the native recipient step then runs unchanged. */
   planTicketComment(tenant: string, ticketId: string, commentId: string): Promise<CommentDeliveryPlan | null>;
   /**
@@ -130,6 +160,16 @@ export function recipientsForAudience(audience: CommentAudience, p: ThreadPartic
 }
 
 export const coManagedDeliverySeam = sharedWorkSeam<CoManagedDeliveryProvider>('delivery');
+
+/**
+ * Workflow ticket-mutation authority (L4a `retainCoManagedWorkflowTicketAuthority`). The workflow runtime
+ * lives in shared/ and cannot import the co-managed package, so it asks this seam: not served / not
+ * registered answers null with 0 SQL and the native action runs unchanged.
+ */
+export interface CoManagedWorkflowTicketAuthority {
+  retain(trx: unknown, input: { tenant: string; ticketId: string; workflowRunId: string; actorUserId: string; fields: string[]; readFields: string[] }): Promise<void>;
+}
+export const coManagedWorkflowTicketSeam = sharedWorkSeam<CoManagedWorkflowTicketAuthority>('workflow-ticket');
 
 // ---- reply-token namespace ------------------------------------------------------------------
 
