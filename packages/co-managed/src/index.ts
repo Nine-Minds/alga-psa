@@ -87,3 +87,4 @@ export type { CoManagedStoredSlaNotification } from './storedSlaNotification';
 export { processCoManagedSlaEmailDeliveries } from './slaEmailDeliveries';
 export type { CoManagedSlaEmailDelivery, CoManagedEmailDeliveryResult } from './slaEmailDeliveries';
 export { observeDueCoManagedTicketSlas } from './ticketSla';
+export { getCoManagedTicketSlaDisplay, type CoManagedTicketSlaDisplay, type CoManagedSlaDisplay, type CoManagedSlaTargetDisplay } from './ticketSlaRead';

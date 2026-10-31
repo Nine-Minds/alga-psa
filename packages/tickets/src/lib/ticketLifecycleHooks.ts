@@ -7,8 +7,8 @@ import type { Knex } from 'knex';
  * so no extension can fail a native ticket write. `rollback` opts a handler into
  * propagating its error (the caller's transaction then rolls back).
  *
- * Dispatched today: `handoff` (co-managed ticketHandoffs). Not yet dispatched: resolved, reopened,
- * awaitingClient (native writers; adoption is L0c or a follow-up card).
+ * Dispatched today by extension-owned writers: `handoff` and `firstResponse`. Not yet dispatched:
+ * resolved, reopened, awaitingClient (native writers; adoption is L0c or a follow-up card).
  */
 
 export type TicketLifecycleEvent =

@@ -1,8 +1,10 @@
 import { tenantDb } from '@alga-psa/db';
 import { getCoManagedOperationalState } from '@alga-psa/licensing/lifecycle';
-import { observeOrganizationSlaClock, type OrganizationSlaClock, type OrganizationSlaTargetClock } from '@alga-psa/shared/lib/sla/organizationSlaClock';
-import type { CoManagedSharedWorkContext } from './sharedWork';
-import { CoManagedSharedWorkError } from './sharedWorkIdentity';
+import { observeOrganizationSlaClock, organizationSlaElapsedMinutes, type OrganizationSlaClock, type OrganizationSlaTargetClock } from '@alga-psa/shared/lib/sla/organizationSlaClock';
+import type { Knex } from 'knex';
+import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
+import { withCoManagedCustomerTicket } from './customerWork';
+import { CoManagedSharedWorkError, snapshotCoManagedSessionActor, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 
 export interface CoManagedSlaTargetDisplay {
@@ -13,6 +15,8 @@ export interface CoManagedSlaTargetDisplay {
 export interface CoManagedSlaDisplay {
   state: 'tracking' | 'not_started' | 'not_configured' | 'unavailable';
   paused?: boolean;
+  /** Business-hours minutes the clock has run (organization clock only), including the open interval. */
+  elapsedMinutes?: number;
   response?: CoManagedSlaTargetDisplay;
   resolution?: CoManagedSlaTargetDisplay;
 }
@@ -76,11 +80,20 @@ export async function readCoManagedTicketSlaDisplay(context: CoManagedSharedWork
         const paused = Boolean(saved.pauseReasons.length) || work.responsibility !== 'msp' || !canObserve || !lifecycle.canWrite;
         const clock = !paused && !saved.resolution.completedAt && at.getTime() >= Date.parse(saved.observedAt)
           ? observeOrganizationSlaClock(saved, at.toISOString()) : saved;
-        result.msp = { state: 'tracking', paused: paused && !clock.resolution.completedAt,
+        result.msp = { state: 'tracking', paused: paused && !clock.resolution.completedAt, elapsedMinutes: Math.floor(organizationSlaElapsedMinutes(clock)),
           response: organizationTarget(clock.response, paused, Boolean(clock.resolution.completedAt)),
           resolution: organizationTarget(clock.resolution, paused, Boolean(clock.resolution.completedAt)) };
       }
     }
   }
   return result;
+}
+
+/** Admitted read of the display for one shared ticket, from either side. The customer reads through its own
+ * ticket admission and the sponsor through shared-work admission; each sees only what its redaction allows. */
+export async function getCoManagedTicketSlaDisplay(db: Knex, inputActor: CoManagedSessionActor, resource: CoManagedSharedResource): Promise<CoManagedTicketSlaDisplay> {
+  const actor = snapshotCoManagedSessionActor(inputActor);
+  if (!resource || resource.kind !== 'ticket') throw new CoManagedSharedWorkError();
+  return actor.tenant === resource.tenant ? withCoManagedCustomerTicket(db, actor, resource, 'read', readCoManagedTicketSlaDisplay)
+    : withCoManagedSharedWork(db, actor, resource, 'read', readCoManagedTicketSlaDisplay);
 }

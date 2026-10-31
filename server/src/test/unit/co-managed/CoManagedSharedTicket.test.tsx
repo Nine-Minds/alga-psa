@@ -11,6 +11,7 @@ const session = vi.hoisted(() => ({
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: (_key: string, fallback?: string) => fallback ?? _key }),
 }));
+vi.mock('@/components/co-managed/CoManagedTicketSlaStatus', () => ({ default: () => <div data-testid="sla-status" /> }));
 vi.mock('@/components/co-managed/sharedConversationSession', () => ({ createSharedConversationSession: () => session }));
 vi.mock('@alga-psa/tickets/components/ticket/TicketDetailsContainer', async () => {
   const { useTicketDataSource } = await import('@alga-psa/tickets/components/ticket/TicketDataSourceContext');

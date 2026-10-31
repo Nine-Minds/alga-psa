@@ -2832,5 +2832,35 @@
       "notAvailable": "This canned response is not available for this ticket.",
       "notATeamMember": "You can only manage team responses for teams you belong to."
     }
+  },
+  "sharedSla": {
+    "title": "Service level",
+    "msp": "MSP service level",
+    "customer": "Customer service level",
+    "state": {
+      "running": "Running",
+      "paused": "Paused",
+      "met": "Met",
+      "breached": "Breached"
+    },
+    "target": {
+      "response": "First response",
+      "resolution": "Resolution"
+    },
+    "elapsed": "Elapsed {{time}}",
+    "dueAt": "Due {{date}}",
+    "completedAt": "Met {{date}}",
+    "breached": "Breached",
+    "targetPaused": "Paused",
+    "noTarget": "No target",
+    "duration": {
+      "hoursMinutes": "{{hours}}h {{minutes}}m",
+      "minutes": "{{minutes}}m"
+    },
+    "notStarted": "The clock starts when the ticket is escalated.",
+    "unavailable": "This service level is no longer available.",
+    "notConfigured": "No service level applies.",
+    "empty": "No service level is being tracked for this ticket yet.",
+    "loadError": "The service level could not be loaded."
   }
 }
