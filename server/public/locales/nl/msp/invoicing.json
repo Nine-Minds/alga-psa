@@ -1995,6 +1995,15 @@
     "resize": {
       "handleHint": "Sleep om het formaat te wijzigen · dubbelklik om aan de inhoud aan te passen",
       "autoValue": "Automatisch ({{value}})"
+    },
+    "bundleRows": {
+      "off": "Uit",
+      "quantities": "Alleen aantallen",
+      "quantitiesAndPrices": "Aantallen en prijzen",
+      "custom": "Aangepast (geïmporteerd)",
+      "showChange": "Wijziging t.o.v. de vorige periode tonen (+N / −N)",
+      "pricesNote": "Componentprijzen zijn opgenomen in de factuurgegevens van deze sjabloon, ook voor klanten.",
+      "quantitiesNote": "Deze sjabloon toont componentprijzen niet aan klanten."
     }
   },
   "projectBilling": {

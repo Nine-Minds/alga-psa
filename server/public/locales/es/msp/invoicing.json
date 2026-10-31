@@ -1995,6 +1995,15 @@
     "resize": {
       "handleHint": "Arrastra para cambiar el tamaño · doble clic para ajustarlo al contenido",
       "autoValue": "Automático ({{value}})"
+    },
+    "bundleRows": {
+      "off": "Desactivado",
+      "quantities": "Solo cantidades",
+      "quantitiesAndPrices": "Cantidades y precios",
+      "custom": "Personalizado (importado)",
+      "showChange": "Mostrar el cambio respecto al período anterior (+N / −N)",
+      "pricesNote": "Los precios de los componentes se incluyen en los datos de factura de esta plantilla, también para los clientes.",
+      "quantitiesNote": "Esta plantilla no expone los precios de los componentes a los clientes."
     }
   },
   "projectBilling": {

@@ -681,6 +681,10 @@
       "statusSuperseded": "Zastąpiono",
       "supersededHistory": "Zastąpione oczekujące edycje ({{count}})",
       "supersededBy": "Zastąpiono przez"
+    },
+    "invoiceText": {
+      "titleLabel": "Tytuł faktury",
+      "subtitleLabel": "Podtytuł faktury"
     }
   },
   "contractLineEdit": {
@@ -694,11 +698,14 @@
     },
     "fields": {
       "billingTimingQuestion": "Kiedy powinna być rozliczana ta linia?",
-      "rate": "Stawka"
+      "rate": "Stawka",
+      "invoiceTitle": "Tytuł",
+      "invoiceSubtitle": "Podtytuł"
     },
     "sections": {
       "billingTiming": "Termin rozliczeń",
-      "pricing": "Cennik"
+      "pricing": "Cennik",
+      "invoiceText": "Tekst faktury"
     },
     "timingDescriptions": {
       "advance": "Opłaty zostaną naliczone przed wykonaniem usługi",
@@ -1487,7 +1494,11 @@
       "nameLabel": "Nazwa linii (opcjonalnie)",
       "namePlaceholder": "Linia stała {{number}}",
       "removeLine": "Usuń linię stałą",
-      "noServiceWarning": "Ta linia ma kwotę cykliczną, ale nie ma usługi, na której można ją rozliczyć. Dodaj usługę przed zakończeniem; nadal możesz zapisać ją jako wersję roboczą."
+      "noServiceWarning": "Ta linia ma kwotę cykliczną, ale nie ma usługi, na której można ją rozliczyć. Dodaj usługę przed zakończeniem; nadal możesz zapisać ją jako wersję roboczą.",
+      "invoiceTitleLabel": "Tytuł faktury (opcjonalnie)",
+      "invoiceTitlePlaceholder": "Domyślnie nazwa pozycji",
+      "invoiceSubtitleLabel": "Podtytuł faktury (opcjonalnie)",
+      "invoiceSubtitlePlaceholder": "np. Zarządzane stacje końcowe i kopie zapasowe"
     },
     "recurringChange": {
       "title": "Potwierdź zmianę sumy cyklicznej",

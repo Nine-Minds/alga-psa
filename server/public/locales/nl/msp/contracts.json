@@ -681,6 +681,10 @@
       "statusSuperseded": "Vervangen",
       "supersededHistory": "Vervangen openstaande wijzigingen ({{count}})",
       "supersededBy": "Vervangen door"
+    },
+    "invoiceText": {
+      "titleLabel": "Factuurtitel",
+      "subtitleLabel": "Factuurondertitel"
     }
   },
   "contractLineEdit": {
@@ -694,11 +698,14 @@
     },
     "fields": {
       "billingTimingQuestion": "Wanneer moet deze regel worden gefactureerd?",
-      "rate": "Tarief"
+      "rate": "Tarief",
+      "invoiceTitle": "Titel",
+      "invoiceSubtitle": "Ondertitel"
     },
     "sections": {
       "billingTiming": "Facturatietiming",
-      "pricing": "Prijzen"
+      "pricing": "Prijzen",
+      "invoiceText": "Factuurtekst"
     },
     "timingDescriptions": {
       "advance": "Kosten worden gefactureerd voordat de service wordt geleverd",
@@ -1487,7 +1494,11 @@
       "nameLabel": "Regelnaam (optioneel)",
       "namePlaceholder": "Vaste regel {{number}}",
       "removeLine": "Vaste regel verwijderen",
-      "noServiceWarning": "Deze regel heeft een terugkerend bedrag maar geen dienst om het op te factureren. Voeg een dienst toe voordat u afrondt; u kunt de regel nog wel als concept opslaan."
+      "noServiceWarning": "Deze regel heeft een terugkerend bedrag maar geen dienst om het op te factureren. Voeg een dienst toe voordat u afrondt; u kunt de regel nog wel als concept opslaan.",
+      "invoiceTitleLabel": "Factuurtitel (optioneel)",
+      "invoiceTitlePlaceholder": "Standaard de regelnaam",
+      "invoiceSubtitleLabel": "Factuurondertitel (optioneel)",
+      "invoiceSubtitlePlaceholder": "bijv. Beheerde endpoints en back-up"
     },
     "recurringChange": {
       "title": "Wijziging van het terugkerende totaal bevestigen",

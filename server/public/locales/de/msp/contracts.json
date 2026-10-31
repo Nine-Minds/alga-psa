@@ -681,6 +681,10 @@
       "statusSuperseded": "Ersetzt",
       "supersededHistory": "Ersetzte ausstehende Änderungen ({{count}})",
       "supersededBy": "Ersetzt durch"
+    },
+    "invoiceText": {
+      "titleLabel": "Rechnungstitel",
+      "subtitleLabel": "Rechnungsuntertitel"
     }
   },
   "contractLineEdit": {
@@ -694,11 +698,14 @@
     },
     "fields": {
       "billingTimingQuestion": "Wann soll diese Linie abgerechnet werden?",
-      "rate": "Tarif"
+      "rate": "Tarif",
+      "invoiceTitle": "Titel",
+      "invoiceSubtitle": "Untertitel"
     },
     "sections": {
       "billingTiming": "Abrechnungszeitpunkt",
-      "pricing": "Preise"
+      "pricing": "Preise",
+      "invoiceText": "Rechnungstext"
     },
     "timingDescriptions": {
       "advance": "Gebühren werden vor Erbringung des Services berechnet",
@@ -1487,7 +1494,11 @@
       "nameLabel": "Positionsname (optional)",
       "namePlaceholder": "Feste Position {{number}}",
       "removeLine": "Feste Position entfernen",
-      "noServiceWarning": "Diese Position hat einen wiederkehrenden Betrag, aber keinen Service, auf dem er abgerechnet werden kann. Fügen Sie vor dem Abschluss einen Service hinzu; als Entwurf können Sie sie weiterhin speichern."
+      "noServiceWarning": "Diese Position hat einen wiederkehrenden Betrag, aber keinen Service, auf dem er abgerechnet werden kann. Fügen Sie vor dem Abschluss einen Service hinzu; als Entwurf können Sie sie weiterhin speichern.",
+      "invoiceTitleLabel": "Rechnungstitel (optional)",
+      "invoiceTitlePlaceholder": "Standardmäßig der Positionsname",
+      "invoiceSubtitleLabel": "Rechnungsuntertitel (optional)",
+      "invoiceSubtitlePlaceholder": "z. B. Verwaltete Endgeräte und Backup"
     },
     "recurringChange": {
       "title": "Änderung der wiederkehrenden Summe bestätigen",

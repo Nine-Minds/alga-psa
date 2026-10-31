@@ -681,6 +681,10 @@
       "statusSuperseded": "⟦Şŭƥḗřşḗḓḗḓ⟧",
       "supersededHistory": "⟦Şŭƥḗřşḗḓḗḓ ƥḗƞḓīƞɠ ḗḓīŧş ({{count}})⟧",
       "supersededBy": "⟦Şŭƥḗřşḗḓḗḓ ƀẏ⟧"
+    },
+    "invoiceText": {
+      "titleLabel": "⟦Īƞṽȯīƈḗ ŧīŧŀḗ⟧",
+      "subtitleLabel": "⟦Īƞṽȯīƈḗ şŭƀŧīŧŀḗ⟧"
     }
   },
   "contractLineEdit": {
@@ -694,11 +698,14 @@
     },
     "fields": {
       "billingTimingQuestion": "⟦Ẇħḗƞ şħȯŭŀḓ ŧħīş ŀīƞḗ ƀḗ ƀīŀŀḗḓ?⟧",
-      "rate": "⟦Řȧŧḗ⟧"
+      "rate": "⟦Řȧŧḗ⟧",
+      "invoiceTitle": "⟦Ŧīŧŀḗ⟧",
+      "invoiceSubtitle": "⟦Şŭƀŧīŧŀḗ⟧"
     },
     "sections": {
       "billingTiming": "⟦Ɓīŀŀīƞɠ Ŧīḿīƞɠ⟧",
-      "pricing": "⟦Ƥřīƈīƞɠ⟧"
+      "pricing": "⟦Ƥřīƈīƞɠ⟧",
+      "invoiceText": "⟦Īƞṽȯīƈḗ ŧḗẋŧ⟧"
     },
     "timingDescriptions": {
       "advance": "⟦Ƈħȧřɠḗş ẇīŀŀ ƀḗ ƀīŀŀḗḓ ƀḗƒȯřḗ ŧħḗ şḗřṽīƈḗ īş ƥřȯṽīḓḗḓ⟧",
@@ -1487,7 +1494,11 @@
       "nameLabel": "⟦Ŀīƞḗ ƞȧḿḗ (ȯƥŧīȯƞȧŀ)⟧",
       "namePlaceholder": "⟦Ƒīẋḗḓ ŀīƞḗ {{number}}⟧",
       "removeLine": "⟦Řḗḿȯṽḗ ƒīẋḗḓ ŀīƞḗ⟧",
-      "noServiceWarning": "⟦Ŧħīş ŀīƞḗ ħȧş ȧ řḗƈŭřřīƞɠ ȧḿȯŭƞŧ ƀŭŧ ƞȯ şḗřṽīƈḗ ŧȯ ƀīŀŀ īŧ ȯƞ. Ȧḓḓ ȧ şḗřṽīƈḗ ƀḗƒȯřḗ ƒīƞīşħīƞɠ; ẏȯŭ ƈȧƞ şŧīŀŀ şȧṽḗ īŧ ȧş ȧ ḓřȧƒŧ.⟧"
+      "noServiceWarning": "⟦Ŧħīş ŀīƞḗ ħȧş ȧ řḗƈŭřřīƞɠ ȧḿȯŭƞŧ ƀŭŧ ƞȯ şḗřṽīƈḗ ŧȯ ƀīŀŀ īŧ ȯƞ. Ȧḓḓ ȧ şḗřṽīƈḗ ƀḗƒȯřḗ ƒīƞīşħīƞɠ; ẏȯŭ ƈȧƞ şŧīŀŀ şȧṽḗ īŧ ȧş ȧ ḓřȧƒŧ.⟧",
+      "invoiceTitleLabel": "⟦Īƞṽȯīƈḗ ŧīŧŀḗ (ȯƥŧīȯƞȧŀ)⟧",
+      "invoiceTitlePlaceholder": "⟦Ḓḗƒȧŭŀŧş ŧȯ ŧħḗ ŀīƞḗ ƞȧḿḗ⟧",
+      "invoiceSubtitleLabel": "⟦Īƞṽȯīƈḗ şŭƀŧīŧŀḗ (ȯƥŧīȯƞȧŀ)⟧",
+      "invoiceSubtitlePlaceholder": "⟦ḗ.ɠ. Ḿȧƞȧɠḗḓ ḗƞḓƥȯīƞŧ ȧƞḓ ƀȧƈķŭƥ şḗřṽīƈḗş⟧"
     },
     "recurringChange": {
       "title": "⟦Ƈȯƞƒīřḿ řḗƈŭřřīƞɠ ŧȯŧȧŀ ƈħȧƞɠḗ⟧",

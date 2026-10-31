@@ -2045,6 +2045,15 @@
     "resize": {
       "handleHint": "Przeciągnij, aby zmienić rozmiar · kliknij dwukrotnie, aby dopasować do zawartości",
       "autoValue": "Automatycznie ({{value}})"
+    },
+    "bundleRows": {
+      "off": "Wyłączone",
+      "quantities": "Tylko ilości",
+      "quantitiesAndPrices": "Ilości i ceny",
+      "custom": "Niestandardowe (zaimportowane)",
+      "showChange": "Pokaż zmianę względem poprzedniego okresu (+N / −N)",
+      "pricesNote": "Ceny składników są zawarte w danych faktury tego szablonu, także dla klientów.",
+      "quantitiesNote": "Ten szablon nie udostępnia klientom cen składników."
     }
   },
   "projectBilling": {

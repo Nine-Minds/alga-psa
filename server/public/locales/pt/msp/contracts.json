@@ -681,6 +681,10 @@
       "statusSuperseded": "Substituído",
       "supersededHistory": "Edições pendentes substituídas ({{count}})",
       "supersededBy": "Substituído por"
+    },
+    "invoiceText": {
+      "titleLabel": "Título da fatura",
+      "subtitleLabel": "Subtítulo da fatura"
     }
   },
   "contractLineEdit": {
@@ -694,11 +698,14 @@
     },
     "fields": {
       "billingTimingQuestion": "Quando esta linha deve ser faturada?",
-      "rate": "Avaliar"
+      "rate": "Avaliar",
+      "invoiceTitle": "Título",
+      "invoiceSubtitle": "Subtítulo"
     },
     "sections": {
       "billingTiming": "Tempo de faturamento",
-      "pricing": "Preços"
+      "pricing": "Preços",
+      "invoiceText": "Texto da fatura"
     },
     "timingDescriptions": {
       "advance": "As cobranças serão cobradas antes da prestação do serviço",
@@ -1487,7 +1494,11 @@
       "nameLabel": "Nome da linha (opcional)",
       "namePlaceholder": "Linha fixa {{number}}",
       "removeLine": "Remover linha fixa",
-      "noServiceWarning": "Esta linha tem um valor recorrente mas nenhum serviço sobre o qual faturá-lo. Adicione um serviço antes de concluir; ainda pode guardá-la como rascunho."
+      "noServiceWarning": "Esta linha tem um valor recorrente mas nenhum serviço sobre o qual faturá-lo. Adicione um serviço antes de concluir; ainda pode guardá-la como rascunho.",
+      "invoiceTitleLabel": "Título da fatura (opcional)",
+      "invoiceTitlePlaceholder": "Por predefinição, o nome da linha",
+      "invoiceSubtitleLabel": "Subtítulo da fatura (opcional)",
+      "invoiceSubtitlePlaceholder": "p. ex. Endpoints gerenciados e backup"
     },
     "recurringChange": {
       "title": "Confirmar a alteração do total recorrente",

@@ -681,6 +681,10 @@
       "statusSuperseded": "Superseded",
       "supersededHistory": "Superseded pending edits ({{count}})",
       "supersededBy": "Superseded by"
+    },
+    "invoiceText": {
+      "titleLabel": "Invoice title",
+      "subtitleLabel": "Invoice subtitle"
     }
   },
   "contractLineEdit": {
@@ -694,11 +698,14 @@
     },
     "fields": {
       "billingTimingQuestion": "When should this line be billed?",
-      "rate": "Rate"
+      "rate": "Rate",
+      "invoiceTitle": "Title",
+      "invoiceSubtitle": "Subtitle"
     },
     "sections": {
       "billingTiming": "Billing Timing",
-      "pricing": "Pricing"
+      "pricing": "Pricing",
+      "invoiceText": "Invoice text"
     },
     "timingDescriptions": {
       "advance": "Charges will be billed before the service is provided",
@@ -1487,7 +1494,11 @@
       "nameLabel": "Line name (optional)",
       "namePlaceholder": "Fixed line {{number}}",
       "removeLine": "Remove fixed line",
-      "noServiceWarning": "This line has a recurring amount but no service to bill it on. Add a service before finishing; you can still save it as a draft."
+      "noServiceWarning": "This line has a recurring amount but no service to bill it on. Add a service before finishing; you can still save it as a draft.",
+      "invoiceTitleLabel": "Invoice title (optional)",
+      "invoiceTitlePlaceholder": "Defaults to the line name",
+      "invoiceSubtitleLabel": "Invoice subtitle (optional)",
+      "invoiceSubtitlePlaceholder": "e.g. Managed endpoint and backup services"
     },
     "recurringChange": {
       "title": "Confirm recurring total change",

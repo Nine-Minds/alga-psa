@@ -681,6 +681,10 @@
       "statusSuperseded": "Ersatt",
       "supersededHistory": "Ersatta väntande ändringar ({{count}})",
       "supersededBy": "Ersatt av"
+    },
+    "invoiceText": {
+      "titleLabel": "Fakturatitel",
+      "subtitleLabel": "Fakturarubrik (undertitel)"
     }
   },
   "contractLineEdit": {
@@ -694,11 +698,14 @@
     },
     "fields": {
       "billingTimingQuestion": "När ska raden debiteras?",
-      "rate": "Taxa"
+      "rate": "Taxa",
+      "invoiceTitle": "Titel",
+      "invoiceSubtitle": "Undertitel"
     },
     "sections": {
       "billingTiming": "Faktureringstidpunkt",
-      "pricing": "Prissättning"
+      "pricing": "Prissättning",
+      "invoiceText": "Fakturatext"
     },
     "timingDescriptions": {
       "advance": "Avgifterna debiteras innan tjänsten tillhandahålls",
@@ -1487,7 +1494,11 @@
       "nameLabel": "Radnamn (valfritt)",
       "namePlaceholder": "Fast rad {{number}}",
       "removeLine": "Ta bort fast rad",
-      "noServiceWarning": "Den här raden har ett återkommande belopp men ingen tjänst att fakturera det på. Lägg till en tjänst innan du slutför; du kan fortfarande spara den som utkast."
+      "noServiceWarning": "Den här raden har ett återkommande belopp men ingen tjänst att fakturera det på. Lägg till en tjänst innan du slutför; du kan fortfarande spara den som utkast.",
+      "invoiceTitleLabel": "Fakturatitel (valfri)",
+      "invoiceTitlePlaceholder": "Standard är radens namn",
+      "invoiceSubtitleLabel": "Fakturaundertitel (valfri)",
+      "invoiceSubtitlePlaceholder": "t.ex. Hanterade slutpunkter och säkerhetskopiering"
     },
     "recurringChange": {
       "title": "Bekräfta ändring av återkommande summa",

@@ -681,6 +681,10 @@
       "statusSuperseded": "Sostituito",
       "supersededHistory": "Modifiche in sospeso sostituite ({{count}})",
       "supersededBy": "Sostituito da"
+    },
+    "invoiceText": {
+      "titleLabel": "Titolo della fattura",
+      "subtitleLabel": "Sottotitolo della fattura"
     }
   },
   "contractLineEdit": {
@@ -694,11 +698,14 @@
     },
     "fields": {
       "billingTimingQuestion": "Quando deve essere fatturata questa linea?",
-      "rate": "Tariffa"
+      "rate": "Tariffa",
+      "invoiceTitle": "Titolo",
+      "invoiceSubtitle": "Sottotitolo"
     },
     "sections": {
       "billingTiming": "Tempistiche di fatturazione",
-      "pricing": "Prezzi"
+      "pricing": "Prezzi",
+      "invoiceText": "Testo della fattura"
     },
     "timingDescriptions": {
       "advance": "Gli addebiti verranno fatturati prima dell'erogazione del servizio",
@@ -1487,7 +1494,11 @@
       "nameLabel": "Nome della riga (facoltativo)",
       "namePlaceholder": "Riga fissa {{number}}",
       "removeLine": "Rimuovi riga fissa",
-      "noServiceWarning": "Questa riga ha un importo ricorrente ma nessun servizio su cui fatturarlo. Aggiungi un servizio prima di terminare; puoi comunque salvarla come bozza."
+      "noServiceWarning": "Questa riga ha un importo ricorrente ma nessun servizio su cui fatturarlo. Aggiungi un servizio prima di terminare; puoi comunque salvarla come bozza.",
+      "invoiceTitleLabel": "Titolo della fattura (facoltativo)",
+      "invoiceTitlePlaceholder": "Per impostazione predefinita, il nome della riga",
+      "invoiceSubtitleLabel": "Sottotitolo della fattura (facoltativo)",
+      "invoiceSubtitlePlaceholder": "es. Endpoint gestiti e backup"
     },
     "recurringChange": {
       "title": "Conferma la modifica del totale ricorrente",

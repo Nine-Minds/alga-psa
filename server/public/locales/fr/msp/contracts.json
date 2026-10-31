@@ -681,6 +681,10 @@
       "statusSuperseded": "Remplacé",
       "supersededHistory": "Modifications en attente remplacées ({{count}})",
       "supersededBy": "Remplacé par"
+    },
+    "invoiceText": {
+      "titleLabel": "Titre de la facture",
+      "subtitleLabel": "Sous-titre de la facture"
     }
   },
   "contractLineEdit": {
@@ -694,11 +698,14 @@
     },
     "fields": {
       "billingTimingQuestion": "Quand cette ligne doit-elle être facturée ?",
-      "rate": "Tarif"
+      "rate": "Tarif",
+      "invoiceTitle": "Titre",
+      "invoiceSubtitle": "Sous-titre"
     },
     "sections": {
       "billingTiming": "Moment de facturation",
-      "pricing": "Tarification"
+      "pricing": "Tarification",
+      "invoiceText": "Texte de la facture"
     },
     "timingDescriptions": {
       "advance": "Les frais seront facturés avant la prestation du service",
@@ -1487,7 +1494,11 @@
       "nameLabel": "Nom de la ligne (facultatif)",
       "namePlaceholder": "Ligne fixe {{number}}",
       "removeLine": "Supprimer la ligne fixe",
-      "noServiceWarning": "Cette ligne a un montant récurrent mais aucun service sur lequel le facturer. Ajoutez un service avant de terminer ; vous pouvez toujours l'enregistrer comme brouillon."
+      "noServiceWarning": "Cette ligne a un montant récurrent mais aucun service sur lequel le facturer. Ajoutez un service avant de terminer ; vous pouvez toujours l'enregistrer comme brouillon.",
+      "invoiceTitleLabel": "Titre de la facture (facultatif)",
+      "invoiceTitlePlaceholder": "Par défaut, le nom de la ligne",
+      "invoiceSubtitleLabel": "Sous-titre de la facture (facultatif)",
+      "invoiceSubtitlePlaceholder": "p. ex. Postes gérés et sauvegarde"
     },
     "recurringChange": {
       "title": "Confirmer la modification du total récurrent",

@@ -1995,6 +1995,15 @@
     "resize": {
       "handleHint": "Dra för att ändra storlek · dubbelklicka för att anpassa till innehållet",
       "autoValue": "Automatisk ({{value}})"
+    },
+    "bundleRows": {
+      "off": "Av",
+      "quantities": "Endast kvantiteter",
+      "quantitiesAndPrices": "Kvantiteter och priser",
+      "custom": "Anpassad (importerad)",
+      "showChange": "Visa ändring från föregående period (+N / −N)",
+      "pricesNote": "Komponentpriser ingår i den här mallens fakturadata, även för kunder.",
+      "quantitiesNote": "Den här mallen visar inte komponentpriser för kunder."
     }
   },
   "projectBilling": {

@@ -1995,6 +1995,15 @@
     "resize": {
       "handleHint": "Drag to resize · double-click to size to content",
       "autoValue": "Auto ({{value}})"
+    },
+    "bundleRows": {
+      "off": "Off",
+      "quantities": "Quantities only",
+      "quantitiesAndPrices": "Quantities and prices",
+      "custom": "Custom (imported)",
+      "showChange": "Show change from the previous period (+N / −N)",
+      "pricesNote": "Component prices are included in this template’s invoice data, including for clients.",
+      "quantitiesNote": "Component prices are not exposed to clients by this template."
     }
   },
   "projectBilling": {

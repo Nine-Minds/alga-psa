@@ -1995,6 +1995,15 @@
     "resize": {
       "handleHint": "Faites glisser pour redimensionner · double-cliquez pour ajuster au contenu",
       "autoValue": "Automatique ({{value}})"
+    },
+    "bundleRows": {
+      "off": "Désactivé",
+      "quantities": "Quantités uniquement",
+      "quantitiesAndPrices": "Quantités et prix",
+      "custom": "Personnalisé (importé)",
+      "showChange": "Afficher la variation par rapport à la période précédente (+N / −N)",
+      "pricesNote": "Les prix des composants sont inclus dans les données de facture de ce modèle, y compris pour les clients.",
+      "quantitiesNote": "Ce modèle n’expose pas les prix des composants aux clients."
     }
   },
   "projectBilling": {
