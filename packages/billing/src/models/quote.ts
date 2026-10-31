@@ -344,6 +344,52 @@ const Quote = {
     return updatedQuote;
   },
 
+  /**
+   * Status transition as ONE conditional UPDATE (`... WHERE status = expectedStatus`).
+   * Returns null, writing nothing, when the quote is no longer in `expectedStatus`;
+   * the row lock taken by the UPDATE makes concurrent callers serialise, so exactly
+   * one of them sees the row. On success it records the same `status_changed`
+   * activity and financial recalculation as `update`.
+   */
+  async updateIfStatus(
+    knexOrTrx: Knex | Knex.Transaction,
+    tenant: string,
+    quoteId: string,
+    expectedStatus: QuoteStatus,
+    updateData: Partial<IQuote> & { status: QuoteStatus }
+  ): Promise<IQuote | null> {
+    if (!tenant) {
+      throw new Error('Tenant context is required for updating quote');
+    }
+
+    if (!canTransitionQuoteStatus(expectedStatus, updateData.status)) {
+      throw new Error(`Invalid quote status transition from ${expectedStatus} to ${updateData.status}`);
+    }
+
+    const [updatedQuote] = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
+      .where({ quote_id: quoteId, status: expectedStatus, is_template: false })
+      .update({ ...prepareQuoteTermsForDb(updateData as Record<string, unknown>), updated_at: knexOrTrx.fn.now() })
+      .returning('*');
+
+    if (!updatedQuote) {
+      return null;
+    }
+
+    await QuoteActivity.create(knexOrTrx, tenant, {
+      quote_id: quoteId,
+      activity_type: 'status_changed',
+      description: `Quote status changed from ${expectedStatus} to ${updateData.status}`,
+      performed_by: updatedQuote.updated_by ?? null,
+      metadata: { previous_status: expectedStatus, next_status: updateData.status },
+    });
+
+    await recalculateQuoteFinancials(knexOrTrx, tenant, quoteId);
+    const recalculatedQuote = await quoteTable<IQuote>(knexOrTrx, tenant, 'quotes')
+      .where({ quote_id: quoteId })
+      .first();
+    return recalculatedQuote ?? updatedQuote;
+  },
+
   async delete(
     knexOrTrx: Knex,
     tenant: string,

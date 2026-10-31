@@ -423,6 +423,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   purchase_orders: { scope: 'tenant' },
   quote_access_links: { scope: 'tenant' },
   quote_activities: { scope: 'tenant' },
+  quote_decisions: { scope: 'tenant' },
   quote_document_template_assignments: { scope: 'tenant' },
   quote_document_templates: { scope: 'tenant' },
   quotes: { scope: 'tenant' },
