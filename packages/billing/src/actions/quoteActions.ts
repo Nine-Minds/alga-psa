@@ -40,7 +40,7 @@ import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination'
 import { formatCurrency } from '@alga-psa/core/lib/formatters';
 import { getQuotePdfFileName } from '../lib/quoteFileNames';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
-import { onQuoteAccepted, onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
+import { onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 import { QUOTE_ACTIVITY_TYPES, buildApprovalChangesRequestedActivity } from '../lib/quoteActivityTypes';
 
 type CreateQuoteInput = Omit<
@@ -710,17 +710,35 @@ export const updateQuote = withAuth(async (
 
   if (parsedInput.status === 'sent' || parsedInput.status === 'accepted') {
     const updatedQuote = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      if (parsedInput.status === 'accepted') {
+        // Acceptance always goes through the decision service (sent -> accepted only; see
+        // QUOTE_ALLOWED_STATUS_TRANSITIONS): one conditional UPDATE, one quote_decisions row,
+        // the hook exactly once. The service stamps accepted_at/accepted_by itself.
+        const { status: _status, accepted_at: _acceptedAt, accepted_by: _acceptedBy, ...rest } = parsedInput;
+        const result = await decideQuote({
+          tenantId: tenant,
+          quoteId,
+          action: 'accept',
+          actor: { kind: 'msp_user', userId: getActorUserId(user) },
+        }, trx);
+        if (result.status === 'not_found') {
+          throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
+        }
+        if (result.status !== 'decided') {
+          const current = result.status === 'not_pending' ? result.currentStatus : 'accepted';
+          throw new Error(`Invalid quote status transition from ${current} to accepted`);
+        }
+        const hasOtherFields = Object.keys(rest).some((key) => key !== 'updated_by' && (rest as Record<string, unknown>)[key] !== undefined);
+        return hasOtherFields
+          ? await Quote.update(trx, tenant, quoteId, rest as Partial<IQuote>)
+          : result.quote;
+      }
       const lifecyclePatch = {
         ...parsedInput,
-        ...(parsedInput.status === 'sent' && !parsedInput.sent_at ? { sent_at: new Date().toISOString() } : {}),
-        ...(parsedInput.status === 'accepted' && !parsedInput.accepted_at ? { accepted_at: new Date().toISOString() } : {}),
+        ...(!parsedInput.sent_at ? { sent_at: new Date().toISOString() } : {}),
       } as Partial<IQuote>;
       const updated = await Quote.update(trx, tenant, quoteId, lifecyclePatch);
       if (updated.status === 'sent') await onQuoteSent(trx, updated);
-      if (updated.status === 'accepted') {
-        // LEVERAGE: friction quote-decision-paths — a fourth accept path that bypasses decideQuote (no quote_decisions row, no conditional UPDATE, hook can double-fire); portal, MSP "mark accepted" and email-link accept all go through the service.
-        await onQuoteAccepted(trx, updated);
-      }
       return updated;
     });
     return await Quote.getById(knex, tenant, updatedQuote.quote_id) as IQuote;

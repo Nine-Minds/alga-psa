@@ -278,6 +278,31 @@ describe('decideQuote (alga-2026-0002820 1/6)', () => {
     expect(onQuoteAcceptedSpy).not.toHaveBeenCalled();
   });
 
+  it('wrong-tenant actors are refused: a portal user or link contact from tenant A cannot decide tenant B\'s quote', async () => {
+    const tenantA = await createTenantFixture();
+    const tenantB = await createTenantFixture();
+    const clientA = await addClient(tenantA);
+    const clientB = await addClient(tenantB);
+    const contactA = await addContact(tenantA, clientA);
+    const userA = await addUser(tenantA, { permissions: [['billing', 'read']], userType: 'client', contactId: contactA });
+    const quoteB = await addQuote(tenantB, clientB);
+
+    // Acting inside tenant B: the tenant A user does not exist there.
+    const asUserInB = await decide({ tenantId: tenantB, quoteId: quoteB.quoteId, action: 'accept', actor: { kind: 'portal_user', userId: userA.user_id } });
+    expect(asUserInB.status).toBe('forbidden');
+    // Acting inside tenant A: tenant B's quote does not exist there.
+    expect(await decide({ tenantId: tenantA, quoteId: quoteB.quoteId, action: 'accept', actor: { kind: 'portal_user', userId: userA.user_id } }))
+      .toEqual({ status: 'not_found' });
+    // A tenant A contact on a link, against tenant B's quote.
+    expect(await decide({ tenantId: tenantB, quoteId: quoteB.quoteId, action: 'accept', actor: { kind: 'access_link', linkId: uuidv4(), contactId: contactA, email: 'x@example.com' } }))
+      .toEqual({ status: 'not_found' });
+
+    expect((await quoteRow(tenantB, quoteB.quoteId)).status).toBe('sent');
+    expect(await tt(tenantB, 'quote_decisions')).toHaveLength(0);
+    expect(await tt(tenantA, 'quote_decisions')).toHaveLength(0);
+    expect(onQuoteAcceptedSpy).not.toHaveBeenCalled();
+  });
+
   it('access_link actor whose contact has no users row: accepted, accepted_by NULL, decision row carries link/contact/signer/ip/ua', async () => {
     const tenantId = await createTenantFixture();
     const clientId = await addClient(tenantId);
@@ -356,6 +381,40 @@ describe('decideQuote (alga-2026-0002820 1/6)', () => {
       decision_id: decision.decision_id,
     });
     expect(onQuoteAcceptedSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('updateQuote(status:accepted) routes through the service: one msp_marked row, hook once, patch fields applied; repeats and drafts are refused', async () => {
+    const { updateQuote } = await import('@alga-psa/billing/actions/quoteActions');
+    const tenantId = await createTenantFixture();
+    const clientId = await addClient(tenantId);
+    const me = await addUser(tenantId, { permissions: [['billing', 'read'], ['billing', 'update']] });
+    const { quoteId } = await addQuote(tenantId, clientId);
+    mockCurrentUser = me;
+
+    const result: any = await updateQuote(quoteId, { status: 'accepted', title: 'Renamed on accept' } as any);
+
+    expect(result.status).toBe('accepted');
+    expect(result.title).toBe('Renamed on accept');
+    const row = await quoteRow(tenantId, quoteId);
+    expect(row.accepted_by).toBe(me.user_id);
+    expect(row.accepted_at).toBeTruthy();
+    const rows = await decisions(tenantId, quoteId);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ decision: 'accepted', method: 'msp_marked', actor_user_id: me.user_id });
+    expect(onQuoteAcceptedSpy).toHaveBeenCalledTimes(1);
+
+    await expect(updateQuote(quoteId, { status: 'accepted' } as any)).rejects.toThrow(
+      'Invalid quote status transition from accepted to accepted'
+    );
+    expect(await decisions(tenantId, quoteId)).toHaveLength(1);
+    expect(onQuoteAcceptedSpy).toHaveBeenCalledTimes(1);
+
+    const draft = await addQuote(tenantId, clientId, 'draft');
+    await expect(updateQuote(draft.quoteId, { status: 'accepted' } as any)).rejects.toThrow(
+      'Invalid quote status transition from draft to accepted'
+    );
+    expect(await decisions(tenantId, draft.quoteId)).toHaveLength(0);
+    expect((await quoteRow(tenantId, draft.quoteId)).status).toBe('draft');
   });
 
   it('a second decide on a decided quote returns not_pending and writes nothing', async () => {
