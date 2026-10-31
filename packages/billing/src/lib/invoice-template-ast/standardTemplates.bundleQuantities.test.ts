@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { countryDateFormat } from '@alga-psa/core/i18n/countryDateFormat';
 import { evaluateTemplateAst } from './evaluator';
 import { renderEvaluatedTemplateAst } from './react-renderer';
 import { validateTemplateAst } from './schema';
@@ -106,5 +107,34 @@ describe('decideBundleLoad (client price-leak gate)', () => {
   it('a client on a template without component rows, or an unknown template, gets nothing', () => {
     expect(decideBundleLoad('client', plain)).toEqual({ includeBundlePresentation: false, includeBundleComponentAmounts: false });
     expect(decideBundleLoad('client', null)).toEqual({ includeBundlePresentation: false, includeBundleComponentAmounts: false });
+  });
+});
+
+describe('French render (T019)', () => {
+  const frModel = {
+    ...viewModel,
+    items: [
+      {
+        id: 'a', description: 'Forfait postes', subtitle: 'Postes et sauvegarde',
+        quantity: 1, unitPrice: 1000, total: 1000, hasComponents: true,
+        components: [
+          { name: 'Postes', quantity: 1234.5, quantityChange: -1.5, pricingBasis: 'unit' },
+          { name: 'Sauvegarde', quantity: 40, quantityChange: 2.5, pricingBasis: 'unit', periodLabelStart: '2026-01-01', periodLabelEnd: '2026-02-01' },
+        ],
+      },
+    ],
+  };
+
+  it('formats quantities, signed changes and period labels in the recipient locale', async () => {
+    const ast = getStandardTemplateAstByCode('standard-bundle-quantities')!;
+    const evaluation = evaluateTemplateAst(ast, frModel as unknown as Record<string, unknown>);
+    const html = (await renderEvaluatedTemplateAst(ast, evaluation, { locale: 'fr', dateFormat: countryDateFormat('FR') })).html;
+    const text = html.replace(/<[^>]+>/g, ' ').replace(/[  ]/g, ' ');
+    expect(text).toContain('1 234,5');
+    expect(text).toContain('−1,5');
+    expect(text).toContain('+2,5');
+    // The country writes the digits (day first for France), the locale the language.
+    expect(text).toContain('01/01/2026 – 01/02/2026');
+    expect(text).not.toContain('1,234.5');
   });
 });

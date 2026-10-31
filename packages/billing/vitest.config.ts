@@ -80,6 +80,7 @@ export default defineConfig({
       'src/lib/invoice-template-ast/fieldFormatting.test.ts',
       'src/lib/invoice-template-ast/childRows.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.bundleQuantities.test.ts',
+      'src/lib/invoice-template-ast/bundleRows.pdf.test.ts',
       'src/lib/invoiceBundleComponents/**/*.test.ts',
       'src/lib/invoice-template-ast/react-renderer.test.tsx',
       // Country-driven date shape: a document is dated the way its recipient

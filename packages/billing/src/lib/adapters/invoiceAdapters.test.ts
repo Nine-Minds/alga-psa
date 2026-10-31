@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildInvoiceTimeCollections,
+  buildInvoiceLocationGroups,
+  enrichWithGroupedItems,
   mapDbInvoiceToWasmViewModel,
   type InvoiceTimeCollectionSource,
 } from './invoiceAdapters';
@@ -628,5 +630,67 @@ describe('mapDbInvoiceToWasmViewModel billed-time collections', () => {
     expect(mapped).not.toBeNull();
     expect(mapped?.timeEntries).toBeUndefined();
     expect(mapped?.ticketGroups).toBeUndefined();
+  });
+});
+
+describe('mapDbInvoiceToWasmViewModel bundle components (T007)', () => {
+  const snapshot = {
+    version: 1 as const,
+    subtitle: 'Seats and backup',
+    components: [
+      { serviceId: 's1', name: 'Seat', quantity: 25, pricingBasis: 'unit' as const, order: 0, servicePeriodStart: '2026-01-01', servicePeriodEnd: '2026-02-01', detailItemIds: ['d1'], previousQuantity: 22, comparison: 'compared' as const },
+      { serviceId: 's2', name: 'Backup', quantity: null, pricingBasis: 'bundle' as const, order: 1, servicePeriodStart: '2026-01-01', servicePeriodEnd: '2026-02-01', detailItemIds: ['d2'], previousQuantity: null, comparison: 'no_prior_period' as const },
+    ],
+  };
+  const base = {
+    invoice_number: 'INV-1', invoice_date: '2026-02-01', due_date: '2026-02-15',
+    client: { name: 'Acme', address: '1 Main' }, subtotal: '1000', tax: '0', total: '1000',
+  };
+  const bundleCharge = {
+    item_id: 'bundle-1', description: 'Managed IT', quantity: '1', unit_price: '1000', total_price: '1000', net_amount: '1000',
+    billing_timing: 'arrears', service_period_start: '2026-01-01', service_period_end: '2026-02-01',
+  };
+
+  it('keeps qty 1 / rate = total and attaches subtitle + components without prices by default', () => {
+    const vm = mapDbInvoiceToWasmViewModel({ ...base, invoice_charges: [{ ...bundleCharge, bundle_presentation: snapshot }] } as any)!;
+    const item = vm.items[0] as any;
+    expect(item.quantity).toBe(1);
+    expect(item.unitPrice).toBe(1000);
+    expect(item.total).toBe(1000);
+    expect(item.subtitle).toBe('Seats and backup');
+    expect(item.hasComponents).toBe(true);
+    expect(item.components.map((c: any) => [c.name, c.quantity, c.quantityChange])).toEqual([['Seat', 25, 3], ['Backup', null, null]]);
+    expect(item.components.every((c: any) => c.total === undefined && c.unitPrice === undefined)).toBe(true);
+  });
+
+  it('adds component money only when amounts were loaded', () => {
+    const vm = mapDbInvoiceToWasmViewModel({
+      ...base,
+      invoice_charges: [{
+        ...bundleCharge, bundle_presentation: snapshot,
+        bundle_component_amounts: { d1: { allocated_amount: 7, rate: 3 }, d2: { allocated_amount: 3, rate: 0 } },
+      }],
+    } as any)!;
+    const components = (vm.items[0] as any).components;
+    expect(components[0].total).toBeGreaterThan(0);
+    expect(components[1].total).toBeGreaterThan(0);
+  });
+
+  it('leaves snapshot-less invoices unchanged', () => {
+    const vm = mapDbInvoiceToWasmViewModel({ ...base, invoice_charges: [bundleCharge] } as any)!;
+    const item = vm.items[0] as any;
+    expect('components' in item).toBe(false);
+    expect('subtitle' in item).toBe(false);
+    expect('hasComponents' in item).toBe(false);
+  });
+
+  it('components ride along into recurringItems and ticketPresentationRows', () => {
+    const vm = enrichWithGroupedItems(
+      mapDbInvoiceToWasmViewModel({ ...base, invoice_charges: [{ ...bundleCharge, bundle_presentation: snapshot }] } as any)!,
+    ) as any;
+    expect(vm.recurringItems[0].components).toHaveLength(2);
+    expect(vm.ticketPresentationRows[0].components).toHaveLength(2);
+    expect(vm.ticketPresentationRows[0].subtitle).toBe('Seats and backup');
+    expect((buildInvoiceLocationGroups(vm.items)[0].items[0] as any).components).toHaveLength(2);
   });
 });
