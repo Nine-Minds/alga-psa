@@ -13,7 +13,7 @@ import {
 import { createTenantKnex } from '@alga-psa/db';
 import { toPlainDate, formatLocationAddress } from '@alga-psa/core';
 import Invoice from '@alga-psa/billing/models/invoice';
-import { templateUsesComponentPricing, templateHasComponentRows } from '@alga-psa/billing/lib/invoice-template-ast/componentPricing';
+import { templateUsesComponentPricing, decideBundleLoad } from '@alga-psa/billing/lib/invoice-template-ast/componentPricing';
 import { getClientContractPurchaseOrderContext, getPurchaseOrderConsumedCents } from '@alga-psa/billing/services/purchaseOrderService';
 import { withAuth } from '@alga-psa/auth';
 import { withSerializableAuth } from './serializableAuth';
@@ -811,9 +811,7 @@ async function resolveBundleLoadOptions(
   user: InvoiceQueryUser,
   invoiceId: string,
 ): Promise<{ includeBundlePresentation: boolean; includeBundleComponentAmounts: boolean }> {
-  if (user.user_type !== 'client') {
-    return { includeBundlePresentation: true, includeBundleComponentAmounts: true };
-  }
+  if (user.user_type !== 'client') return decideBundleLoad('msp', null);
   const db = tenantDb(knex, tenant);
   const invoice = await db.table('invoices').where({ invoice_id: invoiceId }).first('client_id');
   let templateId: string | null = null;
@@ -826,13 +824,8 @@ async function resolveBundleLoadOptions(
     ? templates.find((entry) => entry.template_id === templateId)
     : templates.find((entry) => entry.is_default || entry.isTenantDefault) ?? templates[0];
   const ast = (template?.templateAst ?? null) as Parameters<typeof templateUsesComponentPricing>[0] | null;
-  // Unknown/missing template: fail closed (no prices).
-  // Client payloads carry bundle data only for a template that renders
-  // component rows, and prices only when that template binds one.
-  return {
-    includeBundlePresentation: ast ? templateHasComponentRows(ast) : false,
-    includeBundleComponentAmounts: ast ? templateUsesComponentPricing(ast) : false,
-  };
+  // Unknown/missing template fails closed; see decideBundleLoad.
+  return decideBundleLoad('client', ast);
 }
 
 export const getInvoiceForRendering = withAuth(async (

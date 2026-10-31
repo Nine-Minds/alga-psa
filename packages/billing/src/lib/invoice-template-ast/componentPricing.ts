@@ -71,3 +71,24 @@ const hasChildRows = (value: unknown): boolean => {
 /** Whether any table in the AST renders bundle component rows. */
 export const templateHasComponentRows = (ast: TemplateAst | null | undefined): boolean =>
   ast ? hasChildRows(ast.layout) : false;
+
+export interface BundleLoadDecision {
+  includeBundlePresentation: boolean;
+  includeBundleComponentAmounts: boolean;
+}
+
+/**
+ * The single price-leak gate for what a viewer's invoice data may carry.
+ * MSP users always get everything; for clients the resolved template decides,
+ * and an unknown template (null) fails closed: no component data at all.
+ */
+export const decideBundleLoad = (
+  viewer: 'msp' | 'client',
+  ast: TemplateAst | null | undefined,
+): BundleLoadDecision => {
+  if (viewer === 'msp') return { includeBundlePresentation: true, includeBundleComponentAmounts: true };
+  return {
+    includeBundlePresentation: ast ? templateHasComponentRows(ast) : false,
+    includeBundleComponentAmounts: ast ? templateUsesComponentPricing(ast) : false,
+  };
+};
