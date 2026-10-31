@@ -149,15 +149,15 @@ describe('updateBoard portal status-configuration guard', () => {
     );
   });
 
-  it('T033: updateBoard without ticket_statuses does not require ticket_settings:update', async () => {
+  it('T033: updateBoard without ticket_statuses still requires ticket_settings:update', async () => {
     hasPermissionMock.mockResolvedValue(false);
 
     const { updateBoard } = await import('./boardActions');
 
     const result = await updateBoard('board-a', { board_name: 'Renamed' } as any);
 
-    expect(isReturnedActionError(result)).toBe(false);
+    expect(result).toMatchObject({ permissionError: expect.stringContaining('Permission denied') });
     expect(saveBoardTicketStatusesForBoardMock).not.toHaveBeenCalled();
-    expect(boardUpdates).toHaveLength(1);
+    expect(boardUpdates).toHaveLength(0);
   });
 });

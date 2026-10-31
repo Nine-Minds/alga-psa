@@ -21,7 +21,13 @@ import { parseTicketViewSettings } from './boardViewSettingsSchema';
 import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../../lib/ticketSlaSql';
 import { normalizeBoardStopwatchSetting, resolveBoardStopwatchEnabled } from '../../lib/boardLiveTicketTimer';
 import type { TicketViewSettings } from '../../lib/ticketViewSettings';
-import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { actionError, permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  createBoardInputSchema,
+  updateBoardInputSchema,
+  type ParsedCreateBoardInput,
+  type ParsedUpdateBoardInput,
+} from './boardInputSchema';
 
 export interface FindBoardByNameOutput {
   id: string;
@@ -36,7 +42,7 @@ export interface CreateBoardInput extends Omit<IBoard, 'board_id' | 'tenant'> {
   ticket_statuses?: BoardTicketStatusInput[];
 }
 
-export interface UpdateBoardInput extends Partial<Omit<IBoard, 'tenant'>> {
+export interface UpdateBoardInput extends Partial<Omit<IBoard, 'tenant' | 'board_id'>> {
   ticket_statuses?: BoardTicketStatusInput[];
 }
 
@@ -316,8 +322,99 @@ export const getBoardListStats = withAuth(async (_user, { tenant }): Promise<Rec
   }
 });
 
-export const createBoard = withAuth(async (user, { tenant }, boardData: CreateBoardInput): Promise<IBoard | BoardActionError> => {
+type BoardMutationAction = 'create' | 'update' | 'delete';
+
+const BOARD_PERMISSION_DENIED: Record<BoardMutationAction, { message: string; i18nKey: string }> = {
+  create: { message: 'Permission denied: Cannot create boards', i18nKey: 'features/tickets:errors.settings.createDenied' },
+  update: { message: 'Permission denied: Cannot update ticket settings', i18nKey: 'features/tickets:errors.settings.updateDenied' },
+  delete: { message: 'Permission denied: Cannot delete boards', i18nKey: 'features/tickets:errors.settings.deleteDenied' },
+};
+
+type BoardGuardResult<Input> =
+  | { ok: true; data: Input }
+  | { ok: false; denied: boolean; error: BoardActionError };
+
+/**
+ * The single authorization + input gate for board mutations.
+ *
+ * Order is load-bearing and callers must run it before any read or write
+ * (display_order lookup, existing-default lookup, board load):
+ *   1. principal: board configuration is MSP-internal; client-portal principals
+ *      (user_type 'client', or anything not 'internal') are denied.
+ *   2. permission: ticket_settings:<action>, unconditionally — not contingent on
+ *      which fields the payload happens to contain.
+ *   3. input (create/update): strict schema; unknown keys and wrongly typed
+ *      values are rejected, and the result is the explicit writable projection.
+ */
+// LEVERAGE: pattern board-settings-guard — saveBoardDefaultView/clearBoardDefaultView and the board status/notification/close-rule actions repeat the principal+ticket_settings check inline
+async function boardMutationGuard(
+  user: { user_type?: string } & Record<string, any>,
+  action: 'create',
+  input: unknown,
+  trx?: Knex | Knex.Transaction
+): Promise<BoardGuardResult<ParsedCreateBoardInput>>;
+async function boardMutationGuard(
+  user: { user_type?: string } & Record<string, any>,
+  action: 'update',
+  input: unknown,
+  trx?: Knex | Knex.Transaction
+): Promise<BoardGuardResult<ParsedUpdateBoardInput>>;
+async function boardMutationGuard(
+  user: { user_type?: string } & Record<string, any>,
+  action: 'delete',
+  input?: undefined,
+  trx?: Knex | Knex.Transaction
+): Promise<BoardGuardResult<undefined>>;
+async function boardMutationGuard(
+  user: { user_type?: string } & Record<string, any>,
+  action: BoardMutationAction,
+  input?: unknown,
+  trx?: Knex | Knex.Transaction
+): Promise<BoardGuardResult<any>> {
+  const denial = BOARD_PERMISSION_DENIED[action];
+  const denied = {
+    ok: false as const,
+    denied: true,
+    error: permissionError(denial.message, denial.i18nKey),
+  };
+
+  if (user.user_type !== 'internal') {
+    return denied;
+  }
+  if (!await hasPermission(user as any, 'ticket_settings', action, trx)) {
+    return denied;
+  }
+  if (action === 'delete') {
+    return { ok: true, data: undefined };
+  }
+
+  const schema = action === 'create' ? createBoardInputSchema : updateBoardInputSchema;
+  const parsed = schema.safeParse(input);
+  if (!parsed.success) {
+    const detail = parsed.error.issues
+      .map((issue) => `${issue.path.join('.') || '(root)'}: ${issue.message}`)
+      .join('; ');
+    return {
+      ok: false,
+      denied: false,
+      error: actionError(`Invalid board input: ${detail}`),
+    };
+  }
+  // Drop explicit-undefined keys so the projection only carries what was sent.
+  const data = Object.fromEntries(
+    Object.entries(parsed.data).filter(([, value]) => value !== undefined)
+  );
+  return { ok: true, data };
+}
+
+export const createBoard = withAuth(async (user, { tenant }, rawBoardData: CreateBoardInput): Promise<IBoard | BoardActionError> => {
   const { knex: db } = await createTenantKnex();
+
+  const guard = await boardMutationGuard(user, 'create', rawBoardData, db);
+  if (!guard.ok) {
+    return guard.error;
+  }
+  const boardData = guard.data;
 
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -616,15 +713,16 @@ export const deleteBoard = withAuth(async (
   force: boolean = false,
   cleanupItil = false
 ): Promise<DeleteBoardResult> => {
-  if (!await hasPermission(user, 'ticket', 'delete')) {
+  const { knex: db } = await createTenantKnex();
+
+  const guard = await boardMutationGuard(user, 'delete', undefined, db);
+  if (!guard.ok) {
     return {
       success: false,
       code: 'PERMISSION_DENIED',
       message: 'Permission denied: Cannot delete boards',
     };
   }
-
-  const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction): Promise<DeleteBoardResult> => {
     const tenantScopedTable = <Row extends object = Record<string, any>>(table: string) =>
@@ -1041,8 +1139,15 @@ export async function deleteBoardLegacy(boardId: string): Promise<boolean> {
   return true;
 }
 
-export const updateBoard = withAuth(async (user, { tenant }, boardId: string, boardData: UpdateBoardInput): Promise<IBoard | BoardActionError> => {
+export const updateBoard = withAuth(async (user, { tenant }, boardId: string, rawBoardData: UpdateBoardInput): Promise<IBoard | BoardActionError> => {
   const { knex: db } = await createTenantKnex();
+
+  // Unconditional, and before the board load / default-unset / any write.
+  const guard = await boardMutationGuard(user, 'update', rawBoardData, db);
+  if (!guard.ok) {
+    return guard.error;
+  }
+  const boardData = guard.data;
 
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1067,22 +1172,6 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
         if (await countCoManagedBoardScopes(trx, { tenant, entityId: boardId }) > 0) {
           throw new Error(CO_MANAGED_SHARED_BOARD_MESSAGE);
         }
-      }
-
-      // updateBoard is a second write path to the same two columns that
-      // saveBoardDefaultView/clearBoardDefaultView guard, and it is a write path
-      // to the board's ticket statuses (including portal_selectable). It has to
-      // enforce the same permission or the gates on those actions are
-      // decorative and a client-portal caller could re-enable a restricted
-      // status. Checked before ANY board or status mutation, including the
-      // unset-other-defaults step below.
-      const touchesViewConfig = 'is_pinned' in boardData || 'list_view_settings' in boardData;
-      const touchesTicketStatusConfig = Array.isArray(boardData.ticket_statuses);
-      if (
-        (touchesViewConfig || touchesTicketStatusConfig) &&
-        !await hasPermission(user, 'ticket_settings', 'update', trx)
-      ) {
-        throw new Error('Permission denied: Cannot update ticket settings');
       }
 
       // If setting as default, unset all other defaults first
