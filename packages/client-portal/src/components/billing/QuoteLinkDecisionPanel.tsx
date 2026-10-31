@@ -3,23 +3,19 @@
 /**
  * Accept / reject panel for the public (email-link) quote page - alga-2026-0002820 (4/6).
  *
- * Self-contained: it receives the resolved quote view-model and the access token and
- * mounts anywhere on the public quote page. Typed name + agreement checkbox is the
- * signature (no drawn pad). Optional-item toggles only change the local preview; the
- * selection is committed by Accept, exactly as in the client portal. The server
- * re-validates everything - nothing rendered here is trusted.
+ * Mounted by PublicQuoteReview as the footer of the shared QuoteDocumentView. Typed
+ * name + agreement checkbox is the signature (no drawn pad). Optional-item toggles
+ * and the live preview belong to the document view (the caller owns the selection,
+ * exactly as in the client portal); this panel commits that selection on Accept.
+ * The server re-validates everything - nothing rendered here is trusted.
  */
-import React, { useCallback, useMemo, useState } from 'react';
-import { computeQuoteTotals, isOptional, isQuoteItemIncluded } from '@alga-psa/core';
-import type { IQuoteItem } from '@alga-psa/types';
+import React, { useCallback, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Dialog, DialogContent, DialogDescription } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
-import { Switch } from '@alga-psa/ui/components/Switch';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export interface QuoteLinkAgreement {
@@ -31,17 +27,16 @@ export interface QuoteLinkAgreement {
 export interface QuoteLinkDecisionPanelProps {
   /** The raw access token from the URL; only used to address the decision route. */
   token: string;
-  /** Quote lines. Optional rows need `tax_amount_if_included` for the live preview. */
-  items: IQuoteItem[];
-  currencyCode?: string;
-  /** Persisted totals, shown when no preview is available. */
-  totals: { subtotal: number; discount_total?: number; tax: number; total_amount: number };
   /** Current agreement wording from the server (getCurrentQuoteAgreement). */
   agreement: QuoteLinkAgreement;
-  /** The quote's status when the page was rendered; the panel only acts on `sent`. */
-  quoteStatus: string;
+  /** Optional items the recipient currently has switched on; committed by Accept. */
+  selectedOptionalIds: ReadonlyArray<string>;
   /** Optional signer prefill, e.g. the recipient's name. */
   defaultSignerName?: string;
+  /** Lets the owner of the document view lock its toggles while a request is in flight. */
+  onSubmittingChange?: (submitting: boolean) => void;
+  /** Called once a result replaces the form (decided, already decided, changed, invalid). */
+  onSettled?: () => void;
 }
 
 type PanelState =
@@ -50,13 +45,10 @@ type PanelState =
   | { kind: 'changed' }
   | { kind: 'invalid' };
 
-const UNASSIGNED = '__unassigned__';
-
 const QuoteLinkDecisionPanel: React.FC<QuoteLinkDecisionPanelProps> = ({
-  token, items, currencyCode, totals, agreement, quoteStatus, defaultSignerName,
+  token, agreement, selectedOptionalIds, defaultSignerName, onSubmittingChange, onSettled,
 }) => {
   const { t } = useTranslation('features/billing');
-  const { money } = useCurrencyFormat();
   const { formatDate } = useFormatters();
 
   const [state, setState] = useState<PanelState>({ kind: 'form' });
@@ -67,40 +59,17 @@ const QuoteLinkDecisionPanel: React.FC<QuoteLinkDecisionPanelProps> = ({
   const [rejectOpen, setRejectOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(items.filter((i) => isOptional(i) && isQuoteItemIncluded(i)).map((i) => i.quote_item_id)),
-  );
-
-  const optionalItems = useMemo(() => items.filter((i) => i.is_optional), [items]);
-  const canDecide = quoteStatus === 'sent';
-
-  const previewItems = useMemo(
-    () => items.map((i) => (i.is_optional ? { ...i, is_selected: selected.has(i.quote_item_id) } : i)),
-    [items, selected],
-  );
-  const preview = useMemo(() => {
-    if (!canDecide || optionalItems.length === 0) return null;
-    const base = previewItems.filter((i) => !i.is_discount);
-    if (base.some((i) => typeof i.tax_amount_if_included !== 'number')) return null;
-    return computeQuoteTotals(
-      previewItems.map((i) => ({
-        ...i,
-        id: i.quote_item_id,
-        groupKey: i.location_id && i.location_id.trim().length > 0 ? i.location_id : UNASSIGNED,
-        taxAmountIfIncluded: i.tax_amount_if_included ?? 0,
-      })),
-    );
-  }, [canDecide, optionalItems.length, previewItems]);
-
-  const shown = preview
-    ? { subtotal: preview.subtotal, tax: preview.tax, total: preview.totalAmount }
-    : { subtotal: totals.subtotal, tax: totals.tax, total: totals.total_amount };
+  // Synchronous guard: state updates are async, a fast double click could otherwise send twice.
+  const inFlight = React.useRef(false);
 
   const submit = useCallback(async (action: 'accept' | 'reject') => {
+    if (inFlight.current) return;
+    inFlight.current = true;
     setSubmitting(true);
+    onSubmittingChange?.(true);
     setError(null);
     try {
-      const response = await fetch(`/api/quote-link/${encodeURIComponent(token)}/decision`, {
+      const response = await fetch(`/api/quote/${encodeURIComponent(token)}/decision`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -110,7 +79,7 @@ const QuoteLinkDecisionPanel: React.FC<QuoteLinkDecisionPanelProps> = ({
           agreed,
           agreementVersion: agreement.version,
           agreementTextHash: agreement.hash,
-          selectedOptionalQuoteItemIds: [...selected],
+          selectedOptionalQuoteItemIds: action === 'accept' ? [...selectedOptionalIds] : [],
           comment,
         }),
       });
@@ -131,11 +100,17 @@ const QuoteLinkDecisionPanel: React.FC<QuoteLinkDecisionPanelProps> = ({
     } catch {
       setError(t('quotes.publicDecision.errors.generic', { defaultValue: 'Something went wrong. Please try again.' }));
     } finally {
+      inFlight.current = false;
       setSubmitting(false);
+      onSubmittingChange?.(false);
       setRejectOpen(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, name, title, agreed, agreement, selected, comment, t]);
+  }, [token, name, title, agreed, agreement, selectedOptionalIds, comment, t, onSubmittingChange]);
+
+  // A settled result replaces the form; tell the owner so it can lock the optional-item toggles.
+  const settled = state.kind !== 'form';
+  React.useEffect(() => { if (settled) onSettled?.(); }, [settled, onSettled]);
 
   function inputProblemMessage(problem: string): string {
     switch (problem) {
@@ -155,11 +130,14 @@ const QuoteLinkDecisionPanel: React.FC<QuoteLinkDecisionPanelProps> = ({
   }
 
   if (state.kind === 'invalid') {
+    // Same generic copy as the server-rendered not-valid page: no reason is ever given.
     return (
       <Alert id="quote-link-invalid" variant="destructive">
-        <AlertTitle>{t('quotes.publicDecision.invalid.title', { defaultValue: 'This link is not valid' })}</AlertTitle>
+        <AlertTitle>{t('quotes.public.outcome.unavailable.title', { defaultValue: "This link isn't available" })}</AlertTitle>
         <AlertDescription>
-          {t('quotes.publicDecision.invalid.body', { defaultValue: 'This link can no longer be used. Please contact the sender for a new one.' })}
+          {t('quotes.public.outcome.unavailable.body', { defaultValue: 'The link may be mistyped or may no longer be active.' })}
+          {' '}
+          {t('quotes.public.outcome.help', { defaultValue: 'Need help? Reply to the email you received this link in.' })}
         </AlertDescription>
       </Alert>
     );
@@ -201,44 +179,8 @@ const QuoteLinkDecisionPanel: React.FC<QuoteLinkDecisionPanelProps> = ({
     );
   }
 
-  if (!canDecide) return null;
-
-  const toggle = (id: string, on: boolean) =>
-    setSelected((cur) => {
-      const next = new Set(cur);
-      if (on) next.add(id); else next.delete(id);
-      return next;
-    });
-
   return (
     <div className="space-y-4 rounded-lg border border-border p-4" id="quote-link-decision-panel">
-      {optionalItems.length > 0 && (
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold">{t('quotes.publicDecision.optionalItems', { defaultValue: 'Optional items' })}</h3>
-          <p className="text-xs text-muted-foreground">
-            {t('quotes.publicDecision.optionalHint', { defaultValue: 'Choose the optional items you want. Your choices are sent when you accept.' })}
-          </p>
-          {optionalItems.map((item) => (
-            <div key={item.quote_item_id} className="flex items-center justify-between gap-3">
-              <Switch
-                id={`quote-link-optional-${item.quote_item_id}`}
-                label={item.description}
-                checked={selected.has(item.quote_item_id)}
-                onCheckedChange={(checked: boolean) => toggle(item.quote_item_id, checked)}
-                disabled={submitting}
-              />
-              <span className="text-sm">{money(item.total_price ?? 0, currencyCode)}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="space-y-1 text-sm" aria-live="polite">
-        <div className="flex justify-between"><span>{t('quotes.publicDecision.subtotal', { defaultValue: 'Subtotal' })}</span><span>{money(shown.subtotal, currencyCode)}</span></div>
-        <div className="flex justify-between"><span>{t('quotes.publicDecision.tax', { defaultValue: 'Tax' })}</span><span>{money(shown.tax, currencyCode)}</span></div>
-        <div className="flex justify-between font-semibold"><span>{t('quotes.publicDecision.total', { defaultValue: 'Total' })}</span><span>{money(shown.total, currencyCode)}</span></div>
-      </div>
-
       <div className="space-y-3">
         <Input
           id="quote-link-signer-name"

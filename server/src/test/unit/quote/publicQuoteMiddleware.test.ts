@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { QUOTE_ACCESS_TOKEN_LENGTH } from '@alga-psa/billing/services';
 import {
   applyPublicQuoteReviewHeaders,
+  isPublicQuoteDecisionPath,
   isPublicQuotePagePath,
   isPublicQuotePdfPath,
   isPublicQuoteReviewPath,
@@ -20,6 +21,29 @@ describe('public quote review paths', () => {
     expect(isPublicQuotePdfPath(`/api/quote/${token}/pdf`)).toBe(true);
     expect(isPublicQuoteReviewPath(`/api/quote/${token}/pdf`)).toBe(true);
     expect(shouldSkipApiKeyAuth(`/api/quote/${token}/pdf`)).toBe(true);
+  });
+
+  it('opens exactly /api/quote/<token>/decision and nothing near it', () => {
+    expect(isPublicQuoteDecisionPath(`/api/quote/${token}/decision`)).toBe(true);
+    expect(isPublicQuoteReviewPath(`/api/quote/${token}/decision`)).toBe(true);
+    expect(shouldSkipApiKeyAuth(`/api/quote/${token}/decision`)).toBe(true);
+    const near = [
+      `/api/quote/${token}/decision/`,
+      `/api/quote/${token}/decision/extra`,
+      `/api/quote/${token}/decisions`,
+      `/api/quote/${token}/decisionx`,
+      `/api/quote/${token}x/decision`,
+      `/api/quote/${token.slice(1)}/decision`,
+      `/api/quote//decision`,
+      `/api/quote-link/${token}/decision`,
+      `/api/quote/${token}/x/decision`,
+      `/api/quote/${token}`,
+    ];
+    for (const path of near) {
+      expect(isPublicQuoteDecisionPath(path), path).toBe(false);
+      expect(isPublicQuoteReviewPath(path), path).toBe(false);
+      expect(shouldSkipApiKeyAuth(path), path).toBe(false);
+    }
   });
 
   it('does not treat anything else as public', () => {
