@@ -122,6 +122,8 @@ export const navigationSections: NavigationSection[] = [
         icon: Ticket,
         subItems: [
           { name: 'All Tickets', translationKey: 'nav.ticketsAll', icon: Ticket, href: '/msp/tickets' },
+          // Capability-gated: SidebarWithFeatureFlags removes it unless the co-managed capability is served.
+          { name: 'Customer Tickets', translationKey: 'nav.ticketsCustomer', icon: Ticket, href: '/msp/tickets/customer' },
           { name: 'Recurring Tickets', translationKey: 'nav.ticketsRecurring', icon: Repeat, href: '/msp/tickets/recurring', requiredPermission: 'recurring_ticket:read' },
           { name: 'Ticket Templates', translationKey: 'nav.ticketsTemplates', icon: LayoutTemplate, href: '/msp/tickets/templates', requiredPermission: 'ticket_template:read' },
           { name: 'Canned Responses', translationKey: 'nav.ticketsCannedResponses', icon: MessageSquareText, href: '/msp/tickets/canned-responses', requiredPermission: 'canned_response:read' }
