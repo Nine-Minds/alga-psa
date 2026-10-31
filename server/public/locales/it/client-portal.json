@@ -66,7 +66,8 @@
       "createTicket": "Crea ticket",
       "requestAppointment": "Richiedi appuntamento",
       "viewLatestInvoice": "Visualizza l'ultima fattura",
-      "newServiceRequest": "Nuova richiesta di servizio"
+      "newServiceRequest": "Nuova richiesta di servizio",
+      "createSupportTicket": "Crea ticket di supporto"
     },
     "appointments": {
       "title": "Prossimi appuntamenti",
@@ -329,7 +330,25 @@
       "tenant_mismatch": "{{providerEmail}} appartiene al portale di un'altra organizzazione. Accedi con la tua password o contatta il tuo fornitore di servizi."
     },
     "configurationTitle": "Accesso non riuscito",
-    "configurationMessage": "L'accesso non è riuscito. Riprova oppure contatta il tuo fornitore di servizi."
+    "configurationMessage": "L'accesso non è riuscito. Riprova oppure contatta il tuo fornitore di servizi.",
+    "registration": {
+      "messages": {
+        "verified": "Utente verificato e registrato correttamente"
+      },
+      "errors": {
+        "verifyFailed": "Impossibile verificare e registrare l’utente",
+        "invalidToken": "Token non valido",
+        "tokenExpired": "Token scaduto",
+        "tokenNotActive": "Il token non è ancora attivo",
+        "unknown": "Errore sconosciuto"
+      },
+      "user": "Utente",
+      "clientPortalUser": "Utente del portale clienti",
+      "mspUser": "Utente MSP",
+      "resetExpiration": "1 ora",
+      "verificationExpiration": "24 ore",
+      "superadminRole": "Ruolo di superamministratore"
+    }
   },
   "account": {
     "title": "Account",
@@ -555,7 +574,9 @@
       "invoices": "Notifiche sulle fatture",
       "announcements": "Annunci di sistema",
       "emailPreferences": "E-mail",
-      "internalPreferences": "Interne"
+      "internalPreferences": "Interne",
+      "unreadCount_few": "{{count}} notifiche non lette",
+      "unreadCount_many": "{{count}} notifiche non lette"
     },
     "actions": {
       "save": "Salva modifiche",
@@ -833,7 +854,9 @@
     "card": {
       "unread": "Non letta",
       "noMessage": "Nessun messaggio"
-    }
+    },
+    "unreadCount_few": "{{count}} notifiche non lette",
+    "unreadCount_many": "{{count}} notifiche non lette"
   },
   "sidebar": {
     "goToDashboard": "Vai al dashboard",

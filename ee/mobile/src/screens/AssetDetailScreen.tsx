@@ -6,6 +6,7 @@ import { useTheme } from "../ui/ThemeContext";
 import type { Theme } from "../ui/themes";
 import { Badge, Card, PrimaryButton, Separator, TextInput } from "../ui/components";
 import { ErrorState, LoadingState } from "../ui/states";
+import { RecordUnavailableState, isRecordUnavailableError } from "../ui/components/RecordUnavailableState";
 import { formatDateShort } from "../ui/formatters/dateTime";
 import { useToast } from "../ui/toast/ToastProvider";
 import {
@@ -97,6 +98,7 @@ export function AssetDetailScreen({ route, navigation }: Props) {
   const { assetId, assetName } = route.params;
   const theme = useTheme();
   const { t } = useTranslation("assets");
+  const { t: tInventory } = useTranslation("inventory");
   const { client, apiKey } = useInventoryApi();
   const { showToast } = useToast();
 
@@ -106,7 +108,10 @@ export function AssetDetailScreen({ route, navigation }: Props) {
   const [tickets, setTickets] = useState<AssetTicketRow[]>([]);
   const [software, setSoftware] = useState<AssetSoftwareItem[]>([]);
   const [notesBlockData, setNotesBlockData] = useState<unknown | null>(null);
-  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  // False when the notes GET failed: notesBlockData is then unknown (not "empty"),
+  // and saving would PUT over the whole server-side document.
+  const [notesLoaded, setNotesLoaded] = useState(false);
+  const [status, setStatus] = useState<"loading" | "ready" | "error" | "unavailable">("loading");
   const [linkOpen, setLinkOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [recordSchedule, setRecordSchedule] = useState<MaintenanceSchedule | null>(null);
@@ -132,7 +137,18 @@ export function AssetDetailScreen({ route, navigation }: Props) {
     ]);
     if (controller.signal.aborted) return;
     if (!assetResult.ok) {
-      if (assetResult.error.kind !== "canceled") setStatus("error");
+      if (assetResult.error.kind === "canceled") return;
+      if (isRecordUnavailableError(assetResult.error)) {
+        // 403 and 404 look identical, and nothing about the record (including
+        // the assetName route param) may be shown.
+        setAsset(null);
+        // The navigator derives the header title from the assetName route param;
+        // replace it so the denied record's name is not shown there either.
+        navigation.setOptions({ title: tInventory("asset.title", "Asset") });
+        setStatus("unavailable");
+        return;
+      }
+      setStatus("error");
       return;
     }
     setAsset(assetResult.data.data);
@@ -142,6 +158,7 @@ export function AssetDetailScreen({ route, navigation }: Props) {
     setTickets(ticketsResult.ok ? ticketsResult.data.data : []);
     setSoftware(softwareResult.ok ? softwareResult.data.data : []);
     setNotesBlockData(notesResult.ok ? notesResult.data.data.blockData : null);
+    setNotesLoaded(notesResult.ok);
     setStatus("ready");
   }, [client, apiKey, assetId]);
 
@@ -172,7 +189,8 @@ export function AssetDetailScreen({ route, navigation }: Props) {
   }, [client, apiKey, assetId, recordSchedule, recordNote, showToast, t, fetchAll]);
 
   const submitAddNote = useCallback(async () => {
-    if (!client || !apiKey) return;
+    // Never save without the current document: the PUT replaces all notes.
+    if (!client || !apiKey || !notesLoaded) return;
     const note = noteDraft.trim();
     if (!note) return;
     setSavingNote(true);
@@ -194,7 +212,7 @@ export function AssetDetailScreen({ route, navigation }: Props) {
         message: result.error.message || t("notes.saveFailed", "Couldn't save note"),
       });
     }
-  }, [client, apiKey, assetId, noteDraft, notesBlockData, showToast, t, fetchAll]);
+  }, [client, apiKey, assetId, noteDraft, notesBlockData, notesLoaded, showToast, t, fetchAll]);
 
   const refetchTickets = useCallback(async () => {
     if (!client || !apiKey) return;
@@ -210,6 +228,9 @@ export function AssetDetailScreen({ route, navigation }: Props) {
   }, [fetchAll]);
 
   if (status === "loading") return <LoadingState message={t("detail.loading", "Loading device")} />;
+  if (status === "unavailable") {
+    return <RecordUnavailableState onBack={() => navigation.goBack()} />;
+  }
   if (status === "error" || !asset) {
     return (
       <ErrorState
@@ -396,15 +417,21 @@ export function AssetDetailScreen({ route, navigation }: Props) {
         <Card>
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <SectionTitle theme={theme}>{t("notes.title", "Notes")}</SectionTitle>
-            <Text
-              onPress={() => { setNoteDraft(""); setNoteOpen(true); }}
-              testID="asset-detail-add-note"
-              style={{ ...theme.typography.body, color: theme.colors.primary }}
-            >
-              {t("notes.add", "Add note")}
-            </Text>
+            {notesLoaded ? (
+              <Text
+                onPress={() => { setNoteDraft(""); setNoteOpen(true); }}
+                testID="asset-detail-add-note"
+                style={{ ...theme.typography.body, color: theme.colors.primary }}
+              >
+                {t("notes.add", "Add note")}
+              </Text>
+            ) : null}
           </View>
-          {notesText ? (
+          {!notesLoaded ? (
+            <EmptyLine theme={theme}>
+              {t("notes.loadFailed", "Couldn't load notes, so notes can't be added right now.")}
+            </EmptyLine>
+          ) : notesText ? (
             <Text testID="asset-detail-notes-body" style={{ ...theme.typography.body, color: theme.colors.text, marginTop: theme.spacing.xs }}>
               {notesText}
             </Text>

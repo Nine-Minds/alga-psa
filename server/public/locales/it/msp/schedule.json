@@ -853,5 +853,81 @@
       "members": "Membri",
       "creatorNote": "Potrai gestire questo calendario."
     }
+  },
+  "ticketDetails": {
+    "title": "Dettagli del ticket",
+    "numberedTitle": "Ticket n. {{number}}",
+    "untitled": "Ticket senza titolo",
+    "noDescription": "Nessuna descrizione",
+    "notAvailable": "Non disponibile",
+    "unassigned": "Non assegnato",
+    "fields": {
+      "title": {
+        "label": "Titolo"
+      },
+      "description": {
+        "label": "Descrizione"
+      },
+      "status": {
+        "label": "Stato"
+      },
+      "priority": {
+        "label": "Priorità"
+      },
+      "board": {
+        "label": "Bacheca"
+      },
+      "client": {
+        "label": "Cliente"
+      },
+      "contact": {
+        "label": "Contatto"
+      },
+      "assignedUser": {
+        "label": "Utente assegnato"
+      },
+      "entered": {
+        "label": "Inserito"
+      },
+      "updated": {
+        "label": "Aggiornato"
+      },
+      "closed": {
+        "label": "Chiuso"
+      }
+    }
+  },
+  "projectTaskDetails": {
+    "title": "Attività di progetto",
+    "noDescription": "Nessuna descrizione",
+    "notAvailable": "Non disponibile",
+    "unassigned": "Non assegnato",
+    "untitledItem": "Elemento senza titolo",
+    "noChecklistItems": "Nessun elemento nella lista di controllo",
+    "fields": {
+      "description": {
+        "label": "Descrizione"
+      },
+      "project": {
+        "label": "Progetto"
+      },
+      "phase": {
+        "label": "Fase"
+      },
+      "assignedTo": {
+        "label": "Assegnato a"
+      },
+      "dueDate": {
+        "label": "Data di scadenza"
+      },
+      "checklist": {
+        "label": "Lista di controllo"
+      }
+    }
+  },
+  "fallback": {
+    "agentSchedule": "La vista del programma dell’agente è ora gestita in Pianificazione. (agentId: {{agentId}})",
+    "timeEntry": "Gli inserimenti ore sono gestiti in Pianificazione.",
+    "scheduling": "La pianificazione è gestita in Pianificazione."
   }
 }

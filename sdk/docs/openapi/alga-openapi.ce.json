@@ -5332,7 +5332,7 @@
         "properties": {
           "provider": {
             "type": "string",
-            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
           }
         },
         "required": [
@@ -24347,6 +24347,86 @@
           }
         }
       },
+      "WorkV1TimeSheetListQuery": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "string"
+          },
+          "limit": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "string",
+            "enum": [
+              "approval_status",
+              "approved_at",
+              "created_at",
+              "period_end",
+              "period_start",
+              "submitted_at"
+            ],
+            "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ]
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "period_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "approval_status": {
+            "type": "string"
+          },
+          "approved_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "submitted_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "submitted_to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "approved_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "approved_to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "has_entries": {
+            "type": "string"
+          },
+          "period_start_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "period_start_to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "period_end_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "period_end_to": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "WorkV1GenericBody": {
         "type": "object",
         "additionalProperties": {},
@@ -24777,6 +24857,19 @@
           "tax_region": {
             "type": "string"
           },
+          "tax_rate_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+          },
+          "contract_line_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
+          },
           "is_billable": {
             "type": "boolean",
             "default": true
@@ -24828,6 +24921,19 @@
           "tax_region": {
             "type": "string"
           },
+          "tax_rate_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+          },
+          "contract_line_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
+          },
           "is_billable": {
             "type": "boolean",
             "default": true
@@ -24877,6 +24983,19 @@
                 },
                 "tax_region": {
                   "type": "string"
+                },
+                "tax_rate_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+                },
+                "contract_line_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
                 },
                 "is_billable": {
                   "type": "boolean",
@@ -24948,6 +25067,19 @@
                     },
                     "tax_region": {
                       "type": "string"
+                    },
+                    "tax_rate_id": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid",
+                      "description": "Optional. Stored as given, like the UI save path; the API does not compute tax."
+                    },
+                    "contract_line_id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "description": "Optional. Must be one of the contract lines eligible for the work item's client, the service and the work date, else 400. When omitted the line is resolved automatically; if several lines are eligible and none can be chosen the request fails with 400 (details.reason = contract_line_ambiguous, details.eligible_contract_lines) and should be resent with contract_line_id set. Ignored for non-billable entries."
                     },
                     "is_billable": {
                       "type": "boolean",
@@ -43072,10 +43204,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
             },
             "required": true,
-            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.",
+            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
             "name": "provider",
             "in": "path"
           }
@@ -43128,10 +43260,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
             },
             "required": true,
-            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.",
+            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
             "name": "provider",
             "in": "path"
           }
@@ -43194,10 +43326,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing."
+              "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing."
             },
             "required": true,
-            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, or huntress. Scheduled device sync is available for the first four; huntress exposes no device listing.",
+            "description": "RMM provider slug: ninjaone, levelio, tacticalrmm, tanium, datto, or huntress. Scheduled device sync is available for the first five; huntress exposes no device listing.",
             "name": "provider",
             "in": "path"
           }
@@ -101425,9 +101557,19 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "approval_status",
+                "approved_at",
+                "created_at",
+                "period_end",
+                "period_start",
+                "submitted_at"
+              ],
+              "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400."
             },
             "required": false,
+            "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.",
             "name": "sort",
             "in": "query"
           },
@@ -101445,10 +101587,20 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             },
             "required": false,
-            "name": "fields",
+            "name": "user_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "period_id",
             "in": "query"
           },
           {
@@ -101456,7 +101608,52 @@
               "type": "string"
             },
             "required": false,
-            "name": "search",
+            "name": "approval_status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "approved_by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "submitted_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "submitted_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "approved_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "approved_to",
             "in": "query"
           },
           {
@@ -101464,7 +101661,43 @@
               "type": "string"
             },
             "required": false,
-            "name": "query",
+            "name": "has_entries",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "period_start_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "period_start_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "period_end_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "period_end_to",
             "in": "query"
           }
         ],
@@ -101889,9 +102122,19 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "approval_status",
+                "approved_at",
+                "created_at",
+                "period_end",
+                "period_start",
+                "submitted_at"
+              ],
+              "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400."
             },
             "required": false,
+            "description": "Sort field. Defaults to period_start (descending). `created_at` is a legacy alias for `period_start` (time sheets have no created_at column). Ties break on time sheet id in the same direction; submitted_at and approved_at sort NULLs last. Any other value is rejected with 400.",
             "name": "sort",
             "in": "query"
           },
@@ -101909,10 +102152,20 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "format": "uuid"
             },
             "required": false,
-            "name": "fields",
+            "name": "user_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "period_id",
             "in": "query"
           },
           {
@@ -101920,7 +102173,52 @@
               "type": "string"
             },
             "required": false,
-            "name": "search",
+            "name": "approval_status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "approved_by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "submitted_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "submitted_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "approved_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "approved_to",
             "in": "query"
           },
           {
@@ -101928,7 +102226,43 @@
               "type": "string"
             },
             "required": false,
-            "name": "query",
+            "name": "has_entries",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "period_start_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "period_start_to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "period_end_from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "period_end_to",
             "in": "query"
           }
         ],
