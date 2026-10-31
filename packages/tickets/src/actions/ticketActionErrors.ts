@@ -146,6 +146,16 @@ export function ticketActionErrorFrom(error: unknown): TicketActionError | null 
     return permissionError(error instanceof Error ? error.message : String(error));
   }
 
+  const audienceCode = (error as { code?: unknown } | null)?.code;
+  if (audienceCode === 'CO_MANAGED_AUDIENCE_REQUIRED' || audienceCode === 'COMMENT_AUDIENCE_INVALID') {
+    return actionError(
+      (error as Error).message,
+      audienceCode === 'CO_MANAGED_AUDIENCE_REQUIRED'
+        ? 'features/tickets:errors.comment.audienceRequired'
+        : 'features/tickets:errors.comment.audienceInvalid',
+    );
+  }
+
   const ticketCode = ticketErrorCodeOf(error);
   if (ticketCode) {
     return actionError(TICKET_CODE_MESSAGES[ticketCode], TICKET_CODE_MESSAGE_KEYS[ticketCode]);
