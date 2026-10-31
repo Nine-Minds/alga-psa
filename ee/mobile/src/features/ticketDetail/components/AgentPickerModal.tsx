@@ -241,6 +241,7 @@ export function AgentPickerModal({
             </Text>
           ) : null}
           <TicketUpdateFooter
+            idPrefix="ticket-agent-update"
             suppression={suppression}
             onSuppressionChange={setSuppression}
             onCancel={onClose}

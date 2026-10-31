@@ -65,10 +65,12 @@ describe('tenant-wide dont-notify-customer default setting', () => {
       settings: { other: 'kept', ticketing: { display } },
     });
     expect(await updateTicketingDisplaySettings({ defaultDontNotifyCustomer: value })).toEqual({ success: true });
-    const saved = JSON.parse(mocks.insert.mock.calls[0][0].ticket_display_settings);
-    expect(saved.defaultDontNotifyCustomer).toBe(value);
-    // The reply default is a different switch and must survive the save.
-    expect(saved.defaultReplyInternal).toBe(true);
+    const row = mocks.insert.mock.calls[0][0];
+    expect(JSON.parse(row.ticket_display_settings)).toEqual({ ...display, defaultDontNotifyCustomer: value });
+    expect(JSON.parse(row.settings)).toEqual({
+      other: 'kept',
+      ticketing: { display: { ...display, defaultDontNotifyCustomer: value } },
+    });
   });
 
   it('preserves the notify default when a ticket-list view saves', async () => {

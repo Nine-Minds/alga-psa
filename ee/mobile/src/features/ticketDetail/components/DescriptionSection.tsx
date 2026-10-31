@@ -78,7 +78,7 @@ export function DescriptionSection({
       resetSuppression();
       setCollapsed(false);
     }
-  }, [isEditing]);
+  }, [isEditing, resetSuppression]);
 
   return (
     <View
@@ -133,6 +133,7 @@ export function DescriptionSection({
               </Text>
             ) : null}
             <TicketUpdateFooter
+              idPrefix="ticket-description-update"
               suppression={suppression}
               onSuppressionChange={setSuppression}
               onCancel={() => {

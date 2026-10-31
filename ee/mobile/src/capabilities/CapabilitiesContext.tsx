@@ -62,7 +62,7 @@ export function useCapabilities(): CapabilitiesContextValue {
  * Tenant "don't notify the customer" default without the provider requirement.
  *
  * The suppression checkboxes in the ticket sheet read this through
- * `useReseedTicketNotificationSuppression`; rendering outside a provider (tests,
+ * `useTicketNotificationSuppression`; rendering outside a provider (tests,
  * future surfaces) must degrade to the historical unticked default rather than
  * crash a ticket edit.
  */

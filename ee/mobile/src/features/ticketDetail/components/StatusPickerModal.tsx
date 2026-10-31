@@ -103,6 +103,7 @@ export function StatusPickerModal({
         </ScrollView>
         <View style={{ paddingHorizontal: spacing.lg }}>
           <TicketUpdateFooter
+            idPrefix="ticket-status-update"
             suppression={suppression}
             onSuppressionChange={setSuppression}
             onCancel={onClose}

@@ -83,6 +83,12 @@ for every team member. This tenant-wide setting is off by default, preserving
 the existing behavior where each action notifies the customer unless the agent
 ticks the box.
 
+This adds only the `defaultDontNotifyCustomer` JSON property to the existing
+`tenant_settings.ticket_display_settings` column, alongside `defaultReplyInternal`.
+It uses the existing display-settings action, including its compatibility copy
+in `tenant_settings.settings.ticketing.display`. No new table, column, or
+database migration is required.
+
 The setting covers every place the checkbox appears: comments, status changes
 (including bulk status changes), contact changes, ticket closure and resolution,
 bulk assign / priority / due-date dialogs, and the mobile ticket screens. Only

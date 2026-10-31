@@ -98,6 +98,7 @@ export function PriorityPickerModal({
 
         <View style={{ flex: 1 }} />
         <TicketUpdateFooter
+          idPrefix="ticket-priority-update"
           suppression={suppression}
           onSuppressionChange={setSuppression}
           onCancel={onClose}

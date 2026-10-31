@@ -278,6 +278,7 @@ export function ContactPickerModal({
             </Text>
           ) : null}
           <TicketUpdateFooter
+            idPrefix="ticket-contact-update"
             suppression={suppression}
             onSuppressionChange={setSuppression}
             onCancel={onClose}

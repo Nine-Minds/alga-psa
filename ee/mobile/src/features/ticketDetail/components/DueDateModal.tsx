@@ -132,6 +132,7 @@ export function DueDateModal({
         </Pressable>
 
         <TicketUpdateFooter
+          idPrefix="ticket-due-date-update"
           suppression={suppression}
           onSuppressionChange={setSuppression}
           onCancel={onClose}

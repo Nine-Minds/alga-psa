@@ -45,10 +45,12 @@ export function TicketNotificationSuppressionControl({
   value,
   onChange,
   disabled = false,
+  idPrefix = "ticket-notification",
 }: {
   value: TicketNotificationSuppressionOptions;
   onChange: (next: TicketNotificationSuppressionOptions) => void;
   disabled?: boolean;
+  idPrefix?: string;
 }) {
   const { t } = useTranslation("tickets");
   const { colors, spacing, typography } = useTheme();
@@ -74,6 +76,7 @@ export function TicketNotificationSuppressionControl({
           </Text>
         </View>
         <Switch
+          nativeID={`${idPrefix}-suppress-contact-notifications`}
           testID="ticket-suppress-contact-notifications"
           accessibilityLabel={t("notifications.suppression.contactLabel", "Don't notify the customer")}
           value={value.suppressContactNotifications}
@@ -104,6 +107,7 @@ export function TicketNotificationSuppressionControl({
           </Text>
         </View>
         <Switch
+          nativeID={`${idPrefix}-suppress-internal-notifications`}
           testID="ticket-suppress-internal-notifications"
           accessibilityLabel={t("notifications.suppression.internalLabel", "Also don't notify agents and watchers")}
           value={value.suppressContactNotifications && value.suppressInternalNotifications}
@@ -131,6 +135,7 @@ export function TicketUpdateFooter({
   cancelLabel,
   applyDisabled = false,
   busy = false,
+  idPrefix = "ticket-update",
 }: {
   suppression: TicketNotificationSuppressionOptions;
   onSuppressionChange: (next: TicketNotificationSuppressionOptions) => void;
@@ -140,6 +145,7 @@ export function TicketUpdateFooter({
   cancelLabel?: string;
   applyDisabled?: boolean;
   busy?: boolean;
+  idPrefix?: string;
 }) {
   const { t } = useTranslation("tickets");
   const { colors, spacing, typography } = useTheme();
@@ -150,9 +156,12 @@ export function TicketUpdateFooter({
         value={suppression}
         onChange={onSuppressionChange}
         disabled={busy}
+        idPrefix={idPrefix}
       />
       <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
         <Pressable
+          nativeID={`${idPrefix}-cancel-button`}
+          testID={`${idPrefix}-cancel-button`}
           accessibilityRole="button"
           accessibilityLabel={cancelLabel ?? t("common:cancel")}
           disabled={busy}
@@ -174,6 +183,8 @@ export function TicketUpdateFooter({
         </Pressable>
         <View style={{ flex: 1 }}>
           <PrimaryButton
+            nativeID={`${idPrefix}-apply-button`}
+            testID={`${idPrefix}-apply-button`}
             onPress={onApply}
             disabled={busy || applyDisabled}
             accessibilityLabel={applyLabel ?? t("common:apply", "Apply")}

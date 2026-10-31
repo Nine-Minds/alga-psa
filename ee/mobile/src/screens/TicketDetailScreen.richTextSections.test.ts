@@ -1,12 +1,13 @@
 import React, { createRef } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, create, type ReactTestRenderer } from "react-test-renderer";
-import { Linking } from "react-native";
+import { Linking, Switch } from "react-native";
 import type { TicketRichTextEditorRef } from "../features/ticketRichText/TicketRichTextEditor";
 
+const capabilities = vi.hoisted(() => ({ dontNotifyCustomerDefault: false }));
 vi.mock("../capabilities/CapabilitiesContext", () => ({
   useCapabilities: () => ({ features: { clientsCreate: false, clientsUpdate: false, contactsCreate: false, contactsUpdate: false }, defaultCountry: null, loaded: true, refresh: () => Promise.resolve() }),
-  useDontNotifyCustomerDefault: () => false,
+  useDontNotifyCustomerDefault: () => capabilities.dontNotifyCustomerDefault,
 }));
 vi.mock("../features/contacts/components/ContactFormModal", () => ({ ContactFormModal: () => null }));
 vi.mock("../auth/AuthContext", () => ({
@@ -151,6 +152,10 @@ import {
   CommentsSection,
   DescriptionSection,
 } from "./TicketDetailScreen";
+import {
+  TicketNotificationSuppressionControl,
+  TicketUpdateFooter,
+} from "../features/ticketDetail/components/TicketUpdateFooter";
 
 function render(node: React.ReactElement): ReactTestRenderer {
   let renderer: ReactTestRenderer | null = null;
@@ -175,6 +180,89 @@ const richImageComment = "[{\"type\":\"image\",\"props\":{\"url\":\"/api/documen
 const malformedDescription = "{\"type\":";
 
 describe("TicketDetailScreen rich text sections", () => {
+  beforeEach(() => {
+    capabilities.dontNotifyCustomerDefault = false;
+  });
+
+  it.each([false, true])("preserves a resolution notification choice across mode changes with default %s", (defaultValue) => {
+    capabilities.dontNotifyCustomerDefault = defaultValue;
+    const props = {
+      draftContent: richComment,
+      draftPlainText: "Rich reply",
+      isInternal: false,
+      onChangeIsInternal: vi.fn(),
+      isResolution: true,
+      closeStatusId: "closed",
+      onSend: vi.fn(),
+      sending: false,
+      offline: false,
+      error: null,
+      editorRef: createRef<TicketRichTextEditorRef>(),
+      onDraftChange: vi.fn(),
+    };
+    const renderer = render(React.createElement(CommentComposer, props));
+    const control = () => renderer.root.findByType(TicketNotificationSuppressionControl);
+    expect(renderer.root.findAllByType(Switch).map((node) => node.props.nativeID)).toEqual([
+      "ticket-comment-close-suppress-contact-notifications",
+      "ticket-comment-close-suppress-internal-notifications",
+    ]);
+    expect(control().props.value.suppressContactNotifications).toBe(defaultValue);
+    const choice = { suppressContactNotifications: !defaultValue, suppressInternalNotifications: false };
+    act(() => { control().props.onChange(choice); });
+    act(() => { renderer.update(React.createElement(CommentComposer, { ...props, isResolution: false })); });
+    expect(renderer.root.findAllByType(TicketNotificationSuppressionControl)).toHaveLength(0);
+    const send = () => renderer.root.find((node) => (node.type as string) === "MockPrimaryButton");
+    act(() => { send().props.onPress(); });
+    expect(props.onSend).toHaveBeenLastCalledWith(undefined);
+    act(() => { renderer.update(React.createElement(CommentComposer, { ...props, closeStatusId: null })); });
+    act(() => { send().props.onPress(); });
+    expect(props.onSend).toHaveBeenLastCalledWith(undefined);
+    act(() => { renderer.update(React.createElement(CommentComposer, props)); });
+    expect(control().props.value).toEqual(choice);
+    act(() => { send().props.onPress(); });
+    expect(props.onSend).toHaveBeenLastCalledWith(choice.suppressContactNotifications ? choice : undefined);
+    act(() => { renderer.update(React.createElement(CommentComposer, { ...props, draftContent: "", draftPlainText: "" })); });
+    expect(control().props.value.suppressContactNotifications).toBe(defaultValue);
+    act(() => { renderer.unmount(); });
+  });
+
+  it.each([false, true])("keeps description suppression after a failed save and resets for the next edit with default %s", async (defaultValue) => {
+    capabilities.dontNotifyCustomerDefault = defaultValue;
+    const props = {
+      ticket: { ticket_id: "ticket-1", ticket_number: "T-1", title: "Example" },
+      isEditing: true,
+      draftContent: richDescription,
+      draftPlainText: "Rich description",
+      saving: false,
+      error: null,
+      editorRef: createRef<TicketRichTextEditorRef>(),
+      onStartEditing: vi.fn(),
+      onCancelEditing: vi.fn(),
+      onSave: vi.fn().mockResolvedValue(false),
+      onDraftChange: vi.fn(),
+    };
+    const renderer = render(React.createElement(DescriptionSection, props));
+    const footer = () => renderer.root.findByType(TicketUpdateFooter);
+    expect(renderer.root.findAllByType(Switch).map((node) => node.props.nativeID)).toEqual([
+      "ticket-description-update-suppress-contact-notifications",
+      "ticket-description-update-suppress-internal-notifications",
+    ]);
+    expect(renderer.root.find((node) => (node.type as string) === "MockPrimaryButton").props.nativeID)
+      .toBe("ticket-description-update-apply-button");
+    expect(footer().props.suppression.suppressContactNotifications).toBe(defaultValue);
+    const choice = { suppressContactNotifications: !defaultValue, suppressInternalNotifications: false };
+    act(() => { footer().props.onSuppressionChange(choice); });
+    await act(async () => { footer().props.onApply(); });
+    expect(props.onSave).toHaveBeenCalledWith(choice.suppressContactNotifications ? choice : undefined);
+    expect(footer().props.suppression).toEqual(choice);
+    act(() => { footer().props.onCancel(); });
+    expect(props.onCancelEditing).toHaveBeenCalled();
+    act(() => { renderer.update(React.createElement(DescriptionSection, { ...props, isEditing: false })); });
+    act(() => { renderer.update(React.createElement(DescriptionSection, props)); });
+    expect(footer().props.suppression.suppressContactNotifications).toBe(defaultValue);
+    act(() => { renderer.unmount(); });
+  });
+
   it("renders rich description content through the rich-text wrapper in read mode", () => {
     const renderer = render(
       React.createElement(DescriptionSection, {

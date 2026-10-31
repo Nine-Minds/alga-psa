@@ -455,6 +455,7 @@ export function TicketDetailBody({
               </Text>
             ) : null}
             <TicketUpdateFooter
+              idPrefix="ticket-title-update"
               suppression={titleSuppression}
               onSuppressionChange={setTitleSuppression}
               onCancel={() => {

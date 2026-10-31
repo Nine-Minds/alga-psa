@@ -102,10 +102,11 @@ export function CommentComposer({
   }, [isInternal, onChangeScheduleAt, scheduleAt]);
 
   useEffect(() => {
-    if (!isResolution || !closeStatusId) {
+    // A cleared draft starts a new action; mode changes keep the agent's choice.
+    if (!sending && draftPlainText.trim().length === 0) {
       resetSuppression();
     }
-  }, [isResolution, closeStatusId]);
+  }, [draftPlainText, sending, resetSuppression]);
   return (
     <View
       style={{
@@ -229,6 +230,7 @@ export function CommentComposer({
           {isResolution && closeStatusId ? (
             <View style={{ marginTop: spacing.md }}>
               <TicketNotificationSuppressionControl
+                idPrefix="ticket-comment-close"
                 value={suppression}
                 onChange={setSuppression}
                 disabled={sending}
@@ -250,7 +252,11 @@ export function CommentComposer({
           ) : null}
           <View style={{ marginTop: spacing.sm }}>
             <PrimaryButton
-              onPress={() => onSend(activeTicketNotificationSuppression(suppression))}
+              onPress={() => onSend(
+                isResolution && closeStatusId
+                  ? activeTicketNotificationSuppression(suppression)
+                  : undefined,
+              )}
               disabled={sending || offline || draftPlainText.trim().length === 0 || draftPlainText.length > MAX_COMMENT_LENGTH}
               accessibilityLabel={t("comments.sendComment")}
             >
