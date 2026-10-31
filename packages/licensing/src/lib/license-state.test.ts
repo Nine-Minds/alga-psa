@@ -187,3 +187,39 @@ describe('resolveSelfHostTier — subscription lapse boundary', () => {
   });
 });
 
+
+describe('resolveSelfHostTier — failing renewal payment', () => {
+  it('payment_failed keeps Pro and surfaces the retry date and update URL', () => {
+    const retry = new Date('2026-11-05T12:00:00Z');
+    const result = resolveSelfHostTier(
+      makeRow({
+        license_token: VALID_PRO_TOKEN,
+        subscription_state: 'payment_failed',
+        subscription_next_retry_at: retry,
+        subscription_update_payment_url: 'https://invoice.stripe.com/i/abc',
+      }),
+    );
+    expect(result?.state).toBe('licensed');
+    expect(result?.tier).toBe('pro');
+    expect(result?.subscription).toMatchObject({
+      phase: 'payment_failed',
+      cause: 'payment_failed',
+      nextRetryAt: retry,
+      updatePaymentUrl: 'https://invoice.stripe.com/i/abc',
+    });
+  });
+
+  it('an expired token after a payment-failure end is a lapse with cause payment_failed', () => {
+    const result = resolveSelfHostTier(
+      makeRow({ license_token: EXPIRED_TOKEN, subscription_state: 'cancelled', subscription_end_reason: 'payment_failed' }),
+    );
+    expect(result?.tier).toBe('essentials');
+    expect(result?.subscription).toMatchObject({ phase: 'lapsed', cause: 'payment_failed' });
+  });
+
+  it('a plain cancellation keeps cause cancelled', () => {
+    expect(
+      resolveSelfHostTier(makeRow({ license_token: VALID_PRO_TOKEN, subscription_state: 'cancelled' }))?.subscription?.cause,
+    ).toBe('cancelled');
+  });
+});

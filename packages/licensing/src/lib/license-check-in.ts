@@ -17,7 +17,7 @@
  * are ignored, never thrown, so legacy servers and future fields are safe.
  */
 import { getLicenseStateRow, upsertLicenseState } from './license-state';
-import type { LicenseStateRow, SubscriptionStateValue } from './license-state';
+import type { LicenseStateRow, SubscriptionEndReasonValue, SubscriptionStateValue } from './license-state';
 
 export interface CheckInSubscription {
   state: SubscriptionStateValue | null;
@@ -25,6 +25,12 @@ export interface CheckInSubscription {
   /** Unix seconds `exp` of the token the server believes we hold. Informational. */
   licenseValidUntil: number | null;
   resubscribeUrl: string | null;
+  /** `payment_failed` only: Stripe's next retry; null when none is scheduled/known. */
+  nextRetryAt: Date | null;
+  /** `payment_failed` only: where to update the payment method. */
+  updatePaymentUrl: string | null;
+  /** `cancelled` only: 'payment_failed' when the end followed failed payments. */
+  endReason: SubscriptionEndReasonValue | null;
 }
 
 export type CheckInResult =
@@ -39,7 +45,7 @@ export type CheckInResult =
   /** Other non-OK status, or an unreadable/unknown 200 body. */
   | { kind: 'rejected'; httpStatus: number };
 
-const SUBSCRIPTION_STATES: readonly SubscriptionStateValue[] = ['active', 'cancel_scheduled', 'term_ends', 'cancelled'];
+const SUBSCRIPTION_STATES: readonly SubscriptionStateValue[] = ['active', 'cancel_scheduled', 'term_ends', 'cancelled', 'payment_failed'];
 const MAX_URL_LENGTH = 2048;
 
 /** Only http(s) URLs are accepted — this value becomes a clickable link. */
@@ -76,7 +82,23 @@ export function parseCheckInSubscription(raw: unknown): CheckInSubscription | nu
       ? r.license_valid_until
       : null;
 
-  return { state, cancelsAt, licenseValidUntil, resubscribeUrl: parseHttpUrl(r.resubscribe_url) };
+  // The payment-failure fields are camelCase on the wire (newer than the
+  // snake_case ones above); all optional, so older servers parse as before.
+  let nextRetryAt: Date | null = null;
+  if (typeof r.nextRetryAt === 'string') {
+    const d = new Date(r.nextRetryAt);
+    if (!Number.isNaN(d.getTime())) nextRetryAt = d;
+  }
+
+  return {
+    state,
+    cancelsAt,
+    licenseValidUntil,
+    resubscribeUrl: parseHttpUrl(r.resubscribe_url),
+    nextRetryAt,
+    updatePaymentUrl: parseHttpUrl(r.updatePaymentUrl),
+    endReason: r.endReason === 'payment_failed' ? 'payment_failed' : null,
+  };
 }
 
 /**
@@ -114,6 +136,9 @@ type SubscriptionColumns = Pick<
   | 'subscription_cancels_at'
   | 'subscription_resubscribe_url'
   | 'subscription_context_updated_at'
+  | 'subscription_next_retry_at'
+  | 'subscription_update_payment_url'
+  | 'subscription_end_reason'
 >;
 
 const CLEARED: SubscriptionColumns = {
@@ -121,6 +146,9 @@ const CLEARED: SubscriptionColumns = {
   subscription_cancels_at: null,
   subscription_resubscribe_url: null,
   subscription_context_updated_at: null,
+  subscription_next_retry_at: null,
+  subscription_update_payment_url: null,
+  subscription_end_reason: null,
 };
 
 /**
@@ -130,9 +158,12 @@ const CLEARED: SubscriptionColumns = {
  *  - ok / no_change with state 'active' or no subscription data → clear the
  *    context (reactivation removes the warning in the same write that stores the
  *    new token).
- *  - ok / no_change with cancel_scheduled|term_ends|cancelled → store it.
+ *  - ok / no_change with cancel_scheduled|term_ends|cancelled → store it
+ *    (cancelled also stores `endReason`).
+ *  - ok / no_change with payment_failed → store it with the retry date and the
+ *    update-payment URL. Informational: the token and tier are untouched.
  *  - lapsed → store 'cancelled' (a legacy bare `{status:'revoked'}` still marks
- *    the lapse; date and URL are then simply unknown).
+ *    the lapse; date and URL are then simply unknown) plus `endReason`.
  * `license_token` is never touched here for lapsed — soft revocation keeps it.
  */
 export function checkInStateUpdate(
@@ -147,12 +178,15 @@ export function checkInStateUpdate(
       const tokenFields =
         result.kind === 'ok' && result.jwt && result.jwt !== currentToken ? { license_token: result.jwt } : {};
       const subFields: SubscriptionColumns =
-        sub && (sub.state === 'cancel_scheduled' || sub.state === 'term_ends' || sub.state === 'cancelled')
+        sub && (sub.state === 'cancel_scheduled' || sub.state === 'term_ends' || sub.state === 'cancelled' || sub.state === 'payment_failed')
           ? {
               subscription_state: sub.state,
               subscription_cancels_at: sub.cancelsAt,
               subscription_resubscribe_url: sub.resubscribeUrl,
               subscription_context_updated_at: now,
+              subscription_next_retry_at: sub.state === 'payment_failed' ? sub.nextRetryAt : null,
+              subscription_update_payment_url: sub.state === 'payment_failed' ? sub.updatePaymentUrl : null,
+              subscription_end_reason: sub.state === 'cancelled' ? sub.endReason : null,
             }
           : // A bare no_change carries no verdict; leave stored context alone.
             result.kind === 'no_change' && !sub
@@ -167,6 +201,9 @@ export function checkInStateUpdate(
         subscription_cancels_at: sub?.cancelsAt ?? null,
         subscription_resubscribe_url: sub?.resubscribeUrl ?? null,
         subscription_context_updated_at: now,
+        subscription_next_retry_at: null,
+        subscription_update_payment_url: null,
+        subscription_end_reason: sub?.endReason ?? null,
         last_checkin_at: now,
       };
     }

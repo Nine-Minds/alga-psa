@@ -39,10 +39,22 @@ export interface LicenseStateRow {
   subscription_cancels_at?: Date | null;
   subscription_resubscribe_url?: string | null;
   subscription_context_updated_at?: Date | null;
+  /**
+   * Failing-renewal-payment context (migration 20261031000000). Optional end to
+   * end: absent/null on legacy rows, older alga-license servers and any state
+   * other than payment_failed (next_retry_at, update_payment_url) / cancelled
+   * (end_reason).
+   */
+  subscription_next_retry_at?: Date | null;
+  subscription_update_payment_url?: string | null;
+  subscription_end_reason?: SubscriptionEndReasonValue | null;
 }
 
 /** Subscription states the check-in contract can report (stored verbatim). */
-export type SubscriptionStateValue = 'active' | 'cancel_scheduled' | 'term_ends' | 'cancelled';
+export type SubscriptionStateValue = 'active' | 'cancel_scheduled' | 'term_ends' | 'cancelled' | 'payment_failed';
+
+/** Why a cancelled subscription ended, when the check-in says so. */
+export type SubscriptionEndReasonValue = 'payment_failed';
 
 /** Derived licensing state for an install. */
 export type LicenseStateKind =
@@ -61,18 +73,26 @@ export type LicenseStateKind =
  *  - 'lapsed' — the token has expired and the subscription had been cancelled:
  *               the install is on the free edition by subscription lapse (not
  *               a generic expiry or credential problem).
+ *  - 'payment_failed' — still licensed and NOT ending: the renewal payment
+ *               failed and Stripe is retrying. Informational only; it never
+ *               changes the tier.
  */
 export interface ResolvedSubscription {
-  phase: 'ending' | 'lapsed';
+  phase: 'ending' | 'lapsed' | 'payment_failed';
   /**
    * Why Pro ends: 'cancelled' = the subscription was cancelled; 'term' = a
-   * fixed-term (comp) grant reaches its planned end. Drives the wording only —
-   * a term end must never read as a cancellation.
+   * fixed-term (comp) grant reaches its planned end; 'payment_failed' = renewal
+   * payments failed (while retrying, or the end that followed them). Drives the
+   * wording only — a term end must never read as a cancellation.
    */
-  cause: 'cancelled' | 'term';
+  cause: 'cancelled' | 'term' | 'payment_failed';
   /** When Pro ends (ending) / ended (lapsed). Null only if truly unknown. */
   endsAt: Date | null;
   resubscribeUrl: string | null;
+  /** `payment_failed` phase only: Stripe's next retry, when scheduled. */
+  nextRetryAt?: Date | null;
+  /** `payment_failed` phase only: where to update the payment method. */
+  updatePaymentUrl?: string | null;
 }
 
 export interface ResolvedLicenseState {
@@ -133,13 +153,26 @@ export async function upsertLicenseState(
  */
 function resolveEndingSubscription(row: LicenseStateRow, tokenExp: Date): ResolvedSubscription | null {
   const sub = row.subscription_state;
+  if (sub === 'payment_failed') {
+    // Still entitled: Pro runs until the token's exp (and beyond, if a payment
+    // lands and the next check-in renews it). Never a downgrade by itself.
+    return {
+      phase: 'payment_failed',
+      cause: 'payment_failed',
+      endsAt: tokenExp,
+      resubscribeUrl: row.subscription_resubscribe_url ?? null,
+      nextRetryAt: row.subscription_next_retry_at ? new Date(row.subscription_next_retry_at) : null,
+      updatePaymentUrl: row.subscription_update_payment_url ?? null,
+    };
+  }
   if (sub !== 'cancelled' && sub !== 'cancel_scheduled' && sub !== 'term_ends') return null;
   // Pro runs until the held token's exp even once the subscription is
   // cancelled (soft revocation never hard-cuts), so that is the end date. A
   // scheduled end that is known is more precise while the token is still rolling.
   const cancelsAt = row.subscription_cancels_at ? new Date(row.subscription_cancels_at) : null;
   const endsAt = sub !== 'cancelled' && cancelsAt ? cancelsAt : tokenExp;
-  return { phase: 'ending', cause: sub === 'term_ends' ? 'term' : 'cancelled', endsAt, resubscribeUrl: row.subscription_resubscribe_url ?? null };
+  const cause = sub === 'term_ends' ? 'term' : row.subscription_end_reason === 'payment_failed' ? 'payment_failed' : 'cancelled';
+  return { phase: 'ending', cause, endsAt, resubscribeUrl: row.subscription_resubscribe_url ?? null };
 }
 
 /**
@@ -160,7 +193,7 @@ function licenseExpired(row: LicenseStateRow, tokenExp: Date | null, now: number
     expiresAt: null,
     daysRemaining: null,
     subscription: subscriptionEnded
-      ? { phase: 'lapsed', cause: sub === 'term_ends' ? 'term' : 'cancelled', endsAt: tokenExp ?? cancelsAt, resubscribeUrl: row.subscription_resubscribe_url ?? null }
+      ? { phase: 'lapsed', cause: sub === 'term_ends' ? 'term' : row.subscription_end_reason === 'payment_failed' ? 'payment_failed' : 'cancelled', endsAt: tokenExp ?? cancelsAt, resubscribeUrl: row.subscription_resubscribe_url ?? null }
       : null,
   };
 }
