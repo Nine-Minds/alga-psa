@@ -44,6 +44,16 @@ describe('co-managed project task history', () => {
 });
 
 describe('co-managed project task assignment', () => {
+  it('hides "Assign to me" when the task is already assigned to the viewer, and offers it otherwise', () => {
+    const shared = { ...props, revision: 3, assigneeName: 'QA Tester', isAssigned: true };
+    const mine = render(<CoManagedProjectTaskAssignment {...shared} assignedToMe />);
+    expect(mine.container.textContent).toContain('Assigned to QA Tester');
+    expect(mine.container.querySelector('#co-managed-task-assign-me')).toBeNull();
+    mine.unmount();
+    const other = render(<CoManagedProjectTaskAssignment {...shared} assignedToMe={false} />);
+    expect(other.container.querySelector('#co-managed-task-assign-me')).not.toBeNull();
+  });
+
   it('assigns with expectedRevision null first, then the new revision once a reference exists', async () => {
     mocks.assign.mockResolvedValue({ success: true, receipt: { referenceId: 'ref', revision: 1, assigneeName: 'Quinn Tech' } });
     const onChanged = vi.fn();

@@ -32,6 +32,9 @@ export const nativeProjectDataSource: ProjectDataSource = Object.freeze({
     reorderInStatus: lazy(taskActions, 'reorderTasksInStatus'),
     moveToPhase: lazy(taskActions, 'moveTaskToPhase'),
     update: lazy(taskActions, 'updateTaskWithChecklist'),
+    checklist: lazy(taskActions, 'getTaskChecklistItems'),
+    resources: lazy(taskActions, 'getTaskResourcesAction'),
+    ticketLinks: lazy(taskActions, 'getTaskTicketLinksAction'),
   }),
   options: Object.freeze({
     taskStatuses: lazy(projectActions, 'getProjectTaskStatuses'),

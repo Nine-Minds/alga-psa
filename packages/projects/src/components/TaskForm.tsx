@@ -16,12 +16,10 @@ import { IService } from '@alga-psa/types';
 import {
   updateTaskWithChecklist,
   addTaskToPhase,
-  getTaskChecklistItems,
   moveTaskToPhase,
   deleteTask,
   addTaskResourcesAction,
   removeTaskResourceAction,
-  getTaskResourcesAction,
   assignTeamToProjectTask,
   removeTeamFromProjectTask,
   addTicketLinkAction,
@@ -57,6 +55,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { TaskTypeSelector } from './TaskTypeSelector';
+import { useTaskTypeLabel } from '../lib/useTaskTypeLabel';
 import { ITaskType } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import TaskTicketLinks, { TaskTicketLinksRef } from './TaskTicketLinks';
@@ -153,6 +152,7 @@ export default function TaskForm({
   const { formatDate } = useFormatters();
   const billingIntegration = useProjectBillingIntegration();
   const projectSource = useProjectDataSource();
+  const taskTypeLabel = useTaskTypeLabel();
   const screen = projectSource.screen;
   // Non-native sources never fall through to the native tenant-bound actions below.
   const sharedMode = projectSource.kind !== 'native';
@@ -477,7 +477,7 @@ export default function TaskForm({
           } else {
             // Only fetch if not available on the task object
             console.log('Fetching checklist items from API');
-            const existingChecklistItems = await getTaskChecklistItems(task.task_id);
+            const existingChecklistItems = await projectSource.tasks.checklist(task.task_id);
             if (isReturnedActionError(existingChecklistItems)) {
               toast.error(getErrorMessage(existingChecklistItems));
             } else {
@@ -486,7 +486,7 @@ export default function TaskForm({
           }
 
           // Always fetch resources to ensure we have the latest data
-          const resources = await getTaskResourcesAction(task.task_id);
+          const resources = await projectSource.tasks.resources(task.task_id);
           if (isReturnedActionError(resources)) {
             toast.error(getErrorMessage(resources));
           } else {
@@ -763,6 +763,7 @@ export default function TaskForm({
   };
 
   const performTeamAssign = async (teamId: string) => {
+    if (sharedMode) return;
     setAssignedTeamId(teamId);
     const team = teams.find(t => t.team_id === teamId);
     const leadId = team?.manager_id || team?.members?.find(member => member.role === 'lead')?.user_id || null;
@@ -779,7 +780,7 @@ export default function TaskForm({
           toast.error(getErrorMessage(assignResult));
           return;
         }
-        const resources = await getTaskResourcesAction(task.task_id);
+        const resources = await projectSource.tasks.resources(task.task_id);
         if (isReturnedActionError(resources)) {
           toast.error(getErrorMessage(resources));
           return;
@@ -831,6 +832,7 @@ export default function TaskForm({
     mode: 'remove_all' | 'keep_all' | 'selective',
     keepUserIds?: string[]
   ) => {
+    if (sharedMode) return;
     // 'remove_all' takes the team's lead off the task too, so mirror the server
     // and clear the primary agent when it's that lead.
     const removedTeam = teams.find(t => t.team_id === assignedTeamId);
@@ -856,7 +858,7 @@ export default function TaskForm({
       }
       setAssignedTeamId(null);
       if (shouldClearPrimary) setAssignedUser(null);
-      const resources = await getTaskResourcesAction(task.task_id);
+      const resources = await projectSource.tasks.resources(task.task_id);
       if (isReturnedActionError(resources)) {
         toast.error(getErrorMessage(resources));
         return;
@@ -2002,12 +2004,19 @@ export default function TaskForm({
             {/* Row 1: Task Type and Priority */}
             {fieldGate('task_type_key', <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('taskTypeLabel', 'Task Type')}</label>
-              <TaskTypeSelector
-                value={selectedTaskType}
-                taskTypes={taskTypes}
-                onChange={setSelectedTaskType}
-                disabled={isSubmitting}
-              />
+              {sharedMode && frozen('task_type_key') ? (
+                // Not an admitted field: shown as text, never as a select that looks editable (and never as an empty placeholder).
+                <div id="task-type-readonly" className="p-2 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] rounded-md text-[rgb(var(--color-text-700))]">
+                  {taskTypeLabel(taskTypes.find(type => type.type_key === selectedTaskType), selectedTaskType)}
+                </div>
+              ) : (
+                <TaskTypeSelector
+                  value={selectedTaskType}
+                  taskTypes={taskTypes}
+                  onChange={setSelectedTaskType}
+                  disabled={isSubmitting}
+                />
+              )}
             </div>)}
             {!sharedMode && fieldGate('priority_id', <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('priorityLabel', 'Priority')}</label>
@@ -2141,7 +2150,8 @@ export default function TaskForm({
             {/* Row 5: Assigned To and Additional Agents in one row */}
             <div className="col-span-2">
               <div className="grid grid-cols-2 gap-4">
-                {fieldGate('assigned_to', <div>
+                {/* Shared mode: the assignee is the MSP reference row, shown and changed in the aside. A native picker here would read "Not assigned" beside "Assigned to <name>". */}
+                {!sharedMode && fieldGate('assigned_to', <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('assignedToLabel', 'Assigned To')}</label>
                   <UserAndTeamPicker
                     label=""

@@ -64,7 +64,7 @@ export interface LoadedCoManagedSharedProjectDataSource {
   /** Re-reads the project and refreshes the per-task baselines (call after an assignment bumps a reference revision). */
   refresh(): Promise<boolean>;
   /** The MSP reference as last loaded or saved (display name only), for the drawer's assignment panel. */
-  baselineOf(taskId: string): { revision: number | null; assigneeName: string | null; isAssigned: boolean } | null;
+  baselineOf(taskId: string): { revision: number | null; assigneeName: string | null; isAssigned: boolean; assignedToMe: boolean } | null;
   /** Status display names by mapping id, for the history panel. */
   statusNames(): Record<string, string>;
   /** Called after a refresh and after every edit receipt or conflict; returns an unsubscribe. */
@@ -209,14 +209,18 @@ export function createCoManagedSharedProjectDataSource(deps: CoManagedSharedProj
     return actionError(result.message ?? 'The task could not be moved.');
   };
 
+  // A phase either forked onto its own mappings or uses the project defaults (same rule as the native phase-effective read).
+  const effectiveStatuses = (phaseId?: string | null) => {
+    const own = phaseId ? read.statusesByPhase[phaseId] : undefined;
+    return own && own.length ? own : read.statuses;
+  };
   const taskStatuses = async (projectId: string, phaseId?: string | null) => {
     if (!inProject(projectId)) return [] as never;
-    const list = phaseId ? read.statusesByPhase[phaseId] ?? [] : read.statuses;
-    return list.map(status) as never;
+    return effectiveStatuses(phaseId).map(status) as never;
   };
   const statusesByPhase = async (projectId: string) => {
     if (!inProject(projectId)) return notFound();
-    return Object.fromEntries(Object.entries(read.statusesByPhase).map(([phaseId, list]) => [phaseId, list.map(status)])) as never;
+    return Object.fromEntries(read.phases.map(phase => [phase.phaseId, effectiveStatuses(phase.phaseId).map(status)])) as never;
   };
 
   const base = throwingBase();
@@ -235,6 +239,10 @@ export function createCoManagedSharedProjectDataSource(deps: CoManagedSharedProj
     'tasks.reorderInStatus': base.groups.tasks.reorderInStatus,
     'tasks.moveToPhase': base.groups.tasks.moveToPhase,
     'tasks.update': base.groups.tasks.update,
+    // Shared tasks carry no checklist, resources or ticket links in the admitted read model: empty, never a native lookup.
+    'tasks.checklist': async () => [],
+    'tasks.resources': async () => [],
+    'tasks.ticketLinks': async () => [],
     'options.taskStatuses': taskStatuses,
     'options.statusesByPhase': statusesByPhase,
     'options.types': async () => [],
@@ -274,7 +282,7 @@ export function createCoManagedSharedProjectDataSource(deps: CoManagedSharedProj
     },
     baselineOf: taskId => {
       const row = rows.get(taskId);
-      return row ? { revision: baselines.get(taskId)?.revision ?? null, assigneeName: row.reference?.assigneeName ?? null, isAssigned: row.reference != null } : null;
+      return row ? { revision: baselines.get(taskId)?.revision ?? null, assigneeName: row.reference?.assigneeName ?? null, isAssigned: row.reference != null, assignedToMe: row.reference?.assignedToMe === true } : null;
     },
     statusNames: () => Object.fromEntries(Object.values(read.statusesByPhase).flat().concat(read.statuses).map(status => [status.statusMappingId, status.name])),
     subscribe: listener => { listeners.add(listener); return () => { listeners.delete(listener); }; },

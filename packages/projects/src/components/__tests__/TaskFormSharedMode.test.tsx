@@ -225,4 +225,39 @@ describe('TaskForm in shared mode', () => {
     expect(container.querySelector('[data-frozen-field]')).toBeNull();
     expect(container.querySelector('#task-form-readonly-note')).toBeNull();
   });
+
+  describe('drawer controls that are not admitted', () => {
+    const notAdmitted = { frozenFields: ['task_type_key', 'assigned_to', 'start_date'], hiddenFields: [] as string[] };
+
+    it('renders the task type read-only text, not an empty "Select task type" select', async () => {
+      getTaskTypesMock.mockResolvedValue([{ type_key: 'task', type_name: 'Task', color: null }]);
+      const { container } = mount(sharedSource(vi.fn(), notAdmitted));
+      await waitFor(() => expect(container.querySelector('#task-type-readonly')!.textContent).toBe('Task'));
+      expect(container.textContent).not.toContain('Select task type');
+    });
+
+    it('keeps the native task type select under the native source', () => {
+      const { container } = render(
+        <TicketIntegrationProvider value={createMockTicketIntegration()}>
+          <TaskForm task={task} phase={phase} onClose={() => undefined} onSubmit={() => undefined} projectStatuses={statuses}
+            users={[] as IUser[]} mode="edit" onPhaseChange={() => undefined} inDrawer={true} />
+        </TicketIntegrationProvider>);
+      expect(container.querySelector('#task-type-readonly')).toBeNull();
+    });
+
+    it('does not render the native assignee picker, so it cannot contradict the aside', () => {
+      const { container } = mount(sharedSource(vi.fn(), notAdmitted));
+      expect(rtlScreen.queryByTestId('assigned-user')).toBeNull();
+      expect(container.textContent).not.toContain('Not assigned');
+    });
+
+    it('still shows the native assignee picker under the native source', () => {
+      render(
+        <TicketIntegrationProvider value={createMockTicketIntegration()}>
+          <TaskForm task={task} phase={phase} onClose={() => undefined} onSubmit={() => undefined} projectStatuses={statuses}
+            users={[] as IUser[]} mode="edit" onPhaseChange={() => undefined} inDrawer={true} />
+        </TicketIntegrationProvider>);
+      expect(rtlScreen.queryByTestId('assigned-user')).not.toBeNull();
+    });
+  });
 });

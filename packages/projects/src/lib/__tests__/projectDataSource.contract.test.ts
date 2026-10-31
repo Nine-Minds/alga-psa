@@ -4,7 +4,7 @@ const fns = vi.hoisted(() => {
   const mk = () => vi.fn().mockResolvedValue({ sentinel: true });
   return {
     projectActions: { getProjectMetadata: mk(), updateProject: mk(), getProjectTaskStatuses: mk(), getProjectStatusesByPhase: mk(), getProjectTreeData: mk(), reorderPhase: mk(), updatePhase: mk() },
-    taskActions: { getProjectTaskData: mk(), getTasksForPhase: mk(), getTaskById: mk(), updateTaskStatus: mk(), reorderTask: mk(), reorderTasksInStatus: mk(), moveTaskToPhase: mk(), updateTaskWithChecklist: mk(), getTaskTypes: mk() },
+    taskActions: { getProjectTaskData: mk(), getTasksForPhase: mk(), getTaskById: mk(), updateTaskStatus: mk(), reorderTask: mk(), reorderTasksInStatus: mk(), moveTaskToPhase: mk(), updateTaskWithChecklist: mk(), getTaskTypes: mk(), getTaskChecklistItems: mk(), getTaskResourcesAction: mk(), getTaskTicketLinksAction: mk() },
     statusActions: { getPhaseCustomStatusCounts: mk() },
     commentActions: { getTaskCommentCountsBatch: mk() },
   };
@@ -23,6 +23,7 @@ const TARGET: Record<string, [Record<string, any>, string]> = {
   'tasks.commentCounts': [fns.commentActions, 'getTaskCommentCountsBatch'], 'tasks.updateStatus': [fns.taskActions, 'updateTaskStatus'],
   'tasks.reorder': [fns.taskActions, 'reorderTask'], 'tasks.reorderInStatus': [fns.taskActions, 'reorderTasksInStatus'],
   'tasks.moveToPhase': [fns.taskActions, 'moveTaskToPhase'], 'tasks.update': [fns.taskActions, 'updateTaskWithChecklist'],
+  'tasks.checklist': [fns.taskActions, 'getTaskChecklistItems'], 'tasks.resources': [fns.taskActions, 'getTaskResourcesAction'], 'tasks.ticketLinks': [fns.taskActions, 'getTaskTicketLinksAction'],
   'options.taskStatuses': [fns.projectActions, 'getProjectTaskStatuses'], 'options.statusesByPhase': [fns.projectActions, 'getProjectStatusesByPhase'],
   'options.types': [fns.taskActions, 'getTaskTypes'], 'options.tree': [fns.projectActions, 'getProjectTreeData'],
   'phases.customStatusCounts': [fns.statusActions, 'getPhaseCustomStatusCounts'], 'phases.reorder': [fns.projectActions, 'reorderPhase'], 'phases.update': [fns.projectActions, 'updatePhase'],

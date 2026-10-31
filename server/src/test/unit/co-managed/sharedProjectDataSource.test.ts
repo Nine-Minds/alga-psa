@@ -78,6 +78,12 @@ describe('shared project data source contract', () => {
     expect(await source.tasks.commentCounts(['t1'])).toEqual({ t1: 0 });
     expect(await source.options.taskStatuses(P)).toHaveLength(2);
     expect(await source.options.types()).toEqual([]);
+    expect(await source.tasks.checklist('t1')).toEqual([]);
+    expect(await source.tasks.resources('t1')).toEqual([]);
+    expect(await source.tasks.ticketLinks('t1')).toEqual([]);
+    // A phase that never forked uses the project defaults, so its board is not empty.
+    expect(await source.options.taskStatuses(P, PH)).toHaveLength(2);
+    expect(Object.keys((await source.options.statusesByPhase(P)) as object)).toEqual([PH]);
     expect(await source.options.tree()).toEqual([]);
     expect(await source.phases.customStatusCounts(P)).toEqual({});
     expect(nativeCalls.n).toBe(0);

@@ -44,7 +44,7 @@ import type { ProjectBillingOverview } from '@alga-psa/types';
 import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
 import { derivePhaseBillingBadges, getCurrentDateInUserTimeZone } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
-import { getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, addTaskDependency, removeTaskDependency, assignTeamToProjectTask, removeTeamFromProjectTask, bulkAddTagsToTasks } from '../actions/projectTaskActions';
+import { duplicateTaskToPhase, deleteTask as deleteTaskAction, addTaskDependency, removeTaskDependency, assignTeamToProjectTask, removeTeamFromProjectTask, bulkAddTagsToTasks } from '../actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { toast } from 'react-hot-toast';
 import {
@@ -237,6 +237,8 @@ interface ProjectDetailProps {
    */
   statusRefreshKey?: number;
 }
+
+const NO_TAGS: ITag[] = [];
 
 export default function ProjectDetail({
   project,
@@ -442,7 +444,9 @@ export default function ProjectDetail({
 
   // Tag-related state
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
-  const { tags: allTags } = useTags();
+  // The tag context is the viewer's own tenant; a shared project's tag filter must not list the viewer's tags.
+  const { tags: viewerTags } = useTags();
+  const allTags = sharedMode ? NO_TAGS : viewerTags;
   const hasNotifiedParent = useRef(false);
   // Opens a task named in the URL once; a task opened by a click counts as handled.
   const urlTaskOpenGuard = useUrlTaskOpenGuard();
@@ -2190,7 +2194,7 @@ export default function ProjectDetail({
           toast.error(getErrorMessage(updatedTask));
           return;
         }
-        const checklistItems = sharedMode ? (task.checklist_items ?? []) : unwrapActionResult(await getTaskChecklistItems(draggedTaskId));
+        const checklistItems = sharedMode ? (task.checklist_items ?? []) : unwrapActionResult(await projectSource.tasks.checklist(draggedTaskId));
         const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
         // Reconcile with the authoritative server values (final order_key, etc.).
@@ -2571,7 +2575,7 @@ export default function ProjectDetail({
         moveConfirmation.targetPhase.phase_id,
       ));
 
-      const checklistItems = unwrapActionResult(await getTaskChecklistItems(moveConfirmation.taskId));
+      const checklistItems = unwrapActionResult(await projectSource.tasks.checklist(moveConfirmation.taskId));
       const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
       setProjectTasks(prevTasks =>
@@ -2614,8 +2618,8 @@ export default function ProjectDetail({
 
       if (activePhase && newTask.wbs_code.startsWith(activePhase.wbs_code)) {
         const [checklistResult, taskResourcesResult] = await Promise.all([
-          getTaskChecklistItems(newTask.task_id),
-          getTaskResourcesAction(newTask.task_id)
+          projectSource.tasks.checklist(newTask.task_id),
+          projectSource.tasks.resources(newTask.task_id)
         ]);
         const checklistItems = unwrapActionResult(checklistResult);
         const taskResources = unwrapActionResult(taskResourcesResult);
@@ -2657,7 +2661,7 @@ export default function ProjectDetail({
     } finally {
       setIsAddingTask(false);
     }
-  }, [selectedPhase, currentPhase, t]);
+  }, [selectedPhase, currentPhase, t, projectSource]);
 
   const handleCloseQuickAdd = useCallback(() => {
     setShowQuickAdd(false);
@@ -2700,8 +2704,8 @@ export default function ProjectDetail({
       try {
         // Fetch checklist items and task resources in parallel
         const [checklistResult, taskResourcesResult] = await Promise.all([
-          getTaskChecklistItems(updatedTask.task_id),
-          getTaskResourcesAction(updatedTask.task_id)
+          projectSource.tasks.checklist(updatedTask.task_id),
+          projectSource.tasks.resources(updatedTask.task_id)
         ]);
         const checklistItems = unwrapActionResult(checklistResult);
         const taskResources = unwrapActionResult(taskResourcesResult);
@@ -2767,7 +2771,7 @@ export default function ProjectDetail({
     setShowQuickAdd(false);
     setSelectedTask(null);
     setIsAddingTask(false);
-  }, [t]);
+  }, [t, projectSource]);
 
   const handleTaskSelected = useCallback((task: IProjectTask) => {
     // Log that we're using the cached project tree data for editing
@@ -2807,7 +2811,7 @@ export default function ProjectDetail({
       }
 
       if (updatedTask) {
-        const checklistItems = unwrapActionResult(await getTaskChecklistItems(taskId));
+        const checklistItems = unwrapActionResult(await projectSource.tasks.checklist(taskId));
         const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
         // Update kanban view data
@@ -2931,12 +2935,12 @@ export default function ProjectDetail({
   const refreshTaskAfterTeamChange = async (taskId: string) => {
     const [updatedTaskResult, resourcesResult] = await Promise.all([
       projectSource.tasks.get(taskId),
-      getTaskResourcesAction(taskId),
+      projectSource.tasks.resources(taskId),
     ]);
     const updatedTask = unwrapActionResult(updatedTaskResult);
     const resources = unwrapActionResult(resourcesResult);
     if (!updatedTask) return;
-    const checklistItems = unwrapActionResult(await getTaskChecklistItems(taskId));
+    const checklistItems = unwrapActionResult(await projectSource.tasks.checklist(taskId));
     const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
     setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
@@ -2967,7 +2971,7 @@ export default function ProjectDetail({
 
     if (task.assigned_team_id) {
       try {
-        const resources = unwrapActionResult(await getTaskResourcesAction(taskId));
+        const resources = unwrapActionResult(await projectSource.tasks.resources(taskId));
         setPendingTaskTeamMembers(resources.filter((r: any) => r.role === 'team_member'));
       } catch (error) {
         console.error('Failed to load task resources for team switch dialog:', error);
@@ -3157,9 +3161,9 @@ export default function ProjectDetail({
     try {
         // Fetch necessary details for the dialog toggles
         const [resourcesResult, linksResult, checklistResult] = await Promise.all([
-            getTaskResourcesAction(task.task_id),
-            getTaskTicketLinksAction(task.task_id),
-            getTaskChecklistItems(task.task_id)
+            projectSource.tasks.resources(task.task_id),
+            projectSource.tasks.ticketLinks(task.task_id),
+            projectSource.tasks.checklist(task.task_id)
         ]);
         const resources = unwrapActionResult(resourcesResult);
         const links = unwrapActionResult(linksResult);
@@ -3199,7 +3203,7 @@ export default function ProjectDetail({
       ));
 
       if (movedTask) {
-        const checklistItems = unwrapActionResult(await getTaskChecklistItems(movedTask.task_id));
+        const checklistItems = unwrapActionResult(await projectSource.tasks.checklist(movedTask.task_id));
         const taskWithDetails = { ...movedTask, checklist_items: checklistItems };
 
         // Check if the task was moved to a different phase than the currently selected one
@@ -3394,7 +3398,7 @@ export default function ProjectDetail({
             continue;
           }
           if (updatedTask) {
-            const checklistItems = unwrapActionResult(await getTaskChecklistItems(taskId));
+            const checklistItems = unwrapActionResult(await projectSource.tasks.checklist(taskId));
             const taskWithChecklist = { ...updatedTask, assigned_team_id: null, checklist_items: checklistItems };
             setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
             setAllProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
@@ -3412,7 +3416,7 @@ export default function ProjectDetail({
         const refreshed = await Promise.all(
           resourcesToRefresh.map(async (id) => {
             try {
-              return [id, unwrapActionResult(await getTaskResourcesAction(id))] as const;
+              return [id, unwrapActionResult(await projectSource.tasks.resources(id))] as const;
             } catch (error) {
               console.error(`Failed to refresh resources for task ${id}:`, error);
               return null;
@@ -4679,7 +4683,7 @@ export default function ProjectDetail({
                 options
               ));
               
-              const checklistItems = unwrapActionResult(await getTaskChecklistItems(newTask.task_id));
+              const checklistItems = unwrapActionResult(await projectSource.tasks.checklist(newTask.task_id));
               const taskWithChecklist = { ...newTask, checklist_items: checklistItems };
               setProjectTasks(prev => [...prev, taskWithChecklist]);
               // Add to allProjectTasks for filtered counts

@@ -39,6 +39,10 @@ export interface ProjectDataSource {
     reorderInStatus: Fn<typeof ProjectTaskActions, 'reorderTasksInStatus'>;
     moveToPhase: Fn<typeof ProjectTaskActions, 'moveTaskToPhase'>;
     update: Fn<typeof ProjectTaskActions, 'updateTaskWithChecklist'>;
+    /** Per-task detail reads the screen refreshes after a save. Shared mode answers from its read model, never a native action. */
+    checklist: Fn<typeof ProjectTaskActions, 'getTaskChecklistItems'>;
+    resources: Fn<typeof ProjectTaskActions, 'getTaskResourcesAction'>;
+    ticketLinks: Fn<typeof ProjectTaskActions, 'getTaskTicketLinksAction'>;
   };
   readonly options: {
     taskStatuses: Fn<typeof ProjectActions, 'getProjectTaskStatuses'>;
@@ -129,7 +133,7 @@ export type ProjectTaskScreenField = typeof PROJECT_TASK_SCREEN_FIELDS[number];
 export const PROJECT_DATA_SOURCE_METHODS = [
   'project.metadata', 'project.update',
   'tasks.data', 'tasks.forPhase', 'tasks.get', 'tasks.commentCounts', 'tasks.updateStatus', 'tasks.reorder',
-  'tasks.reorderInStatus', 'tasks.moveToPhase', 'tasks.update',
+  'tasks.reorderInStatus', 'tasks.moveToPhase', 'tasks.update', 'tasks.checklist', 'tasks.resources', 'tasks.ticketLinks',
   'options.taskStatuses', 'options.statusesByPhase', 'options.types', 'options.tree',
   'phases.customStatusCounts', 'phases.reorder', 'phases.update',
   'editTask',

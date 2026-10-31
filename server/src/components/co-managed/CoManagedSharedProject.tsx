@@ -14,6 +14,7 @@ import { loadCoManagedSharedProjectDataSource, type LoadedCoManagedSharedProject
 import { newCoManagedOperationId } from './coManagedOperationId';
 import CoManagedProjectTaskAssignment from './CoManagedProjectTaskAssignment';
 import CoManagedProjectTaskHistory from './CoManagedProjectTaskHistory';
+import CoManagedSharedProviders from './CoManagedSharedProviders';
 
 const BACK_HREF = '/msp/co-management/tasks';
 
@@ -27,7 +28,7 @@ function TaskAside({ handle, task, customerTenant, relationshipId, userId }: {
   const baseline = handle.baselineOf(task.task_id);
   return <div id="co-managed-task-aside" className="space-y-6">
     <CoManagedProjectTaskAssignment customerTenant={customerTenant} relationshipId={relationshipId} taskId={task.task_id} userId={userId}
-      revision={baseline?.revision ?? null} assigneeName={baseline?.assigneeName ?? null} isAssigned={baseline?.isAssigned ?? false}
+      revision={baseline?.revision ?? null} assigneeName={baseline?.assigneeName ?? null} isAssigned={baseline?.isAssigned ?? false} assignedToMe={baseline?.assignedToMe ?? false}
       onChanged={() => { void handle.refresh(); }} />
     <CoManagedProjectTaskHistory customerTenant={customerTenant} relationshipId={relationshipId} taskId={task.task_id} reloadKey={historyKey} statusNames={handle.statusNames()} />
   </div>;
@@ -77,8 +78,10 @@ export default function CoManagedSharedProject({ customerTenant, relationshipId,
     </div>;
   }
   return <div id="co-managed-shared-project">
-    <ProjectDataSourceProvider dataSource={state.handle.source}>
-      <ProjectPage params={paramsRef.current.params} />
-    </ProjectDataSourceProvider>
+    <CoManagedSharedProviders>
+      <ProjectDataSourceProvider dataSource={state.handle.source}>
+        <ProjectPage params={paramsRef.current.params} />
+      </ProjectDataSourceProvider>
+    </CoManagedSharedProviders>
   </div>;
 }
