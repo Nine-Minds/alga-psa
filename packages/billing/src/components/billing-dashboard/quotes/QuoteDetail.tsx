@@ -1335,7 +1335,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
                   <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
                     <div className="font-medium text-foreground">
                       {(() => {
-                        const linked = emailLinkDecisionForActivity(quote.decisions, quote.quote_activities, activity);
+                        const linked = emailLinkDecisionForActivity(quote.decisions, activity);
                         return linked ? <QuoteDecisionLine decision={linked} /> : activity.description;
                       })()}
                     </div>

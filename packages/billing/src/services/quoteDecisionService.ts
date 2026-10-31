@@ -376,7 +376,8 @@ async function decideInTransaction(
     activity_type: action === 'accept' ? 'accepted' : 'rejected',
     description: activity.description,
     performed_by: userId,
-    metadata: activity.metadata,
+    // decision_id ties the activity to its quote_decisions row so readers never have to guess.
+    metadata: { ...activity.metadata, decision_id: decision.decision_id },
   });
 
   // 5. Hook, last, on the committed-in-this-transaction state.
