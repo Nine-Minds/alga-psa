@@ -24,7 +24,8 @@ export async function cleanupCoManagedThreadTransfers(db: Knex, tenant: string, 
           .where('cleanup_next_attempt_at', '<=', trx.raw('clock_timestamp()')).forUpdate().skipLocked().first();
         if (!row) return false;
         for (const file of row.manifest) {
-          if (file.path !== disclosedAttachmentPath(row.customer_tenant, tenant, row.operation_id, file.targetId, row.project_task_id ? 'project_task' : 'ticket')) throw new Error('Invalid transfer cleanup path');
+          // Transfers are ticket-parented; L4c adds project-task parenting together with its parent check.
+          if (file.path !== disclosedAttachmentPath(row.customer_tenant, tenant, row.operation_id, file.targetId, 'ticket')) throw new Error('Invalid transfer cleanup path');
           await remove(file.path);
         }
         // write-admission: exempt — co-managed disclosure operation, written by its owning disclosure state machine under the operation row lock
