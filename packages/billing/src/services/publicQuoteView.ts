@@ -135,28 +135,51 @@ export async function loadPublicQuoteView(
   return { quote: projectPublicQuote(quote), items, locations };
 }
 
-/** Canonical JSON: object keys sorted recursively, so equal content always serialises identically. */
+/**
+ * Canonical JSON: object keys sorted recursively, so equal content always serialises
+ * identically. Values with a toJSON (Date, and anything alike) serialise through it
+ * first; any other non-plain object (Map, Set, class instance, ...) throws rather than
+ * silently hashing as '{}', so a new column type can never be dropped from the signed content.
+ */
 function canonicalJson(value: unknown): string {
+  if (value === undefined || value === null) return 'null';
+  if (typeof value === 'object' && typeof (value as { toJSON?: unknown }).toJSON === 'function') {
+    return canonicalJson((value as { toJSON: () => unknown }).toJSON());
+  }
   if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
-  if (value && typeof value === 'object') {
+  if (typeof value === 'object') {
+    const proto = Object.getPrototypeOf(value);
+    if (proto !== Object.prototype && proto !== null) {
+      throw new TypeError(`canonicalJson: unsupported non-plain object ${(value as object).constructor?.name ?? 'unknown'}`);
+    }
     const obj = value as Record<string, unknown>;
     return `{${Object.keys(obj).sort().map((k) => `${JSON.stringify(k)}:${canonicalJson(obj[k])}`).join(',')}}`;
   }
-  return JSON.stringify(value === undefined ? null : value);
+  if (typeof value === 'bigint') return JSON.stringify(value.toString());
+  if (typeof value === 'function' || typeof value === 'symbol') {
+    throw new TypeError(`canonicalJson: unsupported ${typeof value}`);
+  }
+  return JSON.stringify(value);
 }
 
-/** Pure: sha256 over exactly what the public page shows (quote fields + items, stable item order). */
-export function fingerprintPublicQuoteView(view: Pick<PublicQuoteView, 'quote' | 'items'>): string {
+/**
+ * Pure: sha256 over everything the public page shows - the quote fields, the items
+ * (stable order) and the locations (sorted by location_id).
+ */
+export function fingerprintPublicQuoteView(view: Pick<PublicQuoteView, 'quote' | 'items' | 'locations'>): string {
   const items = [...view.items].sort(
     (a, b) =>
       (Number(a.display_order) || 0) - (Number(b.display_order) || 0) ||
       String(a.quote_item_id).localeCompare(String(b.quote_item_id)),
   );
-  return createHash('sha256').update(canonicalJson({ quote: view.quote, items }), 'utf8').digest('hex');
+  const locations = [...(view.locations ?? [])].sort((a, b) =>
+    String(a.location_id).localeCompare(String(b.location_id)),
+  );
+  return createHash('sha256').update(canonicalJson({ quote: view.quote, items, locations }), 'utf8').digest('hex');
 }
 
 /**
- * Content fingerprint of the public projection of a quote (null if it is not client-facing).
+ * Content fingerprint of the full public view of a quote - quote, items and locations (null if it is not client-facing).
  * The public page and the decision submit both use this one function, so a signature can
  * only bind to the content that was rendered. Deliberately not based on updated_at.
  */

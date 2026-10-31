@@ -310,6 +310,20 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
     expect(onQuoteAcceptedSpy).toHaveBeenCalledTimes(1);
   });
 
+  it('5e. MSP changes valid_until / quote_date while the quote stays sent: "changed", nothing written', async () => {
+    for (const patch of [{ valid_until: new Date('2030-01-01T00:00:00Z') }, { quote_date: new Date('2026-01-02T00:00:00Z') }]) {
+      const s = await setup();
+      const rendered = await fingerprintOf(s);
+      await tt(s.tenantId, 'quotes').where({ quote_id: s.quoteId }).update(patch);
+      expect(await fingerprintOf(s)).not.toBe(rendered);
+      const out: any = await submit(s.token, await acceptInput({ quoteFingerprint: rendered }));
+      expect(out).toEqual({ status: 'changed' });
+      expect((await quoteRow(s.tenantId, s.quoteId)).status).toBe('sent');
+      expect(await decisionRows(s.tenantId, s.quoteId)).toHaveLength(0);
+      expect(onQuoteAcceptedSpy).not.toHaveBeenCalled();
+    }
+  });
+
   it('5b. MSP adds an item while the quote stays sent: "changed", nothing written', async () => {
     const s = await setup();
     const rendered = await fingerprintOf(s);
