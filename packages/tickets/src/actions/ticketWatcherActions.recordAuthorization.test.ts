@@ -109,7 +109,7 @@ describe('ticket watcher writes: record-level ticket:update authorization', () =
   it('REST TicketService routes watcher writes through the same shared command and maps denial to 403', () => {
     const src = readFileSync(path.resolve(__dirname, '../../../../server/src/lib/api/services/TicketService.ts'), 'utf8');
     expect(src).toContain('runAuthorizedTicketWatcherWrite');
-    expect(src).toContain('buildAuthorizationPrincipalSubject(context.user, context.apiKeyId)');
+    expect(src).toContain('buildAuthorizationPrincipalSubject(');
     expect(src).toMatch(/TicketWatcherPermissionError\)\s*{\s*return new ForbiddenError/);
   });
 });

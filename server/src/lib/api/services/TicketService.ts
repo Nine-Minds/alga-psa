@@ -1142,7 +1142,7 @@ export class TicketService extends BaseService<ITicket> {
 
     let result: TicketWatcherWriteResult;
     try {
-      const subject = buildAuthorizationPrincipalSubject(context.user, context.apiKeyId);
+      const subject = buildAuthorizationPrincipalSubject(context.user ?? { user_id: context.userId, tenant: context.tenant }, context.apiKeyId);
       const kernel = await getAuthorizationKernel();
       result = await withTransaction(knex, (trx) =>
         runAuthorizedTicketWatcherWrite({
