@@ -57,8 +57,11 @@ async function state(context: CoManagedSharedWorkContext, canEdit: boolean) {
     catch (error) { if (!(error instanceof CoManagedSharedWorkError)) throw error; }
   }
   await current(context, canEdit);
-  return { resource: context.resource, canEdit: canEdit && (!!reference || !work && routing.canCollaborate), canAssign: canEdit && (!!reference || !work) && routing.canCollaborate,
-    revision: work?.revision ?? (routing.canCollaborate ? 0 : undefined), hasAssignment: !!(reference?.assigned_to || reference?.assigned_team_id), mspAssignment };
+  const shared = { resource: context.resource, canEdit: canEdit && (!!reference || !work && routing.canCollaborate),
+    revision: work?.revision ?? (routing.canCollaborate ? 0 : undefined), hasAssignment: !!(reference?.assigned_to || reference?.assigned_team_id) };
+  // Customer-side actors see who is assigned, never the sponsor's principal ids; the sponsor-side payload below is unchanged.
+  if (context.actor.tenant === context.resource.tenant) return { ...shared, canAssign: false as const, mspAssignment: mspAssignment ? { name: mspAssignment.name, organizationName: mspAssignment.organizationName } : null };
+  return { ...shared, canAssign: canEdit && (!!reference || !work) && routing.canCollaborate, mspAssignment };
 }
 export async function getCoManagedTicketAssignment(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource) {
   const actor = snapshotCoManagedSessionActor(inputActor), resource = snapshot(inputResource), withWork = boundary(actor, resource);
@@ -69,9 +72,10 @@ export async function getCoManagedTicketAssignment(db: Knex, inputActor: CoManag
   }
 }
 export async function listCoManagedTicketAssignees(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource, kind: 'user' | 'team', afterId?: string) {
-  const actor = snapshotCoManagedSessionActor(inputActor), resource = snapshot(inputResource), withWork = boundary(actor, resource);
-  if (!['user', 'team'].includes(kind) || afterId !== undefined && !isCoManagedUuid(afterId)) denied();
-  return withWork(db, actor, resource, 'update', write => withWork(write.trx, actor, resource, 'read', async read => {
+  const actor = snapshotCoManagedSessionActor(inputActor), resource = snapshot(inputResource);
+  // The candidate directory is the sponsor's staff: a customer-side actor never reaches it, whatever the caller's action gate.
+  if (actor.tenant === resource.tenant || !['user', 'team'].includes(kind) || afterId !== undefined && !isCoManagedUuid(afterId)) denied();
+  return withCoManagedSharedWork(db, actor, resource, 'update', write => withCoManagedSharedWork(write.trx, actor, resource, 'read', async read => {
     if (hidden(write.redactedFields) || hidden(read.redactedFields)) denied();
     const routing = await retainedRouting(write), home = tenantDb(write.trx, routing.relationship.sponsor_tenant);
     if (!routing.canCollaborate || routing.work && !routing.reference) denied();
