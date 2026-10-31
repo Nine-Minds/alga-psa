@@ -97,6 +97,10 @@ const sources = {
 };
 // Redaction aliases for the owner-ticket response state that drives the awaiting-reply signal.
 const responseStateAliases = ['response_state', 'tickets.response_state', 'values.response_state'];
+// Redaction aliases for the customer workspace display name. The detail path (sharedWorkRead) never redacts
+// its `customerName`, so no alias is established there; these are the plausible spellings, and `'*'`/`'fields'` always hide it.
+const workspaceNameAliases = ['workspace_name', 'workspaceName', 'client_name', 'customer_name', 'customerName'];
+const REDACTED_WORKSPACE_LABEL = '(redacted workspace)';
 function snapshotRequest(input: CoManagedTicketQueueRequest): Required<Omit<CoManagedTicketQueueRequest, 'workspaceTenant' | 'clientId' | 'signal'>> & { workspaceTenant?: string; clientId?: string; signal?: CoManagedTicketQueueSignal } {
   if (!input || !['working', 'oversight'].includes(input.view) ||
       (input.workspaceTenant !== undefined && !isCoManagedUuid(input.workspaceTenant)) ||
@@ -147,22 +151,26 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
     if (!await hasCoManagedLocalPermission(trx, actor, 'ticket', 'read', true)) throw new CoManagedSharedWorkError();
     const rules = (await resolveBundleNarrowingRulesForEvaluation(trx, { subject, resource: { type: 'ticket', action: 'read' }, knex: trx }, { lock: true }))
       .filter(rule => rule.resource === 'ticket' && rule.action === 'read');
+    // Sponsor-home redactions; each relationship branch adds its own `redacted_fields` (see projection()).
     const redactions = rules.flatMap(rule => rule.redactedFields ?? []);
-    const visible = Object.fromEntries(Object.entries(sources).map(([field, aliases]) => [field, !isCoManagedReadFieldHidden(redactions, aliases)]));
-    // Assignment presence is a projection of the same redaction policy that
-    // gates the working-queue membership test, read from the qualified MSP
-    // reference in this query — never a browser-side directory lookup.
-    const assignmentVisible = visible.has_msp_assignment;
-    // Callout signals read responsibility, assignment and response state. If any
-    // field that drives a signal is redacted, the signal is false for the row.
-    const responseStateVisible = !isCoManagedReadFieldHidden(redactions, responseStateAliases);
-    const escalatedSignalVisible = visible.responsibility && assignmentVisible;
-    const awaitingSignalVisible = responseStateVisible && assignmentVisible;
     const queries: Knex.QueryBuilder[] = [];
     // Native tickets in the home tenant are never part of this relation (the
     // customer tickets page lists shared work only); every projection is a
     // shared record read through its qualified relationship.
-    function projection(ownerTenant: string, name: string, relationship: any, boardIds: string[] = []) {
+    function projection(ownerTenant: string, name: string, relationship: any, effectiveRedactions: readonly string[], boardIds: string[] = []) {
+      // Visibility is decided per relationship branch, before the union, so search, state, sort, counts and
+      // export only ever see already-masked values.
+      const branchVisible: Record<string, boolean> = Object.fromEntries(Object.entries(sources).map(([field, aliases]) => [field, !isCoManagedReadFieldHidden(effectiveRedactions, aliases)]));
+      // Assignment presence is a projection of the same redaction policy that
+      // gates the working-queue membership test, read from the qualified MSP
+      // reference in this query — never a browser-side directory lookup.
+      const assignmentVisible = branchVisible.has_msp_assignment;
+      // Callout signals read responsibility, assignment and response state. If any
+      // field that drives a signal is redacted, the signal is false for the row.
+      const responseStateVisible = !isCoManagedReadFieldHidden(effectiveRedactions, responseStateAliases);
+      const escalatedSignalVisible = branchVisible.responsibility && assignmentVisible;
+      const awaitingSignalVisible = responseStateVisible && assignmentVisible;
+      const workspaceNameVisible = !isCoManagedReadFieldHidden(effectiveRedactions, workspaceNameAliases);
       const owner = tenantDb(trx, ownerTenant);
       const base = owner.table('tickets as t');
       owner.tenantJoin(base, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
@@ -178,9 +186,9 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
         this.where(function () { this.whereNotNull('w.work_id').whereNull('w.grant_revoked_at'); }).orWhereIn('t.board_id', boardIds);
       });
       if (request.view === 'working') base.whereNotNull('r.reference_id').where(function () {
-        if (visible.responsibility) this.where('w.responsibility', 'msp');
+        if (branchVisible.responsibility) this.where('w.responsibility', 'msp');
         if (assignmentVisible) this.orWhereNotNull('r.assigned_to').orWhereNotNull('r.assigned_team_id');
-        if (!visible.responsibility && !assignmentVisible) this.whereRaw('false');
+        if (!branchVisible.responsibility && !assignmentVisible) this.whereRaw('false');
       });
       const policyColumns = { auth_owner: trx.raw('NULL::uuid'), auth_client: trx.raw('?::uuid', [relationship.sponsor_client_id]), auth_board: 'r.board_id', auth_assigned: 'r.assigned_to', auth_team: 'r.assigned_team_id' };
       base.select({ tenant: 't.tenant', ticket_id: 't.ticket_id', relationship_id: trx.raw('?::uuid', [relationship.relationship_id]),
@@ -202,8 +210,11 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
         ...policyColumns });
       const authorized = trx.from(base.as('q'));
       applyCoManagedQueuePolicy(authorized, subject, rules, { resourceType: 'ticket', shared: true });
-      authorized.select('q.tenant', 'q.ticket_id', 'q.relationship_id', 'q.workspace_name', 'q.client_id', 'q.sig_escalated', 'q.sig_awaiting');
-      for (const field of Object.keys(sources)) authorized.select(visible[field] ? `q.${field}` : trx.raw(`NULL::${['is_closed', 'has_msp_assignment'].includes(field) ? 'boolean' : field === 'work_revision' ? 'integer' : ['entered_at', 'updated_at'].includes(field) ? 'timestamptz' : 'text'} as ??`, [field]));
+      authorized.select('q.tenant', 'q.ticket_id', 'q.relationship_id', 'q.client_id', 'q.sig_escalated', 'q.sig_awaiting');
+      authorized.select(workspaceNameVisible ? 'q.workspace_name' : trx.raw('NULL::text as workspace_name'));
+      // The mask travels with each row through the union so the response keeps absent keys (not nulls) per relationship.
+      authorized.select(trx.raw('?::jsonb as redaction_mask', [JSON.stringify({ ...branchVisible, workspace_name: workspaceNameVisible })]));
+      for (const field of Object.keys(sources)) authorized.select(branchVisible[field] ? `q.${field}` : trx.raw(`NULL::${['is_closed', 'has_msp_assignment'].includes(field) ? 'boolean' : field === 'work_revision' ? 'integer' : ['entered_at', 'updated_at'].includes(field) ? 'timestamptz' : 'text'} as ??`, [field]));
       queries.push(authorized);
     }
     let assignedRelationshipCount = 0;
@@ -217,7 +228,9 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
       if (!staff) continue;
       const boards = relationship.visibility_mode === 'board_scope' ? await owner.table('co_management_board_scopes').where('relationship_id', target.relationship_id).forShare().select('board_id') : [];
       assignedRelationshipCount += 1;
-      projection(target.customer_tenant, customer.client_name, relationship, boards.map(row => row.board_id));
+      // LEVERAGE: pattern effective-redactions — sponsor-home ∪ relationship.redacted_fields, as in sharedWork.ts and sharedWorkRead.ts.
+      const effectiveRedactions = [...new Set([...redactions, ...(Array.isArray(relationship.redacted_fields) ? relationship.redacted_fields : [])])];
+      projection(target.customer_tenant, customer.client_name, relationship, effectiveRedactions, boards.map(row => row.board_id));
     }
     await assertCoManagedSessionUnexpired(trx, actor);
     if (!queries.length) return { items: [], workspaces: [], totalCount: 0, openCount: 0, closedCount: 0, page: request.page, pageSize: request.pageSize,
@@ -243,7 +256,7 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
     if (paginate) page.limit(request.pageSize).offset((request.page - 1) * request.pageSize);
     // A single statement snapshot keeps rows and counts coherent during local ticket edits.
     const result = await trx.with('authorized', combined).with('scoped', scoped).with('filtered', filtered).with('page_rows', page)
-      .select(trx.raw("COALESCE((SELECT json_agg(workspaces ORDER BY name, tenant) FROM (SELECT DISTINCT tenant, workspace_name AS name FROM scoped) workspaces), '[]'::json) AS workspaces"),
+      .select(trx.raw("COALESCE((SELECT json_agg(workspaces ORDER BY name, tenant) FROM (SELECT DISTINCT tenant, COALESCE(workspace_name, ?) AS name FROM scoped) workspaces), '[]'::json) AS workspaces", [REDACTED_WORKSPACE_LABEL]),
         trx.raw('(SELECT count(*) FROM filtered) AS total_count'),
         trx.raw('(SELECT count(*) FROM filtered WHERE is_closed = false) AS open_count'),
         trx.raw('(SELECT count(*) FROM filtered WHERE is_closed = true) AS closed_count'),
@@ -251,8 +264,8 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
         trx.raw('(SELECT count(*) FROM scoped WHERE is_closed = false AND sig_awaiting) AS awaiting_count'),
         trx.raw("COALESCE((SELECT json_agg(page_rows) FROM page_rows), '[]'::json) AS items")).first();
     await assertCoManagedSessionUnexpired(trx, actor);
-    const items = result.items.map((row: any) => ({ tenant: row.tenant, relationshipId: row.relationship_id, ticketId: row.ticket_id, workspaceName: row.workspace_name,
-      fields: Object.fromEntries(Object.keys(sources).filter(field => visible[field]).map(field => [field, row[field]])) }));
+    const items = result.items.map((row: any) => ({ tenant: row.tenant, relationshipId: row.relationship_id, ticketId: row.ticket_id, workspaceName: row.redaction_mask.workspace_name ? row.workspace_name : REDACTED_WORKSPACE_LABEL,
+      fields: Object.fromEntries(Object.keys(sources).filter(field => row.redaction_mask[field]).map(field => [field, row[field]])) }));
     return { items, workspaces: result.workspaces, totalCount: Number(result.total_count), openCount: Number(result.open_count), closedCount: Number(result.closed_count), page: request.page, pageSize: request.pageSize,
       signals: { escalatedUnassigned: Number(result.escalated_count), awaitingReply: Number(result.awaiting_count) }, assignedRelationshipCount };
   });
