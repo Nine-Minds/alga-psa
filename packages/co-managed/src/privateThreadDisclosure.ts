@@ -93,7 +93,7 @@ export async function discloseCoManagedPrivateThread(db: Knex, inputActor: CoMan
     const requestHash = hash({ resource, actor: { tenant: actor.tenant, userId: actor.userId }, request, command: 'private_thread_disclosure' });
     const withTransfer = <T>(work: (context: CoManagedSharedWorkContext, row: any) => Promise<T>) => withAuthority(db, actor, resource, async context => {
       const owner = tenantDb(context.trx, actor.tenant), row = await owner.table(TABLE).where('operation_id', operationId).forUpdate().first();
-      if (!row || row.request_hash !== requestHash || row.customer_tenant !== resource.tenant || row.relationship_id !== resource.relationshipId || Object.entries(coManagedAttachmentParent(resource)).some(([key,value]) => row[key] !== value) ||
+      if (!row || row.request_hash !== requestHash || row.customer_tenant !== resource.tenant || row.relationship_id !== resource.relationshipId || row.ticket_id !== resource.id ||
         row.source_thread_id !== reference.threadId || row.actor_user_id !== actor.userId || row.audience !== request.audience || row.source_snapshot !== request.expectedSnapshot) throw new CoManagedThreadDisclosureError('THREAD_DISCLOSURE_OPERATION_CONFLICT');
       if (row.status === 'abandoned') conflict();
       // write-admission: exempt — co-managed disclosure operation, written by its owning disclosure state machine under the operation row lock
@@ -114,7 +114,7 @@ export async function discloseCoManagedPrivateThread(db: Knex, inputActor: CoMan
           path: disclosedAttachmentPath(resource.tenant, actor.tenant, operationId, targetId, resource.kind), copied: false };
       });
       // write-admission: exempt — co-managed disclosure operation, written by its owning disclosure state machine under the operation row lock
-      await home.table(TABLE).insert({ tenant: actor.tenant, operation_id: operationId, customer_tenant: resource.tenant, relationship_id: resource.relationshipId, ...coManagedAttachmentParent(resource),
+      await home.table(TABLE).insert({ tenant: actor.tenant, operation_id: operationId, customer_tenant: resource.tenant, relationship_id: resource.relationshipId, ticket_id: resource.id, // transfers table is ticket-parented (L4c adds project_task_id with its parent check)
         source_thread_id: reference.threadId, actor_user_id: actor.userId, audience: request.audience, request_hash: requestHash, source_snapshot: request.expectedSnapshot,
         comment_map: JSON.stringify(commentMap), manifest: JSON.stringify(manifest) });
     });

@@ -8,7 +8,9 @@ import { nativeTicketDataSource } from '@alga-psa/tickets/lib/nativeTicketDataSo
 import { TicketDataSourceProvider } from '@alga-psa/tickets/components/ticket/TicketDataSourceContext';
 import { composeTicketDataSource, type TicketDataSource, type TicketDataSourceOverrides } from '@alga-psa/tickets/lib/ticketDataSource';
 import { getCoManagedLocalTicketResourceAction } from '@/lib/actions/coManagedLocalTicketActions';
+import { createAttachmentStaging } from '@/lib/co-managed/attachmentStaging';
 import { createSharedConversationSession, type SharedConversationSession } from './sharedConversationSession';
+import CoManagedConversationFiles from './CoManagedConversationFiles';
 
 /** Audiences a co_managed workspace's own tickets offer before the server has resolved the shared ones. */
 const NATIVE_AUDIENCES: readonly CommentAudience[] = ['requester', 'organization_private'];
@@ -23,6 +25,8 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: {
   const { t } = useTranslation('features/tickets');
   const [session, setSession] = useState<SharedConversationSession | null>(null);
   const [version, setVersion] = useState(0);
+  const [resource, setResource] = useState<Awaited<ReturnType<typeof getCoManagedLocalTicketResourceAction>>>(null);
+  const staging = useMemo(() => createAttachmentStaging(() => globalThis.crypto.randomUUID()), [ticketId]);
 
   useEffect(() => {
     let cancelled = false;
@@ -30,9 +34,9 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: {
       try {
         const resource = await getCoManagedLocalTicketResourceAction(ticketId);
         if (!resource || cancelled) return;
-        const next = createSharedConversationSession(resource, { t: (key, fallback) => t(key, { defaultValue: fallback }) });
+        const next = createSharedConversationSession(resource, { t: (key, fallback) => t(key, { defaultValue: fallback }), staging });
         await next.load();
-        if (!cancelled) { setSession(next); setVersion(v => v + 1); }
+        if (!cancelled) { setResource(resource); setSession(next); setVersion(v => v + 1); }
       } catch {
         // No shared conversation is reachable: the ticket keeps its native audiences.
       }
@@ -77,5 +81,7 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, version]);
 
-  return <TicketDataSourceProvider dataSource={dataSource}>{children}</TicketDataSourceProvider>;
+  return <TicketDataSourceProvider dataSource={dataSource}>{children}
+    {session && resource && <CoManagedConversationFiles session={session} resource={resource} staging={staging} version={version} />}
+  </TicketDataSourceProvider>;
 }

@@ -1,25 +1,43 @@
-import type { Job } from 'pg-boss';
 import { getConnection } from '@alga-psa/db';
-import { runMaintenanceJob } from '@alga-psa/jobs/fanout';
+import { filterServed } from '@alga-psa/core/capability';
+import { cleanupCoManagedUploads, cleanupCoManagedThreadTransfers } from '@alga-psa/co-managed';
+import { registerJobCapabilityFilter, getJobCapabilityFilter } from '@alga-psa/jobs/fanout';
 import {
-  coManagedUploadCleanupJob,
   registerCoManagedUploadCleanupJob,
   registerUploadCleanupAdapter,
   CO_MANAGED_UPLOAD_CLEANUP_JOB,
 } from '@alga-psa/jobs/handlers/coManagedUploadCleanupHandler';
-import { cleanupCommentAttachmentDrafts } from './cleanupCommentAttachmentDrafts';
 
 export { CO_MANAGED_UPLOAD_CLEANUP_JOB };
-export interface CoManagedUploadCleanupJobData { tenantId?: string; limit?: number; [key: string]: unknown }
 
-/** Base adapter: the native comment-attachment draft sweep, run by the one handler. */
-registerUploadCleanupAdapter({
-  name: 'comment-attachment-drafts',
-  run: async (tenantId) => cleanupCommentAttachmentDrafts(await getConnection(tenantId), tenantId),
-});
-registerCoManagedUploadCleanupJob();
+async function removeFromStorage(path: string): Promise<void> {
+  const { StorageProviderFactory } = await import('@alga-psa/storage/StorageProviderFactory');
+  await (await StorageProviderFactory.createProvider()).delete(path);
+}
 
-export async function coManagedUploadCleanupJobHandler(job: Job<CoManagedUploadCleanupJobData>) {
-  const input = job.data || {};
-  return input.tenantId ? coManagedUploadCleanupJob(String(job.id ?? ''), { tenantId: input.tenantId, limit: input.limit }) : runMaintenanceJob(CO_MANAGED_UPLOAD_CLEANUP_JOB);
+/**
+ * Boot registration (called from registerServerMaintenanceJobs): the co-managed
+ * sweep adapter, the capability filter capability-gated jobs require, and the
+ * descriptor itself (which also registers the maintenance-fanout schedule).
+ *
+ * Decision: the base `cleanupCommentAttachmentDrafts` is deliberately NOT an
+ * adapter here. It already runs for every draft tenant from
+ * publishScheduledCommentHandler; this job only reaches co-managed-served tenants,
+ * so adding it would double-sweep them and does nothing for native tenants.
+ */
+export function registerCoManagedUploadCleanup(): void {
+  registerUploadCleanupAdapter({
+    name: 'co-managed',
+    async run(tenantId, limit) {
+      const db = await getConnection(tenantId);
+      return {
+        uploads: await cleanupCoManagedUploads(db, tenantId, removeFromStorage, limit),
+        transfers: await cleanupCoManagedThreadTransfers(db, tenantId, removeFromStorage, limit),
+      };
+    },
+  });
+  if (!getJobCapabilityFilter()) {
+    registerJobCapabilityFilter((capability, tenantIds) => filterServed(capability as Parameters<typeof filterServed>[0], tenantIds));
+  }
+  registerCoManagedUploadCleanupJob();
 }

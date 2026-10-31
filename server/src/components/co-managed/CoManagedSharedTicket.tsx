@@ -8,7 +8,9 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { createCoManagedSharedTicketDataSource, sharedTicketOptions, sharedTicketRecord } from '@/lib/co-managed/sharedTicketDataSource';
 import { conversationAuthorMaps } from '@/lib/co-managed/sharedConversationMapping';
+import { createAttachmentStaging } from '@/lib/co-managed/attachmentStaging';
 import { createSharedConversationSession } from './sharedConversationSession';
+import CoManagedConversationFiles from './CoManagedConversationFiles';
 
 /**
  * The standard ticket screen, mounted over a co-managed shared ticket. The ticket's fields are
@@ -21,7 +23,8 @@ export default function CoManagedSharedTicket({ summary, backHref }: { summary: 
   const { t } = useTranslation('features/tickets');
   const tRef = useRef(t);
   tRef.current = t;
-  const session = useMemo(() => createSharedConversationSession(summary.resource, { t: (key, fallback) => tRef.current(key, fallback) }), [summary.resource]);
+  const staging = useMemo(() => createAttachmentStaging(() => globalThis.crypto.randomUUID()), [summary.resource]);
+  const session = useMemo(() => createSharedConversationSession(summary.resource, { t: (key, fallback) => tRef.current(key, fallback), staging }), [summary.resource, staging]);
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');
   const load = useCallback(() => {
     setState('loading');
@@ -59,5 +62,6 @@ export default function CoManagedSharedTicket({ summary, backHref }: { summary: 
     <TicketDataSourceProvider dataSource={dataSource}>
       <TicketDetailsContainer ticketData={ticketData} hideSlaStatus hideBilling hideScheduling hideTimeEntry hideMaterials disableAgentSchedule />
     </TicketDataSourceProvider>
+    {state === 'ready' && <CoManagedConversationFiles session={session} resource={summary.resource} staging={staging} version={0} />}
   </div>;
 }

@@ -6,6 +6,7 @@ import type { CoManagedSharedResource } from '@alga-psa/co-managed';
 import { getCoManagedTicketConversationScreenAction } from '@/lib/actions/coManagedTicketConversationActions';
 import { loadSharedConversation, type SharedConversationSnapshot } from '@/lib/co-managed/loadSharedConversation';
 import { mapConversation } from '@/lib/co-managed/sharedConversationMapping';
+import type { AttachmentStaging } from '@/lib/co-managed/attachmentStaging';
 import { createTicketCommentWriter, PLAIN_TEXT_WRITER, TicketCommentWriteError } from './ticketCommentWriter';
 
 export type SharedConversationTranslate = (key: string, defaultValue: string) => string;
@@ -28,11 +29,14 @@ export function sharedWriteFailureText(t: SharedConversationTranslate, code: str
  * writer without this session changing. Reads and writes go only through the admitted
  * co-managed commands; this adds no authority.
  */
-export function createSharedConversationSession(resource: CoManagedSharedResource, options: { t: SharedConversationTranslate; kind?: string }) {
+export function createSharedConversationSession(resource: CoManagedSharedResource, options: { t: SharedConversationTranslate; kind?: string;
+  /** Files chosen for the next message; sent through the registered file stager and cleared only once the message is saved. */
+  staging?: AttachmentStaging }) {
   let snapshot: SharedConversationSnapshot | null = null;
   const writer = createTicketCommentWriter({
     kind: options.kind ?? PLAIN_TEXT_WRITER,
     resource,
+    ...(options.staging ? { files: () => options.staging!.getSnapshot() } : {}),
     context: () => ({ canWrite: (snapshot?.writeAudiences.length ?? 0) > 0, actorTenant: snapshot?.actor.tenant ?? '', writeAudiences: snapshot?.writeAudiences ?? [] }),
     parent: commentId => {
       const item = snapshot?.items.find(candidate => candidate.commentId === commentId);
@@ -61,6 +65,7 @@ export function createSharedConversationSession(resource: CoManagedSharedResourc
       } catch (error) {
         throw new Error(sharedWriteFailureText(options.t, error instanceof TicketCommentWriteError ? error.code : 'unknownOutcome'));
       }
+      options.staging?.clear();
       // The write is durable; a failed refresh must not read as a failed post.
       try { await load(); } catch { /* the next screen load shows it */ }
       const stored = comments().find(comment => comment.comment_id === commentId);

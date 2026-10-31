@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
   resource: vi.fn(),
 }));
 
+vi.mock('@/components/co-managed/CoManagedConversationFiles', () => ({ default: () => null }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_k: string, o?: any) => o?.defaultValue ?? _k }) }));
 vi.mock('@alga-psa/tickets/lib/nativeTicketDataSource', () => ({ nativeTicketDataSource: { kind: 'native', conversation: {}, comments: h.native } }));
 vi.mock('@/lib/actions/coManagedLocalTicketActions', () => ({ getCoManagedLocalTicketResourceAction: h.resource }));

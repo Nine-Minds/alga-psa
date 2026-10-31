@@ -81,7 +81,7 @@ export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string
   'temporal-workflows-kebab': { glob: 'ee/temporal-workflows/src/workflows/co-managed*', files: 1 },
   'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 2 },
   'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
-  'server-ui': { glob: 'server/src/components/co-managed/**', files: 46 },
+  'server-ui': { glob: 'server/src/components/co-managed/**', files: 47 },
   'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
 };
 
@@ -820,6 +820,7 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
 
 const UI_SLOT_MOUNTS: Readonly<Record<string, string>> = {
   'server/src/components/layout/SidebarWithFeatureFlags.tsx': 'msp.navigation.group',
+  'server/src/components/co-managed/CoManagedConversationFiles.tsx': 'ticket.conversation.comment-attachments',
 };
 const UI_SLOT_CONTRIBUTIONS: Readonly<Record<string, string>> = {
   'server/src/config/coManagedMenu.ts': 'msp.navigation.group',
