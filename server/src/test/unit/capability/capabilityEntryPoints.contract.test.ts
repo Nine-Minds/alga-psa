@@ -537,6 +537,8 @@ export function registrySanity(families: readonly EntryPointFamily[], files: Sou
 // ---------------------------------------------------------------------------
 
 const repoFiles = scanRepo();
+/** Walking the worker and capability import graphs parses ~1,100 repo files; that is not a per-unit workload. */
+const IMPORT_GRAPH_WALK_TIMEOUT_MS = 120_000;
 const workerEntries = repoFiles
   .map((f) => f.path)
   .filter((p) => WORKER_ENTRY_GLOBS.some((g) => globToRegExp(g).test(p)));
@@ -572,7 +574,7 @@ describe('capability gate coverage (AST) — branch is green', () => {
       expect(workerEntries).toContain(e);
     }
     expect(ruleD(workerEntries)).toEqual([]);
-  });
+  }, IMPORT_GRAPH_WALK_TIMEOUT_MS);
 
   it('Rule E: no production file imports the capability test hatch; the pure entry exports none', () => {
     expect(ruleE(repoFiles)).toEqual([]);
@@ -585,7 +587,7 @@ describe('capability gate coverage (AST) — branch is green', () => {
   it('Rule D baseline for the Temporal worker has no stale entries', () => {
     const reached = new Set([...closure('ee/temporal-workflows/src/worker.ts').bare].filter(isForbiddenForWorkers));
     for (const spec of Object.keys(TEMPORAL_PREEXISTING_FORBIDDEN)) expect(reached.has(spec), spec).toBe(true);
-  });
+  }, IMPORT_GRAPH_WALK_TIMEOUT_MS);
 
   it('registry sanity: exactly the expected families, globs and per-family file counts', () => {
     expect(registrySanity(ENTRY_POINT_FAMILIES, repoFiles)).toEqual([]);
