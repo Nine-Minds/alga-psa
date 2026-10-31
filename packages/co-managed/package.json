@@ -34,6 +34,10 @@
       "types": "./src/managementPolicy.ts",
       "import": "./src/managementPolicy.ts"
     },
+    "./conversationRichText": {
+      "types": "./src/conversationRichText.ts",
+      "import": "./src/conversationRichText.ts"
+    },
     "./sharedWorkIdentity": {
       "types": "./src/sharedWorkIdentity.ts",
       "import": "./src/sharedWorkIdentity.ts"
@@ -101,6 +105,10 @@
     "./projectTaskQueue": {
       "types": "./src/projectTaskQueue.ts",
       "import": "./src/projectTaskQueue.ts"
+    },
+    "./sharedWorkProjection": {
+      "types": "./src/sharedWorkProjection.ts",
+      "import": "./src/sharedWorkProjection.ts"
     },
     "./projectTaskEditing": {
       "types": "./src/projectTaskEditing.ts",

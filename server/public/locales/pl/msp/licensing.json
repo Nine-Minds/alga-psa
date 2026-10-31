@@ -698,6 +698,7 @@
       "noTasks": "Ten projekt nie ma zadań, które możesz zobaczyć.",
       "assignment": "Przypisanie",
       "assignedTo": "Przypisano do: {{name}}",
+      "assignedHidden": "Przypisano (nazwa ukryta)",
       "assignConflict": "To zadanie zostało przypisane lub zmienione przez kogoś innego. Wczytano je ponownie; spróbuj jeszcze raz, jeśli nadal jest to potrzebne.",
       "assignFailed": "Nie udało się przypisać tego zadania.",
       "assignMe": "Przypisz do mnie",

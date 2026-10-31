@@ -25,7 +25,7 @@
  *   `{...base, ...overrides}` also works but replaces whole groups.
  */
 import type React from 'react';
-import type { ITicket, TicketTimeEntriesSummary, WorkItemType } from '@alga-psa/types';
+import type { CommentAudience, ITicket, TicketTimeEntriesSummary, WorkItemType } from '@alga-psa/types';
 
 // Types only: `typeof` on a type-only import erases at runtime, so this
 // module never loads an action. The native implementation owns the runtime
@@ -325,6 +325,15 @@ export interface TicketEditorRestrictions {
 /** Conversation (comment composer) behaviour. Native: `{}`. Extended additively by audience-aware sources. */
 export interface TicketConversationConfig {
   editor?: TicketEditorRestrictions;
+  /**
+   * Write audiences the composer offers. When non-empty the composer replaces the
+   * Internal toggle with a required audience choice (no default). Set ONLY for a
+   * shared ticket and for tickets in a co_managed workspace; every other source
+   * leaves it unset and renders the legacy toggle. `shared_it` is offered only by a
+   * source that routes it through the co-managed comment command; the native
+   * resolution flow never offers it.
+   */
+  audiences?: readonly CommentAudience[];
 }
 
 // ---------------------------------------------------------------------------

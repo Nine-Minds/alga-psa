@@ -439,7 +439,27 @@
     "bcc": "Bcc",
     "ccBccInvalid": "Korrigieren Sie die markierten Adressen, bevor Sie senden.",
     "ccBccTooMany": "Es können höchstens {{max}} Cc- und Bcc-Empfänger pro Kommentar kopiert werden.",
-    "ccBccNotSentOnInternal": "Cc und Bcc werden bei einer internen Notiz nicht gesendet. Deaktivieren Sie „Intern“, um sie zu verwenden."
+    "ccBccNotSentOnInternal": "Cc und Bcc werden bei einer internen Notiz nicht gesendet. Deaktivieren Sie „Intern“, um sie zu verwenden.",
+    "audience": {
+      "requester": "Anfragender",
+      "sharedIt": "Gemeinsame IT",
+      "organizationPrivate": "Nur Organisation",
+      "placeholder": "Wer kann das sehen?",
+      "required": "Wählen Sie vor dem Senden aus, wer diesen Kommentar sehen kann."
+    },
+    "shared": {
+      "loading": "Die gemeinsame Unterhaltung wird geladen...",
+      "loadError": "Die gemeinsame Unterhaltung konnte nicht geladen werden.",
+      "reload": "Neu laden",
+      "errors": {
+        "forbidden": "Sie dürfen für diese Zielgruppe nichts veröffentlichen.",
+        "invalid": "Dieser Kommentar kann nicht veröffentlicht werden.",
+        "readOnly": "Dieser Arbeitsbereich ist derzeit schreibgeschützt.",
+        "operationConflict": "Dieser Kommentar steht im Konflikt mit einem früheren Versuch. Neu laden und erneut versuchen.",
+        "audienceUnresolved": "Wählen Sie, wer diesen Kommentar sehen kann, bevor Sie ihn veröffentlichen.",
+        "unknownOutcome": "Wir konnten nicht bestätigen, dass der Kommentar veröffentlicht wurde. Prüfen Sie die Unterhaltung, bevor Sie ihn erneut senden."
+      }
+    }
   },
   "responseState": {
     "awaitingYourResponse": "Warten auf Ihre Antwort",
@@ -1726,6 +1746,9 @@
       "templateRulesTargetOtherClients": "Einige Regeln für automatische Anwendung dieser Vorlage zielen auf andere Kunden. Entfernen Sie diese Kunden aus den Regeln, bevor Sie die Vorlage einem Kunden zuordnen.",
       "predicateClientOutsideScope": "Kunde {{client}} liegt außerhalb des Geltungsbereichs dieser Vorlage.",
       "predicateInvalid": "Ungültige Checklistenregel: {{detail}}"
+    },
+    "comment": {
+      "audienceRequired": "Wählen Sie vor dem Senden aus, wer diesen Kommentar sehen kann."
     }
   },
   "ticketSection": {

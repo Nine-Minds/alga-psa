@@ -9,6 +9,7 @@ import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResoluti
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { resolveCommentMergeTokens } from '../lib/cannedResponses/commentMerge';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
+import { nativeThreadAudience, type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import {
@@ -96,6 +97,7 @@ import {
   type RelationshipSqlCompileResult,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import { authorizeTicketRecordAccess, type TicketRecordRow } from '../lib/ticketRecordAuthorization';
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
 import { compilePredicateFragment } from '@alga-psa/predicates/sql';
 import type { PredicateGroup } from '@alga-psa/predicates';
@@ -3382,13 +3384,17 @@ export interface AddTicketCommentInput {
   >;
   schedule?: ScheduledCommentPublication | null;
   emailRecipients?: CommentEmailRecipientsInput | null;
+  /** Who may read this comment. Required for requester-visible staff comments in co-managed workspaces. */
+  audienceId?: NativeCommentAudience | null;
 }
 
 /**
  * Transaction-scoped comment write. Runs on the caller's transaction so the
  * comment and every after-commit hook it registers commit (or roll back) with
- * the caller's work. Throws on failure (never returns a TicketActionError) and
- * does not check permissions: callers authorize, like updateTicketInTransaction.
+ * the caller's work. Throws on failure (never returns a TicketActionError).
+ * Callers check tenant-wide RBAC, like updateTicketInTransaction; this function
+ * enforces record-level ticket authorization, so a client principal must be
+ * linked to a contact that can see the ticket.
  */
 export async function addTicketCommentInTransaction(
   trx: Knex.Transaction,
@@ -3405,6 +3411,7 @@ export async function addTicketCommentInTransaction(
     notificationSuppression,
     schedule,
     emailRecipients,
+    audienceId,
   } = input;
 
   const suppressContactNotifications = notificationSuppression?.suppressContactNotifications === true;
@@ -3456,8 +3463,21 @@ export async function addTicketCommentInTransaction(
     .first();
 
   if (!ticket) {
-    throw new Error('Ticket not found');
+    // Do not let a client principal distinguish "missing" from "not yours".
+    throw new Error(isClientUserType(user.user_type) ? 'Permission denied: Cannot access ticket' : 'Ticket not found');
   }
+
+  // Record-level authorization, before any thread/comment/workflow/notification write.
+  // Tenant-wide ticket:update RBAC (checked by callers) does not scope a principal to
+  // this specific ticket; evaluate the same per-record policy as the sibling actions.
+  await authorizeTicketRecordAccess({
+    trx,
+    tenant,
+    user,
+    ticketId,
+    action: 'update',
+    ticketRow: ticket as TicketRecordRow,
+  });
 
   // Canned responses: resolve merge fields once, on this trx, before anything reads the content. Every later
   // use (markdown, insert, bundle mirrors, events) sees only this resolved value. Internal authors only.
@@ -3496,6 +3516,10 @@ export async function addTicketCommentInTransaction(
     isInternal: effectiveIsInternal,
   });
 
+  // Native: `{}` with zero SQL (psa tenants, internal notes, plain authors). Co-managed: fails closed.
+  // LEVERAGE: pattern thread-audience-insert — nativeThreadAudience + spread into the comment_threads insert + label the publication payload is repeated at 5 sites (ticketModel, Comment.insert, optimizedTicketActions, ticketActions, TicketService); a single 'insertCommentThread' write path below would own it
+  const threadAudience = await nativeThreadAudience(trx, tenant, { isInternal: effectiveIsInternal, authorType, audience: audienceId });
+
   await tenantDb(trx, tenant).table('comment_threads').insert({
     tenant,
     thread_id: threadId,
@@ -3503,6 +3527,7 @@ export async function addTicketCommentInTransaction(
     project_task_id: null,
     root_comment_id: newCommentId,
     is_internal: effectiveIsInternal,
+    ...threadAudience,
     reply_count: 0,
     last_activity_at: nowIso,
     created_at: nowIso,
@@ -3529,6 +3554,22 @@ export async function addTicketCommentInTransaction(
       publish_state: 'scheduled',
       scheduled_publish_at: scheduledPublishAtIso,
       scheduled_publish_tz: schedule!.timeZone,
+      // A labelled thread's audience must survive to the scheduled dispatch: store the publication
+      // intent now (native scheduled comments keep their lazily-built payload, byte for byte).
+      ...(threadAudience.collaboration_audience ? {
+        comment_publication_payload: JSON.stringify(buildTicketCommentAddedPayload({
+          tenantId: tenant,
+          occurredAt: nowIso,
+          ticketId,
+          commentId: newCommentId,
+          userId: user.user_id!,
+          comment: { content, author: `${user.first_name} ${user.last_name}`, isInternal, authorType },
+          suppressContactNotifications,
+          suppressInternalNotifications,
+          collaboration_audience: threadAudience.collaboration_audience,
+          thread_id: threadId,
+        })),
+      } : {}),
     } : {}),
     // The email subscriber reads metadata.closes_ticket and skips the
     // comment-added email so the close email is the single source of
@@ -3614,6 +3655,9 @@ export async function addTicketCommentInTransaction(
         },
         suppressContactNotifications,
         suppressInternalNotifications,
+        ...(threadAudience.collaboration_audience
+          ? { collaboration_audience: threadAudience.collaboration_audience, thread_id: threadId }
+          : {}),
       }),
     }, publishStoredWorkflowEvent);
 
@@ -3741,6 +3785,7 @@ export const addTicketCommentWithCache = withAuth(async (
   >,
   schedule?: ScheduledCommentPublication | null,
   emailRecipients?: CommentEmailRecipientsInput | null,
+  audienceId?: NativeCommentAudience | null,
 ): Promise<IComment | TicketActionError> => {
   // The catch sits outside the transaction on purpose: an expected error must
   // roll back anything already written instead of committing a half-written comment.
@@ -3761,6 +3806,7 @@ export const addTicketCommentWithCache = withAuth(async (
         notificationSuppression,
         schedule,
         emailRecipients,
+        audienceId,
       });
     });
   } catch (error) {
@@ -3790,6 +3836,7 @@ export async function addTicketCommentWithCacheForCurrentUser(
   >,
   schedule?: ScheduledCommentPublication | null,
   emailRecipients?: CommentEmailRecipientsInput | null,
+  audienceId?: NativeCommentAudience | null,
 ): Promise<IComment | TicketActionError> {
   return addTicketCommentWithCache(
     ticketId,
@@ -3800,6 +3847,7 @@ export async function addTicketCommentWithCacheForCurrentUser(
     notificationSuppression,
     schedule,
     emailRecipients,
+    audienceId,
   );
 }
 

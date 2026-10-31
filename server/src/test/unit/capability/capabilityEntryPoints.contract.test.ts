@@ -68,7 +68,7 @@ export const ENTRY_POINT_GLOBS: readonly string[] = ENTRY_POINT_FAMILIES.map((f)
 export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string; files: number }>> = {
   'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 10 },
   'rest-routes': { glob: 'server/src/app/api/**/co-management/**', files: 0 },
-  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 11 },
+  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 16 },
   'package-actions': { glob: 'packages/co-managed/src/**/actions*', files: 0 },
   'user-invitation-actions': { glob: 'packages/users/src/actions/user-actions/userInvitationActions.ts', files: 1 },
   'user-invitation-service': { glob: 'packages/users/src/services/UserInvitationService.ts', files: 1 },
@@ -81,13 +81,14 @@ export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string
   'temporal-workflows-kebab': { glob: 'ee/temporal-workflows/src/workflows/co-managed*', files: 1 },
   'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 2 },
   'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
-  'server-ui': { glob: 'server/src/components/co-managed/**', files: 32 },
+  'server-ui': { glob: 'server/src/components/co-managed/**', files: 36 },
   'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
 };
 
 /** The six adapters (plus the three Next-free guard names they export). */
 export const ADAPTER_EXPORTS = new Set([
   'requireCapabilityForAction', // 1 server action
+  'requireCapabilityEitherMode', // 1 server action, two-sided (admits else serves)
   'capabilityRouteGuard', //       2 REST
   'requireCapabilityForPage', //   3 RSC
   'withCapabilityJob', //          4 job
@@ -260,7 +261,7 @@ export function ruleA(files: SourceFile[]): string[] {
 // ---------------------------------------------------------------------------
 
 /** Adapters 1-3 take `(capability, tenantId, mode?)`; the tenant is argument 1. */
-export const SESSION_TENANT_ADAPTERS = new Set(['requireCapabilityForAction', 'capabilityRouteGuard', 'requireCapabilityForPage']);
+export const SESSION_TENANT_ADAPTERS = new Set(['requireCapabilityForAction', 'requireCapabilityEitherMode', 'capabilityRouteGuard', 'requireCapabilityForPage']);
 /** Calls whose result carries the session tenant at `.tenant` (user) or `.user.tenant` (session). */
 const SESSION_OBJECT_SOURCES = new Set(['getSession', 'auth', 'getServerSession', 'getCurrentUser', 'getCurrentUserWithRevocationCheck']);
 /** Zero-argument calls that return the session tenant itself. */
@@ -536,6 +537,8 @@ export function registrySanity(families: readonly EntryPointFamily[], files: Sou
 // ---------------------------------------------------------------------------
 
 const repoFiles = scanRepo();
+/** Walking the worker and capability import graphs parses ~1,100 repo files; that is not a per-unit workload. */
+const IMPORT_GRAPH_WALK_TIMEOUT_MS = 120_000;
 const workerEntries = repoFiles
   .map((f) => f.path)
   .filter((p) => WORKER_ENTRY_GLOBS.some((g) => globToRegExp(g).test(p)));
@@ -571,7 +574,7 @@ describe('capability gate coverage (AST) — branch is green', () => {
       expect(workerEntries).toContain(e);
     }
     expect(ruleD(workerEntries)).toEqual([]);
-  });
+  }, IMPORT_GRAPH_WALK_TIMEOUT_MS);
 
   it('Rule E: no production file imports the capability test hatch; the pure entry exports none', () => {
     expect(ruleE(repoFiles)).toEqual([]);
@@ -584,7 +587,7 @@ describe('capability gate coverage (AST) — branch is green', () => {
   it('Rule D baseline for the Temporal worker has no stale entries', () => {
     const reached = new Set([...closure('ee/temporal-workflows/src/worker.ts').bare].filter(isForbiddenForWorkers));
     for (const spec of Object.keys(TEMPORAL_PREEXISTING_FORBIDDEN)) expect(reached.has(spec), spec).toBe(true);
-  });
+  }, IMPORT_GRAPH_WALK_TIMEOUT_MS);
 
   it('registry sanity: exactly the expected families, globs and per-family file counts', () => {
     expect(registrySanity(ENTRY_POINT_FAMILIES, repoFiles)).toEqual([]);
@@ -693,6 +696,7 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
       ok(`export const a = withAuth(async (user, ctx) => { await requireCapabilityForAction('co-managed', ctx.tenant); });`);
       ok(`export const a = withAuth(async (user, ctx) => { const t = ctx.tenant; await requireCapabilityForAction('co-managed', t); });`);
       ok(`export const a = withAuth(async (user) => { await requireCapabilityForAction('co-managed', user.tenant, 'serves'); });`);
+      ok(`export const a = withAuth(async (user, { tenant }) => { await requireCapabilityEitherMode('co-managed', tenant); });`);
     });
 
     it('accepts session-derived tenants in pages and routes', () => {
@@ -708,6 +712,7 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
       bad(`export default async function P({ params }) { await requireCapabilityForPage('co-managed', params.tenant); }`, 'server/src/app/msp/co-managed/page.tsx');
       bad(`export const a = withAuth(async (user, ctx, input: { tenant: string }) => { await requireCapabilityForAction('co-managed', input.tenant); });`);
       bad(`export const a = withAuth(async (user, ctx, tenant: string) => { await requireCapabilityForAction('co-managed', tenant); });`);
+      bad(`export const a = withAuth(async (user, ctx, input: { tenant: string }) => { await requireCapabilityEitherMode('co-managed', input.tenant); });`);
       bad(`export async function a(tenantId: string) { await requireCapabilityForAction('co-managed', tenantId); }`);
       bad(`export async function a() { await requireCapabilityForAction('co-managed', 'tenant-1'); }`);
       bad(`export async function a() { const t = await getTenantForCurrentRequest(body.tenant); await requireCapabilityForAction('co-managed', t); }`);

@@ -11,9 +11,9 @@ import { newCoManagedOperationId } from './coManagedOperationId';
  * MSP-side assignment. The assignee lives on the MSP's own reference row, never on the customer's task.
  * `revision` is null until a reference exists; assigning to oneself is what creates it.
  */
-export default function CoManagedProjectTaskAssignment({ customerTenant, relationshipId, taskId, userId, revision, assigneeName, onChanged }: {
+export default function CoManagedProjectTaskAssignment({ customerTenant, relationshipId, taskId, userId, revision, assigneeName, isAssigned = false, onChanged }: {
   customerTenant: string; relationshipId: string; taskId: string; userId: string;
-  revision: number | null; assigneeName?: string | null; onChanged?: (assigneeName?: string) => void;
+  revision: number | null; assigneeName?: string | null; isAssigned?: boolean; onChanged?: (assigneeName?: string) => void;
 }) {
   const { t } = useTranslation('msp/licensing');
   const [name, setName] = useState<string | null>(assigneeName ?? null);
@@ -40,6 +40,7 @@ export default function CoManagedProjectTaskAssignment({ customerTenant, relatio
     <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">{t('coManaged.sharedTasks.assignment', { defaultValue: 'Assignment' })}</h2>
     <p id="co-managed-task-assignee">{shown
       ? t('coManaged.sharedTasks.assignedTo', { defaultValue: 'Assigned to {{name}}', name: shown })
+      : isAssigned ? t('coManaged.sharedTasks.assignedHidden', { defaultValue: 'Assigned (name hidden)' })
       : t('coManaged.sharedTasks.unassigned', { defaultValue: 'Not assigned' })}</p>
     {failure === 'conflict' && <Alert variant="destructive"><AlertDescription id="co-managed-task-assignment-conflict">
       {t('coManaged.sharedTasks.assignConflict', { defaultValue: 'This task was assigned or changed by someone else. It has been reloaded; try again if you still need to.' })}</AlertDescription></Alert>}

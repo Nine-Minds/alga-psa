@@ -694,6 +694,7 @@
       "noTasks": "Questo progetto non ha attività che puoi vedere.",
       "assignment": "Assegnazione",
       "assignedTo": "Assegnata a {{name}}",
+      "assignedHidden": "Assegnata (nome nascosto)",
       "assignConflict": "Questa attività è stata assegnata o modificata da qualcun altro. È stata ricaricata; riprova se ne hai ancora bisogno.",
       "assignFailed": "Impossibile assegnare questa attività.",
       "assignMe": "Assegna a me",
