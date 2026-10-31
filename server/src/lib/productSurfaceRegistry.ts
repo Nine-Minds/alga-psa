@@ -100,6 +100,20 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
   },
   {
+    // Ending a relationship is available to both sides (a customer ends its own MSP; a sponsor ends a client).
+    // The page and its actions decide, per side, what the caller may do.
+    group: 'msp_co_management_departure',
+    staticPrefixes: ['/msp/co-management/departure'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
+  },
+  {
+    // The MSP's read-only archive of ended relationships. Sponsor-only: a co_managed customer has none.
+    // Must precede the shared /msp/co-managed root, which allows both sides (first match wins).
+    group: 'msp_co_managed_archive',
+    staticPrefixes: ['/msp/co-managed/archive'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
+  },
+  {
     // One side-aware co-managed root: a PSA sponsor sees the overview, a
     // co_managed customer sees its own relationship home. The capability gate
     // in the route layout decides whether a tenant may see either.
