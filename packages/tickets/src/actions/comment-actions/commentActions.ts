@@ -32,6 +32,8 @@ import {
   prepareCommentEmailRecipients,
   type CommentEmailRecipientsInput,
 } from '@shared/lib/tickets/commentEmailRecipients';
+import { authorizeTicketRecordAccess } from '../../lib/ticketRecordAuthorization';
+import { projectCommentsForPrincipal, type CommentThreadVisibility } from '../../lib/commentVisibility';
 import { ticketActionErrorFrom, type TicketActionError } from '../ticketActionErrors';
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
 
@@ -70,28 +72,18 @@ function tenantScopedTable<Row extends object = Record<string, unknown>>(
   return tenantDb(conn, tenant).table<Row>(table);
 }
 
-async function assertClientCanCreateComment(
+/**
+ * Fail-closed same-client guard for client principals: resolves the user's client
+ * (user.clientId, else users -> contacts.client_id) and requires the ticket to belong
+ * to it. Independent of board visibility, so it holds even when the kernel's client
+ * branch applies no record rule (see card 36dd23da for finer narrowing).
+ */
+async function assertClientOwnsTicket(
   trx: Knex.Transaction,
   tenant: string,
   user: any,
-  comment: Omit<IComment, 'tenant'>
+  ticketId: string
 ): Promise<void> {
-  if (!isClientUserType(user?.user_type)) {
-    return;
-  }
-
-  if (comment.is_internal) {
-    throw new Error('Client users cannot create internal comments');
-  }
-
-  if (comment.user_id && user.user_id && comment.user_id !== user.user_id) {
-    throw new Error('Client users can only create their own comments');
-  }
-
-  if (!comment.ticket_id) {
-    throw new Error('ticket_id is required for client comments');
-  }
-
   let clientId = user.clientId || user.client_id || null;
   if (!clientId) {
     const clientRow = await tenantDb(trx, tenant)
@@ -114,12 +106,40 @@ async function assertClientCanCreateComment(
 
   const ticket = await tenantScopedTable(trx, 'tickets', tenant)
     .select('client_id')
-    .where({ ticket_id: comment.ticket_id })
+    .where({ ticket_id: ticketId })
     .first();
 
   if (!ticket || ticket.client_id !== clientId) {
     throw new Error('Client user cannot access this ticket');
   }
+}
+
+async function assertClientCanCreateComment(
+  trx: Knex.Transaction,
+  tenant: string,
+  user: any,
+  comment: Omit<IComment, 'tenant'>
+): Promise<void> {
+  if (!isClientUserType(user?.user_type)) {
+    return;
+  }
+
+  if (comment.is_internal) {
+    throw new Error('Client users cannot create internal comments');
+  }
+
+  if (comment.user_id && user.user_id && comment.user_id !== user.user_id) {
+    throw new Error('Client users can only create their own comments');
+  }
+
+  if (!comment.ticket_id) {
+    throw new Error('ticket_id is required for client comments');
+  }
+
+  // KEEP until card 36dd23da lands: authorizeTicketRecordAccess's client branch still uses only
+  // `selected_boards` on this branch, so it cannot be shown to enforce same-client. Replace with
+  // authorizeTicketRecordAccess(..., 'update') once the kernel fix is merged.
+  await assertClientOwnsTicket(trx, tenant, user, comment.ticket_id);
 
   // Comment.insert re-roots a client reply aimed at an internal thread into a
   // fresh public thread (D1, for inbound email whose headers resolve to an
@@ -142,12 +162,51 @@ async function assertClientCanCreateComment(
   }
 }
 
-export const findCommentsByTicketId = withAuth(async (_user, { tenant }, ticketId: string): Promise<IComment[] | TicketActionError> => {
+// Every failure on the read actions (missing ticket/comment, record-scope denial,
+// missing ticket:read, hidden comment) collapses to this one error so a caller
+// cannot use the response as an existence oracle.
+function commentReadNotFound(): Error {
+  return new Error('Ticket not found');
+}
+
+async function loadThreadVisibility(
+  trx: Knex.Transaction,
+  tenant: string,
+  comments: IComment[],
+): Promise<Map<string, CommentThreadVisibility>> {
+  const threadIds = [...new Set(comments.map((c) => c.thread_id).filter(Boolean))] as string[];
+  if (threadIds.length === 0) return new Map();
+  const rows = await tenantScopedTable<{ thread_id: string; is_internal: boolean }>(trx, 'comment_threads', tenant)
+    .select('thread_id', 'is_internal')
+    .whereIn('thread_id', threadIds);
+  return new Map(rows.map((r) => [r.thread_id, { is_internal: r.is_internal }]));
+}
+
+async function authorizeCommentRead(user: any, trx: Knex.Transaction, tenant: string, ticketId: string): Promise<void> {
+  // The kernel's rbacEvaluator is a stub, so ticket:read is checked here for everyone.
+  if (!(await hasPermission(user, 'ticket', 'read'))) {
+    throw commentReadNotFound();
+  }
+  try {
+    if (!isMspPrincipalUserType(user?.user_type)) {
+      await assertClientOwnsTicket(trx, tenant, user, ticketId);
+    }
+    await authorizeTicketRecordAccess({ trx, tenant: tenant!, user, ticketId, action: 'read' });
+  } catch {
+    throw commentReadNotFound();
+  }
+}
+
+export const findCommentsByTicketId = withAuth(async (user, { tenant }, ticketId: string): Promise<IComment[] | TicketActionError> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      await authorizeCommentRead(user, trx, tenant!, ticketId);
       const comments = await Comment.getAllbyTicketId(trx, tenant!, ticketId);
-      return comments;
+      const threads = isMspPrincipalUserType(user.user_type)
+        ? undefined
+        : await loadThreadVisibility(trx, tenant!, comments);
+      return projectCommentsForPrincipal(user, comments, threads);
     });
   } catch (error) {
     console.error(error);
@@ -159,12 +218,23 @@ export const findCommentsByTicketId = withAuth(async (_user, { tenant }, ticketI
   }
 });
 
-export const findCommentById = withAuth(async (_user, { tenant }, commentId: string): Promise<IComment | TicketActionError | null> => {
+export const findCommentById = withAuth(async (user, { tenant }, commentId: string): Promise<IComment | TicketActionError | null> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const comment = await Comment.get(trx, tenant!, commentId);
-      return comment;
+      if (!comment?.ticket_id) {
+        throw commentReadNotFound();
+      }
+      await authorizeCommentRead(user, trx, tenant!, comment.ticket_id);
+      const threads = isMspPrincipalUserType(user.user_type)
+        ? undefined
+        : await loadThreadVisibility(trx, tenant!, [comment]);
+      const [projected] = projectCommentsForPrincipal(user, [comment], threads);
+      if (!projected) {
+        throw commentReadNotFound();
+      }
+      return projected;
     });
   } catch (error) {
     console.error(error);
