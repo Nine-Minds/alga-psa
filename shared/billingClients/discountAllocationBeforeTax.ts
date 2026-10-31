@@ -239,3 +239,50 @@ export function allocateDiscountsBeforeTax(input: {
   }
   return { taxableAmountById, reductionById, unappliedByPool };
 }
+
+/**
+ * One line (or one component of a consolidated fixed bundle) as the callers
+ * know it, before it becomes an allocation entity.
+ */
+export interface DiscountTaxLineInput {
+  id: string;
+  /** Line discounts attach to: the parent item for fixed-bundle components. */
+  itemId: string;
+  /** Minor units; non-positive amounts are not entities. */
+  amount: number;
+  /** The component's OWN region; empty falls back to `defaultRegion`. */
+  region?: string | null;
+  /** The component's OWN taxability (never the bundle parent's). */
+  taxable: boolean;
+  serviceId?: string | null;
+  clientContractId?: string | null;
+}
+
+/**
+ * Turns lines into allocation entities. Billing preview (one line per fixed
+ * component charge) and invoice generation (one line per
+ * `invoice_charge_fixed_details` row) both build their entities here, so a
+ * mixed taxable/exempt fixed bundle is broken up identically: every positive
+ * component is an entity, exempt ones included, each with its own taxability
+ * and region.
+ */
+export function buildDiscountTaxEntities(
+  lines: DiscountTaxLineInput[],
+  defaultRegion: string,
+): DiscountTaxEntity[] {
+  const entities: DiscountTaxEntity[] = [];
+  for (const line of lines) {
+    const amount = Number(line.amount);
+    if (!(amount > 0)) continue;
+    entities.push({
+      id: line.id,
+      itemId: line.itemId,
+      amount,
+      region: line.region || defaultRegion,
+      taxable: Boolean(line.taxable),
+      serviceId: line.serviceId ?? null,
+      clientContractId: line.clientContractId ?? null,
+    });
+  }
+  return entities;
+}

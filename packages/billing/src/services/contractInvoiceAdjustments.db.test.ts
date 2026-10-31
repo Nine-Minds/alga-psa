@@ -427,7 +427,8 @@ describe('contract invoice adjustments (DB-backed)', () => {
         billing_period_start: '2026-01-01', billing_period_end: '2026-03-01',
       });
       // True-ups inherit this service's explicit non-taxable classification.
-      // The consolidated parent below independently carries the taxable region.
+      // The consolidated components below carry their own taxable region
+      // (per-detail taxability, not the parent's, decides what is taxed).
       await trx('service_catalog').where({ tenant, service_id: serviceId }).update({ tax_rate_id: null });
       await trx('discounts').where({ tenant, discount_id: configuredDiscountId }).update({
         scope: 'invoice', start_date: '2026-01-01', end_date: '2026-02-01',
@@ -448,7 +449,7 @@ describe('contract invoice adjustments (DB-backed)', () => {
           service_id: serviceId, config_id: configId, quantity: 1, rate: amount, service_period_start: start, service_period_end: end });
         await trx('invoice_charge_fixed_details').insert({ tenant, item_detail_id: detailId,
           base_rate: amount, enable_proration: false, fmv: amount, proportion: 1, allocated_amount: amount,
-          tax_amount: 0 });
+          tax_amount: 0, is_taxable: true, tax_region: 'CONSOLIDATED-TEST' });
         charges.push({ tenant, type: 'fixed', config_id: configId, serviceId, serviceName: 'Consolidated period',
           client_contract_id: clientContractId, client_contract_line_id: contractLineId, quantity: 1, rate: amount,
           total: amount, tax_amount: 0, tax_rate: 0, servicePeriodStart: start, servicePeriodEnd: end });

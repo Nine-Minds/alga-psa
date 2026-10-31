@@ -1,6 +1,7 @@
 import { TaxService } from '../../services/taxService';
 import {
   allocateDiscountsBeforeTax,
+  buildDiscountTaxEntities,
   type DiscountPool,
   type DiscountTaxEntity,
 } from '../discountAllocationBeforeTax';
@@ -41,22 +42,20 @@ export async function computeTaxAfterDiscounts(input: {
   defaultTaxRegion: string;
   calculateRegionTax: (region: string, taxableBase: number) => Promise<number>;
 }): Promise<number> {
-  const entities: DiscountTaxEntity[] = [];
-  input.charges.forEach((charge, index) => {
-    const amount = charge.type === 'fixed'
-      ? Number(charge.allocated_amount ?? charge.total)
-      : Number(charge.total);
-    if (!(amount > 0)) return;
-    entities.push({
+  const entities: DiscountTaxEntity[] = buildDiscountTaxEntities(
+    input.charges.map((charge, index) => ({
       id: `charge-${index}`,
       itemId: input.chargeItemIds[index] ?? `preview-charge-${index}`,
-      amount,
-      region: charge.tax_region || input.defaultTaxRegion,
+      amount: charge.type === 'fixed'
+        ? Number(charge.allocated_amount ?? charge.total)
+        : Number(charge.total),
+      region: charge.tax_region,
       taxable: Boolean(charge.is_taxable),
       serviceId: charge.serviceId ?? null,
       clientContractId: charge.client_contract_id ?? null,
-    });
-  });
+    })),
+    input.defaultTaxRegion,
+  );
 
   const pools: DiscountPool[] = input.discounts.map((discount) => ({
     id: discount.discount_id,
