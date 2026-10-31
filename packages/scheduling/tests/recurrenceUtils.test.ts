@@ -453,3 +453,21 @@ describe('generateOccurrences', () => {
     });
   });
 });
+
+describe('calendar master occurrence', () => {
+  it('includes the first event exactly once and retains the subsequent-only default', () => {
+    const entry = makeEntry({ is_recurring: true, scheduled_start: new Date('2024-01-15T09:00:00'), scheduled_end: new Date('2024-01-15T10:00:00'),
+      recurrence_pattern: makePattern({ startDate: new Date('2024-01-15T00:00:00'), count: 3 }) });
+    const dates = (includeMaster: boolean) => generateOccurrences(entry, new Date('2024-01-14T00:00:00'), new Date('2024-01-19T00:00:00'), { includeMaster }).map(date => date.getDate());
+    expect(dates(true)).toEqual([15, 16, 17]);
+    expect(dates(false)).toEqual([16, 17]);
+  });
+
+  it('applies exceptions and holidays to the first event as to later occurrences', () => {
+    const entry = makeEntry({ is_recurring: true, scheduled_start: new Date('2024-01-15T09:00:00'), scheduled_end: new Date('2024-01-15T10:00:00'),
+      recurrence_pattern: makePattern({ startDate: new Date('2024-01-15T00:00:00'), count: 3, exceptions: [new Date('2024-01-15T09:00:00')] }) });
+    expect(generateOccurrences(entry, new Date('2024-01-14T00:00:00'), new Date('2024-01-19T00:00:00'), {
+      includeMaster: true, holidays: [{ holiday_date: '2024-01-16', is_recurring: false } as any],
+    }).map(date => date.getDate())).toEqual([17]);
+  });
+});

@@ -1,5 +1,6 @@
 'use client';
 
+import { ticketCreatorName } from '../ticketCreatorName';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { PartialBlock } from '@blocknote/core';
 import { Pencil, SlidersHorizontal, Flame, Save, CheckCircle, Plus, Tag } from 'lucide-react';
@@ -21,7 +22,7 @@ import { BentoTile } from '@alga-psa/ui/components/bento/BentoTile';
 import { hasDescriptionContent } from './descriptionContent';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { FieldConflictBanner } from '@alga-psa/ui/presence/FieldConflictBanner';
-import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
+import { useTicketDataSource } from '../TicketDataSourceContext';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { computeSlaClocks, formatSlaLabel, type TicketSlaFields } from './slaClocks';
 import { useTeamAvatarUrl } from './useTeamAvatarUrl';
@@ -33,11 +34,11 @@ import {
 } from '../../../lib/inboundEmailOriginalView';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../../../lib/ticketRichText';
 import { useTicketRichTextUploadSession } from '../useTicketRichTextUploadSession';
-import { getTicketStatuses } from '@alga-psa/reference-data/actions';
-import { getTicketCategoriesByBoard, type BoardCategoryData } from '../../../actions/ticketCategoryActions';
+import type { BoardCategoryData } from '../../../actions/ticketCategoryActions';
 import { useRegisterUnsavedChanges, useOptionalActivityCrossFeature } from '@alga-psa/ui/context';
 import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
 import { buildTicketAssignmentKey } from '../../../lib/ticketAssignmentKey';
+import { unresolvedAssigneeLabel } from '../../../lib/assigneeDisplay';
 import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
@@ -76,7 +77,7 @@ interface BentoHeroProps {
   id: string;
   /** Observed by TicketDetails' sticky header to float the title on scroll. */
   titleRef?: React.Ref<HTMLHeadingElement>;
-  ticket: ITicket & TicketSlaFields & { source?: string | null; escalated?: boolean; escalation_level?: number | null };
+  ticket: ITicket & TicketSlaFields & { source?: string | null; created_by_display_name?: string | null; escalated?: boolean; escalation_level?: number | null };
   statusOptions: HeroSelectOption[];
   priorityOptions: HeroSelectOption[];
   boardOptions: HeroSelectOption[];
@@ -225,7 +226,12 @@ export function BentoHero({
   resolveTicketAttachmentViewUrl,
 }: BentoHeroProps) {
   const { t } = useTranslation('features/tickets');
+  const dataSource = useTicketDataSource();
+  const { getTicketStatuses, getTicketCategoriesByBoard } = dataSource.options;
+  const { searchUsersForMentions } = dataSource.viewer;
   const activityCrossFeature = useOptionalActivityCrossFeature();
+  // A local creator is a user row; a shared ticket's creator arrives as an attributed display name (null-safe either way).
+  const openedByName = ticketCreatorName(createdByUser, ticket);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -886,7 +892,7 @@ export function BentoHero({
         <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
           <div className="min-w-0 flex-[1_1_28rem]" {...editHandlers('title')}>
             <div className={`transition-opacity ${isRemotelyEdited('title') ? 'opacity-60' : ''}`.trim()}>
-              {isEditingTitle ? (
+              {isEditingTitle && !isFrozen('title') ? (
                 <Input
                   id={`${id}-title-input`}
                   value={titleDraft}
@@ -911,7 +917,8 @@ export function BentoHero({
                     ) : null}
                     <span>{displayedTitle}</span>
                   </span>
-                  <button
+                  {/* A frozen title (read-only screen or a field this source cannot write) offers no edit. */}
+                  {!isFrozen('title') && <button
                     id={`${id}-title-edit`}
                     type="button"
                     aria-label={t('bento.hero.editTitle', 'Edit title')}
@@ -919,7 +926,7 @@ export function BentoHero({
                     onClick={() => setIsEditingTitle(true)}
                   >
                     <Pencil className="h-3.5 w-3.5" />
-                  </button>
+                  </button>}
                 </h2>
               )}
             </div>
@@ -1000,8 +1007,8 @@ export function BentoHero({
         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1.5">
           <div id={`${id}-meta-line`} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-[rgb(var(--color-text-500))]">
             <p>
-              {createdByUser
-                ? t('bento.tiles.openedBy', 'Opened by {{name}}', { name: `${createdByUser.first_name} ${createdByUser.last_name}` })
+              {openedByName
+                ? t('bento.tiles.openedBy', 'Opened by {{name}}', { name: openedByName })
                 : t('bento.tiles.opened', 'Opened')}
               {ticket.source ? ` ${t('bento.tiles.viaSource', 'via {{source}}', { source: String(ticket.source).replace(/_/g, ' ') })}` : ''}
             </p>
@@ -1020,6 +1027,7 @@ export function BentoHero({
                   initialTags={tags ?? []}
                   onTagsChange={onTagsChange}
                   useInlineInput
+                  readOnly={dataSource.screen.readOnly === true}
                 />
               </div>
             ) : null}
@@ -1092,7 +1100,12 @@ export function BentoHero({
                 buttonWidth="full"
                 className="min-w-0 flex-1"
                 size="sm"
-                placeholder={t('bento.hero.notAssigned', 'Not assigned')}
+                placeholder={unresolvedAssigneeLabel({
+                  savedAssigneeId: ticket.assigned_to,
+                  savedAssigneeName: ticket.assigned_to_name,
+                  currentValue: displayValue('assigned_to'),
+                  selectableUserIds: availableAgents.map((user) => user.user_id),
+                }) ?? t('bento.hero.notAssigned', 'Not assigned')}
                 disabled={workflowLocked || isFrozen('assigned_to')}
               />
               {assignedTeam ? (
@@ -1209,7 +1222,7 @@ export function BentoHero({
             <span className="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
               {t('fields.description', 'Description')}
             </span>
-            {!isEditingDescription ? (
+            {!isEditingDescription && !isFrozen('description') ? (
               <button
                 id={`${id}-description-edit`}
                 type="button"
@@ -1266,7 +1279,7 @@ export function BentoHero({
                 </button>
               ) : null}
             </>
-          ) : (
+          ) : isFrozen('description') ? null : (
             <button
               id={`${id}-description-empty`}
               type="button"

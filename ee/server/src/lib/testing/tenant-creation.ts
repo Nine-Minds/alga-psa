@@ -11,6 +11,7 @@ import { tenantDb } from '@alga-psa/db/tenantDb';
 // appliance bootstrap runs this module from the built production image, where
 // shared/ ships only as dist + node_modules (no shared/utils/ source tree).
 import { hashPassword, generateSecurePassword } from '@alga-psa/shared/utils/encryption.js';
+import { createClientWithDefaults } from '@alga-psa/shared/models/clientCreation.js';
 
 type DynamicTenantColumn = 'tenant' | 'tenant_id';
 
@@ -127,20 +128,19 @@ export async function createTenant(
 
     const tenantId = tenantResult[0].tenant || tenantResult[0];
     
-    // Create client using provided name or fallback to tenant company name
+    // Create client using provided name or fallback to tenant company name.
+    // Routed through the shared creation seam so a self-host/appliance tenant's
+    // system client gets the same default billing profile as a SaaS one. The
+    // default-contract step is gated on billing configuration and tax init
+    // tolerates an unconfigured tenant, so both no-op this early in bootstrap.
     let clientId: string | undefined;
     if (input.clientName ?? tenantCompanyName) {
-      const clientResult = await tenantDb(trx, tenantId).table('clients')
-        .insert({
-          client_id: uuidv4(),
-          client_name: input.clientName ?? tenantCompanyName,
-          tenant: tenantId,
-          created_at: new Date(),
-          updated_at: new Date()
-        })
-        .returning('client_id');
-      
-      clientId = clientResult[0].client_id || clientResult[0];
+      const createdClient = await createClientWithDefaults(trx, tenantId, {
+        client_id: uuidv4(),
+        client_name: input.clientName ?? tenantCompanyName,
+      });
+
+      clientId = createdClient.client_id;
     }
 
     return { tenantId, clientId };
@@ -371,6 +371,12 @@ export async function rollbackTenant(db: Knex, tenantId: string): Promise<void> 
     await deleteTenantScopedRows(trx, 'roles', tenantId);
     await deleteTenantScopedRows(trx, 'tenant_companies', tenantId);
     await deleteTenantScopedRows(trx, 'tenant_email_settings', tenantId);
+
+    // The creation seam gives every client a default billing profile and a tax
+    // settings row; both carry a foreign key to clients, so they go first.
+    await deleteTenantScopedRows(trx, 'client_tax_rates', tenantId);
+    await deleteTenantScopedRows(trx, 'client_tax_settings', tenantId);
+    await deleteTenantScopedRows(trx, 'client_billing_profiles', tenantId);
     await deleteTenantScopedRows(trx, 'clients', tenantId);
     await deleteTenantScopedRows(trx, 'tenants', tenantId);
   });

@@ -1,5 +1,6 @@
 import { defineConfig } from 'vitest/config';
 import path from 'path';
+import { exportedSourceAliases } from '../../scripts/lib/vitest-exported-source-aliases.mjs';
 
 export default defineConfig({
   test: {
@@ -46,6 +47,9 @@ export default defineConfig({
       { find: /^@alga-psa\/projects\/(.*)$/, replacement: `${path.resolve(__dirname, 'src')}/$1` },
       { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../ui/src/index.ts') },
       { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../db/src/lib/admin.ts') },
+      // Published @alga-psa/core subpaths come from its exports map (capability
+      // and config/deletion live outside src/lib).
+      ...exportedSourceAliases('@alga-psa/core', path.resolve(__dirname, '../core')),
       // @alga-psa/core's i18n exports live under src/lib for the same reason.
       {
         find: /^@alga-psa\/core\/i18n\/(.*)$/,

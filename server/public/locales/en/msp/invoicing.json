@@ -323,6 +323,21 @@
       "any": "any",
       "clear": "Clear",
       "countSummary": "{{groups}} group(s) · {{obligations}} line item(s)"
+    },
+    "lateTime": {
+      "title": "Late approved hourly time",
+      "description": "This time was approved after the invoice for its service period was issued. Entries waiting to bill are added to the next invoice, once, marked as late time. Entries outside the lookback are not billed.",
+      "columns": {
+        "client": "Client",
+        "technician": "Technician",
+        "service": "Service",
+        "workDate": "Work date",
+        "hours": "Hours",
+        "closedPeriod": "Closed service period",
+        "status": "Status"
+      },
+      "nextInvoice": "Bills on next invoice",
+      "outsideLookback": "Outside lookback — not billed"
     }
   },
   "manualInvoices": {
@@ -606,7 +621,9 @@
       "bulkPdfFailed": "Failed to generate PDFs. Please try again.",
       "unfinalizeFailed": "Failed to unfinalize invoice. Please try again.",
       "bulkUnfinalizeFailed": "Failed to unfinalize invoices. Please try again.",
-      "bulkUnfinalizeInvoiceFailed": "Could not unfinalize {{invoiceNumber}}: {{reason}}"
+      "bulkUnfinalizeInvoiceFailed": "Could not unfinalize {{invoiceNumber}}: {{reason}}",
+      "explainThis": "Explain this",
+      "usedHourBlockExplanation": "Finalizing this invoice made its prepaid hours available for time entries. Time has since been allocated to the block. Reopening the invoice would undo the block while those allocations and any later charges could still depend on it. To keep billing consistent, invoices for blocks that have ever been used cannot be unfinalized, even if the time was later reversed. Consider a separate adjustment or credit note to correct the invoice."
     },
     "bulk": {
       "actionBar": {
@@ -839,6 +856,7 @@
       "syncNow": "Sync to QuickBooks",
       "viewInQbo": "View in QuickBooks",
       "voidInvoice": "Void Invoice",
+      "delegateTax": "Use accounting system tax",
       "viewInXero": "View in Xero"
     },
     "loading": "Loading Preview...",
@@ -860,6 +878,13 @@
     },
     "applyCreditDialog": {
       "title": "Apply Credit"
+    },
+    "delegateTaxDialog": {
+      "title": "Use accounting system tax",
+      "description": "The accounting system will calculate tax for this invoice on its next export, and AlgaPSA will then replace the tax and total with that result. Numbers, lines, prices and recorded payments stay as they are.",
+      "cancel": "Cancel",
+      "confirm": "Switch to accounting system tax",
+      "switching": "Switching..."
     },
     "voidDialog": {
       "title": "Void Invoice",
@@ -2535,7 +2560,8 @@
       "packingSlip": "Packing Slip",
       "pickList": "Pick List",
       "workTag": "Work Tag / Label",
-      "stagingManifest": "Packing Manifest"
+      "stagingManifest": "Packing Manifest",
+      "rmaReturnSlip": "RMA Return Slip"
     }
   },
   "errors": {
@@ -2558,6 +2584,7 @@
       "onlyDraftEditable": "Only draft invoices can be edited",
       "numberExists": "Invoice number already exists. Choose a different number.",
       "notFinalized": "Invoice is not finalized",
+      "usedHourBlockUnfinalize": "Cannot unfinalize this invoice: its hour block {{blockId}} has already been used ({{usedHours}} of {{totalHours}} hrs). Consider a separate adjustment or credit note to correct the invoice.",
       "unfinalizeFailed": "Invoice could not be unfinalized because an unexpected data error occurred. Please refresh and try again.",
       "paidOrCancelled": "Cannot modify a paid or cancelled invoice",
       "syncedVoidInstead": "This invoice is synced to an accounting system — void it instead of deleting.",

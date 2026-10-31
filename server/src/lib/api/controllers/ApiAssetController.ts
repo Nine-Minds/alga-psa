@@ -60,13 +60,13 @@ export class ApiAssetController {
     // Validate query parameters
     const validation = assetListQuerySchema.safeParse(query);
     if (!validation.success) {
-      return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.errors);
+      return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
     const { page, limit, sort, order, ...filters } = validation.data;
     const listOptions = { 
-      page: page ? parseInt(page) : undefined, 
-      limit: limit ? parseInt(limit) : undefined, 
+      page, 
+      limit, 
       sort, 
       order: order as 'asc' | 'desc' | undefined
     };
@@ -80,8 +80,8 @@ export class ApiAssetController {
     }));
 
     return createPaginatedResponse(assetsWithLinks, {
-      page: parseInt(page as string) || 1,
-      limit: parseInt(limit as string) || 25,
+      page: page || 1,
+      limit: limit || 25,
       total: result.total
     });
   }
@@ -116,7 +116,7 @@ export class ApiAssetController {
     // Validate request body
     const validation = createAssetWithExtensionSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
     const asset = await this.assetService.create(validation.data, context);
@@ -137,7 +137,7 @@ export class ApiAssetController {
     // Validate request body
     const validation = updateAssetSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
     const asset = await this.assetService.update(params.id, validation.data, context);
@@ -270,7 +270,7 @@ export class ApiAssetController {
     const data = await req.json();
     const validation = linkAssetTicketSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
     const association = await this.assetService.linkTicket(params.id, validation.data, context);
@@ -305,7 +305,7 @@ export class ApiAssetController {
     // Validate request body
     const validation = createAssetRelationshipSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
     const relationship = await this.assetService.createRelationship(params.id, validation.data, context);
@@ -345,7 +345,7 @@ export class ApiAssetController {
     // Validate request body
     const validation = createAssetDocumentSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
     const association = await this.assetService.associateDocument(params.id, validation.data, context);
@@ -387,7 +387,7 @@ export class ApiAssetController {
     // Validate request body
     const validation = createMaintenanceScheduleSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
     const schedule = await this.assetService.createMaintenanceSchedule(params.id, validation.data, context);
@@ -405,7 +405,7 @@ export class ApiAssetController {
     // Validate request body
     const validation = updateMaintenanceScheduleSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
     const schedule = await this.assetService.updateMaintenanceSchedule(params.scheduleId, validation.data, context);
@@ -434,7 +434,7 @@ export class ApiAssetController {
     // Validate request body
     const validation = recordMaintenanceSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
     const maintenance = await this.assetService.recordMaintenance(params.id, validation.data, context);
@@ -465,7 +465,7 @@ export class ApiAssetController {
     // Validate query parameters
     const validation = assetSearchSchema.safeParse(query);
     if (!validation.success) {
-      return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.errors);
+      return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
     const assets = await this.assetService.search(validation.data, context);
@@ -548,7 +548,7 @@ export class ApiAssetController {
     // Validate request body
     const validation = bulkUpdateAssetSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
     const results = await Promise.all(
@@ -570,7 +570,7 @@ export class ApiAssetController {
     // Validate request body
     const validation = bulkAssetStatusSchema.safeParse(data);
     if (!validation.success) {
-      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
+      return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
     const results = await Promise.all(

@@ -10,6 +10,7 @@ import {
   registerRmmAlertFetcher,
   runRmmAlertReconciliation,
   type NormalizedRmmAlertEvent,
+  type RmmAlertRuleActions,
 } from '@alga-psa/shared/rmm/alerts';
 
 const HOOK_TIMEOUT = 180_000;
@@ -358,7 +359,7 @@ describe('processRmmAlertEvent (DB integration)', { shuffle: false }, () => {
           boardId,
           priorityOverride: priorityUrgentId,
           assignToUserId: userId,
-        },
+        } as RmmAlertRuleActions,
         clientId: orgOnlyClientId,
         mappingDefaultContactId,
       }),
@@ -372,7 +373,7 @@ describe('processRmmAlertEvent (DB integration)', { shuffle: false }, () => {
     const fallbackTicket = await db.transaction((trx) =>
       createTicketForAlert(trx, {
         event: event({ externalAlertId: 'direct-primary-contact', externalDeviceId: undefined }),
-        actions: { createTicket: true, boardId },
+        actions: { createTicket: true, boardId } as RmmAlertRuleActions,
         clientId: orgOnlyClientId,
       }),
     );
@@ -384,7 +385,7 @@ describe('processRmmAlertEvent (DB integration)', { shuffle: false }, () => {
     const noContactTicket = await db.transaction((trx) =>
       createTicketForAlert(trx, {
         event: event({ externalAlertId: 'direct-no-contact', externalDeviceId: undefined }),
-        actions: { createTicket: true, boardId },
+        actions: { createTicket: true, boardId } as RmmAlertRuleActions,
         clientId: noContactClientId,
       }),
     );

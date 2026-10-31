@@ -30,6 +30,10 @@
       "import": "./src/tickets/*.tsx",
       "types": "./src/tickets/*.tsx"
     },
+    "./tickets/rmaTicketActions": {
+      "import": "./src/tickets/rmaTicketActions.ts",
+      "types": "./src/tickets/rmaTicketActions.ts"
+    },
     "./tickets/registerSlaIntegration": {
       "import": "./src/tickets/registerSlaIntegration.ts",
       "types": "./src/tickets/registerSlaIntegration.ts"
@@ -101,6 +105,7 @@
   },
   "dependencies": {
     "@alga-psa/assets": "*",
+    "@alga-psa/inventory": "*",
     "@alga-psa/auth": "*",
     "@alga-psa/billing": "*",
     "@alga-psa/clients": "*",

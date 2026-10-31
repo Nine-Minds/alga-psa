@@ -181,11 +181,13 @@ export function custodyEventToHistoryEntry(
     from_holder_name?: string | null;
     to_holder_name?: string | null;
     counterparty?: string | null;
+    document_ids?: string[] | null;
   },
   isReceiveBack = false
-): { change_type: string; changes: Record<string, unknown> } {
+): { change_type: string; changes: Record<string, unknown>; documentIds: string[] } {
   return {
     change_type: `custody_${event.event_type}`,
+    documentIds: event.document_ids ?? [],
     changes: {
       from_location_name: event.from_location_name ?? null,
       from_bin: event.from_bin ?? null,

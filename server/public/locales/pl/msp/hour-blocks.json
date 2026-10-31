@@ -30,7 +30,8 @@
     "status": "Status",
     "expiration": "Wygaśnięcie",
     "source": "Źródło",
-    "actions": "Działania"
+    "actions": "Działania",
+    "validFrom": "Obowiązuje od {{date}}"
   },
   "status": {
     "pending": "Oczekujący",
@@ -53,8 +54,10 @@
     "rateRequired": "Podaj prawidłową stawkę.",
     "scopeLabel": "Zakres — usługi objęte pakietem (puste = wszystkie prace)",
     "serviceLabel": "Usługa",
+    "serviceNoResults": "Nie znaleziono usług",
     "servicePlaceholder": "Wybierz usługę",
     "serviceRequired": "Wybierz usługę.",
+    "serviceSearchPlaceholder": "Wyszukaj usługi...",
     "submit": "Utwórz wersję roboczą faktury",
     "submitted": "Utworzono wersję roboczą faktury {{invoiceNumber}}. Sfinalizuj ją, aby aktywować pakiet.",
     "title": "Sprzedaj pakiet godzin",
@@ -127,7 +130,9 @@
     "voidedLabel": "Unieważniono",
     "purchaseReversed": "Zakup cofnięty (faktura cofnięta do wersji roboczej)",
     "unknownUser": "System",
-    "sourceContract": "Umowa: {{contract}}"
+    "sourceContract": "Umowa: {{contract}}",
+    "remainingValue": "Wartość pozostałych godzin: {{value}}",
+    "validFrom": "Obowiązuje od {{date}}"
   },
   "expire": {
     "error": "Nie udało się wygasić pakietu godzin.",

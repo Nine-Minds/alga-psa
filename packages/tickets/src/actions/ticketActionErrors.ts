@@ -66,7 +66,10 @@ const EXPECTED_TICKET_MESSAGE_PREFIXES = [
   'Comment with id',
   'Changing the board requires selecting a status for the destination board',
   'Child ticket not found',
+  'Invalid asset:',
   'Invalid category combination',
+  'Invalid ticket create payload:',
+  'Invalid watcher:',
   'Invalid destination status',
   'Invalid location',
   'Invalid status',
@@ -141,6 +144,16 @@ function ticketErrorCodeOf(error: unknown): TicketErrorCode | undefined {
 export function ticketActionErrorFrom(error: unknown): TicketActionError | null {
   if (isAuthorizationThrow(error)) {
     return permissionError(error instanceof Error ? error.message : String(error));
+  }
+
+  const audienceCode = (error as { code?: unknown } | null)?.code;
+  if (audienceCode === 'CO_MANAGED_AUDIENCE_REQUIRED' || audienceCode === 'COMMENT_AUDIENCE_INVALID') {
+    return actionError(
+      (error as Error).message,
+      audienceCode === 'CO_MANAGED_AUDIENCE_REQUIRED'
+        ? 'features/tickets:errors.comment.audienceRequired'
+        : 'features/tickets:errors.comment.audienceInvalid',
+    );
   }
 
   const ticketCode = ticketErrorCodeOf(error);

@@ -3,12 +3,13 @@
 import { silentTicketCreation } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { Knex } from 'knex';
 import { queueContactCreated } from '@alga-psa/shared/lib/contacts/contactEvents';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction, admitOperationalWrite } from '@alga-psa/db';
 import { localizeActionError, withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { unparseCSV } from '@alga-psa/core';
 import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions/tagActions';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
+import { createClientWithDefaults } from '@alga-psa/shared/models/clientCreation';
 import {
   TICKET_ACTIVITY_ACTOR,
   TICKET_ACTIVITY_ENTITY,
@@ -512,18 +513,14 @@ export const importTickets = withAuth(async (
     for (const resolution of clientResolutions) {
       if (resolution.action === 'create') {
         const result = await safeInsert(`Failed to create client "${resolution.originalClientName}"`, async () => {
-          const [newClient] = await tenantScopedTable('clients')
-            .insert({
-              client_id: trx.raw('gen_random_uuid()'),
-              tenant,
-              client_name: resolution.originalClientName,
-              client_type: resolution.clientType || 'company',
-              is_inactive: false,
-              created_at: new Date(),
-              updated_at: new Date(),
-            })
-            .returning(['client_id']);
-          return newClient;
+          // Imported clients get the same prerequisites as hand-created ones:
+          // default billing profile, gated default contract, default tax
+          // settings and the tenant's configured currency.
+          return createClientWithDefaults(trx, tenant, {
+            client_name: resolution.originalClientName,
+            client_type: resolution.clientType || 'company',
+            is_inactive: false,
+          });
         });
         if (result) createdClientMap.set(resolution.originalClientName.toLowerCase().trim(), result.client_id);
       }
@@ -892,6 +889,7 @@ export const importTickets = withAuth(async (
       const params: (string)[] = [];
       for (const u of batch) { params.push(u.ticket_id, u.entered_at); }
       const ticketScope = tenantScopedTicketBatchUpdateScopeSql(trx, tenant, batch.map((u) => u.ticket_id));
+      await admitOperationalWrite(trx, tenant, 'tickets', 'raw:ticket-import-dates');
       await trx.raw(
         `
           UPDATE tickets AS target
@@ -911,6 +909,7 @@ export const importTickets = withAuth(async (
       const params: (string)[] = [];
       for (const u of batch) { params.push(u.ticket_id, u.closed_at, u.closed_by); }
       const ticketScope = tenantScopedTicketBatchUpdateScopeSql(trx, tenant, batch.map((u) => u.ticket_id));
+      await admitOperationalWrite(trx, tenant, 'tickets', 'raw:ticket-import-dates');
       await trx.raw(
         `
           UPDATE tickets AS target

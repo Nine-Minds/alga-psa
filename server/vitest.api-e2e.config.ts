@@ -20,6 +20,5 @@ export default defineConfig({
     fileParallelism: false,
     maxWorkers: 1,
     sequence: { concurrent: false, shuffle: false },
-    poolOptions: { forks: { singleFork: false } },
   },
 });

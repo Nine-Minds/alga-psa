@@ -1070,7 +1070,12 @@ export class EmailWebhookMaintenanceService {
     return { queuedMessages, switchedToPolling: true, moreRemaining, enqueuedMessageIds };
   }
 
-  private async updateProviderConnectionStatus(
+  /**
+   * Single writer for the provider card's connection status. Public so the
+   * inbound consumer can surface a connect failure it is the only runtime to
+   * see (a folder that cannot be resolved) instead of leaving the card green.
+   */
+  async updateProviderConnectionStatus(
     providerId: string,
     tenant: string,
     status: 'connected' | 'error',
@@ -1123,7 +1128,8 @@ export class EmailWebhookMaintenanceService {
     return status === 400 && code === 'ErrorInvalidParameter';
   }
 
-  private async updateHealthStatus(providerId: string, tenant: string, status: {
+  /** Single writer for `email_provider_health`; see the status writer above. */
+  async updateHealthStatus(providerId: string, tenant: string, status: {
     subscription_status: string;
     last_renewal_result: string;
     failure_reason: string | null;

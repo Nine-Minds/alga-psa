@@ -5,26 +5,26 @@ export function registerInventoryV1Routes(registry: ApiOpenApiRegistry) {
   const tag = 'Inventory v1';
   const UnitParams = registry.registerSchema(
     'InventoryUnitParamsV1',
-    zOpenApi.object({ unitId: zOpenApi.string().uuid() }),
+    zOpenApi.object({ unitId: zOpenApi.string().guid() }),
   );
   const CountParams = registry.registerSchema(
     'InventoryCountParamsV1',
-    zOpenApi.object({ sessionId: zOpenApi.string().uuid() }),
+    zOpenApi.object({ sessionId: zOpenApi.string().guid() }),
   );
   const PurchaseOrderParams = registry.registerSchema(
     'InventoryPurchaseOrderParamsV1',
-    zOpenApi.object({ poId: zOpenApi.string().uuid() }),
+    zOpenApi.object({ poId: zOpenApi.string().guid() }),
   );
   const PurchaseOrderLineParams = registry.registerSchema(
     'InventoryPurchaseOrderLineParamsV1',
     zOpenApi.object({
-      poId: zOpenApi.string().uuid(),
-      lineId: zOpenApi.string().uuid(),
+      poId: zOpenApi.string().guid(),
+      lineId: zOpenApi.string().guid(),
     }),
   );
   const TransferParams = registry.registerSchema(
     'InventoryTransferParamsV1',
-    zOpenApi.object({ transferId: zOpenApi.string().uuid() }),
+    zOpenApi.object({ transferId: zOpenApi.string().guid() }),
   );
   const LookupQuery = registry.registerSchema(
     'InventoryLookupQueryV1',
@@ -37,16 +37,16 @@ export function registerInventoryV1Routes(registry: ApiOpenApiRegistry) {
       limit: zOpenApi.coerce.number().int().min(1).max(100).optional(),
       search: zOpenApi.string().optional(),
       status: zOpenApi.string().optional(),
-      location_id: zOpenApi.string().uuid().optional(),
-      service_id: zOpenApi.string().uuid().optional(),
-      client_id: zOpenApi.string().uuid().optional(),
+      location_id: zOpenApi.string().guid().optional(),
+      service_id: zOpenApi.string().guid().optional(),
+      client_id: zOpenApi.string().guid().optional(),
       low_stock: zOpenApi.enum(['true', 'false']).optional(),
     }),
   );
   // TODO: Replace the loose inventory bodies and responses with the inventory route schemas.
   const LooseBody = registry.registerSchema(
     'InventoryLooseBodyV1',
-    zOpenApi.record(zOpenApi.unknown()),
+    zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()),
   );
   const LooseSuccess = registry.registerSchema(
     'InventoryLooseSuccessV1',

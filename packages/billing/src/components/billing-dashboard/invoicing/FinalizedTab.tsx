@@ -34,6 +34,7 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
+  getActionErrorMessageKey,
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
@@ -74,7 +75,18 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setErrorState] = useState<string | null>(null);
+  const [explainBlockUsage, setExplainBlockUsage] = useState(false);
+  const [showBlockExplanation, setShowBlockExplanation] = useState(false);
+  const setError = (message: string | null) => {
+    setErrorState(message);
+    setExplainBlockUsage(false);
+    setShowBlockExplanation(false);
+  };
+  const setUnfinalizeError = (result: unknown, message = getErrorMessage(result)) => {
+    setError(message);
+    setExplainBlockUsage(getActionErrorMessageKey(result) === 'msp/invoicing:errors.invoice.usedHourBlockUnfinalize');
+  };
   const [tableKey, setTableKey] = useState(0);
 
   // Pagination state - server-side
@@ -285,7 +297,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     try {
       const result = await unfinalizeInvoice(selectedInvoice.invoice_id);
       if (isInvoiceMutationError(result)) {
-        setError(getErrorMessage(result));
+        setUnfinalizeError(result);
         return;
       }
       await loadData();
@@ -332,16 +344,17 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
         const result = await unfinalizeInvoice(invoiceId);
         if (isInvoiceMutationError(result)) {
           const invoiceNumber = invoices.find((invoice) => invoice.invoice_id === invoiceId)?.invoice_number;
-          setError(invoiceNumber
+          const message = invoiceNumber
             ? t('finalizedTab.errors.bulkUnfinalizeInvoiceFailed', {
                 defaultValue: 'Could not unfinalize {{invoiceNumber}}: {{reason}}',
                 invoiceNumber,
                 reason: getErrorMessage(result),
               })
-            : getErrorMessage(result));
+            : getErrorMessage(result);
           // Earlier invoices in the batch were already unfinalized and committed.
           await loadData();
           onRefreshNeeded();
+          setUnfinalizeError(result, message);
           return;
         }
       }
@@ -486,10 +499,11 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={async () => {
+                  setError(null);
                   try {
                     const result = await unfinalizeInvoice(record.invoice_id);
                     if (isInvoiceMutationError(result)) {
-                      setError(getErrorMessage(result));
+                      setUnfinalizeError(result);
                       return;
                     }
                     await loadData();
@@ -562,7 +576,21 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
 
       {error && (
         <Alert variant="destructive" className="mb-4">
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>
+            {error}
+            {explainBlockUsage && (
+              <div className="mt-2">
+                <Button id="explain-used-hour-block-unfinalize" variant="link" className="h-auto p-0" aria-expanded={showBlockExplanation} aria-controls="used-hour-block-explanation" onClick={() => setShowBlockExplanation(!showBlockExplanation)}>
+                  {t('finalizedTab.errors.explainThis', { defaultValue: 'Explain this' })}
+                </Button>
+                {showBlockExplanation && (
+                  <p id="used-hour-block-explanation" className="mt-2">
+                    {t('finalizedTab.errors.usedHourBlockExplanation', { defaultValue: 'Finalizing this invoice made its prepaid hours available for time entries. Time has since been allocated to the block. Reopening the invoice would undo the block while those allocations and any later charges could still depend on it. To keep billing consistent, invoices for blocks that have ever been used cannot be unfinalized, even if the time was later reversed. Consider a separate adjustment or credit note to correct the invoice.' })}
+                  </p>
+                )}
+              </div>
+            )}
+          </AlertDescription>
         </Alert>
       )}
 

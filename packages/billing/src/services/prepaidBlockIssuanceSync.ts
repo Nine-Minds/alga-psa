@@ -33,6 +33,7 @@ import { supersedeScheduledExpiryForRenewal } from './prepaidBlockLifecycleServi
  *    (prepaidBlockRenewalService; inherited blocks keep running). A scheduled (inherited) expiry
  *    issuance is superseded by it, like a usage follow-on supersedes one. With the trigger off nothing
  *    is issued. Never `contract_start`.
+ *  - Cadence mode (issue_mode = 'cadence'): no issuances at all; scheduled ones are cancelled.
  *  - Cancellation: scheduled issuances of EVERY kind (expiry ones superseded, the
  *    rest cancelled) are cancelled when the config is removed, the line or its
  *    assignment is gone/inactive, or the assignment ends before the due date.
@@ -114,7 +115,14 @@ export async function syncPrepaidBlockIssuancesForContractLine(
   const config = await table(trx, tenant, 'contract_line_prepaid_blocks')
     .where({ contract_line_id: contractLineId })
     .forUpdate()
-    .first('contract_line_id', 'trigger_on_renewal');
+    .first('contract_line_id', 'trigger_on_renewal', 'issue_mode');
+
+  // A cadence block line issues no consumption issuances: its blocks are recurring service periods
+  // (plan D2/D3). Switching a line to cadence cancels the ones still scheduled; live blocks keep running.
+  if (config?.issue_mode === 'cadence') {
+    const count = await cancelScheduledIssuances(trx, tenant, contractLineId, 'Prepaid block is issued every billing period');
+    return count > 0 ? { action: 'cancelled', count } : { action: 'none' };
+  }
 
   const db = tenantDb(trx, tenant);
   const lineQuery = db.table('contract_lines as cl');
@@ -297,6 +305,67 @@ async function syncRenewalContractLine(
     source_block_id: replaced?.sourceBlockId ?? null,
   });
   return { action: 'scheduled', issuanceId, dueDate: firstDue };
+}
+
+/**
+ * After a line switches from cadence back to consumption mode (plan D9): schedule a
+ * `contract_start`-style issuance, unless a live block still covers today (it runs to its own
+ * expiry, and the configured triggers take over from there) or an issuance is already open.
+ * The block is due today, or at the assignment start if that is still ahead.
+ */
+export async function scheduleStartIssuanceAfterCadenceSwitch(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+): Promise<PrepaidBlockIssuanceSyncResult> {
+  const today = await resolvePrepaidBlockBusinessDate(trx, tenant);
+  const open = await table(trx, tenant, 'contract_line_block_issuances')
+    .where({ contract_line_id: contractLineId, status: 'scheduled' })
+    .first('issuance_id');
+  if (open) return { action: 'none' };
+
+  const covering = await table(trx, tenant, 'hour_blocks')
+    .where({ contract_line_id: contractLineId })
+    .whereIn('status', ['active', 'pending'])
+    .where((b) => b.whereNull('valid_from').orWhere('valid_from', '<=', today))
+    .where((b) => b.whereNull('expiration_date').orWhere('expiration_date', '>=', today))
+    .first('block_id');
+  if (covering) return { action: 'none' };
+
+  const lineQuery = table(trx, tenant, 'contract_lines as cl');
+  const db = tenantDb(trx, tenant);
+  db.tenantJoin(lineQuery, 'contracts as ct', 'ct.contract_id', 'cl.contract_id', { type: 'left' });
+  const line = await lineQuery
+    .andWhere('cl.contract_line_id', contractLineId)
+    .first('cl.contract_id as contract_id', 'ct.status as contract_status');
+  if (!line || !line.contract_status || ['draft', 'terminated', 'archived'].includes(line.contract_status)) {
+    return { action: 'none' };
+  }
+  // A renewal contract never issues `contract_start`; its renewal trigger owns that block.
+  if (await isRenewalContract(trx, tenant, line.contract_id)) return { action: 'none' };
+  const assignment = await table(trx, tenant, 'client_contracts')
+    .where({ contract_id: line.contract_id, is_active: true })
+    .orderBy('start_date', 'asc')
+    .first('client_contract_id', 'client_id', 'start_date', 'end_date');
+  if (!assignment) return { action: 'none' };
+
+  const startDate = toDateOnly(assignment.start_date);
+  const endDate = toDateOnly(assignment.end_date);
+  const dueDate = startDate && startDate > today ? startDate : today;
+  if (endDate && dueDate > endDate) return { action: 'none' };
+
+  const issuanceId = uuidv4();
+  await table(trx, tenant, 'contract_line_block_issuances').insert({
+    tenant,
+    issuance_id: issuanceId,
+    contract_line_id: contractLineId,
+    client_contract_id: assignment.client_contract_id,
+    client_id: assignment.client_id,
+    trigger_kind: 'contract_start',
+    due_date: dueDate,
+    status: 'scheduled',
+  });
+  return { action: 'scheduled', issuanceId, dueDate };
 }
 
 /** Contract-level callers (assignment create/update/activate, wizard save). */

@@ -62,6 +62,7 @@ exports.up = async function up(knex) {
     [CHECK_CONSTRAINT]
   );
   if (hasCheck.rows.length === 0) {
+    // migration-lint: allow 2 - retroactive: CHECK added under a pg_constraint absence probe on portal_domains, a small per-tenant table; merged before the lint existed
     await knex.raw(
       `ALTER TABLE ${TABLE} ADD CONSTRAINT ${CHECK_CONSTRAINT} CHECK (surface IN ('client_portal', 'msp', 'both'))`
     );
@@ -70,6 +71,7 @@ exports.up = async function up(knex) {
   await truncateStaleLocalHeapIfDistributed(knex);
 
   for (const name of await findUniqueConstraintOnColumns(knex, ['tenant'])) {
+    // migration-lint: allow UNRESOLVED - constraint names come from findUniqueConstraintOnColumns (catalog lookup of tenant-only unique constraints); no literal exists to resolve
     await knex.raw(`ALTER TABLE ${TABLE} DROP CONSTRAINT "${name}"`);
   }
 
