@@ -174,6 +174,14 @@ export const API_RULES: readonly ApiRule[] = [
     visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
   },
   {
+    // Retained co-managed archive file bytes. The MSP (psa) reads its own sealed archive; the route
+    // is also capability-gated and 404s by default. A co_managed customer has no archive.
+    group: 'api_co_management_archive_files',
+    staticPrefixes: ['/api/co-management/archive-files'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied', co_managed: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false, co_managed: false },
+  },
+  {
     // Session-authenticated co-managed conversation file download. Every product
     // may reach it; capabilityRouteGuard inside the route decides (closed => 404).
     group: 'api_co_management_attachments',
