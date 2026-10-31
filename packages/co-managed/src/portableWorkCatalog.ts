@@ -26,7 +26,7 @@ export const CO_MANAGED_PORTABLE_WORK_COLUMNS = {
   task_checklist_items: ['checklist_item_id', 'task_id', 'item_name', 'description', 'assigned_to', 'completed', 'due_date', 'created_at', 'updated_at', 'order_number'],
   project_task_dependencies: ['dependency_id', 'predecessor_task_id', 'successor_task_id', 'dependency_type', 'lead_lag_days', 'notes', 'created_at', 'updated_at'],
   project_ticket_links: ['link_id', 'project_id', 'phase_id', 'task_id', 'ticket_id', 'created_at'],
-  project_task_comments: ['task_comment_id', 'task_id', 'user_id', 'author_type', 'note', 'markdown_content', 'created_at', 'updated_at', 'edited_at', 'thread_id', 'parent_comment_id', 'deleted_at', 'actor_reference_id', 'actor_display_name', 'actor_organization_name', 'collaboration_revision'],
+  project_task_comments: ['task_comment_id', 'task_id', 'user_id', 'author_type', 'note', 'markdown_content', 'created_at', 'updated_at', 'edited_at', 'thread_id', 'parent_comment_id', 'deleted_at'],
   project_task_comment_reactions: ['reaction_id', 'task_comment_id', 'user_id', 'emoji', 'created_at'],
   handoff_history: ['operation_id', 'ticket_id', 'revision', 'transition', 'actor_tenant', 'actor_user_id', 'actor_name', 'actor_organization', 'note', 'audience', 'occurred_at'],
 } as const;

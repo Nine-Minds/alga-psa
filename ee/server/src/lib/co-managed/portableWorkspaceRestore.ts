@@ -100,6 +100,22 @@ export async function inspectPortableWorkspaceArchive(archivePath: string, passp
   }))); } finally { passphrase = ''; }
 }
 
+/**
+ * Destination identities must be a pure function of (archive, destination, allocation order): a crash
+ * followed by --resume re-prepares the whole restore, and the receipt written before the crash already
+ * names the administrator's destination id. Random allocation would make the resumed rows disagree with it.
+ * Each stage draws from its own labelled stream, so the three prepare steps cannot collide with each other.
+ */
+function deterministicUuids(archiveSha256: string, tenant: string, stage: string): () => string {
+  let counter = 0;
+  return () => {
+    const bytes = createHash('sha256').update(`portable-restore\0${archiveSha256}\0${tenant}\0${stage}\0${counter++}`).digest().subarray(0, 16);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40; bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = bytes.toString('hex');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  };
+}
+
 const RECEIPT_SQL_COLUMNS = ['tenant', 'source_tenant', 'package_id', 'archive_sha256', 'state', 'source_administrator_user_id',
   'administrator_user_id', 'created_at', 'promoted_at', 'verified_at'] as const;
 
@@ -147,13 +163,15 @@ export async function restorePortableWorkspaceForInstallation(db: Knex, input: {
         // 2. Read-only preparation: nothing is written until every archive-level check has passed.
         const catalogs = await db.transaction(trx => resolveCoManagedPortableDestinationCatalogs(trx, manifest));
         const nullable = await db.transaction(trx => portableRestoreColumnNullability(trx, manifest));
-        const records = prepareCoManagedPortableWorkspaceRecords({ manifest, destinationTenant: tenant, destinationCatalogMappings: catalogs, externalColumnNullable: nullable });
+        const records = prepareCoManagedPortableWorkspaceRecords({ manifest, destinationTenant: tenant, destinationCatalogMappings: catalogs, externalColumnNullable: nullable },
+          { allocateUuid: deterministicUuids(sha256, tenant, 'records') });
         const administratorUserId = records.domains.find(domain => domain.table === 'users' && domain.column === 'user_id')!.mappings
           .find(pair => same(pair.source, request.sourceAdministratorUserId))?.destination;
         if (!isCoManagedUuid(administratorUserId)) fail('administrator identity mapping');
         const files = prepareCoManagedPortableWorkspaceFiles({ manifest, files: archive.files, preparedRecords: records, importedByUserId: administratorUserId,
-          binders: dependencies.binders, maxStagedBytes: request.maxStagedBytes });
-        const vault = await prepareCoManagedPortableWorkspaceVault({ manifest, restoreRecords: files, passphrase: request.passphrase }, { reservedUuids: files.allocatedIds });
+          binders: dependencies.binders, maxStagedBytes: request.maxStagedBytes },
+          { allocateUuid: deterministicUuids(sha256, tenant, 'files') });
+        const vault = await prepareCoManagedPortableWorkspaceVault({ manifest, restoreRecords: files, passphrase: request.passphrase }, { reservedUuids: files.allocatedIds, allocateUuid: deterministicUuids(sha256, tenant, 'vault') });
         const summary = (written: Record<string, number>, historical: string[], globals: string[]) => ({ written, historical, globals });
 
         // 3. Begin: freshness, receipt (staged) and the dedicated suspension row, atomically.

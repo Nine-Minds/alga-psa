@@ -47,7 +47,6 @@ export const CO_MANAGED_PORTABLE_WORK_REFERENCES = [
   ['project_ticket_links', 'task_id', 'project_tasks', 'task_id'], ['project_ticket_links', 'ticket_id', 'tickets', 'ticket_id'],
   ['project_task_comments', 'task_id', 'project_tasks', 'task_id'], ['project_task_comments', 'thread_id', 'comment_threads', 'thread_id'],
   ['project_task_comments', 'parent_comment_id', 'project_task_comments', 'task_comment_id'],
-  ['project_task_comments', 'actor_reference_id', 'collaboration_actor_references', 'actor_reference_id'],
   ['project_task_comment_reactions', 'task_comment_id', 'project_task_comments', 'task_comment_id'],
   ['handoff_history', 'ticket_id', 'tickets', 'ticket_id'],
 ] as const;
