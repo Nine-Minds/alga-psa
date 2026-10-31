@@ -343,7 +343,7 @@ export const saveContractLineEdit = withAuth(async (
       // 4. Membership additions and removals.
       const membershipChanged = additions.length > 0 || removedIds.length > 0;
       if (membershipChanged) {
-        await applyContractLineServiceMembershipChangesInTransaction(trx, tenant, contractLineId, {
+        await applyContractLineServiceMembershipChangesInTransaction(trx, tenant, user, contractLineId, {
           additions,
           removals: removedIds,
         });
