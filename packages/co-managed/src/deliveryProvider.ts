@@ -91,6 +91,7 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
     },
 
     async flagStaleRoutingSending(tenant, olderThanMs) {
+      // write-admission: exempt — delivery-ledger reconciliation flag on a stale claim, not a co-managed work write
       return withAdminTransaction(async (trx) => tenantDb(trx, tenant).table('co_management_deliveries')
         .whereIn('delivery_kind', [ROUTING_IN_APP_KIND, ROUTING_EMAIL_KIND]).where({ state: 'sending', requires_reconciliation: false })
         .where('updated_at', '<', new Date(Date.now() - olderThanMs))

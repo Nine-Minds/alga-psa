@@ -249,6 +249,25 @@ export async function appendOutboundMessageIdReference(
     });
 }
 
+/**
+ * Which delivery-ledger row (if any) a single send claims. A co-managed caller names its own
+ * ledger via `params.delivery`; otherwise a managed comment-attachment send claims the comment's
+ * row keyed on the `To` recipient alone — Cc/Bcc addresses never claim a comment's delivery.
+ * Returns null when the send is not ledgered.
+ */
+export function resolveDeliveryClaim(
+  params: Pick<SendEmailParams, 'to' | 'tenantId' | 'delivery'>,
+  managedCommentId: string | undefined,
+): { ledger: DeliveryLedger; tenant: string; key: DeliveryKey } | null {
+  if (params.delivery) {
+    return { ledger: params.delivery.ledger, tenant: params.delivery.ledgerTenant ?? params.tenantId, key: params.delivery.key };
+  }
+  if (managedCommentId) {
+    return { ledger: COMMENT_EMAIL_LEDGER, tenant: params.tenantId, key: { comment_id: managedCommentId, recipient: params.to } };
+  }
+  return null;
+}
+
 export async function sendEventEmail(params: SendEmailParams): Promise<void> {
   try {
     logger.info('[SendEventEmail] 🚀 NEW EMAIL PROVIDER MANAGER VERSION - Preparing to send email:', {
@@ -566,15 +585,14 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     const processor = new StaticTemplateProcessor(subject, html, text);
     // One claim protocol, two ledgers: base's comment-attachment ledger, or the ledger a co-managed
     // caller named in `params.delivery`.
-    const ledgered = managedCommentDelivery || Boolean(params.delivery);
-    const ledger: DeliveryLedger = params.delivery?.ledger ?? COMMENT_EMAIL_LEDGER;
-    const ledgerTenant = params.delivery?.ledgerTenant ?? params.tenantId;
-    const ledgerKey: DeliveryKey = params.delivery?.key ?? { comment_id: attachmentCommentId!, recipient: params.to };
+    const claim = resolveDeliveryClaim(params, managedCommentDelivery ? attachmentCommentId : undefined);
+    const ledgered = claim !== null;
     const finishLedger = (state: DeliveryFinishState, outcome?: { error?: string; errorCode?: string }) =>
-      finishDelivery(knex, ledger, ledgerTenant, ledgerKey, state, outcome);
-    if (ledgered && !await claimDelivery(knex, ledger, ledgerTenant, ledgerKey, params.delivery?.extra)) {
-      const normalizedKey = Object.fromEntries(Object.entries(ledgerKey).map(([k, v]) => [k, ledger.normalized?.includes(k) ? v.trim().toLowerCase() : v]));
-      const delivery = await tenantDb(knex, ledgerTenant).table(ledger.table).where(normalizedKey).first();
+      finishDelivery(knex, claim!.ledger, claim!.tenant, claim!.key, state, outcome);
+    if (claim && !await claimDelivery(knex, claim.ledger, claim.tenant, claim.key, params.delivery?.extra)) {
+      const { ledger, key } = claim;
+      const normalizedKey = Object.fromEntries(Object.entries(key).map(([k, v]) => [k, ledger.normalized?.includes(k) ? v.trim().toLowerCase() : v]));
+      const delivery = await tenantDb(knex, claim.tenant).table(ledger.table).where(normalizedKey).first();
       if (delivery?.state === 'sent') return;
       throw new EmailProviderError('Comment email has an unresolved provider outcome; reconcile before retrying.',
         'unknown', 'unknown', false, 'COMMENT_DELIVERY_RECONCILIATION_REQUIRED', { requiresReconciliation: true });
