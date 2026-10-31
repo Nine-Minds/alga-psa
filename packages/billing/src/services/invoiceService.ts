@@ -1710,6 +1710,9 @@ async function persistFixedInvoiceCharges(
         allocated_amount: allocatedAmountCents,
         tax_amount: taxAmountCents,
         tax_rate: detail.tax_rate ?? 0,
+        // Member tax decision from computeFixedCharges; read back by calculateAndDistributeTax.
+        is_taxable: detail.is_taxable === true,
+        tax_region: detail.tax_region ?? null,
         tenant
       });
 
@@ -2269,19 +2272,21 @@ export async function calculateAndDistributeTax(
 
   let fixedDetails: any[] = [];
   if (consolidatedItemIds.length > 0) {
-    // Fetch details. Tax info (is_taxable, tax_region) should now be on the parent invoice_item
-    // derived during item creation based on service's tax_rate_id.
+    // Fetch details. Each member's own tax decision (is_taxable, tax_region) is stored on the
+    // detail row at persist time; NULL means a legacy row that inherits from the parent charge.
     const fixedDetailsQuery = tenantDb(tx, tenant).table('invoice_charge_fixed_details as iifd')
         .whereIn('iid.item_id', consolidatedItemIds) // Filter by the correctly identified parent IDs
         .select(
             'iifd.item_detail_id',
             'iifd.allocated_amount',
+            'iifd.is_taxable as detail_is_taxable',
+            'iifd.tax_region as detail_tax_region',
             'iid.item_id as parent_item_id',
-            'iid.service_id' // Keep service_id if needed for other logic, but not for tax region/taxability here
+            'iid.service_id'
         );
     tenantDb(tx, tenant).tenantJoin(fixedDetailsQuery, 'invoice_charge_details as iid', 'iid.item_detail_id', 'iifd.item_detail_id');
     fixedDetails = await fixedDetailsQuery;
-    console.log(`[calculateAndDistributeTax] Fetched ${fixedDetails.length} fixed details (tax info from parent item):`, JSON.stringify(fixedDetails.map(d => ({ detail_id: d.item_detail_id, parent_id: d.parent_item_id, amount: d.allocated_amount })), null, 2));
+    console.log(`[calculateAndDistributeTax] Fetched ${fixedDetails.length} fixed details (member tax flags with parent fallback):`, JSON.stringify(fixedDetails.map(d => ({ detail_id: d.item_detail_id, parent_id: d.parent_item_id, amount: d.allocated_amount })), null, 2));
   } else {
       console.log(`[calculateAndDistributeTax] No consolidated items found, skipping fixed detail fetch.`);
   }
@@ -2291,24 +2296,37 @@ export async function calculateAndDistributeTax(
   const creditItems = invoiceItems.filter(item => Number(item.net_amount) < 0 && item.is_discount !== true);
 
   // Process fixed details into taxable entities
+  // Client default region is the same for every detail; look it up once.
+  const clientDefaultTaxRegion = fixedDetails.length > 0
+    ? (await getClientDefaultTaxRegionCode(tx, tenant, client.client_id)) || ''
+    : '';
+  const fixedDetailsWithoutTax = new Set<string>();
+  // LEVERAGE: friction fixed-bundle-tax-carrier — fixed bundles are the only charges taxed through a child
+  // table with its own tax rules; preview (computeFixedCharges) and this saved pass duplicate the decision.
+  // A shared "taxable line" layer would remove that.
   for (const detail of fixedDetails) {
     const parentItem = invoiceItems.find(item => item.item_id === detail.parent_item_id);
     if (!parentItem) {
         console.error(`[calculateAndDistributeTax] Could not find parent item ${detail.parent_item_id} for detail ${detail.item_detail_id}`);
         continue; // Skip this detail if parent is missing
     }
-    const isTaxable = parentItem.is_taxable === true; // Get taxability from parent
+    // Member decision wins; NULL (legacy row) inherits from the parent. A parent explicitly
+    // marked non-taxable forces all of its details non-taxable.
+    const isTaxable = parentItem.is_taxable !== false
+      && (detail.detail_is_taxable ?? parentItem.is_taxable) === true;
     const allocatedAmount = Number(detail.allocated_amount || 0);
     if (allocatedAmount > 0 && isTaxable) {
       taxableEntities.push({
         id: detail.item_detail_id,
         type: 'fixed_detail',
         amount: allocatedAmount,
-        // Use service region first, then lookup client default. Provide empty string if null.
-        taxRegion: parentItem.tax_region || await getClientDefaultTaxRegionCode(tx, tenant, client.client_id) || '', // Get region from parent
+        // Member region first, then parent region, then client default.
+        taxRegion: detail.detail_tax_region || parentItem.tax_region || clientDefaultTaxRegion,
         isTaxable: true,
         parentId: detail.parent_item_id,
       });
+    } else {
+      fixedDetailsWithoutTax.add(detail.item_detail_id);
     }
   }
 
@@ -2451,6 +2469,12 @@ export async function calculateAndDistributeTax(
 
   // 6. Update Detail and Item Tables (Tax Amounts)
   const updatePromises: Array<Promise<any>> = [];
+
+  // Reset stale tax on fixed details that are not taxable in this pass, so the step 7 sum
+  // onto the parent only includes tax computed here.
+  for (const itemDetailId of fixedDetailsWithoutTax) {
+    detailUpdates.push({ item_detail_id: itemDetailId, tax_amount: 0, tax_rate: 0 });
+  }
 
   // Update fixed details tax amounts
   if (detailUpdates.length > 0) {
