@@ -46,6 +46,7 @@ const {
   recordPendingDeletion,
   updateDeletionStatus,
   deleteTenantData,
+  endTenantCoManagedSponsorships,
   deleteTenantSchedules,
   cancelTenantStripeSubscription,
   sendCancellationConfirmationEmail,
@@ -454,6 +455,20 @@ export async function tenantDeletionWorkflow(
             ? emailTeardownError.message
             : 'Unknown error',
         });
+      }
+    }
+    if (patched('tenant-deletion-end-co-management-v1')) {
+      // Unlike the best-effort teardown above, this must succeed: deleting a
+      // sponsor with live co-managed customers would strand them.
+      try {
+        const coManaged = await endTenantCoManagedSponsorships(input.tenantId);
+        log.info('Co-managed sponsorships ended', { tenantId: input.tenantId, ...coManaged });
+      } catch (coManagedError) {
+        const error = `Could not end co-managed sponsorships: ${coManagedError instanceof Error ? coManagedError.message : 'Unknown error'}`;
+        state.status = 'failed';
+        state.error = error;
+        await updateDeletionStatus({ deletionId, status: 'failed', error });
+        throw new Error(error);
       }
     }
     const deleteResult = await deleteTenantData(input.tenantId, deletionId);
