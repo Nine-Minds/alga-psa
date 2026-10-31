@@ -721,6 +721,12 @@
       "draftDescription": "Usted es el único usuario que puede aprobar cotizaciones. Después de enviar esta cotización para su aprobación, podrá aprobarla usted mismo y luego enviarla.",
       "pendingDescription": "Usted es el único usuario que puede aprobar cotizaciones, por lo que puede aprobar esta cotización. Elija Aprobar para dejarla lista para enviar.",
       "dialogNote": "Usted es el único aprobador, por lo que puede aprobar su propia cotización. La aprobación se registra como autoaprobación."
+    },
+    "emailLinkReview": {
+      "label": "Permitir que los clientes revisen y aprueben cotizaciones desde el enlace del correo sin iniciar sesión",
+      "lifetimeLabel": "Duración del enlace (horas)",
+      "lifetimePlaceholder": "Predeterminado: hasta que venza la cotización",
+      "lifetimeHelp": "Entre 24 y 2160 horas. Déjelo vacío para usar la fecha de vencimiento de la cotización (30 días si no tiene)."
     }
   },
   "quoteTemplates": {
@@ -890,6 +896,9 @@
       "missingFieldNamed": "Falta un campo obligatorio de la cotización: {{field}}.",
       "templateCannotBeAccepted": "Las plantillas de cotización no se pueden marcar como aceptadas",
       "onlySentCanBeAccepted": "Solo las cotizaciones enviadas se pueden marcar como aceptadas"
+    },
+    "emailLinkReview": {
+      "invalidLifetime": "La duración del enlace debe ser un número entero de horas entre 24 y 2160"
     }
   }
 }

@@ -73,6 +73,27 @@ describe('computeQuoteAccessExpiry', () => {
   });
 });
 
+describe('computeQuoteAccessExpiry with a configured lifetime', () => {
+  const HOUR = 60 * 60 * 1000;
+
+  it('replaces the valid_until default with now + lifetimeHours', () => {
+    expect(computeQuoteAccessExpiry('2026-06-11T00:00:00Z', NOW, 72).getTime()).toBe(NOW.getTime() + 72 * HOUR);
+    expect(computeQuoteAccessExpiry(null, NOW, 48).getTime()).toBe(NOW.getTime() + 48 * HOUR);
+  });
+
+  it('still floors at 24h and caps at 90d', () => {
+    expect(computeQuoteAccessExpiry(null, NOW, 1).getTime()).toBe(NOW.getTime() + DAY);
+    expect(computeQuoteAccessExpiry(null, NOW, 24 * 365).getTime()).toBe(NOW.getTime() + 90 * DAY);
+  });
+
+  it('uses the default rule when the lifetime is null, undefined, zero or invalid', () => {
+    const expected = computeQuoteAccessExpiry('2026-06-11T00:00:00Z', NOW).getTime();
+    for (const v of [null, undefined, 0, -5, Number.NaN]) {
+      expect(computeQuoteAccessExpiry('2026-06-11T00:00:00Z', NOW, v as any).getTime()).toBe(expected);
+    }
+  });
+});
+
 describe('resolve short-circuits', () => {
   it('returns not_found for malformed tokens without querying the DB', async () => {
     for (const bad of ['', 'short', 'x'.repeat(44), `${'a'.repeat(42)}=`, `${'a'.repeat(42)}!`]) {

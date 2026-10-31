@@ -721,6 +721,12 @@
       "draftDescription": "Du är den enda användaren som kan godkänna offerter. När du har skickat in offerten för godkännande kan du godkänna den själv och sedan skicka den.",
       "pendingDescription": "Du är den enda användaren som kan godkänna offerter, så du kan godkänna offerten själv. Välj Godkänn för att göra den klar att skicka.",
       "dialogNote": "Du är den enda som kan godkänna, så det är tillåtet att godkänna din egen offert. Godkännandet registreras som ett självgodkännande."
+    },
+    "emailLinkReview": {
+      "label": "Låt kunder granska och godkänna offerter via länken i e-postmeddelandet utan att logga in",
+      "lifetimeLabel": "Länkens giltighetstid (timmar)",
+      "lifetimePlaceholder": "Standard: tills offerten går ut",
+      "lifetimeHelp": "Mellan 24 och 2160 timmar. Lämna tomt för att använda offertens utgångsdatum (30 dagar om det saknas)."
     }
   },
   "quoteTemplates": {
@@ -890,6 +896,9 @@
       "missingFieldNamed": "Ett obligatoriskt offertfält saknas: {{field}}.",
       "templateCannotBeAccepted": "Offertmallar kan inte markeras som accepterade",
       "onlySentCanBeAccepted": "Endast skickade offerter kan markeras som accepterade"
+    },
+    "emailLinkReview": {
+      "invalidLifetime": "Länkens giltighetstid måste vara ett heltal timmar mellan 24 och 2160"
     }
   }
 }

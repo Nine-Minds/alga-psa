@@ -721,6 +721,12 @@
       "draftDescription": "You are the only user who can approve quotes. After you submit this quote for approval, you can approve it yourself and then send it.",
       "pendingDescription": "You are the only user who can approve quotes, so you can approve this quote yourself. Choose Approve to make it ready to send.",
       "dialogNote": "You are the only approver, so approving your own quote is allowed. The approval is recorded as a self-approval."
+    },
+    "emailLinkReview": {
+      "label": "Let clients review and approve quotes from the email link without signing in",
+      "lifetimeLabel": "Link lifetime (hours)",
+      "lifetimePlaceholder": "Default: until the quote expires",
+      "lifetimeHelp": "Between 24 and 2160 hours. Leave empty to use the quote expiry date (30 days when it has none)."
     }
   },
   "quoteTemplates": {
@@ -890,6 +896,9 @@
       "missingFieldNamed": "Missing required quote field: {{field}}.",
       "templateCannotBeAccepted": "Quote templates cannot be marked as accepted",
       "onlySentCanBeAccepted": "Only sent quotes can be marked as accepted"
+    },
+    "emailLinkReview": {
+      "invalidLifetime": "Link lifetime must be a whole number of hours between 24 and 2160"
     }
   }
 }

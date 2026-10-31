@@ -721,6 +721,12 @@
       "draftDescription": "U bent de enige gebruiker die offertes kan goedkeuren. Nadat u deze offerte ter goedkeuring hebt ingediend, kunt u hem zelf goedkeuren en vervolgens verzenden.",
       "pendingDescription": "U bent de enige gebruiker die offertes kan goedkeuren, dus u kunt deze offerte zelf goedkeuren. Kies Goedkeuren om hem klaar te zetten voor verzending.",
       "dialogNote": "U bent de enige goedkeurder, dus het goedkeuren van uw eigen offerte is toegestaan. De goedkeuring wordt vastgelegd als zelfgoedkeuring."
+    },
+    "emailLinkReview": {
+      "label": "Klanten toestaan offertes te bekijken en goed te keuren via de link in de e-mail, zonder in te loggen",
+      "lifetimeLabel": "Geldigheid van de link (uren)",
+      "lifetimePlaceholder": "Standaard: tot de offerte verloopt",
+      "lifetimeHelp": "Tussen 24 en 2160 uur. Laat leeg om de vervaldatum van de offerte te gebruiken (30 dagen als die ontbreekt)."
     }
   },
   "quoteTemplates": {
@@ -890,6 +896,9 @@
       "missingFieldNamed": "Er ontbreekt een verplicht offerteveld: {{field}}.",
       "templateCannotBeAccepted": "Offertesjablonen kunnen niet als geaccepteerd worden gemarkeerd",
       "onlySentCanBeAccepted": "Alleen verzonden offertes kunnen als geaccepteerd worden gemarkeerd"
+    },
+    "emailLinkReview": {
+      "invalidLifetime": "De geldigheid van de link moet een geheel aantal uren zijn tussen 24 en 2160"
     }
   }
 }

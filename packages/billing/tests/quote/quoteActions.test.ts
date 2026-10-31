@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Quote from '../../src/models/quote';
 import QuoteActivity from '../../src/models/quoteActivity';
 import QuoteItem from '../../src/models/quoteItem';
@@ -29,6 +29,9 @@ const getTenantEmailServiceInstance = vi.fn(() => ({ sendEmail: (...args: any[])
 const generatePDFMock = vi.fn();
 const generateAndStoreMock = vi.fn();
 const approvalSettingsMock = vi.fn();
+const emailLinkReviewSettingsMock = vi.fn();
+const mintLinkMock = vi.fn();
+const revokeLinkMock = vi.fn();
 const documentInsertMock = vi.fn();
 const documentAssociationCreateMock = vi.fn();
 const fetchTenantPartyMock = vi.fn();
@@ -114,8 +117,14 @@ vi.mock('../../src/lib/quoteApprovalSettings', async (importOriginal) => {
   return {
     ...actual,
     getQuoteApprovalWorkflowSettings: (...args: any[]) => approvalSettingsMock(...args),
+    getQuoteEmailLinkReviewSettings: (...args: any[]) => emailLinkReviewSettingsMock(...args),
   };
 });
+
+vi.mock('../../src/services/quoteAccessLinks', () => ({
+  mint: (...args: any[]) => mintLinkMock(...args),
+  revoke: (...args: any[]) => revokeLinkMock(...args),
+}));
 
 vi.mock('../../src/services/quoteCalculationService', () => ({
   recalculateQuoteFinancials: (...args: any[]) => recalculateQuoteFinancialsMock(...args),
@@ -287,6 +296,11 @@ describe('quoteActions', () => {
     documentAssociationCreateMock.mockResolvedValue({ association_id: 'assoc-1' });
     sendEmailMock.mockResolvedValue({ success: true, messageId: 'message-1' });
     approvalSettingsMock.mockResolvedValue({ approvalRequired: false });
+    // Email-link review is off by default in this file so the legacy single-send path is what
+    // the existing tests exercise; the per-recipient path has its own test file.
+    emailLinkReviewSettingsMock.mockResolvedValue({ enabled: false, linkLifetimeHours: null });
+    mintLinkMock.mockReset();
+    revokeLinkMock.mockReset();
     vi.spyOn(Quote, 'create').mockResolvedValue({ quote_id: QUOTE_ID } as any);
     vi.spyOn(Quote, 'update').mockResolvedValue({ quote_id: QUOTE_ID } as any);
     vi.spyOn(Quote, 'getById').mockResolvedValue({ quote_id: QUOTE_ID, quote_number: 'Q-0001' } as any);
@@ -1713,5 +1727,190 @@ describe('quoteActions', () => {
         expect(emailBody()).not.toMatch(/client-portal|localhost|href=/);
       },
     );
+  });
+  describe('per-recipient quote review links (alga-2026-0002820)', () => {
+    const reviewQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: 'Quote',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2099-03-20',
+      status: 'sent',
+      is_template: false,
+      client_id: 'client-1',
+      contact_id: null,
+    };
+    const originalBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+    let linkCounter = 0;
+    let usersWithPortalAccess: string[] = [];
+    // email (lowercase) -> contact id, for the "contacts" lookup
+    let contactsByEmail: Record<string, string> = {};
+    const activityMetadata = () => (QuoteActivity.create as any).mock.calls.at(-1)[2].metadata;
+    const bodyOf = (call: number) => JSON.stringify(sendEmailMock.mock.calls[call][0]);
+
+    beforeEach(() => {
+      process.env.NEXT_PUBLIC_BASE_URL = 'https://app.example.com';
+      linkCounter = 0;
+      usersWithPortalAccess = [];
+      contactsByEmail = {};
+      emailLinkReviewSettingsMock.mockResolvedValue({ enabled: true, linkLifetimeHours: null });
+      mintLinkMock.mockImplementation(async (_trx: any, _tenant: string, input: any) => {
+        linkCounter += 1;
+        return { link: { link_id: `link-${linkCounter}`, recipient_email: input.recipient.email }, token: `token-${linkCounter}-secretvalue` };
+      });
+      revokeLinkMock.mockResolvedValue(1);
+      const base = mockKnex.getMockImplementation()!;
+      mockKnex.mockImplementation((table: string) => {
+        if (table === 'contacts') {
+          let looked: string | undefined;
+          const chain: any = {};
+          chain.select = vi.fn(() => chain);
+          chain.where = vi.fn(() => chain);
+          chain.whereRaw = vi.fn((_sql: string, params: string[]) => { looked = params[0]; return chain; });
+          chain.first = vi.fn(async () => (looked && contactsByEmail[looked] ? { contact_name_id: contactsByEmail[looked] } : (looked ? undefined : { email: null })));
+          return chain;
+        }
+        if (table === 'users') {
+          // Authorization lookups use this table too; only the portal-access query
+          // (filtered by contact_id) is answered here.
+          const baseChain = base(table);
+          const originalWhere = baseChain.where;
+          baseChain.where = vi.fn((filter: any) => {
+            if (filter && 'contact_id' in filter) {
+              const chain: any = {};
+              chain.select = vi.fn(() => chain);
+              chain.first = vi.fn(async () => (usersWithPortalAccess.includes(filter.contact_id) ? { user_id: 'u1' } : undefined));
+              return chain;
+            }
+            return originalWhere(filter);
+          });
+          return baseChain;
+        }
+        return base(table);
+      });
+      vi.spyOn(Quote, 'getById').mockResolvedValue(reviewQuote as any);
+    });
+
+    afterEach(() => {
+      if (originalBaseUrl === undefined) delete process.env.NEXT_PUBLIC_BASE_URL;
+      else process.env.NEXT_PUBLIC_BASE_URL = originalBaseUrl;
+    });
+
+    it('setting on: one email, one distinct link per recipient; duplicates differing in case collapse', async () => {
+      contactsByEmail = { 'known@example.com': 'contact-1' };
+      const { resendQuote } = await import('../../src/actions/quoteActions');
+      await resendQuote(QUOTE_ID, { email_addresses: ['Known@Example.com', 'known@example.com ', 'other@example.com'] });
+
+      expect(sendEmailMock).toHaveBeenCalledTimes(2);
+      expect(mintLinkMock).toHaveBeenCalledTimes(2);
+      const [first, second] = mintLinkMock.mock.calls.map((c) => c[2]);
+      expect(first.recipient).toEqual({ contactId: 'contact-1', email: 'known@example.com' });
+      expect(second.recipient).toEqual({ contactId: null, email: 'other@example.com' });
+
+      expect(sendEmailMock.mock.calls[0][0].to).toEqual(['known@example.com']);
+      expect(sendEmailMock.mock.calls[1][0].to).toEqual(['other@example.com']);
+      expect(bodyOf(0)).toContain('https://app.example.com/quote/token-1-secretvalue');
+      expect(bodyOf(0)).not.toContain('token-2-secretvalue');
+      expect(bodyOf(1)).toContain('https://app.example.com/quote/token-2-secretvalue');
+      expect(bodyOf(1)).not.toContain('token-1-secretvalue');
+    });
+
+    it('setting on: portal link is secondary and only for recipients with portal access', async () => {
+      contactsByEmail = { 'portal@example.com': 'contact-p' };
+      usersWithPortalAccess = ['contact-p'];
+      const { resendQuote } = await import('../../src/actions/quoteActions');
+      await resendQuote(QUOTE_ID, { email_addresses: ['portal@example.com', 'nologin@example.com'] });
+
+      const portalUrl = `/client-portal/billing/quotes/${QUOTE_ID}`;
+      expect(bodyOf(0)).toContain(portalUrl);
+      expect(bodyOf(1)).not.toContain(portalUrl);
+      expect(bodyOf(1)).toContain('/quote/token-2-secretvalue');
+    });
+
+    it.each([
+      ['sendQuote', 'draft'],
+      ['resendQuote', 'sent'],
+      ['sendQuoteReminder', 'sent'],
+    ])('%s supersedes only that recipient\'s links before minting, in one transaction', async (action, status) => {
+      vi.spyOn(Quote, 'getById').mockResolvedValue({ ...reviewQuote, status } as any);
+      const { [action]: run } = (await import('../../src/actions/quoteActions')) as any;
+      await run(QUOTE_ID, { email_addresses: ['A@example.com', 'b@example.com'] });
+
+      expect(revokeLinkMock.mock.calls.map((c) => [c[0], c[2], c[3]])).toEqual([
+        [mockTrx, { quoteId: QUOTE_ID, recipientEmail: 'a@example.com' }, 'superseded'],
+        [mockTrx, { quoteId: QUOTE_ID, recipientEmail: 'b@example.com' }, 'superseded'],
+      ]);
+      expect(mintLinkMock.mock.calls.every((c) => c[0] === mockTrx)).toBe(true);
+      expect(revokeLinkMock.mock.invocationCallOrder[0]).toBeLessThan(mintLinkMock.mock.invocationCallOrder[0]);
+    });
+
+    it('setting on: honours the configured link lifetime', async () => {
+      emailLinkReviewSettingsMock.mockResolvedValue({ enabled: true, linkLifetimeHours: 48 });
+      const { resendQuote } = await import('../../src/actions/quoteActions');
+      await resendQuote(QUOTE_ID, { email_addresses: ['a@example.com'] });
+      expect(mintLinkMock.mock.calls[0][2].lifetimeHours).toBe(48);
+    });
+
+    it('partial failure: successful emails stay sent, the failed recipient link is revoked and recorded, status is not touched', async () => {
+      sendEmailMock
+        .mockResolvedValueOnce({ success: true, messageId: 'm-a' })
+        .mockResolvedValueOnce({ success: false, error: 'mailbox full' });
+      const { resendQuote } = await import('../../src/actions/quoteActions');
+      const result: any = await resendQuote(QUOTE_ID, { email_addresses: ['a@example.com', 'b@example.com'] });
+
+      expect(revokeLinkMock).toHaveBeenCalledWith(expect.anything(), TENANT_ID, { linkId: 'link-2' }, 'manual');
+      expect(result.email_delivery).toEqual({
+        sent: ['a@example.com'],
+        failed: [{ email: 'b@example.com', error: 'mailbox full' }],
+      });
+      const metadata = activityMetadata();
+      expect(metadata.failed_recipients).toEqual(['b@example.com']);
+      expect(metadata.deliveries).toEqual([
+        { email: 'a@example.com', success: true, message_id: 'm-a', link_id: 'link-1' },
+        { email: 'b@example.com', success: false, message_id: null, link_id: null, error: 'mailbox full' },
+      ]);
+      expect(QuoteActivity.create).toHaveBeenCalledTimes(1);
+      expect(Quote.update).not.toHaveBeenCalled();
+    });
+
+    it('sendQuote transitions the quote to sent once, regardless of recipient count', async () => {
+      vi.spyOn(Quote, 'getById').mockResolvedValue({ ...reviewQuote, status: 'draft' } as any);
+      const { sendQuote } = await import('../../src/actions/quoteActions');
+      await sendQuote(QUOTE_ID, { email_addresses: ['a@example.com', 'b@example.com'] });
+      expect(Quote.update).toHaveBeenCalledTimes(1);
+      expect(QuoteActivity.create).toHaveBeenCalledTimes(1);
+    });
+
+    it('never writes the raw token to the activity log or message metadata', async () => {
+      const { resendQuote } = await import('../../src/actions/quoteActions');
+      await resendQuote(QUOTE_ID, { email_addresses: ['a@example.com', 'b@example.com'] });
+      expect(JSON.stringify((QuoteActivity.create as any).mock.calls)).not.toContain('secretvalue');
+      for (const [payload] of sendEmailMock.mock.calls) {
+        const { html, text, attachments, ...meta } = payload;
+        expect(JSON.stringify(meta)).not.toContain('secretvalue');
+      }
+    });
+
+    it.each([
+      ['sendQuote', 'draft'],
+      ['resendQuote', 'sent'],
+      ['sendQuoteReminder', 'sent'],
+    ])('setting OFF (%s): no mint, no revoke, one combined send with no review link - identical to before', async (action, status) => {
+      emailLinkReviewSettingsMock.mockResolvedValue({ enabled: false, linkLifetimeHours: null });
+      vi.spyOn(Quote, 'getById').mockResolvedValue({ ...reviewQuote, status } as any);
+      const { [action]: run } = (await import('../../src/actions/quoteActions')) as any;
+      const result = await run(QUOTE_ID, { email_addresses: ['One@example.com', 'two@example.com'] });
+
+      expect(mintLinkMock).not.toHaveBeenCalled();
+      expect(revokeLinkMock).not.toHaveBeenCalled();
+      expect(sendEmailMock).toHaveBeenCalledTimes(1);
+      const payload = sendEmailMock.mock.calls[0][0];
+      expect(payload.to).toEqual(['One@example.com', 'two@example.com']);
+      expect(JSON.stringify(payload)).not.toMatch(/quoteReviewLink|\/quote\/|Review and approve/);
+      expect(payload.html).toContain(`/client-portal/billing/quotes/${QUOTE_ID}`);
+      expect(result.email_delivery).toBeUndefined();
+      expect(Object.keys(activityMetadata()).sort()).toEqual(['email_sent', 'message_id', 'recipients']);
+    });
   });
 });

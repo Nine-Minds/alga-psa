@@ -721,6 +721,12 @@
       "draftDescription": "Jesteś jedynym użytkownikiem, który może zatwierdzać wyceny. Po przesłaniu tej wyceny do zatwierdzenia możesz ją sam zatwierdzić, a następnie wysłać.",
       "pendingDescription": "Jesteś jedynym użytkownikiem, który może zatwierdzać wyceny, więc możesz sam zatwierdzić tę wycenę. Wybierz Zatwierdź, aby była gotowa do wysłania.",
       "dialogNote": "Jesteś jedyną osobą zatwierdzającą, więc zatwierdzenie własnej wyceny jest dozwolone. Zatwierdzenie zostanie zapisane jako samodzielne zatwierdzenie."
+    },
+    "emailLinkReview": {
+      "label": "Zezwalaj klientom na przeglądanie i zatwierdzanie wycen z linku w e-mailu bez logowania",
+      "lifetimeLabel": "Czas ważności linku (godziny)",
+      "lifetimePlaceholder": "Domyślnie: do wygaśnięcia wyceny",
+      "lifetimeHelp": "Od 24 do 2160 godzin. Pozostaw puste, aby użyć daty ważności wyceny (30 dni, gdy jej brak)."
     }
   },
   "quoteTemplates": {
@@ -890,6 +896,9 @@
       "missingFieldNamed": "Brakuje wymaganego pola oferty: {{field}}.",
       "templateCannotBeAccepted": "Szablonów wycen nie można oznaczyć jako zaakceptowanych",
       "onlySentCanBeAccepted": "Jako zaakceptowane można oznaczyć tylko wysłane wyceny"
+    },
+    "emailLinkReview": {
+      "invalidLifetime": "Czas ważności linku musi być liczbą całkowitą godzin od 24 do 2160"
     }
   }
 }

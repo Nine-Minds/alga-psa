@@ -22,7 +22,9 @@ import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { mapLoadedQuoteToViewModel } from '../lib/adapters/quoteAdapters';
 import { buildTenantPortalUrl } from '@alga-psa/tenancy/server';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
-import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, type QuoteApprovalWorkflowSettings } from '../lib/quoteApprovalSettings';
+import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, getQuoteEmailLinkReviewSettings as loadQuoteEmailLinkReviewSettings, setQuoteEmailLinkReviewSettings as persistQuoteEmailLinkReviewSettings, type QuoteApprovalWorkflowSettings, type QuoteEmailLinkReviewSettings, validateQuoteEmailLinkLifetimeHours } from '../lib/quoteApprovalSettings';
+import { buildQuoteReviewLink, getPublicBaseOrigin } from '../lib/quoteReviewLink';
+import { mint as mintQuoteAccessLink, revoke as revokeQuoteAccessLinks } from '../services/quoteAccessLinks';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
 import { buildQuoteConversionPreview, convertQuoteToDraftContract, convertQuoteToDraftContractAndInvoice, convertQuoteToDraftInvoice, convertQuoteToDraftSalesOrder, createPDFGenerationService } from '../services';
 import {
@@ -561,6 +563,8 @@ const renderQuoteEmail = async ({
   quote,
   companyName,
   portalLink,
+  quoteReviewLink,
+  hasPortalAccess,
   customMessage,
   locale,
 }: {
@@ -570,6 +574,8 @@ const renderQuoteEmail = async ({
   quote: IQuote;
   companyName: string;
   portalLink?: string;
+  quoteReviewLink?: string;
+  hasPortalAccess?: boolean;
   customMessage?: string;
   locale?: string;
 }): Promise<{ subject: string; html: string; text: string }> => {
@@ -579,7 +585,7 @@ const renderQuoteEmail = async ({
     const buildFallback = templateName === 'quote-reminder-email'
       ? buildQuoteReminderEmailTemplate
       : buildQuoteSentEmailTemplate;
-    return buildFallback({ quote, companyName, portalLink, customMessage, locale });
+    return buildFallback({ quote, companyName, portalLink, quoteReviewLink, hasPortalAccess, customMessage, locale });
   }
 
   const templateContext = {
@@ -592,7 +598,9 @@ const renderQuoteEmail = async ({
     company: {
       name: companyName,
     },
-    portalLink: portalLink?.trim() || '',
+    // With a review link the portal link is secondary and only for recipients with portal access.
+    portalLink: (quoteReviewLink && hasPortalAccess === false ? '' : portalLink?.trim()) || '',
+    quoteReviewLink: quoteReviewLink?.trim() || '',
     customMessage: customMessage?.trim() || '',
   };
 
@@ -614,6 +622,7 @@ const sendQuoteEmailWithAttachment = async ({
   html,
   text,
   senderId,
+  pdf,
 }: {
   tenant: string;
   quote: IQuote;
@@ -623,9 +632,11 @@ const sendQuoteEmailWithAttachment = async ({
   html: string;
   text: string;
   senderId?: string;
+  /** Pre-generated PDF, so per-recipient sends generate it once. */
+  pdf?: Buffer;
 }) => {
   const actorId = getActorUserId(user);
-  const pdfBuffer = await createPDFGenerationService(tenant).generatePDF({ quoteId: quote.quote_id, userId: actorId ?? '' });
+  const pdfBuffer = pdf ?? await createPDFGenerationService(tenant).generatePDF({ quoteId: quote.quote_id, userId: actorId ?? '' });
   return await TenantEmailService.getInstance(tenant).sendEmail({
     mailClass: 'sales',
     senderId,
@@ -646,6 +657,265 @@ const sendQuoteEmailWithAttachment = async ({
     contactId: quote.contact_id ?? undefined,
     userId: getActorUserId(user) ?? undefined,
   });
+};
+
+export interface QuoteEmailRecipientResult {
+  email: string;
+  success: boolean;
+  messageId: string | null;
+  /** Access link minted for this recipient (id only, never the token). */
+  linkId: string | null;
+  error?: string;
+}
+
+interface QuoteEmailDelivery {
+  /** Recipients the email was attempted for. */
+  recipients: string[];
+  /** True when at least one send succeeded. */
+  emailSent: boolean;
+  /** Legacy combined message id (setting off) or the first successful per-recipient id. */
+  messageId: string | null;
+  /** Present only when per-recipient review links were used. */
+  perRecipient?: QuoteEmailRecipientResult[];
+}
+
+const normalizeRecipientEmail = (email: string) => email.trim().toLowerCase();
+
+// Contact in the quote's client with this email (case-insensitive), if any, and
+// whether that contact has an active client-portal user.
+const resolveRecipientContact = async (
+  knex: Knex,
+  tenant: string,
+  quote: IQuote,
+  email: string
+): Promise<{ contactId: string | null; hasPortalAccess: boolean }> => {
+  if (!quote.client_id) {
+    return { contactId: null, hasPortalAccess: false };
+  }
+  const contact = await tenantDb(knex, tenant).table('contacts')
+    .select('contact_name_id')
+    .where({ client_id: quote.client_id })
+    .whereRaw('lower(email) = ?', [email])
+    .first<{ contact_name_id?: string } | undefined>();
+  if (!contact?.contact_name_id) {
+    return { contactId: null, hasPortalAccess: false };
+  }
+  const portalUser = await tenantDb(knex, tenant).table('users')
+    .select('user_id')
+    .where({ contact_id: contact.contact_name_id, user_type: 'client', is_inactive: false })
+    .first();
+  return { contactId: contact.contact_name_id, hasPortalAccess: Boolean(portalUser) };
+};
+
+/**
+ * Sends (or resends / reminds) the quote email.
+ *
+ * Setting off: exactly the original behaviour - one combined send to all
+ * recipients, no tokens minted or revoked, no review link.
+ *
+ * Setting on: one email per (deduplicated, case-folded) recipient, each with
+ * its own review link. Per recipient, in one transaction, earlier live links
+ * are revoked ('superseded') and a fresh one is minted; if the send then fails
+ * the new link is revoked, so no live link exists for an email that never
+ * went out. Other recipients are unaffected by one recipient's failure.
+ */
+const deliverQuoteEmails = async ({
+  knex,
+  tenant,
+  quote,
+  user,
+  templateName,
+  input,
+  logLabel,
+}: {
+  knex: Knex;
+  tenant: string;
+  quote: IQuote;
+  user: unknown;
+  templateName: QuoteTemplateName;
+  input: SendQuoteInput;
+  logLabel: string;
+}): Promise<QuoteEmailDelivery> => {
+  const [recipients, tenantParty, linkSettings] = await Promise.all([
+    getQuoteRecipients(knex, tenant, quote, input.email_addresses ?? []),
+    fetchTenantParty(knex, tenant),
+    loadQuoteEmailLinkReviewSettings(knex, tenant),
+  ]);
+
+  if (recipients.length === 0) {
+    return { recipients: [], emailSent: false, messageId: null };
+  }
+
+  const companyName = tenantParty?.name || 'Your Company';
+  const portalLink = await buildQuotePortalLink(tenant, quote.quote_id);
+
+  if (!linkSettings.enabled) {
+    try {
+    const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
+    const renderedEmail = await renderQuoteEmail({
+      knex,
+      tenant,
+      templateName,
+      quote,
+      companyName,
+      portalLink,
+      customMessage: input.message,
+      locale: recipientLocale,
+    });
+    const subject = input.subject?.trim() || renderedEmail.subject;
+
+    const emailResult = await sendQuoteEmailWithAttachment({
+      tenant,
+      quote,
+      user,
+      recipients,
+      subject,
+      html: renderedEmail.html,
+      text: renderedEmail.text,
+      senderId: input.senderId,
+    });
+    if (!emailResult.success) {
+      console.warn(`${logLabel}:`, emailResult.error);
+    }
+    return { recipients, emailSent: emailResult.success, messageId: emailResult.messageId ?? null };
+    } catch (emailError) {
+      console.warn(`${logLabel}:`, emailError);
+      return { recipients, emailSent: false, messageId: null };
+    }
+  }
+
+  // Per-recipient path. Dedupe on trimmed + lowercased address.
+  const uniqueRecipients = Array.from(new Set(recipients.map(normalizeRecipientEmail)));
+  const actorUserId = getActorUserId(user);
+  const hasPublicOrigin = getPublicBaseOrigin() !== null;
+  const pdf = await createPDFGenerationService(tenant).generatePDF({ quoteId: quote.quote_id, userId: actorUserId ?? '' });
+  const results: QuoteEmailRecipientResult[] = [];
+
+  for (const email of uniqueRecipients) {
+    let linkId: string | null = null;
+    try {
+      const { contactId, hasPortalAccess } = await resolveRecipientContact(knex, tenant, quote, email);
+
+      let quoteReviewLink: string | undefined;
+      if (hasPublicOrigin) {
+        const { link, token } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+          await revokeQuoteAccessLinks(trx, tenant, { quoteId: quote.quote_id, recipientEmail: email }, 'superseded');
+          return await mintQuoteAccessLink(trx, tenant, {
+            quote,
+            recipient: { contactId, email },
+            createdBy: actorUserId ?? null,
+            lifetimeHours: linkSettings.linkLifetimeHours,
+          });
+        });
+        linkId = link.link_id;
+        quoteReviewLink = buildQuoteReviewLink(token) ?? undefined;
+      }
+
+      const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, email);
+      const renderedEmail = await renderQuoteEmail({
+        knex,
+        tenant,
+        templateName,
+        quote,
+        companyName,
+        portalLink,
+        quoteReviewLink,
+        hasPortalAccess,
+        customMessage: input.message,
+        locale: recipientLocale,
+      });
+      const subject = input.subject?.trim() || renderedEmail.subject;
+
+      const emailResult = await sendQuoteEmailWithAttachment({
+        tenant,
+        quote,
+        user,
+        recipients: [email],
+        subject,
+        html: renderedEmail.html,
+        text: renderedEmail.text,
+        senderId: input.senderId,
+        pdf,
+      });
+
+      if (!emailResult.success) {
+        throw new Error(emailResult.error ? String(emailResult.error) : 'Email send failed');
+      }
+      results.push({ email, success: true, messageId: emailResult.messageId ?? null, linkId });
+    } catch (error) {
+      if (linkId) {
+        try {
+          await revokeQuoteAccessLinks(knex, tenant, { linkId }, 'manual');
+        } catch (revokeError) {
+          console.error(`${logLabel}: failed to revoke link after send failure:`, revokeError);
+        }
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn(`${logLabel} (recipient):`, message);
+      results.push({ email, success: false, messageId: null, linkId: null, error: message });
+    }
+  }
+
+  const firstSuccess = results.find((r) => r.success);
+  return {
+    recipients: uniqueRecipients,
+    emailSent: Boolean(firstSuccess),
+    messageId: firstSuccess?.messageId ?? null,
+    perRecipient: results,
+  };
+};
+
+// Activity metadata. Setting off keeps the original shape; per-recipient adds
+// the per-recipient outcome (message id + link id, never the token).
+const buildQuoteEmailActivityMetadata = (delivery: QuoteEmailDelivery) => ({
+  recipients: delivery.recipients,
+  email_sent: delivery.emailSent,
+  message_id: delivery.messageId,
+  ...(delivery.perRecipient
+    ? {
+        deliveries: delivery.perRecipient.map((r) => ({
+          email: r.email,
+          success: r.success,
+          message_id: r.messageId,
+          link_id: r.linkId,
+          ...(r.error ? { error: r.error } : {}),
+        })),
+        failed_recipients: delivery.perRecipient.filter((r) => !r.success).map((r) => r.email),
+      }
+    : {}),
+});
+
+/**
+ * Result of a send / resend / reminder. `email_delivery` is present only when
+ * per-recipient review links were used, and lists who got the email and who
+ * did not, so callers can surface a partial failure.
+ */
+export type QuoteSendResult = IQuote & {
+  email_delivery?: {
+    sent: string[];
+    failed: Array<{ email: string; error: string }>;
+  };
+};
+
+const withEmailDelivery = (quote: IQuote, delivery: QuoteEmailDelivery): QuoteSendResult => {
+  if (!delivery.perRecipient) {
+    return quote;
+  }
+  return {
+    ...quote,
+    email_delivery: {
+      sent: delivery.perRecipient.filter((r) => r.success).map((r) => r.email),
+      failed: delivery.perRecipient.filter((r) => !r.success).map((r) => ({ email: r.email, error: r.error ?? 'Email send failed' })),
+    },
+  };
+};
+
+const describeQuoteEmailOutcome = (delivery: QuoteEmailDelivery, verb: string): string => {
+  const sent = delivery.perRecipient
+    ? delivery.perRecipient.filter((r) => r.success).map((r) => r.email)
+    : delivery.recipients;
+  const failed = delivery.perRecipient?.filter((r) => !r.success).map((r) => r.email) ?? [];
+  return failed.length > 0 ? `${verb} to ${sent.join(', ') || 'no recipients'}; failed for ${failed.join(', ')}` : `${verb} to ${sent.join(', ')}`;
 };
 
 export const createQuote = withAuth(async (user, { tenant }, input: CreateQuoteInput): Promise<IQuote | QuoteActionError> => {
@@ -1430,6 +1700,7 @@ export const listQuoteVersions = withAuth(async (
  */
 export type QuoteApprovalSettingsView = QuoteApprovalWorkflowSettings & {
   currentUserIsSoleApprover: boolean;
+  emailLinkReview: QuoteEmailLinkReviewSettings;
 };
 
 export const getQuoteApprovalSettings = withAuth(async (
@@ -1442,7 +1713,10 @@ export const getQuoteApprovalSettings = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const settings = await loadQuoteApprovalWorkflowSettings(knex, tenant);
+  const [settings, emailLinkReview] = await Promise.all([
+    loadQuoteApprovalWorkflowSettings(knex, tenant),
+    loadQuoteEmailLinkReviewSettings(knex, tenant),
+  ]);
 
   const currentUserIsSoleApprover =
     settings.approvalRequired &&
@@ -1450,7 +1724,7 @@ export const getQuoteApprovalSettings = withAuth(async (
     await hasPermission(user as any, 'quotes', 'approve') &&
     await allowSelfQuoteApproval(knex, tenant, (user as any).user_id);
 
-  return { ...settings, currentUserIsSoleApprover };
+  return { ...settings, currentUserIsSoleApprover, emailLinkReview };
 });
 
 export const updateQuoteApprovalSettings = withAuth(async (
@@ -1469,6 +1743,39 @@ export const updateQuoteApprovalSettings = withAuth(async (
 
   const { knex } = await createTenantKnex();
   return await persistQuoteApprovalWorkflowRequired(knex, tenant, approvalRequired);
+  });
+});
+
+export const updateQuoteEmailLinkReviewSettings = withAuth(async (
+  user,
+  { tenant },
+  input: QuoteEmailLinkReviewSettings
+): Promise<QuoteEmailLinkReviewSettings | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
+  if ((user as any).user_type === 'client') {
+    throw new Error('Permission denied: operation not available in client portal');
+  }
+
+  if (!await hasPermission(user as any, 'billing', 'update')) {
+    return permissionError('Permission denied: Cannot update quote approval settings', 'msp/quotes:errors.permissions.updateApprovalSettings');
+  }
+
+  // Validation errors are expected user input problems, not server faults.
+  let validated: QuoteEmailLinkReviewSettings;
+  try {
+    validated = {
+      enabled: input?.enabled === true,
+      linkLifetimeHours: validateQuoteEmailLinkLifetimeHours(input?.linkLifetimeHours),
+    };
+  } catch (error) {
+    return actionError(
+      error instanceof Error ? error.message : 'Invalid link lifetime',
+      'msp/quotes:errors.emailLinkReview.invalidLifetime'
+    );
+  }
+
+  const { knex } = await createTenantKnex();
+  return await persistQuoteEmailLinkReviewSettings(knex, tenant, validated);
   });
 });
 
@@ -1678,7 +1985,7 @@ export const sendQuote = withAuth(async (
   { tenant },
   quoteId: string,
   input: SendQuoteInput = {}
-): Promise<IQuote | QuoteActionError> => {
+): Promise<QuoteSendResult | QuoteActionError> => {
   return withQuoteActionErrors(async () => {
   if ((user as any).user_type === 'client') {
     throw new Error('Permission denied: operation not available in client portal');
@@ -1731,55 +2038,25 @@ export const sendQuote = withAuth(async (
   }
 
   // Attempt email notification (best-effort — quote is already visible in client portal)
-  let emailSent = false;
-  let emailRecipients: string[] = [];
-  let emailMessageId: string | null = null;
+  let delivery: QuoteEmailDelivery = { recipients: [], emailSent: false, messageId: null };
   try {
-    const [recipients, tenantParty] = await Promise.all([
-      getQuoteRecipients(knex, tenant, quote, input.email_addresses ?? []),
-      fetchTenantParty(knex, tenant),
-    ]);
-
-    if (recipients.length > 0) {
-      emailRecipients = recipients;
-      const companyName = tenantParty?.name || 'Your Company';
-      const portalLink = await buildQuotePortalLink(tenant, quote.quote_id);
-      const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
-      const renderedEmail = await renderQuoteEmail({
-        knex,
-        tenant,
-        templateName: 'quote-email',
-        quote,
-        companyName,
-        portalLink,
-        customMessage: input.message,
-        locale: recipientLocale,
-      });
-      const subject = input.subject?.trim() || renderedEmail.subject;
-
-      const emailResult = await sendQuoteEmailWithAttachment({
-        tenant,
-        quote,
-        user,
-        recipients,
-        subject,
-        html: renderedEmail.html,
-        text: renderedEmail.text,
-        senderId: input.senderId,
-      });
-
-      emailSent = emailResult.success;
-      emailMessageId = emailResult.messageId ?? null;
-      if (!emailResult.success) {
-        console.warn('Quote email failed (quote is still published in client portal):', emailResult.error);
-      }
-    }
+    delivery = await deliverQuoteEmails({
+      knex,
+      tenant,
+      quote,
+      user,
+      templateName: 'quote-email',
+      input,
+      logLabel: 'Quote email failed (quote is still published in client portal)',
+    });
   } catch (emailError) {
     console.warn('Quote email failed (quote is still published in client portal):', emailError);
   }
+  const emailSent = delivery.emailSent;
+  const emailRecipients = delivery.recipients;
 
   const activityDescription = emailSent && emailRecipients.length > 0
-    ? `Quote sent to ${emailRecipients.join(', ')} and published in client portal`
+    ? `${describeQuoteEmailOutcome(delivery, 'Quote sent')} and published in client portal`
     : 'Quote published in client portal';
 
   await QuoteActivity.create(knex, tenant, {
@@ -1787,14 +2064,10 @@ export const sendQuote = withAuth(async (
     activity_type: 'sent',
     description: activityDescription,
     performed_by: actorUserId,
-    metadata: {
-      recipients: emailRecipients,
-      email_sent: emailSent,
-      message_id: emailMessageId,
-    },
+    metadata: buildQuoteEmailActivityMetadata(delivery),
   });
 
-  return await Quote.getById(knex, tenant, quoteId) as IQuote;
+  return withEmailDelivery(await Quote.getById(knex, tenant, quoteId) as IQuote, delivery);
   });
 });
 
@@ -1803,7 +2076,7 @@ export const resendQuote = withAuth(async (
   { tenant },
   quoteId: string,
   input: SendQuoteInput = {}
-): Promise<IQuote | QuoteActionError> => {
+): Promise<QuoteSendResult | QuoteActionError> => {
   return withQuoteActionErrors(async () => {
   if ((user as any).user_type === 'client') {
     throw new Error('Permission denied: operation not available in client portal');
@@ -1831,66 +2104,32 @@ export const resendQuote = withAuth(async (
     throw new Error('Only sent quotes can be resent');
   }
 
-  let emailSent = false;
-  let emailRecipients: string[] = [];
-  let emailMessageId: string | null = null;
+  let delivery: QuoteEmailDelivery = { recipients: [], emailSent: false, messageId: null };
   try {
-    const [recipients, tenantParty] = await Promise.all([
-      getQuoteRecipients(knex, tenant, quote, input.email_addresses ?? []),
-      fetchTenantParty(knex, tenant),
-    ]);
-
-    if (recipients.length > 0) {
-      emailRecipients = recipients;
-      const companyName = tenantParty?.name || 'Your Company';
-      const portalLink = await buildQuotePortalLink(tenant, quote.quote_id);
-      const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
-      const renderedEmail = await renderQuoteEmail({
-        knex,
-        tenant,
-        templateName: 'quote-email',
-        quote,
-        companyName,
-        portalLink,
-        customMessage: input.message,
-        locale: recipientLocale,
-      });
-      const subject = input.subject?.trim() || renderedEmail.subject;
-
-      const emailResult = await sendQuoteEmailWithAttachment({
-        tenant,
-        quote,
-        user,
-        recipients,
-        subject,
-        html: renderedEmail.html,
-        text: renderedEmail.text,
-        senderId: input.senderId,
-      });
-
-      emailSent = emailResult.success;
-      emailMessageId = emailResult.messageId ?? null;
-      if (!emailResult.success) {
-        console.warn('Quote resend email failed:', emailResult.error);
-      }
-    }
+    delivery = await deliverQuoteEmails({
+      knex,
+      tenant,
+      quote,
+      user,
+      templateName: 'quote-email',
+      input,
+      logLabel: 'Quote resend email failed',
+    });
   } catch (emailError) {
     console.warn('Quote resend email failed:', emailError);
   }
+  const emailSent = delivery.emailSent;
+  const emailRecipients = delivery.recipients;
 
   await QuoteActivity.create(knex, tenant, {
     quote_id: quoteId,
     activity_type: 'resent',
-    description: emailSent ? `Quote resent to ${emailRecipients.join(', ')}` : 'Quote resend attempted (email not configured)',
+    description: emailSent ? describeQuoteEmailOutcome(delivery, 'Quote resent') : 'Quote resend attempted (email not configured)',
     performed_by: getActorUserId(user),
-    metadata: {
-      recipients: emailRecipients,
-      email_sent: emailSent,
-      message_id: emailMessageId,
-    },
+    metadata: buildQuoteEmailActivityMetadata(delivery),
   });
 
-  return await Quote.getById(knex, tenant, quoteId) as IQuote;
+  return withEmailDelivery(await Quote.getById(knex, tenant, quoteId) as IQuote, delivery);
   });
 });
 
@@ -1899,7 +2138,7 @@ export const sendQuoteReminder = withAuth(async (
   { tenant },
   quoteId: string,
   input: SendQuoteInput = {}
-): Promise<IQuote | QuoteActionError> => {
+): Promise<QuoteSendResult | QuoteActionError> => {
   return withQuoteActionErrors(async () => {
   if ((user as any).user_type === 'client') {
     throw new Error('Permission denied: operation not available in client portal');
@@ -1927,66 +2166,32 @@ export const sendQuoteReminder = withAuth(async (
     throw new Error('Only sent quotes can receive reminders');
   }
 
-  let emailSent = false;
-  let emailRecipients: string[] = [];
-  let emailMessageId: string | null = null;
+  let delivery: QuoteEmailDelivery = { recipients: [], emailSent: false, messageId: null };
   try {
-    const [recipients, tenantParty] = await Promise.all([
-      getQuoteRecipients(knex, tenant, quote, input.email_addresses ?? []),
-      fetchTenantParty(knex, tenant),
-    ]);
-
-    if (recipients.length > 0) {
-      emailRecipients = recipients;
-      const companyName = tenantParty?.name || 'Your Company';
-      const portalLink = await buildQuotePortalLink(tenant, quote.quote_id);
-      const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
-      const renderedEmail = await renderQuoteEmail({
-        knex,
-        tenant,
-        templateName: 'quote-reminder-email',
-        quote,
-        companyName,
-        portalLink,
-        customMessage: input.message,
-        locale: recipientLocale,
-      });
-      const subject = input.subject?.trim() || renderedEmail.subject;
-
-      const emailResult = await sendQuoteEmailWithAttachment({
-        tenant,
-        quote,
-        user,
-        recipients,
-        subject,
-        html: renderedEmail.html,
-        text: renderedEmail.text,
-        senderId: input.senderId,
-      });
-
-      emailSent = emailResult.success;
-      emailMessageId = emailResult.messageId ?? null;
-      if (!emailResult.success) {
-        console.warn('Quote reminder email failed:', emailResult.error);
-      }
-    }
+    delivery = await deliverQuoteEmails({
+      knex,
+      tenant,
+      quote,
+      user,
+      templateName: 'quote-reminder-email',
+      input,
+      logLabel: 'Quote reminder email failed',
+    });
   } catch (emailError) {
     console.warn('Quote reminder email failed:', emailError);
   }
+  const emailSent = delivery.emailSent;
+  const emailRecipients = delivery.recipients;
 
   await QuoteActivity.create(knex, tenant, {
     quote_id: quoteId,
     activity_type: 'reminder_sent',
-    description: emailSent ? `Quote reminder sent to ${emailRecipients.join(', ')}` : 'Quote reminder attempted (email not configured)',
+    description: emailSent ? describeQuoteEmailOutcome(delivery, 'Quote reminder sent') : 'Quote reminder attempted (email not configured)',
     performed_by: getActorUserId(user),
-    metadata: {
-      recipients: emailRecipients,
-      email_sent: emailSent,
-      message_id: emailMessageId,
-    },
+    metadata: buildQuoteEmailActivityMetadata(delivery),
   });
 
-  return await Quote.getById(knex, tenant, quoteId) as IQuote;
+  return withEmailDelivery(await Quote.getById(knex, tenant, quoteId) as IQuote, delivery);
   });
 });
 

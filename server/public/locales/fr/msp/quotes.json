@@ -721,6 +721,12 @@
       "draftDescription": "Vous êtes le seul utilisateur pouvant approuver les devis. Après avoir soumis ce devis pour approbation, vous pourrez l'approuver vous-même puis l'envoyer.",
       "pendingDescription": "Vous êtes le seul utilisateur pouvant approuver les devis ; vous pouvez donc approuver ce devis vous-même. Choisissez Approuver pour le rendre prêt à être envoyé.",
       "dialogNote": "Vous êtes le seul approbateur ; approuver votre propre devis est donc autorisé. L'approbation est enregistrée comme une auto-approbation."
+    },
+    "emailLinkReview": {
+      "label": "Permettre aux clients de consulter et d'approuver les devis depuis le lien de l'e-mail sans se connecter",
+      "lifetimeLabel": "Durée de validité du lien (heures)",
+      "lifetimePlaceholder": "Par défaut : jusqu'à l'expiration du devis",
+      "lifetimeHelp": "Entre 24 et 2160 heures. Laisser vide pour utiliser la date d'expiration du devis (30 jours à défaut)."
     }
   },
   "quoteTemplates": {
@@ -890,6 +896,9 @@
       "missingFieldNamed": "Un champ obligatoire du devis est manquant : {{field}}.",
       "templateCannotBeAccepted": "Les modèles de devis ne peuvent pas être marqués comme acceptés",
       "onlySentCanBeAccepted": "Seuls les devis envoyés peuvent être marqués comme acceptés"
+    },
+    "emailLinkReview": {
+      "invalidLifetime": "La durée du lien doit être un nombre entier d'heures entre 24 et 2160"
     }
   }
 }

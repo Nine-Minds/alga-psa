@@ -721,6 +721,12 @@
       "draftDescription": "Sei l'unico utente che può approvare i preventivi. Dopo aver inviato questo preventivo per l'approvazione, potrai approvarlo tu stesso e poi inviarlo.",
       "pendingDescription": "Sei l'unico utente che può approvare i preventivi, quindi puoi approvare questo preventivo tu stesso. Scegli Approva per renderlo pronto per l'invio.",
       "dialogNote": "Sei l'unico approvatore, quindi approvare il tuo preventivo è consentito. L'approvazione viene registrata come auto-approvazione."
+    },
+    "emailLinkReview": {
+      "label": "Consenti ai clienti di rivedere e approvare i preventivi dal link nell'e-mail senza accedere",
+      "lifetimeLabel": "Durata del link (ore)",
+      "lifetimePlaceholder": "Predefinito: fino alla scadenza del preventivo",
+      "lifetimeHelp": "Tra 24 e 2160 ore. Lascia vuoto per usare la data di scadenza del preventivo (30 giorni se assente)."
     }
   },
   "quoteTemplates": {
@@ -890,6 +896,9 @@
       "missingFieldNamed": "Manca un campo obbligatorio del preventivo: {{field}}.",
       "templateCannotBeAccepted": "I modelli di preventivo non possono essere segnati come accettati",
       "onlySentCanBeAccepted": "Solo i preventivi inviati possono essere segnati come accettati"
+    },
+    "emailLinkReview": {
+      "invalidLifetime": "La durata del link deve essere un numero intero di ore tra 24 e 2160"
     }
   }
 }

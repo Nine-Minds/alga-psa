@@ -721,6 +721,12 @@
       "draftDescription": "Sie sind der einzige Benutzer, der Angebote genehmigen kann. Nachdem Sie dieses Angebot zur Genehmigung eingereicht haben, können Sie es selbst genehmigen und anschließend senden.",
       "pendingDescription": "Sie sind der einzige Benutzer, der Angebote genehmigen kann, daher können Sie dieses Angebot selbst genehmigen. Wählen Sie Genehmigen, um es versandbereit zu machen.",
       "dialogNote": "Sie sind der einzige Genehmiger, daher ist die Genehmigung Ihres eigenen Angebots erlaubt. Die Genehmigung wird als Selbstgenehmigung erfasst."
+    },
+    "emailLinkReview": {
+      "label": "Kunden erlauben, Angebote über den E-Mail-Link ohne Anmeldung zu prüfen und zu genehmigen",
+      "lifetimeLabel": "Link-Gültigkeit (Stunden)",
+      "lifetimePlaceholder": "Standard: bis das Angebot abläuft",
+      "lifetimeHelp": "Zwischen 24 und 2160 Stunden. Leer lassen, um das Ablaufdatum des Angebots zu verwenden (30 Tage, falls keines vorhanden)."
     }
   },
   "quoteTemplates": {
@@ -890,6 +896,9 @@
       "missingFieldNamed": "Erforderliches Angebotsfeld fehlt: {{field}}.",
       "templateCannotBeAccepted": "Angebotsvorlagen können nicht als angenommen markiert werden",
       "onlySentCanBeAccepted": "Nur gesendete Angebote können als angenommen markiert werden"
+    },
+    "emailLinkReview": {
+      "invalidLifetime": "Die Link-Gültigkeit muss eine ganze Zahl von Stunden zwischen 24 und 2160 sein"
     }
   }
 }
