@@ -765,7 +765,8 @@
         "choose": "11111",
         "resume": "11111",
         "discard": "11111",
-        "missing": "11111"
+        "missing": "11111",
+        "unsent": "11111"
       },
       "files": {
         "choose": "⟦Ȧŧŧȧƈħ ƒīŀḗş⟧",

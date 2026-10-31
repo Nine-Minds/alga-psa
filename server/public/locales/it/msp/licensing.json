@@ -765,7 +765,8 @@
         "choose": "Seleziona i file mancanti",
         "resume": "Invia",
         "discard": "Scarta",
-        "missing": "Prima di inviare, seleziona ogni file mancante con lo stesso nome."
+        "missing": "Prima di inviare, seleziona ogni file mancante con lo stesso nome.",
+        "unsent": "Non è stato possibile confermare l’invio del messaggio e dei file. Sono salvati e compariranno in «Messaggi non inviati»: riprendili o scartali da lì."
       },
       "files": {
         "choose": "Allega file",

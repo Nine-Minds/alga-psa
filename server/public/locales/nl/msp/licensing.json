@@ -765,7 +765,8 @@
         "choose": "Ontbrekende bestanden selecteren",
         "resume": "Verzenden",
         "discard": "Verwijderen",
-        "missing": "Selecteer vóór het verzenden elk ontbrekend bestand met dezelfde naam."
+        "missing": "Selecteer vóór het verzenden elk ontbrekend bestand met dezelfde naam.",
+        "unsent": "We konden niet bevestigen dat uw bericht en de bestanden zijn verzonden. Ze zijn opgeslagen en verschijnen onder ‘Niet-verzonden berichten’; hervat of verwijder ze daar."
       },
       "files": {
         "choose": "Bestanden bijvoegen",

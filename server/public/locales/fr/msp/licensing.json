@@ -765,7 +765,8 @@
         "choose": "Sélectionner les fichiers manquants",
         "resume": "Envoyer",
         "discard": "Supprimer",
-        "missing": "Sélectionnez chaque fichier manquant, avec le même nom, avant d’envoyer."
+        "missing": "Sélectionnez chaque fichier manquant, avec le même nom, avant d’envoyer.",
+        "unsent": "Nous n’avons pas pu confirmer l’envoi de votre message et de ses fichiers. Ils sont enregistrés et apparaîtront sous « Messages non envoyés » ; reprenez-les ou supprimez-les à cet endroit."
       },
       "files": {
         "choose": "Joindre des fichiers",

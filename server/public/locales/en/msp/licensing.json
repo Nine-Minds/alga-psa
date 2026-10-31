@@ -765,7 +765,8 @@
         "choose": "Select the missing files",
         "resume": "Send",
         "discard": "Discard",
-        "missing": "Select every missing file with the same name before sending."
+        "missing": "Select every missing file with the same name before sending.",
+        "unsent": "We could not confirm your message and files were sent. They are saved and will appear under “Unsent messages” — resume or discard them there."
       },
       "files": {
         "choose": "Attach files",

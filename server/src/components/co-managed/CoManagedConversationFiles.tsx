@@ -5,6 +5,7 @@ import type { ComponentType } from 'react';
 import type { CoManagedSharedResource } from '@alga-psa/co-managed';
 import { resolveUiSlots } from '@alga-psa/ui/capability/uiSlotRegistry';
 import { useCapability } from '@alga-psa/ui/hooks';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import '@/config/coManagedConversationSlots';
@@ -47,6 +48,7 @@ export default function CoManagedConversationFiles({ session, resource, staging 
   const version = useSyncExternalStore(session.subscribe, session.version, session.version);
   const staged = useSyncExternalStore(staging.subscribe, staging.getSnapshot, staging.getSnapshot);
   const snapshot = session.snapshot();
+  const unsent = session.unsentFailure();
   if (!enabled || !snapshot) return null;
   const items = snapshot.items.filter(item => !item.deleted);
   const threads = [...new Set(items.map(item => `${item.storeTenant}:${item.threadId}`))];
@@ -55,6 +57,8 @@ export default function CoManagedConversationFiles({ session, resource, staging 
   void staged;
   return <section id="co-managed-conversation-files" className="space-y-4 p-4">
     {writeAudiences.length > 0 && <CoManagedDraftRestore resource={resource} version={version} onPublished={() => { void session.load(); }} />}
+    {unsent && <Alert variant="destructive" role="alert"><AlertDescription>{t(['forbidden', 'readOnly', 'invalid', 'operationConflict'].includes(unsent.code)
+      ? `coManaged.editor.errors.${unsent.code}` : 'coManaged.conversation.drafts.unsent')}</AlertDescription></Alert>}
     {writeAudiences.length > 0 && <SharedCommentAttachmentPicker staging={staging} limits={{ maxBytes, maxFiles: MAX_FILES }}
       attachable={writeAudiences.length > 0} disabled={false} />}
     {threads.map(key => {

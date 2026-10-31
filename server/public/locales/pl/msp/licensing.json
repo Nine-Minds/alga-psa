@@ -769,7 +769,8 @@
         "choose": "Wybierz brakujące pliki",
         "resume": "Wyślij",
         "discard": "Odrzuć",
-        "missing": "Przed wysłaniem wybierz każdy brakujący plik o tej samej nazwie."
+        "missing": "Przed wysłaniem wybierz każdy brakujący plik o tej samej nazwie.",
+        "unsent": "Nie udało się potwierdzić wysłania wiadomości i plików. Są zapisane i pojawią się w sekcji „Niewysłane wiadomości” — wznów je lub odrzuć tam."
       },
       "files": {
         "choose": "Dołącz pliki",

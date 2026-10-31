@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
+import { canonicalHash } from './canonicalHash';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
 import { commentAudienceSql, resolveCommentAudience, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
@@ -143,7 +144,7 @@ export async function beginCoManagedConversationDraft(db: Knex, inputActor: CoMa
   const actor = snapshotCoManagedSessionActor(inputActor), resource = targetSnapshot(inputResource), request = snapshotRequest(input);
   if ((db as Knex.Transaction).isTransaction) invalid();
   const store = request.parent?.storeTenant ?? (request.audience === 'organization_private' && actor.tenant !== resource.tenant ? actor.tenant : resource.tenant);
-  const hash = createHash('sha256').update(JSON.stringify({ actor: { tenant: actor.tenant, userId: actor.userId }, resource, request })).digest('hex');
+  const hash = canonicalHash({ actor: { tenant: actor.tenant, userId: actor.userId }, resource, request });
   return withBase(db, actor, resource, store, async base => {
     const context = await destination(base, request, store), owner = tenantDb(context.trx, store);
     let row = await owner.table(TABLE).where('operation_id', request.operationId).forUpdate().first();

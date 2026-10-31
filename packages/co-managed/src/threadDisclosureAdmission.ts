@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { canonicalHash } from './canonicalHash';
 import type { Knex } from 'knex';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
 import { type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
@@ -32,7 +32,8 @@ export const conflict = (): never => { throw new CoManagedThreadDisclosureError(
 export const COMMENT_DISCLOSURE_FILE_CAP = 20;
 export const privateReplies = (): never => { throw new CoManagedThreadDisclosureError('THREAD_DISCLOSURE_PRIVATE_REPLIES'); };
 export const tooManyFiles = (): never => { throw new CoManagedThreadDisclosureError('THREAD_DISCLOSURE_TOO_MANY_FILES'); };
-export const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
+/** Canonical (key-order independent): a retried request rebuilt from stored or client state must hash the same. */
+export const hash = canonicalHash;
 export function target(input: CoManagedThreadReference): CoManagedThreadReference {
   if (!input || ![input.storeTenant, input.threadId].every(isCoManagedUuid)) invalid();
   return { storeTenant: input.storeTenant.toLowerCase(), threadId: input.threadId.toLowerCase() };

@@ -765,7 +765,8 @@
         "choose": "Fehlende Dateien auswählen",
         "resume": "Senden",
         "discard": "Verwerfen",
-        "missing": "Wählen Sie vor dem Senden jede fehlende Datei mit demselben Namen aus."
+        "missing": "Wählen Sie vor dem Senden jede fehlende Datei mit demselben Namen aus.",
+        "unsent": "Wir konnten nicht bestätigen, dass Ihre Nachricht und die Dateien gesendet wurden. Sie sind gespeichert und erscheinen unter „Nicht gesendete Nachrichten“ – setzen Sie sie dort fort oder verwerfen Sie sie."
       },
       "files": {
         "choose": "Dateien anhängen",

@@ -765,7 +765,8 @@
         "choose": "Seleccionar los archivos que faltan",
         "resume": "Enviar",
         "discard": "Descartar",
-        "missing": "Seleccione cada archivo que falta con el mismo nombre antes de enviar."
+        "missing": "Seleccione cada archivo que falta con el mismo nombre antes de enviar.",
+        "unsent": "No pudimos confirmar que su mensaje y los archivos se enviaron. Están guardados y aparecerán en «Mensajes sin enviar»; reanúdelos o descártelos allí."
       },
       "files": {
         "choose": "Adjuntar archivos",

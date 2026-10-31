@@ -1,12 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { encodeConversationContent, type CoManagedSharedResource, type CoManagedOpenConversationDraft } from '@alga-psa/co-managed';
+import type { CoManagedSharedResource, CoManagedOpenConversationDraft } from '@alga-psa/co-managed';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { listCoManagedConversationDraftsAction, abandonCoManagedConversationDraftAction } from '@/lib/actions/coManagedConversationDraftActions';
+import { conversationText } from './conversationText';
 import { missingDraftFiles, restoreConversationDraft, submitConversationDraft } from './conversationDraftSubmission';
+
+/** Plain text for the preview: the stored words, never the escaped markdown the server derives for transport. */
+export const draftPreviewText = (draft: Pick<CoManagedOpenConversationDraft, 'content'>): string =>
+  draft.content.document ? conversationText(JSON.stringify(draft.content.document), null) : draft.content.text ?? '';
 
 const ERROR_KEYS: Record<string, string> = { abandoned: 'coManaged.conversation.files.abandoned', notReady: 'coManaged.conversation.files.notReady' };
 
@@ -58,7 +63,7 @@ export default function CoManagedDraftRestore({ resource, version, onPublished }
     {drafts.map(draft => {
       const id = `co-managed-draft-${draft.operationId}`, missing = missingDraftFiles(draft);
       return <div key={draft.operationId} id={id} className="space-y-2 rounded border p-3">
-        <p className="whitespace-pre-wrap text-sm">{encodeConversationContent(draft.content).markdown_content}</p>
+        <p className="whitespace-pre-wrap text-sm">{draftPreviewText(draft)}</p>
         <p className="text-xs text-muted-foreground">{t('coManaged.conversation.audience')}: {t(`coManaged.conversation.audiences.${draft.audience}`)}</p>
         <ul className="space-y-1">
           {draft.files.map(file => <li key={file.attachmentId} className="flex justify-between gap-2 text-sm">

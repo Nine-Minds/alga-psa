@@ -44,6 +44,7 @@ vi.mock('@alga-psa/auth', async importOriginal => ({
   withAuth: (action: any) => async (...args: any[]) => action(currentUser, { tenant: currentUser.tenant }, ...args),
   hasPermission: async () => true,
 }));
+vi.mock('../../lib/actions/coManagedConversationDraftActions', () => ({ beginCoManagedConversationDraftAction: vi.fn(), uploadCoManagedDraftAttachmentAction: vi.fn(), publishCoManagedConversationDraftAction: vi.fn() }));
 vi.mock('@alga-psa/db', async importOriginal => ({
   ...(await importOriginal<any>()),
   getConnection: async () => testDb,
@@ -620,5 +621,33 @@ describe('A3 draft restore: the actor\'s open drafts are readable after a reload
     expect(after).toContain(operationId);
     expect(after).not.toContain(privateOp);
     expect(after).not.toContain(published.operationId);
+  });
+});
+
+describe('A3 draft resume survives the jsonb key reordering of the stored request', () => {
+  it('a restored draft re-begins as the same draft (no operationConflict) and then publishes', async () => {
+    const { beginCoManagedConversationDraft, uploadCoManagedDraftAttachment, publishCoManagedConversationDraft, listCoManagedOpenConversationDrafts } = await drafts();
+    const { restoreConversationDraft } = await import('../../components/co-managed/conversationDraftSubmission');
+    const operationId = uuidv4(), attached = file(`resume-${MARK}.pdf`);
+    // BlockNote key order: props backgroundColor, textColor, textAlignment; text node type, text, styles. jsonb stores keys by length then
+    // bytes, so reading this back yields a different order.
+    const document = [{ type: 'paragraph', props: { backgroundColor: 'default', textColor: 'default', textAlignment: 'left' },
+      content: [{ type: 'text', text: `resume ${MARK}`, styles: { bold: true } }] }];
+    const request: any = { operationId, audience: 'shared_it', content: { document }, files: manifestOf([attached]) };
+    const begun = await beginCoManagedConversationDraft(db, alice.actor, alice.resource, request);
+    await uploadCoManagedDraftAttachment(db, alice.actor, alice.resource, { storeTenant: begun.storeTenant, operationId }, attached.id, attached.bytes, putObject);
+
+    const stored = (await listCoManagedOpenConversationDrafts(db, alice.actor, alice.resource)).find(d => d.operationId === operationId)!;
+    expect(JSON.stringify(stored.content)).not.toBe(JSON.stringify(request.content)); // the premise: the database reordered the keys
+    const restored = restoreConversationDraft(alice.resource, stored, []);
+    if (!restored.ok) throw new Error('expected a restorable draft');
+
+    const again = await beginCoManagedConversationDraft(db, alice.actor, alice.resource, restored.prepared.request);
+    expect(again).toMatchObject({ operationId, storeTenant: begun.storeTenant, status: 'draft', uploadedAttachmentIds: [attached.id] });
+    const rows = await db('co_management_conversation_drafts').where({ tenant: msp.tenant, operation_id: operationId });
+    expect(rows).toHaveLength(1);
+
+    await publishCoManagedConversationDraft(db, alice.actor, alice.resource, { storeTenant: again.storeTenant, operationId }, sharedWith as any);
+    expect(await db('co_management_conversation_drafts').where({ tenant: msp.tenant, operation_id: operationId }).first()).toMatchObject({ status: 'published' });
   });
 });

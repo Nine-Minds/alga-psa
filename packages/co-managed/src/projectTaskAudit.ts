@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { canonicalHash } from './canonicalHash';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
@@ -12,9 +12,7 @@ export type CoManagedTaskAuditOperation = typeof CO_MANAGED_TASK_AUDIT_OPERATION
 
 /** Stable digest of a command's meaning. Same operation id + same hash = replay; same id + other hash = misuse. */
 export function coManagedRequestHash(kind: string, resource: CoManagedSharedResource, body: unknown): string {
-  const canonical = (value: unknown): unknown => Array.isArray(value) ? value.map(canonical)
-    : value && typeof value === 'object' ? Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical((value as Record<string, unknown>)[key])])) : value;
-  return createHash('sha256').update(JSON.stringify(canonical({ kind, tenant: resource.tenant, relationshipId: resource.relationshipId, id: resource.id, body }))).digest('hex');
+  return canonicalHash({ kind, tenant: resource.tenant, relationshipId: resource.relationshipId, id: resource.id, body });
 }
 
 /**

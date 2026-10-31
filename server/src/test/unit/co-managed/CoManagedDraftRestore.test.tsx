@@ -38,6 +38,8 @@ describe('restoreConversationDraft', () => {
   });
 });
 
+const document_ = () => document.getElementById('co-managed-draft-restore')!;
+
 describe('CoManagedDraftRestore', () => {
   beforeEach(() => { Object.values(m).forEach(f => f.mockReset()); });
   it('renders nothing when there is no open draft', async () => {
@@ -57,6 +59,14 @@ describe('CoManagedDraftRestore', () => {
     screen.getByText('coManaged.conversation.drafts.discard').click();
     await waitFor(() => expect(m.abandon).toHaveBeenCalledWith(resource, { storeTenant: 't', operationId: 'op1' }));
     await waitFor(() => expect(document.getElementById('co-managed-draft-restore')).toBeNull());
+  });
+  it('previews plain text, never the escaped markdown the server derives', async () => {
+    const blocks = [{ type: 'paragraph', content: [{ type: 'text', text: 'draft (0531).', styles: {} }, { type: 'text', text: ' a_b *c*', styles: { bold: true } }] }];
+    m.list.mockResolvedValue({ ok: true, drafts: [draft({ operationId: 'op1', content: { text: 'plain (draft 0531).' } }), draft({ operationId: 'op2', content: { document: blocks } })] });
+    render(<CoManagedDraftRestore resource={resource} version={0} onPublished={() => {}} />);
+    expect(await screen.findByText('plain (draft 0531).')).toBeInTheDocument();
+    expect(screen.getByText('draft (0531). a_b *c*')).toBeInTheDocument();
+    expect(document_().textContent).not.toContain('\\');
   });
   it('will not send while a file is still missing', async () => {
     m.list.mockResolvedValue({ ok: true, drafts: [draft()] });

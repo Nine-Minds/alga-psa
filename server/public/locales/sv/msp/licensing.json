@@ -765,7 +765,8 @@
         "choose": "Välj de saknade filerna",
         "resume": "Skicka",
         "discard": "Kassera",
-        "missing": "Välj varje saknad fil med samma namn innan du skickar."
+        "missing": "Välj varje saknad fil med samma namn innan du skickar.",
+        "unsent": "Vi kunde inte bekräfta att ditt meddelande och dina filer skickades. De är sparade och visas under ”Ej skickade meddelanden” – återuppta eller kasta dem där."
       },
       "files": {
         "choose": "Bifoga filer",

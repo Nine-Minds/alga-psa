@@ -48,6 +48,9 @@ export function createSharedConversationSession(resource: CoManagedSharedResourc
   let version = 0;
   const listeners = new Set<() => void>();
   const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
+  // The last write that left staged files unsent (a draft the server may already hold). The files panel shows it as an alert.
+  let unsent: { code: string } | null = null;
+  const setUnsent = (next: { code: string } | null) => { unsent = next; listeners.forEach(listener => listener()); };
   const comments = () => snapshot ? mapConversation(snapshot.items, resource.id, snapshot.actor) : [];
   const load = async () => {
     snapshot = await loadSharedConversation(before => getCoManagedTicketConversationScreenAction(resource, before));
@@ -64,17 +67,23 @@ export function createSharedConversationSession(resource: CoManagedSharedResourc
     /** Audiences the signed-in viewer may write to (server-resolved; empty until loaded). */
     writeAudiences: (): readonly CommentAudience[] => snapshot?.writeAudiences ?? [],
     comments,
+    /** Set when a write carrying files failed; the draft may be waiting under "Unsent messages". Cleared by the next write that succeeds. */
+    unsentFailure: () => unsent,
     /** Audience of an existing comment (a reply inherits its thread's audience). */
     audienceOf: (commentId: string): CommentAudience | undefined =>
       snapshot?.items.find(item => item.commentId === commentId)?.audience as CommentAudience | undefined,
     /** Post one message, reload, and return the stored comment. Throws a localized Error on any refusal. */
     async write(message: { content: string; audience: CommentAudience; parentCommentId?: string }): Promise<IComment> {
       let commentId: string;
+      const withFiles = (options.staging?.getSnapshot().length ?? 0) > 0;
       try {
         commentId = (await writer(message)).commentId;
       } catch (error) {
-        throw new Error(sharedWriteFailureText(options.t, error instanceof TicketCommentWriteError ? error.code : 'unknownOutcome'));
+        const code = error instanceof TicketCommentWriteError ? error.code : 'unknownOutcome';
+        if (withFiles) setUnsent({ code });
+        throw new Error(sharedWriteFailureText(options.t, code));
       }
+      if (unsent) setUnsent(null);
       options.staging?.clear();
       // The write is durable; a failed refresh must not read as a failed post.
       try { await load(); } catch { /* the next screen load shows it */ }

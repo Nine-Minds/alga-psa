@@ -6,7 +6,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({ enabled: true, stager: vi.fn(), picker: vi.fn(() => null) }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useCapability: () => ({ enabled: state.enabled }) }));
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_k: string, o?: any) => o?.defaultValue ?? _k }) }));
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (k: string, o?: any) => o?.defaultValue ?? k }) }));
+vi.mock('@alga-psa/ui/components/Alert', () => ({ Alert: (p: any) => <div role="alert">{p.children}</div>, AlertDescription: (p: any) => <span>{p.children}</span> }));
 vi.mock('@alga-psa/ui/components/Button', () => ({ Button: (props: any) => <button id={props.id} onClick={props.onClick}>{props.children}</button> }));
 vi.mock('@/components/co-managed/attachmentFileStager', () => ({ registerCoManagedAttachmentStager: () => state.stager() }));
 vi.mock('@/components/co-managed/SharedCommentAttachmentPicker', () => ({ default: (props: any) => { state.picker(props); return <div data-testid="picker" />; } }));
@@ -22,7 +23,7 @@ const resource = { tenant: 't', relationshipId: 'r', kind: 'ticket', id: 'k' } a
 const session = (audiences: string[]) => ({
   snapshot: () => ({ actor: { tenant: 'a', userId: 'u' }, items: [
     { storeTenant: 't', threadId: 'th1', commentId: 'c1', deleted: false }, { storeTenant: 't', threadId: 'th1', commentId: 'c2', deleted: false }, { storeTenant: 't', threadId: 'th2', commentId: 'c3', deleted: true }] }),
-  writeAudiences: () => audiences, load: vi.fn(), subscribe: () => () => {}, version: () => 0,
+  writeAudiences: () => audiences, load: vi.fn(), subscribe: () => () => {}, version: () => 0, unsentFailure: () => null,
 }) as any;
 
 describe('CoManagedConversationFiles', () => {
@@ -50,11 +51,26 @@ describe('CoManagedConversationFiles', () => {
   it('re-renders when the session finishes a load, so a freshly sent message gets its files surface', () => {
     const listeners = new Set<() => void>();
     let version = 0, items = [{ storeTenant: 't', threadId: 'th1', commentId: 'c1', deleted: false }];
-    const live = { snapshot: () => ({ actor: { tenant: 'a', userId: 'u' }, items }), writeAudiences: () => ['requester'], load: vi.fn(),
+    const live = { snapshot: () => ({ actor: { tenant: 'a', userId: 'u' }, items }), writeAudiences: () => ['requester'], unsentFailure: () => null, load: vi.fn(),
       subscribe: (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; }, version: () => version } as any;
     render(<CoManagedConversationFiles session={live} resource={resource} staging={staging} />);
     expect(screen.getAllByTestId('files').map(n => n.textContent)).toEqual(['c1']);
     act(() => { items = [...items, { storeTenant: 't', threadId: 'th1', commentId: 'c9', deleted: false }]; version += 1; listeners.forEach(l => l()); });
     expect(screen.getAllByTestId('files').map(n => n.textContent)).toEqual(['c1', 'c9']);
+  });
+});
+
+describe('CoManagedConversationFiles upload failure notice', () => {
+  it('tells the user a failed send with files will be under "Unsent messages", and shows a refusal as itself', () => {
+    const failed = (code: string) => ({ ...session(['requester']), unsentFailure: () => ({ code }) });
+    const view = render(<CoManagedConversationFiles session={failed('unknownOutcome')} resource={resource} staging={staging} />);
+    expect(screen.getByRole('alert')).toHaveTextContent('coManaged.conversation.drafts.unsent');
+    view.unmount();
+    render(<CoManagedConversationFiles session={failed('readOnly')} resource={resource} staging={staging} />);
+    expect(screen.getByRole('alert')).toHaveTextContent('coManaged.editor.errors.readOnly');
+  });
+  it('shows no alert when nothing failed', () => {
+    render(<CoManagedConversationFiles session={{ ...session(['requester']), unsentFailure: () => null }} resource={resource} staging={staging} />);
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
