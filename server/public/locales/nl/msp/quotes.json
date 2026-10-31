@@ -499,6 +499,13 @@
     },
     "availability": {
       "onHand": "Op voorraad: {{count}}"
+    },
+    "activity": {
+      "viewedViaEmailLink": {
+        "description": "Offerte bekeken via e-maillink",
+        "descriptionWithRecipient": "Offerte bekeken door {{email}} via e-maillink",
+        "type": "Bekeken via e-maillink"
+      }
     }
   },
   "quoteLineItems": {

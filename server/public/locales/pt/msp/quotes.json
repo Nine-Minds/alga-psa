@@ -499,6 +499,13 @@
     },
     "availability": {
       "onHand": "Em estoque: {{count}}"
+    },
+    "activity": {
+      "viewedViaEmailLink": {
+        "description": "Proposta visualizada por link de e-mail",
+        "descriptionWithRecipient": "Proposta visualizada por {{email}} por link de e-mail",
+        "type": "Visualizada por link de e-mail"
+      }
     }
   },
   "quoteLineItems": {

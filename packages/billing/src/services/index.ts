@@ -140,12 +140,27 @@ export {
 export { verifyAndCompletePublicSetup, type SetupInspection } from './publicSetupConfirmation';
 export {
   QuoteAccessLinks,
+  QUOTE_ACCESS_TOKEN_LENGTH,
   computeQuoteAccessExpiry,
   hashQuoteAccessToken,
   type IQuoteAccessLink,
   type QuoteAccessLinkRevokeReason,
+  type QuoteAccessResolveFailure,
   type QuoteAccessResolveResult,
 } from './quoteAccessLinks';
+export {
+  loadPublicQuoteView,
+  projectPublicQuote,
+  projectPublicQuoteItems,
+  recordQuoteViewedViaEmailLink,
+  resolveQuoteRecipientLocale,
+  PUBLIC_QUOTE_FIELDS,
+  PUBLIC_QUOTE_ITEM_FIELDS,
+  type PublicQuote,
+  type PublicQuoteItem,
+  type PublicQuoteLocation,
+  type PublicQuoteView,
+} from './publicQuoteView';
 
 // Label batch rendering (work tags, asset / stock-unit labels): one PDF from N authorized view models.
 export { renderLabelBatchPdf, renderHtmlToPdf } from './labelPdfService';

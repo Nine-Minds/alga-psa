@@ -230,6 +230,36 @@
       "termsAndConditions": "Termini e condizioni",
       "total": "Totale",
       "validUntil": "Valido fino al"
+    },
+    "public": {
+      "metaTitle": "Revisione del preventivo",
+      "notice": {
+        "accepted": "Questo preventivo è stato accettato. È mostrato qui per tua informazione.",
+        "declined": "Questo preventivo è stato rifiutato. È mostrato qui per tua informazione.",
+        "converted": "Questo preventivo è stato accettato ed è in corso di evasione. È mostrato qui per tua informazione.",
+        "readOnly": "Questa è una vista di sola lettura del tuo preventivo."
+      },
+      "outcome": {
+        "unavailable": {
+          "title": "Questo link non è disponibile",
+          "body": "Il link potrebbe essere stato digitato in modo errato o non essere più attivo."
+        },
+        "expired": {
+          "title": "Questo link è scaduto",
+          "body": "Per sicurezza, i link dei preventivi smettono di funzionare dopo un certo periodo."
+        },
+        "superseded": {
+          "title": "Questo preventivo è stato sostituito",
+          "body": "È stata inviata una versione più recente. Usa il link nell'ultima email."
+        },
+        "decided": {
+          "title": "Questo preventivo è già stato deciso",
+          "body": "È già stata registrata una risposta, quindi non può più essere aperto da questo link."
+        },
+        "help": "Hai bisogno di aiuto? Rispondi all'email in cui hai ricevuto questo link.",
+        "signIn": "Accedi al portale clienti",
+        "signInHint": "Hai già un account sul portale clienti?"
+      }
     }
   },
   "enums": {

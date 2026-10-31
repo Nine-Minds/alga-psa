@@ -1329,11 +1329,22 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack, onEdit, onSe
               {quote.quote_activities.map((activity) => (
                 <div key={activity.activity_id} className="rounded-md border border-border p-3">
                   <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-                    <div className="font-medium text-foreground">{activity.description}</div>
+                    <div className="font-medium text-foreground">
+                      {activity.activity_type === 'viewed_via_email_link'
+                        ? (typeof activity.metadata?.recipient_email === 'string'
+                          ? t('quoteDetail.activity.viewedViaEmailLink.descriptionWithRecipient', {
+                            defaultValue: 'Quote viewed via email link by {{email}}',
+                            email: activity.metadata.recipient_email,
+                          })
+                          : t('quoteDetail.activity.viewedViaEmailLink.description', { defaultValue: 'Quote viewed via email link' }))
+                        : activity.description}
+                    </div>
                     <div className="text-xs text-muted-foreground">{activity.created_at ? formatDate(activity.created_at) : '—'}</div>
                   </div>
                   <div className="mt-1 text-xs uppercase tracking-wide text-muted-foreground">
-                    {activity.activity_type.replace(/_/g, ' ')}
+                    {activity.activity_type === 'viewed_via_email_link'
+                      ? t('quoteDetail.activity.viewedViaEmailLink.type', { defaultValue: 'Viewed via email link' })
+                      : activity.activity_type.replace(/_/g, ' ')}
                   </div>
                 </div>
               ))}

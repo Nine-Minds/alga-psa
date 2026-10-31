@@ -499,6 +499,13 @@
     },
     "availability": {
       "onHand": "On hand: {{count}}"
+    },
+    "activity": {
+      "viewedViaEmailLink": {
+        "description": "Quote viewed via email link",
+        "descriptionWithRecipient": "Quote viewed via email link by {{email}}",
+        "type": "Viewed via email link"
+      }
     }
   },
   "quoteLineItems": {

@@ -52,6 +52,36 @@ const protectedPrefix = '/msp';
 const clientPortalPrefix = '/client-portal';
 const publicPagePaths = new Set(['/payment-methods/setup-complete']);
 
+/**
+ * Public, session-less quote review (alga-2026-0002820). Public by exact shape,
+ * not by prefix: a 43-char base64url token (mirrors QUOTE_ACCESS_TOKEN_LENGTH in
+ * @alga-psa/billing; middleware is Edge so it cannot import the Node service)
+ * and nothing after it except, for the API, the fixed `/pdf` leaf.
+ * Authorization is the token itself, checked in the page / route handler.
+ */
+const PUBLIC_QUOTE_PAGE_PATTERN = /^\/quote\/[A-Za-z0-9_-]{43}$/;
+const PUBLIC_QUOTE_PDF_PATTERN = /^\/api\/quote\/[A-Za-z0-9_-]{43}\/pdf$/;
+
+export function isPublicQuotePagePath(pathname: string): boolean {
+  return PUBLIC_QUOTE_PAGE_PATTERN.test(pathname);
+}
+
+export function isPublicQuotePdfPath(pathname: string): boolean {
+  return PUBLIC_QUOTE_PDF_PATTERN.test(pathname);
+}
+
+export function isPublicQuoteReviewPath(pathname: string): boolean {
+  return isPublicQuotePagePath(pathname) || isPublicQuotePdfPath(pathname);
+}
+
+/** The token is a bearer secret in the URL: never leak it via Referer, never index it. */
+export function applyPublicQuoteReviewHeaders<T extends { headers: Headers }>(response: T): T {
+  response.headers.set('Referrer-Policy', 'no-referrer');
+  response.headers.set('X-Robots-Tag', 'noindex, nofollow');
+  response.headers.set('Cache-Control', 'private, no-store');
+  return response;
+}
+
 export interface ClientPortalThemeRequestContext {
   isClientPortal: boolean;
   portalDomain?: string;
@@ -217,6 +247,8 @@ const exactApiKeySkipPaths = [
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
   return pathname === '/api/ticket-comment-attachments/download' ||
+    // Public quote PDF: authorized by the path token, resolved in the route handler.
+    isPublicQuotePdfPath(pathname) ||
     // Client portal document handlers authenticate the portal session and run
     // the shared tenant/client visibility resolver before serving content.
     /^\/api\/client-portal\/documents\/[^/]+\/(?:file|export)$/.test(pathname) ||
@@ -405,6 +437,10 @@ const _middleware = auth((request) => {
     response.headers.set('x-pathname', pathname);
   }
 
+  if (isPublicQuoteReviewPath(pathname)) {
+    applyPublicQuoteReviewHeaders(response);
+  }
+
   // Only handle API routes that need API key authentication
   if (pathname.startsWith('/api/') && !pathname.startsWith('/api/auth/')) {
     const apiKey = request.headers.get('x-api-key');
@@ -444,7 +480,7 @@ const _middleware = auth((request) => {
   const isAuthPage = pathname.startsWith('/auth/');
 
   // Public Stripe Checkout return page verifies its opaque session context itself.
-  if (publicPagePaths.has(pathname)) {
+  if (publicPagePaths.has(pathname) || isPublicQuotePagePath(pathname)) {
     return applyCorsHeaders(response, origin);
   }
 
