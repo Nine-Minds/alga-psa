@@ -12,8 +12,12 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 
 type GuardUser = Parameters<typeof hasPermission>[0];
 
+// The allowed branch declares `reason`/`message` as undefined so callers can
+// read `access.message` after `!access.allowed` even in projects compiled
+// without strictNullChecks (e.g. ee/server), where boolean-literal narrowing
+// does not apply.
 export type OutboundEmailAdminCheck =
-  | { allowed: true }
+  | { allowed: true; reason?: undefined; message?: undefined }
   | { allowed: false; reason: 'client_user' | 'missing_permission'; message: string };
 
 export function isClientUser(user: GuardUser): boolean {

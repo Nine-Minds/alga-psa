@@ -99,7 +99,7 @@ describe('testOutboundEmail authorization and routing', () => {
     const { testOutboundEmail } = await import('./emailSettingsActions');
     const result = await testOutboundEmail('victim@example.com');
 
-    expect(result.success).toBe(false);
+    expect(result).toEqual({ success: false, error: 'Permission denied' });
     expect(mocks.hasPermission).not.toHaveBeenCalled();
     expect(mocks.testConnection).not.toHaveBeenCalled();
     expect(mocks.runDiagnostics).not.toHaveBeenCalled();
@@ -111,7 +111,7 @@ describe('testOutboundEmail authorization and routing', () => {
     const { testOutboundEmail } = await import('./emailSettingsActions');
     const result = await testOutboundEmail('victim@example.com');
 
-    expect(result.success).toBe(false);
+    expect(result).toEqual({ success: false, error: 'Permission denied: Cannot manage outbound email' });
     expect(mocks.testConnection).not.toHaveBeenCalled();
     expect(mocks.runDiagnostics).not.toHaveBeenCalled();
   });
