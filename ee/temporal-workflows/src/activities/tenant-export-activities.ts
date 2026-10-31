@@ -153,6 +153,8 @@ export async function exportTenantData(
   });
 
   try {
+    // Best-effort scratch reclaim; a worker without @alga-psa/co-managed must still export.
+    await import('../../../../packages/co-managed/src/portableTemporaryDirectory').then(m => m.createPortableTemporarySweeper().sweep(), () => undefined).catch(() => undefined);
     const adminKnex = await getAdminConnection();
 
     // Get tenant info for the export metadata
