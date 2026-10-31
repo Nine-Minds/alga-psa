@@ -100,7 +100,7 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
   },
   {
-    // Customer-admin workspace export (records and files). A co_managed customer exports its own workspace, so
+    // Customer-admin workspace export (records). A co_managed customer exports its own workspace, so
     // it reaches this one page beneath the otherwise-closed /msp/co-management prefix; the co-managed capability
     // gate in the page (and the export permission in its actions) still decides admission.
     group: 'msp_co_management_export',

@@ -155,7 +155,7 @@ async function retainCoManagedPortableAssets(trx: Knex.Transaction, inputActor: 
 /** Registry entry for this section. The engine never calls the exporters above
  * directly: it reaches them only through assets's contributor contract. */
 export const portableAssetContributor: PortableContributor = {
-  id: 'assets', version: 1, reason: 'operational asset inventory',
+  id: 'assets', version: 1, reason: 'operational asset inventory', permissions: [{ resource: 'asset', action: 'read' }],
   columns: COLUMNS, references: CO_MANAGED_PORTABLE_ASSET_REFERENCES,
   export: async ctx => exportCoManagedPortableAssets(ctx.db, ctx.actor, ctx.packageId, ctx.snapshot),
   retain: ctx => retainCoManagedPortableAssets(ctx.trx, ctx.actor, ctx.packageId),

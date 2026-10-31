@@ -366,9 +366,9 @@
   "coManaged": {
     "portableExport": {
       "title": "Export workspace",
-      "description": "Download an encrypted, portable archive of your workspace records and files.",
+      "description": "Download an encrypted, portable archive of your workspace records.",
       "recovery": "Keep the recovery passphrase somewhere safe. Without it, the archive cannot be opened.",
-      "connections": "The archive contains your records and files. Billing, MSP-private data and integration secrets are not included.",
+      "connections": "The archive contains your workspace records. Files and attachments are not included yet and arrive in a later release. Billing, MSP-private data and integration secrets are not included.",
       "passphrase": "Recovery passphrase",
       "confirmPassphrase": "Confirm recovery passphrase",
       "download": "Prepare and download archive",

@@ -4,14 +4,14 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedPortableExport, { CoManagedPortableExportEntry } from '../../../components/co-managed/CoManagedPortableExport';
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
-const mocks = vi.hoisted(() => ({ load: vi.fn(), enabled: true, loading: false, error: null as any, sessionId: 'session' }));
+const mocks = vi.hoisted(() => ({ load: vi.fn(), enabled: true, loading: false, error: null as any, sessionId: 'session', status: 'authenticated' as string, identified: true }));
 vi.mock('../../../lib/actions/coManagedPortableExportActions', () => ({ getCoManagedPortableExportScreenAction: mocks.load }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useCapability: () => ({ enabled: mocks.enabled && !mocks.loading && !mocks.error, admitted: mocks.enabled && !mocks.loading && !mocks.error, resolved: true }) }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
-vi.mock('next-auth/react', () => ({ useSession: () => ({ data: { session_id: mocks.sessionId, user: { id: 'admin', tenant: 'customer' } } }) }));
+vi.mock('next-auth/react', () => ({ useSession: () => ({ status: mocks.status, data: mocks.identified ? { session_id: mocks.sessionId, user: { id: 'admin', tenant: 'customer' } } : undefined }) }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (key: string) => key }), useOptionalI18n: () => null }));
 const mount = () => render(<CoManagedFeatureBoundary mode="serves"><CoManagedPortableExport /></CoManagedFeatureBoundary>);
-beforeEach(() => { vi.clearAllMocks(); mocks.enabled = true; mocks.loading = false; mocks.error = null; mocks.sessionId = 'session'; mocks.load.mockResolvedValue({ workspaceName: 'Customer workspace' }); });
+beforeEach(() => { vi.clearAllMocks(); mocks.enabled = true; mocks.loading = false; mocks.error = null; mocks.sessionId = 'session'; mocks.status = 'authenticated'; mocks.identified = true; mocks.load.mockResolvedValue({ workspaceName: 'Customer workspace' }); });
 afterEach(cleanup);
 it('does not load or reveal export controls when the presentation flag is disabled, loading or failed', () => {
   for (const state of [{ enabled: false }, { enabled: true, loading: true }, { loading: false, error: new Error('Flag unavailable') }]) {
@@ -52,4 +52,17 @@ it('the export entry renders a link for a served customer and nothing when the c
   for (const state of [{ enabled: false }, { enabled: true, loading: true }, { enabled: true, error: new Error('x') }]) {
     Object.assign(mocks, state); const v = render(<CoManagedPortableExportEntry />); expect(screen.queryByRole('link')).toBeNull(); v.unmount();
   }
+});
+it('loads the screen once per mount, including while the session identity resolves', async () => {
+  mocks.status = 'loading'; mocks.identified = false;
+  const view = mount(); expect(mocks.load).not.toHaveBeenCalled();
+  mocks.status = 'authenticated'; mocks.identified = true;
+  view.rerender(<CoManagedFeatureBoundary mode="serves"><CoManagedPortableExport /></CoManagedFeatureBoundary>);
+  await screen.findByText('Customer workspace');
+  view.rerender(<CoManagedFeatureBoundary mode="serves"><CoManagedPortableExport /></CoManagedFeatureBoundary>);
+  expect(mocks.load).toHaveBeenCalledTimes(1);
+});
+it('does not describe files the archive does not contain', () => {
+  const copy = JSON.stringify(JSON.parse(require('node:fs').readFileSync('public/locales/en/msp/licensing.json', 'utf8')).coManaged.portableExport);
+  expect(copy).not.toMatch(/records and files/i);
 });

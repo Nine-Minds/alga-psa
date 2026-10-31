@@ -20,9 +20,12 @@ export function CoManagedPortableExportEntry() {
 }
 
 export default function CoManagedPortableExport({ available = true }: { available?: boolean }) {
-  const { data: session } = useSession(), { t } = useTranslation('msp/licensing');
+  const { data: session, status } = useSession(), { t } = useTranslation('msp/licensing');
   if (!available) return <div className="mx-auto max-w-3xl p-6"><Card><CardHeader><CardTitle>{t('coManaged.portableExport.title')}</CardTitle></CardHeader>
     <CardContent><p role="status">{t('coManaged.portableExport.unavailable', { defaultValue: 'Workspace export is not available in this edition.' })}</p></CardContent></Card></div>;
+  // While the session resolves its identity is undefined; keying on it would mount the screen, then remount it (and repeat the
+  // load action) the moment the identity arrives. Mount once the identity is known.
+  if (status === 'loading') return <div className="mx-auto max-w-3xl p-6"><p role="status">{t('coManaged.loading')}</p></div>;
   return <ExportContent key={`${session?.session_id}:${session?.user?.tenant}:${session?.user?.id}`} />;
 }
 

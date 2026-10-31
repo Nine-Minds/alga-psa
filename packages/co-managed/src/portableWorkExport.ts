@@ -11,6 +11,10 @@ import { authorizeCoManagedLocalRecord, CoManagedSharedWorkError, isCoManagedUui
   snapshotCoManagedSessionActor, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { CO_MANAGED_PORTABLE_WORK_COLUMNS, type CoManagedPortableWorkRecords, type CoManagedPortableWorkTable } from './portableWorkCatalog';
 
+/** Tables that exist only when the project permission is provisioned. */
+const PROJECT_TABLES = ['projects', 'project_phases', 'project_status_mappings', 'project_tasks', 'task_resources', 'task_checklist_items',
+  'project_task_dependencies', 'project_ticket_links', 'project_task_comments', 'project_task_comment_reactions'] as const;
+
 export const CO_MANAGED_PORTABLE_WORK_REFERENCES = [
   ['statuses', 'board_id', 'boards', 'board_id'], ['categories', 'board_id', 'boards', 'board_id'],
   ['categories', 'parent_category', 'categories', 'category_id'],
@@ -47,7 +51,6 @@ export const CO_MANAGED_PORTABLE_WORK_REFERENCES = [
   ['project_ticket_links', 'task_id', 'project_tasks', 'task_id'], ['project_ticket_links', 'ticket_id', 'tickets', 'ticket_id'],
   ['project_task_comments', 'task_id', 'project_tasks', 'task_id'], ['project_task_comments', 'thread_id', 'comment_threads', 'thread_id'],
   ['project_task_comments', 'parent_comment_id', 'project_task_comments', 'task_comment_id'],
-  ['project_task_comments', 'actor_reference_id', 'collaboration_actor_references', 'actor_reference_id'],
   ['project_task_comment_reactions', 'task_comment_id', 'project_task_comments', 'task_comment_id'],
   ['handoff_history', 'ticket_id', 'tickets', 'ticket_id'],
 ] as const;
@@ -85,21 +88,24 @@ export function validateCoManagedPortableWorkRecords(input: unknown): asserts in
 /** Customer-owned tickets, projects and conversation history. Home-private MSP
  * stores and live trust/dispatch records are deliberately absent. Handoffs are
  * inert historical events for restore conversion, not relationship-table rows. */
-async function exportCoManagedPortableWork(db: Knex, inputActor: CoManagedSessionActor, packageId: string, snapshot?: CoManagedPortableSnapshot) {
+async function exportCoManagedPortableWork(db: Knex, inputActor: CoManagedSessionActor, packageId: string, snapshot?: CoManagedPortableSnapshot,
+  notProvisioned: ReadonlySet<string> = new Set()) {
   if (db.isTransaction) throw new Error('Portable export requires a root database connection');
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
   // LEVERAGE: pattern portable-export-is-snapshot-retain — every contributor's export is its retain run at the shared snapshot; the engine could derive export from retain.
-  return portableSnapshotTransaction(db, snapshot, trx => retainCoManagedPortableWork(trx, actor, packageId));
+  return portableSnapshotTransaction(db, snapshot, trx => retainCoManagedPortableWork(trx, actor, packageId, notProvisioned));
 }
 
 /** Internal retained collector for a final package-wide current-source check. */
-async function retainCoManagedPortableWork(trx: Knex.Transaction, inputActor: CoManagedSessionActor, packageId: string) {
+async function retainCoManagedPortableWork(trx: Knex.Transaction, inputActor: CoManagedSessionActor, packageId: string, notProvisioned: ReadonlySet<string> = new Set()) {
   if (!trx.isTransaction) throw new Error('Portable retention requires a transaction');
   const actor = snapshotCoManagedSessionActor(inputActor);
   if (!isCoManagedUuid(packageId)) throw new CoManagedSharedWorkError();
   return withCoManagedExportAdmin(trx, actor, async (current, verified, subject) => {
+    const projectsAbsent = PROJECT_TABLES.every(table => notProvisioned.has(table));
     for (const resource of ['ticket', 'project', 'ticket_settings']) {
+      if (resource === 'project' && projectsAbsent) continue; // not provisioned in this tenant (engine-declared); a provisioned-but-denied permission still throws
       if (!await hasCoManagedLocalPermission(current, verified, resource, 'read', true)) throw new CoManagedSharedWorkError();
     }
     const settings = await authorizeCoManagedLocalRecord(current, verified, subject, 'ticket_settings', 'read', { id: verified.tenant });
@@ -108,6 +114,9 @@ async function retainCoManagedPortableWork(trx: Knex.Transaction, inputActor: Co
     for (const table of Object.keys(CO_MANAGED_PORTABLE_WORK_COLUMNS) as CoManagedPortableWorkTable[]) {
       const columns = CO_MANAGED_PORTABLE_WORK_COLUMNS[table];
       const query = table === 'standard_statuses' ? /* LEVERAGE: friction global-table-read — tenantDb refuses global tables, so the one global reference read bypasses it (allowlisted and asserted in the isolation test). */ current('standard_statuses') : own.table(table === 'handoff_history' ? 'co_management_ticket_handoffs' : table);
+      if (notProvisioned.has(table)) { records[table] = []; continue; }
+      // Project-task threads reference tables that are absent when projects are not provisioned.
+      if (table === 'comment_threads' && projectsAbsent) query.whereNull('project_task_id');
       records[table] = await query.select(...columns).orderBy(columns[0]).limit(100_001).forShare();
     }
     for (const row of records.tickets) {
@@ -135,8 +144,10 @@ async function retainCoManagedPortableWork(trx: Knex.Transaction, inputActor: Co
  * directly: it reaches them only through work's contributor contract. */
 export const portableWorkContributor: PortableContributor = {
   id: 'work', version: 1, reason: 'customer-owned tickets, projects and conversation history',
+  permissions: [{ resource: 'ticket', action: 'read' }, { resource: 'ticket_settings', action: 'read' },
+    { resource: 'project', action: 'read', tables: PROJECT_TABLES }],
   columns: CO_MANAGED_PORTABLE_WORK_COLUMNS, references: CO_MANAGED_PORTABLE_WORK_REFERENCES,
-  export: async ctx => exportCoManagedPortableWork(ctx.db, ctx.actor, ctx.packageId, ctx.snapshot),
-  retain: ctx => retainCoManagedPortableWork(ctx.trx, ctx.actor, ctx.packageId),
+  export: async ctx => exportCoManagedPortableWork(ctx.db, ctx.actor, ctx.packageId, ctx.snapshot, ctx.notProvisioned),
+  retain: ctx => retainCoManagedPortableWork(ctx.trx, ctx.actor, ctx.packageId, ctx.notProvisioned),
   validate: (records, workspace) => { validateCoManagedPortableWorkRecords(records);  },
 };
