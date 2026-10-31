@@ -28,6 +28,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { MICROSOFT_CALENDAR_OAUTH_SCOPES } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { useToast } from '@alga-psa/ui/hooks/use-toast';
+import { copyTextToClipboard } from '@alga-psa/ui/lib/clipboard';
 // Deep link to the Microsoft app registration section of the Providers page.
 const MICROSOFT_PROVIDERS_SETTINGS_URL = '/msp/settings?tab=integrations&category=providers&provider=microsoft';
 
@@ -148,13 +149,13 @@ export function MicrosoftCalendarProviderForm({
 
   const copyRedirectUri = async () => {
     if (!redirectUri) return;
-    try {
-      await navigator.clipboard.writeText(redirectUri);
+    const copied = await copyTextToClipboard(redirectUri);
+    if (copied) {
       toast({
         title: t('calendar.providers.microsoft.setup.copied', { defaultValue: 'Copied' }),
         description: t('calendar.providers.microsoft.setup.redirectUri', { defaultValue: 'Redirect URI' }),
       });
-    } catch {
+    } else {
       toast({
         title: t('calendar.providers.microsoft.setup.copyFailed', { defaultValue: 'Could not copy' }),
         variant: 'destructive',
