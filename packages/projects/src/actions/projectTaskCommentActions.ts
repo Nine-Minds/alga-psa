@@ -3,7 +3,9 @@
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import type { IProjectTaskComment, IProjectTaskCommentWithUser } from '@alga-psa/types';
+import { serves } from '@alga-psa/core/capability';
+import { getApiKeyUserOverride, getSession } from '@alga-psa/auth';
+import type { IProjectTaskComment, IProjectTaskCommentWithUser, IUserWithRoles } from '@alga-psa/types';
 import {
   countTaskCommentsBatchWithDb,
   countTaskCommentsWithDb,
@@ -12,6 +14,7 @@ import {
   listTaskCommentsWithDb,
   updateTaskCommentWithDb,
 } from '../lib/taskComments/taskCommentService';
+import { withTaskCommentAccess, withTaskCommentBatchReadAccess } from '../lib/taskComments/taskCommentAuthorization';
 import {
   actionError,
   permissionError,
@@ -83,11 +86,12 @@ export const createTaskComment = withAuth(async (
 ): Promise<string | ProjectTaskCommentActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
-    return await createTaskCommentWithDb(db, tenant, user, {
-      taskId: comment.taskId,
-      note: comment.note,
-      parentCommentId: comment.parentCommentId || comment.parent_comment_id || null,
-    });
+    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskId: comment.taskId }, 'create', ({ trx }) =>
+      createTaskCommentWithDb(trx, tenant, user, {
+        taskId: comment.taskId,
+        note: comment.note,
+        parentCommentId: comment.parentCommentId || comment.parent_comment_id || null,
+      }));
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -99,13 +103,14 @@ export const createTaskComment = withAuth(async (
  * Get all comments for a task
  */
 export const getTaskComments = withAuth(async (
-  _user,
+  user,
   { tenant },
   taskId: string
 ): Promise<IProjectTaskCommentWithUser[] | ProjectTaskCommentActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
-    return await listTaskCommentsWithDb(db, tenant, taskId);
+    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskId }, 'read', ({ trx }) =>
+      listTaskCommentsWithDb(trx, tenant, taskId));
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -124,7 +129,8 @@ export const updateTaskComment = withAuth(async (
 ): Promise<void | ProjectTaskCommentActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
-    return await updateTaskCommentWithDb(db, tenant, user, taskCommentId, updates);
+    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskCommentId }, 'update', ({ trx }) =>
+      updateTaskCommentWithDb(trx, tenant, user, taskCommentId, updates));
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -142,7 +148,8 @@ export const deleteTaskComment = withAuth(async (
 ): Promise<void | ProjectTaskCommentActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
-    return await deleteTaskCommentWithDb(db, tenant, user, taskCommentId);
+    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskCommentId }, 'delete', ({ trx }) =>
+      deleteTaskCommentWithDb(trx, tenant, user, taskCommentId));
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
@@ -159,18 +166,36 @@ export const getTaskCommentCount = withAuth(async (
   taskId: string
 ): Promise<number | ProjectTaskCommentActionError> => {
   try {
-    if (!await hasPermission(user, 'project_task', 'read')) {
-      throw new Error('Permission denied: cannot read task comments');
-    }
-
     const { knex: db } = await createTenantKnex();
-    return await countTaskCommentsWithDb(db, tenant, taskId);
+    return await withTaskCommentAccess(db, tenant, user as IUserWithRoles, { taskId }, 'read', ({ trx }) =>
+      countTaskCommentsWithDb(trx, tenant, taskId));
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;
     throw error;
   }
 });
+
+/**
+ * Co-managed workspaces count through L3c's keyset-bounded reader admission. Anything else (flag off, no
+ * participation, kill switch, PSA tenant) returns null before a single statement is issued, so the native
+ * count below is byte-for-byte what it was. The module is imported lazily for the same reason.
+ */
+async function coManagedBoardCommentCounts(db: Parameters<typeof countTaskCommentsBatchWithDb>[0], tenant: string, user: { user_id: string }, taskIds: string[]) {
+  if (!(await serves('co-managed', tenant)).served) return null;
+  const { isCoManagedWorkspace } = await import('@alga-psa/co-managed/coManagedWorkspace');
+  if (!await isCoManagedWorkspace(db, tenant)) return null;
+  const session = await getSession();
+  if (getApiKeyUserOverride() || !session?.session_id || session.user?.tenant !== tenant || session.user?.id !== user.user_id) {
+    throw new Error('Permission denied: cannot read task comments');
+  }
+  const { countCoManagedNativeTaskComments } = await import('@alga-psa/co-managed/nativeTaskCommentAccess');
+  try {
+    return await countCoManagedNativeTaskComments(db, { kind: 'session', tenant, userId: user.user_id, sessionId: session.session_id }, taskIds);
+  } catch {
+    throw new Error('Permission denied: cannot read task comments');
+  }
+}
 
 /**
  * Get comment counts for multiple tasks in a single query
@@ -183,12 +208,16 @@ export const getTaskCommentCountsBatch = withAuth(async (
   try {
     if (taskIds.length === 0) return {};
 
+    // Coarse permission first, before the co-managed admission path can see the request.
     if (!await hasPermission(user, 'project_task', 'read')) {
       throw new Error('Permission denied: cannot read task comments');
     }
 
     const { knex: db } = await createTenantKnex();
-    return await countTaskCommentsBatchWithDb(db, tenant, taskIds);
+    const coManaged = await coManagedBoardCommentCounts(db, tenant, user, taskIds);
+    if (coManaged) return coManaged;
+    return await withTaskCommentBatchReadAccess(db, tenant, user as IUserWithRoles, { taskIds }, 'read', ({ trx, ids }) =>
+      countTaskCommentsBatchWithDb(trx, tenant, ids));
   } catch (error) {
     const expected = projectTaskCommentActionErrorFrom(error);
     if (expected) return expected;

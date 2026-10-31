@@ -290,6 +290,13 @@
       "pending": "Factures en attente d'approbation ou de traitement",
       "prepayment": "Factures d'acompte ou de dépôt",
       "partially_applied": "Factures avec paiements partiels appliqués"
+    },
+    "billingPeriod": {
+      "weekly": "par semaine",
+      "monthly": "par mois",
+      "quarterly": "par trimestre",
+      "semi-annually": "par semestre",
+      "annually": "par an"
     }
   },
   "quoteForm": {
@@ -445,7 +452,13 @@
     "expires": "Expire le {{date}}",
     "recentBurn": "Consommation récente",
     "timeEntry": "Entrée de temps",
-    "contractLabel": "Contrat : {{contract}}"
+    "contractLabel": "Contrat : {{contract}}",
+    "hoursLeftValue": "{{hours}} h restantes · {{value}}",
+    "validFrom": "Valide à partir du {{date}}"
+  },
+  "invoiceLines": {
+    "prepaidBlockFee": "{{name}} — bloc prépayé, {{hours}} h",
+    "overPrepaidBlock": "{{name}} (au-delà du bloc prépayé)"
   },
   "bucketUsage": {
     "contractLine": "Ligne de contrat de forfait d’heures",

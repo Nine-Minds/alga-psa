@@ -14,18 +14,15 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import {
-  addTicketCommentWithCacheForCurrentUser,
-  updateTicketWithCache,
-  updateTicketWithCacheForCurrentUser,
-} from '../../actions/optimizedTicketActions';
 import TicketDetails from './TicketDetails';
 import type { TicketNotificationSuppressionValue } from './TicketNotificationSuppressionControl';
 import type { CommentEmailRecipientsPayload } from './CommentEmailRecipientsControl';
+import type { ComposerAudience } from './CommentAudienceControl';
 import { TicketDetailsSkeleton } from './TicketDetailsSkeleton';
 import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 import { persistTicketDescriptionUpdate } from './ticketDescriptionUpdate';
 import { TicketLiveProvider } from './TicketLiveProvider';
+import { runTicketRefresh, useTicketDataSource } from './TicketDataSourceContext';
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -48,6 +45,7 @@ interface TicketDetailsContainerProps {
     client: any;
     contacts: any[];
     contactInfo: any;
+    displayTags?: { contact: any[]; client: any[] };
     createdByUser: any;
     updatedByUser?: any;
     board: any;
@@ -141,6 +139,9 @@ export default function TicketDetailsContainer({
   disableAgentSchedule = false,
 }: TicketDetailsContainerProps) {
   const router = useRouter();
+  const dataSource = useTicketDataSource();
+  const { updateTicketWithCache, updateTicketWithCacheForCurrentUser } = dataSource.ticket;
+  const { addTicketCommentWithCacheForCurrentUser } = dataSource.comments;
   const { data: session } = useSession();
   const { t } = useTranslation('features/tickets');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -249,7 +250,7 @@ export default function TicketDetailsContainer({
         toast.success(t('info.changesSaved', 'Changes saved successfully!'));
 
         // Refresh the page to get updated data
-        router.refresh();
+        runTicketRefresh(dataSource, 'soft', router);
 
         return true;
       } catch (error) {
@@ -257,7 +258,7 @@ export default function TicketDetailsContainer({
         return false;
       }
     });
-  }, [router, session?.user, t, ticketData.ticket.ticket_id, withSubmitting]);
+  }, [dataSource, router, session?.user, t, ticketData.ticket.ticket_id, updateTicketWithCache, withSubmitting]);
 
   const handleAddComment = async (
     content: string,
@@ -266,10 +267,11 @@ export default function TicketDetailsContainer({
     closesTicket: boolean = false,
     schedule?: { publishAt: string; timeZone: string } | null,
     emailRecipients?: CommentEmailRecipientsPayload,
-  ) => {
+    audienceId?: ComposerAudience | null,
+  ): Promise<boolean> => {
     if (!session?.user) {
       toast.error(t('errors.authRequiredComment', 'You must be logged in to add comments'));
-      return;
+      return false;
     }
 
     try {
@@ -283,6 +285,8 @@ export default function TicketDetailsContainer({
         undefined,
         schedule,
         emailRecipients,
+        // LEVERAGE: friction comment-audience-seam — the seam types this param as the native audience, but a shared-ticket source accepts `shared_it` too.
+        (audienceId ?? undefined) as Parameters<typeof addTicketCommentWithCacheForCurrentUser>[8],
       );
       if (isReturnedActionError(newComment)) {
         throw newComment;
@@ -290,8 +294,12 @@ export default function TicketDetailsContainer({
 
       setComments(prev => [...prev, newComment]);
       toast.success(t('messages.commentAdded', 'Comment added successfully'));
+      return true;
     } catch (error) {
+      // The failure is reported here; the composer learns only that the message was not
+      // confirmed, so it keeps the draft for the same intent to be retried.
       handleTicketActionError(error, t('errors.addComment', 'Failed to add comment'));
+      return false;
     } finally {
       setIsSubmitting(false);
     }
@@ -321,7 +329,12 @@ export default function TicketDetailsContainer({
     : null;
 
   const shouldEnableTicketLiveUpdates =
-    Boolean(liveCurrentUser && ticketData.ticket.tenant && ticketData.ticket.ticket_id);
+    Boolean(
+      dataSource.capabilities.live &&
+      liveCurrentUser &&
+      ticketData.ticket.tenant &&
+      ticketData.ticket.ticket_id,
+    );
 
   const ticketDetailsContent = (
     <TicketDetails
@@ -334,6 +347,7 @@ export default function TicketDetailsContainer({
       initialClient={ticketData.client}
       initialContacts={ticketData.contacts}
       initialContactInfo={ticketData.contactInfo}
+      initialDisplayTags={ticketData.displayTags}
       initialCreatedByUser={ticketData.createdByUser}
       initialUpdatedByUser={ticketData.updatedByUser ?? null}
       initialBoard={ticketData.board}

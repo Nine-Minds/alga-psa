@@ -21,6 +21,11 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowClient';
 import { ADD_ONS, type AddOnKey, type TenantTier } from '@alga-psa/types';
 import { tierFromStripeProduct } from './stripeTierMapping';
+import { stripeApiOverride } from './stripeApiOverride';
+import { reconcileHostedCoManagedEntitlement, runCoManagedPurchase, type CoManagedPurchaseResult } from '@alga-psa/licensing';
+import { coManagedSnapshotFromStripe, isCoManagedSubscription, assertCoManagedPrice, currentProSubscriptionExpiry } from './coManagedSubscription';
+import { dispatchPaymentEvent } from './paymentEventRegistry';
+import { createCoManagedPaymentHandlers } from './coManagedPaymentEvents';
 import {
   getAppleIapConfig,
   getAllSubscriptionStatuses,
@@ -290,7 +295,8 @@ function licenseSubscriptions(
 ): Knex.QueryBuilder<Record<string, any>, Record<string, any>[]> {
   return tenantScopedTable(conn, 'stripe_subscriptions', tenant)
     .whereIn('status', [...statuses])
-    .whereRaw("COALESCE(metadata->>'addon_key', '') = ''");
+    .whereRaw("COALESCE(metadata->>'addon_key', '') = ''")
+    .whereRaw("COALESCE(metadata->>'subscription_kind', '') <> 'co_managed'");
 }
 
 const RETIRED_PREMIUM_SCHEDULE_KEY = 'retired_premium_schedule_id';
@@ -326,10 +332,13 @@ export class StripeService {
 
   private async initialize() {
     this.config = await getStripeConfig();
-    this.stripe = new Stripe(this.config.secretKey, {
+    const clientOptions: Stripe.StripeConfig = {
       apiVersion: '2024-12-18.acacia' as any,
       typescript: true,
-    });
+    };
+    // Defaults to real Stripe; honoured only for a loopback endpoint with an sk_test_ key.
+    Object.assign(clientOptions, stripeApiOverride(this.config.secretKey));
+    this.stripe = new Stripe(this.config.secretKey, clientOptions);
     await this.cleanupRetiredPremiumSchedules();
   }
 
@@ -1300,8 +1309,11 @@ export class StripeService {
       .merge();
 
     try {
+      // Payment-event registry: payload-classified, capability-admitted. A plain PSA tenant's event
+      // runs no co-managed query here; co-managed events are never handled as MSP seat changes.
+      const paymentOutcome = await dispatchPaymentEvent(this.coManagedPaymentHandlers(), { event, tenantId: eventTenantId, knex });
       // Process event based on type
-      switch (event.type) {
+      if (!paymentOutcome.consumed) switch (event.type) {
         case 'checkout.session.completed':
           await this.handleCheckoutCompleted(event, eventTenantId, knex);
           break;
@@ -1429,6 +1441,191 @@ export class StripeService {
     }
 
     return null;
+  }
+
+  private coManagedHandlers?: ReturnType<typeof createCoManagedPaymentHandlers>;
+
+  private coManagedPaymentHandlers() {
+    this.coManagedHandlers ??= createCoManagedPaymentHandlers({
+      priceId: () => process.env.STRIPE_CO_MANAGED_USER_PRICE_ID || undefined,
+      sync: (tenantId, subscriptionId, db) => this.syncCoManagedSubscription(tenantId, subscriptionId, db),
+      finalizeCheckout: (session, tenantId, db) => this.finalizeCoManagedCheckout(session, tenantId, db),
+    });
+    return this.coManagedHandlers;
+  }
+
+  /** Reconciles hosted capacity from CURRENT Stripe state (the only place capacity is raised). */
+  private async syncCoManagedSubscription(tenantId: string, subscriptionId: string, db: Knex): Promise<void> {
+    const priceId = process.env.STRIPE_CO_MANAGED_USER_PRICE_ID;
+    if (!priceId) throw new Error('STRIPE_CO_MANAGED_USER_PRICE_ID is required for co-managed billing');
+    const current = await tenantScopedTable(db, 'co_managed_entitlements', tenantId).first();
+    if (current?.source === 'hosted' && current.source_reference !== subscriptionId) {
+      const superseded = await tenantScopedTable(db, 'co_managed_purchase_operations', tenantId)
+        .where({ provider_reference: subscriptionId, state: 'completed' }).first();
+      if (superseded) return;
+    }
+    const customer = await tenantScopedTable(db, 'stripe_customers', tenantId).first();
+    if (!customer) throw new Error('Co-managed sponsor has no Stripe customer');
+    const externalCustomerId = customer.stripe_customer_external_id;
+    await reconcileHostedCoManagedEntitlement(db, tenantId, subscriptionId, async () => {
+      const subscription = await this.stripe.subscriptions.retrieve(subscriptionId, { expand: ['latest_invoice'] });
+      const baseSubscriptions: Stripe.Subscription[] = [];
+      for await (const candidate of this.stripe.subscriptions.list({ customer: externalCustomerId, status: 'all', limit: 100 })) {
+        baseSubscriptions.push(candidate);
+      }
+      const tenant = await tenantScopedTable(db, 'tenants', tenantId).first('product_code', 'plan');
+      const proPriceIds = tenant?.product_code === 'psa' && tenant?.plan === 'pro' ? this.coManagedSponsorPriceIds() : [];
+      return coManagedSnapshotFromStripe({ subscription, baseSubscriptions, sponsorTenant: tenantId,
+        customerId: externalCustomerId, coManagedPriceId: priceId, proPriceIds });
+    });
+  }
+
+  private coManagedSponsorPriceIds(): string[] {
+    return [this.config.proPriceId, this.config.proAnnualPriceId, this.config.algapsaUserPriceId,
+      this.config.algapsaUserAnnualPriceId, this.config.earlyAdoptersUserPriceId, this.config.earlyAdoptersUserAnnualPriceId]
+      .filter((id): id is string => Boolean(id));
+  }
+
+  /** A checkout completion binds the paid-for operation to its subscription, then reconciles. The
+   * return page itself grants nothing; capacity only moves inside `syncCoManagedSubscription`. */
+  private async finalizeCoManagedCheckout(session: Stripe.Checkout.Session, tenantId: string, knex: Knex): Promise<void> {
+    if (session.mode !== 'subscription' || !session.subscription) return;
+    const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription.id;
+    const subscription = await this.stripe.subscriptions.retrieve(subscriptionId, { expand: ['items.data.price.product'] });
+    const operationId = subscription.metadata?.operation_id ?? session.metadata?.operation_id;
+    if (operationId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(operationId)) {
+      const operation = await tenantScopedTable(knex, 'co_managed_purchase_operations', tenantId)
+        .where('operation_id', operationId).whereIn('state', ['preparing', 'checkout']).first();
+      if (operation) {
+        const customer = await tenantScopedTable(knex, 'stripe_customers', tenantId).first();
+        const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id;
+        if (!customer || customerId !== customer.stripe_customer_external_id ||
+            subscription.metadata?.tenant_id !== tenantId || subscription.metadata?.subscription_kind !== 'co_managed' ||
+            subscription.items.data.length !== 1 || subscription.items.data[0].quantity !== operation.quantity) {
+          throw new Error('Co-managed checkout does not match the authorized purchase');
+        }
+        assertCoManagedPrice(subscription.items.data[0].price, process.env.STRIPE_CO_MANAGED_USER_PRICE_ID!);
+        // Finalize through the purchase lock order so replacement checkouts can become canonical
+        // even if the browser never returns after paying. Does not raise capacity.
+        await runCoManagedPurchase(knex, { sponsorTenant: tenantId, operationId, quantity: operation.quantity },
+          async () => ({ kind: 'updated', subscriptionId: subscription.id }));
+      }
+    }
+    await this.syncCoManagedSubscription(tenantId, subscription.id, knex);
+  }
+
+  /** Quote for a pool target. Amount and currency come only from the configured Stripe price. */
+  async previewCoManagedSeats(tenantId: string, quantity: number): Promise<{
+    unitAmount: number; monthlyTotal: number; amountDue: number; currency: string;
+  }> {
+    await this.ensureInitialized();
+    if (!Number.isInteger(quantity) || quantity < 0 || quantity > 100000) throw new Error('Invalid co-managed seat quantity');
+    const db = await getConnection(tenantId);
+    const tenant = await tenantScopedTable(db, 'tenants', tenantId).first();
+    if (tenant?.product_code !== 'psa' || tenant?.plan !== 'pro' || tenant?.billing_source === 'manual') throw new Error('A hosted Pro PSA subscription is required');
+    const priceId = process.env.STRIPE_CO_MANAGED_USER_PRICE_ID;
+    if (!priceId) throw new Error('Co-managed pricing is not configured');
+    const price = await this.stripe.prices.retrieve(priceId);
+    assertCoManagedPrice(price, priceId);
+    const customer = await this.getOrImportCustomer(tenantId);
+    const subscriptions: Stripe.Subscription[] = [];
+    for await (const sub of this.stripe.subscriptions.list({ customer: customer.stripe_customer_external_id, status: 'all', limit: 100 })) subscriptions.push(sub);
+    if (!currentProSubscriptionExpiry(subscriptions, customer.stripe_customer_external_id, this.coManagedSponsorPriceIds(), priceId)) throw new Error('A current Pro subscription is required');
+    const existing = subscriptions.filter((sub) => isCoManagedSubscription(sub, priceId) && !['canceled', 'incomplete_expired'].includes(sub.status));
+    if (existing.length > 1) throw new Error('Multiple co-managed subscriptions require reconciliation');
+    const subscription = existing[0];
+    const monthlyTotal = price.unit_amount! * quantity;
+    let amountDue = monthlyTotal;
+    if (subscription) {
+      if (subscription.metadata?.tenant_id !== tenantId || subscription.metadata?.subscription_kind !== 'co_managed' || subscription.items.data.length !== 1) throw new Error('Co-managed subscription ownership does not match');
+      assertCoManagedPrice(subscription.items.data[0].price, priceId);
+      const preview = await this.stripe.invoices.createPreview({
+        customer: customer.stripe_customer_external_id, subscription: subscription.id,
+        subscription_details: quantity === 0
+          ? { cancel_at: Math.floor(Date.now() / 1000), proration_behavior: 'always_invoice' }
+          : { items: [{ id: subscription.items.data[0].id, quantity }], proration_behavior: 'always_invoice' },
+      });
+      amountDue = preview.amount_due;
+    }
+    return { unitAmount: price.unit_amount!, monthlyTotal, amountDue, currency: price.currency };
+  }
+
+  /** Dedicated customer-seat pool; never calls ordinary MSP seat mutation APIs and never carries a
+   * base-Pro price. `quantity` is the absolute pool target. */
+  async purchaseCoManagedSeats(tenantId: string, quantity: number, operationId: string): Promise<CoManagedPurchaseResult> {
+    await this.ensureInitialized();
+    const db = await getConnection(tenantId);
+    const tenant = await tenantScopedTable(db, 'tenants', tenantId).first();
+    if (tenant?.product_code !== 'psa' || tenant?.plan !== 'pro' || tenant?.billing_source === 'manual') {
+      throw new Error('A hosted Pro PSA subscription is required; self-hosted capacity uses signed licenses');
+    }
+    const priceId = process.env.STRIPE_CO_MANAGED_USER_PRICE_ID;
+    if (!priceId) throw new Error('Co-managed pricing is not configured');
+    assertCoManagedPrice(await this.stripe.prices.retrieve(priceId), priceId);
+    const customer = await this.getOrImportCustomer(tenantId);
+    const customerId = customer.stripe_customer_external_id;
+    const result = await runCoManagedPurchase(db, { sponsorTenant: tenantId, quantity, operationId }, async (operation) => {
+      const subscriptions: Stripe.Subscription[] = [];
+      for await (const sub of this.stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100 })) subscriptions.push(sub);
+      if (!currentProSubscriptionExpiry(subscriptions, customerId, this.coManagedSponsorPriceIds(), priceId)) {
+        throw new Error('A current Pro subscription is required to purchase co-managed seats');
+      }
+      const readSession = (session: Stripe.Checkout.Session): CoManagedPurchaseResult => {
+        const owner = typeof session.customer === 'string' ? session.customer : session.customer?.id;
+        if (owner !== customerId || session.metadata?.tenant_id !== tenantId ||
+            session.metadata?.operation_id !== operationId || session.metadata?.subscription_kind !== 'co_managed') {
+          throw new Error('Co-managed checkout ownership does not match');
+        }
+        if (session.status === 'complete') {
+          const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id;
+          if (!subscriptionId) throw new Error('Completed checkout has no subscription');
+          return { kind: 'updated', subscriptionId };
+        }
+        if (session.status === 'expired') return { kind: 'expired' };
+        if (!session.client_secret) throw new Error('Checkout has no client secret');
+        return { kind: 'checkout', sessionId: session.id, clientSecret: session.client_secret };
+      };
+      if (operation.state === 'checkout' && operation.provider_reference) {
+        return readSession(await this.stripe.checkout.sessions.retrieve(operation.provider_reference));
+      }
+      // Recover a checkout created before a lost response/commit, including after Stripe's
+      // short-lived request-idempotency cache has expired. Resume never creates a second charge.
+      for await (const session of this.stripe.checkout.sessions.list({ customer: customerId, limit: 100 })) {
+        if (session.metadata?.operation_id === operationId && session.metadata?.subscription_kind === 'co_managed') return readSession(session);
+      }
+      const existing = subscriptions.filter((sub) => isCoManagedSubscription(sub, priceId) && !['canceled', 'incomplete_expired'].includes(sub.status));
+      if (existing.length > 1) throw new Error('Multiple co-managed subscriptions require reconciliation');
+      const subscription = existing[0];
+      const idempotencyKey = `co-managed:${tenantId}:${operationId}`;
+      if (subscription) {
+        if (subscription.metadata?.tenant_id !== tenantId || subscription.metadata?.subscription_kind !== 'co_managed' || subscription.items.data.length !== 1) throw new Error('Co-managed subscription ownership does not match');
+        assertCoManagedPrice(subscription.items.data[0].price, priceId);
+        if (quantity === 0) {
+          await this.stripe.subscriptions.cancel(subscription.id, { invoice_now: true, prorate: true }, { idempotencyKey });
+        } else if (subscription.items.data[0].quantity !== quantity || subscription.cancel_at_period_end) {
+          await this.stripe.subscriptions.update(subscription.id, {
+            items: [{ id: subscription.items.data[0].id, quantity }], cancel_at_period_end: false,
+            payment_behavior: 'error_if_incomplete', proration_behavior: 'always_invoice',
+          }, { idempotencyKey });
+        }
+        return { kind: 'updated', subscriptionId: subscription.id };
+      }
+      if (quantity === 0) return { kind: 'updated', subscriptionId: null };
+      const metadata = { tenant_id: tenantId, subscription_kind: 'co_managed', operation_id: operationId };
+      return readSession(await this.stripe.checkout.sessions.create({
+        customer: customerId, ui_mode: 'embedded', mode: 'subscription',
+        line_items: [{ price: priceId, quantity }], metadata, subscription_data: { metadata },
+        // Card payments complete inside the embedded dialog (onComplete). A redirect-based method
+        // returns to the account page that hosts the pool editor, NOT the co-managed overview: that
+        // page is entitlement-gated and 404s for a first purchase whose webhook has not landed yet.
+        // The editor re-reads the pending operation there and offers Resume; nothing is granted.
+        redirect_on_completion: 'if_required',
+        return_url: `${getStripeReturnBaseUrl()}/msp/account#account-co-managed`,
+      }, { idempotencyKey }));
+    });
+    // Reconciliation, not this call, decides whether capacity rises.
+    if (result.kind === 'updated' && result.subscriptionId) await this.syncCoManagedSubscription(tenantId, result.subscriptionId, db);
+    return result;
   }
 
   private getAddOnKeyFromMetadata(metadata: Stripe.Metadata | null | undefined): AddOnKey | null {

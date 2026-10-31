@@ -310,8 +310,8 @@ export async function buildRealLabelDeps(overrides: { renderPdf?: unknown } = {}
     renderPdf: (overrides.renderPdf as never) ?? ((tenant: string, items: never, layout: never) => renderLabelBatchPdf(tenant, items, layout)),
     resolveTemplate: (tenant: string, labelClass: never, templateId: string | null) =>
       resolveLabelTemplateForTenant(tenant, labelClass, templateId),
-    getLinkedAssetParts: (context: never, ticketIds: readonly string[], chosen: Record<string, string>) =>
-      getTicketLinkedAssetLabelParts(context, ticketIds, chosen),
+    getLinkedAssetParts: (context: never, subjects: ReadonlyArray<{ recordId: string; linkedAssetId?: string }>) =>
+      getTicketLinkedAssetLabelParts(context, subjects),
     describeClientError: (error: unknown) =>
       error instanceof LabelRenderError
         ? { message: error.message, failures: error.failures }

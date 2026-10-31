@@ -9,7 +9,7 @@ import { reportingActionErrorFrom, type ReportingActionError } from './reporting
 
 // Define the schema for the input parameters
 const InputSchema = z.object({
-  clientId: z.string().uuid(),
+  clientId: z.string().guid(),
   currentDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "Invalid current date format (YYYY-MM-DD)",
   }),

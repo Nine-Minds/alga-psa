@@ -29,11 +29,12 @@ import { getContactByContactNameId } from '@alga-psa/clients/actions/contact-act
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { createProjectSchema, updateProjectSchema, projectPhaseSchema } from '../schemas/project.schemas';
 import { OrderingService } from '../lib/orderingUtils';
+import { regeneratePhaseOrderKeys } from '../services/projectOrderingService';
 import { projectKanbanHiddenStatusesKey } from '../lib/kanbanPreferences';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import {
@@ -1268,17 +1269,23 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
         if (beforePhaseId) {
             const beforePhase = await tenantScopedTable(trx, 'project_phases', tenant)
                 .where({ phase_id: beforePhaseId })
-                .select('order_key')
+                .select('order_key', 'project_id')
                 .first();
-            beforeKey = beforePhase?.order_key || null;
+            if (!beforePhase || beforePhase.project_id !== phase.project_id) {
+                throw new Error('Phase reorder neighbour must belong to the same project');
+            }
+            beforeKey = beforePhase.order_key || null;
         }
 
         if (afterPhaseId) {
             const afterPhase = await tenantScopedTable(trx, 'project_phases', tenant)
                 .where({ phase_id: afterPhaseId })
-                .select('order_key')
+                .select('order_key', 'project_id')
                 .first();
-            afterKey = afterPhase?.order_key || null;
+            if (!afterPhase || afterPhase.project_id !== phase.project_id) {
+                throw new Error('Phase reorder neighbour must belong to the same project');
+            }
+            afterKey = afterPhase.order_key || null;
         }
 
         try {
@@ -1302,12 +1309,7 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
             console.error('Error generating order key for phase:', error);
 
             // Try to recover by regenerating all order keys for the project
-            const { regenerateOrderKeysForPhases } = await import('./regenerateOrderKeys');
-            const { isProjectOrderKeyActionError } = await import('./projectOrderKeyActionErrors');
-            const regenerationResult = await regenerateOrderKeysForPhases(phase.project_id);
-            if (isProjectOrderKeyActionError(regenerationResult)) {
-                throw regenerationResult;
-            }
+            await regeneratePhaseOrderKeys(trx, tenant, phase.project_id);
 
             // Try again with fresh order keys
             const freshBeforePhase = beforePhaseId ? await tenantScopedTable(trx, 'project_phases', tenant)
@@ -1552,32 +1554,34 @@ export const createProject = withAuth(async (
             if (!project) {
                 throw new Error('Created project could not be reloaded after insert.');
             }
+            if (!options?.skipEvents) {
+                const createdAt = new Date();
+                registerAfterCommit(trx, async () => {
+                    await publishWorkflowEvent({
+                        eventType: 'PROJECT_CREATED',
+                        ctx: {
+                            tenantId: tenant,
+                            occurredAt: createdAt,
+                            actor: { actorType: 'USER', actorUserId: user.user_id },
+                        },
+                        payload: buildProjectCreatedPayload({
+                            projectId: project.project_id,
+                            createdByUserId: user.user_id,
+                            createdAt,
+                        }),
+                    });
+                }, `PROJECT_CREATED tenant=${tenant} project=${project.project_id}`);
+            }
             return project;
         };
 
-        // Execute using external transaction if provided, otherwise create a new one
+        // Execute using external transaction if provided, otherwise create a new one.
+        // With an external transaction the event fires when that outer transaction commits.
+        // LEVERAGE: pattern trx-threading — reads above (checkPermission, getProjectStatusesInternal)
+        // still run on the pool rather than on externalTrx; no caller passes options.trx today.
         const fullProject = externalTrx
             ? await createProjectInTransaction(externalTrx)
             : await withTransaction(knex, createProjectInTransaction);
-
-        // Only publish events if not using an external transaction (or explicitly requested)
-        if (!options?.skipEvents) {
-            // Publish project created event
-            const createdAt = new Date();
-            await publishWorkflowEvent({
-                eventType: 'PROJECT_CREATED',
-                ctx: {
-                    tenantId: tenant,
-                    occurredAt: createdAt,
-                    actor: { actorType: 'USER', actorUserId: user.user_id },
-                },
-                payload: buildProjectCreatedPayload({
-                    projectId: fullProject.project_id,
-                    createdByUserId: user.user_id,
-                    createdAt,
-                }),
-            });
-        }
 
         return fullProject;
     } catch (error) {

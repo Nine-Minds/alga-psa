@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
+import { getTenantIdBySlug, isValidTenantSlug } from '@alga-psa/db';
 import {
   MSP_SSO_DISCOVERY_COOKIE,
   MSP_SSO_GENERIC_FAILURE_MESSAGE,
@@ -8,6 +9,7 @@ import {
   MSP_SSO_RESOLUTION_TTL_SECONDS,
   createSignedMspSsoResolutionCookie,
   getMspSsoSigningSecret,
+  hasAppFallbackProviderCredentials,
   isValidResolverCallbackUrl,
   normalizeResolverEmail,
   parseAndVerifyMspSsoDiscoveryCookie,
@@ -82,7 +84,7 @@ function clearClientPortalSsoCookies(response: NextResponse): void {
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = (await request.json().catch(() => null)) as
-      | { provider?: unknown; email?: unknown; publicWorkstation?: unknown; callbackUrl?: unknown }
+      | { provider?: unknown; email?: unknown; publicWorkstation?: unknown; callbackUrl?: unknown; tenantSlug?: unknown }
       | null;
 
     const provider = parseResolverProvider(body?.provider);
@@ -90,6 +92,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const publicWorkstation = body?.publicWorkstation === true;
     const callbackUrl =
       typeof body?.callbackUrl === 'string' ? body.callbackUrl.trim() : undefined;
+
+    const rawTenantSlug = body?.tenantSlug;
+    const tenantSlug =
+      typeof rawTenantSlug === 'string' && rawTenantSlug.trim() ? rawTenantSlug.trim().toLowerCase() : undefined;
+    // A slug that was supplied but is bad fails the same way as everything else.
+    if (rawTenantSlug !== undefined && rawTenantSlug !== null && rawTenantSlug !== '' && !tenantSlug) {
+      return buildGenericFailureResponse();
+    }
 
     if (
       !provider ||
@@ -122,12 +132,41 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       secret: signingSecret,
     });
 
+    // Scoped sign-in: the slug names the only tenant whose user may be signed
+    // in. Resolve it here, server-side, and sign it into the cookie.
+    let scopeTenantId: string | undefined;
+    if (tenantSlug) {
+      if (!isValidTenantSlug(tenantSlug)) {
+        return buildGenericFailureResponse();
+      }
+      scopeTenantId = (await getTenantIdBySlug(tenantSlug)) ?? undefined;
+      if (!scopeTenantId) {
+        return buildGenericFailureResponse();
+      }
+    }
+
     // Anti-enumeration rule: lookup outcomes only affect internal source selection, never external messaging.
     const outcome = await resolveMspSsoCredentialSource({
       provider,
       email,
       discovery: discoveryContext,
     });
+    if (
+      scopeTenantId &&
+      outcome.resolved &&
+      outcome.source === 'tenant' &&
+      outcome.tenantId !== scopeTenantId
+    ) {
+      // The email's domain belongs to another tenant's IdP. A sign-in scoped to
+      // this tenant must never run through it; use the app-level provider if
+      // one exists, otherwise fail like any other unavailable source.
+      if (await hasAppFallbackProviderCredentials(provider)) {
+        outcome.source = 'app';
+        outcome.tenantId = undefined;
+      } else {
+        outcome.resolved = false;
+      }
+    }
     if (!outcome.resolved || !outcome.source) {
       console.info('[msp-sso-resolve] no available credential source', {
         provider,
@@ -140,6 +179,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       provider,
       source: outcome.source,
       tenantId: outcome.tenantId,
+      scopeTenantId,
       secret: signingSecret,
       ttlSeconds: MSP_SSO_RESOLUTION_TTL_SECONDS,
     });

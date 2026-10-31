@@ -15,6 +15,7 @@ import {
   bulkDeleteSchema,
   bulkUpdateSchema
 } from './common';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 // ============================================================================
 // ENUMS AND CONSTANTS
@@ -34,7 +35,12 @@ export const contractStatusSchema = z.enum(['active', 'draft', 'terminated', 'ex
 
 // Prepaid Block config overlay for Hourly lines (contract_line_prepaid_blocks).
 // block_price is in minor units of the contract's currency.
+// issue_mode 'cadence' bills one block per service period, in advance; rollover_periods (0..12)
+// is how many further periods unused hours stay valid and applies to cadence only. The
+// consumption triggers and expiry_months cannot be combined with cadence.
 export const prepaidBlockConfigSchema = z.object({
+  issue_mode: z.enum(['consumption', 'cadence']).optional(),
+  rollover_periods: z.number().int().min(0).max(12).optional(),
   block_minutes: z.number().int().min(1),
   block_price: z.number().int().min(0),
   sold_as_service_id: uuidSchema.nullable().optional(),
@@ -44,6 +50,27 @@ export const prepaidBlockConfigSchema = z.object({
   trigger_on_expiry: z.boolean().optional(),
   trigger_on_renewal: z.boolean().optional(),
   replenishment_tier: z.enum(['draft', 'auto_issue']).optional(),
+}).superRefine((block, ctx) => {
+  if (block.issue_mode === 'cadence') {
+    const conflicting = block.trigger_on_exhaustion === true
+      || block.trigger_on_expiry === true
+      || block.trigger_on_renewal === true
+      || block.trigger_threshold_percent != null
+      || block.expiry_months != null;
+    if (conflicting) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Blocks issued every billing period cannot use the exhaustion, threshold, expiry or renewal triggers or expiry_months; use rollover_periods',
+        path: ['issue_mode'],
+      });
+    }
+  } else if ((block.rollover_periods ?? 0) !== 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'rollover_periods applies only when issue_mode is cadence',
+      path: ['rollover_periods'],
+    });
+  }
 });
 
 // Base contract line schema (without refinements)
@@ -328,10 +355,10 @@ export const updatePlanServiceSchema = z.object({
   quantity: z.number().min(0).optional(),
   custom_rate: z.number().min(0).optional(),
   type_config: z.union([
-    createPlanServiceFixedConfigSchema.partial(),
-    createPlanServiceHourlyConfigSchema.partial(),
-    createPlanServiceUsageConfigSchema.partial(),
-    createPlanServiceBucketConfigSchema.partial()
+    partialWithoutDefaults(createPlanServiceFixedConfigSchema),
+    partialWithoutDefaults(createPlanServiceHourlyConfigSchema),
+    partialWithoutDefaults(createPlanServiceUsageConfigSchema),
+    partialWithoutDefaults(createPlanServiceBucketConfigSchema)
   ]).and(
     // The partial branches above strip unknown keys and the hourly/usage/bucket
     // partials accept an empty object, so an invalid base_rate_basis would be
@@ -562,8 +589,8 @@ export const usageMetricsResponseSchema = z.object({
   total_usage: z.number(),
   billable_usage: z.number(),
   overage_usage: z.number(),
-  usage_by_service: z.record(z.number()),
-  usage_by_user: z.record(z.number()),
+  usage_by_service: z.record(z.string(), z.number()),
+  usage_by_user: z.record(z.string(), z.number()),
   cost_breakdown: z.object({
     base_cost: z.number(),
     overage_cost: z.number(),
@@ -677,7 +704,7 @@ export const billingOverviewAnalyticsSchema = z.object({
   total_plans: z.number(),
   total_contracts: z.number(),
   total_assignments: z.number(),
-  plans_by_type: z.record(z.number()),
+  plans_by_type: z.record(z.string(), z.number()),
   revenue_summary: z.object({
     total_monthly_revenue: z.number(),
     average_revenue_per_plan: z.number(),
@@ -693,7 +720,7 @@ export const billingOverviewAnalyticsSchema = z.object({
       count: z.number(),
       percentage: z.number()
     })),
-    billing_frequency_distribution: z.record(z.number())
+    billing_frequency_distribution: z.record(z.string(), z.number())
   })
 });
 

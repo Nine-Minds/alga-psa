@@ -217,9 +217,10 @@ async function writeFixedLineMembers(
         },
         {
           pricing_basis: 'unit',
-          base_rate: service.unit_rate as number,
+          // A seat rate is per unit. The fixed-config model derives the pair and
+          // provenance: a null rate is catalog-priced (inherited) with no basis.
+          base_rate: service.unit_rate ?? null,
           base_rate_basis: 'per_unit',
-          rate_provenance: 'custom',
         },
       );
       continue;
@@ -430,6 +431,8 @@ export type ClientContractWizardSubmission = {
    */
   recurring_change_ack?: { baseline_monthly_cents: number };
   product_services?: ClientProductServiceInput[];
+  /** The products line's own timing; unset inherits `billing_timing` (same rule as a fixed line's `billing_timing`). */
+  product_billing_timing?: 'arrears' | 'advance';
   hourly_services?: ClientHourlyServiceInput[];
   hourly_billing_frequency?: string;
   usage_services?: ClientUsageServiceInput[];
@@ -1054,8 +1057,8 @@ export const createContractTemplateFromWizard = withAuth(async (
           tenant,
           config_id: configId,
           hourly_rate: normalizedHourlyRate ?? null,
-          minimum_billable_time: submission.minimum_billable_time ?? 0,
-          round_up_to_nearest: submission.round_up_to_nearest ?? 0,
+          minimum_billable_time: submission.minimum_billable_time ?? 15,
+          round_up_to_nearest: submission.round_up_to_nearest ?? 15,
           enable_overtime: false,
           overtime_rate: null,
           overtime_threshold: null,
@@ -1092,8 +1095,9 @@ export const createContractTemplateFromWizard = withAuth(async (
             ? `${submission.contract_name} - Prepaid Block ${blockIndex + 1}`
             : `${submission.contract_name} - Prepaid Block`),
         billing_frequency: submission.billing_frequency ?? 'monthly',
-        billing_timing: recurringAuthoringPolicy.billingTiming,
-        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
+        // Line stays arrears; the block fee goes in advance via its prepaid_block charge stream.
+        billing_timing: arrearsOnlyLinePolicy.billingTiming,
+        cadence_owner: arrearsOnlyLinePolicy.cadenceOwner,
         is_custom: true,
         service_category: null as any,
         contract_line_type: 'Hourly',
@@ -1141,8 +1145,8 @@ export const createContractTemplateFromWizard = withAuth(async (
           tenant,
           config_id: configId,
           hourly_rate: normalizedHourlyRate ?? null,
-          minimum_billable_time: submission.minimum_billable_time ?? 0,
-          round_up_to_nearest: submission.round_up_to_nearest ?? 0,
+          minimum_billable_time: submission.minimum_billable_time ?? 15,
+          round_up_to_nearest: submission.round_up_to_nearest ?? 15,
           enable_overtime: false,
           overtime_rate: null,
           overtime_threshold: null,
@@ -1860,11 +1864,12 @@ export const createClientContractFromWizard = withAuth(async (
     const usageGroups = groupBySourceLine(filteredUsageServices);
     let nextDisplayOrder = 0;
   const planServiceConfigService = new ContractLineServiceConfigurationService(trx, tenant);
-  // Products allow advance, so the contract-wide value applies to them.
+  // Products allow advance: the products line's own timing, else the contract-wide value.
   const recurringAuthoringPolicy = resolveRecurringAuthoringPolicy({
     lineType: 'Product',
     cadenceOwner: submission.cadence_owner,
     defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
+    billingTiming: submission.product_billing_timing,
     contractWideBillingTiming: submission.billing_timing,
     enableProration: submission.enable_proration,
   });
@@ -2138,8 +2143,8 @@ export const createClientContractFromWizard = withAuth(async (
 
         await planServiceConfigService.upsertPlanServiceHourlyConfiguration(hourlyPlanId, service.service_id, {
           hourly_rate: normalizedHourlyRate,
-          minimum_billable_time: submission.minimum_billable_time ?? 0,
-          round_up_to_nearest: submission.round_up_to_nearest ?? 0,
+          minimum_billable_time: submission.minimum_billable_time ?? 15,
+          round_up_to_nearest: submission.round_up_to_nearest ?? 15,
         });
 
         if (service.bucket_overlay) {
@@ -2235,8 +2240,9 @@ export const createClientContractFromWizard = withAuth(async (
         contract_id: contractId,
         display_order: nextDisplayOrder,
         custom_rate: null,
-        billing_timing: recurringAuthoringPolicy.billingTiming,
-        cadence_owner: recurringAuthoringPolicy.cadenceOwner,
+        // Line stays arrears; the block fee goes in advance via its prepaid_block charge stream.
+        billing_timing: arrearsOnlyLinePolicy.billingTiming,
+        cadence_owner: arrearsOnlyLinePolicy.cadenceOwner,
         is_template: false,
       } as any);
       const blockLineId = blockLine.contract_line_id!;
@@ -2259,8 +2265,8 @@ export const createClientContractFromWizard = withAuth(async (
         });
         await planServiceConfigService.upsertPlanServiceHourlyConfiguration(blockLineId, service.service_id, {
           hourly_rate: normalizedHourlyRate,
-          minimum_billable_time: submission.minimum_billable_time ?? 0,
-          round_up_to_nearest: submission.round_up_to_nearest ?? 0,
+          minimum_billable_time: submission.minimum_billable_time ?? 15,
+          round_up_to_nearest: submission.round_up_to_nearest ?? 15,
         });
       }
 
@@ -2706,6 +2712,8 @@ export type DraftContractWizardData = {
   po_amount?: number;
   po_required?: boolean;
   fixed_lines: ContractWizardFixedLine[];
+  /** Set only when the stored products line's timing differs from the contract default; unset = inherit. */
+  product_billing_timing?: 'arrears' | 'advance';
   product_services: Array<{
     service_id: string;
     service_name?: string;
@@ -2797,6 +2805,7 @@ export const getDraftContractForResume = withAuth(async (
   let usageBillingFrequency: string | undefined;
   let cadenceOwner: CadenceOwner = 'client';
   let billingTiming: 'arrears' | 'advance' = 'arrears';
+  let storedProductsTiming: 'arrears' | 'advance' | undefined;
   const servicesByLineId = new Map<
     string,
     Awaited<ReturnType<typeof getContractLineServicesWithConfigurations>>
@@ -2871,6 +2880,8 @@ export const getDraftContractForResume = withAuth(async (
           ),
         })),
         block: {
+          issue_mode: prepaidConfig.issue_mode ?? 'consumption',
+          rollover_periods: Number(prepaidConfig.rollover_periods ?? 0),
           block_minutes: Number(prepaidConfig.block_minutes),
           block_price: Number(prepaidConfig.block_price),
           sold_as_service_id: prepaidConfig.sold_as_service_id ?? null,
@@ -2941,6 +2952,9 @@ export const getDraftContractForResume = withAuth(async (
         { missingUnitRate: undefined, includeLocation: true },
       );
       productServices.push(...mapped.products);
+      if (mapped.products.length > 0 && line.billing_timing) {
+        storedProductsTiming = line.billing_timing as 'arrears' | 'advance';
+      }
       if (mapped.fixedLine) {
         fixedLines.push(mapped.fixedLine);
         enableProration = enableProration || mapped.fixedLine.enable_proration;
@@ -3187,6 +3201,9 @@ export const getDraftContractForResume = withAuth(async (
     po_amount: clientContract.po_amount != null ? Number(clientContract.po_amount) : undefined,
     po_required: Boolean(clientContract.po_required),
     fixed_lines: fixedLines,
+    // Explicit only when it differs from the contract default, so an inheriting products line stays inheriting.
+    product_billing_timing:
+      storedProductsTiming && storedProductsTiming !== billingTiming ? storedProductsTiming : undefined,
     product_services: productServices,
     enable_proration: enableProration,
     recurring_baseline: {

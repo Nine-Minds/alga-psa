@@ -1,3 +1,4 @@
+import { coManagedAcceptancePendingError, isCoManagedAwaitingAcceptanceLazily, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 import { createTenantKnex, isTenantSuspended, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import crypto from 'crypto';
@@ -200,6 +201,10 @@ export class ApiKeyService {
         return null;
       }
 
+      if (await isCoManagedAwaitingAcceptanceLazily(async () => knex, tenant)) {
+        throw coManagedAcceptancePendingError();
+      }
+
       // A deactivated owner, a client-portal owner, or a suspended tenant
       // (cancelled, pending deletion) must not authenticate. Reversible:
       // reactivation restores the same keys untouched. A client-owned key is
@@ -243,6 +248,7 @@ export class ApiKeyService {
 
       return record;
     } catch (error) {
+      if (isCoManagedLifecycleError(error)) throw error;
       console.error(`Error validating API key in tenant ${tenant}:`, error);
       return null;
     }

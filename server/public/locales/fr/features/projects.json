@@ -1536,7 +1536,9 @@
     "addFailed": "Échec de l'ajout du commentaire",
     "submitting": "Envoi...",
     "loading": "Chargement...",
-    "empty": "Pas encore de commentaires. Soyez le premier à commenter !"
+    "empty": "Pas encore de commentaires. Soyez le premier à commenter !",
+    "loadError": "Impossible de charger les commentaires.",
+    "retry": "Réessayer"
   },
   "clientPortal": {
     "clientsWillSee": "Les clients verront :",

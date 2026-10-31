@@ -38,7 +38,7 @@ export default function StagingBulkPrintDialog({ isOpen, onClose, boxes, lines, 
   const { t } = useTranslation(['features/projects', 'common']);
   const st = useCallback((key: string, fallback: string, options?: Record<string, unknown>) =>
     t(`staging.print.${key}`, { defaultValue: fallback, ...(options ?? {}) }), [t]);
-  const { printItems, isPrinting } = useLabelPrint();
+  const { print, isPrinting } = useLabelPrint();
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [includeUnboxed, setIncludeUnboxed] = useState(true);
   const [preset, setPreset] = useState<LabelLayoutPresetId>(DEFAULT_LABEL_LAYOUT_PRESET);
@@ -58,7 +58,7 @@ export default function StagingBulkPrintDialog({ isOpen, onClose, boxes, lines, 
 
   const handlePrint = async () => {
     setMessage(null);
-    const outcome = await printItems({ items: plan.items, layout: LABEL_LAYOUT_PRESETS[preset].layout });
+    const outcome = await print({ labels: plan.labels, layout: LABEL_LAYOUT_PRESETS[preset].layout });
     if (outcome.status === 'failed') {
       setMessage({ kind: 'error', text: outcome.message || st('failed', 'The labels could not be printed.') });
       return;
@@ -123,7 +123,7 @@ export default function StagingBulkPrintDialog({ isOpen, onClose, boxes, lines, 
           />
         </div>
         <p className="text-sm" id="staging-print-count">
-          {st('count', '{{count}} label(s) in one PDF.', { count: plan.items.length })}
+          {st('count', '{{count}} label(s) in one PDF.', { count: plan.labels.length })}
         </p>
         {plan.droppedUnitLabels > 0 && (
           <Alert variant="info" id="staging-print-no-inventory">
@@ -149,7 +149,7 @@ export default function StagingBulkPrintDialog({ isOpen, onClose, boxes, lines, 
         <Button id="staging-print-cancel" variant="outline" onClick={onClose}>
           {t('common:actions.cancel', 'Cancel')}
         </Button>
-        <Button id="staging-print-submit" onClick={handlePrint} disabled={isPrinting || plan.items.length === 0 || plan.overCap}>
+        <Button id="staging-print-submit" onClick={handlePrint} disabled={isPrinting || plan.labels.length === 0 || plan.overCap}>
           {isPrinting && <Loader2 className="w-4 h-4 mr-1 animate-spin" />}
           {st('submit', 'Print')}
         </Button>

@@ -317,7 +317,7 @@
         "description": "Konfigurera avancerade alternativ för e-postbehandling",
         "folderFiltersLabel": "Mappfilter",
         "folderFiltersPlaceholder": "Inbox, Support, Anpassad mapp",
-        "folderFiltersHelp": "Kommaseparerad lista över mappar att bevaka (standard: Inbox)",
+        "folderFiltersHelp": "Kommaseparerad lista över mappar att bevaka (standard: Inbox). Använd exakt det mappnamn som visas i Outlook och skriv nästlade mappar som Inbox/Undermapp.",
         "maxEmailsPerSync": "Högsta antal e-postmeddelanden per synkronisering"
       }
     },

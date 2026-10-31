@@ -2,6 +2,7 @@ import type {
   ChargeExplanation,
   IBillingPeriod,
   IClientContractLine,
+  ILateServicePeriodSource,
   ITimeBasedCharge,
   InvoiceTimeEntrySnapshot,
 } from "@alga-psa/types";
@@ -58,16 +59,72 @@ export interface TimeEntryComputeRow {
   /** Customer-visible ticket description (tickets.attributes->>'description'). */
   ticket_description?: string | null;
   project_task_name?: string | null;
+  /**
+   * Set by the loader when the entry is dated inside a service period an issued
+   * invoice already closed. Priced under the same contract terms; the charge
+   * reports this period instead of the current one.
+   */
+  late_for_service_period?: ILateServicePeriodSource | null;
 }
 
 export interface HourlyServiceConfigEntry {
   config: {
     config_id: string;
-    hourly_rate: number;
+    /** The contract's hourly rate for this service, in minor units of the contract currency; null when unset. */
+    hourly_rate: number | null;
+    /** The service configuration's custom rate (minor units), the contract's fallback rate. */
+    custom_rate?: number | null;
     minimum_billable_time: number;
     round_up_to_nearest: number;
   };
   userTypeRates: Map<string, number>;
+}
+
+/** The contract line's plan-wide hourly terms (contract_lines). */
+export interface HourlyLineTerms {
+  minimum_billable_time?: number | null;
+  round_up_to_nearest?: number | null;
+}
+
+export interface HourlyContractTerms {
+  minimumMinutes: number;
+  roundUpMinutes: number;
+  /** The contract's own rate for the service, when it has one. */
+  contractRate: number | undefined;
+}
+
+const positiveOrUndefined = (value: unknown): number | undefined => {
+  if (value == null) return undefined;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : undefined;
+};
+// null/undefined mean "unset"; an explicit 0 is a real value ("none") and must not fall through.
+const minutesOrNull = (value: unknown): number | null => {
+  if (value == null) return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric >= 0 ? numeric : null;
+};
+
+/**
+ * The persisted contract terms one hourly entry is billed under. The contract
+ * line's minimum and rounding are the values the contract screen shows and
+ * edits, so they win over the per-service copy, which applies only when the
+ * line carries none. The contract's own rate (the service's hourly rate, else
+ * its configured custom rate) wins over the catalog price. A system-managed
+ * default line has no negotiated terms and bills raw minutes at catalog price.
+ */
+// LEVERAGE: friction hourly-terms-split — two persisted copies of the same terms (line row and per-service row), kept in sync by hand at four wizard sites; this resolver is the mechanism, the real fix is one column owning the truth
+export function resolveHourlyContractTerms(
+  line: HourlyLineTerms | null | undefined,
+  serviceConfig: HourlyServiceConfigEntry | undefined,
+  isSystemManagedDefault: boolean,
+): HourlyContractTerms {
+  if (isSystemManagedDefault) return { minimumMinutes: 0, roundUpMinutes: 0, contractRate: undefined };
+  return {
+    minimumMinutes: minutesOrNull(line?.minimum_billable_time) ?? minutesOrNull(serviceConfig?.config.minimum_billable_time) ?? 0,
+    roundUpMinutes: minutesOrNull(line?.round_up_to_nearest) ?? minutesOrNull(serviceConfig?.config.round_up_to_nearest) ?? 0,
+    contractRate: positiveOrUndefined(serviceConfig?.config.hourly_rate) ?? positiveOrUndefined(serviceConfig?.config.custom_rate),
+  };
 }
 
 export interface TimeBasedPhaseRateOverride {
@@ -91,8 +148,8 @@ export interface TimeBasedChargeComputeInputs {
   clientContractLine: IClientContractLine;
   timing: ChargeComputeTiming;
   client: ChargeComputeClient;
-  /** contract_lines row fields used for overtime. */
-  plan: {
+  /** contract_lines row fields used for overtime and the line's minimum/rounding terms. */
+  plan: HourlyLineTerms & {
     enable_overtime?: boolean | null;
     overtime_threshold?: number | null;
     overtime_rate?: number | null;
@@ -100,6 +157,11 @@ export interface TimeBasedChargeComputeInputs {
   serviceConfigMap: Map<string, HourlyServiceConfigEntry>;
   timeEntries: TimeEntryComputeRow[];
   contractCurrency: string;
+  /**
+   * The line carries a cadence Prepaid Block, so the time left here is what
+   * the block did not cover: the charges are marked as over the block.
+   */
+  overPrepaidBlock?: boolean;
   /** Contract-line/contract/client-default profile assignments (F016–F024). */
   billingProfile?: ChargeProfileAssignments | null;
   /** Project-billing hooks; production wires these to ProjectBillingContext, the simulator passes null. */
@@ -228,25 +290,22 @@ export function computeTimeBasedCharges(
       (clientContractLine as { is_system_managed_default?: boolean | null })
         .is_system_managed_default === true;
 
+    const terms = resolveHourlyContractTerms(plan, serviceConfig, isSystemManagedDefault);
     const rawDurationMinutes = Number(entry.billable_duration);
     let durationMinutes = rawDurationMinutes;
     let minimumApplied = false;
     let roundingApplied = false;
 
-    if (serviceConfig && !isSystemManagedDefault) {
-      if (durationMinutes < serviceConfig.config.minimum_billable_time) {
-        durationMinutes = serviceConfig.config.minimum_billable_time;
-        minimumApplied = durationMinutes !== rawDurationMinutes;
-      }
+    if (durationMinutes < terms.minimumMinutes) {
+      durationMinutes = terms.minimumMinutes;
+      minimumApplied = durationMinutes !== rawDurationMinutes;
+    }
 
-      if (serviceConfig.config.round_up_to_nearest > 0) {
-        const remainder =
-          durationMinutes % serviceConfig.config.round_up_to_nearest;
-        if (remainder > 0) {
-          durationMinutes +=
-            serviceConfig.config.round_up_to_nearest - remainder;
-          roundingApplied = true;
-        }
+    if (terms.roundUpMinutes > 0) {
+      const remainder = durationMinutes % terms.roundUpMinutes;
+      if (remainder > 0) {
+        durationMinutes += terms.roundUpMinutes - remainder;
+        roundingApplied = true;
       }
     }
 
@@ -256,8 +315,8 @@ export function computeTimeBasedCharges(
     const duration = durationMinutes / 60;
 
     // Resolve rate, preferring overrides over the currency-specific catalog
-    // price: per-entry custom rate -> per-user-type rate -> service_prices
-    // row in the contract's currency. No fallback to the currency-untagged
+    // price: per-entry custom rate -> per-user-type rate -> the contract's own
+    // rate -> service_prices row in the contract's currency. No fallback to the currency-untagged
     // legacy service_catalog.default_rate.
     const userTypeRate =
       !isSystemManagedDefault &&
@@ -269,6 +328,7 @@ export function computeTimeBasedCharges(
     const resolvedRate =
       entry.custom_rate ??
       userTypeRate ??
+      terms.contractRate ??
       (entry.currency_rate != null ? Number(entry.currency_rate) : undefined);
     const phaseOverride =
       resolvePhaseRateOverride?.(entry.project_phase_id, entry.service_id) ??
@@ -348,14 +408,14 @@ export function computeTimeBasedCharges(
     const explanationInputs = [
       {
         label: "Rate",
-        value: `${formatCents(rate, contractCurrency)} / hr${entry.custom_rate != null ? " (entry custom rate)" : userTypeRate !== undefined ? " (user-type rate)" : ""}`,
+        value: `${formatCents(rate, contractCurrency)} / hr${entry.custom_rate != null ? " (entry custom rate)" : userTypeRate !== undefined ? " (user-type rate)" : terms.contractRate !== undefined && phaseOverride?.rate == null ? " (contract rate)" : ""}`,
       },
       { label: "Hours", value: `${formatHours(duration)} hrs` },
     ];
     const durationSteps: string[] = [];
     if (minimumApplied || roundingApplied) {
       durationSteps.push(
-        `${rawDurationMinutes} min${minimumApplied ? ` → minimum ${serviceConfig!.config.minimum_billable_time} min` : ""}${roundingApplied ? ` → rounded up to ${durationMinutes} min` : ""} = ${formatHours(duration)} hrs`,
+        `${rawDurationMinutes} min${minimumApplied ? ` → minimum ${terms.minimumMinutes} min` : ""}${roundingApplied ? ` → rounded up to ${durationMinutes} min` : ""} = ${formatHours(duration)} hrs`,
       );
     }
     if (isOvertime) {
@@ -415,6 +475,7 @@ export function computeTimeBasedCharges(
         markers,
       });
 
+      const late = entry.late_for_service_period ?? null;
       return {
         serviceId: effectiveServiceId,
         serviceName: effectiveServiceName as string,
@@ -427,6 +488,7 @@ export function computeTimeBasedCharges(
         total,
         type: "time",
         ...(segment.kind ? { timeSegment: segment.kind } : {}),
+        ...(inputs.overPrepaidBlock ? { overPrepaidBlock: true } : {}),
         workItemSnapshot: buildTimeEntryWorkItemSnapshot(entry, {
           billedMinutes: segment.minutes,
           rateKind: 'uniform',
@@ -442,9 +504,10 @@ export function computeTimeBasedCharges(
         tax_region: effectiveTaxRegion,
         entryId: entry.entry_id,
         is_taxable: isTaxable,
-        servicePeriodStart,
-        servicePeriodEnd,
+        servicePeriodStart: late?.servicePeriodStart ?? servicePeriodStart,
+        servicePeriodEnd: late?.servicePeriodEnd ?? servicePeriodEnd,
         servicePeriodRecordId: timing.servicePeriodRecordId ?? null,
+        ...(late ? { lateForServicePeriod: late } : {}),
         billingTiming: timing.duePosition,
         client_contract_id: clientContractLine.client_contract_id || undefined,
         contract_name: clientContractLine.contract_name || undefined,

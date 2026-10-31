@@ -42,6 +42,9 @@ import {
 } from '@alga-psa/billing/actions/invoiceGeneration.constants';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
+import { changeInvoiceTaxSourceInternal } from '@alga-psa/billing/actions/taxSourceActions';
+import { assertInvoiceNotExported } from '@alga-psa/billing/services/accountingSync/invoiceExportGuards';
+import type { TaxSource } from '@alga-psa/types';
 import {
   settlePrepaidReplenishmentInvoice,
   deleteInvoiceWithKnex,
@@ -79,6 +82,7 @@ import {
   UpdateRecurringInvoiceTemplate,
   InvoicePreviewRequest,
 } from '../schemas/invoiceSchemas';
+import { INVOICE_UPDATE_FIELDS, LIFECYCLE_OWNED_FIELDS } from '../schemas/invoiceUpdateFields';
 
 import {
   IInvoice,
@@ -258,6 +262,12 @@ export interface InvoiceHATEOASLinks {
   credit?: string;
   payment?: string;
 }
+
+const TAX_SOURCES: ReadonlySet<string> = new Set<TaxSource>(['internal', 'external', 'pending_external']);
+// The update schema already validates tax_source; this narrows the inferred
+// request type to TaxSource for the shared tax-source change.
+const isTaxSource = (value: unknown): value is TaxSource =>
+  typeof value === 'string' && TAX_SOURCES.has(value);
 
 export class InvoiceService extends BaseService<IInvoice> {
   private taxService: TaxService;
@@ -739,21 +749,61 @@ export class InvoiceService extends BaseService<IInvoice> {
   async update(id: string, data: UpdateInvoice, context: ServiceContext): Promise<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'update');
 
+    // Defense in depth behind updateInvoiceSchema: status, identity and monetary
+    // fields are owned by dedicated commands (finalize/send/recordPayment/void/...),
+    // so a caller holding only invoice:update can never write them here.
+    const allowedFields: readonly string[] = INVOICE_UPDATE_FIELDS;
+    const lifecycleFields: readonly string[] = LIFECYCLE_OWNED_FIELDS;
+    const submittedKeys = Object.keys(data ?? {}).filter(
+      (key) => (data as Record<string, unknown>)[key] !== undefined
+    );
+    const lifecycleKey = submittedKeys.find((key) => lifecycleFields.includes(key));
+    if (lifecycleKey) {
+      throw new ValidationError(
+        `Field '${lifecycleKey}' cannot be changed by updating an invoice; use the dedicated invoice command instead`,
+        [{ path: [lifecycleKey], message: 'Field is managed by an invoice lifecycle command' }]
+      );
+    }
+    const unknownKey = submittedKeys.find((key) => !allowedFields.includes(key));
+    if (unknownKey) {
+      throw new ValidationError(`Field '${unknownKey}' is not editable on an invoice`, [
+        { path: [unknownKey], message: 'Unrecognized field' },
+      ]);
+    }
+
     const { knex } = await this.getKnex();
     const deferredEvents: DeferredEvent[] = [];
 
     await withTransaction(knex, async (trx) => {
       const existing = await tenantDb(trx, context.tenant).table('invoices')
         .where({ invoice_id: id })
+        .forUpdate()
         .first();
 
       if (!existing) {
         throw new NotFoundError('Invoice not found');
       }
 
-      // Validate business rules
-      if (existing.status === 'paid' && data.status && data.status !== 'paid') {
-        throw new ConflictError('Cannot modify paid invoice status');
+      // An invoice already exported (or being exported) to an accounting system
+      // is frozen; same guard as the invoice editor, inside this transaction.
+      if (submittedKeys.length > 0) {
+        try {
+          await assertInvoiceNotExported(trx, context.tenant, id, 'edit');
+        } catch (error) {
+          throw new ConflictError(error instanceof Error ? error.message : 'Invoice has been exported');
+        }
+      }
+
+      // Invoice and due dates are draft-only billing terms, as in the editor.
+      for (const dateField of ['invoice_date', 'due_date'] as const) {
+        const next = data[dateField];
+        if (next !== undefined && existing.status !== 'draft') {
+          const toDay = (value: unknown) =>
+            value instanceof Date ? value.toISOString().slice(0, 10) : String(value ?? '').slice(0, 10);
+          if (toDay(next) !== toDay(existing[dateField])) {
+            throw new ConflictError(`${dateField} can only be changed on draft invoices`);
+          }
+        }
       }
 
       // Payment method is a draft-only term; an unchanged value (null and
@@ -770,7 +820,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         await this.assertBillingProfileBelongsToClient(
           trx,
           context.tenant,
-          data.client_id ?? existing.client_id,
+          existing.client_id,
           data.billing_profile_id,
         );
       }
@@ -810,8 +860,18 @@ export class InvoiceService extends BaseService<IInvoice> {
         }
       }
 
-      // Prepare update data. `items` is not an invoices column; it is handled below.
-      const { items: _items, ...headerData } = data;
+      // A tax-source change has its own rules and side effects (draft tax
+      // recalculation, finalized-invoice guard), so it never rides the header
+      // update below.
+      if (isTaxSource(data.tax_source) && data.tax_source !== existing.tax_source) {
+        const taxSourceChange = await changeInvoiceTaxSourceInternal(trx, context.tenant, id, data.tax_source);
+        if (!taxSourceChange.success) {
+          throw new ConflictError(taxSourceChange.error);
+        }
+      }
+
+      // Prepare update data. `items` and `tax_source` are handled separately.
+      const { items: _items, tax_source: _taxSource, ...headerData } = data;
       const updateData: any = await this.addUpdateAuditFields(trx, headerData, context, 'invoices');
 
       // Changing the billing profile of a draft re-resolves the profile-derived
@@ -823,7 +883,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       let repointToProfileId: string | null | undefined;
       let repointSource: 'explicit' | 'client_default' = 'client_default';
       if (profileChangedOnDraft) {
-        const termsClientId = data.client_id ?? existing.client_id;
+        const termsClientId = existing.client_id;
         if (termsClientId) {
           const rawInvoiceDate = data.invoice_date ?? existing.invoice_date;
           const termsInvoiceDate = rawInvoiceDate instanceof Date
