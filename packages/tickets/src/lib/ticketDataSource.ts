@@ -278,6 +278,14 @@ export interface TicketScreenBehavior {
   /** Where the header "Back to Tickets" control goes. Native: `/msp/tickets`. */
   backHref?: string;
   /**
+   * Lets an app layer tell the screen "the comment list changed outside the composer" (for example a
+   * message published from a panel beside the screen). The screen subscribes once and, on each signal,
+   * re-reads comments through `comments.findCommentsByTicketId` (the same path a composer send uses).
+   * Returns the unsubscribe. Absent (native default): the screen never subscribes.
+   * An implementation must fire ONLY on an explicit event, never from a signal the re-read itself causes.
+   */
+  subscribeCommentsChanged?: (listener: () => void) => () => void;
+  /**
    * The viewer may look but not write: every field is frozen, the comment
    * composer, reply and edit affordances, the description editor, the
    * additional-agents/team picker and the watch list are absent. Native

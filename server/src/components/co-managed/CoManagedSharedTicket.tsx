@@ -11,6 +11,7 @@ import { conversationAuthorMaps } from '@/lib/co-managed/sharedConversationMappi
 import { createAttachmentStaging } from '@/lib/co-managed/attachmentStaging';
 import { createSharedConversationSession } from './sharedConversationSession';
 import CoManagedConversationFiles from './CoManagedConversationFiles';
+import { createCommentsChangedSignal } from './commentsChangedSignal';
 
 /**
  * The standard ticket screen, mounted over a co-managed shared ticket. The ticket's fields are
@@ -25,6 +26,7 @@ export default function CoManagedSharedTicket({ summary, backHref }: { summary: 
   tRef.current = t;
   const staging = useMemo(() => createAttachmentStaging(() => globalThis.crypto.randomUUID()), [summary.resource]);
   const session = useMemo(() => createSharedConversationSession(summary.resource, { t: (key, fallback) => tRef.current(key, fallback), staging }), [summary.resource, staging]);
+  const commentsChanged = useMemo(() => createCommentsChangedSignal(), [session]);
   const [state, setState] = useState<'loading' | 'ready' | 'failed'>('loading');
   const load = useCallback(() => {
     setState('loading');
@@ -34,8 +36,8 @@ export default function CoManagedSharedTicket({ summary, backHref }: { summary: 
 
   // Until the conversation is admitted (or when it cannot be loaded) the screen stays fully read-only.
   const dataSource = useMemo(
-    () => createCoManagedSharedTicketDataSource(summary, backHref, { conversation: state === 'ready' ? session : undefined }),
-    [summary, backHref, session, state],
+    () => createCoManagedSharedTicketDataSource(summary, backHref, { conversation: state === 'ready' ? session : undefined, commentsChanged: commentsChanged.subscribe }),
+    [summary, backHref, session, state, commentsChanged],
   );
   const ticketData = useMemo(() => {
     const snapshot = state === 'ready' ? session.snapshot() : null;
@@ -62,6 +64,6 @@ export default function CoManagedSharedTicket({ summary, backHref }: { summary: 
     <TicketDataSourceProvider dataSource={dataSource}>
       <TicketDetailsContainer ticketData={ticketData} hideSlaStatus hideBilling hideScheduling hideTimeEntry hideMaterials disableAgentSchedule />
     </TicketDataSourceProvider>
-    {state === 'ready' && <CoManagedConversationFiles session={session} resource={summary.resource} staging={staging} />}
+    {state === 'ready' && <CoManagedConversationFiles session={session} resource={summary.resource} staging={staging} onCommentsChanged={commentsChanged.fire} />}
   </div>;
 }

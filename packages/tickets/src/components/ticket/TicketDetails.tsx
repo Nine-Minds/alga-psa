@@ -751,6 +751,31 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     }, [t, ticket.ticket_id]);
 
+    // An app layer may signal that comments changed outside this screen's composer; re-read through the same path.
+    // Native sources provide no signal, so nothing subscribes.
+    const subscribeCommentsChanged = dataSource.screen.subscribeCommentsChanged;
+    useEffect(() => {
+        const ticketId = ticket.ticket_id;
+        if (!subscribeCommentsChanged || !ticketId) return undefined;
+        return subscribeCommentsChanged(() => {
+            void (async () => {
+                try {
+                    const updatedComments = await findCommentsByTicketId(ticketId);
+                    if (isReturnedActionError(updatedComments)) {
+                        handleTicketActionError(updatedComments, t('messages.loadCommentsFailed', 'Failed to load comments'));
+                    } else {
+                        setConversations(updatedComments);
+                    }
+                } catch (e) {
+                    console.error('Failed to refresh comments after a comments-changed signal:', e);
+                }
+            })();
+        });
+        // Deliberately omits `t` / `handleTicketActionError`: they change identity per render and would tear down and
+        // re-subscribe on every render; they are only used to word a load-failure toast, so the ones captured at subscribe time are adequate.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [subscribeCommentsChanged, ticket.ticket_id]);
+
     const [board, setBoard] = useState<any>(initialBoard);
     const [savedBoardId, setSavedBoardId] = useState<string | null>(initialBoard?.board_id ?? initialTicket.board_id ?? null);
     const isLiveTicketTimerEnabled = useMemo(() => isBoardLiveTicketTimerEnabled(board), [board]);

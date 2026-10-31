@@ -34,8 +34,10 @@ const MAX_FILES = 20;
  */
 // LEVERAGE: friction conversation-inline-slots — TicketConversation/CommentItem have no per-comment slot, so files and the
 // disclosure control render in this panel beside the conversation instead of inside each comment bubble.
-export default function CoManagedConversationFiles({ session, resource, staging }: {
+export default function CoManagedConversationFiles({ session, resource, staging, onCommentsChanged }: {
   session: SharedConversationSession; resource: CoManagedSharedResource; staging: AttachmentStaging;
+  /** Fired after a draft is published from the "Unsent messages" panel, so the host timeline re-reads. Never fired by a plain load. */
+  onCommentsChanged?: () => void;
 }) {
   const { t } = useTranslation('msp/licensing');
   const { enabled } = useCapability('co-managed');
@@ -57,10 +59,8 @@ export default function CoManagedConversationFiles({ session, resource, staging 
   const maxBytes = coManagedAttachmentUploadLimit();
   void staged;
   return <section id="co-managed-conversation-files" className="space-y-4 p-4">
-    {/* LEVERAGE: friction host-comment-refresh — publishing a draft cannot make the host timeline re-read: TicketDetails keeps comments in
-        useState(initialComments) and screen.refresh('soft') (router.refresh) does not re-seed it; only a full 'reload' would. Needs a composable
-        "comments changed" callback on TicketScreenBehavior. */}
-    {writeAudiences.length > 0 && <CoManagedDraftRestore resource={resource} version={version} onPublished={() => { void session.load(); }} />}
+    {writeAudiences.length > 0 && <CoManagedDraftRestore resource={resource} version={version}
+      onPublished={() => { void session.load().catch(() => undefined).then(() => onCommentsChanged?.()); }} />}
     {unsent && <Alert variant="destructive" role="alert"><AlertDescription>{t(['forbidden', 'readOnly', 'invalid', 'operationConflict'].includes(unsent.code)
       ? `coManaged.editor.errors.${unsent.code}` : 'coManaged.conversation.drafts.unsent')}</AlertDescription></Alert>}
     {writeAudiences.length > 0 && <SharedCommentAttachmentPicker staging={staging} limits={{ maxBytes, maxFiles: MAX_FILES }}

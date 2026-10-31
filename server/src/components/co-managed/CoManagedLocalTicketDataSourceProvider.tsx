@@ -11,6 +11,7 @@ import { getCoManagedLocalTicketResourceAction } from '@/lib/actions/coManagedLo
 import { createAttachmentStaging } from '@/lib/co-managed/attachmentStaging';
 import { createSharedConversationSession, type SharedConversationSession } from './sharedConversationSession';
 import CoManagedConversationFiles from './CoManagedConversationFiles';
+import { createCommentsChangedSignal } from './commentsChangedSignal';
 
 /** Audiences a co_managed workspace's own tickets offer before the server has resolved the shared ones. */
 const NATIVE_AUDIENCES: readonly CommentAudience[] = ['requester', 'organization_private'];
@@ -26,6 +27,7 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: {
   const [session, setSession] = useState<SharedConversationSession | null>(null);
   const [version, setVersion] = useState(0);
   const [resource, setResource] = useState<Awaited<ReturnType<typeof getCoManagedLocalTicketResourceAction>>>(null);
+  const commentsChanged = useMemo(() => createCommentsChangedSignal(), [ticketId]);
   const staging = useMemo(() => createAttachmentStaging(() => globalThis.crypto.randomUUID()), [ticketId]);
 
   useEffect(() => {
@@ -58,6 +60,7 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: {
       try { return await session!.write({ content, audience: 'shared_it' }); } catch (error) { return failure(error); }
     };
     return composeTicketDataSource(nativeTicketDataSource, {
+      screen: { subscribeCommentsChanged: commentsChanged.subscribe },
       conversation: { audiences, editor: { disallowImages: true, disallowFiles: true, disallowMentions: true } },
       comments: {
         findCommentsByTicketId: async (id: string, ...rest: unknown[]) => {
@@ -82,6 +85,6 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: {
   }, [session, version]);
 
   return <TicketDataSourceProvider dataSource={dataSource}>{children}
-    {session && resource && <CoManagedConversationFiles session={session} resource={resource} staging={staging} />}
+    {session && resource && <CoManagedConversationFiles session={session} resource={resource} staging={staging} onCommentsChanged={commentsChanged.fire} />}
   </TicketDataSourceProvider>;
 }

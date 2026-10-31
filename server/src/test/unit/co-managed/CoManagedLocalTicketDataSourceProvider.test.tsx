@@ -7,10 +7,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const h = vi.hoisted(() => ({
   native: { findCommentsByTicketId: vi.fn(), createComment: vi.fn(), addTicketCommentWithCache: vi.fn(), addTicketCommentWithCacheForCurrentUser: vi.fn() },
   session: { load: vi.fn(), comments: vi.fn(), writeAudiences: vi.fn(), write: vi.fn(), audienceOf: vi.fn() },
-  resource: vi.fn(),
+  resource: vi.fn(), filesProps: null as any,
 }));
 
-vi.mock('@/components/co-managed/CoManagedConversationFiles', () => ({ default: () => null }));
+vi.mock('@/components/co-managed/CoManagedConversationFiles', () => ({ default: (props: any) => { h.filesProps = props; return null; } }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (_k: string, o?: any) => o?.defaultValue ?? _k }) }));
 vi.mock('@alga-psa/tickets/lib/nativeTicketDataSource', () => ({ nativeTicketDataSource: { kind: 'native', conversation: {}, comments: h.native } }));
 vi.mock('@/lib/actions/coManagedLocalTicketActions', () => ({ getCoManagedLocalTicketResourceAction: h.resource }));
@@ -68,6 +68,21 @@ describe('CoManagedLocalTicketDataSourceProvider', () => {
     expect(h.session.write).toHaveBeenCalledWith({ content: 'r', audience: 'shared_it', parentCommentId: 's1' });
     await source.comments.createComment({ note: 'r2', parent_comment_id: 'l1', collaboration_audience: 'organization_private' });
     expect(h.native.createComment).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers a comments-changed signal that fires on an explicit publish and never on a session load', async () => {
+    await mount();
+    const listener = vi.fn();
+    const off = source.screen.subscribeCommentsChanged(listener);
+    await source.comments.findCommentsByTicketId('tk1'); // calls session.load()
+    await h.session.load();
+    expect(h.session.load).toHaveBeenCalled();
+    expect(listener).not.toHaveBeenCalled();
+    h.filesProps.onCommentsChanged(); // CoManagedDraftRestore onPublished, via CoManagedConversationFiles
+    expect(listener).toHaveBeenCalledTimes(1);
+    off();
+    h.filesProps.onCommentsChanged();
+    expect(listener).toHaveBeenCalledTimes(1);
   });
 
   it('keeps native audiences when the workspace has no relationship', async () => {

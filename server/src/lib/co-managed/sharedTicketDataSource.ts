@@ -152,10 +152,12 @@ const nothing = async () => null;
 export interface CoManagedSharedTicketWrites {
   edit?: CoManagedSharedTicketEdit;
   conversation?: SharedTicketConversation;
+  /** Optional explicit "comments changed" event source; becomes `screen.subscribeCommentsChanged`. */
+  commentsChanged?: (listener: () => void) => () => void;
 }
 
 export function createCoManagedSharedTicketDataSource(summary: CoManagedSharedWorkSummary, backHref: string,
-  { edit, conversation }: CoManagedSharedTicketWrites = {}): TicketDataSource {
+  { edit, conversation, commentsChanged }: CoManagedSharedTicketWrites = {}): TicketDataSource {
   const record = sharedTicketRecord(summary);
   const update = edit ? sharedUpdate(edit, record.ticket_id) : undefined;
   const audiences = conversation?.writeAudiences() ?? [];
@@ -189,6 +191,7 @@ export function createCoManagedSharedTicketDataSource(summary: CoManagedSharedWo
     readOnly: !edit && !writable, backHref,
     ...(edit || writable ? { frozenFields: TICKET_SCREEN_FIELDS.filter(field => !editable.includes(field)) } : {}),
     refresh: () => { if (typeof window !== 'undefined') window.location.reload(); },
+    ...(commentsChanged ? { subscribeCommentsChanged: commentsChanged } : {}),
   };
   const overrides = {
     kind: 'co-managed-shared',
