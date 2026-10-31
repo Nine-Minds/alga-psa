@@ -22,6 +22,8 @@ import { overPrepaidBlockDescription, prepaidBlockFeeDescription } from '../lib/
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import { resolveChargeProfile } from '../lib/billing/billingProfileResolution';
 import { resolveInvoiceBillingRecipient } from './invoiceBillingRecipientService';
+import { allocateDiscountsBeforeTax, type DiscountPool, type DiscountTaxEntity } from '../lib/discountAllocationBeforeTax';
+import { discountPoolFromInvoiceRow } from '../lib/billing/invoiceDiscountPools';
 import { getCurrentUserAsync, hasPermissionAsync, getSessionAsync, getAnalyticsAsync } from '../lib/authHelpers';
 
 
@@ -1159,7 +1161,7 @@ export async function persistManualInvoiceCharges(
       if (alreadyPersisted) {
         // Idempotent re-submission: the same editor payload arrived twice, so
         // reuse the row instead of minting a duplicate charge.
-        if (requestItem.service_id) {
+        if (requestItem.service_id && !alreadyPersisted.is_discount) {
           serviceToItemMap.set(requestItem.service_id, alreadyPersisted.item_id);
         }
         subtotal += Number(alreadyPersisted.net_amount ?? 0);
@@ -1222,7 +1224,10 @@ export async function persistManualInvoiceCharges(
         sourceSnapshots.get(requestItem),
       );
     }
-    if (requestItem.service_id) {
+    // A manual credit carries the service of the line it refunds but is not a
+    // target a discount can apply to: pointing a discount at it would leave
+    // the discount with no taxable line to reduce.
+    if (requestItem.service_id && !isCredit) {
       serviceToItemMap.set(requestItem.service_id, invoiceItem.item_id);
     }
     subtotal += netAmount;
@@ -2155,6 +2160,17 @@ export async function persistInvoiceCharges(
   return fixedSubtotal + otherSubtotal; // Return total subtotal
 }
 
+/**
+ * Resolves a discount line (or manual negative line) into a discount pool for
+ * the shared before-tax allocation.
+ *
+ * - Automatic contract discounts carry the exact per-line allocation the
+ *   evaluator resolved in `manual_line_metadata.allocations`.
+ * - `applies_to_item_id` targets one line (a percentage/fixed discount on it).
+ * - Manual lines tied to a service are scoped to that service's tax region.
+ * - Everything else is untargeted: spread over every positive non-discount
+ *   line, taxable and exempt alike.
+ */
 export async function calculateAndDistributeTax(
   tx: Knex.Transaction,
   invoiceId: string,
@@ -2373,6 +2389,64 @@ export async function calculateAndDistributeTax(
       regionGroups[region].discounts.push(discount);
   }
   console.log(`[calculateAndDistributeTax] Region groups created:`, JSON.stringify(Object.keys(regionGroups)));
+
+  // 3b. Apply discounts before tax. A seller-funded discount lowers the taxable
+  // base of the lines it applies to; the shared allocation spreads each
+  // discount over its lines (exempt lines absorb their share too) and the
+  // reduced amounts below feed the unchanged tax distribution.
+  {
+    const clientDefaultRegion = (await getClientDefaultTaxRegionCode(tx, tenant, client.client_id)) || '';
+    const itemsById = new Map(invoiceItems.map((item) => [item.item_id, item]));
+    const allocationEntities: DiscountTaxEntity[] = [];
+
+    for (const group of Object.values(regionGroups)) {
+      for (const entity of group.taxable) {
+        const owner = itemsById.get(entity.type === 'fixed_detail' ? entity.parentId! : entity.id);
+        allocationEntities.push({
+          id: entity.id,
+          itemId: owner?.item_id ?? entity.id,
+          amount: entity.amount,
+          region: entity.taxRegion,
+          taxable: true,
+          serviceId: owner?.service_id ?? null,
+          clientContractId: owner?.client_contract_id ?? null,
+        });
+      }
+    }
+    // Positive non-discount lines that are not taxed still take a share of an
+    // untargeted discount; a discount on exempt labor must not lower tax on
+    // taxable hardware.
+    for (const item of invoiceItems) {
+      if (item.parent_item_id || item.is_discount || Number(item.net_amount) <= 0) continue;
+      // Taxable lines are already represented above (as the item or, for a
+      // consolidated fixed plan, as its detail entities).
+      if (item.is_taxable === true) continue;
+      allocationEntities.push({
+        id: item.item_id,
+        itemId: item.item_id,
+        amount: Number(item.net_amount),
+        region: item.tax_region || clientDefaultRegion,
+        taxable: false,
+        serviceId: item.service_id ?? null,
+        clientContractId: item.client_contract_id ?? null,
+      });
+    }
+
+    const pools = invoiceItems
+      .filter((item) => item.is_discount === true)
+      .map(discountPoolFromInvoiceRow)
+      .filter((pool): pool is DiscountPool => pool !== null);
+
+    if (pools.length > 0) {
+      const allocation = allocateDiscountsBeforeTax({ entities: allocationEntities, pools });
+      for (const group of Object.values(regionGroups)) {
+        for (const entity of group.taxable) {
+          entity.amount = allocation.taxableAmountById.get(entity.id) ?? entity.amount;
+        }
+      }
+      console.log(`[calculateAndDistributeTax] Applied ${pools.length} discount pool(s) before tax.`);
+    }
+  }
 
   // 4. Calculate Regional Base & Tax and 5. Distribute Tax
   let computedTotalInvoiceTax = 0;

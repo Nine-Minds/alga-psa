@@ -71,6 +71,7 @@ import {
 
 // TODO: Import these from billingAndTax.ts once created
 import { getNextBillingDate } from './billingAndTax';
+import { calculatePreviewTaxAfterDiscounts } from '../lib/billing/taxAfterDiscounts';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
 import { applyCreditToInvoice } from './creditActions';
 import { getCurrencySymbol } from '@alga-psa/core';
@@ -2687,15 +2688,19 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     });
   }
 
-  const previewTax = await calculatePreviewTax(
+  const adjustments = await previewAutomaticInvoiceDiscounts(
+    knex, tenant, client_id, previewCharges, previewInvoiceDate,
+  );
+
+  // Same allocation and per-region tax as generation: discounts lower the
+  // taxable base before tax, so the preview equals the generated invoice.
+  const previewTax = await calculatePreviewTaxAfterDiscounts(
     previewCharges,
     client_id,
     cycleEnd,
     client?.tax_region || '',
-  );
-
-  const adjustments = await previewAutomaticInvoiceDiscounts(
-    knex, tenant, client_id, previewCharges, previewInvoiceDate,
+    billingResult.currency_code || 'USD',
+    { discounts: adjustments.discounts, chargeItemIds: adjustments.chargeItemIds },
   );
 
   const viewModel = await adaptToWasmViewModel(

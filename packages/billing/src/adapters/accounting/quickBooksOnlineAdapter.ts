@@ -23,6 +23,8 @@ import {
   PendingTaxImportRecord
 } from '@alga-psa/types';
 import { createQboProviderOperations } from './qboProviderOperations';
+import { allocateDiscountsBeforeTax, type DiscountPool } from '../../lib/discountAllocationBeforeTax';
+import { discountPoolFromInvoiceRow } from '../../lib/billing/invoiceDiscountPools';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
@@ -1573,7 +1575,52 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       // Discounts and credits keep their provider identity but receive no tax
       // share. The invoice pipeline taxes its eligible positive-charge base.
       const taxableLineItems = lineItems.filter(item => !item.isDiscount);
-      const subtotal = taxableLineItems.reduce((sum, item) => sum + item.amount, 0);
+      // QuickBooks taxes the discounted base, so the invoice tax total must be
+      // spread by each line's post-discount base, not its gross amount. The
+      // same allocation Alga uses when it is the tax authority is applied to
+      // the stored discount rows; lines it cannot attribute fall back to gross.
+      const spreadWeightByLine = new Map<string, number>();
+      if (mappingRow?.alga_entity_id && lineItems.some(item => item.isDiscount)) {
+        const chargeRows = (await tenantDb(knex, tenantId).table('invoice_charges')
+          .where({ invoice_id: mappingRow.alga_entity_id })
+          .select(
+            'item_id', 'net_amount', 'is_discount', 'is_taxable', 'manual_line_metadata',
+            'adjustment_source_kind', 'applies_to_item_id', 'applies_to_service_id', 'is_manual', 'service_id', 'tax_region'
+          )) as Array<Record<string, any>>;
+        const pools: DiscountPool[] = [];
+        for (const row of chargeRows) {
+          if (row.is_discount) {
+            const pool = discountPoolFromInvoiceRow(row as any);
+            if (pool) pools.push(pool);
+          }
+        }
+        if (pools.length > 0) {
+          const exemptCharges = new Set(chargeRows.filter(r => r.is_taxable === false).map(r => String(r.item_id)));
+          const entities = taxableLineItems.map(item => {
+            const ownerId = item.parentChargeId ?? item.lineId;
+            return {
+              id: item.lineId,
+              itemId: ownerId,
+              amount: Math.max(0, item.amount),
+              region: 'qbo',
+              taxable: !exemptCharges.has(ownerId)
+            };
+          });
+          const allocation = allocateDiscountsBeforeTax({ entities, pools });
+          for (const entity of entities) {
+            spreadWeightByLine.set(entity.id, allocation.taxableAmountById.get(entity.id) ?? entity.amount);
+          }
+        }
+      }
+      const weightOf = (item: { lineId: string; amount: number }) =>
+        spreadWeightByLine.has(item.lineId) ? spreadWeightByLine.get(item.lineId)! : item.amount;
+      let subtotal = taxableLineItems.reduce((sum, item) => sum + weightOf(item), 0);
+      if (subtotal <= 0) {
+        // Every taxable base was discounted away; keep the gross spread so the
+        // external total stays attributed rather than dropped.
+        spreadWeightByLine.clear();
+        subtotal = taxableLineItems.reduce((sum, item) => sum + item.amount, 0);
+      }
       const lastTaxableLineIndex = lineItems.reduce((last, item, index) => item.isDiscount ? last : index, -1);
 
       // Distribute tax proportionally across lines based on line amounts
@@ -1585,7 +1632,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
         if (!item.isDiscount && subtotal > 0 && totalTax > 0) {
           // Proportional distribution: itemTax = floor((itemNetAmount / totalRegionalNet) * totalGroupTax)
-          taxAmount = Math.floor((item.amount / subtotal) * totalTax);
+          taxAmount = Math.floor((weightOf(item) / subtotal) * totalTax);
         }
 
         // Calculate effective tax rate for this line

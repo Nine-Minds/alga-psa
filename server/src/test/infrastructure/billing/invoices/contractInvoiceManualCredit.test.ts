@@ -274,7 +274,8 @@ describe('Contract Invoice Manual Credit', () => {
     const baseTax = Number(generatedInvoice!.tax);
     expect(baseSubtotal).toBeGreaterThan(0);
 
-    const expectedTax = baseTax;
+    // The manual credit reduces the taxable base before tax (10% rate here).
+    const expectedTax = baseTax - 1000;
     const expectedSubtotal = baseSubtotal - 10000;
     const expectedTotal = expectedSubtotal + expectedTax;
 

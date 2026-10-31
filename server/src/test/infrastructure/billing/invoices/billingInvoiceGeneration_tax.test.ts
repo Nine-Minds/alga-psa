@@ -294,8 +294,9 @@ describe('Billing Invoice Tax Calculations', () => {
 
       expect(invoice).not.toBeNull();
       expect(Number(invoice!.subtotal)).toBe(0);    // $0.00 after discount
-      expect(Number(invoice!.tax)).toBe(1000);      // $10.00 (10% of original $100)
-      expect(Number(invoice!.total_amount)).toBe(1000); // $10.00 (tax only)
+      // A discount that wipes out the whole taxable base leaves no tax.
+      expect(Number(invoice!.tax)).toBe(0);
+      expect(Number(invoice!.total_amount)).toBe(0);
 
       const invoiceItems = await tenantTable(context, 'invoice_charges')
         .where({ invoice_id: manualInvoice.invoice_id, tenant: context.tenantId })
@@ -306,7 +307,7 @@ describe('Billing Invoice Tax Calculations', () => {
       const taxableItem = invoiceItems.find(item => item.service_id === taxableService);
       expect(taxableItem).toBeDefined();
       expect(Number(taxableItem!.net_amount)).toBe(10000);
-      expect(Number(taxableItem!.tax_amount)).toBe(1000);
+      expect(Number(taxableItem!.tax_amount)).toBe(0);
 
       const discountItem = invoiceItems.find(item => item.is_discount === true);
       expect(discountItem).toBeDefined();
@@ -762,7 +763,8 @@ describe('Billing Invoice Tax Calculations', () => {
       const positiveItem = invoiceItems.find((item) => Number(item.net_amount) > 0);
       expect(positiveItem).toBeDefined();
       expect(Number(positiveItem!.net_amount)).toBe(1000);
-      expect(Number(positiveItem!.tax_amount)).toBe(189);
+      // Tax is on the discounted base: 1000 - 200 credit - 100 discount = 700.
+      expect(Number(positiveItem!.tax_amount)).toBe(133);
 
       const creditItem = invoiceItems.find((item) => item.service_id === creditService);
       expect(creditItem).toBeDefined();
@@ -775,8 +777,8 @@ describe('Billing Invoice Tax Calculations', () => {
       expect(Number(discountItem!.tax_amount)).toBe(0);
 
       expect(Number(updatedInvoice!.subtotal)).toBe(700);
-      expect(Number(updatedInvoice!.tax)).toBe(189);
-      expect(Number(updatedInvoice!.total_amount)).toBe(889);
+      expect(Number(updatedInvoice!.tax)).toBe(133);
+      expect(Number(updatedInvoice!.total_amount)).toBe(833);
     });
   });
 

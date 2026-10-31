@@ -57,14 +57,21 @@ function toQuoteDate(value?: string | null): string {
 
 function resolveQuoteDiscounts(
   items: QuoteItemRow[]
-): { byItemId: Map<string, number>; totalDiscount: number } {
+): { byItemId: Map<string, number>; shareByBaseId: Map<string, number>; totalDiscount: number } {
   const allocation = allocateIncludedQuoteDiscounts(items, (item) => item.quote_item_id);
   const byItemId = new Map<string, number>();
+  // Discount reduction each base row absorbed (taxable and exempt rows alike).
+  // Tax is computed on the row's amount minus this share: a seller-funded
+  // discount lowers the taxable base of the lines it applies to.
+  const shareByBaseId = new Map<string, number>();
   for (const result of allocation.discounts) {
     byItemId.set(result.discountId, result.resolvedAmount);
+    for (const line of result.allocations) {
+      shareByBaseId.set(line.baseItemId, (shareByBaseId.get(line.baseItemId) ?? 0) + line.amount);
+    }
   }
 
-  return { byItemId, totalDiscount: allocation.totalDiscount };
+  return { byItemId, shareByBaseId, totalDiscount: allocation.totalDiscount };
 }
 
 function isDateApplicable(row: { start_date?: string | Date | null; end_date?: string | Date | null }, date: string): boolean {
@@ -301,7 +308,7 @@ export async function recalculateQuoteFinancials(
 
   // Resolve discount reductions against the eligible base items they target,
   // independent of each discount row's own persisted cadence fields.
-  const { byItemId: discountAmountById, totalDiscount } = resolveQuoteDiscounts(items);
+  const { byItemId: discountAmountById, shareByBaseId, totalDiscount } = resolveQuoteDiscounts(items);
 
   // Persisted per-row figures, then the stored totals through the shared
   // derivation the editor and the document view model use. Included rows
@@ -331,11 +338,16 @@ export async function recalculateQuoteFinancials(
 
     if (!isDiscount) {
       if (quote.client_id && taxSource === 'internal') {
+        // Included rows are taxed on the discounted base; a pending optional
+        // row absorbs no discount, so its hypothetical tax uses the full amount.
+        const taxableBase = isIncludedInTotals
+          ? Math.max(0, resolvedTotalPrice - (shareByBaseId.get(item.quote_item_id) ?? 0))
+          : resolvedTotalPrice;
         const taxResult = await calculateTaxWithConnection(
           knexOrTrx,
           tenant,
           quote.client_id,
-          resolvedTotalPrice,
+          taxableBase,
           quoteDate,
           taxRegion ?? undefined,
           item.is_taxable !== false,

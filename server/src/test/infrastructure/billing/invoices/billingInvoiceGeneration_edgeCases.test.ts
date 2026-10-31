@@ -213,8 +213,10 @@ describe('Billing Invoice Edge Cases', () => {
     } as any]) as any;
     expect(settled).not.toHaveProperty('actionError');
     expect(Number(settled.subtotal)).toBe(-13750);
-    expect(Number(settled.tax)).toBe(1250);
-    expect(Number(settled.total_amount)).toBe(-12500);
+    // The credit is larger than the whole taxable base, so the base floors at
+    // zero and so does the tax (never negative).
+    expect(Number(settled.tax)).toBe(0);
+    expect(Number(settled.total_amount)).toBe(-13750);
 
     const invoiceItems = await context.db('invoice_charges')
       .where({ invoice_id: invoice!.invoice_id, tenant: context.tenantId })

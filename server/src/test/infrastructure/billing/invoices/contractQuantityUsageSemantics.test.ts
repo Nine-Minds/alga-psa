@@ -1887,8 +1887,9 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
       // invoice.subtotal is net of discounts; the gross 390000 is reduced by 10%.
       expect(january.subtotal).toBe(351000);
-      expect(Number(january.tax)).toBe(39000);
-      expect(Number(january.total_amount)).toBe(390000);
+      // Tax follows the discount: 10% of the discounted base 351000.
+      expect(Number(january.tax)).toBe(35100);
+      expect(Number(january.total_amount)).toBe(386100);
       const janDiscount = await context.db('invoice_charges')
         .where({ tenant: context.tenantId, invoice_id: january.invoice_id, is_discount: true }).first();
       expect(janDiscount).toBeTruthy();
@@ -1903,14 +1904,14 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       expect(preview.success, JSON.stringify(preview)).toBe(true);
       if (!preview.success) throw new Error('unreachable');
       expect(preview.data!.subtotal).toBe(378000);
-      expect(preview.data.tax).toBe(42000);
-      expect(preview.data.total).toBe(420000);
+      expect(preview.data.tax).toBe(37800);
+      expect(preview.data.total).toBe(415800);
       expect(preview.data.items.find(item => item.total < 0)?.total).toBe(-42000);
 
       const february = unwrapInvoiceResult<any>(await generateInvoice(februaryCycle));
       expect(february.subtotal).toBe(378000);
-      expect(Number(february.tax)).toBe(42000);
-      expect(Number(february.total_amount)).toBe(420000);
+      expect(Number(february.tax)).toBe(37800);
+      expect(Number(february.total_amount)).toBe(415800);
       const febDiscount = await context.db('invoice_charges')
         .where({ tenant: context.tenantId, invoice_id: february.invoice_id, is_discount: true }).first();
       expect(febDiscount).toBeTruthy();
@@ -1943,8 +1944,8 @@ describe('Contract quantity & usage semantics — period totals and recurring se
 
       const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
       expect(january.subtotal).toBe(380000); // 390000 gross − 10000 fixed
-      expect(Number(january.tax)).toBe(39000); // tax stays on the gross base
-      expect(Number(january.total_amount)).toBe(419000);
+      expect(Number(january.tax)).toBe(38000); // 10% of the discounted 380000
+      expect(Number(january.total_amount)).toBe(418000);
 
       expectScheduled(await scheduleProduct(setup, setup.users, {
         quantity: 23,
@@ -1952,8 +1953,8 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       }));
       const february = unwrapInvoiceResult<any>(await generateInvoice(await setupInvoiceCycle(2023, 3, 1)));
       expect(february.subtotal).toBe(410000); // 420000 gross − 10000 fixed
-      expect(Number(february.tax)).toBe(42000);
-      expect(Number(february.total_amount)).toBe(452000);
+      expect(Number(february.tax)).toBe(41000);
+      expect(Number(february.total_amount)).toBe(451000);
       const febDiscount = await context.db('invoice_charges')
         .where({ tenant: context.tenantId, invoice_id: february.invoice_id, is_discount: true }).first();
       expect(Number(febDiscount.total_price ?? febDiscount.net_amount)).toBe(-10000);
@@ -2723,7 +2724,7 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         expect(Number(adjustment.unit_price)).toBe(9000);
       });
 
-      it('does not discount a credit and keeps tax on the positive base', async () => {
+      it('does not discount a credit; the contract discount lowers the tax base', async () => {
         const setup = await setupProductLine();
         const discountId = uuidv4();
         await context.db('discounts').insert({
@@ -2751,9 +2752,10 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         }));
         const january = unwrapInvoiceResult<any>(await generateInvoice(setup.billingCycleId));
         // Positive gross 390000, credit -51613, discount 10% of the positive
-        // base only (39000); tax stays on the positive base too.
+        // base only (39000); tax is on the positive base less that discount
+        // (351000), the automatic credit does not enter the tax base.
         expect(january.subtotal).toBe(390000 - 51613 - 39000);
-        expect(Number(january.tax)).toBe(39000);
+        expect(Number(january.tax)).toBe(35100);
         const discounts = await context.db('invoice_charges')
           .where({ tenant: context.tenantId, invoice_id: january.invoice_id, is_discount: true });
         expect(discounts).toHaveLength(1);
@@ -3063,8 +3065,8 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       });
       expect(impact.success, JSON.stringify(impact)).toBe(true);
       if (!impact.success) throw new Error('unreachable');
-      expect(impact.before).toMatchObject({ subtotal: 380000, tax: 39000, total: 419000 });
-      expect(impact.after).toMatchObject({ subtotal: 410000, tax: 42000, total: 452000 });
+      expect(impact.before).toMatchObject({ subtotal: 380000, tax: 38000, total: 418000 });
+      expect(impact.after).toMatchObject({ subtotal: 410000, tax: 41000, total: 451000 });
       expect(await context.db('contract_line_unit_pricing_revisions').where({ tenant: context.tenantId })).toHaveLength(0);
       expect(await context.db('contract_line_unit_pricing_revision_history').where({ tenant: context.tenantId })).toHaveLength(0);
       expect(await context.db('invoices').where({ tenant: context.tenantId })).toHaveLength(0);
