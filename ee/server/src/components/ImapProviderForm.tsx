@@ -10,6 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button, Input, Label, Switch, Alert, AlertDescription, Card, CardContent, CardDescription, CardHeader, CardTitle, CustomSelect } from '@alga-psa/ui/components';
 import { Eye, EyeOff } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { PublicEmailProvider } from '@alga-psa/integrations/components/email/types';
 import { createEmailProvider, updateEmailProvider } from '@alga-psa/integrations/actions/email-actions/emailProviderActions';
@@ -189,6 +190,13 @@ export function ImapProviderForm({
         return;
       }
 
+      if (result.reconnectRequired) {
+        // The OAuth issuer changed, so the stored authorization was discarded.
+        toast(t('imapForm.messages.reconnectRequired', {
+          defaultValue: 'OAuth settings changed. Reconnect the mailbox to authorize it with the new settings.',
+        }), { icon: '⚠️', duration: 8000 });
+      }
+
       onSuccess(result.provider);
     } catch (err: any) {
       setError(err.message);
@@ -360,6 +368,9 @@ export function ImapProviderForm({
               </div>
               <div>
                 <Label htmlFor="oauthClientSecret">{t('imapForm.fields.oauthClientSecret')}</Label>
+                <p className="text-sm text-muted-foreground mb-1">
+                  {t('imapForm.fields.oauthClientSecretHelp', { defaultValue: 'The client secret is stored securely and will not be displayed. Leave blank to keep the existing secret.' })}
+                </p>
                 <div className="relative">
                   <Input id="oauthClientSecret" type={showClientSecret ? 'text' : 'password'} {...form.register('oauthClientSecret')} error={form.formState.errors.oauthClientSecret?.message} />
                   <button
