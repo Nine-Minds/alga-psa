@@ -25,15 +25,16 @@ const TYPES = ['project', 'project_phase', 'project_task'] as const;
 let db: Knex;
 let world: L3cWorld, emptyWorld: L3cWorld;
 let shared: L3cProject, unshared: L3cProject;
+const extraWorlds: L3cWorld[] = [];
 // Vitest may shuffle test order: each test owns the projects it mutates; only `shared`/`unshared` are fixed.
 const names = { shared: 'Zephyrquartz Shared', unshared: 'Zephyrquartz Hidden', late: 'Zephyrquartz Late' };
 const taskNames = (n: string) => [`${n} task one`, `${n} task two`];
 const actorOf = (w: L3cWorld) => sessionActor(w.sponsor, w.technician);
 const actor = () => actorOf(world);
 
-async function searchAll(w: L3cWorld) {
+async function searchAll(w: L3cWorld, query = TERM) {
   return withSharedProjectSearchAccess(db, actorOf(w), w.relationshipId, async (knex, customerTenant, searchIndex) => {
-    const base = { knex, tenant: customerTenant, query: TERM, allowedTypes: [...TYPES], searchIndex };
+    const base = { knex, tenant: customerTenant, query, allowedTypes: [...TYPES], searchIndex };
     return {
       customerTenant,
       hits: await runSearchQuery({ ...base, limit: 50 }),
@@ -61,7 +62,7 @@ describe('CM L3c project scope access and search', () => {
   }, 180_000);
 
   afterAll(async () => {
-    await cleanupL3cTenants([...(world?.tenants ?? []), ...(emptyWorld?.tenants ?? [])]);
+    await cleanupL3cTenants([...(world?.tenants ?? []), ...(emptyWorld?.tenants ?? []), ...extraWorlds.flatMap(w => w.tenants)]);
     await db?.destroy().catch(() => undefined);
   });
 
@@ -150,5 +151,48 @@ describe('CM L3c project scope access and search', () => {
     expect(found.typeahead).toEqual([]);
     expect(found.total).toBe(0);
     expect(found.byType).toEqual({});
+  });
+
+  // The relationship's redacted_fields join the home policy in the effective policy admission computes.
+  const setRelationshipRedactions = (w: L3cWorld, fields: string[]) =>
+    db('co_management_relationships').where({ tenant: w.customer, relationship_id: w.relationshipId }).update({ redacted_fields: fields });
+  async function redactionWorld(titleTerm: string, descriptionTerm: string) {
+    const w = await seedL3cWorld(db);
+    extraWorlds.push(w);
+    const taskTitle = `Plain ${titleTerm} chore`, project = await seedL3cProject(db, w, 'Redaction project', [taskTitle]);
+    await db('project_tasks').where({ tenant: w.customer, task_id: project.taskIds[0] }).update({ description: `Notes about ${descriptionTerm} here` });
+    await indexProjectRows(db, w.customer, 'Redaction project', project, [taskTitle]);
+    await shareProject(db, w, project.projectId, true);
+    return { w, taskId: project.taskIds[0] };
+  }
+
+  it('A: a hidden task_name matches nothing in results, typeahead, counts or groups; an unredacted reader still finds it', async () => {
+    const { w, taskId } = await redactionWorld('quokkafrost', 'narwhalmist');
+    const open = await searchAll(w, 'quokkafrost');
+    expect(open.hits.map(hit => hit.id)).toContain(taskId);
+    expect(open.total).toBe(1);
+
+    await setRelationshipRedactions(w, ['task_name']);
+    const masked = await searchAll(w, 'quokkafrost');
+    expect(masked.hits.map(hit => hit.id)).not.toContain(taskId);
+    expect(masked.typeahead.map(hit => hit.id)).not.toContain(taskId);
+    expect(masked.total).toBe(0);
+    expect(masked.byType).toEqual({});
+  });
+
+  it('B: a hidden description nulls the body and stops body-only matches, while title terms still match', async () => {
+    const { w, taskId } = await redactionWorld('lemurbramble', 'okapidrift');
+    const open = await searchAll(w, 'okapidrift');
+    expect(open.hits.map(hit => hit.id)).toContain(taskId);
+
+    await setRelationshipRedactions(w, ['description']);
+    const byTitle = await searchAll(w, 'lemurbramble');
+    const hit = byTitle.hits.find(h => h.id === taskId);
+    expect(hit).toBeDefined();
+    expect(hit?.body ?? null).toBeNull();
+    const byBody = await searchAll(w, 'okapidrift');
+    expect(byBody.hits.map(h => h.id)).not.toContain(taskId);
+    expect(byBody.typeahead.map(h => h.id)).not.toContain(taskId);
+    expect(byBody.total).toBe(0);
   });
 });
