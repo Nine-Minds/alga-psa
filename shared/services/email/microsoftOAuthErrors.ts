@@ -9,7 +9,8 @@ export type MicrosoftOAuthFailureKind =
   | 'single_tenant_app' // AADSTS50194
   | 'app_not_in_directory' // AADSTS700016
   | 'user_wrong_directory' // AADSTS50020
-  | 'redirect_uri_mismatch'; // AADSTS50011
+  | 'redirect_uri_mismatch' // AADSTS50011
+  | 'admin_consent_required'; // error=consent_required, AADSTS65001, AADSTS90094
 
 export interface MicrosoftOAuthFailureInput {
   error?: string | null;
@@ -22,6 +23,8 @@ const CODE_TO_KIND: Record<number, MicrosoftOAuthFailureKind> = {
   700016: 'app_not_in_directory',
   50020: 'user_wrong_directory',
   50011: 'redirect_uri_mismatch',
+  65001: 'admin_consent_required',
+  90094: 'admin_consent_required',
 };
 
 export function extractAadstsCode(input: MicrosoftOAuthFailureInput): number | null {
@@ -41,7 +44,10 @@ export function classifyMicrosoftOAuthFailure(
   input: MicrosoftOAuthFailureInput
 ): MicrosoftOAuthFailureKind | null {
   const code = extractAadstsCode(input);
-  return code ? CODE_TO_KIND[code] : null;
+  if (code) return CODE_TO_KIND[code];
+  // The authorize redirect reports a missing grant as a bare OAuth error.
+  if ((input.error || '').toLowerCase() === 'consent_required') return 'admin_consent_required';
+  return null;
 }
 
 /** Pulls the redirect URI Microsoft names in an AADSTS50011 description. */
@@ -60,6 +66,8 @@ export const MICROSOFT_OAUTH_FAILURE_ERROR_CODES: Record<MicrosoftOAuthFailureKi
   app_not_in_directory: 'aadsts_700016_app_not_found',
   user_wrong_directory: 'aadsts_50020_wrong_directory',
   redirect_uri_mismatch: 'aadsts_50011_redirect_uri',
+  // Stable UI code the Outlook Calendar connect form keys its pending state on.
+  admin_consent_required: 'pending_admin_consent',
 };
 
 export function kindFromMicrosoftOAuthErrorCode(code: string | null | undefined): MicrosoftOAuthFailureKind | null {
@@ -85,6 +93,8 @@ export function describeMicrosoftOAuthFailureForMailboxFlow(
       return context.redirectUri
         ? `Microsoft rejected the redirect URI because it is not registered on the app. Add this exact URI under Authentication > Web redirect URIs: ${context.redirectUri}`
         : 'Microsoft rejected the redirect URI because it is not registered on the app. Add the redirect URI shown on the Microsoft app registration screen under Authentication > Web redirect URIs.';
+    case 'admin_consent_required':
+      return 'Microsoft needs a Microsoft 365 administrator to approve this app before anyone can connect. Ask an administrator to grant admin consent for the app\'s delegated permissions, then connect again.';
   }
 }
 

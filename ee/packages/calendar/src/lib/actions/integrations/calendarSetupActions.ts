@@ -68,8 +68,7 @@ export const getMicrosoftCalendarSetupStatus = withAuth(async (
   success: boolean;
   error?: string;
   ready?: boolean;
-  /** `pending_admin_consent`: profile is bound but a Microsoft 365 admin still has to approve it. */
-  state?: 'ready' | 'pending_admin_consent' | 'not_configured';
+  state?: 'ready' | 'not_configured';
   /** Redirect URI the authorize request will send; register it in the Entra app. */
   redirectUri?: string;
   profileId?: string | null;
@@ -100,17 +99,6 @@ export const getMicrosoftCalendarSetupStatus = withAuth(async (
         profileId: profile.profileId || null,
         message: profile.message || 'No Microsoft profile is currently bound to Calendar.',
         reasonCode: profile.reasonCode,
-      };
-    }
-
-    if (profile.adminConsentPending) {
-      return {
-        success: true,
-        ready: false,
-        state: 'pending_admin_consent',
-        redirectUri,
-        profileId: profile.profileId,
-        message: 'Microsoft 365 administrator approval is still required',
       };
     }
 

@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { screen, waitFor, cleanup } from '@testing-library/react';
+import { screen, waitFor, cleanup, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
@@ -83,18 +83,42 @@ describe('MicrosoftCalendarProviderForm', () => {
     expect(assign).toHaveBeenCalledWith(PROVIDERS_URL);
   });
 
-  it('shows an admin-consent-pending state and offers no Connect', async () => {
-    setStatus({ ready: false, state: 'pending_admin_consent', message: 'Microsoft 365 administrator approval is still required' });
+  it('shows the admin-consent-pending state when the callback reports it, and keeps Connect available', async () => {
+    setStatus({ ready: true, state: 'ready' });
     renderWithProviders(<MicrosoftCalendarProviderForm tenant="t1" />);
+    await waitFor(() => expect(document.getElementById('microsoft-authorize-button')).toBeEnabled());
+    expect(screen.queryByText('Administrator approval is pending.')).toBeNull();
+
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: {
+          type: 'oauth-callback', provider: 'microsoft', resource: 'calendar', success: false,
+          error: 'pending_admin_consent', errorDescription: 'Microsoft needs a Microsoft 365 administrator to approve this app',
+        },
+      }));
+    });
 
     await waitFor(() => expect(screen.getByText('Administrator approval is pending.')).toBeInTheDocument());
-    expect(document.getElementById('microsoft-authorize-button')).toBeNull();
-    // Not the generic "not configured" alert.
+    // Distinct from the generic callback failure and the not-configured alert.
+    expect(screen.queryByText(/needs a Microsoft 365 administrator/)).toBeNull();
     expect(screen.queryByText('Microsoft provider settings are not configured.')).toBeNull();
-    // Setup guidance stays visible so the admin knows what to approve.
-    expect(screen.getByText(REDIRECT_URI)).toBeInTheDocument();
+    // The user can retry once an admin approves.
+    expect(document.getElementById('microsoft-authorize-button')).toBeEnabled();
     await userEvent.click(document.getElementById('microsoft-calendar-admin-consent-providers-link')!);
     expect(assign).toHaveBeenCalledWith(PROVIDERS_URL);
+  });
+
+  it('shows other callback failures as a plain error, not the pending state', async () => {
+    setStatus({ ready: true, state: 'ready' });
+    renderWithProviders(<MicrosoftCalendarProviderForm tenant="t1" />);
+    await waitFor(() => expect(document.getElementById('microsoft-authorize-button')).toBeEnabled());
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', {
+        data: { type: 'oauth-callback', provider: 'microsoft', resource: 'calendar', success: false, error: 'token_exchange_failed', errorDescription: 'Boom' },
+      }));
+    });
+    await waitFor(() => expect(screen.getByText('Boom')).toBeInTheDocument());
+    expect(screen.queryByText('Administrator approval is pending.')).toBeNull();
   });
 
   it('keeps the not-configured alert, pointing at the Microsoft section', async () => {

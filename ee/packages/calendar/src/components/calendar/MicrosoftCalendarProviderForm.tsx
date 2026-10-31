@@ -59,7 +59,9 @@ export function MicrosoftCalendarProviderForm({
   const [calendarProviderId, setCalendarProviderId] = useState<string | undefined>(provider?.id);
   const [providerSetupReady, setProviderSetupReady] = useState(false);
   const [providerSetupLoading, setProviderSetupLoading] = useState(true);
-  const [providerSetupState, setProviderSetupState] = useState<'ready' | 'pending_admin_consent' | 'not_configured' | null>(null);
+  // Set when the OAuth callback reports that Microsoft needs administrator
+  // consent (error=consent_required, AADSTS65001, AADSTS90094).
+  const [pendingAdminConsent, setPendingAdminConsent] = useState(false);
   const [redirectUri, setRedirectUri] = useState<string | null>(null);
   const { toast } = useToast();
   const [providerSetupReasonCode, setProviderSetupReasonCode] = useState<
@@ -102,12 +104,10 @@ export function MicrosoftCalendarProviderForm({
         const res = await getMicrosoftCalendarSetupStatus();
         setProviderSetupReady(Boolean(res.success && res.ready));
         setProviderSetupReasonCode(res.success ? res.reasonCode || null : null);
-        setProviderSetupState(res.success ? res.state || null : null);
         setRedirectUri(res.success ? res.redirectUri || null : null);
       } catch {
         setProviderSetupReady(false);
         setProviderSetupReasonCode(null);
-        setProviderSetupState(null);
       } finally {
         setProviderSetupLoading(false);
       }
@@ -123,14 +123,20 @@ export function MicrosoftCalendarProviderForm({
         if (event.data.success) {
           setOAuthStatus('success');
           setOAuthError(null);
+          setPendingAdminConsent(false);
           if (event.data.data?.calendarProviderId) {
             setCalendarProviderId(event.data.data.calendarProviderId);
           }
           if (onSuccess) {
             onSuccess();
           }
+        } else if (event.data.error === 'pending_admin_consent') {
+          setOAuthStatus('error');
+          setOAuthError(null);
+          setPendingAdminConsent(true);
         } else {
           setOAuthStatus('error');
+          setPendingAdminConsent(false);
           setOAuthError(event.data.errorDescription || t('calendar.providers.common.oauth.callbackFailed', { defaultValue: 'OAuth authorization failed' }));
         }
       }
@@ -156,12 +162,11 @@ export function MicrosoftCalendarProviderForm({
     }
   };
 
-  const pendingAdminConsent = providerSetupState === 'pending_admin_consent';
-
   const handleAuthorize = async () => {
     try {
       setOAuthStatus('authorizing');
       setOAuthError(null);
+      setPendingAdminConsent(false);
 
       // Create or get provider ID
       let providerId = calendarProviderId;
@@ -363,7 +368,7 @@ export function MicrosoftCalendarProviderForm({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {!providerSetupLoading && pendingAdminConsent && (
+            {pendingAdminConsent && (
               <Alert id="microsoft-calendar-admin-consent-pending">
                 <AlertDescription>
                   <div className="space-y-2">
@@ -386,7 +391,7 @@ export function MicrosoftCalendarProviderForm({
                 </AlertDescription>
               </Alert>
             )}
-            {!providerSetupLoading && !providerSetupReady && !pendingAdminConsent && (
+            {!providerSetupLoading && !providerSetupReady && (
               <Alert>
                 <AlertDescription>
                   <div className="space-y-2">
@@ -477,7 +482,6 @@ export function MicrosoftCalendarProviderForm({
                     </Badge>
                   </div>
                 </div>
-                {!pendingAdminConsent && (
                 <Button
                   id="microsoft-authorize-button"
                   type="button"
@@ -504,7 +508,6 @@ export function MicrosoftCalendarProviderForm({
                     </>
                   )}
                 </Button>
-                )}
               </div>
             </div>
 
