@@ -196,10 +196,47 @@ export interface TemplateRepeatRegionBinding {
   keyPath?: string;
 }
 
+/**
+ * One cell of a child (sub) row, keyed by the parent column id it sits under.
+ * Columns with no entry render empty on child rows.
+ */
+export interface TemplateChildRowCell {
+  value: TemplateValueExpression;
+  format?: TemplateValueFormat;
+  /** Stacked lines, same semantics as `TemplateTableColumn.lines`. */
+  lines?: TemplateTableColumnLine[];
+  /**
+   * Optional leading adornment rendered before the value, e.g. a quantity
+   * change. In `signed-number` format a positive value shows "+N" (positive
+   * tone), a negative value "\u2212N" (negative tone), and null/0 renders nothing.
+   */
+  change?: {
+    value: TemplateValueExpression;
+    format: 'signed-number';
+  };
+  style?: TemplateNodeStyleRef;
+}
+
+/**
+ * Presentation-only sub-rows rendered directly under each parent row of a
+ * `dynamic-table`. They never feed transforms, aggregates or totals.
+ */
+export interface TemplateChildRows {
+  /** Path relative to the parent row binding, e.g. `item.components`. */
+  sourcePath: string;
+  /** Name the child item is bound to for the cell expressions, e.g. `component`. */
+  itemBinding: string;
+  cells: Record<string, TemplateChildRowCell>;
+  /** Parent column ids whose cell renders empty on rows that have child rows. */
+  parentBlankColumns?: string[];
+  style?: TemplateNodeStyleRef;
+}
+
 export interface TemplateDynamicTableNode extends TemplateNodeBase {
   type: 'dynamic-table';
   repeat: TemplateRepeatRegionBinding;
   columns: TemplateTableColumn[];
+  childRows?: TemplateChildRows;
   headerStyle?: TemplateNodeStyleRef;
   emptyStateText?: TemplateI18nText;
   children?: never;

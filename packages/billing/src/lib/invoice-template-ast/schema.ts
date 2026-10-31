@@ -173,6 +173,29 @@ const tableColumnSchema: z.ZodTypeAny = z.lazy(() =>
   }).strict()
 );
 
+const childRowCellSchema: z.ZodTypeAny = z.lazy(() =>
+  z.object({
+    value: valueExpressionSchema,
+    format: valueFormatSchema.optional(),
+    lines: z.array(tableColumnLineSchema).optional(),
+    change: z.object({
+      value: valueExpressionSchema,
+      format: z.literal('signed-number'),
+    }).strict().optional(),
+    style: nodeStyleRefSchema.optional(),
+  }).strict()
+);
+
+const childRowsSchema: z.ZodTypeAny = z.lazy(() =>
+  z.object({
+    sourcePath: z.string().min(1),
+    itemBinding: z.string().min(1),
+    cells: z.record(z.string().min(1), childRowCellSchema),
+    parentBlankColumns: z.array(z.string().min(1)).optional(),
+    style: nodeStyleRefSchema.optional(),
+  }).strict()
+);
+
 type ComputationExpressionInput =
   | { type: 'literal'; value: number }
   | { type: 'path'; path: string }
@@ -386,6 +409,7 @@ type NodeInput =
         keyPath?: string;
       };
       columns: TableColumnInput[];
+      childRows?: unknown;
       emptyStateText?: I18nTextInput;
     }
   | {
@@ -500,6 +524,7 @@ const nodeSchema: z.ZodTypeAny = z.lazy(() =>
         keyPath: z.string().min(1).optional(),
       }).strict(),
       columns: z.array(tableColumnSchema).min(1),
+      childRows: childRowsSchema.optional(),
       emptyStateText: i18nTextSchema.optional(),
     }).strict(),
     z.object({
