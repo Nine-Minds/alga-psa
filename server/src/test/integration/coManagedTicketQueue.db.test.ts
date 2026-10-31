@@ -395,6 +395,32 @@ describeDb('co-managed ticket queue and handoffs on real Postgres', { shuffle: f
       } finally { await restore(); }
     });
 
+    it('a redacted status never takes part in the state filter or the open/closed counts; a redacted number is not searchable', async () => {
+      const baseline = await all();
+      const closedA = rowsOf(await all({ state: 'closed' }), A).map(item => item.ticketId);
+      expect(closedA).toEqual([A.tickets.a4]); // control: unredacted, A's closed ticket is found by state
+      try {
+        await redactFor(A, ['status']);
+        // 'status' hides both status_name and is_closed for A's branch, so A matches neither bucket.
+        const closed = await all({ state: 'closed' }), open = await all({ state: 'open' });
+        expect(rowsOf(closed, A)).toEqual([]);
+        expect(rowsOf(open, A)).toEqual([]);
+        expect(closed.totalCount).toBe(rowsOf(closed, B).length);
+        expect(open.totalCount).toBe(rowsOf(open, B).length);
+        const everything = await all();
+        expect(everything.openCount + everything.closedCount).toBe(rowsOf(everything, B).length);
+        expect(everything.totalCount).toBe(baseline.totalCount); // 'all' still lists A's rows, just without status
+        for (const item of rowsOf(everything, A)) { expect('status_name' in item.fields).toBe(false); expect('is_closed' in item.fields).toBe(false); }
+        await redactFor(A, ['ticket_number', 'title']); // the seeded title embeds the number, so both must be masked
+        // '1004' only exists on A's closed ticket: masked, it is neither found nor counted.
+        const miss = await all({ search: '1004' });
+        expect(miss.items).toEqual([]);
+        expect(miss.totalCount).toBe(0);
+        await redactFor(A, []);
+        expect(rowsOf(await all({ search: '1004' }), A).map(item => item.ticketId)).toEqual([A.tickets.a4]);
+      } finally { await restore(); }
+    });
+
     it('sorting by title never reveals A\'s titles through ordering', async () => {
       try {
         await redactFor(A, ['title']);
