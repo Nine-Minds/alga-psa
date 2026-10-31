@@ -16,7 +16,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
-import { afterAll, beforeAll, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   CoManagedTicketHandoffError,
   escalateCoManagedTicket,
@@ -346,4 +346,118 @@ describeDb('co-managed ticket queue and handoffs on real Postgres', { shuffle: f
       expect(events.map(event => event.revision)).toEqual(events.map((_, index) => index + 1));
     }
   }, 120_000);
+
+  // Last on purpose: these cases mutate relationship.redacted_fields and always restore it.
+  describe('relationship redacted_fields apply to the queue, its search, sort, counts, chooser and export', { shuffle: false }, () => {
+    const redactFor = (c: Customer, fields: string[]) =>
+      db('co_management_relationships').where({ tenant: c.tenant, relationship_id: c.relationshipId }).update({ redacted_fields: fields });
+    const restore = async () => { await redactFor(A, []); await redactFor(B, []); };
+    const all = (extra: Partial<CoManagedTicketQueueRequest> = {}) => rq('oversight', { state: 'all', ...extra });
+    const rowsOf = (page: { items: Array<{ tenant: string }> }, c: Customer) => page.items.filter(item => item.tenant === c.tenant);
+    const aTitles = () => db('tickets').where({ tenant: A.tenant }).pluck('title');
+
+    it('A redacting title hides it on A rows only; B rows keep it in the same response', async () => {
+      const baseline = await all();
+      try {
+        await redactFor(A, ['title']);
+        const page = await all();
+        expect(rowsOf(page, A).length).toBeGreaterThan(0);
+        expect(rowsOf(page, B).length).toBeGreaterThan(0);
+        for (const item of rowsOf(page, A)) {
+          expect('title' in item.fields).toBe(false);
+          expect(item.fields.ticket_number).toBeTruthy();
+        }
+        for (const item of rowsOf(page, B)) expect(typeof item.fields.title).toBe('string');
+        // Masking a non-filter field never moves the unfiltered total.
+        expect(page.totalCount).toBe(baseline.totalCount);
+        expect(page.openCount).toBe(baseline.openCount);
+        expect(page.closedCount).toBe(baseline.closedCount);
+        expect(page.items.length).toBe(baseline.items.length);
+        expect(JSON.stringify(page)).not.toContain('redaction_mask');
+        // A's list does not leak onto B, including when narrowed to B's workspace.
+        expect(rowsOf(await all({ workspaceTenant: B.tenant }), B).every(item => typeof item.fields.title === 'string')).toBe(true);
+      } finally { await restore(); }
+    });
+
+    it('searching for A\'s real title finds none of A but still matches B', async () => {
+      try {
+        await redactFor(A, ['title']);
+        const [aTitle] = (await aTitles()).filter(title => title.startsWith('A a1'));
+        const [bTitle] = await db('tickets').where({ tenant: B.tenant, ticket_id: B.tickets.b1 }).pluck('title');
+        expect(aTitle).toBeTruthy();
+        const miss = await all({ search: aTitle });
+        expect(rowsOf(miss, A)).toEqual([]);
+        expect(miss.totalCount).toBe(0);
+        expect(rowsOf(await all({ search: bTitle }), B).map(item => item.ticketId)).toEqual([B.tickets.b1]);
+        // Unredacted control: the same search does find A, so the miss above is the redaction, not the data.
+        await redactFor(A, []);
+        expect(rowsOf(await all({ search: aTitle }), A).map(item => item.ticketId)).toEqual([A.tickets.a1]);
+      } finally { await restore(); }
+    });
+
+    it('sorting by title never reveals A\'s titles through ordering', async () => {
+      try {
+        await redactFor(A, ['title']);
+        for (const direction of ['asc', 'desc'] as const) {
+          const page = await all({ sort: 'title', direction });
+          const a = rowsOf(page, A).map(item => item.ticketId);
+          expect(a.length).toBeGreaterThan(1);
+          // Masked values sort as NULL (last) and tie-break on ticket id, not on the hidden title.
+          expect(page.items.slice(-a.length).map(item => item.ticketId)).toEqual(a);
+          expect(a).toEqual([...a].sort());
+        }
+      } finally { await restore(); }
+    });
+
+    it('["*"] masks every field and the workspace name for A only; totalCount is unchanged', async () => {
+      const baseline = await all();
+      const nameA = (await db('tenants').where({ tenant: A.tenant }).first('client_name')).client_name;
+      try {
+        await redactFor(A, ['*']);
+        const page = await all();
+        expect(page.totalCount).toBe(baseline.totalCount);
+        expect(rowsOf(page, A).length).toBe(rowsOf(baseline, A).length);
+        for (const item of rowsOf(page, A)) {
+          expect(item.fields).toEqual({});
+          expect(item.workspaceName).toBe('(redacted workspace)');
+        }
+        for (const item of rowsOf(page, B)) {
+          expect(Object.keys(item.fields).sort()).toEqual(expect.arrayContaining(['title', 'ticket_number', 'status_name', 'is_closed', 'responsibility']));
+          expect(item.workspaceName).not.toBe('(redacted workspace)');
+        }
+        // A's rows are legitimately outside the open/closed buckets once is_closed is masked; B's are not.
+        expect(page.openCount + page.closedCount).toBe(rowsOf(page, B).length);
+        expect(JSON.stringify(page)).not.toContain(nameA);
+        // Working view: responsibility and assignment are both hidden, so A contributes nothing there.
+        expect(rowsOf(await rq('working', { state: 'all' }), A)).toEqual([]);
+      } finally { await restore(); }
+    });
+
+    it('the workspace chooser shows the redacted label with A\'s tenant and A\'s real name appears nowhere', async () => {
+      const nameA = (await db('tenants').where({ tenant: A.tenant }).first('client_name')).client_name;
+      const nameB = (await db('tenants').where({ tenant: B.tenant }).first('client_name')).client_name;
+      expect((await all()).workspaces).toContainEqual({ tenant: A.tenant, name: nameA });
+      try {
+        await redactFor(A, ['*']);
+        const page = await all();
+        expect(page.workspaces).toContainEqual({ tenant: A.tenant, name: '(redacted workspace)' });
+        expect(page.workspaces).toContainEqual({ tenant: B.tenant, name: nameB });
+        expect(page.workspaces.map(w => w.name)).not.toContain(nameA);
+        expect(JSON.stringify(page)).not.toContain(nameA);
+      } finally { await restore(); }
+    });
+
+    it('the export returns the same masked rows and A\'s titles appear nowhere in it', async () => {
+      try {
+        await redactFor(A, ['title']);
+        const exported = await exportCoManagedTicketQueue(db, tech, { view: 'oversight', state: 'all', sort: 'number', direction: 'asc' });
+        const paged = await all({ sort: 'number', direction: 'asc', pageSize: 100 });
+        expect(exported).toEqual(paged.items);
+        expect(rowsOf({ items: exported }, A).length).toBeGreaterThan(0);
+        const serialized = JSON.stringify(exported);
+        for (const title of await aTitles()) expect(serialized).not.toContain(title);
+        expect(rowsOf({ items: exported }, B).every(item => typeof item.fields.title === 'string')).toBe(true);
+      } finally { await restore(); }
+    });
+  });
 });
