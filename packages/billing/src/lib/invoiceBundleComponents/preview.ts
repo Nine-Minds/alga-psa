@@ -53,38 +53,38 @@ export async function buildPreviewFixedBundles(
   const requests: PreviousPeriodRequest[] = [];
   for (const [lineId, lineCharges] of byLine) {
     const starts = lineCharges
-      .flatMap((charge) => charge.recurringDetailPeriods?.map((p) => p.servicePeriodStart) ?? [charge.servicePeriodStart])
+      .flatMap((charge) => [charge.servicePeriodStart ?? charge.recurringDetailPeriods?.[0]?.servicePeriodStart])
       .filter((value): value is string => Boolean(value))
       .sort();
     if (starts.length > 0) requests.push({ contractLineId: lineId, earliestPeriodStart: starts[0] });
   }
-  const previous = await loadPreviousBundlePeriods(knex, tenant, 'preview', requests);
+  const previous = await loadPreviousBundlePeriods(knex, tenant, null, requests);
 
   return [...byLine.entries()].map(([lineId, lineCharges]) => {
     const line = lines.get(lineId);
     const amounts: Record<string, IInvoiceBundleComponentAmount> = {};
     const details: BundleSnapshotDetailInput[] = [];
     lineCharges.forEach((charge, index) => {
-      const periods = charge.recurringDetailPeriods?.length
-        ? charge.recurringDetailPeriods
-        : [{ servicePeriodStart: charge.servicePeriodStart ?? null, servicePeriodEnd: charge.servicePeriodEnd ?? null }];
-      periods.forEach((period, periodIndex) => {
-        const detailItemId = `preview-detail-${lineId}-${index}-${periodIndex}`;
-        // Per-period money is not split in a draft: the charge total rides on its first period.
-        amounts[detailItemId] = {
-          allocated_amount: periodIndex === 0 ? Number(charge.allocated_amount ?? charge.total) || 0 : 0,
-          rate: Number(charge.rate) || 0,
-        };
-        details.push({
-          detailItemId,
-          serviceId: charge.serviceId as string,
-          serviceName: charge.serviceName,
-          rawQuantity: charge.raw_quantity !== undefined ? charge.raw_quantity : (Number(charge.quantity) || null),
-          pricingBasis: charge.pricing_basis ?? 'bundle',
-          configCreatedAt: createdAt.get(charge.config_id as string) ?? null,
-          servicePeriodStart: period.servicePeriodStart ?? null,
-          servicePeriodEnd: period.servicePeriodEnd ?? null,
-        });
+      // Persistence writes exactly one invoice_charge_details row per charge, carrying the
+      // charge's whole allocated amount and its overall service period. Mirror that 1:1 so the
+      // preview equals the persisted bundle (no per-period spreading or first-period dumping).
+      const recurring = charge.recurringDetailPeriods ?? [];
+      const periodStart = charge.servicePeriodStart ?? recurring[0]?.servicePeriodStart ?? null;
+      const periodEnd = charge.servicePeriodEnd ?? recurring[recurring.length - 1]?.servicePeriodEnd ?? null;
+      const detailItemId = `preview-detail-${lineId}-${index}`;
+      amounts[detailItemId] = {
+        allocated_amount: Number(charge.allocated_amount ?? charge.total) || 0,
+        rate: Number(charge.rate) || 0,
+      };
+      details.push({
+        detailItemId,
+        serviceId: charge.serviceId as string,
+        serviceName: charge.serviceName,
+        rawQuantity: charge.raw_quantity !== undefined ? charge.raw_quantity : (Number(charge.quantity) || null),
+        pricingBasis: charge.pricing_basis ?? 'bundle',
+        configCreatedAt: createdAt.get(charge.config_id as string) ?? null,
+        servicePeriodStart: periodStart,
+        servicePeriodEnd: periodEnd,
       });
     });
     return {

@@ -1659,6 +1659,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         previewGroupKey: group.groupKey,
         selectorInputs: group.selectorInputs,
       })),
+      // Operator dialog keeps its per-service layout; template-rendered previews consolidate.
+      { consolidateFixedBundles: false },
     );
     if (response.success) {
       setPreviewState({

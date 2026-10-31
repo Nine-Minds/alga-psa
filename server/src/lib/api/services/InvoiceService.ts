@@ -2171,6 +2171,8 @@ export class InvoiceService extends BaseService<IInvoice> {
 
     return previewInvoiceForSelectionInput(
       this.requireRecurringSelectorInput(data, 'preview'),
+      // REST preview shape is a public contract; keep per-service rows.
+      { consolidateFixedBundles: false },
     );
   }
 
