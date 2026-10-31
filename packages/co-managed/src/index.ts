@@ -69,6 +69,7 @@ export type { CoManagedCommentMutationRequest, CoManagedCommentMutationReceipt, 
 export { mutateCoManagedPrivateTicketComment, mutateCoManagedPrivateTaskComment, CoManagedPrivateCommentError } from './privateTicketConversation';
 export type { CoManagedPrivateCommentReference, CoManagedPrivateCommentCommand, CoManagedPrivateCommentReceipt } from './privateTicketConversation';
 export { getCoManagedTicketConversation, getCoManagedConversationContributionHints, getCoManagedConversationWriteAudiences } from './ticketConversation';
+export { localAuthorReference, LOCAL_AUTHOR_REFERENCE_NAMESPACE } from './conversationAuthorReference';
 export type { CoManagedConversationCursor, CoManagedConversationItem, CoManagedConversationAuthor, CoManagedTicketConversation } from './ticketConversation';
 export { retainCoManagedConversationParticipation, retainCoManagedSharedConversationBeforeReduction } from './conversationParticipationEvidence';
 export type { CoManagedCaptureIntent, CoManagedConversationCapture } from './conversationParticipationEvidence';
