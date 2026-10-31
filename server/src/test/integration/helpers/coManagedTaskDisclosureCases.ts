@@ -163,5 +163,24 @@ export function registerCoManagedTaskDisclosureCases() {
       const source = readFileSync(require.resolve('../../../../../packages/projects/src/lib/taskComments/taskCommentAuthorization.ts'), 'utf8');
       expect(source).not.toMatch(/\b1000\b|\.slice\(0,/);
     }, 120_000);
+    // Main's whole-resource task denial: when the relationship redacts `tasks`/`project_tasks`, the shared task is
+    // not-found for the sponsor, so there is no conversation to read, write or offer audiences for.
+    describe.each(['tasks', 'project_tasks'])('whole-task redaction (%s)', alias => {
+      const setRedactions = (fields: string[]) =>
+        db('co_management_relationships').where({ tenant: w.world.customer, relationship_id: w.world.relationshipId }).update({ redacted_fields: fields });
+      it('gives not-found for read, write and write audiences, and writes nothing', async () => {
+        const { getCoManagedProjectTaskConversation, mutateCoManagedProjectTaskComment, getCoManagedProjectTaskWriteAudiences } = await conversation();
+        const { isCoManagedSharedWorkError } = await import('@alga-psa/co-managed/sharedWorkIdentity');
+        const before = Number((await db('project_task_comments').where({ tenant: w.world.customer, task_id: w.taskId }).count('* as n').first())!.n);
+        await setRedactions([alias]);
+        try {
+          await expect(getCoManagedProjectTaskConversation(db, w.techActor, w.resource)).rejects.toSatisfy(isCoManagedSharedWorkError);
+          await expect(mutateCoManagedProjectTaskComment(db, w.techActor, w.resource,
+            { operationId: randomUUID(), kind: 'create', audience: 'shared_it', ...text('blocked') } as any)).rejects.toSatisfy(isCoManagedSharedWorkError);
+          expect(await getCoManagedProjectTaskWriteAudiences(db, w.techActor, w.resource)).toEqual([]);
+        } finally { await setRedactions([]); }
+        expect(Number((await db('project_task_comments').where({ tenant: w.world.customer, task_id: w.taskId }).count('* as n').first())!.n)).toBe(before);
+      });
+    });
   });
 }

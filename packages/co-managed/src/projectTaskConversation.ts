@@ -11,6 +11,7 @@ import { ensureCoManagedActorReference } from './actorReferences';
 import { encodeConversationContent, snapshotConversationContent, type CoManagedConversationContent } from './conversationContent';
 import { coManagedConversationBodySources, coManagedConversationAuthorSources } from './conversationPolicy';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+import { isCoManagedTaskResourceHidden } from './sharedWorkProjection';
 import { mutateCoManagedPrivateTaskComment } from './privateTicketConversation';
 import type { CoManagedCommentReference } from './ticketCommentCreation';
 import { projectTaskAudienceSql, projectTaskAudience as audienceOf } from './projectTaskAudience';
@@ -75,6 +76,8 @@ export async function mutateCoManagedProjectTaskComment(db: Knex, inputActor: Co
   const hash = createHash('sha256').update(JSON.stringify({ actor: { tenant: actor.tenant, userId: actor.userId }, resource, command: 'project_task_comment', request })).digest('hex');
   const withWork = boundary(actor, resource);
   try { return await withWork(db, actor, resource, 'update', write => withWork(write.trx, actor, resource, 'read', async read => {
+    // Main's whole-resource task denial (tasks / project_tasks redacted): the task is not-found, never a conversation.
+    if (isCoManagedTaskResourceHidden([...write.redactedFields, ...read.redactedFields])) deny();
     if (isCoManagedReadFieldHidden([...write.redactedFields, ...read.redactedFields], [...bodySources, 'revision'])) deny();
     const owner = tenantDb(write.trx, resource.tenant), threadId = target?.threadId ?? request.operationId, commentId = request.kind === 'create' ? request.operationId : request.comment.commentId;
     const revision = request.kind === 'create' ? 1 : request.expectedRevision + 1;
@@ -140,6 +143,7 @@ export async function getCoManagedProjectTaskConversation(db: Knex, inputActor: 
   const cursor = before ? { createdAt: before.createdAt, storeTenant: before.storeTenant.toLowerCase(), commentId: before.commentId.toLowerCase() } : undefined;
   return boundary(actor, resource)(db, actor, resource, 'read', async context => {
     const { trx, redactedFields } = context, queries: Knex.QueryBuilder[] = [];
+    if (isCoManagedTaskResourceHidden(redactedFields)) deny();
     const hideCanonical = isCoManagedReadFieldHidden(redactedFields, bodySources);
     const hidePrivate = isCoManagedReadFieldHidden(redactedFields, [...coManagedConversationBodySources, 'co_management_private_threads', 'co_management_private_comments']);
     if (!hideCanonical) {
@@ -187,7 +191,9 @@ export async function getCoManagedProjectTaskConversation(db: Knex, inputActor: 
 export async function getCoManagedProjectTaskWriteAudiences(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource): Promise<CommentAudience[]> {
   const actor = snapshotCoManagedSessionActor(inputActor), resource = resourceSnapshot(inputResource), withWork = boundary(actor, resource);
   try { return await withWork(db, actor, resource, 'update', write => withWork(write.trx, actor, resource, 'read', async read => {
-    const redactions = [...write.redactedFields, ...read.redactedFields], hidden = (names: readonly string[]) => isCoManagedReadFieldHidden(redactions, names);
+    const redactions = [...write.redactedFields, ...read.redactedFields];
+    if (isCoManagedTaskResourceHidden(redactions)) return [];
+    const hidden = (names: readonly string[]) => isCoManagedReadFieldHidden(redactions, names);
     const canonical = hidden([...bodySources, 'revision']), privateNotes = hidden([...coManagedConversationBodySources, 'co_management_private_threads', 'co_management_private_comments', 'revision']);
     await current(write, true);
     return [...(canonical ? [] : ['requester', 'shared_it']), ...((actor.tenant === resource.tenant ? canonical : privateNotes) ? [] : ['organization_private'])] as CommentAudience[];
