@@ -3,7 +3,7 @@
  *
  * A customer's project policy may hide a task comment's author, its revision, or the identity of
  * its reactors from a given reader. Every surface that emits a task comment (the web actions/UI,
- * the REST `ProjectTaskCommentService`, the search indexer) must pass the comment through
+ * the REST `ProjectTaskCommentService`; the search indexer emits no author, revision or reactor fields at all, so it has nothing to redact) must pass the comment through
  * `redactTaskComment` rather than deleting fields locally, so a field hidden on one surface can
  * never be learned from another. Hiding the reactor keeps the reaction count (it is only
  * visible inside the audience in the first place).
@@ -16,8 +16,6 @@ export interface TaskCommentFieldPolicy {
 }
 
 export const TASK_COMMENT_SHOW_ALL: TaskCommentFieldPolicy = { hideAuthor: false, hideRevision: false, hideReactors: false };
-/** Search documents never carry an author, an editor affordance or reactor labels. */
-export const TASK_COMMENT_INDEX_POLICY: TaskCommentFieldPolicy = { hideAuthor: true, hideRevision: false, hideReactors: true };
 
 /** Build a policy from a reader's "is this field source hidden" predicate (the co-managed `hidden(taskId, fields)`). */
 export function taskCommentFieldPolicy(hidden: (fields: readonly string[]) => boolean): TaskCommentFieldPolicy {

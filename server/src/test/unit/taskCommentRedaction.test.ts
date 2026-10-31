@@ -3,7 +3,7 @@
  * search indexer both go through it.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { redactTaskComment, redactTaskCommentReactions, taskCommentFieldPolicy, TASK_COMMENT_INDEX_POLICY, TASK_COMMENT_SHOW_ALL } from '@alga-psa/types';
+import { redactTaskComment, redactTaskCommentReactions, taskCommentFieldPolicy, TASK_COMMENT_SHOW_ALL } from '@alga-psa/types';
 import { projectTaskCommentIndexer } from '@alga-psa/search/indexers/project_task_comment';
 
 const tombstone = {
@@ -57,16 +57,17 @@ describe('search indexer', () => {
   const row = { task_comment_id: 'c1', task_id: 't1', note: null, markdown_content: 'hello', task_name: 'Task', project_id: 'p1', project_name: 'P', client_id: 'cl',
     user_id: 'u1', actor_reference_id: 'ref1', contact_id: 'ct1', collaboration_revision: null, updated_at: '2026-01-02T00:00:00.000Z' };
 
-  it('carries no author, and a legacy missing revision is revision 1', async () => {
-    const doc = await projectTaskCommentIndexer.loadOne(knexWith(row) as never, tenant, 'c1');
-    expect(doc?.metadata).toEqual({ userId: null, actorReferenceId: null, contactId: null, sourceRevision: 1 });
-    expect(JSON.stringify(doc)).not.toMatch(/u1|ref1|ct1/);
-  });
-  it('stamps the stored revision as the source revision', async () => {
-    const doc = await projectTaskCommentIndexer.loadOne(knexWith({ ...row, collaboration_revision: 4 }) as never, tenant, 'c1');
-    expect((doc?.metadata as any).sourceRevision).toBe(4);
-  });
-  it('index policy hides the author and reactors but not the revision stamp', () => {
-    expect(TASK_COMMENT_INDEX_POLICY).toEqual({ hideAuthor: true, hideRevision: false, hideReactors: true });
+  // Neutrality: the indexer is main's. A native row yields exactly main's document (no metadata, no author block),
+  // and selects no L4c column, so it also runs on a schema without the L4c migrations.
+  it('a native row produces main\'s SearchDoc unchanged and selects no L4c column', async () => {
+    const knex = knexWith(row);
+    const doc = await projectTaskCommentIndexer.loadOne(knex as never, tenant, 'c1');
+    expect(doc).toEqual({
+      tenant, objectType: 'project_task_comment', objectId: 'c1', parentType: 'project_task', parentId: 't1', title: 'Task', subtitle: 'P', body: 'hello',
+      url: '/msp/projects/p1?taskId=t1#comment-c1', acl: { requiredPermission: 'project:read', clientScopeId: 'cl' }, sourceUpdatedAt: new Date('2026-01-02T00:00:00.000Z'),
+    });
+    expect('metadata' in (doc as object)).toBe(false);
+    const selected = JSON.stringify(knex().select.mock.calls);
+    expect(selected).not.toMatch(/user_id|actor_reference_id|contact_id|collaboration_revision/);
   });
 });
