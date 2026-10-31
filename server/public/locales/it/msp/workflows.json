@@ -535,6 +535,7 @@
         "renewal": "la data di decisione sul rinnovo del contratto",
         "contractEnd": "la data di fine del contratto",
         "warrantyEnd": "la data di fine garanzia dell’asset",
+        "maintenanceDue": "la data di scadenza della manutenzione dell’asset",
         "ticketStatusAge": "il giorno in cui il ticket raggiunge il numero di giorni nello stato"
       }
     }
@@ -795,6 +796,7 @@
       "dateSourceRenewal": "Data di decisione sul rinnovo del contratto",
       "dateSourceContractEnd": "Data di fine del contratto",
       "dateSourceWarranty": "Fine garanzia dell’asset",
+      "dateSourceMaintenanceDue": "Manutenzione dell’asset in scadenza",
       "dateOffset": "Giorni",
       "dateDirection": "Tempistica",
       "before": "Prima",
@@ -1065,6 +1067,26 @@
           "label": "Elenca spazi dei nomi dei collegamenti",
           "description": "Elenca gli spazi dei nomi dei collegamenti entità del workflow usati da questo tenant."
         }
+      },
+      "assets.get_maintenance": {
+        "label": "Ottieni manutenzione asset",
+        "description": "Trova piano e occorrenza per piano, occorrenza o ticket collegato."
+      },
+      "assets.create_maintenance_ticket": {
+        "label": "Crea ticket di manutenzione",
+        "description": "Crea e collega un ticket per un’occorrenza di manutenzione aperta."
+      },
+      "assets.complete_maintenance": {
+        "label": "Completa manutenzione asset",
+        "description": "Registra la manutenzione e apri l’occorrenza successiva."
+      },
+      "assets.skip_maintenance": {
+        "label": "Salta manutenzione asset",
+        "description": "Salta un’occorrenza con un motivo e apri la successiva."
+      },
+      "assets.set_maintenance_paused": {
+        "label": "Sospendi o riprendi manutenzione",
+        "description": "Sospendi o riprendi un piano di manutenzione."
       }
     },
     "validation": {
@@ -1288,6 +1310,10 @@
         "data-store": {
           "label": "Archivio dati",
           "description": "Leggi e scrivi lo stato persistente del workflow tra le esecuzioni."
+        },
+        "maintenance": {
+          "label": "Manutenzione",
+          "description": "Trova manutenzioni, collega ticket, completa o salta occorrenze e sospendi o riprendi piani."
         }
       },
       "noMatches": {
@@ -1594,6 +1620,9 @@
         "client_id": "Scegli prima un cliente fisso per caricare le opzioni di sede."
       },
       "ticket-category": {
+        "board_id": "Scegli prima una bacheca fissa per caricare le opzioni di categoria."
+      },
+      "ticket-category-any": {
         "board_id": "Scegli prima una bacheca fissa per caricare le opzioni di categoria."
       },
       "ticket-status": {

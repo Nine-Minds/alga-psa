@@ -20,6 +20,18 @@ export const dateTriggerPayloadSchemas = {
   'payload.ContractRenewalDate.v1': z.object({ ...common, contractId, clientId, renewalMode: z.string().optional(), renewalCycleKey: z.string().optional() }).passthrough(),
   'payload.ContractEndDate.v1': z.object({ ...common, contractId, clientId, endDate: dateOnlySchema('Contract end date (YYYY-MM-DD)') }).passthrough(),
   'payload.AssetWarrantyEnd.v1': z.object({ ...common, assetId, warrantyEndDate: dateOnlySchema('Warranty end date (YYYY-MM-DD)') }).passthrough(),
+  // The open occurrence drives it: its id is unique per maintenance cycle, so a workflow can dedup
+  // and later link a ticket back to the occurrence it was created for.
+  'payload.AssetMaintenanceDue.v1': z.object({
+    ...common,
+    occurrenceId: z.string(),
+    scheduleId: z.string(),
+    assetId,
+    scheduleName: z.string().optional(),
+    assetName: z.string().optional(),
+    maintenanceType: z.string().optional(),
+    dueDate: dateOnlySchema('Maintenance due date (YYYY-MM-DD)'),
+  }).passthrough(),
   // `ticket.status_age` carries everything a follow-up step needs (contact, assignee, board, status),
   // so a workflow never has to look the ticket up again.
   'payload.TicketStatusAge.v1': z.object({
