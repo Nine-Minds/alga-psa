@@ -37,7 +37,7 @@ vi.mock('../projectReadAuthorization', () => ({
 
 import { withTaskCommentAccess, withTaskCommentBatchReadAccess } from './taskCommentAuthorization';
 
-const me = { user_id: 'me', tenant: 't1' } as any;
+const me = { user_id: 'me', tenant: 't1', user_type: 'internal' } as any;
 const run = (target: any, action: any, work = vi.fn(async () => 'ok')) =>
   withTaskCommentAccess({} as any, 't1', me, target, action, work as any).then((r) => ({ r, work }));
 
@@ -105,6 +105,17 @@ describe('withTaskCommentAccess', () => {
       expect(r).toBe('ok');
       expect(work).toHaveBeenCalledWith(expect.objectContaining({ projectId: 'P1', taskId: 'T1' }));
     }
+  });
+
+  it('client user cannot edit or delete another user\'s comment even with project_task:update', async () => {
+    const client = { user_id: 'me', tenant: 't1', user_type: 'client' } as any;
+    for (const action of ['update', 'delete'] as const) {
+      const work = vi.fn(async () => 'ok');
+      await expect(withTaskCommentAccess({} as any, 't1', client, { taskCommentId: 'C2' }, action, work as any))
+        .rejects.toThrow(`You can only ${action === 'update' ? 'edit' : 'delete'} your own comments`);
+      expect(work).not.toHaveBeenCalled();
+    }
+    expect(await withTaskCommentAccess({} as any, 't1', client, { taskCommentId: 'C1' }, 'delete', async () => 'ok')).toBe('ok');
   });
 
   it('author with delete permission only (no project_task:update) can delete own comment', async () => {

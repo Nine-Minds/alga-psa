@@ -6,7 +6,8 @@
  *   1. coarse `project_task:*` permission (a record-level pass never rescues a caller without it),
  *   2. resolve the target to its parent project inside one transaction, tenant-scoped,
  *   3. the record-level project authorizer (read for read/react, update for writes),
- *   4. for update/delete of someone else's comment, project-task update authority too,
+ *   4. for update/delete of someone else's comment, an MSP principal with project-task update
+ *      authority (client users may only edit/delete their own comments),
  *   5. only then the caller's work, on the same transaction.
  *
  * A missing task/comment and a project the caller may not access throw the same
@@ -15,6 +16,7 @@
 
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { isMspPrincipalUserType } from '@alga-psa/types';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import ProjectModel from '../../models/project';
@@ -131,9 +133,10 @@ export async function withTaskCommentAccess<T>(
     if (!(await decide(task.project_id))) throw new Error(notFound);
 
     if (comment && (action === 'update' || action === 'delete') && comment.user_id !== user.user_id) {
-      // Someone else's comment: the caller needs project-task update authority too. The record-level
-      // update decision over the parent project was already made above (writes use the update action).
-      if (!(await hasPermission(user, 'project_task', 'update', trx))) {
+      // Someone else's comment: only an MSP principal with project-task update authority. Client users
+      // are limited to their own comments whatever their RBAC grants. The record-level update decision
+      // over the parent project was already made above (writes use the update action).
+      if (!isMspPrincipalUserType(user.user_type) || !(await hasPermission(user, 'project_task', 'update', trx))) {
         throw new Error(`You can only ${action === 'update' ? 'edit' : 'delete'} your own comments`);
       }
     }
