@@ -1334,7 +1334,10 @@
       },
       "requiredSuffix": "(required)",
       "tagsUnderTitle": "Display under Title",
-      "tagsSeparateColumn": "Display in separate column"
+      "tagsSeparateColumn": "Display in separate column",
+      "defaultDontNotifyCustomerTitle": "Don't notify the customer",
+      "defaultDontNotifyCustomerDescription": "Start every \"Don't notify the customer\" checkbox ticked for all team members — status changes, contact changes, closure and comments. Users can still untick the box to send the notification for a single action.",
+      "defaultDontNotifyCustomerLabel": "Start actions with customer notifications off"
     }
   },
   "export": {

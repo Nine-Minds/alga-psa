@@ -18,9 +18,9 @@ import { extractDescription } from "../utils";
 import type { TicketNotificationSuppressionOptions } from "../../../api/tickets";
 import {
   activeTicketNotificationSuppression,
-  DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
   TicketUpdateFooter,
 } from "./TicketUpdateFooter";
+import { useTicketNotificationSuppression } from "./useTicketNotificationSuppression";
 import { SectionCollapseToggle } from "./SectionCollapseToggle";
 
 export function DescriptionSection({
@@ -69,13 +69,13 @@ export function DescriptionSection({
   const DESCRIPTION_COLLAPSED_HEIGHT = 96;
   const [expanded, setExpanded] = useState(false);
   const [contentHeight, setContentHeight] = useState<number | null>(null);
-  const [suppression, setSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+  const { suppression, setSuppression, reset: resetSuppression } = useTicketNotificationSuppression();
   const [collapsed, setCollapsed] = useState(initiallyCollapsed);
   const needsExpansion = contentHeight !== null && contentHeight > DESCRIPTION_COLLAPSED_HEIGHT;
 
   useEffect(() => {
     if (isEditing) {
-      setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+      resetSuppression();
       setCollapsed(false);
     }
   }, [isEditing]);
@@ -137,11 +137,11 @@ export function DescriptionSection({
               onSuppressionChange={setSuppression}
               onCancel={() => {
                 onCancelEditing();
-                setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+                resetSuppression();
               }}
               onApply={() => {
                 void Promise.resolve(onSave(activeTicketNotificationSuppression(suppression))).then((saved) => {
-                  if (saved !== false) setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+                  if (saved !== false) resetSuppression();
                 });
               }}
               applyLabel={t("description.save", "Save description")}

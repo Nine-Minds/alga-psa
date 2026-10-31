@@ -67,6 +67,7 @@ describe('MobileCapabilitiesService', () => {
       opportunities: true,
       opportunitiesCreate: true,
       projects: true,
+      dontNotifyCustomerDefault: false,
       ...CRM_ALL,
     });
     expect(result.formatting).toEqual(SYSTEM_DATE_FORMAT);
@@ -86,12 +87,21 @@ describe('MobileCapabilitiesService', () => {
       opportunities: false,
       opportunitiesCreate: false,
       projects: false,
+      dontNotifyCustomerDefault: false,
       ...CRM_ALL,
     });
     expect(result.formatting).toEqual(SYSTEM_DATE_FORMAT);
     expect(mocks.hasPermission).not.toHaveBeenCalledWith(user, 'inventory', 'read', db);
     expect(mocks.hasPermission).not.toHaveBeenCalledWith(user, 'project', 'read', db);
     expect(mocks.hasPermission).not.toHaveBeenCalledWith(user, 'opportunities', 'read', db);
+  });
+
+  it('surfaces the tenant dont-notify-customer default as a feature flag', async () => {
+    const service = new MobileCapabilitiesService();
+    vi.spyOn(service as any, 'getDontNotifyCustomerDefault').mockResolvedValue(true);
+
+    const result = await service.getMyCapabilities(context);
+    expect(result.features.dontNotifyCustomerDefault).toBe(true);
   });
 
   it('reports client and contact write permissions for every product', async () => {
@@ -131,6 +141,7 @@ describe('MobileCapabilitiesService', () => {
       opportunities: expectedOpportunities,
       opportunitiesCreate: expectedOpportunities,
       projects: true,
+      dontNotifyCustomerDefault: false,
       ...CRM_ALL,
     });
   });
@@ -147,6 +158,7 @@ describe('MobileCapabilitiesService', () => {
       opportunities: true,
       opportunitiesCreate: false,
       projects: true,
+      dontNotifyCustomerDefault: false,
       ...CRM_ALL,
     });
   });
@@ -245,6 +257,7 @@ describe('MobileCapabilitiesService', () => {
         opportunities: true,
         opportunitiesCreate: true,
         projects: true,
+        dontNotifyCustomerDefault: false,
         ...CRM_ALL,
       });
     });

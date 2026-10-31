@@ -5,9 +5,9 @@ import type { TicketPriority } from "../../../api/tickets";
 import { useTheme } from "../../../ui/ThemeContext";
 import {
   activeTicketNotificationSuppression,
-  DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
   TicketUpdateFooter,
 } from "./TicketUpdateFooter";
+import { useTicketNotificationSuppression } from "./useTicketNotificationSuppression";
 
 export function PriorityPickerModal({
   visible,
@@ -34,12 +34,12 @@ export function PriorityPickerModal({
   const { t } = useTranslation("tickets");
   const busy = loading || updating;
   const [selectedPriorityId, setSelectedPriorityId] = useState<string | null>(currentPriorityId);
-  const [suppression, setSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+  const { suppression, setSuppression, reset: resetSuppression } = useTicketNotificationSuppression();
 
   useEffect(() => {
     if (!visible) return;
     setSelectedPriorityId(currentPriorityId);
-    setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+    resetSuppression();
   }, [currentPriorityId, visible]);
 
   return (

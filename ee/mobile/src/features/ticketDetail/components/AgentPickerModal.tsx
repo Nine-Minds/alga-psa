@@ -7,9 +7,9 @@ import { getUserDisplayName, listUsers, type UserListItem } from "../../../api/u
 import type { ApiClient } from "../../../api/client";
 import {
   activeTicketNotificationSuppression,
-  DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
   TicketUpdateFooter,
 } from "./TicketUpdateFooter";
+import { useTicketNotificationSuppression } from "./useTicketNotificationSuppression";
 
 export function AgentPickerModal({
   visible,
@@ -47,7 +47,7 @@ export function AgentPickerModal({
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState<{ id: string | null; name: string | null } | null>(null);
-  const [suppression, setSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+  const { suppression, setSuppression, reset: resetSuppression } = useTicketNotificationSuppression();
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -85,7 +85,7 @@ export function AgentPickerModal({
     if (visible) {
       setSearch("");
       setSelectedUser(null);
-      setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+      resetSuppression();
       void fetchUsers("");
     } else {
       abortRef.current?.abort();

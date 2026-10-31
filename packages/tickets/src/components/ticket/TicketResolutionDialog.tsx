@@ -14,6 +14,8 @@ import { hasEditorContent } from "@alga-psa/ui/editor/hasEditorContent";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { useTicketDataSource } from "./TicketDataSourceContext";
 import { createTicketRichTextParagraph } from "../../lib/ticketRichText";
+import { defaultNotificationSuppression } from "../../lib/notificationSuppressionDefaults";
+import { useReseedNotificationSuppression } from "../../lib/useTicketNotificationSuppressionDefault";
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from "./TicketNotificationSuppressionControl";
@@ -34,12 +36,6 @@ const TextEditor = dynamic(
 );
 
 const DEFAULT_RESOLUTION_BLOCK = createTicketRichTextParagraph("");
-
-const defaultNotificationSuppression =
-  (): TicketNotificationSuppressionValue => ({
-    suppressContactNotifications: false,
-    suppressInternalNotifications: false,
-  });
 
 interface TicketResolutionDialogProps {
   id: string;
@@ -109,6 +105,7 @@ export default function TicketResolutionDialog({
     useState<TicketNotificationSuppressionValue>(
       defaultNotificationSuppression,
     );
+  useReseedNotificationSuppression(notificationSuppression, setNotificationSuppression);
   // One-off Cc/Bcc for this resolution. The close email carries them, so the
   // agent can copy someone on the message that closes the ticket.
   const emailRecipients = useCommentEmailRecipientsDraft();

@@ -67,6 +67,8 @@ import type { IAggregatedReaction } from '@alga-psa/types';
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from './TicketNotificationSuppressionControl';
+import { defaultNotificationSuppression } from '../../lib/notificationSuppressionDefaults';
+import { useReseedNotificationSuppression } from '../../lib/useTicketNotificationSuppressionDefault';
 import {
   CommentEmailRecipientsControl,
   commentEmailRecipientsPayload,
@@ -147,11 +149,6 @@ const CLIENT_TAB_ID = 'client';
 const INTERNAL_TAB_ID = 'internal';
 const RESOLUTION_TAB_ID = 'resolution';
 const NO_STATUS_CHANGE = '__no_status_change__';
-
-const defaultNotificationSuppression = (): TicketNotificationSuppressionValue => ({
-  suppressContactNotifications: false,
-  suppressInternalNotifications: false,
-});
 
 const TicketConversation: React.FC<TicketConversationProps> = ({
   id,
@@ -236,6 +233,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(
     defaultNotificationSuppression
   );
+  useReseedNotificationSuppression(notificationSuppression, setNotificationSuppression);
   const [contactAvatarUrls, setContactAvatarUrls] = useState<Record<string, string | null>>({});
   const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});

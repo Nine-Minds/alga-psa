@@ -17,6 +17,7 @@ import {
   updateTicketingDisplaySettings
 } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { TOGGLEABLE_TICKET_COLUMNS, resolveTicketColumnVisibility } from '@alga-psa/tickets/lib';
+import { primeDontNotifyCustomerDefault } from '../../lib/notificationSuppressionDefaults';
 import { useDateFormat } from '@alga-psa/ui/lib';
 
 const DisplaySettings = (): React.JSX.Element => {
@@ -37,6 +38,7 @@ const DisplaySettings = (): React.JSX.Element => {
   const [tagsInlineUnderTitle, setTagsInlineUnderTitle] = useState<boolean>(false);
   const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(true);
   const [defaultReplyInternal, setDefaultReplyInternal] = useState(false);
+  const [defaultDontNotifyCustomer, setDefaultDontNotifyCustomer] = useState(false);
   // Only user-toggleable columns appear here. Title is always shown; ticket
   // number and category fold into the Title cell, so they're not toggles.
   const columnOptions = TOGGLEABLE_TICKET_COLUMNS.map((c) => ({
@@ -51,12 +53,14 @@ const DisplaySettings = (): React.JSX.Element => {
     tagsInlineUnderTitle: boolean;
     responseStateTrackingEnabled: boolean;
     defaultReplyInternal: boolean;
+    defaultDontNotifyCustomer: boolean;
   }>({
     showWeekday: false,
     columnVisibility: resolveTicketColumnVisibility(),
     tagsInlineUnderTitle: false,
     responseStateTrackingEnabled: true,
     defaultReplyInternal: false,
+    defaultDontNotifyCustomer: false,
   });
   
   // Check if there are unsaved changes
@@ -66,7 +70,8 @@ const DisplaySettings = (): React.JSX.Element => {
       JSON.stringify(columnVisibility) !== JSON.stringify(originalDisplaySettings.columnVisibility) ||
       tagsInlineUnderTitle !== originalDisplaySettings.tagsInlineUnderTitle ||
       responseStateTrackingEnabled !== originalDisplaySettings.responseStateTrackingEnabled ||
-      defaultReplyInternal !== originalDisplaySettings.defaultReplyInternal
+      defaultReplyInternal !== originalDisplaySettings.defaultReplyInternal ||
+      defaultDontNotifyCustomer !== originalDisplaySettings.defaultDontNotifyCustomer
     );
   };
 
@@ -82,6 +87,11 @@ const DisplaySettings = (): React.JSX.Element => {
         const loadedTagsInline = s?.list?.tagsInlineUnderTitle || false;
         const loadedResponseStateTracking = s?.responseStateTrackingEnabled ?? true;
         const loadedDefaultReplyInternal = s?.defaultReplyInternal ?? false;
+        const loadedDefaultDontNotify = s?.defaultDontNotifyCustomer ?? false;
+
+        // Keep the shared suppression-default cache in step with what the admin
+        // sees, so dialogs opened after load/save use the same value.
+        primeDontNotifyCustomerDefault(loadedDefaultDontNotify);
 
         // Set current values
         setShowWeekday(loadedShowWeekday);
@@ -89,6 +99,7 @@ const DisplaySettings = (): React.JSX.Element => {
         setTagsInlineUnderTitle(loadedTagsInline);
         setResponseStateTrackingEnabled(loadedResponseStateTracking);
         setDefaultReplyInternal(loadedDefaultReplyInternal);
+        setDefaultDontNotifyCustomer(loadedDefaultDontNotify);
 
         // Store original values for change detection
         setOriginalDisplaySettings({
@@ -97,6 +108,7 @@ const DisplaySettings = (): React.JSX.Element => {
           tagsInlineUnderTitle: loadedTagsInline,
           responseStateTrackingEnabled: loadedResponseStateTracking,
           defaultReplyInternal: loadedDefaultReplyInternal,
+          defaultDontNotifyCustomer: loadedDefaultDontNotify,
         });
       } catch (e) {
         console.error('Failed to load ticketing display settings', e);
@@ -112,6 +124,7 @@ const DisplaySettings = (): React.JSX.Element => {
         showWeekday,
         responseStateTrackingEnabled,
         defaultReplyInternal,
+        defaultDontNotifyCustomer,
         list: {
           columnVisibility,
           tagsInlineUnderTitle,
@@ -130,7 +143,10 @@ const DisplaySettings = (): React.JSX.Element => {
         tagsInlineUnderTitle,
         responseStateTrackingEnabled,
         defaultReplyInternal,
+        defaultDontNotifyCustomer,
       });
+      // Reflect the saved value in the shared cache used by the ticket dialogs.
+      primeDontNotifyCustomerDefault(defaultDontNotifyCustomer);
     } catch (e) {
       handleError(e, t('settings.display.saveFailed', 'Failed to save display settings'));
     } finally {
@@ -155,6 +171,23 @@ const DisplaySettings = (): React.JSX.Element => {
           checked={defaultReplyInternal}
           onCheckedChange={setDefaultReplyInternal}
           label={t('settings.display.defaultReplyInternalLabel', 'Default ticket replies to Internal')}
+        />
+      </div>
+      <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
+        <h3 className="text-sm font-semibold text-[rgb(var(--color-text-800))] mb-2">
+          {t('settings.display.defaultDontNotifyCustomerTitle', "Don't notify the customer")}
+        </h3>
+        <p className="text-sm text-[rgb(var(--color-text-700))] mb-4">
+          {t(
+            'settings.display.defaultDontNotifyCustomerDescription',
+            'Start every "Don\'t notify the customer" checkbox ticked for all team members — status changes, contact changes, closure and comments. Users can still untick the box to send the notification for a single action.'
+          )}
+        </p>
+        <Switch
+          id="default-dont-notify-customer-toggle"
+          checked={defaultDontNotifyCustomer}
+          onCheckedChange={setDefaultDontNotifyCustomer}
+          label={t('settings.display.defaultDontNotifyCustomerLabel', 'Start actions with customer notifications off')}
         />
       </div>
       <div className="bg-white p-6 rounded-lg shadow-sm">

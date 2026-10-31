@@ -5,9 +5,9 @@ import type { TicketStatus } from "../../../api/tickets";
 import { useTheme } from "../../../ui/ThemeContext";
 import {
   activeTicketNotificationSuppression,
-  DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
   TicketUpdateFooter,
 } from "./TicketUpdateFooter";
+import { useTicketNotificationSuppression } from "./useTicketNotificationSuppression";
 
 export function StatusPickerModal({
   visible,
@@ -34,12 +34,12 @@ export function StatusPickerModal({
   const { t } = useTranslation("tickets");
   const busy = loading || updating;
   const [selectedStatusId, setSelectedStatusId] = useState<string | null>(currentStatusId ?? null);
-  const [suppression, setSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+  const { suppression, setSuppression, reset: resetSuppression } = useTicketNotificationSuppression();
 
   useEffect(() => {
     if (!visible) return;
     setSelectedStatusId(currentStatusId ?? null);
-    setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+    resetSuppression();
   }, [currentStatusId, visible]);
 
   return (
