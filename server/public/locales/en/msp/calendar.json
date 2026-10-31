@@ -243,6 +243,23 @@
         "defaults": {
           "providerName": "Outlook Calendar",
           "calendarId": "calendar"
+        },
+        "setup": {
+          "title": "Before you connect",
+          "intro": "In your Microsoft Entra app registration, add this redirect URI and grant these delegated permissions.",
+          "redirectUri": "Redirect URI",
+          "copy": "Copy",
+          "copied": "Copied",
+          "copyFailed": "Could not copy",
+          "unavailable": "Unavailable",
+          "permissions": "Delegated permissions (Microsoft Graph)",
+          "tenancy": "The app can be single-tenant or multitenant. Sign-in follows the directory (tenant) ID on the Microsoft profile bound to Calendar.",
+          "openProviders": "Open Microsoft provider settings"
+        },
+        "adminConsentPending": {
+          "title": "Administrator approval is pending.",
+          "body": "A Microsoft 365 administrator still has to approve the app registration bound to Calendar. Ask them to grant admin consent for the permissions listed below, then return here to connect Outlook Calendar.",
+          "openSettings": "Open Microsoft Provider Settings"
         }
       }
     }

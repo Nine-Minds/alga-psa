@@ -32,6 +32,7 @@ import {
   buildMicrosoftEmailRedirectUri,
   buildMicrosoftEmailSetupRedirectUri,
 } from '@alga-psa/shared/services/email/microsoftRedirectUris';
+import { MICROSOFT_CALENDAR_OAUTH_SCOPES } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { resolveMicrosoftBindingCandidateProfile } from '../../lib/microsoftConsumerProfileResolution';
 import {
   backfillMicrosoftEmailProviderIssuerMetadata,
@@ -826,11 +827,7 @@ function getMicrosoftIntegrationMetadata(baseUrl: string): NonNullable<
         'profile',
         'email',
       ],
-      calendar: [
-        'https://graph.microsoft.com/Calendars.ReadWrite',
-        'https://graph.microsoft.com/Mail.Read',
-        'offline_access',
-      ],
+      calendar: [...MICROSOFT_CALENDAR_OAUTH_SCOPES],
       sso: ['openid', 'profile', 'email'],
       teams: ['openid', 'profile', 'email', 'offline_access'],
       entra: [...ENTRA_DIRECT_DISPLAY_SCOPES],

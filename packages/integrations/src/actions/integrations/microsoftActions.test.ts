@@ -1,3 +1,4 @@
+import { MICROSOFT_CALENDAR_OAUTH_SCOPES } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -775,6 +776,8 @@ describe('Microsoft integration actions', () => {
       );
       expect(result.scopes?.email?.length).toBeGreaterThan(0);
       expect(result.scopes?.calendar?.length).toBeGreaterThan(0);
+      expect(result.scopes?.calendar).toEqual([...MICROSOFT_CALENDAR_OAUTH_SCOPES]);
+      expect(result.scopes?.calendar?.some((scope) => scope.includes('Mail.'))).toBe(false);
       expect(result.scopes?.teams).toEqual(['openid', 'profile', 'email', 'offline_access']);
       expect([...(result.profiles?.[0]?.consumers || [])].sort()).toEqual([
         'Calendar',

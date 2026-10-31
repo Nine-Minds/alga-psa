@@ -243,6 +243,23 @@
         "defaults": {
           "providerName": "Kalendarz programu Outlook",
           "calendarId": "calendar"
+        },
+        "setup": {
+          "title": "Przed połączeniem",
+          "intro": "W rejestracji aplikacji Microsoft Entra dodaj ten identyfikator URI przekierowania i przyznaj te uprawnienia delegowane.",
+          "redirectUri": "Identyfikator URI przekierowania",
+          "copy": "Kopiuj",
+          "copied": "Skopiowano",
+          "copyFailed": "Nie udało się skopiować",
+          "unavailable": "Niedostępne",
+          "permissions": "Uprawnienia delegowane (Microsoft Graph)",
+          "tenancy": "Aplikacja może być jednodzierżawna lub wielodzierżawna. Logowanie korzysta z identyfikatora katalogu (dzierżawy) z profilu Microsoft powiązanego z Calendar.",
+          "openProviders": "Otwórz ustawienia dostawców Microsoft"
+        },
+        "adminConsentPending": {
+          "title": "Zatwierdzenie przez administratora jest w toku.",
+          "body": "Administrator Microsoft 365 musi jeszcze zatwierdzić rejestrację aplikacji powiązaną z Calendar. Poproś o udzielenie zgody administratora na wymienione poniżej uprawnienia, a następnie wróć tutaj, aby połączyć Outlook Calendar.",
+          "openSettings": "Otwórz ustawienia dostawców Microsoft"
         }
       }
     }

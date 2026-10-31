@@ -22,6 +22,8 @@ interface MicrosoftProfileRow {
   client_id: string;
   tenant_id: string;
   client_secret_ref: string;
+  email_admin_consent_required?: boolean;
+  email_admin_consent_granted_at?: string | Date | null;
   capabilities: MicrosoftProfileConsumer[] | string | null;
   is_default: boolean;
   is_archived: boolean;
@@ -61,6 +63,12 @@ export interface MicrosoftConsumerProfileResolution {
   microsoftTenantId?: string;
   /** `binding` = a tenant-owned Microsoft profile; `app` = the platform-managed app. */
   credentialSource?: 'binding' | 'app';
+  /**
+   * Set on a `ready` binding when the bound profile still needs Microsoft 365
+   * administrator approval (same profile flag the email resolver turns into
+   * `pending_admin_consent`). Status surfaces use it; it never blocks refresh.
+   */
+  adminConsentPending?: boolean;
   message?: string;
   reasonCode?: MicrosoftConsumerProfileReasonCode;
 }
@@ -444,5 +452,8 @@ export async function resolveMicrosoftConsumerProfileConfig(
     clientSecret: clientSecret || undefined,
     microsoftTenantId: normalizeTenantId(profile.tenant_id),
     credentialSource: 'binding',
+    adminConsentPending: Boolean(
+      profile.email_admin_consent_required && !profile.email_admin_consent_granted_at
+    ),
   };
 }

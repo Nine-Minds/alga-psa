@@ -10,7 +10,7 @@ import { TIER_FEATURES, FEATURE_MINIMUM_TIER, TIER_LABELS, resolveTier, tierHasF
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getWebhookBaseUrl } from '../../../../../../lib/utils/email/webhookHelpers';
 import axios from 'axios';
-import { getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import { getMicrosoftTokenUrl, MICROSOFT_CALENDAR_OAUTH_SCOPES } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { MICROSOFT_MULTI_TENANT_AUTHORITY, microsoftIssuerKindFromSource, resolveMicrosoftOAuthAuthority } from '@alga-psa/shared/services/email/microsoftAuthority';
 import {
   classifyMicrosoftOAuthFailure,
@@ -304,7 +304,7 @@ export async function GET(request: NextRequest) {
         code: code,
         grant_type: 'authorization_code',
         redirect_uri: redirectUri,
-        scope: 'https://graph.microsoft.com/Calendars.ReadWrite https://graph.microsoft.com/MailboxSettings.ReadWrite offline_access'
+        scope: MICROSOFT_CALENDAR_OAUTH_SCOPES.join(' ')
       });
 
       const response = await axios.post(tokenUrl, params.toString(), {
