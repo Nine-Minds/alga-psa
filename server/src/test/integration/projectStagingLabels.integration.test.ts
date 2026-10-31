@@ -14,6 +14,9 @@
 import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+
+// This suite asserts real RBAC denial; opt out of the global rbac mock in server/src/test/setup.ts.
+vi.unmock('@alga-psa/auth/rbac');
 import type { Knex } from 'knex';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
