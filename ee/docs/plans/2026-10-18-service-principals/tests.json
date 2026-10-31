@@ -129,7 +129,7 @@
   {
     "id": "T014",
     "description": "Integration: REST GET /api/v1/tickets with a service principal key succeeds under its MSP role and 403s without the permission; a client-owned key is still rejected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F012",
       "F020",
@@ -160,7 +160,7 @@
   {
     "id": "T017",
     "description": "DB integration: POST time entry as a service principal without act-as \u2192 422 ACT_AS_REQUIRED; with act-as \u2192 user_id and created_by are the human and created_via_principal_id is the principal",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F055",
       "F062",
@@ -170,7 +170,7 @@
   {
     "id": "T018",
     "description": "DB integration: principal creates a ticket as itself (entered_by = principal, assigned_to = human ok, ticket_audit_logs actor_type service_principal); assigned_to or added resource = a service user \u2192 422 HUMAN_WORK_ASSIGNEE_INVALID",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F052",
       "F053",
@@ -181,7 +181,7 @@
   {
     "id": "T019",
     "description": "DB integration: interaction create and schedule entry create by a principal with no assignees and no act-as \u2192 ACT_AS_REQUIRED (no self-booking); explicit service assignee rejected; with act-as the via column is stamped",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F054",
       "F059",
@@ -192,7 +192,7 @@
   {
     "id": "T020",
     "description": "DB integration: time-sheet approve and time-entry approve by a bare principal \u2192 ACT_AS_REQUIRED; with act-as approved_by is the human and approved_via_principal_id is stamped",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F056",
       "F057",
@@ -218,7 +218,7 @@
   {
     "id": "T023",
     "description": "DB integration: act-as ticket update writes ticket_audit_logs actor_type='user', actor_user_id = human, via_principal_user_id = principal; auditLog details carry via",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F066",
       "F067",
@@ -381,7 +381,7 @@
   {
     "id": "T040",
     "description": "DB integration: principal posts a ticket comment with no visibility \u2192 stored internal; explicit is_internal=false without act-as \u2192 422 ACT_AS_REQUIRED and nothing stored; with act-as \u2192 public comment authored by the human with created_via_principal_id; a client-portal user's public comment is unaffected",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F101"
     ]
