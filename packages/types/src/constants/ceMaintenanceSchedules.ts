@@ -20,6 +20,7 @@ import { listExtensionMaintenanceSchedules } from './jobScheduleExtensions';
  */
 export const CE_SHARED_MAINTENANCE_JOBS: ReadonlyArray<string> = [
   'recover-file-uploads',
+  'co-managed-upload-cleanup',
   'expired-credits',
   'expiring-credits-notification',
   'prepaid-balance-alert-scan',

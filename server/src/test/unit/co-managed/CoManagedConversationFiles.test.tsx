@@ -1,7 +1,7 @@
 /* @vitest-environment jsdom */
 /// <reference types="@testing-library/jest-dom/vitest" />
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({ enabled: true, stager: vi.fn(), picker: vi.fn(() => null) }));
@@ -22,14 +22,14 @@ const resource = { tenant: 't', relationshipId: 'r', kind: 'ticket', id: 'k' } a
 const session = (audiences: string[]) => ({
   snapshot: () => ({ actor: { tenant: 'a', userId: 'u' }, items: [
     { storeTenant: 't', threadId: 'th1', commentId: 'c1', deleted: false }, { storeTenant: 't', threadId: 'th1', commentId: 'c2', deleted: false }, { storeTenant: 't', threadId: 'th2', commentId: 'c3', deleted: true }] }),
-  writeAudiences: () => audiences, load: vi.fn(),
+  writeAudiences: () => audiences, load: vi.fn(), subscribe: () => () => {}, version: () => 0,
 }) as any;
 
 describe('CoManagedConversationFiles', () => {
   beforeEach(() => { state.enabled = true; state.stager.mockClear(); state.picker.mockClear(); });
 
   it('resolves the comment-attachment slot per comment, the thread-header slot per thread, and offers the picker and registers the stager', () => {
-    render(<CoManagedConversationFiles session={session(['requester', 'shared_it'])} resource={resource} staging={staging} version={1} />);
+    render(<CoManagedConversationFiles session={session(['requester', 'shared_it'])} resource={resource} staging={staging} />);
     expect(state.stager).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId('picker')).toBeInTheDocument();
     expect(state.picker.mock.calls[0][0].limits).toEqual({ maxBytes: 1024, maxFiles: 20 });
@@ -39,11 +39,22 @@ describe('CoManagedConversationFiles', () => {
 
   it('renders nothing and registers the stager only through this panel; no write audience means no picker', () => {
     state.enabled = false;
-    const off = render(<CoManagedConversationFiles session={session(['requester'])} resource={resource} staging={staging} version={1} />);
+    const off = render(<CoManagedConversationFiles session={session(['requester'])} resource={resource} staging={staging} />);
     expect(off.container).toBeEmptyDOMElement();
     off.unmount();
     state.enabled = true;
-    render(<CoManagedConversationFiles session={session([])} resource={resource} staging={staging} version={1} />);
+    render(<CoManagedConversationFiles session={session([])} resource={resource} staging={staging} />);
     expect(screen.queryByTestId('picker')).toBeNull();
+  });
+
+  it('re-renders when the session finishes a load, so a freshly sent message gets its files surface', () => {
+    const listeners = new Set<() => void>();
+    let version = 0, items = [{ storeTenant: 't', threadId: 'th1', commentId: 'c1', deleted: false }];
+    const live = { snapshot: () => ({ actor: { tenant: 'a', userId: 'u' }, items }), writeAudiences: () => ['requester'], load: vi.fn(),
+      subscribe: (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; }, version: () => version } as any;
+    render(<CoManagedConversationFiles session={live} resource={resource} staging={staging} />);
+    expect(screen.getAllByTestId('files').map(n => n.textContent)).toEqual(['c1']);
+    act(() => { items = [...items, { storeTenant: 't', threadId: 'th1', commentId: 'c9', deleted: false }]; version += 1; listeners.forEach(l => l()); });
+    expect(screen.getAllByTestId('files').map(n => n.textContent)).toEqual(['c1', 'c9']);
   });
 });

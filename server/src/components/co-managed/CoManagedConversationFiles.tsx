@@ -32,8 +32,8 @@ const MAX_FILES = 20;
  */
 // LEVERAGE: friction conversation-inline-slots — TicketConversation/CommentItem have no per-comment slot, so files and the
 // disclosure control render in this panel beside the conversation instead of inside each comment bubble.
-export default function CoManagedConversationFiles({ session, resource, staging, version }: {
-  session: SharedConversationSession; resource: CoManagedSharedResource; staging: AttachmentStaging; version: number;
+export default function CoManagedConversationFiles({ session, resource, staging }: {
+  session: SharedConversationSession; resource: CoManagedSharedResource; staging: AttachmentStaging;
 }) {
   const { t } = useTranslation('msp/licensing');
   const { enabled } = useCapability('co-managed');
@@ -42,7 +42,8 @@ export default function CoManagedConversationFiles({ session, resource, staging,
   const commentSlots = useMemo(() => resolveUiSlots<{ component: string }>('ticket.conversation.comment-attachments', served), [served]);
   const headerSlots = useMemo(() => resolveUiSlots<{ component: string }>('ticket.conversation.thread-header', served), [served]);
   const [disclosing, setDisclosing] = useState<string | null>(null);
-  const [reload, setReload] = useState(0);
+  // Re-render whenever the session finishes a load: the files panel follows the conversation, not a host-passed counter.
+  useSyncExternalStore(session.subscribe, session.version, session.version);
   const staged = useSyncExternalStore(staging.subscribe, staging.getSnapshot, staging.getSnapshot);
   const snapshot = session.snapshot();
   if (!enabled || !snapshot) return null;
@@ -50,7 +51,7 @@ export default function CoManagedConversationFiles({ session, resource, staging,
   const threads = [...new Set(items.map(item => `${item.storeTenant}:${item.threadId}`))];
   const writeAudiences = session.writeAudiences();
   const maxBytes = coManagedAttachmentUploadLimit();
-  void version; void reload; void staged;
+  void staged;
   return <section id="co-managed-conversation-files" className="space-y-4 p-4">
     {writeAudiences.length > 0 && <SharedCommentAttachmentPicker staging={staging} limits={{ maxBytes, maxFiles: MAX_FILES }}
       attachable={writeAudiences.length > 0} disabled={false} />}
@@ -68,7 +69,7 @@ export default function CoManagedConversationFiles({ session, resource, staging,
             </Button>
             {disclosing === key && <Slot resource={resource} thread={ref} actor={{ tenant: snapshot.actor.tenant, userId: snapshot.actor.userId }}
               audiences={[...writeAudiences]} onClosed={() => setDisclosing(null)}
-              onSaved={() => { setDisclosing(null); void session.load().then(() => setReload(value => value + 1)); }} />}
+              onSaved={() => { setDisclosing(null); void session.load(); }} />}
           </div>;
         })}
         {thread.map(item => commentSlots.map(slot => {

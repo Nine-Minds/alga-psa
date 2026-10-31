@@ -62,6 +62,6 @@ export default function CoManagedSharedTicket({ summary, backHref }: { summary: 
     <TicketDataSourceProvider dataSource={dataSource}>
       <TicketDetailsContainer ticketData={ticketData} hideSlaStatus hideBilling hideScheduling hideTimeEntry hideMaterials disableAgentSchedule />
     </TicketDataSourceProvider>
-    {state === 'ready' && <CoManagedConversationFiles session={session} resource={summary.resource} staging={staging} version={0} />}
+    {state === 'ready' && <CoManagedConversationFiles session={session} resource={summary.resource} staging={staging} />}
   </div>;
 }

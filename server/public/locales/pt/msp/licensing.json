@@ -715,6 +715,83 @@
       "rejected": "Não foi possível salvar esta tarefa.",
       "saved": "Salvo.",
       "save": "Salvar"
+    },
+    "attachments": {
+      "title": "Anexos",
+      "add": "Anexar arquivo",
+      "choose": "Escolher arquivo",
+      "help": "Os ficheiros herdam a visibilidade desta mensagem. Máximo {{size}} MiB.",
+      "uploading": "A carregar…",
+      "upload": "Carregar",
+      "invalid": "Escolha um arquivo permitido dentro do limite de tamanho.",
+      "loadError": "Os anexos estão indisponíveis. Atualize para verificar o seu acesso.",
+      "unknownOutcome": "Não foi possível confirmar o carregamento. Tente novamente com o mesmo arquivo.",
+      "remove": "Remover",
+      "removeTitle": "Remover anexo",
+      "removeHelp": "Remover {{name}} desta mensagem? Quem visualizar a mensagem não poderá mais baixar este arquivo.",
+      "removeUnknownOutcome": "Não foi possível confirmar a remoção. Tente novamente para verificar o mesmo arquivo.",
+      "removing": "Removendo…",
+      "removeNamed": "Remover {{name}}"
+    },
+    "disclosure": {
+      "title": "Alterar o público da conversa",
+      "review": "Rever novamente",
+      "confirm": "Confirmar alteração",
+      "scope": "Isto altera o público de toda a conversa: {{comments}} mensagens e {{attachments}} anexos.",
+      "current": "Público atual: {{audience}}",
+      "help": "As respostas e os anexos herdam este público. Restringir o acesso não recupera informações já lidas ou transferidas.",
+      "pending": "O envio de um anexo está pendente. Conclua o envio antes de alterar o público.",
+      "unknownOutcome": "O resultado é desconhecido. Tente novamente para verificar a mesma alteração.",
+      "transferHelp": "A partilha transfere esta conversa e os seus anexos para o espaço de trabalho do cliente. A conversa privada original do MSP é mantida como histórico só de leitura.",
+      "open": "Alterar quem pode ver este tópico"
+    },
+    "conversation": {
+      "audience": "Visível para",
+      "audiences": {
+        "requester": "Solicitante e equipes de TI",
+        "shared_it": "Equipes de TI compartilhadas",
+        "organization_private": "Somente minha organização"
+      },
+      "audienceHelp": {
+        "requester": "Visível para solicitantes autorizados e equipes de TI de ambas as organizações.",
+        "shared_it": "Visível para as equipes de TI autorizadas de ambas as organizações, sem acesso para o solicitante.",
+        "organization_private": "Visível somente para o pessoal autorizado da sua organização."
+      },
+      "files": {
+        "choose": "Anexar arquivos",
+        "help": "Até {{count}} arquivos de {{size}} MiB cada. Os arquivos são compartilhados com os destinatários desta mensagem.",
+        "remove": "Remover",
+        "removeNamed": "Remover {{name}}",
+        "invalid": "Remova os arquivos que excedem o limite de tamanho ou quantidade antes de enviar.",
+        "preparing": "Preparando arquivos…",
+        "uploading": "{{completed}} de {{total}} arquivos enviados…",
+        "publishing": "Publicando mensagem e arquivos…",
+        "notReady": "Alguns arquivos não estão prontos. Tente novamente para concluir o envio e publicar a mesma mensagem.",
+        "preparationFailed": "Não foi possível ler os arquivos selecionados. Selecione-os novamente ou remova-os antes de tentar de novo.",
+        "abandoned": "Este rascunho foi descartado. Salve novamente para criar uma nova mensagem com os arquivos selecionados.",
+        "audienceUnavailable": "Não é possível anexar arquivos a mensagens para este público. Remova os arquivos ou escolha outro público.",
+        "cancelUnknownOutcome": "Não foi possível confirmar o cancelamento. Tente novamente para verificar a mesma solicitação de cancelamento.",
+        "canceling": "Cancelando…"
+      }
+    },
+    "ticket": {
+      "cancel": "Cancelar",
+      "loading": "Carregando…",
+      "reload": "Recarregar estado atual",
+      "retry": "Tentar novamente",
+      "saving": "Salvando…"
+    },
+    "editor": {
+      "errors": {
+        "invalid": "Alguns valores são inválidos. Confira as alterações e tente novamente.",
+        "conflict": "Este chamado foi alterado. Recarregue antes de salvar suas alterações.",
+        "operationConflict": "Esta solicitação de salvamento já foi usada para outra alteração. Recarregue o chamado.",
+        "forbidden": "Seu acesso a este chamado mudou. Recarregue para continuar.",
+        "readOnly": "Este espaço está em modo somente leitura. Recarregue para ver o estado atual.",
+        "closeRules": "O chamado deve atender aos requisitos de encerramento do seu quadro antes de ser encerrado.",
+        "unknownOutcome": "Não foi possível confirmar o salvamento. Tente novamente com a mesma solicitação ou descarte as alterações e recarregue.",
+        "slaSetupRequired": "Seu MSP precisa configurar a política de SLA e o mapeamento de prioridades antes de reabrir este chamado sob sua responsabilidade."
+      }
     }
   },
   "common": {

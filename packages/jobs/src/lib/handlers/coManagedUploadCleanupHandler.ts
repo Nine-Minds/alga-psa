@@ -1,4 +1,3 @@
-import { defineJob, getJobDescriptor } from '../jobDescriptors';
 import { withCapabilityJob } from '../jobs/capabilityJob';
 
 export const CO_MANAGED_UPLOAD_CLEANUP_JOB = 'co-managed-upload-cleanup';
@@ -36,14 +35,15 @@ export async function coManagedUploadCleanupHandler(input: { tenantId: string; l
 export const coManagedUploadCleanupJob = withCapabilityJob<{ tenantId: string; limit?: number }>('co-managed',
   async (_jobId, data) => { await coManagedUploadCleanupHandler(data); });
 
-/** Declares the job as data; idempotent. Capability-gated: runs only for tenants `co-managed` serves. */
-export function registerCoManagedUploadCleanupJob(): void {
-  if (getJobDescriptor(CO_MANAGED_UPLOAD_CLEANUP_JOB)) return;
-  defineJob({
-    name: CO_MANAGED_UPLOAD_CLEANUP_JOB,
-    scope: 'tenant',
-    capability: 'co-managed',
-    schedule: { cron: '17 * * * *' },
-    run: (tenantId) => coManagedUploadCleanupHandler({ tenantId }),
-  });
-}
+/**
+ * The fan-out definition. The job is NATIVE to the schedule catalog
+ * (MAINTENANCE_FANOUT_SCHEDULES / CE_SHARED_MAINTENANCE_JOBS carry its cron statically, so
+ * both schedulers see it without any server boot code); `defineJob` would reject it as a native
+ * schedule name. The server registers this with `registerMaintenanceJob`. Capability-gated: runs
+ * only for tenants `co-managed` serves, and is inert when the capability filter is absent.
+ */
+export const coManagedUploadCleanupJobDef = {
+  scope: 'tenant' as const,
+  capability: 'co-managed',
+  run: (tenantId: string) => coManagedUploadCleanupHandler({ tenantId }),
+};

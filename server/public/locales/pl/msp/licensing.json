@@ -719,6 +719,83 @@
       "rejected": "Nie udało się zapisać tego zadania.",
       "saved": "Zapisano.",
       "save": "Zapisz"
+    },
+    "attachments": {
+      "title": "Załączniki",
+      "add": "Dołącz plik",
+      "choose": "Wybierz plik",
+      "help": "Pliki dziedziczą widoczność tej wiadomości. Maksymalnie {{size}} MiB.",
+      "uploading": "Przesyłanie…",
+      "upload": "Prześlij",
+      "invalid": "Wybierz dozwolony plik mieszczący się w limicie rozmiaru.",
+      "loadError": "Załączniki są niedostępne. Odśwież, aby sprawdzić dostęp.",
+      "unknownOutcome": "Nie udało się potwierdzić przesłania. Spróbuj ponownie z tym samym plikiem.",
+      "remove": "Usuń",
+      "removeTitle": "Usuń załącznik",
+      "removeHelp": "Usunąć {{name}} z tej wiadomości? Osoby przeglądające wiadomość nie będą już mogły pobrać tego pliku.",
+      "removeUnknownOutcome": "Nie można potwierdzić usunięcia. Spróbuj ponownie, aby sprawdzić ten sam plik.",
+      "removing": "Usuwanie…",
+      "removeNamed": "Usuń {{name}}"
+    },
+    "disclosure": {
+      "title": "Zmień widoczność wątku",
+      "review": "Sprawdź ponownie",
+      "confirm": "Potwierdź zmianę",
+      "scope": "To zmienia widoczność całego wątku: {{comments}} wiadomości i {{attachments}} załączników.",
+      "current": "Obecna widoczność: {{audience}}",
+      "help": "Odpowiedzi i załączniki dziedziczą tę widoczność. Ograniczenie dostępu nie cofa informacji już przeczytanych lub pobranych.",
+      "pending": "Przesyłanie załącznika oczekuje na zakończenie. Zakończ je przed zmianą widoczności.",
+      "unknownOutcome": "Wynik jest nieznany. Ponów próbę, aby sprawdzić tę samą zmianę.",
+      "transferHelp": "Udostępnienie przenosi ten wątek i jego załączniki do obszaru roboczego klienta. Oryginalny prywatny wątek MSP pozostaje historią tylko do odczytu.",
+      "open": "Zmień, kto widzi ten wątek"
+    },
+    "conversation": {
+      "audience": "Widoczne dla",
+      "audiences": {
+        "requester": "Zgłaszający i zespoły IT",
+        "shared_it": "Wspólne zespoły IT",
+        "organization_private": "Tylko moja organizacja"
+      },
+      "audienceHelp": {
+        "requester": "Widoczne dla uprawnionych zgłaszających i pracowników IT obu organizacji.",
+        "shared_it": "Widoczne dla uprawnionych pracowników IT obu organizacji, bez dostępu dla zgłaszającego.",
+        "organization_private": "Widoczne tylko dla uprawnionych pracowników Twojej organizacji."
+      },
+      "files": {
+        "choose": "Dołącz pliki",
+        "help": "Maksymalnie {{count}} plików, każdy do {{size}} MiB. Pliki są udostępniane odbiorcom tej wiadomości.",
+        "remove": "Usuń",
+        "removeNamed": "Usuń {{name}}",
+        "invalid": "Przed wysłaniem usuń pliki przekraczające limit rozmiaru lub liczby plików.",
+        "preparing": "Przygotowywanie plików…",
+        "uploading": "Przesłano {{completed}} z {{total}} plików…",
+        "publishing": "Publikowanie wiadomości i plików…",
+        "notReady": "Niektóre pliki nie są gotowe. Spróbuj ponownie, aby dokończyć przesyłanie i wysłać tę samą wiadomość.",
+        "preparationFailed": "Nie można odczytać wybranych plików. Wybierz je ponownie lub usuń przed ponowną próbą.",
+        "abandoned": "Ten szkic został odrzucony. Zapisz ponownie, aby utworzyć nową wiadomość z wybranymi plikami.",
+        "audienceUnavailable": "Do wiadomości dla tych odbiorców nie można dołączać plików. Usuń pliki lub wybierz innych odbiorców.",
+        "cancelUnknownOutcome": "Nie można potwierdzić anulowania. Spróbuj ponownie, aby sprawdzić to samo żądanie anulowania.",
+        "canceling": "Anulowanie…"
+      }
+    },
+    "ticket": {
+      "cancel": "Anuluj",
+      "loading": "Wczytywanie…",
+      "reload": "Wczytaj aktualny stan",
+      "retry": "Ponów",
+      "saving": "Zapisywanie…"
+    },
+    "editor": {
+      "errors": {
+        "invalid": "Niektóre wartości są nieprawidłowe. Sprawdź zmiany i spróbuj ponownie.",
+        "conflict": "To zgłoszenie zostało zmienione. Odśwież je przed zapisaniem zmian.",
+        "operationConflict": "To żądanie zapisu zostało już użyte do innej zmiany. Odśwież zgłoszenie.",
+        "forbidden": "Twój dostęp do tego zgłoszenia uległ zmianie. Odśwież, aby kontynuować.",
+        "readOnly": "Ten obszar jest tylko do odczytu. Odśwież, aby zobaczyć jego obecny stan.",
+        "closeRules": "Przed zamknięciem zgłoszenie musi spełnić wymagania zamknięcia określone na jego tablicy.",
+        "unknownOutcome": "Nie udało się potwierdzić zapisu. Ponów to samo żądanie albo odrzuć zmiany i odśwież.",
+        "slaSetupRequired": "Twój MSP musi skonfigurować zasady SLA i mapowanie priorytetów, zanim zgłoszenie będzie można ponownie otworzyć pod odpowiedzialnością MSP."
+      }
     }
   },
   "common": {

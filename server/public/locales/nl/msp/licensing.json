@@ -715,6 +715,83 @@
       "rejected": "Deze taak kon niet worden opgeslagen.",
       "saved": "Opgeslagen.",
       "save": "Opslaan"
+    },
+    "attachments": {
+      "title": "Bijlagen",
+      "add": "Bestand bijvoegen",
+      "choose": "Bestand kiezen",
+      "help": "Bestanden nemen de zichtbaarheid van dit bericht over. Maximaal {{size}} MiB.",
+      "uploading": "Uploaden…",
+      "upload": "Uploaden",
+      "invalid": "Kies een toegestaan bestand binnen de maximale grootte.",
+      "loadError": "Bijlagen zijn niet beschikbaar. Vernieuw om uw toegang te controleren.",
+      "unknownOutcome": "We konden de upload niet bevestigen. Probeer hetzelfde bestand opnieuw.",
+      "remove": "Verwijderen",
+      "removeTitle": "Bijlage verwijderen",
+      "removeHelp": "{{name}} uit dit bericht verwijderen? Mensen die het bericht bekijken, kunnen dit bestand daarna niet meer downloaden.",
+      "removeUnknownOutcome": "We konden de verwijdering niet bevestigen. Probeer opnieuw om hetzelfde bestand te controleren.",
+      "removing": "Verwijderen…",
+      "removeNamed": "{{name}} verwijderen"
+    },
+    "disclosure": {
+      "title": "Zichtbaarheid van gesprek wijzigen",
+      "review": "Opnieuw controleren",
+      "confirm": "Wijziging bevestigen",
+      "scope": "Dit wijzigt de zichtbaarheid van het hele gesprek: {{comments}} berichten en {{attachments}} bijlagen.",
+      "current": "Huidige zichtbaarheid: {{audience}}",
+      "help": "Antwoorden en bijlagen nemen deze zichtbaarheid over. Beperkte toegang haalt eerder gelezen of gedownloade informatie niet terug.",
+      "pending": "Er staat nog een bijlage-upload open. Voltooi de upload voordat u de zichtbaarheid wijzigt.",
+      "unknownOutcome": "Het resultaat is onbekend. Probeer opnieuw om dezelfde wijziging te controleren.",
+      "transferHelp": "Delen verplaatst dit gesprek en de bijlagen naar de werkruimte van de klant. Het oorspronkelijke privégesprek van de MSP blijft bewaard als alleen-lezen geschiedenis.",
+      "open": "Wijzig wie deze thread kan zien"
+    },
+    "conversation": {
+      "audience": "Zichtbaar voor",
+      "audiences": {
+        "requester": "Aanvrager en IT-teams",
+        "shared_it": "Gedeelde IT-teams",
+        "organization_private": "Alleen mijn organisatie"
+      },
+      "audienceHelp": {
+        "requester": "Zichtbaar voor bevoegde aanvragers en IT-medewerkers van beide organisaties.",
+        "shared_it": "Zichtbaar voor bevoegde IT-medewerkers van beide organisaties, zonder toegang voor de aanvrager.",
+        "organization_private": "Alleen zichtbaar voor bevoegde medewerkers van uw organisatie."
+      },
+      "files": {
+        "choose": "Bestanden bijvoegen",
+        "help": "Maximaal {{count}} bestanden van elk {{size}} MiB. Bestanden worden gedeeld met de doelgroep van dit bericht.",
+        "remove": "Verwijderen",
+        "removeNamed": "{{name}} verwijderen",
+        "invalid": "Verwijder bestanden die de limiet voor grootte of aantal overschrijden voordat u verzendt.",
+        "preparing": "Bestanden voorbereiden…",
+        "uploading": "{{completed}} van {{total}} bestanden geüpload…",
+        "publishing": "Bericht en bestanden publiceren…",
+        "notReady": "Sommige bestanden zijn nog niet klaar. Probeer opnieuw om de upload te voltooien en hetzelfde bericht te verzenden.",
+        "preparationFailed": "De geselecteerde bestanden konden niet worden gelezen. Selecteer ze opnieuw of verwijder ze voordat u het opnieuw probeert.",
+        "abandoned": "Dit concept is verwijderd. Sla opnieuw op om een nieuw bericht met de geselecteerde bestanden te maken.",
+        "audienceUnavailable": "Aan berichten voor dit publiek kunnen geen bestanden worden toegevoegd. Verwijder de bestanden of kies een ander publiek.",
+        "cancelUnknownOutcome": "We konden de annulering niet bevestigen. Probeer opnieuw om hetzelfde annuleringsverzoek te controleren.",
+        "canceling": "Annuleren…"
+      }
+    },
+    "ticket": {
+      "cancel": "Annuleren",
+      "loading": "Laden…",
+      "reload": "Huidige status laden",
+      "retry": "Opnieuw proberen",
+      "saving": "Opslaan…"
+    },
+    "editor": {
+      "errors": {
+        "invalid": "Sommige waarden zijn ongeldig. Controleer uw wijzigingen en probeer het opnieuw.",
+        "conflict": "Dit ticket is gewijzigd. Vernieuw het voordat u uw wijzigingen opslaat.",
+        "operationConflict": "Dit opslagverzoek is al voor een andere wijziging gebruikt. Vernieuw het ticket.",
+        "forbidden": "Uw toegang tot dit ticket is gewijzigd. Vernieuw om verder te gaan.",
+        "readOnly": "Deze werkruimte is alleen-lezen. Vernieuw om de huidige status te bekijken.",
+        "closeRules": "Het ticket moet voldoen aan de sluitingsvereisten van het bord voordat het kan worden gesloten.",
+        "unknownOutcome": "We konden niet bevestigen of de wijziging is opgeslagen. Probeer hetzelfde verzoek opnieuw of verwerp uw wijzigingen en vernieuw.",
+        "slaSetupRequired": "Uw MSP moet het SLA-beleid en de prioriteitskoppeling configureren voordat dit ticket onder MSP-verantwoordelijkheid kan worden heropend."
+      }
     }
   },
   "common": {

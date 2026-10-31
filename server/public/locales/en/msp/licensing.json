@@ -715,6 +715,83 @@
       "rejected": "This task could not be saved.",
       "saved": "Saved.",
       "save": "Save"
+    },
+    "attachments": {
+      "title": "Attachments",
+      "add": "Attach file",
+      "choose": "Choose file",
+      "help": "Files inherit this message’s audience. Maximum {{size}} MiB.",
+      "uploading": "Uploading…",
+      "upload": "Upload",
+      "invalid": "Choose an allowed file within the size limit.",
+      "loadError": "Attachments are unavailable. Refresh to check your access.",
+      "unknownOutcome": "We could not confirm the upload. Retry to check the same file.",
+      "remove": "Remove",
+      "removeTitle": "Remove attachment",
+      "removeHelp": "Remove {{name}} from this message? People viewing the message will no longer be able to download this file.",
+      "removeUnknownOutcome": "We could not confirm removal. Retry to check the same file.",
+      "removing": "Removing…",
+      "removeNamed": "Remove {{name}}"
+    },
+    "disclosure": {
+      "title": "Change thread audience",
+      "review": "Review again",
+      "confirm": "Confirm audience change",
+      "scope": "This changes the audience of the entire thread: {{comments}} messages and {{attachments}} attachments.",
+      "current": "Current audience: {{audience}}",
+      "help": "Replies and attachments inherit this audience. Restricting access cannot recall information people have already read or downloaded.",
+      "pending": "An attachment upload is still pending. Finish the upload before changing the audience.",
+      "unknownOutcome": "The result is unknown. Retry to check the same audience change.",
+      "transferHelp": "Sharing transfers this thread and its attachments into the customer workspace. The original MSP-private thread is retained as read-only history.",
+      "open": "Change who can see this thread"
+    },
+    "conversation": {
+      "audience": "Visible to",
+      "audiences": {
+        "requester": "Requester and IT teams",
+        "shared_it": "Shared IT teams",
+        "organization_private": "My organization only"
+      },
+      "audienceHelp": {
+        "requester": "Visible to authorized requesters and IT staff in both organizations.",
+        "shared_it": "Visible to authorized IT staff in both organizations, without requester access.",
+        "organization_private": "Visible only to authorized staff in your organization."
+      },
+      "files": {
+        "choose": "Attach files",
+        "help": "Up to {{count}} files, {{size}} MiB each. Files are shared with this message’s audience.",
+        "remove": "Remove",
+        "removeNamed": "Remove {{name}}",
+        "invalid": "Remove files that exceed the size limit or file count before sending.",
+        "preparing": "Preparing files…",
+        "uploading": "Uploaded {{completed}} of {{total}} files…",
+        "publishing": "Publishing message and files…",
+        "notReady": "Some files are not ready. Retry to finish uploading and send the same message.",
+        "preparationFailed": "Could not read the selected files. Select them again or remove them before retrying.",
+        "abandoned": "This draft was discarded. Save again to create a new message with the selected files.",
+        "audienceUnavailable": "Files cannot be attached to messages for this audience. Remove the files or choose another audience.",
+        "cancelUnknownOutcome": "We could not confirm cancellation. Retry to check the same cancellation request.",
+        "canceling": "Canceling…"
+      }
+    },
+    "ticket": {
+      "cancel": "Cancel",
+      "loading": "Loading…",
+      "reload": "Reload current state",
+      "retry": "Retry",
+      "saving": "Saving…"
+    },
+    "editor": {
+      "errors": {
+        "invalid": "Some values are not valid. Check your changes and try again.",
+        "conflict": "This ticket changed. Reload it before saving your changes.",
+        "operationConflict": "This save request was already used for a different edit. Reload the ticket.",
+        "forbidden": "Your access to this ticket changed. Reload to continue.",
+        "readOnly": "This workspace is read-only. Reload to see its current state.",
+        "closeRules": "The ticket must meet its board’s closing requirements before it can be closed.",
+        "unknownOutcome": "We could not confirm whether the edit was saved. Retry the same save, or discard your changes and reload.",
+        "slaSetupRequired": "Your MSP must configure its SLA policy and priority mapping before this ticket can be reopened under MSP responsibility."
+      }
     }
   },
   "common": {

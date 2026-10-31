@@ -480,6 +480,14 @@ describe('A4 thread disclosure', () => {
       const publishedReceipt = { storeTenant: msp.tenant, threadId: operationId, commentId: copyOfFirst.comment_id };
       expect(sha((await readAs(tech, publishedReceipt, copyOfFirst.attachment_id)).content)).toBe(files[0].hash);
       await denied(portalRead(publishedReceipt, copyOfFirst.attachment_id));
+      // the conversation reader no longer lists the disclosed SOURCE thread (no duplicate, no unreadable attachments, no disclose control):
+      // only the shared copy remains, and a not-yet-disclosed private thread still shows.
+      const { getCoManagedTicketConversation } = await import('../../../../packages/co-managed/src/ticketConversation');
+      const listed = await getCoManagedTicketConversation(db, alice.actor, alice.resource);
+      expect(listed.items.some(item => item.threadId === receipt.threadId)).toBe(false);
+      expect(listed.items.filter(item => item.threadId === operationId).map(item => item.audience)).toEqual(copiedComments.map(() => 'shared_it'));
+      const stillPrivate = await privateThread(sourceFiles(1));
+      expect((await getCoManagedTicketConversation(db, alice.actor, alice.resource)).items.some(item => item.threadId === stillPrivate.threadId && item.audience === 'organization_private')).toBe(true);
       // replay is the same receipt, no second transfer
       expect(await discloseCoManagedPrivateThread(db, alice.actor, alice.resource,
         { ...thread, operationId, expectedSnapshot: preview.snapshot, audience: 'shared_it', confirmed: true }, transport, after)).toEqual(disclosed);

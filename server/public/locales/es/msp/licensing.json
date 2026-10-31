@@ -715,6 +715,83 @@
       "rejected": "No se pudo guardar esta tarea.",
       "saved": "Guardado.",
       "save": "Guardar"
+    },
+    "attachments": {
+      "title": "Archivos adjuntos",
+      "add": "Adjuntar archivo",
+      "choose": "Elegir archivo",
+      "help": "Los archivos heredan la visibilidad de este mensaje. Máximo {{size}} MiB.",
+      "uploading": "Subiendo…",
+      "upload": "Subir",
+      "invalid": "Elija un archivo permitido que no supere el límite de tamaño.",
+      "loadError": "Los archivos adjuntos no están disponibles. Actualice para comprobar su acceso.",
+      "unknownOutcome": "No pudimos confirmar la subida. Reintente con el mismo archivo.",
+      "remove": "Quitar",
+      "removeTitle": "Quitar archivo adjunto",
+      "removeHelp": "¿Quitar {{name}} de este mensaje? Quienes vean el mensaje ya no podrán descargar este archivo.",
+      "removeUnknownOutcome": "No pudimos confirmar la eliminación. Reintente para comprobar el mismo archivo.",
+      "removing": "Quitando…",
+      "removeNamed": "Quitar {{name}}"
+    },
+    "disclosure": {
+      "title": "Cambiar la audiencia del hilo",
+      "review": "Revisar de nuevo",
+      "confirm": "Confirmar cambio de audiencia",
+      "scope": "Esto cambia la audiencia de todo el hilo: {{comments}} mensajes y {{attachments}} archivos adjuntos.",
+      "current": "Audiencia actual: {{audience}}",
+      "help": "Las respuestas y los adjuntos heredan esta audiencia. Restringir el acceso no recupera la información ya leída o descargada.",
+      "pending": "Hay una carga de adjunto pendiente. Complétela antes de cambiar la audiencia.",
+      "unknownOutcome": "Se desconoce el resultado. Reintente para comprobar el mismo cambio de audiencia.",
+      "transferHelp": "Al compartir, este hilo y sus adjuntos se transfieren al espacio de trabajo del cliente. El hilo privado original del MSP se conserva como historial de solo lectura.",
+      "open": "Cambiar quién puede ver este hilo"
+    },
+    "conversation": {
+      "audience": "Visible para",
+      "audiences": {
+        "requester": "Solicitante y equipos de TI",
+        "shared_it": "Equipos de TI compartidos",
+        "organization_private": "Solo mi organización"
+      },
+      "audienceHelp": {
+        "requester": "Visible para solicitantes autorizados y personal de TI de ambas organizaciones.",
+        "shared_it": "Visible para el personal de TI autorizado de ambas organizaciones, sin acceso para el solicitante.",
+        "organization_private": "Visible solo para el personal autorizado de su organización."
+      },
+      "files": {
+        "choose": "Adjuntar archivos",
+        "help": "Hasta {{count}} archivos de {{size}} MiB cada uno. Los archivos se comparten con los destinatarios de este mensaje.",
+        "remove": "Quitar",
+        "removeNamed": "Quitar {{name}}",
+        "invalid": "Quite los archivos que superen el límite de tamaño o cantidad antes de enviar.",
+        "preparing": "Preparando archivos…",
+        "uploading": "Se han subido {{completed}} de {{total}} archivos…",
+        "publishing": "Publicando el mensaje y los archivos…",
+        "notReady": "Algunos archivos no están listos. Reintente para terminar la carga y enviar el mismo mensaje.",
+        "preparationFailed": "No se pudieron leer los archivos seleccionados. Selecciónelos de nuevo o quítelos antes de reintentar.",
+        "abandoned": "Se descartó este borrador. Guarde de nuevo para crear un mensaje nuevo con los archivos seleccionados.",
+        "audienceUnavailable": "No se pueden adjuntar archivos a los mensajes de esta audiencia. Quite los archivos o elija otra audiencia.",
+        "cancelUnknownOutcome": "No pudimos confirmar la cancelación. Reintente para comprobar la misma solicitud de cancelación.",
+        "canceling": "Cancelando…"
+      }
+    },
+    "ticket": {
+      "cancel": "Cancelar",
+      "loading": "Cargando…",
+      "reload": "Recargar estado actual",
+      "retry": "Reintentar",
+      "saving": "Guardando…"
+    },
+    "editor": {
+      "errors": {
+        "invalid": "Algunos valores no son válidos. Revise los cambios e inténtelo de nuevo.",
+        "conflict": "Este ticket ha cambiado. Vuelva a cargarlo antes de guardar sus cambios.",
+        "operationConflict": "Esta solicitud de guardado ya se usó para otra modificación. Vuelva a cargar el ticket.",
+        "forbidden": "Su acceso a este ticket ha cambiado. Vuelva a cargarlo para continuar.",
+        "readOnly": "Este espacio es de solo lectura. Vuelva a cargarlo para ver su estado actual.",
+        "closeRules": "El ticket debe cumplir los requisitos de cierre de su tablero antes de poder cerrarse.",
+        "unknownOutcome": "No pudimos confirmar si se guardó la modificación. Reintente el mismo guardado o descarte los cambios y vuelva a cargar.",
+        "slaSetupRequired": "Su MSP debe configurar su política de SLA y la asignación de prioridades antes de reabrir este ticket bajo su responsabilidad."
+      }
     }
   },
   "common": {

@@ -715,6 +715,83 @@
       "rejected": "Det gick inte att spara uppgiften.",
       "saved": "Sparat.",
       "save": "Spara"
+    },
+    "attachments": {
+      "title": "Bilagor",
+      "add": "Bifoga fil",
+      "choose": "Välj fil",
+      "help": "Filer ärver meddelandets målgrupp. Högst {{size}} MiB.",
+      "uploading": "Laddar upp…",
+      "upload": "Ladda upp",
+      "invalid": "Välj en tillåten fil inom storleksgränsen.",
+      "loadError": "Bilagor är inte tillgängliga. Uppdatera för att kontrollera din åtkomst.",
+      "unknownOutcome": "Vi kunde inte bekräfta uppladdningen. Försök igen för att kontrollera samma fil.",
+      "remove": "Ta bort",
+      "removeTitle": "Ta bort bilaga",
+      "removeHelp": "Ta bort {{name}} från det här meddelandet? De som visar meddelandet kommer inte längre att kunna ladda ner filen.",
+      "removeUnknownOutcome": "Vi kunde inte bekräfta borttagningen. Försök igen för att kontrollera samma fil.",
+      "removing": "Tar bort…",
+      "removeNamed": "Ta bort {{name}}"
+    },
+    "disclosure": {
+      "title": "Ändra trådens målgrupp",
+      "review": "Granska igen",
+      "confirm": "Bekräfta ändrad målgrupp",
+      "scope": "Detta ändrar målgruppen för hela tråden: {{comments}} meddelanden och {{attachments}} bilagor.",
+      "current": "Nuvarande målgrupp: {{audience}}",
+      "help": "Svar och bilagor ärver den här målgruppen. Begränsad åtkomst kan inte ta tillbaka information som redan har lästs eller laddats ner.",
+      "pending": "En bilaga laddas fortfarande upp. Slutför uppladdningen innan du ändrar målgruppen.",
+      "unknownOutcome": "Resultatet är okänt. Försök igen för att kontrollera samma målgruppsändring.",
+      "transferHelp": "Delning överför den här tråden och dess bilagor till kundens arbetsyta. Den ursprungliga MSP-privata tråden sparas som skrivskyddad historik.",
+      "open": "Ändra vem som kan se den här tråden"
+    },
+    "conversation": {
+      "audience": "Synligt för",
+      "audiences": {
+        "requester": "Anmälare och IT-team",
+        "shared_it": "Delade IT-team",
+        "organization_private": "Endast min organisation"
+      },
+      "audienceHelp": {
+        "requester": "Synligt för behöriga anmälare och IT-personal i båda organisationerna.",
+        "shared_it": "Synligt för behörig IT-personal i båda organisationerna, utan åtkomst för anmälare.",
+        "organization_private": "Synligt endast för behörig personal i din organisation."
+      },
+      "files": {
+        "choose": "Bifoga filer",
+        "help": "Upp till {{count}} filer, {{size}} MiB vardera. Filer delas med meddelandets målgrupp.",
+        "remove": "Ta bort",
+        "removeNamed": "Ta bort {{name}}",
+        "invalid": "Ta bort filer som överskrider storleksgränsen eller antalsgränsen innan du skickar.",
+        "preparing": "Förbereder filer…",
+        "uploading": "Har laddat upp {{completed}} av {{total}} filer…",
+        "publishing": "Publicerar meddelande och filer…",
+        "notReady": "Vissa filer är inte klara. Försök igen för att slutföra uppladdningen och skicka samma meddelande.",
+        "preparationFailed": "Det gick inte att läsa de valda filerna. Välj dem igen eller ta bort dem innan du försöker igen.",
+        "abandoned": "Utkastet har kastats. Spara igen för att skapa ett nytt meddelande med de valda filerna.",
+        "audienceUnavailable": "Filer kan inte bifogas till meddelanden för den här målgruppen. Ta bort filerna eller välj en annan målgrupp.",
+        "cancelUnknownOutcome": "Det gick inte att bekräfta avbrytandet. Försök igen för att kontrollera samma avbrytandebegäran.",
+        "canceling": "Avbryter…"
+      }
+    },
+    "ticket": {
+      "cancel": "Avbryt",
+      "loading": "Läser in…",
+      "reload": "Ladda om aktuellt tillstånd",
+      "retry": "Försök igen",
+      "saving": "Sparar…"
+    },
+    "editor": {
+      "errors": {
+        "invalid": "Vissa värden är ogiltiga. Kontrollera dina ändringar och försök igen.",
+        "conflict": "Ärendet har ändrats. Ladda om det innan du sparar dina ändringar.",
+        "operationConflict": "Den här sparbegäran har redan använts för en annan ändring. Ladda om ärendet.",
+        "forbidden": "Din åtkomst till ärendet har ändrats. Ladda om för att fortsätta.",
+        "readOnly": "Den här arbetsytan är skrivskyddad. Ladda om för att se aktuellt tillstånd.",
+        "closeRules": "Ärendet måste uppfylla tavlans stängningskrav innan det kan stängas.",
+        "unknownOutcome": "Det gick inte att bekräfta om ändringen sparades. Försök spara igen, eller kasta ändringarna och ladda om.",
+        "slaSetupRequired": "Din MSP måste konfigurera sin SLA-policy och prioritetsmappning innan ärendet kan öppnas igen under MSP-ansvar."
+      }
     }
   },
   "common": {

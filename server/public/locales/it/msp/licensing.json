@@ -715,6 +715,83 @@
       "rejected": "Impossibile salvare questa attività.",
       "saved": "Salvato.",
       "save": "Salva"
+    },
+    "attachments": {
+      "title": "Allegati",
+      "add": "Allega file",
+      "choose": "Scegli file",
+      "help": "I file ereditano la visibilità di questo messaggio. Massimo {{size}} MiB.",
+      "uploading": "Caricamento…",
+      "upload": "Carica",
+      "invalid": "Scegli un file consentito entro il limite di dimensione.",
+      "loadError": "Gli allegati non sono disponibili. Aggiorna per verificare il tuo accesso.",
+      "unknownOutcome": "Impossibile confermare il caricamento. Riprova con lo stesso file.",
+      "remove": "Rimuovi",
+      "removeTitle": "Rimuovi allegato",
+      "removeHelp": "Rimuovere {{name}} da questo messaggio? Chi visualizza il messaggio non potrà più scaricare questo file.",
+      "removeUnknownOutcome": "Impossibile confermare la rimozione. Riprova per verificare lo stesso file.",
+      "removing": "Rimozione…",
+      "removeNamed": "Rimuovi {{name}}"
+    },
+    "disclosure": {
+      "title": "Modifica il pubblico della discussione",
+      "review": "Rivedi",
+      "confirm": "Conferma modifica",
+      "scope": "Questo cambia il pubblico dell’intera discussione: {{comments}} messaggi e {{attachments}} allegati.",
+      "current": "Pubblico attuale: {{audience}}",
+      "help": "Risposte e allegati ereditano questo pubblico. Limitare l’accesso non recupera le informazioni già lette o scaricate.",
+      "pending": "Il caricamento di un allegato è in sospeso. Completalo prima di modificare il pubblico.",
+      "unknownOutcome": "Il risultato è sconosciuto. Riprova per verificare la stessa modifica.",
+      "transferHelp": "La condivisione trasferisce questa discussione e i suoi allegati nello spazio di lavoro del cliente. La discussione privata originale dell’MSP viene conservata come storico di sola lettura.",
+      "open": "Modifica chi può vedere questa conversazione"
+    },
+    "conversation": {
+      "audience": "Visibile a",
+      "audiences": {
+        "requester": "Richiedente e team IT",
+        "shared_it": "Team IT condivisi",
+        "organization_private": "Solo la mia organizzazione"
+      },
+      "audienceHelp": {
+        "requester": "Visibile ai richiedenti autorizzati e al personale IT di entrambe le organizzazioni.",
+        "shared_it": "Visibile al personale IT autorizzato di entrambe le organizzazioni, senza accesso per il richiedente.",
+        "organization_private": "Visibile solo al personale autorizzato della tua organizzazione."
+      },
+      "files": {
+        "choose": "Allega file",
+        "help": "Fino a {{count}} file da {{size}} MiB ciascuno. I file sono condivisi con i destinatari di questo messaggio.",
+        "remove": "Rimuovi",
+        "removeNamed": "Rimuovi {{name}}",
+        "invalid": "Rimuovi i file che superano il limite di dimensione o quantità prima di inviare.",
+        "preparing": "Preparazione dei file…",
+        "uploading": "Caricati {{completed}} di {{total}} file…",
+        "publishing": "Pubblicazione del messaggio e dei file…",
+        "notReady": "Alcuni file non sono pronti. Riprova per completare il caricamento e inviare lo stesso messaggio.",
+        "preparationFailed": "Impossibile leggere i file selezionati. Selezionali di nuovo o rimuovili prima di riprovare.",
+        "abandoned": "Questa bozza è stata eliminata. Salva di nuovo per creare un nuovo messaggio con i file selezionati.",
+        "audienceUnavailable": "Non è possibile allegare file ai messaggi per questo pubblico. Rimuovi i file o scegli un altro pubblico.",
+        "cancelUnknownOutcome": "Impossibile confermare l’annullamento. Riprova per verificare la stessa richiesta di annullamento.",
+        "canceling": "Annullamento…"
+      }
+    },
+    "ticket": {
+      "cancel": "Annulla",
+      "loading": "Caricamento…",
+      "reload": "Ricarica stato attuale",
+      "retry": "Riprova",
+      "saving": "Salvataggio…"
+    },
+    "editor": {
+      "errors": {
+        "invalid": "Alcuni valori non sono validi. Controlla le modifiche e riprova.",
+        "conflict": "Questo ticket è stato modificato. Ricaricalo prima di salvare le tue modifiche.",
+        "operationConflict": "Questa richiesta di salvataggio è già stata usata per un’altra modifica. Ricarica il ticket.",
+        "forbidden": "Il tuo accesso a questo ticket è cambiato. Ricarica per continuare.",
+        "readOnly": "Questo spazio è di sola lettura. Ricarica per visualizzarne lo stato attuale.",
+        "closeRules": "Il ticket deve soddisfare i requisiti di chiusura della sua bacheca prima di poter essere chiuso.",
+        "unknownOutcome": "Non è stato possibile confermare il salvataggio. Riprova con la stessa richiesta oppure scarta le modifiche e ricarica.",
+        "slaSetupRequired": "Il MSP deve configurare la policy SLA e la corrispondenza delle priorità prima di riaprire questo ticket sotto la propria responsabilità."
+      }
     }
   },
   "common": {

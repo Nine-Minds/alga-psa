@@ -1,9 +1,9 @@
 import { getConnection } from '@alga-psa/db';
 import { filterServed } from '@alga-psa/core/capability';
 import { cleanupCoManagedUploads, cleanupCoManagedThreadTransfers } from '@alga-psa/co-managed';
-import { registerJobCapabilityFilter, getJobCapabilityFilter } from '@alga-psa/jobs/fanout';
+import { registerJobCapabilityFilter, getJobCapabilityFilter, registerMaintenanceJob } from '@alga-psa/jobs/fanout';
 import {
-  registerCoManagedUploadCleanupJob,
+  coManagedUploadCleanupJobDef,
   registerUploadCleanupAdapter,
   CO_MANAGED_UPLOAD_CLEANUP_JOB,
 } from '@alga-psa/jobs/handlers/coManagedUploadCleanupHandler';
@@ -18,7 +18,8 @@ async function removeFromStorage(path: string): Promise<void> {
 /**
  * Boot registration (called from registerServerMaintenanceJobs): the co-managed
  * sweep adapter, the capability filter capability-gated jobs require, and the
- * descriptor itself (which also registers the maintenance-fanout schedule).
+ * fan-out definition. The schedule is NOT registered here: it is static in
+ * MAINTENANCE_FANOUT_SCHEDULES / CE_SHARED_MAINTENANCE_JOBS so both schedulers see it without server boot.
  *
  * Decision: the base `cleanupCommentAttachmentDrafts` is deliberately NOT an
  * adapter here. It already runs for every draft tenant from
@@ -39,5 +40,5 @@ export function registerCoManagedUploadCleanup(): void {
   if (!getJobCapabilityFilter()) {
     registerJobCapabilityFilter((capability, tenantIds) => filterServed(capability as Parameters<typeof filterServed>[0], tenantIds));
   }
-  registerCoManagedUploadCleanupJob();
+  registerMaintenanceJob(CO_MANAGED_UPLOAD_CLEANUP_JOB, coManagedUploadCleanupJobDef);
 }

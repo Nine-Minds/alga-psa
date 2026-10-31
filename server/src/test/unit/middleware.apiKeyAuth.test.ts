@@ -149,4 +149,14 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/upload')).toBe(false);
     expect(shouldSkipApiKeyAuth('/api/instanceinfo')).toBe(false);
   });
+
+  it('exempts exactly the two co-managed attachment download routes', () => {
+    expect(shouldSkipApiKeyAuth('/api/co-management/attachments/abc')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments/abc')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/co-management/attachments/x/y')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/client-portal/conversation-attachments/x/y')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/attachments/')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/other')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/attachments')).toBe(false);
+  });
 });

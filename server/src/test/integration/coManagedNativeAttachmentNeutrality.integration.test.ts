@@ -92,13 +92,14 @@ describe.each([['Kansas (flag off)', false], ['Emerald (flag on, no entitlement)
 
   it('the co-managed cleanup job is a no-op for a tenant without the capability: it runs no co_management_* statement', async () => {
     const w = await native(`${name.split(' ')[0]}-job`, flagOn);
-    const { registerCoManagedUploadCleanup, CO_MANAGED_UPLOAD_CLEANUP_JOB } = await import('../../lib/jobs/handlers/coManagedUploadCleanupHandler');
+    const { registerCoManagedUploadCleanup } = await import('../../lib/jobs/handlers/coManagedUploadCleanupHandler');
+    const { coManagedUploadCleanupJobDef } = await import('@alga-psa/jobs/handlers/coManagedUploadCleanupHandler');
+    const { getJobCapabilityFilter } = await import('@alga-psa/jobs/fanout');
     registerCoManagedUploadCleanup();
-    const { getJobDescriptor } = await import('@alga-psa/jobs/fanout');
-    const descriptor = getJobDescriptor(CO_MANAGED_UPLOAD_CLEANUP_JOB)!;
-    expect(descriptor).toMatchObject({ scope: 'tenant', capability: 'co-managed' });
+    expect(coManagedUploadCleanupJobDef).toMatchObject({ scope: 'tenant', capability: 'co-managed' });
     statements.length = 0;
-    await (descriptor as any).run({ tenantId: w.tenant }).catch(() => null);
+    // The fan-out only reaches tenants the capability filter serves; this tenant is not one.
+    await expect(getJobCapabilityFilter()!('co-managed', [w.tenant])).resolves.toEqual([]);
     expect(statements.filter(sql => /co_management_/i.test(sql))).toEqual([]);
   });
 });

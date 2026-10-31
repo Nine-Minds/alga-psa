@@ -87,6 +87,10 @@ async function readConversation(context: CoManagedSharedWorkContext, cursor?: Co
     const privateComments = home.table('co_management_private_comments as c');
     home.tenantJoin(privateComments, 'co_management_private_threads as t', 'c.thread_id', 't.thread_id');
     privateComments.where({ 't.customer_tenant': resource.tenant, 't.relationship_id': resource.relationshipId, 't.resource_type': 'ticket', 't.resource_id': resource.id });
+    // A private thread that was disclosed lives on as its shared copy (read from the customer store above).
+    // Its source is retained history only: listing it again is a duplicate with no readable attachments
+    // and a disclose control that can never succeed (a disclosed thread is not eligible to disclose twice).
+    privateComments.whereNull('t.disclosure_operation_id');
     home.tenantJoin(privateComments, 'co_management_private_comments as parent', 'c.parent_comment_id', 'parent.comment_id', { type: 'left',
       on: join => join.andOn('parent.thread_id', '=', 'c.thread_id') });
     privateComments.select({ store_tenant: 'c.tenant', comment_id: 'c.comment_id', thread_id: 'c.thread_id', parent_comment_id: 'parent.comment_id',

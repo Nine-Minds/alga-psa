@@ -82,6 +82,6 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: {
   }, [session, version]);
 
   return <TicketDataSourceProvider dataSource={dataSource}>{children}
-    {session && resource && <CoManagedConversationFiles session={session} resource={resource} staging={staging} version={version} />}
+    {session && resource && <CoManagedConversationFiles session={session} resource={resource} staging={staging} />}
   </TicketDataSourceProvider>;
 }

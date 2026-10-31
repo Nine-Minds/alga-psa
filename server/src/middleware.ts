@@ -243,6 +243,11 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
     // Client portal document handlers authenticate the portal session and run
     // the shared tenant/client visibility resolver before serving content.
     /^\/api\/client-portal\/documents\/[^/]+\/(?:file|export)$/.test(pathname) ||
+    // Co-managed conversation attachment downloads: the handlers authenticate the
+    // session, run capabilityRouteGuard and resolveAttachmentAccess (denied, closed or
+    // kill-switched readers get 404). Single-segment ids only; no nested paths.
+    /^\/api\/co-management\/attachments\/[^/]+$/.test(pathname) ||
+    /^\/api\/client-portal\/conversation-attachments\/[^/]+$/.test(pathname) ||
     exactApiKeySkipPaths.includes(pathname) ||
     apiKeySkipPaths.some((path) => pathname.startsWith(path)) ||
     (pathname.startsWith('/api/tickets/') &&
