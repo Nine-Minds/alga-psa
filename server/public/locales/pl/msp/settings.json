@@ -3855,5 +3855,116 @@
       "empty": "Brak standardowych statusów do zaimportowania",
       "importSelected": "Importuj wybrane ({{count}})"
     }
+  },
+  "servicePrincipals": {
+    "via": {
+      "label": "przez {{principal}}"
+    },
+    "badge": {
+      "service": "Usługa"
+    },
+    "keyReveal": {
+      "copySuccess": "Klucz API skopiowany do schowka!",
+      "copyFailed": "Nie udało się skopiować klucza API do schowka",
+      "downloadFailed": "Nie udało się pobrać klucza API",
+      "title": "Klucz API wygenerowany",
+      "warning": "Skopiuj swój klucz API teraz. Ze względów bezpieczeństwa nie zostanie on ponownie wyświetlony.",
+      "rotationNote": "Poprzedni klucz działa jeszcze przez 5 minut, abyś mógł przełączyć się na nowy.",
+      "copy": "Kopiuj do schowka",
+      "download": "Pobierz jako .txt",
+      "done": "Gotowe"
+    },
+    "dialog": {
+      "nameRequired": "Nazwa jest wymagana",
+      "rateLimitInvalid": "Wprowadź obie wartości limitu żądań, w granicach pokazanych maksimów, albo zostaw oba pola puste.",
+      "saveFailed": "Nie udało się zapisać podmiotu usługi",
+      "editTitle": "Edytuj podmiot usługi",
+      "createTitle": "Nowy podmiot usługi",
+      "cancel": "Anuluj",
+      "save": "Zapisz",
+      "name": "Nazwa",
+      "description": "Opis",
+      "roles": "Role",
+      "allowActAs": "Zezwalaj na działanie w imieniu użytkownika",
+      "rateLimit": "Nadpisanie limitu żądań (opcjonalnie)",
+      "rateLimitBurst": "Rozmiar serii (maks. {{max}})",
+      "rateLimitRefill": "Żądania na minutę (maks. {{max}})"
+    },
+    "keys": {
+      "loadFailed": "Nie udało się załadować kluczy",
+      "issueFailed": "Nie udało się utworzyć klucza API",
+      "revokeFailed": "Nie udało się unieważnić klucza API",
+      "columns": {
+        "description": "Opis",
+        "status": "Status",
+        "lastUsed": "Ostatnio użyty",
+        "expires": "Wygasa"
+      },
+      "noDescription": "Brak opisu",
+      "status": {
+        "active": "Aktywny",
+        "inactive": "Nieaktywny"
+      },
+      "never": "Nigdy",
+      "noExpiry": "Bez wygaśnięcia",
+      "rotate": "Rotuj",
+      "revoke": "Unieważnij",
+      "title": "Klucze API dla {{name}}",
+      "descriptionLabel": "Opis klucza",
+      "create": "Utwórz klucz",
+      "revokeTitle": "Unieważnić klucz API?",
+      "revokeMessage": "Wszystko, co używa tego klucza, natychmiast przestanie działać."
+    },
+    "columns": {
+      "actions": "Akcje",
+      "name": "Nazwa",
+      "status": "Status",
+      "active": "Aktywny",
+      "roles": "Role",
+      "keys": "Aktywne klucze",
+      "lastUsed": "Ostatnio użyty",
+      "createdBy": "Utworzony przez",
+      "kind": "Typ"
+    },
+    "loadFailed": "Nie udało się załadować podmiotów usług",
+    "toggleFailed": "Nie udało się zaktualizować podmiotu usługi",
+    "delete": {
+      "archived": "Podmiot usługi zarchiwizowany. Jego historia jest zachowana, aby dawna aktywność nadal pokazywała jego nazwę.",
+      "deleted": "Podmiot usługi usunięty.",
+      "failed": "Nie udało się usunąć podmiotu usługi",
+      "title": "Usunąć podmiot usługi?",
+      "message": "Jego klucze API przestaną działać. Jeśli ma historię, zostanie zarchiwizowany zamiast usunięty."
+    },
+    "status": {
+      "inactive": "Nieaktywny",
+      "active": "Aktywny"
+    },
+    "actions": {
+      "edit": "Edytuj",
+      "keys": "Klucze",
+      "deactivate": "Dezaktywuj",
+      "delete": "Usuń",
+      "new": "Nowy podmiot usługi"
+    },
+    "featureName": "Podmioty usług",
+    "title": "Podmioty usług",
+    "description": "Tożsamości niebędące osobami, z własnymi rolami i kluczami API, dla integracji i agentów.",
+    "usage": {
+      "header": "{{used}} z {{limit}} podmiotów usług",
+      "availableOnPro": "Dostępne w planie Pro",
+      "row": "{{used}} z {{limit}}",
+      "label": "Podmioty usług"
+    },
+    "grandfathered": "Podmioty usług wymagają planu Pro. Istniejące podmioty zostaną zachowane, ale możesz je tylko dezaktywować lub usunąć.",
+    "limitReached": "Osiągnięto limit {{limit}} aktywnych podmiotów usług. Dezaktywuj lub usuń jeden, aby dodać kolejny.",
+    "mcp": {
+      "sharedLimit": "Agenci MCP wliczają się do limitu podmiotów usług: {{used}} z {{limit}} w użyciu.",
+      "requiresPro": "Dodawanie agentów MCP wymaga planu Pro.",
+      "limitReached": "Osiągnięto limit {{limit}} aktywnych podmiotów usług. Dezaktywuj lub usuń jeden, aby dodać agenta."
+    },
+    "kind": {
+      "api": "API",
+      "mcpAgent": "Agent MCP"
+    }
   }
 }

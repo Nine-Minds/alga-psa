@@ -3855,5 +3855,116 @@
       "empty": "No standard statuses available for import",
       "importSelected": "Import Selected ({{count}})"
     }
+  },
+  "servicePrincipals": {
+    "via": {
+      "label": "via {{principal}}"
+    },
+    "badge": {
+      "service": "Service"
+    },
+    "keyReveal": {
+      "copySuccess": "API key copied to clipboard!",
+      "copyFailed": "Failed to copy API key to clipboard",
+      "downloadFailed": "Failed to download API key",
+      "title": "API Key Generated",
+      "warning": "Please copy your API key now. For security reasons, it will not be shown again.",
+      "rotationNote": "The previous key keeps working for 5 more minutes so you can switch over.",
+      "copy": "Copy to Clipboard",
+      "download": "Download as .txt",
+      "done": "Done"
+    },
+    "dialog": {
+      "nameRequired": "A name is required",
+      "rateLimitInvalid": "Enter both rate-limit values, within the maximums shown, or leave both empty.",
+      "saveFailed": "Failed to save service principal",
+      "editTitle": "Edit service principal",
+      "createTitle": "New service principal",
+      "cancel": "Cancel",
+      "save": "Save",
+      "name": "Name",
+      "description": "Description",
+      "roles": "Roles",
+      "allowActAs": "Allow acting on behalf of a user",
+      "rateLimit": "Rate limit override (optional)",
+      "rateLimitBurst": "Burst size (max {{max}})",
+      "rateLimitRefill": "Requests per minute (max {{max}})"
+    },
+    "keys": {
+      "loadFailed": "Failed to load keys",
+      "issueFailed": "Failed to create API key",
+      "revokeFailed": "Failed to revoke API key",
+      "columns": {
+        "description": "Description",
+        "status": "Status",
+        "lastUsed": "Last used",
+        "expires": "Expires"
+      },
+      "noDescription": "No description",
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "never": "Never",
+      "noExpiry": "No expiry",
+      "rotate": "Rotate",
+      "revoke": "Revoke",
+      "title": "API keys for {{name}}",
+      "descriptionLabel": "Key description",
+      "create": "Create key",
+      "revokeTitle": "Revoke API key?",
+      "revokeMessage": "Anything using this key stops working immediately."
+    },
+    "columns": {
+      "actions": "Actions",
+      "name": "Name",
+      "status": "Status",
+      "active": "Active",
+      "roles": "Roles",
+      "keys": "Active keys",
+      "lastUsed": "Last used",
+      "createdBy": "Created by",
+      "kind": "Type"
+    },
+    "loadFailed": "Failed to load service principals",
+    "toggleFailed": "Failed to update service principal",
+    "delete": {
+      "archived": "Service principal archived. Its history is kept so past activity still shows its name.",
+      "deleted": "Service principal deleted.",
+      "failed": "Failed to delete service principal",
+      "title": "Delete service principal?",
+      "message": "Its API keys stop working. If it has history it is archived rather than removed."
+    },
+    "status": {
+      "inactive": "Inactive",
+      "active": "Active"
+    },
+    "actions": {
+      "edit": "Edit",
+      "keys": "Keys",
+      "deactivate": "Deactivate",
+      "delete": "Delete",
+      "new": "New service principal"
+    },
+    "featureName": "Service principals",
+    "title": "Service principals",
+    "description": "Non-human identities with their own roles and API keys for integrations and agents.",
+    "usage": {
+      "header": "{{used}} of {{limit}} service principals",
+      "availableOnPro": "Available on Pro",
+      "row": "{{used}} of {{limit}}",
+      "label": "Service principals"
+    },
+    "grandfathered": "Service principals require the Pro plan. Your existing principals are kept, but you can only deactivate or delete them.",
+    "limitReached": "You have reached your limit of {{limit}} active service principals. Deactivate or delete one to add another.",
+    "mcp": {
+      "sharedLimit": "MCP agents count toward your service principal limit: {{used}} of {{limit}} in use.",
+      "requiresPro": "Adding MCP agents requires the Pro plan.",
+      "limitReached": "You have reached your limit of {{limit}} active service principals. Deactivate or remove one to add an agent."
+    },
+    "kind": {
+      "api": "API",
+      "mcpAgent": "MCP agent"
+    }
   }
 }

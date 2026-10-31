@@ -290,7 +290,7 @@
   {
     "id": "T030",
     "description": "Component: Service principals tab lists principals with kind badges and display names, shows 'x of y', disables New at the limit; create dialog saves roles and act-as",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F078",
       "F079",
@@ -301,7 +301,7 @@
   {
     "id": "T031",
     "description": "Component: Manage keys dialog shows the new key once, revokes and rotates",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F080",
       "F028"
@@ -310,7 +310,7 @@
   {
     "id": "T032",
     "description": "Component: AccountManagement and LicenseManagementPage render the service-principal usage row; MCP settings shows the shared limit",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F076",
       "F077",
@@ -320,7 +320,7 @@
   {
     "id": "T033",
     "description": "Component: ticket activity and time-entry detail render '<human> via <principal>'; service-authored comment renders Service badge",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F069"
     ]
@@ -328,7 +328,7 @@
   {
     "id": "T034",
     "description": "Component: API keys admin list shows principal name + Service badge for principal-owned keys",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F084"
     ]
@@ -346,7 +346,7 @@
   {
     "id": "T036",
     "description": "Component: below Pro the Service principals tab and MCP agent create show the upgrade notice, grandfathered principals list with deactivate/delete only, and the license page row reads 'Available on Pro'",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F095"
     ]

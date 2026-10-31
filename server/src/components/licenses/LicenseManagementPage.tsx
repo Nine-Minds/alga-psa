@@ -38,6 +38,8 @@ import {
 } from "@alga-psa/ui/lib/errorHandling";
 import { isEnterpriseEdition } from "@/lib/features";
 import ApplianceAiSection from "@/components/licenses/ApplianceAiSection";
+import { ServicePrincipalUsageRow } from "@enterprise/components/service-principals/ServicePrincipalUsageRow";
+import { TIER_FEATURES, tierHasFeature, type TenantTier } from "@alga-psa/types";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 
 type Tone = "neutral" | "success" | "warning" | "danger" | "premium";
@@ -571,6 +573,11 @@ export default function LicenseManagementPage() {
                 {tierLabel(status.tier, t)}
               </p>
             </div>
+
+            <ServicePrincipalUsageRow
+              hasPro={status.tier ? tierHasFeature(status.tier as TenantTier, TIER_FEATURES.SERVICE_PRINCIPALS) : false}
+              className="flex items-center justify-between rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4 text-sm"
+            />
 
             {expiresAt ? (
               <div className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4">

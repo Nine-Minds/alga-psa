@@ -96,7 +96,8 @@
       "policies": "Políticas",
       "apiKeys": "Claves API",
       "webhooks": "Webhooks",
-      "userProvisioning": "Aprovisionamiento de usuarios"
+      "userProvisioning": "Aprovisionamiento de usuarios",
+      "servicePrincipals": "Principales de servicio"
     },
     "loading": {
       "roles": "Cargando configuración de roles...",
@@ -107,7 +108,8 @@
       "webhooks": "Cargando configuración de webhooks...",
       "sso": "Cargando herramientas de gestión de SSO...",
       "sessions": "Cargando sesiones activas...",
-      "userProvisioning": "Cargando el aprovisionamiento mediante SCIM..."
+      "userProvisioning": "Cargando el aprovisionamiento mediante SCIM...",
+      "servicePrincipals": "Cargando principales de servicio..."
     },
     "sso": {
       "advanced": {
@@ -804,7 +806,10 @@
       "testNotRetryable": "Las entregas de prueba no se pueden reintentar.",
       "payloadInvalid": "Esta entrega no se puede reintentar porque la carga útil almacenada no es válida.",
       "unsupportedEventType": "Tipo de evento no compatible: {{eventTypes}}",
-      "validation": { "unknownEntity": "Entidad de webhook desconocida «{{entity}}».", "unknownField": "Campo desconocido «{{field}}» para la entidad de webhook «{{entity}}»." }
+      "validation": {
+        "unknownEntity": "Entidad de webhook desconocida «{{entity}}».",
+        "unknownField": "Campo desconocido «{{field}}» para la entidad de webhook «{{entity}}»."
+      }
     },
     "inboundWebhooks": {
       "permissions": {
@@ -823,7 +828,11 @@
       "deliveryNotFound": "Entrega entrante no encontrada.",
       "replayMissingConfig": "No se puede reenviar una entrega entrante sin una configuración de webhook.",
       "notFoundOrInactive": "Webhook entrante no encontrado o inactivo.",
-      "validation": { "slugReserved": "Este identificador está reservado para una integración incluida.", "authTypeMismatch": "El tipo de configuración de autenticación debe coincidir con el tipo de autenticación seleccionado.", "handlerTypeMismatch": "El tipo de configuración del controlador debe coincidir con el tipo de controlador seleccionado." }
+      "validation": {
+        "slugReserved": "Este identificador está reservado para una integración incluida.",
+        "authTypeMismatch": "El tipo de configuración de autenticación debe coincidir con el tipo de autenticación seleccionado.",
+        "handlerTypeMismatch": "El tipo de configuración del controlador debe coincidir con el tipo de controlador seleccionado."
+      }
     }
   }
 }

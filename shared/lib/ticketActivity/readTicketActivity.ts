@@ -14,6 +14,7 @@
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { attachViaPrincipalNames } from '../viaPrincipal/viaPrincipalNames';
 
 import type {
   TicketActivityChanges,
@@ -105,7 +106,8 @@ export async function readTicketActivity(
   }
 
   const rows = (await q) as Array<Record<string, unknown>>;
-  return rows.map((row) => normalizeActivityRow(row));
+  const activities = rows.map((row) => normalizeActivityRow(row));
+  return attachViaPrincipalNames(knex, tenant, activities, 'via_principal_user_id');
 }
 
 function normalizeActivityRow(row: Record<string, unknown>): TicketActivityRow {
@@ -122,6 +124,7 @@ function normalizeActivityRow(row: Record<string, unknown>): TicketActivityRow {
     actor_user_id: (row.actor_user_id as string | null) ?? null,
     actor_contact_id: (row.actor_contact_id as string | null) ?? null,
     actor_display_name: (row.actor_display_name as string | null) ?? null,
+    via_principal_user_id: (row.via_principal_user_id as string | null | undefined) ?? null,
     source: row.source as string,
     occurred_at:
       row.occurred_at instanceof Date

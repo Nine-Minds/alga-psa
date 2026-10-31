@@ -339,7 +339,7 @@ export class ApiKeyService {
   /**
    * List all API keys across users (admin only)
    */
-  static async listAllApiKeys(tenantId?: string): Promise<(ApiKey & { username: string; first_name: string | null; last_name: string | null })[]> {
+  static async listAllApiKeys(tenantId?: string): Promise<(ApiKey & { username: string; first_name: string | null; last_name: string | null; user_type: string | null })[]> {
     const { knex, tenant } = await createTenantKnex(tenantId);
 
     if (!tenant) {
@@ -352,7 +352,7 @@ export class ApiKeyService {
       db.tenantJoin(query, 'users', 'api_keys.user_id', 'users.user_id');
 
       return await query
-        .select('api_keys.*', 'users.username', 'users.first_name', 'users.last_name')
+        .select('api_keys.*', 'users.username', 'users.first_name', 'users.last_name', 'users.user_type')
         .orderBy('api_keys.created_at', 'desc');
     } catch (error) {
       console.error(`Error listing API keys in tenant ${tenant}:`, error);

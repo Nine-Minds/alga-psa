@@ -3855,5 +3855,116 @@
       "empty": "Inga standardstatusar tillgängliga för import",
       "importSelected": "Importera markerade ({{count}})"
     }
+  },
+  "servicePrincipals": {
+    "via": {
+      "label": "via {{principal}}"
+    },
+    "badge": {
+      "service": "Tjänst"
+    },
+    "keyReveal": {
+      "copySuccess": "API-nyckeln kopierades till urklipp!",
+      "copyFailed": "Det gick inte att kopiera API-nyckeln till urklipp",
+      "downloadFailed": "Det gick inte att ladda ned API-nyckeln",
+      "title": "API-nyckel genererad",
+      "warning": "Kopiera din API-nyckel nu. Av säkerhetsskäl visas den inte igen.",
+      "rotationNote": "Den tidigare nyckeln fungerar i 5 minuter till så att du hinner byta.",
+      "copy": "Kopiera till urklipp",
+      "download": "Ladda ned som .txt",
+      "done": "Klar"
+    },
+    "dialog": {
+      "nameRequired": "Ett namn krävs",
+      "rateLimitInvalid": "Ange båda värdena för hastighetsgränsen, inom de visade maxvärdena, eller lämna båda tomma.",
+      "saveFailed": "Det gick inte att spara tjänstehuvudmannen",
+      "editTitle": "Redigera tjänstehuvudman",
+      "createTitle": "Ny tjänstehuvudman",
+      "cancel": "Avbryt",
+      "save": "Spara",
+      "name": "Namn",
+      "description": "Beskrivning",
+      "roles": "Roller",
+      "allowActAs": "Tillåt att agera på uppdrag av en användare",
+      "rateLimit": "Åsidosättning av hastighetsgräns (valfritt)",
+      "rateLimitBurst": "Burst-storlek (max {{max}})",
+      "rateLimitRefill": "Förfrågningar per minut (max {{max}})"
+    },
+    "keys": {
+      "loadFailed": "Det gick inte att läsa in nycklar",
+      "issueFailed": "Det gick inte att skapa API-nyckeln",
+      "revokeFailed": "Det gick inte att återkalla API-nyckeln",
+      "columns": {
+        "description": "Beskrivning",
+        "status": "Status",
+        "lastUsed": "Senast använd",
+        "expires": "Upphör"
+      },
+      "noDescription": "Ingen beskrivning",
+      "status": {
+        "active": "Aktiv",
+        "inactive": "Inaktiv"
+      },
+      "never": "Aldrig",
+      "noExpiry": "Ingen utgång",
+      "rotate": "Rotera",
+      "revoke": "Återkalla",
+      "title": "API-nycklar för {{name}}",
+      "descriptionLabel": "Nyckelbeskrivning",
+      "create": "Skapa nyckel",
+      "revokeTitle": "Återkalla API-nyckeln?",
+      "revokeMessage": "Allt som använder den här nyckeln slutar fungera omedelbart."
+    },
+    "columns": {
+      "actions": "Åtgärder",
+      "name": "Namn",
+      "status": "Status",
+      "active": "Aktiv",
+      "roles": "Roller",
+      "keys": "Aktiva nycklar",
+      "lastUsed": "Senast använd",
+      "createdBy": "Skapad av",
+      "kind": "Typ"
+    },
+    "loadFailed": "Det gick inte att läsa in tjänstehuvudmän",
+    "toggleFailed": "Det gick inte att uppdatera tjänstehuvudmannen",
+    "delete": {
+      "archived": "Tjänstehuvudmannen arkiverades. Dess historik sparas så att tidigare aktivitet fortfarande visar dess namn.",
+      "deleted": "Tjänstehuvudmannen togs bort.",
+      "failed": "Det gick inte att ta bort tjänstehuvudmannen",
+      "title": "Ta bort tjänstehuvudmannen?",
+      "message": "Dess API-nycklar slutar fungera. Om den har historik arkiveras den i stället för att tas bort."
+    },
+    "status": {
+      "inactive": "Inaktiv",
+      "active": "Aktiv"
+    },
+    "actions": {
+      "edit": "Redigera",
+      "keys": "Nycklar",
+      "deactivate": "Inaktivera",
+      "delete": "Ta bort",
+      "new": "Ny tjänstehuvudman"
+    },
+    "featureName": "Tjänstehuvudmän",
+    "title": "Tjänstehuvudmän",
+    "description": "Icke-mänskliga identiteter med egna roller och API-nycklar för integrationer och agenter.",
+    "usage": {
+      "header": "{{used}} av {{limit}} tjänstehuvudmän",
+      "availableOnPro": "Tillgängligt i Pro",
+      "row": "{{used}} av {{limit}}",
+      "label": "Tjänstehuvudmän"
+    },
+    "grandfathered": "Tjänstehuvudmän kräver Pro-planen. Dina befintliga huvudmän behålls, men du kan bara inaktivera eller ta bort dem.",
+    "limitReached": "Du har nått gränsen på {{limit}} aktiva tjänstehuvudmän. Inaktivera eller ta bort en för att lägga till en ny.",
+    "mcp": {
+      "sharedLimit": "MCP-agenter räknas mot din gräns för tjänstehuvudmän: {{used}} av {{limit}} används.",
+      "requiresPro": "Att lägga till MCP-agenter kräver Pro-planen.",
+      "limitReached": "Du har nått gränsen på {{limit}} aktiva tjänstehuvudmän. Inaktivera eller ta bort en för att lägga till en agent."
+    },
+    "kind": {
+      "api": "API",
+      "mcpAgent": "MCP-agent"
+    }
   }
 }

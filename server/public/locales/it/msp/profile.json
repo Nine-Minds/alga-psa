@@ -96,7 +96,8 @@
       "policies": "Criteri",
       "apiKeys": "Chiavi API",
       "webhooks": "Webhook",
-      "userProvisioning": "Provisioning utenti"
+      "userProvisioning": "Provisioning utenti",
+      "servicePrincipals": "Principal di servizio"
     },
     "loading": {
       "roles": "Caricamento configurazione ruoli...",
@@ -107,7 +108,8 @@
       "webhooks": "Caricamento configurazione webhook...",
       "sso": "Caricamento strumenti di gestione SSO...",
       "sessions": "Caricamento sessioni attive...",
-      "userProvisioning": "Caricamento del provisioning SCIM…"
+      "userProvisioning": "Caricamento del provisioning SCIM…",
+      "servicePrincipals": "Caricamento dei principal di servizio..."
     },
     "sso": {
       "advanced": {
@@ -804,7 +806,10 @@
       "testNotRetryable": "Le consegne di prova non possono essere ritentate.",
       "payloadInvalid": "Questa consegna non può essere ritentata perché il payload memorizzato non è valido.",
       "unsupportedEventType": "Tipo di evento non supportato: {{eventTypes}}",
-      "validation": { "unknownEntity": "Entità webhook sconosciuta «{{entity}}».", "unknownField": "Campo sconosciuto «{{field}}» per l’entità webhook «{{entity}}»." }
+      "validation": {
+        "unknownEntity": "Entità webhook sconosciuta «{{entity}}».",
+        "unknownField": "Campo sconosciuto «{{field}}» per l’entità webhook «{{entity}}»."
+      }
     },
     "inboundWebhooks": {
       "permissions": {
@@ -823,7 +828,11 @@
       "deliveryNotFound": "Consegna in ingresso non trovata.",
       "replayMissingConfig": "Non è possibile rieseguire una consegna in ingresso senza una configurazione del webhook.",
       "notFoundOrInactive": "Webhook in ingresso non trovato o inattivo.",
-      "validation": { "slugReserved": "Questo identificatore è riservato a un’integrazione inclusa.", "authTypeMismatch": "Il tipo di configurazione dell’autenticazione deve corrispondere al tipo di autenticazione selezionato.", "handlerTypeMismatch": "Il tipo di configurazione del gestore deve corrispondere al tipo di gestore selezionato." }
+      "validation": {
+        "slugReserved": "Questo identificatore è riservato a un’integrazione inclusa.",
+        "authTypeMismatch": "Il tipo di configurazione dell’autenticazione deve corrispondere al tipo di autenticazione selezionato.",
+        "handlerTypeMismatch": "Il tipo di configurazione del gestore deve corrispondere al tipo di gestore selezionato."
+      }
     }
   }
 }

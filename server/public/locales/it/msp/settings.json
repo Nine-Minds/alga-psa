@@ -3855,5 +3855,116 @@
       "empty": "Nessuno stato standard disponibile per l’importazione",
       "importSelected": "Importa selezionati ({{count}})"
     }
+  },
+  "servicePrincipals": {
+    "via": {
+      "label": "tramite {{principal}}"
+    },
+    "badge": {
+      "service": "Servizio"
+    },
+    "keyReveal": {
+      "copySuccess": "Chiave API copiata negli appunti!",
+      "copyFailed": "Impossibile copiare la chiave API negli appunti",
+      "downloadFailed": "Impossibile scaricare la chiave API",
+      "title": "Chiave API generata",
+      "warning": "Copia subito la tua chiave API. Per motivi di sicurezza, non verrà mostrata di nuovo.",
+      "rotationNote": "La chiave precedente continua a funzionare per altri 5 minuti, così puoi passare a quella nuova.",
+      "copy": "Copia negli appunti",
+      "download": "Scarica come .txt",
+      "done": "Fatto"
+    },
+    "dialog": {
+      "nameRequired": "Il nome è obbligatorio",
+      "rateLimitInvalid": "Inserisci entrambi i valori del limite di frequenza, entro i massimi indicati, oppure lasciali entrambi vuoti.",
+      "saveFailed": "Impossibile salvare il principal di servizio",
+      "editTitle": "Modifica principal di servizio",
+      "createTitle": "Nuovo principal di servizio",
+      "cancel": "Annulla",
+      "save": "Salva",
+      "name": "Nome",
+      "description": "Descrizione",
+      "roles": "Ruoli",
+      "allowActAs": "Consenti di agire per conto di un utente",
+      "rateLimit": "Override del limite di frequenza (facoltativo)",
+      "rateLimitBurst": "Dimensione del burst (max {{max}})",
+      "rateLimitRefill": "Richieste al minuto (max {{max}})"
+    },
+    "keys": {
+      "loadFailed": "Impossibile caricare le chiavi",
+      "issueFailed": "Impossibile creare la chiave API",
+      "revokeFailed": "Impossibile revocare la chiave API",
+      "columns": {
+        "description": "Descrizione",
+        "status": "Stato",
+        "lastUsed": "Ultimo utilizzo",
+        "expires": "Scade"
+      },
+      "noDescription": "Nessuna descrizione",
+      "status": {
+        "active": "Attiva",
+        "inactive": "Inattiva"
+      },
+      "never": "Mai",
+      "noExpiry": "Nessuna scadenza",
+      "rotate": "Ruota",
+      "revoke": "Revoca",
+      "title": "Chiavi API per {{name}}",
+      "descriptionLabel": "Descrizione della chiave",
+      "create": "Crea chiave",
+      "revokeTitle": "Revocare la chiave API?",
+      "revokeMessage": "Tutto ciò che usa questa chiave smette di funzionare immediatamente."
+    },
+    "columns": {
+      "actions": "Azioni",
+      "name": "Nome",
+      "status": "Stato",
+      "active": "Attivo",
+      "roles": "Ruoli",
+      "keys": "Chiavi attive",
+      "lastUsed": "Ultimo utilizzo",
+      "createdBy": "Creato da",
+      "kind": "Tipo"
+    },
+    "loadFailed": "Impossibile caricare i principal di servizio",
+    "toggleFailed": "Impossibile aggiornare il principal di servizio",
+    "delete": {
+      "archived": "Principal di servizio archiviato. La sua cronologia viene conservata, così l'attività passata continua a mostrarne il nome.",
+      "deleted": "Principal di servizio eliminato.",
+      "failed": "Impossibile eliminare il principal di servizio",
+      "title": "Eliminare il principal di servizio?",
+      "message": "Le sue chiavi API smettono di funzionare. Se ha una cronologia, viene archiviato anziché rimosso."
+    },
+    "status": {
+      "inactive": "Inattivo",
+      "active": "Attivo"
+    },
+    "actions": {
+      "edit": "Modifica",
+      "keys": "Chiavi",
+      "deactivate": "Disattiva",
+      "delete": "Elimina",
+      "new": "Nuovo principal di servizio"
+    },
+    "featureName": "Principal di servizio",
+    "title": "Principal di servizio",
+    "description": "Identità non umane con ruoli e chiavi API propri per integrazioni e agenti.",
+    "usage": {
+      "header": "{{used}} di {{limit}} principal di servizio",
+      "availableOnPro": "Disponibile con Pro",
+      "row": "{{used}} di {{limit}}",
+      "label": "Principal di servizio"
+    },
+    "grandfathered": "I principal di servizio richiedono il piano Pro. I principal esistenti vengono mantenuti, ma puoi solo disattivarli o eliminarli.",
+    "limitReached": "Hai raggiunto il limite di {{limit}} principal di servizio attivi. Disattivane o eliminane uno per aggiungerne un altro.",
+    "mcp": {
+      "sharedLimit": "Gli agenti MCP contano ai fini del limite dei principal di servizio: {{used}} di {{limit}} in uso.",
+      "requiresPro": "L'aggiunta di agenti MCP richiede il piano Pro.",
+      "limitReached": "Hai raggiunto il limite di {{limit}} principal di servizio attivi. Disattivane o rimuovine uno per aggiungere un agente."
+    },
+    "kind": {
+      "api": "API",
+      "mcpAgent": "Agente MCP"
+    }
   }
 }

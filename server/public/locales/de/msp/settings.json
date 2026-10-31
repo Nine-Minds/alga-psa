@@ -3855,5 +3855,116 @@
       "empty": "Keine Standardstatus zum Importieren verfügbar",
       "importSelected": "Ausgewählte importieren ({{count}})"
     }
+  },
+  "servicePrincipals": {
+    "via": {
+      "label": "via {{principal}}"
+    },
+    "badge": {
+      "service": "Dienst"
+    },
+    "keyReveal": {
+      "copySuccess": "API-Schlüssel in die Zwischenablage kopiert!",
+      "copyFailed": "Kopieren des API-Schlüssels in die Zwischenablage fehlgeschlagen",
+      "downloadFailed": "Herunterladen des API-Schlüssels fehlgeschlagen",
+      "title": "API-Schlüssel generiert",
+      "warning": "Bitte kopieren Sie Ihren API-Schlüssel jetzt. Aus Sicherheitsgründen wird er nicht erneut angezeigt.",
+      "rotationNote": "Der vorherige Schlüssel funktioniert noch 5 Minuten weiter, sodass Sie umstellen können.",
+      "copy": "In die Zwischenablage kopieren",
+      "download": "Als .txt herunterladen",
+      "done": "Fertig"
+    },
+    "dialog": {
+      "nameRequired": "Ein Name ist erforderlich",
+      "rateLimitInvalid": "Geben Sie beide Ratenlimit-Werte innerhalb der angezeigten Höchstwerte ein oder lassen Sie beide leer.",
+      "saveFailed": "Dienstprinzipal konnte nicht gespeichert werden",
+      "editTitle": "Dienstprinzipal bearbeiten",
+      "createTitle": "Neuer Dienstprinzipal",
+      "cancel": "Abbrechen",
+      "save": "Speichern",
+      "name": "Name",
+      "description": "Beschreibung",
+      "roles": "Rollen",
+      "allowActAs": "Handeln im Namen eines Benutzers zulassen",
+      "rateLimit": "Ratenlimit überschreiben (optional)",
+      "rateLimitBurst": "Burst-Größe (max. {{max}})",
+      "rateLimitRefill": "Anfragen pro Minute (max. {{max}})"
+    },
+    "keys": {
+      "loadFailed": "Schlüssel konnten nicht geladen werden",
+      "issueFailed": "API-Schlüssel konnte nicht erstellt werden",
+      "revokeFailed": "API-Schlüssel konnte nicht widerrufen werden",
+      "columns": {
+        "description": "Beschreibung",
+        "status": "Status",
+        "lastUsed": "Zuletzt verwendet",
+        "expires": "Läuft ab"
+      },
+      "noDescription": "Keine Beschreibung",
+      "status": {
+        "active": "Aktiv",
+        "inactive": "Inaktiv"
+      },
+      "never": "Nie",
+      "noExpiry": "Kein Ablaufdatum",
+      "rotate": "Rotieren",
+      "revoke": "Widerrufen",
+      "title": "API-Schlüssel für {{name}}",
+      "descriptionLabel": "Schlüsselbeschreibung",
+      "create": "Schlüssel erstellen",
+      "revokeTitle": "API-Schlüssel widerrufen?",
+      "revokeMessage": "Alles, was diesen Schlüssel verwendet, funktioniert sofort nicht mehr."
+    },
+    "columns": {
+      "actions": "Aktionen",
+      "name": "Name",
+      "status": "Status",
+      "active": "Aktiv",
+      "roles": "Rollen",
+      "keys": "Aktive Schlüssel",
+      "lastUsed": "Zuletzt verwendet",
+      "createdBy": "Erstellt von",
+      "kind": "Typ"
+    },
+    "loadFailed": "Dienstprinzipale konnten nicht geladen werden",
+    "toggleFailed": "Dienstprinzipal konnte nicht aktualisiert werden",
+    "delete": {
+      "archived": "Dienstprinzipal archiviert. Sein Verlauf bleibt erhalten, damit frühere Aktivitäten weiterhin seinen Namen zeigen.",
+      "deleted": "Dienstprinzipal gelöscht.",
+      "failed": "Dienstprinzipal konnte nicht gelöscht werden",
+      "title": "Dienstprinzipal löschen?",
+      "message": "Seine API-Schlüssel funktionieren nicht mehr. Hat er einen Verlauf, wird er archiviert statt entfernt."
+    },
+    "status": {
+      "inactive": "Inaktiv",
+      "active": "Aktiv"
+    },
+    "actions": {
+      "edit": "Bearbeiten",
+      "keys": "Schlüssel",
+      "deactivate": "Deaktivieren",
+      "delete": "Löschen",
+      "new": "Neuer Dienstprinzipal"
+    },
+    "featureName": "Dienstprinzipale",
+    "title": "Dienstprinzipale",
+    "description": "Nicht-menschliche Identitäten mit eigenen Rollen und API-Schlüsseln für Integrationen und Agenten.",
+    "usage": {
+      "header": "{{used}} von {{limit}} Dienstprinzipalen",
+      "availableOnPro": "Verfügbar mit Pro",
+      "row": "{{used}} von {{limit}}",
+      "label": "Dienstprinzipale"
+    },
+    "grandfathered": "Dienstprinzipale erfordern den Pro-Tarif. Ihre vorhandenen Prinzipale bleiben erhalten, Sie können sie jedoch nur deaktivieren oder löschen.",
+    "limitReached": "Sie haben Ihr Limit von {{limit}} aktiven Dienstprinzipalen erreicht. Deaktivieren oder löschen Sie einen, um einen weiteren hinzuzufügen.",
+    "mcp": {
+      "sharedLimit": "MCP-Agenten zählen zu Ihrem Dienstprinzipal-Limit: {{used}} von {{limit}} in Verwendung.",
+      "requiresPro": "Das Hinzufügen von MCP-Agenten erfordert den Pro-Tarif.",
+      "limitReached": "Sie haben Ihr Limit von {{limit}} aktiven Dienstprinzipalen erreicht. Deaktivieren oder entfernen Sie einen, um einen Agenten hinzuzufügen."
+    },
+    "kind": {
+      "api": "API",
+      "mcpAgent": "MCP-Agent"
+    }
   }
 }

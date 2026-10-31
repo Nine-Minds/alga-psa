@@ -459,3 +459,32 @@ None remain. All were resolved on 2026-10-18; the table at the end of the PRD li
 - **MCP:** tool calls accept `act_as_user_id`; `agents.ts` creates service users + `service_principals` rows (`kind='mcp_agent'`), `agents.active` kept in lockstep with `users.is_inactive`.
 - **Controllers:** the codemod'd controllers needed `apiAuthContext` threaded into `assertManualProductAccess` (time entry/sheet) and `resolveScheduleAccess`. `apiAuthInventory.contract.test.ts` now accepts `buildAuthenticatedApiContext(` as the guard (base controller delegates to it).
 - **`is_internal` comment default** removal and the claim-only appliance limit: see service/entitlements; appliance reads only the verified signed claim `service_principals` (fallback 10), never `tenants.service_principal_limit`.
+
+## 2026-10-31 — Card D/4 (EE UI + usage visibility)
+
+Stacked on card C commit `c91494afd1` (local-only, not on origin) merged cleanly; C's WIP files (`ee/temporal-workflows/Dockerfile`, `server/migrations/utils/permissions/catalog.cjs`, `ee/server/permission-catalog/`) were NOT copied. No Design Session plan doc exists for this card; PRD.md is the source of truth.
+
+Implemented F069, F076, F077, F078, F079, F080, F081, F084, F091, F095; tests T030–T034, T036 written as vitest component tests.
+
+C gaps worked around (thin additions in `ee/server/src/lib/actions/service-principal-actions.ts`):
+- No roles-update action on C's service -> `setServicePrincipalRolesAction` wrapper (`LEVERAGE: friction service-principal-roles-update`).
+- No list view with role names / last used / creator display name -> `listServicePrincipalRowsAction`.
+- No form options -> `getServicePrincipalFormOptionsAction` (msp roles + rate-limit ceiling).
+- C does not seed `service_principal` permissions for new tenants (known C gap, not fixed here).
+
+Other notes:
+- `@enterprise/components/service-principals/*` stubs added in `packages/ee` (incl. `McpAgentCreateGate`, `ApiKeyPrincipalCell` fallback).
+- Added `@enterprise` alias to `packages/tickets/vitest.config.ts`.
+- `msp/settings` added to ROUTE_NAMESPACES for /msp/tickets, /msp/time-entry, /msp/licenses, /msp/account.
+- `via_principal_name` plumbed through activity feed, time entries and comments (`shared/lib/viaPrincipal/viaPrincipalNames.ts`).
+- `listAllApiKeys` now returns `user_type` for the principal cell.
+- Below Pro: tab shows TierGate when empty; grandfathered rows keep only Deactivate/Delete; MCP create disabled.
+- LEVERAGE markers: `pattern api-key-reveal-dialog`, `friction service-principal-roles-update`.
+
+### D — backend-adjacent changes and the D feature each serves (reviewer: please check the two flagged ones)
+- `shared/lib/viaPrincipal/viaPrincipalNames.ts`, `shared/lib/ticketActivity/{types,readTicketActivity}.ts`, `packages/scheduling/.../timeEntryTicketActions.ts`, `packages/tickets/.../optimizedTicketActions.ts`, `packages/types` comment/time-entry interfaces — read-path only: resolve the *display name* of the via-principal and attach `via_principal_name` so the label can render (F069). Only names are exposed to the UI; `via_principal_user_id` is never read by any component.
+- `packages/auth/.../apiKeyService.ts` (`listAllApiKeys` selects `users.user_type`) and `server/src/lib/actions/apiKeyActions.ts` (`user_type` on the admin list view) — lets the admin keys table decide whether to show the principal cell + Service badge (F084).
+- `ee/server/src/lib/actions/service-principal-actions.ts` — roles wrapper, list view, form options (F078/F079; C gaps, see above).
+- **FLAG: `server/src/app/api/v1/mcp/agents/route.ts`** — POST catch now passes through errors with a numeric 4xx `statusCode` as `{error, code}` so the shared-limit 409 from C's service reaches the MCP settings UI instead of a generic 500 (F081). Behavior change on an API route.
+- **FLAG: `packages/core/src/lib/i18n/config.ts` ROUTE_NAMESPACES** — `msp/settings` added to /msp/tickets, /msp/time-entry, /msp/licenses, /msp/account so the new strings (via label, Service badge, usage row) load on those pages (F091/F069/F076/F077).
+- Rendered output audit: ViaPrincipalLabel, ServiceAuthorBadge, ApiKeyPrincipalCell, ServicePrincipalUsageRow and the tab table render names/counts only; ids appear solely as DOM element ids and action arguments.

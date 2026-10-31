@@ -26,6 +26,8 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      // CE stubs for @enterprise/* (the edition-swapped seam); tests that need the EE component mock it explicitly.
+      { find: /^@enterprise\/(.*)$/, replacement: path.resolve(__dirname, '../ee/src/$1') },
       { find: /^next\/server$/, replacement: path.resolve(__dirname, '../../node_modules/next/server.js') },
       { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../ui/src/index.ts') },
       { find: /^@alga-psa\/ui\/(.*)$/, replacement: path.resolve(__dirname, '../ui/src/$1') },

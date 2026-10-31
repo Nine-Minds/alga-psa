@@ -48,6 +48,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     if (e instanceof Error && e.name === 'AgentBindingConflictError') {
       return NextResponse.json({ error: e.message }, { status: 409 });
     }
+    // Agents are principals on the shared service layer: its limit / tier / validation errors carry a
+    // 4xx statusCode and a machine code, so surface them as-is instead of a generic 500.
+    const status = (e as { statusCode?: unknown } | null)?.statusCode;
+    if (e instanceof Error && typeof status === 'number' && status >= 400 && status < 500) {
+      return NextResponse.json({ error: e.message, code: (e as { code?: string }).code }, { status });
+    }
     throw e;
   }
 }

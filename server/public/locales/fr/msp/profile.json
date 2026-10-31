@@ -96,7 +96,8 @@
       "policies": "Politiques",
       "apiKeys": "Clés API",
       "webhooks": "Webhooks",
-      "userProvisioning": "Provisionnement des utilisateurs"
+      "userProvisioning": "Provisionnement des utilisateurs",
+      "servicePrincipals": "Principaux de service"
     },
     "loading": {
       "roles": "Chargement de la configuration des rôles...",
@@ -107,7 +108,8 @@
       "webhooks": "Chargement de la configuration des webhooks...",
       "sso": "Chargement des outils de gestion SSO...",
       "sessions": "Chargement des sessions actives...",
-      "userProvisioning": "Chargement du provisionnement SCIM…"
+      "userProvisioning": "Chargement du provisionnement SCIM…",
+      "servicePrincipals": "Chargement des principaux de service..."
     },
     "sso": {
       "advanced": {
@@ -804,7 +806,10 @@
       "testNotRetryable": "Les livraisons de test ne peuvent pas être relancées.",
       "payloadInvalid": "Cette livraison ne peut pas être relancée car la charge utile enregistrée n'est pas valide.",
       "unsupportedEventType": "Type d'événement non pris en charge : {{eventTypes}}",
-      "validation": { "unknownEntity": "Entité de webhook inconnue « {{entity}} ».", "unknownField": "Champ « {{field}} » inconnu pour l’entité de webhook « {{entity}} »." }
+      "validation": {
+        "unknownEntity": "Entité de webhook inconnue « {{entity}} ».",
+        "unknownField": "Champ « {{field}} » inconnu pour l’entité de webhook « {{entity}} »."
+      }
     },
     "inboundWebhooks": {
       "permissions": {
@@ -823,7 +828,11 @@
       "deliveryNotFound": "Livraison entrante introuvable.",
       "replayMissingConfig": "Impossible de rejouer une livraison entrante sans configuration de webhook.",
       "notFoundOrInactive": "Webhook entrant introuvable ou inactif.",
-      "validation": { "slugReserved": "Cet identifiant est réservé à une intégration incluse.", "authTypeMismatch": "Le type de configuration d’authentification doit correspondre au type d’authentification sélectionné.", "handlerTypeMismatch": "Le type de configuration du gestionnaire doit correspondre au type de gestionnaire sélectionné." }
+      "validation": {
+        "slugReserved": "Cet identifiant est réservé à une intégration incluse.",
+        "authTypeMismatch": "Le type de configuration d’authentification doit correspondre au type d’authentification sélectionné.",
+        "handlerTypeMismatch": "Le type de configuration du gestionnaire doit correspondre au type de gestionnaire sélectionné."
+      }
     }
   }
 }

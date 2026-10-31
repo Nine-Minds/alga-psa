@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@alga-psa/ui/components/Button';
+import { ViaPrincipalLabel } from '@enterprise/components/service-principals/ViaPrincipalLabel';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
@@ -632,10 +633,11 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
         title: 'Actor',
         dataIndex: 'actor',
         width: '180px',
-        render: (value: unknown) => (
+        render: (value: unknown, record: FormattedEntry) => (
           <span className="inline-flex items-center gap-1 text-xs text-[rgb(var(--color-text-700))]">
             <User2 className="h-3 w-3" />
             {String(value ?? '')}
+            <ViaPrincipalLabel principalName={record.rawActivity?.via_principal_name} />
           </span>
         ),
       },

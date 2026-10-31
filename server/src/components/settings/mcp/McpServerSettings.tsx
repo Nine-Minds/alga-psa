@@ -13,6 +13,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
+import { McpAgentCreateGate } from '@enterprise/components/service-principals/McpAgentCreateGate';
 import ConnectedClientsCard from './ConnectedClientsCard';
 import type { ColumnDefinition } from '@alga-psa/types';
 import type { TrustedIdp, Agent, Role, AuditRow, PlatformProvider, ConnectIdentity } from './mcpTypes';
@@ -764,8 +765,10 @@ export default function McpServerSettings() {
               ))}
             </div>
           </div>
+          <McpAgentCreateGate refreshKey={agents.length}>
+            {({ disabled: createBlocked }) => (
           <div className="flex items-center gap-3">
-            <Button id="mcp-create-agent" onClick={createAgent} disabled={busy || !agentForm.name || !agentForm.idpIssuer || !agentForm.idpSubject}>
+            <Button id="mcp-create-agent" onClick={createAgent} disabled={createBlocked || busy || !agentForm.name || !agentForm.idpIssuer || !agentForm.idpSubject}>
               {t('mcpServer.agents.actions.add', { defaultValue: 'Add agent' })}
             </Button>
             {!agentForm.name ? (
@@ -784,6 +787,8 @@ export default function McpServerSettings() {
               </span>
             ) : null}
           </div>
+            )}
+          </McpAgentCreateGate>
             </>
           )}
         </CardContent>

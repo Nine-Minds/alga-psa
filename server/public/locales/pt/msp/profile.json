@@ -96,7 +96,8 @@
       "policies": "Políticas",
       "apiKeys": "Chaves de API",
       "webhooks": "Webhooks",
-      "userProvisioning": "Provisionamento de usuários"
+      "userProvisioning": "Provisionamento de usuários",
+      "servicePrincipals": "Principais de serviço"
     },
     "loading": {
       "roles": "Carregando configuração de função...",
@@ -107,7 +108,8 @@
       "webhooks": "Carregando configuração do webhook...",
       "sso": "Carregando ferramentas de gerenciamento de SSO...",
       "sessions": "Carregando sessões ativas...",
-      "userProvisioning": "Carregando provisionamento via SCIM..."
+      "userProvisioning": "Carregando provisionamento via SCIM...",
+      "servicePrincipals": "Carregando principais de serviço..."
     },
     "sso": {
       "advanced": {
@@ -804,7 +806,10 @@
       "testNotRetryable": "Entregas de teste não podem ser repetidas.",
       "unsupportedEventType": "Tipo de evento não suportado: {{eventTypes}}",
       "payloadInvalid": "Esta entrega não pode ser repetida porque o payload armazenado é inválido.",
-      "validation": { "unknownEntity": "Entidade de webhook desconhecida \"{{entity}}\".", "unknownField": "Campo desconhecido \"{{field}}\" para a entidade de webhook \"{{entity}}\"." }
+      "validation": {
+        "unknownEntity": "Entidade de webhook desconhecida \"{{entity}}\".",
+        "unknownField": "Campo desconhecido \"{{field}}\" para a entidade de webhook \"{{entity}}\"."
+      }
     },
     "inboundWebhooks": {
       "permissions": {
@@ -823,7 +828,11 @@
       "deliveryNotFound": "Entrega de entrada não encontrada.",
       "replayMissingConfig": "Não é possível reenviar uma entrega de entrada sem uma configuração de webhook.",
       "notFoundOrInactive": "Webhook de entrada não encontrado ou inativo.",
-      "validation": { "slugReserved": "Este identificador é reservado para uma integração incluída.", "authTypeMismatch": "O tipo de configuração de autenticação deve corresponder ao tipo de autenticação selecionado.", "handlerTypeMismatch": "O tipo de configuração do manipulador deve corresponder ao tipo de manipulador selecionado." }
+      "validation": {
+        "slugReserved": "Este identificador é reservado para uma integração incluída.",
+        "authTypeMismatch": "O tipo de configuração de autenticação deve corresponder ao tipo de autenticação selecionado.",
+        "handlerTypeMismatch": "O tipo de configuração do manipulador deve corresponder ao tipo de manipulador selecionado."
+      }
     }
   }
 }

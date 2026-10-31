@@ -220,7 +220,7 @@ export const ROUTE_NAMESPACES = {
   // time-entry launcher (period picker + blocked-launch feedback) is opened
   // from both. msp/user-activities loads on ticket, project and dispatch
   // surfaces because they host the shared "My group" activity-group control.
-  '/msp/tickets': ['common', 'msp/core', 'features/tickets', 'msp/time-entry', 'msp/user-activities', 'msp/schedule', 'features/documents'],
+  '/msp/tickets': ['common', 'msp/core', 'msp/settings', 'features/tickets', 'msp/time-entry', 'msp/user-activities', 'msp/schedule', 'features/documents'],
   '/msp/projects': ['common', 'msp/core', 'features/projects', 'features/tickets', 'msp/time-entry', 'msp/user-activities', 'msp/schedule', 'features/documents'],
   '/msp/billing/credits': ['common', 'msp/core', 'features/billing', 'msp/credits', 'features/documents'],
   '/msp/reports': ['common', 'msp/core', 'msp/reports'],
@@ -242,7 +242,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/workflow-editor': ['common', 'msp/core', 'msp/workflows'],
   '/msp/workflow-control': ['common', 'msp/core', 'msp/workflows'],
   '/msp/technician-dispatch': ['common', 'msp/core', 'msp/dispatch', 'msp/user-activities', 'msp/schedule', 'features/tickets', 'msp/time-entry', 'features/documents'],
-  '/msp/time-entry': ['common', 'msp/core', 'msp/time-entry', 'features/tickets', 'features/documents'],
+  '/msp/time-entry': ['common', 'msp/core', 'msp/settings', 'msp/time-entry', 'features/tickets', 'features/documents'],
   '/msp/time-sheet-approvals': ['common', 'msp/core', 'msp/time-entry'],
   '/msp/time-management': ['common', 'msp/core', 'msp/time-entry'],
   '/msp/service-requests': ['common', 'msp/core', 'features/tickets', 'msp/service-requests', 'features/documents'],
@@ -253,8 +253,8 @@ export const ROUTE_NAMESPACES = {
   '/msp/security-settings': ['common', 'msp/core', 'msp/settings', 'msp/profile'],
   '/msp/platform-updates': ['common', 'msp/core', 'msp/profile'],
   '/msp/extensions': ['common', 'msp/core', 'msp/extensions'],
-  '/msp/licenses': ['common', 'msp/core', 'msp/licensing'],
-  '/msp/account': ['common', 'msp/core', 'msp/account', 'msp/licensing'],
+  '/msp/licenses': ['common', 'msp/core', 'msp/licensing', 'msp/settings'],
+  '/msp/account': ['common', 'msp/core', 'msp/account', 'msp/licensing', 'msp/settings'],
   '/msp/add-ons': ['common', 'msp/core', 'msp/account', 'msp/licensing'],
   '/msp/user-activities': ['common', 'msp/core', 'msp/user-activities', 'msp/workflows', 'features/tickets', 'features/projects', 'msp/schedule', 'msp/opportunities', 'msp/time-entry', 'features/documents'],
   '/msp/credentials': ['common', 'msp/core', 'msp/credentials'],

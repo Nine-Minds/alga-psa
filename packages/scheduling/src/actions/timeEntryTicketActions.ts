@@ -20,6 +20,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { resolveManagedSubjectUserIds } from './timeEntryDelegationAuth';
+import { tableHasColumn, resolveViaPrincipalNames } from '@alga-psa/shared/lib/viaPrincipal/viaPrincipalNames';
 import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
 import {
   timeSheetActionErrorFrom,
@@ -103,6 +104,21 @@ export async function fetchTimeEntriesForTicketCore(
       db.raw(`TRIM(CONCAT_WS(' ', NULLIF(users.first_name, ''), NULLIF(users.last_name, ''))) AS user_name`),
     );
 
+  // The via-principal column exists only in the EE schema; names resolve to display text, never ids.
+  const viaNames = new Map<string, string>();
+  if (rows.length > 0 && (await tableHasColumn(db, 'time_entries', 'created_via_principal_id'))) {
+    const viaRows = (await scopedDb
+      .table('time_entries')
+      .whereIn('entry_id', rows.map((row) => row.entry_id))
+      .whereNotNull('created_via_principal_id')
+      .select('entry_id', 'created_via_principal_id')) as Array<{ entry_id: string; created_via_principal_id: string }>;
+    const principalNames = await resolveViaPrincipalNames(db, tenant, viaRows.map((r) => r.created_via_principal_id));
+    for (const viaRow of viaRows) {
+      const name = principalNames.get(viaRow.created_via_principal_id);
+      if (name) viaNames.set(viaRow.entry_id, name);
+    }
+  }
+
   const managedUserIds = await resolveManagedSubjectUserIds(db, tenant, user);
 
   const subject: AuthorizationSubject = {
@@ -181,6 +197,7 @@ export async function fetchTimeEntriesForTicketCore(
       service_id: row.service_id,
       service_name: row.service_name,
       is_own: isOwn,
+      ...(viaNames.has(row.entry_id) ? { via_principal_name: viaNames.get(row.entry_id) } : {}),
     };
 
     visible.push(redactEntry(entry, decision.redactedFields));

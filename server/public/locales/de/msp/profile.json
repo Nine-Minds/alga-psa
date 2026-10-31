@@ -96,7 +96,8 @@
       "policies": "Richtlinien",
       "apiKeys": "API-Schlüssel",
       "webhooks": "Webhooks",
-      "userProvisioning": "Benutzerbereitstellung"
+      "userProvisioning": "Benutzerbereitstellung",
+      "servicePrincipals": "Dienstprinzipale"
     },
     "loading": {
       "roles": "Rollenkonfiguration wird geladen...",
@@ -107,7 +108,8 @@
       "webhooks": "Webhook-Konfiguration wird geladen...",
       "sso": "SSO-Verwaltungswerkzeuge werden geladen...",
       "sessions": "Aktive Sitzungen werden geladen...",
-      "userProvisioning": "SCIM-Bereitstellung wird geladen…"
+      "userProvisioning": "SCIM-Bereitstellung wird geladen…",
+      "servicePrincipals": "Dienstprinzipale werden geladen..."
     },
     "sso": {
       "advanced": {
@@ -804,7 +806,10 @@
       "testNotRetryable": "Testzustellungen können nicht wiederholt werden.",
       "payloadInvalid": "Diese Zustellung kann nicht wiederholt werden, da die gespeicherte Nutzlast ungültig ist.",
       "unsupportedEventType": "Nicht unterstützter Ereignistyp: {{eventTypes}}",
-      "validation": { "unknownEntity": "Unbekannte Webhook-Entität „{{entity}}“.", "unknownField": "Unbekanntes Feld „{{field}}“ für die Webhook-Entität „{{entity}}“." }
+      "validation": {
+        "unknownEntity": "Unbekannte Webhook-Entität „{{entity}}“.",
+        "unknownField": "Unbekanntes Feld „{{field}}“ für die Webhook-Entität „{{entity}}“."
+      }
     },
     "inboundWebhooks": {
       "permissions": {
@@ -823,7 +828,11 @@
       "deliveryNotFound": "Eingehende Zustellung nicht gefunden.",
       "replayMissingConfig": "Eine eingehende Zustellung kann ohne Webhook-Konfiguration nicht wiederholt werden.",
       "notFoundOrInactive": "Eingehender Webhook nicht gefunden oder inaktiv.",
-      "validation": { "slugReserved": "Dieser Slug ist für eine gebündelte Integration reserviert.", "authTypeMismatch": "Der Typ der Authentifizierungskonfiguration muss dem ausgewählten Authentifizierungstyp entsprechen.", "handlerTypeMismatch": "Der Typ der Handler-Konfiguration muss dem ausgewählten Handler-Typ entsprechen." }
+      "validation": {
+        "slugReserved": "Dieser Slug ist für eine gebündelte Integration reserviert.",
+        "authTypeMismatch": "Der Typ der Authentifizierungskonfiguration muss dem ausgewählten Authentifizierungstyp entsprechen.",
+        "handlerTypeMismatch": "Der Typ der Handler-Konfiguration muss dem ausgewählten Handler-Typ entsprechen."
+      }
     }
   }
 }

@@ -96,7 +96,8 @@
       "policies": "Zasady",
       "apiKeys": "Klucze API",
       "webhooks": "Webhooki",
-      "userProvisioning": "Inicjowanie obsługi użytkowników"
+      "userProvisioning": "Inicjowanie obsługi użytkowników",
+      "servicePrincipals": "Podmioty usług"
     },
     "loading": {
       "roles": "Ładowanie konfiguracji ról...",
@@ -107,7 +108,8 @@
       "webhooks": "Ładowanie konfiguracji webhooków...",
       "sso": "Ładowanie narzędzi zarządzania SSO...",
       "sessions": "Ładowanie aktywnych sesji...",
-      "userProvisioning": "Wczytywanie inicjowania obsługi SCIM..."
+      "userProvisioning": "Wczytywanie inicjowania obsługi SCIM...",
+      "servicePrincipals": "Ładowanie podmiotów usług..."
     },
     "sso": {
       "advanced": {
@@ -804,7 +806,10 @@
       "signingSecretMissing": "Brak sekretu podpisu webhooka. Wymień sekret podpisu i spróbuj ponownie.",
       "deliveryNotFound": "Nie znaleziono dostarczenia.",
       "testNotRetryable": "Dostarczeń testowych nie można ponowić.",
-      "validation": { "unknownEntity": "Nieznany typ encji webhooka „{{entity}}”.", "unknownField": "Nieznane pole „{{field}}” dla encji webhooka „{{entity}}”." },
+      "validation": {
+        "unknownEntity": "Nieznany typ encji webhooka „{{entity}}”.",
+        "unknownField": "Nieznane pole „{{field}}” dla encji webhooka „{{entity}}”."
+      },
       "unsupportedEventType": "Nieobsługiwany typ zdarzenia: {{eventTypes}}",
       "payloadInvalid": "Tego dostarczenia nie można ponowić, ponieważ zapisany ładunek jest nieprawidłowy."
     },
@@ -824,7 +829,11 @@
       "unsupportedAuthType": "Nieobsługiwany typ uwierzytelniania przychodzącego webhooka: {{authType}}.",
       "deliveryNotFound": "Nie znaleziono przychodzącego dostarczenia.",
       "replayMissingConfig": "Nie można ponownie odtworzyć przychodzącego dostarczenia bez konfiguracji webhooka.",
-      "validation": { "slugReserved": "Ten identyfikator jest zarezerwowany dla wbudowanej integracji.", "authTypeMismatch": "Typ konfiguracji uwierzytelniania musi odpowiadać wybranemu typowi uwierzytelniania.", "handlerTypeMismatch": "Typ konfiguracji procedury obsługi musi odpowiadać wybranemu typowi procedury obsługi." },
+      "validation": {
+        "slugReserved": "Ten identyfikator jest zarezerwowany dla wbudowanej integracji.",
+        "authTypeMismatch": "Typ konfiguracji uwierzytelniania musi odpowiadać wybranemu typowi uwierzytelniania.",
+        "handlerTypeMismatch": "Typ konfiguracji procedury obsługi musi odpowiadać wybranemu typowi procedury obsługi."
+      },
       "notFoundOrInactive": "Nie znaleziono przychodzącego webhooka lub jest nieaktywny."
     }
   }

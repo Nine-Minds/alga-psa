@@ -120,6 +120,7 @@ import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { resolveBoardStopwatchEnabled } from '../lib/boardLiveTicketTimer';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
 import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
+import { attachViaPrincipalNames } from '@alga-psa/shared/lib/viaPrincipal/viaPrincipalNames';
 
 const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
 type ScheduledCommentPublication = { publishAt: string; timeZone: string };
@@ -511,7 +512,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     // Fetch all related data in parallel
     const [
-      comments,
+      rawComments,
       documentRows,
       clients,
       resources,
@@ -775,6 +776,9 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     // the agent pickers only offer assignable agents. Comment authors are not
     // bound by that: client-portal repliers and deactivated agents also write
     // comments, so fetch the missing authors separately for display purposes only.
+    // "<human> via <principal>" needs the principal's display name (EE only; a no-op elsewhere).
+    const comments = await attachViaPrincipalNames(trx, tenant, rawComments as any[], 'created_via_principal_id');
+
     const pickerUserIds = new Set((users as Array<{ user_id: string }>).map((agent) => agent.user_id));
     const extraAuthorIds = Array.from(
       new Set(

@@ -3855,5 +3855,116 @@
       "empty": "Geen standaardstatussen beschikbaar om te importeren",
       "importSelected": "Selectie importeren ({{count}})"
     }
+  },
+  "servicePrincipals": {
+    "via": {
+      "label": "via {{principal}}"
+    },
+    "badge": {
+      "service": "Service"
+    },
+    "keyReveal": {
+      "copySuccess": "API-sleutel naar klembord gekopieerd!",
+      "copyFailed": "API-sleutel kopiëren naar klembord mislukt",
+      "downloadFailed": "API-sleutel downloaden mislukt",
+      "title": "API-sleutel gegenereerd",
+      "warning": "Kopieer uw API-sleutel nu. Om veiligheidsredenen wordt deze niet opnieuw weergegeven.",
+      "rotationNote": "De vorige sleutel blijft nog 5 minuten werken, zodat u kunt overschakelen.",
+      "copy": "Naar klembord kopiëren",
+      "download": "Downloaden als .txt",
+      "done": "Gereed"
+    },
+    "dialog": {
+      "nameRequired": "Een naam is vereist",
+      "rateLimitInvalid": "Voer beide snelheidslimietwaarden in, binnen de getoonde maxima, of laat beide leeg.",
+      "saveFailed": "Serviceprincipal opslaan mislukt",
+      "editTitle": "Serviceprincipal bewerken",
+      "createTitle": "Nieuwe serviceprincipal",
+      "cancel": "Annuleren",
+      "save": "Opslaan",
+      "name": "Naam",
+      "description": "Beschrijving",
+      "roles": "Rollen",
+      "allowActAs": "Handelen namens een gebruiker toestaan",
+      "rateLimit": "Overschrijving van snelheidslimiet (optioneel)",
+      "rateLimitBurst": "Burstgrootte (max. {{max}})",
+      "rateLimitRefill": "Verzoeken per minuut (max. {{max}})"
+    },
+    "keys": {
+      "loadFailed": "Sleutels laden mislukt",
+      "issueFailed": "API-sleutel maken mislukt",
+      "revokeFailed": "API-sleutel intrekken mislukt",
+      "columns": {
+        "description": "Beschrijving",
+        "status": "Status",
+        "lastUsed": "Laatst gebruikt",
+        "expires": "Verloopt"
+      },
+      "noDescription": "Geen beschrijving",
+      "status": {
+        "active": "Actief",
+        "inactive": "Inactief"
+      },
+      "never": "Nooit",
+      "noExpiry": "Verloopt niet",
+      "rotate": "Roteren",
+      "revoke": "Intrekken",
+      "title": "API-sleutels voor {{name}}",
+      "descriptionLabel": "Sleutelbeschrijving",
+      "create": "Sleutel maken",
+      "revokeTitle": "API-sleutel intrekken?",
+      "revokeMessage": "Alles wat deze sleutel gebruikt, werkt onmiddellijk niet meer."
+    },
+    "columns": {
+      "actions": "Acties",
+      "name": "Naam",
+      "status": "Status",
+      "active": "Actief",
+      "roles": "Rollen",
+      "keys": "Actieve sleutels",
+      "lastUsed": "Laatst gebruikt",
+      "createdBy": "Gemaakt door",
+      "kind": "Type"
+    },
+    "loadFailed": "Serviceprincipals laden mislukt",
+    "toggleFailed": "Serviceprincipal bijwerken mislukt",
+    "delete": {
+      "archived": "Serviceprincipal gearchiveerd. De geschiedenis blijft bewaard, zodat eerdere activiteit nog steeds de naam toont.",
+      "deleted": "Serviceprincipal verwijderd.",
+      "failed": "Serviceprincipal verwijderen mislukt",
+      "title": "Serviceprincipal verwijderen?",
+      "message": "De API-sleutels ervan werken niet meer. Als er geschiedenis is, wordt deze gearchiveerd in plaats van verwijderd."
+    },
+    "status": {
+      "inactive": "Inactief",
+      "active": "Actief"
+    },
+    "actions": {
+      "edit": "Bewerken",
+      "keys": "Sleutels",
+      "deactivate": "Deactiveren",
+      "delete": "Verwijderen",
+      "new": "Nieuwe serviceprincipal"
+    },
+    "featureName": "Serviceprincipals",
+    "title": "Serviceprincipals",
+    "description": "Niet-menselijke identiteiten met eigen rollen en API-sleutels voor integraties en agents.",
+    "usage": {
+      "header": "{{used}} van {{limit}} serviceprincipals",
+      "availableOnPro": "Beschikbaar met Pro",
+      "row": "{{used}} van {{limit}}",
+      "label": "Serviceprincipals"
+    },
+    "grandfathered": "Serviceprincipals vereisen het Pro-abonnement. Uw bestaande principals blijven behouden, maar u kunt ze alleen deactiveren of verwijderen.",
+    "limitReached": "U hebt uw limiet van {{limit}} actieve serviceprincipals bereikt. Deactiveer of verwijder er een om een andere toe te voegen.",
+    "mcp": {
+      "sharedLimit": "MCP-agents tellen mee voor uw limiet voor serviceprincipals: {{used}} van {{limit}} in gebruik.",
+      "requiresPro": "Voor het toevoegen van MCP-agents is het Pro-abonnement vereist.",
+      "limitReached": "U hebt uw limiet van {{limit}} actieve serviceprincipals bereikt. Deactiveer of verwijder er een om een agent toe te voegen."
+    },
+    "kind": {
+      "api": "API",
+      "mcpAgent": "MCP-agent"
+    }
   }
 }

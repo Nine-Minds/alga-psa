@@ -3855,5 +3855,116 @@
       "empty": "Nenhum status padrão disponível para importação",
       "importSelected": "Importar selecionados ({{count}})"
     }
+  },
+  "servicePrincipals": {
+    "via": {
+      "label": "via {{principal}}"
+    },
+    "badge": {
+      "service": "Serviço"
+    },
+    "keyReveal": {
+      "copySuccess": "Chave de API copiada para a área de transferência!",
+      "copyFailed": "Falha ao copiar a chave de API para a área de transferência",
+      "downloadFailed": "Falha ao baixar a chave de API",
+      "title": "Chave de API gerada",
+      "warning": "Copie sua chave de API agora. Por motivos de segurança, ela não será mostrada novamente.",
+      "rotationNote": "A chave anterior continua funcionando por mais 5 minutos para que você possa fazer a troca.",
+      "copy": "Copiar para a área de transferência",
+      "download": "Baixar como .txt",
+      "done": "Concluído"
+    },
+    "dialog": {
+      "nameRequired": "Um nome é obrigatório",
+      "rateLimitInvalid": "Informe os dois valores de limite de taxa, dentro dos máximos exibidos, ou deixe ambos vazios.",
+      "saveFailed": "Falha ao salvar o principal de serviço",
+      "editTitle": "Editar principal de serviço",
+      "createTitle": "Novo principal de serviço",
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "name": "Nome",
+      "description": "Descrição",
+      "roles": "Funções",
+      "allowActAs": "Permitir agir em nome de um usuário",
+      "rateLimit": "Substituição do limite de taxa (opcional)",
+      "rateLimitBurst": "Tamanho do burst (máx. {{max}})",
+      "rateLimitRefill": "Requisições por minuto (máx. {{max}})"
+    },
+    "keys": {
+      "loadFailed": "Falha ao carregar as chaves",
+      "issueFailed": "Falha ao criar a chave de API",
+      "revokeFailed": "Falha ao revogar a chave de API",
+      "columns": {
+        "description": "Descrição",
+        "status": "Status",
+        "lastUsed": "Último uso",
+        "expires": "Expira"
+      },
+      "noDescription": "Sem descrição",
+      "status": {
+        "active": "Ativa",
+        "inactive": "Inativa"
+      },
+      "never": "Nunca",
+      "noExpiry": "Sem expiração",
+      "rotate": "Rotacionar",
+      "revoke": "Revogar",
+      "title": "Chaves de API de {{name}}",
+      "descriptionLabel": "Descrição da chave",
+      "create": "Criar chave",
+      "revokeTitle": "Revogar a chave de API?",
+      "revokeMessage": "Tudo que usa esta chave deixa de funcionar imediatamente."
+    },
+    "columns": {
+      "actions": "Ações",
+      "name": "Nome",
+      "status": "Status",
+      "active": "Ativo",
+      "roles": "Funções",
+      "keys": "Chaves ativas",
+      "lastUsed": "Último uso",
+      "createdBy": "Criado por",
+      "kind": "Tipo"
+    },
+    "loadFailed": "Falha ao carregar os principais de serviço",
+    "toggleFailed": "Falha ao atualizar o principal de serviço",
+    "delete": {
+      "archived": "Principal de serviço arquivado. Seu histórico é mantido para que a atividade passada ainda mostre seu nome.",
+      "deleted": "Principal de serviço excluído.",
+      "failed": "Falha ao excluir o principal de serviço",
+      "title": "Excluir o principal de serviço?",
+      "message": "Suas chaves de API deixam de funcionar. Se tiver histórico, ele é arquivado em vez de removido."
+    },
+    "status": {
+      "inactive": "Inativo",
+      "active": "Ativo"
+    },
+    "actions": {
+      "edit": "Editar",
+      "keys": "Chaves",
+      "deactivate": "Desativar",
+      "delete": "Excluir",
+      "new": "Novo principal de serviço"
+    },
+    "featureName": "Principais de serviço",
+    "title": "Principais de serviço",
+    "description": "Identidades não humanas com funções e chaves de API próprias para integrações e agentes.",
+    "usage": {
+      "header": "{{used}} de {{limit}} principais de serviço",
+      "availableOnPro": "Disponível no Pro",
+      "row": "{{used}} de {{limit}}",
+      "label": "Principais de serviço"
+    },
+    "grandfathered": "Os principais de serviço exigem o plano Pro. Seus principais existentes são mantidos, mas você só pode desativá-los ou excluí-los.",
+    "limitReached": "Você atingiu o limite de {{limit}} principais de serviço ativos. Desative ou exclua um para adicionar outro.",
+    "mcp": {
+      "sharedLimit": "Os agentes MCP contam para o limite de principais de serviço: {{used}} de {{limit}} em uso.",
+      "requiresPro": "Adicionar agentes MCP exige o plano Pro.",
+      "limitReached": "Você atingiu o limite de {{limit}} principais de serviço ativos. Desative ou remova um para adicionar um agente."
+    },
+    "kind": {
+      "api": "API",
+      "mcpAgent": "Agente MCP"
+    }
   }
 }

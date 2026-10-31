@@ -2,6 +2,8 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PartialBlock } from '@blocknote/core';
+import { ServiceAuthorBadge } from '@enterprise/components/service-principals/ServiceAuthorBadge';
+import { ViaPrincipalLabel } from '@enterprise/components/service-principals/ViaPrincipalLabel';
 import { RichTextViewer, TextEditor } from '@alga-psa/ui/editor';
 import { Pencil, Trash, Lock, CheckCircle, Check, Cog, Copy, CornerUpLeft, MessageCircle } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
@@ -564,6 +566,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 <p {...withDataAutomationId({ id: `${commentId}-author-name` })} className="font-semibold text-gray-800 dark:text-[rgb(var(--color-text-900))] break-words min-w-0">
                   {getAuthorName()}
                 </p>
+                {resolvedAuthor.authorKind === 'service' && <ServiceAuthorBadge />}
+                <ViaPrincipalLabel principalName={conversation.via_principal_name} />
                 {isBundleMirror && (
                   conversation.bundle_mirror_source?.master_ticket_id ? (
                     <a

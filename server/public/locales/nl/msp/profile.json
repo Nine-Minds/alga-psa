@@ -96,7 +96,8 @@
       "policies": "Beleidsregels",
       "apiKeys": "API-sleutels",
       "webhooks": "Webhooks",
-      "userProvisioning": "Gebruikersinrichting"
+      "userProvisioning": "Gebruikersinrichting",
+      "servicePrincipals": "Serviceprincipals"
     },
     "loading": {
       "roles": "Rolconfiguratie laden...",
@@ -107,7 +108,8 @@
       "webhooks": "Webhookconfiguratie laden...",
       "sso": "SSO-beheertools laden...",
       "sessions": "Actieve sessies laden...",
-      "userProvisioning": "SCIM-inrichting laden..."
+      "userProvisioning": "SCIM-inrichting laden...",
+      "servicePrincipals": "Serviceprincipals laden..."
     },
     "sso": {
       "advanced": {
@@ -804,7 +806,10 @@
       "testNotRetryable": "Testafleveringen kunnen niet opnieuw worden geprobeerd.",
       "payloadInvalid": "Deze aflevering kan niet opnieuw worden geprobeerd omdat de opgeslagen payload ongeldig is.",
       "unsupportedEventType": "Niet-ondersteund gebeurtenistype: {{eventTypes}}",
-      "validation": { "unknownEntity": "Onbekende webhookentiteit ‘{{entity}}’.", "unknownField": "Onbekend veld ‘{{field}}’ voor webhookentiteit ‘{{entity}}’." }
+      "validation": {
+        "unknownEntity": "Onbekende webhookentiteit ‘{{entity}}’.",
+        "unknownField": "Onbekend veld ‘{{field}}’ voor webhookentiteit ‘{{entity}}’."
+      }
     },
     "inboundWebhooks": {
       "permissions": {
@@ -823,7 +828,11 @@
       "deliveryNotFound": "Inkomende aflevering niet gevonden.",
       "replayMissingConfig": "Een inkomende aflevering kan niet opnieuw worden afgespeeld zonder webhook-configuratie.",
       "notFoundOrInactive": "Inkomende webhook niet gevonden of inactief.",
-      "validation": { "slugReserved": "Deze identificatie is gereserveerd voor een gebundelde integratie.", "authTypeMismatch": "Het type authenticatieconfiguratie moet overeenkomen met het geselecteerde authenticatietype.", "handlerTypeMismatch": "Het type handlerconfiguratie moet overeenkomen met het geselecteerde handlertype." }
+      "validation": {
+        "slugReserved": "Deze identificatie is gereserveerd voor een gebundelde integratie.",
+        "authTypeMismatch": "Het type authenticatieconfiguratie moet overeenkomen met het geselecteerde authenticatietype.",
+        "handlerTypeMismatch": "Het type handlerconfiguratie moet overeenkomen met het geselecteerde handlertype."
+      }
     }
   }
 }

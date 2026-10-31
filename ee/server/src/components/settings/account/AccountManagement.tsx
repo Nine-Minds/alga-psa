@@ -51,8 +51,9 @@ import CancellationFeedbackModal from './CancellationFeedbackModal';
 import AiUsageSection from './AiUsageSection';
 import { useSession } from 'next-auth/react';
 import { useTier } from 'server/src/context/TierContext';
+import { ServicePrincipalUsageRow } from '../../service-principals/ServicePrincipalUsageRow';
 import { useProduct } from 'server/src/context/ProductContext';
-import { ADD_ONS, ADD_ON_LABELS, TIER_LABELS, TIER_FEATURE_MAP, TIER_FEATURES, type AddOnKey } from '@alga-psa/types';
+import { ADD_ONS, ADD_ON_LABELS, TIER_LABELS, TIER_FEATURE_MAP, TIER_FEATURES, tierHasFeature, type AddOnKey } from '@alga-psa/types';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useFormatAddOnDescription } from '@alga-psa/ui/hooks/useAddOnEnumOptions';
 import type { CancellationReasonCategory } from '../../../lib/cancellationFeedbackValidation';
@@ -1390,6 +1391,10 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
                 <p className="text-2xl font-bold text-blue-600">{licenseInfo?.available_licenses ?? t('licenseDetails.unlimited')}</p>
               </div>
             </div>
+            <ServicePrincipalUsageRow
+              hasPro={tier ? tierHasFeature(tier, TIER_FEATURES.SERVICE_PRINCIPALS) : false}
+              className="flex items-center justify-between border-t pt-3 text-sm"
+            />
           </div>
 
           {/* Pricing Info */}

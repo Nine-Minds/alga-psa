@@ -565,7 +565,7 @@
   {
     "id": "F069",
     "description": "CE ticket activity feed, time-entry detail and comment header render the EE ViaPrincipalLabel slot ('<human> via <principal>') when a via column is set",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.8"
     ]
@@ -622,7 +622,7 @@
   {
     "id": "F076",
     "description": "EE AccountManagement page shows a service-principal usage row beside seats with 'don't use seats' note and settings link",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R7.2"
     ]
@@ -630,7 +630,7 @@
   {
     "id": "F077",
     "description": "Appliance LicenseManagementPage shows the service-principal usage row",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R7.2"
     ]
@@ -638,7 +638,7 @@
   {
     "id": "F078",
     "description": "Settings \u2192 Security \u2192 Service principals tab: DataTable (name, kind badge, roles, act-as, status, keys, last used, created by display name) with usage header and New disabled at limit",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "R7.3"
@@ -647,7 +647,7 @@
   {
     "id": "F079",
     "description": "Create/Edit service principal dialog (name, description, MSP roles, allow act-as switch, optional rate-limit override within ceiling)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
@@ -655,7 +655,7 @@
   {
     "id": "F080",
     "description": "Manage keys dialog: issue (shown once), revoke, rotate",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
@@ -663,7 +663,7 @@
   {
     "id": "F081",
     "description": "EE MCP server settings agent list/create use the service-principal backend and show the shared limit",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes",
       "R8.1"
@@ -688,7 +688,7 @@
   {
     "id": "F084",
     "description": "API keys admin list renders an EE principal cell (name + Service badge) for principal-owned keys; CE stub falls back to today's rendering",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
@@ -744,7 +744,7 @@
   {
     "id": "F091",
     "description": "New UI strings added to the msp settings locale files",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "UX / UI Notes"
     ]
@@ -778,7 +778,7 @@
   {
     "id": "F095",
     "description": "Below Pro the Service principals tab and MCP agent create flow render TierGate / FeatureUpgradeNotice via useTierFeature; grandfathered principals stay listed with deactivate/delete only; license page row reads 'Available on Pro'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R7.2",
       "R7.3"

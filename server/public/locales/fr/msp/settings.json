@@ -3855,5 +3855,116 @@
       "empty": "Aucun statut standard disponible à importer",
       "importSelected": "Importer la sélection ({{count}})"
     }
+  },
+  "servicePrincipals": {
+    "via": {
+      "label": "via {{principal}}"
+    },
+    "badge": {
+      "service": "Service"
+    },
+    "keyReveal": {
+      "copySuccess": "Clé API copiée dans le presse-papiers !",
+      "copyFailed": "Échec de la copie de la clé API dans le presse-papiers",
+      "downloadFailed": "Échec du téléchargement de la clé API",
+      "title": "Clé API générée",
+      "warning": "Veuillez copier votre clé API maintenant. Pour des raisons de sécurité, elle ne sera plus affichée.",
+      "rotationNote": "L'ancienne clé continue de fonctionner pendant 5 minutes supplémentaires afin que vous puissiez basculer.",
+      "copy": "Copier dans le presse-papiers",
+      "download": "Télécharger en .txt",
+      "done": "Terminé"
+    },
+    "dialog": {
+      "nameRequired": "Un nom est requis",
+      "rateLimitInvalid": "Saisissez les deux valeurs de limite de débit, dans les maximums indiqués, ou laissez les deux vides.",
+      "saveFailed": "Échec de l'enregistrement du principal de service",
+      "editTitle": "Modifier le principal de service",
+      "createTitle": "Nouveau principal de service",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "name": "Nom",
+      "description": "Description",
+      "roles": "Rôles",
+      "allowActAs": "Autoriser l'action au nom d'un utilisateur",
+      "rateLimit": "Remplacement de la limite de débit (facultatif)",
+      "rateLimitBurst": "Taille de rafale (max. {{max}})",
+      "rateLimitRefill": "Requêtes par minute (max. {{max}})"
+    },
+    "keys": {
+      "loadFailed": "Échec du chargement des clés",
+      "issueFailed": "Échec de la création de la clé API",
+      "revokeFailed": "Échec de la révocation de la clé API",
+      "columns": {
+        "description": "Description",
+        "status": "Statut",
+        "lastUsed": "Dernière utilisation",
+        "expires": "Expire"
+      },
+      "noDescription": "Aucune description",
+      "status": {
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "never": "Jamais",
+      "noExpiry": "Sans expiration",
+      "rotate": "Renouveler",
+      "revoke": "Révoquer",
+      "title": "Clés API de {{name}}",
+      "descriptionLabel": "Description de la clé",
+      "create": "Créer une clé",
+      "revokeTitle": "Révoquer la clé API ?",
+      "revokeMessage": "Tout ce qui utilise cette clé cessera immédiatement de fonctionner."
+    },
+    "columns": {
+      "actions": "Actions",
+      "name": "Nom",
+      "status": "Statut",
+      "active": "Actif",
+      "roles": "Rôles",
+      "keys": "Clés actives",
+      "lastUsed": "Dernière utilisation",
+      "createdBy": "Créé par",
+      "kind": "Type"
+    },
+    "loadFailed": "Échec du chargement des principaux de service",
+    "toggleFailed": "Échec de la mise à jour du principal de service",
+    "delete": {
+      "archived": "Principal de service archivé. Son historique est conservé afin que l'activité passée affiche toujours son nom.",
+      "deleted": "Principal de service supprimé.",
+      "failed": "Échec de la suppression du principal de service",
+      "title": "Supprimer le principal de service ?",
+      "message": "Ses clés API cessent de fonctionner. S'il a un historique, il est archivé plutôt que supprimé."
+    },
+    "status": {
+      "inactive": "Inactif",
+      "active": "Actif"
+    },
+    "actions": {
+      "edit": "Modifier",
+      "keys": "Clés",
+      "deactivate": "Désactiver",
+      "delete": "Supprimer",
+      "new": "Nouveau principal de service"
+    },
+    "featureName": "Principaux de service",
+    "title": "Principaux de service",
+    "description": "Identités non humaines dotées de leurs propres rôles et clés API pour les intégrations et les agents.",
+    "usage": {
+      "header": "{{used}} sur {{limit}} principaux de service",
+      "availableOnPro": "Disponible avec Pro",
+      "row": "{{used}} sur {{limit}}",
+      "label": "Principaux de service"
+    },
+    "grandfathered": "Les principaux de service nécessitent le forfait Pro. Vos principaux existants sont conservés, mais vous pouvez uniquement les désactiver ou les supprimer.",
+    "limitReached": "Vous avez atteint votre limite de {{limit}} principaux de service actifs. Désactivez ou supprimez-en un pour en ajouter un autre.",
+    "mcp": {
+      "sharedLimit": "Les agents MCP comptent dans votre limite de principaux de service : {{used}} sur {{limit}} utilisés.",
+      "requiresPro": "L'ajout d'agents MCP nécessite le forfait Pro.",
+      "limitReached": "Vous avez atteint votre limite de {{limit}} principaux de service actifs. Désactivez ou supprimez-en un pour ajouter un agent."
+    },
+    "kind": {
+      "api": "API",
+      "mcpAgent": "Agent MCP"
+    }
   }
 }
