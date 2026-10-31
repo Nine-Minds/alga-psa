@@ -66,7 +66,7 @@ function makeBuilder(table: string) {
       if (prop === 'first') return async () => resolveRows()[0];
       if (prop === 'select') {
         return (...cols: unknown[]) => {
-          state.selected = [...(state.selected ?? []), ...cols.flat().map(String)];
+          state.selected = [...(state.selected ?? []), ...cols.flat().map((col) => (typeof col === 'string' ? col : '[subquery]'))];
           return builder;
         };
       }
@@ -213,7 +213,7 @@ describe('getConsolidatedTicketData user credential exposure', () => {
     vi.clearAllMocks();
     usersQueries = [];
     createTenantKnexMock.mockResolvedValue({ knex: {} });
-    withTransactionMock.mockImplementation(async (_db: unknown, cb: (t: unknown) => unknown) => cb({}));
+    withTransactionMock.mockImplementation(async (_db: unknown, cb: (t: unknown) => unknown) => cb({ ref: (column: string) => column, raw: (sql: string) => sql }));
     hasPermissionMock.mockResolvedValue(true);
 
     tables = {
@@ -324,6 +324,9 @@ describe('getConsolidatedTicketData user credential exposure', () => {
       clientId: 'client-own',
       contact_id: 'contact-own',
     };
+    // The ticket belongs to this client, so ticket authorization alone would let the portal user
+    // read it: the refusal below must come from the MSP-only principal gate, not from "cannot view".
+    tables.tickets[0].client_id = 'client-own';
 
     // The action's outer handler turns "Permission denied:" errors into the standard
     // { permissionError } envelope; either a throw or that envelope is a refusal, a bundle is not.
