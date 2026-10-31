@@ -77,6 +77,7 @@ vi.mock('../services/accountingSync/accountingSync.types', () => ({
     paymentsReversed: 0,
     paymentsSkipped: 0,
     driftFound: 0,
+    externalVoidsApplied: 0,
     customersUpdated: 0,
     opsProcessed: 0,
     opsFailed: 0,
