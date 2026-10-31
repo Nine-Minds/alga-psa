@@ -60,3 +60,15 @@ test('env set but no projected token falls back to the kubeconfig file', async (
   const calls = await detectLoad({ env: true, tokenExists: false });
   assert.deepEqual(calls, [{ method: 'loadFromFile', file: '/etc/rancher/k3s/k3s.yaml' }]);
 });
+
+// The tests above inject a fake module, so nothing exercised the real
+// dependency tree. An override once resolved js-yaml to 5.x, which dropped the
+// default export client-node imports; the lazy import then threw "does not
+// provide an export named 'default'" the first time an operator opened a pod
+// terminal or port forward.
+test('the real @kubernetes/client-node loads with the locked dependency tree', async () => {
+  const k8s = await import('@kubernetes/client-node');
+  assert.equal(typeof k8s.KubeConfig, 'function');
+  assert.equal(typeof k8s.Exec, 'function');
+  assert.equal(typeof k8s.PortForward, 'function');
+});
