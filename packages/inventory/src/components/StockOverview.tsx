@@ -9,7 +9,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { usePageCreateShortcut, useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
@@ -467,25 +467,41 @@ export function StockOverview({
         onClose={() => setReceiveOpen(false)}
         title={t('stock.receiveStock', 'Receive stock')}
         id="receive-stock-dialog"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button id="receive-stock-cancel" variant="outline" onClick={() => setReceiveOpen(false)}>
+              {t('common.cancel', 'Cancel')}
+            </Button>
+            <Button id="receive-stock-save" onClick={saveReceive} disabled={saving}>
+              {saving ? t('stock.receive.inProgress', 'Receiving…') : t('stock.actions.receive', 'Receive')}
+            </Button>
+          </div>
+        }
       >
         <div className="space-y-4 p-1">
-          <CustomSelect
+          <SearchableSelect
             id="receive-stock-product"
             label={t('stock.fields.product', 'Product')}
             required
             value={receiveForm.service_id}
             placeholder={t('stock.receive.selectProduct', 'Select a product…')}
+            searchPlaceholder={t('stock.receive.searchProducts', 'Search products or SKU...')}
+            emptyMessage={t('stock.receive.noProductsFound', 'No products found')}
+            dropdownMode="overlay"
             options={products.map((p) => ({ value: p.service_id, label: productLabel(p) }))}
-            onValueChange={(v: string) => setReceiveForm({ ...receiveForm, service_id: v })}
+            onChange={(v: string) => setReceiveForm({ ...receiveForm, service_id: v })}
           />
-          <CustomSelect
+          <SearchableSelect
             id="receive-stock-location"
             label={t('stock.fields.location', 'Location')}
             required
             value={receiveForm.location_id}
             placeholder={t('stock.receive.selectLocation', 'Select a location…')}
+            searchPlaceholder={t('stock.receive.searchLocations', 'Search locations...')}
+            emptyMessage={t('stock.receive.noLocationsFound', 'No locations found')}
+            dropdownMode="overlay"
             options={locations.map((loc) => ({ value: loc.location_id, label: loc.name }))}
-            onValueChange={(v: string) => setReceiveForm({ ...receiveForm, location_id: v })}
+            onChange={(v: string) => setReceiveForm({ ...receiveForm, location_id: v })}
           />
           {selectedProduct?.is_serialized ? (
             <div>
@@ -522,14 +538,6 @@ export function StockOverview({
             value={receiveForm.unit_cost ? Number(receiveForm.unit_cost) : undefined}
             onChange={(value) => setReceiveForm({ ...receiveForm, unit_cost: value == null ? '' : String(value) })}
           />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button id="receive-stock-cancel" variant="outline" onClick={() => setReceiveOpen(false)}>
-              {t('common.cancel', 'Cancel')}
-            </Button>
-            <Button id="receive-stock-save" onClick={saveReceive} disabled={saving}>
-              {saving ? t('stock.receive.inProgress', 'Receiving…') : t('stock.actions.receive', 'Receive')}
-            </Button>
-          </div>
         </div>
       </Dialog>
 

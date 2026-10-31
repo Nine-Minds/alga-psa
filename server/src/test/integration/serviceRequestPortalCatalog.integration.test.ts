@@ -261,4 +261,74 @@ describe('service request portal catalog', () => {
     expect(grouped[1].category).toBe('Other Services');
     expect(grouped[1].items[0].title).toBe('General IT Help');
   });
+
+  it('audience scoping: a scoped definition is listed only for the selected client', async () => {
+    resetServiceRequestProviderRegistry();
+    const tenant = uuidv4();
+    const clientA = uuidv4();
+    const clientB = uuidv4();
+    const scopedId = uuidv4();
+    const openId = uuidv4();
+
+    await db('tenants').insert({
+      tenant,
+      client_name: `Tenant ${tenant.slice(0, 8)}`,
+      email: `tenant-${tenant.slice(0, 8)}@example.com`,
+    });
+    for (const [id, name] of [[clientA, 'A'], [clientB, 'B']]) {
+      await db('clients').insert({
+        tenant,
+        client_id: id,
+        client_name: `${name} ${tenant.slice(0, 8)}`,
+        is_inactive: false,
+        billing_cycle: 'monthly',
+        is_tax_exempt: false,
+      });
+    }
+    for (const [id, name, mode] of [[scopedId, 'Scoped', 'scoped'], [openId, 'Open', 'all']]) {
+      await db('service_request_definitions').insert({
+        tenant,
+        definition_id: id,
+        name,
+        form_schema: { fields: [] },
+        execution_provider: 'ticket-only',
+        execution_config: {},
+        form_behavior_provider: 'basic',
+        form_behavior_config: {},
+        visibility_provider: 'all-authenticated-client-users',
+        visibility_config: {},
+        lifecycle_state: 'published',
+        audience: JSON.stringify(mode === 'all' ? { join: 'and', clauses: [] } : { join: 'or', clauses: [{ path: 'client.id', operator: 'in', value: [clientA] }] }),
+        published_at: db.fn.now(),
+      });
+      await db('service_request_definition_versions').insert({
+        tenant,
+        version_id: uuidv4(),
+        definition_id: id,
+        version_number: 1,
+        name,
+        form_schema_snapshot: { fields: [] },
+        execution_provider: 'ticket-only',
+        execution_config: {},
+        form_behavior_provider: 'basic',
+        form_behavior_config: {},
+        visibility_provider: 'all-authenticated-client-users',
+        visibility_config: {},
+      });
+    }
+
+
+    const list = async (clientId: string) =>
+      (
+        await listVisibleServiceRequestCatalogItems(db, {
+          tenant,
+          requesterUserId: uuidv4(),
+          clientId,
+          contactId: null,
+        })
+      ).map((item) => item.definitionId);
+
+    expect((await list(clientA)).sort()).toEqual([scopedId, openId].sort());
+    expect(await list(clientB)).toEqual([openId]);
+  });
 });

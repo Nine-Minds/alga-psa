@@ -323,6 +323,21 @@
       "any": "tutte",
       "clear": "Cancella",
       "countSummary": "{{groups}} gruppo/i · {{obligations}} voce/i"
+    },
+    "lateTime": {
+      "title": "Tempo a ore approvato in ritardo",
+      "description": "Questo tempo è stato approvato dopo l'emissione della fattura del relativo periodo di servizio. Le voci in attesa di fatturazione vengono aggiunte una sola volta alla fattura successiva, contrassegnate come tempo in ritardo. Le voci oltre il periodo di retrospettiva non vengono fatturate.",
+      "columns": {
+        "client": "Cliente",
+        "technician": "Tecnico",
+        "service": "Servizio",
+        "workDate": "Data di lavoro",
+        "hours": "Ore",
+        "closedPeriod": "Periodo di servizio chiuso",
+        "status": "Stato"
+      },
+      "nextInvoice": "Verrà fatturato nella prossima fattura",
+      "outsideLookback": "Oltre il periodo di retrospettiva — non fatturato"
     }
   },
   "manualInvoices": {
@@ -606,7 +621,9 @@
       "bulkPdfFailed": "Impossibile generare PDF. Per favore riprova.",
       "unfinalizeFailed": "Impossibile definalizzare la fattura. Per favore riprova.",
       "bulkUnfinalizeFailed": "Impossibile definalizzare le fatture. Per favore riprova.",
-      "bulkUnfinalizeInvoiceFailed": "Impossibile riaprire {{invoiceNumber}}: {{reason}}"
+      "bulkUnfinalizeInvoiceFailed": "Impossibile riaprire {{invoiceNumber}}: {{reason}}",
+      "explainThis": "Mostra spiegazione",
+      "usedHourBlockExplanation": "La finalizzazione di questa fattura ha reso disponibili le ore prepagate per le registrazioni di tempo. Da allora è stato assegnato del tempo al blocco. Riaprire la fattura annullerebbe il blocco, anche se tali assegnazioni ed eventuali addebiti successivi potrebbero ancora dipenderne. Per mantenere coerente la fatturazione, non è possibile annullare la finalizzazione delle fatture relative a blocchi già utilizzati, anche se il tempo è stato successivamente stornato. Per correggere la fattura, valuta una rettifica separata o una nota di credito."
     },
     "bulk": {
       "actionBar": {
@@ -839,6 +856,7 @@
       "syncNow": "Sincronizza con QuickBooks",
       "viewInQbo": "Visualizza in QuickBooks",
       "voidInvoice": "Annulla fattura",
+      "delegateTax": "Usa l'imposta del sistema contabile",
       "viewInXero": "Visualizza in Xero"
     },
     "loading": "Caricamento anteprima...",
@@ -860,6 +878,13 @@
     },
     "applyCreditDialog": {
       "title": "Applica credito"
+    },
+    "delegateTaxDialog": {
+      "title": "Usa l'imposta del sistema contabile",
+      "description": "Il sistema contabile calcolerà l'imposta di questa fattura alla prossima esportazione e AlgaPSA sostituirà poi imposta e totale con quel risultato. Numeri, righe, prezzi e pagamenti registrati restano invariati.",
+      "cancel": "Annulla",
+      "confirm": "Passa all'imposta del sistema contabile",
+      "switching": "Passaggio in corso..."
     },
     "voidDialog": {
       "title": "Annulla fattura",
@@ -2535,7 +2560,8 @@
       "packingSlip": "Documento di trasporto",
       "pickList": "Lista di prelievo",
       "workTag": "Etichetta di lavoro / Etichetta",
-      "stagingManifest": "Distinta di imballaggio"
+      "stagingManifest": "Distinta di imballaggio",
+      "rmaReturnSlip": "Bolla di reso RMA"
     }
   },
   "errors": {
@@ -2558,6 +2584,7 @@
       "onlyDraftEditable": "Solo le fatture in bozza possono essere modificate",
       "numberExists": "Il numero della fattura esiste già. Scegliere un numero diverso.",
       "notFinalized": "La fattura non è finalizzata",
+      "usedHourBlockUnfinalize": "Impossibile annullare la finalizzazione di questa fattura: il blocco di ore {{blockId}} è già stato utilizzato ({{usedHours}} di {{totalHours}} ore). Per correggere la fattura, valuta una rettifica separata o una nota di credito.",
       "unfinalizeFailed": "Non è stato possibile annullare la finalizzazione della fattura a causa di un errore imprevisto nei dati. Aggiornare la pagina e riprovare.",
       "paidOrCancelled": "Non è possibile modificare una fattura pagata o annullata",
       "syncedVoidInstead": "Questa fattura è sincronizzata con un sistema contabile: annullarla anziché eliminarla.",

@@ -58,10 +58,13 @@ build_local_image() {
   echo -e "${BLUE}→${NC} Next.js max old space: ${NEXT_BUILD_MAX_OLD_SPACE_SIZE} MB" >&2
 
   cd "${ROOT_DIR}"
+  # Dockerfile.build only produces the build artifacts; the runtime image is
+  # always Dockerfile, the same definition the published images are built from.
+  ALGA_IMAGE_PLATFORM="${IMAGE_PLATFORM}" NEXT_BUILD_MAX_OLD_SPACE_SIZE="${NEXT_BUILD_MAX_OLD_SPACE_SIZE}" \
+    "${ROOT_DIR}/scripts/export-production-artifacts.sh" community
   docker build \
     --platform "${IMAGE_PLATFORM}" \
-    --build-arg "NEXT_BUILD_MAX_OLD_SPACE_SIZE=${NEXT_BUILD_MAX_OLD_SPACE_SIZE}" \
-    -f Dockerfile.build \
+    -f Dockerfile \
     -t "${REGISTRY}:${tag}" \
     .
 }

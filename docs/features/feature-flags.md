@@ -6,6 +6,55 @@ AlgaPSA uses PostHog for feature flag management, allowing tenant-based feature 
 
 ## Current Feature Flags
 
+### Server tenant targeting (any flag)
+
+Operators can target any flag to specific tenants with a runtime, server-only
+environment variable, with no rebuild and no `NEXT_PUBLIC_*` value:
+
+```
+FEATURE_FLAG_TENANTS__<KEY>=<tenant-uuid>[,<tenant-uuid>...]
+```
+
+`<KEY>` is the flag key upper-cased with each run of non-alphanumeric characters
+replaced by `_` (`release-v2-0-feature` becomes `RELEASE_V2_0_FEATURE`).
+
+- Unset: not targeted; PostHog (or the existing evaluator) decides.
+- Set and valid: authoritative for that flag only. On for the listed tenants, off
+  for every other tenant, and not openable by `DISABLE_FEATURE_FLAGS`.
+- Set but empty or containing any malformed entry: off for everyone (the whole
+  value is rejected, never partly applied). There is no wildcard.
+- A tenant id is required; a user id is never treated as a tenant.
+
+The same source is applied by `isFeatureFlagEnabled` (server admission, the
+capability probe and the browser bootstrap) and by the `FeatureFlags` runtime
+(direct callers and `/api/v1/feature-flags`), so they cannot disagree. It is
+separate from the in-process `FeatureFlags.setOverride`, which is untenanted,
+set from code and cannot be configured by an operator.
+
+#### Co-managed review: only `release-v2-0-feature` is needed
+
+Co-managed is gated by `release-v2-0-feature` AND a durable entitlement. To run
+the production review:
+
+1. Set `FEATURE_FLAG_TENANTS__RELEASE_V2_0_FEATURE=<oz-uuid>,<emerald-uuid>` on
+   the server, using the fixture uuidv5 tenant IDs (never names: the wired
+   database has two tenants named "Oz"). Leave Kansas out.
+2. Restart the server only after the Temporal worker reports the deployed SHA.
+3. Keep `FORCE_CAPABILITIES` unset (`co-managed:on` bypasses eligibility).
+
+Oz (flag on plus the fixture `admin_grant` entitlement) is admitted and served.
+Emerald (flag on, no entitlement) sees no co-managed UI. Kansas (flag off) is
+closed. Existing participants remain served independently of the flag. Workers
+use participation and never evaluate targeting.
+
+Kill switch: `FORCE_CAPABILITIES=co-managed:off` closes admission and service for
+every tenant, listed or not, and overrides targeting and participation. To stop
+new admission only, set the variable to an empty value and restart; to return to
+PostHog, remove it and restart.
+
+This does not prove PostHog targeting is configured; that remains an accepted
+limitation.
+
 ### 1. `billing-enabled`
 Controls access to billing-related features across the application.
 
@@ -207,11 +256,15 @@ Controls discovery of the Contract Simulator while it is being rolled out.
   flag controls only the Contract Details tab and is not an authorization boundary.
 
 ### 14. `release-v2-0-feature`
-Gates the project Timeline (Gantt) view while the 2.0 release is prepared.
+Gates the project Timeline (Gantt) view while the 2.0 release is prepared. It has two
+consumers: the Timeline view (below) and the `co-managed` capability gate (see
+[Capabilities](#capabilities)), which admits a tenant only when this flag is on **and** the
+tenant is eligible.
 
 **Affected Areas:**
 - **MSP Portal:**
   - Project Details → view switcher → Timeline
+- **Capability `co-managed`:** flag term of the admission decision. No co-managed UI exists yet.
 
 **Behavior:**
 - When disabled (default): The Timeline option is not offered in the project view switcher.
@@ -221,6 +274,54 @@ Gates the project Timeline (Gantt) view while the 2.0 release is prepared.
 - Task start dates, the dependency warnings, CSV, API, templates, mobile and client portal
   changes that shipped with the timeline are not gated. This flag controls only the view's
   entry point and is not an authorization boundary.
+- The server evaluates the flag per tenant (distinct id `tenant_<id>`, group `tenant`) in the
+  root layout and passes it through `PostHogProvider initialFeatureFlags`, so the Timeline
+  follows the flag even when posthog-js is blocked in the browser. A flag evaluation failure
+  omits the value and the Timeline falls back to posthog-js, as before.
+
+## Capabilities
+
+`@alga-psa/core/capability` is a registry of capability gates. `co-managed` is keyed on
+`release-v2-0-feature`.
+
+- `admits(capability, tenantId)`: may start new state. Forced value, else flag AND eligibility.
+  Eligibility defaults to false until a resolver is registered.
+- `serves(capability, tenantId)` / `filterServed`: keep serving existing state (workers,
+  reads, inbound). Forced value, else participation. Never evaluates the flag.
+- Every branch fails closed; errors never escape the gate. Decisions are cached for
+  `CAPABILITY_CACHE_TTL_MS` (default 30000).
+- Adapters: server action (`CapabilityUnavailableError`), REST (the standard 404
+  `NotFoundError` body), RSC (`notFound()`), job (`job_skipped_capability_closed`), subscriber
+  (fall-through), Temporal (`CapabilitySkip`). Next-bound adapters are in
+  `@alga-psa/core/capability/server`; workers import only `@alga-psa/core/capability`.
+- Browser: `useCapability('co-managed')` reads the server bootstrap and never evaluates
+  anything itself.
+- `registerCapabilityGate` merges into the existing definition; resolvers registered
+  separately survive a re-declaration. Remove one explicitly with
+  `registerCapabilityEligibility(key, null)` / `registerCapabilityParticipation(key, null)`.
+
+**Server-bootstrapped flags.** The root layout evaluates `release-v2-0-feature` for the tenant
+(`tenant_<id>`, group `tenant`) and passes it to `PostHogProvider initialFeatureFlags`.
+`useFeatureFlag` treats a bootstrapped flag as decided: it does not re-evaluate it in
+posthog-js, which identifies the person (`anonymous_<tenant>_<user>`, no group) and could
+answer a group, person or percentage rule differently. Target `release-v2-0-feature` by the
+`tenant` group or the `tenant` person property; both are what the server sends. Flags that are
+not bootstrapped still follow PostHog updates.
+
+Cost per server process: one PostHog evaluation per tenant per 60 s (flag cache) and one
+`tenants` read per tenant per 5 min (`TENANT_FLAG_PROPERTIES_TTL_MS`, the person properties
+every server flag evaluation sends). The capability decision itself makes no query and no
+PostHog call until resolvers are registered.
+
+**Probe:** `GET /api/v1/capabilities/co-managed` (authenticated MSP session; the probe path is exempted from the middleware API-key check by exact match (`exactApiKeySkipPaths`) because the route authenticates the session itself; other paths under `/api/v1/capabilities/` still need an API key) returns the
+caller's own tenant decision and reasons with `Cache-Control: no-store`, or the standard 404
+while the gate is closed. It accepts no parameters.
+
+**Kill switch `FORCE_CAPABILITIES`** (server env): comma-separated `key:on|off`, e.g.
+`co-managed:off`. A malformed value on a known key forces that capability off. It overrides
+the flag and resolvers for that capability only; `release-v2-0-feature` and the Timeline are
+unaffected. `NEXT_PUBLIC_FORCE_CAPABILITIES` is a dev/CI fallback for the browser only when
+the bootstrap key is absent, and is ignored in production builds.
 
 ## Implementation Details
 

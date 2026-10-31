@@ -607,12 +607,16 @@ export type TemplateAstValidationResult =
       errors: TemplateAstValidationError[];
     };
 
-const issuePathToString = (path: (string | number)[]): string => path.map(String).join('.');
+const issuePathToString = (path: ReadonlyArray<PropertyKey>): string => path.map(String).join('.');
+
+// Zod 4 wraps a failing record key in an invalid_key issue; the key schema's own message sits inside.
+const issueMessage = (issue: z.ZodIssue): string =>
+  issue.code === 'invalid_key' ? (issue.issues[0]?.message ?? issue.message) : issue.message;
 
 const toValidationError = (issue: z.ZodIssue): TemplateAstValidationError => ({
   code: issue.code,
   path: issuePathToString(issue.path),
-  message: issue.message,
+  message: issueMessage(issue),
 });
 
 export const validateTemplateAst = (input: unknown): TemplateAstValidationResult => {

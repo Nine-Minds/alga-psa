@@ -30,6 +30,7 @@ import {
 } from '../lib/boardTabs';
 import { shouldWriteTicketListUrl, TICKET_LIST_PATHNAME } from '../lib/ticketListUrlSync';
 import { normalizeAssignedToIds } from '../lib/ticketFilterUtils';
+import { decodeTicketWhere, encodeTicketWhere } from '../lib/ticketWhereUrl';
 import {
   DEFAULT_TICKET_LIST_SORT_KEY,
   isTicketListSortKey,
@@ -81,6 +82,8 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
   pageSize: number;
   sortBy: string;
   sortDirection: 'asc' | 'desc';
+  /** `where` clauses (or whole values) the URL carried that could not be applied. */
+  droppedWhere: number;
 } {
   const params = new URLSearchParams(search);
   const parsedPage = Number.parseInt(params.get('page') || '1', 10);
@@ -107,12 +110,15 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
     : undefined;
 
   const assignedTo = normalizeAssignedToIds(params.get('assignedToIds'));
+  const decodedWhere = decodeTicketWhere(params.get('where'));
 
   const filters: Partial<ITicketListFilters> = {
     boardId: params.get('boardId') || undefined,
+    where: decodedWhere.where,
     boardIds: decodeCsvParam(params.get('boardIds')),
     excludeBoardIds: decodeCsvParam(params.get('excludeBoardIds')),
     clientId: params.get('clientId') || undefined,
+    contactId: params.get('contactId') || undefined,
     statusId: params.get('statusId') || TICKET_STATUS_FILTER_OPEN,
     priorityId: params.get('priorityId') || 'all',
     categoryId: params.get('categoryId') || undefined,
@@ -145,6 +151,7 @@ function parseTicketListStateFromSearch(search: string, allowSlaStatusFilter = t
     pageSize: Number.isFinite(parsedPageSize) && parsedPageSize > 0 ? parsedPageSize : 10,
     sortBy,
     sortDirection,
+    droppedWhere: decodedWhere.dropped,
   };
 }
 
@@ -152,6 +159,20 @@ export interface TicketListMetadata {
   agentAvatarUrls: Record<string, string | null>;
   teamAvatarUrls: Record<string, string | null>;
   ticketTags: Record<string, ITag[]>;
+}
+
+function whereTagUniverses(options: {
+  contactTagDefinitions?: { tag_id?: string }[];
+  clientTagDefinitions?: { tag_id?: string }[];
+}): Partial<Record<'contact.tags' | 'client.tags', ReadonlySet<string>>> {
+  const universe: Partial<Record<'contact.tags' | 'client.tags', ReadonlySet<string>>> = {};
+  if (Array.isArray(options.contactTagDefinitions)) {
+    universe['contact.tags'] = new Set(options.contactTagDefinitions.map((d) => d.tag_id as string));
+  }
+  if (Array.isArray(options.clientTagDefinitions)) {
+    universe['client.tags'] = new Set(options.clientTagDefinitions.map((d) => d.tag_id as string));
+  }
+  return universe;
 }
 
 interface TicketingDashboardContainerProps {
@@ -175,6 +196,8 @@ interface TicketingDashboardContainerProps {
   useAlgaDeskQuickAddForm?: boolean;
   /** Decided by the page's server component: every smart search gate passed for this caller. */
   smartSearchAvailable?: boolean;
+  /** App-owned slot rendered between the board tabs and the list. */
+  listCallout?: React.ReactNode;
 }
 
 export default function TicketingDashboardContainer({
@@ -192,12 +215,18 @@ export default function TicketingDashboardContainer({
   allowSlaStatusFilter = true,
   useAlgaDeskQuickAddForm = false,
   smartSearchAvailable = false,
+  listCallout,
 }: TicketingDashboardContainerProps) {
   const { t } = useTranslation('features/tickets');
   const initialStatusId = initialFilters?.statusId ?? TICKET_STATUS_FILTER_OPEN;
   const latestFetchRequestIdRef = useRef(0);
   const filterFetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastAppliedSearchRef = useRef<string>('');
+  // The initial-load `where` check runs once per mount; StrictMode re-runs effects.
+  const initialWhereCheckedRef = useRef(false);
+  // `t` may change identity per render; the mount effect must not re-run for it.
+  const tRef = useRef(t);
+  tRef.current = t;
   const isSyncingFromHistoryRef = useRef(false);
   const navigatingAwayRef = useRef(false);
 
@@ -346,6 +375,7 @@ export default function TicketingDashboardContainer({
       params.set('excludeBoardIds', filters.excludeBoardIds.join(','));
     }
     if (filters.clientId) params.set('clientId', filters.clientId);
+    if (filters.contactId) params.set('contactId', filters.contactId);
     if (filters.statusId && filters.statusId !== TICKET_STATUS_FILTER_OPEN) params.set('statusId', filters.statusId);
     if (filters.priorityId && filters.priorityId !== 'all') params.set('priorityId', filters.priorityId);
     if (filters.categoryIds && Array.isArray(filters.categoryIds) && filters.categoryIds.length > 0) {
@@ -365,6 +395,8 @@ export default function TicketingDashboardContainer({
       const encodedTags = filters.tags.map(tag => encodeURIComponent(String(tag)));
       params.set('tags', encodedTags.join(','));
     }
+    const whereParam = encodeTicketWhere(filters.where);
+    if (whereParam) params.set('where', whereParam);
     if (filters.sortBy && filters.sortBy !== 'entered_at') {
       params.set('sortBy', filters.sortBy);
     }
@@ -450,6 +482,7 @@ export default function TicketingDashboardContainer({
         categoryIds: filters.categoryIds && filters.categoryIds.length > 0 ? filters.categoryIds : undefined,
         excludeCategoryIds: filters.excludeCategoryIds && filters.excludeCategoryIds.length > 0 ? filters.excludeCategoryIds : undefined,
         clientId: filters.clientId || undefined,
+        contactId: filters.contactId || undefined,
         searchQuery: filters.searchQuery || '',
         boardFilterState: filters.boardFilterState || 'active',
         showOpenOnly: shouldApplyOpenOnlyStatusFilter(filters.statusId, filters.showOpenOnly),
@@ -464,7 +497,8 @@ export default function TicketingDashboardContainer({
         slaStatusFilter: allowSlaStatusFilter ? (filters.slaStatusFilter || undefined) : undefined,
         sortBy: effectiveSortBy,
         sortDirection: effectiveSortDirection,
-        bundleView: filters.bundleView || 'bundled'
+        bundleView: filters.bundleView || 'bundled',
+        where: filters.where && filters.where.clauses.length > 0 ? filters.where : undefined,
       };
 
       console.log('[Container] Fetching with defaults:', currentFiltersWithDefaults);
@@ -578,12 +612,17 @@ export default function TicketingDashboardContainer({
     categoryIds: effectiveOptions.categories.map((category: { category_id: string }) => category.category_id),
     clientIds: effectiveOptions.clients.map(client => client.client_id),
     userIds: effectiveOptions.users.map((user: { user_id: string }) => user.user_id),
+    // Contact / client tag universes for `where`. An older cached options payload has no such list:
+    // leave the universe absent ("cannot validate") rather than empty ("everything is deleted").
+    whereTagIds: whereTagUniverses(effectiveOptions),
   }), [
     effectiveOptions.statusOptions,
     effectiveOptions.priorityOptions,
     effectiveOptions.categories,
     effectiveOptions.clients,
     effectiveOptions.users,
+    effectiveOptions.contactTagDefinitions,
+    effectiveOptions.clientTagDefinitions,
   ]);
 
   /** The fully-layered view for a board (null = the All-tickets tab). */
@@ -702,6 +741,9 @@ export default function TicketingDashboardContainer({
       setSortBy(parsed.sortBy);
       setSortDirection(parsed.sortDirection);
       setActiveFilters(parsed.filters);
+      if (parsed.droppedWhere > 0) {
+        toast(t('filters.droppedFromLink', 'Some filters in this link are not valid and were ignored.'));
+      }
       // Columns and density are not URL state, so a history step has to be told
       // which board it landed on for them to follow. Presentation only: the
       // filters come from the URL, which already *is* the state a back step is
@@ -726,6 +768,30 @@ export default function TicketingDashboardContainer({
     }
 
     lastAppliedSearchRef.current = window.location.search;
+
+    // AC12 on a fresh load: the seed above is why syncFromUrl never runs on
+    // mount, so an invalid `where` would otherwise be dropped silently (SSR
+    // already filtered it out) and linger in the URL. Toast once, then rewrite
+    // the URL to only the valid clauses. No refetch: the server rendered the
+    // list from the same valid clauses.
+    // LEVERAGE: pattern dropped-where-toast — same toast/dropped shape as syncFromUrl
+    if (!initialWhereCheckedRef.current) {
+      initialWhereCheckedRef.current = true;
+      const initialParams = new URLSearchParams(window.location.search);
+      const decoded = decodeTicketWhere(initialParams.get('where'));
+      if (decoded.dropped > 0) {
+        toast(tRef.current('filters.droppedFromLink', 'Some filters in this link are not valid and were ignored.'));
+        const validWhere = encodeTicketWhere(decoded.where);
+        if (validWhere) {
+          initialParams.set('where', validWhere);
+        } else {
+          initialParams.delete('where');
+        }
+        const rewrittenSearch = initialParams.toString() ? `?${initialParams.toString()}` : '';
+        window.history.replaceState(null, '', `${window.location.pathname}${rewrittenSearch}${window.location.hash}`);
+        lastAppliedSearchRef.current = rewrittenSearch;
+      }
+    }
 
     const handlePopState = () => {
       void syncFromUrl(window.location.search);
@@ -976,6 +1042,7 @@ export default function TicketingDashboardContainer({
     clientIds: new Set<string>(knownFilterIds.clientIds as string[]),
     userIds: new Set<string>(knownFilterIds.userIds as string[]),
     teamIds: initialTeams ? new Set(initialTeams.map(team => team.team_id)) : undefined,
+    whereTagIds: knownFilterIds.whereTagIds,
     tags: effectiveOptions.tags ? new Set(effectiveOptions.tags.map(tag => tag.tag_text)) : undefined,
   }), [effectiveOptions.boardOptions, effectiveOptions.tags, knownFilterIds, initialTeams]);
 
@@ -1075,6 +1142,8 @@ export default function TicketingDashboardContainer({
       initialCategories={effectiveOptions.categories}
       initialClients={effectiveOptions.clients}
       initialTags={effectiveOptions.tags || []}
+      contactTagDefinitions={effectiveOptions.contactTagDefinitions}
+      clientTagDefinitions={effectiveOptions.clientTagDefinitions}
       initialUsers={effectiveOptions.users}
       totalCount={totalCount}
       currentPage={currentPage}
@@ -1108,6 +1177,7 @@ export default function TicketingDashboardContainer({
         listViewPicker={<ListViewPicker id="tickets-view-picker" controller={listViews} />}
         columnSizing={columnSizing}
         onColumnSizingChange={setColumnSizing}
+        listCallout={listCallout}
       />
   );
 }

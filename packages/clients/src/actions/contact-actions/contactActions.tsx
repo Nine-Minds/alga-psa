@@ -16,8 +16,8 @@ import { Knex } from 'knex';
 import { isEnterprise, unparseCSV } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { getContactAvatarUrlsBatchAsync } from '../../lib/documentsHelpers';
-import { createTag } from '@alga-psa/tags/actions/tagActions';
-import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
+import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions/tagActions';
+import { isTagTextValidationFailure, validateTagText } from '@alga-psa/tags/lib/tagTextValidation';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import {
   assertMspOrClientPortalOwnClientPermission,
@@ -1435,29 +1435,9 @@ export const importContactsFromCSV = withAuth(async (
             savedContact = await ContactModel.updateContact(existingContact.contact_name_id, updateData, tenant, trx);
             queueContactUpdated(trx, tenant, existingContact as any, savedContact as any, Object.keys(updateData), { actorUserId: user?.user_id });
 
-            if (contactData.tags !== undefined) {
-              try {
-                await tenantScopedTable(trx, 'tag_mappings', tenant)
-                  .where({ tagged_id: savedContact.contact_name_id, tagged_type: 'contact' })
-                  .delete();
-
-                if (contactData.tags) {
-                  const tagTexts = contactData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
-                  for (const tagText of tagTexts) {
-                    const tagResult = await createTag({
-                      tag_text: tagText,
-                      tagged_id: savedContact.contact_name_id,
-                      tagged_type: 'contact',
-                      created_by: user.user_id
-                    });
-                    if (isTagActionError(tagResult)) {
-                      console.warn('Failed to create tag during CSV import:', tagResult);
-                    }
-                  }
-                }
-              } catch (tagError) {
-                console.error('Failed to update tags during CSV import:', tagError);
-              }
+            // A blank Tags value is "no opinion": it neither clears nor writes tags.
+            if (hasImportedTags(contactData.tags)) {
+              await writeImportedContactTags(trx, tenant, savedContact.contact_name_id, contactData.tags, true);
             }
 
             results.push({
@@ -1483,23 +1463,8 @@ export const importContactsFromCSV = withAuth(async (
             savedContact = await ContactModel.createContact(contactToCreate, tenant, trx);
             queueContactCreated(trx, tenant, savedContact as any, { actorUserId: user?.user_id });
 
-            if (contactData.tags) {
-              try {
-                const tagTexts = contactData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
-                for (const tagText of tagTexts) {
-                  const tagResult = await createTag({
-                    tag_text: tagText,
-                    tagged_id: savedContact.contact_name_id,
-                    tagged_type: 'contact',
-                    created_by: user.user_id
-                  });
-                  if (isTagActionError(tagResult)) {
-                    console.warn('Failed to create tag during CSV import:', tagResult);
-                  }
-                }
-              } catch (tagError) {
-                console.error('Failed to create tags during CSV import:', tagError);
-              }
+            if (hasImportedTags(contactData.tags)) {
+              await writeImportedContactTags(trx, tenant, savedContact.contact_name_id, contactData.tags, false);
             }
 
             results.push({
@@ -1543,6 +1508,68 @@ export const importContactsFromCSV = withAuth(async (
     throw await contactError('errors.contact.importFailed', 'SYSTEM_ERROR: ');
   }
 });
+
+function hasImportedTags(tagsColumn: string | undefined): tagsColumn is string {
+  return typeof tagsColumn === 'string' && tagsColumn.trim() !== '';
+}
+
+/**
+ * Writes a CSV row's tags in the import transaction; `replace` first clears the
+ * contact's existing tags. Tag texts are trimmed, de-duplicated
+ * case-insensitively and validated through the shared tag rules (invalid ones
+ * are skipped with a warning). The write runs in a savepoint on the import
+ * transaction, so a failed tag write cannot abort the rest of the import and
+ * nothing opens a second connection that would wait on this transaction's rows.
+ * Tag events are queued after-commit on the owning import transaction.
+ *
+ * A tag failure is logged and swallowed: the contact row is still imported
+ * and only its tags are lost, as before.
+ */
+// LEVERAGE: pattern tag-write-primitive — writeImportedContactTags embeds savepoint + dedupe + validation for "tags from a cell"; if a third importer needs it, this belongs beside createTagsForEntityWithTransaction
+async function writeImportedContactTags(
+  importTrx: Knex.Transaction,
+  tenant: string,
+  contactId: string,
+  tagsColumn: string,
+  replace: boolean,
+): Promise<void> {
+  const seen = new Set<string>();
+  const tagTexts: string[] = [];
+  for (const raw of tagsColumn.split(',')) {
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    const validation = validateTagText(trimmed);
+    if (isTagTextValidationFailure(validation)) {
+      console.warn(`Skipping invalid tag during CSV import: ${validation.message}`, { tag: trimmed });
+      continue;
+    }
+    const key = validation.text.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    tagTexts.push(validation.text);
+  }
+
+  try {
+    await importTrx.transaction(async (trx) => {
+      if (replace) {
+        await tenantScopedTable(trx, 'tag_mappings', tenant)
+          .where({ tagged_id: contactId, tagged_type: 'contact' })
+          .delete();
+      }
+      if (tagTexts.length > 0) {
+        await createTagsForEntityWithTransaction(
+          trx,
+          tenant,
+          contactId,
+          'contact',
+          tagTexts.map((tag_text) => ({ tag_text, isNew: false })),
+        );
+      }
+    });
+  } catch (tagError) {
+    console.error('Failed to write tags during CSV import:', tagError);
+  }
+}
 
 export const checkExistingEmails = withAuth(async (
   user,

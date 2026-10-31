@@ -34,6 +34,13 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/projects/123')).toBe(false);
   });
 
+  it('lets the session-authenticated RMA document route through, and only that shape', () => {
+    expect(shouldSkipApiKeyAuth('/api/inventory/rma/0b57a1e2-7b41-4c1f-a0d3-1d2e3f4a5b6c/document')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/inventory/rma/x/document/extra')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/inventory/rma/x')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/inventory/rma/a/b/document')).toBe(false);
+  });
+
   it('allows the Teams package download route to use session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/download')).toBe(true);
   });
@@ -108,6 +115,13 @@ describe('shouldSkipApiKeyAuth', () => {
   it('allows the Level.io webhook route (X-Alga-Webhook-Secret authenticated in-route)', () => {
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio')).toBe(true);
     expect(shouldSkipApiKeyAuth('/api/webhooks/levelio/')).toBe(true);
+  });
+
+  it('exempts the session-authenticated workspace export POST exactly, never a sibling or deeper route', () => {
+    expect(shouldSkipApiKeyAuth('/api/co-management/export')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/co-management/export/evil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/exportevil')).toBe(false);
+    expect(shouldSkipApiKeyAuth('/api/co-management/other')).toBe(false);
   });
 
   it('exempts the Level.io route exactly, never a prefixed or deeper sibling', () => {

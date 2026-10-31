@@ -30,17 +30,27 @@ export function selectIntegration(changed) {
     : { shouldRun: true, full: false, reason: 'Manifest floor plus affected integration suites' };
 }
 
+// Selection only needs the two endpoint trees, not history. Shallow CI
+// checkouts lack the base commit, so fetch exactly that object on demand
+// rather than cloning every branch and tag (which can outrun job timeouts).
+function resolveCommit(cwd, revision) {
+  const verify = () => spawnSync('git', ['rev-parse', '--verify', '--quiet', '--end-of-options', `${revision}^{commit}`], { cwd, encoding: 'utf8' });
+  let result = verify();
+  if (result.status !== 0 && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(revision)) {
+    spawnSync('git', ['fetch', '--quiet', '--no-tags', '--depth=1', 'origin', revision], { cwd, encoding: 'utf8' });
+    result = verify();
+  }
+  return result.status === 0 ? result.stdout.trim() : null;
+}
+
 export function readChangedFiles({ cwd, base, head = 'HEAD' }) {
   if (!base || /^0+$/.test(base)) return null;
-  for (const revision of [base, head]) {
-    // Pass revisions as verified object IDs to diff; user-controlled refs must
-    // never be interpreted as git options.
-    const result = spawnSync('git', ['rev-parse', '--verify', '--end-of-options', `${revision}^{commit}`], { cwd, encoding: 'utf8' });
-    if (result.status !== 0) return null;
-    if (revision === base) base = result.stdout.trim();
-    else head = result.stdout.trim();
-  }
-  const result = spawnSync('git', ['diff', '--name-only', '--no-renames', '-z', base, head, '--'], { cwd, encoding: 'utf8' });
+  // Pass revisions as verified object IDs to diff; user-controlled refs must
+  // never be interpreted as git options.
+  const baseCommit = resolveCommit(cwd, base);
+  const headCommit = baseCommit && resolveCommit(cwd, head);
+  if (!headCommit) return null;
+  const result = spawnSync('git', ['diff', '--name-only', '--no-renames', '-z', baseCommit, headCommit, '--'], { cwd, encoding: 'utf8' });
   if (result.status !== 0) return null;
   return result.stdout.split('\0').filter(Boolean);
 }

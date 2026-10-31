@@ -225,6 +225,21 @@ const exactApiKeySkipPaths = [
   // so `/api/webhooks/dattoevil` and deeper routes stay behind the API-key gate.
   '/api/webhooks/datto',
   '/api/webhooks/datto/',
+  // The co-managed capability probe: a read-only GET that authenticates the
+  // session in-route (tenant from the session, never the request). Exact match
+  // only, so any future route under /api/v1/capabilities/ stays behind the
+  // API-key gate until it is exempted by name.
+  '/api/v1/capabilities/co-managed',
+  '/api/v1/capabilities/co-managed/',
+  // Notification live-stream token: the MSP shell and the client portal both
+  // mint a short-lived Hocuspocus token from their browser session (no
+  // x-api-key). The route re-checks the session itself, and
+  // `/api/notifications` has no other route to exempt.
+  '/api/notifications/live-token',
+  // Customer-admin workspace export: a browser form POST from the session-authenticated export page (no
+  // x-api-key). The route re-checks the session, the co-managed capability and the export permission itself.
+  // Exact match only, so nothing else under /api/co-management is exempted by this entry.
+  '/api/co-management/export',
 ];
 
 export function shouldSkipApiKeyAuth(pathname: string): boolean {
@@ -245,6 +260,8 @@ export function shouldSkipApiKeyAuth(pathname: string): boolean {
     // Session-authenticated inventory SO document endpoints (auth enforced in-handler via withAuth).
     (pathname.startsWith('/api/inventory/sales-orders/') &&
       (pathname.endsWith('/document') || pathname.endsWith('/email-confirmation'))) ||
+    // Session-authenticated RMA return slip (C5): RMA read + asset record check enforced in-handler.
+    /^\/api\/inventory\/rma\/[^/]+\/document$/.test(pathname) ||
     // Session-authenticated label endpoints (auth + record-level permission enforced in-handler):
     // the PDF render and the read-only lookups the print dialog needs.
     pathname === '/api/labels/pdf' ||

@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Scorciatoie da tastiera",
     "opportunities": "Opportunità",
     "mcpServer": "Server MCP",
-    "settingsFallback": "Impostazioni"
+    "settingsFallback": "Impostazioni",
+    "tags": "Tag"
   },
   "unsavedChanges": {
     "title": "Modifiche non salvate",
@@ -413,17 +414,21 @@
       "cancel": "Annulla",
       "delete": "Elimina",
       "placeholder": "Inserisci il nome del nuovo team",
+      "descriptionPlaceholder": "Inserisci una descrizione facoltativa del team",
       "selectManager": "Seleziona un responsabile"
     },
     "details": {
       "loading": "Caricamento dettagli del team...",
       "notFound": "Nessun team trovato",
+      "noDescription": "Nessuna descrizione",
       "fields": {
         "teamLead": "Responsabile del team",
+        "description": "Descrizione",
         "addMember": "Aggiungi membro"
       },
       "placeholders": {
         "teamName": "Inserisci il nome del team",
+        "description": "Inserisci la descrizione del team",
         "selectTeamLead": "Seleziona un responsabile del team",
         "selectUserToAdd": "Seleziona un utente da aggiungere",
         "noTeamLead": "Non assegnato"
@@ -435,8 +440,10 @@
         "discard": "Annulla modifiche",
         "saveChanges": "Salva modifiche",
         "saveName": "Salva nome",
+        "saveDescription": "Salva descrizione",
         "cancel": "Annulla",
         "editName": "Modifica nome",
+        "editDescription": "Modifica descrizione",
         "remove": "Rimuovi"
       },
       "table": {
@@ -461,6 +468,7 @@
         "createFailed": "Impossibile creare il team: {{error}}",
         "deleteFailed": "Impossibile eliminare il team",
         "updateName": "Impossibile aggiornare il nome del team",
+        "updateDescription": "Impossibile aggiornare la descrizione del team",
         "saveChanges": "Impossibile salvare le modifiche. Riprova."
       }
     }
@@ -710,7 +718,8 @@
         "importNewName": "Importa con un nome diverso:",
         "importWithResolutions": "Importa con risoluzioni",
         "orderConflict": "L'ordine {{order}} è già in uso",
-        "importWithOrder": "Importa con ordine {{order}}"
+        "importWithOrder": "Importa con ordine {{order}}",
+        "removesIntro": "L’eliminazione di questa bacheca rimuoverà anche:"
       },
       "importTable": {
         "active": "Attivo"
@@ -779,7 +788,9 @@
           "deleteFailed": "Impossibile eliminare la bacheca",
           "importFailed": "Impossibile importare le bacheche",
           "updateStatusFailed": "Impossibile aggiornare lo stato della bacheca",
-          "updateDefaultFailed": "Impossibile aggiornare la bacheca predefinita"
+          "updateDefaultFailed": "Impossibile aggiornare la bacheca predefinita",
+          "hasEmailSenderRoute": "Impossibile eliminare la bacheca: ha una regola mittente in uscita dedicata. Rimuovi prima il mittente dei ticket nell’editor della bacheca.",
+          "referencedByAutomations": "Impossibile eliminare la bacheca: altre impostazioni la utilizzano ancora. Spostale su un’altra bacheca o rimuovile prima."
         }
       },
       "closeRules": {
@@ -893,6 +904,48 @@
         "displayName": "Nome visualizzato",
         "save": "Salva mittente",
         "saved": "Mittente salvato"
+      },
+      "deleteDependencies": {
+        "categories_one": "categoria",
+        "categories_other": "categorie",
+        "categories_few": "categorie",
+        "categories_many": "categorie",
+        "statuses_one": "stato ticket",
+        "statuses_other": "stati ticket",
+        "statuses_few": "stati ticket",
+        "statuses_many": "stati ticket",
+        "autoCloseRules_one": "regola di chiusura automatica",
+        "autoCloseRules_other": "regole di chiusura automatica",
+        "autoCloseRules_few": "regole di chiusura automatica",
+        "autoCloseRules_many": "regole di chiusura automatica",
+        "notificationRules_one": "regola di notifica",
+        "notificationRules_other": "regole di notifica",
+        "notificationRules_few": "regole di notifica",
+        "notificationRules_many": "regole di notifica",
+        "portalVisibility_one": "assegnazione di visibilità del portale clienti",
+        "portalVisibility_other": "assegnazioni di visibilità del portale clienti",
+        "portalVisibility_few": "assegnazioni di visibilità del portale clienti",
+        "portalVisibility_many": "assegnazioni di visibilità del portale clienti",
+        "emailSenderRoutes_one": "regola mittente in uscita",
+        "emailSenderRoutes_other": "regole mittente in uscita",
+        "emailSenderRoutes_few": "regole mittente in uscita",
+        "emailSenderRoutes_many": "regole mittente in uscita",
+        "ticketTemplates_one": "modello di ticket",
+        "ticketTemplates_other": "modelli di ticket",
+        "ticketTemplates_few": "modelli di ticket",
+        "ticketTemplates_many": "modelli di ticket",
+        "recurringTickets_one": "pianificazione di ticket ricorrenti",
+        "recurringTickets_other": "pianificazioni di ticket ricorrenti",
+        "recurringTickets_few": "pianificazioni di ticket ricorrenti",
+        "recurringTickets_many": "pianificazioni di ticket ricorrenti",
+        "checklistRules_one": "regola di applicazione della lista di controllo",
+        "checklistRules_other": "regole di applicazione della lista di controllo",
+        "checklistRules_few": "regole di applicazione della lista di controllo",
+        "checklistRules_many": "regole di applicazione della lista di controllo",
+        "cannedResponses_one": "risposta predefinita della bacheca",
+        "cannedResponses_other": "risposte predefinite della bacheca",
+        "cannedResponses_few": "risposte predefinite della bacheca",
+        "cannedResponses_many": "risposte predefinite della bacheca"
       }
     },
     "priorities": {
@@ -1108,6 +1161,50 @@
         "client": "Cliente",
         "allClients": "Tutti i clienti",
         "clear": "Cancella filtro"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Bacheca",
+          "category_id": "Categoria",
+          "subcategory_id": "Sottocategoria",
+          "priority_id": "Priorità",
+          "client_id": "Cliente",
+          "client_tags": "Etichette del cliente",
+          "contact_tags": "Etichette del contatto",
+          "ticket_origin": "Origine del ticket",
+          "title_folded": "Titolo",
+          "description_folded": "Descrizione",
+          "from_service_request": "Da richiesta di servizio",
+          "service_request_definition_id": "Richiesta di servizio"
+        },
+        "operators": {
+          "equals": "È uguale a",
+          "not_equals": "È diverso da",
+          "in": "Contiene uno qualsiasi di",
+          "not_in": "Non contiene nessuno di",
+          "contains": "Contiene",
+          "starts_with": "Inizia con",
+          "ends_with": "Termina con",
+          "is_empty": "È vuoto",
+          "is_not_empty": "Non è vuoto"
+        },
+        "conditions": "Condizioni",
+        "match": "Corrispondenza",
+        "and": "Tutte le condizioni",
+        "or": "Qualsiasi condizione",
+        "field": "Campo",
+        "operator": "Condizione",
+        "value": "Valore",
+        "yes": "Sì",
+        "no": "No",
+        "advanced": "Questa regola contiene condizioni raggruppate o avanzate ed è di sola lettura in questo editor.",
+        "add": "Aggiungi condizione",
+        "save": "Salva condizioni",
+        "enabled": "Abilitata",
+        "matchesAll": "Corrisponde a tutti i ticket nell’ambito del modello.",
+        "matchesNone": "Non corrisponde ad alcun ticket.",
+        "tagsFailed": "Impossibile caricare le opzioni delle etichette. Le selezioni salvate vengono conservate.",
+        "retry": "Riprova"
       }
     },
     "externalSystems": {
@@ -3567,6 +3664,36 @@
         "confirm": "Disconnetti",
         "cancel": "Annulla"
       }
+    },
+    "loading": "Caricamento…",
+    "downloadHosts": {
+      "title": "Host di download consentiti",
+      "intro": "Quando un documento viene allegato tramite URL, AlgaPSA lo scarica solo dagli host elencati qui. Questo vale per chiunque alleghi documenti, inclusi agenti IA, client API e l'API REST. Preferisci host specifici di un bucket, come acme-uploads.s3.us-east-1.amazonaws.com, a quelli generici.",
+      "readOnly": "Puoi visualizzare questo elenco. Per modificarlo serve l'autorizzazione \"Gestisci host di download\".",
+      "builtIn": "Predefinito",
+      "empty": "Nessun host personalizzato.",
+      "add": "Aggiungi host",
+      "addTitle": "Aggiungi host di download consentito",
+      "remove": "Rimuovi",
+      "removeTitle": "Rimuovere l'host?",
+      "removeMessage": "I download da {{host}} non funzioneranno finché non verrà aggiunto di nuovo.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "Un nome host, oppure *.example.com per consentire tutti i sottodomini.",
+        "note": "Nota (facoltativa)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Usato per",
+        "allowed": "Consentito",
+        "note": "Nota",
+        "addedBy": "Aggiunto da",
+        "addedOn": "Aggiunto il"
+      },
+      "errors": {
+        "load": "Impossibile caricare gli host di download consentiti.",
+        "save": "Impossibile salvare la modifica."
+      }
     }
   },
   "errors": {
@@ -3746,7 +3873,8 @@
     }
   },
   "common": {
-    "saving": "Salvataggio…"
+    "saving": "Salvataggio…",
+    "cancel": "Annulla"
   },
   "featureFlags": {
     "categories": {
@@ -3926,6 +4054,29 @@
       "default": "Predefinito",
       "empty": "Nessuno stato standard disponibile per l’importazione",
       "importSelected": "Importa selezionati ({{count}})"
+    }
+  },
+  "tagDisplay": {
+    "title": "Mostra sui chip",
+    "subtitle": "Tag mostrati accanto a contatti e clienti negli elenchi dei ticket, nelle intestazioni dei ticket e nei selettori.",
+    "loading": "Caricamento…",
+    "description": "Scegli quali tag vengono mostrati come badge accanto a contatti e clienti e in quale ordine. Un elenco senza tag non mostra badge per quel pubblico.",
+    "contacts": "Contatti",
+    "clients": "Clienti",
+    "audienceInternal": "Utenti interni",
+    "audienceClient": "Portale clienti",
+    "clientNote": "Parte vuoto. I tag elencati qui sono visibili agli utenti del cliente nel portale clienti.",
+    "noneSelected": "Nessun tag mostrato.",
+    "moveUp": "Sposta su",
+    "moveDown": "Sposta giù",
+    "remove": "Rimuovi",
+    "addTag": "Aggiungi un tag…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Torna alle impostazioni email",
+      "title": "Provider di email e identità",
+      "description": "Registra la tua applicazione Google o Microsoft per le email in arrivo e l'accesso del personale. Queste credenziali appartengono al tuo spazio di lavoro."
     }
   }
 }

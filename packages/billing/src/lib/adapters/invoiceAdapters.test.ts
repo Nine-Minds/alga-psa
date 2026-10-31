@@ -57,6 +57,30 @@ describe('mapDbInvoiceToWasmViewModel', () => {
       }
     });
 
+    it('maps the late-time suffix and the closed period it names through to the line', () => {
+      const mapped = mapDbInvoiceToWasmViewModel(
+        {
+          ...base,
+          invoice_charges: [
+            {
+              item_id: 'late',
+              description: 'Remote Support (late time, service period 2024-12-01–2024-12-31)',
+              quantity: 1,
+              unit_price: 12000,
+              total_price: 12000,
+              service_period_start: '2024-12-01',
+              service_period_end: '2024-12-31',
+            },
+          ],
+        },
+        'en-US'
+      );
+
+      expect(mapped!.items[0].description).toBe('Remote Support (late time, service period 2024-12-01–2024-12-31)');
+      expect(mapped!.items[0].servicePeriodStart).toBe('2024-12-01');
+      expect(mapped!.items[0].servicePeriodEnd).toBe('2024-12-31');
+    });
+
     it('leaves a one-time line blank', () => {
       const mapped = mapDbInvoiceToWasmViewModel({
         ...base,

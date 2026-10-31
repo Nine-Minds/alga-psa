@@ -31,7 +31,11 @@ const ViewSwitcher = <T extends string>({
   const isCompact = size === 'sm';
   return (
     <div
-      className={cn('flex items-center border rounded-md overflow-hidden', isCompact ? 'h-7' : 'h-9', className)}
+      className={cn(
+        'flex items-center border border-[rgb(var(--color-border-200))] rounded-md overflow-hidden',
+        isCompact ? 'h-7' : 'h-9',
+        className
+      )}
       role="group"
       aria-label={ariaLabel}
     >

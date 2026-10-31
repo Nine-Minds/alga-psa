@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -143,5 +143,29 @@ describe('global @alga-psa/auth mock contract', () => {
     await expect(getCurrentUser()).resolves.toMatchObject({
       user_id: '00000000-0000-0000-0000-000000000001',
     });
+  });
+  it('checkMultiplePermissions returns per-check results that follow hasPermission, like production', async () => {
+    const { checkMultiplePermissions, hasPermission } = await import('@alga-psa/auth');
+    const user = { user_id: 'u1', tenant: 't1', roles: [] };
+    const checks = [
+      { resource: 'document', action: 'read' },
+      { resource: 'ticket_attachment', action: 'create' },
+    ];
+
+    await expect(checkMultiplePermissions(user as never, checks)).resolves.toEqual([
+      { resource: 'document', action: 'read', granted: true },
+      { resource: 'ticket_attachment', action: 'create', granted: true },
+    ]);
+
+    vi.mocked(hasPermission).mockImplementation(async (_user, resource) => resource === 'ticket_attachment');
+    try {
+      await expect(checkMultiplePermissions(user as never, checks)).resolves.toEqual([
+        { resource: 'document', action: 'read', granted: false },
+        { resource: 'ticket_attachment', action: 'create', granted: true },
+      ]);
+    } finally {
+      vi.mocked(hasPermission).mockReset();
+      vi.mocked(hasPermission).mockResolvedValue(true);
+    }
   });
 });

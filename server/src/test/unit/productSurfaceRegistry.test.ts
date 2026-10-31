@@ -11,6 +11,33 @@ import {
 } from '../../lib/productSurfaceRegistry';
 
 describe('product surface registry', () => {
+  it('opens only the exact /api/v1/documents attach path to algadesk', () => {
+    expect(resolveProductApiBehavior('algadesk', '/api/v1/documents')).toBe('allowed');
+    expect(isApiVisibleInMetadata('algadesk', '/api/v1/documents')).toBe(true);
+    expect(resolveProductApiBehavior('algadesk', '/api/v1/documents/abc')).toBe('denied');
+    expect(resolveProductApiBehavior('algadesk', '/api/v1/documents/folders')).toBe('denied');
+    expect(isApiVisibleInMetadata('algadesk', '/api/v1/documents/abc')).toBe(false);
+    expect(resolveProductApiBehavior('psa', '/api/v1/documents/abc')).toBe('allowed');
+  });
+
+  it('opens the attach path to co_managed like its other helpdesk APIs, hidden from metadata', () => {
+    expect(resolveProductApiBehavior('co_managed', '/api/v1/documents')).toBe('allowed');
+    expect(isApiVisibleInMetadata('co_managed', '/api/v1/documents')).toBe(false);
+    expect(resolveProductApiBehavior('co_managed', '/api/v1/documents/abc')).toBe('denied');
+  });
+
+  it('exposes attachable entities per product through their adapter API paths', async () => {
+    const { ENTITY_ADAPTERS } = await import('../../lib/api/services/documents/entityAdapters');
+    const allowedOnAlgadesk = Object.values(ENTITY_ADAPTERS)
+      .filter((a) => resolveProductApiBehavior('algadesk', a.productApiPath) === 'allowed')
+      .map((a) => a.entityType)
+      .sort();
+    expect(allowedOnAlgadesk).toEqual(['client', 'contact', 'ticket']);
+    for (const a of Object.values(ENTITY_ADAPTERS)) {
+      expect(resolveProductApiBehavior('psa', a.productApiPath)).toBe('allowed');
+    }
+  });
+
   it('T003: classifies representative AlgaDesk MSP routes as allowed, upgrade-boundary, and not-found', () => {
     expect(resolveProductRouteBehavior('algadesk', '/msp/tickets')).toBe('allowed');
     expect(resolveProductRouteBehavior('algadesk', '/msp/reports')).toBe('allowed');
@@ -70,6 +97,17 @@ describe('product surface registry', () => {
     expect(resolveProductApiBehavior('psa', streamPath)).toBe('allowed');
     expect(resolveProductApiBehavior('algadesk', streamPath)).toBe('allowed');
     expect(getApiMetadataProducts(streamPath)).toEqual([]);
+  });
+
+  it('lets every product mint the realtime notification token without publishing it as a v1 API', () => {
+    // The MSP header renders NotificationBell for every product, so each one
+    // must reach /api/notifications/live-token.
+    const liveTokenPath = '/api/notifications/live-token';
+
+    for (const productCode of ['psa', 'algadesk', 'co_managed'] as const) {
+      expect(resolveProductApiBehavior(productCode, liveTokenPath)).toBe('allowed');
+    }
+    expect(getApiMetadataProducts(liveTokenPath)).toEqual([]);
   });
 
   it('keeps the session-authenticated label PDF route PSA-only without publishing it as a v1 API', () => {

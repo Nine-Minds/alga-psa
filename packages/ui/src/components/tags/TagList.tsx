@@ -20,6 +20,8 @@ interface TagListProps {
   onTagUpdate?: (tagId: string, updates: { text?: string; backgroundColor?: string | null; textColor?: string | null }) => Promise<void>;
   onDeleteAll?: (tagText: string, taggedType: string) => Promise<void>;
   size?: TagSize;
+  /** Display the tags only: no edit trigger and no remove control. */
+  readOnly?: boolean;
 }
 
 // Size configurations for tags
@@ -38,7 +40,8 @@ export const TagList: React.FC<TagListProps> = ({
   maxDisplay,
   onTagUpdate,
   onDeleteAll: onDeleteAllProp,
-  size = 'md'
+  size = 'md',
+  readOnly = false
 }) => {
   const { t } = useTranslation('common');
   const { resolvedTheme } = useTheme();
@@ -91,7 +94,7 @@ export const TagList: React.FC<TagListProps> = ({
               maxWidth: sizeConfig.maxWidth,
             }}
           >
-            <TagEditForm
+            {!readOnly && <TagEditForm
               tag={tag}
               onSave={handleTagUpdate}
               onDeleteAll={allowDeleteAll ? handleDeleteAll : undefined}
@@ -109,7 +112,7 @@ export const TagList: React.FC<TagListProps> = ({
                   <ChevronDown size={sizeConfig.iconSize} />
                 </button>
               }
-            />
+            />}
             <span
               style={{
                 overflow: 'hidden',
@@ -119,7 +122,7 @@ export const TagList: React.FC<TagListProps> = ({
             >
               {tag.tag_text}
             </span>
-            {onRemoveTag && (
+            {onRemoveTag && !readOnly && (
               <button
                 type="button"
                 onClick={() => void onRemoveTag(tag.tag_id)}

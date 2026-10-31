@@ -224,15 +224,15 @@ describe('C6 staging labels and manifests', () => {
     let manifest;
     try {
       boxes = await asRequest(world.tenant, () =>
-        printLabels(deps, caller, { labelClass: 'staging-container', ids: [staging.boxA1, staging.boxA2] })
+        printLabels(deps, caller, { labelClass: 'staging-container', labels: [staging.boxA1, staging.boxA2].map((recordId) => ({ recordId })) })
       );
       bulk = await asRequest(world.tenant, () =>
         printLabels(deps, caller, {
-          items: [
-            { labelClass: 'staging-container', id: staging.boxA1 },
-            { labelClass: 'stock-unit-identity', id: staging.unitId },
-            { labelClass: 'asset-identity', id: world.assets.a1 },
-            { labelClass: 'staging-container', id: staging.boxA2 },
+          labels: [
+            { labelClass: 'staging-container', recordId: staging.boxA1 },
+            { labelClass: 'stock-unit-identity', recordId: staging.unitId },
+            { labelClass: 'asset-identity', recordId: world.assets.a1 },
+            { labelClass: 'staging-container', recordId: staging.boxA2 },
           ],
         })
       );
@@ -296,7 +296,7 @@ describe('C6 staging labels and manifests', () => {
 
     for (const [user, id] of [[world.restricted, staging.boxB1], [world.restricted, missing], [world.noPerm, staging.boxA1], [world.tech, staging.deletedBox]] as const) {
       const label = await asRequest(world.tenant, () =>
-        printLabels(deps, { user, tenant: world.tenant, baseUrl: 'https://psa.test' }, { labelClass: 'staging-container', ids: [id] })
+        printLabels(deps, { user, tenant: world.tenant, baseUrl: 'https://psa.test' }, { labelClass: 'staging-container', labels: [{ recordId: id }] })
       );
       expect(label).toEqual({ ok: false, status: 404, message: 'Not found.' });
       expect(await renderManifest(user, id)).toBeNull();

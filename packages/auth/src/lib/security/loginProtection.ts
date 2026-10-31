@@ -79,9 +79,7 @@ export interface LoginProtectionAssessment {
   retryAfterMs?: number;
 }
 
-export function normalizeLoginEmail(email: unknown): string {
-  return typeof email === 'string' ? email.trim().toLowerCase() : '';
-}
+export { normalizeLoginEmail } from './loginEmail';
 
 function pairKey(ctx: LoginAttemptContext): string {
   return `${ctx.email}|${ctx.ip}`;

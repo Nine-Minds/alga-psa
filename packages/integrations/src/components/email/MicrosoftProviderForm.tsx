@@ -9,6 +9,7 @@ import React, { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { PROVIDER_SETUP_ENTRY_PATH } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -71,6 +72,20 @@ function openMicrosoftOAuthPopup(): Window | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Split the comma-separated folder input into Graph folder filters. `\` and `/`
+ * pass through untouched: the Graph adapter resolves nested folders written in
+ * either notation (`Inbox\Support` as Outlook rules write it, or
+ * `Inbox/Support`).
+ */
+export function normalizeMicrosoftFolderFilters(value: string | undefined, fallback: string[]): string[] {
+  const filters = (value || '')
+    .split(',')
+    .map((folder) => folder.trim())
+    .filter((folder) => folder.length > 0);
+  return filters.length > 0 ? filters : fallback;
 }
 
 function closePopupQuietly(popup: Window | null): void {
@@ -217,7 +232,7 @@ export function MicrosoftProviderForm({
     autoProcessEmails: z.boolean(),
     folderFilters: z.string().optional(),
     maxEmailsPerSync: z.number().min(1).max(1000),
-    inboundTicketDefaultsId: z.string().uuid().optional()
+    inboundTicketDefaultsId: z.string().guid().optional()
   });
 
   const form = useForm<MicrosoftProviderFormData>({
@@ -289,7 +304,7 @@ export function MicrosoftProviderForm({
           client_secret: '',
           tenant_id: '',
           auto_process_emails: data.autoProcessEmails,
-          folder_filters: data.folderFilters ? data.folderFilters.split(',').map(f => f.trim()) : ['Inbox'],
+          folder_filters: normalizeMicrosoftFolderFilters(data.folderFilters, ['Inbox']),
           max_emails_per_sync: data.maxEmailsPerSync
         }
 
@@ -380,7 +395,7 @@ export function MicrosoftProviderForm({
             client_secret: '',
             tenant_id: '',
             auto_process_emails: formData.autoProcessEmails,
-            folder_filters: formData.folderFilters && formData.folderFilters.trim() ? formData.folderFilters.split(',').map(f => f.trim()) : ['INBOX'],
+            folder_filters: normalizeMicrosoftFolderFilters(formData.folderFilters, ['INBOX']),
             max_emails_per_sync: formData.maxEmailsPerSync
           }
         };
@@ -710,7 +725,7 @@ export function MicrosoftProviderForm({
                       type="button"
                       variant="link"
                       className="h-auto p-0"
-                      onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
+                      onClick={() => window.location.assign(PROVIDER_SETUP_ENTRY_PATH)}
                     >
                       {t('forms.microsoft.readiness.openProviders', { defaultValue: 'Open Providers' })}
                     </Button>
@@ -732,7 +747,7 @@ export function MicrosoftProviderForm({
                   type="button"
                   variant="link"
                   className="h-auto p-0 text-xs"
-                  onClick={() => window.location.assign('/msp/settings/integrations?category=providers')}
+                  onClick={() => window.location.assign(PROVIDER_SETUP_ENTRY_PATH)}
                 >
                   {ownAppPendingConsent
                     ? t('forms.microsoft.readiness.openProviders', { defaultValue: 'Open Providers' })
@@ -812,7 +827,7 @@ export function MicrosoftProviderForm({
                 placeholder={t('forms.microsoft.advanced.folderFiltersPlaceholder', { defaultValue: 'Inbox, Support, Custom Folder' })}
               />
               <p className="text-xs text-muted-foreground">
-                {t('forms.microsoft.advanced.folderFiltersHelp', { defaultValue: 'Comma-separated list of folders to monitor (default: Inbox)' })}
+                {t('forms.microsoft.advanced.folderFiltersHelp', { defaultValue: 'Comma-separated list of folders to monitor (default: Inbox). Use the exact folder name as it appears in Outlook, and write nested folders as Inbox/Subfolder.' })}
               </p>
             </div>
 

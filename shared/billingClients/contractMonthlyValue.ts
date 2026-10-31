@@ -105,6 +105,11 @@ export interface ContractFixedMonthlyValue {
   /** True when the contract has usage-billed lines with variable, record-driven revenue. */
   hasVariableUsage: boolean;
   /**
+   * True when a line carries a cadence-mode Prepaid Block, whose block fee is
+   * part of `monthlyValueCents` (an advance fee every billing period).
+   */
+  hasCadencePrepaidBlock: boolean;
+  /**
    * Recurring amount of one billing period of each non-Usage line, in the
    * line's own cadence (what a line header printed next to its frequency
    * should show). Same numbers the monthly value is built from.
@@ -331,8 +336,26 @@ export async function getContractMonthlyFixedValuesByContract(
     }
   }
 
+  // A cadence-mode Prepaid Block bills its block fee in advance every billing
+  // period of its line, on top of whatever the line itself bills.
+  const cadenceBlockFeeByLine = new Map<string, number>();
+  if (lines.length > 0) {
+    const blockRows = (await db.table('contract_line_prepaid_blocks')
+      .where('issue_mode', 'cadence')
+      .whereIn('contract_line_id', lines.map((line) => line.contract_line_id))
+      .select('contract_line_id', 'block_price')) as Array<{
+      contract_line_id: string;
+      block_price: number | string | null;
+    }>;
+    for (const row of blockRows) {
+      cadenceBlockFeeByLine.set(row.contract_line_id, toCents(row.block_price) ?? 0);
+    }
+  }
+
   // Recurring amount of ONE billing period of the line (its own cadence, not monthly).
-  const linePeriodCents = (line: (typeof lines)[number]): number => {
+  const linePeriodCents = (line: (typeof lines)[number]): number =>
+    ownLinePeriodCents(line) + (cadenceBlockFeeByLine.get(line.contract_line_id) ?? 0);
+  const ownLinePeriodCents = (line: (typeof lines)[number]): number => {
     if (line.contract_line_type === 'Usage') return 0;
     if (line.contract_line_type === 'Fixed') {
       const members = membersByLine.get(line.contract_line_id) ?? [];
@@ -476,9 +499,12 @@ export async function getContractMonthlyFixedValuesByContract(
   const valueByContract = new Map<string, ContractFixedMonthlyValue>();
   for (const line of lines) {
     const existing = valueByContract.get(line.contract_id)
-      ?? { contractId: line.contract_id, monthlyValueCents: 0, hasVariableUsage: false, linePeriodCentsByLine: new Map<string, number>() };
+      ?? { contractId: line.contract_id, monthlyValueCents: 0, hasVariableUsage: false, hasCadencePrepaidBlock: false, linePeriodCentsByLine: new Map<string, number>() };
     if (line.contract_line_type === 'Usage' || lineIdsWithUsageConfigs.has(line.contract_line_id)) {
       existing.hasVariableUsage = true;
+    }
+    if (cadenceBlockFeeByLine.has(line.contract_line_id)) {
+      existing.hasCadencePrepaidBlock = true;
     }
     if (line.contract_line_type !== 'Usage') {
       existing.monthlyValueCents += lineMonthlyCents(line);

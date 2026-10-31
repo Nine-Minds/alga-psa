@@ -73,7 +73,7 @@ const parsedEmailSchema = z.object({
   sanitizedText: z.string().describe('Cleaned text content without quoted replies'),
   sanitizedHtml: z.string().optional().describe('Cleaned HTML content'),
   confidence: z.string().optional().describe('Parsing confidence'),
-  metadata: z.record(z.unknown()).optional().describe('Parser metadata')
+  metadata: z.record(z.string(), z.unknown()).optional().describe('Parser metadata')
 });
 
 const emailAddressSchema = z.object({
@@ -189,7 +189,7 @@ export function registerEmailWorkflowActionsV2(): void {
     inputSchema: z.object({
       text: z.string().optional().describe('Plain text email body'),
       html: z.string().optional().describe('HTML email body'),
-      config: z.record(z.any()).optional().describe('Parser configuration options')
+      config: z.record(z.string(), z.any()).optional().describe('Parser configuration options')
     }),
     outputSchema: z.object({
       success: z.boolean().describe('Whether parsing succeeded'),
@@ -840,7 +840,7 @@ export function registerEmailWorkflowActionsV2(): void {
     }),
     outputSchema: z.object({
       success: z.boolean().describe('Whether conversion succeeded'),
-      blocks: z.array(z.record(z.any())).describe('BlockNote editor blocks - each block has type, content, and optional props')
+      blocks: z.array(z.record(z.string(), z.any())).describe('BlockNote editor blocks - each block has type, content, and optional props')
     }),
     sideEffectful: false,
     idempotency: { mode: 'engineProvided' },

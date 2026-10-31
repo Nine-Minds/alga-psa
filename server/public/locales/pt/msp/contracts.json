@@ -588,7 +588,8 @@
       "failedToResetRate": "Falha ao redefinir o preço da linha",
       "protectedStartDate": "A data de início deve ser {{boundary}} ou anterior para incluir o histórico protegido.",
       "protectedEndDate": "A data de término deve ser {{boundary}} ou posterior para incluir o histórico protegido.",
-      "cannotEditWithInvoices": "Não é possível editar a linha de contrato: este contrato tem faturas associadas. As linhas de contrato não podem ser editadas depois que as faturas forem geradas."
+      "cannotEditWithInvoices": "Não é possível editar a linha de contrato: este contrato tem faturas associadas. As linhas de contrato não podem ser editadas depois que as faturas forem geradas.",
+      "reloadLatest": "Recarregar a versão mais recente"
     },
     "loading": {
       "contractLines": "Carregando linhas de contrato",
@@ -698,6 +699,13 @@
       "statusSuperseded": "Substituído",
       "supersededHistory": "Edições pendentes substituídas ({{count}})",
       "supersededBy": "Substituído por"
+    },
+    "pricing": {
+      "catalog": "catálogo",
+      "override": "personalizado",
+      "cost": "Custo: {{cost}}",
+      "costInCurrency": "Custo em {{currency}}: {{cost}}",
+      "margin": "Margem: {{margin}} por unidade"
     }
   },
   "contractLineEdit": {
@@ -1695,6 +1703,9 @@
       "label": "Perfil de faturação",
       "none": "Utilizar o perfil predefinido do cliente",
       "hint": "Os encargos deste contrato são faturados neste perfil, salvo se uma linha o substituir."
+    },
+    "billingTiming": {
+      "label": "Momento de faturamento"
     }
   },
   "wizardFixed": {
@@ -1744,7 +1755,8 @@
       "recurringQuantityLabel": "Quantidade recorrente",
       "allocationQuantityLabel": "Quantidade de alocação",
       "noCurrencyPrice": "Sem preço em {{currency}} no catálogo. Informe uma tarifa unitária."
-    }
+    },
+    "billingTimingLabel": "Momento de faturamento"
   },
   "wizardProducts": {
     "actions": {
@@ -1767,7 +1779,8 @@
       "productMissingPrice": "Este produto não tem preço padrão nem substituição. Ele não pode ser cobrado até que você insira um preço unitário.",
       "noCurrencyPriceEnterUnitPrice": "Nenhum preço {{currency}} no catálogo. Insira um preço unitário.",
       "noCurrencyPriceWithLegacyHint": "Nenhum preço {{currency}} no catálogo. Taxa padrão herdada: {{rate}}. Insira um preço unitário em {{currency}}."
-    }
+    },
+    "billingTimingLabel": "Momento de faturamento"
   },
   "wizardHourly": {
     "actions": {
@@ -1825,7 +1838,8 @@
         "rolloverDisabled": "Desabilitado",
         "rolloverEnabled": "Habilitado"
       }
-    }
+    },
+    "billingTimingLabel": "Momento de faturamento"
   },
   "wizardUsage": {
     "actions": {
@@ -1863,7 +1877,8 @@
     },
     "values": {
       "defaultUnit": "unidade"
-    }
+    },
+    "billingTimingLabel": "Momento de faturamento"
   },
   "wizardReview": {
     "heading": "Revise o contrato",
@@ -1972,7 +1987,10 @@
         "one": "Produto {{count}}",
         "other": "Produtos {{count}}"
       },
-      "overrideRate": "- substituir {{rate}}/{{currencyCode}}"
+      "overrideRate": "- substituir {{rate}}/{{currencyCode}}",
+      "cost": "Custo: {{cost}}",
+      "costInCurrency": "Custo em {{currency}}: {{cost}}",
+      "margin": "Margem: {{margin}} por unidade"
     },
     "hourly": {
       "badgeCount": {
@@ -1995,8 +2013,12 @@
     "total": {
       "title": "Total Mensal Estimado",
       "description": "Produtos e cobranças fixas estão incluídos neste total. Serviços por hora e de uso são faturados com base no consumo real.",
-      "perMonth": "por mês",
-      "savedDraftValue": "Valor do rascunho guardado: {{amount}}"
+      "savedDraftValue": "Valor do rascunho guardado: {{amount}}",
+      "titleCadence": "Total estimado",
+      "mixedFrequencyTitle": "Total estimado por frequência de faturamento",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "cerca de {{amount}} por mês",
+      "savedDraftValueMonthly": "Valor do rascunho guardado: {{amount}} por mês"
     },
     "finalChecklist": {
       "title": "Antes de terminar:",
@@ -2011,7 +2033,16 @@
       "blockSummary": "{{hours}} horas por {{price}}",
       "expiresAfter_one": "expira após {{count}} mês",
       "expiresAfter_other": "expira após {{count}} meses",
-      "neverExpires": "nunca expira"
+      "neverExpires": "nunca expira",
+      "cadenceSummary": "{{hours}} h por período de faturação por {{price}}",
+      "overageRate": "excedente {{rate}}/h"
+    },
+    "billingTiming": {
+      "label": "Momento de faturamento:",
+      "advance": "Antecipado",
+      "arrears": "Pós-pago",
+      "advanceInherited": "Antecipado (padrão do contrato)",
+      "arrearsInherited": "Pós-pago (padrão do contrato)"
     }
   },
   "wizardTemplateLines": {
@@ -2313,7 +2344,8 @@
       "period": "Período: {{period}}"
     },
     "prepaid": {
-      "blockSummaryNeutral": "{{hours}} horas por {{price}} (na moeda do cliente)"
+      "blockSummaryNeutral": "{{hours}} horas por {{price}} (na moeda do cliente)",
+      "cadenceSummaryNeutral": "{{hours}} h por período de faturação por {{price}} (na moeda do cliente)"
     }
   },
   "templatePreview": {
@@ -2756,6 +2788,7 @@
   "wizardFirstInvoice": {
     "loading": "Verificando o calendário de faturamento do cliente…",
     "arrearsPreviewNote": "Até lá, uma prévia de faturas deste cliente não tem nada a faturar para esta linha.",
+    "arrearsPreviewNoteMany": "Até lá, uma prévia de faturas deste cliente não tem nada a faturar para estas linhas.",
     "unavailable": {
       "missingStartDate": "Escolha uma data de início para ver quando este contrato será faturado pela primeira vez.",
       "unsupportedFrequency": "Nenhuma data da primeira fatura é exibida porque o faturamento pelo ciclo do contrato não oferece suporte a essa frequência. Escolha uma frequência compatível ou fature pelo calendário do cliente.",
@@ -2778,7 +2811,7 @@
     "done": "Concluído"
   },
   "sellHourBlockNote": {
-    "text": "Um pacote de horas do contrato fatura apenas o excedente. Para cobrar antecipadamente um bloco de horas, adicione uma linha de Bloco pré-pago a este contrato."
+    "text": "Uma bolsa de horas do contrato fatura apenas o excedente. Para cobrar um bloco de horas antecipadamente, adicione ao contrato uma linha de Bloco pré-pago e emita-a a cada período de faturação."
   },
   "review": {
     "saveTemplateRates": "Guardar estas tarifas em {{currency}} no modelo",
@@ -2792,7 +2825,11 @@
     "options": {
       "advance": "Antecipado (faturar no início do período)",
       "arrears": "Após o período (faturar no fim do período)"
-    }
+    },
+    "inheritWithValue": "Usar o padrão do contrato — {{timing}}",
+    "inheritedAdvance": "antecipado",
+    "inheritedArrears": "pós-pago",
+    "contractDefaultHelp": "Padrão para linhas fixas, que podem ser faturadas antecipadamente. Linhas por hora e de uso são sempre faturadas após o período, independentemente do que escolher aqui."
   },
   "contractDiscounts": {
     "title": "Descontos",
@@ -2960,7 +2997,17 @@
       "tier": "Fatura seguinte",
       "tierDraft": "Criar um rascunho para revisão",
       "tierAutoIssue": "Finalizar e enviar automaticamente",
-      "blockPriceNeutral": "Preço do bloco (na moeda do cliente)"
+      "blockPriceNeutral": "Preço do bloco (na moeda do cliente)",
+      "ratePerHour": "Equivale a {{rate}} por hora do bloco.",
+      "issueMode": "Emitir blocos",
+      "issueModeCadence": "Cada período de faturação",
+      "blockFeeInAdvance": "A linha é faturada em atraso; a taxa do bloco é faturada antecipadamente.",
+      "issueModeConsumption": "Quando o bloco atual se esgota ou expira",
+      "rolloverPeriods": "Horas não utilizadas",
+      "rolloverNone": "Expiram no fim do período",
+      "cadenceNote": "Faturado antecipadamente a cada período. As horas acima do bloco são faturadas à taxa horária da linha na fatura seguinte.",
+      "rolloverCarry_one": "Transitar {{count}} período",
+      "rolloverCarry_other": "Transitar {{count}} períodos"
     },
     "status": {
       "pending": "Pendente",

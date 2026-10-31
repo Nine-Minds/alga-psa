@@ -119,6 +119,9 @@ export default defineConfig({
       'src/components/billing-dashboard/contracts/BucketPoolEditor.currency.test.tsx',
       // Wizard quantity input draft/commit behavior.
       'src/components/billing-dashboard/contracts/QuantityInput.test.tsx',
+      'src/components/billing-dashboard/contracts/BillingTimingField.test.tsx',
+      'src/components/billing-dashboard/contracts/wizard-steps/BillingTimingInheritance.test.tsx',
+      'src/components/billing-dashboard/contracts/wizard-steps/ReviewContractStep.billingTiming.test.tsx',
       'src/components/billing-dashboard/contracts/wizard-steps/templateLineAmounts.test.ts',
       'src/components/billing-dashboard/contracts/wizard-steps/templatePickerOption.test.ts',
       'src/components/billing-dashboard/contracts/wizard-steps/TemplateLinesStep.fallback.test.tsx',
@@ -192,6 +195,17 @@ export default defineConfig({
         find: /^@alga-psa\/core\/logger$/,
         replacement: `${path.resolve(__dirname, '../core/src/lib/logger.ts')}`,
       },
+      // Same shape as the logger rule: `./capability` is exported from
+      // src/lib, while its server/testing subpaths live under src/capability.
+      // Reached through @alga-psa/ui's hooks barrel (useCapability).
+      {
+        find: /^@alga-psa\/core\/capability$/,
+        replacement: path.resolve(__dirname, '../core/src/lib/capability.ts'),
+      },
+      {
+        find: /^@alga-psa\/core\/capability\/(server|testing)$/,
+        replacement: `${path.resolve(__dirname, '../core/src/capability')}/$1.ts`,
+      },
       // Same shape as the logger rule: core's i18n exports sit under src/lib, so
       // the generic @alga-psa/<pkg>/<path> rule below misses them. Reached here
       // through @alga-psa/ui's date formatter.
@@ -200,7 +214,7 @@ export default defineConfig({
         replacement: `${path.resolve(__dirname, '../core/src/lib/i18n')}/$1`,
       },
       {
-        find: /^@alga-psa\/db\/(admin|connection|tenant|workDate)$/,
+        find: /^@alga-psa\/db\/(admin|connection|tenant|tenantDb|workDate|commentEventRegistry)$/,
         replacement: `${path.resolve(__dirname, '../db/src/lib')}/$1.ts`,
       },
       {
