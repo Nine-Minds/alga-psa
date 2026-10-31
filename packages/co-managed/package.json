@@ -82,6 +82,18 @@
       "types": "./src/participationEvidence.ts",
       "import": "./src/participationEvidence.ts"
     },
+    "./ticketSlaRegistration": {
+      "types": "./src/ticketSlaRegistration.ts",
+      "import": "./src/ticketSlaRegistration.ts"
+    },
+    "./ticketSla": {
+      "types": "./src/ticketSla.ts",
+      "import": "./src/ticketSla.ts"
+    },
+    "./ticketSlaRead": {
+      "types": "./src/ticketSlaRead.ts",
+      "import": "./src/ticketSlaRead.ts"
+    },
     "./schedulingRegistration": {
       "types": "./src/schedulingRegistration.ts",
       "import": "./src/schedulingRegistration.ts"

@@ -37,6 +37,14 @@ export async function register() {
       console.error('Failed to register the co-managed scheduling providers:', error);
     }
 
+    // CM L6b: organization-SLA handlers on the ticket-lifecycle registry. Best-effort: without them
+    // the registry stays empty and every ticket write is unchanged.
+    try {
+      await import('@alga-psa/co-managed/ticketSlaRegistration');
+    } catch (error) {
+      console.error('Failed to register the co-managed SLA lifecycle handlers:', error);
+    }
+
     // Wire the DB-prefs-aware locale resolver into @alga-psa/ui's server i18n.
     // Done here (instead of at the @alga-psa/ui level) to avoid a
     // ui→tenancy circular dependency; tenancy already depends on ui.

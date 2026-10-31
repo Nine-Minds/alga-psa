@@ -14,6 +14,11 @@ export type TicketLifecycleEvent =
   | { kind: 'resolved'; tenant: string; ticketId: string; statusId?: string; actorUserId?: string }
   | { kind: 'reopened'; tenant: string; ticketId: string; statusId?: string; actorUserId?: string }
   | { kind: 'awaitingClient'; tenant: string; ticketId: string; previous: string | null; next: string | null }
+  // Additive (L6b): responsibility changes on shared work, and the first reply from the other organization.
+  | { kind: 'handoff'; tenant: string; ticketId: string; relationshipId: string; workId: string; operationId: string;
+      transition: 'escalated' | 'handed_back' | 'access_revoked' | 'reopened'; firstEscalatedAt: string | null; occurredAt: string }
+  | { kind: 'firstResponse'; tenant: string; ticketId: string; relationshipId: string; commentId: string;
+      actorTenant: string; actorUserId: string; actorReferenceId: string }
   | { kind: 'beforeSourceChange'; tenant: string; ticketId: string; fields: Record<string, unknown>; actorUserId?: string };
 
 export type TicketLifecycleKind = TicketLifecycleEvent['kind'];
