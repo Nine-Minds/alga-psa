@@ -33,10 +33,24 @@ it('is a no-op, touching neither database nor storage, when co-managed is forced
   expect(await portableRestoreUploadCleanup()).toEqual({ disabled: true });
   expect(state.hasTable).not.toHaveBeenCalled(); expect(state.provider).not.toHaveBeenCalled();
 });
-it('registers one idempotent system job with a schedule through the job registry, and nothing when forced off', () => {
-  registerPortableRestoreJobs(); registerPortableRestoreJobs();
+const journal = (rows: boolean) => {
+  state.db = Object.assign(() => ({ select: () => ({ first: async () => (rows ? { '?column?': 1 } : undefined) }) }), { schema: { hasTable: state.hasTable }, raw: (sql: string) => sql });
+};
+it('registers one idempotent system job with a schedule once the upload journal has rows', async () => {
+  journal(true);
+  expect(await registerPortableRestoreJobs()).toBe(true);
+  expect(await registerPortableRestoreJobs()).toBe(false);
   expect(getJobDescriptor(PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB)).toMatchObject({ scope: 'system', schedule: { cron: '*/15 * * * *' } });
-  resetJobDescriptors(); process.env.FORCE_CAPABILITIES = 'co-managed:off';
-  registerPortableRestoreJobs();
+});
+it('schedules nothing while dark: an empty journal, a missing table, or the kill switch', async () => {
+  journal(false);
+  expect(await registerPortableRestoreJobs()).toBe(false);
   expect(getJobDescriptor(PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB)).toBeUndefined();
+  journal(true); state.hasTable.mockResolvedValue(false);
+  expect(await registerPortableRestoreJobs()).toBe(false);
+  state.hasTable.mockResolvedValue(true); process.env.FORCE_CAPABILITIES = 'co-managed:off';
+  expect(await registerPortableRestoreJobs()).toBe(false);
+  expect(getJobDescriptor(PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB)).toBeUndefined();
+  process.env.FORCE_CAPABILITIES = 'co-managed:bogus'; // malformed also fails closed
+  expect(await registerPortableRestoreJobs()).toBe(false);
 });
