@@ -838,7 +838,15 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         invoice_line_description: editLineData.invoice_line_description?.trim() || null,
         invoice_line_subtitle: editLineData.invoice_line_subtitle?.trim() || null,
       };
-      const updateResult = pricingOnly ? await updateContractLine(contractLineId, invoiceText) : await updateContractLine(contractLineId, {
+      const savedLine = contractLines.find((candidate) => candidate.contract_line_id === contractLineId);
+      const invoiceTextChanged =
+        (savedLine?.invoice_line_description?.trim() || null) !== invoiceText.invoice_line_description ||
+        (savedLine?.invoice_line_subtitle?.trim() || null) !== invoiceText.invoice_line_subtitle;
+      // On an invoiced contract nothing but text can change here, so an
+      // unchanged text means there is no line mutation to make at all.
+      const updateResult = pricingOnly
+        ? (invoiceTextChanged ? await updateContractLine(contractLineId, invoiceText) : { success: true })
+        : await updateContractLine(contractLineId, {
         ...invoiceText,
         billing_timing: editLineData.billing_timing,
         cadence_owner: editLineData.cadence_owner,

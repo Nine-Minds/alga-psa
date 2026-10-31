@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { evaluateTemplateAst } from './evaluator';
 import { renderEvaluatedTemplateAst } from './react-renderer';
 import { validateTemplateAst } from './schema';
-import { templateHasComponentRows, templateUsesComponentPricing } from './componentPricing';
+import { decideBundleLoad, templateHasComponentRows, templateUsesComponentPricing } from './componentPricing';
 import { STANDARD_INVOICE_TEMPLATE_ASTS, getStandardTemplateAstByCode } from './standardTemplates';
 import { buildBundleChildRowsPreset, detectBundleChildRowsPreset } from './bundleChildRows';
 
@@ -79,5 +79,32 @@ describe('bundle child rows presets', () => {
     expect(detectBundleChildRowsPreset(buildBundleChildRowsPreset({ prices: false, showChange: true }))).toBe('quantities');
     expect(detectBundleChildRowsPreset(buildBundleChildRowsPreset({ prices: true, showChange: true }))).toBe('quantities-and-prices');
     expect(detectBundleChildRowsPreset({ sourcePath: 'x', itemBinding: 'y', cells: {} })).toBe('custom');
+  });
+});
+
+describe('decideBundleLoad (client price-leak gate)', () => {
+  const quantities = STANDARD_INVOICE_TEMPLATE_ASTS['standard-bundle-quantities'];
+  const plain = STANDARD_INVOICE_TEMPLATE_ASTS['standard-default'];
+  const priced = (() => {
+    const ast = JSON.parse(JSON.stringify(quantities));
+    ast.layout.children.find((c: any) => c.id === 'line-items').childRows = buildBundleChildRowsPreset({ prices: true, showChange: true });
+    return ast;
+  })();
+
+  it('MSP always gets presentation and amounts', () => {
+    expect(decideBundleLoad('msp', null)).toEqual({ includeBundlePresentation: true, includeBundleComponentAmounts: true });
+  });
+
+  it('a client on a quantities-only template gets rows but no amounts', () => {
+    expect(decideBundleLoad('client', quantities)).toEqual({ includeBundlePresentation: true, includeBundleComponentAmounts: false });
+  });
+
+  it('a client gets amounts only when the template binds a component price', () => {
+    expect(decideBundleLoad('client', priced)).toEqual({ includeBundlePresentation: true, includeBundleComponentAmounts: true });
+  });
+
+  it('a client on a template without component rows, or an unknown template, gets nothing', () => {
+    expect(decideBundleLoad('client', plain)).toEqual({ includeBundlePresentation: false, includeBundleComponentAmounts: false });
+    expect(decideBundleLoad('client', null)).toEqual({ includeBundlePresentation: false, includeBundleComponentAmounts: false });
   });
 });

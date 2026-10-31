@@ -13,7 +13,10 @@ describe('invoiceQueries recurring detail refresh wiring', () => {
     expect(invoiceQueriesSource).toContain("buildInvoiceDetailServicePeriodSubquery(db, 'max', 'invoices')");
     expect(invoiceQueriesSource).toContain("db.tenantJoin(subquery, 'invoice_charge_details as iid'");
     expect(invoiceQueriesSource).toContain("db.tenantWhereColumn(subquery, 'ic.tenant', `${outerInvoiceAlias}.tenant`)");
-    expect(invoiceQueriesSource).toContain('await Invoice.getFullInvoiceById(knex, tenant, invoiceId);');
+    // Bundle component data is loaded per the viewer/template (price-leak gate), so the
+    // reader takes resolved load options as a fourth argument.
+    expect(invoiceQueriesSource).toContain('await Invoice.getFullInvoiceById(');
+    expect(invoiceQueriesSource).toContain('await resolveBundleLoadOptions(knex, tenant, user, invoiceId)');
     expect(invoiceQueriesSource).toContain('detail-aware reader');
     // The rerender path still hydrates through the detail-aware reader, then
     // enriches with project rendering data.
