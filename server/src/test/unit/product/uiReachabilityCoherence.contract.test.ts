@@ -28,6 +28,8 @@ const INTENTIONALLY_UNLINKED: Record<string, string> = {
   '/msp/account': 'reached via the header avatar menu → Account, not the sidebar',
   '/msp/add-ons': 'reached via add-on notices and paywall CTAs, not the sidebar',
   '/msp/co-managed': 'capability-gated Co-managed IT menu group contributed through the msp.navigation.group UI slot (config/coManagedMenu.ts), not menuConfig; coManagedMenuGroup.test.tsx pins it',
+  '/msp/co-managed/archive': 'capability-gated (co-managed serves) MSP archive, contributed through the same msp.navigation.group slot as /msp/co-managed (config/coManagedMenu.ts)',
+  '/msp/co-management/departure': 'capability-gated (co-managed serves) departure screen for either side of a relationship, reached from the co-managed workspace',
   '/msp/co-management/administration': 'capability-gated Access & administration screen; the sidebar shows it only when the co-managed capability holds (SidebarWithFeatureFlags filters it out otherwise), so the registry-level coherence check does not see it',
   '/msp/co-management/customer-tickets': 'capability-gated (co-managed serves) sponsor queue of customer-shared tickets, reached by its own deep links; the nav entry arrives when the L1b Oversight shell absorbs this route',
   '/msp/co-management/tasks': 'capability-gated (co-managed serves) sponsor Shared Tasks queue, reached from the Projects page via CoManagedProjectTaskQueueLink',
