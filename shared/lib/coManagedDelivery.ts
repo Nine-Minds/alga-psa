@@ -43,7 +43,17 @@ export type InboundAdmission =
   | { admitted: true; audience: CommentAudience; relationshipId: string; threadId: string | null; ticketId: string; parentCommentId: string | null;
       /** Set for shared_it / organization_private: the participant to write as. Absent = requester thread (native writer). */
       actor?: InboundCommentActor }
-  | { admitted: false; reason: 'legacy_token' | 'stale_generation' | 'grant_revoked' | 'not_served' | 'not_participant' | 'audience_forbidden'; acknowledge: boolean };
+  | { admitted: false; reason: 'legacy_token' | 'stale_generation' | 'grant_revoked' | 'not_served' | 'not_participant' | 'audience_forbidden' | 'sender_unauthenticated'; acknowledge: boolean };
+
+/**
+ * The inbound sender as the caller has verified it. `internalAttributionTrusted` is the caller's
+ * `allowsInternalSenderAttribution(senderAuthResults)`: without it the From address is only a claim and
+ * must never resolve to an internal user.
+ */
+export interface InboundSender {
+  email: string | null;
+  internalAttributionTrusted: boolean;
+}
 
 export interface InboundCommentWrite {
   tenant: string;
@@ -101,8 +111,8 @@ export interface CoManagedDeliveryProvider {
   /** Claim a ledger row; true = this caller owns the send. */
   claim(tenant: string, kind: string, sourceId: string, recipient: DeliveryRecipient): Promise<boolean>;
   finish(tenant: string, kind: string, sourceId: string, recipient: DeliveryRecipient, state: 'sent' | 'failed' | 'sending', outcome?: { error?: string; code?: string }): Promise<void>;
-  /** Inbound reply-token admission for a `cm2:`/`cm1:` token (metadata from email_reply_tokens) and a sender address. */
-  admitReplyToken(tenant: string, token: string, metadata: unknown, senderEmail: string | null): Promise<InboundAdmission>;
+  /** Inbound reply-token admission for a `cm2:`/`cm1:` token (metadata from email_reply_tokens) and the verified sender. */
+  admitReplyToken(tenant: string, token: string, metadata: unknown, sender: InboundSender): Promise<InboundAdmission>;
 }
 
 /**

@@ -112,6 +112,37 @@ describe('inbound reply token matrix (CM L5)', () => {
     expect(acks[0]).toMatchObject({ tenant: 'tenant-1', to: expect.stringMatching(/^agent@msp\.test$/i), ticketId: 'ticket-1', reason });
   });
 
+  describe('sender authentication (the cm2 reply must not let a forged From act as an internal user)', () => {
+    const PASS = 'mx; dmarc=pass header.from=msp.test';
+    const SPF_ONLY = 'mx; spf=pass smtp.mailfrom=msp.test';
+
+    it('passes internalAttributionTrusted=true when Authentication-Results satisfy allowsInternalSenderAttribution', async () => {
+      admission = { admitted: true, audience: 'shared_it', relationshipId: 'rel', threadId: 'thr', ticketId: 'ticket-1', parentCommentId: null, actor: { tenant: 'msp', userId: 'u1' } };
+      await inbound('cm2:abc', { headers: { 'authentication-results': PASS } });
+      expect(admitSpy).toHaveBeenCalledWith('tenant-1', 'cm2:abc', expect.anything(), { email: 'agent@msp.test', internalAttributionTrusted: true });
+    });
+
+    it.each([
+      ['spf only (not enough for internal attribution)', { 'authentication-results': SPF_ONLY }],
+      ['absent Authentication-Results', {}],
+      ['failing dmarc', { 'authentication-results': 'mx; dmarc=fail header.from=msp.test' }],
+    ])('passes internalAttributionTrusted=false for %s', async (_n, headers) => {
+      admission = { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
+      await inbound('cm2:abc', { headers });
+      expect(admitSpy).toHaveBeenCalledWith('tenant-1', 'cm2:abc', expect.anything(), { email: 'agent@msp.test', internalAttributionTrusted: false });
+    });
+
+    it('sender_unauthenticated is quarantined (not inert): no write, no native fallthrough, no acknowledgement', async () => {
+      admission = { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
+      const result: any = await inbound('cm2:abc', { headers: {} }, { collectDiagnostics: true });
+      expect(result).toMatchObject({ outcome: 'quarantined', reason: 'co_managed_sender_unauthenticated', ticketId: 'ticket-1', matchedBy: 'reply_token' });
+      expect(writes).toHaveLength(0);
+      expect(acks).toHaveLength(0);
+      expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+      expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
+    });
+  });
+
   it('an auto-reply to a refused token is not acknowledged (no mail loop)', async () => {
     admission = { admitted: false, reason: 'stale_generation', acknowledge: true };
     const result = await inbound('cm2:abc', { headers: { 'auto-submitted': 'auto-replied', 'authentication-results': 'mx; spf=pass' } });
