@@ -148,6 +148,31 @@ export async function createAssetReadContext(
   };
 }
 
+export type AssetAuthorizationAction = 'read' | 'update' | 'delete';
+
+/**
+ * True when the caller's per-record kernel decision allows `action` on the asset. The kernel request carries
+ * the caller's real action: bundle rules match on exact resource + action, so a mutation must not be
+ * decided with the 'read' rule.
+ */
+export async function isAssetActionAllowed(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  asset: AssetAuthorizationInput,
+  action: AssetAuthorizationAction
+): Promise<boolean> {
+  const records = await resolveAssetAuthorizationRecords(trx, tenant, [asset]);
+  const decision = await context.authorizationKernel.authorizeResource({
+    subject: context.subject,
+    resource: { type: 'asset', action, id: asset.asset_id },
+    record: records.get(asset.asset_id),
+    requestCache: context.requestCache,
+    knex: trx as Knex,
+  });
+  return decision.allowed;
+}
+
 /** True when the caller's per-record kernel decision allows reading the asset. */
 export async function isAssetReadAllowed(
   trx: Knex | Knex.Transaction,
@@ -155,15 +180,7 @@ export async function isAssetReadAllowed(
   context: AssetReadAuthorizationContext,
   asset: AssetAuthorizationInput
 ): Promise<boolean> {
-  const records = await resolveAssetAuthorizationRecords(trx, tenant, [asset]);
-  const decision = await context.authorizationKernel.authorizeResource({
-    subject: context.subject,
-    resource: { type: 'asset', action: 'read', id: asset.asset_id },
-    record: records.get(asset.asset_id),
-    requestCache: context.requestCache,
-    knex: trx as Knex,
-  });
-  return decision.allowed;
+  return isAssetActionAllowed(trx, tenant, context, asset, 'read');
 }
 
 /**
