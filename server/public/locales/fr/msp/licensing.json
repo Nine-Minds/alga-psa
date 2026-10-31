@@ -659,7 +659,8 @@
       "viewer": "Lecteur",
       "viewOnly": "Lecture seule",
       "visibility": "Visibilité des tickets",
-      "whyTitle": "Pourquoi quelqu'un ne peut-il pas voir ceci ?"
+      "whyTitle": "Pourquoi quelqu'un ne peut-il pas voir ceci ?",
+      "readOnly": "Vous pouvez consulter cette configuration mais pas la modifier."
     },
     "sharedTasks": {
       "link": "Tâches partagées",
@@ -716,6 +717,14 @@
       "rejected": "Impossible d'enregistrer cette tâche.",
       "saved": "Enregistré.",
       "save": "Enregistrer"
+    },
+    "sla": {
+      "title": "Priorités SLA en cogestion",
+      "description": "Choisissez laquelle de vos priorités, et donc lequel de vos objectifs SLA, s’applique lorsqu’un client escalade un ticket de chaque priorité.",
+      "missingPolicy": "Aucune politique SLA n’est configurée",
+      "settings": "Gérer les politiques SLA",
+      "mappingFor": "La priorité client {{name}} correspond à",
+      "unmapped": "Non associée"
     }
   },
   "common": {

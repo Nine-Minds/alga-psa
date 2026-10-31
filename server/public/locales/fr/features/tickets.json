@@ -2832,5 +2832,35 @@
       "notAvailable": "Cette réponse prédéfinie n'est pas disponible pour ce ticket.",
       "notATeamMember": "Vous ne pouvez gérer que les réponses des équipes dont vous êtes membre."
     }
+  },
+  "sharedSla": {
+    "title": "Niveau de service",
+    "msp": "Niveau de service du MSP",
+    "customer": "Niveau de service du client",
+    "state": {
+      "running": "En cours",
+      "paused": "En pause",
+      "met": "Respecté",
+      "breached": "Dépassé"
+    },
+    "target": {
+      "response": "Première réponse",
+      "resolution": "Résolution"
+    },
+    "elapsed": "Écoulé : {{time}}",
+    "dueAt": "Échéance : {{date}}",
+    "completedAt": "Respecté le {{date}}",
+    "breached": "Dépassé",
+    "targetPaused": "En pause",
+    "noTarget": "Aucun objectif",
+    "duration": {
+      "hoursMinutes": "{{hours}} h {{minutes}} min",
+      "minutes": "{{minutes}} min"
+    },
+    "notStarted": "Le compteur démarre lorsque le ticket est escaladé.",
+    "unavailable": "Ce niveau de service n’est plus disponible.",
+    "notConfigured": "Aucun niveau de service ne s’applique.",
+    "empty": "Aucun niveau de service n’est encore suivi pour ce ticket.",
+    "loadError": "Impossible de charger le niveau de service."
   }
 }

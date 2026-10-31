@@ -659,7 +659,8 @@
       "viewer": "Lector",
       "viewOnly": "Solo lectura",
       "visibility": "Visibilidad de tickets",
-      "whyTitle": "¿Por qué alguien no puede ver esto?"
+      "whyTitle": "¿Por qué alguien no puede ver esto?",
+      "readOnly": "Puede ver esta configuración, pero no cambiarla."
     },
     "sharedTasks": {
       "link": "Tareas compartidas",
@@ -716,6 +717,14 @@
       "rejected": "No se pudo guardar esta tarea.",
       "saved": "Guardado.",
       "save": "Guardar"
+    },
+    "sla": {
+      "title": "Prioridades de SLA en cogestión",
+      "description": "Elija cuál de sus prioridades, y por tanto cuál de sus objetivos de SLA, se aplica cuando un cliente escala un ticket de cada prioridad.",
+      "missingPolicy": "No hay ninguna política de SLA configurada",
+      "settings": "Gestionar políticas de SLA",
+      "mappingFor": "La prioridad del cliente {{name}} corresponde a",
+      "unmapped": "Sin asignar"
     }
   },
   "common": {

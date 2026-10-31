@@ -659,7 +659,8 @@
       "viewer": "Läsare",
       "viewOnly": "Endast visning",
       "visibility": "Ärendesynlighet",
-      "whyTitle": "Varför kan någon inte se detta?"
+      "whyTitle": "Varför kan någon inte se detta?",
+      "readOnly": "Du kan se den här konfigurationen men inte ändra den."
     },
     "sharedTasks": {
       "link": "Delade uppgifter",
@@ -716,6 +717,14 @@
       "rejected": "Det gick inte att spara uppgiften.",
       "saved": "Sparat.",
       "save": "Spara"
+    },
+    "sla": {
+      "title": "SLA-prioriteringar vid samförvaltning",
+      "description": "Välj vilken av dina prioriteringar, och därmed vilket av dina SLA-mål, som gäller när en kund eskalerar ett ärende med respektive prioritet.",
+      "missingPolicy": "Ingen SLA-policy är konfigurerad",
+      "settings": "Hantera SLA-policyer",
+      "mappingFor": "Kundprioritet {{name}} motsvarar",
+      "unmapped": "Inte kopplad"
     }
   },
   "common": {

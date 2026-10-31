@@ -659,7 +659,8 @@
       "viewer": "Visualizzatore",
       "viewOnly": "Sola lettura",
       "visibility": "Visibilità dei ticket",
-      "whyTitle": "Perché qualcuno non riesce a vederlo?"
+      "whyTitle": "Perché qualcuno non riesce a vederlo?",
+      "readOnly": "Puoi visualizzare questa configurazione ma non modificarla."
     },
     "sharedTasks": {
       "link": "Attività condivise",
@@ -716,6 +717,14 @@
       "rejected": "Impossibile salvare questa attività.",
       "saved": "Salvato.",
       "save": "Salva"
+    },
+    "sla": {
+      "title": "Priorità SLA in co-gestione",
+      "description": "Scegli quale delle tue priorità, e quindi quale dei tuoi obiettivi SLA, si applica quando un cliente escala un ticket di ciascuna priorità.",
+      "missingPolicy": "Nessuna policy SLA configurata",
+      "settings": "Gestisci le policy SLA",
+      "mappingFor": "La priorità cliente {{name}} corrisponde a",
+      "unmapped": "Non associata"
     }
   },
   "common": {

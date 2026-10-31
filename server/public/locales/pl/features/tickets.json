@@ -2832,5 +2832,35 @@
       "notAvailable": "Ta gotowa odpowiedź nie jest dostępna dla tego zgłoszenia.",
       "notATeamMember": "Możesz zarządzać odpowiedziami zespołu tylko dla zespołów, do których należysz."
     }
+  },
+  "sharedSla": {
+    "title": "Poziom usług",
+    "msp": "Poziom usług MSP",
+    "customer": "Poziom usług klienta",
+    "state": {
+      "running": "W toku",
+      "paused": "Wstrzymane",
+      "met": "Dotrzymane",
+      "breached": "Naruszone"
+    },
+    "target": {
+      "response": "Pierwsza odpowiedź",
+      "resolution": "Rozwiązanie"
+    },
+    "elapsed": "Upłynęło: {{time}}",
+    "dueAt": "Termin: {{date}}",
+    "completedAt": "Dotrzymano {{date}}",
+    "breached": "Naruszone",
+    "targetPaused": "Wstrzymane",
+    "noTarget": "Brak celu",
+    "duration": {
+      "hoursMinutes": "{{hours}} godz. {{minutes}} min",
+      "minutes": "{{minutes}} min"
+    },
+    "notStarted": "Zegar rusza po eskalacji zgłoszenia.",
+    "unavailable": "Ten poziom usług nie jest już dostępny.",
+    "notConfigured": "Nie obowiązuje żaden poziom usług.",
+    "empty": "Dla tego zgłoszenia nie jest jeszcze śledzony żaden poziom usług.",
+    "loadError": "Nie udało się wczytać poziomu usług."
   }
 }

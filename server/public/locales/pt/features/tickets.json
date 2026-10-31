@@ -2832,5 +2832,35 @@
       "notAvailable": "Esta resposta pronta não está disponível para este ticket.",
       "notATeamMember": "Só pode gerir respostas de equipa das equipas a que pertence."
     }
+  },
+  "sharedSla": {
+    "title": "Nível de serviço",
+    "msp": "Nível de serviço do MSP",
+    "customer": "Nível de serviço do cliente",
+    "state": {
+      "running": "Em andamento",
+      "paused": "Em pausa",
+      "met": "Cumprido",
+      "breached": "Violado"
+    },
+    "target": {
+      "response": "Primeira resposta",
+      "resolution": "Resolução"
+    },
+    "elapsed": "Decorrido: {{time}}",
+    "dueAt": "Vence: {{date}}",
+    "completedAt": "Cumprido em {{date}}",
+    "breached": "Violado",
+    "targetPaused": "Em pausa",
+    "noTarget": "Sem meta",
+    "duration": {
+      "hoursMinutes": "{{hours}} h {{minutes}} min",
+      "minutes": "{{minutes}} min"
+    },
+    "notStarted": "O relógio começa quando o ticket é escalado.",
+    "unavailable": "Este nível de serviço já não está disponível.",
+    "notConfigured": "Nenhum nível de serviço se aplica.",
+    "empty": "Ainda não há nível de serviço acompanhado para este ticket.",
+    "loadError": "Não foi possível carregar o nível de serviço."
   }
 }

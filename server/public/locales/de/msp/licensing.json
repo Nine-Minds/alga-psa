@@ -659,7 +659,8 @@
       "viewer": "Betrachter",
       "viewOnly": "Nur Ansicht",
       "visibility": "Ticket-Sichtbarkeit",
-      "whyTitle": "Warum kann jemand dies nicht sehen?"
+      "whyTitle": "Warum kann jemand dies nicht sehen?",
+      "readOnly": "Sie können diese Konfiguration ansehen, aber nicht ändern."
     },
     "sharedTasks": {
       "link": "Geteilte Aufgaben",
@@ -716,6 +717,14 @@
       "rejected": "Diese Aufgabe konnte nicht gespeichert werden.",
       "saved": "Gespeichert.",
       "save": "Speichern"
+    },
+    "sla": {
+      "title": "SLA-Prioritäten bei gemeinsamer Verwaltung",
+      "description": "Legen Sie fest, welche Ihrer Prioritäten – und damit welches Ihrer SLA-Ziele – gilt, wenn ein Kunde ein Ticket der jeweiligen Priorität eskaliert.",
+      "missingPolicy": "Keine SLA-Richtlinie konfiguriert",
+      "settings": "SLA-Richtlinien verwalten",
+      "mappingFor": "Kundenpriorität {{name}} entspricht",
+      "unmapped": "Nicht zugeordnet"
     }
   },
   "common": {

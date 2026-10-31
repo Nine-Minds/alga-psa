@@ -2832,5 +2832,35 @@
       "notAvailable": "Dit standaardantwoord is niet beschikbaar voor dit ticket.",
       "notATeamMember": "U kunt teamantwoorden alleen beheren voor teams waartoe u behoort."
     }
+  },
+  "sharedSla": {
+    "title": "Serviceniveau",
+    "msp": "Serviceniveau van de MSP",
+    "customer": "Serviceniveau van de klant",
+    "state": {
+      "running": "Loopt",
+      "paused": "Gepauzeerd",
+      "met": "Gehaald",
+      "breached": "Overschreden"
+    },
+    "target": {
+      "response": "Eerste reactie",
+      "resolution": "Oplossing"
+    },
+    "elapsed": "Verstreken: {{time}}",
+    "dueAt": "Deadline: {{date}}",
+    "completedAt": "Gehaald op {{date}}",
+    "breached": "Overschreden",
+    "targetPaused": "Gepauzeerd",
+    "noTarget": "Geen doel",
+    "duration": {
+      "hoursMinutes": "{{hours}} u {{minutes}} min",
+      "minutes": "{{minutes}} min"
+    },
+    "notStarted": "De klok start wanneer het ticket wordt geëscaleerd.",
+    "unavailable": "Dit serviceniveau is niet meer beschikbaar.",
+    "notConfigured": "Er is geen serviceniveau van toepassing.",
+    "empty": "Voor dit ticket wordt nog geen serviceniveau bijgehouden.",
+    "loadError": "Het serviceniveau kon niet worden geladen."
   }
 }
