@@ -15,7 +15,7 @@ Key goals:
 
 | Term | Description | Primary Tables |
 | --- | --- | --- |
-| **Contract template** | A reusable blueprint for a contract, including recommended lines, default billing frequencies, and metadata. | `contract_templates`, `contract_template_lines`, `contract_template_line_services`, `contract_template_line_service_configuration`, `contract_template_line_service_*` |
+| **Contract template** | A reusable blueprint for a contract, including recommended lines, default billing frequencies, and metadata. Now carries a required `currency_code` (the template's base currency). | `contract_templates`, `contract_template_lines`, `contract_template_line_services`, `contract_template_line_service_configuration`, `contract_template_line_service_*`, `contract_template_price_sets`, `contract_template_prices` |
 | **Contract** | A client-owned instantiated contract header. Non-template contracts belong to exactly one owning client and hold the line/configuration data used for billing. | `contracts`, `contract_lines`, `contract_pricing_schedules` |
 | **Client contract** | The assignment/lifecycle record for a client-owned contract header, including start/end dates, PO requirements, renewal workflow state, and live status. | `client_contracts` |
 | **Contract line** | A billable line definition (fixed, hourly, usage, bucket, product, license). | `contract_lines`, `contract_line_fixed_config`, `contract_line_service_configuration`, `contract_line_service_*` |
@@ -63,11 +63,13 @@ Products are implemented as a **subset of the existing service catalog**:
 
 Templates give sales and operations teams a curated starting point.
 
-- `contract_templates` – high level metadata (name, default frequency, status, optional JSON metadata).
+- `contract_templates` – high level metadata (name, default frequency, status, optional JSON metadata). Now also carries a required `currency_code` (the template's base currency), seeded from the tenant default at creation.
 - `contract_template_lines` – line-level defaults (type, descriptions, frequency, overtime rules) along with display order, billing timing, and optional template-level custom rates.
 - `contract_template_line_terms` – stores timing/terms metadata for template lines, including the new `billing_timing` flag (`arrears` or `advance`) that seeds client assignments.
 - `contract_template_line_services` – recommended catalog services and default quantities for a template line.
 - `contract_template_line_service_configuration` and child tables (`_fixed`, `_hourly`, `_usage`, `_bucket`) – configuration defaults for each service type.
+- `contract_template_price_sets` – optional per-currency rate collections on a template. Each set belongs to one template and one currency code.
+- `contract_template_prices` – individual line-amount entries within a price set, one per template line, storing the rate in the set's currency.
 
 Publishing or cloning a template never mutates the template tables; instead, the structure is copied into the client-specific tables via `cloneTemplateContractLine` (`server/src/lib/billing/utils/templateClone.ts`).
 
@@ -305,7 +307,7 @@ These interfaces are consumed throughout the billing dashboard (`ClientContractL
 
 | Area | Tables |
 | --- | --- |
-| Templates | `contract_templates`, `contract_template_lines`, `contract_template_line_services`, `contract_template_line_service_configuration`, `contract_template_line_service_fixed_config`, `contract_template_line_service_hourly_config`, `contract_template_line_service_usage_config`, `contract_template_line_service_bucket_config` |
+| Templates | `contract_templates`, `contract_template_lines`, `contract_template_line_services`, `contract_template_line_service_configuration`, `contract_template_line_service_fixed_config`, `contract_template_line_service_hourly_config`, `contract_template_line_service_usage_config`, `contract_template_line_service_bucket_config`, `contract_template_price_sets`, `contract_template_prices` |
 | Contract library | `contracts`, `contract_lines`, `contract_pricing_schedules`, `contract_line_fixed_config`, `contract_line_service_configuration`, `contract_line_service_fixed_config`, `contract_line_service_hourly_config`, `contract_line_service_usage_config`, `contract_line_service_bucket_config`, `contract_line_service_rate_tiers`, `contract_line_discounts` |
 | Client instances | `client_contracts`, `client_contract_lines`, `client_contract_line_pricing`, `client_contract_line_terms`, `client_contract_services`, `client_contract_service_configuration`, `client_contract_service_fixed_config`, `client_contract_service_hourly_config`, `client_contract_service_usage_config`, `client_contract_service_bucket_config`, `client_contract_service_rate_tiers`, `client_contract_line_discounts` |
 | Activity | `time_entries`, `usage_tracking`, `bucket_usage`, `license_assignments`, `product_usage` |
@@ -317,6 +319,7 @@ Key column highlights:
 
 - `contract_template_line_terms` / `client_contract_line_terms` include a `billing_timing` flag that drives line-level billing behaviour. Fixed lines accept `arrears` or `advance`; Hourly and Usage lines are restricted to `arrears` because the amount can only be calculated after the activity occurs. Submitting `advance` for a Hourly or Usage line through the REST API returns HTTP 400 with error code `CONTRACT_LINE_TIMING_NOT_ALLOWED`.
 - `invoice_item_details` includes `service_period_start`, `service_period_end`, and `billing_timing` so invoices can represent advance and arrears charges on a single document.
+- `contract_line_service_fixed_config.base_rate_basis` (`per_unit` | `share`) records how `base_rate` is interpreted for member lines on a fixed-fee plan. `per_unit` means the rate is multiplied by the line's quantity; `share` means the rate is the member's pre-allocated slice of the bundle total as set by the contract wizard's weighted-split logic. Every write path (wizard, REST API, template clone) is expected to set this field. Submitting an unrecognised value through the REST `PUT /api/v1/contract-lines/{id}/services/{serviceId}` returns HTTP 400.
 
 ## References
 
