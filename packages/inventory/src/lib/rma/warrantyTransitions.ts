@@ -34,6 +34,7 @@ import type {
 
 export type WarrantyErrorCode =
   | 'not_found'
+  | 'ticket_not_found'
   | 'unit_tracked'
   | 'stock_tracked_asset'
   | 'not_client_owned'
@@ -81,6 +82,19 @@ export interface WarrantyCoreOptions {
   authorizeAsset?: (assetId: string, clientId: string | null) => Promise<void>;
 }
 
+/**
+ * Record-level ticket check supplied by the layer that can see tickets. Throw to refuse. The open core turns ANY
+ * throw into the same "Ticket not found." refusal a missing ticket gets, so a denial reveals nothing about the ticket.
+ */
+export type AuthorizeTicket = (trx: Knex.Transaction, ticketId: string, action: 'read') => Promise<void>;
+
+export interface OpenWarrantyClaimOptions extends WarrantyCoreOptions {
+  /**
+   * REQUIRED, with no default and no no-op: whoever opens a claim must say how the ticket is authorized. Runs inside
+   * the transaction on the final resolved ticket id (open custody's ticket, else the supplied one), before any write.
+   */
+  authorizeTicket: AuthorizeTicket;
+}
 
 async function lockWarrantyRma(trx: Knex.Transaction, tenant: string, rmaId: string, options: WarrantyCoreOptions): Promise<IRmaCase> {
   const rma = (await tenantDb(trx, tenant).table('rma_cases').where({ rma_id: rmaId }).forUpdate().first()) as IRmaCase | undefined;
@@ -185,7 +199,7 @@ export async function openWarrantyClaimCore(
   tenant: string,
   actor: string,
   input: OpenWarrantyClaimInput,
-  options: WarrantyCoreOptions = {}
+  options: OpenWarrantyClaimOptions
 ): Promise<{ rma: IRmaCase; event: IRmaEvent; serialNumber: string | null }> {
   const db = tenantDb(trx, tenant);
   const asset = await db
@@ -204,8 +218,16 @@ export async function openWarrantyClaimCore(
   await vendorName(trx, tenant, input.vendor_id);
 
   const open = await db.table('asset_custody').where({ asset_id: input.asset_id }).whereNull('closed_at').select('custody_id', 'ticket_id').first();
+  const ticketId: string | null = open?.ticket_id ?? input.ticket_id ?? null;
+  if (ticketId) {
+    // A denied ticket must be indistinguishable from a missing one (same error, same key, no ticket data).
+    try {
+      await options.authorizeTicket(trx, ticketId, 'read');
+    } catch {
+      throw new WarrantyError('ticket_not_found', 'Ticket not found.');
+    }
+  }
   const rmaNumber = await SharedNumberingService.getNextNumber('RMA', { knex: trx, tenant });
-  const ticketId = open?.ticket_id ?? input.ticket_id ?? null;
 
   const [row] = await db
     .table('rma_cases')

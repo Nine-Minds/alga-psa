@@ -7,9 +7,9 @@ import type { IRmaCase, IRmaEvent } from '@alga-psa/types';
 import { createAssetReadContext, filterReadableAssets } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { getOpenCustodyForAssets } from '@alga-psa/assets/lib/custody/queries';
 import {
-  approveWarrantyClaimCore, approveWarrantyClaimSchema, assetGate, cancelWarrantyClaimCore, cancelWarrantyClaimSchema,
+  approveWarrantyClaimCore, approveWarrantyClaimSchema, cancelWarrantyClaimCore, cancelWarrantyClaimSchema,
   closeWarrantyRmaCore, closeWarrantyRmaSchema, denyWarrantyClaimCore, denyWarrantyClaimSchema, markDeviceReceivedCore,
-  markDeviceReceivedSchema, openWarrantyClaimCore, openWarrantyClaimSchema, publishWarrantyClaimOpened, publishRmaUpdated,
+  markDeviceReceivedSchema, openWarrantyClaimFlow, openWarrantyClaimSchema, ticketRecordAuthorizer,
   receiveVendorReplacementCore, receiveVendorReplacementSchema, recordVendorCreditCore, recordVendorCreditSchema,
   recordVendorRepairCore, recordVendorRepairSchema, requireWarrantyPerm, returnDeviceToClientCore, returnDeviceToClientSchema,
   runWarrantyTransition, shipToVendorCore, resolveRmaReadScope, filterReadableRmaCases, listRmaEvents as listRmaEventRows, shipToVendorSchema, validationActionError, withWarrantyErrors, type WarrantyActionError,
@@ -49,20 +49,13 @@ function transition<S extends z.ZodTypeAny>(
   );
 }
 
+/**
+ * Browser-facing. Takes no `ticket_id` (the schema drops it); the only ticket that can be linked is the open custody
+ * episode's, and the core authorizes it with the real ticket record check. Linking a caller-chosen ticket is
+ * `openWarrantyClaimFromTicket` in `@alga-psa/msp-composition`.
+ */
 export const openWarrantyClaim = withAuth(async (user, { tenant }, rawInput: unknown): Promise<Result> =>
-  withWarrantyErrors(async () => {
-    await requireWarrantyPerm(user, 'create');
-    const parsed = openWarrantyClaimSchema.safeParse(rawInput);
-    if (!parsed.success) return validationActionError(parsed.error);
-    const input = parsed.data;
-    const { knex: db } = await createTenantKnex();
-    const result = await withTransaction(db, async (trx: Knex.Transaction) =>
-      openWarrantyClaimCore(trx, tenant, user.user_id, input, { authorizeAsset: await assetGate(trx, tenant, user as any, 'update') })
-    );
-    await publishWarrantyClaimOpened(tenant, result.rma, result.serialNumber);
-    await publishRmaUpdated(tenant, result.rma, null, ['status'], user.user_id);
-    return reload(tenant, result.rma.rma_id, result.rma);
-  })
+  openWarrantyClaimFlow(user as any, tenant, rawInput, openWarrantyClaimSchema, ticketRecordAuthorizer(user, tenant))
 );
 
 export const approveWarrantyClaim = transition(approveWarrantyClaimSchema, approveWarrantyClaimCore);
