@@ -1,8 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
 
-// This suite asserts real RBAC denial; opt out of the global rbac mock in server/src/test/setup.ts.
-vi.unmock('@alga-psa/auth/rbac');
-
 vi.mock('@alga-psa/db/models/user', () => ({
   default: {
     getUserRolesWithPermissions: vi.fn(async () => [])

@@ -489,19 +489,17 @@ vi.mock('server/src/app/api/auth/[...nextauth]/edge-auth', () => ({
   auth: vi.fn().mockResolvedValue(null),
 }));
 
-// One hasPermission instance shared by the '@alga-psa/auth' facade mock and the
-// '@alga-psa/auth/rbac' mock below. Production code imports it from either
-// specifier (e.g. the email-provider guards use '@alga-psa/auth/rbac'), so a
-// per-test override must be visible through both. Defaults to allow; suites
-// that exercise real RBAC opt out with vi.mock/vi.importActual.
-const sharedAuthMocks = vi.hoisted(() => ({
-  hasPermission: vi.fn().mockResolvedValue(true),
-}));
-
-vi.mock('@alga-psa/auth/rbac', async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  hasPermission: sharedAuthMocks.hasPermission,
-}));
+// The '@alga-psa/auth' facade's hasPermission is published on globalThis so that
+// suites which opt in to the allow-by-default '@alga-psa/auth/rbac' mock
+// (server/src/test/helpers/allowAllRbac.ts) share the very same vi.fn: a
+// per-test override then applies to both specifiers. '@alga-psa/auth/rbac'
+// itself is deliberately NOT mocked globally, so new denial suites hit the real
+// module and cannot silently pass.
+const sharedAuthMocks = vi.hoisted(() => {
+  const hasPermission = vi.fn().mockResolvedValue(true);
+  (globalThis as any).__algaSharedHasPermission = hasPermission;
+  return { hasPermission };
+});
 
 vi.mock('@alga-psa/auth', async () => {
   const { AsyncLocalStorage } = await import('node:async_hooks');

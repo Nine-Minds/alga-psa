@@ -58,6 +58,11 @@ vi.mock('redis', () => ({
 
 // Route the action's tenant resolution (global withAuth mock) at our test
 // tenant, same harness as emailProviderCreation.test.ts.
+// Opt in to the allow-by-default '@alga-psa/auth/rbac' mock (not global on purpose;
+// see ../helpers/allowAllRbac.ts). Fixture tenants here don't seed role_permissions.
+vi.mock('@alga-psa/auth/rbac', async (importOriginal) =>
+  (await import('../helpers/allowAllRbac')).allowAllRbac(importOriginal as any));
+
 vi.mock('../../lib/db', () => ({
   getCurrentTenantId: () => testTenant,
   createTenantKnex: vi.fn().mockImplementation(async () => ({
