@@ -24,7 +24,7 @@ export type CoManagedDepartureResult =
   | { ok: false; reason: 'denied' | 'not_found' };
 
 export type CoManagedDepartResult =
-  | { ok: true; releasedSeats: number; closedAt: string; replayed: boolean }
+  | { ok: true; releasedSeats: number; closedAt: string }
   | { ok: false; reason: 'denied' | 'changed' | 'already_closed' | 'invalid' };
 
 // Not `async`/`await`: helpers are called only after the capability adapter, and keeping them promise-chained
