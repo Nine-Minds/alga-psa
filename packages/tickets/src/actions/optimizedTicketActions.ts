@@ -576,6 +576,8 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       
       // Users - removed document joins that were causing duplicates
       // Avatar URLs are fetched later using getUserAvatarUrl()
+      // LEVERAGE: pattern users-star-projection — unprojected users rows (credential columns included)
+      // flow into `availableAgents`/`userMap` here; see getTicketById in ticketActions.ts. Follow-up sweep.
       tenantScopedTable(trx, 'users', tenant)
         .where('user_type', 'internal')
         .where('is_inactive', false)
