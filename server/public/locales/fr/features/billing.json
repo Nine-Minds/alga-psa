@@ -276,6 +276,36 @@
         "commentRequired": "Veuillez ajouter un bref commentaire avant de refuser ce devis.",
         "tooLong": "Une de vos saisies est trop longue."
       }
+    },
+    "public": {
+      "metaTitle": "Consultation du devis",
+      "notice": {
+        "accepted": "Ce devis a été accepté. Il est affiché ici pour information.",
+        "declined": "Ce devis a été refusé. Il est affiché ici pour information.",
+        "converted": "Ce devis a été accepté et est en cours de traitement. Il est affiché ici pour information.",
+        "readOnly": "Ceci est une vue en lecture seule de votre devis."
+      },
+      "outcome": {
+        "unavailable": {
+          "title": "Ce lien n'est pas disponible",
+          "body": "Le lien est peut-être mal saisi ou n'est plus actif."
+        },
+        "expired": {
+          "title": "Ce lien a expiré",
+          "body": "Pour des raisons de sécurité, les liens de devis cessent de fonctionner après un certain temps."
+        },
+        "superseded": {
+          "title": "Ce devis a été remplacé",
+          "body": "Une version plus récente a été envoyée. Veuillez utiliser le lien du dernier e-mail."
+        },
+        "decided": {
+          "title": "Ce devis a déjà fait l'objet d'une décision",
+          "body": "Une réponse a déjà été enregistrée ; il ne peut plus être ouvert depuis ce lien."
+        },
+        "help": "Besoin d'aide ? Répondez à l'e-mail dans lequel vous avez reçu ce lien.",
+        "signIn": "Se connecter au portail client",
+        "signInHint": "Vous avez déjà un compte sur le portail client ?"
+      }
     }
   },
   "enums": {

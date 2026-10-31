@@ -499,6 +499,13 @@
     },
     "availability": {
       "onHand": "I lager: {{count}}"
+    },
+    "activity": {
+      "viewedViaEmailLink": {
+        "description": "Offert visad via e-postlänk",
+        "descriptionWithRecipient": "Offert visad av {{email}} via e-postlänk",
+        "type": "Visad via e-postlänk"
+      }
     }
   },
   "quoteLineItems": {

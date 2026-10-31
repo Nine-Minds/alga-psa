@@ -276,6 +276,36 @@
         "commentRequired": "Please add a short comment before rejecting this quote.",
         "tooLong": "One of your entries is too long."
       }
+    },
+    "public": {
+      "metaTitle": "Quote review",
+      "notice": {
+        "accepted": "This quote has been accepted. It is shown here for your records.",
+        "declined": "This quote has been declined. It is shown here for your records.",
+        "converted": "This quote has been accepted and is being fulfilled. It is shown here for your records.",
+        "readOnly": "This is a read-only view of your quote."
+      },
+      "outcome": {
+        "unavailable": {
+          "title": "This link isn't available",
+          "body": "The link may be mistyped or may no longer be active."
+        },
+        "expired": {
+          "title": "This link has expired",
+          "body": "For security, quote links stop working after a while."
+        },
+        "superseded": {
+          "title": "This quote has been replaced",
+          "body": "A newer version has been sent. Please use the link in the latest email."
+        },
+        "decided": {
+          "title": "This quote has already been decided",
+          "body": "A response has already been recorded, so it can no longer be opened from this link."
+        },
+        "help": "Need help? Reply to the email you received this link in.",
+        "signIn": "Sign in to the client portal",
+        "signInHint": "Already have a client portal account?"
+      }
     }
   },
   "quoteForm": {

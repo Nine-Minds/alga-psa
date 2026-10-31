@@ -276,6 +276,36 @@
         "commentRequired": "Lägg till en kort kommentar innan du avvisar den här offerten.",
         "tooLong": "En av dina uppgifter är för lång."
       }
+    },
+    "public": {
+      "metaTitle": "Granska offert",
+      "notice": {
+        "accepted": "Den här offerten har godkänts. Den visas här som underlag.",
+        "declined": "Den här offerten har avslagits. Den visas här som underlag.",
+        "converted": "Den här offerten har godkänts och genomförs. Den visas här som underlag.",
+        "readOnly": "Det här är en skrivskyddad vy av din offert."
+      },
+      "outcome": {
+        "unavailable": {
+          "title": "Den här länken är inte tillgänglig",
+          "body": "Länken kan vara felskriven eller inte längre aktiv."
+        },
+        "expired": {
+          "title": "Den här länken har gått ut",
+          "body": "Av säkerhetsskäl slutar offertlänkar fungera efter en tid."
+        },
+        "superseded": {
+          "title": "Den här offerten har ersatts",
+          "body": "En nyare version har skickats. Använd länken i det senaste e-postmeddelandet."
+        },
+        "decided": {
+          "title": "Den här offerten har redan avgjorts",
+          "body": "Ett svar har redan registrerats, så den kan inte längre öppnas via den här länken."
+        },
+        "help": "Behöver du hjälp? Svara på e-postmeddelandet där du fick den här länken.",
+        "signIn": "Logga in på kundportalen",
+        "signInHint": "Har du redan ett konto i kundportalen?"
+      }
     }
   },
   "quoteForm": {

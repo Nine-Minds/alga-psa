@@ -276,6 +276,36 @@
         "commentRequired": "Bitte fügen Sie einen kurzen Kommentar hinzu, bevor Sie dieses Angebot ablehnen.",
         "tooLong": "Eine Ihrer Eingaben ist zu lang."
       }
+    },
+    "public": {
+      "metaTitle": "Angebotsprüfung",
+      "notice": {
+        "accepted": "Dieses Angebot wurde angenommen. Es wird hier zu Ihrer Information angezeigt.",
+        "declined": "Dieses Angebot wurde abgelehnt. Es wird hier zu Ihrer Information angezeigt.",
+        "converted": "Dieses Angebot wurde angenommen und wird umgesetzt. Es wird hier zu Ihrer Information angezeigt.",
+        "readOnly": "Dies ist eine schreibgeschützte Ansicht Ihres Angebots."
+      },
+      "outcome": {
+        "unavailable": {
+          "title": "Dieser Link ist nicht verfügbar",
+          "body": "Der Link ist möglicherweise falsch eingegeben oder nicht mehr aktiv."
+        },
+        "expired": {
+          "title": "Dieser Link ist abgelaufen",
+          "body": "Aus Sicherheitsgründen funktionieren Angebotslinks nur für begrenzte Zeit."
+        },
+        "superseded": {
+          "title": "Dieses Angebot wurde ersetzt",
+          "body": "Eine neuere Version wurde gesendet. Bitte verwenden Sie den Link in der neuesten E-Mail."
+        },
+        "decided": {
+          "title": "Über dieses Angebot wurde bereits entschieden",
+          "body": "Eine Antwort wurde bereits erfasst, daher kann es über diesen Link nicht mehr geöffnet werden."
+        },
+        "help": "Brauchen Sie Hilfe? Antworten Sie auf die E-Mail, in der Sie diesen Link erhalten haben.",
+        "signIn": "Im Kundenportal anmelden",
+        "signInHint": "Sie haben bereits ein Kundenportal-Konto?"
+      }
     }
   },
   "enums": {

@@ -276,6 +276,36 @@
         "commentRequired": "Dodaj krótki komentarz przed odrzuceniem tej oferty.",
         "tooLong": "Jedno z wpisanych pól jest zbyt długie."
       }
+    },
+    "public": {
+      "metaTitle": "Przegląd oferty",
+      "notice": {
+        "accepted": "Ta oferta została zaakceptowana. Wyświetlamy ją tutaj w celach informacyjnych.",
+        "declined": "Ta oferta została odrzucona. Wyświetlamy ją tutaj w celach informacyjnych.",
+        "converted": "Ta oferta została zaakceptowana i jest realizowana. Wyświetlamy ją tutaj w celach informacyjnych.",
+        "readOnly": "To jest widok oferty tylko do odczytu."
+      },
+      "outcome": {
+        "unavailable": {
+          "title": "Ten link jest niedostępny",
+          "body": "Link mógł zostać błędnie wpisany lub nie jest już aktywny."
+        },
+        "expired": {
+          "title": "Ten link wygasł",
+          "body": "Ze względów bezpieczeństwa linki do ofert przestają działać po pewnym czasie."
+        },
+        "superseded": {
+          "title": "Ta oferta została zastąpiona",
+          "body": "Wysłano nowszą wersję. Użyj linku z najnowszej wiadomości e-mail."
+        },
+        "decided": {
+          "title": "W sprawie tej oferty podjęto już decyzję",
+          "body": "Odpowiedź została już zapisana, więc nie można jej otworzyć z tego linku."
+        },
+        "help": "Potrzebujesz pomocy? Odpowiedz na wiadomość e-mail, w której otrzymano ten link.",
+        "signIn": "Zaloguj się do portalu klienta",
+        "signInHint": "Masz już konto w portalu klienta?"
+      }
     }
   },
   "enums": {

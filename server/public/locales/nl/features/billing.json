@@ -276,6 +276,36 @@
         "commentRequired": "Voeg een korte opmerking toe voordat u deze offerte afwijst.",
         "tooLong": "Een van uw invoeren is te lang."
       }
+    },
+    "public": {
+      "metaTitle": "Offerte bekijken",
+      "notice": {
+        "accepted": "Deze offerte is geaccepteerd. Ze wordt hier ter informatie getoond.",
+        "declined": "Deze offerte is afgewezen. Ze wordt hier ter informatie getoond.",
+        "converted": "Deze offerte is geaccepteerd en wordt uitgevoerd. Ze wordt hier ter informatie getoond.",
+        "readOnly": "Dit is een alleen-lezenweergave van uw offerte."
+      },
+      "outcome": {
+        "unavailable": {
+          "title": "Deze link is niet beschikbaar",
+          "body": "De link is mogelijk verkeerd getypt of niet langer actief."
+        },
+        "expired": {
+          "title": "Deze link is verlopen",
+          "body": "Om veiligheidsredenen werken offertelinks maar beperkte tijd."
+        },
+        "superseded": {
+          "title": "Deze offerte is vervangen",
+          "body": "Er is een nieuwere versie verzonden. Gebruik de link in de nieuwste e-mail."
+        },
+        "decided": {
+          "title": "Over deze offerte is al beslist",
+          "body": "Er is al een reactie vastgelegd, dus ze kan niet meer via deze link worden geopend."
+        },
+        "help": "Hulp nodig? Beantwoord de e-mail waarin u deze link hebt ontvangen.",
+        "signIn": "Inloggen op het klantenportaal",
+        "signInHint": "Hebt u al een account voor het klantenportaal?"
+      }
     }
   },
   "enums": {
