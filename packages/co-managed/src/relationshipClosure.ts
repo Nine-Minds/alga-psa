@@ -162,3 +162,33 @@ export async function endCoManagedSponsorshipsForDeletion(db: Knex, sponsorTenan
   }
   return { terminated, unaccepted };
 }
+
+/**
+ * The customer workspace is being deleted: the sponsor's seat for it must come back to the sponsor's
+ * pool. The allocation lives in the SPONSOR's partition, so deleting the customer's own rows never
+ * releases it. Every relationship the customer is party to that has not already ended goes through the
+ * same `endCoManagedRelationshipAccess` as a departure (same lock order, same update-if-null release),
+ * so a replay, or a customer that already departed, releases nothing twice. A setup the customer never
+ * accepted is ended too: it holds a reserved seat and the customer it points at is going away.
+ * A missing sponsor (already deleted) is not an error; there is nothing left to release into.
+ */
+export async function releaseCoManagedSeatsForCustomerDeletion(db: Knex, customerTenant: string):
+  Promise<{ released: number; relationships: number }> {
+  if (!isCoManagedUuid(customerTenant)) throw new CoManagedClosureError('INVALID_CLOSURE');
+  const found = await tenantDb(db, customerTenant).table('co_management_relationships').whereNull('ended_at')
+    .orderBy('relationship_id').select('relationship_id', 'sponsor_tenant');
+  let released = 0, relationships = 0;
+  for (const row of found as Array<{ relationship_id: string; sponsor_tenant: string }>) {
+    const outcome = await withTransaction(db, async trx => {
+      const sponsor = tenantDb(trx, row.sponsor_tenant), customer = tenantDb(trx, customerTenant);
+      await sponsor.table('co_managed_entitlements').forUpdate().first();
+      await sponsor.table('tenants').forShare().first('tenant');
+      const relationship = await customer.table('co_management_relationships').where('relationship_id', row.relationship_id).forUpdate().first();
+      await customer.table('tenants').forShare().first('product_code');
+      if (!relationship || relationship.ended_at) return null;
+      return endCoManagedRelationshipAccess(trx, row.sponsor_tenant, customerTenant, relationship);
+    });
+    if (outcome) { relationships++; released += outcome.releasedSeats; }
+  }
+  return { released, relationships };
+}

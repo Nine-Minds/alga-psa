@@ -88,6 +88,15 @@ it('ends co-managed sponsorships after provider teardown and before deleting dat
   expect(harness.activities.get('endTenantCoManagedSponsorships')).toHaveBeenCalledWith('tenant-fixture');
 });
 
+it('a tenant with no co-managed schema or relationships deletes exactly as before (the step reports nothing and does not throw)', async () => {
+  harness.activities.get('endTenantCoManagedSponsorships')!.mockImplementation(async () => {
+    harness.calls.push('endTenantCoManagedSponsorships'); return { terminated: 0, unaccepted: 0, releasedSeats: 0 };
+  });
+  expect(await tenantDeletionWorkflow(input())).toMatchObject({ status: 'deleted' });
+  expect(harness.activities.get('deleteTenantData')).toHaveBeenCalled();
+  expect(harness.activities.get('updateDeletionStatus')).not.toHaveBeenCalledWith(expect.objectContaining({ status: 'failed' }));
+});
+
 it('stops before deleting data when co-managed sponsorships cannot be ended', async () => {
   // Deleting a sponsor with live co-managed customers would strand them.
   harness.activities.get('endTenantCoManagedSponsorships')!.mockImplementation(async () => {

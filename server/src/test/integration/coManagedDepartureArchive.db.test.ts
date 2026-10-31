@@ -71,12 +71,15 @@ describeDb('co-managed closure and archive on real Postgres', { shuffle: false }
     const history = await getCoManagedArchiveHistory(db, f.mspAdmin, operationId);
     const ids = history.entries.map(entry => entry.id);
     for (const kept of ['sharedMessage', 'requesterMessage', 'privateMessage', 'audit'] as const) expect(ids).toContain(f.evidence[kept]);
-    for (const dropped of ['customerPrivate', 'afterCutoff'] as const) expect(ids).not.toContain(f.evidence[dropped]);
+    for (const dropped of ['customerPrivate', 'afterCutoff', 'customerOrgPrivate', 'customerPrivateAsPrivateConversation'] as const) expect(ids).not.toContain(f.evidence[dropped]);
     const text = JSON.stringify(history);
     expect(text).not.toContain('CUSTOMER-PRIVATE SECRET');
     expect(text).not.toContain('POST-CUTOFF SECRET');
+    expect(text).not.toContain('CUSTOMER-ORG-PRIVATE SECRET');
+    expect(text).not.toContain('CUSTOMER-AS-PRIVATE-CONVERSATION SECRET');
     expect(history.exclusions).toEqual(expect.arrayContaining([
-      { evidenceClass: 'conversation', reason: 'audience_not_allowlisted', count: 1 },
+      { evidenceClass: 'conversation', reason: 'audience_not_allowlisted', count: 2 },
+      { evidenceClass: 'private_conversation', reason: 'audience_not_allowlisted', count: 1 },
       { evidenceClass: 'conversation', reason: 'after_cutoff', count: 1 }]));
     expect(history.files.map(file => file.archiveFileId)).toEqual([fileId]);
   });

@@ -13,7 +13,7 @@ export const sha = (value: unknown) => createHash('sha256').update(JSON.stringif
 export interface BoundaryFixture {
   msp: string; customer: string; relationshipId: string; sponsorClient: string; seats: number;
   mspAdmin: CoManagedSessionActor; customerAdmin: CoManagedSessionActor; stranger: CoManagedSessionActor;
-  evidence: Record<'sharedMessage' | 'requesterMessage' | 'privateMessage' | 'customerPrivate' | 'afterCutoff' | 'audit' | 'unknownClass', string>;
+  evidence: Record<'sharedMessage' | 'requesterMessage' | 'privateMessage' | 'customerPrivate' | 'afterCutoff' | 'audit' | 'unknownClass' | 'customerOrgPrivate' | 'customerPrivateAsPrivateConversation', string>;
 }
 
 async function actorFor(db: Knex, tenant: string, permissions: Array<[string, string]>): Promise<CoManagedSessionActor> {
@@ -61,6 +61,9 @@ export async function seedBoundaryFixture(db: Knex): Promise<BoundaryFixture> {
     row('requesterMessage', 'conversation', { audience: 'requester', markdown: 'told the requester' }, past),
     row('privateMessage', 'private_conversation', { audience: 'organization_private', markdown: 'MSP-private note' }, past),
     row('customerPrivate', 'conversation', { audience: 'internal', markdown: 'CUSTOMER-PRIVATE SECRET' }, past),
+    // Absent cases: a CUSTOMER-private row stored under each MSP-private label must never be archived.
+    row('customerOrgPrivate', 'conversation', { audience: 'organization_private', markdown: 'CUSTOMER-ORG-PRIVATE SECRET' }, past),
+    row('customerPrivateAsPrivateConversation', 'private_conversation', { audience: 'internal', markdown: 'CUSTOMER-AS-PRIVATE-CONVERSATION SECRET' }, past),
     row('afterCutoff', 'conversation', { audience: 'shared_it', markdown: 'POST-CUTOFF SECRET' }, future),
     row('audit', 'work_audit', { changes: { task_name: 'renamed' } }, past),
     // `time_entry` rows cannot be stored yet (the source_type CHECK predates them); an unknown class
