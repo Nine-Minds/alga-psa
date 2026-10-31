@@ -83,6 +83,7 @@ import {
   InvoicePreviewRequest,
 } from '../schemas/invoiceSchemas';
 import { INVOICE_UPDATE_FIELDS, LIFECYCLE_OWNED_FIELDS } from '../schemas/invoiceUpdateFields';
+import { checkInvoicePayload } from '../schemas/invoiceFieldPolicy';
 
 import {
   IInvoice,
@@ -100,7 +101,8 @@ import {
   getClientDetails,
   persistManualInvoiceCharges,
   calculateAndDistributeTax,
-  updateInvoiceTotalsAndRecordTransaction
+  updateInvoiceTotalsAndRecordTransaction,
+  recomputeInvoiceHeaderTotals
 } from '@alga-psa/billing/services/invoiceService';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
 import { repointHeaderFollowingCharges } from '@alga-psa/billing/lib/billing/repointHeaderFollowingCharges';
@@ -634,28 +636,34 @@ export class InvoiceService extends BaseService<IInvoice> {
   async create(data: any, context: ServiceContext): Promise<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'create');
 
+    // A created invoice is always a draft. Lifecycle, credit and provenance are owned by
+    // dedicated commands and header totals are derived from the charges, so the create
+    // body cannot set them. Enforced here (not only in the controller) so every caller
+    // of the service inherits the check. validatePermissions is a stub; do not rely on it.
+    const { forbidden } = checkInvoicePayload('create', data);
+    if (forbidden.length > 0) {
+      const first = forbidden[0];
+      throw new ValidationError(
+        `Field '${first.key}' cannot be set when creating an invoice; ${
+          first.command
+            ? `use the dedicated invoice command (${first.command}) instead`
+            : 'it is not settable on create'
+        }`,
+        forbidden.map((f) => ({
+          path: [f.key],
+          message: f.command
+            ? `Field is managed by the ${f.command} invoice command`
+            : 'Field is not settable on create',
+        }))
+      );
+    }
+
     const { knex } = await this.getKnex();
     const deferredEvents: DeferredEvent[] = [];
     
     const invoiceId = await withTransaction(knex, async (trx) => {
       // Generate invoice number
       const invoiceNumber = await generateInvoiceNumber(trx);
-
-      // Calculate taxes if needed
-      let taxCalculation: { tax_amount: number; tax_region: string; tax_rate: number; calculation_date: string } | null = null;
-      if (data.items?.length) {
-        const taxRegion = await this.resolveTaxRegion(trx, context.tenant, data.client_id);
-        // Only calculate tax when the client has a configured tax region. We do not
-        // fabricate a region (no hardcoded 'US' / inferred default), so a client with
-        // no configured region simply has no tax applied here.
-        if (taxRegion) {
-          taxCalculation = await this.calculateTaxes({
-            client_id: data.client_id,
-            amount: data.subtotal,
-            tax_region: taxRegion
-          }, context);
-        }
-      }
 
       const invoiceDate = data.invoice_date || new Date().toISOString().split('T')[0];
 
@@ -679,22 +687,22 @@ export class InvoiceService extends BaseService<IInvoice> {
         invoice_id: uuidv4(),
         invoice_number: invoiceNumber,
         client_id: data.client_id,
-        billing_cycle_id: data.billing_cycle_id,
-        status: data.status || 'draft',
+        status: 'draft',
         invoice_date: invoiceDate,
         due_date: data.due_date ?? billingTerms?.dueDate,
         payment_method: data.payment_method ?? billingTerms?.paymentMethod ?? null,
         billing_profile_id: data.billing_profile_id ?? billingTerms?.billingProfileId ?? null,
-        subtotal: data.subtotal || 0,
-        tax: taxCalculation?.tax_amount || 0,
-        total_amount: data.total_amount || 0,
+        // Header totals are engine-derived from the charges below; never caller-supplied.
+        subtotal: 0,
+        tax: 0,
+        total_amount: 0,
         // `billing_period_start/end` stores the invoice window, not the service period.
         // This generic create endpoint trusts the caller; rename to `invoice_window_*` is pending.
         billing_period_start: data.billing_period_start,
         billing_period_end: data.billing_period_end,
         is_manual: data.is_manual || false,
         is_prepayment: data.is_prepayment || false,
-        credit_applied: data.credit_applied || 0,
+        credit_applied: 0,
         created_by: context.userId,
         updated_by: context.userId,
         tenant: context.tenant,
@@ -710,6 +718,14 @@ export class InvoiceService extends BaseService<IInvoice> {
         // Only a caller-supplied profile makes the charges 'explicit'; a header
         // profile back-filled from billingTerms keeps them 'client_default'.
         await this.createInvoiceLineItems(invoice.invoice_id, data.items, trx, context, data.billing_profile_id ?? null);
+
+        // Totals come from the charges through the billing engine (the same tax
+        // distribution + header-totals derivation invoice generation and manual
+        // invoices use). A client with no configured tax region simply gets no tax;
+        // we do not fabricate a region.
+        const client = await getClientDetails(trx, context.tenant, invoice.client_id);
+        await calculateAndDistributeTax(trx, invoice.invoice_id, client, this.taxService, context.tenant);
+        await recomputeInvoiceHeaderTotals(trx, invoice.invoice_id, context.tenant);
       }
 
       // Audit log
