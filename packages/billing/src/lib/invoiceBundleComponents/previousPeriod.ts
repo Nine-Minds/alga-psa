@@ -26,6 +26,8 @@ export interface PreviousPeriodRow {
   /** `invoices.status` of the row's invoice; excluded statuses are dropped. */
   invoiceStatus?: string | null;
   contractLineId: string;
+  /** `invoice_charges.item_id` of the consolidated parent carrying the snapshot. */
+  chargeItemId: string;
   serviceId: string;
   serviceName: string;
   itemDetailId: string;
@@ -77,7 +79,10 @@ export function selectPreviousPeriods(
 
     const quantities = new Map<string, number | null>();
     const names = new Map<string, string>();
-    const countedSnapshotComponents = new Set<object>();
+    // Every detail row carries its own parsed copy of the charge's jsonb, so
+    // components are deduped by value, using the same identity snapshot.ts
+    // groups by (period + service), scoped to the charge that owns the snapshot.
+    const countedSnapshotComponents = new Set<string>();
     const add = (serviceId: string, quantity: number | null) => {
       if (!quantities.has(serviceId)) {
         quantities.set(serviceId, quantity);
@@ -90,8 +95,14 @@ export function selectPreviousPeriods(
       names.set(row.serviceId, row.serviceName);
       const component = row.bundlePresentation?.components?.find((entry) => entry.detailItemIds.includes(row.itemDetailId));
       if (component) {
-        if (countedSnapshotComponents.has(component)) continue;
-        countedSnapshotComponents.add(component);
+        const componentKey = [
+          row.chargeItemId,
+          component.servicePeriodStart ?? '',
+          component.servicePeriodEnd ?? '',
+          component.serviceId,
+        ].join('|');
+        if (countedSnapshotComponents.has(componentKey)) continue;
+        countedSnapshotComponents.add(componentKey);
         // Snapshot null means the quantity was unset; fall back to the detail row.
         add(row.serviceId, component.quantity ?? row.detailQuantity);
       } else {
@@ -135,6 +146,7 @@ export async function loadPreviousBundlePeriods(
     .where('d.service_period_end', '<=', new Date(latestStart))
     .select(
       'cfg.contract_line_id as contractLineId',
+      'c.item_id as chargeItemId',
       'd.service_id as serviceId',
       'sc.service_name as serviceName',
       'd.item_detail_id as itemDetailId',

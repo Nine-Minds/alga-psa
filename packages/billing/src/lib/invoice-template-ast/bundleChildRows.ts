@@ -1,4 +1,4 @@
-import type { TemplateDynamicTableNode } from '@alga-psa/types';
+import type { InvoiceBundleRowsLayout, TemplateAst, TemplateDynamicTableNode } from '@alga-psa/types';
 
 export type BundleChildRows = NonNullable<TemplateDynamicTableNode['childRows']>;
 
@@ -144,4 +144,37 @@ export function detectBundleChildRowsPreset(childRows: unknown, columnIds?: Part
     }
   }
   return 'custom';
+}
+
+const findChildRowsTable = (value: unknown): TemplateDynamicTableNode | null => {
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const hit = findChildRowsTable(entry);
+      if (hit) return hit;
+    }
+    return null;
+  }
+  if (!isPlainObject(value)) return null;
+  if (value.type === 'dynamic-table' && isPlainObject(value.childRows) && Array.isArray(value.columns)) {
+    return value as unknown as TemplateDynamicTableNode;
+  }
+  for (const child of Object.values(value)) {
+    const hit = findChildRowsTable(child);
+    if (hit) return hit;
+  }
+  return null;
+};
+
+/**
+ * The bundle component row layout of a template (its first line-items table
+ * with childRows), for surfaces that draw invoice lines without the template
+ * renderer. Null when the template renders no component rows.
+ */
+export function extractBundleRowsLayout(ast: TemplateAst | null | undefined): InvoiceBundleRowsLayout | null {
+  const table = ast ? findChildRowsTable(ast.layout) : null;
+  if (!table?.childRows) return null;
+  return {
+    columnIds: resolveBundleColumnIds(table.columns as Array<{ id: string; key?: unknown }>),
+    childRows: table.childRows,
+  };
 }

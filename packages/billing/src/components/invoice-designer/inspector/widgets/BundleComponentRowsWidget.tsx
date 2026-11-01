@@ -93,17 +93,31 @@ export const BundleComponentRowsWidget: React.FC<Props> = ({ node }) => {
     } else {
       const field = BUNDLE_COMPONENT_CELL_FIELDS.find((entry) => entry.path === value);
       if (!field) return;
-      const previous = cells[columnId] ?? {};
-      // Keep anything the author layered on (lines, change adornment); swap the bound value.
-      const { lines: _lines, ...rest } = previous as unknown as Record<string, unknown>;
-      cells[columnId] = {
-        ...rest,
+      const previous = (cells[columnId] ?? {}) as Partial<BundleChildRows['cells'][string]>;
+      const next: BundleChildRows['cells'][string] = {
+        ...previous,
         value: { type: 'path', path: field.path },
-        format: field.format === 'text' ? undefined : field.format,
-        ...(columnId === columnIds.description ? { lines: (previous as { lines?: unknown }).lines } : {}),
-      } as BundleChildRows['cells'][string];
-      if (cells[columnId].format === undefined) delete (cells[columnId] as unknown as Record<string, unknown>).format;
-      if ((cells[columnId] as unknown as Record<string, unknown>).lines === undefined) delete (cells[columnId] as unknown as Record<string, unknown>).lines;
+      };
+      if (field.format === 'text') delete next.format;
+      else next.format = field.format;
+      // Stacked lines win over `value` when rendered, so the selection must
+      // land on the primary line too or it would be a silent no-op. Supplemental
+      // lines the author layered on stay, unless they now repeat the new field.
+      if (Array.isArray(previous.lines) && previous.lines.length > 0) {
+        const primaryIndex = previous.lines.findIndex((line) => !line.supplemental);
+        const lines = previous.lines
+          .map((line, index) => {
+            if (index !== primaryIndex) return line;
+            const remapped = { ...line, value: { type: 'path' as const, path: field.path } };
+            if (field.format === 'text') delete remapped.format;
+            else remapped.format = field.format;
+            return remapped;
+          })
+          .filter((line, index) =>
+            index === primaryIndex || (line.value as { path?: string } | undefined)?.path !== field.path);
+        next.lines = lines;
+      }
+      cells[columnId] = next;
     }
     writeChildRows({ ...current, cells });
   };

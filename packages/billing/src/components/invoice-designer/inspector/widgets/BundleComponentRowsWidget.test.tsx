@@ -136,6 +136,28 @@ describe('BundleComponentRowsWidget designer round trip (T015)', () => {
     expect(exportedTable().childRows).toEqual(table.childRows);
   });
 
+  it('remapping the description column rebinds its stacked primary line, not just the hidden value', () => {
+    load(startAst());
+    const { container } = render(<Harness />);
+    select(container, 'bundle-component-rows-preset', 'quantities');
+    select(container, 'bundle-cell-description', 'component.pricingBasis');
+
+    const cell = exportedTable().childRows.cells.description;
+    expect(cell.value).toEqual({ type: 'path', path: 'component.pricingBasis' });
+    const primary = cell.lines.filter((line: any) => !line.supplemental);
+    expect(primary).toHaveLength(1);
+    expect(primary[0].value).toEqual({ type: 'path', path: 'component.pricingBasis' });
+    expect(JSON.stringify(cell.lines)).not.toContain('component.name');
+    // the author's supplemental period line survives
+    expect(JSON.stringify(cell.lines)).toContain('component.periodLabelStart|daterange');
+
+    // picking the field a supplemental line already shows drops the duplicate
+    select(container, 'bundle-cell-description', 'component.periodLabelStart|daterange');
+    const after = exportedTable().childRows.cells.description;
+    expect(after.lines).toHaveLength(1);
+    expect(after.lines[0].value).toEqual({ type: 'path', path: 'component.periodLabelStart|daterange' });
+  });
+
   it('Off removes childRows again', () => {
     load(startAst());
     const { container } = render(<Harness />);

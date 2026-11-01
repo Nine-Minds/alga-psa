@@ -1,7 +1,7 @@
 import type { DateValue, ISO8601String } from '../lib/temporal';
 import { TenantEntity } from './index';
 import { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Import the correct ViewModel
-import type { TemplateAst } from '../lib/invoice-template-ast';
+import type { TemplateAst, TemplateChildRows } from '../lib/invoice-template-ast';
 import type {
   BillingProfileSource,
   InvoiceTimeEntrySnapshot,
@@ -736,6 +736,17 @@ export interface InvoiceViewModelLocationGroup {
   total: number;
 }
 
+/**
+ * The bundle component rows of the template that renders an invoice for its
+ * viewer, reduced to what a non-template surface (the client portal details
+ * dialog) needs to draw them the way the template does: the table's childRows
+ * and which of its column ids plays each line-item role.
+ */
+export interface InvoiceBundleRowsLayout {
+  columnIds: { description: string; quantity: string; unitPrice: string; total: string };
+  childRows: TemplateChildRows;
+}
+
 export interface InvoiceViewModel {
   invoice_number: string;
   client_id: string;
@@ -813,4 +824,9 @@ export interface InvoiceViewModel {
    * flag for auto-branching between flat and grouped layouts.
    */
   has_multiple_locations?: boolean;
+  /**
+   * Bundle component row layout of the viewer's resolved template; set for
+   * client-portal reads whose template renders component rows (PRD R7).
+   */
+  bundle_rows_layout?: InvoiceBundleRowsLayout | null;
 }

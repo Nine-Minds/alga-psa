@@ -8,12 +8,14 @@ import { Temporal } from '@js-temporal/polyfill';
 import {
   IInvoice,
   InvoiceViewModel,
-  IInvoiceCharge
+  IInvoiceCharge,
+  InvoiceBundleRowsLayout
 } from '@alga-psa/types';
 import { createTenantKnex } from '@alga-psa/db';
 import { toPlainDate, formatLocationAddress } from '@alga-psa/core';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { templateUsesComponentPricing, decideBundleLoad } from '@alga-psa/billing/lib/invoice-template-ast/componentPricing';
+import { extractBundleRowsLayout } from '@alga-psa/billing/lib/invoice-template-ast/bundleChildRows';
 import { getClientContractPurchaseOrderContext, getPurchaseOrderConsumedCents } from '@alga-psa/billing/services/purchaseOrderService';
 import { withAuth } from '@alga-psa/auth';
 import { withSerializableAuth } from './serializableAuth';
@@ -839,14 +841,23 @@ async function resolveBundleLoadOptions(
   tenant: string,
   user: InvoiceQueryUser,
   invoiceId: string,
-): Promise<{ includeBundlePresentation: boolean; includeBundleComponentAmounts: boolean }> {
+): Promise<{
+  includeBundlePresentation: boolean;
+  includeBundleComponentAmounts: boolean;
+  /** Client readers only: how their template draws component rows, for non-template surfaces. */
+  bundleRowsLayout?: InvoiceBundleRowsLayout | null;
+}> {
   if (user.user_type !== 'client') return decideBundleLoad('msp', null);
   const invoice = await tenantDb(knex, tenant).table('invoices').where({ invoice_id: invoiceId }).first('client_id');
   const { templateId, templates } = await resolveClientInvoiceTemplate(knex, tenant, invoice?.client_id);
   const template = templates.find((entry) => entry.template_id === templateId);
   const ast = (template?.templateAst ?? null) as Parameters<typeof templateUsesComponentPricing>[0] | null;
   // Unknown/missing template fails closed; see decideBundleLoad.
-  return decideBundleLoad('client', ast);
+  const decision = decideBundleLoad('client', ast);
+  return {
+    ...decision,
+    bundleRowsLayout: decision.includeBundlePresentation ? extractBundleRowsLayout(ast) : null,
+  };
 }
 
 export const getInvoiceForRendering = withAuth(async (
@@ -872,12 +883,11 @@ export const getInvoiceForRendering = withAuth(async (
 
     // Existing-invoice preview refresh and rerender must hydrate through the full
     // detail-aware reader so canonical recurring periods survive after persistence.
-    const invoice = await Invoice.getFullInvoiceById(
-      knex,
-      tenant,
-      invoiceId,
-      await resolveBundleLoadOptions(knex, tenant, user, invoiceId),
-    );
+    const { bundleRowsLayout, ...bundleLoad } = await resolveBundleLoadOptions(knex, tenant, user, invoiceId);
+    const invoice = await Invoice.getFullInvoiceById(knex, tenant, invoiceId, bundleLoad);
+    if (bundleRowsLayout !== undefined) {
+      invoice.bundle_rows_layout = bundleRowsLayout;
+    }
     return enrichInvoiceWithProjectRenderingData(
       knex,
       tenant,
@@ -912,7 +922,8 @@ export const getEnrichedInvoiceViewModel = withSerializableAuth(withAuth(async (
       knex,
       tenant,
       invoiceId,
-      await resolveBundleLoadOptions(knex, tenant, user, invoiceId),
+      // The WASM view model is template-rendered; it needs no separate row layout.
+      (({ bundleRowsLayout: _layout, ...bundleLoad }) => bundleLoad)(await resolveBundleLoadOptions(knex, tenant, user, invoiceId)),
     );
   } catch (error) {
     // A draft can be hard-deleted while its preview request is still in

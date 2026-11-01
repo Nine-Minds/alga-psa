@@ -12,7 +12,7 @@ const detail = (id: string, serviceId: string, name: string, q: number | null, b
 });
 
 const prevRow = (over: Partial<PreviousPeriodRow>): PreviousPeriodRow => ({
-  contractLineId: 'L1', serviceId: 'ws', serviceName: 'Workstations', itemDetailId: 'pd1', detailQuantity: 46,
+  contractLineId: 'L1', chargeItemId: 'C1', serviceId: 'ws', serviceName: 'Workstations', itemDetailId: 'pd1', detailQuantity: 46,
   servicePeriodStart: P1.s, servicePeriodEnd: P1.e, bundlePresentation: null, ...over,
 });
 
@@ -32,6 +32,16 @@ describe('selectPreviousPeriods', () => {
     const prev = selectPreviousPeriods(req, rows).get('L1')!;
     expect(prev.quantitiesByServiceId.get('ws')).toBe(0);
     expect(prev.quantitiesByServiceId.get('srv')).toBe(6);
+  });
+  it('counts a merged snapshot component once even though each detail row carries its own parsed jsonb', () => {
+    // snapshot.ts merges two details of one service in one period into a single
+    // component; the loader parses the charge's jsonb once per detail row.
+    const snapshotJson = JSON.stringify({ version: 1, subtitle: null, components: [{ serviceId: 'ws', name: 'Workstations', quantity: 10, pricingBasis: 'unit', order: 0, servicePeriodStart: P1.s, servicePeriodEnd: P1.e, detailItemIds: ['a', 'b'], previousQuantity: null, comparison: 'no_prior_period' }] });
+    const rows = [
+      prevRow({ itemDetailId: 'a', detailQuantity: 4, bundlePresentation: JSON.parse(snapshotJson) }),
+      prevRow({ itemDetailId: 'b', detailQuantity: 6, bundlePresentation: JSON.parse(snapshotJson) }),
+    ];
+    expect(selectPreviousPeriods(req, rows).get('L1')!.quantitiesByServiceId.get('ws')).toBe(10);
   });
   it('uses only the latest prior period', () => {
     const older = { servicePeriodStart: '2026-08-01T00:00:00.000Z', servicePeriodEnd: P1.s };
