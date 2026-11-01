@@ -2,12 +2,14 @@ export interface RemoteAssetLimits {
   maxAssets: number;
   concurrency: number;
   maxTotalBytes: number;
+  perAssetTimeoutMs: number;
 }
 
 export const DEFAULT_REMOTE_ASSET_LIMITS: RemoteAssetLimits = Object.freeze({
   maxAssets: 64,
   concurrency: 6,
   maxTotalBytes: 16 * 1024 * 1024,
+  perAssetTimeoutMs: 5000,
 });
 
 export interface AssetBudget {

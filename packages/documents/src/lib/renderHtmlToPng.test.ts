@@ -185,14 +185,33 @@ describe('renderHtmlToPng network policy', () => {
     expect(budget.spentBytes).toBeLessThanOrEqual(8);
   });
 
+  it('charges CSS and img results in original source order across varied completion orders', async () => {
+    const html = '<p style="background:url(https://assets.example/earlier-css)">early</p>' +
+      '<img src="https://assets.example/later-img" alt="later">';
+    const render = (cssDelay: number, imgDelay: number) => resolveRemoteAssets(html, {
+      limits: { maxAssets: 2, concurrency: 2, maxTotalBytes: 4 },
+      fetchAsset: async (url) => {
+        await new Promise((resolve) => setTimeout(resolve, url.includes('earlier-css') ? cssDelay : imgDelay));
+        return { bytes: Buffer.alloc(4, url.includes('earlier-css') ? 1 : 2), contentType: 'image/png' };
+      },
+    });
+    const cssCompletesLast = await render(15, 0);
+    const imgCompletesLast = await render(0, 15);
+    expect(cssCompletesLast).toBe(imgCompletesLast);
+    expect(cssCompletesLast).toContain(`url("data:image/png;base64,${Buffer.alloc(4, 1).toString('base64')}")`);
+    expect(cssCompletesLast).not.toContain(`data:image/png;base64,${Buffer.alloc(4, 2).toString('base64')}`);
+    expect(cssCompletesLast).toContain('later');
+  });
+
   it('fetches and charges a repeated URL once and applies per-call limits', async () => {
     let calls = 0;
     const repeated = `<img src="https://assets.example/repeated" alt="repeat-${Array.from({ length: 50 }, (_, i) => i).join(',')}">`.repeat(50);
-    await resolveRemoteAssets(repeated, {
+    const repeatedOut = await resolveRemoteAssets(repeated, {
       limits: { maxAssets: 1, maxTotalBytes: 8 },
       fetchAsset: async () => { calls += 1; return { bytes: Buffer.alloc(8), contentType: 'image/png' }; },
     });
     expect(calls).toBe(1);
+    expect(repeatedOut.match(/data:image\/png;base64,/g)).toHaveLength(50);
 
     const overrideCalls: string[] = [];
     const out = await resolveRemoteAssets(
@@ -205,6 +224,24 @@ describe('renderHtmlToPng network policy', () => {
     expect(overrideCalls).toHaveLength(1);
     expect(out).toContain('one');
     expect(out).toContain('two');
+  });
+
+  it('forwards the default and overridden per-asset timeout and rejects malformed values', async () => {
+    const timeoutValues: Array<number | undefined> = [];
+    const fetchAsset = async (_url: string, options?: { timeoutMs: number }) => {
+      timeoutValues.push(options?.timeoutMs);
+      return { bytes: TINY_PNG, contentType: 'image/png' };
+    };
+    await resolveRemoteAssets('<img src="https://assets.example/default">', { fetchAsset });
+    await resolveRemoteAssets('<img src="https://assets.example/custom">', {
+      fetchAsset,
+      limits: { perAssetTimeoutMs: 1200 },
+    });
+    expect(timeoutValues).toEqual([5000, 1200]);
+    await expect(resolveRemoteAssets('<img src="https://assets.example/invalid">', {
+      fetchAsset,
+      limits: { perAssetTimeoutMs: 0 },
+    })).rejects.toThrow(/perAssetTimeoutMs/);
   });
 
   it('keeps inline, blocked, and CSS assets at their original positions', async () => {

@@ -14,7 +14,7 @@ export interface RenderHtmlToPngOptions {
    * Resolve a remote asset URL to bytes. Defaults to safeFetch's public-only fetch.
    * Injectable so tests can assert the rewritten HTML without the network.
    */
-  fetchAsset?: (url: string) => Promise<{ bytes: Buffer; contentType: string }>;
+  fetchAsset?: (url: string, options?: { timeoutMs: number }) => Promise<{ bytes: Buffer; contentType: string }>;
   limits?: Partial<RemoteAssetLimits>;
 }
 
@@ -38,64 +38,54 @@ function getAttr(tag: string, name: string): string | undefined {
   return m ? decodeAttr(m[1] ?? m[2] ?? '') : undefined;
 }
 
-type AssetResolver = (url: string) => Promise<string | null>;
-
-function makeResolver(opts: RenderHtmlToPngOptions, orderedUrls: string[]): { resolve: AssetResolver; finish: () => void } {
-  const cache = new Map<string, Promise<string | null>>();
-  const assetIndices = new Map(orderedUrls.map((url, index) => [url, index]));
-  const limits = validateRemoteAssetLimits(opts.limits);
+async function resolveAssets(
+  opts: RenderHtmlToPngOptions,
+  orderedUrls: string[],
+  limits: RemoteAssetLimits
+): Promise<Map<string, string | null>> {
   const budget = createAssetBudget(limits);
-  let considered = orderedUrls.length;
   let skippedByBytes = 0;
   let chargeQueue = Promise.resolve();
-  const fetchAsset = opts.fetchAsset ?? ((url: string) => fetchPublicBytes(url));
-  const resolve: AssetResolver = (url) => {
-    let hit = cache.get(url);
-    if (!hit) {
-      const index = assetIndices.get(url) ?? considered++;
-      const admitted = budget.admit(index);
-      if (!admitted) {
-        hit = Promise.resolve(null);
-      } else {
-        const previousCharge = chargeQueue;
-        let releaseCharge!: () => void;
-        chargeQueue = new Promise<void>((resolveCharge) => { releaseCharge = resolveCharge; });
-        const fetched = Promise.resolve().then(() => fetchAsset(url)).catch(() => null);
-        hit = fetched.then(async (result) => {
-          await previousCharge;
-          try {
-            if (!result || !/^image\//i.test(result.contentType)) return null;
-            if (!budget.charge(result.bytes.length)) {
-              skippedByBytes += 1;
-              return null;
-            }
-            return `data:${result.contentType};base64,${result.bytes.toString('base64')}`;
-          } finally {
-            releaseCharge();
-          }
-        });
+  const fetchAsset = opts.fetchAsset ?? ((url: string, options?: { timeoutMs: number }) =>
+    fetchPublicBytes(url, { timeoutMs: options?.timeoutMs })
+  );
+  const results = await mapWithConcurrency(orderedUrls, limits.concurrency, async (url, index) => {
+    if (!budget.admit(index)) return null;
+
+    // Each worker holds at most one downloaded result while earlier positions commit first.
+    // This preserves source-order byte decisions without buffering the whole document's payloads.
+    const previousCharge = chargeQueue;
+    let releaseCharge!: () => void;
+    chargeQueue = new Promise<void>((resolveCharge) => { releaseCharge = resolveCharge; });
+    const result = await Promise.resolve()
+      .then(() => fetchAsset(url, { timeoutMs: limits.perAssetTimeoutMs }))
+      .catch(() => null);
+    await previousCharge;
+    try {
+      if (!result || !/^image\//i.test(result.contentType)) return null;
+      if (!budget.charge(result.bytes.length)) {
+        skippedByBytes += 1;
+        return null;
       }
-      cache.set(url, hit);
+      return `data:${result.contentType};base64,${result.bytes.toString('base64')}`;
+    } finally {
+      releaseCharge();
     }
-    return hit;
-  };
-  return {
-    resolve,
-    finish: () => {
-      const skippedByCount = Math.max(0, considered - limits.maxAssets);
-      if (skippedByCount || skippedByBytes) {
-        console.warn('[renderHtmlToPng] remote asset budget exhausted', {
-          considered,
-          admitted: budget.admitted,
-          skipped: skippedByCount + skippedByBytes,
-          skippedByCount,
-          skippedByBytes,
-          spentBytes: budget.spentBytes,
-          maxTotalBytes: limits.maxTotalBytes,
-        });
-      }
-    },
-  };
+  });
+
+  const skippedByCount = Math.max(0, orderedUrls.length - budget.admitted);
+  if (skippedByCount || skippedByBytes) {
+    console.warn('[renderHtmlToPng] remote asset budget exhausted', {
+      considered: orderedUrls.length,
+      admitted: budget.admitted,
+      skipped: skippedByCount + skippedByBytes,
+      skippedByCount,
+      skippedByBytes,
+      spentBytes: budget.spentBytes,
+      maxTotalBytes: limits.maxTotalBytes,
+    });
+  }
+  return new Map(orderedUrls.map((url, index) => [url, results[index]]));
 }
 
 function collectRemoteAssetUrls(html: string): string[] {
@@ -111,18 +101,16 @@ function collectRemoteAssetUrls(html: string): string[] {
   return [...new Set(references.map(({ url }) => url))];
 }
 
-async function replaceAsync(
+function replaceReferences(
   input: string,
   re: RegExp,
-  fn: (match: RegExpExecArray) => Promise<string>,
-  concurrency: number
-): Promise<string> {
+  fn: (match: RegExpExecArray) => string
+): string {
   const matches = [...input.matchAll(re)] as RegExpExecArray[];
-  const replacements = await mapWithConcurrency(matches, concurrency, fn);
   let out = '';
   let last = 0;
-  matches.forEach((m, i) => {
-    out += input.slice(last, m.index) + replacements[i];
+  matches.forEach((m) => {
+    out += input.slice(last, m.index) + fn(m);
     last = m.index! + m[0].length;
   });
   return out + input.slice(last);
@@ -140,33 +128,33 @@ export async function resolveRemoteAssets(
   opts: Pick<RenderHtmlToPngOptions, 'remoteAssets' | 'fetchAsset' | 'limits'> = {}
 ): Promise<string> {
   const mode = opts.remoteAssets ?? 'inline';
-  const resolver = mode === 'inline' ? makeResolver(opts, collectRemoteAssetUrls(html)) : null;
-  const resolve: AssetResolver = resolver?.resolve ?? (async () => null);
   const limits = validateRemoteAssetLimits(opts.limits);
+  const orderedUrls = collectRemoteAssetUrls(html);
+  const resolvedAssets = mode === 'inline'
+    ? await resolveAssets(opts, orderedUrls, limits)
+    : new Map<string, string | null>();
 
   // <img ... src="http...">
-  let out = await replaceAsync(html, /<img\b[^>]*>/gi, async (m) => {
+  let out = replaceReferences(html, /<img\b[^>]*>/gi, (m) => {
     const tag = m[0];
     const src = getAttr(tag, 'src');
     if (src === undefined || !REMOTE_URL.test(src)) return tag;
-    const dataUri = await resolve(src.trim());
+    const dataUri = resolvedAssets.get(src.trim());
     if (dataUri) {
       return tag.replace(/(\ssrc\s*=\s*)(?:"[^"]*"|'[^']*')/i, (_m, pre: string) => pre + '"' + dataUri + '"');
     }
     const alt = getAttr(tag, 'alt') ?? '';
     return `<span style="${PLACEHOLDER_STYLE}" role="img" aria-label="${escapeHtml(alt)}">${escapeHtml(alt)}</span>`;
-  }, limits.concurrency);
+  });
 
   // srcset can also load remote images; drop it when it references remote URLs.
   out = out.replace(/(<img\b[^>]*?)\s(?:srcset)\s*=\s*(?:"[^"]*"|'[^']*')/gi, '$1');
 
   // CSS url(http...)
-  out = await replaceAsync(out, /url\(\s*(["']?)\s*(https?:\/\/[^)"']*)\1\s*\)/gi, async (m) => {
-    const dataUri = await resolve(decodeAttr(m[2]).trim());
+  out = replaceReferences(out, /url\(\s*(["']?)\s*(https?:\/\/[^)"']*)\1\s*\)/gi, (m) => {
+    const dataUri = resolvedAssets.get(decodeAttr(m[2]).trim());
     return `url("${dataUri ?? TRANSPARENT_PIXEL}")`;
-  }, limits.concurrency);
-
-  resolver?.finish();
+  });
 
   return out;
 }
