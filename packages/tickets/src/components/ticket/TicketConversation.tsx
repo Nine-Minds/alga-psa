@@ -300,7 +300,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     onNewCommentContentChange(DEFAULT_BLOCK);
     setComposeHasContent(false);
     setShowEditor(false);
-  }, [onNewCommentContentChange]);
+    // Runs only when the discard really happens (not on 'keep editing'), so a host can drop what it staged beside the composer.
+    dataSource.screen.onComposerCancel?.();
+  }, [onNewCommentContentChange, dataSource.screen]);
 
   const composeUploadSession = useTicketRichTextUploadSession({
     commentAttachments: true,
@@ -423,7 +425,6 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   };
 
   const handleCancelComment = () => {
-    dataSource.screen.onComposerCancel?.();
     composeUploadSession.requestDiscard();
   };
 
