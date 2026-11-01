@@ -70,7 +70,7 @@ vi.mock('server/src/lib/eventBus', () => ({
   })),
 }));
 
-const sendNotification = vi.fn(async (_params: Record<string, unknown>) => {});
+const sendNotification = vi.fn(async (_params: Record<string, unknown>) => ({ status: 'sent' as const, messageId: 'smtp-message-1' }));
 
 vi.mock('@alga-psa/notifications/notifications/email', () => ({
   getEmailNotificationService: vi.fn(() => ({
@@ -205,6 +205,33 @@ describe('SLA Escalation Service Integration Tests', () => {
       userId: managerL1Id,
       templateName: 'sla-escalation',
     });
+    const audit = await tenantTable(db, tenantId, 'sla_audit_log')
+      .where({ ticket_id: ticketId, event_type: 'ticket_escalated' }).first();
+    const eventData = typeof audit.event_data === 'string' ? JSON.parse(audit.event_data) : audit.event_data;
+    expect(eventData.notifications).toMatchObject({ email: 'sent', emailMessageId: 'smtp-message-1' });
+  });
+
+  it('persists queued before send, then marks a post-commit send failure failed and logs both identifiers', async () => {
+    const ticketId = await newTicket();
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    sendNotification.mockImplementationOnce(async () => {
+      const queuedAudit = await tenantTable(db, tenantId, 'sla_audit_log')
+        .where({ ticket_id: ticketId, event_type: 'ticket_escalated' }).first();
+      const queuedData = typeof queuedAudit.event_data === 'string' ? JSON.parse(queuedAudit.event_data) : queuedAudit.event_data;
+      expect(queuedData.notifications.email).toBe('queued');
+      throw new Error('GreenMail unavailable');
+    });
+
+    await runCommitted((trx) => escalateTicket(trx, tenantId, ticketId, 1));
+    const audit = await tenantTable(db, tenantId, 'sla_audit_log')
+      .where({ ticket_id: ticketId, event_type: 'ticket_escalated' }).first();
+    const eventData = typeof audit.event_data === 'string' ? JSON.parse(audit.event_data) : audit.event_data;
+    expect(eventData.notifications).toMatchObject({ email: 'failed', emailReason: 'GreenMail unavailable' });
+    expect(errorSpy).toHaveBeenCalledWith('SLA escalation email delivery failed', expect.objectContaining({
+      ticketId,
+      auditLogId: audit.log_id,
+    }));
+    errorSpy.mockRestore();
   });
 
   it('does not create duplicates when escalating to the same level again', async () => {
@@ -252,6 +279,7 @@ describe('SLA Escalation Service Integration Tests', () => {
     expect(audit).toHaveLength(1);
     const data = typeof audit[0].event_data === 'string' ? JSON.parse(audit[0].event_data) : audit[0].event_data;
     expect(data.manager_found).toBe(false);
+    expect(data.notifications.email).toBe('skipped');
     expect(sendNotification).not.toHaveBeenCalled();
   });
 });

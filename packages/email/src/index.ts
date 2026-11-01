@@ -74,6 +74,8 @@ export { SystemEmailProviderFactory } from './system/SystemEmailProviderFactory'
 
 // Tenant email provider manager
 export { EmailProviderManager } from './providers/EmailProviderManager';
+export { TenantEmailOutboundAdapter } from './outbound/TenantEmailOutboundAdapter';
+export type { OutboundMailPort, OutboundMailMessage, OutboundMailResult } from './outbound/OutboundMailPort';
 
 // Outbound email diagnostics (provider-dispatched, shared kernel)
 export {
