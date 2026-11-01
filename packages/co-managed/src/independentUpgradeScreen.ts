@@ -50,3 +50,17 @@ export async function getCoManagedIndependentUpgradeScreen(db: Knex, input: CoMa
       revision: Number(relationship.revision), departed: relationship.state === 'terminated', selfHosted, seatsRequired, entitlementReady, pendingPurchase, hasOwnBilling, paidSeats };
   });
 }
+
+/** Who the customer-only upgrade page exists for. `customer`: this tenant is the customer side of a
+ * co-managed relationship (`co_management_relationships.tenant` is the customer; the same predicate the
+ * screen above uses). `completed`: it has an independent-upgrade row, so a former customer, now on psa and
+ * possibly no longer participating, still reaches the completed screen. Sponsors are neither.
+ * `includeCustomer: false` skips the relationship query (caller already knows the capability is closed). */
+export async function getCoManagedUpgradeAudience(db: Knex, tenant: string, includeCustomer = true) {
+  const own = tenantDb(db, tenant);
+  // LEVERAGE: pattern co-managed-customer-relationship — "active|terminated relationship on my own tenant" is also in getCoManagedIndependentUpgradeScreen
+  const customer = includeCustomer &&
+    Boolean(await own.table('co_management_relationships').whereIn('state', ['active', 'terminated']).first('relationship_id'));
+  const completed = Boolean(await own.table('co_managed_independent_upgrades').first('operation_id'));
+  return { customer, completed };
+}
