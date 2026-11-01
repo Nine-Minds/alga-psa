@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { tenantDb } from '@alga-psa/db';
-import { decodeState, validateState } from '@/utils/email/oauthHelpers';
+import { decodeImapOAuthState, validateState } from '@/utils/email/oauthHelpers';
 import { createTenantKnex } from '@/lib/db';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import axios from 'axios';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
+import { hasPermission } from '@/lib/auth/rbac';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,7 +17,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing code/state' }, { status: 400 });
     }
 
-    const state = decodeState(stateParam);
+    const secretProvider = await getSecretProviderInstance();
+    const signingKey = await secretProvider.getAppSecret('OAUTH_STATE_SIGNING_KEY');
+    const state = decodeImapOAuthState(stateParam, signingKey);
     if (!state || !validateState(state)) {
       return NextResponse.json({ error: 'Invalid OAuth state' }, { status: 400 });
     }
@@ -30,7 +33,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Missing providerId' }, { status: 400 });
     }
 
-    const { knex, tenant } = await createTenantKnex();
+    const { knex, tenant } = await createTenantKnex(state.tenant);
     if (tenant !== state.tenant) {
       return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
     }
@@ -42,6 +45,27 @@ export async function GET(request: NextRequest) {
 
     if (!provider) {
       return NextResponse.json({ error: 'IMAP provider not found' }, { status: 404 });
+    }
+
+    // Consume before any token exchange. The tenant and id predicates make this
+    // a tenant-local compare-and-set: exactly one concurrent callback wins.
+    const consumedRows = await db.table('email_oauth_grants')
+      .where({ tenant, id: state.nonce, consumed_at: null })
+      .where('expires_at', '>', knex.fn.now())
+      .update({ consumed_at: knex.fn.now() })
+      .returning('*');
+    const grant = consumedRows[0];
+    if (!grant || grant.tenant !== state.tenant || grant.provider_id !== state.providerId ||
+        grant.initiated_by_user_id !== state.userId || grant.redirect_uri !== state.redirectUri ||
+        grant.purpose !== state.purpose) {
+      return NextResponse.json({ error: 'Invalid or already-used OAuth state' }, { status: 400 });
+    }
+
+    const initiatingUser = await db.table('users')
+      .where({ user_id: grant.initiated_by_user_id, user_type: 'internal', is_inactive: false })
+      .first();
+    if (!initiatingUser || !await hasPermission({ ...initiatingUser, tenant }, 'ticket_settings', 'update', knex)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const imapConfig = await db.table('imap_email_provider_config')
@@ -56,7 +80,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'IMAP OAuth token configuration missing' }, { status: 400 });
     }
 
-    const secretProvider = await getSecretProviderInstance();
     const clientSecret = await secretProvider.getTenantSecret(tenant, `imap_oauth_client_secret_${state.providerId}`);
 
     const params = new URLSearchParams();

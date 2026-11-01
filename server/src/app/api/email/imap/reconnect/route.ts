@@ -3,6 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { createTenantKnex } from '@/lib/db';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
+import { assertProviderMutationAuthority, ProviderMutationForbiddenError } from '@/lib/email/providerMutationAuthority';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,6 +16,10 @@ export async function POST(request: NextRequest) {
       capability: 'email_to_ticket',
       allowedProducts: ['psa', 'algadesk'],
     });
+
+    const { knex: authKnex, tenant: authTenant } = await createTenantKnex(user.tenant);
+    if (!authTenant || authTenant !== user.tenant) return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
+    await assertProviderMutationAuthority(user, authKnex);
 
     let body: { providerId?: unknown };
     try {
@@ -56,6 +61,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
+    if (error instanceof ProviderMutationForbiddenError) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     if (isProductAccessError(error)) {
       return toProductAccessDeniedResponse(error);
     }
