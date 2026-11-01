@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer';
 import { fetchPublicBytes } from '@alga-psa/core/net/safeFetch';
+import { createAssetBudget, mapWithConcurrency, validateRemoteAssetLimits, type RemoteAssetLimits } from './remoteAssetBudget';
 
 export interface RenderHtmlToPngOptions {
   width?: number;
@@ -14,6 +15,7 @@ export interface RenderHtmlToPngOptions {
    * Injectable so tests can assert the rewritten HTML without the network.
    */
   fetchAsset?: (url: string) => Promise<{ bytes: Buffer; contentType: string }>;
+  limits?: Partial<RemoteAssetLimits>;
 }
 
 const PLACEHOLDER_STYLE =
@@ -38,30 +40,85 @@ function getAttr(tag: string, name: string): string | undefined {
 
 type AssetResolver = (url: string) => Promise<string | null>;
 
-function makeResolver(opts: RenderHtmlToPngOptions): AssetResolver {
+function makeResolver(opts: RenderHtmlToPngOptions, orderedUrls: string[]): { resolve: AssetResolver; finish: () => void } {
   const cache = new Map<string, Promise<string | null>>();
+  const assetIndices = new Map(orderedUrls.map((url, index) => [url, index]));
+  const limits = validateRemoteAssetLimits(opts.limits);
+  const budget = createAssetBudget(limits);
+  let considered = orderedUrls.length;
+  let skippedByBytes = 0;
+  let chargeQueue = Promise.resolve();
   const fetchAsset = opts.fetchAsset ?? ((url: string) => fetchPublicBytes(url));
-  return (url) => {
+  const resolve: AssetResolver = (url) => {
     let hit = cache.get(url);
     if (!hit) {
-      hit = fetchAsset(url)
-        .then(({ bytes, contentType }) =>
-          /^image\//i.test(contentType) ? `data:${contentType};base64,${bytes.toString('base64')}` : null
-        )
-        .catch(() => null); // a blocked asset must never fail the preview
+      const index = assetIndices.get(url) ?? considered++;
+      const admitted = budget.admit(index);
+      if (!admitted) {
+        hit = Promise.resolve(null);
+      } else {
+        const previousCharge = chargeQueue;
+        let releaseCharge!: () => void;
+        chargeQueue = new Promise<void>((resolveCharge) => { releaseCharge = resolveCharge; });
+        const fetched = Promise.resolve().then(() => fetchAsset(url)).catch(() => null);
+        hit = fetched.then(async (result) => {
+          await previousCharge;
+          try {
+            if (!result || !/^image\//i.test(result.contentType)) return null;
+            if (!budget.charge(result.bytes.length)) {
+              skippedByBytes += 1;
+              return null;
+            }
+            return `data:${result.contentType};base64,${result.bytes.toString('base64')}`;
+          } finally {
+            releaseCharge();
+          }
+        });
+      }
       cache.set(url, hit);
     }
     return hit;
   };
+  return {
+    resolve,
+    finish: () => {
+      const skippedByCount = Math.max(0, considered - limits.maxAssets);
+      if (skippedByCount || skippedByBytes) {
+        console.warn('[renderHtmlToPng] remote asset budget exhausted', {
+          considered,
+          admitted: budget.admitted,
+          skipped: skippedByCount + skippedByBytes,
+          skippedByCount,
+          skippedByBytes,
+          spentBytes: budget.spentBytes,
+          maxTotalBytes: limits.maxTotalBytes,
+        });
+      }
+    },
+  };
+}
+
+function collectRemoteAssetUrls(html: string): string[] {
+  const references: Array<{ index: number; url: string }> = [];
+  for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
+    const src = getAttr(match[0], 'src');
+    if (src !== undefined && REMOTE_URL.test(src)) references.push({ index: match.index!, url: src.trim() });
+  }
+  for (const match of html.matchAll(/url\(\s*(["']?)\s*(https?:\/\/[^)"']*)\1\s*\)/gi)) {
+    references.push({ index: match.index!, url: decodeAttr(match[2]).trim() });
+  }
+  references.sort((a, b) => a.index - b.index);
+  return [...new Set(references.map(({ url }) => url))];
 }
 
 async function replaceAsync(
   input: string,
   re: RegExp,
-  fn: (match: RegExpExecArray) => Promise<string>
+  fn: (match: RegExpExecArray) => Promise<string>,
+  concurrency: number
 ): Promise<string> {
   const matches = [...input.matchAll(re)] as RegExpExecArray[];
-  const replacements = await Promise.all(matches.map(fn));
+  const replacements = await mapWithConcurrency(matches, concurrency, fn);
   let out = '';
   let last = 0;
   matches.forEach((m, i) => {
@@ -80,10 +137,12 @@ async function replaceAsync(
  */
 export async function resolveRemoteAssets(
   html: string,
-  opts: Pick<RenderHtmlToPngOptions, 'remoteAssets' | 'fetchAsset'> = {}
+  opts: Pick<RenderHtmlToPngOptions, 'remoteAssets' | 'fetchAsset' | 'limits'> = {}
 ): Promise<string> {
   const mode = opts.remoteAssets ?? 'inline';
-  const resolve: AssetResolver = mode === 'inline' ? makeResolver(opts) : async () => null;
+  const resolver = mode === 'inline' ? makeResolver(opts, collectRemoteAssetUrls(html)) : null;
+  const resolve: AssetResolver = resolver?.resolve ?? (async () => null);
+  const limits = validateRemoteAssetLimits(opts.limits);
 
   // <img ... src="http...">
   let out = await replaceAsync(html, /<img\b[^>]*>/gi, async (m) => {
@@ -96,7 +155,7 @@ export async function resolveRemoteAssets(
     }
     const alt = getAttr(tag, 'alt') ?? '';
     return `<span style="${PLACEHOLDER_STYLE}" role="img" aria-label="${escapeHtml(alt)}">${escapeHtml(alt)}</span>`;
-  });
+  }, limits.concurrency);
 
   // srcset can also load remote images; drop it when it references remote URLs.
   out = out.replace(/(<img\b[^>]*?)\s(?:srcset)\s*=\s*(?:"[^"]*"|'[^']*')/gi, '$1');
@@ -105,7 +164,9 @@ export async function resolveRemoteAssets(
   out = await replaceAsync(out, /url\(\s*(["']?)\s*(https?:\/\/[^)"']*)\1\s*\)/gi, async (m) => {
     const dataUri = await resolve(decodeAttr(m[2]).trim());
     return `url("${dataUri ?? TRANSPARENT_PIXEL}")`;
-  });
+  }, limits.concurrency);
+
+  resolver?.finish();
 
   return out;
 }
