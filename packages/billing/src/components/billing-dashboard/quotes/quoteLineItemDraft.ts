@@ -229,9 +229,20 @@ export function calculateDraftQuoteTotals(items: DraftQuoteItem[]): DraftQuoteTo
 
   // Draft rows carry the persisted rate, so the editor derives tax the same
   // way the adapter does for pending add-ons (ceil to the cent).
+  // Tax follows the persisted recalculation: each included row is taxed on its
+  // amount minus the discount share it absorbed (discounts apply before tax).
+  const shareById = new Map<string, number>();
+  for (const result of allocation.discounts) {
+    for (const line of result.allocations) {
+      shareById.set(line.baseItemId, (shareById.get(line.baseItemId) ?? 0) + line.amount);
+    }
+  }
   return summarizeQuoteTotals(items, {
     amountOf: (item) => item.quantity * item.unit_price,
-    taxOf: (item) => hypotheticalTaxAmount({ ...item, total_price: item.quantity * item.unit_price }),
+    taxOf: (item) => hypotheticalTaxAmount({
+      ...item,
+      total_price: Math.max(0, item.quantity * item.unit_price - (shareById.get(draftBaseItemId(item)) ?? 0)),
+    }),
     discountTotal: allocation.totalDiscount,
   });
 }

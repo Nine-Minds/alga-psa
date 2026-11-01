@@ -162,22 +162,22 @@ describe('Tax Allocation Strategy', () => {
       });
 
       // Net subtotal: $40.00 ($50.00 positive - $10.00 negative)
-      // Tax calculated on positive items only: $50.00 * 10% = $5.00
-      // Distribution:
-      // - $30.00 item (60% of positive $50) gets $3.00 tax
-      // - $20.00 item (40% of positive $50) gets $2.00 tax
+      // The negative line reduces the taxable base before tax, spread over the
+      // positive lines in proportion: 3000 -> 2400, 2000 -> 1600.
+      // Tax: $40.00 * 10% = $4.00, distributed 60% / 40%.
+      // - $30.00 item gets $2.40 tax
+      // - $20.00 item gets $1.60 tax
       // - Negative item gets no tax
       const invoiceItems = await context.db('invoice_charges')
         .where({ invoice_id: invoice.invoice_id })
         .orderBy('net_amount', 'desc');
 
       expect(invoice.subtotal).toBe(4000); // $40.00
-      expect(invoice.tax).toBe(500); // $5.00 (10% of $50 positive items)
-      expect(invoice.total_amount).toBe(4500); // $45.00
+      expect(invoice.tax).toBe(400); // $4.00 (10% of the $40 discounted base)
+      expect(invoice.total_amount).toBe(4400); // $44.00
 
-      // Verify tax distribution
-      expect(invoiceItems[0].tax_amount).toBe('300'); // $3.00 on $30.00 item (60% of $5 tax)
-      expect(invoiceItems[1].tax_amount).toBe('200'); // $2.00 on $20.00 item (40% of $5 tax)
+      expect(invoiceItems[0].tax_amount).toBe('240');
+      expect(invoiceItems[1].tax_amount).toBe('160');
       expect(invoiceItems[2].tax_amount).toBe('0'); // $0.00 on negative item
     });
 

@@ -174,7 +174,7 @@ describe('Billing Invoice Discount Applications', () => {
   }, 30000);
 
   describe('Service-Based Discount Application', () => {
-    it('applies service-specific percentage discounts without reducing the taxable base', async () => {
+    it('applies service-specific percentage discounts before tax', async () => {
       const serviceA = await createTestService(context, {
         service_name: 'Service A',
         default_rate: 10000,
@@ -233,7 +233,8 @@ describe('Billing Invoice Discount Applications', () => {
       const discountItem = invoiceItems.find(item => item.is_discount)!;
 
       expect(cents(serviceAItem.net_amount)).toBe(10000);
-      expect(cents(serviceAItem.tax_amount)).toBe(1000);
+      // Taxed on the discounted base: 10000 - 1000 = 9000.
+      expect(cents(serviceAItem.tax_amount)).toBe(900);
       expect(serviceAItem.is_taxable).not.toBe(false);
       expect(serviceAItem.tax_region).toBe('US-NY');
       expect(cents(serviceBItem.net_amount)).toBe(5000);
@@ -245,11 +246,11 @@ describe('Billing Invoice Discount Applications', () => {
       expect(discountItem.applies_to_item_id).toBe(serviceAItem.item_id);
 
       expect(invoice.subtotal).toBe(14000);
-      expect(invoice.tax).toBe(1500);
-      expect(invoice.total_amount).toBe(15500);
+      expect(invoice.tax).toBe(1400);
+      expect(invoice.total_amount).toBe(15400);
     });
 
-    it('applies invoice-wide fixed discounts without affecting per-item tax allocation', async () => {
+    it('applies invoice-wide fixed discounts before tax, spread across the lines', async () => {
       const serviceA = await createTestService(context, {
         service_name: 'Service A',
         default_rate: 10000,
@@ -309,17 +310,21 @@ describe('Billing Invoice Discount Applications', () => {
       const discountItem = invoiceItems.find(item => item.is_discount)!;
 
       expect(cents(serviceAItem.net_amount)).toBe(10000);
-      expect(cents(serviceAItem.tax_amount)).toBe(1000);
       expect(cents(serviceBItem.net_amount)).toBe(5000);
-      expect(cents(serviceBItem.tax_amount)).toBe(500);
       expect(cents(serviceCItem.net_amount)).toBe(2000);
-      expect(cents(serviceCItem.tax_amount)).toBe(200);
+      // The 3000 discount is spread 10:5:2 (1765 / 882 / 353, largest
+      // remainder), so the taxable base is 8235 + 4118 + 1647 = 14000 and the
+      // 10% tax is 1400, distributed across the lines.
+      const lineTax = [serviceAItem, serviceBItem, serviceCItem].map(item => cents(item.tax_amount));
+      expect(lineTax[0]).toBeGreaterThan(lineTax[1]);
+      expect(lineTax[1]).toBeGreaterThan(lineTax[2]);
+      expect(lineTax.reduce((sum, value) => sum + value, 0)).toBe(1400);
       expect(cents(discountItem.net_amount)).toBe(-3000);
       expect(discountItem.applies_to_item_id).toBeNull();
 
       expect(invoice.subtotal).toBe(14000);
-      expect(invoice.tax).toBe(1700);
-      expect(invoice.total_amount).toBe(15700);
+      expect(invoice.tax).toBe(1400);
+      expect(invoice.total_amount).toBe(15400);
     });
   });
 
@@ -370,15 +375,15 @@ describe('Billing Invoice Discount Applications', () => {
     const promoDiscount = invoiceItems.find(item => item.description.includes('Promotional'))!;
 
     expect(cents(serviceItem.net_amount)).toBe(10000);
-    expect(cents(serviceItem.tax_amount)).toBe(1000);
+    expect(cents(serviceItem.tax_amount)).toBe(700);
     expect(cents(loyaltyDiscount.net_amount)).toBe(-2000);
     expect(cents(promoDiscount.net_amount)).toBe(-1000);
     expect(loyaltyDiscount.applies_to_item_id).toBe(serviceItem.item_id);
     expect(promoDiscount.applies_to_item_id).toBe(serviceItem.item_id);
 
     expect(invoice.subtotal).toBe(7000);
-    expect(invoice.tax).toBe(1000);
-    expect(invoice.total_amount).toBe(8000);
+    expect(invoice.tax).toBe(700);
+    expect(invoice.total_amount).toBe(7700);
   });
 
   it('handles scenarios where discounts exceed the subtotal', async () => {
@@ -433,12 +438,13 @@ describe('Billing Invoice Discount Applications', () => {
     expect(fixedDiscount.applies_to_item_id).toBe(serviceItem.item_id);
 
     expect(cents(serviceItem.net_amount)).toBe(5000);
-    expect(cents(serviceItem.tax_amount)).toBe(500);
+    // The discounts exceed the line, so the taxable base floors at zero.
+    expect(cents(serviceItem.tax_amount)).toBe(0);
     expect(cents(percentageDiscount.net_amount)).toBe(-3000);
     expect(cents(fixedDiscount.net_amount)).toBe(-3000);
 
     expect(invoice.subtotal).toBe(-1000);
-    expect(invoice.tax).toBe(500);
-    expect(invoice.total_amount).toBe(-500);
+    expect(invoice.tax).toBe(0);
+    expect(invoice.total_amount).toBe(-1000);
   });
 });

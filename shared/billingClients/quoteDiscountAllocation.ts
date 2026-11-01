@@ -34,6 +34,7 @@
  */
 
 import { isQuoteItemIncluded, type QuoteItemInclusionInput } from '@alga-psa/core';
+import { allocateCappedLargestRemainder } from './discountAllocationBeforeTax';
 
 export type QuoteDiscountType = 'fixed' | 'percentage';
 
@@ -142,41 +143,26 @@ export function allocateQuoteDiscounts(
 
     const allocations: QuoteDiscountItemAllocation[] = [];
     if (resolved > 0 && remainingEligible.length > 0) {
-      const weightTotal = remainingEligible.reduce((sum, entry) => sum + entry.remaining, 0);
-      const shares = remainingEligible.map((entry) => {
-        const exact = (resolved * entry.remaining) / weightTotal;
-        return {
-          base: entry.base,
-          share: Math.floor(exact),
-          remainder: exact - Math.floor(exact),
-        };
-      });
-
-      let distributed = shares.reduce((sum, entry) => sum + entry.share, 0);
-      let leftover = resolved - distributed;
-      const byRemainder = [...shares]
-        .map((entry, index) => ({ ...entry, index }))
-        .sort((a, b) => {
-          if (b.remainder !== a.remainder) return b.remainder - a.remainder;
-          return a.index - b.index;
-        });
-
-      for (const entry of byRemainder) {
-        if (leftover <= 0) break;
-        entry.share += 1;
-        leftover -= 1;
-        distributed += 1;
-      }
-
-      const byIndex = [...byRemainder].sort((a, b) => a.index - b.index);
-      for (const entry of byIndex) {
-        if (entry.share <= 0) continue;
+      // Distribution is the shared integer largest-remainder allocation; the
+      // caller's base order (rank) breaks ties.
+      const shares = allocateCappedLargestRemainder(
+        resolved,
+        remainingEligible.map((entry, index) => ({
+          key: entry.base.id,
+          weight: entry.remaining,
+          cap: entry.remaining,
+          rank: index,
+        })),
+      );
+      for (const entry of remainingEligible) {
+        const share = shares.get(entry.base.id) ?? 0;
+        if (share <= 0) continue;
         allocations.push({
           baseItemId: entry.base.id,
-          amount: entry.share,
+          amount: share,
           isRecurring: entry.base.isRecurring,
         });
-        remainingByBase.set(entry.base.id, (remainingByBase.get(entry.base.id) ?? 0) - entry.share);
+        remainingByBase.set(entry.base.id, (remainingByBase.get(entry.base.id) ?? 0) - share);
       }
     }
 

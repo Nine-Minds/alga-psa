@@ -27,6 +27,7 @@ import {
   summarizeContractSide,
 } from '../../../../billingClients/quoteConversionDiscounts';
 import { resolveFixedMemberRatePair } from '../../../../billingClients/fixedMemberRate';
+import { allocateIncludedQuoteDiscounts } from '../../../../billingClients/quoteDiscountAllocation';
 import { prepareQuoteTermsForDb } from '../../../../lib/quoteTerms';
 import { SharedNumberingService } from '../../../../services/numberingService';
 
@@ -446,6 +447,16 @@ async function recalculateQuoteFinancials(
     );
   }
 
+  // LEVERAGE: pattern quote-recalc-dup — this mirrors recalculateQuoteFinancials in packages/billing; discount-before-tax had to be applied in both.
+  // Discount reduction each base row absorbs (same allocation as
+  // recalculateQuoteFinancials); tax is computed on the discounted base.
+  const shareByBaseId = new Map<string, number>();
+  for (const result of allocateIncludedQuoteDiscounts(items as any[], (item: any) => item.quote_item_id).discounts) {
+    for (const line of result.allocations) {
+      shareByBaseId.set(line.baseItemId, (shareByBaseId.get(line.baseItemId) ?? 0) + line.amount);
+    }
+  }
+
   let subtotal = 0;
   let discountTotal = 0;
   let tax = 0;
@@ -478,7 +489,7 @@ async function recalculateQuoteFinancials(
           knexOrTrx,
           tenant,
           quote.client_id,
-          netAmount,
+          Math.max(0, netAmount - (shareByBaseId.get(item.quote_item_id) ?? 0)),
           quoteDate,
           taxRegion ?? undefined,
           item.is_taxable !== false,

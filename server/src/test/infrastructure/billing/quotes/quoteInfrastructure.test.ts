@@ -829,8 +829,9 @@ describe('Quote infrastructure', () => {
     const reloadedQuote = await loadQuoteRow(quote.quote_id);
     expect(Number(reloadedQuote.subtotal)).toBe(1000);
     expect(Number(reloadedQuote.discount_total)).toBe(100);
-    expect(Number(reloadedQuote.tax)).toBe(100);
-    expect(Number(reloadedQuote.total_amount)).toBe(1000);
+    // 10% of the discounted base: 1000 - 100 = 900.
+    expect(Number(reloadedQuote.tax)).toBe(90);
+    expect(Number(reloadedQuote.total_amount)).toBe(990);
   });
 
   it('T064: Totals: adding an item triggers recalculation of all totals', async () => {
