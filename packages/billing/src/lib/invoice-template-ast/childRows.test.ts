@@ -4,6 +4,7 @@ import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 import { evaluateTemplateAst } from './evaluator';
 import { renderEvaluatedTemplateAst } from './react-renderer';
 import { validateTemplateAst } from './schema';
+import { buildBundleChildRowsPreset } from './bundleChildRows';
 import { templateHasComponentRows, templateUsesComponentPricing } from './componentPricing';
 
 const quantitiesOnly: TemplateChildRows = {
@@ -130,5 +131,23 @@ describe('templateUsesComponentPricing', () => {
       ...quantitiesOnly,
       cells: { ...quantitiesOnly.cells, amount: { value: { type: 'template', template: '{{component.total}}' } } },
     }))).toBe(true);
+  });
+
+  it('renders an unbound component price blank, not $0.00, under Quantities and prices', async () => {
+    const preset = buildBundleChildRowsPreset({ prices: true, showChange: true, columnIds: { quantity: 'qty', unitPrice: 'rate', total: 'amount' } });
+    const html = await render(buildAst(preset), {
+      items: [{
+        description: 'Managed IT Bundle', quantity: 1, unitPrice: 624000, total: 624000,
+        components: [{ name: 'Backup users', quantity: 45, quantityChange: -1, pricingBasis: 'bundle', total: 12300 }],
+      }],
+    });
+    const row = html.split('<tr').find((r) => r.includes('Backup users')) ?? '';
+    const cells = row.match(/<td[\s\S]*?<\/td>/g) ?? [];
+    expect(cells).toHaveLength(4);
+    expect(cells[2]).toMatch(/<td[^>]*><\/td>/);
+    expect(row).not.toContain('$0.00');
+    expect(row).not.toContain('0.00');
+    expect(cells[1]).toContain('45');
+    expect(cells[3]).toContain('$123.00');
   });
 });
