@@ -3537,7 +3537,7 @@
       "platformManaged": "Hanteras av AlgaPSA – ingen konfiguration behövs. Anslut en agent till en i steg 2.",
       "addAnother": "Lägg till en annan identitetsleverantör",
       "advancedOptions": "Avancerade alternativ",
-      "googleNoSetup": "Google kräver ingen konfiguration. Agenter loggar in med ID:t för sitt Google-tjänstkonto.",
+      "googleSetup": "Agenterna loggar in med en ID-token för ett Google-tjänstkonto. Endast målgruppen nedan behöver matcha hur de begär den.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3551,9 +3551,14 @@
       "fields": {
         "provider": "Identitetsleverantör",
         "entraTenantId": "Entra-klientorganisations-ID",
-        "audienceOptional": "Målgrupp (valfritt)",
         "audience": "Målgrupp",
         "subjectClaim": "Identifiera agenter med",
+        "audienceHelp": {
+          "microsoft": "Program-ID (klient-ID) för Entra-appregistreringen som dina agenter begär token för. Agenterna begär omfånget api://<det ID:t>/.default.",
+          "google": "Agenterna måste begära sin Google-ID-token med exakt den här målgruppen. Vi har fyllt i den här serverns MCP-URL, som är det vanliga valet.",
+          "custom": "API- eller resursidentifieraren som har konfigurerats hos din leverantör (till exempel en Auth0-API-identifierare). Den måste exakt matcha aud-anspråket i agenternas token. Den här serverns MCP-URL är ett bra val."
+        },
+        "audienceWhy": "Token som din leverantör har utfärdat till andra appar godkänns inte här.",
         "subjectClaimHelp": "Lämna tomt om inte identitetsleverantören anger något annat.",
         "issuer": "Utfärdare",
         "jwksUri": "URL för signeringsnycklar"
