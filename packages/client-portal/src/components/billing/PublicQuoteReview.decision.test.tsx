@@ -187,10 +187,18 @@ describe('PublicQuoteReview decision panel', () => {
       expect(totalsText()).not.toContain('€22.00');
     });
 
+    it('decided/accepted without a snapshot keeps the submitted selection and its totals', async () => {
+      await settle({ status: 'decided', decision: 'accepted', decidedAt: 'x' }, 'quote-link-decided');
+      expect(totalAmounts()).toHaveLength(2);
+      for (const t of totalAmounts()) expect(t).toContain('€22.00');
+      expect(totalsText()).not.toContain('€11.00');
+    });
+
     it.each([
       ['decided/rejected', { status: 'decided', decision: 'rejected', decidedAt: 'x', committed: { subtotal: 1000, discount_total: 0, tax: 100, total_amount: 1100, selectedOptionalQuoteItemIds: [] } }, 'quote-link-decided'],
       ['already_decided', { status: 'already_decided', decision: 'accepted', decidedAt: '2026-10-30' }, 'quote-link-decided'],
       ['changed', { status: 'changed' }, 'quote-link-changed'],
+      ['invalid_link', { status: 'invalid_link' }, 'quote-link-invalid'],
     ])('%s restores the original selection and totals', async (_n, resp, id) => {
       await settle(resp, id);
       expect(headerTotal()).toContain('€11.00');
