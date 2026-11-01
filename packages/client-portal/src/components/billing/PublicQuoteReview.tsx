@@ -72,13 +72,21 @@ function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, toke
   const [confirmedStatus, setConfirmedStatus] = useState<'accepted' | 'rejected' | null>(null);
   // Set only by a fresh `decided` outcome: the quote exactly as the server persisted it.
   const [committed, setCommitted] = useState<QuoteLinkCommittedSnapshot | null>(null);
+  // A fresh accept that came back without a snapshot: the submitted selection is the one the
+  // server committed, so keep it and keep previewing its totals instead of reverting.
+  const [acceptedWithoutSnapshot, setAcceptedWithoutSnapshot] = useState(false);
   const onSettled = useCallback((outcome: QuoteLinkSettledOutcome) => {
     setSettled(true);
     if (outcome.kind === 'decided' || outcome.kind === 'already_decided') setConfirmedStatus(outcome.decision);
     if (outcome.kind === 'decided' && outcome.decision === 'accepted' && outcome.committed) {
       setCommitted(outcome.committed);
+      setAcceptedWithoutSnapshot(false);
       setSelectedIds(new Set(outcome.committed.selectedOptionalQuoteItemIds));
+    } else if (outcome.kind === 'decided' && outcome.decision === 'accepted') {
+      setCommitted(null);
+      setAcceptedWithoutSnapshot(true);
     } else {
+      setAcceptedWithoutSnapshot(false);
       // Rejected, already decided, changed, invalid: the local toggles were never committed.
       // Show the server-rendered selection and totals so rows and totals agree.
       setCommitted(null);
@@ -100,8 +108,8 @@ function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, toke
   );
   // Same pure function the server uses; if any base row lacks its tax input, fall back to persisted totals.
   const preview = useMemo(
-    () => (canEditSelections ? computePublicQuotePreview(previewItems) : null),
-    [canEditSelections, previewItems],
+    () => (canEditSelections || (acceptedWithoutSnapshot && hasOptionalItems) ? computePublicQuotePreview(previewItems) : null),
+    [canEditSelections, acceptedWithoutSnapshot, hasOptionalItems, previewItems],
   );
   const previewUnavailable = canEditSelections && preview === null;
 
