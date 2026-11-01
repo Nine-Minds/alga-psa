@@ -10,7 +10,7 @@
  * `dispatchPaymentEvent`, every table, CHECK and index, and the whole purchase/upgrade domain.
  * Faked (and why): the L7a closure (not on main) — a recording `CoManagedUpgradeClosure`; PSA seed
  * initialisation (`initializeIndependentPsa`, needs the full seed catalogue); the `co-managed`
- * capability gate's `admits` (needs the release flag service). `sessionShape` below adapts three
+ * capability gate (`serves` open, `admits` closed: a customer has no sponsor entitlement). `sessionShape` below adapts three
  * response-shape gaps in the emulator, listed on that function.
  */
 import http from 'node:http';
@@ -21,7 +21,10 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 
 vi.mock('@alga-psa/core/capability', async importOriginal => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  admits: async () => ({ admitted: true }),
+  // The paying tenant is the co-managed CUSTOMER: it serves (participates) but has no sponsor entitlement,
+  // so `admits` is closed. The webhook handler must be gated on `serves`, not `admits`.
+  admits: async () => ({ admitted: false }),
+  serves: async () => ({ admitted: true }),
 }));
 const seeded: string[] = [];
 vi.mock('../../db/product-upgrade-operations.js', async importOriginal => ({
