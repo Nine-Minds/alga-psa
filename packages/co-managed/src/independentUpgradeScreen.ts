@@ -1,5 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
+import { capabilityFeatureFlag, forcedValue, serves } from '@alga-psa/core/capability';
+import { isFeatureFlagEnabled } from '@alga-psa/core/features';
 import { countCoManagedCommittedSeats, resolveSelfHostTier, verifyLicense, retainHostedPsaUpgradeCandidate, HostedPsaUpgradeAdmissionError } from '@alga-psa/licensing';
 import { snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, assertCoManagedSessionUnexpired,
   CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
@@ -51,16 +53,32 @@ export async function getCoManagedIndependentUpgradeScreen(db: Knex, input: CoMa
   });
 }
 
-/** Who the customer-only upgrade page exists for. `customer`: this tenant is the customer side of a
- * co-managed relationship (`co_management_relationships.tenant` is the customer; the same predicate the
- * screen above uses). `completed`: it has an independent-upgrade row, so a former customer, now on psa and
- * possibly no longer participating, still reaches the completed screen. Sponsors are neither.
- * `includeCustomer: false` skips the relationship query (caller already knows the capability is closed). */
-export async function getCoManagedUpgradeAudience(db: Knex, tenant: string, includeCustomer = true) {
+export type CoManagedUpgradeAccess = 'customer' | 'former' | 'closed';
+
+/**
+ * THE gate for the customer-only upgrade surface (page, page metadata, screen action). In order:
+ *  1. kill switch: FORCE_CAPABILITIES co-managed `off` or malformed is closed, whatever else is true;
+ *  2. release flag: off for the tenant is closed (a forced `on` stands in for the flag, as in `serves`);
+ *  3. `customer`: the capability `serves` the tenant AND it is the customer side of a relationship
+ *     (`co_management_relationships.tenant` is the customer; the predicate the screen uses);
+ *  4. `former`: it has a `co_managed_independent_upgrades` row, so a former customer, now on psa and no
+ *     longer participating, still reaches the completed screen without `serves`;
+ *  5. otherwise closed (sponsors land here).
+ * `serves` has no flag reference, hence step 2 is explicit. Steps 1-2 run no co-managed query.
+ */
+export async function resolveCoManagedUpgradeAccess(db: Knex, tenant: string): Promise<CoManagedUpgradeAccess> {
+  const forced = forcedValue(process.env.FORCE_CAPABILITIES, 'co-managed');
+  if (forced === 'off' || forced === 'malformed') return 'closed';
+  if (forced !== 'on') {
+    let flagOn = false;
+    try { flagOn = await isFeatureFlagEnabled(capabilityFeatureFlag('co-managed'), { tenantId: tenant }); } catch { flagOn = false; }
+    if (!flagOn) return 'closed';
+  }
   const own = tenantDb(db, tenant);
-  // LEVERAGE: pattern co-managed-customer-relationship — "active|terminated relationship on my own tenant" is also in getCoManagedIndependentUpgradeScreen
-  const customer = includeCustomer &&
-    Boolean(await own.table('co_management_relationships').whereIn('state', ['active', 'terminated']).first('relationship_id'));
-  const completed = Boolean(await own.table('co_managed_independent_upgrades').first('operation_id'));
-  return { customer, completed };
+  if ((await serves('co-managed', tenant)).served) {
+    // LEVERAGE: pattern co-managed-customer-relationship — "active|terminated relationship on my own tenant" is also in getCoManagedIndependentUpgradeScreen
+    if (await own.table('co_management_relationships').whereIn('state', ['active', 'terminated']).first('relationship_id')) return 'customer';
+  }
+  if (await own.table('co_managed_independent_upgrades').first('operation_id')) return 'former';
+  return 'closed';
 }

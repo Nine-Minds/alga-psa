@@ -85,7 +85,7 @@ export type { CoManagedIndependentUpgradeRequest, CoManagedIndependentUpgradeCom
   CoManagedIndependentUpgradeReceipt } from './independentUpgrade';
 export type { CoManagedUpgradeClosure } from './upgradeClosure';
 export { coManagedUpgradeClosure } from './upgradeClosureWiring';
-export { getCoManagedIndependentUpgradeScreen, getCoManagedUpgradeAudience } from './independentUpgradeScreen';
+export { getCoManagedIndependentUpgradeScreen, resolveCoManagedUpgradeAccess, type CoManagedUpgradeAccess } from './independentUpgradeScreen';
 export { prepareCoManagedUpgradePurchase, withCoManagedUpgradePurchaseAdmin, CO_MANAGED_UPGRADE_PURCHASE_STATES,
   CO_MANAGED_UPGRADE_PENDING_STATES } from './upgradePurchase';
 export type { CoManagedUpgradePurchase, CoManagedUpgradePurchaseRequest, CoManagedUpgradePurchaseState } from './upgradePurchase';
