@@ -9,16 +9,16 @@
  * SQL, the archive, the restore database layer (catalog/FK discovery, topological insert, cycle deferral), the receipt
  * state machine, the upload journal and the promotion transaction.
  * What is stood in: the co-managed export admission seam (relationship/entitlement/session plumbing is not what this
- * test is about), and the storage provider (in-memory). No L7b1 contributor emits blobs, so one test-only contributor
+ * test is about). The storage provider is the REAL StorageProviderFactory local provider on a temp basePath (its own
+ * getLocationIdentity; nothing here supplies one). No L7b1 contributor emits blobs, so one test-only contributor
  * and binder supply the file; see the final test for what that means for production.
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
 import { createHash, randomUUID } from 'node:crypto';
-import { copyFile, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { copyFile, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { Readable } from 'node:stream';
 import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant, createUser } from '../../../test-utils/testDataFactory';
@@ -40,6 +40,7 @@ import { withCoManagedPortableSnapshot } from '../../../../packages/co-managed/s
 import { sealPortableArchive } from '../../../../packages/co-managed/src/portableArchive';
 import { createPortableContributorRegistry, type PortableContributor } from '../../../../packages/co-managed/src/portableContributorRegistry';
 import type { PortableRestoreBlobBinder } from '../../../../packages/co-managed/src/portableWorkspaceRestoreFiles';
+import { StorageProviderFactory } from '@alga-psa/storage/StorageProviderFactory';
 import { restorePortableWorkspaceForInstallation } from '../../../../ee/server/src/lib/co-managed/portableWorkspaceRestore';
 
 const require = createRequire(import.meta.url);
@@ -51,8 +52,8 @@ const FILE_BYTES = Buffer.from('portable restore integration bytes\n'.repeat(64)
 const FILE_SHA = createHash('sha256').update(FILE_BYTES).digest('hex');
 const BLOB_ID = `test_file:${randomUUID()}`;
 
-let db: Knex, root: string, archivePath: string;
-let source: string, third: string, sourceAdmin: string;
+let db: Knex, root: string, archivePath: string, storageRoot: string;
+let source: string, third: string, sourceAdmin: string, sourceAuthor: string, ticketId: string, sourceContact: string;
 const destination = randomUUID();
 
 /** Test-only: the real work contributor, plus one blob. No L7b1 contributor emits blobs (documents are L7b3). */
@@ -62,19 +63,19 @@ const withFile = (contributor: PortableContributor): PortableContributor => ({ .
 const testRegistry = () => createPortableContributorRegistry(CORE_PORTABLE_CONTRIBUTORS.map(c => c.id === 'work' ? withFile(c) : c));
 const binders: PortableRestoreBlobBinder[] = [{ kind: 'test_file', bind: () => ({ name: 'report.txt', mimeType: 'text/plain' }) }];
 
-function memoryProvider(options: { failUploads?: boolean } = {}) {
-  const objects = new Map<string, Buffer>();
-  return { objects,
-    getCapabilities: () => ({ supportsStreaming: true }) as never,
-    getLocationIdentity: () => createHash('sha256').update('memory:l7b2-roundtrip').digest('hex'),
-    upload: async (stream: Readable, path: string, opts: { mime_type: string }) => {
-      if (options.failUploads) { stream.destroy(); throw new Error('simulated provider crash during staging'); }
-      const chunks: Buffer[] = []; for await (const chunk of stream) chunks.push(Buffer.from(chunk));
-      const body = Buffer.concat(chunks); objects.set(path, body);
-      return { path, size: body.length, mime_type: opts.mime_type } as never;
-    },
-    download: async (path: string) => objects.get(path) ?? (() => { throw new Error('missing object'); })(),
-    delete: async (path: string) => { objects.delete(path); } };
+/** The production local provider on a temp basePath. `failUploads` wraps it so staging crashes mid-restore. */
+async function localProvider(options: { failUploads?: boolean } = {}) {
+  const real = await StorageProviderFactory.createProvider();
+  const provider = !options.failUploads ? real : new Proxy(real, { get(target, key) {
+    if (key === 'upload') return async (stream: { destroy(): void }) => { stream.destroy(); throw new Error('simulated provider crash during staging'); };
+    const value = (target as any)[key]; return typeof value === 'function' ? value.bind(target) : value;
+  } });
+  return provider as typeof real;
+}
+/** Every stored object (regular file) under the provider's basePath. */
+async function storedObjects() {
+  const entries = await readdir(storageRoot, { recursive: true, withFileTypes: true });
+  return entries.filter(entry => entry.isFile()).map(entry => join(entry.parentPath, entry.name));
 }
 
 /** Every table that carries a tenant column, and how many rows a tenant holds in each. */
@@ -96,6 +97,9 @@ async function counts(tenant: string, tables: string[]) {
 beforeAll(async () => {
   db = await createTestDbConnection();
   root = await mkdtemp(join(tmpdir(), 'alga-l7b2-roundtrip-'));
+  storageRoot = join(root, 'storage');
+  process.env.STORAGE_DEFAULT_PROVIDER = 'local'; process.env.STORAGE_LOCAL_BASE_PATH = storageRoot;
+  StorageProviderFactory.clearProvider();
   await writeFile(join(root, 'source.txt'), FILE_BYTES);
 
   source = await createTenant(db, 'Source workspace'); third = await createTenant(db, 'Unrelated third tenant');
@@ -108,7 +112,33 @@ beforeAll(async () => {
   await db('clients').insert({ tenant: source, client_id: client, client_name: 'Customer' });
   await db('boards').insert({ tenant: source, board_id: board, board_name: 'Support' });
   await db('statuses').insert({ tenant: source, status_id: status, name: 'Open', status_type: 'ticket', item_type: 'ticket', order_number: 1, board_id: board, is_default: true });
-  await db('tickets').insert({ tenant: source, ticket_id: randomUUID(), ticket_number: 'T-1001', title: 'Printer on fire', client_id: client, board_id: board, status_id: status, entered_by: sourceAdmin });
+  ticketId = randomUUID();
+  await db('tickets').insert({ tenant: source, ticket_id: ticketId, ticket_number: 'T-1001', title: 'Printer on fire', client_id: client, board_id: board, status_id: status, entered_by: sourceAdmin });
+  // D3 fixture: authors of every kind, task comments and audit logs, none of whose FKs the contributors declare.
+  sourceAuthor = await createUser(db, source, { first_name: 'Bea', last_name: 'Author' });
+  sourceContact = randomUUID();
+  await db('contacts').insert({ tenant: source, contact_name_id: sourceContact, full_name: 'Carl Contact', email: 'carl@example.test', client_id: client });
+  const comment = async (author: Record<string, unknown>, note: string) => {
+    const commentId = randomUUID(), threadId = randomUUID();
+    await db('comment_threads').insert({ tenant: source, thread_id: threadId, ticket_id: ticketId, root_comment_id: commentId, is_internal: false });
+    await db('comments').insert({ tenant: source, comment_id: commentId, ticket_id: ticketId, thread_id: threadId, note, is_internal: false, is_resolution: false, ...author });
+  };
+  await comment({ user_id: sourceAdmin, author_type: 'internal' }, 'comment by the administrator');
+  await comment({ user_id: sourceAuthor, author_type: 'internal' }, 'comment by another user');
+  await comment({ contact_id: sourceContact, author_type: 'client' }, 'comment by a contact');
+  const projectStatus = randomUUID(), project = randomUUID(), phase = randomUUID(), task = randomUUID(), taskComment = randomUUID(), taskThread = randomUUID();
+  await db('statuses').insert({ tenant: source, status_id: projectStatus, name: 'Active', status_type: 'project', item_type: 'project', order_number: 1, is_default: true });
+  await db('projects').insert({ tenant: source, project_id: project, project_name: 'Rollout', status: projectStatus, wbs_code: '1', client_id: client, project_number: 'P-1' });
+  await db('project_phases').insert({ tenant: source, phase_id: phase, project_id: project, phase_name: 'Phase 1', status: 'open', order_number: 1, wbs_code: '1.1' });
+  await db('project_tasks').insert({ tenant: source, task_id: task, phase_id: phase, task_name: 'Install', wbs_code: '1.1.1' });
+  await db('comment_threads').insert({ tenant: source, thread_id: taskThread, project_task_id: task, root_comment_id: taskComment, is_internal: false });
+  await db('project_task_comments').insert({ tenant: source, task_comment_id: taskComment, task_id: task, user_id: sourceAuthor, author_type: 'internal', note: 'task comment', thread_id: taskThread });
+  const actorReference = randomUUID();
+  await db('collaboration_actor_references').insert({ tenant: source, actor_reference_id: actorReference, actor_tenant: third, actor_user_id: randomUUID(), display_name: 'Partner Tech', organization_name: 'Partner IT' });
+  const audit = (values: Record<string, unknown>) => db('ticket_audit_logs').insert({ tenant: source, ticket_id: ticketId, event_type: 'TICKET_UPDATED', entity_type: 'ticket',
+    source: 'system', occurred_at: new Date(), ...values });
+  await audit({ actor_type: 'user', actor_user_id: sourceAuthor });
+  await audit({ actor_type: 'user', actor_reference_id: actorReference, actor_display_name: 'Partner Tech', actor_organization_name: 'Partner IT' });
   // The third tenant holds data of its own so "unchanged" is a real assertion.
   const thirdClient = randomUUID(); await db('clients').insert({ tenant: third, client_id: thirdClient, client_name: 'Bystander' });
   await db('tickets').insert({ tenant: third, ticket_id: randomUUID(), ticket_number: 'T-1', title: 'Bystander ticket', client_id: thirdClient });
@@ -149,7 +179,7 @@ describe('portable restore round trip (A6)', () => {
     const tables = await tenantTables(), thirdBefore = await counts(third, tables), sourceBefore = await counts(source, tables);
 
     await step('refuses a wrong passphrase before writing anything', async () => {
-      await expect(restorePortableWorkspaceForInstallation(db, { ...request(), passphrase: 'a different passphrase entirely' }, {}, { createProvider: async () => memoryProvider() as never, binders }))
+      await expect(restorePortableWorkspaceForInstallation(db, { ...request(), passphrase: 'a different passphrase entirely' }, {}, { createProvider: async () => localProvider() as never, binders }))
         .rejects.toThrow();
       expect(await counts(destination, tables)).toEqual({});
       expect(await db('portable_workspace_restores').where({ tenant: destination })).toHaveLength(0);
@@ -159,29 +189,46 @@ describe('portable restore round trip (A6)', () => {
       // Production ships no blob binder (L7b1 contributors emit no blobs; documents arrive with L7b3). A file-bearing
       // archive therefore cannot be restored in production yet: this is a named gap, not a silent skip.
       const fresh = randomUUID();
-      await expect(restorePortableWorkspaceForInstallation(db, { ...request(), destinationTenant: fresh }, {}, { createProvider: async () => memoryProvider() as never, }))
+      await expect(restorePortableWorkspaceForInstallation(db, { ...request(), destinationTenant: fresh }, {}, { createProvider: async () => localProvider() as never, }))
         .rejects.toThrow(/no file binder/);
       expect(await counts(fresh, tables)).toEqual({});
       expect(await db('portable_workspace_restores').where({ tenant: fresh })).toHaveLength(0);
     });
 
-    await step('a crash while staging leaves a staged receipt and no promoted rows; --resume then completes without duplicates', async () => {
-      await expect(restorePortableWorkspaceForInstallation(db, request(), {}, { createProvider: async () => memoryProvider({ failUploads: true }) as never, binders })).rejects.toThrow(/simulated provider crash/);
-      const receipt = await db('portable_workspace_restores').where({ tenant: destination }).first();
-      expect(receipt.state).toBe('staged');
-      expect(await db('tickets').where({ tenant: destination })).toHaveLength(0);
-      expect(await db('external_files').where({ tenant: destination })).toHaveLength(0);
-      expect(await db('portable_restore_suspensions').where({ tenant: destination }).first()).toMatchObject({ reason: 'portable_restore_in_progress' });
-      // A re-run without --resume must not start a second restore over the staged one.
-      await expect(restorePortableWorkspaceForInstallation(db, request(), {}, { createProvider: async () => memoryProvider() as never, binders })).rejects.toThrow(/resume/);
+    const journal = () => db('portable_workspace_restore_uploads').where({ tenant: destination });
+    await step('a crash while staging leaves nothing that blocks a later restore: no receipt, no suspension, no rows (D4)', async () => {
+      await expect(restorePortableWorkspaceForInstallation(db, request(), {}, { createProvider: async () => localProvider({ failUploads: true }) as never, binders })).rejects.toThrow(/simulated provider crash/);
+      expect(await db('portable_workspace_restores').where({ tenant: destination })).toHaveLength(0);
+      expect(await db('portable_restore_suspensions').where({ tenant: destination })).toHaveLength(0);
+      expect(await counts(destination, tables.filter(name => !name.startsWith('portable_')))).toEqual({});
+      expect((await journal()).every(row => row.status !== 'committed')).toBe(true); // uploads are recovered by the journal + cleanup job
+      await expect(restorePortableWorkspaceForInstallation(db, { ...request(), resume: true }, {}, { createProvider: async () => localProvider() as never, binders })).rejects.toThrow(/nothing to resume/);
+    });
 
-      const provider = memoryProvider();
-      const result = await restorePortableWorkspaceForInstallation(db, { ...request(), resume: true }, {}, { createProvider: async () => provider as never, binders });
-      expect(result.outcome).toBe('resumed');
+    await step('a failure inside promotion (after bytes are staged) rolls the receipt and suspension back too (D4)', async () => {
+      await db.raw(`CREATE OR REPLACE FUNCTION l7b2_force_promotion_failure() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+        IF NEW.tenant = '${destination}' THEN RAISE EXCEPTION 'forced promotion failure'; END IF; RETURN NEW; END $$`);
+      await db.raw('CREATE TRIGGER l7b2_force_promotion_failure BEFORE INSERT ON tickets FOR EACH ROW EXECUTE FUNCTION l7b2_force_promotion_failure()');
+      try {
+        await expect(restorePortableWorkspaceForInstallation(db, request(), {}, { createProvider: async () => localProvider() as never, binders })).rejects.toThrow(/forced promotion failure/);
+      } finally {
+        await db.raw('DROP TRIGGER IF EXISTS l7b2_force_promotion_failure ON tickets'); await db.raw('DROP FUNCTION IF EXISTS l7b2_force_promotion_failure()');
+      }
+      expect(await db('portable_workspace_restores').where({ tenant: destination })).toHaveLength(0);
+      expect(await db('portable_restore_suspensions').where({ tenant: destination })).toHaveLength(0);
+      expect(await counts(destination, tables.filter(name => !name.startsWith('portable_')))).toEqual({});
+      expect((await journal()).every(row => row.status !== 'committed')).toBe(true);
+    });
+
+    await step('the same destination then restores in a single --apply', async () => {
+      const provider = await localProvider();
+      const result = await restorePortableWorkspaceForInstallation(db, request(), {}, { createProvider: async () => provider as never, binders });
+      expect(result.outcome).toBe('restored');
       expect(result.receipt.state).toBe('verified');
       expect(await db('portable_workspace_restores').where({ tenant: destination })).toHaveLength(1);
       expect(await db('tickets').where({ tenant: destination })).toHaveLength(1);
       expect(await db('portable_restore_suspensions').where({ tenant: destination }).first()).toMatchObject({ reason: 'portable_restore_pending_activation' });
+      expect((await journal()).filter(row => row.status === 'committed')).toHaveLength(1);
 
       // The ticket and the file resolve under the destination tenant; the bytes read back with a matching hash.
       const ticket = await db('tickets').where({ tenant: destination, ticket_number: 'T-1001' }).first();
@@ -193,7 +240,8 @@ describe('portable restore round trip (A6)', () => {
       const stored = await provider.download(files[0].storage_path);
       expect(createHash('sha256').update(stored).digest('hex')).toBe(FILE_SHA);
       expect(Number(files[0].file_size)).toBe(FILE_BYTES.length);
-      expect([...provider.objects.keys()]).toEqual([files[0].storage_path]); // exactly one object, no leaked staging
+      expect((await storedObjects()).filter(path => path.endsWith(files[0].storage_path.split('/').pop()))).toHaveLength(1); // the bytes landed once
+      expect(await storedObjects()).toHaveLength(1); // and nothing from the failed attempts remains
       expect(await db('users').where({ tenant: destination, user_id: result.receipt.administrator_user_id }).first()).toBeTruthy();
     });
 
@@ -205,7 +253,7 @@ describe('portable restore round trip (A6)', () => {
       for (const table of written) {
         expect([...archived, 'external_files', 'ticket_audit_logs', 'audit_logs']).toContain(table);
       }
-      const nonEmptyArchived = ['tenants', 'users', 'roles', 'permissions', 'user_roles', 'role_permissions', 'clients', 'boards', 'statuses', 'tickets'];
+      const nonEmptyArchived = ['tenants', 'users', 'roles', 'permissions', 'user_roles', 'role_permissions', 'clients', 'boards', 'statuses', 'tickets', 'contacts', 'comments', 'comment_threads', 'projects', 'project_tasks', 'project_task_comments', 'ticket_audit_logs', 'collaboration_actor_references'];
       for (const table of nonEmptyArchived) expect(written).toContain(table);
       // The receipt is the one deliberate provenance record (source_tenant, source administrator, package id); every other row must be clean.
       expect(await db('portable_workspace_restores').where({ tenant: destination }).first()).toMatchObject({ source_tenant: source });
@@ -216,12 +264,47 @@ describe('portable restore round trip (A6)', () => {
       expect(await counts(source, tables)).toEqual(sourceBefore); // the source workspace is untouched
     });
 
+    await step('authored rows resolve to the restored users, contacts and actor references, not the source ids (D3)', async () => {
+      const ticket = await db('tickets').where({ tenant: destination, ticket_number: 'T-1001' }).first();
+      expect(ticket.ticket_id).not.toBe(ticketId);
+      const users = await db('users').where({ tenant: destination }), contacts = await db('contacts').where({ tenant: destination });
+      const restoredUser = (name: string) => users.find(user => user.first_name === name)!;
+      const restoredContact = contacts.find(contact => contact.full_name === 'Carl Contact')!;
+      expect(restoredUser('Bea').user_id).not.toBe(sourceAuthor); expect(restoredContact.contact_name_id).not.toBe(sourceContact);
+      const comments = await db('comments').where({ tenant: destination, ticket_id: ticket.ticket_id });
+      expect(comments).toHaveLength(3);
+      const byNote = (note: string) => comments.find(comment => comment.note === note)!;
+      expect(byNote('comment by the administrator').user_id).toBe((await db('portable_workspace_restores').where({ tenant: destination }).first()).administrator_user_id);
+      expect(byNote('comment by another user').user_id).toBe(restoredUser('Bea').user_id);
+      expect(byNote('comment by a contact')).toMatchObject({ contact_id: restoredContact.contact_name_id, user_id: null });
+      const taskComments = await db('project_task_comments').where({ tenant: destination });
+      expect(taskComments).toHaveLength(1); expect(taskComments[0].user_id).toBe(restoredUser('Bea').user_id);
+      const audits = await db('ticket_audit_logs').where({ tenant: destination, ticket_id: ticket.ticket_id });
+      expect(audits).toHaveLength(2);
+      expect(audits.find(row => row.actor_user_id)!.actor_user_id).toBe(restoredUser('Bea').user_id);
+      const reference = audits.find(row => row.actor_reference_id)!;
+      expect(await db('collaboration_actor_references').where({ tenant: destination, actor_reference_id: reference.actor_reference_id }).first()).toMatchObject({ display_name: 'Partner Tech' });
+      // Every id a restored comment, task comment or audit row carries is a destination-tenant row; none is a source id.
+      const sourceIds = [sourceAdmin, sourceAuthor, sourceContact, ticketId];
+      for (const row of [...comments, ...taskComments, ...audits]) for (const value of Object.values(row)) expect(sourceIds).not.toContain(value);
+      expect(await db.raw(`SELECT 1 FROM comments c WHERE c.tenant = ? AND c.user_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM users u WHERE u.tenant = c.tenant AND u.user_id = c.user_id)`, [destination]).then(r => r.rows)).toHaveLength(0);
+    });
+
+    await step('--resume completes a restore interrupted after promotion (state promoted), without duplicates', async () => {
+      const before = await counts(destination, tables);
+      await db('portable_workspace_restores').where({ tenant: destination }).update({ state: 'promoted', verified_at: null });
+      const result = await restorePortableWorkspaceForInstallation(db, { ...request(), resume: true }, {}, { createProvider: async () => localProvider() as never, binders });
+      expect(result.outcome).toBe('resumed'); expect(result.receipt.state).toBe('verified');
+      expect(await counts(destination, tables)).toEqual(before);
+    });
+
     await step('a second apply is idempotent: already-restored, and no rows are written', async () => {
       const before = await counts(destination, tables);
-      const provider = memoryProvider();
+      const objectsBefore = await storedObjects();
+      const provider = await localProvider();
       const result = await restorePortableWorkspaceForInstallation(db, request(), {}, { createProvider: async () => provider as never, binders });
       expect(result.outcome).toBe('already-restored');
-      expect(provider.objects.size).toBe(0);
+      expect(await storedObjects()).toEqual(objectsBefore);
       expect(await counts(destination, tables)).toEqual(before);
       const again = await restorePortableWorkspaceForInstallation(db, { ...request(), resume: true }, {}, { createProvider: async () => provider as never, binders });
       expect(again.outcome).toBe('already-restored');
@@ -234,7 +317,7 @@ describe('portable restore round trip (A6)', () => {
 
     await step('refuses a restore into a non-fresh installation (a different destination while a restore receipt exists)', async () => {
       const other = randomUUID();
-      await expect(restorePortableWorkspaceForInstallation(db, { ...request(), destinationTenant: other }, {}, { createProvider: async () => memoryProvider() as never, binders }))
+      await expect(restorePortableWorkspaceForInstallation(db, { ...request(), destinationTenant: other }, {}, { createProvider: async () => localProvider() as never, binders }))
         .rejects.toThrow(/already holds|fresh/);
       expect(await counts(other, tables)).toEqual({});
       expect(await db('portable_workspace_restores').where({ tenant: other })).toHaveLength(0);

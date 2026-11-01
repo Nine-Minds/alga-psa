@@ -17,7 +17,7 @@ import { assertPortableTransferActive, awaitPortableTransfer, createPortableWrit
   withPortableTransfer, type PortableTransferOptions } from '../../../../../packages/co-managed/src/portableTransfer';
 import { isCoManagedUuid } from '../../../../../packages/co-managed/src/sharedWorkIdentity';
 import { prepareCoManagedPortableWorkspaceVault } from './portableWorkspaceRestoreVault';
-import { insertCoManagedPortableWorkspaceDatabase, portableRestoreColumnNullability, resolveCoManagedPortableDestinationCatalogs } from './portableWorkspaceRestoreDatabase';
+import { insertCoManagedPortableWorkspaceDatabase, portableRestoreColumnNullability, portableRestoreDestinationReferences, resolveCoManagedPortableDestinationCatalogs } from './portableWorkspaceRestoreDatabase';
 import { beginPortableRestoreUpload, commitPortableRestoreUpload, settlePortableRestoreUpload } from './portableWorkspaceRestoreUploads';
 import { assertPortableRestoreInstallationAuthority } from './portableRestoreInstallationAuthority';
 export { assertPortableRestoreInstallationAuthority } from './portableRestoreInstallationAuthority';
@@ -163,7 +163,8 @@ export async function restorePortableWorkspaceForInstallation(db: Knex, input: {
         // 2. Read-only preparation: nothing is written until every archive-level check has passed.
         const catalogs = await db.transaction(trx => resolveCoManagedPortableDestinationCatalogs(trx, manifest));
         const nullable = await db.transaction(trx => portableRestoreColumnNullability(trx, manifest));
-        const records = prepareCoManagedPortableWorkspaceRecords({ manifest, destinationTenant: tenant, destinationCatalogMappings: catalogs, externalColumnNullable: nullable },
+        const destinationReferences = await db.transaction(trx => portableRestoreDestinationReferences(trx, manifest));
+        const records = prepareCoManagedPortableWorkspaceRecords({ manifest, destinationTenant: tenant, destinationCatalogMappings: catalogs, externalColumnNullable: nullable, destinationReferences },
           { allocateUuid: deterministicUuids(sha256, tenant, 'records') });
         const administratorUserId = records.domains.find(domain => domain.table === 'users' && domain.column === 'user_id')!.mappings
           .find(pair => same(pair.source, request.sourceAdministratorUserId))?.destination;
@@ -174,26 +175,20 @@ export async function restorePortableWorkspaceForInstallation(db: Knex, input: {
         const vault = await prepareCoManagedPortableWorkspaceVault({ manifest, restoreRecords: files, passphrase: request.passphrase }, { reservedUuids: files.allocatedIds, allocateUuid: deterministicUuids(sha256, tenant, 'vault') });
         const summary = (written: Record<string, number>, historical: string[], globals: string[]) => ({ written, historical, globals });
 
-        // 3. Begin: freshness, receipt (staged) and the dedicated suspension row, atomically.
-        let receipt = prior;
-        if (!prior) {
-          receipt = await db.transaction(async trx => {
-            await lock(trx);
-            const raced = await readReceipt(trx);
-            if (raced) fail('destination already belongs to another restore or workspace');
-            await assertFreshPortableRestoreInstallation(trx, tenant);
-            if (await tenantDb(trx, tenant).table('tenants').first('tenant')) fail('destination already belongs to another restore or workspace');
-            const own = tenantDb(trx, tenant);
-            await own.table('portable_workspace_restores').insert({ tenant, source_tenant: sourceTenant, package_id: manifest.context.packageId, archive_sha256: sha256,
-              state: 'staged', source_administrator_user_id: request.sourceAdministratorUserId, administrator_user_id: administratorUserId });
-            await own.table('portable_restore_suspensions').insert({ tenant, reason: 'portable_restore_in_progress' });
-            return (await readReceipt(trx))!;
-          });
-        }
+        // 3. Nothing durable is written for a brand-new destination until promotion is certain: the receipt and
+        //    the dedicated suspension row are created inside the promotion transaction (step 4), so a failed apply
+        //    rolls them back and never wedges the destination. A legacy `staged` receipt is still resumed.
+        const receipt = prior;
+        const assertDestinationFresh = async (trx: Knex.Transaction) => {
+          await assertFreshPortableRestoreInstallation(trx, tenant);
+          if (await tenantDb(trx, tenant).table('tenants').first('tenant')) fail('destination already belongs to another restore or workspace');
+        };
+        // Refuse a non-fresh installation before any byte is staged; the promotion transaction re-checks authoritatively.
+        if (!receipt) await db.transaction(async trx => { await lock(trx); await assertDestinationFresh(trx); });
         let written: Record<string, number> = {}, historical: string[] = [], globals: string[] = [];
 
         // 4. Stage bytes, then promote everything in one transaction.
-        if (receipt!.state === 'staged') {
+        if (!receipt || receipt.state === 'staged') {
           const provider = await awaitPortableTransfer(createProvider);
           assertPortableTransferActive();
           const attempt = await beginPortableRestoreUpload(db, { tenant, packageId: manifest.context.packageId, archiveSha256: sha256,
@@ -205,12 +200,19 @@ export async function restorePortableWorkspaceForInstallation(db: Knex, input: {
               assertPortableTransferActive();
               await lock(trx);
               const current = await readReceipt(trx);
-              if (!current || !matches(current)) fail('restore receipt changed');
-              if (current.state !== 'staged') return undefined; // a concurrent resume already promoted
+              if (current && !matches(current)) fail('destination already belongs to another restore or workspace');
+              if (current && current.state !== 'staged') return undefined; // a concurrent resume already promoted
+              if (!current) await assertDestinationFresh(trx);
               const result = await insertCoManagedPortableWorkspaceDatabase(trx, { preparedRecords: files, externalFiles: lease!.externalFiles, vault });
               const own = tenantDb(trx, tenant);
-              await own.table('portable_workspace_restores').where({ state: 'staged' }).update({ state: 'promoted', promoted_at: trx.fn.now() });
-              await own.table('portable_restore_suspensions').update({ reason: 'portable_restore_pending_activation' });
+              if (current) {
+                await own.table('portable_workspace_restores').where({ state: 'staged' }).update({ state: 'promoted', promoted_at: trx.fn.now() });
+                await own.table('portable_restore_suspensions').update({ reason: 'portable_restore_pending_activation' });
+              } else {
+                await own.table('portable_workspace_restores').insert({ tenant, source_tenant: sourceTenant, package_id: manifest.context.packageId, archive_sha256: sha256,
+                  state: 'promoted', promoted_at: trx.fn.now(), source_administrator_user_id: request.sourceAdministratorUserId, administrator_user_id: administratorUserId });
+                await own.table('portable_restore_suspensions').insert({ tenant, reason: 'portable_restore_pending_activation' });
+              }
               await commitPortableRestoreUpload(trx, attempt, lease!.externalFiles);
               assertPortableTransferActive();
               return result;
@@ -254,6 +256,9 @@ async function expectedCounts(files: ReturnType<typeof prepareCoManagedPortableW
   const globals = new Set(Object.keys(files.globalCatalogs));
   const counts: Record<string, number> = {};
   for (const table of files.tables) if (!historical.has(table) && !globals.has(table)) counts[table] = files.records[table].length;
+  // Historical tables are projected into native ones (handoff history becomes ticket audit rows) on top of the
+  // table's own rows; the destination holds both, so verification must expect both.
+  for (const profile of files.profiles) for (const [table, rows] of Object.entries(profile.project?.(files) ?? {})) if (table in counts) counts[table] += rows.length;
   counts.external_files = files.externalFiles.length;
   return counts;
 }
