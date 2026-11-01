@@ -21,6 +21,24 @@ This records the bounded investigation for YourColo and `alga-2026-0002687`. The
   The same window returned no `Undefined database column (42703)` or entity-tag route lines. The
   notification log contains no comment body or database error. Therefore the customer failure's
   exact column and root cause remain unresolved; no migration is justified by this evidence.
+- Follow-up Loki queries covered the reported October 12–13 dates and the October 22 confirmation
+  window. `{namespace="msp",container="sebastian"}` returned app logs and YourColo ticket
+  notification subjects on each date, across the hosted blue and green `sebastian` pods. This
+  establishes that those dates are retained and that the selector includes the hosted YourColo
+  application stream. It does not establish access to a separate customer appliance, nor that an
+  API request/error was logged. No `/api/v1/tags/entity` or `INTERNAL_CONFIGURATION` lines matched
+  in these windows.
+- The Oct 12–13 selector returned five 42703 entries, but their SQL messages identify unrelated
+  queries: `contract_lines.created_by` (Oct 12 14:54:24 UTC), `service_catalog.currency_code`
+  (Oct 13 10:40:22 and 10:40:40 UTC), and `contract_lines.updated_by` (Oct 13 12:29:16 and
+  12:29:27 UTC). The Oct 22 query returned zero 42703 entries. These do not identify the YourColo
+  tag failure column. Structured `table`/`column` fields were undefined for these logs; the names
+  above came from the SQL error messages.
+- Other ticket-tagging entry points are separate: `TicketService.createTicket` and
+  `TicketService.updateTicket` accept optional `tags` and call `handleTags`, but that helper is
+  currently a placeholder that logs and skips normalized tag writes. No evidence connects those
+  no-op paths to this REST entity-tag 500, so they are recorded for follow-up rather than changed
+  here.
 - The app server was not started. The customer defect was not reproduced against the appliance.
   The previous `stack-up` report (`exit 7: no output`) remains undiagnosed: no originating command
   output or matching stack-up log was available to establish its cause.
@@ -52,6 +70,37 @@ for term in 'YourColo' 'alga-2026-0002687' 'Undefined database column (42703)' '
 done
 ```
 
+The additional historical windows were queried with these exact UTC bounds and selector. The
+YourColo/ticket positive-control queries show the hosted customer stream was present in the selected
+namespace/container on those dates; limits are 100 lines per query, so this is a bounded diagnostic
+query rather than a completeness guarantee.
+
+```sh
+for window in \
+  '2026-10-12 00:00:00|2026-10-14 00:00:00' \
+  '2026-10-22 00:00:00|2026-10-23 00:00:00'; do
+  start=${window%%|*}
+  end=${window##*|}
+  for term in 'YourColo' 'alga-2026-0002687' 'Undefined database column (42703)' 'INTERNAL_CONFIGURATION' '/api/v1/tags/entity'; do
+    curl -fsSG 'http://127.0.0.1:18101/loki/api/v1/query_range' \
+      --data-urlencode "query={namespace=\"msp\",container=\"sebastian\"} |= \"$term\"" \
+      --data-urlencode "start=$(date -u -d "$start" +%s)000000000" \
+      --data-urlencode "end=$(date -u -d "$end" +%s)000000000" \
+      --data-urlencode 'limit=100' --data-urlencode 'direction=forward'
+  done
+done
+```
+
+Observed results: Oct 12–13 produced YourColo/ticket notification matches, five unrelated 42703
+entries, and no tag-route or `INTERNAL_CONFIGURATION` matches. Oct 22 produced YourColo/ticket
+notification matches, zero 42703 entries, and no tag-route or `INTERNAL_CONFIGURATION` matches.
+The exact column for the reported failure still requires the original failed request's UTC timestamp
+and trace/request identifier (or full server error/access log), plus confirmation of the deployment
+pod/namespace. To determine schema drift, obtain the affected database's `tag_mappings` and
+`tag_definitions` columns from `information_schema.columns` and its applied migration ledger
+(`knex_migrations`) around the v1.6.9 deployment. Neither the customer database nor its migration
+ledger is available in this checkout. The local repository has only a `v1.6.0` tag, not v1.6.9.
+
 Check local release and migration availability with:
 
 ```sh
@@ -81,4 +130,20 @@ git log --all --format='%h %ad %s' --date=short -- \
 - `npx eslint packages/tags/src/models/tagMapping.ts server/src/lib/api/controllers/ApiTagController.ts server/src/lib/api/services/TagService.ts server/src/test/integration/api/tagEntityRoute.integration.test.ts server/src/test/integration/api/helpers/withRolledBackSchemaContract.ts server/src/test/unit/api/apiMiddleware.productAccess.test.ts` completed with 0 errors and 88 warnings. The warnings are unused imports/parameters, `any`, and non-null assertions in the existing controller/service files; the added helper/model/test lines emitted no warning.
 - `npm run typecheck` from `server/` was attempted and failed when Node reached its 4 GB heap limit (`FATAL ERROR: Reached heap limit`).
 - `NEXT_TELEMETRY_DISABLED=1 npm run build:source` compiled successfully and generated all 74 static pages. Next reported that it skipped type validation; the explicit typecheck above remains the type-validation result.
+- A scoped TypeScript check covering the changed production modules passed with no diagnostics:
+  `npx tsc --project /tmp/tag-route-tsconfig.json --pretty false` from `server/`. That temporary
+  config extends `server/tsconfig.json`, enables `noEmit`, disables incremental output, and includes
+  only `packages/tags/src/models/tagMapping.ts`, `server/src/lib/api/controllers/ApiTagController.ts`,
+  and `server/src/lib/api/services/TagService.ts` (imports are type-checked transitively).
 - No app server or live HTTP check was run.
+
+## Customer-specific unresolved evidence
+
+The historical hosted Loki window is retained and includes YourColo's hosted ticket-notification
+stream, but does not expose the failed REST request or a related tag-table error. The selected
+namespace/container does not prove coverage of an appliance installation. The customer root cause
+therefore remains unresolved and no schema migration or customer-specific repair is claimed. The
+`stack-up` failure (`exit 7: no output`) also remains undiagnosed because no originating command
+output or matching stack-up log was available. Review first when supplied: request timestamp and
+trace ID, deployment identity (hosted pod vs appliance), full 42703 SQL error, and the affected
+database's tag schema plus applied migration history.
