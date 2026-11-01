@@ -1,7 +1,7 @@
 /* @vitest-environment jsdom */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, cleanup } from '@testing-library/react';
+import { render, cleanup, act } from '@testing-library/react';
 import TaskForm from '../TaskForm';
 import { fireEvent, waitFor, screen as rtlScreen } from '@testing-library/react';
 import { ProjectDataSourceProvider } from '../../context/ProjectDataSourceContext';
@@ -168,7 +168,7 @@ afterEach(() => {
   cleanup();
 });
 
-afterEach(() => { cleanup(); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 const phase = { phase_id: 'phase-1', project_id: 'project-1', phase_name: 'Phase 1', wbs_code: '1', tenant: 't' } as IProjectPhase;
 const statuses = [{ project_status_mapping_id: 'status-1', name: 'Open', custom_name: null, is_closed: false, is_visible: true, display_order: 1, project_id: 'project-1', status_id: 'status-1', is_standard: false } as ProjectStatus];
@@ -177,11 +177,16 @@ const task = {
   project_status_mapping_id: 'status-1', created_at: new Date(), updated_at: new Date(), wbs_code: '1', start_date: null, due_date: null, task_type_key: 'task', tenant: 't',
 } as never;
 
+const resolvingTree = () => vi.fn().mockResolvedValue([{ value: 'project-1', label: 'Project 1', type: 'project', children: [] }]);
+/** A native source whose tree resolves, so no native mount in this file can reject (and toast) after its test ends. */
+const nativeSource = (tree = resolvingTree()): ProjectDataSource =>
+  ({ ...nativeProjectDataSource, options: { ...nativeProjectDataSource.options, tree } }) as ProjectDataSource;
+
 const sharedSource = (editTask: ProjectDataSource['editTask'], screenOver: Partial<ProjectDataSource['screen']> = {}): ProjectDataSource => ({
   ...nativeProjectDataSource,
   kind: 'co-managed-shared',
   editTask,
-  screen: { ...NATIVE_PROJECT_SCREEN, admittedTaskEdit: true, hideCreate: true, frozenFields: ['start_date'], hiddenFields: ['priority_id'], ...screenOver },
+  screen: { ...NATIVE_PROJECT_SCREEN, admittedTaskEdit: true, hideCreate: true, hidePhaseMoves: true, frozenFields: ['start_date'], hiddenFields: ['priority_id'], ...screenOver },
 } as ProjectDataSource);
 
 const mount = (source: ProjectDataSource) => render(
@@ -227,10 +232,12 @@ describe('TaskForm in shared mode', () => {
 
   it('does not take the admitted path under the default native source', async () => {
     const { container } = render(
-      <TicketIntegrationProvider value={createMockTicketIntegration()}>
+      <ProjectDataSourceProvider dataSource={nativeSource()}>
+<TicketIntegrationProvider value={createMockTicketIntegration()}>
         <TaskForm task={task} phase={phase} onClose={() => undefined} onSubmit={() => undefined} projectStatuses={statuses}
           users={[] as IUser[]} mode="edit" onPhaseChange={() => undefined} inDrawer={true} />
-      </TicketIntegrationProvider>);
+      </TicketIntegrationProvider>
+</ProjectDataSourceProvider>);
     expect(container.querySelector('[data-frozen-field]')).toBeNull();
     expect(container.querySelector('#task-form-readonly-note')).toBeNull();
   });
@@ -247,10 +254,12 @@ describe('TaskForm in shared mode', () => {
 
     it('keeps the native task type select under the native source', () => {
       const { container } = render(
-        <TicketIntegrationProvider value={createMockTicketIntegration()}>
+        <ProjectDataSourceProvider dataSource={nativeSource()}>
+<TicketIntegrationProvider value={createMockTicketIntegration()}>
           <TaskForm task={task} phase={phase} onClose={() => undefined} onSubmit={() => undefined} projectStatuses={statuses}
             users={[] as IUser[]} mode="edit" onPhaseChange={() => undefined} inDrawer={true} />
-        </TicketIntegrationProvider>);
+        </TicketIntegrationProvider>
+</ProjectDataSourceProvider>);
       expect(container.querySelector('#task-type-readonly')).toBeNull();
     });
 
@@ -262,10 +271,12 @@ describe('TaskForm in shared mode', () => {
 
     it('still shows the native assignee picker under the native source', () => {
       render(
-        <TicketIntegrationProvider value={createMockTicketIntegration()}>
+        <ProjectDataSourceProvider dataSource={nativeSource()}>
+<TicketIntegrationProvider value={createMockTicketIntegration()}>
           <TaskForm task={task} phase={phase} onClose={() => undefined} onSubmit={() => undefined} projectStatuses={statuses}
             users={[] as IUser[]} mode="edit" onPhaseChange={() => undefined} inDrawer={true} />
-        </TicketIntegrationProvider>);
+        </TicketIntegrationProvider>
+</ProjectDataSourceProvider>);
       expect(rtlScreen.queryByTestId('assigned-user')).not.toBeNull();
     });
   });
@@ -273,13 +284,11 @@ describe('TaskForm in shared mode', () => {
   describe('project tree fetch', () => {
     it('does not fetch the tree, toast or console.error when the phase moves are hidden (shared drawer open)', async () => {
       const tree = vi.fn().mockResolvedValue([]);
-      // Let earlier tests' unmounted-but-pending native tree fetches settle, so only this mount is observed.
-      await new Promise(resolve => setTimeout(resolve, 50));
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
       toastErrorMock.mockClear();
       const source = sharedSource(vi.fn(), { hidePhaseMoves: true });
       mount({ ...source, options: { ...source.options, tree } } as ProjectDataSource);
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await act(async () => { await Promise.resolve(); });
       expect(tree).not.toHaveBeenCalled();
       expect(toastErrorMock).not.toHaveBeenCalled();
       expect(errorSpy.mock.calls).toEqual([]);
@@ -288,7 +297,7 @@ describe('TaskForm in shared mode', () => {
 
     it('native mode still fetches the tree', async () => {
       const tree = vi.fn().mockResolvedValue([{ value: 'p', label: 'P', type: 'project', children: [] }]);
-      const source = { ...nativeProjectDataSource, options: { ...nativeProjectDataSource.options, tree } } as ProjectDataSource;
+      const source = nativeSource(tree);
       render(
         <ProjectDataSourceProvider dataSource={source}>
           <TicketIntegrationProvider value={createMockTicketIntegration()}>
