@@ -736,15 +736,13 @@ export const deleteReferenceDataItem = withAuth(async (
       throw new Error(`Unknown ID field for data type: ${dataType}`);
     }
 
-    if (dataType === 'categories' || dataType === 'statuses' || dataType === 'boards' || dataType === 'interaction_types') {
+    if (dataType === 'categories' || dataType === 'statuses' || dataType === 'interaction_types') {
       const deletionEntityType =
         dataType === 'categories'
           ? 'category'
           : dataType === 'statuses'
             ? 'status'
-            : dataType === 'boards'
-              ? 'board'
-              : 'interaction_type';
+            : 'interaction_type';
       const { knex } = await createTenantKnex();
       const result = await deleteEntityWithValidation(deletionEntityType, itemId, knex, tenant, async (trx, tenantId) => {
         const deletedCount = await tenantDb(trx, tenantId).table(config.targetTable)
@@ -759,17 +757,7 @@ export const deleteReferenceDataItem = withAuth(async (
       });
 
       if (result.deleted === true) {
-        if (dataType === 'boards') {
-          await publishEvent({
-            eventType: 'BOARD_DELETED',
-            payload: {
-              tenantId: tenant,
-              boardId: itemId,
-              userId: _user.user_id,
-              timestamp: new Date().toISOString(),
-            },
-          });
-        } else if (dataType === 'categories') {
+        if (dataType === 'categories') {
           await publishEvent({
             eventType: 'CATEGORY_DELETED',
             payload: {

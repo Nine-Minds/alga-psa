@@ -87,8 +87,8 @@ let warnSpy: ReturnType<typeof vi.spyOn>;
 /** Which check refused, as logged server-side (the caller only ever sees the generic denial). */
 const refusedBy = () =>
   warnSpy.mock.calls
-    .filter((c) => c[0] === '[boards] mutation refused')
-    .map((c) => (c[1] as { code: string }).code);
+    .filter((c: any[]) => c[0] === '[boards] mutation refused')
+    .map((c: any[]) => (c[1] as { code: string }).code);
 const PRINCIPAL = 'BOARD_PRINCIPAL_NOT_ALLOWED';
 const PERMISSION = 'BOARD_PERMISSION_MISSING';
 
