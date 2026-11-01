@@ -1,4 +1,4 @@
-import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
+import { isMspPrincipalUserType } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type { ITicket, IUserWithRoles } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
@@ -265,10 +265,10 @@ export async function authorizeTicketRecordAccess(input: {
 }
 
 /**
- * Same policy as {@link authorizeTicketRecordAccess}, but a client principal gets the
+ * Same policy as {@link authorizeTicketRecordAccess}, but EVERY principal (client or MSP) gets the
  * identical `Permission denied` error whether the ticket is missing or not visible, so
- * a ticket UUID cannot be probed. Internal users keep `Ticket not found` (mapped to 404).
- * Kept separate so existing callers of authorizeTicketRecordAccess are unaffected.
+ * a ticket UUID cannot be probed — bundle-restricted MSP users can also be denied records they
+ * cannot see. Kept separate so existing callers of authorizeTicketRecordAccess are unaffected.
  */
 export async function authorizeTicketRecordAccessConcealed(
   input: Parameters<typeof authorizeTicketRecordAccess>[0],
@@ -276,7 +276,7 @@ export async function authorizeTicketRecordAccessConcealed(
   try {
     return await authorizeTicketRecordAccess(input);
   } catch (error) {
-    if (isClientUserType(input.user.user_type) && error instanceof Error && error.message === 'Ticket not found') {
+    if (error instanceof Error && error.message === 'Ticket not found') {
       throw new Error('Permission denied: Cannot access ticket');
     }
     throw error;

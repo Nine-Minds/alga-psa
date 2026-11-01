@@ -8,13 +8,15 @@ Findings from the review of PR #3994 / merge `22d6e42ed479`.
 
 ## 0. Decision (Design Session, 2026-10-31)
 
+**Correction (smoke 2026-10-31): F1 and the client half of F2 are fixed on main; the MSP half of F2 was NOT** (see "F2 MSP half" below). The original statement was:
+
 **Both findings are already fixed on current main.** The review predates two merges that landed the
 suggested fix; no new production code is required for this card.
 
 | # | Finding | Where it is fixed now |
 |---|---|---|
 | F1 | `authorizeCommentRead` narrowed clients only to same-client/board, omitting contact/manager/billing/watcher scope | `packages/tickets/src/lib/ticketRecordAuthorization.ts:132-159` — `createTicketAuthorizationContext` now resolves the canonical `ContactVisibilityContext` (`getClientContactVisibilityContext`) and installs the `contact_visibility` relationship rule. `authorizeCommentRead` (`commentActions.ts:185-195`) calls `authorizeTicketRecordAccess`, so a client read is fail-closed through contact + board + billing-profile + watcher narrowing. Fixed by `7c883bc821` (2026-10-30). |
-| F2 | `createComment` client gate checked only same-client ownership, bypassing record authz | `commentActions.ts:117-142` — `assertClientCanCreateComment` now calls `authorizeTicketRecordAccessConcealed({action:'update'})` before the parent-thread lookup; the coarse `ticket:update` check remains the MSP gate. Fixed by `8bd7fe5d48` (2026-10-30). |
+| F2 | `createComment` client gate checked only same-client ownership, bypassing record authz | `commentActions.ts:117-142` — `assertClientCanCreateComment` now calls `authorizeTicketRecordAccessConcealed({action:'update'})` before the parent-thread lookup; the coarse `ticket:update` check remained the MSP gate — **this was the gap, see below**. Fixed by `8bd7fe5d48` (2026-10-30). |
 
 Existing regression coverage on main:
 
@@ -57,3 +59,22 @@ Green proves F1 and F2 with the real kernel path, which is the evidence for `sec
 - Re-deriving contact visibility in `authorizeCommentRead` (the kernel does it now).
 - Changing comment projection/thread visibility (already covered by `commentActions.visibility.test.ts`).
 - The REST reaction route — that is a separate card (`3e15e371`).
+
+## F2 MSP half (fixed on this branch)
+
+Smoke proof: MSP user `scarecrow.2993` (own_or_assigned ticket bundle) is denied SMK-2993-B by the UI and
+`findCommentsByTicketId`, yet inserted a comment on it through `createComment`, because the record check
+returned early for non-client principals.
+
+Fix (alga-2026-0002993):
+- `createComment` -> `assertCanCreateComment` (inside the write transaction): missing `ticket_id` fails closed for
+  every principal; then `authorizeTicketRecordAccessConcealed({action:'update'})` for every principal; only then
+  the client-only checks (no internal, own `user_id`, parent-thread visibility). All of this precedes the thread
+  lookup, insert, response-state change and notifications.
+- `assertMayChangeComment` (update/delete) and `toggleCommentReaction` run the same all-principal `update` check.
+  Reactions use `update` because they write to the ticket thread and the client path already used `update`.
+- `authorizeTicketRecordAccessConcealed` now conceals a missing ticket as `Permission denied` for every principal
+  (previously only clients), so a denied MSP caller is indistinguishable from one naming a nonexistent ticket.
+  Its only callers are the comment mutations.
+- Tests: `commentMutationsAuthz.test.ts` (MSP deny/allow cases) and
+  `server/src/test/integration/commentActions.mspBundleRestriction.integration.test.ts` (real kernel + bundle).

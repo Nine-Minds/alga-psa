@@ -21,6 +21,7 @@ const commentDelete = vi.fn();
 const commentInsert = vi.fn();
 let commentAuthorType = 'client';
 let parentThreadRow: Record<string, unknown> | null = null;
+let bundleRules: any[] = [];
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) => action(currentUser, { tenant: 'tenant-1' }, ...args),
@@ -98,7 +99,7 @@ vi.mock('../../lib/workflowTicketCommunicationEvents', () => ({ buildTicketCommu
 vi.mock('@alga-psa/db/commentEventRegistry', () => ({ publishCommentEvent: vi.fn(async () => undefined) }));
 vi.mock('@alga-psa/tickets/actions/ticketBundleUtils', () => ({ maybeReopenBundleMasterFromChildReply: vi.fn(async () => undefined) }));
 vi.mock('@alga-psa/authorization/bundles/service', () => ({
-  resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => []),
+  resolveBundleNarrowingRulesForEvaluation: vi.fn(async () => bundleRules),
 }));
 
 const client = { user_id: 'client-user-1', user_type: 'client', tenant: 'tenant-1', contact_id: 'contact-1', clientId: 'client-1', roles: [{ role_id: 'rc' }] };
@@ -107,12 +108,19 @@ const foreignTicket = { ...ownTicket, ticket_id: 'ticket-2', client_id: 'client-
 // A comment the client authored (e.g. planted through the old unguarded path) on a ticket it cannot see.
 const ownComment = (ticket_id: string) => ({ comment_id: 'c-1', ticket_id, user_id: 'client-user-1', note: 'x', is_internal: false, tenant: 'tenant-1' });
 
+// A bundle-restricted MSP user: ticket read+update narrowed to own_or_assigned records.
+const mspUser = { user_id: 'i-1', user_type: 'internal', tenant: 'tenant-1', roles: [] };
+const ownOrAssignedRules = ['read', 'update'].map((action) => ({ id: `rule-${action}`, resource: 'ticket', action, templateKey: 'own_or_assigned' }));
+// Neither entered by nor assigned to i-1 (ownTicket is entered_by 'x', unassigned).
+const mspOwnComment = (ticket_id: string) => ({ comment_id: 'c-1', ticket_id, user_id: 'i-1', note: 'x', is_internal: false, tenant: 'tenant-1' });
+
 describe('comment mutations: client principals need record access to the owning ticket', () => {
   beforeEach(() => {
     writes = [];
     commentInsert.mockReset().mockResolvedValue('new-comment-id');
     commentAuthorType = 'client';
     parentThreadRow = null;
+    bundleRules = [];
     currentUser = client;
     ticketRow = foreignTicket;
     commentRow = ownComment('ticket-2');
@@ -161,9 +169,50 @@ describe('comment mutations: client principals need record access to the owning 
     await expect(toggleCommentReaction('c-1', '👍')).resolves.toEqual({ added: true });
   });
 
-  it('toggleCommentReaction: internal MSP users get no new record check', async () => {
-    currentUser = { user_id: 'i-1', user_type: 'internal', tenant: 'tenant-1', roles: [] };
-    await expect(toggleCommentReaction('c-1', '👍')).resolves.toEqual({ added: true });
+  describe('bundle-restricted MSP principals (own_or_assigned)', () => {
+    const DENIED = 'Permission denied: Cannot access ticket';
+    beforeEach(() => {
+      currentUser = mspUser;
+      bundleRules = ownOrAssignedRules;
+      ticketRow = ownTicket; // not entered by / assigned to i-1
+      commentRow = mspOwnComment('ticket-1');
+    });
+
+    it('updateComment: denies an MSP author editing a comment on a ticket they cannot see', async () => {
+      const result: any = await updateComment('c-1', { note: 'edited' }).catch((e) => e);
+      expect(JSON.stringify(result?.message ?? result)).toContain(DENIED);
+      expect(commentUpdate).not.toHaveBeenCalled();
+    });
+
+    it('updateComment: allows an MSP author on an assigned ticket', async () => {
+      ticketRow = { ...ownTicket, assigned_to: 'i-1' };
+      await updateComment('c-1', { note: 'edited' });
+      expect(commentUpdate).toHaveBeenCalledTimes(1);
+    });
+
+    it('deleteComment: denies an MSP author deleting a comment on a ticket they cannot see', async () => {
+      const result: any = await deleteComment('c-1').catch((e) => e);
+      expect(JSON.stringify(result?.message ?? result)).toContain(DENIED);
+      expect(commentDelete).not.toHaveBeenCalled();
+      expect(writes).toEqual([]);
+    });
+
+    it('toggleCommentReaction: denies an MSP user reacting on a ticket they cannot see', async () => {
+      const result: any = await toggleCommentReaction('c-1', '👍').catch((e) => e);
+      expect(String(result?.message ?? result)).toMatch(/Permission denied/);
+      expect(writes).toEqual([]);
+    });
+
+    it('toggleCommentReaction: gives an MSP user the same denial for a missing comment', async () => {
+      commentRow = null;
+      const result: any = await toggleCommentReaction('c-missing', '👍').catch((e) => e);
+      expect(String(result?.message ?? result)).toMatch(/Permission denied/);
+    });
+
+    it('toggleCommentReaction: allows an MSP user on an assigned ticket', async () => {
+      ticketRow = { ...ownTicket, assigned_to: 'i-1' };
+      await expect(toggleCommentReaction('c-1', '👍')).resolves.toEqual({ added: true });
+    });
   });
 
   describe('createComment', () => {
@@ -236,12 +285,35 @@ describe('comment mutations: client principals need record access to the owning 
       expect(commentInsert).not.toHaveBeenCalled();
     });
 
-    it('internal MSP users get no record check and succeed unchanged', async () => {
-      currentUser = { user_id: 'i-1', user_type: 'internal', tenant: 'tenant-1', roles: [] };
+    it('denies a bundle-restricted MSP user on a ticket they cannot see, with the nonexistent-ticket denial, and inserts nothing', async () => {
+      currentUser = mspUser;
       commentAuthorType = 'internal';
-      ticketRow = foreignTicket;
+      bundleRules = ownOrAssignedRules;
+      ticketRow = null;
+      const missing = await outcome(newComment('ticket-nope'));
+      ticketRow = foreignTicket; // not entered by / assigned to i-1
+      parentThreadRow = { thread_is_internal: true };
+      const denied = await outcome(newComment('ticket-2', { parent_comment_id: 'p-1' }));
+      expect(missing).toEqual({ returned: { permissionError: DENIED } });
+      expect(denied).toEqual(missing);
+      expect(commentInsert).not.toHaveBeenCalled();
+      expect(writes).toEqual([]);
+    });
+
+    it('fails closed for any principal when ticket_id is missing', async () => {
+      currentUser = mspUser;
+      commentAuthorType = 'internal';
+      const result = await outcome(newComment(undefined as any));
+      expect(JSON.stringify(result)).toMatch(/ticket_id is required/);
+      expect(commentInsert).not.toHaveBeenCalled();
+    });
+
+    it('allows an MSP user on an assigned ticket and inserts as author_type internal', async () => {
+      currentUser = mspUser;
+      commentAuthorType = 'internal';
+      bundleRules = ownOrAssignedRules;
+      ticketRow = { ...foreignTicket, assigned_to: 'i-1' };
       const result: any = await outcome(newComment('ticket-2'));
-      expect(JSON.stringify(result)).not.toContain(DENIED);
       expect(result.returned).toBe('new-comment-id');
       expect(commentInsert.mock.calls[0][2]).toMatchObject({ author_type: 'internal' });
     });

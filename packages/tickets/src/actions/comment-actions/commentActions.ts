@@ -114,12 +114,25 @@ async function assertClientOwnsTicket(
   }
 }
 
-async function assertClientCanCreateComment(
+// LEVERAGE: pattern ticket-comment-record-authz — all-principal concealed 'update' authorization of the parent
+// ticket is repeated in createComment, assertMayChangeComment and toggleCommentReaction.
+async function assertCanCreateComment(
   trx: Knex.Transaction,
   tenant: string,
   user: any,
   comment: Omit<IComment, 'tenant'>
 ): Promise<void> {
+  // Fail closed for every principal: a comment with no parent ticket cannot be record-authorized.
+  if (!comment.ticket_id) {
+    throw new Error('ticket_id is required to create a comment');
+  }
+
+  // Record-level authorization (bundle/relationship narrowing for MSP principals; contact / board /
+  // billing-profile narrowing for clients), the same gate every other comment mutation uses. A missing
+  // and an invisible ticket produce the identical denial, and it runs before any lookup that could probe
+  // records the caller cannot see (e.g. the parent thread below) and before any write.
+  await authorizeTicketRecordAccessConcealed({ trx, tenant, user, ticketId: comment.ticket_id, action: 'update' });
+
   if (!isClientUserType(user?.user_type)) {
     return;
   }
@@ -131,15 +144,6 @@ async function assertClientCanCreateComment(
   if (comment.user_id && user.user_id && comment.user_id !== user.user_id) {
     throw new Error('Client users can only create their own comments');
   }
-
-  if (!comment.ticket_id) {
-    throw new Error('ticket_id is required for client comments');
-  }
-
-  // Record-level visibility (contact / board / billing-profile narrowing), the same gate every other
-  // comment mutation uses. A missing and an invisible ticket produce the identical denial, and it runs
-  // before any lookup that could probe records the client cannot see (e.g. the parent thread below).
-  await authorizeTicketRecordAccessConcealed({ trx, tenant, user, ticketId: comment.ticket_id, action: 'update' });
 
   // Comment.insert re-roots a client reply aimed at an internal thread into a
   // fresh public thread (D1, for inbound email whose headers resolve to an
@@ -333,7 +337,7 @@ export const createComment = withAuth(async (
     const { knex: db } = await createTenantKnex();
     const commentTenant = tenant;
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      await assertClientCanCreateComment(trx, commentTenant!, user, commentToInsert);
+      await assertCanCreateComment(trx, commentTenant!, user, commentToInsert);
 
       // A reply inherits its thread's visibility (Comment.insert enforces it),
       // so resolve the effective visibility before validating one-off Cc/Bcc.
@@ -639,9 +643,10 @@ export const createComment = withAuth(async (
  * through the collaboration commands.
  */
 async function assertMayChangeComment(trx: Knex.Transaction, user: { user_id: string; user_type: string }, existing: IComment, tenant: string): Promise<void> {
-  // A client principal may only reach comments on tickets it can still see: authorship alone
+  // Every principal (MSP or client) may only reach comments on tickets it can still see: authorship alone
   // (e.g. a row written before the write path was guarded) does not grant access.
-  if (isClientUserType(user.user_type) && existing.ticket_id) {
+  // LEVERAGE: pattern ticket-comment-record-authz — same guard as createComment / toggleCommentReaction.
+  if (existing.ticket_id) {
     await authorizeTicketRecordAccessConcealed({ trx, tenant, user: user as any, ticketId: existing.ticket_id, action: 'update' });
   }
   if (existing.actor_reference_id) throw new Error('This comment belongs to a co-managed collaborator and cannot be changed here.');
