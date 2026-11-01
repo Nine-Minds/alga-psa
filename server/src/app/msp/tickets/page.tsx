@@ -26,6 +26,7 @@ import {
 } from '@alga-psa/tickets/lib/ticketViewSettings';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
+import { CoManagedCalloutStrip } from '@/components/co-managed/CoManagedCalloutStrip';
 import type { Metadata } from 'next';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -373,6 +374,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
           allowSlaStatusFilter={allowSlaStatusFilter}
           smartSearchAvailable={smartSearchAvailable}
           useAlgaDeskQuickAddForm={useAlgaDeskQuickAddForm}
+          listCallout={productCode === 'psa' ? <CoManagedCalloutStrip /> : undefined}
         />
       </div>
     );

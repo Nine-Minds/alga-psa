@@ -579,7 +579,22 @@
       "previous": "Précédent",
       "priority": "Priorité",
       "status": "Statut",
-      "titleColumn": "Titre"
+      "titleColumn": "Titre",
+      "title": "Tickets clients",
+      "view": "Affichage",
+      "columns": "Colonnes",
+      "density": "Densité",
+      "filters": "Filtres",
+      "client": "Client",
+      "allClients": "Tous les clients",
+      "share": "Partager",
+      "clearSignal": "Effacer",
+      "unavailable": "Cette vue n'est pas encore disponible pour votre compte.",
+      "allTickets": "Tous les tickets",
+      "signals": {
+        "escalatedUnassigned": "Escaladés, non assignés",
+        "awaitingReply": "En attente de votre réponse"
+      }
     },
     "delegation": {
       "actions": "Actions",
@@ -716,6 +731,152 @@
       "rejected": "Impossible d'enregistrer cette tâche.",
       "saved": "Enregistré.",
       "save": "Enregistrer"
+    },
+    "section": {
+      "title": "Cogestion",
+      "viewHistory": "Afficher l'historique des transferts",
+      "responsible": "Responsable",
+      "change": "Modifier",
+      "privateTo": "Privé pour {{organization}}"
+    },
+    "ticket": {
+      "title": "Ticket cogéré",
+      "escalate": "Transférer au MSP",
+      "handback": "Rendre au client",
+      "takeBack": "Reprendre",
+      "revoke": "Révoquer l’accès au ticket",
+      "escalateHelp": "Le MSP prend immédiatement la responsabilité. Ajoutez le contexte nécessaire pour poursuivre.",
+      "handbackHelp": "La responsabilité revient au client. Le MSP conserve l’accès approuvé au ticket.",
+      "revokeHelp": "L’accès individuel au ticket est révoqué et la responsabilité revient au client. Les accès au tableau approuvés séparément restent valables.",
+      "note": "Note de transfert",
+      "noteAudience": "Visible par le personnel informatique autorisé des deux organisations. Cette note n’est pas envoyée aux demandeurs.",
+      "uncertain": "Le résultat n’a pas pu être confirmé. Réessayez la même demande ou rechargez l’état actuel avant toute autre modification.",
+      "saving": "Enregistrement…",
+      "retry": "Réessayer",
+      "reload": "Recharger l’état actuel",
+      "cancel": "Annuler",
+      "loadError": "Impossible de charger le ticket ou la liste des accès. Vos autorisations ont peut-être changé.",
+      "loading": "Chargement…",
+      "restricted": "Ticket à accès restreint",
+      "responsibility": "Responsable : {{organization}}",
+      "formerSponsor": "Ancien MSP",
+      "readOnly": "Cet espace est en lecture seule. Les administrateurs du client peuvent toujours révoquer les accès.",
+      "history": "Historique des transferts informatiques partagés",
+      "noHistory": "Aucun transfert visible.",
+      "historyError": "Impossible de charger l’historique des transferts.",
+      "older": "Charger les précédents",
+      "transitions": {
+        "escalated": "Transféré au MSP",
+        "handed_back": "Rendu au client",
+        "access_revoked": "Accès individuel au ticket révoqué"
+      },
+      "assignment": {
+        "needsHandoff": "Escaladez ce ticket avant d’affecter du personnel MSP.",
+        "unavailable": "Le collaborateur MSP affecté n’est plus disponible."
+      },
+      "slaSetupRequired": "Votre MSP doit configurer sa politique SLA et les correspondances de priorité avant de pouvoir escalader ce ticket."
+    },
+    "callout": {
+      "title": "Des tickets clients ont besoin de vous",
+      "escalatedUnassigned_one": "{{count}} ticket escaladé, non assigné",
+      "escalatedUnassigned_other": "{{count}} tickets escaladés, non assignés",
+      "awaitingReply_one": "{{count}} ticket en attente de votre réponse",
+      "awaitingReply_other": "{{count}} tickets en attente de votre réponse",
+      "dismiss": "Ignorer"
+    },
+    "queue": {
+      "title": "Files de tickets cogérés",
+      "workingDescription": "Tickets partagés dont votre équipe est responsable ou auxquels elle est affectée.",
+      "oversightDescription": "Tickets clients accessibles selon les autorisations accordées, y compris ceux traités par leur équipe informatique.",
+      "view": "Vue",
+      "working": "File de travail",
+      "oversight": "Supervision des clients",
+      "workspace": "Espace de travail",
+      "allWorkspaces": "Tous les espaces",
+      "state": "Statut",
+      "open": "Ouverts",
+      "closed": "Fermés",
+      "all": "Tous les statuts",
+      "sort": "Trier par",
+      "direction": "Ordre",
+      "asc": "Croissant",
+      "desc": "Décroissant",
+      "search": "Rechercher des tickets",
+      "loadError": "Impossible de charger les tickets. Actualisez pour vérifier votre accès.",
+      "counts_one": "{{count}} ticket · {{open}} ouvert · {{closed}} fermé",
+      "counts_other": "{{count}} tickets · {{open}} ouverts · {{closed}} fermés",
+      "empty": "Aucun ticket autorisé ne correspond à ces filtres.",
+      "emptyUnfiltered": "Aucun ticket client à afficher pour le moment.",
+      "retry": "Réessayer",
+      "page": "Page {{page}}",
+      "sortFields": {
+        "updated": "Dernière modification",
+        "created": "Création",
+        "title": "Titre",
+        "number": "Numéro du ticket"
+      },
+      "columns": {
+        "ticket": "Ticket",
+        "workspace": "Espace de travail",
+        "state": "Statut",
+        "status": "Statut",
+        "priority": "Priorité",
+        "responsibility": "Organisation responsable",
+        "updated": "Modification",
+        "title": "Title"
+      },
+      "organizations": {
+        "msp": "MSP",
+        "customer": "Équipe informatique du client"
+      },
+      "export": "Exporter en CSV",
+      "exporting": "Exportation…",
+      "exportError": "Impossible d’exporter les tickets. Actualisez la file et réessayez.",
+      "bulkHandback": {
+        "title": "Renvoyer les tickets à l’équipe informatique du client",
+        "select": "Sélectionnez les tickets de cette page. La même note informatique partagée sera ajoutée à chaque ticket sélectionné.",
+        "returned": "Renvoyé à l’équipe informatique du client",
+        "forbidden": "Accès refusé",
+        "changed": "Le ticket a changé. Actualisez avant de réessayer.",
+        "invalid": "Sélection non valide",
+        "selected": "{{count}} ticket(s) sélectionné(s) seront renvoyés.",
+        "resume": "Un renvoi vers l'IT client a été interrompu. Reprenez-le pour confirmer le résultat.",
+        "noReloadRecovery": "La récupération après rechargement n'est pas disponible dans ce navigateur ; vous pouvez toujours réessayer dans cette session.",
+        "done": "Done",
+        "selectAll": "Select all returnable tickets",
+        "selectRow": "Select ticket",
+        "readOnly": "Read-only access"
+      },
+      "scopeUnavailable": "Ouverture de la liste des tickets…",
+      "searchPlaceholder": "Rechercher par numéro ou titre",
+      "mspAlsoAssigned": "MSP également assigné",
+      "unavailableWorkspace": "Unavailable workspace",
+      "reset": "Reset"
+    },
+    "projects": {
+      "assignment": {
+        "title": "Affectation au MSP",
+        "unassigned": "Non affecté au MSP",
+        "kind": "Affecter à",
+        "user": "Technicien",
+        "team": "Équipe",
+        "assignee": "Responsable",
+        "more": "Plus de responsables",
+        "assign": "Affecter",
+        "clear": "Retirer l’affectation au MSP"
+      }
+    },
+    "editor": {
+      "errors": {
+        "invalid": "Certaines valeurs ne sont pas valides. Vérifiez vos modifications et réessayez.",
+        "conflict": "Ce ticket a été modifié. Rechargez-le avant d’enregistrer vos modifications.",
+        "operationConflict": "Cette demande d’enregistrement a déjà servi à une autre modification. Rechargez le ticket.",
+        "forbidden": "Votre accès à ce ticket a changé. Rechargez pour continuer.",
+        "readOnly": "Cet espace est en lecture seule. Rechargez pour consulter son état actuel.",
+        "closeRules": "Le ticket doit satisfaire aux conditions de clôture de son tableau avant de pouvoir être fermé.",
+        "unknownOutcome": "Nous n’avons pas pu confirmer l’enregistrement. Réessayez avec la même demande ou abandonnez vos modifications et rechargez.",
+        "slaSetupRequired": "Votre MSP doit configurer sa politique SLA et les correspondances de priorité avant de rouvrir ce ticket sous sa responsabilité."
+      }
     }
   },
   "common": {

@@ -5,6 +5,9 @@ import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorizatio
 import { getCoManagedOperationalState } from '@alga-psa/licensing/lifecycle';
 import { hasCoManagedLocalPermission } from './localPermission';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+import { coManagedRelationshipAllowsWrite } from './policy';
+import { loadCoManagedHomeFacts, loadCoManagedLifecycleFacts, loadCoManagedStaffRoles } from './sharedWork';
+import { CO_MANAGED_HANDBACK_FIELD_ALIASES } from './ticketBulkHandback';
 import { assertCoManagedSessionUnexpired, CoManagedSharedWorkError, isCoManagedUuid, lockCoManagedSessionIdentity, snapshotCoManagedSessionActor, type CoManagedSessionActor } from './sharedWorkIdentity';
 
 /**
@@ -53,6 +56,13 @@ export interface CoManagedTicketQueueItem {
      */
     has_msp_assignment?: boolean | null;
   };
+  /**
+   * Whether the actor may hand this row back: the same decision `bulkHandBackCoManagedTickets`
+   * enforces (relationship lifecycle, staff role, home RBAC, hand-back fields visible, and the
+   * row's effective Collaborate grant). Selection UI is gated on it. It is a capability of the
+   * viewer, not a field of the ticket, so it is never exported.
+   */
+  canHandBack: boolean;
 }
 /** What the callout strip, the menu badge and presentation gating read; counts only, never rows. */
 export interface CoManagedWorkSignals {
@@ -162,7 +172,7 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
     // Native tickets in the home tenant are never part of this relation (the
     // customer tickets page lists shared work only); every projection is a
     // shared record read through its qualified relationship.
-    function projection(ownerTenant: string, name: string, relationship: any, boardIds: string[] = []) {
+    function projection(ownerTenant: string, name: string, relationship: any, boardIds: string[] = [], handBack: { relationshipWritable: boolean; collaborateBoardIds: string[] } = { relationshipWritable: false, collaborateBoardIds: [] }) {
       const owner = tenantDb(trx, ownerTenant);
       const base = owner.table('tickets as t');
       owner.tenantJoin(base, 'statuses as s', 't.status_id', 's.status_id', { type: 'left' });
@@ -191,6 +201,14 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
         has_msp_assignment: assignmentVisible
           ? trx.raw('(r.assigned_to IS NOT NULL OR r.assigned_team_id IS NOT NULL)')
           : trx.raw('NULL::boolean'),
+        // Per-row half of the hand-back decision. The relationship-level layers were evaluated once for
+        // this relationship; the Collaborate grant is per ticket: an explicit escalation grant wins, else
+        // the ticket's board scope (board_scope mode only; `collaborateBoardIds` is empty otherwise).
+        // LEVERAGE: pattern co-managed-effective-grant — SQL mirror of effectiveCoManagedGrant / loadCoManagedGrantFacts (effectiveSharedGrant.ts, ticketCollaboration.ts canHandBack).
+        can_hand_back: handBack.relationshipWritable
+          ? trx.raw(`(CASE WHEN w.work_id IS NOT NULL AND w.grant_revoked_at IS NULL AND w.first_escalated_at IS NOT NULL THEN COALESCE(w.can_collaborate, false)
+              ELSE COALESCE(t.board_id = ANY(?::uuid[]), false) END)`, [handBack.collaborateBoardIds])
+          : trx.raw('false'),
         // Signal membership is decided here, from the same joined reference and
         // owner ticket as the row, so the count and the filter cannot diverge.
         sig_escalated: escalatedSignalVisible
@@ -202,7 +220,7 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
         ...policyColumns });
       const authorized = trx.from(base.as('q'));
       applyCoManagedQueuePolicy(authorized, subject, rules, { resourceType: 'ticket', shared: true });
-      authorized.select('q.tenant', 'q.ticket_id', 'q.relationship_id', 'q.workspace_name', 'q.client_id', 'q.sig_escalated', 'q.sig_awaiting');
+      authorized.select('q.tenant', 'q.ticket_id', 'q.relationship_id', 'q.workspace_name', 'q.client_id', 'q.sig_escalated', 'q.sig_awaiting', 'q.can_hand_back');
       for (const field of Object.keys(sources)) authorized.select(visible[field] ? `q.${field}` : trx.raw(`NULL::${['is_closed', 'has_msp_assignment'].includes(field) ? 'boolean' : field === 'work_revision' ? 'integer' : ['entered_at', 'updated_at'].includes(field) ? 'timestamptz' : 'text'} as ??`, [field]));
       queries.push(authorized);
     }
@@ -215,9 +233,20 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
       const staff = await home.table('co_management_staff_assignments').where({ customer_tenant: target.customer_tenant, relationship_id: target.relationship_id })
         .where(function () { this.where({ principal_type: 'user', principal_id: actor.userId }).orWhere(function () { this.where('principal_type', 'team').whereIn('principal_id', subject.teamIds ?? []); }); }).forShare().first();
       if (!staff) continue;
-      const boards = relationship.visibility_mode === 'board_scope' ? await owner.table('co_management_board_scopes').where('relationship_id', target.relationship_id).forShare().select('board_id') : [];
+      const boards = relationship.visibility_mode === 'board_scope' ? await owner.table('co_management_board_scopes').where('relationship_id', target.relationship_id).forShare().select('board_id', 'can_collaborate') : [];
       assignedRelationshipCount += 1;
-      projection(target.customer_tenant, customer.client_name, relationship, boards.map(row => row.board_id));
+      // Hand-back facts are loaded once per relationship per request, the same loaders the command's admission uses.
+      const lifecycle = await loadCoManagedLifecycleFacts(trx, actor.tenant, target.customer_tenant, target.relationship_id);
+      const roles = await loadCoManagedStaffRoles(trx, actor, target.customer_tenant, target.relationship_id, subject.teamIds ?? []);
+      // Customer UUIDs never become home policy ids: the home record carries only the sponsor client (as admission does).
+      const homeFacts = lifecycle?.relationship ? await loadCoManagedHomeFacts(trx, actor, subject, 'ticket',
+        { id: `${target.customer_tenant}:ticket:queue`, clientId: relationship.sponsor_client_id, assignedUserIds: [], teamIds: [] }) : null;
+      const handBackFieldsVisible = homeFacts !== null && !isCoManagedReadFieldHidden(
+        [...homeFacts.redactedFields, ...(lifecycle?.relationship.redacted_fields ?? [])], CO_MANAGED_HANDBACK_FIELD_ALIASES);
+      const relationshipWritable = Boolean(lifecycle && homeFacts && handBackFieldsVisible && coManagedRelationshipAllowsWrite({
+        lifecycle: lifecycle.lifecycle, staff: { roles }, home: homeFacts.facts, visibilityMode: relationship.visibility_mode }));
+      projection(target.customer_tenant, customer.client_name, relationship, boards.map(row => row.board_id), {
+        relationshipWritable, collaborateBoardIds: boards.filter(row => row.can_collaborate).map(row => row.board_id) });
     }
     await assertCoManagedSessionUnexpired(trx, actor);
     if (!queries.length) return { items: [], workspaces: [], totalCount: 0, openCount: 0, closedCount: 0, page: request.page, pageSize: request.pageSize,
@@ -252,6 +281,7 @@ async function readCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionAc
         trx.raw("COALESCE((SELECT json_agg(page_rows) FROM page_rows), '[]'::json) AS items")).first();
     await assertCoManagedSessionUnexpired(trx, actor);
     const items = result.items.map((row: any) => ({ tenant: row.tenant, relationshipId: row.relationship_id, ticketId: row.ticket_id, workspaceName: row.workspace_name,
+      canHandBack: Boolean(row.can_hand_back),
       fields: Object.fromEntries(Object.keys(sources).filter(field => visible[field]).map(field => [field, row[field]])) }));
     return { items, workspaces: result.workspaces, totalCount: Number(result.total_count), openCount: Number(result.open_count), closedCount: Number(result.closed_count), page: request.page, pageSize: request.pageSize,
       signals: { escalatedUnassigned: Number(result.escalated_count), awaitingReply: Number(result.awaiting_count) }, assignedRelationshipCount };

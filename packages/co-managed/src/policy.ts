@@ -87,6 +87,20 @@ export function evaluateCoManagedAccess(facts: CoManagedAccessFacts): CoManagedA
   return { read, write, delegate: write, layers, deniedBy: failed ? { layer: failed, reason: layers[failed].reason! } : undefined };
 }
 
+/**
+ * The relationship-level half of the write decision: every layer of
+ * `evaluateCoManagedAccess(...).write` except the per-resource Collaborate grant,
+ * which the caller decides per row (explicit escalation grant, else board scope in
+ * board_scope mode). The grant is passed as granted so `write` reduces to the other
+ * layers; combine the result with the row's own grant. There is no second
+ * definition of "may write" - this only fixes one input of the single evaluator.
+ */
+export function coManagedRelationshipAllowsWrite(facts: Omit<CoManagedAccessFacts, 'grant'> & { visibilityMode: CoManagedVisibilityMode }): boolean {
+  const { visibilityMode, ...layers } = facts;
+  return evaluateCoManagedAccess({ ...layers,
+    grant: { visibilityMode, scope: { canCollaborate: true }, explicit: { canCollaborate: true } } }).write;
+}
+
 // ===========================================================================
 // Policy administration (customer grants and MSP staff assignments)
 // ===========================================================================

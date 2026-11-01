@@ -579,7 +579,22 @@
       "previous": "Anterior",
       "priority": "Prioridade",
       "status": "Status",
-      "titleColumn": "Título"
+      "titleColumn": "Título",
+      "title": "Tickets de clientes",
+      "view": "Exibição",
+      "columns": "Colunas",
+      "density": "Densidade",
+      "filters": "Filtros",
+      "client": "Cliente",
+      "allClients": "Todos os clientes",
+      "share": "Compartilhar",
+      "clearSignal": "Limpar",
+      "unavailable": "Esta exibição ainda não está disponível para a sua conta.",
+      "allTickets": "Todos os tickets",
+      "signals": {
+        "escalatedUnassigned": "Escalados sem atribuição",
+        "awaitingReply": "Aguardando sua resposta"
+      }
     },
     "delegation": {
       "actions": "Ações",
@@ -716,6 +731,152 @@
       "rejected": "Não foi possível salvar esta tarefa.",
       "saved": "Salvo.",
       "save": "Salvar"
+    },
+    "section": {
+      "title": "Cogerenciamento",
+      "viewHistory": "Ver histórico de transferências",
+      "responsible": "Responsável",
+      "change": "Alterar",
+      "privateTo": "Privado para {{organization}}"
+    },
+    "ticket": {
+      "title": "Chamado cogerenciado",
+      "escalate": "Escalar para o MSP",
+      "handback": "Devolver ao cliente",
+      "takeBack": "Retomar",
+      "revoke": "Revogar acesso ao chamado",
+      "escalateHelp": "O MSP assume a responsabilidade imediatamente. Adicione o contexto necessário para continuar.",
+      "handbackHelp": "A responsabilidade retorna ao cliente. O MSP mantém o acesso aprovado ao chamado.",
+      "revokeHelp": "O acesso individual ao chamado é revogado e a responsabilidade retorna ao cliente. O acesso ao quadro aprovado separadamente continua válido.",
+      "note": "Nota de transferência",
+      "noteAudience": "Visível para a equipe de TI autorizada de ambas as organizações. Esta nota não é enviada aos solicitantes.",
+      "uncertain": "Não foi possível confirmar o resultado. Tente a mesma solicitação novamente ou recarregue o estado atual antes de outra alteração.",
+      "saving": "Salvando…",
+      "retry": "Tentar novamente",
+      "reload": "Recarregar estado atual",
+      "cancel": "Cancelar",
+      "loadError": "Não foi possível carregar o chamado ou a lista de acessos. Suas permissões podem ter mudado.",
+      "loading": "Carregando…",
+      "restricted": "Chamado restrito",
+      "responsibility": "Responsável: {{organization}}",
+      "formerSponsor": "MSP anterior",
+      "readOnly": "Este espaço está em modo somente leitura. Os administradores do cliente ainda podem revogar acessos.",
+      "history": "Histórico compartilhado de transferências de TI",
+      "noHistory": "Nenhuma transferência visível.",
+      "historyError": "Não foi possível carregar o histórico de transferências.",
+      "older": "Carregar anteriores",
+      "transitions": {
+        "escalated": "Escalado para o MSP",
+        "handed_back": "Devolvido ao cliente",
+        "access_revoked": "Acesso individual ao chamado revogado"
+      },
+      "assignment": {
+        "needsHandoff": "Escale este ticket antes de atribuir pessoal do MSP.",
+        "unavailable": "O colaborador do MSP atribuído já não está disponível."
+      },
+      "slaSetupRequired": "Seu MSP precisa configurar a política de SLA e o mapeamento de prioridades antes que este chamado possa ser escalonado."
+    },
+    "callout": {
+      "title": "Tickets de clientes precisam de você",
+      "escalatedUnassigned_one": "{{count}} ticket escalado sem atribuição",
+      "escalatedUnassigned_other": "{{count}} tickets escalados sem atribuição",
+      "awaitingReply_one": "{{count}} ticket aguardando sua resposta",
+      "awaitingReply_other": "{{count}} tickets aguardando sua resposta",
+      "dismiss": "Dispensar"
+    },
+    "queue": {
+      "title": "Filas de tickets cogeridos",
+      "workingDescription": "Tickets compartilhados pelos quais sua equipe é responsável ou aos quais está atribuída.",
+      "oversightDescription": "Tickets de clientes dentro do acesso aprovado, incluindo os tratados pelas equipas de TI dos clientes.",
+      "view": "Vista",
+      "working": "Fila de trabalho",
+      "oversight": "Supervisão de clientes",
+      "workspace": "Espaço de trabalho",
+      "allWorkspaces": "Todos os espaços",
+      "state": "Estado",
+      "open": "Abertos",
+      "closed": "Fechados",
+      "all": "Todos os estados",
+      "sort": "Ordenar por",
+      "direction": "Ordem",
+      "asc": "Ascendente",
+      "desc": "Descendente",
+      "search": "Pesquisar tickets",
+      "loadError": "Não foi possível carregar os tickets. Atualize para verificar o seu acesso.",
+      "counts_one": "{{count}} ticket · {{open}} aberto · {{closed}} fechado",
+      "counts_other": "{{count}} tickets · {{open}} abertos · {{closed}} fechados",
+      "empty": "Nenhum ticket permitido corresponde a estes filtros.",
+      "emptyUnfiltered": "Ainda não há tickets de clientes para mostrar.",
+      "retry": "Tentar novamente",
+      "page": "Página {{page}}",
+      "sortFields": {
+        "updated": "Última atualização",
+        "created": "Criação",
+        "title": "Título",
+        "number": "Número do ticket"
+      },
+      "columns": {
+        "ticket": "Ticket",
+        "workspace": "Espaço de trabalho",
+        "state": "Estado",
+        "status": "Estado",
+        "priority": "Prioridade",
+        "responsibility": "Organização responsável",
+        "updated": "Atualização",
+        "title": "Title"
+      },
+      "organizations": {
+        "msp": "MSP",
+        "customer": "TI do cliente"
+      },
+      "export": "Exportar CSV",
+      "exporting": "A exportar…",
+      "exportError": "Não foi possível exportar os tickets. Atualize a fila e tente novamente.",
+      "bulkHandback": {
+        "title": "Devolver tickets à equipa de TI do cliente",
+        "select": "Selecione tickets desta página. A mesma nota de TI partilhada será adicionada a cada ticket selecionado.",
+        "returned": "Devolvido à equipa de TI do cliente",
+        "forbidden": "Acesso negado",
+        "changed": "O ticket foi alterado. Atualize antes de tentar novamente.",
+        "invalid": "Seleção inválida",
+        "selected": "Serão devolvidos {{count}} ticket(s) selecionado(s).",
+        "resume": "Uma devolução ao TI do cliente foi interrompida. Retome para confirmar o resultado.",
+        "noReloadRecovery": "A recuperação ao recarregar não está disponível neste navegador; ainda pode tentar novamente nesta sessão.",
+        "done": "Done",
+        "selectAll": "Select all returnable tickets",
+        "selectRow": "Select ticket",
+        "readOnly": "Read-only access"
+      },
+      "scopeUnavailable": "Abrindo a lista de chamados…",
+      "searchPlaceholder": "Pesquisar por número ou título",
+      "mspAlsoAssigned": "MSP também atribuído",
+      "unavailableWorkspace": "Unavailable workspace",
+      "reset": "Reset"
+    },
+    "projects": {
+      "assignment": {
+        "title": "Atribuição ao MSP",
+        "unassigned": "Não atribuída ao MSP",
+        "kind": "Atribuir a",
+        "user": "Técnico",
+        "team": "Equipe",
+        "assignee": "Responsável",
+        "more": "Mais responsáveis",
+        "assign": "Atribuir",
+        "clear": "Remover atribuição ao MSP"
+      }
+    },
+    "editor": {
+      "errors": {
+        "invalid": "Alguns valores são inválidos. Confira as alterações e tente novamente.",
+        "conflict": "Este chamado foi alterado. Recarregue antes de salvar suas alterações.",
+        "operationConflict": "Esta solicitação de salvamento já foi usada para outra alteração. Recarregue o chamado.",
+        "forbidden": "Seu acesso a este chamado mudou. Recarregue para continuar.",
+        "readOnly": "Este espaço está em modo somente leitura. Recarregue para ver o estado atual.",
+        "closeRules": "O chamado deve atender aos requisitos de encerramento do seu quadro antes de ser encerrado.",
+        "unknownOutcome": "Não foi possível confirmar o salvamento. Tente novamente com a mesma solicitação ou descarte as alterações e recarregue.",
+        "slaSetupRequired": "Seu MSP precisa configurar a política de SLA e o mapeamento de prioridades antes de reabrir este chamado sob sua responsabilidade."
+      }
     }
   },
   "common": {

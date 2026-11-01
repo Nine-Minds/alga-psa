@@ -579,7 +579,22 @@
       "previous": "Zurück",
       "priority": "Priorität",
       "status": "Status",
-      "titleColumn": "Titel"
+      "titleColumn": "Titel",
+      "title": "Kundentickets",
+      "view": "Ansicht",
+      "columns": "Spalten",
+      "density": "Dichte",
+      "filters": "Filter",
+      "client": "Kunde",
+      "allClients": "Alle Kunden",
+      "share": "Teilen",
+      "clearSignal": "Zurücksetzen",
+      "unavailable": "Diese Ansicht ist für Ihr Konto noch nicht verfügbar.",
+      "allTickets": "Alle Tickets",
+      "signals": {
+        "escalatedUnassigned": "Eskaliert, nicht zugewiesen",
+        "awaitingReply": "Wartet auf Ihre Antwort"
+      }
     },
     "delegation": {
       "actions": "Aktionen",
@@ -716,6 +731,152 @@
       "rejected": "Diese Aufgabe konnte nicht gespeichert werden.",
       "saved": "Gespeichert.",
       "save": "Speichern"
+    },
+    "section": {
+      "title": "Co-Managed",
+      "viewHistory": "Übergabeverlauf anzeigen",
+      "responsible": "Verantwortlich",
+      "change": "Ändern",
+      "privateTo": "Privat für {{organization}}"
+    },
+    "ticket": {
+      "title": "Co-Managed-Ticket",
+      "escalate": "An MSP eskalieren",
+      "handback": "An Kunden zurückgeben",
+      "takeBack": "Zurücknehmen",
+      "revoke": "Ticketzugriff entziehen",
+      "escalateHelp": "Der MSP übernimmt sofort die Verantwortung. Ergänzen Sie den nötigen Kontext.",
+      "handbackHelp": "Die Verantwortung geht an den Kunden zurück. Der MSP behält den genehmigten Ticketzugriff.",
+      "revokeHelp": "Der individuelle Ticketzugriff wird entzogen und die Verantwortung geht an den Kunden zurück. Separat genehmigter Board-Zugriff bleibt bestehen.",
+      "note": "Übergabenotiz",
+      "noteAudience": "Für berechtigte IT-Mitarbeitende beider Organisationen sichtbar. Diese Notiz wird nicht an Anfragende gesendet.",
+      "uncertain": "Das Ergebnis konnte nicht bestätigt werden. Wiederholen Sie dieselbe Anfrage oder laden Sie den aktuellen Stand, bevor Sie weitere Änderungen vornehmen.",
+      "saving": "Wird gespeichert…",
+      "retry": "Erneut versuchen",
+      "reload": "Aktuellen Stand laden",
+      "cancel": "Abbrechen",
+      "loadError": "Das Ticket oder die Zugriffsliste konnte nicht geladen werden. Ihre Berechtigungen haben sich möglicherweise geändert.",
+      "loading": "Wird geladen…",
+      "restricted": "Eingeschränktes Ticket",
+      "responsibility": "Verantwortlich: {{organization}}",
+      "formerSponsor": "Ehemaliger MSP",
+      "readOnly": "Dieser Arbeitsbereich ist schreibgeschützt. Kundenadministratoren können weiterhin Zugriff entziehen.",
+      "history": "Gemeinsamer IT-Übergabeverlauf",
+      "noHistory": "Keine sichtbaren Übergaben.",
+      "historyError": "Der Übergabeverlauf konnte nicht geladen werden.",
+      "older": "Ältere laden",
+      "transitions": {
+        "escalated": "An MSP eskaliert",
+        "handed_back": "An Kunden zurückgegeben",
+        "access_revoked": "Individueller Ticketzugriff entzogen"
+      },
+      "assignment": {
+        "needsHandoff": "Eskalieren Sie dieses Ticket, bevor Sie MSP-Mitarbeiter zuweisen.",
+        "unavailable": "Der zugewiesene MSP-Mitarbeiter oder das Team ist nicht mehr verfügbar."
+      },
+      "slaSetupRequired": "Ihr MSP muss seine SLA-Richtlinie und Prioritätszuordnung konfigurieren, bevor dieses Ticket eskaliert werden kann."
+    },
+    "callout": {
+      "title": "Kundentickets brauchen Sie",
+      "escalatedUnassigned_one": "{{count}} eskaliertes Ticket, nicht zugewiesen",
+      "escalatedUnassigned_other": "{{count}} eskalierte Tickets, nicht zugewiesen",
+      "awaitingReply_one": "{{count}} Ticket wartet auf Ihre Antwort",
+      "awaitingReply_other": "{{count}} Tickets warten auf Ihre Antwort",
+      "dismiss": "Schließen"
+    },
+    "queue": {
+      "title": "Co-Managed-Ticketwarteschlangen",
+      "workingDescription": "Gemeinsame Tickets, für die Ihr Team verantwortlich oder zuständig ist.",
+      "oversightDescription": "Kundentickets in Ihrem genehmigten Zugriff, einschließlich der Arbeit der Kunden-IT.",
+      "view": "Ansicht",
+      "working": "Arbeitswarteschlange",
+      "oversight": "Kundenübersicht",
+      "workspace": "Arbeitsbereich",
+      "allWorkspaces": "Alle Arbeitsbereiche",
+      "state": "Status",
+      "open": "Offen",
+      "closed": "Geschlossen",
+      "all": "Alle Status",
+      "sort": "Sortieren nach",
+      "direction": "Reihenfolge",
+      "asc": "Aufsteigend",
+      "desc": "Absteigend",
+      "search": "Tickets suchen",
+      "loadError": "Tickets konnten nicht geladen werden. Aktualisieren Sie die Ansicht, um Ihren Zugriff zu prüfen.",
+      "counts_one": "{{count}} Ticket · {{open}} offen · {{closed}} geschlossen",
+      "counts_other": "{{count}} Tickets · {{open}} offen · {{closed}} geschlossen",
+      "empty": "Keine zugänglichen Tickets entsprechen diesen Filtern.",
+      "emptyUnfiltered": "Es gibt noch keine Kundentickets.",
+      "retry": "Erneut versuchen",
+      "page": "Seite {{page}}",
+      "sortFields": {
+        "updated": "Zuletzt aktualisiert",
+        "created": "Erstellt",
+        "title": "Titel",
+        "number": "Ticketnummer"
+      },
+      "columns": {
+        "ticket": "Ticket",
+        "workspace": "Arbeitsbereich",
+        "state": "Status",
+        "status": "Status",
+        "priority": "Priorität",
+        "responsibility": "Zuständige Organisation",
+        "updated": "Aktualisiert",
+        "title": "Title"
+      },
+      "organizations": {
+        "msp": "MSP",
+        "customer": "Kunden-IT"
+      },
+      "export": "CSV exportieren",
+      "exporting": "Wird exportiert…",
+      "exportError": "Tickets konnten nicht exportiert werden. Aktualisieren Sie die Warteschlange und versuchen Sie es erneut.",
+      "bulkHandback": {
+        "title": "Tickets an die Kunden-IT zurückgeben",
+        "select": "Wählen Sie Tickets auf dieser Seite aus. Jedem ausgewählten Ticket wird dieselbe gemeinsame IT-Notiz hinzugefügt.",
+        "returned": "An die Kunden-IT zurückgegeben",
+        "forbidden": "Zugriff verweigert",
+        "changed": "Ticket geändert. Aktualisieren Sie vor einem erneuten Versuch.",
+        "invalid": "Ungültige Auswahl",
+        "selected": "{{count}} ausgewählte(s) Ticket(s) werden zurückgegeben.",
+        "resume": "Eine Rückgabe an die Kunden-IT wurde unterbrochen. Fortsetzen, um das Ergebnis zu bestätigen.",
+        "noReloadRecovery": "Die Wiederherstellung nach dem Neuladen ist in diesem Browser nicht verfügbar; ein erneuter Versuch in dieser Sitzung ist weiterhin möglich.",
+        "done": "Done",
+        "selectAll": "Select all returnable tickets",
+        "selectRow": "Select ticket",
+        "readOnly": "Read-only access"
+      },
+      "scopeUnavailable": "Ticketliste wird geöffnet…",
+      "searchPlaceholder": "Nach Nummer oder Titel suchen",
+      "mspAlsoAssigned": "MSP ebenfalls zugewiesen",
+      "unavailableWorkspace": "Unavailable workspace",
+      "reset": "Reset"
+    },
+    "projects": {
+      "assignment": {
+        "title": "MSP-Zuweisung",
+        "unassigned": "Nicht dem MSP zugewiesen",
+        "kind": "Zuweisen an",
+        "user": "Techniker",
+        "team": "Team",
+        "assignee": "Zuständiger",
+        "more": "Weitere Zuständige",
+        "assign": "Zuweisen",
+        "clear": "MSP-Zuweisung entfernen"
+      }
+    },
+    "editor": {
+      "errors": {
+        "invalid": "Einige Werte sind ungültig. Prüfen Sie Ihre Änderungen und versuchen Sie es erneut.",
+        "conflict": "Dieses Ticket wurde geändert. Laden Sie es vor dem Speichern neu.",
+        "operationConflict": "Diese Speicheranfrage wurde bereits für eine andere Änderung verwendet. Laden Sie das Ticket neu.",
+        "forbidden": "Ihr Zugriff auf dieses Ticket hat sich geändert. Laden Sie es neu.",
+        "readOnly": "Dieser Arbeitsbereich ist schreibgeschützt. Laden Sie den aktuellen Stand neu.",
+        "closeRules": "Das Ticket muss die Abschlussbedingungen seines Boards erfüllen, bevor es geschlossen werden kann.",
+        "unknownOutcome": "Es konnte nicht bestätigt werden, ob die Änderung gespeichert wurde. Wiederholen Sie dieselbe Speicherung oder verwerfen Sie Ihre Änderungen und laden Sie neu.",
+        "slaSetupRequired": "Ihr MSP muss seine SLA-Richtlinie und Prioritätszuordnung konfigurieren, bevor dieses Ticket unter MSP-Verantwortung wieder geöffnet werden kann."
+      }
     }
   },
   "common": {

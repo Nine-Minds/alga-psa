@@ -39,6 +39,14 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
   },
   {
+    // Sponsor-only Customer Tickets queue. Rules resolve first-match, and '/msp/tickets' (core helpdesk, allowed
+    // for every product) would otherwise capture this path, so this rule must stay ABOVE msp_core_helpdesk.
+    // Exact-segment matching keeps /msp/tickets and /msp/tickets/<id> on the helpdesk rule.
+    group: 'msp_co_managed_customer_tickets_queue',
+    staticPrefixes: ['/msp/tickets/customer'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
+  },
+  {
     group: 'msp_core_helpdesk',
     staticPrefixes: ['/msp/tickets', '/msp/create-ticket', '/msp/clients', '/msp/contacts', '/msp/interactions', '/msp/knowledge-base', '/msp/reports', '/msp/settings', '/msp/profile', '/msp/security-settings', '/msp/account', '/msp/add-ons'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed', co_managed: 'allowed' },
@@ -80,7 +88,7 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     // Sponsor-only queue of tickets customers shared with the sponsor, and its shared-ticket screen. Only a PSA
     // sponsor has them; the capability gate in the route layout decides whether a PSA tenant sees them.
     group: 'msp_co_managed_customer_tickets',
-    staticPrefixes: ['/msp/co-management/customer-tickets'],
+    staticPrefixes: ['/msp/co-management/customer-tickets', '/msp/co-management/tickets'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },
   },
   {

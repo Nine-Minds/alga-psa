@@ -466,7 +466,9 @@
         "operationConflict": "Den här kommentaren krockar med ett tidigare försök. Läs in igen och försök på nytt.",
         "audienceUnresolved": "Välj vem som kan se den här kommentaren innan du publicerar den.",
         "unknownOutcome": "Vi kunde inte bekräfta att kommentaren publicerades. Kontrollera konversationen innan du skickar den igen."
-      }
+      },
+      "unavailable": "This ticket is not available.",
+      "back": "Back to Customer Tickets"
     }
   },
   "responseState": {
