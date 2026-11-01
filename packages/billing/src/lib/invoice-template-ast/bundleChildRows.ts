@@ -101,13 +101,46 @@ export function buildBundleChildRowsPreset(options: BundleChildRowsPresetOptions
   };
 }
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+/**
+ * Structural equality that ignores object key order (jsonb reorders keys) and
+ * treats a key set to `undefined` the same as a missing key (jsonb drops them).
+ * Array order is significant, except under `parentBlankColumns`, which is a set.
+ */
+function structurallyEqual(a: unknown, b: unknown, key?: string): boolean {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) return false;
+    if (key === 'parentBlankColumns') {
+      const sortedA = [...a].map(String).sort();
+      const sortedB = [...b].map(String).sort();
+      return sortedA.every((value, index) => value === sortedB[index]);
+    }
+    return a.every((value, index) => structurallyEqual(value, b[index]));
+  }
+  if (isPlainObject(a) && isPlainObject(b)) {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+    for (const k of keys) {
+      if (!structurallyEqual(a[k], b[k], k)) return false;
+    }
+    return true;
+  }
+  return Object.is(a, b);
+}
+
+/** Whether a table's childRows binds the quantity-change field (key-order independent). */
+export function bundleChildRowsShowChange(childRows: unknown): boolean {
+  return JSON.stringify(childRows ?? '').includes('component.quantityChange');
+}
+
 /** Which preset (if any) a table's childRows matches; 'custom' for hand-authored ones. */
 export function detectBundleChildRowsPreset(childRows: unknown, columnIds?: Partial<BundleColumnIds>): 'off' | 'quantities' | 'quantities-and-prices' | 'custom' {
   if (!childRows) return 'off';
   for (const showChange of [true, false]) {
     const candidates: Array<['quantities' | 'quantities-and-prices', boolean]> = [['quantities', false], ['quantities-and-prices', true]];
     for (const [name, prices] of candidates) {
-      if (JSON.stringify(childRows) === JSON.stringify(buildBundleChildRowsPreset({ prices, showChange, columnIds }))) return name;
+      if (structurallyEqual(childRows, buildBundleChildRowsPreset({ prices, showChange, columnIds }))) return name;
     }
   }
   return 'custom';
