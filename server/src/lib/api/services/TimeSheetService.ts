@@ -1531,9 +1531,11 @@ export class TimeSheetService extends BaseService<any> {
   }
 
   private async canManageTimeSheets(context: ServiceContext): Promise<boolean> {
+    // 'manage' ("Administer timesheets on behalf of other users", catalog.cjs) -- NOT 'update', which every default
+    // Technician holds and which only authorises acting on one's own sheet.
     if (!context.user) return false;
     const { knex } = await this.getKnex();
-    return hasPermission(context.user, 'time_sheet', 'update', knex);
+    return hasPermission(context.user, 'time_sheet', 'manage', knex);
   }
 
   private async canApproveTimeSheets(context: ServiceContext): Promise<boolean> {

@@ -82,7 +82,7 @@ async function seed() {
   });
   grants.byUser.set(owner, new Set(['time_sheet:update']));
   grants.byUser.set(other, new Set(['time_sheet:update']));
-  grants.byUser.set(approver, new Set(['time_sheet:update', 'time_sheet:approve']));
+  grants.byUser.set(approver, new Set(['time_sheet:update', 'time_sheet:approve', 'time_sheet:manage']));
   return { tenantId, owner, approver, other, periodId };
 }
 
@@ -256,5 +256,52 @@ describe('TimeSheetService.update approval_status is a requested transition (rea
       svc.update(sheet.id, { approval_status: 'DRAFT' }, contextFor(f.tenantId, f.approver))
     ).rejects.toBeInstanceOf(ConflictError);
     expect((await sheetRow(f.tenantId, sheet.id)).approval_status).toBe('CHANGES_REQUESTED');
+  });
+
+  // canManageTimeSheets is the "act on another user's sheet" guard. time_sheet:update is a default Technician
+  // permission (catalog.cjs), so it must NOT be what grants cross-user write; time_sheet:manage is.
+  describe('cross-user authority needs time_sheet:manage, not time_sheet:update', () => {
+    it('a. update-only user cannot edit another user\'s DRAFT sheet (403, notes unchanged)', async () => {
+      const f = await seed();
+      const sheet = await seedSheet(f, f.owner, 'DRAFT', { notes: 'original' });
+
+      await expect(
+        serviceFor(f.tenantId).update(sheet.id, { notes: 'hijacked' }, contextFor(f.tenantId, f.other))
+      ).rejects.toBeInstanceOf(ForbiddenError);
+
+      expect((await sheetRow(f.tenantId, sheet.id)).notes).toBe('original');
+    });
+
+    it('b. update-only user cannot delete another user\'s DRAFT sheet (403, row remains)', async () => {
+      const f = await seed();
+      const sheet = await seedSheet(f, f.owner, 'DRAFT');
+
+      await expect(
+        serviceFor(f.tenantId).delete(sheet.id, contextFor(f.tenantId, f.other))
+      ).rejects.toBeInstanceOf(ForbiddenError);
+
+      expect(await sheetRow(f.tenantId, sheet.id)).toBeTruthy();
+    });
+
+    it('c. update-only owner cannot edit their own APPROVED sheet (409 immutability, notes unchanged)', async () => {
+      const f = await seed();
+      const sheet = await seedSheet(f, f.owner, 'APPROVED', { notes: 'original' });
+
+      await expect(
+        serviceFor(f.tenantId).update(sheet.id, { notes: 'rewritten' }, contextFor(f.tenantId, f.owner))
+      ).rejects.toThrow();
+
+      expect((await sheetRow(f.tenantId, sheet.id)).notes).toBe('original');
+    });
+
+    it('d. a time_sheet:manage holder can edit another user\'s sheet', async () => {
+      const f = await seed();
+      grants.byUser.set(f.other, new Set(['time_sheet:update', 'time_sheet:manage']));
+      const sheet = await seedSheet(f, f.owner, 'DRAFT', { notes: 'original' });
+
+      await serviceFor(f.tenantId).update(sheet.id, { notes: 'edited by admin' }, contextFor(f.tenantId, f.other));
+
+      expect((await sheetRow(f.tenantId, sheet.id)).notes).toBe('edited by admin');
+    });
   });
 });
