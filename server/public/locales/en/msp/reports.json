@@ -276,7 +276,7 @@
       },
       "bucketUsage": {
         "title": "Bucket Hours Utilization",
-        "description": "Monitor bucket hours usage and identify overage situations",
+        "description": "Monitor bucket hours usage and identify overage situations. Prepaid hour blocks (contract-issued and ad-hoc) are listed with their burn-down.",
         "empty": "No bucket-based contracts found"
       },
       "profitability": {
@@ -305,13 +305,20 @@
       "profit": "Profit",
       "margin": "Margin",
       "plusVariableUsage": "+ variable usage",
-      "variableUsage": "Variable usage"
+      "variableUsage": "Variable usage",
+      "service": "Service",
+      "hourlyRate": "Rate / hr",
+      "expirationDate": "Expires",
+      "neverExpires": "Never",
+      "adhocBlock": "Ad-hoc"
     },
     "statusValues": {
       "active": "Active",
       "upcoming": "Upcoming",
       "yes": "Yes",
-      "no": "No"
+      "no": "No",
+      "expired": "Expired",
+      "voided": "Voided"
     },
     "profitability": {
       "formats": {
@@ -414,6 +421,11 @@
       "fallbacks": {
         "untitledTicket": "Untitled ticket"
       }
+    },
+    "columnsMenu": {
+      "label": "Columns",
+      "title": "Columns",
+      "reset": "Reset to default columns"
     }
   },
   "contractPerformance": {

@@ -8,6 +8,7 @@ import QuoteActivity from './quoteActivity';
 import { canTransitionQuoteStatus } from '../schemas/quoteSchemas';
 import { recalculateQuoteFinancials } from '../services/quoteCalculationService';
 import { prepareQuoteTermsForDb } from '../lib/quoteTermsContent';
+import { revoke as revokeQuoteAccessLinks } from '../services/quoteAccessLinks';
 
 function formatDisplayQuoteNumber(quote: Pick<IQuote, 'quote_number' | 'quote_id' | 'version'>): string {
   const baseNumber = quote.quote_number ?? `Draft ${quote.quote_id}`;
@@ -66,6 +67,9 @@ async function expireQuoteIfNeeded(
       updated_at: knexOrTrx.fn.now()
     })
     .returning('*');
+
+  // Same transaction as the status change: an expired quote must not stay reachable.
+  await revokeQuoteAccessLinks(knexOrTrx, tenant, { quoteId: quote.quote_id }, 'cancelled');
 
   await QuoteActivity.create(knexOrTrx, tenant, {
     quote_id: quote.quote_id,
@@ -308,6 +312,15 @@ const Quote = {
       .update({ ...prepareQuoteTermsForDb(updateData as Record<string, unknown>), updated_at: knexOrTrx.fn.now() })
       .returning('*');
 
+    // Cancelling/expiring a quote kills its access links in the same transaction.
+    // accepted/rejected deliberately do NOT revoke (read-only view stays available).
+    if (
+      (updateData.status === 'cancelled' || updateData.status === 'expired') &&
+      updateData.status !== existingQuote.status
+    ) {
+      await revokeQuoteAccessLinks(knexOrTrx, tenant, { quoteId }, 'cancelled');
+    }
+
     await QuoteActivity.create(knexOrTrx, tenant, {
       quote_id: quoteId,
       activity_type: updateData.status && updateData.status !== existingQuote.status ? 'status_changed' : 'updated',
@@ -390,6 +403,10 @@ const Quote = {
       const db = tenantDb(trx, tenantId);
       // FK CASCADE doesn't reach quote_activities while it's a Citus-local table; delete explicitly.
       await db.table('quote_activities')
+        .where({ quote_id: quoteId })
+        .del();
+      // Same for quote_access_links (distributed only when quotes is; see its migration).
+      await db.table('quote_access_links')
         .where({ quote_id: quoteId })
         .del();
       await db.table('quotes')
@@ -503,6 +520,8 @@ const Quote = {
         updated_at: knexOrTrx.fn.now(),
         updated_by: performedBy ?? sourceQuote.updated_by ?? sourceQuote.created_by ?? null,
       });
+
+    await revokeQuoteAccessLinks(knexOrTrx, tenant, { quoteId: sourceQuote.quote_id }, 'superseded');
 
     await QuoteActivity.create(knexOrTrx, tenant, {
       quote_id: sourceQuote.quote_id,

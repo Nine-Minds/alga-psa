@@ -31,7 +31,7 @@ import {
   type InboundReplyAckDeciderResult,
 } from './inboundReplyAcknowledgementDecider';
 import { evaluateInboundEmailRules } from './inboundEmailRules';
-import { normalizeRfc822MessageId } from './inboundEmailIdentity';
+import { normalizeRfc822MessageId, rfcMessageIdLookupForms } from './inboundEmailIdentity';
 import { captureTicketTransitionSnapshot, publishTicketTransitionsAfterCommit } from '../../lib/tickets/ticketLifecycleEvents';
 import { withTenantAdminTransaction } from './tenantAdminTransaction';
 import { associateAssetWithTicket } from '../assets/assetTicketAssociation';
@@ -41,6 +41,7 @@ import {
 } from './notificationLoopDetection';
 import {
   allowsContactSenderAttribution,
+  isMicrosoftIntraOrgSender,
   allowsInternalSenderAttribution,
   verifySenderAuthentication,
 } from '../../lib/email/senderAuthVerification';
@@ -637,18 +638,6 @@ function buildDedupeKey(input: ProcessInboundEmailInAppInput): string {
 }
 
 /**
- * Candidate lookup forms for a raw RFC 5322 Message-ID. The canonical
- * normalized form matches how the durable pipeline writes `email_metadata`
- * message ids; the raw trimmed (bracketed) form still matches legacy rows.
- */
-function rfcMessageIdLookupForms(value: string | null | undefined): string[] {
-  const raw = typeof value === 'string' ? value.trim() : '';
-  if (!raw) return [];
-  const normalized = normalizeRfc822MessageId(raw);
-  return Array.from(new Set([normalized, raw].filter((form): form is string => Boolean(form))));
-}
-
-/**
  * Canonical form for a message-id value persisted into `email_metadata`.
  * Applies the same RFC normalizer used by every lookup so stored keys and
  * lookup keys can never disagree on bracketing or domain case.
@@ -906,6 +895,10 @@ export async function processInboundEmailInApp(
   )?.[1];
   const senderAuthResults = verifySenderAuthentication(authenticationResultsHeader, senderEmail);
   const isVerifiedListRewrite = Boolean(emailData.headers?.['x-resolved-original-sender']);
+  // Same-M365-tenant mail has no Authentication-Results; Exchange's internal-auth stamp
+  // stands in for aligned SPF/DKIM for contact (never internal-user) attribution.
+  const isTrustedIntraOrgSender = isMicrosoftIntraOrgSender(emailData.provider, emailData.headers);
+  const contactSenderTrusted = allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite || isTrustedIntraOrgSender;
   const durableExecution = options.durableExecution ?? null;
 
   const helperExecutionOptions = (kind: 'ticket' | 'comment'): InboundEmailExecutionOptions | undefined => {
@@ -1009,7 +1002,7 @@ export async function processInboundEmailInApp(
       });
       return null;
     }
-    if (allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite) return matched;
+    if (contactSenderTrusted) return matched;
     console.warn('processInboundEmailInApp: sender auth not aligned; discarding contact match', {
       tenantId, providerId, emailId: emailData.id, senderEmail,
       contactId: matched.contact_id ?? null,
@@ -1974,7 +1967,7 @@ export async function processInboundEmailInApp(
     const automated = detectAutomatedInboundMessage(emailData).isAutomated;
     if (senderIsProviderMailbox) autoCreateSkipReason = 'provider_mailbox';
     else if (automated) autoCreateSkipReason = 'automated';
-    else if (!(allowsContactSenderAttribution(senderAuthResults) || isVerifiedListRewrite)) autoCreateSkipReason = 'auth_not_aligned';
+    else if (!contactSenderTrusted) autoCreateSkipReason = 'auth_not_aligned';
     else {
       const created = await createContactForInboundSender({ email: senderEmail!, name: senderName, clientId: domainMatchedClientId! }, tenantId, {
         existingConnection: options.durableExecution?.trx,

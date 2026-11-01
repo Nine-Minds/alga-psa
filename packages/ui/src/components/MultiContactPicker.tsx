@@ -9,6 +9,7 @@ import { Input } from './Input';
 import { Checkbox } from './Checkbox';
 import { Button } from './Button';
 import type { AutomationProps } from '../ui-reflection/types';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface MultiContactPickerProps {
   id?: string;
@@ -28,10 +29,11 @@ const MultiContactPicker = ({
   onValuesChange,
   contacts,
   clientId,
-  placeholder = 'Select contacts...',
+  placeholder,
   disabled = false,
   'data-automation-id': dataAutomationId,
 }: MultiContactPickerProps & AutomationProps) => {
+  const { t } = useTranslation('common');
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
@@ -132,7 +134,7 @@ const MultiContactPicker = ({
 
   const renderTriggerContent = () => {
     if (selectedContacts.length === 0) {
-      return <span className="text-gray-500">{placeholder}</span>;
+      return <span className="text-gray-500">{placeholder ?? t('multiContactPicker.fields.contacts.placeholder')}</span>;
     }
     return (
       <div className="flex flex-1 flex-wrap items-center gap-2">
@@ -185,7 +187,7 @@ const MultiContactPicker = ({
             <Input
               ref={searchInputRef}
               type="text"
-              placeholder="Search contacts..."
+              placeholder={t('multiContactPicker.fields.search.placeholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full rounded-md border border-gray-200 px-3 py-2 pl-9 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))]"
@@ -198,7 +200,7 @@ const MultiContactPicker = ({
         <div className="overflow-y-auto p-1" style={{ maxHeight: '320px', overscrollBehavior: 'contain' }}>
           {filteredContacts.length === 0 ? (
             <div className="px-3 py-2 text-sm text-gray-500">
-              {searchQuery ? 'No results found' : 'No contacts available'}
+              {searchQuery ? t('multiContactPicker.noResults') : t('multiContactPicker.noContacts')}
             </div>
           ) : (
             filteredContacts.map((contact) => {
@@ -226,7 +228,7 @@ const MultiContactPicker = ({
                     size="sm"
                   />
                   <span className="ml-2 truncate">{contact.full_name}</span>
-                  {noEmail && <span className="ml-auto text-xs text-gray-400">no email</span>}
+                  {noEmail && <span className="ml-auto text-xs text-gray-400">{t('multiContactPicker.noEmail')}</span>}
                 </div>
               );
             })
@@ -241,7 +243,7 @@ const MultiContactPicker = ({
               onClick={() => onValuesChange([])}
               className="w-full py-1 text-sm text-gray-600 hover:text-gray-900"
             >
-              Clear all
+              {t('multiContactPicker.actions.clearAll')}
             </Button>
           </div>
         )}

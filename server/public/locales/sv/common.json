@@ -1,4 +1,7 @@
 {
+  "breadcrumbs": {
+    "ariaLabel": "Navigeringssökväg"
+  },
   "phone": {
     "extension": "ankn."
   },
@@ -22,13 +25,19 @@
     "add": "Reagera",
     "ariaSummary_one": "{{emoji}} {{count}} reaktion",
     "ariaSummary_other": "{{emoji}} {{count}} reaktioner",
-    "ariaYouReacted": ", du reagerade"
+    "ariaYouReacted": ", du reagerade",
+    "ariaSummary_few": "{{emoji}} {{count}} reaktioner",
+    "ariaSummary_many": "{{emoji}} {{count}} reaktioner"
   },
   "credits": {
     "expiresInDaysOn_one": "Går ut om {{count}} dag, den {{date}}",
     "expiresInDaysOn_other": "Går ut om {{count}} dagar, den {{date}}",
     "expiringForClient_one": "{{count}} tillgodohavande för {{clientName}} går snart ut",
-    "expiringForClient_other": "{{count}} tillgodohavanden för {{clientName}} går snart ut"
+    "expiringForClient_other": "{{count}} tillgodohavanden för {{clientName}} går snart ut",
+    "expiresInDaysOn_few": "Går ut om {{count}} dagar, den {{date}}",
+    "expiresInDaysOn_many": "Går ut om {{count}} dagar, den {{date}}",
+    "expiringForClient_few": "{{count}} tillgodohavanden för {{clientName}} går snart ut",
+    "expiringForClient_many": "{{count}} tillgodohavanden för {{clientName}} går snart ut"
   },
   "staleAction": {
     "message": "Sidan är inaktuell. Ladda om sidan för att återställa liveuppdateringar och åtgärder."
@@ -46,7 +55,13 @@
     "licenseWrongTenant": "Licensen utfärdades för en annan installation och är inte giltig här. Installationen använder Essentials-funktionerna.",
     "manageLicense": "Hantera licens",
     "ariaLabel": "Licensstatus",
-    "dismiss": "Stäng"
+    "dismiss": "Stäng",
+    "licenseExpiresIn_few": "Licensen går ut om {{count}} dagar. Förnya den för att undvika avbrott i tjänsten.",
+    "licenseExpiresIn_many": "Licensen går ut om {{count}} dagar. Förnya den för att undvika avbrott i tjänsten.",
+    "trialDaysRemaining_few": "Provperioden för Pro är aktiv – {{count}} dagar kvar.",
+    "trialDaysRemaining_many": "Provperioden för Pro är aktiv – {{count}} dagar kvar.",
+    "trialExpiresIn_few": "Provperioden för Pro går ut om {{count}} dagar. Ange en licensnyckel för att behålla Pro-funktionerna.",
+    "trialExpiresIn_many": "Provperioden för Pro går ut om {{count}} dagar. Ange en licensnyckel för att behålla Pro-funktionerna."
   },
   "nav": {
     "dashboard": "Översikt",
@@ -99,7 +114,18 @@
     "done": "Klart",
     "continue": "Fortsätt",
     "printSelected": "Skriv ut markerade ({{count}})",
-    "removeTag": "Ta bort tagg"
+    "removeTag": "Ta bort tagg",
+    "saveChanges": "Spara ändringar",
+    "printSelected_few": "Skriv ut markerade ({{count}})",
+    "printSelected_many": "Skriv ut markerade ({{count}})",
+    "saveSettings": "Spara inställningar",
+    "finishSetup": "Slutför konfigurationen",
+    "skip": "Hoppa över",
+    "saveAsDraft": "Spara som utkast",
+    "completing": "Slutför…",
+    "more": "Mer",
+    "closeDialog": "Stäng dialogruta",
+    "clearSearch": "Rensa sökning"
   },
   "upgradePrompt": {
     "editionLabel": "Pro",
@@ -128,7 +154,9 @@
     "notAssigned": "Inte tilldelad",
     "searchUsersOrTeams": "Sök användare eller team…",
     "unnamedUser": "Användare utan namn",
-    "unnamedTeam": "Team utan namn"
+    "unnamedTeam": "Team utan namn",
+    "userPicker": "Användarväljare",
+    "noUsersFound": "Inga användare hittades"
   },
   "serviceTypeSelect": {
     "placeholder": "Välj tjänstetyp…",
@@ -159,7 +187,8 @@
     "active": "Aktiv",
     "inactive": "Inaktiv",
     "completed": "Slutförd",
-    "cancelled": "Avbruten"
+    "cancelled": "Avbruten",
+    "loadingLabel": "Läser in"
   },
   "messages": {
     "welcome": "Välkommen",
@@ -239,7 +268,18 @@
     }
   },
   "fields": {
-    "notes": "Anteckningar"
+    "notes": "Anteckningar",
+    "phone": {
+      "label": "Telefon",
+      "placeholder": "+1 (555) 123-4567"
+    },
+    "phoneExtension": {
+      "label": "Anknytning",
+      "placeholder": "ankn. 1234"
+    },
+    "priority": {
+      "placeholder": "Välj prioritet"
+    }
   },
   "auth": {
     "signOut": {
@@ -612,7 +652,11 @@
     "expand": "Fäll ut",
     "showInDrawer": "Visa i sidopanel",
     "showEarlierReplies_one": "Visa {{count}} tidigare svar",
-    "showEarlierReplies_other": "Visa {{count}} tidigare svar"
+    "showEarlierReplies_other": "Visa {{count}} tidigare svar",
+    "replies_few": "{{count}} svar",
+    "replies_many": "{{count}} svar",
+    "showEarlierReplies_few": "Visa {{count}} tidigare svar",
+    "showEarlierReplies_many": "Visa {{count}} tidigare svar"
   },
   "pagination": {
     "previous": "Föregående",
@@ -634,7 +678,9 @@
     "ariaLabel": "Sidnavigering",
     "totalItems": "Totalt {{count}} {{itemLabel}}",
     "totalRecordsInline": "(totalt {{count}} poster)",
-    "pageOf": "Sida {{current}} av {{total}}"
+    "pageOf": "Sida {{current}} av {{total}}",
+    "itemsLabel_few": "poster",
+    "itemsLabel_many": "poster"
   },
   "documents": {
     "title": "Dokument",
@@ -687,7 +733,11 @@
       "downloadFailed": "Det gick inte att ladda ner dokumentet",
       "bulkDeleteFailed": "Det gick inte att radera vissa dokument",
       "bulkDeleteSuccess_one": "{{count}} dokument har raderats",
-      "bulkDeleteSuccess_other": "{{count}} dokument har raderats"
+      "bulkDeleteSuccess_other": "{{count}} dokument har raderats",
+      "bulkDeleteSuccess_few": "{{count}} dokument har raderats",
+      "bulkDeleteSuccess_many": "{{count}} dokument har raderats",
+      "moveDocumentsSuccess_few": "{{count}} dokument har flyttats till {{destination}}",
+      "moveDocumentsSuccess_many": "{{count}} dokument har flyttats till {{destination}}"
     },
     "empty": {
       "default": "Inga dokument hittades",
@@ -701,11 +751,15 @@
       "selected_other": "{{count}} dokument markerade",
       "moveToFolder": "Flytta till mapp",
       "deleteSelected": "Radera markerade",
-      "clearSelection": "Avmarkera alla"
+      "clearSelection": "Avmarkera alla",
+      "selected_few": "{{count}} dokument markerade",
+      "selected_many": "{{count}} dokument markerade"
     },
     "prompts": {
       "confirmBulkDelete_one": "Vill du radera {{count}} dokument?",
-      "confirmBulkDelete_other": "Vill du radera {{count}} dokument?"
+      "confirmBulkDelete_other": "Vill du radera {{count}} dokument?",
+      "confirmBulkDelete_few": "Vill du radera {{count}} dokument?",
+      "confirmBulkDelete_many": "Vill du radera {{count}} dokument?"
     },
     "pagination": {
       "perPage": "{{count}} per sida"
@@ -738,7 +792,9 @@
       "rootOption": "Rot (ingen mapp)",
       "empty": "Inga mappar tillgängliga. Dokument sparas i roten.",
       "showAllFolders": "Visa alla mappar",
-      "showEntityFolders": "Visa entitetsmappar"
+      "showEntityFolders": "Visa entitetsmappar",
+      "bulkMoveDescription_few": "Välj målmapp för {{count}} dokument",
+      "bulkMoveDescription_many": "Välj målmapp för {{count}} dokument"
     },
     "filters": {
       "searchLabel": "Sök dokument",
@@ -1289,7 +1345,9 @@
       "revoking": "Återkallar…",
       "loggingOut": "Loggar ut…",
       "logoutFromOther_one": "Logga ut från {{count}} annan enhet",
-      "logoutFromOther_other": "Logga ut från {{count}} andra enheter"
+      "logoutFromOther_other": "Logga ut från {{count}} andra enheter",
+      "logoutFromOther_few": "Logga ut från {{count}} andra enheter",
+      "logoutFromOther_many": "Logga ut från {{count}} andra enheter"
     },
     "confirmations": {
       "logoutCurrent": "Du loggas ut från din aktuella session. Vill du fortsätta?",
@@ -1337,8 +1395,34 @@
     }
   },
   "enums": {
+    "locale": {
+      "en": "Engelska",
+      "fr": "Franska",
+      "es": "Spanska",
+      "de": "Tyska",
+      "nl": "Nederländska",
+      "it": "Italienska",
+      "pl": "Polska",
+      "pt": "Portugisiska (Brasilien)",
+      "sv": "Svenska",
+      "xx": "Pseudospråk (xx)",
+      "yy": "Pseudospråk (yy)"
+    },
     "addOnDescription": {
       "ai_assistant": "Ge ditt team tillgång till AI-chatt, dokumentstöd, hjälp i sidopanelen och AI-verktyg för arbetsflöden."
+    },
+    "notificationCategory": {
+      "tickets": "Ärenden",
+      "invoices": "Fakturor",
+      "messages": "Meddelanden",
+      "projects": "Projekt",
+      "system": "System",
+      "appointments": "Bokningar"
+    },
+    "theme": {
+      "light": "Ljust",
+      "dark": "Mörkt",
+      "system": "System"
     }
   },
   "timePicker": {
@@ -1525,7 +1609,22 @@
     "showAll": "Visa alla",
     "showingAllColumns": "Alla kolumner visas. Rulla i sidled för att se dem.",
     "showLess": "Visa färre",
-    "columnsHidden": "{{count}} kolumner är dolda på grund av begränsat utrymme."
+    "columnsHidden": "{{count}} kolumner är dolda på grund av begränsat utrymme.",
+    "columnsHidden_few": "{{count}} kolumner är dolda.",
+    "columnsHidden_many": "{{count}} kolumner är dolda.",
+    "responsiveColumnsHidden_one": "{{count}} kolumn är dold på grund av begränsat utrymme. Ändra storleken för att se fler.",
+    "responsiveColumnsHidden_other": "{{count}} kolumner är dolda på grund av begränsat utrymme. Ändra storleken för att se fler.",
+    "responsiveColumnsHidden_few": "{{count}} kolumner är dolda på grund av begränsat utrymme. Ändra storleken för att se fler.",
+    "responsiveColumnsHidden_many": "{{count}} kolumner är dolda på grund av begränsat utrymme. Ändra storleken för att se fler.",
+    "empty": "Inga resultat",
+    "pagination": {
+      "empty": "0 poster",
+      "range_one": "{{first}}–{{last}} av {{count}} post",
+      "range_other": "{{first}}–{{last}} av {{count}} poster",
+      "range_few": "{{first}}–{{last}} av {{count}} poster",
+      "range_many": "{{first}}–{{last}} av {{count}} poster",
+      "perPage": "{{count}} per sida"
+    }
   },
   "richTextEditorSkeleton": {
     "loading": "Läser in redigeraren…"
@@ -1544,7 +1643,36 @@
   },
   "notifications": {
     "needsAttention": "Kräver åtgärd ({{count}})",
-    "lowPriority": "Låg prioritet ({{count}})"
+    "lowPriority": "Låg prioritet ({{count}})",
+    "detail": {
+      "document": "Dokument",
+      "actions": {
+        "openDocument": "Öppna dokument",
+        "viewTicket": "Visa ärende",
+        "viewTask": "Visa uppgift",
+        "viewDetails": "Visa detaljer"
+      },
+      "changes": "Ändringar:",
+      "status": "Status:",
+      "priority": "Prioritet:",
+      "assignedTo": "Tilldelat till:",
+      "changedBy": "Ändrat av:",
+      "assignedBy": "Tilldelat av:",
+      "unread": "Oläst",
+      "internalComment": "Intern kommentar",
+      "commentBy": "Kommentar av {{author}}:",
+      "readAt": "Läst {{time}}"
+    },
+    "item": {
+      "unknown": "Okänd",
+      "justNow": "Just nu",
+      "minutesAgo": "för {{minutes}} min sedan",
+      "hoursAgo": "för {{hours}} h sedan",
+      "daysAgo": "för {{days}} d sedan",
+      "assigned": "Tilldelat:",
+      "performedBy": "av {{name}}",
+      "internal": "Intern"
+    }
   },
   "importConflicts": {
     "title": "Lös importkonflikter",
@@ -1593,7 +1721,41 @@
       "document": "dokument",
       "knowledge_base_article": "kunskapsbasartiklar",
       "opportunity": "affärsmöjligheter"
-    }
+    },
+    "messages": {
+      "error": {
+        "duplicate": "Taggen ”{{tag}}” finns redan på det här objektet",
+        "missingEntityId": "Det gick inte att lägga till taggen: entitets-ID saknas"
+      },
+      "success": {
+        "added": "Taggen ”{{tag}}” har lagts till"
+      }
+    },
+    "dialogs": {
+      "lastUsage": {
+        "title": "Sista användningen av taggen",
+        "message": "Det här är sista användningen av taggen ”{{tag}}”. Vill du ta bort taggdefinitionen eller behålla den för framtida bruk?",
+        "confirm": "Ta bort koppling och definition",
+        "keep": "Ta bort koppling och behåll definition"
+      }
+    },
+    "fields": {
+      "tags": {
+        "label": "Taggar",
+        "placeholder": "Lägg till tagg…"
+      },
+      "newTag": {
+        "placeholder": "Ny tagg"
+      }
+    },
+    "actions": {
+      "removeTag": "Ta bort taggen {{tag}}",
+      "saving": "..."
+    },
+    "errors": {
+      "providerRequired": "useTags måste användas inom en TagProvider"
+    },
+    "empty": "Inga taggar hittades"
   },
   "statusDialog": {
     "nameRequired": "Statusnamn krävs",
@@ -1632,7 +1794,14 @@
   "editor": {
     "attachFiles": "Bifoga filer",
     "uploadingFiles": "Laddar upp filer…",
-    "fileUploadFailed": "Filuppladdningen misslyckades."
+    "fileUploadFailed": "Filuppladdningen misslyckades.",
+    "mentions": {
+      "everyone": "Alla",
+      "aiAssistant": "Alga AI-assistent",
+      "noUsername": "inget användarnamn",
+      "userTitle": "{{displayName}} ({{username}})",
+      "fallback": "omnämnande"
+    }
   },
   "listViews": {
     "defaultView": "Standardvy",
@@ -1754,5 +1923,254 @@
   "emailRecipients": {
     "remove": "Ta bort {{email}}",
     "placeholder": "Skriv en adress och tryck på Retur"
+  },
+  "iconPicker": {
+    "enums": {
+      "icons": {
+        "phone": "Telefon",
+        "mail": "E-post",
+        "message-circle": "Meddelande",
+        "video": "Videosamtal",
+        "send": "Skicka",
+        "users": "Möte",
+        "calendar": "Bokning",
+        "presentation": "Presentation",
+        "coffee": "Informellt möte",
+        "handshake": "Överenskommelse",
+        "file-text": "Dokument",
+        "sticky-note": "Anteckning",
+        "edit": "Redigera",
+        "flag": "Uppföljning",
+        "alarm-clock": "Påminnelse",
+        "clock": "Tidregistrering",
+        "activity": "Allmän aktivitet",
+        "briefcase": "Kontohantering",
+        "search": "Efterforskning",
+        "book-open": "Utbildning",
+        "headphones": "Support",
+        "check-square": "Granskning",
+        "clipboard": "Dokumentation",
+        "users-2": "Konsultation",
+        "target": "Planering",
+        "settings": "Konfiguration",
+        "star": "Viktigt",
+        "award": "Prestation",
+        "zap": "Snabbåtgärd",
+        "map-pin": "Plats",
+        "tag": "Etikett",
+        "bell": "Avisering",
+        "shield": "Säkerhet",
+        "key": "Åtkomst",
+        "heart": "Favorit"
+      },
+      "categories": {
+        "Communication": "Kommunikation",
+        "Meetings": "Möten",
+        "Documents": "Dokument",
+        "Tasks": "Uppgifter",
+        "Activities": "Aktiviteter",
+        "Business": "Affärsverksamhet"
+      }
+    },
+    "selected": "Valt: {{label}}",
+    "help": "Välj en ikon för den här interaktionstypen. Ikonen visas i listor och formulär."
+  },
+  "skeletons": {
+    "calendar": {
+      "loading": "Läser in kalendern…"
+    },
+    "kanbanBoard": {
+      "loading": "Läser in Kanban-tavlan…"
+    },
+    "chart": {
+      "loading": "Läser in diagram...",
+      "loadingNamed": "Läser in {{title}}..."
+    },
+    "settingsTab": {
+      "loading": "Läser in inställningar..."
+    },
+    "editor": {
+      "loading": "Läser in redigeraren…"
+    },
+    "taskForm": {
+      "loading": "Läser in uppgiftsformuläret…"
+    },
+    "workflow": {
+      "loading": "Läser in arbetsflödesvisualiseringen…"
+    }
+  },
+  "dialogs": {
+    "success": {
+      "title": "Lyckades",
+      "confirm": "OK"
+    },
+    "contactPicker": {
+      "title": "Välj kontakt",
+      "columns": {
+        "name": "Namn",
+        "email": "E-post",
+        "phone": "Telefon",
+        "action": "Åtgärd"
+      },
+      "select": "Välj",
+      "searchPlaceholder": "Sök efter namn, e-post eller telefon…"
+    },
+    "defaultTitle": "Dialogruta",
+    "confirmDelete": {
+      "title": "Radera {{itemType}}",
+      "message": "Vill du verkligen radera ”{{itemName}}”? Den här åtgärden kan inte ångras."
+    },
+    "unsavedChanges": {
+      "title": "Osparade ändringar",
+      "message": "Du har osparade ändringar. Vill du verkligen lämna sidan? Dina ändringar går förlorade.",
+      "confirm": "Lämna utan att spara",
+      "cancel": "Stanna"
+    },
+    "confirmAction": {
+      "title": "Bekräfta åtgärd"
+    },
+    "contentTitle": "Dialoginnehåll"
+  },
+  "viewDensity": {
+    "compact": {
+      "label": "Kompakt",
+      "title": "Växla till kompakt vy"
+    },
+    "spacious": {
+      "label": "Rymlig",
+      "title": "Växla till rymlig vy"
+    },
+    "decrease": {
+      "title": "Minska avståndet"
+    },
+    "reset": {
+      "title": "Återställ till standard"
+    },
+    "increase": {
+      "title": "Öka avståndet"
+    }
+  },
+  "multiContactPicker": {
+    "fields": {
+      "contacts": {
+        "placeholder": "Välj kontakter..."
+      },
+      "search": {
+        "placeholder": "Sök kontakter..."
+      }
+    },
+    "noResults": "Inga resultat hittades",
+    "noContacts": "Inga kontakter tillgängliga",
+    "noEmail": "ingen e-postadress",
+    "actions": {
+      "clearAll": "Rensa alla"
+    }
+  },
+  "themeToggle": {
+    "ariaLabel": "Byt tema",
+    "selected": "Valt"
+  },
+  "drawer": {
+    "formTitle": "{{title}} – Formulär",
+    "actions": {
+      "goBack": "Gå tillbaka",
+      "goForward": "Gå framåt",
+      "close": "Stäng sidopanelen"
+    }
+  },
+  "countryPicker": {
+    "placeholder": "Välj land",
+    "searchPlaceholder": "Sök länder…",
+    "otherCountries": "Andra länder",
+    "empty": "Inga länder hittades"
+  },
+  "input": {
+    "actions": {
+      "typeIntoLabel": "Skriv text i fältet {{label}}",
+      "type": "Skriv text i det här fältet",
+      "focus": "Sätt fokus på det här inmatningsfältet",
+      "clear": "Rensa den aktuella texten"
+    }
+  },
+  "button": {
+    "actions": {
+      "clickLabel": "Klicka på {{label}}",
+      "click": "Klicka på den här knappen",
+      "focus": "Sätt fokus på den här knappen"
+    }
+  },
+  "inlineReplyComposer": {
+    "actions": {
+      "reply": "Svara"
+    },
+    "fields": {
+      "internal": {
+        "label": "Markera som internt"
+      }
+    }
+  },
+  "featureUpgradeNotice": {
+    "title": "{{featureName}} kräver {{tierLabel}}",
+    "description": "Uppgradera till nivån {{tierLabel}} för att låsa upp {{featureName}} och fler kraftfulla funktioner.",
+    "actions": {
+      "viewPlans": "Visa planer"
+    }
+  },
+  "widgets": {
+    "highlight": {
+      "ariaLabel": "Markerat innehåll"
+    },
+    "buttonLink": {
+      "unavailable": "Länken är inte tillgänglig",
+      "actions": {
+        "openLink": "Öppna länk"
+      }
+    },
+    "richTextViewer": {
+      "loading": "Läser in innehåll…",
+      "errors": {
+        "loadFailed": "Det gick inte att läsa in innehållet"
+      }
+    }
+  },
+  "reflection": {
+    "parentId": "Överordnad komponents ID: {{id}}",
+    "noParent": "Ingen överordnad komponent"
+  },
+  "teamAvatar": {
+    "alt": "Profilbild för {{name}}",
+    "defaultAlt": "Teamets profilbild"
+  },
+  "userAvatar": {
+    "alt": "Profilbild för {{name}}",
+    "defaultAlt": "Användarens profilbild"
+  },
+  "featurePlaceholder": {
+    "description": "404 - Den här sidan är under uppbyggnad. Du har kommit till en del av webbplatsen som inte är helt klar än. Alga lägger grunden bakom kulisserna. Kom tillbaka snart!"
+  },
+  "contactAvatar": {
+    "alt": "Profilbild för {{name}}",
+    "defaultAlt": "Kontaktens profilbild"
+  },
+  "entityAvatar": {
+    "alt": "Bild för {{name}}",
+    "defaultAlt": "Bild för entiteten"
+  },
+  "editableField": {
+    "notSet": "Inte angivet"
+  },
+  "editableText": {
+    "actions": {
+      "edit": "Klicka för att redigera"
+    }
+  },
+  "label": {
+    "required": "Obligatoriskt"
+  },
+  "tabs": {
+    "ariaLabel": "Flikar"
+  },
+  "viewSwitcher": {
+    "ariaLabel": "Byt vy"
   }
 }

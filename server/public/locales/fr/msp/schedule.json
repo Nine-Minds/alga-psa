@@ -853,5 +853,81 @@
       "members": "Membres",
       "creatorNote": "Vous pourrez gérer ce calendrier."
     }
+  },
+  "ticketDetails": {
+    "title": "Détails du ticket",
+    "numberedTitle": "Ticket n° {{number}}",
+    "untitled": "Ticket sans titre",
+    "noDescription": "Aucune description",
+    "notAvailable": "Non disponible",
+    "unassigned": "Non affecté",
+    "fields": {
+      "title": {
+        "label": "Titre"
+      },
+      "description": {
+        "label": "Description"
+      },
+      "status": {
+        "label": "Statut"
+      },
+      "priority": {
+        "label": "Priorité"
+      },
+      "board": {
+        "label": "Tableau"
+      },
+      "client": {
+        "label": "Client"
+      },
+      "contact": {
+        "label": "Contact"
+      },
+      "assignedUser": {
+        "label": "Utilisateur affecté"
+      },
+      "entered": {
+        "label": "Créé"
+      },
+      "updated": {
+        "label": "Mis à jour"
+      },
+      "closed": {
+        "label": "Fermé"
+      }
+    }
+  },
+  "projectTaskDetails": {
+    "title": "Tâche de projet",
+    "noDescription": "Aucune description",
+    "notAvailable": "Non disponible",
+    "unassigned": "Non affecté",
+    "untitledItem": "Élément sans titre",
+    "noChecklistItems": "Aucun élément dans la liste de contrôle",
+    "fields": {
+      "description": {
+        "label": "Description"
+      },
+      "project": {
+        "label": "Projet"
+      },
+      "phase": {
+        "label": "Phase"
+      },
+      "assignedTo": {
+        "label": "Affecté à"
+      },
+      "dueDate": {
+        "label": "Date d’échéance"
+      },
+      "checklist": {
+        "label": "Liste de contrôle"
+      }
+    }
+  },
+  "fallback": {
+    "agentSchedule": "La vue du planning de l’agent est désormais gérée dans Planification. (agentId : {{agentId}})",
+    "timeEntry": "Les entrées de temps sont gérées dans Planification.",
+    "scheduling": "La planification est gérée dans Planification."
   }
 }

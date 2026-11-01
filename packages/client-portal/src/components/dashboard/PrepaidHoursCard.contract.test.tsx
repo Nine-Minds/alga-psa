@@ -120,4 +120,21 @@ describe('PrepaidHoursCard dashboard widget', () => {
     expect(await screen.findByText('3.0h OVER')).toBeInTheDocument();
     expect(screen.queryByText(/-3\.0h/i)).not.toBeInTheDocument();
   });
+
+  it('renders a "Contract: <name>" label for contract-issued hour blocks only', async () => {
+    getClientBucketUsageMock.mockResolvedValue([]);
+    const block = {
+      service_id: 's', service_name: 'Support', total_minutes: 600, remaining_minutes: 300,
+      hours_total: 10, hours_remaining: 5, expiration_date: null, status: 'active',
+    };
+    getClientHourBlocksMock.mockResolvedValue([
+      { ...block, block_id: 'cb-1', contract_name: 'Acme MSP' },
+      { ...block, block_id: 'ab-1', contract_name: null },
+    ]);
+    render(<PrepaidHoursCard />);
+
+    expect(await screen.findByText('Contract: Acme MSP')).toBeInTheDocument();
+    expect(document.getElementById('prepaid-hour-block-contract-cb-1')).not.toBeNull();
+    expect(document.getElementById('prepaid-hour-block-contract-ab-1')).toBeNull();
+  });
 });

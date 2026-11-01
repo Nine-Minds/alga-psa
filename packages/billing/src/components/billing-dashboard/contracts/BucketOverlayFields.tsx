@@ -21,6 +21,8 @@ interface BucketOverlayFieldsProps {
   disabled?: boolean;
   automationId?: string;
   billingFrequency?: string;
+  /** Template authoring: the overage rate is in this currency's own minor units. */
+  currencyCode?: string;
 }
 
 export function BucketOverlayFields({
@@ -30,20 +32,23 @@ export function BucketOverlayFields({
   unitLabel,
   disabled = false,
   automationId,
-  billingFrequency = 'monthly'
+  billingFrequency = 'monthly',
+  currencyCode,
 }: BucketOverlayFieldsProps) {
   const { t } = useTranslation('msp/contracts');
-  const { symbol } = useCurrencyFormat();
+  const { symbol, fractionDigits } = useCurrencyFormat();
+  const rateDigits = currencyCode ? fractionDigits(currencyCode) : 2;
+  const rateScale = 10 ** rateDigits;
   const [overageRateInput, setOverageRateInput] = useState<string>('');
 
   useEffect(() => {
     // Initialize overage rate input from value
     if (value.overage_rate !== undefined) {
-      setOverageRateInput((value.overage_rate / 100).toFixed(2));
+      setOverageRateInput((value.overage_rate / rateScale).toFixed(rateDigits));
     } else {
       setOverageRateInput('');
     }
-  }, [value.overage_rate]);
+  }, [value.overage_rate, rateScale, rateDigits]);
   const resolvedUnitLabel =
     mode === 'hours'
       ? t('bucketOverlay.units.hours', { defaultValue: 'hours' })
@@ -157,7 +162,7 @@ export function BucketOverlayFields({
           </Tooltip>
         </div>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol(currencyCode)}</span>
           <Input
             id={automationId ? `${automationId}-overage` : undefined}
             data-automation-id={automationId ? `${automationId}-overage` : undefined}
@@ -178,9 +183,9 @@ export function BucketOverlayFields({
                 handleOverageChange(0);
               } else {
                 const dollars = parseFloat(overageRateInput) || 0;
-                const cents = Math.round(dollars * 100);
+                const cents = Math.round(dollars * rateScale);
                 handleOverageChange(cents);
-                setOverageRateInput((cents / 100).toFixed(2));
+                setOverageRateInput((cents / rateScale).toFixed(rateDigits));
               }
             }}
             placeholder="0.00"
