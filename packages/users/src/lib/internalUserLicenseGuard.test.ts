@@ -8,8 +8,16 @@ vi.mock('@alga-psa/db', () => ({
 
 import { checkInternalUserLicenseLimit, countPendingInvitationSeats } from './internalUserLicenseGuard';
 
+const lockCalls: unknown[][] = [];
+
+function asTransaction(fn: any) {
+  fn.isTransaction = true;
+  fn.raw = async (...args: unknown[]) => { lockCalls.push(args); return { rows: [] }; };
+  return fn;
+}
+
 function fakeTrx(input: { plan: string | null; licensedUserCount: number | null; usedInternalUsers: number }) {
-  return ((table: string) => {
+  return asTransaction((table: string) => {
     if (table === 'tenants') {
       const tenantRow = { licensed_user_count: input.licensedUserCount, plan: input.plan };
       return { first: async (..._fields: any[]) => tenantRow };
@@ -26,6 +34,24 @@ function fakeTrx(input: { plan: string | null; licensedUserCount: number | null;
     throw new Error(`Unexpected tenant table ${table}`);
   }) as any;
 }
+
+describe('seat lock and transaction requirement', () => {
+  it('takes the per-tenant advisory xact lock before any read', async () => {
+    lockCalls.length = 0;
+    await checkInternalUserLicenseLimit(
+      fakeTrx({ plan: 'pro', licensedUserCount: 3, usedInternalUsers: 0 }),
+      'tenant-1'
+    );
+    expect(lockCalls).toEqual([
+      ['SELECT pg_advisory_xact_lock(hashtext(?), hashtext(?))', ['internal_user_seats', 'tenant-1']],
+    ]);
+  });
+
+  it('throws for a non-transaction caller', async () => {
+    const notTrx = (() => { throw new Error('must not query'); }) as any;
+    await expect(checkInternalUserLicenseLimit(notTrx, 'tenant-1')).rejects.toThrow(/inside a transaction/);
+  });
+});
 
 describe('checkInternalUserLicenseLimit', () => {
   it('blocks a second internal user on the Solo plan', async () => {
@@ -97,7 +123,7 @@ describe('checkInternalUserLicenseLimit', () => {
   });
 
   it('throws when the tenant row cannot be found', async () => {
-    const trx = ((table: string) => {
+    const trx = asTransaction((table: string) => {
       if (table === 'tenants') {
         return { first: async () => undefined };
       }

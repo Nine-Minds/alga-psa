@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createCoManagedSharedTicketDataSource, type SharedTicketConversation } from '@/lib/co-managed/sharedTicketDataSource';
 import { resolveCommentAuthor } from '../../../../../packages/tickets/src/lib/commentAuthorResolution';
+import { localAuthorReference } from '@alga-psa/co-managed';
 import { mapConversation, conversationAuthorMaps } from '@/lib/co-managed/sharedConversationMapping';
 
 const summary = { revision: 1, resource: { tenant: 't1', relationshipId: 'r1', kind: 'ticket' as const, id: 'tk1' },
@@ -38,7 +39,8 @@ describe('shared conversation mapping', () => {
 });
 
 describe('customer-local authors', () => {
-  const dana = { kind: 'user', tenant: 't1', id: 'u-dana', referenceId: null, displayName: 'Dana Reyes', organizationName: 'Disposable Enable IT' };
+  // As the server now shapes a foreign viewer's page: no raw id, an opaque reference.
+  const dana = { kind: 'user', tenant: 't1', id: null, referenceId: localAuthorReference('t1', 'user', 'u-dana'), displayName: 'Dana Reyes', organizationName: 'Disposable Enable IT' };
   const render = (c: any, maps: any = { userMap: {}, contactMap: {} }) => resolveCommentAuthor(c, maps).displayName;
 
   it('renders for a foreign viewer as "<name> (<organization>)" through an opaque, stable reference', () => {
@@ -48,15 +50,14 @@ describe('customer-local authors', () => {
     expect(render(a)).toBe('Dana Reyes (Disposable Enable IT)');
     expect(a.actor_reference_id).toBeTruthy();
     expect(a.actor_reference_id).toBe(b.actor_reference_id);
-    expect(a.actor_reference_id).not.toContain('u-dana');
-    expect(a.actor_reference_id).not.toContain('t1');
+    expect(a.actor_reference_id).toBe(localAuthorReference('t1', 'user', 'u-dana'));
     expect((a as any).user_id).toBeUndefined();
-    const [other] = mapConversation([item({ author: { ...dana, id: 'u-other' } })], 'tk1', viewer);
+    const [other] = mapConversation([item({ author: { ...dana, referenceId: localAuthorReference('t1', 'user', 'u-other') } })], 'tk1', viewer);
     expect(other.actor_reference_id).not.toBe(a.actor_reference_id);
   });
 
   it('leaves the same-tenant viewer\'s rendering unchanged', () => {
-    const [own] = mapConversation([item({ author: dana })], 'tk1', { tenant: 't1', userId: 'u-dana' });
+    const [own] = mapConversation([item({ author: { ...dana, id: 'u-dana', referenceId: null } })], 'tk1', { tenant: 't1', userId: 'u-dana' });
     expect(own).toMatchObject({ user_id: 'u-dana' });
     expect(own.actor_reference_id).toBeUndefined();
     expect(render(own, { userMap: { 'u-dana': { user_id: 'u-dana', first_name: 'Dana', last_name: 'Reyes', user_type: 'client', avatarUrl: null } } })).toBe('Dana Reyes');

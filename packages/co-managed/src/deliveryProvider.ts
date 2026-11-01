@@ -1,17 +1,46 @@
 import type { Knex } from 'knex';
 import { withAdminTransaction, tenantDb } from '@alga-psa/db';
 import { claimDelivery, finishDelivery, flagStaleSendingDeliveries, CO_MANAGED_LEDGER } from '@alga-psa/shared/lib/deliveryLedger';
+import { normalizeEmailAddress } from '@alga-psa/shared/lib/email/addressUtils';
+import { contactEmailMatch } from '@alga-psa/shared/lib/email/contactEmailMatch';
 import { resolveCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import {
   decideReplyToken, parseCm2Metadata,
-  type CoManagedDeliveryProvider, type CommentDeliveryPlan, type RoutingDelivery, type DeliveryRecipient, type InboundAdmission,
+  type CoManagedDeliveryProvider, type CommentDeliveryPlan, type InboundSender, type RoutingDelivery, type DeliveryRecipient, type InboundAdmission,
 } from '@alga-psa/shared/lib/coManagedDelivery';
 import { withCoManagedNotificationRecipient } from './sharedWork';
 import { projectTaskAudience } from './projectTaskAudience';
 import { ROUTING_IN_APP_KIND, ROUTING_EMAIL_KIND, type CoManagedRoutingPayload } from './routingOutbox';
 import { isCoManagedSharedWorkError } from './sharedWorkIdentity';
+// LEVERAGE: friction customer-ticket-read-authorizer — only the per-record tickets authorizer evaluates bundle/contact-visibility narrowing, but it is shaped for a server action (throws, wants a full IUserWithRoles); we wrap it in try/catch and feed it a raw users row.
+import { authorizeTicketRecordAccess } from '@alga-psa/tickets/lib/ticketRecordAuthorization';
+import { hasPermission } from '@alga-psa/authorization/rbac';
+import type { IUserWithRoles } from '@alga-psa/types';
 
 const normalize = (email: unknown) => String(email ?? '').trim().toLowerCase();
+
+type CustomerUserRow = { user_id: string; email: string | null; is_inactive: boolean } & Record<string, unknown>;
+
+/**
+ * Current-state gate for a captured customer recipient: active user, still the ticket's assignee (a hand-back
+ * notice is addressed to the owner), holds coarse ticket:read RBAC, and passes tenant-local per-record authorization.
+ * The record authorizer's kernel uses `rbacEvaluator: async () => true` (narrowing only), so RBAC must be checked here,
+ * as ticketActions.ts does. `hasPermission` needs user_id/user_type/tenant, all present on the raw users row.
+ */
+async function customerRecipientPermitted(trx: Knex.Transaction, tenant: string, ticketId: string, user: CustomerUserRow | undefined, ticketRow: Record<string, any>) {
+  if (!user || user.is_inactive) return false;
+  if (ticketRow.assigned_to !== user.user_id) return false;
+  if (!(await hasPermission({ user_id: user.user_id, user_type: user.user_type as any, tenant }, 'ticket', 'read', trx))) return false;
+  try {
+    await authorizeTicketRecordAccess({ trx, tenant, user: user as unknown as IUserWithRoles, ticketId, action: 'read', ticketRow: ticketRow as any });
+    return true;
+  } catch (error) {
+    // Relies on the documented messages in ticketRecordAuthorization.ts ('Ticket not found' / 'Permission denied: ...');
+    // anything else (DB errors etc.) is rethrown so the row stays pending and is retried.
+    if (error instanceof Error && /^(Permission denied|Ticket not found)/.test(error.message)) return false;
+    throw error;
+  }
+}
 
 /** A shared ticket: its work row in the customer tenant, the live relationship, and the revoke history. */
 async function loadSharedTicket(trx: Knex.Transaction, tenant: string, ticketId: string) {
@@ -62,12 +91,25 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
           .orderBy('created_at').limit(opts.limit ?? 100);
         if (opts.sourceId) query.where('source_id', opts.sourceId);
         const out: RoutingDelivery[] = [];
-        const tickets = new Map<string, { ticket_number: string; title: string } | undefined>();
-        for (const row of await query) {
+        const tickets = new Map<string, Record<string, any> | undefined>();
+        const rows = await query;
+        // One users query for the whole batch (customer-side principals only), not one per row.
+        const customerIds = new Set<string>();
+        for (const row of rows) {
+          if (row.recipient_kind === 'msp_user' || row.recipient_kind === 'team') continue;
+          const p = (typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload) as { principalId?: string } | null;
+          if (p?.principalId) customerIds.add(p.principalId);
+        }
+        const customerUsers = new Map<string, CustomerUserRow>();
+        if (customerIds.size) {
+          for (const u of await tenantDb(trx, tenant).table('users').whereIn('user_id', [...customerIds])) customerUsers.set(u.user_id, u as CustomerUserRow);
+        }
+        for (const row of rows) {
           const payload = (typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload) as (CoManagedRoutingPayload & { principalId: string }) | null;
           if (!payload) continue;
           if (!tickets.has(payload.ticketId)) {
-            tickets.set(payload.ticketId, await tenantDb(trx, tenant).table('tickets').where({ ticket_id: payload.ticketId }).first('ticket_number', 'title'));
+            tickets.set(payload.ticketId, await tenantDb(trx, tenant).table('tickets').where({ ticket_id: payload.ticketId })
+              .first('ticket_id', 'ticket_number', 'title', 'assigned_to', 'entered_by', 'client_id', 'board_id', 'assigned_team_id', 'contact_name_id', 'billing_profile_id', 'attributes'));
           }
           const ticket = tickets.get(payload.ticketId);
           const sponsorSide = row.recipient_kind === 'msp_user' || row.recipient_kind === 'team';
@@ -81,8 +123,22 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
               allowed = false;
             }
           }
+          let principalId: string = payload.principalId;
+          let email: string | undefined = row.delivery_kind === ROUTING_EMAIL_KIND ? row.recipient : undefined;
+          if (allowed && !sponsorSide) {
+            // Customer side: never trust the captured snapshot. Re-resolve against the CURRENT user and ticket.
+            const user = customerUsers.get(payload.principalId);
+            allowed = await customerRecipientPermitted(trx, tenant, payload.ticketId, user, ticket as Record<string, any>);
+            if (allowed && user) {
+              principalId = user.user_id;
+              if (row.delivery_kind === ROUTING_EMAIL_KIND) {
+                email = normalize(user.email) || undefined;
+                if (!email) allowed = false; // no current address: skip, never fall back to the captured one
+              }
+            }
+          }
           out.push({ tenant, deliveryKind: row.delivery_kind, sourceId: row.source_id, event: payload.event,
-            recipient: { kind: row.recipient_kind, principalId: payload.principalId, email: row.delivery_kind === ROUTING_EMAIL_KIND ? row.recipient : undefined },
+            recipient: { kind: row.recipient_kind, principalId, email }, ledgerRecipient: row.recipient,
             recipientTenant: sponsorSide ? payload.sponsorTenant : tenant, ticketId: payload.ticketId,
             ticketNumber: ticket?.ticket_number ?? '', ticketTitle: ticket?.title ?? '', actorName: payload.actorName, actorOrganization: payload.actorOrganization, allowed });
         }
@@ -143,7 +199,7 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
         { delivery_kind: kind, source_id: sourceId, recipient: recipient.email ?? recipient.principalId }, state, { error: outcome?.error, errorCode: outcome?.code }));
     },
 
-    async admitReplyToken(tenant, token, metadata, senderEmail): Promise<InboundAdmission> {
+    async admitReplyToken(tenant, token, metadata, inboundSender: InboundSender): Promise<InboundAdmission> {
       const parsed = parseCm2Metadata(metadata);
       if (!parsed) {
         // cm1 (or an unparseable cm2) never reaches a comment write.
@@ -164,9 +220,21 @@ export function createCoManagedDeliveryProvider(): CoManagedDeliveryProvider {
           : null;
         const audience = resolveCommentAudience(thread ?? { is_internal: false });
         const base = { admitted: true as const, audience, relationshipId: parsed.relationshipId, threadId: parsed.threadId, ticketId, parentCommentId: (record?.comment_id as string | null) ?? null };
-        // The requester thread keeps the native writer (the sender is a contact; native sender rules apply).
-        if (audience === 'requester') return base;
-        const sender = normalize(senderEmail);
+        const sender = normalizeEmailAddress(inboundSender.email) ?? '';
+        if (audience === 'requester') {
+          // Requester threads keep the native writer (its contact-auth rules still apply), but only an active
+          // contact of the ticket's own client, in this tenant, is admitted to it.
+          if (!sender) return { admitted: false, reason: 'not_participant', acknowledge: true };
+          const ticket = await tenantDb(trx, tenant).table('tickets').where({ ticket_id: ticketId }).first('client_id');
+          const contact = ticket?.client_id
+            ? await tenantDb(trx, tenant).table('contacts').where({ 'contacts.client_id': ticket.client_id, 'contacts.is_inactive': false })
+              .andWhere(contactEmailMatch(tenantDb(trx, tenant), trx, sender)).first('contacts.contact_name_id')
+            : null;
+          return contact ? base : { admitted: false, reason: 'not_participant', acknowledge: true };
+        }
+        // shared_it / organization_private resolve the sender to an internal user. An unauthenticated From is
+        // only a claim: refuse BEFORE any user lookup, and never mail the unverified address.
+        if (!inboundSender.internalAttributionTrusted) return { admitted: false, reason: 'sender_unauthenticated', acknowledge: false };
         if (!sender) return { admitted: false, reason: 'not_participant', acknowledge: true };
         // Resolve the sender to an internal user of either organisation. The writer then re-authorizes them.
         for (const candidateTenant of [tenant, shared.relationship.sponsor_tenant as string]) {

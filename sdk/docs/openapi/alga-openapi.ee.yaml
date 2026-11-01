@@ -69153,7 +69153,13 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
     post:
       summary: Create time sheet
-      description: Creates time sheet via create() path.
+      description: Creates a time sheet. A time sheet is unique per tenant, effective
+        owner (`user_id`, defaulting to the caller) and `period_id`, in every
+        approval status. The first request returns 201 with a DRAFT sheet; a
+        request for a user and period that already has a sheet returns 409
+        CONFLICT ("A time sheet already exists for this user and period") and
+        changes nothing. To recover, GET /api/v1/time-sheets filtered by
+        `user_id` and `period_id`.
       tags:
         - Work Management v1
       security:
@@ -69199,6 +69205,15 @@ paths:
                 $ref: "#/components/schemas/WorkV1ApiError"
         "403":
           description: RBAC denied for time_sheet resource action.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkV1ApiError"
+        "409":
+          description: 'Conflict: a time sheet already exists for this user and period
+            (any approval status). Body:
+            {"error":{"code":"CONFLICT","message":"A time sheet already exists
+            for this user and period"}}. The existing sheet is unchanged.'
           content:
             application/json:
               schema:

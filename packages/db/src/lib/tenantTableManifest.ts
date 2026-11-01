@@ -570,6 +570,7 @@ export const TENANT_TABLE_MANIFEST: readonly TenantTableEntry[] = [
   { table: 'stripe_subscriptions', deletion: 'ordered' },
   { table: 'stripe_prices', deletion: 'ordered' },
   { table: 'stripe_products', deletion: 'ordered' },
+  { table: 'stripe_customer_bindings', deletion: 'ordered' },
   { table: 'stripe_customers', deletion: 'ordered' },
   { table: 'stripe_accounts', deletion: 'ordered' },
   { table: 'payment_webhook_events', deletion: 'ordered' },

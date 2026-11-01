@@ -302,16 +302,23 @@ describeDb('ticket chip tag hydration (DB)', () => {
       const reloaded: any = await optimized.loadTicketListItemsByIds(base, [ids.A, ids.B]);
       expect(reloaded.tickets).toEqual([ids.A, ids.B]
         .filter(id => rows.has(id)).map(id => rows.get(id)));
-      const detail = await optimized.getConsolidatedTicketData(ids.A);
-      expect(detail.displayTags).toEqual({ contact: [], client: [] });
-      expect(detail.contacts.every((c: any) => c.displayTags.length === 0)).toBe(true);
+      // The consolidated detail bundle is an MSP view: a portal user is refused outright
+      // (the portal ticket page has its own loader), so no internal chips can ride along on it.
+      const refused: any = await optimized.getConsolidatedTicketData(ids.A)
+        .catch((error: Error) => ({ permissionError: error.message }));
+      expect(refused.permissionError).toMatch(/consolidated ticket data is an MSP view/);
+      expect(refused).not.toHaveProperty('displayTags');
+      expect(refused).not.toHaveProperty('contacts');
+      // The per-party chip read the ticket header uses follows the client audience, not the internal one.
+      expect(await optimized.getTicketPartyDisplayTags(ids.A, ids.k1, ids.c1))
+        .toEqual({ contact: [], client: [] });
 
       await db('tag_display_rules').insert({ tenant: ids.tenant, tagged_type: 'client', audience: 'client', tag_id: defs.clientGold, position: 0 });
       const withClientRule = await rowsById();
       expect(withClientRule.get(ids.A).client_tags.map((t: any) => t.tag_id)).toEqual([defs.clientGold]);
-      const clientDetail = await optimized.getConsolidatedTicketData(ids.A);
-      expect(clientDetail.displayTags.client.map((t: any) => t.tag_id)).toEqual([defs.clientGold]);
-      expect(clientDetail.displayTags.contact).toEqual([]);
+      const clientChips: any = await optimized.getTicketPartyDisplayTags(ids.A, ids.k1, ids.c1);
+      expect(clientChips.client.map((t: any) => t.tag_id)).toEqual([defs.clientGold]);
+      expect(clientChips.contact).toEqual([]);
     } finally {
       await db('tag_display_rules').where({ tenant: ids.tenant, audience: 'client' }).del();
       await db('contacts').where({ tenant: ids.tenant, contact_name_id: ids.k1 })
