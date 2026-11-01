@@ -17,7 +17,11 @@ vi.mock('@alga-psa/auth', async () => {
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true)),
 }));
+vi.mock('@/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true)),
+}));
 
+import { v4 as uuidv4 } from 'uuid';
 import { setupCommonMocks } from '../../../../test-utils/testMocks';
 import { InvoiceService } from '@/lib/api/services/InvoiceService';
 import { handleApiError } from '@/lib/api/middleware/apiMiddleware';
@@ -56,10 +60,13 @@ describe('POST /api/v1/invoices (InvoiceService.create) is draft-only', () => {
   function serviceUnderTest() {
     const service = new InvoiceService();
     vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: context.db, tenant: context.tenantId });
-    vi.spyOn(service as any, 'validatePermissions').mockResolvedValue(undefined);
     return service;
   }
-  const ctx = () => ({ tenant: context.tenantId, userId: context.userId } as any);
+  const ctx = () => ({
+    tenant: context.tenantId,
+    userId: context.userId,
+    user: { user_id: context.userId, user_type: 'internal' },
+  } as any);
   const base = () => ({ client_id: context.clientId, invoice_date: '2026-03-01', due_date: '2026-03-31' });
   const invoiceCount = async () =>
     Number((await context.db('invoices').where({ tenant: context.tenantId }).count('* as n').first())?.n ?? 0);
@@ -150,5 +157,28 @@ describe('POST /api/v1/invoices (InvoiceService.create) is draft-only', () => {
       .where({ tenant: context.tenantId, invoice_id: header.invoice_id });
     const derived = charges.reduce((s: number, c: any) => s + Number(c.net_amount) + Number(c.tax_amount), 0);
     expect(Number(header.total_amount)).toBe(Math.round(derived));
+  });
+
+  it("a client_id belonging to another tenant is a 400 and creates nothing in either tenant", async () => {
+    const otherTenant = uuidv4();
+    const otherClient = uuidv4();
+    await context.db('tenants').insert({
+      tenant: otherTenant,
+      client_name: `Other Tenant ${otherTenant.slice(0, 6)}`,
+      email: `${otherTenant.slice(0, 6)}@example.com`,
+    });
+    await context.db('clients').insert({
+      tenant: otherTenant,
+      client_id: otherClient,
+      client_name: `Other Client ${otherClient.slice(0, 6)}`,
+    });
+
+    const error = await serviceUnderTest()
+      .create({ ...base(), client_id: otherClient } as any, ctx())
+      .then(() => null, (e) => e);
+    expect(error).toMatchObject({ statusCode: 400, message: expect.stringContaining('client') });
+    expect(handleApiError(error).status).toBe(400);
+    expect(await invoiceCount()).toBe(baselineCount);
+    expect(Number((await context.db('invoices').where({ client_id: otherClient }).count('* as n').first())?.n)).toBe(0);
   });
 });

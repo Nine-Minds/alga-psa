@@ -342,6 +342,32 @@ export class InvoiceService extends BaseService<IInvoice> {
    * A billing profile may only be attached to an invoice of the client that
    * owns it, and only while the profile is active.
    */
+  /**
+   * RBAC check against the caller's user record, the same check ApiBaseController.checkPermission
+   * runs. Use this, not validatePermissions (which only checks that a userId is present).
+   */
+  private async assertInvoicePermission(context: ServiceContext, action: string): Promise<void> {
+    if (!context.user) {
+      throw new ForbiddenError(`Permission denied: Cannot ${action} invoice - no user context`);
+    }
+    const { knex } = await this.getKnex();
+    if (!(await hasPermission(context.user, 'invoice', action, knex))) {
+      throw new ForbiddenError(`Permission denied: Cannot ${action} invoice`);
+    }
+  }
+
+  private async assertClientInTenant(trx: Knex.Transaction, tenant: string, clientId: unknown): Promise<void> {
+    const client = typeof clientId === 'string' && clientId
+      ? await tenantDb(trx, tenant).table('clients').where({ client_id: clientId }).first('client_id')
+      : undefined;
+    if (!client) {
+      throw new ValidationError('The selected client is not available', {
+        code: 'CLIENT_NOT_FOUND',
+        clientId,
+      });
+    }
+  }
+
   private async assertBillingProfileBelongsToClient(
     trx: Knex.Transaction,
     tenant: string,
@@ -634,12 +660,14 @@ export class InvoiceService extends BaseService<IInvoice> {
   async create(data: Partial<IInvoice>, context: ServiceContext): Promise<IInvoice>;
   async create(data: CreateInvoice, context: ServiceContext): Promise<IInvoice>;
   async create(data: any, context: ServiceContext): Promise<IInvoice> {
-    await this.validatePermissions(context, 'invoice', 'create');
+    // Real RBAC check (validatePermissions is a stub): the controller checks too, but
+    // every caller of the service must hold invoice:create.
+    await this.assertInvoicePermission(context, 'create');
 
     // A created invoice is always a draft. Lifecycle, credit and provenance are owned by
     // dedicated commands and header totals are derived from the charges, so the create
     // body cannot set them. Enforced here (not only in the controller) so every caller
-    // of the service inherits the check. validatePermissions is a stub; do not rely on it.
+    // of the service inherits the check.
     const { forbidden } = checkInvoicePayload('create', data);
     if (forbidden.length > 0) {
       const first = forbidden[0];
@@ -666,6 +694,10 @@ export class InvoiceService extends BaseService<IInvoice> {
       const invoiceNumber = await generateInvoiceNumber(trx);
 
       const invoiceDate = data.invoice_date || new Date().toISOString().split('T')[0];
+
+      // The invoice's client must belong to the caller's tenant. The row's tenant is forced
+      // from the context, so a foreign client_id would otherwise be persisted against it.
+      await this.assertClientInTenant(trx, context.tenant, data.client_id);
 
       // Terms follow the client's effective billing identity; explicit caller
       // values win.
