@@ -295,6 +295,7 @@ export const addServiceToContractLine = withAuth(async (
       addServiceToContractLineInTransaction(
         trx,
         tenant,
+        user,
         contractLineId,
         serviceId,
         quantity,
@@ -484,7 +485,7 @@ export const applyContractLineServiceMembershipChanges = withAuth(async (
 
     const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      await applyContractLineServiceMembershipChangesInTransaction(trx, tenant, contractLineId, changes);
+      await applyContractLineServiceMembershipChangesInTransaction(trx, tenant, user, contractLineId, changes);
       return true;
     });
   } catch (error) {
