@@ -4,7 +4,7 @@ import React from 'react';
 import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const state = vi.hoisted(() => ({ enabled: true, stager: vi.fn(), picker: vi.fn(() => null) }));
+const state = vi.hoisted(() => ({ enabled: true, stager: vi.fn(), picker: vi.fn((_props: any) => null) }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useCapability: () => ({ enabled: state.enabled }) }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (k: string, o?: any) => o?.defaultValue ?? k }) }));
 vi.mock('@alga-psa/ui/components/Alert', () => ({ Alert: (p: any) => <div role="alert">{p.children}</div>, AlertDescription: (p: any) => <span>{p.children}</span> }));

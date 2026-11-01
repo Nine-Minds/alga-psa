@@ -251,12 +251,15 @@ describe('A1/A2 audience x reader, both transports, real rows', () => {
   it('the generic document lookups do not find a conversation attachment id', async () => {
     const { getAuthorizedDocumentById, getAuthorizedDocumentByFileId } = await import('@alga-psa/documents/actions/documentActions');
     currentUser = { user_id: msp.techId, user_type: 'internal', tenant: msp.tenant };
+    const user = await db('users').where({ tenant: msp.tenant, user_id: msp.techId }).first();
+    expect(user).toBeTruthy();
     for (const key of ['requester', 'sharedIt'] as const) {
       const id = posted[key].file.id;
-      const byId: any = await getAuthorizedDocumentById(id).catch(() => null);
-      const byFile: any = await getAuthorizedDocumentByFileId(id).catch(() => null);
-      expect(byId == null || byId.success === false || byId.document == null, `byId ${key}`).toBe(true);
-      expect(byFile == null || byFile.success === false || byFile.document == null, `byFile ${key}`).toBe(true);
+      // Called with their real (trx, tenant, user, id) signature and not caught, so a throw cannot pass as "not found".
+      await db.transaction(async trx => {
+        expect(await getAuthorizedDocumentById(trx, msp.tenant, user, id), `byId ${key}`).toBeNull();
+        expect(await getAuthorizedDocumentByFileId(trx, msp.tenant, user, id), `byFile ${key}`).toBeNull();
+      });
     }
   });
 });

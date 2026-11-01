@@ -83,8 +83,12 @@ describe.each([['Kansas (flag off)', false], ['Emerald (flag on, no entitlement)
     expect(await expireCommentAttachmentDrafts(db, w.tenant)).toBeGreaterThanOrEqual(0);
     await db.transaction(trx => withdrawCommentAttachments(trx, w.tenant, w.commentId));
     const { getAuthorizedDocumentById, getAuthorizedDocumentByFileId } = await import('@alga-psa/documents/actions/documentActions');
-    await getAuthorizedDocumentById(live.document).catch(() => null);
-    await getAuthorizedDocumentByFileId(stale.file).catch(() => null);
+    const user = await db('users').where({ tenant: w.tenant, user_id: w.userId }).first();
+    await db.transaction(async trx => {
+      // Real (trx, tenant, user, id) signature and no catch, so the lookups actually run and their SQL is inspected below.
+      await getAuthorizedDocumentById(trx, w.tenant, user, live.document);
+      await getAuthorizedDocumentByFileId(trx, w.tenant, user, stale.file);
+    });
 
     expect(statements.length).toBeGreaterThan(0);
     expect(statements.filter(sql => /co_management_/i.test(sql))).toEqual([]);
