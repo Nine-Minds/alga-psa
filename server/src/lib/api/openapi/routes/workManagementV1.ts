@@ -407,6 +407,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'delete', path: '/api/v1/tags/entity/{entityType}/{entityId}', summary: 'Remove tags from entity', description: 'Removes tag set from entity route params/body.', family: 'tag' },
     { method: 'get', path: '/api/v1/tags/entity/{entityType}/{entityId}', summary: 'List tags for entity', description: 'Lists tags attached to entity route params.', family: 'tag' },
     { method: 'post', path: '/api/v1/tags/entity/{entityType}/{entityId}', summary: 'Attach tags to entity', description: 'Adds tags to entity route params/body.', family: 'tag' },
+    { method: 'put', path: '/api/v1/tags/entity/{entityType}/{entityId}', summary: 'Replace entity tags', description: 'Replaces the tag set attached to an entity.', family: 'tag' },
     { method: 'get', path: '/api/v1/tags/search', summary: 'Search tags', description: 'Searches tags via ApiTagController.search().', family: 'tag' },
     { method: 'delete', path: '/api/v1/tags/{id}', summary: 'Delete tag', description: 'Deletes tag UUID.', family: 'tag' },
     { method: 'get', path: '/api/v1/tags/{id}', summary: 'Get tag', description: 'Gets tag UUID.', family: 'tag' },
