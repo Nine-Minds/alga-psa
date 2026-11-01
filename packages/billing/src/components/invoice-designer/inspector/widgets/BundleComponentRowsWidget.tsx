@@ -8,6 +8,7 @@ import { getNodeMetadata } from '../../utils/nodeProps';
 import {
   BUNDLE_COMPONENT_CELL_FIELDS,
   buildBundleChildRowsPreset,
+  bundleChildRowsShowChange,
   detectBundleChildRowsPreset,
   resolveBundleColumnIds,
   type BundleChildRows,
@@ -44,7 +45,7 @@ export const BundleComponentRowsWidget: React.FC<Props> = ({ node }) => {
 
   const preset = detectBundleChildRowsPreset(current, columnIds) as PresetValue;
   const enabled = Boolean(current);
-  const hasChange = JSON.stringify(current ?? '').includes('component.quantityChange');
+  const hasChange = bundleChildRowsShowChange(current);
 
   const writeChildRows = (next: BundleChildRows) => setNodeProp(node.id, 'metadata.bundleChildRows', next, true);
 
