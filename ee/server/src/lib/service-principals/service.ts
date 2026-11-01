@@ -37,6 +37,9 @@ export interface ServicePrincipalRecord {
 export interface ServicePrincipalListItem extends ServicePrincipalRecord {
   is_inactive: boolean;
   active_key_count: number;
+  roles: { role_id: string; role_name: string }[];
+  /** max(api_keys.last_used_at) across every key the principal owns, or null if never used. */
+  last_used_at: string | null;
 }
 
 export class ServicePrincipalError extends Error {
@@ -89,6 +92,22 @@ function validateRateLimit(maxTokens: number | null | undefined, refillPerMin: n
   }
 }
 
+/** Dedupes and validates role ids: tenant-scoped, MSP roles only (R2.6). Returns the clean list. */
+async function validateMspRoleIds(
+  db: ReturnType<typeof tenantDb>,
+  rawRoleIds: string[] | undefined,
+): Promise<string[]> {
+  const roleIds = Array.from(new Set((rawRoleIds ?? []).filter((r) => typeof r === 'string' && r)));
+  if (roleIds.length > 0) {
+    const valid = await db.table('roles').whereIn('role_id', roleIds).where({ msp: true }).pluck('role_id');
+    const invalid = roleIds.filter((r) => !valid.includes(r));
+    if (invalid.length > 0) {
+      throw new ServicePrincipalError('SERVICE_PRINCIPAL_ROLE_INVALID', 'Only MSP roles can be assigned', 422);
+    }
+  }
+  return roleIds;
+}
+
 export interface CreateServicePrincipalInput {
   kind: ServicePrincipalKind;
   name: string;
@@ -133,16 +152,9 @@ export async function createServicePrincipalInTrx(
     is_inactive: false,
   });
 
-  const roleIds = Array.from(new Set((input.roleIds ?? []).filter((r) => typeof r === 'string' && r)));
-  if (roleIds.length > 0) {
-    const valid = await db.table('roles').whereIn('role_id', roleIds).where({ msp: true }).pluck('role_id');
-    const invalid = roleIds.filter((r) => !valid.includes(r));
-    if (invalid.length > 0) {
-      throw new ServicePrincipalError('SERVICE_PRINCIPAL_ROLE_INVALID', 'Only MSP roles can be assigned', 422);
-    }
-    for (const roleId of roleIds) {
-      await db.table('user_roles').insert({ tenant, user_id: userId, role_id: roleId });
-    }
+  const roleIds = await validateMspRoleIds(db, input.roleIds);
+  for (const roleId of roleIds) {
+    await db.table('user_roles').insert({ tenant, user_id: userId, role_id: roleId });
   }
 
   if (input.allowActAs) await assertServicePrincipalTier(tenant);
@@ -189,14 +201,8 @@ export async function getServicePrincipal(
   userId: string,
 ): Promise<ServicePrincipalListItem> {
   const record = await loadPrincipal(knex, tenant, userId);
-  const db = tenantDb(knex, tenant);
-  const user = await db.table('users').where({ user_id: userId }).first('is_inactive');
-  const keys = await db.table('api_keys').where({ user_id: userId, active: true }).count('* as count');
-  return {
-    ...record,
-    is_inactive: Boolean(user?.is_inactive),
-    active_key_count: parseInt((keys as Array<{ count: string }>)[0].count, 10),
-  };
+  const [item] = await decorateServicePrincipals(knex, tenant, [record]);
+  return item;
 }
 
 /** Lists non-archived principals (archived ones are hidden, R8.3). */
@@ -210,6 +216,16 @@ export async function listServicePrincipals(
     .whereNull('archived_at')
     .orderBy('created_at', 'desc')) as ServicePrincipalRecord[];
   if (records.length === 0) return [];
+  return decorateServicePrincipals(knex, tenant, records);
+}
+
+/** Adds status, key counts, roles and last-used to principal rows with one batched query each. */
+async function decorateServicePrincipals(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  records: ServicePrincipalRecord[],
+): Promise<ServicePrincipalListItem[]> {
+  const db = tenantDb(knex, tenant);
   const ids = records.map((r) => r.user_id);
   const users = await db.table('users').whereIn('user_id', ids).select('user_id', 'is_inactive');
   const keys = await db
@@ -221,17 +237,50 @@ export async function listServicePrincipals(
     .count('* as count');
   const inactive = new Map(users.map((u: { user_id: string; is_inactive: boolean }) => [u.user_id, u.is_inactive]));
   const keyCounts = new Map(keys.map((k: { user_id: string; count: string }) => [k.user_id, parseInt(k.count, 10)]));
-  return records.map((r) => ({
-    ...r,
-    is_inactive: Boolean(inactive.get(r.user_id)),
-    active_key_count: keyCounts.get(r.user_id) ?? 0,
-  }));
+
+  const lastUsedRows = await db
+    .table('api_keys')
+    .whereIn('user_id', ids)
+    .groupBy('user_id')
+    .select('user_id')
+    .max('last_used_at as last_used_at');
+  const lastUsed = new Map(
+    lastUsedRows.map((k: { user_id: string; last_used_at: string | Date | null }) => [k.user_id, k.last_used_at]),
+  );
+
+  const roleRows = await db
+    .table('user_roles')
+    .join('roles', function () {
+      this.on('roles.role_id', 'user_roles.role_id').andOn('roles.tenant', 'user_roles.tenant');
+    })
+    .whereIn('user_roles.user_id', ids)
+    .orderBy('roles.role_name')
+    .select('user_roles.user_id as user_id', 'roles.role_id as role_id', 'roles.role_name as role_name');
+  const rolesByUser = new Map<string, { role_id: string; role_name: string }[]>();
+  for (const row of roleRows as Array<{ user_id: string; role_id: string; role_name: string }>) {
+    const list = rolesByUser.get(row.user_id) ?? [];
+    list.push({ role_id: row.role_id, role_name: row.role_name });
+    rolesByUser.set(row.user_id, list);
+  }
+
+  return records.map((r) => {
+    const used = lastUsed.get(r.user_id);
+    return {
+      ...r,
+      is_inactive: Boolean(inactive.get(r.user_id)),
+      active_key_count: keyCounts.get(r.user_id) ?? 0,
+      roles: rolesByUser.get(r.user_id) ?? [],
+      last_used_at: used ? (used instanceof Date ? used.toISOString() : String(used)) : null,
+    };
+  });
 }
 
 export interface UpdateServicePrincipalInput {
   name?: string;
   description?: string | null;
   allowActAs?: boolean;
+  /** MSP role ids. When present (even empty) the principal's roles are replaced by exactly this set. */
+  roleIds?: string[];
   /** Pass `null` for both to clear the override and fall back to the Pro default. */
   rateLimitMaxTokens?: number | null;
   rateLimitRefillPerMin?: number | null;
@@ -266,6 +315,22 @@ export async function updateServicePrincipal(
 
   return knex.transaction(async (trx) => {
     const db = tenantDb(trx, tenant);
+    if (input.roleIds !== undefined) {
+      const roleIds = await validateMspRoleIds(db, input.roleIds);
+      await db.table('user_roles').where({ user_id: userId }).del();
+      for (const roleId of roleIds) {
+        await db.table('user_roles').insert({ tenant, user_id: userId, role_id: roleId });
+      }
+      if (existing.kind === 'mcp_agent') {
+        const agent = await db.table('agents').where({ service_user_id: userId }).first('agent_id');
+        if (agent) {
+          await db.table('agent_roles').where({ agent_id: agent.agent_id }).del();
+          for (const roleId of roleIds) {
+            await db.table('agent_roles').insert({ tenant, agent_id: agent.agent_id, role_id: roleId });
+          }
+        }
+      }
+    }
     const [record] = await db.table('service_principals').where({ user_id: userId }).update(patch).returning('*');
     if (patch.name !== undefined) {
       await db.table('users').where({ user_id: userId }).update({ first_name: patch.name });

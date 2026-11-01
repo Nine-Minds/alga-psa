@@ -75,6 +75,14 @@ describe('MCP agents route error mapping', () => {
     expect(await conflict.json()).toEqual({ error: 'already bound' });
   });
 
+  it('maps a refused session mint (inactive agent) to 403 with its code', async () => {
+    createAgent.mockRejectedValueOnce(shaped('AgentInactiveError', 'This agent is inactive', 'AGENT_INACTIVE', 403));
+    const { POST } = await import('@/app/api/v1/mcp/agents/route');
+    const res = await POST(post());
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: 'This agent is inactive', code: 'AGENT_INACTIVE' });
+  });
+
   it('rethrows unknown errors (500 behaviour unchanged)', async () => {
     const boom = new Error('boom');
     createAgent.mockRejectedValue(boom);

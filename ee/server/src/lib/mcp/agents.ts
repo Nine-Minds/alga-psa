@@ -72,6 +72,20 @@ export class AgentBindingConflictError extends Error {
   }
 }
 
+/**
+ * Thrown when a session key is requested for a deactivated or missing agent /
+ * service user. Shaped (name, code, numeric statusCode) so the route's structural
+ * error mapping handles it without `instanceof`.
+ */
+export class AgentInactiveError extends Error {
+  public readonly code = 'AGENT_INACTIVE';
+  public readonly statusCode = 403;
+  constructor(message = 'This agent is inactive') {
+    super(message);
+    this.name = 'AgentInactiveError';
+  }
+}
+
 function backingUserId(agent: AgentRecord): string | null {
   return agent.service_user_id ?? null;
 }
@@ -330,6 +344,10 @@ export async function mintAgentSessionKey(params: {
   await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
     const db = tenantDb(knex, tenant);
+    // R8.2: a deactivated principal (or its agent) must not get a fresh key.
+    const user = await db.table('users').where({ user_id: userId }).first('is_inactive');
+    const agent = await db.table('agents').where({ agent_id: agentId }).first('active');
+    if (!user || user.is_inactive || !agent || !agent.active) throw new AgentInactiveError();
     // Opportunistically sweep this tenant's expired agent session keys so they
     // don't accumulate (each agent request mints a fresh short-lived key).
     await db.table('api_keys')

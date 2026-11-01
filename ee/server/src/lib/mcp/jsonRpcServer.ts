@@ -266,11 +266,20 @@ async function resolveAuth(
     // negative narrowing of a boolean-discriminated union doesn't narrow there.
     if (res.ok === false) return { ok: false, status: res.status, error: res.error };
     const { resolved } = res.ctx;
-    const sessionKey = await mintAgentSessionKey({
-      tenant: resolved.tenant,
-      agentId: resolved.agent.agent_id,
-      backingUserId: resolved.backingUserId as string,
-    });
+    let sessionKey: string;
+    try {
+      sessionKey = await mintAgentSessionKey({
+        tenant: resolved.tenant,
+        agentId: resolved.agent.agent_id,
+        backingUserId: resolved.backingUserId as string,
+      });
+    } catch (err) {
+      // Name/code match, not instanceof: the class may cross a module seam.
+      if ((err as { name?: string }).name === 'AgentInactiveError') {
+        return { ok: false, status: 403, error: (err as Error).message };
+      }
+      throw err;
+    }
     return { ok: true, auth: { apiKey: sessionKey, agentId: resolved.agent.agent_id, tenant: resolved.tenant } };
   }
 
