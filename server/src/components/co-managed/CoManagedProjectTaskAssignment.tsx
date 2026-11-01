@@ -11,9 +11,9 @@ import { newCoManagedOperationId } from './coManagedOperationId';
  * MSP-side assignment. The assignee lives on the MSP's own reference row, never on the customer's task.
  * `revision` is null until a reference exists; assigning to oneself is what creates it.
  */
-export default function CoManagedProjectTaskAssignment({ customerTenant, relationshipId, taskId, userId, revision, assigneeName, isAssigned = false, assignedToMe = false, onChanged }: {
+export default function CoManagedProjectTaskAssignment({ customerTenant, relationshipId, taskId, userId, revision, assigneeName, isAssigned = false, assignedToMe = false, canAssign = true, onChanged }: {
   customerTenant: string; relationshipId: string; taskId: string; userId: string;
-  revision: number | null; assigneeName?: string | null; isAssigned?: boolean; assignedToMe?: boolean; onChanged?: (assigneeName?: string) => void;
+  revision: number | null; assigneeName?: string | null; isAssigned?: boolean; assignedToMe?: boolean; /** False on a view-only grant: assigning creates the MSP reference row, which a view-only project does not offer. */ canAssign?: boolean; onChanged?: (assigneeName?: string) => void;
 }) {
   const { t } = useTranslation('msp/licensing');
   const [name, setName] = useState<string | null>(assigneeName ?? null);
@@ -47,7 +47,7 @@ export default function CoManagedProjectTaskAssignment({ customerTenant, relatio
     {failure === 'failed' && <Alert variant="destructive"><AlertDescription id="co-managed-task-assignment-error">
       {t('coManaged.sharedTasks.assignFailed', { defaultValue: 'This task could not be assigned.' })}</AlertDescription></Alert>}
     {/* Already assigned to the viewer: nothing to do, so the action is not offered. */}
-    {!assignedToMe && <Button id="co-managed-task-assign-me" size="sm" disabled={busy} onClick={() => void assign()}>
+    {canAssign && !assignedToMe && <Button id="co-managed-task-assign-me" size="sm" disabled={busy} onClick={() => void assign()}>
       {t('coManaged.sharedTasks.assignMe', { defaultValue: 'Assign to me' })}</Button>}
   </section>;
 }

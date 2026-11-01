@@ -580,6 +580,8 @@ export default function TaskForm({
   // Use provided projectTreeData if available, otherwise fetch it
   useEffect(() => {
     const fetchProjectsData = async () => {
+      // Shared mode hides Move-to/Duplicate-to, so the tree is never needed (the shared seam has none to give).
+      if (screen.hidePhaseMoves) return;
       if (mode === 'edit') {
         if (projectTreeData && projectTreeData.length > 0) {
           // Use the provided project tree data
@@ -607,7 +609,7 @@ export default function TaskForm({
     };
 
     fetchProjectsData();
-  }, [mode, projectTreeData, t, projectSource]);
+  }, [mode, projectTreeData, t, projectSource, screen.hidePhaseMoves]);
 
   const handleTreeSelectChange = async (
     value: string,
@@ -922,6 +924,8 @@ export default function TaskForm({
   };
 
   const performSubmit = async () => {
+    // A read-only screen offers no write; Enter in a field must not reach the native submit path either.
+    if (screen.readOnly) return;
     setIsSubmitting(true);
 
     try {
@@ -1788,6 +1792,7 @@ export default function TaskForm({
             {taskFormT('addTimeEntry', 'Add Time Entry')}
           </Button>
         )}
+        {!screen.readOnly && (
         <Button
           id='save-button'
           type={outsideForm ? "button" : "submit"}
@@ -1803,6 +1808,7 @@ export default function TaskForm({
               ? taskFormT('update', 'Update')
               : taskFormT('save', 'Save'))}
         </Button>
+        )}
       </div>
     </div>
   );

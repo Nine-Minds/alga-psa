@@ -21,6 +21,8 @@ export interface CoManagedSharedProjectScreenPhase { phaseId: string; projectId:
 export interface CoManagedSharedProjectScreenTask {
   taskId: string; taskName: string; phaseId: string; statusMappingId: string | null; dueDate: string | null; wbsCode: string | null;
   orderKey: string | null; taskUpdatedAt: string;
+  /** The task row's real created_at (same query as the rest of the row). */
+  taskCreatedAt: string;
   reference: { revision: number; assigneeName: string | null; assignedToMe: boolean } | null;
 }
 export interface CoManagedSharedProjectScreen {
@@ -120,7 +122,7 @@ export async function getCoManagedSharedProjectScreen(db: Knex, inputActor: CoMa
         const query = customer.table('project_tasks as task').where('phase.project_id', projectId).orderBy('task.task_id').limit(TASK_PAGE);
         customer.tenantJoin(query, 'project_phases as phase', 'task.phase_id', 'phase.phase_id');
         if (after) query.where('task.task_id', '>', after);
-        const page = await query.select('task.task_id', 'task.task_name', 'task.phase_id', 'task.project_status_mapping_id', 'task.due_date', 'task.wbs_code', 'task.order_key', 'task.updated_at') as Array<Record<string, any>>;
+        const page = await query.select('task.task_id', 'task.task_name', 'task.phase_id', 'task.project_status_mapping_id', 'task.due_date', 'task.wbs_code', 'task.order_key', 'task.created_at', 'task.updated_at') as Array<Record<string, any>>;
         if (!page.length) break;
         const references = await tenantDb(context.trx, actor.tenant).table('co_managed_project_task_references')
           .where({ customer_tenant: customerTenant, relationship_id: relationshipId, active: true }).whereIn('task_id', page.map(task => task.task_id))
@@ -130,7 +132,7 @@ export async function getCoManagedSharedProjectScreen(db: Knex, inputActor: CoMa
           const reference = byTask.get(task.task_id);
           tasks.push({
             taskId: task.task_id, taskName: task.task_name, phaseId: task.phase_id, statusMappingId: statusHidden ? null : task.project_status_mapping_id ?? null,
-            dueDate: dueHidden ? null : isoOrNull(task.due_date), wbsCode: task.wbs_code ?? null, orderKey: task.order_key ?? null, taskUpdatedAt: iso(task.updated_at),
+            dueDate: dueHidden ? null : isoOrNull(task.due_date), wbsCode: task.wbs_code ?? null, orderKey: task.order_key ?? null, taskCreatedAt: iso(task.created_at), taskUpdatedAt: iso(task.updated_at),
             reference: reference ? maskCoManagedSnapshot(redacted, { revision: reference.revision as number, assigneeName: reference.assignee_name as string | null, assignedToMe: reference.assigned_to === actor.userId },
               { assigneeName: CO_MANAGED_ASSIGNEE_NAME_ALIASES }) : null,
           });

@@ -110,7 +110,7 @@ const readModel = (name = 'Patch servers') => ({
   ],
   statusesByPhase: {},
   tasks: [{ taskId: TASK_ID, taskName: name, phaseId: 'ph1', statusMappingId: 'm1', dueDate: null, wbsCode: '1.1', orderKey: 'a',
-    taskUpdatedAt: '2026-10-01T10:00:00.000Z', reference: { revision: 1, assigneeName: 'QA Tester', assignedToMe: false } }],
+    taskCreatedAt: '2026-09-01T08:00:00.000Z', taskUpdatedAt: '2026-10-01T10:00:00.000Z', reference: { revision: 1, assigneeName: 'QA Tester', assignedToMe: false } }],
   redactedFields: [], hiddenTaskFields: [],
 });
 
@@ -150,6 +150,45 @@ describe('shared project screen renders through the real provider stack', () => 
     expect(document.getElementById('co-managed-task-aside')).not.toBeNull();
     expect(h.nativeCalls).toEqual([]);
     expect(noCustomerIdReachedTags()).toEqual([]);
+  });
+
+  it('a view-only project renders no editable control, no Update, no Assign to me and no draggable card', async () => {
+    h.read = { ...readModel(), canCollaborate: false };
+    h.search = `taskId=${TASK_ID}`;
+    await renderRoute();
+    expect(await screen.findByDisplayValue('Patch servers', {}, { timeout: 8000 })).toBeInTheDocument();
+    const dialog = await screen.findByRole('dialog');
+    await screen.findByText(/Assigned to QA Tester/);
+    expect(screen.queryByRole('button', { name: /^(update|save)$/i })).toBeNull();
+    expect(document.getElementById('save-button')).toBeNull();
+    expect(screen.queryByText('Assign to me')).toBeNull();
+    const enabled = Array.from(dialog.querySelectorAll<HTMLElement>('input, textarea, select, button[role="combobox"]'))
+      .filter(el => !(el as HTMLInputElement).disabled && !el.closest('fieldset[disabled]') && (el as HTMLInputElement).type !== 'hidden' && !(el as HTMLInputElement).readOnly);
+    expect(enabled.map(el => el.id || el.tagName)).toEqual([]);
+    expect(document.querySelector('[draggable="true"]')).toBeNull();
+    expect(h.nativeCalls).toEqual([]);
+  });
+
+  it('a view-only project hides the list-view status menu', async () => {
+    h.read = { ...readModel(), canCollaborate: false };
+    h.search = 'view=list';
+    // jsdom has no layout: give the list a wide container so the status and assignee columns are fitted in.
+    const width = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(4000);
+    await renderRoute();
+    expect((await screen.findAllByText('Patch servers', {}, { timeout: 8000 })).length).toBeGreaterThan(0);
+    await waitFor(() => expect(document.querySelector('[data-shared-assignee-name]')).not.toBeNull());
+    expect(document.querySelector('[id^="task-status-select"], [role="combobox"]')).toBeNull();
+    width.mockRestore();
+    // The MSP assignee name is read-only text, not "Unassigned".
+    expect(document.querySelector('[data-shared-assignee-name]')?.textContent).toBe('QA Tester');
+  });
+
+  it('a collaborate project keeps the draggable cards and the Update button', async () => {
+    h.search = `taskId=${TASK_ID}`;
+    await renderRoute();
+    await screen.findByDisplayValue('Patch servers', {}, { timeout: 8000 });
+    expect(document.getElementById('save-button')).not.toBeNull();
+    expect(document.querySelector('[draggable="true"]')).not.toBeNull();
   });
 
   it('an admitted edit from the drawer reports success, shows the new name, and reaches no native action', async () => {

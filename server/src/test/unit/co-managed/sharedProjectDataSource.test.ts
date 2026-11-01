@@ -31,9 +31,9 @@ const read = (over: Partial<CoManagedSharedProjectRead> = {}): CoManagedSharedPr
     { statusMappingId: 'm2', phaseId: null, name: 'Done', customName: null, displayOrder: 2, isVisible: true, isClosed: true, color: null, icon: null }],
   statusesByPhase: {},
   tasks: [
-    { taskId: 't1', taskName: 'Patch', phaseId: PH, statusMappingId: 'm1', dueDate: '2026-10-20T00:00:00.000Z', wbsCode: '1.1', orderKey: 'a', taskUpdatedAt: '2026-10-01T10:00:00.000Z',
+    { taskId: 't1', taskName: 'Patch', phaseId: PH, statusMappingId: 'm1', dueDate: '2026-10-20T00:00:00.000Z', wbsCode: '1.1', orderKey: 'a', taskCreatedAt: '2026-09-01T08:00:00.000Z', taskUpdatedAt: '2026-10-01T10:00:00.000Z',
       reference: { revision: 3, assigneeName: 'Quinn', assignedToMe: true } },
-    { taskId: 't2', taskName: 'Unassigned', phaseId: PH, statusMappingId: 'm1', dueDate: null, wbsCode: '1.2', orderKey: 'b', taskUpdatedAt: '2026-10-01T10:00:00.000Z', reference: null },
+    { taskId: 't2', taskName: 'Unassigned', phaseId: PH, statusMappingId: 'm1', dueDate: null, wbsCode: '1.2', orderKey: 'b', taskCreatedAt: '2026-09-01T08:00:00.000Z', taskUpdatedAt: '2026-10-01T10:00:00.000Z', reference: null },
   ],
   redactedFields: [], hiddenTaskFields: [],
   ...over,
@@ -94,6 +94,25 @@ describe('shared project data source contract', () => {
     expect(source.screen).toMatchObject({ readOnly: false, admittedTaskEdit: true, hideCreate: true, hidePhaseMoves: true, hideKanbanDrag: false, freezeProjectEdit: true, backHref: '/msp/co-management/tasks' });
     expect(source.screen.slots).toEqual({ conversations: null, timeSummary: null, taskAside: null });
     expect(source.screen.frozenFields).toEqual(PROJECT_TASK_SCREEN_FIELDS.filter(f => !['task_name', 'project_status_mapping_id', 'due_date'].includes(f)));
+  });
+
+  it('view-only grant: read-only screen, no admitted edit, no drag; collaborate keeps the current behaviour', async () => {
+    const view = build({ canCollaborate: false });
+    expect(view.source.screen).toMatchObject({ readOnly: true, admittedTaskEdit: false, hideKanbanDrag: true });
+    expect(build().source.screen).toMatchObject({ readOnly: false, admittedTaskEdit: true, hideKanbanDrag: false });
+    // Refused before L3c is called, naming every proposed field; status drag is refused the same way.
+    const result = await view.source.editTask({ taskId: 't1', changes: { task_name: 'X', due_date: null } });
+    expect(result).toEqual({ ok: false, code: 'refused', refusedFields: ['task_name', 'due_date'] });
+    expect(await view.source.tasks.updateStatus('t1', 'm2', null, null)).toEqual({ actionError: 'This change is not shared with you.' });
+    expect(view.edit).not.toHaveBeenCalled();
+    expect(() => view.source.tasks.update('t1', {} as never)).toThrow();
+  });
+
+  it('carries the real created_at, distinct from updated_at', async () => {
+    const { source } = build();
+    const task = await source.tasks.get('t1') as { created_at: Date; updated_at: Date };
+    expect(task.created_at.toISOString()).toBe('2026-09-01T08:00:00.000Z');
+    expect(task.updated_at.toISOString()).toBe('2026-10-01T10:00:00.000Z');
   });
 
   it('hidden fields come from the read and are not also frozen', () => {

@@ -33,8 +33,15 @@ const getAllPrioritiesMock = vi.fn();
 const getServicesMock = vi.fn();
 const getTaskTypesMock = vi.fn();
 const getProjectDetailsMock = vi.fn();
+const getProjectTreeDataMock = vi.fn();
 
 let lastTaskTicketLinksProps: any = null;
+const toastErrorMock = vi.hoisted(() => vi.fn());
+
+vi.mock('react-hot-toast', () => {
+  const toast = Object.assign(vi.fn(), { error: toastErrorMock, success: vi.fn(), dismiss: vi.fn(), loading: vi.fn() });
+  return { default: toast, toast, Toaster: () => null };
+});
 
 
 vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
@@ -127,14 +134,14 @@ vi.mock('../../actions/projectTaskActions', () => ({
   getTaskResourcesAction: vi.fn(),
   addTicketLinkAction: vi.fn(),
   duplicateTaskToPhase: vi.fn(),
-  getTaskDependencies: vi.fn(),
+  getTaskDependencies: vi.fn().mockResolvedValue({ predecessors: [], successors: [] }),
   addTaskDependency: vi.fn(),
   getTaskTypes: (...args: unknown[]) => getTaskTypesMock(...args)
 }));
 
 vi.mock('../../actions/projectActions', () => ({
   getProjectDetails: (...args: unknown[]) => getProjectDetailsMock(...args),
-  getProjectTreeData: vi.fn()
+  getProjectTreeData: (...args: unknown[]) => getProjectTreeDataMock(...args)
 }));
 
 vi.mock('@alga-psa/ui', () => ({
@@ -193,6 +200,8 @@ describe('TaskForm in shared mode', () => {
     getServicesMock.mockResolvedValue({ services: [] });
     getTaskTypesMock.mockResolvedValue([]);
     getProjectDetailsMock.mockResolvedValue({ tasks: [] });
+    // A valid tree, so a native mount left pending by an earlier test can never toast into a later one.
+    getProjectTreeDataMock.mockResolvedValue([{ value: 'project-1', label: 'Project 1', type: 'project', children: [] }]);
   });
 
   it('renders a frozen field disabled and does not render a hidden field', () => {
@@ -259,5 +268,40 @@ describe('TaskForm in shared mode', () => {
         </TicketIntegrationProvider>);
       expect(rtlScreen.queryByTestId('assigned-user')).not.toBeNull();
     });
+  });
+
+  describe('project tree fetch', () => {
+    it('does not fetch the tree, toast or console.error when the phase moves are hidden (shared drawer open)', async () => {
+      const tree = vi.fn().mockResolvedValue([]);
+      // Let earlier tests' unmounted-but-pending native tree fetches settle, so only this mount is observed.
+      await new Promise(resolve => setTimeout(resolve, 50));
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+      toastErrorMock.mockClear();
+      const source = sharedSource(vi.fn(), { hidePhaseMoves: true });
+      mount({ ...source, options: { ...source.options, tree } } as ProjectDataSource);
+      await new Promise(resolve => setTimeout(resolve, 50));
+      expect(tree).not.toHaveBeenCalled();
+      expect(toastErrorMock).not.toHaveBeenCalled();
+      expect(errorSpy.mock.calls).toEqual([]);
+      errorSpy.mockRestore();
+    });
+
+    it('native mode still fetches the tree', async () => {
+      const tree = vi.fn().mockResolvedValue([{ value: 'p', label: 'P', type: 'project', children: [] }]);
+      const source = { ...nativeProjectDataSource, options: { ...nativeProjectDataSource.options, tree } } as ProjectDataSource;
+      render(
+        <ProjectDataSourceProvider dataSource={source}>
+          <TicketIntegrationProvider value={createMockTicketIntegration()}>
+            <TaskForm task={task} phase={phase} onClose={() => undefined} onSubmit={() => undefined} projectStatuses={statuses}
+              users={[] as IUser[]} mode="edit" onPhaseChange={() => undefined} inDrawer={true} />
+          </TicketIntegrationProvider>
+        </ProjectDataSourceProvider>);
+      await waitFor(() => expect(tree).toHaveBeenCalledTimes(1));
+    });
+  });
+
+  it('read-only screen renders no Update button and every field frozen', () => {
+    const { container } = mount(sharedSource(vi.fn(), { readOnly: true, admittedTaskEdit: false }));
+    expect(container.querySelector('#save-button')).toBeNull();
   });
 });

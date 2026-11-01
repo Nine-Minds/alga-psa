@@ -39,6 +39,7 @@ import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useTaskSelection } from './TaskSelectionContext';
+import { useProjectDataSource } from '../context/ProjectDataSourceContext';
 
 // Auto-scroll configuration for drag operations
 const SCROLL_THRESHOLD = 80; // Pixels from edge to start scrolling
@@ -294,6 +295,7 @@ export default function TaskListView({
   searchCaseSensitive = false
 }: TaskListViewProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const projectSource = useProjectDataSource();
   const taskTypeLabel = useTaskTypeLabel();
   // toLocaleDateString() with no locale follows the browser, not the app.
   const { formatDate } = useFormatters();
@@ -1845,6 +1847,13 @@ export default function TaskListView({
                                                       </span>
                                                     </>
                                                   );
+                                                }
+                                                // Shared mode: the assignee is a display name only (no user id), shown as read-only text.
+                                                const sharedAssigneeName = projectSource.kind !== 'native' && !task.assigned_to
+                                                  ? (task as { assigned_to_name?: string | null }).assigned_to_name?.trim()
+                                                  : undefined;
+                                                if (sharedAssigneeName) {
+                                                  return <span className="text-[13px] text-[rgb(var(--color-text-700))] truncate" data-shared-assignee-name>{sharedAssigneeName}</span>;
                                                 }
                                                 return (
                                                   <span className="text-[13px] text-[rgb(var(--color-text-400))]">{t('projectList.unassigned', 'Unassigned')}</span>

@@ -93,8 +93,10 @@ export function createCoManagedSharedProjectDataSource(deps: CoManagedSharedProj
   // Derived server-side from the reader's redactions (the matcher is server-only code).
   const hidden = [...(initial.hiddenTaskFields ?? [])];
   const admitted = CO_MANAGED_ADMITTED_TASK_FIELDS.filter(field => !hidden.includes(field));
+  // View-only grant (can_collaborate = false): nothing is writable, so the screen offers no write and the drawer has no Update.
+  const viewOnly = initial.canCollaborate === false;
   const screen: ProjectScreenBehavior = Object.freeze({
-    readOnly: false, admittedTaskEdit: true, hideCreate: true, hidePhaseMoves: true, hideKanbanDrag: false, freezeProjectEdit: true,
+    readOnly: viewOnly, admittedTaskEdit: !viewOnly, hideCreate: true, hidePhaseMoves: true, hideKanbanDrag: viewOnly, freezeProjectEdit: true,
     frozenFields: Object.freeze(PROJECT_TASK_SCREEN_FIELDS.filter(field => !(admitted as readonly string[]).includes(field) && !hidden.includes(field))),
     hiddenFields: Object.freeze([...hidden]), backHref: deps.backHref,
     // L4c: no project-task conversation seam exists on main (nativeTaskCommentAccess is customer-side only). L6a2 is not on main.
@@ -107,7 +109,7 @@ export function createCoManagedSharedProjectDataSource(deps: CoManagedSharedProj
   });
   const toTask = (task: CoManagedSharedProjectScreenTask) => ({
     tenant: deps.customerTenant, task_id: task.taskId, phase_id: task.phaseId, task_name: task.taskName, description: null, assigned_to: null, assigned_team_id: null,
-    estimated_hours: null, actual_hours: null, project_status_mapping_id: task.statusMappingId as string, created_at: new Date(task.taskUpdatedAt), updated_at: new Date(task.taskUpdatedAt),
+    estimated_hours: null, actual_hours: null, project_status_mapping_id: task.statusMappingId as string, created_at: new Date(task.taskCreatedAt), updated_at: new Date(task.taskUpdatedAt),
     wbs_code: task.wbsCode ?? '', order_key: task.orderKey ?? undefined, start_date: null, due_date: date(task.dueDate), priority_id: null, task_type_key: 'task',
     checklist_items: [], ticket_links: [], resources: [], dependencies: [], dependents: [],
     // The MSP assignee is a display name only; ids never leave the server.
@@ -150,6 +152,8 @@ export function createCoManagedSharedProjectDataSource(deps: CoManagedSharedProj
     const row = rows.get(request.taskId);
     if (!row) return { ok: false, code: 'not_found' };
     const changes = request.changes ?? {};
+    // View-only: refused here, before L3c, never left to server rejection. Nothing is dropped; every proposed field is named.
+    if (viewOnly) return { ok: false, code: 'refused', refusedFields: Object.keys(changes) };
     // A field the screen cannot save is refused, never dropped: nothing is written when any one is refused.
     const refusedFields = Object.keys(changes).filter(key => !(admitted as readonly string[]).includes(key));
     if (refusedFields.length) return { ok: false, code: 'refused', refusedFields };

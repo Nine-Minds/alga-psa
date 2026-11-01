@@ -28,7 +28,7 @@ function TaskAside({ handle, task, customerTenant, relationshipId, userId }: {
   const baseline = handle.baselineOf(task.task_id);
   return <div id="co-managed-task-aside" className="space-y-6">
     <CoManagedProjectTaskAssignment customerTenant={customerTenant} relationshipId={relationshipId} taskId={task.task_id} userId={userId}
-      revision={baseline?.revision ?? null} assigneeName={baseline?.assigneeName ?? null} isAssigned={baseline?.isAssigned ?? false} assignedToMe={baseline?.assignedToMe ?? false}
+      revision={baseline?.revision ?? null} assigneeName={baseline?.assigneeName ?? null} isAssigned={baseline?.isAssigned ?? false} assignedToMe={baseline?.assignedToMe ?? false} canAssign={!handle.source.screen.readOnly}
       onChanged={() => { void handle.refresh(); }} />
     <CoManagedProjectTaskHistory customerTenant={customerTenant} relationshipId={relationshipId} taskId={task.task_id} reloadKey={historyKey} statusNames={handle.statusNames()} />
   </div>;

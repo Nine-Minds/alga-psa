@@ -4232,7 +4232,7 @@ export default function ProjectDetail({
           avatarSize={listDensity.avatarSize}
           priorities={priorities}
           taskTypes={taskTypes}
-          onTaskUpdate={handleListTaskUpdate}
+          onTaskUpdate={screen.readOnly ? undefined : handleListTaskUpdate}
           taskResources={allProjectTaskResources}
           taskTags={allProjectTaskTags}
           taskDependencies={allTaskDependencies}
