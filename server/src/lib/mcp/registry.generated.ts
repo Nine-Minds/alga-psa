@@ -22987,6 +22987,58 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     }
   },
   {
+    "id": "get-_api_v1_invoices_id_history",
+    "method": "get",
+    "path": "/api/v1/invoices/{id}/history",
+    "displayName": "Get invoice lifecycle history",
+    "summary": "Get invoice lifecycle history",
+    "description": "Returns the audit trail (invoice_finalized, invoice_unfinalized, invoice_deleted) for one invoice id, oldest first. Each entry has the acting user, timestamp and before/after status and finalized_at.",
+    "tags": [
+      "Invoices"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Path UUID parameter resolved by ApiBaseController.extractIdFromPath().",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Path UUID parameter resolved by ApiBaseController.extractIdFromPath()."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {}
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
     "id": "get-_api_v1_invoices_id_pdf",
     "method": "get",
     "path": "/api/v1/invoices/{id}/pdf",
