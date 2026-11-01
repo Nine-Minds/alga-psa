@@ -27,22 +27,24 @@ outside the bundle) from the ticket detail screen and it saved. The same author 
 the workflow path for the same ticket, so the tenant had already decided this is
 unauthorized; one write surface simply never asks.
 
-Every caller of the core inherits the gap, which is why the fix belongs in the core rather
-than in the screen:
+Most server-action callers converge on the core. REST `PUT` is a separate write
+implementation in `TicketService.update` and does not call either server-action guard; it
+needs its own check before the first mutation. The fix therefore covers both write
+boundaries rather than claiming one convergence point:
 
 | entry point | how it reaches the core |
 | --- | --- |
 | MSP ticket detail **Save Changes** | `updateTicketWithCache:3324` → core |
 | `updateTicketWithCacheForCurrentUser:3368` | → `updateTicketWithCache` → core |
 | bulk status/update (`ticketActions` bulk paths) | per-row `updateTicketInTransaction` (see `ticketActions.bulkStatusResolution.test.ts`) |
-| REST `PUT /api/v1/tickets/{id}` | `server/src/app/api/v1/tickets/[id]/route.ts:13` → controller → ticket update action |
+| REST `PUT /api/v1/tickets/{id}` | route → `ApiBaseController.update()` → `TicketService.update()`; direct write, guarded in the service with the API user and `apiKeyId` |
 | quick-add / automation | through the same actions |
 
 `packages/tickets/src/actions/ticketActions.ts:1293` (`updateTicket`) is a **second
 implementation** of the same write with the same RBAC-only shape. It is in scope: a card that
 fixes one door and leaves the other open has not fixed the finding.
 
-## 2. Decision: enforce in the core, with two named exemptions
+## 2. Decision: enforce at each shared write boundary
 
 `updateTicketInTransaction` already loads the row it is about to mutate:
 
@@ -64,10 +66,10 @@ if (!isSystemActor && !collaboration) {
 
 Why there and not in the wrapper:
 
-- **One place, every door.** The wrapper is only one of five entry points. The core is where
-  all of them converge, and it is where the mutation actually begins — before row locks are
-  taken, before children are propagated, before events, notifications, or audit rows are
-  written.
+- **One place for server actions.** The wrapper is only one of several action callers. The
+  core is where native save, bulk, and automation paths converge, before child propagation,
+  events, notifications, or audit rows are written. REST is separate and must guard its own
+  service write.
 - **The row is already in hand.** `ticketRow` skips a second read inside the authorizer, and
   because the caller has already resolved the ticket in the same transaction, the check
   cannot race a concurrent reassignment of `client_id`/`board_id` (the row lock taken for
@@ -104,44 +106,48 @@ no allowance for bulk. `tenant`/`user` mismatch is already rejected a few lines 
 
 Give it the same treatment as its sibling comment write: inside its transaction, load the
 ticket row it is about to update (it already resolves `currentTicket` for its own logic) and
-call `authorizeTicketRecordAccess({ action: 'update', ticketRow })` before the write, with
-the same `systemActor` exemption (it has `systemActor` in its `UpdateTicketOptions`? — if it
-does not, it does not need one: no engine caller uses it; confirm at implementation and
-state the result in the PR).
+call `authorizeTicketRecordAccess({ action: 'update', ticketRow })` before the write. Its
+options have no `systemActor` exemption, and no auto-close caller uses this legacy entry
+point, so the legacy action has no system-actor bypass.
 
 ## 4. What we are deliberately NOT doing
 
 - **Not changing bundle/RBAC semantics.** The kernel, the bundle fields, the client/board
   narrowing and the shared-work domain are untouched; this card only asks the existing
   record authorizer the question the MSP path forgot to ask.
-- **Not adding a UI-side guard.** A hidden button is not authorization; the refusal must
-  come from the action layer so it holds for REST, bulk, and any future caller.
+- **Not adding a UI-side guard.** A hidden button is not authorization; the refusal comes
+  from each shared write boundary: the action transaction core for server-action callers
+  and `TicketService.update` for REST.
 - **Not touching read paths.** Ticket reads, comment reads and the workflow path already
   enforce record authz; nothing here changes their behaviour.
 - **Not widening the error surface.** A client-portal principal is already rejected before
   the permission lookup (`:3338`), so this adds no new information channel to clients.
-- **Not refactoring `updateTicketInTransaction`.** It is long and load-bearing; the change is
-  one guarded call plus the tests, to keep the blast radius readable in review.
+- **Not refactoring `updateTicketInTransaction`.** It is long and load-bearing; the action
+  change is one guarded call. REST requires a distinct service guard because it bypasses
+  that transaction core.
 
 ## 5. Tests (the deliverable is not done without them)
 
-In `packages/tickets/src/actions/` as an integration-style test with a real transaction (the
-package's existing `*.contract.test.ts` style for the structural claims):
+In a server integration test with a real transaction and actual authorization bundles:
 
 1. **The finding, reproduced.** Internal admin with `ticket:update` narrowed to client A
    updates a ticket whose `client_id` is client B through `updateTicketWithCache` →
-   resolves to a `TicketActionError` (permission), and the ticket row, attribute mirror,
-   `ticket_events`, and notifications are unchanged.
+   resolves to a permission `TicketActionError`, and the ticket row, its
+   `attributes.watch_list` mirror and `ticket_watchers` source rows, audit rows, workflow
+   events, and internal notifications are unchanged.
 2. **No over-blocking.** The same admin updates a ticket in client A → `'success'`.
 3. **`systemActor` still closes.** `updateTicketInTransaction(..., { systemActor: true })`
-   for a ticket outside the (placeholder) user's bundles → `'success'`.
+   for a ticket outside the (placeholder) user's bundles → `'success'` (covered by the
+   focused action tests).
 4. **Collaboration unaffected.** A `collaboration`-admitted edit that passed
    `assertWriteAuthority` is not denied by the new check.
 5. **Both entry points.** `ticketActions.updateTicket` denies the same out-of-bundle write
    (finding 1 repeated against the legacy action).
-6. **Structural guard.** A contract test asserting that the `authorizeTicketRecordAccess`
-   call sits inside `updateTicketInTransaction` before the first `UPDATE`/event emission, so
-   a later refactor cannot move it after the write.
+6. **Runtime guard order.** Invoke `updateTicketInTransaction` directly as a native principal
+   with a real transaction and assert authorization receives the current row before any
+   write/event; a wrapper-only guard must fail this test.
+7. **REST path.** `TicketService.update` denies an out-of-bundle API principal and permits an
+   in-bundle principal, preserving the API principal and API error mapping.
 
 ## 6. Risks and how they are checked
 
@@ -155,16 +161,15 @@ package's existing `*.contract.test.ts` style for the structural claims):
 - **The auto-close engine regresses silently.** Test 3 plus the existing
   `autoCloseTicketsHandler` tests cover it; the exemption is explicit and named in a comment
   citing this spec.
-- **A caller we have not enumerated.** The guard is in the core and the legacy action, which
-  is every write path we could find by grep; the contract test makes a mismatch visible in
-  review rather than in production.
+- **A caller we have not enumerated.** Action writes are guarded in the core and legacy
+  action, while REST is guarded in `TicketService.update`; keep auditing future write paths.
 
 ## 7. Order of work
 
 1. Core guard + exemptions in `optimizedTicketActions.ts` (one call, one comment citing this
    spec).
 2. Same guard in `ticketActions.ts#updateTicket`.
-3. Tests 1–6.
+3. Tests 1–7.
 4. PR body: quote the observed live reproduction and the table of entry points above, so the
    reviewer can check the reach claim against the diff.
 
