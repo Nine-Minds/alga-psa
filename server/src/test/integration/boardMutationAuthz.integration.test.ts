@@ -39,6 +39,8 @@ import {
   deleteBoard,
 } from '../../../../packages/tickets/src/actions/board-actions/boardActions';
 
+import { deleteWizardBoard } from '../../../../packages/onboarding/src/lib/deleteWizardBoard';
+
 const HOOK_TIMEOUT = 180_000;
 
 let db: Knex;
@@ -193,4 +195,45 @@ describe('board mutation authorization (real DB)', () => {
     expect(deleted.success).toBe(true);
     expect(await tenantTable(tenantId, 'boards').where({ board_id: defaultBoardId }).first()).toBeUndefined();
   }, HOOK_TIMEOUT);
+
+  describe('Setup wizard board delete (deleteWizardBoard -> deleteBoard)', () => {
+    async function createBoardWithStatuses() {
+      const seeded = await seed();
+      grantRef.granted.add('ticket_settings:create');
+      const created = await createBoard({
+        board_name: 'Wizard board',
+        ticket_statuses: [
+          { name: 'Open', is_closed: false, is_default: true },
+          { name: 'Closed', is_closed: true },
+        ],
+      } as any);
+      const boardId = (created as any).board_id as string;
+      const statusCount = async () =>
+        Number((await tenantTable(seeded.tenantId, 'statuses').where({ board_id: boardId }).count('* as c').first())?.c);
+      expect(await statusCount()).toBe(2);
+      return { ...seeded, boardId, statusCount };
+    }
+
+    it('deletes a board that has statuses (no statuses_tenant_board_id_fk failure) for a permitted user', async () => {
+      const { tenantId, boardId, statusCount } = await createBoardWithStatuses();
+      grantRef.granted.add('ticket_settings:delete');
+
+      const result = await deleteWizardBoard(boardId, deleteBoard);
+
+      expect(result).toMatchObject({ success: true });
+      expect(await tenantTable(tenantId, 'boards').where({ board_id: boardId }).first()).toBeUndefined();
+      expect(await statusCount()).toBe(0);
+    }, HOOK_TIMEOUT);
+
+    it('refuses a user without ticket_settings:delete and leaves board and statuses intact', async () => {
+      const { tenantId, boardId, statusCount } = await createBoardWithStatuses();
+      grantRef.granted.add('ticket:delete');
+
+      const result = await deleteWizardBoard(boardId, deleteBoard);
+
+      expect(result).toMatchObject({ success: false, code: 'PERMISSION_DENIED' });
+      expect(await tenantTable(tenantId, 'boards').where({ board_id: boardId }).first()).toBeTruthy();
+      expect(await statusCount()).toBe(2);
+    }, HOOK_TIMEOUT);
+  });
 });

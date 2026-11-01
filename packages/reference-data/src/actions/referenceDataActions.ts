@@ -699,6 +699,23 @@ export const deleteReferenceDataItem = withAuth(async (
   dataType: ReferenceDataType,
   itemId: string
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; error?: string }> => {
+  // Boards are governed by the board mutation policy (internal principal +
+  // ticket_settings:delete) and own statuses and other rows that must be cleaned
+  // up with them. That lives in deleteBoard (@alga-psa/tickets), which this
+  // package cannot import (tickets already depends on reference-data). This
+  // generic path performs no authorization and no cleanup, so it refuses
+  // boards outright instead of deleting them unguarded.
+  if (dataType === 'boards') {
+    return {
+      success: false,
+      canDelete: false,
+      code: 'UNKNOWN_ENTITY',
+      message: 'Boards must be deleted with deleteBoard; the generic reference-data delete does not support them.',
+      dependencies: [],
+      alternatives: [],
+    };
+  }
+
   try {
     const config = referenceDataConfigs[dataType];
 
