@@ -165,7 +165,8 @@
     "@alga-psa/tickets": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/event-schemas": "*",
-    "@alga-psa/shared": "*"
+    "@alga-psa/shared": "*",
+    "uuid": "^11.1.1"
   },
   "devDependencies": {
     "typescript": "^5.4.0"

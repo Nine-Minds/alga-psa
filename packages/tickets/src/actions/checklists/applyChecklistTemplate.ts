@@ -31,6 +31,7 @@ export const applyChecklistTemplate = withAuth(
 
       const { knex: db } = await createTenantKnex();
       return await withTransaction(db, async (trx: Knex.Transaction) => {
+        // LEVERAGE: friction checklist-record-authz -- only the coarse ticket:update check guards this; same per-ticket gap as ticketChecklistActions (fixed there via authorizeTicketRecordAccessConcealed), out of scope for alga-2026-0002974.
         const ticket = await tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id: ticketId }).first();
         if (!ticket) throw new Error('Ticket not found');
 

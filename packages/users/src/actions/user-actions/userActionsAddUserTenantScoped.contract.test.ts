@@ -23,7 +23,9 @@ describe('user actions add-user tenant-scoped query contract', () => {
     expect(helperSection).toContain('tenantDb(trx, ');
     expect(helperSection).toContain(".table('users");
     expect(addUserSection).toContain('tenantDb(trx, ');
-    expect(addUserSection).toContain(".table('tenants");
+    // Seat limits are owned by the shared guard, which locks per tenant on this trx.
+    expect(addUserSection).toContain('checkInternalUserLicenseLimit(trx, tenant)');
+    expect(addUserSection).not.toContain(".table('tenants");
     expect(addUserSection).toContain(".table('roles");
     expect(addUserSection).toContain(".table('users");
     expect(addUserSection).toContain("const [newUser] = await tenantDb(trx, tenant).table('users')");
