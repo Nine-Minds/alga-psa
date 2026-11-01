@@ -536,6 +536,11 @@
       },
       "providers": {
         "title": "E-mail- en identiteitsproviders"
+      },
+      "sharedTasks": {
+        "title": "Gedeelde taken",
+        "taskTitle": "Gedeelde taak",
+        "projectTitle": "Gedeeld project"
       }
     }
   },

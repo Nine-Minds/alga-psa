@@ -1,4 +1,5 @@
-import { prepareCommentAttachmentEmail, claimCommentEmailDelivery, finishCommentEmailDelivery, recipientCanReceiveCommentFiles } from './ticketCommentAttachmentEmail';
+import { prepareCommentAttachmentEmail, recipientCanReceiveCommentFiles } from './ticketCommentAttachmentEmail';
+import { claimDelivery, finishDelivery, COMMENT_EMAIL_LEDGER, type DeliveryLedger, type DeliveryKey, type DeliveryFinishState } from '@shared/lib/deliveryLedger';
 import { isPublicAttachmentComment } from '@shared/lib/ticketCommentAttachments';
 import { randomUUID } from 'node:crypto';
 import { type TenantDb, tenantDb } from '@alga-psa/db';
@@ -51,6 +52,7 @@ interface ReplyMarkerPayload {
   projectId?: string;
   commentId?: string;
   threadId?: string;
+  extraMetadata?: Record<string, unknown>;
 }
 
 export interface SendEmailParams {
@@ -83,7 +85,15 @@ export interface SendEmailParams {
     commentId?: string;
     threadId?: string;
     conversationToken?: string;
+    /** Extra `email_reply_tokens.metadata` (co-managed `cm2:` tokens). Absent for native mail. */
+    tokenMetadata?: Record<string, unknown>;
   };
+  /**
+   * Optional delivery-ledger claim for this single send (co-managed deliveries). When set, the
+   * send claims `key` in `ledger` before the provider call and finishes it after, with the same
+   * protocol base uses for comment attachments. Native sends never set it.
+   */
+  delivery?: { ledger: DeliveryLedger; key: DeliveryKey; extra?: Record<string, unknown>; ledgerTenant?: string };
   from?: EmailAddress;
   /**
    * Optional: explicitly specify recipient's locale
@@ -187,7 +197,7 @@ async function persistReplyToken(
       ticket_id: payload.ticketId || null,
       project_id: payload.projectId || null,
       comment_id: payload.commentId || null,
-      metadata: JSON.stringify({ ...metadata, threadId: payload.threadId }),
+      metadata: JSON.stringify({ ...metadata, ...payload.extraMetadata, threadId: payload.threadId }),
       template: metadata.template,
       recipient_email: metadata.recipient,
       entity_type: payload.projectId ? 'project' : 'ticket',
@@ -237,6 +247,25 @@ export async function appendOutboundMessageIdReference(
         [rfcMessageId]
       )
     });
+}
+
+/**
+ * Which delivery-ledger row (if any) a single send claims. A co-managed caller names its own
+ * ledger via `params.delivery`; otherwise a managed comment-attachment send claims the comment's
+ * row keyed on the `To` recipient alone — Cc/Bcc addresses never claim a comment's delivery.
+ * Returns null when the send is not ledgered.
+ */
+export function resolveDeliveryClaim(
+  params: Pick<SendEmailParams, 'to' | 'tenantId' | 'delivery'>,
+  managedCommentId: string | undefined,
+): { ledger: DeliveryLedger; tenant: string; key: DeliveryKey } | null {
+  if (params.delivery) {
+    return { ledger: params.delivery.ledger, tenant: params.delivery.ledgerTenant ?? params.tenantId, key: params.delivery.key };
+  }
+  if (managedCommentId) {
+    return { ledger: COMMENT_EMAIL_LEDGER, tenant: params.tenantId, key: { comment_id: managedCommentId, recipient: params.to } };
+  }
+  return null;
 }
 
 export async function sendEventEmail(params: SendEmailParams): Promise<void> {
@@ -539,6 +568,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         projectId: params.replyContext.projectId,
         commentId: params.replyContext.commentId,
         threadId: params.replyContext.threadId,
+        extraMetadata: params.replyContext.tokenMetadata,
       };
       effectiveReplyContext = {
         ...params.replyContext,
@@ -553,9 +583,16 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     // Send via TenantEmailService (handles tenant provider and EE fallback)
     const service = TenantEmailService.getInstance(params.tenantId);
     const processor = new StaticTemplateProcessor(subject, html, text);
-    if (managedCommentDelivery && !await claimCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to)) {
-      const delivery = await tenantDb(knex, params.tenantId).table('ticket_comment_email_deliveries')
-        .where({ comment_id: attachmentCommentId!, recipient: params.to.trim().toLowerCase() }).first();
+    // One claim protocol, two ledgers: base's comment-attachment ledger, or the ledger a co-managed
+    // caller named in `params.delivery`.
+    const claim = resolveDeliveryClaim(params, managedCommentDelivery ? attachmentCommentId : undefined);
+    const ledgered = claim !== null;
+    const finishLedger = (state: DeliveryFinishState, outcome?: { error?: string; errorCode?: string }) =>
+      finishDelivery(knex, claim!.ledger, claim!.tenant, claim!.key, state, outcome);
+    if (claim && !await claimDelivery(knex, claim.ledger, claim.tenant, claim.key, params.delivery?.extra)) {
+      const { ledger, key } = claim;
+      const normalizedKey = Object.fromEntries(Object.entries(key).map(([k, v]) => [k, ledger.normalized?.includes(k) ? v.trim().toLowerCase() : v]));
+      const delivery = await tenantDb(knex, claim.tenant).table(ledger.table).where(normalizedKey).first();
       if (delivery?.state === 'sent') return;
       throw new EmailProviderError('Comment email has an unresolved provider outcome; reconcile before retrying.',
         'unknown', 'unknown', false, 'COMMENT_DELIVERY_RECONCILIATION_REQUIRED', { requiresReconciliation: true });
@@ -583,10 +620,10 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       from: params.from,
       userId: params.recipientUserId  // For rate limiting
     }).catch(async (error: unknown) => {
-      if (!managedCommentDelivery) throw error;
+      if (!ledgered) throw error;
       const providerError = error as { message?: string; errorCode?: string; metadata?: Record<string, unknown>; isRetryable?: boolean };
       const notSent = providerError.metadata?.definitelyNotSent === true;
-      await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, notSent ? 'failed' : 'sending', {
+      await finishLedger(notSent ? 'failed' : 'sending', {
         error: providerError.message || 'Email service failed with an unknown outcome', errorCode: providerError.errorCode || 'OUTCOME_UNKNOWN',
       });
       throw new EmailProviderError(providerError.message || 'Email delivery requires reconciliation', 'unknown', 'unknown',
@@ -594,15 +631,15 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         { ...providerError.metadata, requiresReconciliation: !notSent });
     });
 
-    if (managedCommentDelivery) {
+    if (ledgered) {
       if (result.success && !result.queued) {
         // Record success before ancillary reply-token/log writes can fail.
-        await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'sent');
+        await finishLedger('sent');
       } else if (result.metadata?.definitelyNotSent === true ||
         Number(result.metadata?.status) === 429) {
-        await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'failed', { error: result.error, errorCode: String(result.metadata?.errorCode || 'NOT_SENT') });
+        await finishLedger('failed', { error: result.error, errorCode: String(result.metadata?.errorCode || 'NOT_SENT') });
       } else {
-        await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'sending', { error: result.error || 'Provider outcome is unknown', errorCode: String(result.metadata?.errorCode || 'OUTCOME_UNKNOWN') });
+        await finishLedger('sending', { error: result.error || 'Provider outcome is unknown', errorCode: String(result.metadata?.errorCode || 'OUTCOME_UNKNOWN') });
       }
     }
 
@@ -621,7 +658,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
 
       const providerId = result.providerId || params.providerId || 'unknown';
       const providerType = result.providerType || 'unknown';
-      const isRetryable = result.metadata?.retryable === true && (!managedCommentDelivery ||
+      const isRetryable = result.metadata?.retryable === true && (!ledgered ||
         result.metadata?.definitelyNotSent === true || Number(result.metadata?.status) === 429);
       const errorCode = typeof result.metadata?.errorCode === 'string' ? result.metadata.errorCode : undefined;
 

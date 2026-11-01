@@ -1,4 +1,4 @@
-import { isPreviewableDocumentMimeType } from '@alga-psa/core';
+import { resolveDocumentServingPolicy } from '@alga-psa/core';
 
 export interface DocumentViewUrlInput {
   document_id?: string | null;
@@ -17,17 +17,19 @@ type DocumentViewUrlResolver = (document: DocumentViewUrlResolverInput) => strin
 /**
  * Resolve the URL used to open a ticket document.
  *
- * Documents with an associated file are served from storage: previewable
- * types (images, video, PDF) open inline via the view route, while anything
- * else (audio voicemails, archives, office files) goes to the download route
- * because the view route refuses those with 400. In-app / block documents
+ * Documents with an associated file are served from storage: types the view
+ * route serves AND the serving policy renders inline (images except SVG,
+ * video, PDF) open via the view route, while anything else (SVG and other
+ * markup, text, audio voicemails, archives, office files) goes to the download
+ * route, so a link never points at a route that would reject or download it. In-app / block documents
  * have no file, so requesting file content (e.g.
  * `/api/documents/download/<id>`) fails with "Document has no associated
  * file"; open those in the documents viewer instead.
  */
 export function resolveDocumentViewUrl(input: DocumentViewUrlInput): string {
   if (input.file_id) {
-    return isPreviewableDocumentMimeType(input.mime_type)
+    const policy = resolveDocumentServingPolicy(input.mime_type);
+    return policy.servable && policy.disposition === 'inline'
       ? `/api/documents/view/${input.file_id}`
       : `/api/documents/download/${input.file_id}`;
   }

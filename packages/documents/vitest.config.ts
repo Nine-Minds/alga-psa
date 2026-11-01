@@ -86,6 +86,8 @@ const storageStubAlias = [
 ];
 
 const nodeAliases = [
+  // safeFetch etc. resolve from core source rather than unbuilt dist.
+  ...exportedSourceAliases('@alga-psa/core', path.resolve(__dirname, '../core')),
   { find: /^@alga-psa\/types$/, replacement: path.resolve(__dirname, '../types/src') },
   { find: /^@alga-psa\/types\/(.*)$/, replacement: `${path.resolve(__dirname, '../types/src')}/$1` },
   { find: /^@alga-psa\/ui$/, replacement: path.resolve(__dirname, '../ui/src/index.ts') },
@@ -106,7 +108,7 @@ export default defineConfig({
           name: 'documents-node',
           globals: true,
           environment: 'node',
-          include: ['tests/**/*.test.ts'],
+          include: ['tests/**/*.test.ts', 'src/lib/renderHtmlToPng.test.ts'],
           testTimeout: 10000,
         },
         resolve: { alias: nodeAliases },

@@ -299,6 +299,7 @@ const nextConfig = {
       '@alga-psa/core/fileNames': '../packages/core/src/lib/fileNames.ts',
       '@alga-psa/core/capability': '../packages/core/src/lib/capability.ts',
       '@alga-psa/core/address': '../packages/core/src/lib/address.ts',
+      '@alga-psa/core/net/safeFetch': '../packages/core/src/lib/net/safeFetch.ts',
       '@alga-psa/core/': '../packages/core/src/',
       '@alga-psa/validation': '../packages/validation/src',
       '@alga-psa/validation/': '../packages/validation/src/',
@@ -650,6 +651,9 @@ const nextConfig = {
       '@alga-psa/core/fileNames': usePrebuilt
         ? path.join(prebuiltDirAbs('core'), 'lib/fileNames.js')
         : path.join(__dirname, '../packages/core/src/lib/fileNames.ts'),
+      '@alga-psa/core/net/safeFetch': usePrebuilt
+        ? path.join(prebuiltDirAbs('core'), 'lib/net/safeFetch.js')
+        : path.join(__dirname, '../packages/core/src/lib/net/safeFetch.ts'),
       '@alga-psa/core/': `${prebuiltDirAbs('core')}/`,
       '@alga-psa/validation': prebuiltDirAbs('validation'),
       '@alga-psa/validation/': `${prebuiltDirAbs('validation')}/`,
@@ -1299,6 +1303,14 @@ const nextConfig = {
     // OOMs in CI.
     cpus: buildCpus,
     ...(memoryBasedWorkersCount ? { memoryBasedWorkersCount: true } : {}),
+    // Compile server, edge and client in separate worker processes, one after
+    // another, so each compiler's module graph and in-memory webpack cache
+    // (production keeps every entry: maxMemoryGenerations Infinity) is freed
+    // before the next starts. Next enables this by default only when the
+    // config has no custom `webpack` function, which ours has; without it all
+    // three compilers stack in one process and a warm cache that a branch
+    // partly invalidates pushed the EE build past CI's runner memory.
+    webpackBuildWorker: true,
     // Disable server source maps (RSC + server actions). Build-only — does
     // not affect production error traces from Sentry or similar tools.
     serverSourceMaps: false,

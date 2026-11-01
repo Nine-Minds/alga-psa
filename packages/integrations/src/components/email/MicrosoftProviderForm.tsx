@@ -20,7 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { DrawerFooter } from '@alga-psa/ui/components/Drawer';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { CheckCircle } from 'lucide-react';
-import type { EmailProvider } from './types';
+import type { PublicEmailProvider } from './types';
 import {
   createEmailProvider,
   updateEmailProvider,
@@ -54,8 +54,8 @@ type MicrosoftProviderFormData = {
 
 export interface MicrosoftProviderFormProps {
   tenant: string;
-  provider?: EmailProvider;
-  onSuccess: (provider: EmailProvider) => void;
+  provider?: PublicEmailProvider;
+  onSuccess: (provider: PublicEmailProvider) => void;
   onCancel: () => void;
   emailSetup?: MicrosoftEmailSetupReadiness | null;
 }
@@ -232,7 +232,7 @@ export function MicrosoftProviderForm({
     autoProcessEmails: z.boolean(),
     folderFilters: z.string().optional(),
     maxEmailsPerSync: z.number().min(1).max(1000),
-    inboundTicketDefaultsId: z.string().uuid().optional()
+    inboundTicketDefaultsId: z.string().guid().optional()
   });
 
   const form = useForm<MicrosoftProviderFormData>({
