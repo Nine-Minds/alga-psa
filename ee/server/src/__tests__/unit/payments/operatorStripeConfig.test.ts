@@ -17,13 +17,14 @@ describe('operator Stripe configuration', () => {
     vi.clearAllMocks();
     delete process.env.STRIPE_SECRET_KEY;
     getAppSecret.mockImplementation(async (key: string) => ({
-      stripe_secret_key: 'sk_test_platform', stripe_webhook_secret: 'whsec_platform', stripe_publishable_key: 'pk_platform',
+      stripe_secret_key: 'sk_test_platform', stripe_webhook_secret: 'whsec_saas',
+      stripe_payment_webhook_secret: 'whsec_client_payments', stripe_publishable_key: 'pk_platform',
     }[key] ?? null));
     stripeConstructor.mockImplementation(function (key: string) { return { key }; });
   });
 
   it('preserves operator access to app credentials and platform environment fallback', async () => {
-    await expect(getOperatorStripeConfig()).resolves.toMatchObject({ secretKey: 'sk_test_platform', webhookSecret: 'whsec_platform', publishableKey: 'pk_platform' });
+    await expect(getOperatorStripeConfig()).resolves.toMatchObject({ secretKey: 'sk_test_platform', webhookSecret: 'whsec_saas', publishableKey: 'pk_platform' });
     getAppSecret.mockResolvedValue(null);
     process.env.STRIPE_SECRET_KEY = 'sk_test_environment';
     await expect(createOperatorStripeClient()).resolves.toMatchObject({ key: 'sk_test_environment' });
