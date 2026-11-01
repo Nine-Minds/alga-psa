@@ -2,7 +2,7 @@
 
 import { getSession } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { getOperatorStripeSecretKey } from '../payments/operatorStripeConfig';
 import { isLicenseDistributionTenant } from '@alga-psa/licensing';
 import Stripe from 'stripe';
 import type { Knex } from 'knex';
@@ -50,8 +50,7 @@ function getPriceEnvKey(tier: ApplianceLicenseTier, transport: ApplianceLicenseT
 }
 
 async function getStripeSecretKey(): Promise<string> {
-  const sp = await getSecretProviderInstance();
-  const key = await sp.getAppSecret('stripe_secret_key') || process.env.STRIPE_SECRET_KEY;
+  const key = await getOperatorStripeSecretKey();
   if (!key) throw new Error('Stripe secret key not configured');
   return key;
 }

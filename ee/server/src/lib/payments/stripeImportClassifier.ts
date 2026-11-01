@@ -69,8 +69,9 @@ export interface AlgaPaymentMethodState {
 
 export interface AlgaState {
   tenantId: string;
+  accountId?: string;
   profiles: AlgaProfileState[];
-  mappings: Array<{ clientId: string; billingProfileId: string; customerId: string }>;
+  mappings: Array<{ clientId: string; billingProfileId: string; customerId: string; accountId?: string }>;
   paymentMethods: AlgaPaymentMethodState[];
   enrolledProfileIds: string[];
   /** Upper-case ISO codes the provider can charge. */
@@ -150,8 +151,8 @@ export interface ImportPlan {
 
 const CUSTOMER_ID = /^cus_[A-Za-z0-9]+$/;
 
-export function importMetadata(tenantId: string, clientId: string, billingProfileId: string): Record<string, string> {
-  return { tenant_id: tenantId, client_id: clientId, billing_profile_id: billingProfileId, source: 'alga_import' };
+export function importMetadata(tenantId: string, clientId: string, billingProfileId: string, accountId: string): Record<string, string> {
+  return { tenant_id: tenantId, client_id: clientId, billing_profile_id: billingProfileId, stripe_account_id: accountId, source: 'alga_import' };
 }
 
 /** Metadata that `getOrCreateCustomer` requires to reuse a customer (source is informational only). */
@@ -159,13 +160,15 @@ function metadataMatches(metadata: Record<string, string>, tenantId: string, cli
   return metadata.tenant_id === tenantId && metadata.client_id === clientId && metadata.billing_profile_id === billingProfileId;
 }
 
-function metadataClaimedByOther(metadata: Record<string, string>, tenantId: string, clientId: string, billingProfileId: string): boolean {
-  const any = metadata.tenant_id || metadata.client_id || metadata.billing_profile_id;
-  return !!any && !metadataMatches(metadata, tenantId, clientId, billingProfileId) &&
-    // A customer with only partially stamped metadata that doesn't contradict us is adoptable.
-    ((!!metadata.tenant_id && metadata.tenant_id !== tenantId) ||
-      (!!metadata.client_id && metadata.client_id !== clientId) ||
-      (!!metadata.billing_profile_id && metadata.billing_profile_id !== billingProfileId));
+export type OwnershipOf = 'owned' | 'unclaimed' | 'claimed-by-other';
+
+export function ownershipOf(metadata: Record<string, string>, tenantId: string, accountId: string, clientId?: string, billingProfileId?: string): OwnershipOf {
+  if (metadata.stripe_account_id !== undefined && metadata.stripe_account_id !== accountId) return 'claimed-by-other';
+  if (metadata.tenant_id && metadata.tenant_id !== tenantId) return 'claimed-by-other';
+  if (clientId && metadata.client_id && metadata.client_id !== clientId) return 'claimed-by-other';
+  if (billingProfileId && metadata.billing_profile_id && metadata.billing_profile_id !== billingProfileId) return 'claimed-by-other';
+  if (metadata.tenant_id === tenantId && metadata.stripe_account_id === accountId && !!accountId) return 'owned';
+  return 'unclaimed';
 }
 
 function isExpired(card: { expMonth: number; expYear: number }, now: Date): boolean {
@@ -233,7 +236,8 @@ export function classifyImport(input: {
       (mapping.clientId !== row.clientId || mapping.billingProfileId !== row.billingProfileId));
     if (claimedBy) return emptyRow(row, { ...base, action: 'conflict', reason: 'customer-claimed-by-other' });
 
-    if (metadataClaimedByOther(customer.metadata, alga.tenantId, row.clientId, row.billingProfileId)) {
+    const ownership = ownershipOf(customer.metadata, alga.tenantId, alga.accountId ?? '', row.clientId, row.billingProfileId);
+    if (ownership === 'claimed-by-other') {
       return emptyRow(row, { ...base, action: 'conflict', reason: 'customer-metadata-owned-by-other' });
     }
 
@@ -255,7 +259,7 @@ export function classifyImport(input: {
     const importable: StripePaymentMethodSnapshot[] = [];
     const sorted = [...customer.paymentMethods].sort((a, b) => b.created - a.created || a.id.localeCompare(b.id));
     for (const method of sorted) {
-      const stamped = metadataMatches(method.metadata, alga.tenantId, row.clientId, row.billingProfileId);
+      const stamped = metadataMatches(method.metadata, alga.tenantId, row.clientId, row.billingProfileId) && method.metadata.stripe_account_id === alga.accountId;
       const common = {
         externalPaymentMethodId: method.id, type: method.type,
         brand: method.card?.brand ?? null, last4: method.card?.last4 ?? null,
@@ -265,6 +269,10 @@ export function classifyImport(input: {
       };
       if (method.type !== 'card' || !method.card) {
         cards.push({ ...common, action: 'skip', reason: 'unsupported-method' });
+        continue;
+      }
+      if (method.metadata.stripe_account_id !== undefined && method.metadata.stripe_account_id !== alga.accountId) {
+        cards.push({ ...common, action: 'conflict', reason: 'card-claimed-elsewhere' });
         continue;
       }
       const existing = methodByExternal.get(method.id);
@@ -305,7 +313,7 @@ export function classifyImport(input: {
     if (customer.paymentMethods.length === 0) warnings.push('no-cards');
     else if (cards.every((card) => card.action === 'skip' || card.action === 'conflict')) warnings.push('no-importable-card');
 
-    const needsCustomerStamp = !metadataMatches(customer.metadata, alga.tenantId, row.clientId, row.billingProfileId);
+    const needsCustomerStamp = ownership !== 'owned';
     const needsMapping = !profileMapping;
     const pendingCards = cards.some((card) => card.action === 'import' || (card.action === 'already-imported' && card.needsMetadataStamp));
     const pending = needsCustomerStamp || needsMapping || pendingCards || defaultExternalId !== null;

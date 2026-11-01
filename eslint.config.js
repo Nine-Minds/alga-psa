@@ -291,6 +291,22 @@ export default [
             ]
         }
     },
+    {
+        files: [
+            "server/src/app/**/*.{js,mjs,cjs,ts,tsx}",
+            "server/src/lib/actions/**/*.{js,mjs,cjs,ts,tsx}",
+            "ee/server/src/lib/actions/**/*.{js,mjs,cjs,ts,tsx}"
+        ],
+        ignores: ["ee/server/src/lib/actions/applianceLicenseActions.ts"],
+        rules: {
+            "no-restricted-imports": ["error", {
+                patterns: [{
+                    group: ["**/operatorStripeConfig", "**/operatorStripeConfig.*"],
+                    message: "Operator Stripe credentials are forbidden in tenant request paths."
+                }]
+            }]
+        }
+    },
     // Server-action barrel guardrail (dev RSC server-reference-manifest bloat → OOM).
     // A `@alga-psa/<pkg>/actions` barrel (or a feature `/components` barrel, which pulls it)
     // drags every 'use server' file of the package into every route's server-reference

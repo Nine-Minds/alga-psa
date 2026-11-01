@@ -102,6 +102,7 @@ describe('connectStripeAction settings preservation', () => {
     expect(result.success).toBe(true);
     expect(store.row!.settings).toEqual({ ...DEFAULT_PAYMENT_SETTINGS, ...customised });
     expect(store.row!.configuration.publishable_key).toBe('pk_test_x');
+    expect(store.row!.configuration.stripe_account_id).toBe('acct_1');
   });
 
   it('keeps all saved settings across disconnect then reconnect', async () => {
@@ -126,5 +127,13 @@ describe('connectStripeAction settings preservation', () => {
     const result = await (connectStripeAction as any)(credentials);
     expect(result.success).toBe(true);
     expect(store.row!.settings).toEqual(DEFAULT_PAYMENT_SETTINGS);
+  });
+
+  it('refuses credentials for a different account without replacing the durable binding', async () => {
+    store.row!.configuration.stripe_account_id = 'acct_original';
+    const result = await (connectStripeAction as any)(credentials);
+    expect(result.success).toBe(false);
+    expect(result.code).toBe('stripe-payment/account-binding-mismatch');
+    expect(store.row!.configuration.stripe_account_id).toBe('acct_original');
   });
 });

@@ -69,6 +69,7 @@ interface PaymentActionResult<T = void> {
   success: boolean;
   data?: T;
   error?: string;
+  code?: string;
 }
 
 /**
@@ -188,19 +189,29 @@ export const connectStripeAction = withAuth(async (
       apiVersion: '2024-12-18.acacia' as any,
     });
 
+    let verifiedAccountId: string;
     try {
       // Test the API key by fetching account info
-      await stripe.accounts.retrieve();
+      verifiedAccountId = (await stripe.accounts.retrieve()).id;
     } catch (stripeError: any) {
       if (stripeError.type === 'StripeAuthenticationError') {
-        return { success: false, error: 'Invalid Stripe secret key' };
+        return { success: false, error: 'Invalid Stripe secret key', code: 'stripe-payment/credential-verification-failed' };
       }
-      throw stripeError;
+      logger.error('[PaymentActions] Could not verify Stripe account credentials', { error: stripeError, tenantId: tenant });
+      return { success: false, error: 'Unable to verify Stripe account credentials', code: 'stripe-payment/credential-verification-failed' };
     }
 
     // Validate publishable key format
     if (!credentials.publishableKey.startsWith('pk_')) {
       return { success: false, error: 'Invalid publishable key format (should start with pk_)' };
+    }
+
+    const { knex } = await createTenantKnex();
+    const existingConfig = await tenantDb(knex, tenant).table<IPaymentProviderConfig>('payment_provider_configs')
+      .where({ provider_type: 'stripe' }).first();
+    const existingAccountId = existingConfig?.configuration?.stripe_account_id as string | undefined;
+    if (existingAccountId && existingAccountId !== verifiedAccountId) {
+      return { success: false, error: 'Stripe credentials belong to a different account than the tenant’s existing binding', code: 'stripe-payment/account-binding-mismatch' };
     }
 
     // Store credentials securely
@@ -333,19 +344,13 @@ export const connectStripeAction = withAuth(async (
     }
 
     // Create or update provider config
-    const { knex } = await createTenantKnex();
-    const existingConfig = await tenantDb(knex, tenant).table<IPaymentProviderConfig>('payment_provider_configs')
-      .where({
-        provider_type: 'stripe',
-      })
-      .first();
-
     const configData = {
       is_enabled: true,
       is_default: true,
       configuration: {
         publishable_key: credentials.publishableKey,
         webhook_endpoint_id: webhookEndpointId,
+        stripe_account_id: verifiedAccountId,
       },
       credentials_vault_path: `tenant/${tenant}/stripe_payment_secret_key`,
       webhook_secret_vault_path: webhookSecret
