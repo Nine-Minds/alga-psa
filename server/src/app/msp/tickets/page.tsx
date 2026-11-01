@@ -374,6 +374,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
           displaySettings={displaySettings}
           initialTeams={initialTeams}
           canUpdateTickets={canUpdateTickets}
+          workspaceReadOnly={workspaceReadOnly}
           allowSlaStatusFilter={allowSlaStatusFilter}
           smartSearchAvailable={smartSearchAvailable}
           useAlgaDeskQuickAddForm={useAlgaDeskQuickAddForm}

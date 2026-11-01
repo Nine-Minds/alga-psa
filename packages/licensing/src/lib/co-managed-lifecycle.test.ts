@@ -39,6 +39,7 @@ vi.mock('./co-managed-entitlements', () => ({
 
 import {
   coManagedLifecycleProvider,
+  readCoManagedLifecycleLockFree,
   getCoManagedOperationalState,
   isCoManagedAwaitingAcceptance,
   isCoManagedAwaitingAcceptanceLazily,
@@ -204,5 +205,31 @@ describe('licence lapse state machine (CM L7a, injected clock)', () => {
     const late = new Date(start.getTime() + 60 * DAY);
     expect(coManagedStateForLapse(resolveCoManagedLapse({ lapseStartedAt: start, now: late })).canWrite).toBe(false);
     expect(coManagedStateForLapse(resolveCoManagedLapse({ lapseStartedAt: null, now: late }))).toMatchObject({ state: 'active', canWrite: true });
+  });
+});
+
+describe('lock-free reader (the default L0c reader)', () => {
+  it.each(['provisioning', 'pending_acceptance'])('admits writes while the relationship is %s, as main did', async (state) => {
+    seed('co_managed', state);
+    expect(await readCoManagedLifecycleLockFree(db, customer)).toMatchObject({ canWrite: true });
+  });
+
+  it('keeps refusing a terminated or ended relationship', async () => {
+    seed('co_managed', 'terminated');
+    expect(await readCoManagedLifecycleLockFree(db, customer)).toMatchObject({ state: 'terminated', canWrite: false });
+    seed('co_managed', 'active');
+    sql.tables.co_management_relationships[0].ended_at = new Date();
+    expect(await readCoManagedLifecycleLockFree(db, customer)).toMatchObject({ state: 'terminated', canWrite: false });
+  });
+
+  it('keeps refusing an active relationship with no allocation, and one lapsed past grace', async () => {
+    seed('co_managed', 'active');
+    expect(await readCoManagedLifecycleLockFree(db, customer)).toMatchObject({ state: 'active', canWrite: true });
+    sql.tables.co_managed_entitlements[0].lapse_started_at = new Date(Date.now() - 31 * 86_400_000);
+    expect(await readCoManagedLifecycleLockFree(db, customer)).toMatchObject({ state: 'read_only', canWrite: false });
+    sql.tables.co_managed_entitlements[0].lapse_started_at = new Date(Date.now() - 86_400_000);
+    expect(await readCoManagedLifecycleLockFree(db, customer)).toMatchObject({ state: 'grace', canWrite: true });
+    sql.tables.co_managed_allocations = [];
+    expect(await readCoManagedLifecycleLockFree(db, customer)).toMatchObject({ state: 'read_only', canWrite: false });
   });
 });

@@ -123,4 +123,20 @@ describe('CoManagedLocalTicketDataSourceProvider', () => {
     await waitFor(() => expect(screen.getByTestId('delete')).toBeInTheDocument());
     expect(screen.getByTestId('edit-title')).toBeInTheDocument();
   });
+
+  it.each(['timerStart', 'timeEntryCreate', 'locationEdit', 'assetAdd', 'commentOwnEdit', 'reactionToggle'] as const)(
+    '%s: offered when writable, withheld when read-only',
+    async (key) => {
+      h.resource.mockResolvedValue(null);
+      function Cap() {
+        return <>{useTicketDataSource().capabilities[key] && <button data-testid="cap" />}</>;
+      }
+      render(<CoManagedLocalTicketDataSourceProvider ticketId="tk1" readOnly><Cap /></CoManagedLocalTicketDataSourceProvider>);
+      await waitFor(() => expect(h.resource).toHaveBeenCalled());
+      expect(screen.queryByTestId('cap')).toBeNull();
+      cleanup();
+      render(<CoManagedLocalTicketDataSourceProvider ticketId="tk1"><Cap /></CoManagedLocalTicketDataSourceProvider>);
+      await waitFor(() => expect(screen.getByTestId('cap')).toBeInTheDocument());
+    },
+  );
 });

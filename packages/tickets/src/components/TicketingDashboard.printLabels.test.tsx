@@ -115,7 +115,7 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
   DataTable: ({ id, data = [], columns = [] }: any) => {
     const selection = columns.find((c: any) => c.dataIndex === 'selection');
     return (
-      <table id={id}>
+      <table id={id} data-columns={columns.map((c: any) => c.dataIndex).join(',')}>
         <tbody>
           {data.map((record: any, i: number) => (
             <tr key={record.ticket_id ?? i}>
@@ -199,7 +199,7 @@ const AVATARS: Record<string, string | null> = {};
 const TICKET_TAGS: Record<string, never[]> = {};
 const USER = { user_id: 'u1' } as any;
 
-function renderDashboard(count: number) {
+function renderDashboard(count: number, workspaceReadOnly = false) {
   const tickets = Array.from({ length: count }, (_, i) => ticket(i));
   const noop = vi.fn();
   render(
@@ -224,6 +224,7 @@ function renderDashboard(count: number) {
       initialAgentAvatarUrls={AVATARS}
       initialTeamAvatarUrls={AVATARS}
       initialTicketTags={TICKET_TAGS}
+      workspaceReadOnly={workspaceReadOnly}
     />
     </TicketsRouteProvider>,
   );
@@ -250,5 +251,23 @@ describe('TicketingDashboard bulk print labels', () => {
     const dialog = screen.getByTestId('label-dialog');
     expect(dialog.getAttribute('data-label-class')).toBe('ticket-work-tag');
     expect(JSON.parse(dialog.getAttribute('data-ids')!).sort()).toEqual(['t-0', 't-2']);
+  });
+
+  it('writable workspace offers Add Ticket, the row actions column and bulk delete', async () => {
+    renderDashboard(2);
+    await pick('add-ticket-button');
+    expect(document.querySelector('table')!.getAttribute('data-columns')).toContain('actions');
+    await userEvent.click(await pick('ticketing-dashboard-select-t-0'));
+    await pick('ticketing-dashboard-bulk-delete-button');
+  });
+
+  it('read-only workspace hides Add Ticket, the row actions (Duplicate / Create template) and bulk delete, keeping print', async () => {
+    renderDashboard(2, true);
+    await pick('ticketing-dashboard-select-t-0');
+    expect(document.getElementById('add-ticket-button')).toBeNull();
+    expect(document.querySelector('table')!.getAttribute('data-columns')).not.toContain('actions');
+    await userEvent.click(await pick('ticketing-dashboard-select-t-0'));
+    await pick('ticketing-dashboard-bulk-print-labels-button');
+    expect(document.getElementById('ticketing-dashboard-bulk-delete-button')).toBeNull();
   });
 });

@@ -64,4 +64,35 @@ describe('CoManagedDeparture (A1)', () => {
     expect(await screen.findByText(/do not have permission to end this relationship/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'End relationship' })).toBeNull();
   });
+
+  it('after a successful departure shows the ended state and does not reload (a sponsor would get not_found)', async () => {
+    actions.get.mockResolvedValueOnce(review()).mockResolvedValue({ ok: false, reason: 'not_found' });
+    actions.depart.mockResolvedValue({ ok: true, releasedSeats: 3, closedAt: '2026-10-31T00:00:00.000Z' });
+    render(<CoManagedDeparture />);
+    fireEvent.click(await screen.findByRole('button', { name: 'End relationship' }));
+    await waitFor(() => expect(document.getElementById('co-managed-departure-confirm-confirm')).not.toBeNull());
+    fireEvent.click(document.getElementById('co-managed-departure-confirm-confirm')!);
+    expect(await screen.findByText('This relationship ended 2026-10-31.')).toBeInTheDocument();
+    expect(document.getElementById('co-managed-departure-done')).not.toBeNull();
+    expect(document.body.textContent).not.toMatch(/could not be found/);
+    expect(screen.queryByRole('button', { name: 'End relationship' })).toBeNull();
+    expect(actions.get).toHaveBeenCalledTimes(1);
+  });
+
+  it('a thrown action shows a generic error, resets the retry key and keeps the review', async () => {
+    actions.get.mockResolvedValue(review());
+    actions.depart.mockRejectedValueOnce(new Error('boom')).mockResolvedValue({ ok: true, releasedSeats: 3, closedAt: '2026-10-31T00:00:00.000Z' });
+    render(<CoManagedDeparture />);
+    const end = async () => {
+      fireEvent.click(await screen.findByRole('button', { name: 'End relationship' }));
+      await waitFor(() => expect(document.getElementById('co-managed-departure-confirm-confirm')).not.toBeNull());
+      fireEvent.click(document.getElementById('co-managed-departure-confirm-confirm')!);
+    };
+    await end();
+    expect(await screen.findByText('The request could not be processed.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'End relationship' })).toBeEnabled();
+    await end();
+    await waitFor(() => expect(actions.depart).toHaveBeenCalledTimes(2));
+    expect(actions.depart.mock.calls[1][0].operationId).not.toBe(actions.depart.mock.calls[0][0].operationId);
+  });
 });

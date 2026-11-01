@@ -5,7 +5,7 @@ import { getCurrentUser, getCurrentUserPermissions } from '@alga-psa/user-compos
 import { Suspense } from 'react';
 import { TicketDetailsSkeleton } from '@alga-psa/tickets/components/ticket/TicketDetailsSkeleton';
 import { getSurveyTicketSummary } from '@alga-psa/surveys/actions/survey-actions/surveyDashboardActions';
-import AssociatedAssets from '@alga-psa/assets/components/AssociatedAssets';
+import AssociatedAssets from '@/components/tickets/TicketAssociatedAssets';
 import MspTicketDetailsContainerClient from '@alga-psa/msp-composition/tickets/MspTicketDetailsContainerClient';
 
 import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';

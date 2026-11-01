@@ -59,7 +59,9 @@ export function TicketStopwatchControls({
   const { openDrawer, closeDrawer } = useDrawer();
   const { launchTimeEntry } = useSchedulingCallbacks();
   const stopwatch = useStopwatch();
-  const timeWorkItem = resolveTicketTimeWorkItem(useTicketDataSource(), { ticket_id: ticketId });
+  const dataSource = useTicketDataSource();
+  const timerStartAllowed = dataSource.capabilities.timerStart;
+  const timeWorkItem = resolveTicketTimeWorkItem(dataSource, { ticket_id: ticketId });
   const { session, state } = stopwatch;
   const elapsedMs = useStopwatchElapsedMs();
   const [busy, setBusy] = useState(false);
@@ -107,6 +109,9 @@ export function TicketStopwatchControls({
       void stopwatch.updateNotes(timeDescription);
     }
   };
+
+  // Starting or switching a timer is a write; a read-only screen offers no stopwatch at all.
+  if (!timerStartAllowed) return null;
 
   // The session store books ticket and project_task work only; other work item types book time
   // through the time entry flow.
