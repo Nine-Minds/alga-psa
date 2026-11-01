@@ -6,7 +6,9 @@ import { IStandardPriority, IPriority, DeletionValidationResult } from '@alga-ps
 import { IStandardStatus, IStatus } from '@alga-psa/types';
 import { IStandardServiceType } from '@alga-psa/types';
 import { IInteractionType } from '@alga-psa/types';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
+import { BOARD_PERMISSION_DENIED, evaluateBoardMutationPolicy } from '@alga-psa/auth/boardPolicy';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
@@ -414,6 +416,16 @@ export const importReferenceData = withAuth(async (
   filters?: any,
   conflictResolutions?: Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>
 ) => {
+  // Importing boards creates boards: apply the same policy as createBoard
+  // (internal principal + ticket_settings:create) before any read or write.
+  if (dataType === 'boards') {
+    const decision = await evaluateBoardMutationPolicy(user, 'create', hasPermission);
+    if (!decision.allowed) {
+      const denied = BOARD_PERMISSION_DENIED.create;
+      return permissionError(denied.message, denied.i18nKey);
+    }
+  }
+
   // Validate required filters for specific data types
   if (dataType === 'categories' && !filters?.board_id) {
     throw new Error('Board ID is required when importing categories');

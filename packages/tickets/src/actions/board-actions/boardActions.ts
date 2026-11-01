@@ -33,7 +33,7 @@ import {
   evaluateBoardMutationPolicy,
   type BoardDenialCode,
   type BoardMutationAction,
-} from './boardPolicy';
+} from '@alga-psa/auth/boardPolicy';
 
 export interface FindBoardByNameOutput {
   id: string;

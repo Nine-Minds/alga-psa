@@ -8,7 +8,7 @@ import { BoardService } from '../services/BoardService';
 import {
   BOARD_PERMISSION_DENIED,
   evaluateBoardMutationPolicy,
-} from '@alga-psa/tickets/actions/board-actions/boardPolicy';
+} from '@alga-psa/auth/boardPolicy';
 import { boardListQuerySchema, createBoardSchema, updateBoardSchema } from '../schemas/board';
 
 export class ApiBoardController extends ApiBaseController {
@@ -32,7 +32,7 @@ export class ApiBoardController extends ApiBaseController {
 
   /**
    * Board writes are governed by the same policy as the board server actions
-   * (packages/tickets boardPolicy): an internal principal holding
+   * (packages/auth boardPolicy): an internal principal holding
    * ticket_settings:<create|update|delete>. The generic 'ticket' resource is not
    * enough - it is held by every technician. Reads stay on ticket:read, as boards
    * are ticket reference data (the read server actions only require a session).

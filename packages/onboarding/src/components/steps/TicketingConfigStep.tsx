@@ -454,6 +454,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       if (regularBoards.length > 0) {
         const regularBoardIds = regularBoards.map(c => c.id);
         const regularResult = await importReferenceData('boards', regularBoardIds);
+        if (isReturnedActionError(regularResult)) {
+          throw new Error(getErrorMessage(regularResult));
+        }
 
         if (regularResult?.imported) allResults.imported.push(...regularResult.imported);
         if (regularResult?.skipped) allResults.skipped.push(...regularResult.skipped);

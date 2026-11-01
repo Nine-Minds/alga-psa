@@ -1466,6 +1466,10 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           regularResult = await importReferenceData('boards', regularBoardIds);
         }
 
+        if (isReturnedActionError(regularResult)) {
+          throw new Error(getErrorMessage(regularResult));
+        }
+
         if (regularResult?.imported) allResults.imported.push(...regularResult.imported);
         if (regularResult?.skipped) allResults.skipped.push(...regularResult.skipped);
       }
