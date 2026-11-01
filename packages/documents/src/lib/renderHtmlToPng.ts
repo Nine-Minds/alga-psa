@@ -92,7 +92,7 @@ export async function resolveRemoteAssets(
     if (src === undefined || !REMOTE_URL.test(src)) return tag;
     const dataUri = await resolve(src.trim());
     if (dataUri) {
-      return tag.replace(/(\ssrc\s*=\s*)(?:"[^"]*"|'[^']*')/i, `$1"${dataUri}"`);
+      return tag.replace(/(\ssrc\s*=\s*)(?:"[^"]*"|'[^']*')/i, (_m, pre: string) => pre + '"' + dataUri + '"');
     }
     const alt = getAttr(tag, 'alt') ?? '';
     return `<span style="${PLACEHOLDER_STYLE}" role="img" aria-label="${escapeHtml(alt)}">${escapeHtml(alt)}</span>`;
