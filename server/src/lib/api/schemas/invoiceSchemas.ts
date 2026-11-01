@@ -198,7 +198,19 @@ const createInvoiceSchema = baseInvoiceSchema.omit({
   finalized_at: true
 }).extend({
   tenant: uuidSchema.optional(),
-  items: z.array(createInvoiceItemSchema).optional()
+  items: z.array(createInvoiceItemSchema).optional(),
+  // Lifecycle and header totals are not create inputs (see invoiceFieldPolicy.ts): an
+  // invoice is created as a draft and totals are derived from its charges. They stay
+  // accepted-but-optional so existing clients that echo them do not break; InvoiceService.create
+  // rejects a non-draft status / non-zero credit and ignores the totals.
+  status: invoiceStatusSchema.optional(),
+  // No default: a body that sends true must reach InvoiceService.create and be refused,
+  // not be silently defaulted or stripped.
+  is_manual: z.boolean().optional(),
+  is_prepayment: z.boolean().optional(),
+  subtotal: monetaryAmountSchema.optional(),
+  tax: monetaryAmountSchema.optional(),
+  total_amount: monetaryAmountSchema.optional(),
 });
 
 // Update invoice schema. tax_source is update-only: a new invoice takes its

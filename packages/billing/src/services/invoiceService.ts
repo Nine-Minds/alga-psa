@@ -2614,6 +2614,35 @@ export async function reconcileInvoiceAdjustmentTransaction(
   });
 }
 
+/**
+ * The single derivation of an invoice's header totals: subtotal = sum of charge net
+ * amounts, tax = sum of charge tax amounts, total = subtotal + tax (rounded to cents).
+ * Persists them on the invoice header and returns them. Shared by invoice generation,
+ * manual invoices and the REST create path so no caller computes totals on its own.
+ */
+export async function recomputeInvoiceHeaderTotals(
+  tx: Knex.Transaction,
+  invoiceId: string,
+  tenant: string
+): Promise<{ subtotal: number; tax: number; total_amount: number }> {
+  const finalItems = await tenantScopedTable(tx, tenant, 'invoice_charges')
+    .where('invoice_id', invoiceId)
+    .select<{ net_amount?: unknown; tax_amount?: unknown }[]>('*');
+  const finalSubtotal = finalItems.reduce((sum, item) => sum + Number(item.net_amount), 0);
+  const finalTotalTax = finalItems.reduce((sum, item) => sum + Number(item.tax_amount), 0);
+  const finalTotalAmount = finalSubtotal + finalTotalTax;
+
+  const totals = {
+    subtotal: Math.round(finalSubtotal), // Use Math.round for final cents
+    tax: Math.round(finalTotalTax),
+    total_amount: Math.round(finalTotalAmount)
+  };
+  await tenantScopedTable(tx, tenant, 'invoices')
+    .where('invoice_id', invoiceId)
+    .update(totals);
+  return totals;
+}
+
 export async function updateInvoiceTotalsAndRecordTransaction(
   tx: Knex.Transaction,
   invoiceId: string,
@@ -2632,23 +2661,8 @@ export async function updateInvoiceTotalsAndRecordTransaction(
     description
   } = options;
 
-  // Recalculate totals directly from the updated invoice items
-  const finalItems = await tenantScopedTable(tx, tenant, 'invoice_charges')
-    .where('invoice_id', invoiceId)
-    .select<{ net_amount?: unknown; tax_amount?: unknown }[]>('*');
-  const finalSubtotal = finalItems.reduce((sum, item) => sum + Number(item.net_amount), 0);
-  const finalTotalTax = finalItems.reduce((sum, item) => sum + Number(item.tax_amount), 0);
-  const finalTotalAmount = finalSubtotal + finalTotalTax;
-
-
-  // Update invoice with final totals
-  await tenantScopedTable(tx, tenant, 'invoices')
-    .where('invoice_id', invoiceId)
-    .update({
-      subtotal: Math.round(finalSubtotal), // Use Math.round for final cents
-      tax: Math.round(finalTotalTax),
-      total_amount: Math.round(finalTotalAmount)
-    });
+  const { total_amount: roundedTotalAmount } = await recomputeInvoiceHeaderTotals(tx, invoiceId, tenant);
+  const finalTotalAmount = roundedTotalAmount;
 
   // Get current balance
   const lastTransaction = await tenantScopedTable(tx, tenant, 'transactions')
