@@ -161,18 +161,20 @@ async function authorizeActor(
       quoteId,
       ['sent'],
     );
-    if (access.ok) return { ok: true, quote: access.quote };
-    switch (access.reason) {
-      case 'no_client':
-      case 'no_billing_permission':
-        return { ok: false, result: { status: 'forbidden', reason: access.reason } };
-      case 'invalid_state': {
-        const current = await Quote.getById(trx, tenantId, quoteId);
-        return { ok: false, result: { status: 'not_pending', currentStatus: current?.status ?? null } };
+    if ('reason' in access) {
+      switch (access.reason) {
+        case 'no_client':
+        case 'no_billing_permission':
+          return { ok: false, result: { status: 'forbidden', reason: access.reason } };
+        case 'invalid_state': {
+          const current = await Quote.getById(trx, tenantId, quoteId);
+          return { ok: false, result: { status: 'not_pending', currentStatus: current?.status ?? null } };
+        }
+        default:
+          return { ok: false, result: { status: 'not_found' } };
       }
-      default:
-        return { ok: false, result: { status: 'not_found' } };
     }
+    return { ok: true, quote: access.quote };
   }
 
   // access_link / msp_user: the caller has authorised the actor; the service still
@@ -299,7 +301,7 @@ async function decideInTransaction(
   }
 
   const authorized = await authorizeActor(trx, input);
-  if (!authorized.ok) {
+  if ('result' in authorized) {
     return authorized.result;
   }
 

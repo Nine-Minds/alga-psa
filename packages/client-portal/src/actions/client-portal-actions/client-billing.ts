@@ -133,7 +133,7 @@ async function getAuthorizedClientQuote(
   allowedStatuses?: string[]
 ): Promise<ClientBillingActionResult<IQuote>> {
   const access = await authorizePortalUserForQuote(trx, user, tenant, quoteId, allowedStatuses);
-  if (access.ok) {
+  if (!('reason' in access)) {
     return access.quote;
   }
 
