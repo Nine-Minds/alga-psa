@@ -10,10 +10,17 @@
  */
 
 import { Knex } from 'knex';
-import { registerAfterCommit, tenantDb } from '@alga-psa/db';
+import { registerAfterCommitWithConnection, tenantDb } from '@alga-psa/db';
+import type { Knex as RootKnex } from 'knex';
 import { IEscalationManagerWithUser } from '../types';
 import { getEmailNotificationService } from '@alga-psa/notifications/notifications/email';
+import type { EmailNotificationResult } from '@alga-psa/notifications/notifications/email';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions';
+
+/** Resolve the email consumer through this module's configured worker import. */
+export function getEscalationEmailNotificationService() {
+  return getEmailNotificationService();
+}
 
 /**
  * Result of escalating a ticket
@@ -109,7 +116,8 @@ export async function escalateTicket(
       await logEscalationEvent(trx, tenant, ticketId, {
         level: newLevel,
         escalated_by: escalatedBy,
-        manager_found: false
+        manager_found: false,
+        notifications: { inApp: false, email: 'skipped' },
       });
       return result;
     }
@@ -144,8 +152,9 @@ export async function escalateTicket(
       result.notificationsSent.inApp = inAppSent;
     }
 
+    let sendEmail: (() => Promise<EmailNotificationResult>) | null = null;
     if (notifyVia.includes('email') && manager.manager_email) {
-      const emailSent = await sendEscalationEmailNotification(
+      sendEmail = await sendEscalationEmailNotification(
         trx,
         tenant,
         manager.manager_user_id,
@@ -155,18 +164,25 @@ export async function escalateTicket(
         ticket.title,
         newLevel
       );
-      result.notificationsSent.email = emailSent;
+      result.notificationsSent.email = sendEmail !== null;
     }
 
     // 6. Log the escalation event
-    await logEscalationEvent(trx, tenant, ticketId, {
+    const auditLogId = await logEscalationEvent(trx, tenant, ticketId, {
       level: newLevel,
       escalated_by: escalatedBy,
       manager_found: true,
       manager_id: manager.manager_user_id,
       resource_added: resourceAdded,
-      notifications: result.notificationsSent
+      notifications: {
+        inApp: result.notificationsSent.inApp,
+        email: sendEmail ? 'queued' : 'skipped',
+      }
     });
+
+    if (sendEmail) {
+      registerEmailOutcome(trx, tenant, ticketId, auditLogId, sendEmail);
+    }
 
     result.success = true;
     return result;
@@ -387,8 +403,8 @@ async function sendEscalationEmailNotification(
   ticketNumber: string,
   ticketTitle: string,
   level: number
-): Promise<boolean> {
-  const emailService = getEmailNotificationService();
+): Promise<(() => Promise<EmailNotificationResult>) | null> {
+  const emailService = getEscalationEmailNotificationService();
 
   // Get the SLA Escalation notification subtype ID
   const subtype = await tenantDb(trx, tenant)
@@ -396,17 +412,18 @@ async function sendEscalationEmailNotification(
     .where({ name: 'SLA Escalation' })
     .first();
 
-  if (!subtype) {
+  let resolvedSubtype = subtype;
+  if (!resolvedSubtype) {
     console.warn('SLA Escalation notification subtype not found, falling back to SLA Warning');
     // Try to fall back to SLA Warning subtype
-    const fallbackSubtype = await tenantDb(trx, tenant)
+    resolvedSubtype = await tenantDb(trx, tenant)
       .unscoped('notification_subtypes', 'global notification subtype catalog shared across tenants')
       .where({ name: 'SLA Warning' })
       .first();
 
-    if (!fallbackSubtype) {
+    if (!resolvedSubtype) {
       console.error('No suitable notification subtype found for escalation email');
-      return false;
+      return null;
     }
   }
 
@@ -453,10 +470,8 @@ async function sendEscalationEmailNotification(
   // Defer the send until the escalation transaction commits: a rollback (and the
   // Temporal retry that follows) must not leave a stray email behind.
   const boardId = ticketDetails?.board_id;
-  const subtypeId = subtype?.id || 1;
-  registerAfterCommit(
-    trx,
-    () =>
+  const subtypeId = resolvedSubtype.id;
+  return () =>
       emailService.sendNotification({
         mailClass: 'ticket',
         boardId,
@@ -466,11 +481,7 @@ async function sendEscalationEmailNotification(
         emailAddress: email,
         templateName: 'sla-escalation',
         data: templateData as Record<string, string | number | boolean>
-      }),
-    `sla-escalation-email ticket=${ticketId} user=${userId}`
-  );
-
-  return true;
+      });
 }
 
 /**
@@ -481,13 +492,52 @@ async function logEscalationEvent(
   tenant: string,
   ticketId: string,
   eventData: Record<string, unknown>
-): Promise<void> {
+): Promise<string> {
+  const logId = crypto.randomUUID();
   await tenantDb(trx, tenant).table('sla_audit_log').insert({
-    log_id: crypto.randomUUID(),
+    log_id: logId,
     tenant,
     ticket_id: ticketId,
     event_type: 'ticket_escalated',
     event_data: JSON.stringify(eventData),
     created_at: trx.fn.now()
   });
+  return logId;
+}
+
+function registerEmailOutcome(
+  trx: Knex.Transaction,
+  tenant: string,
+  ticketId: string,
+  auditLogId: string,
+  sendEmail: () => Promise<EmailNotificationResult>,
+): void {
+  registerAfterCommitWithConnection(trx, async (connection: RootKnex) => {
+    let outcome: EmailNotificationResult | { status: 'failed'; reason: string };
+    try {
+      outcome = await sendEmail();
+      if (outcome.status === 'skipped') outcome = { status: 'skipped', reason: outcome.reason };
+    } catch (error) {
+      outcome = { status: 'failed', reason: error instanceof Error ? error.message : String(error) };
+      console.error('SLA escalation email delivery failed', { ticketId, auditLogId, error });
+    }
+
+    try {
+      const scoped = tenantDb(connection, tenant);
+      const row = await scoped.table('sla_audit_log').where({ log_id: auditLogId, ticket_id: ticketId }).first('event_data');
+      if (!row) throw new Error('SLA escalation audit row no longer exists');
+      const eventData = typeof row.event_data === 'string' ? JSON.parse(row.event_data) : row.event_data;
+      const status = outcome.status === 'sent' ? 'sent' : outcome.status;
+      eventData.notifications = {
+        ...eventData.notifications,
+        email: status,
+        ...(outcome.status === 'sent' && outcome.messageId ? { emailMessageId: outcome.messageId } : {}),
+        ...(outcome.status !== 'sent' ? { emailReason: outcome.reason } : {}),
+      };
+      await scoped.table('sla_audit_log').where({ log_id: auditLogId, ticket_id: ticketId }).update({ event_data: JSON.stringify(eventData) });
+    } catch (error) {
+      console.error('Failed to persist SLA escalation email outcome', { ticketId, auditLogId, error });
+      throw error;
+    }
+  }, `sla-escalation-email ticket=${ticketId} audit=${auditLogId}`);
 }
