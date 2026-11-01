@@ -37,11 +37,11 @@ describe('Stripe customer import stamp idempotency and verification', () => {
   it('re-stamps after drift with a fresh key per attempt', async () => {
     const store = { metadata: {} as Record<string, string> };
     const { gateway, keys } = replayingGateway(store);
-    const service = new StripeCustomerImportService('t1', knexStub(), gateway);
+    const service = new StripeCustomerImportService('t1', knexStub(), gateway, 'acct_test');
     const plan = { rows: [row()] } as any;
 
     expect((await service.execute(plan))[0].status).toBe('imported');
-    expect(store.metadata).toMatchObject({ tenant_id: 't1', client_id: 'c1', billing_profile_id: 'p1', source: 'alga_import' });
+    expect(store.metadata).toMatchObject({ tenant_id: 't1', client_id: 'c1', billing_profile_id: 'p1', stripe_account_id: 'acct_test', source: 'alga_import' });
 
     store.metadata = {}; // drift
     expect((await service.execute(plan))[0].status).toBe('imported');
@@ -53,7 +53,7 @@ describe('Stripe customer import stamp idempotency and verification', () => {
     const store = { metadata: {} as Record<string, string> };
     const { gateway } = replayingGateway(store, { lands: false });
     const knex = knexStub();
-    const result = (await new StripeCustomerImportService('t1', knex, gateway).execute({ rows: [row()] } as any))[0];
+    const result = (await new StripeCustomerImportService('t1', knex, gateway, 'acct_test').execute({ rows: [row()] } as any))[0];
     expect(result.status).toBe('failed');
     expect(result.error).toMatch(/did not persist/);
     expect(knex.transaction).not.toHaveBeenCalled();
@@ -65,7 +65,7 @@ describe('Stripe customer import stamp idempotency and verification', () => {
     const knex = knexStub();
     const r = row(); r.needsCustomerStamp = false;
     r.cards = [{ action: 'import', externalPaymentMethodId: 'pm_1' }];
-    const result = (await new StripeCustomerImportService('t1', knex, gateway).execute({ rows: [r] } as any))[0];
+    const result = (await new StripeCustomerImportService('t1', knex, gateway, 'acct_test').execute({ rows: [r] } as any))[0];
     expect(result.status).toBe('failed');
     expect(knex.transaction).not.toHaveBeenCalled();
   });

@@ -92,13 +92,16 @@ export interface OwnedCandidateSelection {
 
 /** Fail-closed selection: exactly one candidate whose metadata names the tenant, else refuse. */
 export function selectOwnedCustomer(
-  tenantId: string,
+  input: { tenantId: string; accountId: string; purpose: 'saas_billing' | 'client_payment' },
   candidates: Array<{ id: string; deleted?: boolean | void; metadata?: Record<string, string> | null }>,
 ): OwnedCandidateSelection {
+  const { tenantId, accountId, purpose } = input;
   if (candidates.length === 0) {
     return { customerId: null, error: new StripeOwnershipError('no_candidates', tenantId, [], 'no Stripe customer matched the tenant email.') };
   }
-  const owned = candidates.filter((c) => !c.deleted && stripeMetadataTenant(c) === tenantId);
+  const owned = candidates.filter((c) => !c.deleted && stripeMetadataTenant(c) === tenantId &&
+    c.metadata?.stripe_account_id === accountId &&
+    (purpose !== 'saas_billing' || c.metadata?.purpose === 'saas_billing'));
   if (owned.length === 0) {
     return {
       customerId: null,

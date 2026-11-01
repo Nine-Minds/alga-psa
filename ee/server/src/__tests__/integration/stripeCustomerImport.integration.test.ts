@@ -60,7 +60,7 @@ describe('StripeCustomerImportService executor (DB integration)', () => {
         cus_import1: { id: 'cus_import1', email: 'ap@x.test', name: 'X', currency: null, defaultPaymentMethodId: 'pm_aaaa1111', metadata: {},
           paymentMethods: [card('pm_aaaa1111', 100), card('pm_bbbb2222', 200, false), { id: 'pm_bank', type: 'us_bank_account', created: 1, metadata: {}, offSessionEvidence: false }] },
       };
-      const service = new StripeCustomerImportService(tenant, trx as unknown as Knex, fakeStripe(customers, events));
+      const service = new StripeCustomerImportService(tenant, trx as unknown as Knex, fakeStripe(customers, events), 'acct_test');
       connection.current = trx;
 
       // Observe the mapping write relative to the Stripe stamp.
@@ -71,7 +71,7 @@ describe('StripeCustomerImportService executor (DB integration)', () => {
         mappingAtStamp.push(!!(await trx('client_payment_customers').where({ tenant, client_id: clientId }).first()));
         return original(...args);
       };
-      const svc = new StripeCustomerImportService(tenant, trx as unknown as Knex, gateway);
+      const svc = new StripeCustomerImportService(tenant, trx as unknown as Knex, gateway, 'acct_test');
 
       const plan = await svc.preview([{ rowId: 'r1', clientId, billingProfileId: profileId, customerId: 'cus_import1' }]);
       expect(plan.rows[0].action).toBe('adopt');
@@ -87,6 +87,9 @@ describe('StripeCustomerImportService executor (DB integration)', () => {
 
       const mapping = await trx('client_payment_customers').where({ tenant, client_id: clientId, billing_profile_id: profileId }).first();
       expect(mapping.external_customer_id).toBe('cus_import1');
+      expect(mapping.metadata).toMatchObject({ stripe_account_id: 'acct_test' });
+      expect(customers.cus_import1.metadata).toMatchObject({ stripe_account_id: 'acct_test' });
+      expect(customers.cus_import1.paymentMethods.every((method) => method.metadata.stripe_account_id === 'acct_test')).toBe(true);
       const methods = await trx('payment_methods').where({ tenant }).orderBy('external_payment_method_id');
       expect(methods).toHaveLength(2);
       expect(methods[0]).toMatchObject({
@@ -117,7 +120,7 @@ describe('StripeCustomerImportService executor (DB integration)', () => {
       const customers: Record<string, StripeCustomerSnapshot> = {
         cus_import2: { id: 'cus_import2', email: null, name: null, currency: 'eur', defaultPaymentMethodId: null, metadata: {}, paymentMethods: [card('pm_cccc3333', 100)] },
       };
-      const svc = new StripeCustomerImportService(tenant, trx as unknown as Knex, fakeStripe(customers, []));
+      const svc = new StripeCustomerImportService(tenant, trx as unknown as Knex, fakeStripe(customers, []), 'acct_test');
       const input = [{ rowId: 'r1', clientId, billingProfileId: profileId, customerId: 'cus_import2' }];
       const enroll = vi.fn().mockResolvedValue(undefined);
 
@@ -143,7 +146,7 @@ describe('StripeCustomerImportService executor (DB integration)', () => {
       const customers: Record<string, StripeCustomerSnapshot> = {
         cus_import3: { id: 'cus_import3', email: 'a@x.test', name: 'A', currency: null, defaultPaymentMethodId: null, metadata: {}, paymentMethods: [card('pm_dddd4444', 1)] },
       };
-      const svc = new StripeCustomerImportService(tenant, trx as unknown as Knex, fakeStripe(customers, []));
+      const svc = new StripeCustomerImportService(tenant, trx as unknown as Knex, fakeStripe(customers, []), 'acct_test');
       await svc.execute(await svc.preview([{ rowId: 'r1', clientId, billingProfileId: profileId, customerId: 'cus_import3' }]));
 
       const stripe = {
@@ -184,7 +187,7 @@ describe('StripeCustomerImportService executor (DB integration)', () => {
           return out;
         },
       };
-      const svc = new StripeCustomerImportService(tenant, trx as unknown as Knex, gateway);
+      const svc = new StripeCustomerImportService(tenant, trx as unknown as Knex, gateway, 'acct_test');
       const input = [{ rowId: 'r1', clientId, billingProfileId: profileId, customerId: 'cus_drift1' }];
 
       expect((await svc.execute(await svc.preview(input)))[0].status).toBe('imported');
@@ -202,7 +205,7 @@ describe('StripeCustomerImportService executor (DB integration)', () => {
       const other = await seed(trx);
       customers.cus_drift2 = { id: 'cus_drift2', email: null, name: null, currency: null, defaultPaymentMethodId: null, metadata: {}, paymentMethods: [] };
       landStamp = false;
-      const svc2 = new StripeCustomerImportService(other.tenant, trx as unknown as Knex, gateway);
+      const svc2 = new StripeCustomerImportService(other.tenant, trx as unknown as Knex, gateway, 'acct_test');
       const input2 = [{ rowId: 'r2', clientId: other.clientId, billingProfileId: other.profileId, customerId: 'cus_drift2' }];
       const res = await svc2.execute(await svc2.preview(input2));
       expect(res[0].status).toBe('failed');

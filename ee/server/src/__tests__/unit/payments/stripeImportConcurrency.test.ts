@@ -26,7 +26,7 @@ describe('Stripe import fan-out limit', () => {
       capabilities: () => ({ supportedCurrencies: ['USD'] }),
       getCustomerImportSnapshot: async () => { calls++; inFlight++; peak = Math.max(peak, inFlight); await new Promise((r) => setTimeout(r, 2)); inFlight--; return null; },
     } as unknown as StripeImportGateway;
-    const service = new StripeCustomerImportService('t', {} as any, gateway);
+    const service = new StripeCustomerImportService('t', {} as any, gateway, 'acct_test');
     vi.spyOn(service, 'loadAlgaState').mockResolvedValue({ tenantId: 't', profiles: [], mappings: [], paymentMethods: [], enrolledProfileIds: [], supportedCurrencies: ['USD'], now: new Date() } as any);
 
     const rows = Array.from({ length: 60 }, (_, i) => ({ rowId: `row-${i}`, clientId: 'c', billingProfileId: 'p', customerId: `cus_${i}`, source: 'mapping' as const }));
