@@ -7,7 +7,7 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getConnection, tenantDb } from '@alga-psa/db';
 import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
 import { SystemEmailProviderFactory } from '../system/SystemEmailProviderFactory';
-import { verifyProviderSecretFingerprint } from '../../../integrations/src/lib/providerConnectionIdentity';
+import { findProviderSecretMismatch, SECRET_IDENTITY_MISMATCH_MESSAGE } from '../../../integrations/src/lib/providerConnectionIdentity';
 import {
   IEmailProvider,
   IEmailProviderManager,
@@ -29,10 +29,15 @@ export class EmailProviderManager implements IEmailProviderManager {
 
   async initialize(tenantSettings: TenantEmailSettings): Promise<void> {
     const tenantId = tenantSettings.tenantId;
-    const secretBindingError = verifyProviderSecretFingerprint(tenantSettings);
-    if (secretBindingError) {
-      const provider = tenantSettings.providerConfigs.find((config) => config.isEnabled)!;
-      throw new EmailProviderError(secretBindingError, provider.providerId, provider.providerType, false, 'SECRET_IDENTITY_MISMATCH');
+    const secretMismatch = findProviderSecretMismatch(tenantSettings);
+    if (secretMismatch) {
+      throw new EmailProviderError(
+        SECRET_IDENTITY_MISMATCH_MESSAGE,
+        secretMismatch.providerId ?? secretMismatch.providerType,
+        secretMismatch.providerType,
+        false,
+        'SECRET_IDENTITY_MISMATCH',
+      );
     }
     logger.info(`[EmailProviderManager] Initializing for tenant: ${tenantId}`);
     

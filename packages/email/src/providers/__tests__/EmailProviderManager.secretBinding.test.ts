@@ -39,4 +39,27 @@ describe('EmailProviderManager stored-secret identity gate', () => {
     } as any)).rejects.toMatchObject({ errorCode: 'SECRET_IDENTITY_MISMATCH' });
     expect(createTransportMock).not.toHaveBeenCalled();
   });
+
+  it('names the provider whose credential went stale, not the first enabled provider', async () => {
+    const smtpConfig = { host: 'smtp.original.test', port: 587, username: 'mailer', password: 'smtp-credential', secure: false };
+    const resendConfig = { apiKey: 'resend-credential' };
+    const manager = new EmailProviderManager();
+
+    await expect(manager.initialize({
+      tenantId: 'tenant-1', emailProvider: 'smtp',
+      providerConfigs: [
+        { providerId: 'smtp-1', providerType: 'smtp', isEnabled: true, config: {
+          ...smtpConfig, __secretFingerprint: connectionFingerprint(smtpConfig, 'smtp'),
+        } },
+        { providerId: 'resend-1', providerType: 'resend', isEnabled: true, config: {
+          ...resendConfig, __secretFingerprint: 'stale-fingerprint',
+        } },
+      ],
+    } as any)).rejects.toMatchObject({
+      errorCode: 'SECRET_IDENTITY_MISMATCH',
+      providerId: 'resend-1',
+      providerType: 'resend',
+    });
+    expect(createTransportMock).not.toHaveBeenCalled();
+  });
 });

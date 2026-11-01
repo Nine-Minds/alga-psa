@@ -27,9 +27,31 @@ export function providerSecretFingerprintMatches(provider: { providerType: strin
     && config.__secretFingerprint === connectionFingerprint(config, provider.providerType);
 }
 
-export function verifyProviderSecretFingerprint(settings: { providerConfigs?: Array<{ providerType: string; isEnabled: boolean; config?: Record<string, unknown> }> }): string | null {
+export const SECRET_IDENTITY_MISMATCH_MESSAGE =
+  'Credentials no longer match this server. Re-enter the password for the current connection.';
+
+export interface ProviderSecretMismatch {
+  providerId?: string;
+  providerType: string;
+}
+
+/**
+ * The enabled provider whose stored secret no longer matches its own connection
+ * identity, or null when every stored secret is still bound to the endpoint it
+ * was entered for. Callers that report a failure must name THIS provider: with
+ * several enabled providers, the first enabled one is not necessarily the one
+ * whose credential went stale.
+ */
+export function findProviderSecretMismatch(settings: {
+  providerConfigs?: Array<{ providerId?: string; providerType: string; isEnabled: boolean; config?: Record<string, unknown> }>;
+}): ProviderSecretMismatch | null {
   const enabled = settings.providerConfigs?.filter((provider) => provider.isEnabled) ?? [];
-  return enabled.some((provider) => !providerSecretFingerprintMatches(provider))
-    ? 'Credentials no longer match this server. Re-enter the password for the current connection.'
-    : null;
+  const failing = enabled.find((provider) => !providerSecretFingerprintMatches(provider));
+  return failing ? { providerId: failing.providerId, providerType: failing.providerType } : null;
+}
+
+export function verifyProviderSecretFingerprint(settings: {
+  providerConfigs?: Array<{ providerType: string; isEnabled: boolean; config?: Record<string, unknown> }>;
+}): string | null {
+  return findProviderSecretMismatch(settings) ? SECRET_IDENTITY_MISMATCH_MESSAGE : null;
 }
