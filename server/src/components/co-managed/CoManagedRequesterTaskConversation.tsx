@@ -6,16 +6,16 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
-import { getRequesterTaskConversationAction, createRequesterTaskCommentAction } from '@/lib/actions/coManagedRequesterTaskActions';
+import { getRequesterTaskConversationAction, createRequesterTaskCommentAction, getRequesterSharedTaskIdsAction } from '@/lib/actions/coManagedRequesterTaskActions';
 import { conversationText } from './conversationText';
 import { newCoManagedOperationId } from './coManagedOperationId';
 
 type Screen = Awaited<ReturnType<typeof getRequesterTaskConversationAction>>;
 type Request = Parameters<typeof createRequesterTaskCommentAction>[1];
-// The capability gate lives in the package's RequesterTaskConversation wrapper (useCapability('co-managed'));
-// the server actions re-check it on every call.
+// The gate lives in the package's RequesterTaskConversation wrapper: useCapability('co-managed') SERVES plus the
+// server's shared-work answer; the server actions re-check both on every call.
 export function CoManagedRequesterTaskProvider({ children }: { children: ReactNode }) {
-  return <RequesterTaskConversationProvider component={Conversation}>{children}</RequesterTaskConversationProvider>;
+  return <RequesterTaskConversationProvider component={Conversation} loadSharedTaskIds={getRequesterSharedTaskIdsAction}>{children}</RequesterTaskConversationProvider>;
 }
 function Conversation(props: RequesterTaskConversationProps) {
   const { data: session } = useSession();

@@ -52,5 +52,5 @@ export { ClientKBPage, ClientKBArticleView } from './kb';
 export { default as ClientLicensesPage } from './licenses/ClientLicensesPage';
 
 // Requester task thread (L4c): the app supplies the implementation, the package owns the capability gate.
-export { RequesterTaskConversationProvider } from './projects/RequesterTaskConversation';
+export { RequesterTaskConversationProvider, RequesterSharedTasksProvider, useRequesterSharedTaskIds } from './projects/RequesterTaskConversation';
 export type { RequesterTaskConversationProps } from './projects/RequesterTaskConversation';

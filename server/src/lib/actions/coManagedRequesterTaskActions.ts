@@ -2,7 +2,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { getConnection, withTransaction } from '@alga-psa/db';
 import { requireCapabilityEitherMode, requireCapabilityForAction } from '@alga-psa/core/capability/server';
-import { getRequesterTaskConversation, createRequesterTaskComment, type RequesterTaskReply } from '@alga-psa/co-managed/requesterTaskConversation';
+import { getRequesterTaskConversation, createRequesterTaskComment, listRequesterSharedTaskIds, type RequesterTaskReply } from '@alga-psa/co-managed/requesterTaskConversation';
 import type { RequesterTaskTarget } from '@alga-psa/co-managed/requesterTaskConversation';
 import { coManagedPortalBrowserActor } from '../co-managed/browserActor';
 
@@ -20,4 +20,12 @@ export const createRequesterTaskCommentAction = withAuth(async (user, { tenant }
   await requireCapabilityEitherMode('co-managed', tenant);
   const actor = await coManagedPortalBrowserActor(user, tenant);
   return withTransaction(await getConnection(tenant), trx => createRequesterTaskComment(trx, actor, target, input));
+});
+
+/** Which tasks of this project are shared work a requester may converse on. The portal's button and deep link
+ * depend on this answer (plus the capability serving); it is the same predicate the two actions above enforce. */
+export const getRequesterSharedTaskIdsAction = withAuth(async (user, { tenant }, projectId: string) => {
+  await requireCapabilityForAction('co-managed', tenant, 'serves');
+  const actor = await coManagedPortalBrowserActor(user, tenant);
+  return listRequesterSharedTaskIds(await getConnection(tenant), actor, projectId);
 });

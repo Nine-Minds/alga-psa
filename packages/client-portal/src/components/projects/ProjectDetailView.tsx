@@ -7,7 +7,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { getDateFnsLocale } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
-import { useCapability } from '@alga-psa/ui/hooks';
+import { RequesterSharedTasksProvider, useRequesterSharedTaskIds } from './RequesterTaskConversation';
 import {
   getClientProjectPhases,
   getClientProjectTasks,
@@ -93,11 +93,10 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
   const [taskDependencies, setTaskDependencies] = useState<{ [taskId: string]: { predecessors: TaskDependency[]; successors: TaskDependency[] } }>({});
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
-  // A requester-thread link (?taskId=) opens on the phase holding that task. Only a co-managed-admitted
-  // portal acts on it, so every other portal behaves exactly as before.
-  const { admitted: coManagedAdmitted } = useCapability('co-managed');
-  const admittedRef = useRef(coManagedAdmitted);
-  admittedRef.current = coManagedAdmitted;
+  // A requester-thread link (?taskId=) opens on the phase holding that task. It is acted on only when the
+  // capability serves AND the server says that task is shared work (null until then, and always null for any
+  // other portal, which therefore behaves exactly as before).
+  const sharedTaskIds = useRequesterSharedTaskIds(project.project_id);
   const taskLinkHandledFor = useRef<string | null>(null);
 
   // Persist viewMode to localStorage when it changes
@@ -185,13 +184,6 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
 
         if (result?.tasks) {
           setTasks(result.tasks);
-          // Apply the linked task's phase once, so later view changes keep the user's own choice.
-          if (admittedRef.current && taskLinkHandledFor.current !== project.project_id) {
-            taskLinkHandledFor.current = project.project_id;
-            const linkedTaskId = new URLSearchParams(window.location.search).get('taskId');
-            const linkedTask = result.tasks.find(task => task.task_id === linkedTaskId);
-            if (linkedTask) setSelectedPhaseId(linkedTask.phase_id);
-          }
         }
         if (result?.taskDependencies) {
           setTaskDependencies(result.taskDependencies);
@@ -218,6 +210,16 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
     fetchTasks();
   }, [project.project_id, showTasks, effectiveViewMode]);
 
+  // Apply the linked task's phase once the tasks and the shared-work answer are both known, so later view
+  // changes keep the user's own choice.
+  useEffect(() => {
+    if (!sharedTaskIds || tasks.length === 0 || taskLinkHandledFor.current === project.project_id) return;
+    taskLinkHandledFor.current = project.project_id;
+    const linkedTaskId = new URLSearchParams(window.location.search).get('taskId');
+    const linkedTask = linkedTaskId && sharedTaskIds.has(linkedTaskId) ? tasks.find(task => task.task_id === linkedTaskId) : undefined;
+    if (linkedTask) setSelectedPhaseId(linkedTask.phase_id);
+  }, [sharedTaskIds, tasks, project.project_id]);
+
   // View switcher options
   const viewOptions = useMemo(() => [
     { value: 'kanban' as ViewMode, label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
@@ -225,6 +227,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
   ], [t]);
 
   return (
+    <RequesterSharedTasksProvider ids={sharedTaskIds}>
     <div className="space-y-6">
       {/* Project Header Card */}
       <div className="p-6 bg-white rounded-lg shadow">
@@ -328,5 +331,6 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
       {/* Read-only billing summary (renders only when show_billing is enabled). */}
       <ProjectBillingSummarySection projectId={project.project_id} />
     </div>
+    </RequesterSharedTasksProvider>
   );
 }

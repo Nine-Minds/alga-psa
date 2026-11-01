@@ -31,7 +31,8 @@ export { getCoManagedDelegatedScreen, saveCoManagedDelegatedGrant, revokeCoManag
 export type { CoManagedDelegatedOperation, CoManagedDelegatedTarget, CoManagedDelegatedGrantInput, CoManagedDelegatedCommand } from './delegatedAdministration';
 export { coManagedAssigneeOption } from './sharedWorkAssignees';
 export { recordCoManagedWorkAudit } from './sharedWorkAudit';
-export { withRequesterTaskAccess, withRequesterTaskRecipientAccess } from './requesterTaskAccess';
+export { withRequesterTaskAccess, withRequesterTaskRecipientAccess, listRequesterSharedTaskIds } from './requesterTaskAccess';
+export { requesterSharedTaskIds, isRequesterTaskSharedWork } from './requesterSharedWork';
 export { retainCoManagedWorkflowTicketAuthority } from './workflowTicketAuthority';
 export { retainCoManagedWorkSnapshot } from './workSnapshotEvidence';
 export { retainCoManagedHistoricalWorkEvidence } from './historicalWorkEvidence';
