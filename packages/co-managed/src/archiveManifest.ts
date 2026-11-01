@@ -105,8 +105,10 @@ export async function sealCoManagedArchive(context: CoManagedClosureContext): Pr
   const excluded = new Map<string, number>();
   for (const row of rows) {
     const decision = classifyArchiveCandidate(row, cutoffAt);
-    if (decision.include) evidence.push([row.evidence_id, row.payload_hash]);
-    else excluded.set(`${row.source_type}\u0000${decision.reason}`, (excluded.get(`${row.source_type}\u0000${decision.reason}`) ?? 0) + 1);
+    if (decision.include === false) {
+      const { reason } = decision as { include: false; reason: CoManagedArchiveExclusionReason };
+      excluded.set(`${row.source_type}\u0000${reason}`, (excluded.get(`${row.source_type}\u0000${reason}`) ?? 0) + 1);
+    } else evidence.push([row.evidence_id, row.payload_hash]);
   }
   const files: CoManagedArchiveManifest['files'] = [];
   for (const source of coManagedArchiveFileSources()) {
