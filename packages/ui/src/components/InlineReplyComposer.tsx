@@ -10,6 +10,7 @@ import { useRegisterUnsavedChanges } from '../context/UnsavedChangesContext';
 import { Button } from './Button';
 import { Label } from './Label';
 import { Switch } from './Switch';
+import { COMPOSER_MAX_HEIGHT } from './composerSizing';
 import { withDataAutomationId } from '../ui-reflection/withDataAutomationId';
 import { useTranslation } from '../lib/i18n/client';
 
@@ -116,6 +117,7 @@ export function InlineReplyComposer({
         uploadFile={uploadFile}
         footerActions={footerActions}
         snippets={snippets}
+        maxHeight={COMPOSER_MAX_HEIGHT}
         autoFocus
       />
       <div className="mt-2 flex justify-end gap-2">

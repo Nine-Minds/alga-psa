@@ -35,6 +35,7 @@ import {
 import { getTicketLinkedAssetLabelParts } from '@alga-psa/assets/lib/ticketLinkedAssetLabels';
 import { assetLabelViewModelProvider } from '@alga-psa/assets/lib/labelViewModelProvider';
 import { stockUnitLabelViewModelProvider } from '@alga-psa/inventory/lib/labelViewModelProvider';
+import { rmaLabelViewModelProvider } from '@alga-psa/inventory/lib/rmaLabelViewModelProvider';
 import { ticketLabelViewModelProvider } from '@alga-psa/tickets/lib/labelViewModelProvider';
 import { stagingContainerLabelViewModelProvider } from '@alga-psa/projects/lib/stagingLabelViewModelProvider';
 import { BarcodeError } from '@alga-psa/billing/lib/invoice-template-ast/barcode/constraints';
@@ -49,6 +50,7 @@ const PROVIDERS: Record<LabelClass, LabelViewModelProvider> = {
   'asset-identity': assetLabelViewModelProvider,
   'stock-unit-identity': stockUnitLabelViewModelProvider,
   'staging-container': stagingContainerLabelViewModelProvider,
+  'rma-work-tag': rmaLabelViewModelProvider,
 };
 
 const deps: PrintLabelsDeps = {

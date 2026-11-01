@@ -66,8 +66,8 @@ export const interactionListQuerySchema = z.object({
   is_closed: z.enum(['true', 'false']).optional().transform((value) => (value === undefined ? undefined : value === 'true')),
   date_from: optionalDateTime,
   date_to: optionalDateTime,
-  page: positiveIntegerQuery.optional().default('1'),
-  page_size: positiveIntegerQuery.optional().default('25').transform((value) => Math.min(value, 100)),
+  page: positiveIntegerQuery.prefault('1'),
+  page_size: positiveIntegerQuery.prefault('25').transform((value) => Math.min(value, 100)),
 }).superRefine((value, ctx) => {
   if (
     value.date_from &&

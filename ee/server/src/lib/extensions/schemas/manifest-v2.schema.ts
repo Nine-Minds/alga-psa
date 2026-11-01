@@ -60,7 +60,7 @@ export const manifestV2Schema = z.object({
   capabilities: z.array(z.string()).default([]),
   ui: uiSchema,
   api: apiSchema.optional(),
-  precompiled: z.record(z.string()).optional(),
+  precompiled: z.record(z.string(), z.string()).optional(),
   assets: z.array(z.string()).optional(),
   sbom: z.string().optional(),
 });
@@ -77,7 +77,7 @@ export function validateManifestV2(
     return { valid: true, data: result.data };
   }
 
-  const errors = result.error.errors.map((e) => {
+  const errors = result.error.issues.map((e) => {
     const path = e.path.join('.') || '(root)';
     return `${path}: ${e.message}`;
   });
