@@ -2329,7 +2329,11 @@ export async function calculateAndDistributeTax(
   // would tax exempt components. Exempt components are not tax entities, but
   // they stay in the discount allocation (below) so they absorb their share of
   // an untargeted discount, and they are written back with tax 0.
-  const clientDefaultTaxRegion = (await getClientDefaultTaxRegionCode(tx, tenant, client.client_id)) || '';
+  // One lookup per call: the fixed-detail, per-item and discount-allocation
+  // steps below all resolve the same client default region.
+  let clientDefaultRegionLookup: Promise<string> | undefined;
+  const resolveClientDefaultTaxRegion = (): Promise<string> =>
+    (clientDefaultRegionLookup ??= getClientDefaultTaxRegionCode(tx, tenant, client.client_id).then((region) => region || ''));
   const exemptFixedDetails: Array<{ id: string; parentId: string; amount: number; region: string; serviceId: string | null }> = [];
   const fixedDetailServiceIds = new Map<string, string | null>();
   for (const detail of fixedDetails) {
@@ -2353,7 +2357,7 @@ export async function calculateAndDistributeTax(
       detailTaxable = detail.detail_is_taxable === true;
       detailRegion = detail.detail_tax_region || null;
     }
-    const resolvedRegion = detailRegion || clientDefaultTaxRegion;
+    const resolvedRegion = detailRegion || await resolveClientDefaultTaxRegion();
     fixedDetailServiceIds.set(detail.item_detail_id, detail.service_id ?? null);
 
     if (detailTaxable) {
@@ -2393,7 +2397,7 @@ export async function calculateAndDistributeTax(
         type: 'item',
         amount: Number(item.net_amount),
         // Use item region first, then lookup client default. Provide empty string if null.
-        taxRegion: item.tax_region || await getClientDefaultTaxRegionCode(tx, tenant, client.client_id) || '',
+        taxRegion: item.tax_region || await resolveClientDefaultTaxRegion(),
         isTaxable: true,
       });
     }
@@ -2443,7 +2447,6 @@ export async function calculateAndDistributeTax(
   // discount over its lines (exempt lines absorb their share too) and the
   // reduced amounts below feed the unchanged tax distribution.
   {
-    const clientDefaultRegion = (await getClientDefaultTaxRegionCode(tx, tenant, client.client_id)) || '';
     const itemsById = new Map(invoiceItems.map((item) => [item.item_id, item]));
     const allocationLines: DiscountTaxLineInput[] = [];
 
@@ -2488,12 +2491,17 @@ export async function calculateAndDistributeTax(
         id: item.item_id,
         itemId: item.item_id,
         amount: Number(item.net_amount),
-        region: item.tax_region || clientDefaultRegion,
+        region: item.tax_region || '', // empty falls back to the client default below
         taxable: false,
         serviceId: item.service_id ?? null,
         clientContractId: item.client_contract_id ?? null,
       });
     }
+    // Look the default up only if some line has no region of its own;
+    // buildDiscountTaxEntities applies it to exactly those lines.
+    const clientDefaultRegion = allocationLines.some((line) => !line.region)
+      ? await resolveClientDefaultTaxRegion()
+      : '';
     const allocationEntities = buildDiscountTaxEntities(allocationLines, clientDefaultRegion);
 
     const pools = invoiceItems
