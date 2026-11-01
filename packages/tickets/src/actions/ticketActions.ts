@@ -1,9 +1,14 @@
 'use server';
 
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
-import { isMspPrincipalUserType } from '@alga-psa/types';
+import {
+  isClientUserType,
+  isMspPrincipalUserType,
+  type AllowlistedUserField,
+} from '@alga-psa/types';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
+import { projectResponseUsers, sanitizeResponseUsers } from '../lib/responseUsers';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
@@ -2823,8 +2828,14 @@ export type DetailedTicket = ITicket & {
   client_name?: string;
 
   additionalAgents?: ITicketResource[];
-  availableAgents?: IUser[];
+  /**
+   * Assignable-agent directory, allow-listed user columns only (never credential material).
+   * Omitted for client-portal principals, who have no use for the MSP agent directory.
+   */
+  availableAgents?: TicketAgentOption[];
 };
+
+export type TicketAgentOption = Pick<IUserWithRoles, AllowlistedUserField>;
 
 export const getTicketById = withAuth(async (user, { tenant }, id: string): Promise<DetailedTicket> => {
   try {
@@ -2882,15 +2893,24 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
         throw new Error('Permission denied: Cannot view ticket');
       }
 
+      // Client-portal principals are admitted to their own ticket but do not receive the MSP
+      // agent directory, so the users table is not queried for them at all.
+      const includeAgentDirectory = !isClientUserType(user.user_type);
+
       // Fetch additional resources and available agents in parallel
-      const [additionalAgents, availableAgents] = await Promise.all([
+      const [additionalAgents, agentRows] = await Promise.all([
         tenantScopedTable(trx, 'ticket_resources', tenant)
           .where({
             ticket_id: id
           }),
-        tenantScopedTable(trx, 'users', tenant)
-          .orderBy('first_name', 'asc')
+        includeAgentDirectory
+          ? projectResponseUsers(tenantScopedTable(trx, 'users', tenant))
+              .where({ is_inactive: false })
+              .orderBy('first_name', 'asc')
+              .then(sanitizeResponseUsers)
+          : Promise.resolve(undefined)
       ]);
+      const availableAgents: TicketAgentOption[] | undefined = agentRows;
 
 
     const assigned_to_name = (ticket.assigned_to_first_name || ticket.assigned_to_last_name)
@@ -2908,7 +2928,7 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
       contact_name: ticket.contact_name || undefined,
       client_name: ticket.client_name || undefined,
       additionalAgents: additionalAgents,
-      availableAgents: availableAgents,
+      ...(availableAgents ? { availableAgents } : {}),
     };
 
     delete (detailedTicket as any).assigned_to_first_name;
