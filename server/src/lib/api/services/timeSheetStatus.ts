@@ -16,7 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { tenantDb, type ServiceContext } from '@alga-psa/db';
 import { assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { hasPermission } from '../../auth/rbac';
-import { ConflictError, ForbiddenError } from '../middleware/apiMiddleware';
+import { ConflictError, ForbiddenError, ValidationError } from '../middleware/apiMiddleware';
 
 export type TimeSheetStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'CHANGES_REQUESTED';
 export type TransitionTarget = 'SUBMITTED' | 'APPROVED' | 'CHANGES_REQUESTED';
@@ -37,6 +37,8 @@ export interface TransitionDescriptor {
   forbiddenMessage: string;
   /** Message of the ConflictError when the sheet is not in an allowed from-state. */
   conflictMessage: string;
+  /** Payload fields that must be non-blank; checked by applyTransition before any write (400). */
+  requiredPayload?: readonly (keyof TransitionPayload)[];
 }
 
 export const TIME_SHEET_TRANSITIONS: Readonly<Record<TransitionTarget, TransitionDescriptor>> = {
@@ -60,6 +62,7 @@ export const TIME_SHEET_TRANSITIONS: Readonly<Record<TransitionTarget, Transitio
     capability: 'approve',
     forbiddenMessage: 'Permission denied: Cannot request changes to time sheets',
     conflictMessage: 'Time sheet must be submitted before requesting changes',
+    requiredPayload: ['change_reason'],
   },
 };
 
@@ -102,15 +105,33 @@ export async function assertTransitionCapability(
   }
 }
 
-async function insertApproverComment(trx: Knex.Transaction, sheetId: string, comment: string, context: ServiceContext) {
-  // time_sheets has neither approval_notes nor updated_at; keep the notes as an approver comment
-  // using the real time_sheet_comments columns (same shape the workflow runtime writes).
+/** Reject (400) a payload missing a field the transition requires. Pure: runs before any write. */
+function assertTransitionPayload(descriptor: TransitionDescriptor, payload: TransitionPayload): void {
+  for (const field of descriptor.requiredPayload ?? []) {
+    const value = payload[field];
+    if (typeof value !== 'string' || value.trim() === '') {
+      throw new ValidationError(`${field} is required to move a time sheet to ${descriptor.target}`, { field });
+    }
+  }
+}
+
+/**
+ * time_sheets has neither approval/submission notes nor updated_at; transition notes live in time_sheet_comments
+ * (same shape the workflow runtime writes). `isApprover` is true for approver notes and false for the submitter's.
+ */
+async function insertComment(
+  trx: Knex.Transaction,
+  sheetId: string,
+  comment: string,
+  isApprover: boolean,
+  context: ServiceContext
+) {
   await tenantDb(trx, context.tenant).table('time_sheet_comments').insert({
     comment_id: uuidv4(),
     time_sheet_id: sheetId,
     user_id: context.userId,
     comment,
-    is_approver: true,
+    is_approver: isApprover,
     created_at: trx.fn.now(),
     tenant: context.tenant,
   });
@@ -124,6 +145,7 @@ export async function applyTransition(
   context: ServiceContext,
   payload: TransitionPayload = {}
 ): Promise<void> {
+  assertTransitionPayload(descriptor, payload);
   const db = tenantDb(trx, context.tenant);
   const sheets = () => db.table('time_sheets').where({ id: sheet.id });
 
@@ -136,8 +158,10 @@ export async function applyTransition(
       await sheets().update({
         approval_status: 'SUBMITTED',
         submitted_at: new Date(),
-        submission_notes: payload.submission_notes,
       });
+      if (payload.submission_notes?.trim()) {
+        await insertComment(trx, sheet.id, payload.submission_notes, false, context);
+      }
       return;
     }
     case 'APPROVED': {
@@ -149,7 +173,7 @@ export async function applyTransition(
         approved_by: context.userId,
       });
       if (payload.approval_notes) {
-        await insertApproverComment(trx, sheet.id, payload.approval_notes, context);
+        await insertComment(trx, sheet.id, payload.approval_notes, true, context);
       }
       // time_entries has no approved_at/approved_by columns (they live on time_sheets).
       await db.table('time_entries').where({ time_sheet_id: sheet.id }).update({
@@ -161,11 +185,9 @@ export async function applyTransition(
     case 'CHANGES_REQUESTED': {
       await sheets().update({
         approval_status: 'CHANGES_REQUESTED',
-        change_reason: payload.change_reason,
-        detailed_feedback: payload.detailed_feedback,
       });
       const details = payload.detailed_feedback ? `\n\nDetails: ${payload.detailed_feedback}` : '';
-      await insertApproverComment(trx, sheet.id, `Changes requested: ${payload.change_reason}${details}`, context);
+      await insertComment(trx, sheet.id, `Changes requested: ${payload.change_reason}${details}`, true, context);
       return;
     }
   }

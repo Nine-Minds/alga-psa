@@ -304,4 +304,64 @@ describe('TimeSheetService.update approval_status is a requested transition (rea
       expect((await sheetRow(f.tenantId, sheet.id)).notes).toBe('edited by admin');
     });
   });
+
+  describe('transition notes live in time_sheet_comments, not time_sheets columns', () => {
+    const commentsFor = (tenantId: string, id: string) =>
+      tenantTable(tenantId, 'time_sheet_comments').where({ time_sheet_id: id }).select('*');
+
+    it('submitTimeSheet with submission_notes stores a non-approver comment', async () => {
+      const f = await seed();
+      const sheet = await seedSheet(f, f.owner, 'DRAFT');
+
+      await serviceFor(f.tenantId).submitTimeSheet(
+        sheet.id,
+        { submission_notes: 'please review' } as any,
+        contextFor(f.tenantId, f.owner)
+      );
+
+      const row = await sheetRow(f.tenantId, sheet.id);
+      expect(row.approval_status).toBe('SUBMITTED');
+      expect(row.submitted_at).toBeInstanceOf(Date);
+      const comments = await commentsFor(f.tenantId, sheet.id);
+      expect(comments).toHaveLength(1);
+      expect(comments[0].comment).toBe('please review');
+      expect(comments[0].is_approver).toBe(false);
+      expect(comments[0].user_id).toBe(f.owner);
+    });
+
+    it('requestChanges with change_reason and detailed_feedback stores the approver comment', async () => {
+      const f = await seed();
+      const sheet = await seedSheet(f, f.owner, 'SUBMITTED');
+
+      await serviceFor(f.tenantId).requestChanges(
+        sheet.id,
+        { change_reason: 'r', detailed_feedback: 'd' } as any,
+        contextFor(f.tenantId, f.approver)
+      );
+
+      expect((await sheetRow(f.tenantId, sheet.id)).approval_status).toBe('CHANGES_REQUESTED');
+      const comments = await commentsFor(f.tenantId, sheet.id);
+      expect(comments).toHaveLength(1);
+      expect(comments[0].comment).toBe('Changes requested: r\n\nDetails: d');
+      expect(comments[0].is_approver).toBe(true);
+    });
+
+    it('update to CHANGES_REQUESTED without a reason is a 400 and writes nothing', async () => {
+      const f = await seed();
+      const sheet = await seedSheet(f, f.owner, 'SUBMITTED', { notes: 'original' });
+
+      await expect(
+        serviceFor(f.tenantId).update(
+          sheet.id,
+          { notes: 'changed', approval_status: 'CHANGES_REQUESTED' },
+          contextFor(f.tenantId, f.approver)
+        )
+      ).rejects.toMatchObject({ statusCode: 400, name: 'ValidationError' });
+
+      const row = await sheetRow(f.tenantId, sheet.id);
+      expect(row.approval_status).toBe('SUBMITTED');
+      expect(row.notes).toBe('original');
+      expect(await commentsFor(f.tenantId, sheet.id)).toHaveLength(0);
+    });
+  });
 });
