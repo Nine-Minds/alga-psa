@@ -1692,7 +1692,9 @@
       "valueNotAllowed": "Um dos valores do material não é permitido. Revise o formulário e tente novamente."
     },
     "settings": {
-      "updateDenied": "Permissão negada: não é possível atualizar as configurações de tickets"
+      "createDenied": "Permissão negada: não é possível criar quadros",
+      "updateDenied": "Permissão negada: não é possível atualizar as configurações de tickets",
+      "deleteDenied": "Permissão negada: não é possível excluir quadros"
     },
     "list": {
       "filtersInvalid": "Os filtros da lista de tickets não são mais válidos. Atualize a página e tente novamente."

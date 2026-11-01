@@ -46,6 +46,10 @@
       "import": "./src/lib/geolocation.ts",
       "types": "./src/lib/geolocation.ts"
     },
+    "./boardPolicy": {
+      "import": "./src/boardPolicy.ts",
+      "types": "./src/boardPolicy.ts"
+    },
     "./twoFactorHelpers": {
       "import": "./src/lib/twoFactorHelpers.ts",
       "types": "./src/lib/twoFactorHelpers.ts"

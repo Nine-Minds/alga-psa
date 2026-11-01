@@ -1692,7 +1692,9 @@
       "valueNotAllowed": "Uno dei valori del materiale non è consentito. Controllare il modulo e riprovare."
     },
     "settings": {
-      "updateDenied": "Autorizzazione negata: impossibile aggiornare le impostazioni dei ticket"
+      "createDenied": "Autorizzazione negata: impossibile creare bacheche",
+      "updateDenied": "Autorizzazione negata: impossibile aggiornare le impostazioni dei ticket",
+      "deleteDenied": "Autorizzazione negata: impossibile eliminare bacheche"
     },
     "list": {
       "filtersInvalid": "I filtri dell’elenco ticket non sono più validi. Aggiornare la pagina e riprovare."

@@ -1692,7 +1692,9 @@
       "valueNotAllowed": "Uno de los valores del material no está permitido. Revise el formulario e inténtelo de nuevo."
     },
     "settings": {
-      "updateDenied": "Permiso denegado: no se puede actualizar la configuración de tickets"
+      "createDenied": "Permiso denegado: no se pueden crear tableros",
+      "updateDenied": "Permiso denegado: no se puede actualizar la configuración de tickets",
+      "deleteDenied": "Permiso denegado: no se pueden eliminar tableros"
     },
     "list": {
       "filtersInvalid": "Los filtros de la lista de tickets ya no son válidos. Actualice la página e inténtelo de nuevo."
