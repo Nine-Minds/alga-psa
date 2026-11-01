@@ -41,6 +41,8 @@ export async function finalizeCoManagedArchive(context: CoManagedClosureContext)
     const task = kind === 'project_task', id = task ? 'task_id' : 'ticket_id';
     const commentTable = task ? 'project_task_comments' : 'comments';
     if (!await trx.schema.hasTable(commentTable) || !await trx.schema.hasTable('collaboration_actor_references')) continue;
+    // Only `comments` carries actor_reference_id; project task comments have no such column, so they cannot be discovered this way.
+    if (!await trx.schema.hasColumn(commentTable, 'actor_reference_id')) continue;
     const comments = customer.table(`${commentTable} as c`);
     customer.tenantJoin(comments, 'collaboration_actor_references as a', 'c.actor_reference_id', 'a.actor_reference_id');
     for (const row of await comments.where('a.actor_tenant', sponsorTenant).distinct(`c.${id}`)) add(kind, row[id]);

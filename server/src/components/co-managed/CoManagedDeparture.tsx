@@ -47,8 +47,17 @@ export default function CoManagedDeparture({ clientId, relationshipId }: { clien
     operationId.current ??= crypto.randomUUID();
     try {
       const result = await departFromCoManagedRelationship({ clientId, relationshipId: review.relationshipId, expectedRevision: review.revision, operationId: operationId.current });
-      if (result.ok) { setDone({ releasedSeats: result.releasedSeats }); setRefusal(null); await load(); }
+      if (result.ok) {
+        // A sponsor can no longer read the ended relationship (`not_found`), so reloading would show an error beside the
+        // stale review. Render the ended state from the action result instead.
+        setDone({ releasedSeats: result.releasedSeats });
+        setRefusal(null);
+        setReview(current => current && { ...current, departed: true, closedAt: result.closedAt, counterpartName: null, outstandingHandoffs: 0, seatsToRelease: 0 });
+      }
       else { setRefusal(reason(result)); if (result.reason !== 'denied') operationId.current = null; }
+    } catch {
+      setRefusal(t('departure.errors.invalid', { defaultValue: 'The request could not be processed.' }));
+      operationId.current = null;
     } finally { setBusy(false); setConfirming(false); }
   };
 

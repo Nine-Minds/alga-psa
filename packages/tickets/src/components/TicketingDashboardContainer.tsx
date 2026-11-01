@@ -190,6 +190,8 @@ interface TicketingDashboardContainerProps {
   initialTeams?: ITeam[];
   initialFormOptions?: TicketFormOptions | null;
   canUpdateTickets?: boolean;
+  /** Ended or lapsed co-managed workspace: withdraw create/duplicate/template/delete controls. */
+  workspaceReadOnly?: boolean;
   renderClientDetails?: React.ComponentProps<typeof TicketingDashboard>['renderClientDetails'];
   renderContactDetails?: React.ComponentProps<typeof TicketingDashboard>['renderContactDetails'];
   allowSlaStatusFilter?: boolean;
@@ -210,6 +212,7 @@ export default function TicketingDashboardContainer({
   initialTeams,
   initialFormOptions,
   canUpdateTickets,
+  workspaceReadOnly,
   renderClientDetails,
   renderContactDetails,
   allowSlaStatusFilter = true,
@@ -1165,6 +1168,7 @@ export default function TicketingDashboardContainer({
       initialTicketTags={ticketMetadata.ticketTags}
       initialTeams={initialTeams}
       canUpdateTickets={canUpdateTickets}
+      workspaceReadOnly={workspaceReadOnly}
       onNavigateAway={markNavigatingAway}
         allowSlaStatusFilter={allowSlaStatusFilter}
         smartSearchAvailable={smartSearchAvailable}

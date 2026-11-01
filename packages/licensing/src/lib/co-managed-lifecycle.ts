@@ -214,6 +214,8 @@ export async function readCoManagedLifecycleLockFree(
   if (!workspace || workspace.product_code !== 'co_managed') return INDEPENDENT;
   const relationship = await customer.table('co_management_relationships').whereNull('ended_at').first();
   if (!relationship || relationship.state === 'terminated') return { state: 'terminated', canWrite: false, graceEndsAt: null };
+  // Mirrors main's L0c, which answered `independent` (admit) here: bootstrap and acceptance write while the relationship is provisioning/pending_acceptance.
+  if (relationship.state === 'provisioning' || relationship.state === 'pending_acceptance') return INDEPENDENT;
   if (relationship.state !== 'active') return { state: 'pending_acceptance', canWrite: false, graceEndsAt: null };
   const sponsor = tenantDb(db, relationship.sponsor_tenant);
   const allocation = await sponsor.table('co_managed_allocations').where({
