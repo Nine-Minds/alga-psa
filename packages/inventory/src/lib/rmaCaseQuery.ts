@@ -20,10 +20,22 @@ export function rmaCaseQuery(trx: Knex.Transaction, tenant: string): Knex.QueryB
     .leftJoin('stock_units as su', function () {
       this.on('r.returned_unit_id', '=', 'su.unit_id').andOn('r.tenant', '=', 'su.tenant');
     })
+    .leftJoin('assets as a', function () {
+      this.on('r.asset_id', '=', 'a.asset_id').andOn('r.tenant', '=', 'a.tenant');
+    })
+    .leftJoin('tickets as tk', function () {
+      this.on('r.ticket_id', '=', 'tk.ticket_id').andOn('r.tenant', '=', 'tk.tenant');
+    })
     .where({ 'r.tenant': tenant })
     .select(
       'r.*',
+      // DATE columns come back from pg as JS Dates and would shift a day when serialised; send the calendar date.
+      trx.raw(`to_char(r.return_by, 'YYYY-MM-DD') as return_by`),
       'c.client_name',
+      'a.name as asset_name',
+      'a.asset_tag',
+      'a.serial_number as asset_serial_number',
+      'tk.ticket_number',
       'v.vendor_name',
       'sc.service_name',
       'sc.sku as service_sku',

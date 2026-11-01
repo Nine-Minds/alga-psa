@@ -355,6 +355,7 @@ export const upsertPlanServiceBucketConfigurationAction = withAuth(async (
       configId = await upsertBucketOverlayInTransaction(
         trx,
         tenant,
+        user,
         contractLineId,
         serviceId,
         {

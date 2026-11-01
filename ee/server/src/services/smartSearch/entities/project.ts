@@ -34,7 +34,7 @@ import type { SmartSearchEntityDefinition } from '../entityDefinition';
 import type { RelevancePrompt } from '../scoreBatch';
 
 export const projectSmartSearchScopeSchema = z.object({
-  projectIds: z.array(z.string().uuid()),
+  projectIds: z.array(z.string().guid()),
 });
 
 export interface ProjectTextRow {

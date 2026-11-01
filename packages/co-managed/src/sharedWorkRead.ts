@@ -60,6 +60,19 @@ export function ticketSummaryCandidates(tenant: string, row: any): Record<string
     opened_by: { value: openedByName(row), sources: ['tickets.entered_by', 'users'] },
   };
 }
+/** Handoff state of one ticket in one relationship; absent work row = never escalated, customer-handled, revision 0.
+ * Single-ticket reads only: list rows do not join the work table and must not default these. */
+function ticketWorkCandidates(row: any): Record<string, CoManagedSummaryCandidate> {
+  const sources = ['work', 'co_management_ticket_work'];
+  return {
+    work_revision: { value: Number(row.work_revision ?? 0), sources },
+    responsibility: { value: row.responsibility ?? 'customer', sources },
+    first_escalated_at: { value: date(row.first_escalated_at), sources },
+    last_transition_at: { value: date(row.last_transition_at), sources },
+    // An explicit grant exists once the ticket has been escalated and until it is revoked.
+    explicit_grant_active: { value: row.first_escalated_at != null && row.grant_revoked_at == null, sources: [...sources, 'grant_revoked_at'] },
+  };
+}
 function openedByName(row: any): string | null {
   return coManagedDisplayName({ first_name: row.opened_by_first_name, last_name: row.opened_by_last_name }, '') || null;
 }
@@ -80,9 +93,14 @@ function ticketQuery(trx: Knex.Transaction, tenant: string) {
 export async function readCoManagedSummaryCandidates(trx: Knex.Transaction, resource: CoManagedSharedResource): Promise<Record<string, CoManagedSummaryCandidate>> {
   const owner = tenantDb(trx, resource.tenant);
   if (resource.kind === 'ticket') {
-    const row = await ticketQuery(trx, resource.tenant).where('tickets.ticket_id', resource.id).first(...TICKET_COLUMNS);
+    // The work row is per (tenant, relationship, ticket): tenantJoin leads the join with the tenant, the relationship is pinned here.
+    const query = ticketQuery(trx, resource.tenant).where('tickets.ticket_id', resource.id);
+    owner.tenantJoin(query, 'co_management_ticket_work as work', 'tickets.ticket_id', 'work.ticket_id', { type: 'left',
+      on: join => join.andOn('work.relationship_id', '=', trx.raw('?', [resource.relationshipId])) });
+    const row = await query.first(...TICKET_COLUMNS, 'work.revision as work_revision', 'work.responsibility',
+      'work.first_escalated_at', 'work.last_transition_at', 'work.grant_revoked_at');
     if (!row) throw new CoManagedSharedWorkError();
-    return ticketSummaryCandidates(resource.tenant, row);
+    return { ...ticketWorkCandidates(row), ...ticketSummaryCandidates(resource.tenant, row) };
   }
   if (resource.kind === 'project') {
     const query = owner.table('projects').where('projects.project_id', resource.id);
@@ -248,14 +266,18 @@ export async function listCoManagedCustomerTickets(db: Knex, actor: CoManagedSes
       // Every ticket on a board shares that board's scope row: read it once per board (shared lock), not once per ticket.
       const boards = await tenantDb(trx, customerTenant).table('co_management_board_scopes').where('relationship_id', relationshipId).forShare()
         .select('board_id', 'can_collaborate');
-      if (!boards.length) continue;
+      // L3b1: escalated tickets are explicit grants, readable in either mode and on boards with no scope row.
+      const explicit = new Map<string, { canCollaborate: boolean }>((await tenantDb(trx, customerTenant).table('co_management_ticket_work')
+        .where('relationship_id', relationshipId).whereNull('grant_revoked_at').whereNotNull('first_escalated_at').forShare()
+        .select('ticket_id', 'can_collaborate')).map((w: any) => [w.ticket_id, { canCollaborate: w.can_collaborate }]));
+      if (!boards.length && !explicit.size) continue;
       const scopeByBoard = new Map<string, { canCollaborate: boolean }>(boards.map((b: any) => [b.board_id, { canCollaborate: b.can_collaborate }]));
-      const boardIds = boards.map((b: any) => b.board_id);
+      const boardIds = boards.map((b: any) => b.board_id), explicitIds = [...explicit.keys()];
       const customer = await tenantDb(trx, customerTenant).table('tenants').first('client_name');
       const redactions = home.redactedFields.concat(lifecycle.relationship.redacted_fields ?? []);
       sources.push({
         fetch: async (after, limit) => {
-          const query = ticketQuery(trx, customerTenant).whereIn('tickets.board_id', boardIds).forShare('tickets');
+          const query = ticketQuery(trx, customerTenant).where(scoped => scoped.whereIn('tickets.board_id', boardIds).orWhereIn('tickets.ticket_id', explicitIds)).forShare('tickets');
           if (after) {
             const { enteredAt, ticketId } = after;
             query.where(outer => enteredAt === null ? outer.whereNull('tickets.entered_at').where('tickets.ticket_id', '>', ticketId)
@@ -268,9 +290,7 @@ export async function listCoManagedCustomerTickets(db: Knex, actor: CoManagedSes
         },
         admit: row => {
           const resource: CoManagedSharedResource = { tenant: customerTenant, relationshipId, kind: 'ticket', id: row.ticket_id };
-          const scope = scopeByBoard.get(row.board_id);
-          if (!scope) return null;
-          const grant = { visibilityMode: mode, scope, explicit: null };
+          const grant = { visibilityMode: mode, scope: scopeByBoard.get(row.board_id) ?? null, explicit: explicit.get(row.ticket_id) ?? null };
           if (!evaluateCoManagedAccess({ lifecycle: lifecycle.lifecycle, staff: { roles }, grant, home: home.facts }).read) return null;
           return { resource, customerName: customer?.client_name ?? '', fields: visibleCoManagedFields(ticketSummaryCandidates(customerTenant, row), redactions) };
         },

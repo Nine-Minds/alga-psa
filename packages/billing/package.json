@@ -62,6 +62,7 @@
     "@alga-psa/documents": "*",
     "@alga-psa/email": "*",
     "@alga-psa/inventory": "*",
+    "@alga-psa/licensing": "*",
     "@alga-psa/notifications": "*",
     "@alga-psa/opportunities": "*",
     "@alga-psa/shared": "*",
@@ -77,7 +78,7 @@
     "@alga-psa/workflows": "*",
     "bwip-js": "^4.11.4",
     "qrcode": "^1.5.4",
-    "zod": "^3.22.4",
+    "zod": "^4.6.7",
     "@alga-psa/sla": "*"
   },
   "peerDependencies": {

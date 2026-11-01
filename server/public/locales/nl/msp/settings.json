@@ -1185,6 +1185,9 @@
           "contains": "Bevat",
           "starts_with": "Begint met",
           "ends_with": "Eindigt op",
+          "not_contains": "Bevat niet",
+          "not_starts_with": "Begint niet met",
+          "not_ends_with": "Eindigt niet op",
           "is_empty": "Is leeg",
           "is_not_empty": "Is niet leeg"
         },
@@ -3534,7 +3537,7 @@
       "platformManaged": "Beheerd door AlgaPSA — geen configuratie nodig. Verbind in stap 2 een agent met een van deze providers.",
       "addAnother": "Nog een provider toevoegen",
       "advancedOptions": "Geavanceerde opties",
-      "googleNoSetup": "Google vereist geen configuratie. Agenten melden zich aan met de ID van hun Google-serviceaccount.",
+      "googleSetup": "Agenten melden zich aan met een Google-ID-token van een serviceaccount. Alleen de doelgroep hieronder moet overeenkomen met hoe ze het aanvragen.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3548,9 +3551,14 @@
       "fields": {
         "provider": "Aanbieder",
         "entraTenantId": "Entra-tenant-ID",
-        "audienceOptional": "Doelgroep (optioneel)",
         "audience": "Doelgroep",
         "subjectClaim": "Agenten identificeren via",
+        "audienceHelp": {
+          "microsoft": "De toepassings-ID (client-ID) van de Entra-appregistratie waarvoor uw agenten tokens aanvragen. Agenten vragen het bereik api://<die ID>/.default aan.",
+          "google": "Agenten moeten hun Google-ID-token met precies deze doelgroep aanvragen. We hebben de MCP-URL van deze server ingevuld, de gebruikelijke keuze.",
+          "custom": "De API- of resource-id die in uw provider is ingesteld (bijvoorbeeld een Auth0 API-id). Deze moet exact overeenkomen met de aud-claim in agenttokens. De MCP-URL van deze server is een goede keuze."
+        },
+        "audienceWhy": "Tokens die uw provider voor andere apps heeft uitgegeven, worden hier niet geaccepteerd.",
         "subjectClaimHelp": "Laat leeg, tenzij uw provider anders aangeeft.",
         "issuer": "Uitgever",
         "jwksUri": "URL van ondertekeningssleutels"
@@ -3663,6 +3671,36 @@
         "message": "Wilt u de verbinding met \"{{name}}\" verbreken? De client verliest onmiddellijk de toegang en moet opnieuw worden geautoriseerd om weer verbinding te maken.",
         "confirm": "Verbinding verbreken",
         "cancel": "Annuleren"
+      }
+    },
+    "loading": "Laden…",
+    "downloadHosts": {
+      "title": "Toegestane downloadhosts",
+      "intro": "Wanneer een document via een URL wordt bijgevoegd, downloadt AlgaPSA het alleen van de hosts die hier staan. Dit geldt voor iedereen die documenten bijvoegt, inclusief AI-agents, API-clients en de REST API. Geef de voorkeur aan bucketspecifieke hosts zoals acme-uploads.s3.us-east-1.amazonaws.com boven brede hosts.",
+      "readOnly": "U kunt deze lijst bekijken. Voor wijzigingen is de machtiging 'Downloadhosts beheren' nodig.",
+      "builtIn": "Ingebouwd",
+      "empty": "Nog geen aangepaste hosts.",
+      "add": "Host toevoegen",
+      "addTitle": "Toegestane downloadhost toevoegen",
+      "remove": "Verwijderen",
+      "removeTitle": "Host verwijderen?",
+      "removeMessage": "Downloads van {{host}} werken pas weer als de host opnieuw is toegevoegd.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "Een hostnaam, of *.example.com om alle subdomeinen toe te staan.",
+        "note": "Notitie (optioneel)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Gebruikt voor",
+        "allowed": "Toegestaan",
+        "note": "Notitie",
+        "addedBy": "Toegevoegd door",
+        "addedOn": "Toegevoegd op"
+      },
+      "errors": {
+        "load": "Kan de toegestane downloadhosts niet laden.",
+        "save": "Kan de wijziging niet opslaan."
       }
     }
   },
@@ -3843,7 +3881,8 @@
     }
   },
   "common": {
-    "saving": "Opslaan…"
+    "saving": "Opslaan…",
+    "cancel": "Annuleren"
   },
   "featureFlags": {
     "categories": {

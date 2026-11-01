@@ -1185,6 +1185,9 @@
           "contains": "Contém",
           "starts_with": "Começa com",
           "ends_with": "Termina com",
+          "not_contains": "Não contém",
+          "not_starts_with": "Não começa com",
+          "not_ends_with": "Não termina com",
           "is_empty": "Está vazio",
           "is_not_empty": "Não está vazio"
         },
@@ -3534,7 +3537,7 @@
       "platformManaged": "Gerenciado pelo AlgaPSA — nenhuma configuração é necessária. Conecte um agente a um deles na etapa 2.",
       "addAnother": "Adicionar outro provedor",
       "advancedOptions": "Opções avançadas",
-      "googleNoSetup": "O Google não exige configuração. Os agentes fazem login com o ID da conta de serviço do Google.",
+      "googleSetup": "Os agentes entram com um token de ID de conta de serviço do Google. Somente o público-alvo abaixo precisa corresponder à forma como eles o solicitam.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3548,9 +3551,14 @@
       "fields": {
         "provider": "Provedor",
         "entraTenantId": "ID do tenant do Entra",
-        "audienceOptional": "Público-alvo (opcional)",
         "audience": "Público-alvo",
         "subjectClaim": "Identificar agentes por",
+        "audienceHelp": {
+          "microsoft": "O ID do aplicativo (cliente) do registro de aplicativo do Entra para o qual seus agentes solicitam tokens. Os agentes solicitam o escopo api://<esse ID>/.default.",
+          "google": "Os agentes devem solicitar o token de ID do Google exatamente com este público-alvo. Preenchemos a URL MCP deste servidor, que é a escolha habitual.",
+          "custom": "O identificador de API ou recurso configurado no seu provedor (por exemplo, um identificador de API do Auth0). Ele deve corresponder exatamente à declaração aud nos tokens dos agentes. A URL MCP deste servidor é uma boa escolha."
+        },
+        "audienceWhy": "Tokens que seu provedor emitiu para outros aplicativos não serão aceitos aqui.",
         "subjectClaimHelp": "Deixe em branco, a menos que seu provedor indique o contrário.",
         "issuer": "Emissor",
         "jwksUri": "URL das chaves de assinatura"
@@ -3663,6 +3671,36 @@
         "message": "Desconectar \"{{name}}\"? O cliente perderá o acesso imediatamente e precisará ser autorizado novamente para se reconectar.",
         "confirm": "Desconectar",
         "cancel": "Cancelar"
+      }
+    },
+    "loading": "Carregando…",
+    "downloadHosts": {
+      "title": "Hosts de download permitidos",
+      "intro": "Quando um documento é anexado por URL, o AlgaPSA só o baixa dos hosts listados aqui. Isso vale para qualquer um que anexe documentos, incluindo agentes de IA, clientes de API e a API REST. Prefira hosts específicos de um bucket, como acme-uploads.s3.us-east-1.amazonaws.com, a hosts genéricos.",
+      "readOnly": "Você pode visualizar esta lista. Para alterá-la, é necessária a permissão \"Gerenciar hosts de download\".",
+      "builtIn": "Integrado",
+      "empty": "Nenhum host personalizado ainda.",
+      "add": "Adicionar host",
+      "addTitle": "Adicionar host de download permitido",
+      "remove": "Remover",
+      "removeTitle": "Remover host?",
+      "removeMessage": "Os downloads de {{host}} deixarão de funcionar até que ele seja adicionado novamente.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "Um nome de host, ou *.example.com para permitir todos os subdomínios.",
+        "note": "Observação (opcional)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Usado para",
+        "allowed": "Permitido",
+        "note": "Observação",
+        "addedBy": "Adicionado por",
+        "addedOn": "Adicionado em"
+      },
+      "errors": {
+        "load": "Não foi possível carregar os hosts de download permitidos.",
+        "save": "Não foi possível salvar a alteração."
       }
     }
   },
@@ -3843,7 +3881,8 @@
     }
   },
   "common": {
-    "saving": "A guardar…"
+    "saving": "A guardar…",
+    "cancel": "Cancelar"
   },
   "featureFlags": {
     "categories": {

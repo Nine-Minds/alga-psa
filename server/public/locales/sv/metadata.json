@@ -618,6 +618,11 @@
       },
       "providers": {
         "title": "E-post- och identitetsleverantörer"
+      },
+      "sharedTasks": {
+        "title": "Delade uppgifter",
+        "taskTitle": "Delad uppgift",
+        "projectTitle": "Delat projekt"
       }
     }
   },

@@ -588,7 +588,8 @@
       "failedToResetRate": "Échec de la réinitialisation du tarif de la ligne",
       "protectedStartDate": "La date de début doit être le {{boundary}} ou antérieure pour inclure l’historique protégé.",
       "protectedEndDate": "La date de fin doit être le {{boundary}} ou postérieure pour inclure l’historique protégé.",
-      "cannotEditWithInvoices": "Impossible de modifier la ligne de contrat : ce contrat comporte des factures associées. Les lignes de contrat ne peuvent plus être modifiées une fois les factures générées."
+      "cannotEditWithInvoices": "Impossible de modifier la ligne de contrat : ce contrat comporte des factures associées. Les lignes de contrat ne peuvent plus être modifiées une fois les factures générées.",
+      "reloadLatest": "Recharger la dernière version"
     },
     "loading": {
       "contractLines": "Chargement des lignes de contrat",

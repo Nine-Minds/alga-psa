@@ -4,7 +4,7 @@
 import { z } from 'zod';
 import { findUnknownTitleTokens, TICKET_TITLE_TOKENS } from './ticketTitleTokens';
 
-const uuid = z.string().uuid();
+const uuid = z.string().guid();
 
 /** Template title with `{{token}}` placeholders; an unknown token is a save error (R8). */
 export const ticketTitleSchema = z

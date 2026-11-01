@@ -1029,6 +1029,36 @@ describe('client merge into a billing profile (TM010, TM011, TM012, TM016)', () 
     }
   }, HOOK_TIMEOUT);
 
+  it('leaves shared project task references pinned to the client their relationship names', async () => {
+    // The reference's client_id copies the customer relationship's
+    // sponsor_client_id, which this merge cannot reach; re-pointing it would
+    // stop participation lookups from matching the reference to its relationship.
+    const target = await seedClient('Shared Work Group');
+    const source = await seedClient('Shared Work North');
+    await ensureDefaultBillingProfile({ db, tenantId }, target);
+    await ensureDefaultBillingProfile({ db, tenantId }, source);
+
+    const referenceId = uuidv4();
+    await table('co_managed_project_task_references').insert({
+      tenant: tenantId,
+      reference_id: referenceId,
+      customer_tenant: uuidv4(),
+      relationship_id: uuidv4(),
+      task_id: uuidv4(),
+      client_id: source,
+      assigned_to: userId,
+      active: false,
+      task_name: 'Firewall refresh',
+      project_name: 'Network upgrade',
+    });
+
+    await db.transaction((trx) =>
+      executeClientMerge(trx, tenantId, userId, { sourceClientId: source, targetClientId: target }));
+
+    expect(await table('co_managed_project_task_references').where({ reference_id: referenceId }).first())
+      .toMatchObject({ client_id: source, task_name: 'Firewall refresh', revision: 1 });
+  }, HOOK_TIMEOUT);
+
   it('TM019: accounts for every client-keyed table in the schema', async () => {
     // A table nobody thought about does not fail loudly — its rows just stay on
     // the archived client, keeping a live write path aimed at a tombstone. The

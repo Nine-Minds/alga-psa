@@ -47,11 +47,11 @@ beforeAll(async () => {
     .insert({ tenant: TENANT, service_id: svc.service_id, serial_number: `SN-${randomUUID()}`, status: 'returned', unit_cost: 1000 })
     .returning('unit_id');
   const [rma] = await knex('rma_cases')
-    .insert({ tenant: TENANT, rma_type: 'standard', returned_unit_id: unit.unit_id, service_id: svc.service_id, client_id: client.client_id, vendor_id: vendor.vendor_id, status: 'sent_to_vendor', reason: 'dead on arrival' })
+    .insert({ tenant: TENANT, rma_number: `RMA-T${randomUUID().slice(0, 8)}`, rma_type: 'standard', returned_unit_id: unit.unit_id, service_id: svc.service_id, client_id: client.client_id, vendor_id: vendor.vendor_id, status: 'sent_to_vendor', reason: 'dead on arrival' })
     .returning('rma_id');
   rmaId = rma.rma_id;
   const oSvc = await knex('service_catalog').where({ tenant: OTHER_TENANT }).first();
-  const [oRma] = await knex('rma_cases').insert({ tenant: OTHER_TENANT, service_id: oSvc.service_id, status: 'open' }).returning('rma_id');
+  const [oRma] = await knex('rma_cases').insert({ tenant: OTHER_TENANT, rma_number: `RMA-T${randomUUID().slice(0, 8)}`, service_id: oSvc.service_id, status: 'open' }).returning('rma_id');
   otherRmaId = oRma.rma_id;
 });
 

@@ -1,7 +1,7 @@
 import type { IDocument, PreviewResponse } from '@alga-psa/types';
 import { DocumentTypeHandler } from './DocumentTypeHandler';
 import { CacheFactory } from '../cache/CacheFactory';
-import puppeteer from 'puppeteer';
+import { renderHtmlToPng } from '../lib/renderHtmlToPng';
 
 async function loadSharp() {
   try {
@@ -88,52 +88,7 @@ export abstract class BaseDocumentHandler implements DocumentTypeHandler {
    * @returns A promise that resolves to a Buffer containing the PNG image
    */
   protected async renderHtmlToPng(htmlContent: string, width: number = 400, height: number = 300): Promise<Buffer> {
-    let browser;
-    try {
-      const puppeteerOptions: any = {
-        headless: true,
-        args: [
-          '--no-sandbox', 
-          '--disable-setuid-sandbox', 
-          '--disable-dev-shm-usage',
-          '--disable-gpu',
-          '--disable-features=IsolateOrigins',
-          '--disable-site-isolation-trials'
-        ]
-      };
-      
-      // Use system chromium if available (Docker environment)
-      if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-        puppeteerOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-      }
-      
-      browser = await puppeteer.launch(puppeteerOptions);
-      const page = await browser.newPage();
-      await page.setViewport({ width, height });
-      const styledHtml = `
-        <style>
-          body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"; font-size: 14px; line-height: 1.4; padding: 15px; border: 1px solid #e0e0e0; box-sizing: border-box; overflow: hidden; height: ${height}px; background-color: #ffffff; }
-          pre { white-space: pre-wrap; word-wrap: break-word; font-family: monospace; }
-          h1, h2, h3, h4, h5, h6 { margin-top: 0; margin-bottom: 0.5em; }
-          p { margin-top: 0; margin-bottom: 1em; }
-          table { border-collapse: collapse; width: 100%; margin-bottom: 1em; }
-          th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-          ul, ol { padding-left: 20px; margin-top: 0; margin-bottom: 1em; }
-          img { max-width: 100%; height: auto; }
-          /* Basic styling for BlockNote generated HTML */
-          .bn-editor table { width: 100%; border-collapse: collapse; }
-          .bn-editor th, .bn-editor td { border: 1px solid #ddd; padding: 8px; }
-        </style>
-        <div>${htmlContent}</div>
-      `;
-      await page.setContent(styledHtml, { waitUntil: 'domcontentloaded' });
-      const imageBuffer = await page.screenshot({ type: 'png' });
-      
-      return Buffer.from(imageBuffer);
-    } finally {
-      if (browser) {
-        await browser.close();
-      }
-    }
+    // Single shared renderer: network is closed, remote images are inlined via safeFetch.
+    return renderHtmlToPng(htmlContent, { width, height });
   }
 }

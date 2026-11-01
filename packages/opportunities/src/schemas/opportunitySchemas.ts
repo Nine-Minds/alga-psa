@@ -8,6 +8,7 @@ import type {
   OpportunityStatus,
   OpportunityType,
 } from '@alga-psa/types';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 export const opportunityStatusSchema: z.ZodType<OpportunityStatus> = z.enum(['open', 'won', 'lost']);
 export const opportunityTypeSchema: z.ZodType<OpportunityType> = z.enum(['new_logo', 'expansion', 'renewal', 'project']);
@@ -56,7 +57,7 @@ export const opportunitySettingsSchema = z.object({
   renewal_lead_days: z.number().int().min(1).default(120),
   tm_threshold_cents: z.number().int().nonnegative().default(120000),
   asset_age_years: z.number().int().min(1).default(6),
-  assessment_service_ids: z.array(z.string().uuid()).max(100).optional(),
+  assessment_service_ids: z.array(z.string().guid()).max(100).optional(),
 }).superRefine((value, ctx) => {
   if (value.interrupt_days <= value.nudge_days) {
     ctx.addIssue({
@@ -79,11 +80,11 @@ const expectedCloseDateSchema = z.string()
 const centsSchema = z.number().int().nonnegative();
 
 export const createOpportunitySchema = z.object({
-  client_id: z.string().uuid(),
-  contact_id: z.string().uuid().optional().nullable(),
+  client_id: z.string().guid(),
+  contact_id: z.string().guid().optional().nullable(),
   title: z.string().trim().min(1),
   opportunity_type: opportunityTypeSchema,
-  owner_id: z.string().uuid().optional(),
+  owner_id: z.string().guid().optional(),
   confidence: opportunityConfidenceSchema.default('medium'),
   mrr_cents: centsSchema.default(0),
   nrr_cents: centsSchema.default(0),
@@ -93,23 +94,23 @@ export const createOpportunitySchema = z.object({
   next_action: z.string().trim().min(1),
   next_action_due: z.string().datetime(),
   generator_key: opportunityGeneratorKeySchema.optional().nullable(),
-  generator_context: z.record(z.unknown()).optional().nullable(),
-  suggestion_id: z.string().uuid().optional().nullable(),
+  generator_context: z.record(z.string(), z.unknown()).optional().nullable(),
+  suggestion_id: z.string().guid().optional().nullable(),
 });
 
 // Status and stage are intentionally absent: dedicated win/lose and evidence
 // flows own those transitions. The next-action columns are absent too: they
 // mirror the current step, and the step flows are their single writer.
-export const updateOpportunitySchema = createOpportunitySchema.partial().omit({
+export const updateOpportunitySchema = partialWithoutDefaults(createOpportunitySchema).omit({
   next_action: true,
   next_action_due: true,
 });
 
 export const winOpportunitySchema = z.object({
-  convert_quote_id: z.string().uuid().optional(),
-  project_template_id: z.string().uuid().optional(),
+  convert_quote_id: z.string().guid().optional(),
+  project_template_id: z.string().guid().optional(),
   project_name: z.string().trim().min(1).optional(),
-  project_status_id: z.string().uuid().optional(),
+  project_status_id: z.string().guid().optional(),
   project_start_date: expectedCloseDateSchema.optional(),
 }).strict();
 
@@ -146,11 +147,11 @@ export const createOpportunityStepSchema = z.object({
   due_at: z.string().datetime().optional().nullable(),
   has_time: z.boolean().optional(),
   duration_minutes: z.number().int().min(15).max(480).optional(),
-  assigned_to: z.string().uuid().optional().nullable(),
+  assigned_to: z.string().guid().optional().nullable(),
   checkpoint: stepCheckpointSchema.optional().nullable(),
   stage: stepStageSchema.optional().nullable(),
-  ticket_id: z.string().uuid().optional().nullable(),
-  project_task_id: z.string().uuid().optional().nullable(),
+  ticket_id: z.string().guid().optional().nullable(),
+  project_task_id: z.string().guid().optional().nullable(),
   status: z.enum(['planned', 'current']).optional(),
 });
 
@@ -159,16 +160,16 @@ export const updateOpportunityStepSchema = z.object({
   due_at: z.string().datetime().optional().nullable(),
   has_time: z.boolean().optional(),
   duration_minutes: z.number().int().min(15).max(480).optional(),
-  assigned_to: z.string().uuid().optional().nullable(),
+  assigned_to: z.string().guid().optional().nullable(),
   checkpoint: stepCheckpointSchema.optional().nullable(),
   stage: stepStageSchema.optional().nullable(),
-  ticket_id: z.string().uuid().optional().nullable(),
-  project_task_id: z.string().uuid().optional().nullable(),
+  ticket_id: z.string().guid().optional().nullable(),
+  project_task_id: z.string().guid().optional().nullable(),
   status: z.enum(['planned', 'current', 'skipped']).optional(),
 });
 
 export const completeOpportunityStepSchema = z.object({
-  next_step_id: z.string().uuid().optional().nullable(),
+  next_step_id: z.string().guid().optional().nullable(),
   next_action: stepTitleSchema.optional().nullable(),
   next_action_due: z.string().datetime().optional().nullable(),
   checkpoint: stepCheckpointSchema.optional().nullable(),
@@ -194,8 +195,8 @@ export const saveOpportunityStepTemplatesSchema = z.object({
 });
 
 export const reorderOpportunityStepsSchema = z.object({
-  opportunity_id: z.string().uuid(),
-  ordered_step_ids: z.array(z.string().uuid()).min(1).max(200),
+  opportunity_id: z.string().guid(),
+  ordered_step_ids: z.array(z.string().guid()).min(1).max(200),
 });
 
 // The legacy "edit the next action" affordances write through the current
@@ -212,7 +213,7 @@ export const correctEvidenceSchema = z.object({
 });
 
 export const linkQuoteSchema = z.object({
-  quote_id: z.string().uuid(),
+  quote_id: z.string().guid(),
 });
 
 export const suggestionActionSchema = z.object({
@@ -230,8 +231,8 @@ export const suggestionActionSchema = z.object({
 
 export const acceptSuggestionOverridesSchema = z.object({
   title: z.string().trim().min(1).optional(),
-  contact_id: z.string().uuid().nullable().optional(),
-  owner_id: z.string().uuid().optional(),
+  contact_id: z.string().guid().nullable().optional(),
+  owner_id: z.string().guid().optional(),
   mrr_cents: centsSchema.optional(),
   nrr_cents: centsSchema.optional(),
   hardware_cents: centsSchema.optional(),
@@ -248,8 +249,8 @@ export const snoozeSuggestionSchema = z.object({
 export const opportunityListFiltersSchema: z.ZodType<OpportunityListFilters> = z.object({
   status: z.enum(['open', 'won', 'lost', 'all']).optional(),
   stage: opportunityStageSchema.optional(),
-  owner_id: z.string().uuid().optional(),
-  client_id: z.string().uuid().optional(),
+  owner_id: z.string().guid().optional(),
+  client_id: z.string().guid().optional(),
   opportunity_type: opportunityTypeSchema.optional(),
   stalled_only: z.boolean().optional(),
   search: z.string().optional(),

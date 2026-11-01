@@ -9,16 +9,16 @@ export function registerServiceCategoryRoutes(
     'ServiceCategory',
     zOpenApi
       .object({
-        tenant: zOpenApi.string().uuid(),
-        category_id: zOpenApi.string().uuid(),
+        tenant: zOpenApi.string().guid(),
+        category_id: zOpenApi.string().guid(),
         category_name: zOpenApi.string(),
         description: zOpenApi.string().nullable().optional(),
         display_order: zOpenApi.number().int().optional().default(0),
         is_active: zOpenApi.boolean(),
         created_at: zOpenApi.string().datetime(),
         updated_at: zOpenApi.string().datetime(),
-        created_by: zOpenApi.string().uuid(),
-        updated_by: zOpenApi.string().uuid(),
+        created_by: zOpenApi.string().guid(),
+        updated_by: zOpenApi.string().guid(),
         tags: zOpenApi.array(zOpenApi.string()).optional(),
       })
       .describe('Service category resource.'),
@@ -56,14 +56,14 @@ export function registerServiceCategoryRoutes(
   const CategoryIdParam = registry.registerSchema(
     'CategoryIdParam',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Category UUID from service_categories.category_id or categories.category_id.'),
+      id: zOpenApi.string().guid().describe('Category UUID from service_categories.category_id or categories.category_id.'),
     }),
   );
 
   const BoardIdParam = registry.registerSchema(
     'CategoryBoardIdParam',
     zOpenApi.object({
-      boardId: zOpenApi.string().uuid().describe('Board UUID used by ticket category tree queries.'),
+      boardId: zOpenApi.string().guid().describe('Board UUID used by ticket category tree queries.'),
     }),
   );
 
@@ -71,15 +71,15 @@ export function registerServiceCategoryRoutes(
     'TicketCategory',
     zOpenApi
       .object({
-        category_id: zOpenApi.string().uuid(),
+        category_id: zOpenApi.string().guid(),
         category_name: zOpenApi.string(),
-        parent_category: zOpenApi.string().uuid().nullable().optional(),
-        board_id: zOpenApi.string().uuid().nullable(),
+        parent_category: zOpenApi.string().guid().nullable().optional(),
+        board_id: zOpenApi.string().guid().nullable(),
         display_order: zOpenApi.number().optional(),
         is_from_itil_standard: zOpenApi.boolean().nullable().optional(),
-        created_by: zOpenApi.string().uuid(),
+        created_by: zOpenApi.string().guid(),
         created_at: zOpenApi.string().datetime().optional(),
-        tenant: zOpenApi.string().uuid(),
+        tenant: zOpenApi.string().guid(),
         children: zOpenApi.array(zOpenApi.unknown()).optional(),
         depth: zOpenApi.number().optional(),
         path: zOpenApi.string().optional(),
@@ -92,8 +92,8 @@ export function registerServiceCategoryRoutes(
     'TicketCategoryCreateRequest',
     zOpenApi.object({
       category_name: zOpenApi.string().min(1).max(255),
-      board_id: zOpenApi.string().uuid(),
-      parent_category: zOpenApi.string().uuid().optional(),
+      board_id: zOpenApi.string().guid(),
+      parent_category: zOpenApi.string().guid().optional(),
     }),
   );
 
@@ -112,8 +112,8 @@ export function registerServiceCategoryRoutes(
       updated_from: zOpenApi.string().datetime().optional(),
       updated_to: zOpenApi.string().datetime().optional(),
       category_name: zOpenApi.string().optional(),
-      board_id: zOpenApi.string().uuid().optional(),
-      parent_category: zOpenApi.string().uuid().optional(),
+      board_id: zOpenApi.string().guid().optional(),
+      parent_category: zOpenApi.string().guid().optional(),
       is_parent: zOpenApi.enum(['true', 'false']).optional(),
       is_child: zOpenApi.enum(['true', 'false']).optional(),
       depth: zOpenApi.string().optional(),
@@ -129,8 +129,8 @@ export function registerServiceCategoryRoutes(
   const CategoryMoveRequest = registry.registerSchema(
     'CategoryMoveRequest',
     zOpenApi.object({
-      category_id: zOpenApi.string().uuid(),
-      new_parent_id: zOpenApi.string().uuid().optional().nullable(),
+      category_id: zOpenApi.string().guid(),
+      new_parent_id: zOpenApi.string().guid().optional().nullable(),
       position: zOpenApi.number().int().min(0).optional(),
     }),
   );
@@ -140,7 +140,7 @@ export function registerServiceCategoryRoutes(
     zOpenApi.object({
       search_term: zOpenApi.string().min(1),
       category_type: zOpenApi.enum(['service', 'ticket']).optional(),
-      board_id: zOpenApi.string().uuid().optional(),
+      board_id: zOpenApi.string().guid().optional(),
       include_inactive: zOpenApi.enum(['true', 'false']).optional(),
       limit: zOpenApi.string().optional(),
       offset: zOpenApi.string().optional(),
@@ -151,7 +151,7 @@ export function registerServiceCategoryRoutes(
     'CategoryAnalyticsQuery',
     zOpenApi.object({
       category_type: zOpenApi.enum(['service', 'ticket']).optional(),
-      board_id: zOpenApi.string().uuid().optional(),
+      board_id: zOpenApi.string().guid().optional(),
       date_from: zOpenApi.string().datetime().optional(),
       date_to: zOpenApi.string().datetime().optional(),
       include_usage: zOpenApi.enum(['true', 'false']).optional(),
@@ -162,7 +162,7 @@ export function registerServiceCategoryRoutes(
     'CategoryAnalyticsResponse',
     zOpenApi.object({
       data: zOpenApi.object({
-        analytics: zOpenApi.record(zOpenApi.unknown()).describe('Aggregated category analytics from CategoryService.getCategoryAnalytics.'),
+        analytics: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).describe('Aggregated category analytics from CategoryService.getCategoryAnalytics.'),
         generated_at: zOpenApi.string().datetime(),
       }),
     }),
@@ -181,7 +181,7 @@ export function registerServiceCategoryRoutes(
   const BulkDeleteCategoriesRequest = registry.registerSchema(
     'BulkDeleteCategoriesRequest',
     zOpenApi.object({
-      category_ids: zOpenApi.array(zOpenApi.string().uuid()).min(1).max(50),
+      category_ids: zOpenApi.array(zOpenApi.string().guid()).min(1).max(50),
       category_type: zOpenApi.enum(['service', 'ticket']),
       force: zOpenApi
         .union([zOpenApi.enum(['true', 'false']), zOpenApi.boolean()])
@@ -197,7 +197,7 @@ export function registerServiceCategoryRoutes(
         message: zOpenApi.string(),
         success: zOpenApi.number().int().min(0),
         failed: zOpenApi.number().int().min(0),
-        errors: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())).optional(),
+        errors: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())).optional(),
       }),
     }),
   );
@@ -214,7 +214,7 @@ export function registerServiceCategoryRoutes(
         hasNext: zOpenApi.boolean(),
         hasPrev: zOpenApi.boolean(),
       }),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -230,7 +230,7 @@ export function registerServiceCategoryRoutes(
         hasNext: zOpenApi.boolean(),
         hasPrev: zOpenApi.boolean(),
       }),
-      meta: zOpenApi.record(zOpenApi.unknown()).optional(),
+      meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional(),
     }),
   );
 
@@ -541,7 +541,7 @@ export function registerServiceCategoryRoutes(
     security: [{ ApiKeyAuth: [] }],
     request: { query: CategorySearchQuery },
     responses: {
-      200: { description: 'Category search results returned.', schema: zOpenApi.object({ data: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())), pagination: zOpenApi.record(zOpenApi.unknown()), meta: zOpenApi.record(zOpenApi.unknown()).optional() }) },
+      200: { description: 'Category search results returned.', schema: zOpenApi.object({ data: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())), pagination: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()), meta: zOpenApi.record(zOpenApi.string(), zOpenApi.unknown()).optional() }) },
       400: { description: 'Invalid query parameters.', schema: deps.ErrorResponse },
       401: { description: 'Authentication failed.', schema: deps.ErrorResponse },
       403: { description: 'Authenticated user lacks the derived settings read permission.', schema: deps.ErrorResponse },
