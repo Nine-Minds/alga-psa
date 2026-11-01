@@ -26,10 +26,10 @@ export async function admitPortableActivation(trx: Knex.Transaction, tenant: str
     if (activation.operation_id !== operationId) fail('another activation already completed');
     return { kind: 'completed' as const, receipt: activation };
   }
-  const restored = await seam.findRestore(trx, tenant);
-  const workspace = await own.table('tenants').forUpdate().first('tenant', 'product_code', 'suspended_at', 'suspended_reason');
-  if (!restored || !workspace || workspace.product_code !== 'psa' || !workspace.suspended_at ||
-      workspace.suspended_reason !== 'portable_restore_pending_activation') fail('pending isolated restore required');
+  // L7b2's quarantine marker is its own suspension row (never tenants.suspended_*), read through the seam.
+  const restored = await seam.findPendingActivation(trx, tenant);
+  const workspace = await own.table('tenants').forUpdate().first('tenant', 'product_code');
+  if (!restored || !workspace || workspace.product_code !== 'psa') fail('pending isolated restore required');
   if (await own.table('users').whereRaw('is_inactive IS DISTINCT FROM TRUE').first('user_id')) fail('restored users must remain inactive');
   const administrator = await own.table('users').where('user_id', restored.administrator_user_id).forUpdate().first('user_type', 'hashed_password', 'is_inactive');
   if (!administrator || administrator.user_type !== 'internal' || administrator.is_inactive !== true || administrator.hashed_password !== '!portable-restore-disabled') fail('original restored administrator required');
@@ -137,8 +137,8 @@ async function completeActivation(db: Knex, request: { tenant: string; operation
         administrator_user_id: current.restored.administrator_user_id, entitlement_source: entitlement.source, entitlement_reference: entitlement.reference,
         seats: entitlement.seats, entitlement_valid_until: entitlement.validUntil, activated_at: now };
       await own.table('portable_workspace_activations').insert(receipt);
-      if (await own.table('tenants').where('suspended_reason', 'portable_restore_pending_activation')
-        .update({ suspended_at: null, suspended_reason: null, licensed_user_count: entitlement.seats }) !== 1) fail('restore suspension changed');
+      await seam.releasePendingActivation(trx, request.tenant);
+      if (await own.table('tenants').where('product_code', 'psa').update({ licensed_user_count: entitlement.seats }) !== 1) fail('restore suspension changed');
       return receipt;
     });
 }

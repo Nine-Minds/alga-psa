@@ -48,7 +48,7 @@ vi.mock('../../lib/stripe/coManagedIndependentEntitlement', () => ({ paidPsaUpgr
 vi.mock('../../../../temporal-workflows/src/db/product-upgrade-operations', () => ({ initializeIndependentPsa: vi.fn(async () => { world.writes.push('initializeIndependentPsa'); }) }));
 
 import { activatePortableWorkspaceWithTenantLicense } from '../../lib/co-managed/portableWorkspaceActivation';
-import { portableRestoreSeam, type PortableRestoreSeam } from '../../lib/co-managed/portableRestoreSeam';
+import { portableRestoreSeam, portableRestoreTables, type PortableRestoreSeam } from '../../lib/co-managed/portableRestoreSeam';
 
 const TENANT = '00000000-0000-4000-8000-0000000000c1';
 const OP = '00000000-0000-4000-8000-0000000000b1';
@@ -63,7 +63,8 @@ function db() {
 }
 const seam: PortableRestoreSeam = {
   assertInstallationAuthority: async (...args) => world.seamAuthority(...args),
-  findRestore: async () => world.restore,
+  findPendingActivation: async () => world.restore,
+  releasePendingActivation: async () => { world.writes.push('portable_restore_suspensions:release'); },
 };
 const log = { info() {}, error() {} };
 const activate = (over: Record<string, unknown> = {}) => activatePortableWorkspaceWithTenantLicense(db(), input(over), log as any, seam);
@@ -71,7 +72,7 @@ const activate = (over: Record<string, unknown> = {}) => activatePortableWorkspa
 beforeEach(() => {
   world.restore = { tenant: TENANT, administrator_user_id: ADMIN };
   world.activation = undefined;
-  world.tenant = { tenant: TENANT, product_code: 'psa', suspended_at: new Date(), suspended_reason: 'portable_restore_pending_activation' };
+  world.tenant = { tenant: TENANT, product_code: 'psa' };
   world.activeUser = undefined;
   world.admin = { user_type: 'internal', is_inactive: true, hashed_password: '!portable-restore-disabled' };
   world.armed = {}; world.lockTaken = []; world.writes = []; world.seamAuthority = vi.fn(async () => undefined);
@@ -83,6 +84,8 @@ describe('portable workspace activation preconditions (A4)', () => {
     expect(receipt).toMatchObject({ tenant: TENANT, operation_id: OP, administrator_user_id: ADMIN, entitlement_source: 'tenant_license', entitlement_reference: 'lic_own', seats: 5 });
     expect(world.writes).toContain('portable_workspace_activations:insert');
     expect(world.writes).toContain('initializeIndependentPsa');
+    // L7b2's suspension is released in the same transaction; tenants.suspended_* is never written.
+    expect(world.writes).toContain('portable_restore_suspensions:release');
   });
 
   it('takes a per-tenant advisory lock', async () => {
@@ -91,15 +94,10 @@ describe('portable workspace activation preconditions (A4)', () => {
     expect(world.lockTaken[0]).toContain(`portable-restore:${TENANT}`);
   });
 
-  it('refuses when no restore row exists', async () => {
+  it('refuses when there is no restore pending activation', async () => {
     world.restore = undefined;
     await expect(activate()).rejects.toThrow(/pending isolated restore required/);
     expect(world.writes).toEqual([]);
-  });
-
-  it('refuses a tenant without the restore marker (a merely suspended psa tenant)', async () => {
-    world.tenant = { ...world.tenant, suspended_reason: 'non_payment' };
-    await expect(activate()).rejects.toThrow(/pending isolated restore required/);
   });
 
   it('refuses a tenant that is not psa', async () => {
@@ -148,5 +146,38 @@ describe('portable workspace activation preconditions (A4)', () => {
 
   it('refuses a connection that is already a transaction', async () => {
     await expect(activatePortableWorkspaceWithTenantLicense({ ...db(), isTransaction: true }, input(), log as any, seam)).rejects.toThrow(/installation connection/);
+  });
+});
+
+/** The seam's reads against L7b2's schema (portable_workspace_restores + portable_restore_suspensions). */
+describe('portable restore tables (L7b2 contract)', () => {
+  const trx = (tables = true) => ({ schema: { hasTable: async () => tables }, fn: { now: () => 'now' } }) as any;
+  const verified = { tenant: TENANT, state: 'verified', administrator_user_id: ADMIN };
+  const pending = { reason: 'portable_restore_pending_activation', released_at: null };
+  beforeEach(() => { world.armed = { portable_workspace_restores: verified, portable_restore_suspensions: pending }; });
+
+  it('a verified restore with an unreleased pending-activation suspension qualifies', async () => {
+    await expect(portableRestoreTables.findPendingActivation(trx(), TENANT)).resolves.toEqual({ tenant: TENANT, administrator_user_id: ADMIN });
+  });
+  it.each([
+    ['restore still staged', { portable_workspace_restores: { ...verified, state: 'staged' } }],
+    ['restore promoted but not verified', { portable_workspace_restores: { ...verified, state: 'promoted' } }],
+    ['no restored administrator', { portable_workspace_restores: { ...verified, administrator_user_id: null } }],
+    ['no restore row', { portable_workspace_restores: undefined }],
+    ['restore still in progress', { portable_restore_suspensions: { ...pending, reason: 'portable_restore_in_progress' } }],
+    ['suspension already released (activated)', { portable_restore_suspensions: { ...pending, released_at: new Date() } }],
+    ['no suspension row', { portable_restore_suspensions: undefined }],
+  ])('does not qualify: %s', async (_name, override) => {
+    world.armed = { ...world.armed, ...override };
+    await expect(portableRestoreTables.findPendingActivation(trx(), TENANT)).resolves.toBeUndefined();
+  });
+  it('L7b2 tables absent (not migrated): no restore, no query', async () => {
+    world.armed = {};
+    await expect(portableRestoreTables.findPendingActivation(trx(false), TENANT)).resolves.toBeUndefined();
+  });
+  it('the release writes released_at exactly once', async () => {
+    world.writes = [];
+    await portableRestoreTables.releasePendingActivation(trx(), TENANT);
+    expect(world.writes).toEqual(['portable_restore_suspensions:update']);
   });
 });
