@@ -598,5 +598,75 @@
     "doc": "sdk/docs/openapi/alga-openapi.ee.json",
     "pointer": "/components/schemas/InvoiceUpdateBody",
     "reason": "alga-2026-0002945: PUT /api/v1/invoices/{id} request body was narrowed to INVOICE_UPDATE_FIELDS (payment_method, billing_profile_id, due_date, invoice_date, items, tax_source) with additionalProperties:false. Lifecycle, identity and calculated monetary fields (status, client_id, subtotal, tax, total_amount, credit_applied, finalized_at, etc.) were removed because they let invoice:update bypass the finalize/send/payment/void commands and their permissions; the runtime now rejects them with 400."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/subtotal",
+    "reason": "security-review PR #3985 (InvoiceService.create): header totals are derived from the invoice items by the billing engine; a posted subtotal is ignored, so it is no longer documented as an input."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/tax",
+    "reason": "security-review PR #3985 (InvoiceService.create): tax is computed from the items by the tax engine; a posted tax is ignored, so it is no longer documented as an input."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/total_amount",
+    "reason": "security-review PR #3985 (InvoiceService.create): total_amount is derived from the items; a posted value is ignored, so it is no longer documented as an input."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/status/enum",
+    "reason": "security-review PR #3985 (InvoiceService.create): invoices are always created as drafts; any other status is refused with 400 (lifecycle is owned by finalize/send/payment commands), so only 'draft' is documented."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/credit_applied",
+    "reason": "security-review PR #3985 (InvoiceService.create): credit is applied only through the credit command; a non-zero credit_applied on create is refused with 400."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/is_manual",
+    "reason": "security-review PR #3985 (InvoiceService.create): is_manual is server-set provenance (duplicate / manual invoice); true on create is refused with 400."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ce.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/is_prepayment",
+    "reason": "security-review PR #3985 (InvoiceService.create): is_prepayment is server-set provenance; true on create is refused with 400."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/subtotal",
+    "reason": "security-review PR #3985 (InvoiceService.create): header totals are derived from the invoice items by the billing engine; a posted subtotal is ignored, so it is no longer documented as an input."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/tax",
+    "reason": "security-review PR #3985 (InvoiceService.create): tax is computed from the items by the tax engine; a posted tax is ignored, so it is no longer documented as an input."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/total_amount",
+    "reason": "security-review PR #3985 (InvoiceService.create): total_amount is derived from the items; a posted value is ignored, so it is no longer documented as an input."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/status/enum",
+    "reason": "security-review PR #3985 (InvoiceService.create): invoices are always created as drafts; any other status is refused with 400 (lifecycle is owned by finalize/send/payment commands), so only 'draft' is documented."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/credit_applied",
+    "reason": "security-review PR #3985 (InvoiceService.create): credit is applied only through the credit command; a non-zero credit_applied on create is refused with 400."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/is_manual",
+    "reason": "security-review PR #3985 (InvoiceService.create): is_manual is server-set provenance (duplicate / manual invoice); true on create is refused with 400."
+  },
+  {
+    "doc": "sdk/docs/openapi/alga-openapi.ee.json",
+    "pointer": "/components/schemas/InvoiceCreateBody/properties/is_prepayment",
+    "reason": "security-review PR #3985 (InvoiceService.create): is_prepayment is server-set provenance; true on create is refused with 400."
   }
 ]

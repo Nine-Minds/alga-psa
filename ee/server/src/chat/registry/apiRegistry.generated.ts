@@ -21225,7 +21225,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/invoices",
     "displayName": "Create invoice",
     "summary": "Create invoice",
-    "description": "Creates an invoice record via ApiBaseController.create() and invoice create schema.",
+    "description": "Creates a draft invoice. Header totals are derived from the items; lifecycle, credit and provenance fields are owned by dedicated commands and rejected when set.",
     "tags": [
       "Invoices"
     ],
@@ -21236,7 +21236,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "properties": {
         "client_id": {
           "type": "string",
-          "format": "uuid"
+          "format": "uuid",
+          "description": "Must be a client in the caller's tenant."
         },
         "invoice_date": {
           "type": "string"
@@ -21244,40 +21245,31 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "due_date": {
           "type": "string"
         },
-        "subtotal": {
-          "type": "integer",
-          "minimum": 0
+        "payment_method": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "credit_card",
+            "bank_transfer",
+            "check",
+            null
+          ]
         },
-        "tax": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "total_amount": {
-          "type": "integer",
-          "minimum": 0
+        "billing_profile_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
         },
         "status": {
           "type": "string",
           "enum": [
-            "draft",
-            "sent",
-            "paid",
-            "overdue",
-            "cancelled",
-            "pending",
-            "prepayment",
-            "partially_applied"
-          ]
-        },
-        "credit_applied": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "is_manual": {
-          "type": "boolean"
-        },
-        "is_prepayment": {
-          "type": "boolean"
+            "draft"
+          ],
+          "description": "Optional; invoices are always created as drafts. Use the finalize/send/payment commands to change status."
         },
         "items": {
           "type": "array",
@@ -21290,13 +21282,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
       "required": [
         "client_id",
         "invoice_date",
-        "due_date",
-        "subtotal",
-        "tax",
-        "total_amount",
-        "status"
+        "due_date"
       ],
-      "additionalProperties": {}
+      "additionalProperties": {},
+      "description": "New draft invoice. Totals are computed from the items. status (other than draft), credit_applied, is_manual, is_prepayment and billing_cycle_id are server-owned and rejected with 400."
     },
     "responseBodySchema": {
       "type": "object",

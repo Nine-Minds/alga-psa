@@ -296,19 +296,25 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
 
   const InvoiceCreateBody = registry.registerSchema(
     'InvoiceCreateBody',
+    // Mirrors the create surface of INVOICE_FIELD_POLICY (schemas/invoiceFieldPolicy.ts): an
+    // invoice is always created as a draft. Lifecycle (status beyond draft), credit_applied,
+    // is_manual, is_prepayment and billing_cycle_id are server-owned and refused with a 400 when
+    // set to a non-default value; subtotal/tax/total_amount are derived from the charges and
+    // ignored if sent. None of those are published as inputs.
     zOpenApi.object({
-      client_id: zOpenApi.string().guid(),
+      client_id: zOpenApi.string().guid().describe('Must be a client in the caller\'s tenant.'),
       invoice_date: zOpenApi.string(),
       due_date: zOpenApi.string(),
-      subtotal: zOpenApi.number().int().min(0),
-      tax: zOpenApi.number().int().min(0),
-      total_amount: zOpenApi.number().int().min(0),
-      status: zOpenApi.enum(['draft', 'sent', 'paid', 'overdue', 'cancelled', 'pending', 'prepayment', 'partially_applied']),
-      credit_applied: zOpenApi.number().int().min(0).optional(),
-      is_manual: zOpenApi.boolean().optional(),
-      is_prepayment: zOpenApi.boolean().optional(),
+      payment_method: zOpenApi.enum(PREFERRED_PAYMENT_METHODS).nullable().optional(),
+      billing_profile_id: zOpenApi.string().guid().nullable().optional(),
+      status: zOpenApi
+        .enum(['draft'])
+        .describe('Optional; invoices are always created as drafts. Use the finalize/send/payment commands to change status.')
+        .optional(),
       items: zOpenApi.array(zOpenApi.record(zOpenApi.string(), zOpenApi.unknown())).optional(),
-    }).catchall(zOpenApi.unknown()),
+    }).catchall(zOpenApi.unknown()).describe(
+      'New draft invoice. Totals are computed from the items. status (other than draft), credit_applied, is_manual, is_prepayment and billing_cycle_id are server-owned and rejected with 400.',
+    ),
   );
 
   // Editable billing terms only (INVOICE_UPDATE_FIELDS). Lifecycle, identity and monetary fields
@@ -949,7 +955,7 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
     method: 'post',
     path: '/api/v1/invoices',
     summary: 'Create invoice',
-    description: 'Creates an invoice record via ApiBaseController.create() and invoice create schema.',
+    description: 'Creates a draft invoice. Header totals are derived from the items; lifecycle, credit and provenance fields are owned by dedicated commands and rejected when set.',
     tags: [invoiceTag],
     security: [{ ApiKeyAuth: [] }],
     request: { body: { schema: InvoiceCreateBody } },
