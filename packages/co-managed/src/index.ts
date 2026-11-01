@@ -80,3 +80,14 @@ export { retainCoManagedConversationBeforeSourceChange } from './sourceChangeRet
 export { snapshotConversationContent, encodeConversationContent, plainTextContent } from './conversationContent';
 export type { CoManagedConversationContent } from './conversationContent';
 export { projectTaskAudience, projectTaskAudienceSql } from './projectTaskAudience';
+// L7a: departure, closure and the participation-evidence-only MSP archive.
+export { closeCoManagedRelationship, endCoManagedSponsorshipsForDeletion, releaseCoManagedSeatsForCustomerDeletion, CoManagedClosureError } from './relationshipClosure';
+export type { CoManagedClosureRequest, CoManagedClosureReceipt, CoManagedClosureContext } from './relationshipClosure';
+export { getCoManagedDepartureScreen, departCoManagedRelationship } from './departure';
+export type { CoManagedDepartureQualifiedTarget, CoManagedDepartureReview, CoManagedDepartureRequest } from './departure';
+export { sealCoManagedArchive, classifyArchiveCandidate, coManagedArchiveManifestHash, registerCoManagedArchiveFileSource,
+  ARCHIVE_EVIDENCE_CLASSES, ARCHIVE_ALLOWED_AUDIENCES } from './archiveManifest';
+export type { CoManagedArchiveManifest, CoManagedArchiveFileSource, CoManagedArchiveFileContent } from './archiveManifest';
+export { finalizeCoManagedArchive, registerCoManagedClosureEvidenceSource } from './archiveFinalization';
+export { listCoManagedArchives, getCoManagedArchiveHistory, readCoManagedArchiveFile } from './archiveReads';
+export type { CoManagedArchiveSummary, CoManagedArchiveEntry, CoManagedArchiveFile, CoManagedArchiveHistory } from './archiveReads';

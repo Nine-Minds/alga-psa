@@ -2426,6 +2426,7 @@ const handleClose = () => {
             onSaved?.();
         } catch (error) {
             console.error("Error deleting comment:", error);
+            handleTicketActionError(error, t('messages.deleteCommentFailed', 'Failed to delete comment'));
         }
     };
 

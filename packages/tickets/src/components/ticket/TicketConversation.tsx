@@ -1,5 +1,7 @@
 'use client';
 
+import { toast } from 'react-hot-toast';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import React, { useState, useMemo, useEffect, useCallback, useRef, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -559,7 +561,13 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
 
   const handleToggleReaction = useCallback(async (commentId: string, emoji: string) => {
     try {
-      const { added } = await toggleCommentReaction(commentId, emoji);
+      const reactionResult = await toggleCommentReaction(commentId, emoji);
+      // A refused write (e.g. read-only workspace) comes back as a returned action error, not `{ added }`.
+      if (isActionMessageError(reactionResult) || isActionPermissionError(reactionResult)) {
+        toast.error(getErrorMessage(reactionResult));
+        return;
+      }
+      const { added } = reactionResult;
       if (added && currentUser?.id && currentUser.name) {
         setReactionUserNames(prev => prev[currentUser.id] ? prev : { ...prev, [currentUser.id]: currentUser.name! });
       }
@@ -618,13 +626,13 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           onContentChange={onContentChange}
           onSave={updates => { if (!existingCommentUploadSession.isUploading) onSave(updates); }}
           onClose={existingCommentUploadSession.requestDiscard}
-          onEdit={readOnly ? undefined : () => onEdit(mergedConversation)}
-          onDelete={readOnly ? undefined : onDelete}
+          onEdit={readOnly || !dataSource.capabilities.commentOwnEdit ? undefined : () => onEdit(mergedConversation)}
+          onDelete={readOnly || !dataSource.capabilities.commentOwnEdit ? undefined : onDelete}
           onReply={readOnly ? undefined : () => setReplyingToCommentId(mergedConversation.comment_id ?? null)}
           hideInternalTab={hideInternalTab}
           uploadFile={existingCommentUploadSession.uploadFile}
           reactions={dataSource.capabilities.reactions ? reactionsMap[mergedConversation.comment_id || ''] || [] : undefined}
-          onToggleReaction={dataSource.capabilities.reactions ? handleToggleReaction : undefined}
+          onToggleReaction={dataSource.capabilities.reactions && dataSource.capabilities.reactionToggle ? handleToggleReaction : undefined}
           userNames={reactionUserNames}
           canViewCommentMetadataDebug={canViewCommentMetadataDebug}
           externalLinks={externalLinksByCommentId[mergedConversation.comment_id || ''] ?? []}

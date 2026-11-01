@@ -111,6 +111,7 @@
     "profile": "Profil",
     "signOut": "Abmelden",
     "coManaged": "Gemeinsam verwaltete IT",
+    "coManagedArchive": "Archiv der gemeinsamen Verwaltung",
     "coManagedAdministration": "Zugriff & Administration"
   },
   "sidebar": {

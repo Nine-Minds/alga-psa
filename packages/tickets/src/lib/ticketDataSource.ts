@@ -206,6 +206,18 @@ export interface TicketCapabilities {
   createProjectTask: boolean;
   /** Creating categories from the ticket screen ("Add new category"). Native-only: needs a board in the local tenant. */
   categoryCreate: boolean;
+  /** Starting (or switching) the stopwatch. Pure write: the timer display of a held session is not gated by it. */
+  timerStart: boolean;
+  /** "Add time entry" buttons. The time-logged summary stays under `timeEntry`. */
+  timeEntryCreate: boolean;
+  /** Editing the ticket's location. */
+  locationEdit: boolean;
+  /** Adding (or removing) an associated asset. The linked assets stay under `assets`. */
+  assetAdd: boolean;
+  /** Edit and delete on the viewer's own comments. Reading and replying are unaffected. */
+  commentOwnEdit: boolean;
+  /** Adding or removing a reaction. Existing reactions stay under `reactions`. */
+  reactionToggle: boolean;
 }
 
 export type TicketCapabilityKey = keyof TicketCapabilities;
@@ -238,6 +250,12 @@ export const NATIVE_TICKET_CAPABILITIES: Readonly<TicketCapabilities> = Object.f
   createWorkflow: true,
   createProjectTask: true,
   categoryCreate: true,
+  timerStart: true,
+  timeEntryCreate: true,
+  locationEdit: true,
+  assetAdd: true,
+  commentOwnEdit: true,
+  reactionToggle: true,
 });
 
 /**
@@ -248,6 +266,7 @@ export const NATIVE_TICKET_CAPABILITIES: Readonly<TicketCapabilities> = Object.f
  */
 export const TICKET_WRITE_ACTION_CAPABILITIES: readonly TicketCapabilityKey[] = Object.freeze([
   'delete', 'duplicate', 'createTemplate', 'createWorkflow', 'createProjectTask', 'quickInvoice', 'categoryCreate',
+  'timerStart', 'timeEntryCreate', 'locationEdit', 'assetAdd', 'commentOwnEdit', 'reactionToggle',
 ] as TicketCapabilityKey[]);
 
 /** Every capability off: a convenient starting point for a reduced data source. */

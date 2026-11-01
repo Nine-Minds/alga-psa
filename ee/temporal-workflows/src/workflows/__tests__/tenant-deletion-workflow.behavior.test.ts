@@ -81,11 +81,37 @@ it('continues deletion after provider teardown fails', async () => {
   expect(relevant(['teardownTenantEmailIngestion', 'deleteTenantData'])).toEqual(['teardownTenantEmailIngestion', 'deleteTenantData']);
 });
 
+it('ends co-managed sponsorships after provider teardown and before deleting data', async () => {
+  expect(await tenantDeletionWorkflow(input())).toMatchObject({ status: 'deleted' });
+  expect(relevant(['teardownTenantEmailIngestion', 'endTenantCoManagedSponsorships', 'deleteTenantData']))
+    .toEqual(['teardownTenantEmailIngestion', 'endTenantCoManagedSponsorships', 'deleteTenantData']);
+  expect(harness.activities.get('endTenantCoManagedSponsorships')).toHaveBeenCalledWith('tenant-fixture');
+});
+
+it('a tenant with no co-managed schema or relationships deletes exactly as before (the step reports nothing and does not throw)', async () => {
+  harness.activities.get('endTenantCoManagedSponsorships')!.mockImplementation(async () => {
+    harness.calls.push('endTenantCoManagedSponsorships'); return { terminated: 0, unaccepted: 0, releasedSeats: 0 };
+  });
+  expect(await tenantDeletionWorkflow(input())).toMatchObject({ status: 'deleted' });
+  expect(harness.activities.get('deleteTenantData')).toHaveBeenCalled();
+  expect(harness.activities.get('updateDeletionStatus')).not.toHaveBeenCalledWith(expect.objectContaining({ status: 'failed' }));
+});
+
+it('stops before deleting data when co-managed sponsorships cannot be ended', async () => {
+  // Deleting a sponsor with live co-managed customers would strand them.
+  harness.activities.get('endTenantCoManagedSponsorships')!.mockImplementation(async () => {
+    harness.calls.push('endTenantCoManagedSponsorships'); throw new Error('CLEANUP_INCOMPLETE');
+  });
+  await expect(tenantDeletionWorkflow(input())).rejects.toThrow(/co-managed sponsorships/);
+  expect(harness.activities.get('deleteTenantData')).not.toHaveBeenCalled();
+  expect(harness.activities.get('updateDeletionStatus')).toHaveBeenCalledWith(expect.objectContaining({ status: 'failed' }));
+});
+
 it.each([false, true])('omits newly patched suspension/resume activities on a legacy path (rollback=%s)', async rollback => {
   harness.patched = false;
   harness.rollback = rollback;
   expect(await tenantDeletionWorkflow(input())).toMatchObject({ status: rollback ? 'rolled_back' : 'deleted' });
-  for (const name of ['suspendTenantEmailIngestion', 'suspendTenantBackgroundActivity', 'resumeTenantEmailIngestion', 'resumeTenantBackgroundActivity', 'teardownTenantEmailIngestion']) {
+  for (const name of ['suspendTenantEmailIngestion', 'suspendTenantBackgroundActivity', 'resumeTenantEmailIngestion', 'resumeTenantBackgroundActivity', 'teardownTenantEmailIngestion', 'endTenantCoManagedSponsorships']) {
     expect(harness.activities.get(name)).not.toHaveBeenCalled();
   }
 });

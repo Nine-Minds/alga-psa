@@ -18,7 +18,7 @@ export * from './lib/co-managed-purchase-surface';
 export * from './lib/co-managed-hosted-reconcile';
 export * from './lib/co-managed-admission';
 export * from './lib/co-managed-admission-permissions';
-export { coManagedLifecycleProvider, invalidateCoManagedAwaitingAcceptance, resetCoManagedAwaitingAcceptanceCache } from './lib/co-managed-lifecycle';
+export { coManagedLifecycleProvider, invalidateCoManagedAwaitingAcceptance, resetCoManagedAwaitingAcceptanceCache, readCoManagedLifecycleLockFree, resolveCoManagedLapse, coManagedStateForLapse, coManagedGraceDeadline, type CoManagedLapsePhase } from './lib/co-managed-lifecycle';
 export * from './lib/verify-license';
 export * from './lib/license-state';
 export * from './lib/tenant-tier';

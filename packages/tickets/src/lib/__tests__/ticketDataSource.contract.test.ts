@@ -33,8 +33,8 @@ describe('native ticket data source contract', () => {
     expect('boundTicketId' in nativeTicketDataSource).toBe(false);
   });
 
-  it('declares 26 capabilities and the seventeen method groups, every method a function', () => {
-    expect(Object.keys(NATIVE_TICKET_CAPABILITIES)).toHaveLength(26);
+  it('declares 32 capabilities and the seventeen method groups, every method a function', () => {
+    expect(Object.keys(NATIVE_TICKET_CAPABILITIES)).toHaveLength(32);
     expect(Object.keys(NO_TICKET_CAPABILITIES)).toEqual(Object.keys(NATIVE_TICKET_CAPABILITIES));
     let methods = 0;
     for (const group of METHOD_GROUPS) {

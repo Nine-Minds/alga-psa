@@ -314,7 +314,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
     return null;
   }, [defaultLocation, selectedLocation, t]);
 
-  const canChangeLocation = Boolean(props.onChangeLocation) && (props.locations ?? []).length > 0;
+  const canChangeLocation = Boolean(props.onChangeLocation) && (props.locations ?? []).length > 0 && capabilities.locationEdit;
   const [locationPickerOpen, setLocationPickerOpen] = React.useState(false);
   const [selectedLocationId, setSelectedLocationId] = React.useState<string | null>(null);
   const locationOptions = React.useMemo(() => {
@@ -405,7 +405,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
       id={`${id}-time-tile`}
       title={!showTime ? t('bento.tiles.billing', 'Billing') : !showBilling ? t('bento.tiles.timeLogged', 'Time logged') : t('bento.tiles.timeAndBilling', 'Time & billing')}
       icon={<Clock className="h-4 w-4" />}
-      action={!showTime ? undefined :
+      action={!showTime || !capabilities.timeEntryCreate ? undefined :
         <BentoTileAddButton
           id={`${id}-add-time-entry`}
           label={t('bento.tiles.addTimeEntry', 'Add time entry')}

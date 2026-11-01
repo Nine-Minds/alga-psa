@@ -3,7 +3,8 @@ import { tenantDb } from '@alga-psa/db';
 import { verifyLicense } from './verify-license';
 import { isLicenseVerifyFailure } from './license-types';
 
-const GRACE_MS = 30 * 86_400_000;
+/** Length of the lapse grace window; the deadline is durable (`read_only_after`), never a wall-clock wait. */
+export const GRACE_MS = 30 * 86_400_000;
 
 export interface CoManagedEntitlementState {
   capacity: number;

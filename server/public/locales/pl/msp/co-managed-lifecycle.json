@@ -1,0 +1,64 @@
+{
+  "departure": {
+    "loading": "Ładowanie…",
+    "titleCustomer": "Zakończ IT we współzarządzaniu z {{name}}",
+    "titleSponsor": "Zakończ IT we współzarządzaniu dla {{name}}",
+    "keepCustomer": "Zachowujesz swoją przestrzeń roboczą, zgłoszenia, użytkowników i pliki. Twój MSP natychmiast traci dostęp i zachowuje tylko zapis pracy, w której uczestniczył.",
+    "keepSponsor": "Zachowujesz archiwum tylko do odczytu z pracy, w której uczestniczyłeś. Twój dostęp do przestrzeni roboczej klienta kończy się natychmiast, a licencje wracają do Twojej puli.",
+    "warnHandoffs_one": "{{count}} wspólne zgłoszenie jest nadal u MSP. Pozostanie otwarte, a MSP straci do niego dostęp.",
+    "warnHandoffs_few": "{{count}} wspólne zgłoszenia są nadal u MSP. Pozostaną otwarte, a MSP straci do nich dostęp.",
+    "warnHandoffs_many": "{{count}} wspólnych zgłoszeń jest nadal u MSP. Pozostaną otwarte, a MSP straci do nich dostęp.",
+    "warnHandoffs_other": "{{count}} wspólnych zgłoszeń jest nadal u MSP. Pozostaną otwarte, a MSP straci do nich dostęp.",
+    "seats_one": "{{count}} licencja zostanie zwolniona.",
+    "seats_few": "{{count}} licencje zostaną zwolnione.",
+    "seats_many": "{{count}} licencji zostanie zwolnionych.",
+    "seats_other": "Zwolnionych zostanie licencji: {{count}}.",
+    "end": "Zakończ relację",
+    "confirmTitle": "Zakończyć tę relację?",
+    "confirmMessage": "Nie można tego tutaj cofnąć. Dostęp kończy się natychmiast dla obu stron.",
+    "confirmEnd": "Zakończ relację",
+    "cancel": "Anuluj",
+    "done": "Relacja została zakończona. Historia wspólnej pracy jest zachowana i tylko do odczytu.",
+    "endedOn": "Ta relacja zakończyła się {{date}}.",
+    "errors": {
+      "notFound": "Nie znaleziono tej relacji.",
+      "denied": "Nie masz uprawnień do zakończenia tej relacji.",
+      "changed": "Relacja zmieniła się podczas przeglądu. Przejrzyj ją ponownie przed zakończeniem.",
+      "alreadyClosed": "Ta relacja została już zakończona.",
+      "invalid": "Nie można przetworzyć żądania."
+    }
+  },
+  "archive": {
+    "loading": "Ładowanie…",
+    "denied": "Nie masz uprawnień do wyświetlenia tego archiwum.",
+    "empty": "Brak archiwów. Archiwum powstaje po zakończeniu relacji.",
+    "unknownClient": "Klient bez nazwy",
+    "columns": {
+      "client": "Klient",
+      "sealed": "Zarchiwizowano",
+      "evidence": "Rekordy",
+      "files": "Pliki",
+      "actions": "Akcje"
+    },
+    "open": "Otwórz",
+    "back": "Wstecz",
+    "cutoff": "Rekordy do {{date}}. To archiwum jest tylko do odczytu.",
+    "entry": {
+      "when": "Data",
+      "author": "Autor",
+      "content": "Treść",
+      "deleted": "Usunięto przez autora",
+      "empty": "Nie zachowano żadnych rekordów."
+    },
+    "more": "Załaduj więcej",
+    "filesHeading": "Pliki",
+    "fileUnnamed": "Pobierz plik",
+    "exclusionsHeading": "Niezachowane",
+    "exclusion": "{{count}} · {{reason}}",
+    "reason": {
+      "class": "Nie należy do zachowanego zapisu",
+      "audience": "Prywatne dla klienta",
+      "afterCutoff": "Po zakończeniu relacji"
+    }
+  }
+}

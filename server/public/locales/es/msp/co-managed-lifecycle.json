@@ -1,0 +1,60 @@
+{
+  "departure": {
+    "loading": "Cargando…",
+    "titleCustomer": "Finalizar la TI cogestionada con {{name}}",
+    "titleSponsor": "Finalizar la TI cogestionada para {{name}}",
+    "keepCustomer": "Conserva su espacio de trabajo, tickets, usuarios y archivos. Su MSP pierde el acceso de inmediato y solo conserva un registro del trabajo en el que participó.",
+    "keepSponsor": "Conserva un archivo de solo lectura del trabajo en el que participó. Su acceso al espacio de trabajo del cliente termina de inmediato y las plazas vuelven a su bolsa.",
+    "warnHandoffs_one": "{{count}} ticket compartido sigue con el MSP. Seguirá abierto y el MSP perderá el acceso.",
+    "warnHandoffs_other": "{{count}} tickets compartidos siguen con el MSP. Seguirán abiertos y el MSP perderá el acceso.",
+    "seats_one": "Se liberará {{count}} plaza.",
+    "seats_other": "Se liberarán {{count}} plazas.",
+    "end": "Finalizar relación",
+    "confirmTitle": "¿Finalizar esta relación?",
+    "confirmMessage": "Esto no se puede deshacer desde aquí. El acceso termina de inmediato para ambas partes.",
+    "confirmEnd": "Finalizar relación",
+    "cancel": "Cancelar",
+    "done": "La relación ha finalizado. El historial del trabajo compartido se conserva y es de solo lectura.",
+    "endedOn": "Esta relación finalizó el {{date}}.",
+    "errors": {
+      "notFound": "No se encontró esta relación.",
+      "denied": "No tiene permiso para finalizar esta relación.",
+      "changed": "La relación cambió mientras la revisaba. Revísela de nuevo antes de finalizarla.",
+      "alreadyClosed": "Esta relación ya ha finalizado.",
+      "invalid": "No se pudo procesar la solicitud."
+    }
+  },
+  "archive": {
+    "loading": "Cargando…",
+    "denied": "No tiene permiso para ver este archivo.",
+    "empty": "Aún no hay archivos. Se crea uno cuando termina una relación.",
+    "unknownClient": "Cliente sin nombre",
+    "columns": {
+      "client": "Cliente",
+      "sealed": "Archivado",
+      "evidence": "Registros",
+      "files": "Archivos",
+      "actions": "Acciones"
+    },
+    "open": "Abrir",
+    "back": "Volver",
+    "cutoff": "Registros hasta el {{date}}. Este archivo es de solo lectura.",
+    "entry": {
+      "when": "Fecha",
+      "author": "Autor",
+      "content": "Contenido",
+      "deleted": "Eliminado por su autor",
+      "empty": "No se conservó ningún registro."
+    },
+    "more": "Cargar más",
+    "filesHeading": "Archivos",
+    "fileUnnamed": "Descargar archivo",
+    "exclusionsHeading": "No conservado",
+    "exclusion": "{{count}} · {{reason}}",
+    "reason": {
+      "class": "No forma parte del registro conservado",
+      "audience": "Privado del cliente",
+      "afterCutoff": "Después de que terminó la relación"
+    }
+  }
+}
