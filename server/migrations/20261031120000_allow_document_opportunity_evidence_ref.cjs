@@ -4,8 +4,10 @@
  *
  * Citus rejects ADD CONSTRAINT combined with other subcommands, and the
  * migration lint requires ADD CONSTRAINT on an existing table to be NOT VALID,
- * so each step is its own statement: DROP IF EXISTS (idempotent), ADD ... NOT
- * VALID, then VALIDATE. Transaction-free, like the prepaid block migrations.
+ * so each step is its own statement: DROP IF EXISTS (idempotent), then ADD ...
+ * NOT VALID. Migration lint rule R2 requires VALIDATE CONSTRAINT to live in a
+ * different transaction-free file; see 20261031120100_validate_*. Transaction-free,
+ * like the prepaid block migrations.
  */
 exports.config = { transaction: false };
 
@@ -18,7 +20,6 @@ async function replaceCheck(knex, refTypes) {
   await knex.raw(
     `ALTER TABLE ${TABLE} ADD CONSTRAINT ${CONSTRAINT} CHECK (ref_type IS NULL OR ref_type IN (${list})) NOT VALID`,
   );
-  await knex.raw(`ALTER TABLE ${TABLE} VALIDATE CONSTRAINT ${CONSTRAINT}`);
 }
 
 const BASE = ['quote', 'contract', 'project', 'schedule_entry', 'interaction'];
