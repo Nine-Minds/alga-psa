@@ -8,7 +8,7 @@ import { ITag } from '@alga-psa/types';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { getProjectTreeData, getProjectDetails } from '../actions/projectActions';
+import { getProjectDetails } from '../actions/projectActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
 import { getServices } from '@alga-psa/projects/actions/serviceCatalogActions';
 import { timeEntryServiceChoices } from '@alga-psa/core';
@@ -16,12 +16,10 @@ import { IService } from '@alga-psa/types';
 import {
   updateTaskWithChecklist,
   addTaskToPhase,
-  getTaskChecklistItems,
   moveTaskToPhase,
   deleteTask,
   addTaskResourcesAction,
   removeTaskResourceAction,
-  getTaskResourcesAction,
   assignTeamToProjectTask,
   removeTeamFromProjectTask,
   addTicketLinkAction,
@@ -57,7 +55,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { TaskTypeSelector } from './TaskTypeSelector';
-import { getTaskTypes } from '../actions/projectTaskActions';
+import { useTaskTypeLabel } from '../lib/useTaskTypeLabel';
 import { ITaskType } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import TaskTicketLinks, { TaskTicketLinksRef } from './TaskTicketLinks';
@@ -70,6 +68,8 @@ import { SearchableSelect } from '@alga-psa/ui/components/SearchableSelect';
 import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/components/TreeSelect';
 import { useTicketIntegration } from '../context/TicketIntegrationContext';
 import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
+import { useProjectDataSource } from '../context/ProjectDataSourceContext';
+import { computeTaskEditChanges, refusedFieldLabels, taskEditSignature } from '../lib/taskEditChanges';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useDrawer } from '@alga-psa/ui';
 import { useSchedulingCallbacks, useOptionalActivityCrossFeature } from '@alga-psa/ui/context';
@@ -127,6 +127,16 @@ interface TaskFormProps {
 // project tree effect that is keyed on this prop.
 const NO_PROJECT_TREE_DATA: any[] = [];
 
+// Set by the frozen branch of fieldGate. Rich/custom controls (which a disabled fieldset cannot
+// stop, e.g. contenteditable) read it via useFieldFrozen() and render themselves non-interactive.
+const FrozenFieldContext = React.createContext(false);
+const useFieldFrozen = (): boolean => React.useContext(FrozenFieldContext);
+
+function GatedTextEditor(props: React.ComponentProps<typeof TextEditor>): React.JSX.Element {
+  const frozenField = useFieldFrozen();
+  return <TextEditor {...props} editable={!frozenField} />;
+}
+
 export default function TaskForm({
   task,
   phase,
@@ -151,6 +161,24 @@ export default function TaskForm({
   // Read 'en-US' outright, so it stayed American in every locale.
   const { formatDate } = useFormatters();
   const billingIntegration = useProjectBillingIntegration();
+  const projectSource = useProjectDataSource();
+  const taskTypeLabel = useTaskTypeLabel();
+  const screen = projectSource.screen;
+  // Non-native sources never fall through to the native tenant-bound actions below.
+  const sharedMode = projectSource.kind !== 'native';
+  const frozen = (field: string) => screen.frozenFields.includes(field) || screen.readOnly;
+  const hidden = (field: string) => screen.hiddenFields.includes(field);
+  // Hidden fields render nothing; frozen ones render but cannot be operated (fieldset disables native controls, pointer-events covers editors/pickers).
+  const fieldGate = (field: string, node: React.ReactNode): React.ReactNode =>
+    hidden(field) ? null : frozen(field) ? (
+      <fieldset disabled className="m-0 min-w-0 border-0 p-0 opacity-70 pointer-events-none" data-frozen-field={field}>
+        <FrozenFieldContext.Provider value={true}>{node}</FrozenFieldContext.Provider>
+      </fieldset>
+    ) : node;
+  const [refusedFields, setRefusedFields] = useState<string[] | null>(null);
+  const [conflictTask, setConflictTask] = useState<IProjectTask | null | undefined>(undefined);
+  const [editError, setEditError] = useState<string | null>(null);
+  const editOperationRef = useRef<{ signature: string; operationId: string } | null>(null);
   const { createDocumentAssociations, deleteDocument, removeDocumentAssociations } = useDocumentsCrossFeature();
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
   const ticketLinksRef = useRef<TaskTicketLinksRef>(null);
@@ -398,6 +426,17 @@ export default function TaskForm({
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
+        if (sharedMode) {
+          // Shared source: only the type list comes through the seam; everything else is tenant-bound.
+          const types = await projectSource.options.types();
+          if (isReturnedActionError(types)) {
+            toast.error(getErrorMessage(types));
+          } else {
+            setTaskTypes(types);
+          }
+          return;
+        }
+
         const user = await getCurrentUser();
         if (user) {
           setCurrentUserId(user.user_id);
@@ -408,7 +447,7 @@ export default function TaskForm({
         setPriorities(allPriorities);
 
         // Fetch task types
-        const types = await getTaskTypes();
+        const types = await projectSource.options.types();
         if (isReturnedActionError(types)) {
           toast.error(getErrorMessage(types));
         } else {
@@ -448,7 +487,7 @@ export default function TaskForm({
           } else {
             // Only fetch if not available on the task object
             console.log('Fetching checklist items from API');
-            const existingChecklistItems = await getTaskChecklistItems(task.task_id);
+            const existingChecklistItems = await projectSource.tasks.checklist(task.task_id);
             if (isReturnedActionError(existingChecklistItems)) {
               toast.error(getErrorMessage(existingChecklistItems));
             } else {
@@ -457,7 +496,7 @@ export default function TaskForm({
           }
 
           // Always fetch resources to ensure we have the latest data
-          const resources = await getTaskResourcesAction(task.task_id);
+          const resources = await projectSource.tasks.resources(task.task_id);
           if (isReturnedActionError(resources)) {
             toast.error(getErrorMessage(resources));
           } else {
@@ -479,9 +518,10 @@ export default function TaskForm({
       }
     };
     fetchInitialData();
-  }, [task?.task_id]);
+  }, [task?.task_id, sharedMode, projectSource]);
 
   useEffect(() => {
+    if (sharedMode) return;
     const loadTeams = async () => {
       try {
         const fetchedTeams = await getTeams();
@@ -499,6 +539,7 @@ export default function TaskForm({
 
   // Fetch team avatar URL when assigned team changes
   useEffect(() => {
+    if (sharedMode) return;
     if (!assignedTeamId) {
       setTeamAvatarUrl(null);
       return;
@@ -515,7 +556,7 @@ export default function TaskForm({
         }
       })
       .catch(() => setTeamAvatarUrl(null));
-  }, [assignedTeamId, teams]);
+  }, [assignedTeamId, teams, sharedMode]);
 
   const teamMembersOnTask = useMemo(() => {
     return taskResources.filter(r => r.role === 'team_member');
@@ -524,6 +565,7 @@ export default function TaskForm({
   // Separate effect for loading task dependencies
   useEffect(() => {
     const loadDependencies = async () => {
+      if (sharedMode) return;
       if (task?.task_id && mode === 'edit') {
         try {
           console.log('Fetching task dependencies from API');
@@ -543,11 +585,13 @@ export default function TaskForm({
     };
 
     loadDependencies();
-  }, [task?.task_id, mode]);
+  }, [task?.task_id, mode, sharedMode]);
 
   // Use provided projectTreeData if available, otherwise fetch it
   useEffect(() => {
     const fetchProjectsData = async () => {
+      // Shared mode hides Move-to/Duplicate-to, so the tree is never needed (the shared seam has none to give).
+      if (screen.hidePhaseMoves) return;
       if (mode === 'edit') {
         if (projectTreeData && projectTreeData.length > 0) {
           // Use the provided project tree data
@@ -555,7 +599,7 @@ export default function TaskForm({
         } else {
           // Fall back to fetching the data if not provided
           try {
-            const treeData = await getProjectTreeData();
+            const treeData = await projectSource.options.tree();
             if (isActionPermissionError(treeData)) {
               handleError(treeData.permissionError);
               setProjectTreeOptions([]);
@@ -575,7 +619,7 @@ export default function TaskForm({
     };
 
     fetchProjectsData();
-  }, [mode, projectTreeData, t]);
+  }, [mode, projectTreeData, t, projectSource, screen.hidePhaseMoves]);
 
   const handleTreeSelectChange = async (
     value: string,
@@ -731,6 +775,7 @@ export default function TaskForm({
   };
 
   const performTeamAssign = async (teamId: string) => {
+    if (sharedMode) return;
     setAssignedTeamId(teamId);
     const team = teams.find(t => t.team_id === teamId);
     const leadId = team?.manager_id || team?.members?.find(member => member.role === 'lead')?.user_id || null;
@@ -747,7 +792,7 @@ export default function TaskForm({
           toast.error(getErrorMessage(assignResult));
           return;
         }
-        const resources = await getTaskResourcesAction(task.task_id);
+        const resources = await projectSource.tasks.resources(task.task_id);
         if (isReturnedActionError(resources)) {
           toast.error(getErrorMessage(resources));
           return;
@@ -799,6 +844,7 @@ export default function TaskForm({
     mode: 'remove_all' | 'keep_all' | 'selective',
     keepUserIds?: string[]
   ) => {
+    if (sharedMode) return;
     // 'remove_all' takes the team's lead off the task too, so mirror the server
     // and clear the primary agent when it's that lead.
     const removedTeam = teams.find(t => t.team_id === assignedTeamId);
@@ -824,7 +870,7 @@ export default function TaskForm({
       }
       setAssignedTeamId(null);
       if (shouldClearPrimary) setAssignedUser(null);
-      const resources = await getTaskResourcesAction(task.task_id);
+      const resources = await projectSource.tasks.resources(task.task_id);
       if (isReturnedActionError(resources)) {
         toast.error(getErrorMessage(resources));
         return;
@@ -888,6 +934,8 @@ export default function TaskForm({
   };
 
   const performSubmit = async () => {
+    // A read-only screen offers no write; Enter in a field must not reach the native submit path either.
+    if (screen.readOnly) return;
     setIsSubmitting(true);
 
     try {
@@ -895,6 +943,78 @@ export default function TaskForm({
 
       // Convert empty string to null for database
       const finalAssignedTo = !assignedUser || assignedUser === '' ? null : assignedUser;
+
+      if (mode === 'create' && (screen.hideCreate || screen.readOnly)) return;
+
+      if (mode === 'edit' && task?.task_id && screen.admittedTaskEdit) {
+        // Admitted edit: the data source decides what is saved. confirmBeforeSave is a native concern and is skipped.
+        setRefusedFields(null);
+        setConflictTask(undefined);
+        setEditError(null);
+
+        const liveBlocks = (blockNoteEditorRef.current?.document as PartialBlock[] | undefined) ?? descriptionContent;
+        const descriptionSerialized = isTaskRichTextEmpty(liveBlocks) ? '' : serializeTaskRichTextContent(liveBlocks);
+        const loadedDescriptionSerialized = initialDescriptionSerializedRef.current
+          ?? (!(task.description_rich_text ?? task.description)
+            ? ''
+            : serializeTaskRichTextContent(parseTaskRichTextContent(task.description_rich_text ?? task.description)));
+        const checklistModified =
+          checklistItems.length !== (task.checklist_items?.length ?? 0) ||
+          checklistItems.some((item, i) => {
+            const original = task.checklist_items?.[i];
+            return !original || item.item_name !== original.item_name || item.completed !== original.completed;
+          });
+
+        const changes = computeTaskEditChanges(task, {
+          taskName,
+          descriptionSerialized,
+          loadedDescriptionSerialized,
+          statusId: selectedStatusId,
+          phaseId: selectedPhaseId,
+          assignedTo: finalAssignedTo,
+          assignedTeamId,
+          estimatedHours,
+          startDate,
+          dueDate,
+          priorityId: selectedPriorityId,
+          taskTypeKey: selectedTaskType,
+          serviceId: selectedServiceId,
+          checklistItems,
+          checklistModified,
+          // Native-loaded collections are not loaded in an admitted edit; they are only sent when this form loaded them.
+          resources: resourcesLoaded && taskResources.length !== initialTaskResources.length ? taskResources : undefined,
+          tags: undefined,
+          dependencies: undefined,
+          ticketLinks: undefined,
+        });
+
+        const signature = taskEditSignature(task.task_id, changes);
+        if (editOperationRef.current?.signature !== signature) {
+          editOperationRef.current = { signature, operationId: crypto.randomUUID() };
+        }
+        const operationId = editOperationRef.current.operationId;
+
+        const result = await projectSource.editTask({ taskId: task.task_id, changes, operationId });
+        if (result.ok) {
+          editOperationRef.current = null;
+          onSubmit(result.task ?? ({ ...task, ...changes } as unknown as IProjectTask));
+          onClose();
+          return;
+        }
+        if (result.code === 'refused') {
+          setRefusedFields(result.refusedFields);
+        } else if (result.code === 'conflict') {
+          setConflictTask(result.task ?? null);
+        } else {
+          const message = result.message
+            ?? (result.code === 'not_found'
+              ? taskFormT('editNotFound', 'This task is no longer available.')
+              : taskFormT('editFailed', 'The task could not be saved. Please try again.'));
+          setEditError(message);
+          toast.error(message);
+        }
+        return;
+      }
 
       if (mode === 'edit' && task?.task_id && confirmBeforeSave) {
         const proceed = await confirmBeforeSave(task.task_id, {
@@ -1657,7 +1777,7 @@ export default function TaskForm({
             {t('common:actions.cancel', 'Cancel')}
           </Button>
         )}
-        {mode === 'edit' && !inDrawer && (
+        {mode === 'edit' && !inDrawer && !sharedMode && (
           <Button
             id='delete-button'
             type="button"
@@ -1670,7 +1790,7 @@ export default function TaskForm({
         )}
       </div>
       <div className="flex gap-2">
-        {mode === 'edit' && (
+        {mode === 'edit' && !sharedMode && (
           <Button
             id='add-time-entry-button'
             type="button"
@@ -1682,10 +1802,11 @@ export default function TaskForm({
             {taskFormT('addTimeEntry', 'Add Time Entry')}
           </Button>
         )}
+        {!screen.readOnly && (
         <Button
           id='save-button'
           type={outsideForm ? "button" : "submit"}
-          disabled={isSubmitting}
+          disabled={isSubmitting || screen.readOnly}
           className={!taskName.trim() ? 'opacity-50' : ''}
           {...(outsideForm ? { onClick: () => (document.getElementById('task-form') as HTMLFormElement | null)?.requestSubmit() } : {})}
         >
@@ -1697,6 +1818,7 @@ export default function TaskForm({
               ? taskFormT('update', 'Update')
               : taskFormT('save', 'Save'))}
         </Button>
+        )}
       </div>
     </div>
   );
@@ -1724,6 +1846,55 @@ export default function TaskForm({
             </AlertDescription>
           </Alert>
         )}
+        {(screen.readOnly || screen.frozenFields.length > 0) && (
+          <p id="task-form-readonly-note" className="mb-2 text-xs text-[rgb(var(--color-text-500))]">
+            {screen.readOnly
+              ? taskFormT('sharedViewOnlyNote', 'This project is view-only')
+              : taskFormT('sharedReadOnlyNote', 'Some fields are read-only for shared work')}
+          </p>
+        )}
+        {refusedFields && (
+          <Alert id="task-form-refused-fields" variant="destructive" className="mb-4">
+            <AlertDescription>
+              <p className="font-medium mb-2">
+                {taskFormT('refusedTitle', 'These changes could not be saved. Nothing was changed.')}
+              </p>
+              <ul className="list-disc list-inside space-y-1">
+                {refusedFieldLabels(refusedFields, (key, fallback) => taskFormT(key, fallback)).map((label, index) => (
+                  <li key={index}>{label}</li>
+                ))}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+        {conflictTask !== undefined && (
+          <Alert id="task-form-conflict" variant="destructive" className="mb-4">
+            <AlertDescription>
+              <p className="mb-2">
+                {taskFormT('conflictMessage', 'This task was changed by someone else while you were editing.')}
+              </p>
+              <Button
+                id="task-form-reload-latest"
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const latest = conflictTask;
+                  setConflictTask(undefined);
+                  if (latest) onSubmit(latest);
+                }}
+              >
+                {taskFormT('reloadLatest', 'Reload latest')}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+        {editError && (
+          <Alert id="task-form-edit-error" variant="destructive" className="mb-4">
+            <AlertDescription>{editError}</AlertDescription>
+          </Alert>
+        )}
+        {task && screen.slots.taskAside?.(task)}
         <div
           className="space-y-4 flex-1 overflow-y-auto"
           data-print-region
@@ -1777,7 +1948,7 @@ export default function TaskForm({
                   value={selectedStatusId}
                   statuses={projectStatuses}
                   onValueChange={setSelectedStatusId}
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || frozen('project_status_mapping_id')}
                 />
               </div>
             </div>
@@ -1792,13 +1963,14 @@ export default function TaskForm({
                 hasAttemptedSubmit && !taskName.trim() ? 'border-destructive' : 'border-gray-300'
               }`}
               rows={1}
+              disabled={frozen('task_name')}
             />
           </div>
 
           {/* Full width Description */}
-          <div>
+          {fieldGate('description', <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('descriptionLabel', 'Description')}</label>
-            <TextEditor
+            <GatedTextEditor
               key={descriptionEditorKey}
               id={`task-description-${task?.task_id || 'new'}`}
               initialContent={descriptionContent}
@@ -1807,10 +1979,10 @@ export default function TaskForm({
               searchMentions={searchUsersForMentions}
               placeholder={taskFormT('descriptionPlaceholder', 'Add task description...')}
             />
-          </div>
+          </div>)}
 
           {/* Service (for time entry prefill) - right under description */}
-          <div>
+          {!sharedMode && fieldGate('service_id', <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               {taskFormT('serviceLabel', 'Service (for time entries)')}
             </label>
@@ -1843,21 +2015,28 @@ export default function TaskForm({
                     })}
               </p>
             )}
-          </div>
+          </div>)}
 
           {/* 2 Column Grid Section */}
           <div className="grid grid-cols-2 gap-4">
             {/* Row 1: Task Type and Priority */}
-            <div>
+            {fieldGate('task_type_key', <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('taskTypeLabel', 'Task Type')}</label>
-              <TaskTypeSelector
-                value={selectedTaskType}
-                taskTypes={taskTypes}
-                onChange={setSelectedTaskType}
-                disabled={isSubmitting}
-              />
-            </div>
-            <div>
+              {sharedMode && frozen('task_type_key') ? (
+                // Not an admitted field: shown as text, never as a select that looks editable (and never as an empty placeholder).
+                <div id="task-type-readonly" className="p-2 bg-[rgb(var(--color-border-50))] border border-[rgb(var(--color-border-200))] rounded-md text-[rgb(var(--color-text-700))]">
+                  {taskTypeLabel(taskTypes.find(type => type.type_key === selectedTaskType), selectedTaskType)}
+                </div>
+              ) : (
+                <TaskTypeSelector
+                  value={selectedTaskType}
+                  taskTypes={taskTypes}
+                  onChange={setSelectedTaskType}
+                  disabled={isSubmitting}
+                />
+              )}
+            </div>)}
+            {!sharedMode && fieldGate('priority_id', <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('priorityLabel', 'Priority')}</label>
               {renderPrioritySelect({
                 value: selectedPriorityId,
@@ -1872,12 +2051,12 @@ export default function TaskForm({
                 placeholder: taskFormT('selectPriorityPlaceholder', 'Select priority'),
                 className: 'w-full',
               })}
-            </div>
+            </div>)}
 
             {/* Row 2: Move To and Duplicate To (Edit mode only) */}
-            {mode === 'edit' && (
+            {mode === 'edit' && !sharedMode && (
               <>
-                <div>
+                {fieldGate('phase_id', <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('moveToLabel', 'Move to')}</label>
                   {projectTreeOptions.length > 0 ? (
                     <TreeSelect<ProjectTreeTypes>
@@ -1894,7 +2073,7 @@ export default function TaskForm({
                   ) : (
                     <div className="text-sm text-gray-500">{taskFormT('loading', 'Loading...')}</div>
                   )}
-                </div>
+                </div>)}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('duplicateToLabel', 'Duplicate to')}</label>
                   {projectTreeOptions.length > 0 ? (
@@ -1917,7 +2096,7 @@ export default function TaskForm({
             )}
 
             {/* Row 3: Start Date and Due Date */}
-            <div>
+            {fieldGate('start_date', <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('startDateLabel', 'Start Date')}</label>
               <DatePicker
                 value={startDate}
@@ -1927,10 +2106,10 @@ export default function TaskForm({
                 placeholder={taskFormT('startDatePlaceholder', 'Select start date')}
                 maxDate={dueDate}
                 clearable
-                disabled={isSubmitting}
+                disabled={isSubmitting || frozen('start_date')}
               />
-            </div>
-            <div>
+            </div>)}
+            {fieldGate('due_date', <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('dueDateLabel', 'Due Date')}</label>
               <DatePicker
                 value={dueDate}
@@ -1939,12 +2118,12 @@ export default function TaskForm({
                 label={taskFormT('taskDueDateLabel', 'Task Due Date')}
                 placeholder={taskFormT('dueDatePlaceholder', 'Select due date')}
                 required={true}
-                disabled={isSubmitting}
+                disabled={isSubmitting || frozen('due_date')}
               />
-            </div>
+            </div>)}
 
             {/* Row 4: Estimated Hours and Actual Hours */}
-            <div>
+            {fieldGate('estimated_hours', <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {taskFormT('estimatedHoursLabel', 'Estimated Hours')}
               </label>
@@ -1956,8 +2135,9 @@ export default function TaskForm({
                 value={estimatedHours}
                 onChange={(e) => setEstimatedHours(Number(e.target.value))}
                 className="w-full"
+                disabled={frozen('estimated_hours')}
               />
-            </div>
+            </div>)}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {taskFormT('actualHoursLabel', 'Actual Hours')}
@@ -1988,7 +2168,8 @@ export default function TaskForm({
             {/* Row 5: Assigned To and Additional Agents in one row */}
             <div className="col-span-2">
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                {/* Shared mode: the assignee is the MSP reference row, shown and changed in the aside. A native picker here would read "Not assigned" beside "Assigned to <name>". */}
+                {!sharedMode && fieldGate('assigned_to', <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('assignedToLabel', 'Assigned To')}</label>
                   <UserAndTeamPicker
                     label=""
@@ -2003,8 +2184,9 @@ export default function TaskForm({
                         .some(r => r.additional_user_id === u.user_id)
                     )}
                     teams={teams}
-                    getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                    getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
+                    getUserAvatarUrlsBatch={sharedMode ? undefined : getUserAvatarUrlsBatchAction}
+                    getTeamAvatarUrlsBatch={sharedMode ? undefined : getTeamAvatarUrlsBatchAction}
+                    disabled={frozen('assigned_to') || frozen('assigned_team_id')}
                   />
                   {assignedTeamId && (() => {
                     const assignedTeam = teams.find(t => t.team_id === assignedTeamId);
@@ -2032,8 +2214,8 @@ export default function TaskForm({
                       </div>
                     ) : null;
                   })()}
-                </div>
-                <div>
+                </div>)}
+                {!sharedMode && fieldGate('resources', <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('additionalAgentsLabel', 'Additional Agents')}</label>
                   <MultiUserAndTeamPicker
                     id="task-additional-agents"
@@ -2087,13 +2269,13 @@ export default function TaskForm({
                     size="sm"
                     placeholder={taskFormT('additionalAgentsPlaceholder', 'Select additional agents...')}
                   />
-                </div>
+                </div>)}
               </div>
             </div>
           </div>
 
           {/* Full width Tags section */}
-          {mode === 'edit' && task?.task_id ? (
+          {sharedMode || hidden('tags') ? null : mode === 'edit' && task?.task_id ? fieldGate('tags', (
             <div>
               <h3 className="font-semibold mb-2">{taskFormT('tagsTitle', 'Tags')}</h3>
               <TagManager
@@ -2105,7 +2287,7 @@ export default function TaskForm({
                 useInlineInput={true}
               />
             </div>
-          ) : mode === 'create' && (
+          )) : mode === 'create' && (
             <div>
               <h3 className="font-semibold mb-2">{taskFormT('tagsTitle', 'Tags')}</h3>
               <QuickAddTagPicker
@@ -2119,7 +2301,7 @@ export default function TaskForm({
           )}
 
           {/* Full width Checklist section */}
-          <div>
+          {!sharedMode && fieldGate('checklist_items', <div>
             <div className="flex items-center gap-2 mb-2">
               <ListChecks className="h-5 w-5 text-gray-500" />
               <h3 className='font-semibold'>{taskFormT('checklistTitle', 'Checklist')}</h3>
@@ -2291,10 +2473,10 @@ export default function TaskForm({
                   )}
                 </div>
 
-          </div>
+          </div>)}
 
           {/* Full width Dependencies section */}
-          {mode === 'edit' && task ? (
+          {sharedMode ? null : mode === 'edit' && task ? (
             <TaskDependencies
               ref={dependenciesRef}
               task={task}
@@ -2331,7 +2513,7 @@ export default function TaskForm({
           )}
 
           {/* Full width Associated Tickets section */}
-          <TaskTicketLinks
+          {!sharedMode && <TaskTicketLinks
             ref={ticketLinksRef}
             taskId={task?.task_id || undefined}
             phaseId={phase.phase_id}
@@ -2355,27 +2537,35 @@ export default function TaskForm({
                   }
                 : undefined
             }
-          />
+          />}
 
           {/* Full width Attachments section */}
-          <div onClick={(e) => e.stopPropagation()} onSubmit={(e) => e.preventDefault()}>
+          {!sharedMode && <div onClick={(e) => e.stopPropagation()} onSubmit={(e) => e.preventDefault()}>
             <TaskDocumentsSimple
               taskId={mode === 'edit' && task ? task.task_id : undefined}
               pendingDocuments={mode === 'create' ? pendingDocuments : undefined}
               onPendingDocumentsChange={mode === 'create' ? setPendingDocuments : undefined}
               onDocumentAdded={mode === 'edit' ? (doc) => setSessionAddedDocuments(prev => [...prev, doc]) : undefined}
             />
-          </div>
+          </div>}
 
           {/* Full width Passwords section (flag-gated; task attach point) */}
-          {mode === 'edit' && task && (
+          {!sharedMode && mode === 'edit' && task && (
             <div onClick={(e) => e.stopPropagation()} onSubmit={(e) => e.preventDefault()}>
               <TaskCredentialsSection taskId={task.task_id} />
             </div>
           )}
 
+          {/* Shared-work slots: conversations and effort summary live where comments do natively. */}
+          {sharedMode && mode === 'edit' && task && (
+            <>
+              {screen.slots.conversations?.(task)}
+              {screen.slots.timeSummary?.(task)}
+            </>
+          )}
+
           {/* Full width Comments section */}
-          {mode === 'edit' && task && (
+          {!sharedMode && mode === 'edit' && task && (
             <div onClick={(e) => e.stopPropagation()} onSubmit={(e) => e.preventDefault()}>
               <TaskCommentThread
                 key={task.task_id}

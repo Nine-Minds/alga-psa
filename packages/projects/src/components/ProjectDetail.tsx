@@ -16,10 +16,8 @@ import {
   toggleHiddenStatusId,
 } from '../lib/kanbanPreferences';
 import { getAllPriorities } from '@alga-psa/reference-data/actions';
-import { getTaskTypes } from '../actions/projectTaskActions';
 import { findTagsByEntityId, findTagsByEntityIds, isTagActionError } from '@alga-psa/tags/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { getTaskCommentCountsBatch } from '../actions/projectTaskCommentActions';
 import { TagFilter } from '@alga-psa/ui/components';
 import { TagManager } from '@alga-psa/tags/components';
 import { useTags } from '@alga-psa/tags/context';
@@ -38,15 +36,15 @@ import { useUrlTaskOpenGuard } from './useUrlTaskOpenGuard';
 import { addDependencyToMap, removeDependencyFromMap } from '../lib/taskDependencyMap';
 import ProjectGanttView, { DEFAULT_GANTT_SETTINGS, type GanttSettings } from './ProjectGanttView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
-import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase, markPhaseComplete, reopenPhase } from '../actions/projectActions';
-import { getPhaseCustomStatusCounts } from '../actions/projectTaskStatusActions';
+import { deletePhase, markPhaseComplete, reopenPhase } from '../actions/projectActions';
+import { useProjectDataSource } from '../context/ProjectDataSourceContext';
 import { PhaseStatusScopeChip } from './status-columns';
 import { checkCurrentUserPermissions } from '@alga-psa/auth/actions';
 import type { ProjectBillingOverview } from '@alga-psa/types';
 import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
 import { derivePhaseBillingBadges, getCurrentDateInUserTimeZone } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
-import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getProjectTaskData, addTaskDependency, removeTaskDependency, assignTeamToProjectTask, removeTeamFromProjectTask, bulkAddTagsToTasks } from '../actions/projectTaskActions';
+import { duplicateTaskToPhase, deleteTask as deleteTaskAction, addTaskDependency, removeTaskDependency, assignTeamToProjectTask, removeTeamFromProjectTask, bulkAddTagsToTasks } from '../actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { toast } from 'react-hot-toast';
 import {
@@ -240,6 +238,8 @@ interface ProjectDetailProps {
   statusRefreshKey?: number;
 }
 
+const NO_TAGS: ITag[] = [];
+
 export default function ProjectDetail({
   project,
   phases,
@@ -256,11 +256,22 @@ export default function ProjectDetail({
   statusRefreshKey
 }: ProjectDetailProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const projectSource = useProjectDataSource();
+  const screen = projectSource.screen;
+  // A non-native source serves a project that is not in the viewer's tenant: native actions that take
+  // the project id (or the viewer's user/team/tag ids) would read the wrong tenant, so those effects skip.
+  const sharedMode = projectSource.kind !== 'native';
+  // Native mutation entry points the seam does not carry are not offered when the screen says so.
+  const writesLocked = sharedMode || screen.readOnly;
+  const createHidden = writesLocked || screen.hideCreate;
+  const phaseMovesHidden = writesLocked || screen.hidePhaseMoves;
+  const dragHidden = screen.readOnly || screen.hideKanbanDrag;
   const taskTypeLabel = useTaskTypeLabel();
   const { money } = useCurrencyFormat();
   // Billing surfaces are injected from the composition layer (billing package
   // implements them); null when no provider is mounted → billing UI hidden.
-  const billingIntegration = useProjectBillingIntegration();
+  const nativeBillingIntegration = useProjectBillingIntegration();
+  const billingIntegration = sharedMode ? null : nativeBillingIntegration;
   useTagPermissions(['project', 'project_task']);
   const { getDocumentCountsForEntities } = useDocumentsCrossFeature();
   const { resolvedTheme } = useTheme();
@@ -295,8 +306,10 @@ export default function ProjectDetail({
   const { value: storedViewMode, setValue: setViewMode, isLoading: isViewModeLoading } = prefs[PROJECT_VIEW_MODE_SETTING];
   // The timeline ships dark behind the 2.0 release flag. Only its entry point is
   // gated: a saved preference or ?view=gantt falls back to kanban while it is off.
-  const { enabled: timelineEnabled } = useFeatureFlag('release-v2-0-feature', { defaultValue: false });
-  const viewMode: ProjectViewMode = storedViewMode === 'gantt' && !timelineEnabled ? 'kanban' : storedViewMode;
+  const { enabled: timelineFlagEnabled } = useFeatureFlag('release-v2-0-feature', { defaultValue: false });
+  // Gantt and billing read the viewer's own tenant by project id; a shared source offers kanban and list only.
+  const timelineEnabled = timelineFlagEnabled && !sharedMode;
+  const viewMode: ProjectViewMode = (storedViewMode === 'gantt' && !timelineEnabled) || (sharedMode && storedViewMode === 'billing') ? 'kanban' : storedViewMode;
   const { value: isPhasesPanelVisible, setValue: setIsPhasesPanelVisible } = prefs[PROJECT_PHASES_PANEL_VISIBLE_SETTING];
   const { value: kanbanZoomLevel, setValue: setKanbanZoomLevel } = prefs[PROJECT_KANBAN_ZOOM_LEVEL_SETTING];
   const { value: isHeaderPinned, setValue: setIsHeaderPinned } = prefs[PROJECT_HEADER_PINNED_SETTING];
@@ -431,7 +444,9 @@ export default function ProjectDetail({
 
   // Tag-related state
   const [projectTags, setProjectTags] = useState<ITag[]>([]);
-  const { tags: allTags } = useTags();
+  // The tag context is the viewer's own tenant; a shared project's tag filter must not list the viewer's tags.
+  const { tags: viewerTags } = useTags();
+  const allTags = sharedMode ? NO_TAGS : viewerTags;
   const hasNotifiedParent = useRef(false);
   // Opens a task named in the URL once; a task opened by a click counts as handled.
   const urlTaskOpenGuard = useUrlTaskOpenGuard();
@@ -479,7 +494,7 @@ export default function ProjectDetail({
       }
 
       try {
-        const statuses = await getProjectTaskStatuses(project.project_id, selectedPhase.phase_id);
+        const statuses = await projectSource.options.taskStatuses(project.project_id, selectedPhase.phase_id);
         if (!stale) {
           setProjectStatuses(statuses);
         }
@@ -499,7 +514,7 @@ export default function ProjectDetail({
   useEffect(() => {
     let stale = false;
 
-    getPhaseCustomStatusCounts(project.project_id)
+    projectSource.phases.customStatusCounts(project.project_id)
       .then((counts) => {
         if (stale || !counts || 'actionError' in counts || 'permissionError' in counts) return;
         setPhaseCustomStatusCounts(counts);
@@ -514,6 +529,7 @@ export default function ProjectDetail({
     let stale = false;
     const fetchTags = async () => {
       if (!project.project_id) return;
+      if (sharedMode) return;
 
       try {
         const tags = await findTagsByEntityId(project.project_id, 'project').catch((error) => {
@@ -615,6 +631,7 @@ export default function ProjectDetail({
   // whole view + ambient signals (F115); the invoice create/generate set gates
   // mutations; project:update gates phase completion (F154 — not billing).
   useEffect(() => {
+    if (sharedMode) return;
     let stale = false;
     checkCurrentUserPermissions([
       { resource: 'billing', action: 'read' },
@@ -711,6 +728,7 @@ export default function ProjectDetail({
   }, [initialViewMode, isViewModeLoading, canViewBilling, viewMode, setViewMode]);
 
   const handleMarkPhaseComplete = useCallback(async (phase: IProjectPhase) => {
+    if (writesLocked) return;
     try {
       const result = await markPhaseComplete(phase.phase_id);
       setProjectPhases((prev) => prev.map((p) => (p.phase_id === phase.phase_id ? result.phase : p)));
@@ -743,9 +761,10 @@ export default function ProjectDetail({
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error));
     }
-  }, [refreshBilling, canViewBilling, t, setViewMode]);
+  }, [refreshBilling, canViewBilling, t, setViewMode, writesLocked]);
 
   const handleReopenPhase = useCallback(async (phase: IProjectPhase) => {
+    if (writesLocked) return;
     try {
       const updated = await reopenPhase(phase.phase_id);
       setProjectPhases((prev) => prev.map((p) => (p.phase_id === phase.phase_id ? updated : p)));
@@ -754,7 +773,7 @@ export default function ProjectDetail({
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error));
     }
-  }, [refreshBilling, t]);
+  }, [refreshBilling, t, writesLocked]);
 
   // Shared ViewSwitcher options; the Billing option appears only with billing
   // read permission (F113/F115).
@@ -795,8 +814,8 @@ export default function ProjectDetail({
     const fetchAllTaskData = async () => {
       try {
         const [data, phaseStatuses] = await Promise.all([
-          getProjectTaskData(project.project_id),
-          getProjectStatusesByPhase(project.project_id),
+          projectSource.tasks.data(project.project_id),
+          projectSource.options.statusesByPhase(project.project_id),
         ]);
         if (stale) return;
         if (isReturnedActionError(data)) {
@@ -1405,7 +1424,7 @@ export default function ProjectDetail({
     }
 
     // Bulk move: when the dragged task is part of a multi-selection, move them all
-    if (selectedTaskIds.has(taskId) && selectedTaskIds.size > 1) {
+    if (!sharedMode && selectedTaskIds.has(taskId) && selectedTaskIds.size > 1) {
       // Sort selected tasks by current order_key so they land in their existing
       // relative order. Tasks already in the target phase are repositioned;
       // cross-phase tasks are moved in.
@@ -1433,7 +1452,7 @@ export default function ProjectDetail({
       for (const task of tasksToMove) {
         try {
           if (task.phase_id !== newPhaseId) {
-            const moveResult = await moveTaskToPhase(
+            const moveResult = await projectSource.tasks.moveToPhase(
               task.task_id,
               newPhaseId,
               newStatusMappingId,
@@ -1448,7 +1467,7 @@ export default function ProjectDetail({
             }
             crossPhaseMoved++;
           } else {
-            const updatedTask = await updateTaskStatus(
+            const updatedTask = await projectSource.tasks.updateStatus(
               task.task_id,
               newStatusMappingId,
               prevBefore,
@@ -1523,10 +1542,13 @@ export default function ProjectDetail({
         return;
       }
 
+      // A shared source admits status changes within a phase only: no phase move, no reorder.
+      if (sharedMode && (task.phase_id !== newPhaseId || task.project_status_mapping_id === newStatusMappingId)) return;
+
       // Check if we're moving to a different phase
       if (task.phase_id !== newPhaseId) {
         // Move to different phase with new status
-        const moveResult = await moveTaskToPhase(taskId, newPhaseId, newStatusMappingId);
+        const moveResult = await projectSource.tasks.moveToPhase(taskId, newPhaseId, newStatusMappingId);
         if (isReturnedActionError(moveResult)) {
           toast.error(getErrorMessage(moveResult));
           return;
@@ -1537,7 +1559,7 @@ export default function ProjectDetail({
         toast.success(t('projectDetail.taskMovedToNewPhase', 'Task moved to new phase'));
       } else if (task.project_status_mapping_id !== newStatusMappingId) {
         // Same phase, different status
-        const updatedTask = await updateTaskStatus(taskId, newStatusMappingId, beforeTaskId, afterTaskId);
+        const updatedTask = await projectSource.tasks.updateStatus(taskId, newStatusMappingId, beforeTaskId, afterTaskId);
         if (isReturnedActionError(updatedTask)) {
           toast.error(getErrorMessage(updatedTask));
           return;
@@ -1548,7 +1570,7 @@ export default function ProjectDetail({
         toast.success(t('projectDetail.taskStatusUpdated', 'Task status updated'));
       } else {
         // Same phase and status - just reorder
-        unwrapActionResult(await reorderTask(taskId, beforeTaskId, afterTaskId));
+        unwrapActionResult(await projectSource.tasks.reorder(taskId, beforeTaskId, afterTaskId));
         toast.success(t('projectDetail.taskReordered', 'Task reordered'));
       }
     } catch (error) {
@@ -1600,14 +1622,14 @@ export default function ProjectDetail({
     const fetchInitialData = async () => {
       try {
         const [metrics, treeData, allPriorities, types] = await Promise.all([
-          calculateProjectCompletion(project.project_id),
-          getProjectTreeData(),
-          getAllPriorities('project_task'),
-          getTaskTypes(),
+          sharedMode ? Promise.resolve(null) : calculateProjectCompletion(project.project_id),
+          projectSource.options.tree(),
+          sharedMode ? Promise.resolve(null) : getAllPriorities('project_task'),
+          projectSource.options.types(),
         ]);
         if (stale) return;
 
-        setProjectMetrics({
+        if (metrics) setProjectMetrics({
           taskCompletionPercentage: metrics.taskCompletionPercentage,
           hoursCompletionPercentage: metrics.hoursCompletionPercentage,
           budgetedHours: metrics.budgetedHours,
@@ -1619,7 +1641,7 @@ export default function ProjectDetail({
           setProjectTreeData(treeData);
         }
 
-        setPriorities(allPriorities);
+        if (allPriorities) setPriorities(allPriorities);
         if (isReturnedActionError(types)) {
           handleError(types);
         } else {
@@ -1691,7 +1713,7 @@ export default function ProjectDetail({
 
       setIsLoadingTasks(true);
       try {
-        const phaseData = await getTasksForPhase(selectedPhase.phase_id);
+        const phaseData = await projectSource.tasks.forPhase(selectedPhase.phase_id);
         if (isReturnedActionError(phaseData)) {
           handleError(phaseData);
           return;
@@ -1727,6 +1749,7 @@ export default function ProjectDetail({
   useEffect(() => {
     let stale = false;
     const fetchAvatarUrls = async () => {
+      if (sharedMode) return;
       const userIds = new Set<string>();
 
       // Collect user IDs from task resources
@@ -1765,6 +1788,7 @@ export default function ProjectDetail({
     let stale = false;
 
     const fetchTeamData = async () => {
+      if (sharedMode) return;
       const tenant = project.tenant;
       if (!tenant) return;
 
@@ -1812,7 +1836,7 @@ export default function ProjectDetail({
 
     const loadTaskAndSelectPhase = async () => {
       try {
-        const task = await getTaskById(initialTaskId);
+        const task = await projectSource.tasks.get(initialTaskId);
         if (isReturnedActionError(task)) {
           toast.error(getErrorMessage(task));
           return;
@@ -1868,6 +1892,7 @@ export default function ProjectDetail({
   useEffect(() => {
     let stale = false;
     const fetchDocumentCounts = async () => {
+      if (sharedMode) return;
       if (!selectedPhase || projectTasks.length === 0) {
         setTaskDocumentCounts(new Map());
         return;
@@ -1900,7 +1925,7 @@ export default function ProjectDetail({
 
       try {
         const taskIds = projectTasks.map(task => task.task_id);
-        const counts = await getTaskCommentCountsBatch(taskIds);
+        const counts = await projectSource.tasks.commentCounts(taskIds);
         if (isReturnedActionError(counts)) {
           if (!stale) {
             toast.error(getErrorMessage(counts));
@@ -1994,7 +2019,7 @@ export default function ProjectDetail({
       let prevBefore = beforeTaskId;
       for (const task of samePhaseTasks) {
         try {
-          const updatedTask = await updateTaskStatus(task.task_id, targetStatusId, prevBefore, afterTaskId);
+          const updatedTask = await projectSource.tasks.updateStatus(task.task_id, targetStatusId, prevBefore, afterTaskId);
           if (isReturnedActionError(updatedTask)) {
             toast.error(getErrorMessage(updatedTask));
             failed++;
@@ -2011,7 +2036,7 @@ export default function ProjectDetail({
       // Move cross-phase tasks into the current phase at the target status
       for (const task of otherPhaseTasks) {
         try {
-          unwrapActionResult(await moveTaskToPhase(task.task_id, currentPhaseId, targetStatusId));
+          unwrapActionResult(await projectSource.tasks.moveToPhase(task.task_id, currentPhaseId, targetStatusId));
           movedInIds.push(task.task_id);
         } catch (error) {
           console.error(`Failed to move task ${task.task_id}:`, error);
@@ -2091,9 +2116,10 @@ export default function ProjectDetail({
 
   const handleDrop = async (e: React.DragEvent, targetStatusId: string, draggedTaskId: string, beforeTaskId: string | null, afterTaskId: string | null) => {
     e.preventDefault();
+    if (dragHidden) return;
 
     // Bulk drag: when the dragged task is part of a multi-selection, move them all
-    if (selectedTaskIds.has(draggedTaskId) && selectedTaskIds.size > 1) {
+    if (!sharedMode && selectedTaskIds.has(draggedTaskId) && selectedTaskIds.size > 1) {
       // Don't anchor positioning to tasks that are themselves being moved
       const safeBefore = beforeTaskId && selectedTaskIds.has(beforeTaskId) ? null : beforeTaskId;
       const safeAfter = afterTaskId && selectedTaskIds.has(afterTaskId) ? null : afterTaskId;
@@ -2107,6 +2133,9 @@ export default function ProjectDetail({
       console.error('Task not found');
       return;
     }
+
+    // A shared source admits status changes only: a drop into the same column is a reorder, which is not admitted.
+    if (sharedMode && task.project_status_mapping_id === targetStatusId) return;
 
     if (
       task.project_status_mapping_id !== targetStatusId &&
@@ -2153,7 +2182,7 @@ export default function ProjectDetail({
       animateDroppedTask();
 
       try {
-        const updatedTask = await updateTaskStatus(draggedTaskId, targetStatusId, beforeTaskId, afterTaskId);
+        const updatedTask = await projectSource.tasks.updateStatus(draggedTaskId, targetStatusId, beforeTaskId, afterTaskId);
         if (isReturnedActionError(updatedTask)) {
           setProjectTasks(prevTasks =>
             prevTasks.map((t): IProjectTask =>
@@ -2165,7 +2194,7 @@ export default function ProjectDetail({
           toast.error(getErrorMessage(updatedTask));
           return;
         }
-        const checklistItems = unwrapActionResult(await getTaskChecklistItems(draggedTaskId));
+        const checklistItems = sharedMode ? (task.checklist_items ?? []) : unwrapActionResult(await projectSource.tasks.checklist(draggedTaskId));
         const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
         // Reconcile with the authoritative server values (final order_key, etc.).
@@ -2194,7 +2223,7 @@ export default function ProjectDetail({
       animateDroppedTask();
 
       try {
-        unwrapActionResult(await reorderTask(draggedTaskId, beforeTaskId, afterTaskId));
+        unwrapActionResult(await projectSource.tasks.reorder(draggedTaskId, beforeTaskId, afterTaskId));
       } catch (error) {
         // Roll back the optimistic reorder on failure.
         setProjectTasks(prevTasks =>
@@ -2339,13 +2368,14 @@ export default function ProjectDetail({
   };
 
   const handlePhaseReorder = async (draggedPhaseId: string, beforePhaseId: string | null, afterPhaseId: string | null) => {
+    if (phaseMovesHidden) return;
     if (!draggedPhaseId) return;
     
     try {
       const draggedPhase = projectPhases.find(p => p.phase_id === draggedPhaseId);
       if (!draggedPhase) return;
       
-      const reorderResult = await reorderPhase(draggedPhaseId, beforePhaseId, afterPhaseId);
+      const reorderResult = await projectSource.phases.reorder(draggedPhaseId, beforePhaseId, afterPhaseId);
       if (isReturnedActionError(reorderResult)) {
         handleError(getErrorMessage(reorderResult));
         return;
@@ -2400,6 +2430,7 @@ export default function ProjectDetail({
   };
 
   const handlePhaseDropZone = async (e: React.DragEvent, targetPhase: IProjectPhase, beforePhaseId: string | null, afterPhaseId: string | null) => {
+    if (phaseMovesHidden) return;
     e.preventDefault();
     setPhaseDropTarget(null);
     setTaskDraggingOverPhaseId(null); // Clear highlight on drop
@@ -2469,6 +2500,7 @@ export default function ProjectDetail({
   };
 
   const handleMoveConfirm = async () => {
+    if (phaseMovesHidden) return;
     if (!moveConfirmation) return;
 
     // Bulk move: move every selected task to the target phase
@@ -2483,7 +2515,7 @@ export default function ProjectDetail({
           // Omit the status mapping so moveTaskToPhase performs phase-aware
           // status remapping — passing the source status can land a task on a
           // mapping that isn't valid for the target phase's status set.
-          const movedTask = unwrapActionResult(await moveTaskToPhase(id, targetPhase.phase_id));
+          const movedTask = unwrapActionResult(await projectSource.tasks.moveToPhase(id, targetPhase.phase_id));
           movedById.set(id, movedTask);
           success++;
         } catch (error) {
@@ -2538,12 +2570,12 @@ export default function ProjectDetail({
       // Omit the status mapping so moveTaskToPhase performs phase-aware status
       // remapping — passing the source status can land the task on a mapping
       // that isn't valid for the target phase's status set.
-      const updatedTask = unwrapActionResult(await moveTaskToPhase(
+      const updatedTask = unwrapActionResult(await projectSource.tasks.moveToPhase(
         moveConfirmation.taskId,
         moveConfirmation.targetPhase.phase_id,
       ));
 
-      const checklistItems = unwrapActionResult(await getTaskChecklistItems(moveConfirmation.taskId));
+      const checklistItems = unwrapActionResult(await projectSource.tasks.checklist(moveConfirmation.taskId));
       const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
       setProjectTasks(prevTasks =>
@@ -2586,8 +2618,8 @@ export default function ProjectDetail({
 
       if (activePhase && newTask.wbs_code.startsWith(activePhase.wbs_code)) {
         const [checklistResult, taskResourcesResult] = await Promise.all([
-          getTaskChecklistItems(newTask.task_id),
-          getTaskResourcesAction(newTask.task_id)
+          projectSource.tasks.checklist(newTask.task_id),
+          projectSource.tasks.resources(newTask.task_id)
         ]);
         const checklistItems = unwrapActionResult(checklistResult);
         const taskResources = unwrapActionResult(taskResourcesResult);
@@ -2629,7 +2661,7 @@ export default function ProjectDetail({
     } finally {
       setIsAddingTask(false);
     }
-  }, [selectedPhase, currentPhase, t]);
+  }, [selectedPhase, currentPhase, t, projectSource]);
 
   const handleCloseQuickAdd = useCallback(() => {
     setShowQuickAdd(false);
@@ -2654,6 +2686,7 @@ export default function ProjectDetail({
   }, [onUrlUpdate, t]);
 
   const handleAddCard = useCallback((status: ProjectStatus) => {
+    if (createHidden) return;
     if (!selectedPhase) {
       toast.error(t('projectDetail.selectPhaseToAddCard', 'Please select a phase before adding a card.'));
       return;
@@ -2671,8 +2704,8 @@ export default function ProjectDetail({
       try {
         // Fetch checklist items and task resources in parallel
         const [checklistResult, taskResourcesResult] = await Promise.all([
-          getTaskChecklistItems(updatedTask.task_id),
-          getTaskResourcesAction(updatedTask.task_id)
+          projectSource.tasks.checklist(updatedTask.task_id),
+          projectSource.tasks.resources(updatedTask.task_id)
         ]);
         const checklistItems = unwrapActionResult(checklistResult);
         const taskResources = unwrapActionResult(taskResourcesResult);
@@ -2738,7 +2771,7 @@ export default function ProjectDetail({
     setShowQuickAdd(false);
     setSelectedTask(null);
     setIsAddingTask(false);
-  }, [t]);
+  }, [t, projectSource]);
 
   const handleTaskSelected = useCallback((task: IProjectTask) => {
     // Log that we're using the cached project tree data for editing
@@ -2756,6 +2789,7 @@ export default function ProjectDetail({
   }, [phases, onUrlUpdate]);
 
   const handleAssigneeChange = async (taskId: string, newAssigneeId: string | null, newTaskName?: string) => {
+    if (writesLocked) return;
     try {
       // Find task in either kanban data or list view data
       const task = projectTasks.find(t => t.task_id === taskId) || allProjectTasks.find(t => t.task_id === taskId);
@@ -2763,7 +2797,7 @@ export default function ProjectDetail({
         throw new Error('Task not found');
       }
 
-      const updatedTask = await updateTaskWithChecklist(taskId, {
+      const updatedTask = await projectSource.tasks.update(taskId, {
         ...task,
         assigned_to: !newAssigneeId || newAssigneeId === 'unassigned' || newAssigneeId === '' ? null : newAssigneeId,
         task_name: newTaskName || task.task_name,
@@ -2777,7 +2811,7 @@ export default function ProjectDetail({
       }
 
       if (updatedTask) {
-        const checklistItems = unwrapActionResult(await getTaskChecklistItems(taskId));
+        const checklistItems = unwrapActionResult(await projectSource.tasks.checklist(taskId));
         const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
         // Update kanban view data
@@ -2803,6 +2837,30 @@ export default function ProjectDetail({
   // due date, hours). Mirrors handleAssigneeChange: spread the existing task,
   // apply the partial, persist, then sync both task arrays.
   const handleListTaskUpdate = async (taskId: string, updates: Partial<IProjectTask>) => {
+    // Shared source: only a status change is admitted here (tasks.updateStatus); the drawer's editTask carries the rest.
+    if (sharedMode) {
+      const statusId = updates.project_status_mapping_id;
+      if (!statusId || screen.readOnly) return;
+      const current = projectTasks.find(t => t.task_id === taskId) || allProjectTasks.find(t => t.task_id === taskId);
+      if (!current || current.project_status_mapping_id === statusId) return;
+      if (!(await confirmTaskChanges([{ taskId, change: { project_status_mapping_id: statusId } }]))) return;
+      try {
+        const moved = await projectSource.tasks.updateStatus(taskId, statusId, null, null);
+        if (isReturnedActionError(moved)) {
+          toast.error(getErrorMessage(moved));
+          return;
+        }
+        if (moved) {
+          const withChecklist = { ...moved, checklist_items: current.checklist_items ?? [] };
+          setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? withChecklist : t)));
+          setAllProjectTasks(prev => prev.map(t => (t.task_id === taskId ? withChecklist : t)));
+        }
+      } catch (error) {
+        handleError(error, 'Failed to update task. Please try again.');
+      }
+      return;
+    }
+
     // Inline status and date edits, and timeline drags, all save through here.
     if ('project_status_mapping_id' in updates || 'start_date' in updates || 'due_date' in updates) {
       const change: Parameters<typeof confirmTaskChanges>[0][number]['change'] = {};
@@ -2818,7 +2876,7 @@ export default function ProjectDetail({
         throw new Error('Task not found');
       }
 
-      const updatedTask = await updateTaskWithChecklist(taskId, {
+      const updatedTask = await projectSource.tasks.update(taskId, {
         ...task,
         estimated_hours: Number(task.estimated_hours) || 0,
         actual_hours: Number(task.actual_hours) || 0,
@@ -2845,6 +2903,7 @@ export default function ProjectDetail({
 
   // Timeline: a dependency drawn from one bar to another is a blocking link.
   const handleGanttAddDependency = async (predecessorTaskId: string, successorTaskId: string) => {
+    if (writesLocked) return;
     try {
       const dependency = await addTaskDependency(predecessorTaskId, successorTaskId, 'blocks');
       if (isReturnedActionError(dependency)) {
@@ -2859,6 +2918,7 @@ export default function ProjectDetail({
   };
 
   const handleGanttRemoveDependency = async (dependencyId: string) => {
+    if (writesLocked) return;
     try {
       const result = await removeTaskDependency(dependencyId);
       if (isReturnedActionError(result)) {
@@ -2874,13 +2934,13 @@ export default function ProjectDetail({
 
   const refreshTaskAfterTeamChange = async (taskId: string) => {
     const [updatedTaskResult, resourcesResult] = await Promise.all([
-      getTaskById(taskId),
-      getTaskResourcesAction(taskId),
+      projectSource.tasks.get(taskId),
+      projectSource.tasks.resources(taskId),
     ]);
     const updatedTask = unwrapActionResult(updatedTaskResult);
     const resources = unwrapActionResult(resourcesResult);
     if (!updatedTask) return;
-    const checklistItems = unwrapActionResult(await getTaskChecklistItems(taskId));
+    const checklistItems = unwrapActionResult(await projectSource.tasks.checklist(taskId));
     const taskWithChecklist = { ...updatedTask, checklist_items: checklistItems };
 
     setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
@@ -2893,6 +2953,7 @@ export default function ProjectDetail({
   };
 
   const performTeamAssign = async (taskId: string, teamId: string) => {
+    if (writesLocked) return;
     try {
       unwrapActionResult(await assignTeamToProjectTask(taskId, teamId));
       await refreshTaskAfterTeamChange(taskId);
@@ -2903,13 +2964,14 @@ export default function ProjectDetail({
   };
 
   const handleTeamAssign = async (taskId: string, teamId: string) => {
+    if (writesLocked) return;
     const task = projectTasks.find(x => x.task_id === taskId) || allProjectTasks.find(x => x.task_id === taskId);
     if (!task) return;
     if (task.assigned_team_id === teamId) return;
 
     if (task.assigned_team_id) {
       try {
-        const resources = unwrapActionResult(await getTaskResourcesAction(taskId));
+        const resources = unwrapActionResult(await projectSource.tasks.resources(taskId));
         setPendingTaskTeamMembers(resources.filter((r: any) => r.role === 'team_member'));
       } catch (error) {
         console.error('Failed to load task resources for team switch dialog:', error);
@@ -2927,6 +2989,7 @@ export default function ProjectDetail({
     mode: 'remove_all' | 'keep_all' | 'selective',
     keepUserIds?: string[]
   ) => {
+    if (writesLocked) return;
     if (!pendingTeamAssign) return;
     const { taskId, teamId } = pendingTeamAssign;
     try {
@@ -2942,6 +3005,7 @@ export default function ProjectDetail({
   };
 
   const handleEditPhase = (phase: IProjectPhase) => {
+    if (writesLocked) return;
     setEditingPhaseId(phase.phase_id);
     setEditingPhaseName(phase.phase_name);
     setEditingPhaseDescription(phase.description);
@@ -2958,7 +3022,7 @@ export default function ProjectDetail({
         return;
       }
   
-      const updatedPhase = await updatePhase(phase.phase_id, {
+      const updatedPhase = await projectSource.phases.update(phase.phase_id, {
         phase_name: editingPhaseName,
         description: editingPhaseDescription,
         start_date: editingStartDate || null,
@@ -3011,6 +3075,7 @@ export default function ProjectDetail({
   };
 
   const handleDeletePhase = async () => {
+    if (writesLocked) return;
     if (!deletePhaseConfirmation) return;
 
     try {
@@ -3047,6 +3112,7 @@ export default function ProjectDetail({
   };
 
   const handleDeletePhaseClick = (phase: IProjectPhase) => {
+    if (writesLocked) return;
     setDeletePhaseConfirmation({
       phaseId: phase.phase_id,
       phaseName: phase.phase_name
@@ -3055,7 +3121,7 @@ export default function ProjectDetail({
 
   const handleReorderTasks = async (updates: { taskId: string, newWbsCode: string }[]) => {
     try {
-      unwrapActionResult(await reorderTasksInStatus(updates));
+      unwrapActionResult(await projectSource.tasks.reorderInStatus(updates));
       // Update local state to reflect the new order
       const updatedTasks = [...projectTasks];
       updates.forEach(({taskId, newWbsCode}) => {
@@ -3075,12 +3141,14 @@ export default function ProjectDetail({
   };
 
   const handleMoveTaskClick = (task: IProjectTask) => {
+    if (phaseMovesHidden) return;
     console.log("Move Task action clicked in ProjectDetail:", task);
     setTaskToMove(task);
     setIsMoveTaskDialogOpen(true);
   };
 
   const handleDuplicateTaskClick = async (task: IProjectTask) => {
+    if (createHidden) return;
     console.log("Duplicate clicked in ProjectDetail:", task);
 
     const placeholderTargetPhase = projectPhases.find(p => p.phase_id !== task.phase_id) || projectPhases[0]; // Just picking another phase for demo
@@ -3093,9 +3161,9 @@ export default function ProjectDetail({
     try {
         // Fetch necessary details for the dialog toggles
         const [resourcesResult, linksResult, checklistResult] = await Promise.all([
-            getTaskResourcesAction(task.task_id),
-            getTaskTicketLinksAction(task.task_id),
-            getTaskChecklistItems(task.task_id)
+            projectSource.tasks.resources(task.task_id),
+            projectSource.tasks.ticketLinks(task.task_id),
+            projectSource.tasks.checklist(task.task_id)
         ]);
         const resources = unwrapActionResult(resourcesResult);
         const links = unwrapActionResult(linksResult);
@@ -3116,24 +3184,26 @@ export default function ProjectDetail({
 
   // Placeholder for delete handler (will add later)
   const handleDeleteTaskClick = (task: IProjectTask) => {
+    if (writesLocked) return;
     console.log("Delete clicked in ProjectDetail:", task);
     setTaskToDelete(task);
   };
  
   // Handler for MoveTaskDialog confirmation
   const handleDialogMoveConfirm = async (targetPhaseId: string, targetStatusId: string | undefined) => {
+    if (phaseMovesHidden) return;
     if (!taskToMove) return;
 
     console.log(`Moving task ${taskToMove.task_id} to phase ${targetPhaseId} with status ${targetStatusId}`);
     try {
-      const movedTask = unwrapActionResult(await moveTaskToPhase(
+      const movedTask = unwrapActionResult(await projectSource.tasks.moveToPhase(
         taskToMove.task_id,
         targetPhaseId,
         targetStatusId
       ));
 
       if (movedTask) {
-        const checklistItems = unwrapActionResult(await getTaskChecklistItems(movedTask.task_id));
+        const checklistItems = unwrapActionResult(await projectSource.tasks.checklist(movedTask.task_id));
         const taskWithDetails = { ...movedTask, checklist_items: checklistItems };
 
         // Check if the task was moved to a different phase than the currently selected one
@@ -3179,6 +3249,7 @@ export default function ProjectDetail({
 
   // Handler for bulk move confirmation
   const handleBulkMoveConfirm = async (targetPhaseId: string, targetStatusId: string | undefined) => {
+    if (phaseMovesHidden) return;
     const ids = Array.from(selectedTaskIds);
     if (ids.length === 0) return;
 
@@ -3187,7 +3258,7 @@ export default function ProjectDetail({
 
     for (const taskId of ids) {
       try {
-        const movedTask = unwrapActionResult(await moveTaskToPhase(taskId, targetPhaseId, targetStatusId));
+        const movedTask = unwrapActionResult(await projectSource.tasks.moveToPhase(taskId, targetPhaseId, targetStatusId));
         if (movedTask) {
           moved.push(movedTask);
         } else {
@@ -3235,6 +3306,7 @@ export default function ProjectDetail({
 
   // Handler for bulk delete confirmation
   const handleBulkDeleteConfirm = async () => {
+    if (writesLocked) return;
     const ids = Array.from(selectedTaskIds);
     if (ids.length === 0) return;
 
@@ -3284,6 +3356,7 @@ export default function ProjectDetail({
   const handleBulkAssignConfirm = async (
     selection: { kind: 'user'; userId: string | null } | { kind: 'team'; teamId: string },
   ) => {
+    if (writesLocked) return;
     const ids = Array.from(selectedTaskIds);
     if (ids.length === 0) return;
 
@@ -3311,7 +3384,7 @@ export default function ProjectDetail({
             unwrapActionResult(await removeTeamFromProjectTask(taskId, { mode: 'remove_all' }));
             resourcesToRefresh.push(taskId);
           }
-          const updatedTask = await updateTaskWithChecklist(taskId, {
+          const updatedTask = await projectSource.tasks.update(taskId, {
             ...task,
             assigned_to: userId,
             assigned_team_id: null,
@@ -3325,7 +3398,7 @@ export default function ProjectDetail({
             continue;
           }
           if (updatedTask) {
-            const checklistItems = unwrapActionResult(await getTaskChecklistItems(taskId));
+            const checklistItems = unwrapActionResult(await projectSource.tasks.checklist(taskId));
             const taskWithChecklist = { ...updatedTask, assigned_team_id: null, checklist_items: checklistItems };
             setProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
             setAllProjectTasks(prev => prev.map(t => (t.task_id === taskId ? taskWithChecklist : t)));
@@ -3343,7 +3416,7 @@ export default function ProjectDetail({
         const refreshed = await Promise.all(
           resourcesToRefresh.map(async (id) => {
             try {
-              return [id, unwrapActionResult(await getTaskResourcesAction(id))] as const;
+              return [id, unwrapActionResult(await projectSource.tasks.resources(id))] as const;
             } catch (error) {
               console.error(`Failed to refresh resources for task ${id}:`, error);
               return null;
@@ -3428,6 +3501,7 @@ export default function ProjectDetail({
 
   // Handler for bulk tag add confirmation
   const handleBulkAddTagsConfirm = async (tagTexts: string[]) => {
+    if (writesLocked) return;
     const ids = Array.from(selectedTaskIds);
     if (ids.length === 0 || tagTexts.length === 0) return;
 
@@ -4158,7 +4232,7 @@ export default function ProjectDetail({
           avatarSize={listDensity.avatarSize}
           priorities={priorities}
           taskTypes={taskTypes}
-          onTaskUpdate={handleListTaskUpdate}
+          onTaskUpdate={screen.readOnly ? undefined : handleListTaskUpdate}
           taskResources={allProjectTaskResources}
           taskTags={allProjectTaskTags}
           taskDependencies={allTaskDependencies}
@@ -4172,11 +4246,12 @@ export default function ProjectDetail({
           }, {} as Record<string, { total: number; completed: number; items?: Array<{ item_name: string; completed: boolean }> }>)}
           documentCounts={{}}
           onTaskClick={handleTaskSelected}
-          onTaskDelete={handleDeleteTaskClick}
-          onTaskDuplicate={handleDuplicateTaskClick}
-          onTaskMove={handleListViewTaskMove}
-          onAddPhase={() => setShowPhaseQuickAdd(true)}
-          onAddTask={(phaseId) => {
+          statusOnlyUpdate={sharedMode}
+          onTaskDelete={writesLocked ? undefined : handleDeleteTaskClick}
+          onTaskDuplicate={createHidden ? undefined : handleDuplicateTaskClick}
+          onTaskMove={dragHidden ? undefined : handleListViewTaskMove}
+          onAddPhase={createHidden ? undefined : () => setShowPhaseQuickAdd(true)}
+          onAddTask={createHidden ? undefined : (phaseId) => {
             const phase = projectPhases.find(p => p.phase_id === phaseId);
             if (phase) {
               setCurrentPhase(phase);
@@ -4185,12 +4260,12 @@ export default function ProjectDetail({
           }}
           phaseBillingBadges={phaseBillingBadges}
           phaseAllTasksClosed={phaseAllTasksClosed}
-          canCompletePhase={canCompletePhase}
+          canCompletePhase={canCompletePhase && !writesLocked}
           onMarkPhaseComplete={handleMarkPhaseComplete}
           onReopenPhase={handleReopenPhase}
-          onTaskTagsChange={handleTaskTagsChange}
-          onAssigneeChange={(taskId, newAssigneeId) => handleAssigneeChange(taskId, newAssigneeId)}
-          onTeamAssign={handleTeamAssign}
+          onTaskTagsChange={writesLocked ? undefined : handleTaskTagsChange}
+          onAssigneeChange={writesLocked ? undefined : (taskId, newAssigneeId) => handleAssigneeChange(taskId, newAssigneeId)}
+          onTeamAssign={writesLocked ? undefined : handleTeamAssign}
           teams={teams}
           users={users}
           teamNames={teamNames}
@@ -4299,7 +4374,7 @@ export default function ProjectDetail({
             onDuplicateTaskClick={handleDuplicateTaskClick}
             onEditTaskClick={handleTaskSelected}
             onDeleteTaskClick={handleDeleteTaskClick}
-            onTaskTagsChange={handleTaskTagsChange}
+            onTaskTagsChange={writesLocked ? undefined : handleTaskTagsChange}
             onHideColumn={toggleKanbanStatusHidden}
           />
         )}
@@ -4361,7 +4436,7 @@ export default function ProjectDetail({
                     setCurrentPhase(selectedPhase);
                     setShowQuickAdd(true);
                   }}
-                  onAddPhase={() => setShowPhaseQuickAdd(true)}
+                  onAddPhase={createHidden ? (() => undefined) : () => setShowPhaseQuickAdd(true)}
                   onEditPhase={handleEditPhase}
                   onSavePhase={handleSavePhase}
                   onCancelEdit={handleCancelEdit}
@@ -4381,7 +4456,7 @@ export default function ProjectDetail({
                   phaseBillingBadges={phaseBillingBadges}
                   phaseAllTasksClosed={phaseAllTasksClosed}
                   phaseCustomStatusCounts={phaseCustomStatusCounts}
-                  canCompletePhase={canCompletePhase}
+                  canCompletePhase={canCompletePhase && !writesLocked}
                   onMarkPhaseComplete={handleMarkPhaseComplete}
                   onReopenPhase={handleReopenPhase}
                 />
@@ -4461,6 +4536,7 @@ export default function ProjectDetail({
                           <span className={styles.kanbanStatusStripName}>
                             {status.custom_name || status.name}
                           </span>
+                          {!createHidden && (
                           <Button
                             id={`sticky-add-task-button-${status.project_status_mapping_id}`}
                             variant="default"
@@ -4473,6 +4549,7 @@ export default function ProjectDetail({
                           >
                             <Plus className="w-3 h-3 text-white" />
                           </Button>
+                          )}
                           <span className={styles.kanbanStatusStripCount} style={countStyle}>
                             {statusTaskCounts[status.project_status_mapping_id] ?? 0}
                           </span>
@@ -4598,6 +4675,7 @@ export default function ProjectDetail({
           projectTreeData={projectTreeData}
           onConfirm={async (targetPhaseId: string, options: DuplicateOptions) => {
             if (!taskToDuplicate) return;
+            if (writesLocked) return;
             try {
               const newTask = unwrapActionResult(await duplicateTaskToPhase(
                 taskToDuplicate.task_id,
@@ -4605,7 +4683,7 @@ export default function ProjectDetail({
                 options
               ));
               
-              const checklistItems = unwrapActionResult(await getTaskChecklistItems(newTask.task_id));
+              const checklistItems = unwrapActionResult(await projectSource.tasks.checklist(newTask.task_id));
               const taskWithChecklist = { ...newTask, checklist_items: checklistItems };
               setProjectTasks(prev => [...prev, taskWithChecklist]);
               // Add to allProjectTasks for filtered counts
@@ -4642,15 +4720,17 @@ export default function ProjectDetail({
       )}
 
       {/* Bulk task action bar */}
-      <BulkTaskActionBar
-        onMove={() => setIsBulkMoveOpen(true)}
-        onAssign={() => setIsBulkAssignOpen(true)}
-        onTags={() => {
-          setBulkTagsErrors([]);
-          setIsBulkTagsOpen(true);
-        }}
-        onDelete={() => setIsBulkDeleteOpen(true)}
-      />
+      {!writesLocked && (
+        <BulkTaskActionBar
+          onMove={() => setIsBulkMoveOpen(true)}
+          onAssign={() => setIsBulkAssignOpen(true)}
+          onTags={() => {
+            setBulkTagsErrors([]);
+            setIsBulkTagsOpen(true);
+          }}
+          onDelete={() => setIsBulkDeleteOpen(true)}
+        />
+      )}
 
       {/* Bulk Move Task Dialog */}
       {isBulkMoveOpen && (
@@ -4713,6 +4793,7 @@ export default function ProjectDetail({
           onClose={() => setTaskToDelete(null)}
           onConfirm={async () => {
             if (!taskToDelete) return;
+            if (writesLocked) return;
             try {
               const result = await deleteTaskAction(taskToDelete.task_id);
               if (isReturnedActionError(result)) {
@@ -4749,6 +4830,7 @@ export default function ProjectDetail({
       )}
 
       {/* Phase/Task Import Dialog */}
+      {!sharedMode && (
       <PhaseTaskImportDialog
         isOpen={showImportDialog}
         onClose={() => {
@@ -4783,6 +4865,7 @@ export default function ProjectDetail({
           window.location.reload();
         }}
       />
+      )}
 
       {dependencyGuardDialog}
       <RemoveTeamDialog

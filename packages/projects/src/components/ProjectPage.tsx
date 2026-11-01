@@ -1,6 +1,6 @@
 'use client';
 
-import { getProjectMetadata, updateProject } from '../actions/projectActions';
+import { useProjectDataSource } from '../context/ProjectDataSourceContext';
 import ProjectInfo from './ProjectInfo';
 import ProjectDetail from './ProjectDetail';
 import { TaskShareActionsProvider } from './TaskShareActionsContext';
@@ -32,6 +32,8 @@ function isReturnedActionError(value: unknown): value is { actionError: string }
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { t } = useTranslation('features/projects');
+  const projectSource = useProjectDataSource();
+  const screen = projectSource.screen;
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const taskIdFromUrl = searchParams?.get('taskId') ?? null;
@@ -60,7 +62,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     if (!projectId) return;
 
     const fetchProjectMetadata = async () => {
-      const metadata = await getProjectMetadata(projectId);
+      const metadata = await projectSource.project.metadata(projectId);
       if (isReturnedActionError(metadata)) {
         handleError(getErrorMessage(metadata));
         return;
@@ -68,13 +70,13 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       setProjectMetadata(metadata);
     };
     fetchProjectMetadata();
-  }, [projectId]);
+  }, [projectId, projectSource]);
 
   const handleAssignedUserChange = async (userId: string | null) => {
     if (!projectId) return;
 
     try {
-      const result = await updateProject(projectId, {
+      const result = await projectSource.project.update(projectId, {
         assigned_to: userId
       });
       if (isReturnedActionError(result)) {
@@ -82,7 +84,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         return;
       }
       // Refresh project metadata after update
-      const updatedMetadata = await getProjectMetadata(projectId);
+      const updatedMetadata = await projectSource.project.metadata(projectId);
       if (isReturnedActionError(updatedMetadata)) {
         handleError(getErrorMessage(updatedMetadata));
         return;
@@ -97,7 +99,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     if (!projectId) return;
 
     try {
-      const result = await updateProject(projectId, {
+      const result = await projectSource.project.update(projectId, {
         contact_name_id: contactId
       });
       if (isReturnedActionError(result)) {
@@ -105,7 +107,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         return;
       }
       // Refresh project metadata after update
-      const updatedMetadata = await getProjectMetadata(projectId);
+      const updatedMetadata = await projectSource.project.metadata(projectId);
       if (isReturnedActionError(updatedMetadata)) {
         handleError(getErrorMessage(updatedMetadata));
         return;
@@ -120,13 +122,13 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     if (!projectId) return;
 
     try {
-      const result = await updateProject(projectId, updatedProject);
+      const result = await projectSource.project.update(projectId, updatedProject);
       if (isReturnedActionError(result)) {
         handleError(getErrorMessage(result));
         return;
       }
       // Refresh project metadata after update
-      const updatedMetadata = await getProjectMetadata(projectId);
+      const updatedMetadata = await projectSource.project.metadata(projectId);
       if (isReturnedActionError(updatedMetadata)) {
         handleError(getErrorMessage(updatedMetadata));
         return;
@@ -190,6 +192,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         projectTags={projectTags}
         allTagTexts={allTagTexts}
         onTagsChange={setProjectTags}
+        freezeProjectEdit={screen.freezeProjectEdit}
       />
       <ProjectDetail
         project={projectMetadata.project}

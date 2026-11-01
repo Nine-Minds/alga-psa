@@ -22,6 +22,7 @@ import { useTaskShareActions } from './TaskShareActionsContext';
 import { useTaskSelection } from './TaskSelectionContext';
 import { useTranslation } from 'react-i18next';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useProjectDataSource } from '../context/ProjectDataSourceContext';
 
 interface ProjectBilledSummary {
   invoicedCents: number;
@@ -53,6 +54,8 @@ interface ProjectInfoProps {
   projectTags?: ITag[];
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
+  /** Hide project-level editing (assigned user, contact, edit drawer, tags). Defaults to the screen's setting. */
+  freezeProjectEdit?: boolean;
 }
 
 export default function ProjectInfo({
@@ -68,10 +71,15 @@ export default function ProjectInfo({
   onStatusesChanged,
   projectTags = [],
   allTagTexts = [],
-  onTagsChange
+  onTagsChange,
+  freezeProjectEdit = false
 }: ProjectInfoProps) {
   const { t } = useTranslation(['features/projects', 'common']);
   const billingIntegration = useProjectBillingIntegration();
+  const projectSource = useProjectDataSource();
+  const sharedMode = projectSource.kind !== 'native';
+  const projectFrozen = freezeProjectEdit || projectSource.screen.freezeProjectEdit;
+  const backHref = projectSource.screen.backHref;
   const { openDrawer, closeDrawer } = useDrawer();
   const { selectedTaskIds } = useTaskSelection();
   const selectedTaskCount = selectedTaskIds.size;
@@ -90,6 +98,7 @@ export default function ProjectInfo({
   const [billedSummary, setBilledSummary] = useState<ProjectBilledSummary | null>(null);
 
   useEffect(() => {
+    if (sharedMode) return;
     let stale = false;
     // Fetch project metrics and the ambient billing summary concurrently so the
     // billed bar (F135) extends the existing metadata load rather than adding a
@@ -139,7 +148,7 @@ export default function ProjectInfo({
 
     fetchProjectMetrics();
     return () => { stale = true; };
-  }, [project.project_id, billingIntegration]);
+  }, [project.project_id, billingIntegration, sharedMode]);
 
   useEffect(() => {
     setCurrentProject(project);
@@ -192,7 +201,11 @@ export default function ProjectInfo({
       {/* First line: Back nav, project number, title, tags, and edit button */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-5">
-          <BackNav href="/msp/projects">{t('backToProjects', '← Back to Projects')}</BackNav>
+          {sharedMode ? (
+            backHref ? <BackNav href={backHref}>{t('backToSharedTasks', '← Back to Shared Tasks')}</BackNav> : null
+          ) : (
+            <BackNav href="/msp/projects">{t('backToProjects', '← Back to Projects')}</BackNav>
+          )}
 
           {/* Project number */}
           <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
@@ -201,7 +214,7 @@ export default function ProjectInfo({
 
           <h1 className="text-xl font-bold">{currentProject.project_name}</h1>
           {/* Tags using TagManager for inline editing */}
-          {onTagsChange && (
+          {onTagsChange && !projectFrozen && !sharedMode && (
             <TagManager
               entityId={project.project_id}
               entityType="project"
@@ -211,6 +224,7 @@ export default function ProjectInfo({
           )}
         </div>
         <div className="flex items-center gap-2">
+          {!sharedMode && (<>
           <Button
             id="save-as-template-button"
             variant="outline"
@@ -269,6 +283,7 @@ export default function ProjectInfo({
             <Edit2 className="h-4 w-4 mr-2" />
             {t('common:actions.edit', 'Edit')}
           </Button>
+          </>)}
         </div>
       </div>
       

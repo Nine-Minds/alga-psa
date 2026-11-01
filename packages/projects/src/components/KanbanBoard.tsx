@@ -5,7 +5,6 @@ import { IProjectTask, ProjectStatus, IProjectTicketLinkWithDetails, ITaskType, 
 import { IUserWithRoles } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { IPriority, IStandardPriority } from '@alga-psa/types';
-import { getTaskTypes } from '../actions/projectTaskActions';
 import StatusColumn from './StatusColumn';
 import {
   createFallbackStatus,

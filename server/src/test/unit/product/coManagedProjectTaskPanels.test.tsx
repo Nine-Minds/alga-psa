@@ -2,7 +2,6 @@
 import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import CoManagedProjectTaskEditor from '../../../components/co-managed/CoManagedProjectTaskEditor';
 import CoManagedProjectTaskHistory from '../../../components/co-managed/CoManagedProjectTaskHistory';
 import CoManagedProjectTaskAssignment from '../../../components/co-managed/CoManagedProjectTaskAssignment';
 
@@ -32,74 +31,6 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe('co-managed project task editor', () => {
-  it('renders the snapshot values and submits only the changed fields with both tokens and an operation id', async () => {
-    mocks.edit.mockResolvedValue({ success: true, receipt: { revision: 4, taskUpdatedAt: '2026-10-02T10:00:00.000Z' } });
-    render(<CoManagedProjectTaskEditor {...props} />);
-    const name = await screen.findByDisplayValue('Patch servers');
-    expect(await screen.findByRole('option', { name: 'Done' })).toBeTruthy();
-    fireEvent.change(name, { target: { value: 'Patch all servers' } });
-    fireEvent.change(document.getElementById('co-managed-task-status')!, { target: { value: 'm2' } });
-    fireEvent.click(document.getElementById('co-managed-task-save')!);
-    await waitFor(() => expect(mocks.edit).toHaveBeenCalledWith('c1', 'r1', 't1', {
-      operationId: expect.stringMatching(UUID), expectedRevision: 3, expectedTaskUpdatedAt: '2026-10-01T10:00:00.000Z',
-      patch: { task_name: 'Patch all servers', project_status_mapping_id: 'm2' } }));
-    await screen.findByText('Saved.');
-  });
-
-  it('shows a conflict alert and Reload latest applies the fresh snapshot, then saves at the new revision', async () => {
-    mocks.edit.mockResolvedValueOnce({ success: false, error: 'CONFLICT', reason: 'customer_drift', snapshot: snapshot(5, 'Renamed by customer') });
-    render(<CoManagedProjectTaskEditor {...props} />);
-    fireEvent.change(await screen.findByDisplayValue('Patch servers'), { target: { value: 'Mine' } });
-    fireEvent.click(document.getElementById('co-managed-task-save')!);
-    await screen.findByText(/changed since you opened it/);
-    fireEvent.click(document.getElementById('co-managed-task-reload')!);
-    fireEvent.change(await screen.findByDisplayValue('Renamed by customer'), { target: { value: 'Retry' } });
-    mocks.edit.mockResolvedValueOnce({ success: true, receipt: { revision: 6, taskUpdatedAt: '2026-10-03T00:00:00.000Z' } });
-    fireEvent.click(document.getElementById('co-managed-task-save')!);
-    await waitFor(() => expect(mocks.edit).toHaveBeenLastCalledWith('c1', 'r1', 't1', expect.objectContaining({ expectedRevision: 5, patch: { task_name: 'Retry' } })));
-    expect(screen.queryByText(/changed since you opened it/)).toBeNull();
-  });
-
-  it.each(['INVALID', 'NOT_FOUND'])('answers %s with one opaque message', async error => {
-    mocks.edit.mockResolvedValue({ success: false, error });
-    render(<CoManagedProjectTaskEditor {...props} />);
-    fireEvent.change(await screen.findByDisplayValue('Patch servers'), { target: { value: 'x' } });
-    fireEvent.click(document.getElementById('co-managed-task-save')!);
-    expect((await screen.findByText('This task could not be saved.')).textContent).not.toMatch(/invalid|not found|denied/i);
-  });
-
-  it('shows the current MSP assignee by display name on first render, with no ids', async () => {
-    render(<CoManagedProjectTaskEditor customerTenant="c1" relationshipId="r1" taskId="t1" userId="u1" />);
-    await screen.findByText('Assigned to Quinn Tech');
-    expect(document.body.textContent).not.toMatch(/[0-9a-f]{8}-[0-9a-f]{4}/);
-  });
-
-  it('shows an assigned task with a hidden assignee name as assigned, not as unassigned', async () => {
-    mocks.snapshot.mockResolvedValue({ ...snapshot(), assignee: { kind: 'user', name: null } });
-    render(<CoManagedProjectTaskEditor {...props} />);
-    await screen.findByText('Assigned (name hidden)');
-    expect(screen.queryByText('Not assigned')).toBeNull();
-  });
-
-  it('still shows Not assigned when the snapshot has no assignee', async () => {
-    mocks.snapshot.mockResolvedValue({ ...snapshot(), assignee: null });
-    render(<CoManagedProjectTaskEditor {...props} />);
-    await screen.findByText('Not assigned');
-    expect(screen.queryByText('Assigned (name hidden)')).toBeNull();
-  });
-
-  it('explains a task without an MSP reference and offers assignment', async () => {
-    mocks.snapshot.mockResolvedValue(null);
-    render(<CoManagedProjectTaskEditor {...props} />);
-    await screen.findByText(/once it is assigned to you/);
-    // No reference looks exactly like a denial: no assignee text, no extra signal.
-    expect(screen.queryByText(/Assigned to /)).toBeNull();
-    expect(document.getElementById('co-managed-task-save')).toBeNull();
-    expect(document.getElementById('co-managed-task-assign-me')).not.toBeNull();
-  });
-});
-
 describe('co-managed project task history', () => {
   it('renders the qualified author and readable changes without ids', async () => {
     mocks.history.mockResolvedValue([{ auditId: 'a1', at: '2026-10-02T10:00:00.000Z', operation: 'co_managed_project_task_update', authorName: 'Quinn Tech', organizationName: 'Emerald MSP',
@@ -113,6 +44,16 @@ describe('co-managed project task history', () => {
 });
 
 describe('co-managed project task assignment', () => {
+  it('hides "Assign to me" when the task is already assigned to the viewer, and offers it otherwise', () => {
+    const shared = { ...props, revision: 3, assigneeName: 'QA Tester', isAssigned: true };
+    const mine = render(<CoManagedProjectTaskAssignment {...shared} assignedToMe />);
+    expect(mine.container.textContent).toContain('Assigned to QA Tester');
+    expect(mine.container.querySelector('#co-managed-task-assign-me')).toBeNull();
+    mine.unmount();
+    const other = render(<CoManagedProjectTaskAssignment {...shared} assignedToMe={false} />);
+    expect(other.container.querySelector('#co-managed-task-assign-me')).not.toBeNull();
+  });
+
   it('assigns with expectedRevision null first, then the new revision once a reference exists', async () => {
     mocks.assign.mockResolvedValue({ success: true, receipt: { referenceId: 'ref', revision: 1, assigneeName: 'Quinn Tech' } });
     const onChanged = vi.fn();
