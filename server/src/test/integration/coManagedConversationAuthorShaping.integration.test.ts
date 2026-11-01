@@ -104,7 +104,7 @@ describe('conversation author shaping across the action boundary', () => {
     expect(target).toMatchObject({ storeTenant: owner, commentId: ids.user });
     expect(target.threadId).toBeTruthy();
     const actor = { kind: 'session', tenant: sponsor, userId: sponsorTech, sessionId: uuidv4() };
-    const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+    const { createSharedTicketComment } = await import('@alga-psa/co-managed/sharedTicketCommentWriter');
     const receipt = await createSharedTicketComment(db, actor as any, resource, { operationId: uuidv4(), parent: { storeTenant: target.storeTenant, threadId: target.threadId, commentId: target.commentId }, text: 'reply' });
     expect(receipt).toMatchObject({ storeTenant: owner, threadId: target.threadId });
     expect(await db('comments').where({ tenant: owner, comment_id: receipt.commentId }).first()).toMatchObject({ parent_comment_id: ids.user });
