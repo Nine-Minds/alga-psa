@@ -1,4 +1,4 @@
-// Next 16.3.8 bundles React Flight's dev async ancestry tracker in several
+// Next 16.4.2 bundles React Flight's dev async ancestry tracker in several
 // runtimes. Destroyed resources must release their ancestry even when a newer
 // operation still references the metadata node. See react/react#36836.
 const fs = require('node:fs');
@@ -21,7 +21,7 @@ function patchFlightDebugSource(source, filename) {
 
 function patchNextFlightDebug(nextRoot) {
   const version = JSON.parse(fs.readFileSync(path.join(nextRoot, 'package.json'), 'utf8')).version;
-  if (version !== '16.3.8') throw new Error(`React Flight ancestry repair requires Next 16.3.8; found ${version}.`);
+  if (version !== '16.4.2') throw new Error(`React Flight ancestry repair requires Next 16.4.2; found ${version}.`);
   const files = [];
   for (const base of ['app-page', 'use-cache-probe-worker']) {
     for (const variant of ['', '-turbo', '-experimental', '-turbo-experimental']) {

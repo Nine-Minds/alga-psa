@@ -21,7 +21,7 @@ const matrix: Row[] = [
   // QuickBooks Online: services/products and the automatic discount only.
   ['quickbooks_online', 'service', null, true],
   ['quickbooks_online', 'discount', null, true],
-  ['quickbooks_online', 'tax_code', null, false],
+  ['quickbooks_online', 'tax_code', null, true],
   ['quickbooks_online', 'client', null, false],
   ['quickbooks_online', 'invoice', null, false],
   ['quickbooks_online', 'payment', null, false],

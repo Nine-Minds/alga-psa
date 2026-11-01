@@ -1,3 +1,5 @@
+import { coManagedWorkspaceDenial } from '@/lib/api/coManagedWorkspaceDenial';
+import { canReadDocument } from '@alga-psa/documents/lib/documentPermissions';
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
 import DocumentBlockContent from 'server/src/lib/models/documentBlockContent';
@@ -16,7 +18,6 @@ import { StorageService } from '@alga-psa/storage/StorageService';
 import { tenantDb, withTransaction, runWithTenant } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { getCurrentUser, getSession } from '@alga-psa/auth';
-import { hasPermission } from 'server/src/lib/auth/rbac';
 import { buildDocumentMarkdown } from '@alga-psa/documents/lib/documentMarkdownExport';
 
 // LEVERAGE: pattern document-byte-serving
@@ -49,10 +50,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const denial = await coManagedWorkspaceDenial(tenant);
+  if (denial) return denial;
+
   // Wrap in runWithTenant to ensure tenant context persists across async boundaries
   return await runWithTenant(tenant, async () => {
     // Mirror downloadDocument()'s permission gate for every export format.
-    if (!(await hasPermission(currentUser, 'document', 'read'))) {
+    if (!(await canReadDocument(currentUser, lookupId))) {
       logger.warn(`User ${currentUser.user_id} lacks document:read permission. ID: ${lookupId}, Tenant: ${tenant}`);
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }

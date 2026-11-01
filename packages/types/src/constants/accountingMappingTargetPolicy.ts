@@ -18,11 +18,12 @@ const QBD_SHARED_ENTITY_TYPES: ReadonlySet<string> = new Set(['service', 'discou
 
 /**
  * QuickBooks Online services, products and the automatic discount all export
- * as an ItemRef, so any number of them may route through one item. Customers,
- * invoices, payments, payment terms, categories and (deliberately, until an
- * ambiguous-tax import policy exists) tax codes stay exclusive.
+ * as an ItemRef, so any number of them may route through one item. Tax codes are
+ * shared too: a US Automated Sales Tax company has only TAX and NON, so every
+ * taxable region maps to TAX. Customers, invoices, payments, payment terms and
+ * categories stay exclusive.
  */
-const QBO_SHARED_ENTITY_TYPES: ReadonlySet<string> = new Set(['service', 'discount']);
+const QBO_SHARED_ENTITY_TYPES: ReadonlySet<string> = new Set(['service', 'discount', 'tax_code']);
 
 export function isSharedMappingTarget(
   integrationType: string,

@@ -16,7 +16,7 @@ import { REPO, closure, isForbiddenForWorkers } from './importGraph';
 // Registry
 // ---------------------------------------------------------------------------
 
-export const SCAN_ROOTS = ['server/src', 'packages', 'shared', 'services', 'ee/temporal-workflows'] as const;
+export const SCAN_ROOTS = ['server/src', 'packages', 'shared', 'services', 'ee/temporal-workflows', 'ee/server/src'] as const;
 
 /**
  * The registry later cards extend. One entry per surface family in plan 2.7 / 4.
@@ -35,10 +35,20 @@ export const ENTRY_POINT_FAMILIES: readonly EntryPointFamily[] = [
   { id: 'rest-routes', glob: 'server/src/app/api/**/co-management/**', ruleA: true },
   { id: 'server-actions', glob: 'server/src/lib/actions/coManaged*', ruleA: true },
   { id: 'package-actions', glob: 'packages/co-managed/src/**/actions*', ruleA: true },
+  // Shared PSA/customer actions and token verification discover product and
+  // trusted tenant first, then delegate to the separately registered guard.
+  { id: 'user-invitation-actions', glob: 'packages/users/src/actions/user-actions/userInvitationActions.ts', ruleA: false },
+  { id: 'user-invitation-service', glob: 'packages/users/src/services/UserInvitationService.ts', ruleA: false },
+  { id: 'user-invitation-gate', glob: 'packages/users/src/lib/coManagedInvitationCapability.ts', ruleA: true },
   { id: 'jobs', glob: 'packages/jobs/**/coManaged*', ruleA: true },
   { id: 'subscribers', glob: 'server/src/lib/eventBus/subscribers/coManaged*', ruleA: true },
   { id: 'temporal-activities', glob: 'ee/temporal-workflows/src/activities/coManaged*', ruleA: true },
   { id: 'temporal-workflows', glob: 'ee/temporal-workflows/src/workflows/coManaged*', ruleA: true },
+  // The Temporal files are kebab-case; the camelCase globs above do not match them.
+  { id: 'temporal-activities-kebab', glob: 'ee/temporal-workflows/src/activities/co-managed*', ruleA: true },
+  // A workflow sandbox cannot import the adapter: its activities carry the gate.
+  { id: 'temporal-workflows-kebab', glob: 'ee/temporal-workflows/src/workflows/co-managed*', ruleA: false },
+  { id: 'ee-server-actions', glob: 'ee/server/src/lib/actions/coManaged*', ruleA: true },
   { id: 'shared-services', glob: 'shared/services/**/coManaged*', ruleA: true },
   // Co-managed UI mounts (plan 4). DO-NOT-PORT 24's raw-flag boundary lived at
   // server/src/components/co-managed/CoManagedFeatureBoundary.tsx.
@@ -56,28 +66,38 @@ export const ENTRY_POINT_GLOBS: readonly string[] = ENTRY_POINT_FAMILIES.map((f)
  * updates the count in the same diff.
  */
 export const EXPECTED_FAMILY_FILE_COUNTS: Readonly<Record<string, { glob: string; files: number }>> = {
-  'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 0 },
+  'rsc-pages': { glob: 'server/src/app/msp/co-manag*/**', files: 10 },
   'rest-routes': { glob: 'server/src/app/api/**/co-management/**', files: 0 },
-  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 0 },
+  'server-actions': { glob: 'server/src/lib/actions/coManaged*', files: 16 },
   'package-actions': { glob: 'packages/co-managed/src/**/actions*', files: 0 },
+  'user-invitation-actions': { glob: 'packages/users/src/actions/user-actions/userInvitationActions.ts', files: 1 },
+  'user-invitation-service': { glob: 'packages/users/src/services/UserInvitationService.ts', files: 1 },
+  'user-invitation-gate': { glob: 'packages/users/src/lib/coManagedInvitationCapability.ts', files: 1 },
   jobs: { glob: 'packages/jobs/**/coManaged*', files: 0 },
-  subscribers: { glob: 'server/src/lib/eventBus/subscribers/coManaged*', files: 0 },
+  subscribers: { glob: 'server/src/lib/eventBus/subscribers/coManaged*', files: 1 },
   'temporal-activities': { glob: 'ee/temporal-workflows/src/activities/coManaged*', files: 0 },
   'temporal-workflows': { glob: 'ee/temporal-workflows/src/workflows/coManaged*', files: 0 },
+  'temporal-activities-kebab': { glob: 'ee/temporal-workflows/src/activities/co-managed*', files: 1 },
+  'temporal-workflows-kebab': { glob: 'ee/temporal-workflows/src/workflows/co-managed*', files: 1 },
+  'ee-server-actions': { glob: 'ee/server/src/lib/actions/coManaged*', files: 2 },
   'shared-services': { glob: 'shared/services/**/coManaged*', files: 0 },
-  'server-ui': { glob: 'server/src/components/co-managed/**', files: 0 },
+  'server-ui': { glob: 'server/src/components/co-managed/**', files: 36 },
   'package-ui': { glob: 'packages/co-managed/src/components/**', files: 0 },
 };
 
 /** The six adapters (plus the three Next-free guard names they export). */
 export const ADAPTER_EXPORTS = new Set([
   'requireCapabilityForAction', // 1 server action
+  'requireCapabilityEitherMode', // 1 server action, two-sided (admits else serves)
   'capabilityRouteGuard', //       2 REST
   'requireCapabilityForPage', //   3 RSC
   'withCapabilityJob', //          4 job
   'isCapabilityServed', //         5 subscriber
   'filterCapabilityServed', //     5 subscriber (batch)
   'activityServesCapability', //   6 Temporal
+  // 7 purchase surface (L8a): a purchase creates the FIRST entitlement, so `admits` (flag AND entitlement)
+  // would make it unreachable. The surface is price AND kill switch AND release flag; it grants nothing.
+  'isCoManagedPurchaseSurfaceOpen',
 ]);
 
 const DB_TOUCHING = new Set(['createTenantKnex', 'tenantDb', 'runWithTenant', 'knex']);
@@ -241,7 +261,7 @@ export function ruleA(files: SourceFile[]): string[] {
 // ---------------------------------------------------------------------------
 
 /** Adapters 1-3 take `(capability, tenantId, mode?)`; the tenant is argument 1. */
-export const SESSION_TENANT_ADAPTERS = new Set(['requireCapabilityForAction', 'capabilityRouteGuard', 'requireCapabilityForPage']);
+export const SESSION_TENANT_ADAPTERS = new Set(['requireCapabilityForAction', 'requireCapabilityEitherMode', 'capabilityRouteGuard', 'requireCapabilityForPage']);
 /** Calls whose result carries the session tenant at `.tenant` (user) or `.user.tenant` (session). */
 const SESSION_OBJECT_SOURCES = new Set(['getSession', 'auth', 'getServerSession', 'getCurrentUser', 'getCurrentUserWithRevocationCheck']);
 /** Zero-argument calls that return the session tenant itself. */
@@ -517,6 +537,8 @@ export function registrySanity(families: readonly EntryPointFamily[], files: Sou
 // ---------------------------------------------------------------------------
 
 const repoFiles = scanRepo();
+/** Walking the worker and capability import graphs parses ~1,100 repo files; that is not a per-unit workload. */
+const IMPORT_GRAPH_WALK_TIMEOUT_MS = 120_000;
 const workerEntries = repoFiles
   .map((f) => f.path)
   .filter((p) => WORKER_ENTRY_GLOBS.some((g) => globToRegExp(g).test(p)));
@@ -552,7 +574,7 @@ describe('capability gate coverage (AST) — branch is green', () => {
       expect(workerEntries).toContain(e);
     }
     expect(ruleD(workerEntries)).toEqual([]);
-  });
+  }, IMPORT_GRAPH_WALK_TIMEOUT_MS);
 
   it('Rule E: no production file imports the capability test hatch; the pure entry exports none', () => {
     expect(ruleE(repoFiles)).toEqual([]);
@@ -565,7 +587,7 @@ describe('capability gate coverage (AST) — branch is green', () => {
   it('Rule D baseline for the Temporal worker has no stale entries', () => {
     const reached = new Set([...closure('ee/temporal-workflows/src/worker.ts').bare].filter(isForbiddenForWorkers));
     for (const spec of Object.keys(TEMPORAL_PREEXISTING_FORBIDDEN)) expect(reached.has(spec), spec).toBe(true);
-  });
+  }, IMPORT_GRAPH_WALK_TIMEOUT_MS);
 
   it('registry sanity: exactly the expected families, globs and per-family file counts', () => {
     expect(registrySanity(ENTRY_POINT_FAMILIES, repoFiles)).toEqual([]);
@@ -590,7 +612,8 @@ describe('capability gate coverage (AST) — branch is green', () => {
 
 describe('glob matching', () => {
   it.each([
-    ['server/src/app/msp/co-management/providers/page.tsx', true],
+    // Glob sample only: this page does not exist yet (it ships in L9), but the glob must already cover it.
+    ['server/src/app/msp/co-managed/providers/page.tsx', true],
     ['server/src/app/msp/co-managed/page.tsx', true],
     ['server/src/app/msp/tickets/page.tsx', false],
     ['server/src/app/api/v1/co-management/providers/route.ts', true],
@@ -657,8 +680,8 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
   });
 
   it('Rule A covers pages, routes, jobs and activities (adapter forms and non-entry helpers)', () => {
-    expect(ruleA([file('server/src/app/msp/co-management/page.tsx', `export default async function P(){ return null; }`)])).toHaveLength(1);
-    expect(ruleA([file('server/src/app/msp/co-management/helper.ts', `export const x = 1;`)])).toEqual([]);
+    expect(ruleA([file('server/src/app/msp/co-managed/page.tsx', `export default async function P(){ return null; }`)])).toHaveLength(1);
+    expect(ruleA([file('server/src/app/msp/co-managed/helper.ts', `export const x = 1;`)])).toEqual([]);
     expect(ruleA([file('server/src/app/api/v1/co-management/x/route.ts', `export async function GET(){ const g = await capabilityRouteGuard('co-managed','t'); return g; }`)])).toEqual([]);
     expect(ruleA([file('packages/jobs/src/lib/jobs/handlers/coManagedSync.ts', `export const h = withCapabilityJob('co-managed', async () => { await knex('x'); });`)])).toEqual([]);
     expect(ruleA([file('ee/temporal-workflows/src/activities/coManagedA.ts', `export async function a(){ return knex('x'); }`)])).toHaveLength(1);
@@ -673,11 +696,12 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
       ok(`export const a = withAuth(async (user, ctx) => { await requireCapabilityForAction('co-managed', ctx.tenant); });`);
       ok(`export const a = withAuth(async (user, ctx) => { const t = ctx.tenant; await requireCapabilityForAction('co-managed', t); });`);
       ok(`export const a = withAuth(async (user) => { await requireCapabilityForAction('co-managed', user.tenant, 'serves'); });`);
+      ok(`export const a = withAuth(async (user, { tenant }) => { await requireCapabilityEitherMode('co-managed', tenant); });`);
     });
 
     it('accepts session-derived tenants in pages and routes', () => {
-      ok(`export default async function P() { const session = await getSession(); await requireCapabilityForPage('co-managed', session!.user.tenant); }`, 'server/src/app/msp/co-management/page.tsx');
-      ok(`export default async function P() { const tenant = await getCurrentTenant(); await requireCapabilityForPage('co-managed', tenant); }`, 'server/src/app/msp/co-management/page.tsx');
+      ok(`export default async function P() { const session = await getSession(); await requireCapabilityForPage('co-managed', session!.user.tenant); }`, 'server/src/app/msp/co-managed/page.tsx');
+      ok(`export default async function P() { const tenant = await getCurrentTenant(); await requireCapabilityForPage('co-managed', tenant); }`, 'server/src/app/msp/co-managed/page.tsx');
       ok(`export async function GET() { const user = await getCurrentUser(); return capabilityRouteGuard('co-managed', user!.tenant); }`, 'server/src/app/api/v1/co-management/x/route.ts');
       ok(`export async function GET() { const { user } = (await getSession())!; return capabilityRouteGuard('co-managed', user.tenant); }`, 'server/src/app/api/v1/co-management/x/route.ts');
     });
@@ -685,9 +709,10 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
     it('rejects a tenant from the request body, query, route params or an action argument', () => {
       bad(`export async function POST(req: Request) { const body = await req.json(); return capabilityRouteGuard('co-managed', body.tenantId); }`, 'server/src/app/api/v1/co-management/x/route.ts');
       bad(`export async function GET(req: NextRequest) { return capabilityRouteGuard('co-managed', req.nextUrl.searchParams.get('tenant')!); }`, 'server/src/app/api/v1/co-management/x/route.ts');
-      bad(`export default async function P({ params }) { await requireCapabilityForPage('co-managed', params.tenant); }`, 'server/src/app/msp/co-management/page.tsx');
+      bad(`export default async function P({ params }) { await requireCapabilityForPage('co-managed', params.tenant); }`, 'server/src/app/msp/co-managed/page.tsx');
       bad(`export const a = withAuth(async (user, ctx, input: { tenant: string }) => { await requireCapabilityForAction('co-managed', input.tenant); });`);
       bad(`export const a = withAuth(async (user, ctx, tenant: string) => { await requireCapabilityForAction('co-managed', tenant); });`);
+      bad(`export const a = withAuth(async (user, ctx, input: { tenant: string }) => { await requireCapabilityEitherMode('co-managed', input.tenant); });`);
       bad(`export async function a(tenantId: string) { await requireCapabilityForAction('co-managed', tenantId); }`);
       bad(`export async function a() { await requireCapabilityForAction('co-managed', 'tenant-1'); }`);
       bad(`export async function a() { const t = await getTenantForCurrentRequest(body.tenant); await requireCapabilityForAction('co-managed', t); }`);
@@ -708,13 +733,13 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
 
   it("Rule C fails on a raw useFeatureFlag('release-v2-0-feature') in a co-managed entry point", () => {
     const f = file(
-      'server/src/app/msp/co-management/page.tsx',
+      'server/src/app/msp/co-managed/page.tsx',
       `export default function P() {\n  const { enabled } = useFeatureFlag('release-v2-0-feature');\n  return null;\n}`,
     );
     const v = ruleC([f]);
     expect(v).toHaveLength(1);
     expect(v[0]).toBe(
-      "capabilityEntryPoints: raw useFeatureFlag('release-v2-0-feature') at server/src/app/msp/co-management/page.tsx:2 — co-managed UI must read useCapability('co-managed'); the release flag alone never changes co-managed behaviour",
+      "capabilityEntryPoints: raw useFeatureFlag('release-v2-0-feature') at server/src/app/msp/co-managed/page.tsx:2 — co-managed UI must read useCapability('co-managed'); the release flag alone never changes co-managed behaviour",
     );
   });
 
@@ -746,7 +771,7 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
 
     const withFile = [...repoFiles, file('server/src/lib/actions/coManagedProviders.ts', 'export {}')];
     expect(registrySanity(ENTRY_POINT_FAMILIES, withFile)).toEqual([
-      'capabilityEntryPoints: family server-actions matches 1 production files, expected 0',
+      `capabilityEntryPoints: family server-actions matches ${EXPECTED_FAMILY_FILE_COUNTS['server-actions'].files + 1} production files, expected ${EXPECTED_FAMILY_FILE_COUNTS['server-actions'].files}`,
     ]);
   });
 
@@ -785,5 +810,46 @@ describe('negative fixtures: each rule bites, through the real glob and rule fun
     const real = readFileSync(target, 'utf8');
     const v = ruleD([entry], (f) => (f === target ? `import 'next/headers';\n${real}` : undefined), []);
     expect(v).toContain(`capabilityEntryPoints: next/headers reachable from worker entry ${entry}`);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// UI-slot mounts: every place that resolves a capability-gated UI slot is
+// enumerated here, and each one derives its served set from the capability
+// hook (never a raw flag read). A new mount is added to this list in the same
+// diff, with its test.
+// ---------------------------------------------------------------------------
+
+const UI_SLOT_MOUNTS: Readonly<Record<string, string>> = {
+  'server/src/components/layout/SidebarWithFeatureFlags.tsx': 'msp.navigation.group',
+};
+const UI_SLOT_CONTRIBUTIONS: Readonly<Record<string, string>> = {
+  'server/src/config/coManagedMenu.ts': 'msp.navigation.group',
+};
+
+describe('UI-slot mounts (A8)', () => {
+  const mounts = repoFiles.filter((f) => isSourcePath(f.path) && !isTestPath(f.path) && /\bresolveUiSlots\s*[<(]/.test(f.source)
+    && !f.path.endsWith('uiSlotRegistry.ts'));
+
+  it('enumerates every resolveUiSlots mount', () => {
+    expect(mounts.map((f) => f.path).sort()).toEqual(Object.keys(UI_SLOT_MOUNTS).sort());
+  });
+
+  it("each mount serves slots from useCapability('co-managed') and names its surface", () => {
+    for (const f of mounts) {
+      expect(f.source, f.path).toContain("useCapability('co-managed')");
+      expect(f.source, f.path).toContain(`'${UI_SLOT_MOUNTS[f.path]}'`);
+      expect(f.source, f.path).not.toMatch(/useFeatureFlag\(\s*'release-v2-0-feature'/);
+    }
+  });
+
+  it('every registerUiSlot contribution is enumerated and gated on the co-managed capability', () => {
+    const contributions = repoFiles.filter((f) => isSourcePath(f.path) && !isTestPath(f.path) && /\bregisterUiSlot\s*[<(]/.test(f.source)
+      && !f.path.endsWith('uiSlotRegistry.ts'));
+    expect(contributions.map((f) => f.path).sort()).toEqual(Object.keys(UI_SLOT_CONTRIBUTIONS).sort());
+    for (const f of contributions) {
+      expect(f.source, f.path).toContain("capability: 'co-managed'");
+      expect(f.source, f.path).toContain(`'${UI_SLOT_CONTRIBUTIONS[f.path]}'`);
+    }
   });
 });

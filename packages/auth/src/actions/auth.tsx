@@ -10,6 +10,7 @@ import { isValidTenantSlug } from '@alga-psa/validation';
 import { isEnterprise } from '@alga-psa/core/features';
 import { loadEnterpriseInactiveLoginWinbackHook } from '../lib/winback/enterpriseWinbackEntry';
 import { normalizeLoginEmail } from '../lib/security/loginEmail';
+import { resolveSignInUser, TenantRequiredResolutionError } from '../lib/signInUserResolution';
 interface AuthenticateUserOptions {
     tenantId?: string;
     tenantSlug?: string;
@@ -66,66 +67,30 @@ async function resolveTenantFromPortalDomain(portalDomain: string): Promise<stri
 }
 
 /**
- * Oldest account first, then user_id: a total order on immutable columns, so
- * the same duplicates always resolve to the same user.
- */
-function compareByCreationThenId(a: IUser, b: IUser): number {
-    const aCreated = a.created_at ? new Date(a.created_at).getTime() : Number.POSITIVE_INFINITY;
-    const bCreated = b.created_at ? new Date(b.created_at).getTime() : Number.POSITIVE_INFINITY;
-    if (aCreated !== bCreated) {
-        return aCreated < bCreated ? -1 : 1;
-    }
-    return a.user_id < b.user_id ? -1 : a.user_id > b.user_id ? 1 : 0;
-}
-
-type UnscopedResolution = {
-    user: IUser | undefined;
-    /** True when `user`'s password was already checked against this attempt. */
-    passwordVerified: boolean;
-};
-
-/**
- * Sign-in with no tenant in hand. A `.first()` lookup answers an arbitrary
- * tenant and can select an inactive restored account instead of the live
- * workspace. Look at every match instead, and when the credentials prove out
- * in more than one tenant, refuse instead of choosing a workspace. Only an attempt
- * that already knows the password learns that the email spans tenants.
- * Duplicates inside one tenant resolve by `compareByCreationThenId`.
+ * Sign-in with no tenant in hand: password sign-in uses the shared resolution
+ * engine with the stored hash as the proof. Only an attempt that already knows
+ * the password learns that the email spans tenants.
  */
 async function resolveUnscopedUser(
     normalizedEmail: string,
     password: string,
     userType: 'client' | 'internal',
-): Promise<UnscopedResolution> {
-    const candidates = await User.findUsersByEmailAndType(normalizedEmail, userType);
-
-    if (candidates.length <= 1) {
-        return { user: candidates[0], passwordVerified: false };
-    }
-
-    const authenticated: IUser[] = [];
-    for (const candidate of candidates) {
-        if (candidate.is_inactive || !candidate.hashed_password) {
-            continue;
-        }
-        if (await verifyPassword(password, candidate.hashed_password)) {
-            authenticated.push(candidate);
-        }
-    }
-
-    const tenants = new Set(authenticated.map((candidate) => candidate.tenant));
-    if (tenants.size > 1) {
-        logger.warn('[authenticateUser] Credentials resolve to users in multiple tenants', {
+): Promise<{ user: IUser | undefined; passwordVerified: boolean }> {
+    try {
+        const { user, verified } = await resolveSignInUser({
             email: normalizedEmail,
             userType,
-            tenantCount: tenants.size,
+            verify: (candidate) =>
+                candidate.hashed_password ? verifyPassword(password, candidate.hashed_password) : false,
         });
-        const { TenantRequiredError } = await import('../lib/security/loginProtection');
-        throw new TenantRequiredError();
+        return { user, passwordVerified: verified };
+    } catch (error) {
+        if (error instanceof TenantRequiredResolutionError) {
+            const { TenantRequiredError } = await import('../lib/security/loginProtection');
+            throw new TenantRequiredError();
+        }
+        throw error;
     }
-
-    authenticated.sort(compareByCreationThenId);
-    return { user: authenticated[0], passwordVerified: authenticated.length > 0 };
 }
 
 export async function authenticateUser(

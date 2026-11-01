@@ -90,7 +90,7 @@ afterAll(async () => {
   )).up(db);
   await require(path.resolve(
     __dirname,
-    '../20261029120000_allow_shared_quickbooks_online_item_targets.cjs'
+    '../20261029170000_allow_shared_quickbooks_online_item_targets.cjs'
   )).up(db);
   await db.destroy().catch(() => undefined);
 });

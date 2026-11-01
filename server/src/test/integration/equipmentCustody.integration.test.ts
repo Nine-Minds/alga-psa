@@ -6,14 +6,14 @@
  * the guards (asset delete, location deactivation), held_by_msp -> active on return, and the append-only
  * trigger on plain Postgres.
  */
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 
-const published = vi.hoisted(() => ({ events: [] as Array<{ eventType: string; payload: any }> }));
+const published = vi.hoisted(() => ({ events: [] as Array<{ eventType: string; payload: any }>, verifyFiles: false, committedFiles: [] as boolean[] }));
 /** Assets the record-level asset read check refuses (per test). Empty = the real kernel decision (allow). */
 const denied = vi.hoisted(() => ({ assetIds: new Set<string>() }));
 vi.mock('@alga-psa/assets/lib/assetReadAuthorization', async (importOriginal) => {
@@ -22,6 +22,8 @@ vi.mock('@alga-psa/assets/lib/assetReadAuthorization', async (importOriginal) =>
     ...actual,
     isAssetReadAllowed: async (...args: Parameters<typeof actual.isAssetReadAllowed>) =>
       denied.assetIds.has(args[3].asset_id) ? false : actual.isAssetReadAllowed(...args),
+    isAssetActionAllowed: async (...args: Parameters<typeof actual.isAssetActionAllowed>) =>
+      denied.assetIds.has(args[3].asset_id) ? false : actual.isAssetActionAllowed(...args),
     filterReadableAssets: async (...args: Parameters<typeof actual.filterReadableAssets>) =>
       (await actual.filterReadableAssets(...args)).filter((a) => !denied.assetIds.has(a.asset_id)),
   };
@@ -30,26 +32,70 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn().mockResolvedValue(undefined),
   publishWorkflowEvent: vi.fn(async (e: any) => {
     published.events.push({ eventType: e.eventType, payload: e.payload });
+    if (published.verifyFiles && e.eventType === 'FILE_UPLOADED') {
+      const document = await tenantDb(db, e.ctx.tenantId).table('documents')
+        .where(builder => builder.where('file_id', e.payload.fileId).orWhere('thumbnail_file_id', e.payload.fileId).orWhere('preview_file_id', e.payload.fileId))
+        .first('document_id');
+      published.committedFiles.push(Boolean(document));
+    }
   }),
 }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
+const storage = vi.hoisted(() => ({
+  files: new Map<string, Buffer>(), failOriginal: 0, originalCount: 0, failDelete: false, failDerived: false,
+}));
+vi.mock('@alga-psa/storage/StorageProviderFactory', async importOriginal => {
+  const actual = await importOriginal<typeof import('@alga-psa/storage/StorageProviderFactory')>();
+  return { ...actual, StorageProviderFactory: { createProvider: async () => ({
+    upload: async (buffer: Buffer, path: string, options: { mime_type: string }) => {
+      storage.files.set(path, buffer);
+      if ((options.mime_type === 'image/png' && ++storage.originalCount === storage.failOriginal) ||
+          (options.mime_type === 'image/jpeg' && storage.failDerived)) {
+        throw new Error('provider failed after writing');
+      }
+      return { path, size: buffer.length, mime_type: options.mime_type };
+    },
+    delete: async (path: string) => {
+      if (storage.failDelete) throw new Error('provider temporarily unavailable');
+      storage.files.delete(path);
+    },
+  }) } };
+});
+vi.mock('@alga-psa/auth/getCurrentUser', () => ({ getCurrentUser: async () => ({
+  user_id: actionAuth.userId, tenant: actionAuth.tenant, user_type: 'internal',
+}) }));
+// Keep real document creation, storage writes, previews, authorization and rollback; fake the provider only.
+vi.mock('@alga-psa/storage/config/storage', async importOriginal => ({
+  ...await importOriginal<typeof import('@alga-psa/storage/config/storage')>(),
+  validateFileUpload: async () => {}, validateSystemArtifact: async () => {},
+}));
+
 const HOOK_TIMEOUT = 180_000;
 const columns: Record<string, Record<string, unknown>> = {};
-const actionAuth = vi.hoisted(() => ({ tenant: '', userId: '' }));
+const actionAuth = vi.hoisted(() => ({ tenant: '', userId: '', userType: 'internal' as 'internal' | 'client', clientId: undefined as string | undefined }));
 
 vi.mock('@alga-psa/auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/auth')>();
   return {
     ...actual,
     hasPermission: vi.fn().mockResolvedValue(true),
+    checkMultiplePermissions: vi.fn(async (_user: unknown, checks: { resource: string; action: string }[]) =>
+      checks.map(check => ({ ...check, granted: true }))),
     withAuth: (action: any) => async (...args: unknown[]) =>
-      action({ user_id: actionAuth.userId, user_type: 'internal', roles: [] }, { tenant: actionAuth.tenant }, ...args),
+      (await import('@alga-psa/db')).runWithTenant(actionAuth.tenant, () =>
+        action({ user_id: actionAuth.userId, user_type: actionAuth.userType, clientId: actionAuth.clientId, roles: [] }, { tenant: actionAuth.tenant }, ...args)),
   };
 });
+// This suite isolates custody flows from RBAC; dedicated document authorization tests use real grants.
+vi.mock('@alga-psa/authorization/rbac', () => ({
+  hasPermission: (...args: any[]) => import('@alga-psa/auth').then(auth => (auth.hasPermission as any)(...args)),
+}));
 vi.mock('@alga-psa/auth/rbac', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/auth/rbac')>();
-  return { ...actual, hasPermission: vi.fn().mockResolvedValue(true) };
+  return { ...actual, hasPermission: vi.fn().mockResolvedValue(true),
+    checkMultiplePermissions: vi.fn(async (_user: unknown, checks: { resource: string; action: string }[]) =>
+      checks.map(check => ({ ...check, granted: true }))) };
 });
 vi.mock('@alga-psa/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/db')>();
@@ -61,6 +107,7 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
 });
 
 let db: Knex;
+let image: Uint8Array;
 let custody: typeof import('@alga-psa/assets/actions/assetCustodyActions');
 let receiveEquipment: typeof import('../../../../packages/msp-composition/src/tickets/receiveEquipmentActions').receiveEquipment;
 let deleteAssetRecord: typeof import('@alga-psa/assets/actions/assetActions').deleteAssetRecord;
@@ -184,7 +231,8 @@ const intake = (fx: Fx, over: Record<string, unknown> = {}) => ({
   bin: 'Shelf B3',
   next_action_party: 'vendor',
   next_action_note: 'waiting on vendor, follow up in 5 days',
-  follow_up_on: '2026-10-29',
+  // Far future so the default intake is never overdue, whatever day the suite runs.
+  follow_up_on: '2099-10-29',
   accessories: [{ label: 'Power adapter', quantity: 1 }],
   ...over,
 });
@@ -195,7 +243,7 @@ async function cleanupTenant(tenant: string) {
     await db.raw('ALTER TABLE asset_custody_events DISABLE TRIGGER USER').catch(() => undefined);
   }
   for (const name of [
-    'asset_custody_events', 'asset_custody', 'asset_history', 'asset_associations', 'assets', 'tickets',
+    'file_upload_session_files', 'file_upload_sessions', 'asset_custody_events', 'asset_custody', 'asset_history', 'asset_associations', 'document_associations', 'documents', 'external_files', 'document_folders', 'assets', 'tickets',
     'asset_type_registry', 'stock_locations', 'asset_statuses', 'tenant_settings', 'clients', 'users',
   ]) await del(name);
   if (!isCitus) await db.raw('ALTER TABLE asset_custody_events ENABLE TRIGGER USER').catch(() => undefined);
@@ -203,7 +251,14 @@ async function cleanupTenant(tenant: string) {
 }
 
 describe('equipment custody (integration)', () => {
+  beforeEach(() => {
+    storage.files.clear(); storage.failOriginal = 0; storage.originalCount = 0; storage.failDelete = false; storage.failDerived = false;
+    actionAuth.userType = 'internal'; actionAuth.clientId = undefined;
+    published.verifyFiles = false; published.committedFiles = [];
+  });
   beforeAll(async () => {
+    const sharp = (await import('sharp')).default;
+    image = new Uint8Array(await sharp({ create: { width: 1200, height: 800, channels: 3, background: '#aaa' } }).png().toBuffer());
     wireLocalTestDbEnv();
     process.env.APP_ENV = process.env.APP_ENV || 'test';
     db = await createTestDbConnection({ runSeeds: false });
@@ -220,6 +275,273 @@ describe('equipment custody (integration)', () => {
     for (const tenant of cleanupTenants) await cleanupTenant(tenant);
     await db?.destroy().catch(() => undefined);
   }, HOOK_TIMEOUT);
+
+  const photoForm = (count = 2) => {
+    const form = new FormData();
+    for (let i = 0; i < count; i++) form.append('photos', new File([new Uint8Array(image)], `dock-${i}.png`, { type: 'image/png' }));
+    return form;
+  };
+
+  it('receives two private photos through the upload action and shows them on ticket, asset and history', async () => {
+    const fx = await seedFixture();
+    await table(fx.tenantId, 'document_folders').insert({ tenant: fx.tenantId, folder_name: 'Attachments', folder_path: '/Tickets/Attachments', entity_id: fx.ticketId, entity_type: 'ticket', is_client_visible: true });
+    published.verifyFiles = true;
+    const result = unwrap<any>(await receiveEquipment(intake(fx), photoForm()));
+    published.verifyFiles = false;
+    expect(published.committedFiles).toHaveLength(6);
+    expect(published.committedFiles.every(Boolean)).toBe(true);
+    const ids = result.event.document_ids;
+    expect(ids).toHaveLength(2);
+    const { getAssetDocuments } = await import('@alga-psa/assets/actions/assetDocumentActions');
+    expect((await getAssetDocuments(result.asset.asset_id) as any[]).map(doc => doc.document_id).sort()).toEqual([...ids].sort());
+    const { getDocument } = await import('@alga-psa/documents/actions/documentActions');
+    for (const id of ids) {
+      expect(await getDocument(id)).toMatchObject({ is_client_visible: false });
+      expect(await table(fx.tenantId, 'document_associations').where({ document_id: id })).toHaveLength(2);
+    }
+    const events = unwrap<any[]>(await custody.listCustodyEvents(result.asset.asset_id));
+    expect(events[0].document_ids).toEqual(ids);
+    expect(await table(fx.tenantId, 'file_upload_sessions')).toHaveLength(0);
+    const retainedFiles = storage.files.size;
+    expect(retainedFiles).toBe(6);
+    const { recoverFileUploads } = await import('@alga-psa/storage/fileUploadTransaction');
+    await recoverFileUploads(db, fx.tenantId);
+    expect(storage.files.size).toBe(retainedFiles);
+  });
+
+  it('rolls back partial uploads and cleans originals and derived files without deleting existing documents', async () => {
+    const fx = await seedFixture();
+    const unrelated = randomUUID();
+    await table(fx.tenantId, 'documents').insert({ tenant: fx.tenantId, document_id: unrelated, document_name: 'Existing', user_id: fx.userId, created_by: fx.userId });
+    storage.failOriginal = 2;
+    const eventsBeforeFailure = published.events.length;
+    await expect(receiveEquipment(intake(fx), photoForm())).rejects.toThrow('provider failed after writing');
+    expect(await table(fx.tenantId, 'documents').select('document_id')).toEqual([{ document_id: unrelated }]);
+    expect(await table(fx.tenantId, 'document_associations')).toHaveLength(0);
+    expect(await table(fx.tenantId, 'asset_custody_events')).toHaveLength(0);
+    expect(await table(fx.tenantId, 'file_upload_sessions')).toHaveLength(0);
+    expect(await table(fx.tenantId, 'external_files')).toHaveLength(0);
+    expect(storage.files.size).toBe(0);
+    expect(published.events).toHaveLength(eventsBeforeFailure);
+    const refused = await receiveEquipment(intake(fx, { document_ids: [unrelated] }), photoForm());
+    expect(refused).toMatchObject({ success: false });
+    expect(await table(fx.tenantId, 'documents').where({ document_id: unrelated })).toHaveLength(1);
+  });
+
+  it('persists failed cleanup for maintenance and recovers after a provider outage', async () => {
+    const fx = await seedFixture();
+    storage.failDelete = true;
+    const refused = await receiveEquipment(intake(fx, { location_id: fx.closedLocation }), photoForm());
+    expect(refused).toMatchObject({ success: false });
+    expect(await table(fx.tenantId, 'documents')).toHaveLength(0);
+    expect(await table(fx.tenantId, 'document_associations')).toHaveLength(0);
+    expect(await table(fx.tenantId, 'asset_custody_events')).toHaveLength(0);
+    const pending = await table(fx.tenantId, 'file_upload_sessions').first();
+    expect(pending).toMatchObject({ attempts: 1, last_error: 'provider temporarily unavailable' });
+    expect(storage.files.size).toBeGreaterThan(0);
+    storage.failDelete = false;
+    await table(fx.tenantId, 'file_upload_sessions').update({ expires_at: new Date(0) });
+    const { recoverFileUploads } = await import('@alga-psa/storage/fileUploadTransaction');
+    await recoverFileUploads(db, fx.tenantId);
+    await recoverFileUploads(db, fx.tenantId);
+    expect(await table(fx.tenantId, 'file_upload_sessions')).toHaveLength(0);
+    expect(await table(fx.tenantId, 'external_files')).toHaveLength(0);
+    expect(storage.files.size).toBe(0);
+  });
+
+  it('uploads private photos on every custody step and rolls failed steps back', async () => {
+    const fx = await seedFixture();
+    const received = unwrap<any>(await receiveEquipment(intake(fx)));
+    const { recordCustodyEventWithPhotos } = await import('../../../../packages/msp-composition/src/assets/custodyPhotoActions');
+    const events = [
+      { event_type: 'moved', location_id: fx.annex },
+      { event_type: 'handed_off', to_holder_user_id: fx.otherUserId },
+      { event_type: 'shipped', counterparty: 'Depot' },
+      { event_type: 'received', location_id: fx.mainOffice },
+      { event_type: 'returned' },
+    ];
+    for (const event of events) {
+      const result = unwrap<any>(await recordCustodyEventWithPhotos(received.custody.custody_id, event, photoForm(1)));
+      expect(result.event.document_ids).toHaveLength(1);
+      expect(await table(fx.tenantId, 'document_associations').where({ entity_type: 'asset', entity_id: received.asset.asset_id, document_id: result.event.document_ids[0] })).toHaveLength(1);
+    }
+    const fileCount = storage.files.size;
+    expect(await recordCustodyEventWithPhotos(received.custody.custody_id, events[0], photoForm(1))).toMatchObject({ success: false });
+    expect(storage.files.size).toBe(fileCount);
+    expect(await table(fx.tenantId, 'documents')).toHaveLength(5);
+  });
+
+  it('cleans unretained preview writes after a successful receive without deleting originals', async () => {
+    const fx = await seedFixture();
+    storage.failDerived = true;
+    const received = unwrap<any>(await receiveEquipment(intake(fx), photoForm()));
+    expect(received.event.document_ids).toHaveLength(2);
+    expect(storage.files.size).toBe(2);
+    expect(await table(fx.tenantId, 'external_files')).toHaveLength(2);
+    expect(await table(fx.tenantId, 'file_upload_sessions')).toHaveLength(0);
+  });
+
+  it('recovers interrupted uploads while skipping active sessions and other tenants', async () => {
+    const fx = await seedFixture();
+    const other = await seedFixture();
+    const ids = [];
+    for (const tenant of [fx.tenantId, other.tenantId]) {
+      const sessionId = randomUUID();
+      const fileId = randomUUID();
+      const path = `/${tenant}/${fileId}.png`;
+      storage.files.set(path, Buffer.from('interrupted write'));
+      await table(tenant, 'file_upload_sessions').insert({ tenant, session_id: sessionId, expires_at: new Date(0) });
+      await table(tenant, 'file_upload_session_files').insert({ tenant, session_id: sessionId, file_id: fileId, storage_path: path });
+      ids.push({ tenant, sessionId, path });
+    }
+    const { recoverFileUploads } = await import('@alga-psa/storage/fileUploadTransaction');
+    const lock = await db.transaction();
+    try {
+      await tenantDb(lock, fx.tenantId).table('file_upload_sessions').where({ session_id: ids[0].sessionId }).forNoKeyUpdate().first();
+      await recoverFileUploads(db, fx.tenantId);
+      expect(storage.files.has(ids[0].path)).toBe(true);
+    } finally { await lock.rollback(); }
+    await recoverFileUploads(db, fx.tenantId);
+    expect(storage.files.has(ids[0].path)).toBe(false);
+    expect(storage.files.has(ids[1].path)).toBe(true);
+    await recoverFileUploads(db, other.tenantId);
+    expect(storage.files.size).toBe(0);
+  });
+
+  it('hides intake photos from client document lists, asset documents and custody history', async () => {
+    const fx = await seedFixture();
+    const received = unwrap<any>(await receiveEquipment(intake(fx), photoForm()));
+    const publicId = randomUUID();
+    await table(fx.tenantId, 'documents').insert({ tenant: fx.tenantId, document_id: publicId, document_name: 'Public guide', user_id: fx.userId, created_by: fx.userId, is_client_visible: true });
+    for (const entity of [{ entity_id: fx.ticketId, entity_type: 'ticket' }, { entity_id: received.asset.asset_id, entity_type: 'asset' }]) {
+      await table(fx.tenantId, 'document_associations').insert({ tenant: fx.tenantId, document_id: publicId, ...entity });
+    }
+    actionAuth.userId = fx.otherUserId;
+    actionAuth.userType = 'client';
+    actionAuth.clientId = fx.clientId;
+    const { getAssetDocuments } = await import('@alga-psa/assets/actions/assetDocumentActions');
+    const { getDocumentsByEntity, getDocument, getDocumentThumbnailUrl } = await import('@alga-psa/documents/actions/documentActions');
+    const portal = await getDocumentsByEntity(fx.ticketId, 'ticket');
+    expect(portal).toHaveProperty('documents');
+    expect((portal as any).documents.map((doc: any) => doc.document_id)).toEqual([publicId]);
+    expect((await getAssetDocuments(received.asset.asset_id) as any[]).map(doc => doc.document_id)).toEqual([publicId]);
+    const events = unwrap<any[]>(await custody.listCustodyEvents(received.asset.asset_id));
+    expect(events[0].document_ids).toEqual([]);
+    for (const id of received.event.document_ids) {
+      expect(await getDocument(id)).toHaveProperty('permissionError');
+      expect(await getDocumentThumbnailUrl(id)).toBeNull();
+    }
+  });
+
+  it('rejects oversized uploads and denied document creation before writing storage', async () => {
+    const fx = await seedFixture();
+    const form = new FormData();
+    form.append('photos', new File([new Uint8Array(10 * 1024 * 1024 + 1)], 'large.png', { type: 'image/png' }));
+    expect(await receiveEquipment(intake(fx), form)).toMatchObject({ success: false });
+    expect(await receiveEquipment(intake(fx), photoForm(21))).toMatchObject({ success: false });
+    const invalid = new FormData(); invalid.append('photos', 'not a file');
+    expect(await receiveEquipment(intake(fx), invalid)).toMatchObject({ success: false });
+    const { hasPermission } = await import('@alga-psa/auth');
+    try {
+      vi.mocked(hasPermission).mockImplementation(async (_user, resource, action) => !(resource === 'document' && action === 'create'));
+      expect(await receiveEquipment(intake(fx), photoForm())).toMatchObject({ success: false });
+    } finally { vi.mocked(hasPermission).mockResolvedValue(true); }
+    expect(storage.files.size).toBe(0);
+    expect(await table(fx.tenantId, 'file_upload_sessions')).toHaveLength(0);
+  });
+
+  it('associates both intake photos atomically and preserves ticket links', async () => {
+    const fx = await seedFixture();
+    const ids = [randomUUID(), randomUUID()];
+    for (const id of ids) {
+      await table(fx.tenantId, 'documents').insert({ tenant: fx.tenantId, document_id: id, document_name: 'photo', user_id: fx.userId, created_by: fx.userId, is_client_visible: false });
+      await table(fx.tenantId, 'document_associations').insert({ tenant: fx.tenantId, document_id: id, entity_type: 'ticket', entity_id: fx.ticketId });
+    }
+    const { receiveEquipmentForTicket } = await import('@alga-psa/assets/lib/custody/receiveEquipment');
+    const input = intake(fx, { document_ids: ids }) as any;
+    await expect(db.transaction(async trx => {
+      await receiveEquipmentForTicket(trx, fx.tenantId, fx.userId, input);
+      throw new Error('rollback');
+    })).rejects.toThrow('rollback');
+    expect(await table(fx.tenantId, 'document_associations').where({ entity_type: 'asset' })).toHaveLength(0);
+    expect(await table(fx.tenantId, 'asset_custody_events')).toHaveLength(0);
+    const result = await db.transaction(trx => receiveEquipmentForTicket(trx, fx.tenantId, fx.userId, input));
+    expect(result.event.document_ids).toEqual(ids);
+    const links = await table(fx.tenantId, 'document_associations').whereIn('document_id', ids);
+    expect(links.filter((row: any) => row.entity_type === 'ticket')).toHaveLength(2);
+    expect(links.filter((row: any) => row.entity_type === 'asset' && row.entity_id === result.asset.asset_id)).toHaveLength(2);
+    expect((await table(fx.tenantId, 'documents').whereIn('document_id', ids)).every((row: any) => !row.is_client_visible)).toBe(true);
+
+    const existingId = await newAsset(fx);
+    const existing = await db.transaction(trx => receiveEquipmentForTicket(trx, fx.tenantId, fx.userId, {
+      ...input, new_asset: undefined, asset_id: existingId,
+    }));
+    expect(existing.event.document_ids).toEqual(ids);
+    expect(await table(fx.tenantId, 'document_associations').where({ entity_type: 'asset', entity_id: existingId })).toHaveLength(2);
+
+    const foreign = await seedFixture();
+    const foreignId = randomUUID();
+    await table(foreign.tenantId, 'documents').insert({ tenant: foreign.tenantId, document_id: foreignId, document_name: 'other.jpg', user_id: foreign.userId, created_by: foreign.userId, is_client_visible: false });
+    await table(fx.tenantId, 'asset_custody_events').insert({
+      tenant: fx.tenantId, asset_id: existingId, custody_id: existing.custody.custody_id,
+      event_type: 'moved', occurred_at: new Date(), recorded_at: new Date(), actor_user_id: fx.userId,
+      document_ids: JSON.stringify([ids[0], randomUUID(), foreignId]),
+    });
+    await table(fx.tenantId, 'document_associations').where({ entity_type: 'asset', entity_id: existingId }).del();
+    const migration = await import('../../../migrations/20261028051434_backfill_custody_photo_asset_associations.cjs');
+    await migration.up(db);
+    await migration.up(db);
+    expect((await table(fx.tenantId, 'document_associations').where({ entity_type: 'asset', entity_id: existingId })).map((row: any) => row.document_id).sort()).toEqual([...ids].sort());
+  });
+
+  it('filters custody documents on the shared read path and refuses unavailable IDs on writes', async () => {
+    const fx = await seedFixture();
+    const id = randomUUID();
+    await table(fx.tenantId, 'documents').insert({ tenant: fx.tenantId, document_id: id, document_name: 'condition.jpg', user_id: fx.userId, created_by: fx.userId, is_client_visible: false });
+    const { receiveEquipmentForTicket } = await import('@alga-psa/assets/lib/custody/receiveEquipment');
+    const received = await db.transaction(trx => receiveEquipmentForTicket(trx, fx.tenantId, fx.userId, intake(fx, { document_ids: [id] }) as any));
+    const { listCustodyEventsService, recordCustodyEventService } = await import('@alga-psa/assets/lib/custody/service');
+    const { getAssetDocuments } = await import('@alga-psa/assets/actions/assetDocumentActions');
+    const { hasPermission } = await import('@alga-psa/auth');
+    const principal = { user_id: fx.userId, user_type: 'internal', roles: [] } as const;
+    try {
+      const visible = await listCustodyEventsService(db, fx.tenantId, principal, received.asset.asset_id);
+      expect(visible[0].document_ids).toEqual([id]);
+      expect((await getAssetDocuments(received.asset.asset_id) as any[]).map(doc => doc.document_id)).toEqual([id]);
+      vi.mocked(hasPermission).mockImplementation(async (_user, resource) => resource !== 'document');
+      const hidden = await listCustodyEventsService(db, fx.tenantId, principal, received.asset.asset_id);
+      expect(hidden[0].document_ids).toEqual([]);
+      expect(await getAssetDocuments(received.asset.asset_id)).toHaveProperty('permissionError');
+      await expect(recordCustodyEventService(db, fx.tenantId, principal, received.custody.custody_id, {
+        event_type: 'shipped', counterparty: 'Vendor', document_ids: [id],
+      } as any)).rejects.toThrow('documents are unavailable');
+      vi.mocked(hasPermission).mockResolvedValue(true);
+      denied.assetIds.add(received.asset.asset_id);
+      expect(await getAssetDocuments(received.asset.asset_id)).toHaveProperty('permissionError');
+      denied.assetIds.delete(received.asset.asset_id);
+      await expect(recordCustodyEventService(db, fx.tenantId, principal, received.custody.custody_id, {
+        event_type: 'shipped', counterparty: 'Vendor', document_ids: [randomUUID()],
+      } as any)).rejects.toThrow('documents are unavailable');
+      expect(await table(fx.tenantId, 'asset_custody_events').where({ asset_id: received.asset.asset_id })).toHaveLength(1);
+      const foreign = await seedFixture();
+      const foreignDocument = randomUUID();
+      await table(foreign.tenantId, 'documents').insert({ tenant: foreign.tenantId, document_id: foreignDocument, document_name: 'foreign.jpg', user_id: foreign.userId, created_by: foreign.userId, is_client_visible: false });
+      const foreignAsset = await newAsset(foreign);
+      actionAuth.tenant = fx.tenantId; actionAuth.userId = fx.userId;
+      expect(await getAssetDocuments(foreignAsset)).toHaveProperty('permissionError');
+      await expect(recordCustodyEventService(db, fx.tenantId, principal, received.custody.custody_id, {
+        event_type: 'shipped', counterparty: 'Vendor', document_ids: [foreignDocument],
+      } as any)).rejects.toThrow('documents are unavailable');
+      const shipped = await recordCustodyEventService(db, fx.tenantId, principal, received.custody.custody_id, {
+        event_type: 'shipped', counterparty: 'Vendor', document_ids: [id],
+      } as any);
+      expect(shipped.event.document_ids).toEqual([id]);
+      expect(await table(fx.tenantId, 'document_associations').where({ entity_type: 'asset', entity_id: received.asset.asset_id, document_id: id })).toHaveLength(1);
+    } finally {
+      denied.assetIds.delete(received.asset.asset_id);
+      vi.mocked(hasPermission).mockResolvedValue(true);
+    }
+  });
 
   it('never writes stock, money or time across both intake modes and every step (hard invariant)', async () => {
     const fx = await seedFixture();
@@ -306,7 +628,7 @@ describe('equipment custody (integration)', () => {
   it('writes non-physical edits as custody_updated history, not events, and keeps follow_up_on a calendar date', async () => {
     const fx = await seedFixture();
     const r = unwrap<any>(await receiveEquipment(intake(fx)));
-    expect(r.custody.follow_up_on).toBe('2026-10-29');
+    expect(r.custody.follow_up_on).toBe('2099-10-29');
     const id = r.custody.custody_id;
     const eventsBefore = await table(fx.tenantId, 'asset_custody_events').where({ custody_id: id });
 
@@ -321,7 +643,8 @@ describe('equipment custody (integration)', () => {
 
   it('keeps the queue keyed off the open episode (closed ticket still listed), with tabs and filters', async () => {
     const fx = await seedFixture();
-    const a = unwrap<any>(await receiveEquipment(intake(fx)));
+    // "a" must never be overdue regardless of the wall clock; "b" is always overdue.
+    const a = unwrap<any>(await receiveEquipment(intake(fx, { follow_up_on: '2999-12-31' })));
     const b = unwrap<any>(await receiveEquipment(intake(fx, { new_asset: { name: 'Laptop' }, next_action_party: 'client', follow_up_on: '2020-01-01', bin: null })));
     // The ticket "closes": the queue must not care, and neither must the status column.
     await table(fx.tenantId, 'assets').where({ asset_id: a.asset.asset_id }).update({ status: 'retired' });

@@ -9,7 +9,7 @@ import path from 'node:path';
 
 const require = createRequire(import.meta.url);
 const migration = require(
-  path.resolve(__dirname, '../20261029120000_allow_shared_quickbooks_online_item_targets.cjs')
+  path.resolve(__dirname, '../20261029170000_allow_shared_quickbooks_online_item_targets.cjs')
 ) as { up: (k: any) => Promise<void>; down: (k: any) => Promise<void>; config: { transaction: boolean } };
 
 type Kind = 'old' | 'new' | 'unexpected';
@@ -19,8 +19,8 @@ const KEYS = ['tenant', 'integration_type', 'alga_entity_type', 'external_entity
 const BASE =
   "((integration_type <> 'xero'::text) OR (COALESCE((metadata ->> 'xeroTargetKind'::text), 'item'::text) <> 'account'::text)) AND ((integration_type <> 'quickbooks_desktop'::text) OR (alga_entity_type <> ALL (ARRAY['service'::text, 'discount'::text, 'tax_code'::text]))) AND (deleted_at IS NULL)";
 const predicates: Record<Kind, string> = {
-  old: BASE,
-  new: `${BASE} AND ((integration_type <> 'quickbooks_online'::text) OR (alga_entity_type <> ALL (ARRAY['service'::text, 'discount'::text])))`,
+  old: `${BASE} AND ((integration_type <> 'quickbooks_online'::text) OR (alga_entity_type <> 'tax_code'::text))`,
+  new: `${BASE} AND ((integration_type <> 'quickbooks_online'::text) OR (alga_entity_type <> ALL (ARRAY['service'::text, 'discount'::text, 'tax_code'::text])))`,
   unexpected: "(integration_type <> 'xero'::text)",
 };
 
@@ -38,7 +38,7 @@ function fakeKnex(opts: Options = {}) {
     guard: opts.guard === undefined ? null : opts.guard,
   };
   const log: string[] = [];
-  const kindOf = (sql: string): Kind => (sql.includes("'quickbooks_online'") ? 'new' : 'old');
+  const kindOf = (sql: string): Kind => (sql.includes("NOT IN ('service', 'discount', 'tax_code')") && sql.includes("'quickbooks_online' OR alga_entity_type NOT IN") ? 'new' : 'old');
 
   const raw = async (sql: string, bindings?: unknown[]) => {
     const s = sql.replace(/\s+/g, ' ').trim();

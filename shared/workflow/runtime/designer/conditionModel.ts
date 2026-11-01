@@ -1,5 +1,20 @@
 import jsonata from 'jsonata';
+import {
+  COMPLEMENTS,
+  PREDICATE_OPERATORS,
+  operatorTakesList,
+  operatorTakesValue,
+} from '@alga-psa/predicates';
+import type {
+  PredicateClause,
+  PredicateGroup,
+  PredicateLiteral,
+  PredicateOperator,
+} from '@alga-psa/predicates';
 import { normalizeExpressionSource } from '../expressionEngine';
+
+// LEVERAGE: pattern condition-dialect-jsonata — this adapter is one of several condition dialects that
+// should compile from the shared predicate model (see packages/predicates/spec/SEMANTICS.md).
 
 /**
  * Structured form of a workflow condition (an If step's `condition.$expr`).
@@ -9,57 +24,25 @@ import { normalizeExpressionSource } from '../expressionEngine';
  * the model (mixed and/or, nested groups, arbitrary functions) parse to `null`, and the designer
  * falls back to editing the raw expression.
  */
-export type WorkflowConditionOperator =
-  | 'equals'
-  | 'not_equals'
-  | 'in'
-  | 'not_in'
-  | 'gt'
-  | 'gte'
-  | 'lt'
-  | 'lte'
-  | 'contains'
-  | 'starts_with'
-  | 'ends_with'
-  | 'is_empty'
-  | 'is_not_empty';
+export type WorkflowConditionOperator = PredicateOperator;
 
-export type WorkflowConditionLiteral = string | number | boolean | null;
+export type WorkflowConditionLiteral = PredicateLiteral;
 
-export type WorkflowConditionClause = {
-  /** Field path such as `vars.ticket.ticket.priority_id` or `payload.ticketId`. */
-  path: string;
-  operator: WorkflowConditionOperator;
-  /** A literal for single-value operators, a list for `in`/`not_in`, absent for `is_empty`/`is_not_empty`. */
-  value?: WorkflowConditionLiteral | WorkflowConditionLiteral[];
-};
+/** A workflow condition clause is a predicate clause; the builder's group is the flat form of `PredicateGroup`. */
+export type WorkflowConditionClause = PredicateClause;
 
 export type WorkflowConditionGroup = {
-  join: 'and' | 'or';
+  join: PredicateGroup['join'];
   clauses: WorkflowConditionClause[];
 };
 
-export const WORKFLOW_CONDITION_OPERATORS: readonly WorkflowConditionOperator[] = [
-  'equals',
-  'not_equals',
-  'in',
-  'not_in',
-  'gt',
-  'gte',
-  'lt',
-  'lte',
-  'contains',
-  'starts_with',
-  'ends_with',
-  'is_empty',
-  'is_not_empty',
-];
+export const WORKFLOW_CONDITION_OPERATORS: readonly WorkflowConditionOperator[] = PREDICATE_OPERATORS;
 
 export const conditionOperatorTakesValue = (operator: WorkflowConditionOperator): boolean =>
-  operator !== 'is_empty' && operator !== 'is_not_empty';
+  operatorTakesValue(operator);
 
 export const conditionOperatorTakesList = (operator: WorkflowConditionOperator): boolean =>
-  operator === 'in' || operator === 'not_in';
+  operatorTakesList(operator);
 
 const COMPARISON_OPERATOR_SYMBOLS: Partial<Record<WorkflowConditionOperator, string>> = {
   equals: '=',
@@ -79,17 +62,34 @@ const SYMBOL_TO_COMPARISON_OPERATOR: Record<string, WorkflowConditionOperator> =
   '<=': 'lte',
 };
 
-const TEXT_FUNCTION_BY_OPERATOR: Partial<Record<WorkflowConditionOperator, string>> = {
+const POSITIVE_TEXT_FUNCTION_BY_OPERATOR: Partial<Record<WorkflowConditionOperator, string>> = {
   contains: 'contains',
   starts_with: 'startsWith',
   ends_with: 'endsWith',
 };
 
-const OPERATOR_BY_TEXT_FUNCTION: Record<string, WorkflowConditionOperator> = {
-  contains: 'contains',
-  startsWith: 'starts_with',
-  endsWith: 'ends_with',
+/**
+ * Workflow function for each text operator. A negative text operator calls the `not` form of its positive
+ * function (`not_contains` -> `notContains`), found through the shared `COMPLEMENTS` table. Those functions
+ * are true for a missing or non-string value, as `NOT <positive>` requires.
+ */
+const TEXT_FUNCTION_BY_OPERATOR: Partial<Record<WorkflowConditionOperator, string>> = {
+  ...POSITIVE_TEXT_FUNCTION_BY_OPERATOR,
+  ...Object.fromEntries(
+    (Object.entries(COMPLEMENTS) as Array<[WorkflowConditionOperator, WorkflowConditionOperator]>).flatMap(
+      ([negative, positive]) => {
+        const positiveFunction = POSITIVE_TEXT_FUNCTION_BY_OPERATOR[positive];
+        return positiveFunction ? [[negative, `not${positiveFunction[0].toUpperCase()}${positiveFunction.slice(1)}`]] : [];
+      },
+    ),
+  ),
 };
+
+const OPERATOR_BY_TEXT_FUNCTION: Record<string, WorkflowConditionOperator> = Object.fromEntries(
+  (Object.entries(TEXT_FUNCTION_BY_OPERATOR) as Array<[WorkflowConditionOperator, string]>).map(
+    ([operator, textFunction]) => [textFunction, operator],
+  ),
+);
 
 const SIMPLE_PATH_SEGMENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
@@ -116,6 +116,15 @@ const serializeLiteral = (value: WorkflowConditionLiteral): string => {
   return JSON.stringify(value);
 };
 
+/**
+ * A needle for a text function. The workflow engine rewrites `==` and `name(` in the whole source before
+ * parsing, string literals included, so `=` and `(` are written as unicode escapes to keep the needle literal.
+ */
+const serializeNeedle = (value: WorkflowConditionLiteral): string =>
+  typeof value === 'string'
+    ? JSON.stringify(value).replace(/=/g, '\\u003d').replace(/\(/g, '\\u0028')
+    : serializeLiteral(value);
+
 const asSingleLiteral = (value: WorkflowConditionClause['value']): WorkflowConditionLiteral => {
   if (Array.isArray(value)) return value[0] ?? '';
   return value === undefined ? '' : value;
@@ -135,7 +144,7 @@ export const serializeConditionClause = (clause: WorkflowConditionClause): strin
 
   const textFunction = TEXT_FUNCTION_BY_OPERATOR[clause.operator];
   if (textFunction) {
-    return `${textFunction}(${path}, ${serializeLiteral(asSingleLiteral(clause.value))})`;
+    return `${textFunction}(${path}, ${serializeNeedle(asSingleLiteral(clause.value))})`;
   }
 
   switch (clause.operator) {

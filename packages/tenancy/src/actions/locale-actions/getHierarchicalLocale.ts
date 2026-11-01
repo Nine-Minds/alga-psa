@@ -120,4 +120,8 @@ export const getHierarchicalLocaleAction = withOptionalAuth(async (user: IUserWi
 
   // 5. System default
   return LOCALE_CONFIG.defaultLocale as SupportedLocale;
+}, {
+  // I18nWrapper resolves the locale of the pre-acceptance review screen. It
+  // reads only this workspace's own user preference and tenant default.
+  allowBeforeCoManagedAcceptance: true,
 });

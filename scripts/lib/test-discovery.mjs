@@ -72,6 +72,8 @@ export function isAdditionalWorkspaceTest(file, lane) {
     if (file === 'ee/temporal-workflows/src/workflows/__tests__/tenant-deletion-workflow.behavior.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/tenant-deletion-external-links.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/tenant-deletion-answer-mappings.test.ts') return true;
+    if (file === 'ee/temporal-workflows/src/activities/__tests__/tenant-deletion-prepaid-block-order.test.ts') return true;
+    if (/^ee\/temporal-workflows\/src\/activities\/__tests__\/(defaultTaxRate|workSchedule|teamsObservability)TenantDeletionOrder\.test\.ts$/.test(file)) return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/email-activities.temporal.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/maintenance-fanout-activities.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/portal-domain-reconcile.integration.test.ts') return true;
@@ -125,7 +127,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
       && !/(^|\/)(node_modules|dist)\//.test(file)
       && !/\.(integration|db|playwright)\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
   }
-  if (!/^(services\/(email-service|workflow-worker)|sdk|ee\/server\/src\/lib)\//.test(file)
+  if (!/^(services\/(email-service|workflow-worker)|sdk|ee\/server\/src\/lib|scripts\/dev)\//.test(file)
     || !/\.(test|spec)\.[cm]?[jt]sx?$/.test(file)
     || /(^|\/)(node_modules|dist)\//.test(file)) return false;
   const runtime = /\.integration\.(test|spec)\.[cm]?[jt]sx?$/.test(file);

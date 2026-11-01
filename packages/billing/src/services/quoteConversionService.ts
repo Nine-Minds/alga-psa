@@ -1,3 +1,4 @@
+import { transitionQuoteStatus } from '@alga-psa/shared/lib/quotes/quoteLifecycleEvents';
 import type { Knex } from 'knex';
 import type {
   IContract,
@@ -11,11 +12,12 @@ import type {
   QuoteConversionPreviewItem,
 } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
-import { tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
+import { tenantDb, withTransaction, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { isPendingOptional, isQuoteItemIncluded } from '../lib/quoteItemInclusion';
+import { resolveFixedMemberRatePair } from '@alga-psa/shared/billingClients/fixedMemberRate';
 import { resolveInvoiceBillingTerms } from '../lib/billing/invoiceDueDate';
 import {
   allocatedOneTimeAmountFor,
@@ -607,7 +609,7 @@ export async function buildQuoteConversionPreview(
   };
 }
 
-export async function convertQuoteToDraftContract(
+async function convertQuoteToDraftContractRecords(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quoteId: string,
@@ -623,7 +625,7 @@ export async function convertQuoteToDraftContract(
     throw new Error('Quote templates cannot be converted to contracts');
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted to contracts');
   }
 
@@ -757,12 +759,15 @@ export async function convertQuoteToDraftContract(
       fixedConfigRows.map(({ configId, item, isUnitPriced }) => ({
         tenant,
         config_id: configId,
-        // Unit rows: base_rate is the rate per unit; the quantity is on the configuration row.
-        // Bundle rows: the member's share of the line total (the whole of it, one member per line).
-        base_rate: isUnitPriced ? item.unit_price : bundleLineTotal(item, productServiceIds),
-        // Unit rows and products are per unit; a bundle row is the whole line total (its share).
-        base_rate_basis:
-          isUnitPriced || isProductQuoteItem(item, productServiceIds) ? 'per_unit' : 'share',
+        ...resolveFixedMemberRatePair({
+          // Unit rows: base_rate is the rate per unit; the quantity is on the configuration row.
+          // Bundle rows: the member's share of the line total (the whole of it, one member per line).
+          base_rate: isUnitPriced ? item.unit_price : bundleLineTotal(item, productServiceIds),
+          // Unit rows and products are per unit; a bundle row is the whole line total (its share).
+          base_rate_basis:
+            isUnitPriced || isProductQuoteItem(item, productServiceIds) ? 'per_unit' : 'share',
+          pricing_basis: isUnitPriced ? 'unit' : 'bundle',
+        }),
         // Bundle rows are written exactly as before (column defaults).
         ...(isUnitPriced ? { pricing_basis: 'unit', rate_provenance: 'custom' } : {}),
         created_at: nowIso,
@@ -875,7 +880,7 @@ export async function convertQuoteToDraftContract(
   };
 }
 
-export async function convertQuoteToDraftSalesOrder(
+async function convertQuoteToDraftSalesOrderRecords(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quoteId: string,
@@ -891,7 +896,7 @@ export async function convertQuoteToDraftSalesOrder(
     throw new Error('Quote templates cannot be converted to sales orders');
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted to sales orders');
   }
 
@@ -1026,7 +1031,7 @@ function toIsoString(value: string | Date): string {
   return value instanceof Date ? value.toISOString() : value;
 }
 
-export async function convertQuoteToDraftInvoice(
+async function convertQuoteToDraftInvoiceRecords(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quoteId: string,
@@ -1042,7 +1047,7 @@ export async function convertQuoteToDraftInvoice(
     throw new Error('Quote templates cannot be converted to invoices');
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted to invoices');
   }
 
@@ -1294,7 +1299,7 @@ export async function convertQuoteToDraftInvoice(
   };
 }
 
-export async function convertQuoteToDraftContractAndInvoice(
+async function convertQuoteToDraftContractAndInvoiceRecords(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quoteId: string,
@@ -1306,7 +1311,7 @@ export async function convertQuoteToDraftContractAndInvoice(
     throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted');
   }
 
@@ -1321,30 +1326,8 @@ export async function convertQuoteToDraftContractAndInvoice(
     throw new Error('Quote must contain both recurring and one-time items to convert to both records');
   }
 
-  const contractResult = await convertQuoteToDraftContract(knexOrTrx, tenant, quoteId, performedBy);
-  const invoiceResult = await convertQuoteToDraftInvoice(knexOrTrx, tenant, quoteId, performedBy);
-  const nowIso = new Date().toISOString();
-
-  await tenantDb(knexOrTrx, tenant).table('quotes')
-    .where({ quote_id: quoteId })
-    .update({
-      status: 'converted',
-      converted_at: nowIso,
-      updated_by: performedBy ?? quote.updated_by ?? quote.created_by ?? null,
-      updated_at: nowIso,
-    });
-
-  await QuoteActivity.create(knexOrTrx, tenant, {
-    quote_id: quoteId,
-    activity_type: 'converted',
-    description: 'Quote converted to both a draft contract and a draft invoice',
-    performed_by: performedBy ?? null,
-    metadata: {
-      contract_id: contractResult.contract.contract_id,
-      invoice_id: invoiceResult.invoice.invoice_id,
-    },
-  });
-
+  const contractResult = await convertQuoteToDraftContractRecords(knexOrTrx, tenant, quoteId, performedBy);
+  const invoiceResult = await convertQuoteToDraftInvoiceRecords(knexOrTrx, tenant, quoteId, performedBy);
   const refreshedQuote = await Quote.getById(knexOrTrx, tenant, quoteId);
 
   return {
@@ -1353,4 +1336,85 @@ export async function convertQuoteToDraftContractAndInvoice(
     invoice: invoiceResult.invoice,
     clientContractId: contractResult.clientContractId,
   };
+}
+
+/** Create the destination records and complete one atomic quote conversion. */
+export async function convertQuoteToDraftContract(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  performedBy?: string | null,
+): Promise<QuoteToContractConversionResult> {
+  return withTransaction(knexOrTrx, async (trx) => {
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first();
+    const result = await convertQuoteToDraftContractRecords(trx, tenant, quoteId, performedBy);
+    const quote = await transitionQuoteStatus(trx, tenant, quoteId, 'converted', {
+      reason: 'Quote converted to draft destination records',
+      activity: { activity_type: 'converted', metadata: {} },
+      actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
+    });
+    return { ...result, quote: { ...result.quote, ...quote } };
+  });
+}
+
+/** Create the destination records and complete one atomic quote conversion. */
+export async function convertQuoteToDraftInvoice(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  performedBy?: string | null,
+): Promise<QuoteToInvoiceConversionResult> {
+  return withTransaction(knexOrTrx, async (trx) => {
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first();
+    const result = await convertQuoteToDraftInvoiceRecords(trx, tenant, quoteId, performedBy);
+    const quote = await transitionQuoteStatus(trx, tenant, quoteId, 'converted', {
+      reason: 'Quote converted to draft destination records',
+      activity: { activity_type: 'converted', metadata: {} },
+      actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
+    });
+    return { ...result, quote: { ...result.quote, ...quote } };
+  });
+}
+
+/** Create the destination records and complete one atomic quote conversion. */
+export async function convertQuoteToDraftContractAndInvoice(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  performedBy?: string | null,
+): Promise<QuoteToBothConversionResult> {
+  return withTransaction(knexOrTrx, async (trx) => {
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first();
+    const result = await convertQuoteToDraftContractAndInvoiceRecords(trx, tenant, quoteId, performedBy);
+    const quote = await transitionQuoteStatus(trx, tenant, quoteId, 'converted', {
+      reason: 'Quote converted to draft destination records',
+      activity: { activity_type: 'converted', metadata: {} },
+      actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
+    });
+    return { ...result, quote: { ...result.quote, ...quote } };
+  });
+}
+
+/** Create the destination records and complete one atomic quote conversion. */
+export async function convertQuoteToDraftSalesOrder(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  performedBy?: string | null,
+): Promise<QuoteToSalesOrderConversionResult> {
+  return withTransaction(knexOrTrx, async (trx) => {
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first();
+    const result = await convertQuoteToDraftSalesOrderRecords(trx, tenant, quoteId, performedBy);
+    const quote = await transitionQuoteStatus(trx, tenant, quoteId, 'converted', {
+      reason: 'Quote converted to draft destination records',
+      activity: { activity_type: 'converted', metadata: {} },
+      actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
+      details: { salesOrderId: result.salesOrder.so_id },
+    });
+    return { ...result, quote: { ...result.quote, ...quote } };
+  });
 }

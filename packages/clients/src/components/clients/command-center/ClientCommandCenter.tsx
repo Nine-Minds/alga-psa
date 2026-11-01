@@ -42,6 +42,8 @@ interface ClientCommandCenterProps {
   getSoftwareSummary?: GetClientSoftwareSummary | null;
   /** ?tab= value present when the page loaded (deep link, D3). */
   initialTabId?: string | null;
+  /** Open a registered tab in place (e.g. a header summary action) without a server navigation. */
+  openTabRequest?: { tabId: string; nonce: number } | null;
   /** Sync the focus-view state back into the URL (?tab=). */
   onTabUrlChange: (tabId: string | null) => void;
   /** Dirty state of the shared client-record edit buffer (Details / Additional Info). */
@@ -82,6 +84,7 @@ export default function ClientCommandCenter({
   tabs,
   getSoftwareSummary = null,
   initialTabId,
+  openTabRequest,
   onTabUrlChange,
   hasUnsavedRecordChanges,
   onDiscardRecordChanges,
@@ -143,19 +146,33 @@ export default function ClientCommandCenter({
     onTabUrlChange(tabId);
   }, [tabIds, onTabUrlChange]);
 
+  // Header summary actions ask for a tab by nonce, keeping the focus view open
+  // in place instead of navigating (which would re-render the server tree).
+  const lastOpenTabRequestRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!openTabRequest || lastOpenTabRequestRef.current === openTabRequest.nonce) return;
+    lastOpenTabRequestRef.current = openTabRequest.nonce;
+    if (tabIds.has(openTabRequest.tabId)) openFocus(openTabRequest.tabId);
+  }, [openTabRequest, tabIds, openFocus]);
+
   const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false);
+
+  const focusedTab = useMemo(() => (focusTabId ? tabs.find((tab) => tab.id === focusTabId) ?? null : null), [focusTabId, tabs]);
+  const focusedTabDirty = useCallback(() => Boolean(focusedTab?.hasUnsavedChanges?.()), [focusedTab]);
+  const focusedRecordDirty = Boolean(hasUnsavedRecordChanges && focusTabId && RECORD_FORM_TAB_IDS.has(focusTabId));
 
   const closeFocus = useCallback(() => {
     // Closing a record form with pending edits reads as "done" while the edits
-    // sit unsaved — confirm the discard instead of losing them silently.
-    if (hasUnsavedRecordChanges && focusTabId && RECORD_FORM_TAB_IDS.has(focusTabId)) {
+    // sit unsaved — confirm the discard instead of losing them silently. Feature
+    // drafts (e.g. a co-managed setup form) report their own dirty state.
+    if (focusedRecordDirty || focusedTabDirty()) {
       setConfirmDiscardOpen(true);
       return;
     }
     deepLinkConsumedRef.current = true;
     setFocusTabId(null);
     onTabUrlChange(null);
-  }, [onTabUrlChange, hasUnsavedRecordChanges, focusTabId]);
+  }, [onTabUrlChange, focusedRecordDirty, focusedTabDirty]);
 
   /** First existing tab id from a preference list (AlgaDesk filters some out). */
   const resolveTab = useCallback((...preferred: string[]): string | null => {
@@ -487,15 +504,20 @@ export default function ClientCommandCenter({
         onClose={() => setConfirmDiscardOpen(false)}
         onConfirm={() => {
           setConfirmDiscardOpen(false);
-          onDiscardRecordChanges();
+          if (focusedRecordDirty) onDiscardRecordChanges();
+          focusedTab?.onDiscardUnsavedChanges?.();
           deepLinkConsumedRef.current = true;
           setFocusTabId(null);
           onTabUrlChange(null);
         }}
         title={t('clientCommandCenter.discardTitle', { defaultValue: 'Unsaved changes' })}
-        message={t('clientCommandCenter.discardMessage', {
-          defaultValue: 'You have unsaved client record changes. Close and discard them?',
-        })}
+        message={focusedRecordDirty
+          ? t('clientCommandCenter.discardMessage', {
+            defaultValue: 'You have unsaved client record changes. Close and discard them?',
+          })
+          : t('clientCommandCenter.discardFeatureMessage', {
+            defaultValue: 'You have unsaved changes in this view. Close and discard them?',
+          })}
         confirmLabel={t('clientCommandCenter.discardConfirm', { defaultValue: 'Discard changes' })}
         cancelLabel={t('clientCommandCenter.discardCancel', { defaultValue: 'Keep editing' })}
       />

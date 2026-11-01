@@ -34,7 +34,7 @@ import type {
 import { isOAuthMappingFailure, OAuthAccountLinkConflictError } from "./sso/types";
 import { SSO_LINK_STATE_COOKIE, SSO_PROFILE_TAB_URL } from "./sso/linkStateCookie";
 import {
-    getMicrosoftSsoEmulatorEndpoints,
+    buildMicrosoftSsoEmulatorProvider,
     isMicrosoftSsoEmulatorEnabled,
 } from "./sso/microsoftSsoEmulator";
 import { mapCeOAuthProfileToExtendedUser } from "./sso/ceOAuthProfileMapper";
@@ -294,33 +294,60 @@ const NEXTAUTH_SECURE_COOKIES = isSecureCookieEnvironment();
 const NEXTAUTH_COOKIE_PREFIX = NEXTAUTH_SECURE_COOKIES ? '__Secure-' : '';
 const PLAYWRIGHT_FAKE_GOOGLE_OAUTH_ENABLED = process.env.PLAYWRIGHT_FAKE_GOOGLE_OAUTH === 'true';
 
-async function getClientPortalSsoProfileHints(
+export interface SsoProfileHints {
+    userType: 'client' | 'internal';
+    /** Client-portal vanity/discovery tenant. Never consulted for internal users. */
+    tenantHint?: string;
+    /** Server-verified tenant an internal sign-in is scoped to. */
+    scopeTenantId?: string;
+}
+
+/**
+ * What the server already knows about this OAuth callback. The Teams context
+ * comes first: buildAuthOptions(context) is assembled explicitly by the server
+ * for the Teams surface, so it is the most trusted scope and no cookie (which
+ * may be a leftover from an earlier MSP SSO attempt) can override it. Otherwise,
+ * from signed state the server issued itself: the client-portal resolution
+ * cookie, then the MSP resolution cookie (whose `scopeTenantId`, or tenant-owned
+ * credential source, scopes the user). IdP profile claims are not consulted here
+ * and must never select an internal user's tenant.
+ */
+export async function getSsoProfileHints(
     provider: MspSsoProviderId,
-): Promise<{ tenantHint?: string; userTypeHint?: 'client' } | null> {
+    context?: { teamsTenantId?: string },
+): Promise<SsoProfileHints | null> {
+    if (context?.teamsTenantId) {
+        return { userType: 'internal', scopeTenantId: context.teamsTenantId };
+    }
+
     try {
         const signingSecret = await getMspSsoSigningSecret();
-        if (!signingSecret) {
-            return null;
+        if (signingSecret) {
+            const cookieStore = await cookies();
+            const clientResolution = parseAndVerifyClientPortalSsoResolutionCookie({
+                value: cookieStore.get(CLIENT_PORTAL_SSO_RESOLUTION_COOKIE)?.value,
+                secret: signingSecret,
+            });
+            if (clientResolution && clientResolution.provider === provider) {
+                return { userType: 'client', tenantHint: clientResolution.tenantId };
+            }
+
+            const mspResolution = parseAndVerifyMspSsoResolutionCookie({
+                value: cookieStore.get(MSP_SSO_RESOLUTION_COOKIE)?.value,
+                secret: signingSecret,
+            });
+            if (mspResolution && mspResolution.provider === provider) {
+                const scopeTenantId =
+                    mspResolution.scopeTenantId ??
+                    (mspResolution.source === 'tenant' ? mspResolution.tenantId : undefined);
+                return { userType: 'internal', scopeTenantId };
+            }
         }
-
-        const cookieStore = await cookies();
-        const resolution = parseAndVerifyClientPortalSsoResolutionCookie({
-            value: cookieStore.get(CLIENT_PORTAL_SSO_RESOLUTION_COOKIE)?.value,
-            secret: signingSecret,
-        });
-
-        if (!resolution || resolution.provider !== provider) {
-            return null;
-        }
-
-        return {
-            tenantHint: resolution.tenantId,
-            userTypeHint: 'client',
-        };
     } catch (error) {
-        console.warn('[client-portal-sso] failed to read OAuth profile hints', error);
-        return null;
+        console.warn('[sso] failed to read OAuth profile hints', error);
     }
+
+    return null;
 }
 
 const NEXTAUTH_COOKIES = {
@@ -374,14 +401,17 @@ const NEXTAUTH_COOKIES = {
     },
 } as const;
 
-async function mapGoogleProfile(profile: Record<string, any>): Promise<ExtendedUser> {
+async function mapGoogleProfile(
+    profile: Record<string, any>,
+    context?: { teamsTenantId?: string },
+): Promise<ExtendedUser> {
     const googleProfile = profile as Record<string, unknown>;
-    const clientPortalHints = await getClientPortalSsoProfileHints('google');
+    const clientPortalHints = await getSsoProfileHints('google', context);
     const tenantHint =
         clientPortalHints?.tenantHint ??
         (typeof googleProfile.hd === 'string' ? googleProfile.hd : undefined);
     const userTypeHint =
-        clientPortalHints?.userTypeHint ??
+        clientPortalHints?.userType ??
         (typeof googleProfile.user_type === 'string'
             ? googleProfile.user_type
             : undefined);
@@ -397,6 +427,7 @@ async function mapGoogleProfile(profile: Record<string, any>): Promise<ExtendedU
         tenantHint,
         vanityHostHint,
         userTypeHint,
+        scopeTenantId: clientPortalHints?.scopeTenantId,
     }) as Promise<ExtendedUser>;
 }
 
@@ -404,7 +435,7 @@ function getLocalGoogleOauthBaseUrl(): string {
     return new URL('/api/auth/e2e/google/', process.env.NEXTAUTH_URL || 'http://localhost:3000').toString();
 }
 
-function buildGoogleProvider(clientId: string, clientSecret: string) {
+function buildGoogleProvider(clientId: string, clientSecret: string, context?: { teamsTenantId?: string }) {
     if (PLAYWRIGHT_FAKE_GOOGLE_OAUTH_ENABLED) {
         const localBaseUrl = getLocalGoogleOauthBaseUrl();
         return {
@@ -426,22 +457,21 @@ function buildGoogleProvider(clientId: string, clientSecret: string) {
             userinfo: {
                 url: new URL('userinfo', localBaseUrl).toString(),
             },
-            profile: mapGoogleProfile,
+            profile: (profile: Record<string, any>) => mapGoogleProfile(profile, context),
         };
     }
 
     return GoogleProvider({
         clientId,
         clientSecret,
-        profile: mapGoogleProfile,
+        profile: (profile: Record<string, any>) => mapGoogleProfile(profile, context),
     });
 }
 
 /**
  * Microsoft sign-in, against Entra or — when the simulator gate is on — against
- * the algasim Microsoft simulator. The simulator issues no signed id_token, so
- * that branch runs as plain OAuth2 and resolves the account from Graph `/me`,
- * which carries the same `mail`/`userPrincipalName` pair `profile()` reads.
+ * the algasim Microsoft simulator. That branch uses discovery and signed OIDC
+ * tokens with the same state, PKCE and nonce checks as the production provider.
  */
 function buildAzureADProvider(config: {
     clientId: string;
@@ -451,28 +481,7 @@ function buildAzureADProvider(config: {
     profile: (profile: Record<string, any>) => Promise<ExtendedUser>;
 }) {
     if (isMicrosoftSsoEmulatorEnabled()) {
-        const endpoints = getMicrosoftSsoEmulatorEndpoints(config.authority);
-        return {
-            id: 'azure-ad',
-            name: 'Microsoft',
-            type: 'oauth' as const,
-            clientId: config.clientId,
-            clientSecret: config.clientSecret,
-            checks: config.checks,
-            authorization: {
-                url: endpoints.authorization,
-                params: {
-                    scope: 'openid email profile https://graph.microsoft.com/User.Read',
-                },
-            },
-            token: {
-                url: endpoints.token,
-            },
-            userinfo: {
-                url: endpoints.userinfo,
-            },
-            profile: config.profile,
-        };
+        return buildMicrosoftSsoEmulatorProvider(config);
     }
 
     return AzureADProvider({
@@ -777,13 +786,16 @@ const OAUTH_PROVIDER_ALIASES: Record<string, OAuthLinkProvider> = {
 // Keycloak (or any OIDC realm fronted by it) resolves the AlgaPSA user by email,
 // exactly like Google and Microsoft. Standard realms emit no tenant/user_type
 // claims, so anything beyond email is a hint, never the source of truth.
-async function mapKeycloakProfile(profile: Record<string, any>): Promise<ExtendedUser> {
-    const clientPortalHints = await getClientPortalSsoProfileHints('keycloak');
+async function mapKeycloakProfile(
+    profile: Record<string, any>,
+    context?: { teamsTenantId?: string },
+): Promise<ExtendedUser> {
+    const clientPortalHints = await getSsoProfileHints('keycloak', context);
     const tenantHint =
         clientPortalHints?.tenantHint ??
         (typeof profile.tenant === 'string' ? profile.tenant : undefined);
     const userTypeHint =
-        clientPortalHints?.userTypeHint ??
+        clientPortalHints?.userType ??
         (typeof profile.user_type === 'string' ? profile.user_type : undefined);
     return mapOAuthProfileToExtendedUser({
         provider: 'keycloak',
@@ -792,6 +804,7 @@ async function mapKeycloakProfile(profile: Record<string, any>): Promise<Extende
         profile,
         tenantHint,
         userTypeHint,
+        scopeTenantId: clientPortalHints?.scopeTenantId,
     });
 }
 
@@ -800,12 +813,12 @@ function buildKeycloakProvider(config: {
     clientSecret: string;
     url: string;
     realm: string;
-}) {
+}, context?: { teamsTenantId?: string }) {
     return KeycloakProvider({
         clientId: config.clientId,
         clientSecret: config.clientSecret,
         issuer: buildKeycloakIssuer(config.url, config.realm),
-        profile: mapKeycloakProfile,
+        profile: (profile: Record<string, any>) => mapKeycloakProfile(profile, context),
     });
 }
 
@@ -1579,7 +1592,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
     providers: [
         ...(secrets.googleClientId && secrets.googleClientSecret
             ? [
-                buildGoogleProvider(secrets.googleClientId, secrets.googleClientSecret),
+                buildGoogleProvider(secrets.googleClientId, secrets.googleClientSecret, context),
             ]
             : []),
         ...(secrets.microsoftClientId && secrets.microsoftClientSecret
@@ -1596,7 +1609,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     // sends and verifies a nonce when it is listed here.
                     checks: ['pkce', 'state', 'nonce'],
                     profile: async (profile: Record<string, any>): Promise<ExtendedUser> => {
-                        const clientPortalHints = await getClientPortalSsoProfileHints('azure-ad');
+                        const clientPortalHints = await getSsoProfileHints('azure-ad', context);
                         const emailCandidate =
                             profile.email ??
                             profile.mail ??
@@ -1616,7 +1629,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                         const vanityHostHint =
                             typeof profile.vanity_host === 'string' ? profile.vanity_host : undefined;
                         const userTypeHint =
-                            clientPortalHints?.userTypeHint ??
+                            clientPortalHints?.userType ??
                             (typeof profile.user_type === 'string' ? profile.user_type : undefined);
                         return mapOAuthProfileToExtendedUser({
                             provider: 'microsoft',
@@ -1626,6 +1639,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                             tenantHint,
                             vanityHostHint,
                             userTypeHint,
+                            scopeTenantId: clientPortalHints?.scopeTenantId,
                         }) as Promise<ExtendedUser>;
                     },
                 }),
@@ -1913,7 +1927,7 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                     clientSecret: secrets.keycloakClientSecret,
                     url: secrets.keycloakUrl,
                     realm: secrets.keycloakRealm,
-                }),
+                }, context),
             ]
             : []),
     ],

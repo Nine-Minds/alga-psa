@@ -1,0 +1,12 @@
+
+ RUN  v3.2.7 /home/robert/alga-copies/feature-prepaid-hours-on-contracts-priced-block-in-advan/server
+      Running tests with seed "1793154323219"
+
+Environment file path: /home/robert/alga-copies/feature-prepaid-hours-on-contracts-priced-block-in-advan/.env.localtest
+Environment file path: /home/robert/alga-copies/feature-prepaid-hours-on-contracts-priced-block-in-advan/.env.localtest
+ ✓ |node| ../packages/db/src/lib/tenantTableManifest.golden.test.ts (10 tests) 11ms 17 MB heap used
+
+ Test Files  1 passed (1)
+      Tests  10 passed (10)
+   Start at  02:25:23
+   Duration  4.67s (transform 121ms, setup 68ms, collect 72ms, tests 11ms, environment 0ms, prepare 31ms)

@@ -1,4 +1,5 @@
-import type { z } from 'zod';
+import type { EventPayloadExtension } from './define';
+import { coManagedRoutingExtension } from './coManagedRouting';
 
 /**
  * Event-type extension point. An extension declares its event type names and one
@@ -11,51 +12,15 @@ import type { z } from 'zod';
  * event type, or with another extension, fails `tsc` (see `eventBusSchema.ts`)
  * and throws at module load (`assertEventExtensionsCompose`).
  *
- * The list is empty in the native build, so `EVENT_TYPES` and every
- * `EventPayloadSchemas` entry are exactly the core values.
+ * The core values are never changed: `EVENT_TYPES` is the core list followed by the extension events
+ * (co-managed routing, CM L5), and every core `EventPayloadSchemas` entry is reference-identical.
  *
  * This module must not import `eventBusSchema.ts` (that file imports this one).
  */
-export interface EventPayloadExtension<
-  TEventType extends string = string,
-  TPayloads extends { readonly [K in TEventType]: z.ZodTypeAny } = { readonly [K in TEventType]: z.ZodTypeAny },
-> {
-  readonly name: string;
-  readonly eventTypes: readonly [TEventType, ...TEventType[]];
-  readonly payloadSchemas: TPayloads;
-}
+export { defineEventExtension, type EventPayloadExtension } from './define';
 
-/**
- * Declare an extension. Payload keys must be exactly the declared event types:
- * a missing schema or a stray key is a type error and a runtime error.
- */
-export function defineEventExtension<
-  const TEventType extends string,
-  const TPayloads extends { readonly [K in TEventType]: z.ZodTypeAny },
->(
-  extension: EventPayloadExtension<TEventType, TPayloads> & {
-    readonly payloadSchemas: TPayloads & { readonly [K in Exclude<keyof TPayloads, TEventType>]: never };
-  },
-): EventPayloadExtension<TEventType, TPayloads> {
-  const declared = new Set<string>(extension.eventTypes);
-  if (declared.size !== extension.eventTypes.length) {
-    throw new Error(`[eventExtensions] ${extension.name}: duplicate event type in eventTypes`);
-  }
-  const keys = Object.keys(extension.payloadSchemas);
-  const missing = extension.eventTypes.filter((t) => !keys.includes(t));
-  const stray = keys.filter((k) => !declared.has(k));
-  if (missing.length || stray.length) {
-    throw new Error(
-      `[eventExtensions] ${extension.name}: payloadSchemas must match eventTypes` +
-        (missing.length ? `; missing ${missing.join(', ')}` : '') +
-        (stray.length ? `; undeclared ${stray.join(', ')}` : ''),
-    );
-  }
-  return extension;
-}
-
-/** The composition point: one entry per extension module. Empty natively. */
-export const eventExtensions = [] as const satisfies readonly EventPayloadExtension[];
+/** The composition point: one entry per extension module. */
+export const eventExtensions = [coManagedRoutingExtension] as const satisfies readonly EventPayloadExtension[];
 
 type UnionToIntersection<U> = (U extends unknown ? (arg: U) => void : never) extends (arg: infer I) => void
   ? I
@@ -136,3 +101,4 @@ export function assertEventExtensionsCompose(
     }
   }
 }
+

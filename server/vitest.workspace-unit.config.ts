@@ -2,13 +2,16 @@ import { defineConfig } from 'vitest/config';
 import path from 'node:path';
 import serverConfig, { makeEnvironmentProjects } from './vitest.config';
 
-// Service/SDK and colocated EE library suites were outside both the server
-// unit filter and the package directory. Collect them in an explicit lane.
+// Service/SDK, colocated EE library and TypeScript dev-tooling suites were
+// outside both the server unit filter and the package directory. Collect them
+// in an explicit lane. (scripts/tests holds node:test .mjs suites, which the
+// node-tooling lane runs; scripts/dev holds vitest suites.)
 const include = [
   '../services/email-service/**/*.{test,spec}.?(c|m)[jt]s?(x)',
   '../services/workflow-worker/**/*.{test,spec}.?(c|m)[jt]s?(x)',
   '../sdk/**/*.{test,spec}.?(c|m)[jt]s?(x)',
   '../ee/server/src/lib/**/*.{test,spec}.?(c|m)[jt]s?(x)',
+  '../scripts/dev/**/*.{test,spec}.?(c|m)[jt]s?(x)',
 ];
 
 const exclude = [

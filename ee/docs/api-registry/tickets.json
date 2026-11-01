@@ -459,7 +459,7 @@
       "metadata": {
         "displayName": "Create Ticket",
         "summary": "Create a new ticket",
-        "description": "Creates a new ticket on a specified board with the desired status and priority. Requires the user to have ticket create permissions. Do not invoke this until you have gathered valid UUIDs for board_id, client_id, status_id, and priority_id from prior lookup calls. IMPORTANT: status_id must belong to the same board as board_id — use GET /api/v1/statuses?type=ticket&board_id=... to discover valid statuses for the chosen board.",
+        "description": "Creates a new ticket on a specified board with the desired status and priority. Requires the user to have ticket create permissions. Do not invoke this until you have gathered valid UUIDs for board_id, client_id, status_id, and priority_id from prior lookup calls. IMPORTANT: status_id must belong to the same board as board_id — use GET /api/v1/statuses?type=ticket&board_id=... to discover valid statuses for the chosen board. Set suppressContactNotifications=true to create the ticket silently — no customer-facing ticket-created email (which otherwise falls back to the client's address when the ticket has no contact) and no portal notifications. Add suppressInternalNotifications=true to also skip agent and watcher notifications; internal suppression requires customer suppression. Silent creations still create normal audit, workflow, and webhook records.",
         "rbacResource": "ticket",
         "approvalRequired": true,
         "requestBodySchema": {
@@ -477,7 +477,15 @@
             "assigned_to": { "type": "string", "format": "uuid", "nullable": true, "description": "Technician assignment. Use GET /api/v1/users (filtering by role, team, or name) to acquire the user_id of the assignee and submit that UUID." },
             "url": { "type": "string", "format": "uri", "nullable": true },
             "attributes": { "type": "object", "additionalProperties": true },
-            "tags": { "type": "array", "items": { "type": "string" }, "description": "Optional labels to associate with the ticket. Discover existing tag values via GET /api/v1/tags or GET /api/v1/tags/search before reusing them." }
+            "tags": { "type": "array", "items": { "type": "string" }, "description": "Optional labels to associate with the ticket. Discover existing tag values via GET /api/v1/tags or GET /api/v1/tags/search before reusing them." },
+            "suppressContactNotifications": {
+              "type": "boolean",
+              "description": "Suppress the customer-facing ticket-created email and portal notifications for this creation. Use it for machine-generated tickets that should not reach the client."
+            },
+            "suppressInternalNotifications": {
+              "type": "boolean",
+              "description": "Also suppress agent and watcher email, in-app, and push notifications. Requires suppressContactNotifications=true."
+            }
           },
           "required": ["title", "board_id", "client_id", "status_id", "priority_id"]
         },
@@ -522,6 +530,20 @@
               }
             },
             "notes": "Before calling this endpoint, resolve every referenced identifier by invoking the appropriate lookup APIs: GET /api/v1/boards to choose board_id, GET /api/v1/statuses?type=ticket&board_id=... to choose a status_id that belongs to that board, GET /api/v1/clients to choose client_id, GET /api/v1/contacts?client_id=... for contact_name_id, GET /api/v1/clients/{client_id}/locations for location_id, GET /api/v1/categories/ticket for category/subcategory options, GET /api/v1/users to select the assignee, and GET /api/v1/tags to reuse tag names. CRITICAL: status_id must belong to the same board as board_id — mismatched values will be rejected with a 400 error. Always send UUID fields exactly as documented — do not substitute human-readable names such as \"High\" or \"In Progress,\" and do not introduce extra fields that are not part of this schema."
+          },
+          {
+            "name": "Create an alert ticket without notifying the client",
+            "request": {
+              "body": {
+                "title": "Disk usage above 90% on SRV-01",
+                "board_id": "11111111-1111-1111-1111-111111111111",
+                "client_id": "22222222-2222-2222-2222-222222222222",
+                "status_id": "33333333-3333-3333-3333-333333333333",
+                "priority_id": "44444444-4444-4444-4444-444444444444",
+                "suppressContactNotifications": true
+              }
+            },
+            "notes": "Contact suppression skips the customer-facing ticket-created email — which, with no contact_name_id, would otherwise go to the client's own address — and the portal notification. The assignee and internal watchers are still notified; add suppressInternalNotifications=true to silence them too."
           }
         ]
       }
@@ -534,7 +556,7 @@
       "metadata": {
         "displayName": "Update Ticket",
         "summary": "Update a ticket with optional silent-notification controls",
-        "description": "Updates one or more ticket fields. Set suppressContactNotifications=true to avoid customer email and portal notifications for this operation. Set suppressInternalNotifications=true as well to also avoid agent and watcher notifications; internal suppression requires customer suppression. Silent updates still create normal audit, workflow, and webhook records.",
+        "description": "Updates one or more ticket fields. Set suppressContactNotifications=true to avoid customer email and portal notifications for this operation. Set suppressInternalNotifications=true as well to also avoid agent and watcher notifications; internal suppression requires customer suppression. Silent updates still create normal audit, workflow, and webhook records. Do not hand-edit attributes.watch_list: it is a derived mirror, and any watch_list sent here is ignored and the stored list preserved. To copy contacts, users or external emails on updates use POST /tickets/{id}/watchers (and PATCH/DELETE on the same path).",
         "rbacResource": "ticket",
         "approvalRequired": true,
         "parameters": [
@@ -560,7 +582,7 @@
             "subcategory_id": { "type": "string", "format": "uuid" },
             "assigned_to": { "type": ["string", "null"], "format": "uuid" },
             "priority_id": { "type": "string", "format": "uuid" },
-            "attributes": { "type": ["object", "null"], "additionalProperties": true },
+            "attributes": { "type": ["object", "null"], "additionalProperties": true, "description": "Free-form ticket attributes. Do not put watch_list here: it is ignored and the stored list preserved. Use POST/PATCH/DELETE /tickets/{id}/watchers." },
             "tags": { "type": "array", "items": { "type": "string" } },
             "override_close_rules": { "type": "boolean" },
             "override_close_rules_reason": { "type": ["string", "null"] },
@@ -913,6 +935,296 @@
         "description": "Returns the ticket and matching link for a system/external_id pair, with an optional external_parent_id for comment-level records. Returns 404 when no ticket carries the external record. Use this as the dedupe check before creating a ticket from an external source.",
         "rbacResource": "ticket",
         "approvalRequired": false
+      }
+    },
+    {
+      "match": {
+        "method": "get",
+        "path": "/api/v1/tickets/{id}/watchers"
+      },
+      "metadata": {
+        "displayName": "List Ticket Watchers",
+        "summary": "List ticket watchers: who is copied or cc'd on a ticket's updates",
+        "playbooks": [
+          "See who is copied or cc'd on ticket updates: list the ticket watchers."
+        ],
+        "description": "Watchers vs. additional agents vs. comment cc: WATCHERS (these endpoints) are the persistent watch list - client contacts, internal users or any bare external email - copied on ticket updates until removed; they can be added silently. ADDITIONAL AGENTS (/tickets/{id}/agents) are internal staff working the ticket only; never use them for external people. COMMENT CC/BCC is a one-off copy of a single comment email and never joins the watch list. Use this for requests like 'cc X on updates', 'copy X on this ticket', 'notify X when it changes', 'add to the watch list', 'add a watcher', 'add an external contact / external email'. Returns the current watch list of the ticket, including paused (active=false) watchers. A change to the watch list is not itself emailed to anyone: the new watcher is simply copied on later ticket updates. Unless silent=true the write publishes one ticket-updated event with no field changes; it creates no watcher email, but it does create the generic 'ticket updated' in-app notification for the assigned agents and the client-portal contact. silent=true sets suppressContactNotifications and suppressInternalNotifications on that event, which skips those in-app notifications (request-scoped, never stored); use it when the change should leave no trace for staff or the customer. Every response is the full list of watchers: {email, name, active, entity_type, entity_id, source}; email (case-insensitive) is the key.",
+        "rbacResource": "ticket",
+        "approvalRequired": false,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Ticket identifier.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "examples": [
+          {
+            "name": "See who is watching a ticket",
+            "request": {
+              "params": {
+                "id": "11111111-1111-1111-1111-111111111111"
+              }
+            },
+            "notes": "Read data[] for each watcher; check email before adding to avoid redundant calls (adds are idempotent anyway)."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/tickets/{id}/watchers"
+      },
+      "metadata": {
+        "displayName": "Add Ticket Watcher",
+        "summary": "Add a ticket watcher: copy or cc a contact, user or external email on ticket updates",
+        "playbooks": [
+          "Copy, cc or notify a client contact, internal user or external email on ticket updates: POST the watcher endpoint with contact_id, user_id or email.",
+          "Add an external watcher or external email to a ticket: use the watcher endpoint, not additional agents (internal staff only) and not comment cc (one comment only).",
+          "Example: to copy Dorothy Gale and an outside mailbox on updates, POST once with her contact_id and once with the mailbox email."
+        ],
+        "description": "Watchers vs. additional agents vs. comment cc: WATCHERS (these endpoints) are the persistent watch list - client contacts, internal users or any bare external email - copied on ticket updates until removed; they can be added silently. ADDITIONAL AGENTS (/tickets/{id}/agents) are internal staff working the ticket only; never use them for external people. COMMENT CC/BCC is a one-off copy of a single comment email and never joins the watch list. Use this for requests like 'cc X on updates', 'copy X on this ticket', 'notify X when it changes', 'add to the watch list', 'add a watcher', 'add an external contact / external email'. Provide exactly one of contact_id (client contact), user_id (internal user) or email (any mailbox, e.g. an external address). The contact/user is resolved to its email and name server-side; an unknown or other-tenant id, or one without an email, returns 422. Idempotent set-add: an email already on the list is re-activated, never duplicated. Example: to copy Dorothy Gale (a client contact) and an outside mailbox on updates, call this once with her contact_id and once with {\"email\":\"ops@vendor.example\"}. A change to the watch list is not itself emailed to anyone: the new watcher is simply copied on later ticket updates. Unless silent=true the write publishes one ticket-updated event with no field changes; it creates no watcher email, but it does create the generic 'ticket updated' in-app notification for the assigned agents and the client-portal contact. silent=true sets suppressContactNotifications and suppressInternalNotifications on that event, which skips those in-app notifications (request-scoped, never stored); use it when the change should leave no trace for staff or the customer. Every response is the full list of watchers: {email, name, active, entity_type, entity_id, source}; email (case-insensitive) is the key.",
+        "rbacResource": "ticket",
+        "approvalRequired": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Ticket identifier.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBodySchema": {
+          "type": "object",
+          "properties": {
+            "contact_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Client contact to watch. Exactly one of contact_id, user_id, email."
+            },
+            "user_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Internal user to watch. Exactly one of contact_id, user_id, email."
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "description": "Any bare email address, including external mailboxes. Exactly one of contact_id, user_id, email."
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255,
+              "description": "Optional display name, used only when the watcher has none yet."
+            },
+            "active": {
+              "type": "boolean",
+              "description": "Defaults to true."
+            },
+            "silent": {
+              "type": "boolean",
+              "description": "Request-scoped, never stored. true = send no customer or internal notification for this write."
+            }
+          }
+        },
+        "examples": [
+          {
+            "name": "Copy a client contact on updates",
+            "request": {
+              "params": {
+                "id": "11111111-1111-1111-1111-111111111111"
+              },
+              "body": {
+                "contact_id": "22222222-2222-2222-2222-222222222222"
+              }
+            },
+            "notes": "Persistent watch-list entry; the contact's email and name are resolved server-side."
+          },
+          {
+            "name": "Copy an external mailbox silently",
+            "request": {
+              "params": {
+                "id": "11111111-1111-1111-1111-111111111111"
+              },
+              "body": {
+                "email": "ops@vendor.example",
+                "silent": true
+              }
+            },
+            "notes": "Adds the watcher without notifying anyone about the change itself; the mailbox receives future ticket updates."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "patch",
+        "path": "/api/v1/tickets/{id}/watchers"
+      },
+      "metadata": {
+        "displayName": "Pause or Resume Ticket Watcher",
+        "summary": "Pause or resume a ticket watcher (cc on updates) without removing it",
+        "playbooks": [
+          "Pause or resume a watcher: PATCH with email and active=false or true."
+        ],
+        "description": "Watchers vs. additional agents vs. comment cc: WATCHERS (these endpoints) are the persistent watch list - client contacts, internal users or any bare external email - copied on ticket updates until removed; they can be added silently. ADDITIONAL AGENTS (/tickets/{id}/agents) are internal staff working the ticket only; never use them for external people. COMMENT CC/BCC is a one-off copy of a single comment email and never joins the watch list. Use this for requests like 'cc X on updates', 'copy X on this ticket', 'notify X when it changes', 'add to the watch list', 'add a watcher', 'add an external contact / external email'. Identifies the watcher by email (case-insensitive) and toggles active. A paused watcher stays on the list but is not copied. Returns 404 if the email is not a watcher. A change to the watch list is not itself emailed to anyone: the new watcher is simply copied on later ticket updates. Unless silent=true the write publishes one ticket-updated event with no field changes; it creates no watcher email, but it does create the generic 'ticket updated' in-app notification for the assigned agents and the client-portal contact. silent=true sets suppressContactNotifications and suppressInternalNotifications on that event, which skips those in-app notifications (request-scoped, never stored); use it when the change should leave no trace for staff or the customer. Every response is the full list of watchers: {email, name, active, entity_type, entity_id, source}; email (case-insensitive) is the key.",
+        "rbacResource": "ticket",
+        "approvalRequired": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Ticket identifier.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBodySchema": {
+          "type": "object",
+          "required": [
+            "email",
+            "active"
+          ],
+          "properties": {
+            "email": {
+              "type": "string",
+              "format": "email",
+              "description": "Email of an existing watcher."
+            },
+            "active": {
+              "type": "boolean",
+              "description": "false pauses updates, true resumes them."
+            },
+            "silent": {
+              "type": "boolean",
+              "description": "Request-scoped, never stored. true = send no customer or internal notification for this write."
+            }
+          }
+        },
+        "examples": [
+          {
+            "name": "Pause a watcher",
+            "request": {
+              "params": {
+                "id": "11111111-1111-1111-1111-111111111111"
+              },
+              "body": {
+                "email": "ops@vendor.example",
+                "active": false
+              }
+            },
+            "notes": "The watcher remains listed with active=false."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "delete",
+        "path": "/api/v1/tickets/{id}/watchers"
+      },
+      "metadata": {
+        "displayName": "Remove Ticket Watcher",
+        "summary": "Remove a ticket watcher so they are no longer copied or cc'd on updates",
+        "playbooks": [
+          "Stop copying or cc'ing someone on ticket updates: DELETE the watcher with ?email=."
+        ],
+        "description": "Watchers vs. additional agents vs. comment cc: WATCHERS (these endpoints) are the persistent watch list - client contacts, internal users or any bare external email - copied on ticket updates until removed; they can be added silently. ADDITIONAL AGENTS (/tickets/{id}/agents) are internal staff working the ticket only; never use them for external people. COMMENT CC/BCC is a one-off copy of a single comment email and never joins the watch list. Use this for requests like 'cc X on updates', 'copy X on this ticket', 'notify X when it changes', 'add to the watch list', 'add a watcher', 'add an external contact / external email'. Removes the watcher whose email matches the ?email= query parameter (optional &silent=true). Returns 404 when that email is not a watcher. A change to the watch list is not itself emailed to anyone: the new watcher is simply copied on later ticket updates. Unless silent=true the write publishes one ticket-updated event with no field changes; it creates no watcher email, but it does create the generic 'ticket updated' in-app notification for the assigned agents and the client-portal contact. silent=true sets suppressContactNotifications and suppressInternalNotifications on that event, which skips those in-app notifications (request-scoped, never stored); use it when the change should leave no trace for staff or the customer. Every response is the full list of watchers: {email, name, active, entity_type, entity_id, source}; email (case-insensitive) is the key.",
+        "rbacResource": "ticket",
+        "approvalRequired": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Ticket identifier.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "required": true,
+            "description": "Email of the watcher to remove (case-insensitive).",
+            "schema": {
+              "type": "string",
+              "format": "email"
+            }
+          },
+          {
+            "name": "silent",
+            "in": "query",
+            "required": false,
+            "description": "true = send no notification for this removal.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          }
+        ],
+        "examples": [
+          {
+            "name": "Stop copying an external mailbox",
+            "request": {
+              "params": {
+                "id": "11111111-1111-1111-1111-111111111111"
+              },
+              "query": {
+                "email": "ops@vendor.example"
+              }
+            },
+            "notes": "Use this for the persistent watch list; comment cc needs no cleanup."
+          }
+        ]
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/tickets/{id}/agents"
+      },
+      "metadata": {
+        "displayName": "Add Ticket Additional Agent",
+        "summary": "Add an internal staff member (technician, coworker or colleague) as an additional agent; internal staff only",
+        "playbooks": [
+          "Add another technician to this ticket: POST the agents endpoint with the internal user_id so a second agent can help work the ticket.",
+          "Add a coworker or colleague to help on a ticket, or assign additional staff as another agent: use the additional agents endpoint.",
+          "Add an additional agent to help work the ticket (internal staff only, never an external person)."
+        ],
+        "description": "Adds an INTERNAL user (staff) as an additional agent working the ticket and publishes the additional-agent-assigned event so notifications fire unless suppressed. Internal staff only: to copy an external person, client contact or bare email on updates, use POST /tickets/{id}/watchers instead; for a one-off copy of a single comment use the comment cc/bcc fields. A ticket with no primary agent promotes the user to primary. A duplicate returns 409.",
+        "rbacResource": "ticket",
+        "approvalRequired": true
+      }
+    },
+    {
+      "match": {
+        "method": "post",
+        "path": "/api/v1/tickets/{id}/documents"
+      },
+      "metadata": {
+        "summary": "Upload a ticket document (multipart only)",
+        "description": "Multipart/form-data upload only; this endpoint cannot be called through call_api_endpoint, which sends JSON. To attach a file to a ticket, use the attach_file tool or POST /api/v1/documents (entity_type ticket) instead.",
+        "rbacResource": "ticket",
+        "approvalRequired": true
       }
     }
   ]

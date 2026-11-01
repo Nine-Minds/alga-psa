@@ -49,6 +49,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';
 import CancellationFeedbackModal from './CancellationFeedbackModal';
 import AiUsageSection from './AiUsageSection';
+import CoManagedPoolEditor from '@/components/co-managed/CoManagedPoolEditor';
 import { useSession } from 'next-auth/react';
 import { useTier } from 'server/src/context/TierContext';
 import { useProduct } from 'server/src/context/ProductContext';
@@ -1270,6 +1271,14 @@ export default function AccountManagement({ selectedAddOn }: AccountManagementPr
           })}
         </section>
       )}
+
+      {/* Co-managed IT sponsor pool. The editor asks the server whether the purchase surface is open
+          (kill switch, release flag, price id) and renders nothing when it is not, so ordinary
+          account/subscription controls are unchanged. Not behind `admits`: a purchase is how the
+          first entitlement comes to exist. */}
+      <section id="account-co-managed" className="space-y-4 empty:hidden">
+        <CoManagedPoolEditor showTotals />
+      </section>
 
       {/* Scheduled License Changes Alert */}
       {scheduledChanges && (

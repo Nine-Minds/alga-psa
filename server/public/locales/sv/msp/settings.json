@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Tangentbordsgenvägar",
     "opportunities": "Affärsmöjligheter",
     "mcpServer": "MCP-server",
-    "settingsFallback": "Inställningar"
+    "settingsFallback": "Inställningar",
+    "tags": "Taggar"
   },
   "unsavedChanges": {
     "title": "Osparade ändringar",
@@ -413,17 +414,21 @@
       "cancel": "Avbryt",
       "delete": "Radera",
       "placeholder": "Ange nytt teamnamn",
+      "descriptionPlaceholder": "Ange en valfri teambeskrivning",
       "selectManager": "Välj en chef"
     },
     "details": {
       "loading": "Läser in teamuppgifter…",
       "notFound": "Inget team hittades",
+      "noDescription": "Ingen beskrivning",
       "fields": {
         "teamLead": "Teamledare",
+        "description": "Beskrivning",
         "addMember": "Lägg till medlem"
       },
       "placeholders": {
         "teamName": "Ange teamnamn",
+        "description": "Ange teambeskrivning",
         "selectTeamLead": "Välj en teamledare",
         "selectUserToAdd": "Välj en användare att lägga till",
         "noTeamLead": "Inte tilldelad"
@@ -435,8 +440,10 @@
         "discard": "Kasta",
         "saveChanges": "Spara ändringar",
         "saveName": "Spara namn",
+        "saveDescription": "Spara beskrivning",
         "cancel": "Avbryt",
         "editName": "Redigera namn",
+        "editDescription": "Redigera beskrivning",
         "remove": "Ta bort"
       },
       "table": {
@@ -461,6 +468,7 @@
         "createFailed": "Det gick inte att skapa teamet: {{error}}",
         "deleteFailed": "Det gick inte att radera teamet",
         "updateName": "Det gick inte att uppdatera teamnamnet",
+        "updateDescription": "Det gick inte att uppdatera teambeskrivningen",
         "saveChanges": "Det gick inte att spara ändringarna. Försök igen."
       }
     }
@@ -1153,6 +1161,53 @@
         "client": "Kund",
         "allClients": "Alla kunder",
         "clear": "Rensa filter"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Tavla",
+          "category_id": "Kategori",
+          "subcategory_id": "Underkategori",
+          "priority_id": "Prioritet",
+          "client_id": "Kund",
+          "client_tags": "Kundtaggar",
+          "contact_tags": "Kontakttaggar",
+          "ticket_origin": "Ärendekälla",
+          "title_folded": "Rubrik",
+          "description_folded": "Beskrivning",
+          "from_service_request": "Från tjänstebegäran",
+          "service_request_definition_id": "Tjänstebegäran"
+        },
+        "operators": {
+          "equals": "Är lika med",
+          "not_equals": "Är inte lika med",
+          "in": "Innehåller något av",
+          "not_in": "Innehåller inget av",
+          "contains": "Innehåller",
+          "starts_with": "Börjar med",
+          "ends_with": "Slutar med",
+          "not_contains": "Innehåller inte",
+          "not_starts_with": "Börjar inte med",
+          "not_ends_with": "Slutar inte med",
+          "is_empty": "Är tomt",
+          "is_not_empty": "Är inte tomt"
+        },
+        "conditions": "Villkor",
+        "match": "Matchning",
+        "and": "Alla villkor",
+        "or": "Något villkor",
+        "field": "Fält",
+        "operator": "Villkor",
+        "value": "Värde",
+        "yes": "Ja",
+        "no": "Nej",
+        "advanced": "Den här regeln innehåller grupperade eller avancerade villkor och är skrivskyddad i den här redigeraren.",
+        "add": "Lägg till villkor",
+        "save": "Spara villkor",
+        "enabled": "Aktiverad",
+        "matchesAll": "Matchar alla ärenden inom mallens omfattning.",
+        "matchesNone": "Matchar inga ärenden.",
+        "tagsFailed": "Det gick inte att läsa in taggalternativen. Sparade val bevaras.",
+        "retry": "Försök igen"
       }
     },
     "externalSystems": {
@@ -3482,7 +3537,7 @@
       "platformManaged": "Hanteras av AlgaPSA – ingen konfiguration behövs. Anslut en agent till en i steg 2.",
       "addAnother": "Lägg till en annan identitetsleverantör",
       "advancedOptions": "Avancerade alternativ",
-      "googleNoSetup": "Google kräver ingen konfiguration. Agenter loggar in med ID:t för sitt Google-tjänstkonto.",
+      "googleSetup": "Agenterna loggar in med en ID-token för ett Google-tjänstkonto. Endast målgruppen nedan behöver matcha hur de begär den.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3496,9 +3551,14 @@
       "fields": {
         "provider": "Identitetsleverantör",
         "entraTenantId": "Entra-klientorganisations-ID",
-        "audienceOptional": "Målgrupp (valfritt)",
         "audience": "Målgrupp",
         "subjectClaim": "Identifiera agenter med",
+        "audienceHelp": {
+          "microsoft": "Program-ID (klient-ID) för Entra-appregistreringen som dina agenter begär token för. Agenterna begär omfånget api://<det ID:t>/.default.",
+          "google": "Agenterna måste begära sin Google-ID-token med exakt den här målgruppen. Vi har fyllt i den här serverns MCP-URL, som är det vanliga valet.",
+          "custom": "API- eller resursidentifieraren som har konfigurerats hos din leverantör (till exempel en Auth0-API-identifierare). Den måste exakt matcha aud-anspråket i agenternas token. Den här serverns MCP-URL är ett bra val."
+        },
+        "audienceWhy": "Token som din leverantör har utfärdat till andra appar godkänns inte här.",
         "subjectClaimHelp": "Lämna tomt om inte identitetsleverantören anger något annat.",
         "issuer": "Utfärdare",
         "jwksUri": "URL för signeringsnycklar"
@@ -3611,6 +3671,36 @@
         "message": "Koppla från ”{{name}}”? Den förlorar åtkomsten omedelbart och måste godkännas på nytt för att ansluta igen.",
         "confirm": "Koppla från",
         "cancel": "Avbryt"
+      }
+    },
+    "loading": "Läser in…",
+    "downloadHosts": {
+      "title": "Tillåtna nedladdningsvärdar",
+      "intro": "När ett dokument bifogas via URL hämtar AlgaPSA det bara från värdarna som listas här. Det gäller alla som bifogar dokument, inklusive AI-agenter, API-klienter och REST-API:t. Föredra bucket-specifika värdar som acme-uploads.s3.us-east-1.amazonaws.com framför breda.",
+      "readOnly": "Du kan visa listan. För att ändra den krävs behörigheten ”Hantera nedladdningsvärdar”.",
+      "builtIn": "Inbyggd",
+      "empty": "Inga anpassade värdar ännu.",
+      "add": "Lägg till värd",
+      "addTitle": "Lägg till tillåten nedladdningsvärd",
+      "remove": "Ta bort",
+      "removeTitle": "Ta bort värd?",
+      "removeMessage": "Nedladdningar från {{host}} slutar fungera tills värden läggs till igen.",
+      "fields": {
+        "host": "Värd",
+        "hostHelp": "Ett värdnamn, eller *.example.com för att tillåta alla underdomäner.",
+        "note": "Anteckning (valfritt)"
+      },
+      "table": {
+        "host": "Värd",
+        "used": "Används för",
+        "allowed": "Tillåten",
+        "note": "Anteckning",
+        "addedBy": "Tillagd av",
+        "addedOn": "Tillagd"
+      },
+      "errors": {
+        "load": "Det gick inte att läsa in tillåtna nedladdningsvärdar.",
+        "save": "Det gick inte att spara ändringen."
       }
     }
   },
@@ -3791,7 +3881,8 @@
     }
   },
   "common": {
-    "saving": "Sparar…"
+    "saving": "Sparar…",
+    "cancel": "Avbryt"
   },
   "featureFlags": {
     "categories": {
@@ -3971,6 +4062,29 @@
       "default": "Standard",
       "empty": "Inga standardstatusar tillgängliga för import",
       "importSelected": "Importera markerade ({{count}})"
+    }
+  },
+  "tagDisplay": {
+    "title": "Visa på chips",
+    "subtitle": "Taggar som visas bredvid kontakter och kunder i ärendelistor, ärenderubriker och väljare.",
+    "loading": "Laddar…",
+    "description": "Välj vilka taggar som visas som märken bredvid kontakter och kunder, och i vilken ordning. En lista utan taggar visar inga märken för den målgruppen.",
+    "contacts": "Kontakter",
+    "clients": "Kunder",
+    "audienceInternal": "Interna användare",
+    "audienceClient": "Kundportal",
+    "clientNote": "Börjar tom. Taggar i den här listan syns för kundens egna användare i kundportalen.",
+    "noneSelected": "Inga taggar visas.",
+    "moveUp": "Flytta upp",
+    "moveDown": "Flytta ned",
+    "remove": "Ta bort",
+    "addTag": "Lägg till en tagg…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Tillbaka till e-postinställningar",
+      "title": "E-post- och identitetsleverantörer",
+      "description": "Registrera din egen Google- eller Microsoft-applikation för inkommande e-post och inloggning för personal. Dessa autentiseringsuppgifter tillhör din arbetsyta."
     }
   }
 }

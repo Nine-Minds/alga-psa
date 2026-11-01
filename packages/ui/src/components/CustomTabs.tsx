@@ -16,6 +16,10 @@ export interface TabContent {
   icon?: LucideIcon | React.ReactNode;
   /** Hide only the tab trigger while keeping its URL-addressable content mounted. */
   hideTrigger?: boolean;
+  /** Reports whether this tab holds unsaved feature drafts that closing would discard. */
+  hasUnsavedChanges?: () => boolean;
+  /** Called when the user confirms discarding this tab's unsaved feature drafts. */
+  onDiscardUnsavedChanges?: () => void;
 }
 
 export interface TabGroup {

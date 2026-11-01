@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { tenantDb } from '@alga-psa/db';
+import { type TenantDb, tenantDb } from '@alga-psa/db';
 import { buildMicrosoftEmailProviderConfig as resolveMicrosoftEmailProviderConfig } from './microsoftEmailProviderConfig';
 import { withTenantAdminTransaction } from './tenantAdminTransaction';
 import type {
@@ -328,7 +328,7 @@ async function postInboundAttachmentTrailComment(input: {
   if (input.outcomes.length === 0) return;
   try {
     const { TicketModel } = await import('../../models/ticketModel');
-    await withTenantAdminTransaction(input.tenantId, async (trx: any, db: any) => {
+    await withTenantAdminTransaction(input.tenantId, async (trx: any, db: TenantDb) => {
       // Serialize concurrent artifact-worker jobs for the same email so they
       // merge into a single trail comment instead of racing to insert two.
       await trx.raw('select pg_advisory_xact_lock(hashtext(?))', [

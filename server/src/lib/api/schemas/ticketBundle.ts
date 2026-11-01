@@ -15,18 +15,18 @@ export const closedMasterChoiceSchema = z.enum([
 export type ClosedMasterChoice = z.infer<typeof closedMasterChoiceSchema>;
 
 export const createBundleSchema = z.object({
-  child_ticket_ids: z.array(z.string().uuid()).min(1),
+  child_ticket_ids: z.array(z.string().guid()).min(1),
   mode: bundleModeSchema.default('sync_updates'),
   on_closed_master: closedMasterChoiceSchema.optional(),
 });
 
 export const addBundleChildrenSchema = z.object({
-  child_ticket_ids: z.array(z.string().uuid()).min(1),
+  child_ticket_ids: z.array(z.string().guid()).min(1),
   on_closed_master: closedMasterChoiceSchema.optional(),
 });
 
 export const promoteBundleMasterSchema = z.object({
-  new_master_ticket_id: z.string().uuid(),
+  new_master_ticket_id: z.string().guid(),
 });
 
 export const updateBundleSettingsSchema = z

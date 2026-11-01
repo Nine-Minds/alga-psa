@@ -92,7 +92,7 @@ test('service and SDK inventory assigns unit and runtime suites without counting
   assert.equal(isAdditionalWorkspaceTest('ee/packages/workflows/src/lib/behavior.db.test.ts', 'enterprise-unit'), false);
   assert.equal(isAdditionalWorkspaceTest('ee/packages/workflows/src/lib/behavior.integration.test.ts', 'enterprise-unit'), false);
   assert.equal(isAdditionalWorkspaceTest('ee/packages/workflows/dist/behavior.test.js', 'enterprise-unit'), false);
-  for (const root of ['services/email-service', 'services/workflow-worker', 'sdk/extension-runtime', 'ee/server/src/lib']) {
+  for (const root of ['services/email-service', 'services/workflow-worker', 'sdk/extension-runtime', 'ee/server/src/lib', 'scripts/dev/co-managed-fixtures']) {
     assert.equal(isAdditionalWorkspaceTest(`${root}/src/behavior.test.ts`, 'workspace-unit'), true);
     assert.equal(isAdditionalWorkspaceTest(`${root}/src/behavior.spec.tsx`, 'workspace-unit'), true);
     assert.equal(isAdditionalWorkspaceTest(`${root}/src/behavior.integration.test.ts`, 'workspace-unit'), false);
@@ -102,6 +102,8 @@ test('service and SDK inventory assigns unit and runtime suites without counting
     assert.equal(isAdditionalWorkspaceTest(`${root}/src/behavior.db.test.ts`, 'workspace-unit'), false);
   }
   assert.equal(isAdditionalWorkspaceTest('packages/billing/src/example.test.ts', 'workspace-unit'), false);
+  // node:test suites under scripts/tests belong to node-tooling, not this lane.
+  assert.equal(isAdditionalWorkspaceTest('scripts/tests/test-discovery.test.mjs', 'workspace-unit'), false);
   assert.throws(() => isAdditionalWorkspaceTest('sdk/example.test.ts', 'unknown'), /Unknown workspace lane/);
 });
 
@@ -112,6 +114,20 @@ test('questionnaire mapping deletion is required by the Temporal readiness inven
   assert.equal(isAdditionalWorkspaceTest(file, 'temporal-database'), false);
   const candidates = [file].filter(candidate => isAdditionalWorkspaceTest(candidate, 'temporal-readiness'));
   assert.equal(inspect({ candidates, collections: [] }).status, 'failed');
+});
+
+test('relocated tenant deletion regressions remain required in the Temporal readiness lane', () => {
+  const files = ['defaultTaxRate', 'workSchedule', 'teamsObservability'].map(name =>
+    `ee/temporal-workflows/src/activities/__tests__/${name}TenantDeletionOrder.test.ts`);
+  const candidates = files.filter(file => isAdditionalWorkspaceTest(file, 'temporal-readiness'));
+  assert.deepEqual(candidates, files);
+  const collected = { runner: 'temporal-readiness', status: 'passed', files };
+  assert.equal(inspect({ candidates, collections: [collected] }).status, 'passed');
+  for (const missing of files) {
+    const result = inspect({ candidates, collections: [{ ...collected, files: files.filter(file => file !== missing) }] });
+    assert.equal(result.status, 'failed');
+    assert.deepEqual(result.unmatched, [missing]);
+  }
 });
 
 test('HTTP locale rendering and fixture readback join API execution without absorbing browser suites', () => {

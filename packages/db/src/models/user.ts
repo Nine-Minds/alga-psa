@@ -24,6 +24,11 @@ const USER_DISCOVERY_BY_EMAIL_REASON = 'user discovery by email before tenant co
 const USER_DISCOVERY_BY_EMAIL_AND_TYPE_REASON = 'user discovery by email and type before tenant context exists';
 const USER_PASSWORD_VERIFY_REASON = 'password verification by user id before tenant context exists';
 const USER_REGISTRATION_LOOKUP_REASON = 'registration lookup by user id before tenant context exists';
+const INTERNAL_EMAIL_CLAIM_REASON = 'internal user emails are unique across tenants, including pending co-managed administrators';
+
+export type InternalEmailClaim =
+  | { kind: 'user'; tenant: string; userId: string }
+  | { kind: 'pending_administrator'; tenant: string };
 
 interface RoleWithPermissionRow {
   role_id: string;
@@ -145,6 +150,49 @@ const User = {
       logger.error(`Error finding users with email ${email} and type ${userType}:`, error);
       throw error;
     }
+  },
+
+  /**
+   * Internal users sign in with an email and no tenant, so an internal email
+   * identifies one account platform-wide. It is claimed by an internal user in
+   * any tenant, and by the initial administrator of a co-managed workspace
+   * that nobody has signed up for yet: if someone else took the email first,
+   * that workspace could never be claimed and would hold its seats.
+   * Every internal-user create, invite and email change asks this one question.
+   */
+  findInternalEmailClaim: async (email: string, options: {
+    /** Ignore this user (an email change re-saving its own address). */
+    excludeUserId?: string;
+    /** Ignore pending administrators of this tenant's own setup. */
+    excludeTenant?: string;
+    /** Ignore this co-managed setup (a retry of the same request). */
+    excludeOperationId?: string;
+    db?: Knex;
+  } = {}): Promise<InternalEmailClaim | null> => {
+    const db = options.db ?? await getAdminConnection();
+    const normalized = email.trim().toLowerCase();
+    const discovery = tenantDb(db, USER_MODEL_DISCOVERY_TENANT);
+    const users = discovery.unscoped<IUser>('users', INTERNAL_EMAIL_CLAIM_REASON)
+      .whereRaw('lower(trim(email)) = ?', [normalized]).where('user_type', 'internal');
+    if (options.excludeUserId) users.whereNot('user_id', options.excludeUserId);
+    const user = await users.first('tenant', 'user_id');
+    if (user) return { kind: 'user', tenant: user.tenant, userId: user.user_id };
+    // A setup's administrator invitation is created by its worker, so a queued
+    // or failed setup without one still claims the email; once the invitation
+    // exists, it claims it until used (signing up makes a user, seen above).
+    const setups = discovery.unscoped('co_managed_provisioning_operations as o', INTERNAL_EMAIL_CLAIM_REASON)
+      .leftJoin('user_invitations as i', function () {
+        this.on('i.tenant', 'o.customer_tenant').andOn('i.invitation_id', 'o.administrator_invitation_id');
+      })
+      .whereRaw("lower(trim(o.request->'administrator'->>'email')) = ?", [normalized])
+      .where(function () {
+        this.where(function () { this.whereNull('i.invitation_id').whereIn('o.state', ['queued', 'provisioning', 'failed']); })
+          .orWhere(function () { this.whereNotNull('i.invitation_id').whereNull('i.used_at'); });
+      });
+    if (options.excludeTenant) setups.whereNot('o.customer_tenant', options.excludeTenant);
+    if (options.excludeOperationId) setups.whereNot('o.operation_id', options.excludeOperationId);
+    const setup = await setups.first('o.customer_tenant');
+    return setup ? { kind: 'pending_administrator', tenant: setup.customer_tenant } : null;
   },
 
   findUserByEmailTenantAndType: async (

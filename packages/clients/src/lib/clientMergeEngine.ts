@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { countLiveCoManagedWorkspacesForClient } from '@alga-psa/core/config/deletion';
+import { tenantDb, admitOperationalWrite } from '@alga-psa/db';
 import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 import {
   CLIENT_OWNED_MOVE_TABLES,
@@ -216,6 +217,7 @@ async function readClientFacts(
     clientName: row.client_name as string,
     mergedIntoClientId: (row.merged_into_client_id as string | null) ?? null,
     isTenantDefault: Boolean(tenantDefault),
+    hasLiveCoManagement: await countLiveCoManagedWorkspacesForClient(trx, { tenant, entityId: clientId }) > 0,
   };
 }
 
@@ -941,6 +943,7 @@ export async function executeClientMerge(
 
   // Other clients recorded as children of the source now hang off the target,
   // so the soft hierarchy does not point at a tombstone.
+  await admitOperationalWrite(trx, tenant, 'clients', 'raw:client-merge-hierarchy');
   await trx.raw(
     `UPDATE clients
         SET properties = jsonb_set(

@@ -55,7 +55,15 @@ export interface CommentMetadata {
   [key: string]: unknown;
 }
 
+/** Who may read a comment on shared work; see shared/lib/commentAudience.ts. */
+export type CommentAudience = 'requester' | 'shared_it' | 'organization_private';
+
 export interface IComment extends TenantEntity {
+  /** Owner-local attribution and saved labels for a foreign technician. These
+   * fields never identify a local login, contact, or avatar. */
+  actor_reference_id?: string | null;
+  actor_display_name?: string | null;
+  actor_organization_name?: string | null;
   comment_id?: string;
   ticket_id?: string;
   thread_id?: string;
@@ -65,6 +73,13 @@ export interface IComment extends TenantEntity {
   author_type: CommentAuthorType;
   note?: string;
   is_internal?: boolean; // Only comments with author_type='internal' can be internal
+  /**
+   * Write intent for shared (co-managed) work: who may read the new thread. Never a
+   * `comments` column; writers strip it and store it on `comment_threads`. Native tenants omit it.
+   */
+  collaboration_audience?: CommentAudience | null;
+  /** Read-time audience of the comment's thread (derived, never persisted on the comment). */
+  audience?: CommentAudience;
   is_resolution?: boolean;
   is_system_generated?: boolean;
   created_at?: string;

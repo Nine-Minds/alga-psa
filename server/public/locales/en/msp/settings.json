@@ -36,7 +36,8 @@
     "keyboardShortcuts": "Keyboard Shortcuts",
     "opportunities": "Opportunities",
     "mcpServer": "MCP Server",
-    "settingsFallback": "Settings"
+    "settingsFallback": "Settings",
+    "tags": "Tags"
   },
   "unsavedChanges": {
     "title": "Unsaved Changes",
@@ -413,17 +414,21 @@
       "cancel": "Cancel",
       "delete": "Delete",
       "placeholder": "Enter new team name",
+      "descriptionPlaceholder": "Enter an optional team description",
       "selectManager": "Select a manager"
     },
     "details": {
       "loading": "Loading team details...",
       "notFound": "No team found",
+      "noDescription": "No description",
       "fields": {
         "teamLead": "Team Lead",
+        "description": "Description",
         "addMember": "Add Member"
       },
       "placeholders": {
         "teamName": "Enter team name",
+        "description": "Enter team description",
         "selectTeamLead": "Select a team lead",
         "selectUserToAdd": "Select a user to add",
         "noTeamLead": "Not assigned"
@@ -435,8 +440,10 @@
         "discard": "Discard",
         "saveChanges": "Save Changes",
         "saveName": "Save name",
+        "saveDescription": "Save description",
         "cancel": "Cancel",
         "editName": "Edit name",
+        "editDescription": "Edit description",
         "remove": "Remove"
       },
       "table": {
@@ -461,6 +468,7 @@
         "createFailed": "Failed to create team: {{error}}",
         "deleteFailed": "Failed to delete team",
         "updateName": "Failed to update team name",
+        "updateDescription": "Failed to update team description",
         "saveChanges": "Failed to save changes. Please try again."
       }
     }
@@ -1153,6 +1161,53 @@
         "client": "Client",
         "allClients": "All clients",
         "clear": "Clear filter"
+      },
+      "predicate": {
+        "fields": {
+          "board_id": "Board",
+          "category_id": "Category",
+          "subcategory_id": "Subcategory",
+          "priority_id": "Priority",
+          "client_id": "Client",
+          "client_tags": "Client tags",
+          "contact_tags": "Contact tags",
+          "ticket_origin": "Ticket source",
+          "title_folded": "Title",
+          "description_folded": "Description",
+          "from_service_request": "From service request",
+          "service_request_definition_id": "Service request"
+        },
+        "operators": {
+          "equals": "Equals",
+          "not_equals": "Does not equal",
+          "in": "Has any of",
+          "not_in": "Has none of",
+          "contains": "Contains",
+          "starts_with": "Starts with",
+          "ends_with": "Ends with",
+          "not_contains": "Does not contain",
+          "not_starts_with": "Does not start with",
+          "not_ends_with": "Does not end with",
+          "is_empty": "Is empty",
+          "is_not_empty": "Is not empty"
+        },
+        "conditions": "Conditions",
+        "match": "Match",
+        "and": "All conditions",
+        "or": "Any condition",
+        "field": "Field",
+        "operator": "Condition",
+        "value": "Value",
+        "yes": "Yes",
+        "no": "No",
+        "advanced": "This rule contains grouped or advanced conditions and is read-only in this editor.",
+        "add": "Add condition",
+        "save": "Save conditions",
+        "enabled": "Enabled",
+        "matchesAll": "Matches every ticket within the template’s ownership.",
+        "matchesNone": "Matches no tickets.",
+        "tagsFailed": "Could not load tag choices. Saved tag selections are preserved.",
+        "retry": "Retry"
       }
     },
     "externalSystems": {
@@ -3482,7 +3537,7 @@
       "platformManaged": "Managed by AlgaPSA — no setup needed. Connect an agent to one in step 2.",
       "addAnother": "Add another provider",
       "advancedOptions": "Advanced options",
-      "googleNoSetup": "Google needs no setup. Agents sign in with their Google service-account ID.",
+      "googleSetup": "Agents sign in with a Google service-account ID token. Only the audience below needs to match how they request it.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3496,9 +3551,14 @@
       "fields": {
         "provider": "Provider",
         "entraTenantId": "Entra tenant ID",
-        "audienceOptional": "Audience (optional)",
         "audience": "Audience",
         "subjectClaim": "Identify agents by",
+        "audienceHelp": {
+          "microsoft": "The Application (client) ID of the Entra app registration your agents request tokens for. Agents request the scope api://<that ID>/.default.",
+          "google": "Agents must request their Google ID token with exactly this audience. We've filled in this server's MCP URL, which is the usual choice.",
+          "custom": "The API or resource identifier set up in your provider (for example, an Auth0 API identifier). It must exactly match the aud claim in agent tokens. This server's MCP URL is a good choice."
+        },
+        "audienceWhy": "Tokens your provider issued to other apps won't be accepted here.",
         "subjectClaimHelp": "Leave blank unless your provider tells you otherwise.",
         "issuer": "Issuer",
         "jwksUri": "Signing keys URL"
@@ -3611,6 +3671,36 @@
         "message": "Disconnect \"{{name}}\"? It will lose access immediately and need to be re-authorized to reconnect.",
         "confirm": "Disconnect",
         "cancel": "Cancel"
+      }
+    },
+    "loading": "Loading…",
+    "downloadHosts": {
+      "title": "Allowed download hosts",
+      "intro": "When a document is attached by URL, AlgaPSA downloads it only from the hosts listed here. This applies to every caller that attaches documents, including AI agents, API clients and the REST API. Prefer bucket-specific hosts such as acme-uploads.s3.us-east-1.amazonaws.com over broad ones.",
+      "readOnly": "You can view this list. Changing it needs the \"Manage download hosts\" permission.",
+      "builtIn": "Built-in",
+      "empty": "No custom hosts yet.",
+      "add": "Add host",
+      "addTitle": "Add allowed download host",
+      "remove": "Remove",
+      "removeTitle": "Remove host?",
+      "removeMessage": "Downloads from {{host}} will stop working until it is added again.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "A hostname, or *.example.com to allow every subdomain.",
+        "note": "Note (optional)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Used for",
+        "allowed": "Allowed",
+        "note": "Note",
+        "addedBy": "Added by",
+        "addedOn": "Added on"
+      },
+      "errors": {
+        "load": "Failed to load allowed download hosts.",
+        "save": "Could not save the change."
       }
     }
   },
@@ -3791,7 +3881,8 @@
     }
   },
   "common": {
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "cancel": "Cancel"
   },
   "featureFlags": {
     "categories": {
@@ -3971,6 +4062,29 @@
       "default": "Default",
       "empty": "No standard statuses available for import",
       "importSelected": "Import Selected ({{count}})"
+    }
+  },
+  "tagDisplay": {
+    "title": "Display on chips",
+    "subtitle": "Tags shown next to contacts and clients in ticket lists, ticket headers and pickers.",
+    "loading": "Loading…",
+    "description": "Choose which tags show as badges next to contacts and clients, and in what order. A list with no tags shows no badges for that audience.",
+    "contacts": "Contacts",
+    "clients": "Clients",
+    "audienceInternal": "Internal users",
+    "audienceClient": "Client portal",
+    "clientNote": "Starts empty. Tags listed here are visible to the client's own users in the client portal.",
+    "noneSelected": "No tags shown.",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Remove",
+    "addTag": "Add a tag…"
+  },
+  "coManaged": {
+    "providers": {
+      "backToEmail": "Back to Email settings",
+      "title": "Email and identity providers",
+      "description": "Register your own Google or Microsoft application for inbound email, and staff sign-in. These credentials belong to your workspace."
     }
   }
 }

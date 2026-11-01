@@ -25,7 +25,7 @@
  *   `{...base, ...overrides}` also works but replaces whole groups.
  */
 import type React from 'react';
-import type { ITicket, TicketTimeEntriesSummary, WorkItemType } from '@alga-psa/types';
+import type { CommentAudience, ITicket, TicketTimeEntriesSummary, WorkItemType } from '@alga-psa/types';
 
 // Types only: `typeof` on a type-only import erases at runtime, so this
 // module never loads an action. The native implementation owns the runtime
@@ -62,6 +62,7 @@ import type {
   updateTicketWithCache,
   updateTicketWithCacheForCurrentUser,
   getAdjacentTicketIds,
+  getTicketPartyDisplayTags,
 } from '../actions/optimizedTicketActions';
 import type {
   getTicketById,
@@ -96,6 +97,11 @@ import type { getTicketStatuses, getAllPriorities } from '@alga-psa/reference-da
 import type { getTicketCategories, getTicketCategoriesByBoard } from '../actions/ticketCategoryActions';
 import type { addTicketResource, getTicketResources, removeTicketResource } from '../actions/ticketResourceActions';
 import type { assignTeamToTicket, removeTeamFromTicket } from '../actions/teamAssignmentActions';
+import type {
+  addTicketWatchers,
+  setTicketWatcherActive,
+  removeTicketWatcher,
+} from '../actions/ticketWatcherActions';
 import type { getTeamById, getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import type { getTicketLayoutPreference, setTicketLayoutPreference } from '../actions/ticketLayoutPreference';
 import type { getRecurringSourceForTicket } from '../actions/recurringTicketActions';
@@ -319,6 +325,15 @@ export interface TicketEditorRestrictions {
 /** Conversation (comment composer) behaviour. Native: `{}`. Extended additively by audience-aware sources. */
 export interface TicketConversationConfig {
   editor?: TicketEditorRestrictions;
+  /**
+   * Write audiences the composer offers. When non-empty the composer replaces the
+   * Internal toggle with a required audience choice (no default). Set ONLY for a
+   * shared ticket and for tickets in a co_managed workspace; every other source
+   * leaves it unset and renders the legacy toggle. `shared_it` is offered only by a
+   * source that routes it through the co-managed comment command; the native
+   * resolution flow never offers it.
+   */
+  audiences?: readonly CommentAudience[];
 }
 
 // ---------------------------------------------------------------------------
@@ -431,6 +446,18 @@ export interface TicketResourceMethods {
   getTeams: typeof getTeams;
 }
 
+/**
+ * Watch list: contacts, users and bare emails copied on ticket activity.
+ * Deliberately NOT part of {@link TicketResourceMethods}: a watcher is never an
+ * assigned agent. Writes go through TicketWatcherService, so the screen never
+ * rewrites `tickets.attributes` to change watchers.
+ */
+export interface TicketWatcherMethods {
+  addTicketWatchers: typeof addTicketWatchers;
+  setTicketWatcherActive: typeof setTicketWatcherActive;
+  removeTicketWatcher: typeof removeTicketWatcher;
+}
+
 /** Pickable option lists (status, priority, category). */
 export interface TicketOptionMethods {
   getTicketStatuses: typeof getTicketStatuses;
@@ -504,6 +531,7 @@ export interface TicketTileMethods {
 
 export interface TicketTagMethods {
   findTagsByEntityId: typeof findTagsByEntityId;
+  getTicketPartyDisplayTags: typeof getTicketPartyDisplayTags;
 }
 
 /**
@@ -554,6 +582,7 @@ export interface TicketDataSource {
   readonly comments: TicketCommentMethods;
   readonly people: TicketPeopleMethods;
   readonly resources: TicketResourceMethods;
+  readonly watchers: TicketWatcherMethods;
   readonly options: TicketOptionMethods;
   readonly closeRules: TicketCloseRuleMethods;
   readonly bundles: TicketBundleMethods;

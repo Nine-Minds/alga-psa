@@ -297,7 +297,7 @@
         "description": "Configureer geavanceerde opties voor e-mailverwerking",
         "folderFiltersLabel": "Mapfilters",
         "folderFiltersPlaceholder": "Inbox, Ondersteuning, Aangepaste map",
-        "folderFiltersHelp": "Door komma's gescheiden lijst met mappen die moeten worden gecontroleerd (standaard: Inbox)",
+        "folderFiltersHelp": "Door komma’s gescheiden lijst met mappen die moeten worden gecontroleerd (standaard: Inbox). Gebruik de exacte mapnaam zoals weergegeven in Outlook en schrijf geneste mappen als Inbox/Submap.",
         "maxEmailsPerSync": "Max. e-mails per synchronisatie"
       },
       "readiness": {
@@ -424,7 +424,8 @@
         "clientId": "OAuth-client-ID",
         "clientSecret": "OAuth-clientgeheim",
         "scopes": "OAuth-bereiken",
-        "scopesPlaceholder": "door spaties begrensde scopes"
+        "scopesPlaceholder": "door spaties begrensde scopes",
+        "clientSecretHelp": "Het clientgeheim wordt veilig opgeslagen en wordt niet getoond. Laat leeg om het bestaande geheim te behouden."
       },
       "processing": {
         "title": "Verwerkingsinstellingen",
@@ -432,6 +433,9 @@
         "folderFilters": "Mapfilters",
         "folderFiltersPlaceholder": "Inbox, ondersteuning, tickets",
         "active": "Actief"
+      },
+      "messages": {
+        "reconnectRequired": "De OAuth-instellingen zijn gewijzigd. Verbind de mailbox opnieuw om deze met de nieuwe instellingen te autoriseren."
       }
     }
   },
@@ -556,7 +560,8 @@
       "providerNameHelp": "Interne naam gebruikt om deze configuratie te identificeren. Niet zichtbaar in uitgaande e-mails.",
       "senderDisplayName": "Weergavenaam afzender",
       "senderDisplayNamePlaceholder": "bv. Acme Support",
-      "senderDisplayNameHelp": "Weergavenaam in het Van-veld van uitgaande ticket-e-mails (antwoorden, sluitingen). Alleen toegepast wanneer deze mailbox overeenkomt met het uitgaande ticket-verzendadres van de tenant. Laat leeg om de boardnaam van het ticket te gebruiken."
+      "senderDisplayNameHelp": "Weergavenaam in het Van-veld van uitgaande ticket-e-mails (antwoorden, sluitingen). Alleen toegepast wanneer deze mailbox overeenkomt met het uitgaande ticket-verzendadres van de tenant. Laat leeg om de boardnaam van het ticket te gebruiken.",
+      "oauthClientSecretHelp": "Het clientgeheim wordt veilig opgeslagen en wordt niet getoond. Laat leeg om het bestaande geheim te behouden."
     },
     "authOptions": {
       "password": "Wachtwoord",
@@ -580,6 +585,9 @@
       "saving": "Opslaan...",
       "updateProvider": "Aanbieder bijwerken",
       "createProvider": "Aanbieder maken"
+    },
+    "messages": {
+      "reconnectRequired": "De OAuth-instellingen zijn gewijzigd. Verbind de mailbox opnieuw om deze met de nieuwe instellingen te autoriseren."
     }
   },
   "microsoftForm": {

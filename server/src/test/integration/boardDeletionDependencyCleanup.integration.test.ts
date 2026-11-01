@@ -283,7 +283,9 @@ describe('board deletion dependency cleanup', () => {
       tenant: tenantId,
       apply_rule_id: uuidv4(),
       template_id: checklistTemplateId,
-      board_id: doomedBoardId,
+      where: JSON.stringify({ join: 'and', clauses: [{ join: 'or', clauses: [
+        { path: 'board_id', operator: 'in', value: [doomedBoardId] },
+      ] }] }),
     });
 
     // A board-scoped canned response cannot drop its board_id (the

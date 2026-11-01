@@ -8,3 +8,4 @@
  */
 export * from './fakeQueryBuilder';
 export * from './fakeTenantDb';
+export * from './writeAdmission';

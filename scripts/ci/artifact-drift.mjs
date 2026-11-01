@@ -12,6 +12,12 @@
 //    scripts/ci/artifact-drift-allow.json with a reason.
 //
 // Exit 0 clean, 1 drift or breaking change, 2 the check could not run.
+//
+// Output contract: stdout carries ONLY repo-relative paths, one per line (each
+// drifted artifact, and each OpenAPI document with a non-additive change), because
+// CI pipes stdout to `attribute-card.mjs --stdin`, which reads every line as a
+// path. Generator output and every human-readable message go to stderr, which
+// the job log still shows.
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -159,6 +165,34 @@ export function driftedFiles() {
     .split('\n').filter(Boolean).map((l) => l.slice(3));
 }
 
+/**
+ * Split a run's findings into machine output (stdout: paths only) and human
+ * output (stderr). `breaks` is [{ doc, left, used }] per OpenAPI document.
+ */
+export function formatReport({ drift, breaks, base }) {
+  const stdout = [];
+  const stderr = [];
+  if (drift.length) {
+    stderr.push('artifact-drift: generated artifacts differ from what is committed. Run `npm run generate:artifacts` and commit the result:');
+    for (const f of drift) {
+      stderr.push(`  ${f}`);
+      stdout.push(f);
+    }
+  }
+  for (const { doc, left, used } of breaks) {
+    for (const e of used) stderr.push(`artifact-drift: ALLOWED ${doc} ${e.pointer} - ${e.reason}`);
+    if (left.length) {
+      stdout.push(doc);
+      stderr.push(`artifact-drift: ${doc} has ${left.length} non-additive change(s) vs ${base}:`);
+      for (const c of left.slice(0, 200)) stderr.push(`  [${c.kind}] ${c.pointer}: ${c.message}`);
+      stderr.push('  If intentional, add an entry (doc, pointer, reason) to scripts/ci/artifact-drift-allow.json');
+    }
+  }
+  const exit = drift.length || breaks.some((b) => b.left.length) ? 1 : 0;
+  if (exit === 0) stderr.push(`artifact-drift: clean (${drift.length} drifted files, OpenAPI additive vs ${base})`);
+  return { stdout, stderr, exit };
+}
+
 function main(argv) {
   let base = 'HEAD';
   let generate = true;
@@ -169,22 +203,17 @@ function main(argv) {
   }
 
   if (generate) {
-    const res = spawnSync('npm', ['run', 'generate:artifacts'], { cwd: repoRoot, stdio: 'inherit' });
+    // Generator chatter goes to stderr so stdout stays a pure path list.
+    const res = spawnSync('npm', ['run', 'generate:artifacts'], { cwd: repoRoot, stdio: ['ignore', 2, 2] });
     if (res.status !== 0) {
       console.error('artifact-drift: `npm run generate:artifacts` failed (tool failure, not drift)');
       return 2;
     }
   }
 
-  let exit = 0;
   const drift = driftedFiles();
-  if (drift.length) {
-    exit = 1;
-    console.log('artifact-drift: generated artifacts differ from what is committed. Run `npm run generate:artifacts` and commit the result:');
-    for (const f of drift) console.log(`  ${f}`);
-  }
-
   const allow = readAllow();
+  const breaks = [];
   for (const doc of OPENAPI_DOCS) {
     let before;
     try {
@@ -194,17 +223,12 @@ function main(argv) {
       return 2;
     }
     const after = JSON.parse(fs.readFileSync(path.join(repoRoot, doc), 'utf8'));
-    const { left, used } = applyAllow(nonAdditiveChanges(before, after), doc, allow);
-    for (const e of used) console.log(`artifact-drift: ALLOWED ${doc} ${e.pointer} - ${e.reason}`);
-    if (left.length) {
-      exit = 1;
-      console.log(`artifact-drift: ${doc} has ${left.length} non-additive change(s) vs ${base}:`);
-      for (const c of left.slice(0, 200)) console.log(`  [${c.kind}] ${c.pointer}: ${c.message}`);
-      console.log('  If intentional, add an entry (doc, pointer, reason) to scripts/ci/artifact-drift-allow.json');
-    }
+    breaks.push({ doc, ...applyAllow(nonAdditiveChanges(before, after), doc, allow) });
   }
-  if (exit === 0) console.log(`artifact-drift: clean (${drift.length} drifted files, OpenAPI additive vs ${base})`);
-  return exit;
+  const report = formatReport({ drift, breaks, base });
+  for (const line of report.stderr) console.error(line);
+  for (const line of report.stdout) console.log(line);
+  return report.exit;
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

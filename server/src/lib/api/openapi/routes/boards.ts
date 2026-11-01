@@ -11,7 +11,7 @@ export function registerBoardRoutes(
   const BoardIdParams = registry.registerSchema(
     'BoardIdParams',
     zOpenApi.object({
-      id: zOpenApi.string().uuid().describe('Board UUID.'),
+      id: zOpenApi.string().guid().describe('Board UUID.'),
     }),
   );
 

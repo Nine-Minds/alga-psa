@@ -13,7 +13,7 @@ import { createTestDbConnection, wireLocalTestDbEnv } from '../../test-utils/dbC
 
 const require = createRequire(import.meta.url);
 const MIGRATIONS = path.resolve(__dirname, '..');
-const migration = require(path.join(MIGRATIONS, '20261029120000_allow_shared_quickbooks_online_item_targets.cjs')) as Migration;
+const migration = require(path.join(MIGRATIONS, '20261029170000_allow_shared_quickbooks_online_item_targets.cjs')) as Migration;
 const tombstoneMigration = require(
   path.join(MIGRATIONS, '20261027130000_exclude_tombstones_from_external_mapping_unique_indexes.cjs')
 ) as Migration;
@@ -83,7 +83,8 @@ async function indexRow(name: string) {
 async function expectFinalIndexState(kind: 'new' | 'old') {
   const canonical = await indexRow(CANONICAL);
   expect(canonical?.valid).toBe(true);
-  expect(/quickbooks_online/.test(canonical!.def)).toBe(kind === 'new');
+  const afterOnline = canonical!.def.split("'quickbooks_online'")[1] ?? '';
+  expect(afterOnline.includes('discount')).toBe(kind === 'new');
   expect(await indexRow(GUARD)).toBeUndefined();
   expect(await indexRow(ALGA_INDEX)).toBeDefined();
 }
@@ -95,6 +96,7 @@ async function liveDuplicateGroupsUnderOldPredicates(): Promise<number> {
       WHERE (integration_type <> 'xero' OR COALESCE(metadata ->> 'xeroTargetKind', 'item') <> 'account')
         AND (integration_type <> 'quickbooks_desktop' OR alga_entity_type NOT IN ('service', 'discount', 'tax_code'))
         AND deleted_at IS NULL
+        AND (integration_type <> 'quickbooks_online' OR alga_entity_type <> 'tax_code')
       GROUP BY tenant, integration_type, alga_entity_type, external_entity_id, COALESCE(external_realm_id, '')
       HAVING COUNT(*) > 1) d`);
   return r.rows[0].n;
@@ -138,8 +140,11 @@ describe('shared QBO item targets migration (DB-backed)', () => {
     await insertMapping(tenant, { type: 'service', target: 'item-1' });
     await insertMapping(tenant, { type: 'service', target: 'item-1' });
     await insertMapping(tenant, { type: 'discount', entityId: 'automatic_discount', target: 'item-1' });
+    // Tax codes are shared too (20261029160000): every taxable region maps to TAX.
+    await insertMapping(tenant, { type: 'tax_code', target: 'TAX' });
+    await insertMapping(tenant, { type: 'tax_code', target: 'TAX' });
 
-    for (const type of ['client', 'invoice', 'payment', 'payment_term', 'service_category', 'tax_code']) {
+    for (const type of ['client', 'invoice', 'payment', 'payment_term', 'service_category']) {
       await insertMapping(tenant, { type, target: `excl-${type}` });
       await expect(insertMapping(tenant, { type, target: `excl-${type}` })).rejects.toMatchObject(unique);
     }
@@ -298,7 +303,7 @@ describe('shared QBO item targets migration (DB-backed)', () => {
       WHERE (integration_type <> 'xero' OR COALESCE(metadata ->> 'xeroTargetKind', 'item') <> 'account')
         AND (integration_type <> 'quickbooks_desktop' OR alga_entity_type NOT IN ('service', 'discount', 'tax_code'))
         AND deleted_at IS NULL
-        AND (integration_type <> 'quickbooks_online' OR alga_entity_type NOT IN ('service', 'discount'))`;
+        AND (integration_type <> 'quickbooks_online' OR alga_entity_type NOT IN ('service', 'discount', 'tax_code'))`;
 
     it('resumes after a crash between guard build and canonical drop', async () => {
       await toOldState();

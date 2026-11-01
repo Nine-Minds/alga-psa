@@ -38,6 +38,7 @@ import { TicketExternalLinksSection } from "./TicketExternalLinksSection";
 import TicketEmailNotifications from "./TicketEmailNotifications";
 import TicketConversation from "./TicketConversation";
 import type { CommentEmailRecipientsPayload } from "./CommentEmailRecipientsControl";
+import type { ComposerAudience, NativeComposerAudience } from "./CommentAudienceControl";
 import { TicketActivityTimeline } from "./TicketActivityTimeline";
 import { useInboundEmailViewPreference } from "../../hooks/useInboundEmailViewPreference";
 import { useSession } from 'next-auth/react';
@@ -54,6 +55,8 @@ import { useDrawer } from "@alga-psa/ui";
 import { useCatalogShortcut } from "@alga-psa/ui/keyboard-shortcuts";
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
+import { EMPTY_PARTY_DISPLAY_TAGS, type PartyDisplayTags } from '../../lib/partyDisplayTags';
+import { usePartyDisplayTags } from './usePartyDisplayTags';
 import type { ITicketAutoCloseState } from "../../actions/close-rules/closeRuleActions";
 import type { ITicketChecklistItem } from "../../actions/checklists/ticketChecklistActions";
 import type { ITicketExternalLinkView } from "../../actions/externalLinks/externalLinkActions";
@@ -89,6 +92,7 @@ import type { TicketDetailLayout } from '../../actions/ticketLayoutPreference';
 import TicketOriginBadge from '../TicketOriginBadge';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useTicketLiveContext } from './TicketLiveProvider';
+import type { TicketLiveRemoteUpdate } from '../../hooks/useTicketLive';
 import { runTicketRefresh, useTicketDataSource } from './TicketDataSourceContext';
 import { resolveTicketFrozenFields, resolveTicketTimeWorkItem } from '../../lib/ticketDataSource';
 import { buildTicketTimeEntryContext } from '../../lib/timeEntryContext';
@@ -97,8 +101,9 @@ import type { RecurringTicketSource } from '../../lib/recurring/types';
 import { buildCreateTicketHref } from '../../lib/createTicketRoute';
 import {
     setTicketWatchListOnAttributes,
-    type TicketWatchListEntry,
 } from '@shared/lib/tickets/watchList';
+import type { AddTicketWatcherInput } from '@shared/services/tickets/ticketWatcherService';
+import type { TicketWatchersResult } from '../../actions/ticketWatcherActions';
 import type {
     BundleMasterClosedContextActionResult,
     EligibleChildTicket
@@ -155,6 +160,8 @@ interface TicketDetailsProps {
     initialClient?: IClient | null;
     initialContacts?: IContact[];
     initialContactInfo?: IContact | null;
+    /** Chip tags for the requester and client, already filtered to the viewer's audience. */
+    initialDisplayTags?: PartyDisplayTags;
     initialCreatedByUser?: IUser | null;
     initialUpdatedByUser?: IUser | null;
     initialBoard?: any;
@@ -184,7 +191,7 @@ interface TicketDetailsProps {
         changes: Record<string, unknown>,
         options?: Partial<TicketNotificationSuppressionValue> & { propagateToChildren?: boolean }
     ) => Promise<boolean>;
-    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null, emailRecipients?: CommentEmailRecipientsPayload) => Promise<boolean>;
+    onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean, schedule?: { publishAt: string; timeZone: string } | null, emailRecipients?: CommentEmailRecipientsPayload, audienceId?: ComposerAudience | null) => Promise<boolean>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     /**
      * Additive notification fired after a user edit was saved successfully (field change,
@@ -294,6 +301,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     initialClient = null,
     initialContacts = [],
     initialContactInfo = null,
+    initialDisplayTags = EMPTY_PARTY_DISPLAY_TAGS,
     initialCreatedByUser = null,
     initialUpdatedByUser = null,
     initialBoard = null,
@@ -357,6 +365,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     } = dataSource.comments;
     const { getAllActiveContacts, getContactByContactNameId, getContactsByClient, getClientById, getClientLocations } = dataSource.people;
     const { addTicketResource, getTicketResources, removeTicketResource, assignTeamToTicket, removeTeamFromTicket, getTeamById, getTeams } = dataSource.resources;
+    const { addTicketWatchers, setTicketWatcherActive, removeTicketWatcher } = dataSource.watchers;
     const { checkTicketClosure, getTicketAutoCloseState } = dataSource.closeRules;
     const {
         previewBundleStatusPropagationAction, addChildrenToBundleAction, findTicketByNumberAction,
@@ -646,6 +655,27 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }, [initialDocuments]);
     const [client, setClient] = useState<IClient | null>(initialClient);
     const [contactInfo, setContactInfo] = useState<IContact | null>(initialContactInfo);
+    // The requester or client can be changed in place; the chips follow the new party (see the hook).
+    const displayTags = usePartyDisplayTags({
+      ticketId: ticket.ticket_id,
+      contactId: contactInfo?.contact_name_id,
+      clientId: client?.client_id,
+      initial: initialDisplayTags,
+      onError: (error, retry) => {
+        const message = isReturnedActionError(error)
+          ? getErrorMessage(error)
+          : t('messages.loadPartyTagsFailed', 'Failed to load requester and client tags');
+        toast.error(
+          <span>
+            {message}{' '}
+            <button type="button" className="underline" onClick={() => { toast.dismiss(); retry(); }}>
+              {t('actions.retry', 'Retry')}
+            </button>
+          </span>,
+          { id: 'ticket-party-tags-failed' },
+        );
+      },
+    });
     const [createdByUser, setCreatedByUser] = useState<IUser | null>(initialCreatedByUser);
     const [updatedByUser, setUpdatedByUser] = useState<IUser | null>(initialUpdatedByUser);
 
@@ -672,6 +702,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         suppression: TicketNotificationSuppressionValue,
         isInternal: boolean = false,
         emailRecipients?: CommentEmailRecipientsPayload,
+        audienceId?: NativeComposerAudience | null,
     ): Promise<boolean> => {
         const ticketId = ticket.ticket_id;
         if (!ticketId) {
@@ -693,6 +724,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         // The close email carries these; see the email
                         // subscriber's closes_ticket handling.
                         emailRecipients,
+                        audienceId,
                     );
                     if (isReturnedActionError(result)) {
                         throw result;
@@ -727,6 +759,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [locations, setLocations] = useState<IClientLocation[]>(initialLocations);
     const [showWeekday, setShowWeekday] = useState<boolean>(bootstrap?.displaySettings?.showWeekday ?? false);
     const [responseStateTrackingEnabled, setResponseStateTrackingEnabled] = useState<boolean>(bootstrap?.displaySettings?.responseStateTrackingEnabled ?? true);
+    const [defaultReplyInternal, setDefaultReplyInternal] = useState(bootstrap?.displaySettings?.defaultReplyInternal ?? false);
     const [createdRelativeTime, setCreatedRelativeTime] = useState<string>('');
     const [updatedRelativeTime, setUpdatedRelativeTime] = useState<string>('');
     const [addChildTicketNumber, setAddChildTicketNumber] = useState<string>('');
@@ -883,11 +916,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const ticketInfoDirtyFieldsRef = useRef<string[]>([]);
     const ticketPropertiesDirtyFieldsRef = useRef<string[]>([]);
     const pendingLiveNetworkFieldsRef = useRef<Set<string>>(new Set());
-    const pendingRemoteUpdateRef = useRef<{
-        updatedFields: string[];
-        updatedBy: { userId: string; displayName: string };
-        updatedAt: string;
-    } | null>(null);
+    const pendingRemoteUpdateRef = useRef<TicketLiveRemoteUpdate | null>(null);
     const remoteUpdateTimerRef = useRef<NodeJS.Timeout | null>(null);
     const liveHighlightTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
 
@@ -1235,7 +1264,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     }, [getLiveFieldLabel, highlightLiveFields, refreshTicketSnapshot, t]);
 
-    const queueRemoteUpdate = useCallback((update: { updatedFields: string[]; updatedBy: { userId: string; displayName: string }; updatedAt: string }) => {
+    const queueRemoteUpdate = useCallback((update: TicketLiveRemoteUpdate) => {
         const currentPendingUpdate = pendingRemoteUpdateRef.current;
 
         pendingRemoteUpdateRef.current = currentPendingUpdate
@@ -1585,6 +1614,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 const settings = await getTicketingDisplaySettings();
                 setShowWeekday(settings?.showWeekday ?? false);
                 setResponseStateTrackingEnabled(settings?.responseStateTrackingEnabled ?? true);
+                setDefaultReplyInternal(settings?.defaultReplyInternal ?? false);
             } catch (error) {
                 console.error('Failed to load ticketing display settings:', error);
             }
@@ -2018,6 +2048,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         options?: TicketNotificationSuppressionValue,
         schedule?: { publishAt: string; timeZone: string } | null,
         emailRecipients?: CommentEmailRecipientsPayload,
+        audienceId?: ComposerAudience | null,
     ): Promise<boolean> => {
         // Check if content is empty
         const contentStr = JSON.stringify(newCommentContent);
@@ -2068,6 +2099,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     willCloseTicket,
                     schedule,
                     emailRecipients,
+                    audienceId,
                 );
                 // An unconfirmed publish (rejected or unknown outcome) has already been
                 // reported by the handler; keep the composer and its draft intact.
@@ -2142,7 +2174,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                             scheduled_publish_tz: schedule.timeZone,
                         } : {}),
                         // See email-subscriber suppression note above.
-                        ...(willCloseTicket ? { metadata: { closes_ticket: true } } : {})
+                        ...(willCloseTicket ? { metadata: { closes_ticket: true } } : {}),
+                        ...(audienceId ? { collaboration_audience: audienceId } : {})
                     }, emailRecipients);
                     if (isReturnedActionError(newComment)) {
                         handleTicketActionError(newComment, t('messages.addCommentFailed', 'Failed to add comment'));
@@ -2580,21 +2613,34 @@ const handleClose = () => {
         }
     };
 
-    const handleUpdateWatchList = async (watchList: TicketWatchListEntry[]): Promise<boolean> => {
+    // Watcher writes go through TicketWatcherService-backed server actions; the
+    // whole `attributes` object is never rewritten from here. The returned list is
+    // applied to local display state only (the server already synced the mirror).
+    const runWatcherAction = async (
+        action: () => Promise<TicketWatchersResult | ActionMessageError | ActionPermissionError>
+    ): Promise<boolean> => {
         if (!ticket.ticket_id || isWatchListSaving) {
             return false;
         }
 
-            setIsWatchListSaving(true);
+        setIsWatchListSaving(true);
         try {
-            const updatedAttributes = setTicketWatchListOnAttributes(ticket.attributes, watchList);
-            const result = await updateTicketWithCache(ticket.ticket_id, {
-                attributes: updatedAttributes ?? null,
-            });
+            const result = await action();
             if (isReturnedActionError(result)) {
                 throw result;
             }
 
+            const updatedAttributes = setTicketWatchListOnAttributes(
+                ticket.attributes,
+                result.watchers.map((watcher) => ({
+                    email: watcher.email,
+                    active: watcher.active,
+                    name: watcher.name ?? undefined,
+                    entity_type: watcher.entity_type ?? undefined,
+                    entity_id: watcher.entity_id ?? undefined,
+                    source: watcher.source ?? undefined,
+                }))
+            );
             setTicket((prevTicket) => ({
                 ...prevTicket,
                 attributes: updatedAttributes ?? null,
@@ -2611,6 +2657,13 @@ const handleClose = () => {
             setIsWatchListSaving(false);
         }
     };
+
+    const handleAddWatchers = (inputs: AddTicketWatcherInput[]) =>
+        runWatcherAction(() => addTicketWatchers(ticket.ticket_id!, inputs));
+    const handleSetWatcherActive = (email: string, active: boolean) =>
+        runWatcherAction(() => setTicketWatcherActive(ticket.ticket_id!, email, active));
+    const handleRemoveWatcher = (email: string) =>
+        runWatcherAction(() => removeTicketWatcher(ticket.ticket_id!, email));
 
     const handleLoadAllContactsForWatchList = useCallback(async () => {
         if (allContactsForWatchListLoading || allContactsForWatchList.length > 0) {
@@ -2929,6 +2982,7 @@ const handleClose = () => {
         suppression: TicketNotificationSuppressionValue,
         isInternal: boolean = false,
         emailRecipients?: CommentEmailRecipientsPayload,
+        audienceId?: NativeComposerAudience | null,
     ) => {
         if (!ticket.ticket_id || !closedStatusOptions.some((option) => option.value === statusId)) {
             toast.error(t('messages.closeFailed', 'Failed to close ticket'));
@@ -2949,6 +3003,7 @@ const handleClose = () => {
                     suppression,
                     isInternal,
                     emailRecipients,
+                    audienceId,
                 );
                 if (!resolutionAdded) {
                     return false;
@@ -4467,6 +4522,7 @@ const handleClose = () => {
                     onBatchSelectChange={(changes, options) => handleBatchSaveChanges(changes, options)}
                     onUpdateDescription={handleUpdateDescription}
                     responseStateTrackingEnabled={responseStateTrackingEnabled}
+                    defaultReplyInternal={defaultReplyInternal}
                     hideSlaStatus={effectiveHideSlaStatus}
                     hideBilling={effectiveHideBilling}
                     hideScheduling={effectiveHideScheduling}
@@ -4527,6 +4583,7 @@ const handleClose = () => {
                     resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                     createdByUser={createdByUser}
                     contactInfo={contactInfo}
+                    displayTags={displayTags}
                     client={client}
                     onContactClick={handleContactClick}
                     onClientClick={handleClientClick}
@@ -4564,7 +4621,9 @@ const handleClose = () => {
                     team={team}
                     onAssignTeam={handleAssignTeam}
                     onRemoveTeamAssignment={handleRemoveTeamAssignment}
-                    onUpdateWatchList={handleUpdateWatchList}
+                    onAddWatchers={handleAddWatchers}
+                    onSetWatcherActive={handleSetWatcherActive}
+                    onRemoveWatcher={handleRemoveWatcher}
                     watchListSaving={isWatchListSaving}
                     contacts={contacts}
                     allContactsForWatchList={allContactsForWatchList}
@@ -4675,6 +4734,7 @@ const handleClose = () => {
                                     onContentChange={handleContentChange}
                                     isSubmitting={isSubmitting}
                                     hideInternalTab={false}
+                                    defaultReplyInternal={defaultReplyInternal}
                                     readOnly={dataSource.screen.readOnly}
                                     externalComments={bundle?.isBundleMaster ? aggregatedChildClientComments : []}
                                     onClipboardImageUploaded={refreshTicketDocuments}
@@ -4738,13 +4798,14 @@ const handleClose = () => {
                         ) : null}
 
                     </div>
-                    <div className={isInDrawer ? "w-96" : "w-1/4"} id="ticket-properties-container">
+                    <div className={isInDrawer ? "w-96 shrink-0" : "w-1/4 min-w-[min(100%,18rem)] shrink-0"} id="ticket-properties-container">
                         <Suspense fallback={<div id="ticket-properties-skeleton" className="animate-pulse skeleton-fill h-96 rounded-lg mb-6"></div>}>
                                 <TicketProperties
                                     id={`${id}-properties`}
                                     ticket={ticket}
                                 client={client}
                                 contactInfo={contactInfo}
+                                displayTags={displayTags}
                                 createdByUser={createdByUser}
                                 board={board}
                                 timeDescription={timeDescription}
@@ -4781,7 +4842,9 @@ const handleClose = () => {
                                 allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                 onTagsChange={capabilities.tags ? handleTagsChange : undefined}
                                 onItilFieldChange={handleItilFieldChange}
-                                onUpdateWatchList={handleUpdateWatchList}
+                                onAddWatchers={handleAddWatchers}
+                    onSetWatcherActive={handleSetWatcherActive}
+                    onRemoveWatcher={handleRemoveWatcher}
                                 watchListSaving={isWatchListSaving}
                                 allContactsForWatchList={allContactsForWatchList}
                                 allContactsForWatchListLoading={allContactsForWatchListLoading}
@@ -4898,6 +4961,7 @@ const handleClose = () => {
                                         void handleContactChange(value === 'none' ? null : value)
                                     }
                                     className="!w-full"
+                                    disabled={dataSource.screen.readOnly === true}
                                 />
                             </div>
                             <div>
@@ -4918,6 +4982,7 @@ const handleClose = () => {
                                         void handleLocationChange(value === 'none' ? null : value)
                                     }
                                     className="!w-full"
+                                    disabled={dataSource.screen.readOnly === true}
                                 />
                             </div>
                         </div>

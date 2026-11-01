@@ -77,7 +77,7 @@ export class ApiInventoryController extends ApiBaseController {
       if (!id) throw new ValidationError(`${key} is required`);
       return id;
     } catch (error) {
-      if (error instanceof ZodError) throw new ValidationError('Invalid route parameter', error.errors);
+      if (error instanceof ZodError) throw new ValidationError('Invalid route parameter', error.issues);
       throw error;
     }
   }
