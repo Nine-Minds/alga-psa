@@ -426,9 +426,23 @@ the metrics and flaky-test reports read what they always did. The aggregate
 gate performs the same merge from the same shard artifacts, so neither job
 waits on the other, and requires every shard of both editions to succeed.
 
+A recorded Jev judgment (see `docs/technical/jev-test-selection.md`) composes
+with the shards. Every shard judges the whole collection the same way, so all
+derive one selection and one deferred list; the files with a selected journey
+are what the shards partition, and each shard runs its share as `file:line`
+filters, recording the shared judgment in `selection.jev`. A judgment that
+selects fewer files than there are shards leaves a shard idle, publishing an
+empty report. The merge requires every shard to carry the same judgment and
+only filters inside its own files, reconciles the shards' union against the
+full collection with the judgment's deferred journeys excused, and publishes a
+`selection.mode: jev` record, which the gate accepts under the same rules as
+an unsharded judged run. Filters without a judgment still fail the merge.
+
 Refresh the weight profile from a run's merged `results.json` with
 `node scripts/update-browser-journey-weights.mjs <results.json>`; a stale
-profile costs balance, never coverage.
+profile costs balance, never coverage. The updater refuses a report whose
+sibling `evidence.json` records a judged run, since a narrowed run measures
+only part of each file; refresh from a nightly or other full run.
 
 ## Browser collection coverage
 

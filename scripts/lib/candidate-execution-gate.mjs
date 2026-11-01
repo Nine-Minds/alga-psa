@@ -33,7 +33,14 @@ export function evaluateCandidateExecution({ root, revision, requirements, bundl
           problems.push(`Source ${phase} is missing, stale or dirty`);
         }
       }
-      if (!Array.isArray(bundle.filters) || bundle.filters.length) problems.push('Missing selection or filtered execution');
+      if (bundle.jev) {
+        if (format !== 'playwright') problems.push('Judged selection is only accepted for browser execution');
+        if (bundle.jev.revision !== revision) problems.push('Judgment is for a different revision');
+        if (!Array.isArray(bundle.filters) || (bundle.jev.deferred.length && !bundle.filters.length)) problems.push('Judged execution recorded deferred cases without filters');
+        for (const entry of bundle.jev.deferred) {
+          if (typeof entry?.probability !== 'number' || entry.probability >= bundle.jev.threshold) problems.push(`Deferred case at or above threshold: ${JSON.stringify(entry?.identity)}`);
+        }
+      } else if (!Array.isArray(bundle.filters) || bundle.filters.length) problems.push('Missing selection or filtered execution');
       try {
         const executionRoot = bundle.sourceRoot ?? root;
         if (typeof executionRoot !== 'string' || !path.isAbsolute(executionRoot)) throw new Error('Invalid producer checkout root');
@@ -41,7 +48,7 @@ export function evaluateCandidateExecution({ root, revision, requirements, bundl
           if (!Array.isArray(bundle.collectedTests) || !bundle.collectedTests.length) problems.push('Missing assertion collection');
           verified = reconcileExecution({ ...bundle, root: executionRoot, revision, suite: id, exitCode: bundle.outcome === 'success' ? 0 : 1 });
         } else if (format === 'playwright') {
-          verified = reconcilePlaywrightExecution({ ...bundle, root: executionRoot, revision, exitCode: bundle.outcome === 'success' ? 0 : 1 });
+          verified = reconcilePlaywrightExecution({ ...bundle, root: executionRoot, revision, exitCode: bundle.outcome === 'success' ? 0 : 1, deferred: bundle.jev?.deferred ?? [] });
           verified.expectedFiles = [...new Set(playwrightTests(bundle.collected, executionRoot).map(test => test.file))];
         } else if (format === 'node-events') {
           verified = reconcileNodeExecution({ root: executionRoot, revision, suite: id, files: candidates, events: bundle.events,
