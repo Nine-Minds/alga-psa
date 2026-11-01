@@ -78,3 +78,6 @@ export { retainCoManagedConversationBeforeSourceChange } from './sourceChangeRet
 export { snapshotConversationContent, encodeConversationContent, plainTextContent } from './conversationContent';
 export type { CoManagedConversationContent } from './conversationContent';
 export { projectTaskAudience, projectTaskAudienceSql } from './projectTaskAudience';
+
+export * from './portableRestoreUploads';
+export { assertPortableRestoreInstallationAuthority } from './portableRestoreInstallationAuthority';

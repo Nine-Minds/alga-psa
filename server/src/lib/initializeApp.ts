@@ -293,6 +293,15 @@ export async function initializeApp() {
       // Continue startup - scheduled jobs are not critical for basic functionality
     }
 
+    // Portable-restore upload recovery: declared through the job registry, and only when the
+    // co-managed capability is not forced off. Absent schema or attempts make the sweep a no-op.
+    try {
+      const { registerPortableRestoreJobs } = await import('./jobs/portableRestoreJobs');
+      await registerPortableRestoreJobs();
+    } catch (error) {
+      logger.error('Failed to register portable restore jobs:', error);
+    }
+
     // Standard invoice templates are shipped as data (AST) and do not require compilation/sync at startup.
 
     // Register cleanup handlers

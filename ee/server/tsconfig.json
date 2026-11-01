@@ -161,6 +161,8 @@
       "@alga-psa/users/*": ["packages/users/src/*"],
       "@alga-psa/licensing": ["packages/licensing/src"],
       "@alga-psa/licensing/*": ["packages/licensing/src/*"],
+      "@alga-psa/storage": ["packages/storage/src"],
+      "@alga-psa/storage/*": ["packages/storage/src/*"],
       "@alga-psa/co-managed": ["packages/co-managed/src"],
       "@alga-psa/co-managed/*": ["packages/co-managed/src/*"],
       "@alga-psa/sla": ["packages/sla/src"],
