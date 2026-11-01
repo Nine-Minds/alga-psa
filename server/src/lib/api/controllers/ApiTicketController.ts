@@ -53,6 +53,7 @@ import {
   updateBundleSettingsSchema
 } from '../schemas/ticketBundle';
 import { ZodError } from 'zod';
+import { buildDocumentPreviewHeaders } from '@alga-psa/core';
 import {
   addChecklistItem,
   getTicketChecklistItems,
@@ -1484,7 +1485,10 @@ export class ApiTicketController extends ApiBaseController {
 
           const etag = `"${result.fileId}"`;
           const headers = new Headers();
-          headers.set('Content-Type', result.mimeType);
+          // LEVERAGE: pattern byte-serving-headers — policy headers set by hand in each byte-serving route
+          for (const [name, value] of Object.entries(buildDocumentPreviewHeaders(result.mimeType))) {
+            headers.set(name, value);
+          }
           headers.set('ETag', etag);
           // Variants are immutable per file id: a regenerated preview gets a new id.
           headers.set('Cache-Control', 'private, max-age=31536000, immutable');

@@ -19,7 +19,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) return editionGateResponse('mcp');
-  const { authenticateMcpAdmin, addTrustedIdp } = await import('@product/mcp/entry');
+  const { authenticateMcpAdmin, addTrustedIdp, isUsableAudience, MISSING_AUDIENCE_MESSAGE } = await import('@product/mcp/entry');
   const admin = await authenticateMcpAdmin(req);
   if (!admin) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
@@ -32,6 +32,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     subjectClaim?: string;
   };
   const kind = body.kind ?? 'custom';
+  if (!isUsableAudience(body.audience)) {
+    return NextResponse.json({ error: MISSING_AUDIENCE_MESSAGE }, { status: 400 });
+  }
   if (kind === 'microsoft' && !body.entraTenantId) {
     return NextResponse.json({ error: 'The Microsoft preset requires "entraTenantId".' }, { status: 400 });
   }
@@ -45,7 +48,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       entraTenantId: body.entraTenantId,
       issuer: body.issuer,
       jwksUri: body.jwksUri,
-      audience: body.audience,
+      audience: body.audience.trim(),
       subjectClaim: body.subjectClaim,
     });
     return NextResponse.json({ data: idp }, { status: 201 });

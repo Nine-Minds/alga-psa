@@ -17,6 +17,9 @@ export const PREDICATE_OPERATORS = [
   'contains',
   'starts_with',
   'ends_with',
+  'not_contains',
+  'not_starts_with',
+  'not_ends_with',
   'is_empty',
   'is_not_empty',
 ] as const;
@@ -45,6 +48,26 @@ export type PredicateNode = PredicateClause | PredicateGroup;
 /** Operators that take no value. */
 export const operatorTakesValue = (operator: PredicateOperator): boolean =>
   operator !== 'is_empty' && operator !== 'is_not_empty';
+
+/** Case-sensitive substring, prefix and suffix tests. Their value is a string. */
+export const TEXT_OPERATORS: readonly PredicateOperator[] = ['contains', 'starts_with', 'ends_with'];
+
+/**
+ * Operators defined as exactly `NOT <positive>` over the full path (relation hops included), so a missing
+ * value satisfies them. Every backend resolves them through this one table: evaluate the positive form,
+ * then negate. `not_equals` is deliberately absent: a missing value does not satisfy it (see SEMANTICS.md).
+ */
+export const COMPLEMENTS: Readonly<Partial<Record<PredicateOperator, PredicateOperator>>> = {
+  not_in: 'in',
+  is_empty: 'is_not_empty',
+  not_contains: 'contains',
+  not_starts_with: 'starts_with',
+  not_ends_with: 'ends_with',
+};
+
+/** Operators whose value is a string to look for: the text operators and their complements. */
+export const operatorTakesText = (operator: PredicateOperator): boolean =>
+  TEXT_OPERATORS.includes(COMPLEMENTS[operator] ?? operator);
 
 /** Operators whose value is a list. */
 export const operatorTakesList = (operator: PredicateOperator): boolean =>

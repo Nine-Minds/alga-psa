@@ -60,10 +60,14 @@ describe('listCoManagedProjectTaskHistory', () => {
     expect(entry.changes).toEqual({ msp_assignee: { kind: 'user', name: 'Alex MSP' } });
     expect(JSON.stringify(entry)).not.toContain(U(91));
   });
-  it.each([['assignee_name'], ['users'], ['*']])('omits msp_assignee for a reader with %s redacted but keeps the header', async redaction => {
+  it.each([['assignee_name'], ['users']])('omits msp_assignee for a reader with %s redacted but keeps the header', async redaction => {
     state.redactedFields = [redaction];
     const [entry] = await listCoManagedProjectTaskHistory({} as any, actor, resource);
     expect(entry).toMatchObject({ auditId: U(7), operation: 'co_managed_project_task_assignment', authorName: 'Sam', organizationName: 'MSP Co', changes: {} });
     expect(JSON.stringify(entry)).not.toContain('Alex MSP');
+  });
+  it.each([['*'], ['tasks'], ['project_tasks']])('denies the whole history when the task resource is redacted (%s)', async redaction => {
+    state.redactedFields = [redaction];
+    await expect(listCoManagedProjectTaskHistory({} as any, actor, resource)).rejects.toThrow();
   });
 });
