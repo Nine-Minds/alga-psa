@@ -10,6 +10,8 @@ import {
   TICKET_ACTIVITY_SOURCE,
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
+import { isClientUserType } from '@alga-psa/types';
+import { authorizeTicketRecordAccessConcealed } from '../../lib/ticketRecordAuthorization';
 import { checklistActionErrorFrom, type ChecklistActionError } from './checklistActionErrors';
 
 /**
@@ -54,15 +56,49 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
-async function requireTicket(trx: Knex.Transaction | Knex, tenant: string, ticketId: string) {
-  const ticket = await tenantScopedTable(trx, 'tickets', tenant).where({ ticket_id: ticketId }).first();
-  if (!ticket) {
-    throw new Error('Ticket not found');
-  }
-  return ticket;
+type ChecklistActor = Parameters<typeof authorizeTicketRecordAccessConcealed>[0]['user'];
+
+const CONCEALED_REFUSAL = 'Permission denied: Cannot access ticket';
+
+/** Tenant-scoped load of a checklist item; the caller decides how to report a miss. */
+async function loadChecklistItem(trx: Knex.Transaction | Knex, tenant: string, itemId: string) {
+  return tenantScopedTable(trx, 'ticket_checklist_items', tenant)
+    .where({ checklist_item_id: itemId })
+    .first('checklist_item_id', 'ticket_id');
 }
 
-// LEVERAGE: friction checklist-transaction -- five checklist mutations each open their own withTransaction with the same requireTicket-then-write shape; the helper is the boundary durably, so a missing helper is the signal.
+/** Per-record gate for the ticket that owns (or will own) checklist rows. */
+async function authorizeChecklistTarget(
+  trx: Knex.Transaction | Knex,
+  tenant: string,
+  user: ChecklistActor,
+  ticketId: string,
+  action: 'read' | 'update'
+) {
+  return authorizeTicketRecordAccessConcealed({ trx, tenant, user, ticketId, action });
+}
+
+/**
+ * Resolve an item's owning ticket and authorize it. A missing item is
+ * indistinguishable from a hidden one for client users; internal users keep
+ * the 'Checklist item not found' report.
+ */
+async function authorizeChecklistItem(
+  trx: Knex.Transaction | Knex,
+  tenant: string,
+  user: ChecklistActor,
+  itemId: string,
+  action: 'read' | 'update'
+): Promise<{ checklist_item_id: string; ticket_id: string }> {
+  const item = await loadChecklistItem(trx, tenant, itemId);
+  if (!item) {
+    throw new Error(isClientUserType((user as { user_type?: string }).user_type) ? CONCEALED_REFUSAL : 'Checklist item not found');
+  }
+  await authorizeChecklistTarget(trx, tenant, user, item.ticket_id, action);
+  return item;
+}
+
+// LEVERAGE: friction checklist-transaction -- five checklist mutations each open their own withTransaction with the same authorize-then-write shape; the helper is the boundary durably, so a missing helper is the signal.
 async function runChecklistMutation<T>(
   db: Knex,
   work: (trx: Knex.Transaction) => Promise<T>
@@ -71,8 +107,22 @@ async function runChecklistMutation<T>(
 }
 
 export const getTicketChecklistItems = withAuth(
-  async (_user, { tenant }, ticketId: string): Promise<ITicketChecklistItem[]> => {
+  async (user, { tenant }, ticketId: string): Promise<ITicketChecklistItem[]> => {
+    if (!(await hasPermission(user, 'ticket', 'read'))) {
+      return [];
+    }
     const { knex: db } = await createTenantKnex();
+    // Refusal (hidden or missing ticket) looks like an empty checklist.
+    try {
+      await withTransaction(db, (trx: Knex.Transaction) =>
+        authorizeChecklistTarget(trx, tenant, user, ticketId, 'read')
+      );
+    } catch (error) {
+      if (error instanceof Error && (error.message.includes('Permission denied') || error.message === 'Ticket not found')) {
+        return [];
+      }
+      throw error;
+    }
     return tenantDb(db, tenant)
       .tenantJoin(
         tenantScopedTable(db, 'ticket_checklist_items as tci', tenant),
@@ -113,7 +163,7 @@ export const addChecklistItem = withAuth(
 
       const { knex: db } = await createTenantKnex();
       return await runChecklistMutation(db, async (trx: Knex.Transaction) => {
-        await requireTicket(trx, tenant, ticketId);
+        await authorizeChecklistTarget(trx, tenant, user, ticketId, 'update');
 
         const maxOrder = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
           .where({ ticket_id: ticketId })
@@ -154,6 +204,7 @@ export const updateChecklistItem = withAuth(
 
       const { knex: db } = await createTenantKnex();
       return await runChecklistMutation(db, async (trx: Knex.Transaction) => {
+        await authorizeChecklistItem(trx, tenant, user, itemId, 'update');
         const existing = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
           .where({ checklist_item_id: itemId })
           .first();
@@ -195,6 +246,7 @@ export const deleteChecklistItem = withAuth(
 
       const { knex: db } = await createTenantKnex();
       await runChecklistMutation(db, async (trx: Knex.Transaction) => {
+        await authorizeChecklistItem(trx, tenant, user, itemId, 'update');
         const item = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
           .where({ checklist_item_id: itemId })
           .forUpdate()
@@ -228,7 +280,7 @@ export const reorderChecklistItems = withAuth(
 
       const { knex: db } = await createTenantKnex();
       await runChecklistMutation(db, async (trx: Knex.Transaction) => {
-        await requireTicket(trx, tenant, ticketId);
+        await authorizeChecklistTarget(trx, tenant, user, ticketId, 'update');
         for (let i = 0; i < orderedItemIds.length; i++) {
           const updated = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
             .where({ ticket_id: ticketId, checklist_item_id: orderedItemIds[i] })
@@ -257,6 +309,7 @@ export const setChecklistItemCompleted = withAuth(
 
       const { knex: db } = await createTenantKnex();
       return await runChecklistMutation(db, async (trx: Knex.Transaction) => {
+        await authorizeChecklistItem(trx, tenant, user, itemId, 'update');
         const existing = await tenantScopedTable(trx, 'ticket_checklist_items', tenant)
           .where({ checklist_item_id: itemId })
           .first();
