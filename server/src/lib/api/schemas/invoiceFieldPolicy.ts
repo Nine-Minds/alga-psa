@@ -45,8 +45,10 @@ export const INVOICE_FIELD_POLICY = {
   tenant: { create: immutable('forced from the request context'), update: immutable('tenant') },
   invoice_id: { create: immutable('generated'), update: immutable('invoice identity') },
   invoice_number: { create: immutable('numbering service'), update: owned('numbering service') },
-  is_manual: { create: writable, update: immutable('set at creation') },
-  is_prepayment: { create: writable, update: immutable('set at creation') },
+  // Provenance flags: a create body may only carry the default (false). Server-side
+  // operations that need them (duplicate, manual/prepayment invoice generation) set them.
+  is_manual: { create: owned('server-set provenance (duplicate / manual invoice)'), update: immutable('set at creation'), createAllows: [false] },
+  is_prepayment: { create: owned('server-set provenance (prepayment invoice)'), update: immutable('set at creation'), createAllows: [false] },
   billing_cycle_id: { create: owned('invoiceGeneration'), update: owned('billing engine') },
   billing_period_start: { create: writable, update: owned('billing engine') },
   billing_period_end: { create: writable, update: owned('billing engine') },

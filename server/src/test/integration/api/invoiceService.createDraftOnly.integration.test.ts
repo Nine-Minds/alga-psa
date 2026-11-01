@@ -134,28 +134,40 @@ describe('POST /api/v1/invoices (InvoiceService.create) is draft-only', () => {
     expect([Number(header.subtotal), Number(header.tax), Number(header.total_amount)]).toEqual([0, 0, 0]);
   });
 
-  it('the duplicate endpoint payload (status draft, credit 0) still creates a draft', async () => {
-    // Mirrors ApiInvoiceController duplicate: echoes the original's totals and sends draft / credit 0.
+  it.each([['is_manual'], ['is_prepayment']])('%s = true in the create body is a 400 and creates nothing', async (field) => {
+    const error = await serviceUnderTest()
+      .create({ ...base(), [field]: true } as any, ctx())
+      .then(() => null, (e) => e);
+    expect(error).toMatchObject({ statusCode: 400, message: expect.stringContaining(field) });
+    expect(handleApiError(error).status).toBe(400);
+    expect(await invoiceCount()).toBe(baselineCount);
+  });
+
+  it('create persists is_manual / is_prepayment at their defaults', async () => {
     const created = await serviceUnderTest().create(
-      {
-        ...base(),
-        subtotal: 2000,
-        tax: 0,
-        total_amount: 2000,
-        status: 'draft' as const,
-        credit_applied: 0,
-        is_manual: true,
-        is_prepayment: false,
-        items: [{ description: 'A', quantity: 1, unit_price: 2000 }],
-      } as any,
+      { ...base(), is_manual: false, is_prepayment: false } as any,
       ctx(),
     );
     const header = await headerOf((created as any).invoice_id);
+    expect([header.is_manual, header.is_prepayment]).toEqual([false, false]);
+  });
+
+  it('duplicate() sets is_manual server-side on a new draft with engine-derived totals', async () => {
+    const service = serviceUnderTest();
+    const original = await service.create(
+      { ...base(), items: [{ description: 'A', quantity: 1, unit_price: 2000 }] } as any,
+      ctx(),
+    );
+    const duplicated = await service.duplicate((original as any).invoice_id, ctx());
+    const header = await headerOf((duplicated as any).invoice_id);
+    expect(header.invoice_id).not.toBe((original as any).invoice_id);
     expect(header.status).toBe('draft');
-    // Total is the engine derivation (net + tax of the persisted charges), not the echoed 2000.
+    expect(header.is_manual).toBe(true);
+    expect(header.is_prepayment).toBe(false);
     const charges = await context.db('invoice_charges')
       .where({ tenant: context.tenantId, invoice_id: header.invoice_id });
     const derived = charges.reduce((s: number, c: any) => s + Number(c.net_amount) + Number(c.tax_amount), 0);
+    expect(charges.length).toBeGreaterThan(0);
     expect(Number(header.total_amount)).toBe(Math.round(derived));
   });
 

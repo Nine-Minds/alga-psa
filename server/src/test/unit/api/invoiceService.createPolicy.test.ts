@@ -93,6 +93,8 @@ describe('InvoiceService.create is draft-only', () => {
     [{ status: 'paid' }, 'status'],
     [{ credit_applied: 25 }, 'credit_applied'],
     [{ billing_cycle_id: '11111111-1111-4111-8111-111111111111' }, 'billing_cycle_id'],
+    [{ is_manual: true }, 'is_manual'],
+    [{ is_prepayment: true }, 'is_prepayment'],
   ])('rejects %j with a 400 naming %s and writes nothing', async (body, field) => {
     await expect(service.create({ client_id: 'client-1', ...body } as any, context)).rejects.toMatchObject({
       statusCode: 400,
@@ -105,11 +107,14 @@ describe('InvoiceService.create is draft-only', () => {
     [{ status: 'draft', credit_applied: 0 }],
     [{ status: 'draft' }],
     [{ credit_applied: 0 }],
+    [{ is_manual: false, is_prepayment: false }],
     [{}],
   ])('accepts %j', async (body) => {
     await service.create({ client_id: 'client-1', due_date: '2026-01-01', ...body } as any, context);
     expect(mocks.inserted).toHaveLength(1);
-    expect(mocks.inserted[0]).toMatchObject({ status: 'draft', credit_applied: 0, tenant: 'tenant-1' });
+    expect(mocks.inserted[0]).toMatchObject({
+      status: 'draft', credit_applied: 0, tenant: 'tenant-1', is_manual: false, is_prepayment: false,
+    });
   });
 
   it('never persists caller-supplied header totals and forces the tenant', async () => {

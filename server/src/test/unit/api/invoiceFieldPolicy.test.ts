@@ -30,7 +30,11 @@ describe('invoice field policy matrix', () => {
     expect(p.credit_applied.create).toMatchObject({ kind: 'command-owned', command: 'applyCredit' });
     expect(p.billing_cycle_id.create).toMatchObject({ kind: 'command-owned', command: 'invoiceGeneration' });
     for (const k of ['subtotal', 'tax', 'total_amount']) expect(p[k].create.kind).toBe('engine-derived');
-    for (const k of ['client_id', 'invoice_date', 'due_date', 'is_manual', 'is_prepayment', 'items', 'payment_method'])
+    for (const k of ['is_manual', 'is_prepayment']) {
+      expect(p[k].create.kind).toBe('command-owned');
+      expect(p[k].createAllows).toEqual([false]);
+    }
+    for (const k of ['client_id', 'invoice_date', 'due_date', 'items', 'payment_method'])
       expect(p[k].create.kind).toBe('writable');
   });
 });
@@ -42,6 +46,12 @@ describe('checkInvoicePayload(create)', () => {
     expect(keys({ status: 'sent' })).toEqual(['status']);
     expect(keys({ credit_applied: 25 })).toEqual(['credit_applied']);
     expect(keys({ billing_cycle_id: 'abc' })).toEqual(['billing_cycle_id']);
+  });
+
+  it('rejects is_manual / is_prepayment = true and accepts their default (false)', () => {
+    expect(keys({ is_manual: true })).toEqual(['is_manual']);
+    expect(keys({ is_prepayment: true })).toEqual(['is_prepayment']);
+    expect(keys({ is_manual: false, is_prepayment: false })).toEqual([]);
   });
 
   it('accepts draft / no status, zero or absent credit, and ignores derived totals and tenant', () => {

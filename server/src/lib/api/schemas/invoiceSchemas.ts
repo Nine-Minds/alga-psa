@@ -204,6 +204,10 @@ const createInvoiceSchema = baseInvoiceSchema.omit({
   // accepted-but-optional so existing clients that echo them do not break; InvoiceService.create
   // rejects a non-draft status / non-zero credit and ignores the totals.
   status: invoiceStatusSchema.optional(),
+  // No default: a body that sends true must reach InvoiceService.create and be refused,
+  // not be silently defaulted or stripped.
+  is_manual: z.boolean().optional(),
+  is_prepayment: z.boolean().optional(),
   subtotal: monetaryAmountSchema.optional(),
   tax: monetaryAmountSchema.optional(),
   total_amount: monetaryAmountSchema.optional(),

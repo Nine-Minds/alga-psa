@@ -955,28 +955,8 @@ export class ApiInvoiceController extends ApiBaseController {
 
           const id = await this.extractIdFromPath(apiRequest);
           
-          const originalInvoice = await this.invoiceService.getById(id, apiRequest.context, { include_items: true });
-          
-          if (!originalInvoice) {
-            throw new NotFoundError('Invoice not found');
-          }
-          
-          // Create a new invoice based on the original
-          const duplicateData = {
-            client_id: originalInvoice.client_id,
-            invoice_date: new Date().toISOString().split('T')[0],
-            due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            subtotal: originalInvoice.subtotal,
-            tax: originalInvoice.tax,
-            total_amount: originalInvoice.total_amount,
-            status: 'draft' as const,
-            credit_applied: 0,
-            is_manual: true,
-            is_prepayment: false,
-            items: (originalInvoice as any).invoice_charges || []
-          };
-          
-          const duplicatedInvoice = await this.invoiceService.create(duplicateData, apiRequest.context);
+          // is_manual is server-set provenance, so duplication is its own service operation.
+          const duplicatedInvoice = await this.invoiceService.duplicate(id, apiRequest.context);
           
           return createSuccessResponse(duplicatedInvoice, 201);
         });

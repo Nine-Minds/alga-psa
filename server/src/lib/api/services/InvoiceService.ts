@@ -660,6 +660,37 @@ export class InvoiceService extends BaseService<IInvoice> {
   async create(data: Partial<IInvoice>, context: ServiceContext): Promise<IInvoice>;
   async create(data: CreateInvoice, context: ServiceContext): Promise<IInvoice>;
   async create(data: any, context: ServiceContext): Promise<IInvoice> {
+    return this.createDraft(data, context, {});
+  }
+
+  /**
+   * Duplicate an invoice as a new manual draft. is_manual is provenance the server sets
+   * here; it is not accepted from a create body.
+   */
+  async duplicate(invoiceId: string, context: ServiceContext): Promise<IInvoice> {
+    await this.assertInvoicePermission(context, 'create');
+    const original: any = await this.getById(invoiceId, context, { include_items: true });
+    if (!original) {
+      throw new NotFoundError('Invoice not found');
+    }
+    return this.createDraft(
+      {
+        client_id: original.client_id,
+        invoice_date: new Date().toISOString().split('T')[0],
+        due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        items: original.invoice_charges || [],
+      },
+      context,
+      { is_manual: true },
+    );
+  }
+
+  /** Body-validated draft creation; `provenance` is set by server-side operations only. */
+  private async createDraft(
+    data: any,
+    context: ServiceContext,
+    provenance: { is_manual?: boolean; is_prepayment?: boolean },
+  ): Promise<IInvoice> {
     // Real RBAC check (validatePermissions is a stub): the controller checks too, but
     // every caller of the service must hold invoice:create.
     await this.assertInvoicePermission(context, 'create');
@@ -732,8 +763,9 @@ export class InvoiceService extends BaseService<IInvoice> {
         // This generic create endpoint trusts the caller; rename to `invoice_window_*` is pending.
         billing_period_start: data.billing_period_start,
         billing_period_end: data.billing_period_end,
-        is_manual: data.is_manual || false,
-        is_prepayment: data.is_prepayment || false,
+        // Provenance never comes from the body (checkInvoicePayload refuses true above).
+        is_manual: provenance.is_manual ?? false,
+        is_prepayment: provenance.is_prepayment ?? false,
         credit_applied: 0,
         created_by: context.userId,
         updated_by: context.userId,
