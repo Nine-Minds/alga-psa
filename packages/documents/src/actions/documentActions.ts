@@ -654,6 +654,8 @@ export const updateDocument = withAuth(async (user, { tenant }, documentId: stri
  * only writer of the preview/thumbnail columns.
  */
 export const replaceDocumentFile = withAuth(async (user, { tenant }, documentId: string, fileId: string) => {
+  // New copy uploaded but not yet claimed by the documents row; removed again if the update fails.
+  let unclaimedStorageFileId: string | undefined;
   try {
     if (!await hasPermission(user, 'document', 'update')) {
       return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
@@ -676,17 +678,49 @@ export const replaceDocumentFile = withAuth(async (user, { tenant }, documentId:
         return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');
       }
 
-      const unchanged = target.file_id === fileId;
-      if (!unchanged) {
-        await tenantScopedTable(trx, 'documents', tenant)
-          .where('document_id', documentId)
-          .update({
-            file_id: fileId,
-            updated_at: new Date(),
-          });
+      if (target.file_id === fileId) {
+        return { changed: false as const };
       }
 
-      return { changed: !unchanged, document: { ...target, file_id: fileId, mime_type: source.mime_type } as IDocument };
+      // Copy the bytes into a file of the target's own. Sharing one external_files row between two
+      // documents lets deleting either of them destroy the other's bytes.
+      const sourceFile = await StorageService.downloadFile(fileId);
+      const newFile = await StorageService.uploadFile(
+        tenant,
+        sourceFile.buffer,
+        sourceFile.metadata.original_name ?? source.document_name,
+        {
+          mime_type: source.mime_type ?? sourceFile.metadata.mime_type,
+          uploaded_by_id: user.user_id,
+        },
+      );
+      unclaimedStorageFileId = newFile.file_id;
+
+      const previous = {
+        file_id: target.file_id,
+        preview_file_id: target.preview_file_id,
+        thumbnail_file_id: target.thumbnail_file_id,
+      };
+      const columns = {
+        file_id: newFile.file_id,
+        storage_path: newFile.storage_path,
+        file_size: newFile.file_size,
+        mime_type: newFile.mime_type,
+      };
+      await tenantScopedTable(trx, 'documents', tenant)
+        .where('document_id', documentId)
+        .update({
+          ...columns,
+          updated_at: new Date(),
+        });
+
+      return {
+        changed: true as const,
+        columns,
+        buffer: sourceFile.buffer,
+        previous,
+        document: { ...target, ...columns } as IDocument,
+      };
     });
 
     if (isActionPermissionErrorResult(outcome)) {
@@ -697,23 +731,17 @@ export const replaceDocumentFile = withAuth(async (user, { tenant }, documentId:
       return;
     }
 
+    unclaimedStorageFileId = undefined; // The update committed; the new file now belongs to the document.
+
+    const changedFields = Object.keys(outcome.columns);
     const cache = CacheFactory.getPreviewCache(tenant);
     await cache.delete(documentId);
 
-    await publishDocumentUpdatedSearchEvent(
-      tenant,
-      documentId,
-      user.user_id,
-      ['file_id'],
-      'replaceDocumentFile',
-    );
-
-    // Regenerate derived artifacts. Same single-writer discipline as uploadDocument:
-    // preview/thumbnail columns are written only from the generator result.
+    // Regenerate derived artifacts from the new file. Same single-writer discipline as
+    // uploadDocument: preview/thumbnail columns are written only from the generator result.
+    let previewColumnsWritten = false;
     try {
-      const storage = await StorageService.downloadFile(fileId);
-      const buffer = storage.buffer;
-      const previewResult = await generateDocumentPreviews(outcome.document, buffer);
+      const previewResult = await generateDocumentPreviews(outcome.document, outcome.buffer);
       await tenantScopedTable(knex, 'documents', tenant)
         .where({ document_id: documentId })
         .update({
@@ -722,9 +750,36 @@ export const replaceDocumentFile = withAuth(async (user, { tenant }, documentId:
           preview_generated_at: previewResult.preview_generated_at ?? null,
           updated_at: new Date(),
         });
+      previewColumnsWritten = true;
+      changedFields.push('thumbnail_file_id', 'preview_file_id', 'preview_generated_at');
+      outcome.document.thumbnail_file_id = previewResult.thumbnail_file_id ?? undefined;
+      outcome.document.preview_file_id = previewResult.preview_file_id ?? undefined;
     } catch (error) {
       console.error(`[replaceDocumentFile] Preview generation failed for document ${documentId}:`, error);
     }
+
+    await publishDocumentUpdatedSearchEvent(
+      tenant,
+      documentId,
+      user.user_id,
+      changedFields,
+      'replaceDocumentFile',
+    );
+
+    // The previous file (and its derived preview/thumbnail, once replaced) is no longer used by this
+    // document. Remove it unless another document still references it.
+    const stale = [outcome.previous.file_id];
+    if (previewColumnsWritten) {
+      stale.push(outcome.previous.preview_file_id, outcome.previous.thumbnail_file_id);
+    }
+    await deleteUnreferencedFiles(
+      knex,
+      tenant,
+      stale.filter((id) => id !== outcome.document.preview_file_id && id !== outcome.document.thumbnail_file_id),
+      documentId,
+      user.user_id,
+      'replaceDocumentFile',
+    );
   } catch (error) {
     console.error(error);
     const expectedError = documentActionErrorFrom(error);
@@ -732,8 +787,56 @@ export const replaceDocumentFile = withAuth(async (user, { tenant }, documentId:
       return expectedError;
     }
     throw error;
+  } finally {
+    if (unclaimedStorageFileId) {
+      try { await StorageService.deleteFile(unclaimedStorageFileId, user.user_id); }
+      catch (cleanupError) { console.error('[replaceDocumentFile] Failed to remove unclaimed replacement storage', cleanupError); }
+    }
   }
 });
+
+/**
+ * Delete stored files that no live document still references. A file counts as referenced when any
+ * document in the tenant other than `excludeDocumentId` names it in file_id, preview_file_id or
+ * thumbnail_file_id. `excludeDocumentId` makes the check correct whether or not that document's row
+ * has already been removed. StorageService.deleteFile itself is unguarded, so every document-driven
+ * deletion must go through here.
+ */
+// LEVERAGE: pattern unguarded-file-delete — StorageService.deleteFile has no reference check; other callers (e.g. server attachDocument, importActions, interactionActions) may need the same guard.
+async function deleteUnreferencedFiles(
+  knex: Knex,
+  tenant: string,
+  fileIds: Array<string | null | undefined>,
+  excludeDocumentId: string,
+  deletedById: string,
+  logPrefix: string,
+): Promise<void> {
+  const candidates = [...new Set(fileIds.filter((id): id is string => typeof id === 'string' && id.length > 0))];
+
+  await Promise.all(candidates.map(async (candidate) => {
+    try {
+      const stillReferenced = await tenantScopedTable(knex, 'documents', tenant)
+        .whereNot('document_id', excludeDocumentId)
+        .where((builder) => {
+          builder
+            .where('file_id', candidate)
+            .orWhere('preview_file_id', candidate)
+            .orWhere('thumbnail_file_id', candidate);
+        })
+        .first('document_id');
+      if (stillReferenced) {
+        console.log(`[${logPrefix}] Keeping file ${candidate}: still referenced by another document`);
+        return;
+      }
+      const deleteResult = await deleteFile(candidate, deletedById);
+      if (!deleteResult.success) {
+        console.error(`[${logPrefix}] Failed to delete file ${candidate}:`, deleteResult.error);
+      }
+    } catch (error) {
+      console.error(`[${logPrefix}] Error deleting file ${candidate}:`, error);
+    }
+  }));
+}
 
 // Delete document
 export const deleteDocument = withAuth(async (
@@ -868,35 +971,16 @@ export const deleteDocument = withAuth(async (
 
     await publishDocumentDeletedSearchEvent(tenant, documentId, user.user_id, 'deleteDocument');
 
-    const filesToDelete: string[] = [];
-
-    if (deletedDocument.file_id) {
-      filesToDelete.push(deletedDocument.file_id);
-    }
-
-    if (deletedDocument.thumbnail_file_id) {
-      filesToDelete.push(deletedDocument.thumbnail_file_id);
-    }
-
-    if (deletedDocument.preview_file_id) {
-      filesToDelete.push(deletedDocument.preview_file_id);
-    }
+    const filesToDelete = [
+      deletedDocument.file_id,
+      deletedDocument.thumbnail_file_id,
+      deletedDocument.preview_file_id,
+    ].filter(Boolean);
 
     if (filesToDelete.length > 0) {
-      console.log(`[deleteDocument] Deleting ${filesToDelete.length} files for document ${documentId}`);
+      console.log(`[deleteDocument] Deleting up to ${filesToDelete.length} files for document ${documentId}`);
 
-      const deletePromises = filesToDelete.map(async (fileId) => {
-        try {
-          const deleteResult = await deleteFile(fileId, userId);
-          if (!deleteResult.success) {
-            console.error(`[deleteDocument] Failed to delete file ${fileId}:`, deleteResult.error);
-          }
-        } catch (error) {
-          console.error(`[deleteDocument] Error deleting file ${fileId}:`, error);
-        }
-      });
-
-      await Promise.all(deletePromises);
+      await deleteUnreferencedFiles(knex, tenant, filesToDelete, documentId, userId, 'deleteDocument');
 
       const cache = CacheFactory.getPreviewCache(tenant);
       await cache.delete(deletedDocument.file_id);
