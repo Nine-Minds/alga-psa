@@ -208,10 +208,15 @@ describe('ticket update record authorization (real transaction)', () => {
     // cannot satisfy this assertion because no wrapper participates in this call.
     await withTransaction(context.db, async (trx) => {
       const realAuthorize = recordAuthorization.authorizeTicketRecordAccess;
+      const writesBeforeAuthorization: string[] = [];
+      trx.on('query', (query: { sql: string }) => {
+        if (/^\s*(insert|update|delete)\b/i.test(query.sql)) writesBeforeAuthorization.push(query.sql);
+      });
       const observed = vi.spyOn(recordAuthorization, 'authorizeTicketRecordAccess').mockImplementationOnce(async (input) => {
         const current = await trx('tickets').where({ ticket_id: ticketId }).first();
         expect(input.ticketRow).toMatchObject({ ticket_id: ticketId, client_id: clientInScope, title: 'In-scope original' });
         expect(current.title).toBe('In-scope original');
+        expect(writesBeforeAuthorization).toEqual([]);
         expect(workflowEvents).toHaveLength(0);
         return realAuthorize(input);
       });
