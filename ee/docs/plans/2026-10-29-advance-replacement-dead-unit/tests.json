@@ -98,5 +98,21 @@
     "featureIds": [
       "F016"
     ]
+  },
+  {
+    "id": "T012",
+    "description": "Unit: overdue badge truth table (replaced past due shows 'not yet shipped'; replaced not due hides; dead_unit_owed shipped on time hides even when today > return_by; shipped late shows 'shipped late'; standard track and missing return_by never show)",
+    "implemented": false,
+    "featureIds": [
+      "F014"
+    ]
+  },
+  {
+    "id": "T013",
+    "description": "Unit + DB: receive_replacement on the advance track accepts optional return_by and persists it; omitted return_by leaves the approval-time value untouched",
+    "implemented": false,
+    "featureIds": [
+      "F017"
+    ]
   }
 ]

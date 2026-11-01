@@ -36,13 +36,25 @@ units that never entered MSP custody. The UI hint C5 contemplated for the
 "client holds it" case is therefore *not* needed; the advance track gains a
 real transition instead.
 
-**Open item, deliberately not blocking.** Vendors differ on the return window
-(Dell's advance-exchange terms are typically a fixed number of days from
-delivery of the replacement; HP and Lenovo publish their own). This design
-does **not** encode a vendor-specific deadline: it records the vendor's
-`return_by` when the shipment is created and surfaces an overdue state. Turning
-a deadline into an automatic action (forfeiture, billing, escalation) is a
-product decision this card does not take; see §6.
+**Vendor terms (checked 2026-11-01, round 2).** The published advance-exchange
+terms agree that whoever holds the dead unit ships it, with tracking, inside a
+short window that starts when the replacement is delivered:
+
+| Vendor | Window | Return logistics | Non-return consequence |
+|---|---|---|---|
+| Dell ([part return KB 000178919](https://www.dell.com/support/kbdoc/en-us/000178919/returning-service-parts-to-dell-us-only)) | Within 10 days of receiving the replacement, "unless Dell notified you otherwise" | Prepaid FedEx label in the replacement's box; the holder ships it | Charged the then-current standard price, or warranty service suspended |
+| HP ([Hardware Support Exchange data sheet](https://h20195.www2.hp.com/v2/GetPDF.aspx/4aa5-7508enw.pdf)) | Ship within 3 business days; HP must *receive* it within 10 business days of your receipt of the replacement | Prepaid label and container supplied; keep a proof-of-shipment receipt; the unit becomes HP's property | Charged the replacement's list price (card/PO taken when the request is logged) |
+| Lenovo ([Onsite Advanced Exchange agreement](https://static.lenovo.com/shop/emea/content/pdf/services-warranty/en/Services-Agreements/Onsite-Advanced-Exchange-Services-Agreement-DE_en.pdf)) | Ship within 7 calendar days of delivery, in the replacement's box | In-box instructions; remove accessories, SIM and storage first | Charged the replacement's current retail value |
+
+This confirms the product rule above: when the MSP holds the unit, the MSP
+makes the shipment, and custody must record it. It also fixes the deadline
+semantics (§2.4): the deadline is a **ship-by** date anchored on replacement
+delivery (HP adds a received-by date; Alga stores one date, the vendor's
+`return_by`, and treats it as ship-by). The risk window is therefore the
+`replaced`/`repaired` state, when the dead unit is still on the MSP's shelf,
+not `dead_unit_owed`, when it is already in transit. Windows vary by contract
+("unless Dell notified you otherwise"), so Alga records the vendor's date and
+does not compute one.
 
 ## 2. Design
 
@@ -102,15 +114,28 @@ Additive, not a redesign. Built the same way as the existing stock-unit track.
 - **Return slip: skipped.** C1's label types do not make a dead-unit slip
   trivial, and it is not required for "done".
 
-### 2.4 Deadline behaviour (design decision)
+### 2.4 Deadline behaviour (design decision, revised in review round 2)
 
 `return_by` is the existing `rma_cases.return_by` column (not
 `dead_unit_due_date`, which belongs to the stock track's client-owes-us clock).
-It is stored and displayed; nothing fires automatically. When it
-passes, the case shows an overdue badge and remains closeable — an MSP must
-never be *unable* to close a case because a vendor's clock ran out, and Alga
-must never silently declare a device forfeited. Any automatic consequence is a
-later product decision with its own card.
+It is the vendor's **ship-by** date for the dead unit (§1). It can be set at
+approval, at `receive_replacement` on the advance track (the replacement's
+delivery date is known then, so this is where the MSP will usually enter it),
+and at `ship_dead_unit_to_vendor`. Nothing fires automatically.
+
+The overdue warning badge follows the risk, not the status:
+
+| State (advance track) | Badge shows when |
+|---|---|
+| `replaced` / `repaired` (dead unit still in custody) | today > `return_by` ("Dead unit not yet shipped, was due {date}") |
+| `dead_unit_owed` (shipped, awaiting vendor receipt) | calendar day of `outbound_shipped_at` > `return_by` ("Dead unit shipped late, was due {date}") |
+| any other state, the standard track, or no `return_by` | never |
+
+An on-time shipment awaiting vendor confirmation never shows a badge. The case
+always remains closeable: an MSP must never be *unable* to close a case
+because a vendor's clock ran out, and Alga must never silently declare a
+device forfeited. Attention-list surfacing and the vendor's non-return charge
+are card `3a1d00ee` (C5 follow-up 2).
 
 ### 2.5 Discriminating the shared `dead_unit_owed` status
 
@@ -159,7 +184,7 @@ Open question: the asset status `held_by_msp` is left untouched by this leg.
 - **F2 Custody truth.** `shipped` event to the vendor; episode closes
   `returned_to_vendor`.
 - **F3 Vendor receipt.** Confirm receipt, close as resolved, timeline entry.
-- **F4 Overdue visibility.** Badge only; no automatic action.
+- **F4 Overdue visibility.** Badge per the §2.4 table (unshipped past `return_by`; shipped late); `return_by` capturable at `receive_replacement`; no automatic action.
 - **F5 Regression.** Stock-unit RMA paths unchanged.
 
 ## 5. Tests
@@ -173,12 +198,14 @@ Open question: the asset status `held_by_msp` is left untouched by this leg.
 - Integration: end-to-end advance flow (warranty review → approval → replacement
   received and attached to the client asset → dead unit shipped with tracking →
   vendor confirms → case closed) with custody history assertions.
+- Unit: overdue badge truth table from §2.4 (replaced past due shows; replaced not yet due hides; dead_unit_owed shipped on time hides even when today > return_by; shipped late shows; standard track never; no return_by never).
+- Unit/DB: `receive_replacement` on the advance track accepts and stores an optional `return_by`.
 - Regression: stock-unit RMA suite passes unchanged.
 
 ## 6. Deliberately not doing
 
 - No vendor API integration; carrier/tracking are recorded, not polled.
-- No automatic consequence for a lapsed `return_by` (see §2.4).
+- No automatic consequence for a lapsed `return_by` (see §2.4). Attention-list surfacing, the vendor's non-return charge and retained-media custody are card `3a1d00ee`.
 - No change to the "client holds it" path; it correctly needs no modelling.
 - No new stock ledger, no new permission, no schema change unless confirmed
   necessary.

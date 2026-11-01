@@ -105,8 +105,8 @@
   },
   {
     "id": "F014",
-    "description": "Overdue badge when return_by has passed; nothing automatic",
-    "implemented": true,
+    "description": "Overdue badge per PRD \u00a72.4: replaced/repaired with today > return_by (not yet shipped), dead_unit_owed with outbound_shipped_at day > return_by (shipped late); never for on-time shipments awaiting receipt; nothing automatic",
+    "implemented": false,
     "prdRefs": [
       "\u00a72"
     ]
@@ -125,6 +125,14 @@
     "implemented": true,
     "prdRefs": [
       "\u00a72"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "receive_replacement on the advance track accepts an optional return_by (vendor ship-by date anchored on replacement delivery) and stores it on rma_cases.return_by; Return by field in the receive-replacement form",
+    "implemented": false,
+    "prdRefs": [
+      "\u00a72.4"
     ]
   }
 ]
