@@ -127,6 +127,16 @@ interface TaskFormProps {
 // project tree effect that is keyed on this prop.
 const NO_PROJECT_TREE_DATA: any[] = [];
 
+// Set by the frozen branch of fieldGate. Rich/custom controls (which a disabled fieldset cannot
+// stop, e.g. contenteditable) read it via useFieldFrozen() and render themselves non-interactive.
+const FrozenFieldContext = React.createContext(false);
+const useFieldFrozen = (): boolean => React.useContext(FrozenFieldContext);
+
+function GatedTextEditor(props: React.ComponentProps<typeof TextEditor>): React.JSX.Element {
+  const frozenField = useFieldFrozen();
+  return <TextEditor {...props} editable={!frozenField} />;
+}
+
 export default function TaskForm({
   task,
   phase,
@@ -162,7 +172,7 @@ export default function TaskForm({
   const fieldGate = (field: string, node: React.ReactNode): React.ReactNode =>
     hidden(field) ? null : frozen(field) ? (
       <fieldset disabled className="m-0 min-w-0 border-0 p-0 opacity-70 pointer-events-none" data-frozen-field={field}>
-        {node}
+        <FrozenFieldContext.Provider value={true}>{node}</FrozenFieldContext.Provider>
       </fieldset>
     ) : node;
   const [refusedFields, setRefusedFields] = useState<string[] | null>(null);
@@ -1838,7 +1848,9 @@ export default function TaskForm({
         )}
         {(screen.readOnly || screen.frozenFields.length > 0) && (
           <p id="task-form-readonly-note" className="mb-2 text-xs text-[rgb(var(--color-text-500))]">
-            {taskFormT('sharedReadOnlyNote', 'Some fields are read-only for shared work')}
+            {screen.readOnly
+              ? taskFormT('sharedViewOnlyNote', 'This project is view-only')
+              : taskFormT('sharedReadOnlyNote', 'Some fields are read-only for shared work')}
           </p>
         )}
         {refusedFields && (
@@ -1958,7 +1970,7 @@ export default function TaskForm({
           {/* Full width Description */}
           {fieldGate('description', <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">{taskFormT('descriptionLabel', 'Description')}</label>
-            <TextEditor
+            <GatedTextEditor
               key={descriptionEditorKey}
               id={`task-description-${task?.task_id || 'new'}`}
               initialContent={descriptionContent}

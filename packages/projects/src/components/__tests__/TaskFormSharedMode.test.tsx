@@ -73,11 +73,16 @@ vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
 }));
 
 vi.mock('@alga-psa/ui/editor', () => ({
-  TextEditor: ({ initialContent, placeholder }: { initialContent?: Array<{ content?: Array<{ text?: string }> }>; placeholder?: string }) => {
+  TextEditor: ({ initialContent, placeholder, editable = true }: { initialContent?: Array<{ content?: Array<{ text?: string }> }>; placeholder?: string; editable?: boolean }) => {
     const text = (initialContent ?? [])
       .map((b) => (Array.isArray(b.content) ? b.content.map((c) => c.text ?? '').join('') : ''))
       .join('\n');
-    return <textarea readOnly placeholder={placeholder} value={text} />;
+    return (
+      <>
+        <textarea readOnly placeholder={placeholder} value={text} />
+        <div className="ProseMirror" contentEditable={editable} suppressContentEditableWarning tabIndex={editable ? 0 : undefined}>{text}</div>
+      </>
+    );
   },
   RichTextViewer: () => null,
 }));
@@ -312,5 +317,46 @@ describe('TaskForm in shared mode', () => {
   it('read-only screen renders no Update button and every field frozen', () => {
     const { container } = mount(sharedSource(vi.fn(), { readOnly: true, admittedTaskEdit: false }));
     expect(container.querySelector('#save-button')).toBeNull();
+  });
+
+  describe('frozen rich-text description', () => {
+    const editorOf = (c: HTMLElement) => c.querySelector('[data-frozen-field="description"] .ProseMirror, .ProseMirror') as HTMLElement;
+
+    it('is not editable when the description is frozen (collaborate)', () => {
+      const { container } = mount(sharedSource(vi.fn(), { frozenFields: ['description'], hiddenFields: [] }));
+      const gate = container.querySelector('[data-frozen-field="description"]') as HTMLElement;
+      expect(gate).not.toBeNull();
+      const pm = gate.querySelector('.ProseMirror') as HTMLElement;
+      expect(pm.getAttribute('contenteditable')).toBe('false');
+      expect(pm.tabIndex).toBe(-1);
+    });
+
+    it('is not editable on a readOnly source, and shows the view-only note', () => {
+      const { container } = mount(sharedSource(vi.fn(), { readOnly: true, admittedTaskEdit: false, frozenFields: [], hiddenFields: [] }));
+      expect(editorOf(container).getAttribute('contenteditable')).toBe('false');
+      expect(container.querySelector('#task-form-readonly-note')!.textContent).toBe('This project is view-only');
+    });
+
+    it('keeps the some-fields note when only some fields are frozen', () => {
+      const { container } = mount(sharedSource(vi.fn()));
+      expect(container.querySelector('#task-form-readonly-note')!.textContent).toBe('Some fields are read-only for shared work');
+    });
+
+    it('stays editable when the description is admitted', () => {
+      const { container } = mount(sharedSource(vi.fn()));
+      expect(container.querySelector('[data-frozen-field="description"]')).toBeNull();
+      expect(editorOf(container).getAttribute('contenteditable')).toBe('true');
+    });
+
+    it('stays editable under the native source', () => {
+      const { container } = render(
+        <ProjectDataSourceProvider dataSource={nativeSource()}>
+          <TicketIntegrationProvider value={createMockTicketIntegration()}>
+            <TaskForm task={task} phase={phase} onClose={() => undefined} onSubmit={() => undefined} projectStatuses={statuses}
+              users={[] as IUser[]} mode="edit" onPhaseChange={() => undefined} inDrawer={true} />
+          </TicketIntegrationProvider>
+        </ProjectDataSourceProvider>);
+      expect(editorOf(container).getAttribute('contenteditable')).toBe('true');
+    });
   });
 });
