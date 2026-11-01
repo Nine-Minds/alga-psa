@@ -463,7 +463,7 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'post', path: '/api/v1/time-periods/{id}/reopen', summary: 'Reopen time period', description: 'Sets is_closed false (idempotent). A closed period rejects edits and deletion until reopened; time entry is not affected.', family: 'time_sheet' },
 
     { method: 'get', path: '/api/v1/time-sheets', summary: 'List time sheets', description: 'Lists time sheets via ApiTimeSheetController.list().', family: 'time_sheet' },
-    { method: 'post', path: '/api/v1/time-sheets', summary: 'Create time sheet', description: 'Creates time sheet via create() path.', family: 'time_sheet' },
+    { method: 'post', path: '/api/v1/time-sheets', summary: 'Create time sheet', description: 'Creates a time sheet. A time sheet is unique per tenant, effective owner (`user_id`, defaulting to the caller) and `period_id`, in every approval status. The first request returns 201 with a DRAFT sheet; a request for a user and period that already has a sheet returns 409 CONFLICT ("A time sheet already exists for this user and period") and changes nothing. To recover, GET /api/v1/time-sheets filtered by `user_id` and `period_id`.', family: 'time_sheet' },
     { method: 'post', path: '/api/v1/time-sheets/bulk', summary: 'Bulk time sheet operation', description: 'Current route delegates to ApiTimeSheetController.list() (read path) instead of bulk approval/update logic.', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/time-sheets/export', summary: 'Export time sheets', description: 'Exports time sheets using ApiTimeSheetController.export().', family: 'time_sheet' },
     { method: 'get', path: '/api/v1/time-sheets/search', summary: 'Search time sheets', description: 'Searches time sheets via ApiTimeSheetController.search(). `query` is required and is matched as a case-insensitive substring against the sheet owner\'s full name (first name + space + last name). `user_name` is the only searchable field and the default. Optional filters narrow by approval status, user, period and period date range. Array params (`fields`, `approval_statuses`, `user_ids`, `period_ids`) accept repeated params or comma-separated values. `include_entries=true` adds each sheet\'s `time_entries`. Returns at most `limit` sheets (default 25, max 100).', family: 'time_sheet' },
@@ -509,6 +509,8 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     'put /api/v1/tickets/{id}',
     'put /api/v1/tickets/{id}/status',
   ]);
+
+  const TIME_SHEET_DUPLICATE_CONFLICT_OPS = new Set(['post /api/v1/time-sheets']);
 
   const TIME_PERIOD_CONFLICT_OPS = new Set([
     'post /api/v1/time-periods',
@@ -688,6 +690,13 @@ export function registerWorkManagementV1Routes(registry: ApiOpenApiRegistry) {
     if (BUNDLE_PROPAGATION_CONFLICT_OPS.has(`${def.method} ${def.path}`)) {
       responses[409] = {
         description: 'Confirmation required: the status change would close or reopen child tickets of a sync-mode bundle master. Retry with propagateToChildren=true or false. The error details carry crossesBoundary and the affected/unaffected children.',
+        schema: ApiError,
+      };
+    }
+
+    if (TIME_SHEET_DUPLICATE_CONFLICT_OPS.has(`${def.method} ${def.path}`)) {
+      responses[409] = {
+        description: 'Conflict: a time sheet already exists for this user and period (any approval status). Body: {"error":{"code":"CONFLICT","message":"A time sheet already exists for this user and period"}}. The existing sheet is unchanged.',
         schema: ApiError,
       };
     }
