@@ -7,6 +7,7 @@ import { snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, assertCoMa
   CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { hasCoManagedLocalPermission } from './localPermission';
 import { CO_MANAGED_UPGRADE_PENDING_STATES } from './upgradePurchase';
+import { coManagedUpgradeClosure } from './upgradeClosureWiring';
 
 /** Advisory customer-owned screen. It grants no authority to the worker and
  * remains readable through license lapse and explicit departure. */
@@ -60,7 +61,8 @@ export type CoManagedUpgradeAccess = 'customer' | 'former' | 'closed';
  *  1. kill switch: FORCE_CAPABILITIES co-managed `off` or malformed is closed, whatever else is true;
  *  2. release flag: off for the tenant is closed (a forced `on` stands in for the flag, as in `serves`);
  *  3. `customer`: the capability `serves` the tenant AND it is the customer side of a relationship
- *     (`co_management_relationships.tenant` is the customer; the predicate the screen uses);
+ *     (`co_management_relationships.tenant` is the customer; the predicate the screen uses) AND the
+ *     L7a closure the upgrade depends on is wired (`coManagedUpgradeClosure.available`);
  *  4. `former`: it has a `co_managed_independent_upgrades` row, so a former customer, now on psa and no
  *     longer participating, still reaches the completed screen without `serves`;
  *  5. otherwise closed (sponsors land here).
@@ -75,7 +77,7 @@ export async function resolveCoManagedUpgradeAccess(db: Knex, tenant: string): P
     if (!flagOn) return 'closed';
   }
   const own = tenantDb(db, tenant);
-  if ((await serves('co-managed', tenant)).served) {
+  if (coManagedUpgradeClosure.available && (await serves('co-managed', tenant)).served) {
     // LEVERAGE: pattern co-managed-customer-relationship — "active|terminated relationship on my own tenant" is also in getCoManagedIndependentUpgradeScreen
     if (await own.table('co_management_relationships').whereIn('state', ['active', 'terminated']).first('relationship_id')) return 'customer';
   }

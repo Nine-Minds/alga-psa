@@ -52,6 +52,16 @@ describe('payment-event registry: ordinary PSA tenants', () => {
     expect(gate.admits).toHaveBeenCalledWith('co-managed', 't');
   });
 
+  it('an ADMITTED sponsor still runs the base-subscription sync (real admits decision shape: served is always false)', async () => {
+    gate.admits.mockResolvedValue({ capability: 'co-managed', admitted: true, served: false } as never);
+    const { handlers } = setup();
+    // The sync itself is best effort (errors are logged); what matters is that the gate opened.
+    const outcome = await dispatchPaymentEvent(handlers, { event: ordinary, tenantId: 't', knex: {} as never });
+    expect(outcome.consumed).toBe(false);
+    expect(outcome.handledBy).toContain('co-managed-sponsor-base');
+    expect(outcome.closed).not.toContain('co-managed-sponsor-base');
+  });
+
   it('is payload-only: an ordinary event is never claimed as co-managed', () => {
     expect(isCoManagedPaymentEvent(ordinary, PRICE)).toBe(false);
     expect(isCoManagedPaymentEvent(coManaged, PRICE)).toBe(true);

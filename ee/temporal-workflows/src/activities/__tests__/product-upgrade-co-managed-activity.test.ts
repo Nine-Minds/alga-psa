@@ -4,6 +4,12 @@ const mocks = vi.hoisted(() => ({
   licenseState: vi.fn(),
   tenantLicense: vi.fn(),
   hosted: vi.fn(),
+  gate: vi.fn(async (): Promise<unknown> => null),
+}));
+
+vi.mock('@alga-psa/co-managed/capability', () => ({}));
+vi.mock('@alga-psa/core/capability', async (importOriginal: () => Promise<Record<string, unknown>>) => ({
+  ...(await importOriginal()), activityServesCapability: mocks.gate,
 }));
 
 vi.mock('@alga-psa/db/admin', () => ({
@@ -24,7 +30,19 @@ const command = { actor: { kind: 'session', tenant: 't', userId: 'u', sessionId:
   target: { customerTenant: 't', relationshipId: 'r' }, request: { operationId: 'o', expectedRevision: 1 } } as any;
 
 describe('product_upgrade_co_managed', () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => { vi.clearAllMocks(); mocks.gate.mockResolvedValue(null); });
+
+  it('a closed gate (kill switch / not participating) fails non-retryably before any database access', async () => {
+    mocks.gate.mockResolvedValue({ skipped: true, capability: 'co-managed' });
+    const error = await product_upgrade_co_managed(command).catch(e => e);
+    expect(mocks.gate).toHaveBeenCalledWith('co-managed', 't');
+    expect(error).toBeInstanceOf(ApplicationFailure);
+    expect(error.nonRetryable).toBe(true);
+    expect(error.type).toBe('CO_MANAGED_CAPABILITY_CLOSED');
+    expect(mocks.licenseState).not.toHaveBeenCalled();
+    expect(mocks.hosted).not.toHaveBeenCalled();
+    expect(mocks.tenantLicense).not.toHaveBeenCalled();
+  });
 
   it('selects the self-host path exactly when license_state exists', async () => {
     mocks.licenseState.mockResolvedValue({ id: 1 });

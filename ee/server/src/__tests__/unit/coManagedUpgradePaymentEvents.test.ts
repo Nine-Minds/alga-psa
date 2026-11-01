@@ -11,6 +11,7 @@ vi.mock('@alga-psa/licensing', async (importOriginal: () => Promise<Record<strin
   recordCoManagedPaymentFailure: vi.fn(async () => undefined),
 }));
 
+import { invalidateCapability, registerCapabilityParticipation } from '@alga-psa/core/capability';
 import { dispatchPaymentEvent } from '../../lib/stripe/paymentEventRegistry';
 import { createCoManagedPaymentHandlers, isCoManagedUpgradePaymentEvent } from '../../lib/stripe/coManagedPaymentEvents';
 import { INDEPENDENT_UPGRADE_SOURCE } from '../../lib/stripe/coManagedUpgradeSource';
@@ -36,7 +37,13 @@ function setup() {
   return { upgradePayment, handlers };
 }
 
-beforeEach(() => { delete process.env.FORCE_CAPABILITIES; gate.admits.mockReset(); gate.admits.mockResolvedValue({ admitted: false }); });
+/** The REAL `serves` decides, fed by a participation resolver: no hand-built decision objects. */
+const participating = new Set<string>();
+let participationReads = 0;
+registerCapabilityParticipation('co-managed', async ({ tenantIds }) => (participationReads += 1, new Set(tenantIds.filter((id) => participating.has(id)))));
+
+beforeEach(() => { delete process.env.FORCE_CAPABILITIES; gate.admits.mockReset(); gate.admits.mockResolvedValue({ admitted: false });
+  participating.clear(); participationReads = 0; invalidateCapability('co-managed'); });
 afterEach(() => { delete process.env.FORCE_CAPABILITIES; });
 
 describe('independent-upgrade payment handler', () => {
@@ -58,47 +65,51 @@ describe('independent-upgrade payment handler', () => {
     expect(gate.admits).not.toHaveBeenCalled();
   });
 
-  it('flag off / no entitlement: claimed event falls through untouched', async () => {
+  // Current contract (the customer only ever `serves`): the gate is kill switch + the REAL `serves`, and an
+  // upgrade-marked event is always CONSUMED, never handed to the MSP licence handlers in StripeService.
+  it('not participating: the marked event is consumed without action (never reaches the MSP handlers)', async () => {
     const { handlers, upgradePayment } = setup();
-    gate.admits.mockResolvedValue({ admitted: false });
     const outcome = await dispatchPaymentEvent(handlers, { event: upgradeSession, tenantId: 't', knex: forbiddenKnex });
-    expect(outcome.consumed).toBe(false);
+    expect(outcome).toMatchObject({ consumed: true, handledBy: [] });
     expect(outcome.closed).toContain('co-managed-independent-upgrade');
     expect(upgradePayment).not.toHaveBeenCalled();
   });
 
-  it('FORCE_CAPABILITIES=co-managed:off kills it even when the gate would admit', async () => {
+  it('FORCE_CAPABILITIES=co-managed:off kills it even for a participating tenant, before any query', async () => {
     process.env.FORCE_CAPABILITIES = 'co-managed:off';
-    gate.admits.mockResolvedValue({ admitted: true });
+    participating.add('t');
     const { handlers, upgradePayment } = setup();
     const outcome = await dispatchPaymentEvent(handlers, { event: failedInvoice, tenantId: 't', knex: forbiddenKnex });
-    expect(outcome.consumed).toBe(false);
+    expect(outcome).toMatchObject({ consumed: true, handledBy: [] });
     expect(upgradePayment).not.toHaveBeenCalled();
+    expect(participationReads).toBe(0);
   });
 
-  it('admitted tenant: reconciles and consumes; success/failed/expired all reach the reconciler', async () => {
-    gate.admits.mockResolvedValue({ admitted: true });
+  it('participating customer: success/failed/expired all reach the reconciler and are consumed', async () => {
+    participating.add('t');
     const { handlers, upgradePayment } = setup();
     for (const e of [upgradeSession, expiredSession, failedInvoice]) {
       const outcome = await dispatchPaymentEvent(handlers, { event: e, tenantId: 't', knex: {} as never });
-      expect(outcome.consumed).toBe(true);
+      expect(outcome).toMatchObject({ consumed: true, handledBy: ['co-managed-independent-upgrade'] });
     }
     expect(upgradePayment).toHaveBeenCalledTimes(3);
+    expect(gate.admits).not.toHaveBeenCalled();
   });
 
-  it('refuses an event whose tenant_id differs from the webhook-resolved tenant', async () => {
-    gate.admits.mockResolvedValue({ admitted: true });
+  it('an event whose tenant_id differs from the webhook-resolved tenant is consumed without action', async () => {
+    participating.add('other');
     const { handlers, upgradePayment } = setup();
     const outcome = await dispatchPaymentEvent(handlers, { event: upgradeSession, tenantId: 'other', knex: {} as never });
-    expect(outcome.consumed).toBe(false);
+    expect(outcome.consumed).toBe(true);
     expect(upgradePayment).not.toHaveBeenCalled();
   });
 
-  it('continues to the default handlers when the reconciler says the event was not ours to apply', async () => {
-    gate.admits.mockResolvedValue({ admitted: true });
+  it('an unauthorised marked event (reconciler applied nothing) is still consumed, never an MSP licence event', async () => {
+    participating.add('t');
     const { handlers, upgradePayment } = setup();
     upgradePayment.mockResolvedValue(false);
     const outcome = await dispatchPaymentEvent(handlers, { event: upgradeSession, tenantId: 't', knex: {} as never });
-    expect(outcome.consumed).toBe(false);
+    expect(outcome.consumed).toBe(true);
+    expect(upgradePayment).toHaveBeenCalledOnce();
   });
 });

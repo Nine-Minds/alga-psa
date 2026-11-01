@@ -113,7 +113,7 @@ export function createCoManagedPaymentHandlers(deps: CoManagedPaymentDeps): Paym
       // capability admits; the MSP's own handler still processes the event afterwards.
       name: 'co-managed-sponsor-base',
       claims: (event) => SPONSOR_SYNC_EVENTS.has(event.type),
-      admits: async ({ tenantId }) => Boolean(deps.priceId()) && (await admits('co-managed', tenantId)).served,
+      admits: async ({ tenantId }) => Boolean(deps.priceId()) && (await admits('co-managed', tenantId)).admitted,
       consumeWhenClosed: false,
       async handle({ tenantId, knex }) {
         try {

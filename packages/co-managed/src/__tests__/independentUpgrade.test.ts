@@ -15,6 +15,7 @@ vi.mock('../sharedWorkIdentity', async importOriginal => ({
 }));
 
 import { upgradeCoManagedRelationship, CoManagedIndependentUpgradeError } from '../independentUpgrade';
+import { prepareCoManagedUpgradePurchase } from '../upgradePurchase';
 import { coManagedUpgradeClosure } from '../upgradeClosureWiring';
 import type { CoManagedUpgradeClosure } from '../upgradeClosure';
 
@@ -36,6 +37,7 @@ function setup() {
     first: async () => ({ at: new Date().toISOString() }), whereRaw: () => ({ first: async () => ({ '?column?': 1 }) }) });
   const calls = { close: 0, verify: 0, released: 0 };
   const closure: CoManagedUpgradeClosure = {
+    available: true,
     // L7a's closure is idempotent per operation and releases the allocation once.
     async closeAndArchive(_trx, _actor, _target, input) { calls.close += 1; calls.released += 1; return { operationId: input.operationId }; },
     async verifyDepartedClosure() { calls.verify += 1; return { operationId: OP }; },
@@ -79,6 +81,13 @@ describe('independent upgrade (A1: receipt idempotency)', () => {
     await expect(upgradeCoManagedRelationship(ctx.db, actor, target, { ...request, expectedRevision: 3 }, entitlement, ctx.closure))
       .rejects.toMatchObject({ code: 'UPGRADE_CHANGED' });
     expect(ctx.calls.close).toBe(0);
+  });
+
+  it('no purchase is prepared (so Stripe is never reached) while the closure is not wired', async () => {
+    expect(coManagedUpgradeClosure.available).toBe(false);
+    await expect(prepareCoManagedUpgradePurchase(ctx.db, actor, { operationId: OP, quantity: 3, interval: 'month' }, 'price_psa'))
+      .rejects.toThrow(/not available in this build/);
+    expect(ctx.store.rows('co_managed_upgrade_purchases')).toHaveLength(0);
   });
 
   it('the default closure seam fails closed until CM L7a is wired', async () => {
