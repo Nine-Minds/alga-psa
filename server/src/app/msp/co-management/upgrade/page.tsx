@@ -7,6 +7,14 @@ import { CoManagedFeatureBoundary } from '@/components/co-managed/CoManagedFeatu
 import CoManagedUpgrade from '@/components/co-managed/CoManagedUpgrade';
 
 export async function generateMetadata(): Promise<Metadata> {
+  // Same gate as the page: when it would 404, the tab must not read "Upgrade to AlgaPSA".
+  const tenant = (await getSession())?.user?.tenant;
+  if (!tenant) return {};
+  try {
+    await requireCapabilityForPage('co-managed', tenant, 'serves');
+  } catch {
+    return {};
+  }
   const { t } = await getServerTranslation(undefined, 'metadata');
   return { title: t('msp.coManagement.upgrade.title', { defaultValue: 'Upgrade to AlgaPSA' }) };
 }
