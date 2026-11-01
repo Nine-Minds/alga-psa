@@ -137,6 +137,8 @@ COPY ee/server/seeds/onboarding /app/ee/temporal-workflows/dist/seeds/onboarding
 # when the source checkout is absent. tenantDb.cjs travels with it: the catalog
 # modules require it as ../tenantDb.cjs.
 COPY server/migrations/utils/permissions /app/ee/temporal-workflows/dist/seeds/permissions
+# Edition contributions to the catalog (loaded from ./contributions when packaged).
+COPY ee/server/permission-catalog /app/ee/temporal-workflows/dist/seeds/permissions/contributions
 COPY server/migrations/utils/tenantDb.cjs /app/ee/temporal-workflows/dist/seeds/tenantDb.cjs
 
 # Verify seeds were copied (debug step)
@@ -150,6 +152,8 @@ FROM base AS prebuilt
 COPY ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
 COPY ee/server/seeds/onboarding /app/ee/temporal-workflows/dist/seeds/onboarding
 COPY server/migrations/utils/permissions /app/ee/temporal-workflows/dist/seeds/permissions
+# Edition contributions to the catalog (loaded from ./contributions when packaged).
+COPY ee/server/permission-catalog /app/ee/temporal-workflows/dist/seeds/permissions/contributions
 COPY server/migrations/utils/tenantDb.cjs /app/ee/temporal-workflows/dist/seeds/tenantDb.cjs
 
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in prebuilt stage"

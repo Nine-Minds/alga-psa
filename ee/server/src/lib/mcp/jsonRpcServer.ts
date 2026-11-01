@@ -46,6 +46,9 @@ interface DispatchCtx {
   tenant?: string;
 }
 
+/** Header that makes a service-principal key act as a named user (PRD R5). */
+const ACT_AS_HEADER = 'x-alga-act-as';
+
 interface ToolOutcome {
   content: Array<{ type: 'text'; text: string }>;
   isError: boolean;
@@ -80,8 +83,10 @@ async function selfFetch(
   path: string,
   init: RequestInit,
   apiKey: string,
+  actAsUserId?: string | null,
 ): Promise<{ status: number; ok: boolean; data: unknown }> {
   const headers: Record<string, string> = { ...(init.headers as Record<string, string>), 'x-api-key': apiKey };
+  if (actAsUserId) headers[ACT_AS_HEADER] = actAsUserId;
   const res = await fetch(`${baseUrl}${path}`, { ...init, headers });
   const text = await res.text().catch(() => '');
   let data: unknown = text;
@@ -93,6 +98,32 @@ async function selfFetch(
     }
   }
   return { status: res.status, ok: res.ok, data };
+}
+
+/** Only agent sessions may delegate; a plain API key never forwards the header. */
+function actAsFromArgs(args: Record<string, unknown>, ctx: DispatchCtx): string | null {
+  if (!ctx.agentId) return null;
+  const value = args.act_as_user_id;
+  return typeof value === 'string' && value.trim() ? value.trim() : null;
+}
+
+/** Adds the optional `actAsUserId` argument to the call tool, for agent sessions only. */
+function withActAsArgument<T extends { name: string }>(tools: T[]): T[] {
+  return tools.map((tool) => {
+    if (tool.name !== CALL_API_ENDPOINT_TOOL) return tool;
+    const t = tool as unknown as { description?: string; inputSchema?: { properties?: Record<string, unknown> } };
+    return {
+      ...tool,
+      description: `${t.description ?? ''} Optional "act_as_user_id": run the call as that internal user (their permissions intersected with this agent's) when the agent is allowed to act as users. Human-owned work (time entries, approvals, public comments, bookings) without it fails with ACT_AS_REQUIRED.`.trim(),
+      inputSchema: {
+        ...t.inputSchema,
+        properties: {
+          ...(t.inputSchema?.properties ?? {}),
+          act_as_user_id: { type: 'string', description: 'User id to act as. Requires act-as to be enabled for this agent.' },
+        },
+      },
+    } as T;
+  });
 }
 
 async function dispatchTool(name: string, args: Record<string, unknown>, ctx: DispatchCtx): Promise<ToolOutcome> {
@@ -110,7 +141,7 @@ async function dispatchTool(name: string, args: Record<string, unknown>, ctx: Di
     if (args.limit !== undefined && args.limit !== null) params.set('limit', String(args.limit));
     if (args.cursor) params.set('cursor', String(args.cursor));
     if (args.sort) params.set('sort', String(args.sort));
-    const r = await selfFetch(ctx.baseUrl, `/api/v1/search?${params.toString()}`, { method: 'GET' }, ctx.apiKey);
+    const r = await selfFetch(ctx.baseUrl, `/api/v1/search?${params.toString()}`, { method: 'GET' }, ctx.apiKey, actAsFromArgs(args, ctx));
     return { content: textContent(r.data), isError: !r.ok, statusCode: r.status };
   }
 
@@ -129,7 +160,7 @@ async function dispatchTool(name: string, args: Record<string, unknown>, ctx: Di
       (init.headers as Record<string, string>)['content-type'] = 'application/json';
       init.body = built.body;
     }
-    const r = await selfFetch(ctx.baseUrl, path, init, ctx.apiKey);
+    const r = await selfFetch(ctx.baseUrl, path, init, ctx.apiKey, actAsFromArgs(args, ctx));
     return { content: textContent({ status: r.status, ok: r.ok, data: r.data }), isError: !r.ok, statusCode: r.status };
   }
 
@@ -151,7 +182,7 @@ async function handleOne(m: JsonRpcMessage, ctx: DispatchCtx): Promise<object | 
     case 'ping':
       return rpcResult(id, {});
     case 'tools/list':
-      return rpcResult(id, { tools: buildMetaToolDefinitions({ edition: 'ce' }) });
+      return rpcResult(id, { tools: withActAsArgument(buildMetaToolDefinitions({ edition: 'ce' })) });
     case 'tools/call': {
       const name = (m.params?.name as string) ?? '';
       const args = (m.params?.arguments as Record<string, unknown>) ?? {};
@@ -178,6 +209,7 @@ async function handleOne(m: JsonRpcMessage, ctx: DispatchCtx): Promise<object | 
             agentId: ctx.agentId,
             tool: name,
             arguments: args,
+            actAsUserId: actAsFromArgs(args, ctx),
             ok: !out.isError,
             statusCode: out.statusCode ?? null,
             decision,
@@ -234,11 +266,20 @@ async function resolveAuth(
     // negative narrowing of a boolean-discriminated union doesn't narrow there.
     if (res.ok === false) return { ok: false, status: res.status, error: res.error };
     const { resolved } = res.ctx;
-    const sessionKey = await mintAgentSessionKey({
-      tenant: resolved.tenant,
-      agentId: resolved.agent.agent_id,
-      backingUserId: resolved.backingUserId as string,
-    });
+    let sessionKey: string;
+    try {
+      sessionKey = await mintAgentSessionKey({
+        tenant: resolved.tenant,
+        agentId: resolved.agent.agent_id,
+        backingUserId: resolved.backingUserId as string,
+      });
+    } catch (err) {
+      // Name/code match, not instanceof: the class may cross a module seam.
+      if ((err as { name?: string }).name === 'AgentInactiveError') {
+        return { ok: false, status: 403, error: (err as Error).message };
+      }
+      throw err;
+    }
     return { ok: true, auth: { apiKey: sessionKey, agentId: resolved.agent.agent_id, tenant: resolved.tenant } };
   }
 

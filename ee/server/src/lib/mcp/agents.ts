@@ -4,12 +4,18 @@ import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { getConnection } from '@/lib/db/db';
 import { resolveIdpFromPreset, type IdpKind } from './idpPresets';
 import { listBuiltinIssuers } from './idpBuiltins';
+import {
+  archiveOrDeleteServicePrincipal,
+  assertServicePrincipalTier,
+  createServicePrincipalInTrx,
+  setServicePrincipalActive,
+} from '../service-principals/service';
 
 /**
- * MCP agent identity service (Phase 2). An agent is a first-class principal
- * bound to a tenant-IdP subject. RBAC is reused by backing each agent with a
- * dedicated, no-login internal user (so the existing kernel/hasPermission path
- * enforces the agent's assigned roles). See design.md §10.
+ * MCP agent identity service. An agent is an IdP-bound service principal:
+ * `agents.service_user_id` points at its `users` row (user_type 'service') and
+ * `service_principals` metadata row, so RBAC, entitlement and lifecycle are the
+ * service principal's. Agent-specific state (IdP binding, roles, audit) stays here.
  */
 
 export interface AgentRecord {
@@ -21,6 +27,7 @@ export interface AgentRecord {
   idp_subject: string | null;
   active: boolean;
   created_by: string | null;
+  service_user_id: string | null;
   metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
@@ -65,15 +72,22 @@ export class AgentBindingConflictError extends Error {
   }
 }
 
-function lockedPassword(): string {
-  // Agents authenticate via IdP token, never password. This is unguessable and
-  // not a usable bcrypt hash, so credential login can never succeed.
-  return `!mcp-agent-no-login!${crypto.randomBytes(24).toString('hex')}`;
+/**
+ * Thrown when a session key is requested for a deactivated or missing agent /
+ * service user. Shaped (name, code, numeric statusCode) so the route's structural
+ * error mapping handles it without `instanceof`.
+ */
+export class AgentInactiveError extends Error {
+  public readonly code = 'AGENT_INACTIVE';
+  public readonly statusCode = 403;
+  constructor(message = 'This agent is inactive') {
+    super(message);
+    this.name = 'AgentInactiveError';
+  }
 }
 
 function backingUserId(agent: AgentRecord): string | null {
-  const id = agent.metadata && (agent.metadata as Record<string, unknown>).backing_user_id;
-  return typeof id === 'string' ? id : null;
+  return agent.service_user_id ?? null;
 }
 
 export async function createAgent(input: CreateAgentInput): Promise<AgentRecord> {
@@ -90,27 +104,29 @@ export async function createAgent(input: CreateAgentInput): Promise<AgentRecord>
       );
     }
   }
+  // Pro gate (R6.0) runs before the write transaction opens.
+  await assertServicePrincipalTier(tenant);
   return runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
     const agentId = crypto.randomUUID();
     const userId = crypto.randomUUID();
-    const slug = agentId.slice(0, 8);
     const roleIds = Array.from(new Set((input.roleIds ?? []).filter((r) => typeof r === 'string' && r)));
 
     return knex.transaction(async (trx) => {
       const db = tenantDb(trx, tenant);
 
-      await db.table('users').insert({
-        user_id: userId,
-        tenant,
-        username: `mcp-agent-${slug}`,
-        email: `mcp-agent-${agentId}@agents.alga.local`,
-        hashed_password: lockedPassword(),
-        user_type: 'internal',
+      // The agent's identity is a service principal: it owns the user row, role
+      // grants, entitlement slot and limit check.
+      await createServicePrincipalInTrx(trx, tenant, {
+        kind: 'mcp_agent',
+        name: input.name,
+        description: input.description ?? null,
+        roleIds,
+        createdBy: input.createdBy ?? null,
+        userId,
       });
 
       for (const roleId of roleIds) {
-        await db.table('user_roles').insert({ tenant, user_id: userId, role_id: roleId });
         await db.table('agent_roles').insert({ tenant, agent_id: agentId, role_id: roleId });
       }
 
@@ -124,7 +140,8 @@ export async function createAgent(input: CreateAgentInput): Promise<AgentRecord>
           idp_subject: input.idpSubject ?? null,
           active: true,
           created_by: input.createdBy ?? null,
-          metadata: JSON.stringify({ backing_user_id: userId }),
+          service_user_id: userId,
+          metadata: JSON.stringify({}),
         })
         .returning('*');
       return agent as AgentRecord;
@@ -139,36 +156,35 @@ export async function listAgents(tenant: string): Promise<AgentRecord[]> {
   });
 }
 
+async function findAgentServiceUserId(tenant: string, agentId: string): Promise<string | null> {
+  return runWithTenant(tenant, async () => {
+    const { knex } = await createTenantKnex(tenant);
+    const agent = (await tenantDb(knex, tenant).table('agents').where({ agent_id: agentId }).first()) as AgentRecord | undefined;
+    return agent ? backingUserId(agent) : null;
+  });
+}
+
+/** Activation state lives on the service principal (users.is_inactive); agents.active follows in lockstep. */
 export async function setAgentActive(tenant: string, agentId: string, active: boolean): Promise<void> {
+  const userId = await findAgentServiceUserId(tenant, agentId);
+  if (!userId) return;
   await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
-    await tenantDb(knex, tenant).table('agents').where({ agent_id: agentId }).update({ active, updated_at: knex.fn.now() });
+    await setServicePrincipalActive(knex, tenant, userId, active);
   });
 }
 
 /**
- * Permanently remove an agent and everything provisioned for it. There are no DB
- * cascades (tenant isolation + relations are app-enforced), so we tear down each
- * relation explicitly in one transaction: role grants, the audit trail, any
- * agent-scoped API keys, and the backing internal user. Idempotent.
+ * Remove an agent: archived when its principal is referenced anywhere (audit
+ * trail, attributed work), hard-deleted otherwise. mcp_agent_audit is never
+ * deleted. Idempotent.
  */
 export async function deleteAgent(tenant: string, agentId: string): Promise<void> {
+  const userId = await findAgentServiceUserId(tenant, agentId);
+  if (!userId) return;
   await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
-    const agent = (await tenantDb(knex, tenant).table('agents').where({ agent_id: agentId }).first()) as AgentRecord | undefined;
-    if (!agent) return;
-    const userId = backingUserId(agent);
-    await knex.transaction(async (trx) => {
-      const db = tenantDb(trx, tenant);
-      await db.table('agent_roles').where({ agent_id: agentId }).del();
-      await db.table('mcp_agent_audit').where({ agent_id: agentId }).del();
-      await db.table('api_keys').where({ agent_id: agentId }).del();
-      if (userId) {
-        await db.table('user_roles').where({ user_id: userId }).del();
-        await db.table('users').where({ user_id: userId }).del();
-      }
-      await db.table('agents').where({ agent_id: agentId }).del();
-    });
+    await archiveOrDeleteServicePrincipal(knex, tenant, userId);
   });
 }
 
@@ -328,6 +344,10 @@ export async function mintAgentSessionKey(params: {
   await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex(tenant);
     const db = tenantDb(knex, tenant);
+    // R8.2: a deactivated principal (or its agent) must not get a fresh key.
+    const user = await db.table('users').where({ user_id: userId }).first('is_inactive');
+    const agent = await db.table('agents').where({ agent_id: agentId }).first('active');
+    if (!user || user.is_inactive || !agent || !agent.active) throw new AgentInactiveError();
     // Opportunistically sweep this tenant's expired agent session keys so they
     // don't accumulate (each agent request mints a fresh short-lived key).
     await db.table('api_keys')

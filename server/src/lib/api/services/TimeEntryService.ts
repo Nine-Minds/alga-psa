@@ -3,9 +3,10 @@
  * Handles all time entry-related database operations for the REST API
  */
 
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { assertHumanWorkAssignee, assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb, withViaPrincipal, stampViaPrincipalRow } from '@alga-psa/db';
 import {
   CreateTimeEntryData,
   UpdateTimeEntryData,
@@ -26,7 +27,6 @@ import { ConflictError, ForbiddenError, NotFoundError, NotImplementedError, Vali
 import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from 'server/src/lib/utils/workDate';
 import { buildTimeEntryApprovedPayload, toWorkflowTimeEntryWorkItemType } from '@alga-psa/workflow-streams';
 import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
-import { hasPermission } from '../../auth/rbac';
 import type { IUser } from '@alga-psa/types';
 import {
   StopwatchConflictError,
@@ -59,6 +59,10 @@ export class TimeEntryService extends BaseService<any> {
       primaryKey: 'entry_id',
       tenantColumn: 'tenant',
       searchableFields: ['notes'],
+      viaPrincipalColumns: {
+        create: ['created_via_principal_id', 'updated_via_principal_id'],
+        update: ['updated_via_principal_id'],
+      },
       defaultSort: 'start_time',
       defaultOrder: 'desc'
     });
@@ -282,7 +286,7 @@ export class TimeEntryService extends BaseService<any> {
         throw new ForbiddenError('Permission denied: Missing user context');
       }
 
-      const canReadTickets = await hasPermission(context.user, 'ticket', 'read', knex);
+      const canReadTickets = await hasApiContextPermission(context, 'ticket', 'read', knex);
       if (!canReadTickets) {
         throw new ForbiddenError('Permission denied: Cannot read tickets');
       }
@@ -388,7 +392,7 @@ export class TimeEntryService extends BaseService<any> {
       tax_rate_id: data.tax_rate_id ?? undefined,
     });
 
-    const persisted = await this.persistViaWriteCore(knex, context, entry, contractLine);
+    const persisted = await this.persistViaWriteCore(knex, context, entry, contractLine, ['created_via_principal_id', 'updated_via_principal_id']);
     const timeEntry = persisted.entry;
 
     // Post-commit events (search event + ticket-time-entry-added workflow event),
@@ -702,7 +706,7 @@ export class TimeEntryService extends BaseService<any> {
   async getActiveSession(userId: string, context: ServiceContext): Promise<any | null> {
     const { knex } = await this.getKnex();
 
-    if (!await hasPermission(context.user, 'time_entry', 'read', knex)) {
+    if (!await hasApiContextPermission(context, 'time_entry', 'read', knex)) {
       throw new ForbiddenError('Permission denied: Cannot read time entries');
     }
 
@@ -851,10 +855,10 @@ export class TimeEntryService extends BaseService<any> {
         
         await this.buildTenantScopedQuery(knex, context)
           .where('entry_id', entryId)
-          .update({
+          .update(withViaPrincipal(context, {
             approval_status: 'APPROVED',
             updated_at: new Date()
-          });
+          }, 'updated_via_principal_id'));
 
         results.push({ success: true, entry_id: entryId });
 
@@ -914,10 +918,10 @@ export class TimeEntryService extends BaseService<any> {
         await this.buildTenantScopedQuery(knex, context)
           .where('entry_id', entryId)
           .where('approval_status', 'SUBMITTED')
-          .update({
+          .update(withViaPrincipal(context, {
             approval_status: 'CHANGES_REQUESTED',
             updated_at: new Date()
-          });
+          }, 'updated_via_principal_id'));
 
         results.push({ success: true, entry_id: entryId });
 
@@ -1190,13 +1194,14 @@ export class TimeEntryService extends BaseService<any> {
     context: ServiceContext,
     entry: SaveTimeEntryParams,
     contractLine: { id: string | null; source: ContractLineSource | null },
+    viaColumns: readonly string[] = ['updated_via_principal_id'],
   ): Promise<PersistedTimeEntry> {
     if (!context.user) {
       throw new ForbiddenError('Permission denied: Missing user context');
     }
     try {
-      return await knex.transaction((trx) =>
-        persistTimeEntry(trx, {
+      return await knex.transaction(async (trx) => {
+        const persisted = await persistTimeEntry(trx, {
           tenant: context.tenant,
           actor: context.user as IUser,
           entry,
@@ -1204,8 +1209,14 @@ export class TimeEntryService extends BaseService<any> {
           // The sheet was resolved from work_date (getOrCreateTimeSheetForWorkDate),
           // so the period is checked against the same date the bucketing used.
           sheetPeriodCheck: 'work_date',
-        }),
-      );
+        });
+        // The shared write core knows nothing of act-as; record the principal here.
+        const entryId = (persisted.entry as { entry_id?: string }).entry_id;
+        if (entryId) {
+          await stampViaPrincipalRow(trx, context, 'time_entries', { entry_id: entryId }, viaColumns);
+        }
+        return persisted;
+      });
     } catch (error) {
       throw mapStopwatchError(error);
     }

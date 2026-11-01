@@ -16,6 +16,7 @@ import {
 import { 
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import { findUserByIdForApi } from '@alga-psa/users/actions';
 import { 
   runWithTenant 
@@ -23,15 +24,7 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
-import {
-  assertApiPrincipal,
-  ApiRequest,
-  UnauthorizedError,
-  ForbiddenError,
-  ValidationError,
-  createSuccessResponse,
-  handleApiError
-} from '../middleware/apiMiddleware';
+import { ApiRequest, ForbiddenError, UnauthorizedError, ValidationError, buildAuthenticatedApiContext, createSuccessResponse, handleApiError } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 
 export class ApiContactController extends ApiBaseController {
@@ -131,14 +124,14 @@ export class ApiContactController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertApiPrincipal(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user
         };
@@ -146,7 +139,8 @@ export class ApiContactController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
-          const hasAccess = await hasPermission(user, 'contact', 'read');
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'contact', 'read');
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read contact');
           }
@@ -211,14 +205,14 @@ export class ApiContactController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertApiPrincipal(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user
         };
@@ -226,7 +220,8 @@ export class ApiContactController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
-          const hasAccess = await hasPermission(user, 'contact', 'read');
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'contact', 'read');
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read contact');
           }
@@ -308,14 +303,14 @@ export class ApiContactController extends ApiBaseController {
         }
 
         // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        assertApiPrincipal(user);
+        const apiAuthContext = await buildAuthenticatedApiContext(keyRecord, req);
+    const user = apiAuthContext.user;
 
         // Create request with context
         const apiRequest = req as ApiRequest;
         apiRequest.context = {
-          userId: keyRecord.user_id,
+          userId: apiAuthContext.userId,
+          viaPrincipalUserId: apiAuthContext.viaPrincipalUserId ?? null,
           tenant: keyRecord.tenant,
           user
         };
@@ -323,7 +318,8 @@ export class ApiContactController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
           // Check permissions
-          const hasAccess = await hasPermission(user, 'contact', 'read');
+          const hasAccess = await hasApiContextPermission(
+          apiAuthContext, 'contact', 'read');
           if (!hasAccess) {
             throw new ForbiddenError('Permission denied: Cannot read contact');
           }

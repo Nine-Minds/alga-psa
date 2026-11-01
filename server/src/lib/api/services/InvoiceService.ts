@@ -674,6 +674,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       // Audit log
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'CREATE',
         tableName: 'invoices',
         recordId: invoice.invoice_id,
@@ -806,6 +807,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       // Audit log
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'UPDATE',
         tableName: 'invoices',
         recordId: id,
@@ -1142,6 +1144,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       // Audit log
       await auditLog(trx, {
         userId: context.userId,
+        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
         operation: 'UPDATE',
         tableName: 'invoices',
         recordId: data.invoice_id,
@@ -1319,6 +1322,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	      // Audit log
 	      await auditLog(trx, {
 	        userId: context.userId,
+	        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
 	        operation: 'UPDATE',
 	        tableName: 'invoices',
 	        recordId: data.invoice_id,
@@ -1490,6 +1494,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         // Audit log
         await auditLog(trx, {
           userId: context.userId,
+          viaPrincipalUserId: context.viaPrincipalUserId ?? null,
           operation: 'UPDATE',
           tableName: 'invoices',
           recordId: data.invoice_id,
@@ -1663,6 +1668,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	      // Audit log
 	      await auditLog(trx, {
 	        userId: context.userId,
+	        viaPrincipalUserId: context.viaPrincipalUserId ?? null,
 	        operation: 'UPDATE',
 	        tableName: 'invoices',
 	        recordId: data.invoice_id,
@@ -1765,6 +1771,7 @@ export class InvoiceService extends BaseService<IInvoice> {
 	          // Audit log
 	          await auditLog(trx, {
 	            userId: context.userId,
+	            viaPrincipalUserId: context.viaPrincipalUserId ?? null,
 	            operation: 'UPDATE',
 	            tableName: 'invoices',
 	            recordId: invoiceId,

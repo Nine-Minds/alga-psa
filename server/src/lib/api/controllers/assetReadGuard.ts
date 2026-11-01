@@ -6,13 +6,13 @@
  * and a record-level denial both answer the SAME 404, so the record-level check
  * cannot be used to probe asset ids.
  */
+import { hasApiContextPermission } from '../middleware/apiContextPermission';
 import type { NextResponse } from 'next/server';
 import { getCurrentUser } from '@alga-psa/auth';
 import { AssetService } from '../services/AssetService';
 import { runWithApiKeyOrSession } from '../middleware/runWithApiKeyOrSession';
 import { createErrorResponse } from '../utils/response';
 import type { ApiContext } from '../middleware/apiMiddleware';
-import { hasPermission } from '../../auth/rbac';
 import { getConnection } from '../../db/db';
 import { authorizeApiResourceRead } from './authorizationKernel';
 
@@ -42,7 +42,7 @@ export async function guardAssetRead(
   const knex = await getConnection(context.tenant);
 
   for (const resource of ['asset', ...extraReadResources] as const) {
-    if (!(await hasPermission(context.user, resource, 'read', knex))) {
+    if (!(await hasApiContextPermission(context, resource, 'read', knex))) {
       return createErrorResponse(`Permission denied: Cannot read ${resource}`, 403, 'FORBIDDEN');
     }
   }

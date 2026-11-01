@@ -36,7 +36,13 @@ describe('copied-auth inventory: every API-user load is guarded by assertApiPrin
     const source = readFileSync(resolve(CONTROLLER_DIR, file), 'utf8');
 
     const loadSites = source.split('const user = await findUserByIdForApi(').length - 1;
-    expect(loadSites, `${file} should contain findUserByIdForApi calls`).toBeGreaterThan(0);
+    // Loads moved behind the shared context builder (which asserts the principal and applies
+    // the edition boundary) are covered by the builder check below.
+    const viaBuilder = source.includes('buildAuthenticatedApiContext(');
+    expect(
+      loadSites > 0 || viaBuilder,
+      `${file} should load users via findUserByIdForApi or buildAuthenticatedApiContext`
+    ).toBe(true);
 
     // Count of the guarded pattern immediately following each load.
     const guarded = source
@@ -62,7 +68,8 @@ describe('copied-auth inventory: every API-user load is guarded by assertApiPrin
 
   it('base controller and shared context builder both call assertApiPrincipal', () => {
     const base = readFileSync(resolve(CONTROLLER_DIR, 'ApiBaseController.ts'), 'utf8');
-    expect(base).toContain('assertApiPrincipal(user);');
+    // The base controller delegates to the shared builder, which owns the guard.
+    expect(base).toContain('buildAuthenticatedApiContext(');
 
     const middleware = readFileSync(
       resolve(__dirname, '../../../lib/api/middleware/apiMiddleware.ts'),

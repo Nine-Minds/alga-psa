@@ -6,6 +6,7 @@ export default defineConfig({
     'lib/ticketCommentAttachmentToken': 'lib/ticketCommentAttachmentToken.ts',
     'index': 'index.ts',
     'types/index': 'types/index.ts',
+    'interfaces/contact.interfaces': 'interfaces/contact.interfaces.ts',
     'core/logger': 'core/logger.ts',
     'core/secretProvider': 'core/secretProvider.ts',
     'core/deploymentProfile': 'core/deploymentProfile.ts',

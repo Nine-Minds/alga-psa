@@ -11,7 +11,7 @@
   {
     "id": "F002",
     "description": "EE migration creates service_principals(tenant, user_id, kind, name, description, allow_act_as, rate_limit_max_tokens, rate_limit_refill_per_min, created_by, archived_at, created_at, updated_at) with PK (tenant, user_id)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.3",
       "R9.1"
@@ -20,7 +20,7 @@
   {
     "id": "F003",
     "description": "EE migration adds agents.service_user_id; all readers of metadata.backing_user_id switch to the column",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.4"
     ]
@@ -28,7 +28,7 @@
   {
     "id": "F004",
     "description": "EE migration adds nullable via-principal columns: time_entries.created_via_principal_id/updated_via_principal_id, time_sheets.approved_via_principal_id, schedule_entries/interactions/comments/project_tasks.created_via_principal_id, tickets.entered_via_principal_id, ticket_audit_logs.via_principal_user_id, mcp_agent_audit.act_as_user_id",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.5",
       "R9.1"
@@ -46,7 +46,7 @@
   {
     "id": "F006",
     "description": "EE migration adds nullable tenants.service_principal_limit (platform-admin override)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.2",
       "R9.1"
@@ -55,7 +55,7 @@
   {
     "id": "F007",
     "description": "EE migration adds RBAC resource service_principal (read/create/update/delete) and seeds it to the Admin role",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Security / Permissions",
       "R9.1"
@@ -186,7 +186,7 @@
   {
     "id": "F023",
     "description": "EE createServicePrincipal (ee/server/src/lib/service-principals) creates the service user (locked sentinel password, name mirrored to first_name), service_principals row and MSP role grants in one transaction after the tier gate and checkServicePrincipalLimit",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.5",
       "R1.6",
@@ -196,7 +196,7 @@
   {
     "id": "F024",
     "description": "updateServicePrincipal edits name, description, roles and allow_act_as (allow_act_as requires service_principal:update); name stays mirrored to users.first_name",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.5"
     ]
@@ -204,7 +204,7 @@
   {
     "id": "F025",
     "description": "setServicePrincipalActive(false) sets users.is_inactive, agents.active=false (mcp_agent) and deactivates every active key owned by the principal in one transaction",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R8.2"
     ]
@@ -212,7 +212,7 @@
   {
     "id": "F026",
     "description": "Reactivating a service principal is limit-checked and does not revive previously deactivated keys",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R8.2",
       "R6.3"
@@ -221,7 +221,7 @@
   {
     "id": "F027",
     "description": "archiveOrDeleteServicePrincipal archives a referenced principal (deactivate, delete keys, set archived_at, clear IdP binding) and hard-deletes only an unreferenced one; mcp_agent_audit is never deleted",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R8.3"
     ]
@@ -229,7 +229,7 @@
   {
     "id": "F028",
     "description": "EE issueServicePrincipalKey writes a purpose='service' key owned by the principal directly (not via ApiKeyService.createApiKey), returns plaintext once; revoke and rotate (grace via expireApiKeyAfter)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.5",
       "R3.5"
@@ -238,7 +238,7 @@
   {
     "id": "F029",
     "description": "listServicePrincipals returns non-archived principals with kind, roles, act-as flag, status, active key count and last used",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.5"
     ]
@@ -246,7 +246,7 @@
   {
     "id": "F030",
     "description": "No code path other than the service-principal service may insert or update a users row with user_type='service'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.5"
     ]
@@ -254,7 +254,7 @@
   {
     "id": "F031",
     "description": "createAgent creates a kind='mcp_agent' service principal via createServicePrincipal and is checked against the service-principal limit, not seats",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R8.1"
     ]
@@ -262,7 +262,7 @@
   {
     "id": "F032",
     "description": "setAgentActive delegates to setServicePrincipalActive",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R8.2"
     ]
@@ -270,7 +270,7 @@
   {
     "id": "F033",
     "description": "deleteAgent delegates to archiveOrDeleteServicePrincipal; archived agent's (issuer, subject) can be bound to a new agent",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R8.3"
     ]
@@ -278,7 +278,7 @@
   {
     "id": "F034",
     "description": "resolveAgentByIdp and mintAgentSessionKey use agents.service_user_id; minting refuses an inactive service user",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1.4",
       "R8.2"
@@ -407,7 +407,7 @@
   {
     "id": "F050",
     "description": "EE X-Alga-Act-As validation: principal must have allow_act_as (403 ACT_AS_NOT_ALLOWED), target an active internal user in tenant (422 ACT_AS_INVALID_TARGET); CE middleware rejects the header on human-owned keys (400 ACT_AS_NOT_SUPPORTED)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.1"
     ]
@@ -508,7 +508,7 @@
   {
     "id": "F062",
     "description": "Time-entry writers stamp created_via_principal_id / updated_via_principal_id from ServiceContext",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.5"
     ]
@@ -516,7 +516,7 @@
   {
     "id": "F063",
     "description": "Time-sheet approval stamps approved_via_principal_id",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.5"
     ]
@@ -524,7 +524,7 @@
   {
     "id": "F064",
     "description": "Schedule-entry and interaction writers stamp created_via_principal_id",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.5"
     ]
@@ -532,7 +532,7 @@
   {
     "id": "F065",
     "description": "Comment, ticket (entered_via_principal_id) and project-task writers stamp via-principal",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.5"
     ]
@@ -540,7 +540,7 @@
   {
     "id": "F066",
     "description": "ticket_audit_logs records actor_type='service_principal' (plain string column, no constraint change) when a principal acts as itself, and actor_type='user' + via_principal_user_id under act-as",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.6"
     ]
@@ -548,7 +548,7 @@
   {
     "id": "F067",
     "description": "Generic auditLog() records via_principal_user_id in details",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5.6"
     ]
@@ -556,7 +556,7 @@
   {
     "id": "F068",
     "description": "MCP call meta-tool accepts act_as_user_id, forwards it as X-Alga-Act-As on the loopback dispatch and records it in mcp_agent_audit.act_as_user_id",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R4.5",
       "R5.5"
@@ -573,7 +573,7 @@
   {
     "id": "F070",
     "description": "SERVICE_PRINCIPAL_ENTITLEMENT (Pro) in ee/server/src/lib/service-principals/entitlements.ts: maxPrincipals 10 (flat, not seat-scaled); default and ceiling rate limit 120 burst / 60 per min",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.1"
     ]
@@ -581,7 +581,7 @@
   {
     "id": "F071",
     "description": "Limit resolution: hosted \u2192 tenants.service_principal_limit else Pro default; appliance (license_state row) \u2192 verified signed service_principals claim else Pro default, ignoring tenants.service_principal_limit; unreadable/invalid token falls back to the Pro default, never unlimited; claim read in EE only",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.2"
     ]
@@ -589,7 +589,7 @@
   {
     "id": "F072",
     "description": "checkServicePrincipalLimit(trx, tenant) counts active (non-archived) service users and returns SERVICE_PRINCIPAL_LIMIT_REACHED at the limit; archiving frees the slot",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.3"
     ]
@@ -597,7 +597,7 @@
   {
     "id": "F073",
     "description": "EE boundary sets rateLimitSubjectId = sp:<principal user_id> for every service-principal request regardless of key (covers MCP per-request keys)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R4.6",
       "R6.4"
@@ -606,7 +606,7 @@
   {
     "id": "F074",
     "description": "EE boundary sets rateLimitConfig from service_principals override \u2192 Pro default (a per-key api_rate_limit_settings row still wins); override capped at the Pro ceiling, raisable only by a hosted platform override",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.4"
     ]
@@ -614,7 +614,7 @@
   {
     "id": "F075",
     "description": "getServicePrincipalUsage(tenant) returns {limit, used, remaining}",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R7.1"
     ]
@@ -712,7 +712,7 @@
   {
     "id": "F087",
     "description": "EE data migration converts every agent's backing user to user_type='service', sets is_inactive = NOT agents.active, mirrors name, backfills agents.service_user_id and inserts service_principals (kind mcp_agent); idempotent, skips and logs missing/non-internal users",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R9.2"
     ]
@@ -720,7 +720,7 @@
   {
     "id": "F088",
     "description": "Migration never deactivates or deletes principals to fit the new limit; over-limit tenants only lose the ability to create",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R9.3"
     ]
@@ -728,7 +728,7 @@
   {
     "id": "F089",
     "description": "OpenAPI documents X-Alga-Act-As and the new error codes on affected routes; MCP and chat API registries regenerated",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data / API / Integrations"
     ]
@@ -736,7 +736,7 @@
   {
     "id": "F090",
     "description": "MCP call tool description documents act_as_user_id and ACT_AS_REQUIRED",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Rollout / Migration"
     ]
@@ -760,7 +760,7 @@
   {
     "id": "F093",
     "description": "EE assertTenantTierAccess(SERVICE_PRINCIPALS) enforced in createServicePrincipal (covers createAgent), reactivation, issueServicePrincipalKey and enabling allow_act_as; below Pro returns 403 TIER_ACCESS_DENIED",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.0",
       "R8.1"
@@ -769,7 +769,7 @@
   {
     "id": "F094",
     "description": "Existing principals on a tenant below Pro (pre-existing or after downgrade) keep authenticating and resolving MCP tokens; only create/reactivate/key issuance is blocked; nothing is deactivated",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6.0a",
       "R9.3"
@@ -813,7 +813,7 @@
   {
     "id": "F099",
     "description": "EE resolveServicePrincipalApiContext validates an active non-archived principal, applies act-as, sets principal/actAsUserId/effectiveUserId/viaPrincipalUserId and the rate-limit subject/config, and maps HumanWorkOwnerRequiredError to ACT_AS_REQUIRED",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R4.6",
       "R5.4"
@@ -822,7 +822,7 @@
   {
     "id": "F100",
     "description": "EE server actions (ee/server/src/lib/actions/service-principal-actions.ts) for list/create/update/activate/archive/keys, each requiring an interactive internal session and the service_principal permission",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Edition placement (CE / EE)",
       "Security / Permissions"

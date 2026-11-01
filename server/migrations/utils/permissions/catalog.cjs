@@ -16,6 +16,8 @@
  */
 
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 const PRODUCTS = ['algadesk', 'psa'];
 
@@ -371,6 +373,43 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'workflow', action: 'view', msp: true, client: false, description: 'View workflows', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
 ];
 
+/**
+ * Edition contributions.
+ *
+ * Features that exist in only one edition contribute their permission entries
+ * from a directory of `*.cjs` modules (each exporting an array of entries in the
+ * shape above) instead of a literal in this file. Two layouts are searched: the
+ * source checkout (`ee/server/permission-catalog`) and the packaged Temporal
+ * worker image (`./contributions`, copied by ee/temporal-workflows/Dockerfile).
+ * A directory that does not exist contributes nothing, so a CE checkout is
+ * unchanged. Contributions join ACTIVE_PERMISSIONS before anything reads it, so
+ * onboarding, seeds, reconciliation and `catalogVersion` all see them.
+ */
+const CONTRIBUTION_DIRECTORIES = [
+  path.resolve(__dirname, '../../../../ee/server/permission-catalog'),
+  path.resolve(__dirname, 'contributions'),
+];
+
+function loadContributions(directories = CONTRIBUTION_DIRECTORIES) {
+  const loaded = [];
+  const seen = new Set();
+  for (const directory of directories) {
+    if (!fs.existsSync(directory)) continue;
+    for (const file of fs.readdirSync(directory).filter((name) => name.endsWith('.cjs')).sort()) {
+      if (seen.has(file)) continue;
+      seen.add(file);
+      const entries = require(path.join(directory, file));
+      if (!Array.isArray(entries)) {
+        throw new Error(`Permission catalog contribution ${file} must export an array of entries`);
+      }
+      loaded.push(...entries);
+    }
+  }
+  return loaded;
+}
+
+ACTIVE_PERMISSIONS.push(...loadContributions());
+
 function scopeKeys(entry) {
   const keys = [];
   if (entry.msp) keys.push('msp');
@@ -435,6 +474,7 @@ module.exports = {
   RENAMED_RESOURCES,
   canonicalResource,
   catalogVersion,
+  loadContributions,
   getProductPermissions,
   isProductPermission,
   permissionGrantKeys,

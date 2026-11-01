@@ -5,6 +5,8 @@ import { createTenantKnex, runWithTenant } from '@/lib/db';
 export interface AgentAuditEntry {
   tenant: string;
   agentId: string;
+  /** User the call acted as (X-Alga-Act-As), when delegated. */
+  actAsUserId?: string | null;
   tool: string;
   arguments?: unknown;
   ok: boolean;
@@ -22,6 +24,7 @@ export async function writeAgentAudit(entry: AgentAuditEntry): Promise<void> {
       await tenantDb(knex, entry.tenant).table('mcp_agent_audit').insert({
         tenant: entry.tenant,
         agent_id: entry.agentId,
+        act_as_user_id: entry.actAsUserId ?? null,
         tool: entry.tool,
         arguments: entry.arguments === undefined ? null : JSON.stringify(entry.arguments),
         ok: entry.ok,
