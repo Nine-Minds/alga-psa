@@ -35,4 +35,24 @@ describe('portable restore records (manifest v2, profile-driven)', () => {
     const { manifest } = await fixtureManifest();
     expect(Object.keys(portableRestoreGlobalCatalogs(manifest, CORE_PORTABLE_RESTORE_PROFILES))).toContain('standard_statuses');
   });
+  it('remaps an undeclared FK discovered in the destination metadata, and lets declared edges and qualified actors win', async () => {
+    const { manifest } = await fixtureManifest(add => { add('collaboration_actor_references', { actor_reference_id: id(60), actor_tenant: SOURCE, actor_user_id: id(10), display_name: 'A', organization_name: 'B' }); });
+    // Without the metadata edge the contributors' declarations leave comments.user_id as the SOURCE user id.
+    expect(prepare(manifest).records.comments[0].user_id).toBe(id(10));
+    let n = 1000;
+    const destinationReferences = [
+      ['comments', 'user_id', 'users', 'user_id'],                              // undeclared: remapped from metadata
+      ['tickets', 'client_id', 'clients', 'client_id'],                         // duplicate of a declared edge: ignored
+      ['collaboration_actor_references', 'actor_user_id', 'users', 'user_id'],  // qualified actor column: the profile path wins
+      ['comments', 'ticket_id', 'users', 'nonexistent'],                        // not an identity of the parent: ignored
+    ] as const;
+    const prepared = prepareCoManagedPortableWorkspaceRecords({ manifest, destinationTenant: TARGET, destinationCatalogMappings: { standard_statuses: { [id(40)]: id(900) } }, destinationReferences },
+      { allocateUuid: () => id(n++) });
+    const user = prepared.records.users[0].user_id;
+    expect(user).not.toBe(id(10));
+    expect(prepared.records.comments[0].user_id).toBe(user);
+    expect(prepared.records.tickets[0].client_id).toBe(prepared.records.clients[0].client_id);
+    expect(prepared.records.collaboration_actor_references[0]).toMatchObject({ actor_tenant: TARGET, actor_user_id: user });
+    expect(JSON.stringify(prepared.records)).not.toContain(SOURCE);
+  });
 });

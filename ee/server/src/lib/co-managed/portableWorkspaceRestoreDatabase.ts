@@ -63,6 +63,19 @@ async function schema(trx: Knex.Transaction, tables: string[]) {
   return { columns, constraints: constraints as Constraint[] };
 }
 
+/** The destination's actual foreign keys between the archive's tables, as per-column reference edges (the
+ * `tenant` half of a composite key is the namespace, not an identity). Read with the same metadata reader the
+ * graph check uses, so what the remap rewrites is exactly what the check will require. */
+export async function portableRestoreDestinationReferences(trx: Knex.Transaction, manifest: CoManagedPortableWorkspaceManifest) {
+  const tables = [...new Set(manifest.sections.flatMap(section => Object.keys(section.columns)))];
+  const included = new Set(tables), references: [string, string, string, string][] = [];
+  for (const fk of (await schema(trx, tables)).constraints) {
+    if (fk.kind !== 'f' || fk.parent_schema !== 'public' || !included.has(fk.parent)) continue;
+    fk.columns.forEach((column, i) => { if (column !== 'tenant' && fk.parent_columns[i] !== 'tenant') references.push([fk.table, column, fk.parent, fk.parent_columns[i]]); });
+  }
+  return references;
+}
+
 /** Whether each destination column accepts NULL, for reconciling external references before remapping. */
 export async function portableRestoreColumnNullability(trx: Knex.Transaction, manifest: CoManagedPortableWorkspaceManifest) {
   const tables = [...new Set(manifest.references.filter(edge => edge.status === 'external').map(edge => edge.table))];

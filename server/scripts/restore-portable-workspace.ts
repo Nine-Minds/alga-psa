@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Writable } from 'node:stream';
@@ -94,9 +93,9 @@ async function main() {
   try {
     if (Buffer.byteLength(phrase, 'utf8') < 16 || Buffer.byteLength(phrase, 'utf8') > 1024) throw new Error('Invalid secret length');
     phase = 'restore module loading';
-    // EE sources are CJS under tsx; defer loading them until after help/input.
-    const require = createRequire(import.meta.url);
-    const restore = require('../../ee/server/src/lib/co-managed/portableWorkspaceRestore') as typeof import('../../ee/server/src/lib/co-managed/portableWorkspaceRestore');
+    // Dynamic import (not require): the storage package exports are import-only, so a CJS require of the
+    // EE modules fails with ERR_PACKAGE_PATH_NOT_EXPORTED. Loaded only after help/options/kill-switch/input.
+    const restore = await import('../../ee/server/src/lib/co-managed/portableWorkspaceRestore');
     const archivePath = resolve(String(options['--archive']));
     if (options['--inspect']) {
       phase = 'archive inspection';
@@ -104,7 +103,7 @@ async function main() {
       return;
     }
     phase = 'database connection';
-    const { getAdminConnection } = require('@alga-psa/db/admin') as typeof import('@alga-psa/db/admin');
+    const { getAdminConnection } = await import('@alga-psa/db/admin');
     db = await getAdminConnection();
     phase = 'workspace restore';
     const result = await restore.restorePortableWorkspaceForInstallation(db, { archivePath, passphrase: phrase, resume: !!options['--resume'],

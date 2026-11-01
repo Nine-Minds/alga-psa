@@ -180,6 +180,13 @@ export function prepareCoManagedPortableWorkspaceRecords(input: {
   destinationCatalogMappings: PortableDestinationCatalogMappings;
   /** Whether a destination column accepts NULL; decides how external references are reconciled. */
   externalColumnNullable?: (table: string, column: string) => boolean;
+  /**
+   * The destination schema's actual foreign keys between the archive's tables (one entry per column pair,
+   * tenant excluded), read by the database layer. Merged with `manifest.references`: an FK the contributors
+   * did not declare is still remapped, so it cannot leave the restored graph. Declared edges, qualified-actor
+   * columns and external references always take precedence.
+   */
+  destinationReferences?: readonly PortableRecordReference[];
   profiles?: readonly PortableRestoreProfile[];
 }, options: { allocateUuid?: () => string } = {}) {
   const manifest = structuredClone(input.manifest), sourceTenant = manifest.context.sourceTenant;
@@ -199,6 +206,22 @@ export function prepareCoManagedPortableWorkspaceRecords(input: {
   const edges = manifest.references;
   const references: PortableRecordReference[] = edges.filter(edge => edge.status === 'resolved')
     .map(edge => [edge.table, edge.column, edge.parent, edge.parentColumn] as const);
+
+  // 0. Undeclared FKs from the destination's own metadata. A column is claimed once: declared edges, external
+  //    edges and qualified (cross-tenant) actor columns win, and so does anything that is not an identity.
+  {
+    const claimed = new Set<string>([...edges.map(edge => JSON.stringify([edge.table, edge.column])),
+      ...resolved.flatMap(({ profile }) => profile.qualifiedActors ?? []).flatMap(actor => [JSON.stringify([actor.table, actor.tenantColumn]), JSON.stringify([actor.table, actor.userColumn])]),
+      ...resolved.flatMap(({ profile }) => profile.polymorphic ?? []).map(rule => JSON.stringify([rule.table, rule.column])),
+      ...resolved.flatMap(({ profile }) => profile.conditional ?? []).map(rule => JSON.stringify([rule.table, rule.column]))]);
+    const typeOf = (table: string, column: string) => valueTypes[table]?.[column] ?? 'uuid';
+    for (const [table, column, parent, parentColumn] of input.destinationReferences ?? []) {
+      const key = JSON.stringify([table, column]);
+      if (claimed.has(key) || !Object.hasOwn(columns, table) || !columns[table].includes(column) || !Object.hasOwn(columns, parent) ||
+          !(identities[parent] ?? []).includes(parentColumn) || typeOf(table, column) !== typeOf(parent, parentColumn)) continue;
+      claimed.add(key); references.push([table, column, parent, parentColumn]);
+    }
+  }
 
   // 1. External references (a domain no contributor in this archive provides) are reconciled before
   //    identity remapping: cleared when the destination column is nullable, otherwise the row that
