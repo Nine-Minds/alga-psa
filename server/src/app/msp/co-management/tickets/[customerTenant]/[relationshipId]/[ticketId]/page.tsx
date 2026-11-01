@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { CoManagedFeatureBoundary } from '@/components/co-managed/CoManagedFeatureBoundary';
+import CustomerTicketsUnavailable from '@/components/co-managed/CustomerTicketsUnavailable';
 import SharedTicketScreen from '@/components/co-managed/SharedTicketScreen';
 import { getSharedTicketDetailsAction } from '@/lib/actions/coManagedSharedWorkActions';
 import type { SharedTicketDetailsResult } from '@/lib/co-managed/sharedTicketDataTypes';
@@ -24,5 +25,5 @@ export default async function CoManagedSharedTicketPage({ params, searchParams }
   let details: SharedTicketDetailsResult | null = null;
   try { details = await getSharedTicketDetailsAction(resource); } catch { details = null; }
   const backHref = coManagedTicketReturnHref((await searchParams).returnTo);
-  return <CoManagedFeatureBoundary><SharedTicketScreen resource={resource} initialDetails={details} backHref={backHref} /></CoManagedFeatureBoundary>;
+  return <CoManagedFeatureBoundary mode="serves" fallback={<CustomerTicketsUnavailable />}><SharedTicketScreen resource={resource} initialDetails={details} backHref={backHref} /></CoManagedFeatureBoundary>;
 }
