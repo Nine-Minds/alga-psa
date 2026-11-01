@@ -54,6 +54,7 @@ import {
 import { assertCanActOnBehalf } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
 import { loadVisibleCalendars } from '@alga-psa/scheduling/lib/visibleCalendars';
 import type { IVisibleCalendar } from '@alga-psa/types';
+import { findTransition, transitionTimeSheet } from './timeSheetStatus';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 /**
@@ -411,6 +412,17 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async update(id: string, data: UpdateTimeSheetData, context: ServiceContext): Promise<any> {
+    // approval_status is derived state: a supplied status is a *request* for a transition, never a column write.
+    const { approval_status: requestedStatus, ...fields } = data;
+    if (requestedStatus !== undefined) {
+      // Validated before the time-source seam: the status means the same thing to every source.
+      const current = await this.getById(id, context);
+      if (!current) {
+        throw new NotFoundError('Time sheet not found');
+      }
+      if (requestedStatus !== current.approval_status) findTransition(requestedStatus);
+    }
+
     // Time-source seam: a registered non-native source may own this call; native falls through untouched (0 statements).
     const delegated = await delegateRest({ tenant: context.tenant, userId: context.userId }, 'sheets', 'update', [id, data, context]);
     if (delegated.handled) return delegated.value;
@@ -433,12 +445,16 @@ export class TimeSheetService extends BaseService<any> {
         }
   
         // time_sheets has no updated_at column: write only the caller's fields.
-        const updateData = { ...data };
-  
-        await this.buildTenantScopedQuery(trx, context)
-          .where({ [this.primaryKey]: id })
-          .update(updateData);
-  
+        if (Object.keys(fields).length > 0) {
+          await this.buildTenantScopedQuery(trx, context)
+            .where({ [this.primaryKey]: id })
+            .update(fields);
+        }
+
+        // Same transaction, after the field write: a refused transition rolls the other fields back too.
+        if (requestedStatus !== undefined && requestedStatus !== existing.approval_status) {
+          await transitionTimeSheet(trx, existing, requestedStatus, context);
+        }
       });
 
       // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_UPDATED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
@@ -512,31 +528,7 @@ export class TimeSheetService extends BaseService<any> {
           throw new NotFoundError('Time sheet not found');
         }
   
-        // Check permissions
-        if (timeSheet.user_id !== context.userId) {
-          throw new ForbiddenError('Permission denied: Can only submit your own time sheets');
-        }
-  
-        // Check current status
-        if (timeSheet.approval_status !== 'DRAFT' && timeSheet.approval_status !== 'CHANGES_REQUESTED') {
-          throw new ConflictError('Time sheet can only be submitted from DRAFT or CHANGES_REQUESTED status');
-        }
-  
-        // Validate time sheet has entries
-        const hasEntries = await this.hasTimeEntries(id, context);
-        if (!hasEntries) {
-          throw new ConflictError('Cannot submit time sheet without time entries');
-        }
-  
-        await this.buildTenantScopedQuery(trx, context)
-          .where({ id })
-          .update({
-            approval_status: 'SUBMITTED',
-            submitted_at: new Date(),
-            submission_notes: data.submission_notes,
-            updated_at: new Date()
-          });
-  
+        await transitionTimeSheet(trx, timeSheet, 'SUBMITTED', context, { submission_notes: data.submission_notes });
       });
 
       // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_SUBMITTED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
@@ -568,50 +560,7 @@ export class TimeSheetService extends BaseService<any> {
           throw new NotFoundError('Time sheet not found');
         }
   
-        // Check permissions
-        if (!await this.canApproveTimeSheets(context)) {
-          throw new ForbiddenError('Permission denied: Cannot approve time sheets');
-        }
-  
-        // Check current status
-        if (timeSheet.approval_status !== 'SUBMITTED') {
-          throw new ConflictError('Time sheet must be submitted before approval');
-        }
-
-        // Human-work guard: approval requires a human approver.
-        await assertHumanWorkOwner(trx, context.tenant, context.userId, 'approved_by');
-  
-        await this.buildTenantScopedQuery(trx, context)
-          .where({ id })
-          .update({
-            approval_status: 'APPROVED',
-            approved_at: new Date(),
-            approved_by: context.userId
-          });
-
-        // time_sheets has neither approval_notes nor updated_at; keep the notes as an approver comment
-        // using the real time_sheet_comments columns (same shape the workflow runtime writes).
-        if (data.approval_notes) {
-          await tenantDb(trx, context.tenant).table('time_sheet_comments').insert({
-            comment_id: uuidv4(),
-            time_sheet_id: id,
-            user_id: context.userId,
-            comment: data.approval_notes,
-            is_approver: true,
-            created_at: trx.fn.now(),
-            tenant: context.tenant
-          });
-        }
-  
-        // Update all time entries to approved status. time_entries has no approved_at/approved_by
-        // columns (they live on time_sheets), so only approval_status/updated_at are written.
-        await tenantDb(trx, context.tenant).table('time_entries')
-          .where({ time_sheet_id: id })
-          .update({
-            approval_status: 'APPROVED',
-            updated_at: new Date()
-          });
-  
+        await transitionTimeSheet(trx, timeSheet, 'APPROVED', context, { approval_notes: data.approval_notes });
       });
 
       // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_APPROVED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
@@ -643,30 +592,10 @@ export class TimeSheetService extends BaseService<any> {
           throw new NotFoundError('Time sheet not found');
         }
   
-        // Check permissions
-        if (!await this.canApproveTimeSheets(context)) {
-          throw new ForbiddenError('Permission denied: Cannot request changes to time sheets');
-        }
-  
-        // Check current status
-        if (timeSheet.approval_status !== 'SUBMITTED') {
-          throw new ConflictError('Time sheet must be submitted before requesting changes');
-        }
-  
-        await this.buildTenantScopedQuery(trx, context)
-          .where({ id })
-          .update({
-            approval_status: 'CHANGES_REQUESTED',
-            change_reason: data.change_reason,
-            detailed_feedback: data.detailed_feedback,
-            updated_at: new Date()
-          });
-  
-        // Add comment with feedback
-        await this.addComment(id, {
-          comment_text: `Changes requested: ${data.change_reason}${data.detailed_feedback ? `\n\nDetails: ${data.detailed_feedback}` : ''}`
-        }, context);
-  
+        await transitionTimeSheet(trx, timeSheet, 'CHANGES_REQUESTED', context, {
+          change_reason: data.change_reason,
+          detailed_feedback: data.detailed_feedback
+        });
       });
 
       // KNOWN DEFECT alga-2026-0002675: TIME_SHEET_CHANGES_REQUESTED is not in EVENT_TYPES, so the transport rejects this publish; behaviour kept as-is until the defect is fixed.
@@ -1602,13 +1531,15 @@ export class TimeSheetService extends BaseService<any> {
   }
 
   private async canManageTimeSheets(context: ServiceContext): Promise<boolean> {
-    // Check RBAC permissions
-    return false; // Simplified for now
+    if (!context.user) return false;
+    const { knex } = await this.getKnex();
+    return hasPermission(context.user, 'time_sheet', 'update', knex);
   }
 
   private async canApproveTimeSheets(context: ServiceContext): Promise<boolean> {
-    // Check RBAC permissions
-    return false; // Simplified for now
+    if (!context.user) return false;
+    const { knex } = await this.getKnex();
+    return hasPermission(context.user, 'time_sheet', 'approve', knex);
   }
 
   /**

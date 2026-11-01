@@ -26,6 +26,11 @@ vi.mock('server/src/lib/eventBus/publishers', () => ({
 
 // RBAC itself is not under test; the permissions each actor holds are set per test.
 const grants = vi.hoisted(() => ({ byUser: new Map<string, Set<string>>() }));
+vi.mock('server/src/lib/auth/rbac', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  hasPermission: vi.fn(async (user: { user_id: string }, resource: string, action: string) =>
+    grants.byUser.get(user.user_id)?.has(`${resource}:${action}`) ?? false),
+}));
 vi.mock('@alga-psa/auth', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   hasPermission: vi.fn(async (user: { user_id: string }, resource: string, action: string) =>
@@ -126,11 +131,11 @@ describe('TimeSheetService.create / update (real Postgres)', () => {
     const ctx = contextFor(f.tenantId, f.actor);
     const created = await service.create({ period_id: f.periodId }, ctx);
 
-    const updated = await service.update(created.id, { approval_status: 'SUBMITTED' }, ctx);
+    const updated = await service.update(created.id, { notes: 'updated notes' }, ctx);
 
-    expect(updated).toMatchObject({ id: created.id, approval_status: 'SUBMITTED' });
+    expect(updated).toMatchObject({ id: created.id, notes: 'updated notes', approval_status: 'DRAFT' });
     const [row] = await sheetsFor(f.tenantId, f.actor);
-    expect(row.approval_status).toBe('SUBMITTED');
+    expect(row.notes).toBe('updated notes');
   });
 
   it('creating a sheet for yourself by explicit user_id needs no delegation rights', async () => {
