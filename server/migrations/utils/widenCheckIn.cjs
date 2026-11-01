@@ -1,6 +1,6 @@
 // CM L6a2: widen an `IN (...)` / `= ANY (ARRAY[...])` text CHECK additively, in the order that
 // keeps old readers and writers working: (1) add the replacement NOT VALID, (2) validate it,
-// (3) drop the old constraint and give the replacement the original name.
+// (3) drop the old constraint, re-create the widened check under the original name, drop the replacement.
 // The replacement list is built from the LIVE constraint definition, never hard-coded, so any
 // value a later migration added survives. DDL cannot bind parameters; every literal is escaped.
 const REPLACEMENT_SUFFIX = '_v2';
@@ -46,15 +46,38 @@ async function validateWidenedCheck(knex, { table, name }) {
   await knex.raw(`ALTER TABLE ${quoteIdent(table)} VALIDATE CONSTRAINT ${quoteIdent(`${name}${REPLACEMENT_SUFFIX}`)}`);
 }
 
-/** Step 3: only after the replacement is validated, drop the old one and rename the replacement into its place. */
+/**
+ * Step 3: only after the replacement is validated, put the widened check back under the original
+ * name and drop the replacement. Citus refuses RENAME CONSTRAINT on distributed tables, so the
+ * original name is re-created from the replacement's definition (NOT VALID, then VALIDATE: no
+ * ACCESS EXCLUSIVE scan) instead of renamed. Each step is re-entrant: a run interrupted anywhere
+ * resumes from the live catalog state.
+ */
 async function promoteWidenedCheck(knex, { table, name }) {
   if (!(await knex.schema.hasTable(table))) return;
   const replacementName = `${name}${REPLACEMENT_SUFFIX}`;
   const replacement = await liveDefinition(knex, table, replacementName);
   if (!replacement) return; // already promoted, or never needed
   if (!replacement.convalidated) throw new Error(`${table}.${replacementName} is not validated; refusing to drop ${name}`);
-  await knex.raw(`ALTER TABLE ${quoteIdent(table)} DROP CONSTRAINT IF EXISTS ${quoteIdent(name)}`);
-  await knex.raw(`ALTER TABLE ${quoteIdent(table)} RENAME CONSTRAINT ${quoteIdent(replacementName)} TO ${quoteIdent(name)}`);
+  const widened = literalsOf(replacement.definition);
+  let original = await liveDefinition(knex, table, name);
+  const sameList = (definition) => {
+    const values = literalsOf(definition);
+    return values.length === widened.length && widened.every((value) => values.includes(value));
+  };
+  if (original && !sameList(original.definition)) {
+    await knex.raw(`ALTER TABLE ${quoteIdent(table)} DROP CONSTRAINT IF EXISTS ${quoteIdent(name)}`);
+    original = null;
+  }
+  if (!original) {
+    const check = replacement.definition.replace(/\s+NOT VALID\s*$/i, '');
+    await knex.raw(`ALTER TABLE ${quoteIdent(table)} ADD CONSTRAINT ${quoteIdent(name)} ${check} NOT VALID`);
+    original = await liveDefinition(knex, table, name);
+  }
+  if (!original.convalidated) {
+    await knex.raw(`ALTER TABLE ${quoteIdent(table)} VALIDATE CONSTRAINT ${quoteIdent(name)}`);
+  }
+  await knex.raw(`ALTER TABLE ${quoteIdent(table)} DROP CONSTRAINT IF EXISTS ${quoteIdent(replacementName)}`);
 }
 
 module.exports = { addWidenedCheckNotValid, validateWidenedCheck, promoteWidenedCheck, literalsOf };

@@ -23693,7 +23693,8 @@
               "project_task",
               "non_billable_category",
               "ad_hoc",
-              "interaction"
+              "interaction",
+              "co_managed"
             ]
           },
           "start_time": {
@@ -23757,7 +23758,8 @@
               "project_task",
               "non_billable_category",
               "ad_hoc",
-              "interaction"
+              "interaction",
+              "co_managed"
             ]
           },
           "start_time": {
@@ -23819,7 +23821,8 @@
                     "project_task",
                     "non_billable_category",
                     "ad_hoc",
-                    "interaction"
+                    "interaction",
+                    "co_managed"
                   ]
                 },
                 "start_time": {
@@ -23903,7 +23906,8 @@
                         "project_task",
                         "non_billable_category",
                         "ad_hoc",
-                        "interaction"
+                        "interaction",
+                        "co_managed"
                       ]
                     },
                     "start_time": {
@@ -24392,6 +24396,7 @@
                     "non_billable_category",
                     "ad_hoc",
                     "interaction",
+                    "co_managed",
                     null
                   ]
                 },
@@ -24784,6 +24789,7 @@
                           "non_billable_category",
                           "ad_hoc",
                           "interaction",
+                          "co_managed",
                           null
                         ]
                       },

@@ -1,6 +1,6 @@
 const { validateWidenedCheck, promoteWidenedCheck } = require('./utils/widenCheckIn.cjs');
 
-// CM L6a2 (5 of 5): VALIDATE, then drop the old source_type CHECK and rename the replacement.
+// CM L6a2 (5 of 5): VALIDATE, then drop the old source_type CHECK and restore the widened check under its original name.
 exports.config = { transaction: false };
 
 exports.up = async function up(knex) {

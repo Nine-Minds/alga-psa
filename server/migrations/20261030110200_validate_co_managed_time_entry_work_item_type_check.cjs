@@ -1,8 +1,8 @@
 const { validateWidenedCheck, promoteWidenedCheck } = require('./utils/widenCheckIn.cjs');
 
 // CM L6a2 (3 of 5): steps 2 and 3. VALIDATE the replacement (one scan under SHARE UPDATE
-// EXCLUSIVE, reads and writes continue), then drop the old constraint and rename the replacement
-// into its place. The drop never precedes a successful validate. Idempotent.
+// EXCLUSIVE, reads and writes continue), then drop the old constraint and re-create the widened check
+// under the original name. The drop never precedes a successful validate. Idempotent.
 exports.config = { transaction: false };
 
 exports.up = async function up(knex) {
