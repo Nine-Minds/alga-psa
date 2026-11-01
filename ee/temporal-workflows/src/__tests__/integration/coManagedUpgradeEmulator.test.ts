@@ -24,7 +24,7 @@ vi.mock('@alga-psa/core/capability', async importOriginal => ({
   // The paying tenant is the co-managed CUSTOMER: it serves (participates) but has no sponsor entitlement,
   // so `admits` is closed. The webhook handler must be gated on `serves`, not `admits`.
   admits: async () => ({ admitted: false }),
-  serves: async () => ({ admitted: true }),
+  serves: async () => ({ admitted: false, served: true }),   // the real serves-mode decision shape
 }));
 const seeded: string[] = [];
 vi.mock('../../db/product-upgrade-operations.js', async importOriginal => ({

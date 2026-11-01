@@ -113,7 +113,7 @@ export function createCoManagedPaymentHandlers(deps: CoManagedPaymentDeps): Paym
       // capability admits; the MSP's own handler still processes the event afterwards.
       name: 'co-managed-sponsor-base',
       claims: (event) => SPONSOR_SYNC_EVENTS.has(event.type),
-      admits: async ({ tenantId }) => Boolean(deps.priceId()) && (await admits('co-managed', tenantId)).admitted,
+      admits: async ({ tenantId }) => Boolean(deps.priceId()) && (await admits('co-managed', tenantId)).served,
       consumeWhenClosed: false,
       async handle({ tenantId, knex }) {
         try {
@@ -136,7 +136,7 @@ export function createCoManagedPaymentHandlers(deps: CoManagedPaymentDeps): Paym
       // which would fail on it. The customer's in-app "Resume purchase" reconcile recovers from Stripe.
       name: 'co-managed-independent-upgrade',
       claims: (event) => isCoManagedUpgradePaymentEvent(event),
-      admits: async ({ tenantId }) => killSwitchOpen() && (await serves('co-managed', tenantId)).admitted,
+      admits: async ({ tenantId }) => killSwitchOpen() && (await serves('co-managed', tenantId)).served,
       consumeWhenClosed: true,
       async handle({ event, tenantId, knex }) {
         const object = event.data.object as any;
