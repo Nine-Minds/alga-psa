@@ -123,6 +123,10 @@ describe('TimeSheetService time periods (API)', () => {
 
   describe('update', () => {
     it('updates dates and ignores is_current (with and without it)', async () => {
+      // Pin "today" outside the period: is_current is derived from the clock, so the
+      // false assertion below must not depend on the real date the suite runs on.
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-06-01T12:00:00Z'));
       const period = await create({ start_date: '2026-11-01', end_date: '2026-11-08' });
 
       const withFlag = await update(period.period_id, { end_date: '2026-11-09', is_current: true });
