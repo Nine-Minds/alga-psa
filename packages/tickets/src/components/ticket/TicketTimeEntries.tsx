@@ -360,7 +360,7 @@ const TimeEntryRow: React.FC<TimeEntryRowProps> = ({
           {showUserName
             ? entry.user_name || t('timeEntries.unknownUser', 'Unknown user')
             : startLabel}
-          {showUserName && (
+          {entry.via_principal_name && (
             <>
               {' '}
               <ViaPrincipalLabel principalName={entry.via_principal_name} />

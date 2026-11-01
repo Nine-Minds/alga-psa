@@ -110,6 +110,43 @@ describe('T033 time entry detail', () => {
   });
 });
 
+describe('T033 own time entries', () => {
+  const ownEntry = (id: string, extra: Record<string, unknown>) => ({
+    entry_id: id,
+    user_id: 'me',
+    user_name: 'Me',
+    start_time: '2026-09-21T10:00:00.000Z',
+    end_time: '2026-09-21T10:30:00.000Z',
+    work_date: '2026-09-21',
+    billable_duration: 30,
+    notes: null,
+    approval_status: 'DRAFT',
+    service_id: null,
+    service_name: null,
+    is_own: true,
+    ...extra,
+  });
+
+  it('renders the via label on "My entries" rows only when via_principal_name is set', async () => {
+    m.fetchTimeEntriesForTicket.mockResolvedValue({
+      entries: [ownEntry('o1', { via_principal_name: 'Billing sync' }), ownEntry('o2', {})],
+      ownTotalMinutes: 60,
+      ownEntryCount: 2,
+      othersTotalMinutes: 0,
+      othersEntryCount: 0,
+      othersVisibleMinutes: 0,
+      othersVisibleCount: 0,
+      othersHiddenMinutes: 0,
+      othersHiddenCount: 0,
+      totalMinutes: 60,
+    } as TicketTimeEntriesSummary);
+    render(<TicketTimeEntries id="tte-own" ticketId="t1" currentUserId="me" />);
+    const via = await screen.findAllByTestId('via-principal-label');
+    expect(via).toHaveLength(1);
+    expect(via[0].textContent).toBe('via Billing sync');
+  });
+});
+
 describe('T033 ticket activity', () => {
   it('renders "<human> via <principal>" in the Actor cell', async () => {
     m.getTimeline.mockResolvedValue([
@@ -171,6 +208,33 @@ describe('T033 comments', () => {
     renderComment({ user_id: 'svc' });
     expect((await screen.findByTestId('service-author-badge')).textContent).toBe('Service');
     expect(screen.getByText('Billing sync')).toBeInTheDocument();
+  });
+
+  it('hides the synthetic service email: no @service.alga.local text and no mailto', async () => {
+    const withEmail = {
+      ...userMap,
+      svc: { ...userMap.svc, email: 'svc-abc@service.alga.local' },
+    };
+    const { container } = render(
+      <CommentItem
+        conversation={{ tenant: 't', author_type: 'internal', comment_id: 'c2', user_id: 'svc', note: NOTE, created_at: new Date().toISOString() } as IComment}
+        currentUserId="me"
+        isEditing={false}
+        currentComment={null}
+        ticketId="t1"
+        userMap={withEmail as never}
+        contactMap={{}}
+        onContentChange={() => {}}
+        onSave={() => {}}
+        onClose={() => {}}
+        onEdit={() => {}}
+        onDelete={() => {}}
+      />,
+    );
+    expect(await screen.findByTestId('service-author-badge')).toBeInTheDocument();
+    expect(screen.getByText('Billing sync')).toBeInTheDocument();
+    expect(container.textContent).not.toContain('@service.alga.local');
+    expect(container.querySelector('a[href^="mailto:"]')).toBeNull();
   });
 
   it('shows "via <principal>" on a human comment created through a principal, and no badge', async () => {

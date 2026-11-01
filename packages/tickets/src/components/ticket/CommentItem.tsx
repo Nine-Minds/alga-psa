@@ -257,6 +257,8 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   const getAuthorEmail = () => {
     if (isSystemAuthor) return null;
+    // Service principals have only a synthetic placeholder address; never surface it.
+    if (resolvedAuthor.authorKind === 'service') return null;
     if (resolvedAuthor.source === 'unknown' && inboundSenderIdentity.fromAddress) {
       return inboundSenderIdentity.fromAddress;
     }
