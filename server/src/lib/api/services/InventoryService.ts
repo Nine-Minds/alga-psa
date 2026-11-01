@@ -301,7 +301,7 @@ function throwInventoryApiError(error: unknown): never {
 export type InventoryLookupAssetAuthorizer = <T extends { asset_id: string; client_id?: string | null }>(
   trx: Knex.Transaction,
   assets: T[],
-) => Promise<T[]>;
+) => Promise<Partial<T>[]>;
 
 export class InventoryService extends BaseService<any> {
   constructor() {

@@ -28,7 +28,10 @@ import { ProductAccessError, getTenantProduct } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 import { hasPermission } from '../../auth/rbac';
 import { getConnection } from '../../db/db';
-import { guardAssetRead } from './assetReadGuard';
+import { guardAssetRead, readAssetProjection } from './assetReadGuard';
+import { projectApiResourceRead, projectApiResourceReads, type AuthorizedProjection } from './authorizationKernel';
+import { resolveAssetAuthorizationRecords } from '@alga-psa/assets/lib/assetReadAuthorization';
+import { buildProjectedPage } from '@alga-psa/authorization/pagination';
 
 export class ApiAssetController {
   private assetService: AssetService;
@@ -48,6 +51,35 @@ export class ApiAssetController {
     }
 
     return context;
+  }
+
+  /**
+   * Authorizes and redacts asset-shaped rows (list, search, export). Rows the caller may not read, or whose
+   * identifier is redacted, are dropped. Everything these routes serialize comes from the returned projections.
+   */
+  private async projectAssetRows(
+    context: ApiContext,
+    rows: Record<string, any>[],
+  ): Promise<AuthorizedProjection<Record<string, any>>[]> {
+    if (rows.length === 0) return [];
+    const knex = await getConnection(context.tenant);
+    const records = await resolveAssetAuthorizationRecords(knex, context.tenant, rows as any);
+    const out: AuthorizedProjection<Record<string, any>>[] = [];
+    for (const row of rows) {
+      const recordContext = records.get(row.asset_id);
+      if (!recordContext) continue;
+      const projection = await projectApiResourceRead({
+        knex,
+        tenant: context.tenant,
+        user: context.user,
+        apiKeyId: (context as any).apiKeyId,
+        kind: 'asset',
+        record: row,
+        recordContext,
+      });
+      if (projection) out.push(projection);
+    }
+    return out;
   }
 
   /**
@@ -71,8 +103,15 @@ export class ApiAssetController {
       order: order as 'asc' | 'desc' | undefined
     };
     
-    const result = await this.assetService.list(listOptions, context, filters);
-    
+    // Totals exclude rows the caller cannot read, so pagination never reveals how many were hidden.
+    const result = await buildProjectedPage<Record<string, any>, AuthorizedProjection<Record<string, any>>>({
+      page: page || 1,
+      limit: limit || 25,
+      fetchPage: (sourcePage, sourceLimit) =>
+        this.assetService.list({ ...listOptions, page: sourcePage, limit: sourceLimit }, context, filters),
+      projectRecord: async (row) => (await this.projectAssetRows(context, [row]))[0] ?? null,
+    });
+
     // Add HATEOAS links to each asset
     const assetsWithLinks = result.data.map(asset => ({
       ...asset,
@@ -91,18 +130,18 @@ export class ApiAssetController {
    */
   async getById(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    const denied = await guardAssetRead(context, params.id, this.assetService);
+    // One kernel decision: it authorizes the asset and redacts the detailed record that is serialized.
+    const { projection: asset, denied } = await readAssetProjection(
+      context,
+      params.id,
+      this.assetService,
+      () => this.assetService.getWithDetails(params.id, context),
+    );
     if (denied) return denied;
-
-    const asset = await this.assetService.getWithDetails(params.id, context);
-    
-    if (!asset) {
-      return createErrorResponse('Asset not found', 404);
-    }
 
     return createApiResponse({
       ...asset,
-      _links: getHateoasLinks('asset', asset.asset_id)
+      _links: getHateoasLinks('asset', params.id)
     });
   }
 
@@ -164,7 +203,10 @@ export class ApiAssetController {
    */
   async listRelationships(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    
+    // Gate only: relationships name other assets, so the caller must be able to read this one.
+    const denied = await guardAssetRead(context, params.id, this.assetService);
+    if (denied) return denied;
+
     const relationships = await this.assetService.getAssetRelationships(params.id, context);
     
     return createApiResponse(relationships);
@@ -248,9 +290,19 @@ export class ApiAssetController {
     const denied = await guardAssetRead(context, params.id, this.assetService, ['ticket']);
     if (denied) return denied;
 
+    // Ticket-owned fields: each ticket is redacted under the caller's ticket policy; hidden tickets are dropped.
     const tickets = await this.assetService.getAssetTickets(params.id, context);
+    const knex = await getConnection(context.tenant);
+    const visible = await projectApiResourceReads({
+      knex,
+      tenant: context.tenant,
+      user: context.user,
+      apiKeyId: (context as any).apiKeyId,
+      kind: 'ticket',
+      records: tickets,
+    });
 
-    return createApiResponse(tickets);
+    return createApiResponse(visible);
   }
 
   /**
@@ -329,7 +381,9 @@ export class ApiAssetController {
    */
   async listDocuments(req: NextRequest, params: { id: string }): Promise<NextResponse> {
     const context = await this.requireAllowedContext(req);
-    
+    const denied = await guardAssetRead(context, params.id, this.assetService);
+    if (denied) return denied;
+
     const documents = await this.assetService.getAssetDocuments(params.id, context);
     
     return createApiResponse(documents);
@@ -468,8 +522,8 @@ export class ApiAssetController {
       return createErrorResponse('Invalid query parameters', 400, 'VALIDATION_ERROR', validation.error.issues);
     }
 
-    const assets = await this.assetService.search(validation.data, context);
-    
+    const assets = await this.projectAssetRows(context, await this.assetService.search(validation.data, context));
+
     const assetsWithLinks = assets.map(asset => ({
       ...asset,
       _links: getHateoasLinks('asset', asset.asset_id)
@@ -505,6 +559,10 @@ export class ApiAssetController {
       if (result.data.length < pageSize || rows.length >= (result.total ?? rows.length)) break;
       page += 1;
     }
+
+    // Project before filtering/serializing: nothing below sees a field or row the caller may not read.
+    const projected: Record<string, any>[] = await this.projectAssetRows(context, rows);
+    rows = projected;
 
     // Apply the export-only set filters in memory (list() takes single-value filters).
     if (assetTypes.length) rows = rows.filter((r) => assetTypes.includes(r.asset_type));
@@ -586,7 +644,8 @@ export class ApiAssetController {
   private convertToCSV(data: any[]): string {
     if (data.length === 0) return '';
     
-    const headers = Object.keys(data[0]);
+    // Redactions can differ per row, so the header set is the union of the projected rows' keys.
+    const headers = Array.from(new Set(data.flatMap((row) => Object.keys(row))));
     const csvHeaders = headers.join(',');
     const csvRows = data.map(row => 
       headers.map(header => {
@@ -595,7 +654,7 @@ export class ApiAssetController {
         if (typeof value === 'string' && (value.includes(',') || value.includes('"'))) {
           return `"${value.replace(/"/g, '""')}"`;
         }
-        return value;
+        return value ?? '';
       }).join(',')
     );
     

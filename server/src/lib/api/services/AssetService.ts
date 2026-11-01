@@ -33,6 +33,7 @@ import { isTypedAssetWriteError } from '@alga-psa/assets/lib/assetTypeAttributes
 import { validateAssetStatusSlug } from '@alga-psa/assets/lib/assetStatusRegistry';
 import { isAssetAssigneeError, setAssetAssignee } from '@alga-psa/assets/lib/assetAssignment';
 import { getAssetGroupSummary, removeAssetFromAnyGroup } from '@alga-psa/assets/lib/assetGroups';
+import { createPredicateGuard } from '../controllers/authorizationKernel';
 import { assertBillingProfileForClient } from '@alga-psa/shared/models/assetBillingProfileModel';
 
 function validationDetails(issues: Array<{ key: string; code: string; message: string }>) {
@@ -150,65 +151,66 @@ export class AssetService extends BaseService<any> {
       this.applyRangeFilters(query, filters);
     }
 
-    // Apply filters
+    // Apply filters through the policy guard: a filter over a column the caller's redactions hide matches nothing.
+    // LEVERAGE: pattern filter-key-to-response-field — see ProjectService.list / TicketService.TICKET_FILTER_RESPONSE_FIELD.
+    const guard = await createPredicateGuard(knex, context, 'asset');
+    const T = this.tableName;
     if (filters) {
       if (filters.asset_tag) {
-        query.where(`${this.tableName}.asset_tag`, 'ilike', `%${filters.asset_tag}%`);
+        guard.filter(query, `${T}.asset_tag`, (q, c) => { q.where(c, 'ilike', `%${filters.asset_tag}%`); });
       }
       if (filters.name) {
-        query.where(`${this.tableName}.name`, 'ilike', `%${filters.name}%`);
+        guard.filter(query, `${T}.name`, (q, c) => { q.where(c, 'ilike', `%${filters.name}%`); });
       }
       if (filters.client_id) {
-        query.where(`${this.tableName}.client_id`, filters.client_id);
+        guard.filter(query, `${T}.client_id`, (q, c) => { q.where(c, filters.client_id); });
       }
       if (filters.location_id) {
-        query.where(`${this.tableName}.location_id`, filters.location_id);
+        guard.filter(query, `${T}.location_id`, (q, c) => { q.where(c, filters.location_id); });
       }
       if (filters.contact_name_id) {
-        query.where(`${this.tableName}.contact_name_id`, filters.contact_name_id);
+        guard.filter(query, `${T}.contact_name_id`, (q, c) => { q.where(c, filters.contact_name_id); });
       }
       if (filters.manufacturer) {
-        query.where(`${this.tableName}.manufacturer`, 'ilike', `%${filters.manufacturer}%`);
+        guard.filter(query, `${T}.manufacturer`, (q, c) => { q.where(c, 'ilike', `%${filters.manufacturer}%`); });
       }
       if (filters.model) {
-        query.where(`${this.tableName}.model`, 'ilike', `%${filters.model}%`);
+        guard.filter(query, `${T}.model`, (q, c) => { q.where(c, 'ilike', `%${filters.model}%`); });
       }
       if (filters.vendor_id) {
-        query.where(`${this.tableName}.vendor_id`, filters.vendor_id);
+        guard.filter(query, `${T}.vendor_id`, (q, c) => { q.where(c, filters.vendor_id); });
       }
       if (filters.billing_profile_id) {
-        query.where(`${this.tableName}.billing_profile_id`, filters.billing_profile_id);
+        guard.filter(query, `${T}.billing_profile_id`, (q, c) => { q.where(c, filters.billing_profile_id); });
       }
       if (filters.asset_type) {
-        query.where(`${this.tableName}.asset_type`, filters.asset_type);
+        guard.filter(query, `${T}.asset_type`, (q, c) => { q.where(c, filters.asset_type); });
       }
       if (filters.status) {
-        query.where(`${this.tableName}.status`, filters.status);
+        guard.filter(query, `${T}.status`, (q, c) => { q.where(c, filters.status); });
       }
       if (filters.location) {
-        query.where(`${this.tableName}.location`, 'ilike', `%${filters.location}%`);
+        guard.filter(query, `${T}.location`, (q, c) => { q.where(c, 'ilike', `%${filters.location}%`); });
       }
       if (filters.client_name) {
         tenantDb(knex, context.tenant).tenantJoin(query, 'clients', 'assets.client_id', 'clients.client_id');
-        query.where('clients.client_name', 'ilike', `%${filters.client_name}%`);
+        guard.filter(query, 'clients.client_name', (q, c) => { q.where(c, 'ilike', `%${filters.client_name}%`); });
       }
       if (filters.has_warranty !== undefined) {
-        if (filters.has_warranty) {
-          query.whereNotNull(`${this.tableName}.warranty_end_date`);
-        } else {
-          query.whereNull(`${this.tableName}.warranty_end_date`);
-        }
+        guard.filter(query, `${T}.warranty_end_date`, (q, c) => {
+          if (filters.has_warranty) q.whereNotNull(c); else q.whereNull(c);
+        });
       }
       if (filters.warranty_expired !== undefined) {
-        if (filters.warranty_expired) {
-          query.where(`${this.tableName}.warranty_end_date`, '<', new Date());
-        } else {
-          const tableName = this.tableName;
-          query.where(function() {
-            this.where(`${tableName}.warranty_end_date`, '>=', new Date())
-              .orWhereNull(`${tableName}.warranty_end_date`);
-          });
-        }
+        guard.filter(query, `${T}.warranty_end_date`, (q, c) => {
+          if (filters.warranty_expired) {
+            q.where(c, '<', new Date());
+          } else {
+            q.where(function() {
+              this.where(c, '>=', new Date()).orWhereNull(c);
+            });
+          }
+        });
       }
     }
 
@@ -1386,37 +1388,26 @@ export class AssetService extends BaseService<any> {
     const db = tenantDb(knex, context.tenant);
     const query = db.table(this.tableName);
 
-    // Build search query
+    // Search columns/filters come from the policy guard: columns the caller's redactions hide drop out of the match
+    // set, whether defaulted or named explicitly in `fields`.
     const tableName = this.tableName;
-    if (searchData.fields && searchData.fields.length > 0) {
-      query.where(function() {
-        searchData.fields!.forEach(field => {
-          if (field === 'client_name') {
-            this.orWhere('clients.client_name', 'ilike', `%${searchData.query}%`);
-          } else {
-            this.orWhere(`${tableName}.${field}`, 'ilike', `%${searchData.query}%`);
-          }
-        });
-      });
-    } else {
-      // Default search across all text fields
-      query.where(function() {
-        this.orWhere(`${tableName}.asset_tag`, 'ilike', `%${searchData.query}%`)
-          .orWhere(`${tableName}.name`, 'ilike', `%${searchData.query}%`)
-          .orWhere(`${tableName}.serial_number`, 'ilike', `%${searchData.query}%`)
-          .orWhere(`${tableName}.location`, 'ilike', `%${searchData.query}%`);
-      });
-    }
+    const guard = await createPredicateGuard(knex, context, 'asset');
+    const searchColumns = searchData.fields && searchData.fields.length > 0
+      ? searchData.fields.map(field => field === 'client_name'
+          ? { column: 'clients.client_name', field: 'client_name' }
+          : { column: `${tableName}.${field}`, field })
+      : ['asset_tag', 'name', 'serial_number', 'location'].map(field => `${tableName}.${field}`);
+    guard.search(query, searchColumns, searchData.query);
 
     // Apply filters
     if (searchData.asset_types && searchData.asset_types.length > 0) {
-      query.whereIn(`${this.tableName}.asset_type`, searchData.asset_types);
+      guard.filter(query, `${tableName}.asset_type`, (q, c) => { q.whereIn(c, searchData.asset_types!); });
     }
     if (searchData.statuses && searchData.statuses.length > 0) {
-      query.whereIn(`${this.tableName}.status`, searchData.statuses);
+      guard.filter(query, `${tableName}.status`, (q, c) => { q.whereIn(c, searchData.statuses!); });
     }
     if (searchData.client_ids && searchData.client_ids.length > 0) {
-      query.whereIn(`${this.tableName}.client_id`, searchData.client_ids);
+      guard.filter(query, `${tableName}.client_id`, (q, c) => { q.whereIn(c, searchData.client_ids!); });
     }
 
     // Add joins for searching

@@ -50,9 +50,9 @@ vi.mock('next/server', async () => ({
 }));
 vi.mock('../../../lib/api/controllers/authorizationKernel', async (original) => ({
   ...await original<typeof import('../../../lib/api/controllers/authorizationKernel')>(),
-  authorizeApiResourceRead: async (input: { recordContext: { id?: string } }) => {
+  projectApiResourceRead: async (input: { record: object; recordContext: { id?: string } }) => {
     spies.kernel(input);
-    return input.recordContext?.id !== spies.deniedAssetId;
+    return input.recordContext?.id !== spies.deniedAssetId ? input.record : null;
   },
 }));
 vi.mock('../../../lib/api/services/documents/resolveSource', () => ({

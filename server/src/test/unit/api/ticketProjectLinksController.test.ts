@@ -16,12 +16,15 @@ const state = vi.hoisted(() => ({
   links: [] as Record<string, unknown>[],
   permissions: new Set<string>(),
   readable: new Set<string>(),
+  hidden: new Set<string>(),
 }));
 
 const authorizeReadMock = vi.hoisted(() =>
-  vi.fn(async ({ resource, recordContext }: { resource: string; recordContext: { id: string } }) =>
-    state.readable.has(`${resource}:${recordContext.id}`)
-  )
+  vi.fn(async ({ kind, record }: { kind: string; record: Record<string, unknown> }) => {
+    const id = (kind === 'ticket' ? record.ticket_id : record.project_id) as string;
+    if (!state.readable.has(`${kind}:${id}`)) return null;
+    return Object.fromEntries(Object.entries(record).filter(([field]) => !state.hidden.has(field)));
+  })
 );
 const getTicketProjectLinksMock = vi.hoisted(() => vi.fn(async () => state.links));
 
@@ -70,7 +73,15 @@ vi.mock('@/lib/productSurfaceRegistry', () => ({
 }));
 
 vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
-  authorizeApiResourceRead: authorizeReadMock,
+  projectApiResourceRead: authorizeReadMock,
+  projectApiResourceReads: vi.fn(async ({ kind, records }: { kind: string; records: Record<string, unknown>[] }) => {
+    const out: Record<string, unknown>[] = [];
+    for (const record of records) {
+      const projected = await authorizeReadMock({ kind, record });
+      if (projected) out.push(projected);
+    }
+    return out;
+  }),
 }));
 
 vi.mock('../../../lib/api/services/ProjectService', () => ({
@@ -113,6 +124,7 @@ describe('GET /api/v1/tickets/{id}/project-links', () => {
     state.links = [linkRow(PROJECT_A, 'export'), linkRow(PROJECT_B, 'branding'), linkRow(PROJECT_A, 'import')];
     state.permissions = new Set(['project:read', 'ticket:read']);
     state.readable = new Set([`ticket:${TICKET}`, `project:${PROJECT_A}`]);
+    state.hidden = new Set();
     authorizeReadMock.mockClear();
     getTicketProjectLinksMock.mockClear();
   });
@@ -128,9 +140,16 @@ describe('GET /api/v1/tickets/{id}/project-links', () => {
     }
     expect(getTicketProjectLinksMock).toHaveBeenCalledWith(TICKET, expect.objectContaining({ tenant: TENANT }));
     // One record check per project, built from the project's own owner and client.
-    const projectChecks = authorizeReadMock.mock.calls.filter(([a]) => a.resource === 'project');
+    const projectChecks = authorizeReadMock.mock.calls.filter(([a]) => a.kind === 'project');
     expect(projectChecks).toHaveLength(2);
-    expect(projectChecks[0][0]).toMatchObject({ recordContext: { id: PROJECT_A, ownerUserId: 'user-9', clientId: 'client-1' } });
+    expect(projectChecks[0][0]).toMatchObject({ record: { project_id: PROJECT_A, assigned_to: 'user-9', client_id: 'client-1' } });
+  });
+
+  it('serves project-owned values from the project projection, nulling a redacted project name', async () => {
+    state.hidden = new Set(['project_name']);
+    const body = await (await GET(request())).json();
+    expect(body.data.map((l: { project_name: unknown }) => l.project_name)).toEqual([null, null]);
+    expect(body.data[0]).toMatchObject({ project_number: 'PRJ-0001', task_name: 'export' });
   });
 
   it('refuses without ticket or project read permission', async () => {
@@ -143,7 +162,7 @@ describe('GET /api/v1/tickets/{id}/project-links', () => {
 
   it('refuses a ticket the caller cannot read, and 404s a missing one', async () => {
     state.readable.delete(`ticket:${TICKET}`);
-    expect((await GET(request())).status).toBe(403);
+    expect((await GET(request())).status).toBe(404);
     state.ticket = null;
     expect((await GET(request())).status).toBe(404);
     expect(getTicketProjectLinksMock).not.toHaveBeenCalled();

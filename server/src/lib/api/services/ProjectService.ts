@@ -37,6 +37,7 @@ import {
   ProjectExportQuery
 } from '../schemas/project';
 import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
+import { createPredicateGuard } from '../controllers/authorizationKernel';
 import { ProjectModel, ProjectTaskModel } from '@alga-psa/projects/models';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { projectKanbanHiddenStatusesKey } from '@alga-psa/projects/lib/kanbanPreferences';
@@ -215,46 +216,45 @@ export class ProjectService extends BaseService<IProject> {
         this.applyRangeFilters(query, filters);
       }
   
-      // Apply filters
+      // Every predicate below goes through the policy guard: a filter or search over a column the caller's
+      // redactions hide matches nothing, so it cannot confirm a hidden value.
+      // LEVERAGE: pattern filter-key-to-response-field — each `if (filters.x) guard.filter(query, col, ...)` repeats the
+      // key->column->field mapping that TicketService keeps as a table; a shared filter-spec layer would remove it.
+      const guard = await createPredicateGuard(knex, context, 'project');
+      const col = (name: string) => `${this.tableName}.${name}`;
       if (filters) {
         if (filters.project_name) {
-          query.where(`${this.tableName}.project_name`, 'ilike', `%${filters.project_name}%`);
+          guard.filter(query, col('project_name'), (q, c) => { q.where(c, 'ilike', `%${filters.project_name}%`); });
         }
         if (filters.client_id) {
-          query.where(`${this.tableName}.client_id`, filters.client_id);
+          guard.filter(query, col('client_id'), (q, c) => { q.where(c, filters.client_id); });
         }
         if (filters.status) {
-          query.where(`${this.tableName}.status`, filters.status);
+          guard.filter(query, col('status'), (q, c) => { q.where(c, filters.status); });
         }
         if (filters.is_inactive !== undefined) {
-          query.where(`${this.tableName}.is_inactive`, filters.is_inactive);
+          guard.filter(query, col('is_inactive'), (q, c) => { q.where(c, filters.is_inactive); });
         }
         if (filters.assigned_to) {
-        query.where(`${this.tableName}.assigned_to`, filters.assigned_to);
-      }
-      if (filters.contact_name_id) {
-        query.where(`${this.tableName}.contact_name_id`, filters.contact_name_id);
-      }
-      if (filters.is_closed !== undefined) {
-        query.where(`${this.tableName}.is_closed`, filters.is_closed);
-      }
-      if (filters.has_assignment !== undefined) {
-        if (filters.has_assignment) {
-          query.whereNotNull(`${this.tableName}.assigned_to`);
-        } else {
-          query.whereNull(`${this.tableName}.assigned_to`);
+          guard.filter(query, col('assigned_to'), (q, c) => { q.where(c, filters.assigned_to); });
+        }
+        if (filters.contact_name_id) {
+          guard.filter(query, col('contact_name_id'), (q, c) => { q.where(c, filters.contact_name_id); });
+        }
+        if (filters.is_closed !== undefined) {
+          guard.filter(query, col('is_closed'), (q, c) => { q.where(c, filters.is_closed); });
+        }
+        if (filters.has_assignment !== undefined) {
+          guard.filter(query, col('assigned_to'), (q, c) => {
+            if (filters.has_assignment) q.whereNotNull(c); else q.whereNull(c);
+          });
         }
       }
+
+      if (filters?.search) {
+        guard.search(query, [col('project_name'), col('description')], String(filters.search));
       }
-  
-      // Apply search from filters
-    if (filters?.search) {
-      query.where(subQuery => {
-        subQuery.where(`${this.tableName}.project_name`, 'ilike', `%${filters.search}%`)
-          .orWhere(`${this.tableName}.description`, 'ilike', `%${filters.search}%`);
-      });
-    }
-  
+
       // Get total count for pagination
       const countQuery = query.clone().clearSelect().clearOrder().count('* as count');
   
@@ -1193,40 +1193,30 @@ export class ProjectService extends BaseService<IProject> {
       const db = tenantDb(knex, context.tenant);
       const query = db.table(tableName);
   
-      // Build search query
-      if (searchData.fields && searchData.fields.length > 0) {
-        query.where(function() {
-          searchData.fields!.forEach(field => {
-            if (field === 'client_name') {
-              this.orWhere('clients.client_name', 'ilike', `%${searchData.query}%`);
-            } else {
-              this.orWhere(`${tableName}.${field}`, 'ilike', `%${searchData.query}%`);
-            }
-          });
-        });
-      } else {
-        // Default search across all text fields
-        query.where(function() {
-          this.orWhere(`${tableName}.project_name`, 'ilike', `%${searchData.query}%`)
-            .orWhere(`${tableName}.description`, 'ilike', `%${searchData.query}%`)
-            .orWhere(`${tableName}.wbs_code`, 'ilike', `%${searchData.query}%`);
-        });
-      }
-  
+      // Search columns come from the policy guard: hidden columns drop out of the match set, whether they were
+      // defaulted or named explicitly in `fields`.
+      const guard = await createPredicateGuard(knex, context, 'project');
+      const searchColumns = searchData.fields && searchData.fields.length > 0
+        ? searchData.fields.map(field => field === 'client_name'
+            ? { column: 'clients.client_name', field: 'client_name' }
+            : { column: `${tableName}.${field}`, field })
+        : ['project_name', 'description', 'wbs_code'].map(field => `${tableName}.${field}`);
+      guard.search(query, searchColumns, searchData.query);
+
       // Apply filters
       if (searchData.status && searchData.status.length > 0) {
-        query.whereIn(`${tableName}.status`, searchData.status);
+        guard.filter(query, `${tableName}.status`, (q, c) => { q.whereIn(c, searchData.status!); });
       }
       if (searchData.client_ids && searchData.client_ids.length > 0) {
-        query.whereIn(`${tableName}.client_id`, searchData.client_ids);
+        guard.filter(query, `${tableName}.client_id`, (q, c) => { q.whereIn(c, searchData.client_ids!); });
       }
       if (searchData.assigned_to_ids && searchData.assigned_to_ids.length > 0) {
-        query.whereIn(`${tableName}.assigned_to`, searchData.assigned_to_ids);
+        guard.filter(query, `${tableName}.assigned_to`, (q, c) => { q.whereIn(c, searchData.assigned_to_ids!); });
       }
       if (!searchData.include_inactive) {
-        query.where(`${tableName}.is_inactive`, false);
+        guard.filter(query, `${tableName}.is_inactive`, (q, c) => { q.where(c, false); });
       }
-  
+
       // Add client join for client name search
       db.tenantJoin(query, 'clients', `${tableName}.client_id`, 'clients.client_id', { type: 'left' });
       query
@@ -1489,27 +1479,28 @@ export class ProjectService extends BaseService<IProject> {
       )
       .orderBy(`${tableName}.project_name`);
 
-    // Apply filters
+    // Apply filters through the policy guard (hidden columns match nothing)
+    const guard = await createPredicateGuard(knex, context, 'project');
     if (filters.project_name) {
-      query.where(`${tableName}.project_name`, 'ilike', `%${filters.project_name}%`);
+      guard.filter(query, `${tableName}.project_name`, (q, c) => { q.where(c, 'ilike', `%${filters.project_name}%`); });
     }
     if (filters.client_id) {
-      query.where(`${tableName}.client_id`, filters.client_id);
+      guard.filter(query, `${tableName}.client_id`, (q, c) => { q.where(c, filters.client_id); });
     }
     if (filters.status) {
-      query.where(`${tableName}.status`, filters.status);
+      guard.filter(query, `${tableName}.status`, (q, c) => { q.where(c, filters.status); });
     }
     if (filters.assigned_to) {
-      query.where(`${tableName}.assigned_to`, filters.assigned_to);
+      guard.filter(query, `${tableName}.assigned_to`, (q, c) => { q.where(c, filters.assigned_to); });
     }
     if (filters.start_date_from) {
-      query.where(`${tableName}.start_date`, '>=', filters.start_date_from);
+      guard.filter(query, `${tableName}.start_date`, (q, c) => { q.where(c, '>=', filters.start_date_from); });
     }
     if (filters.start_date_to) {
-      query.where(`${tableName}.start_date`, '<=', filters.start_date_to);
+      guard.filter(query, `${tableName}.start_date`, (q, c) => { q.where(c, '<=', filters.start_date_to); });
     }
     if (filters.is_inactive !== undefined) {
-      query.where(`${tableName}.is_inactive`, filters.is_inactive);
+      guard.filter(query, `${tableName}.is_inactive`, (q, c) => { q.where(c, filters.is_inactive); });
     }
 
     const projects = await query;
