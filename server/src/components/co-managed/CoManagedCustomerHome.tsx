@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { CoManagedFeatureBoundary } from './CoManagedFeatureBoundary';
+import { CoManagedUpgradeEntry } from './CoManagedUpgrade';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedWorkspaceState, type CoManagedWorkspaceState } from '@/lib/actions/coManagedWorkspaceActions';
@@ -51,6 +53,7 @@ export default function CoManagedCustomerHome() {
           </CardContent>
         </Card>
       )}
+      <CoManagedFeatureBoundary mode="serves"><CoManagedUpgradeEntry /></CoManagedFeatureBoundary>
       {state.kind !== 'none' && <CoManagedRelationshipHistory idPrefix="co-managed-home" />}
     </div>
   );

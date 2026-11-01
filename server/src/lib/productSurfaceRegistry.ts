@@ -77,6 +77,14 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
   },
   {
+    // The customer's own upgrade-to-PSA screen. psa stays allowed so the post-upgrade "completed" screen and its
+    // "Open AlgaPSA" button still render after the tenant flips to psa; the page's
+    // requireCapabilityForPage('co-managed', …, 'serves') keeps flag-off / no-entitlement tenants at 404.
+    group: 'msp_co_managed_upgrade',
+    staticPrefixes: ['/msp/co-management/upgrade'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
+  },
+  {
     // Sponsor-only queue of tickets customers shared with the sponsor, and its shared-ticket screen. Only a PSA
     // sponsor has them; the capability gate in the route layout decides whether a PSA tenant sees them.
     group: 'msp_co_managed_customer_tickets',
