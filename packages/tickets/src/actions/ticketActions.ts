@@ -113,6 +113,7 @@ import {
 } from '../lib/instantiateTicketTemplate';
 import { asJsonColumn } from '../lib/recurring/jsonColumn';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
+import { authorizeTicketRecordAccess, type TicketRecordRow } from '../lib/ticketRecordAuthorization';
 import { extractActiveWatcherContactIds } from '@alga-psa/authorization/portal/visibility';
 import {
   addTicketCommentInTransaction,
@@ -1323,6 +1324,15 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       if (!currentTicket) {
         throw new Error('Ticket not found');
       }
+
+      await authorizeTicketRecordAccess({
+        trx,
+        tenant,
+        user,
+        ticketId: id,
+        action: 'update',
+        ticketRow: currentTicket as TicketRecordRow,
+      });
 
       // Clean up the data before update
       const updateData = { ...validatedData };

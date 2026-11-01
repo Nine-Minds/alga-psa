@@ -2575,9 +2575,8 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
 /**
  * Core ticket-update logic, executed inside a caller-provided transaction.
  *
- * Intentionally does NOT check permissions — callers must authorize first. The public
- * `updateTicketWithCache` wrapper performs the `ticket:update` check; bulk callers hoist
- * a single check and reuse this core per ticket, avoiding one permission lookup per row.
+ * Enforces per-record authorization for every native caller. System auto-close and
+ * collaboration edits use their explicit, separately-authorized contexts.
  */
 export interface UpdateTicketInTransactionOptions {
   /** Close despite unmet close rules; honored only with ticket:close_override. */
@@ -2673,6 +2672,20 @@ export async function updateTicketInTransaction(
           .where({ master_ticket_id: id }).forShare().first();
         if (bundle?.mode === 'sync_updates') throw new Error('Shared bundle workflow edits require authority for every child ticket');
       }
+    }
+
+    // Native ticket writes enforce bundle narrowing at their shared write boundary.
+    // System auto-close has no principal; collaboration already passed shared-work
+    // authority and its field allow-list above (spec: 2026-11-01-msp-ticket-save-record-authz).
+    if (!isSystemActor && !collaboration) {
+      await authorizeTicketRecordAccess({
+        trx,
+        tenant,
+        user,
+        ticketId: id,
+        action: 'update',
+        ticketRow: currentTicket as TicketRecordRow,
+      });
     }
 
     // A bundled child's workflow fields are locked only while its master is in
