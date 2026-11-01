@@ -19,7 +19,7 @@ vi.mock('../tenant-email-ingestion-activities.js', () => ({}));
 vi.mock('../tenant-suspension-activities.js', () => ({}));
 vi.mock('@temporalio/activity', () => ({ Context: { current: () => ({ log: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }) } }));
 
-import { endTenantCoManagedSponsorships } from '../tenant-deletion-activities';
+import { endTenantCoManagedSponsorships } from '../co-managed-tenant-deletion-activities';
 
 // Activity-level coverage only: there is no Temporal test environment on this host, so the
 // workflow-level ordering is exercised by tenant-deletion-workflow.behavior.test.ts (mocked harness).
