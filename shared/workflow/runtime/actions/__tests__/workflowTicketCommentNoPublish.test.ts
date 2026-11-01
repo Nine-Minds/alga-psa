@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useNativeCoManagedVerdict } from './helpers/nativeCoManagedVerdict';
 
 /**
  * CM L5 guard (DO-NOT-PORT #2): a workflow `tickets.add_comment` without Cc/Bcc must not
@@ -28,6 +29,7 @@ vi.mock('../businessOperations/shared', async (importOriginal) => {
 });
 
 describe('workflow tickets.add_comment does not publish TICKET_COMMENT_ADDED', () => {
+  useNativeCoManagedVerdict();
   beforeEach(() => { createCommentMock.mockClear(); publishEventMock.mockClear(); });
 
   it('passes no event publisher for public and internal comments without Cc/Bcc', async () => {
