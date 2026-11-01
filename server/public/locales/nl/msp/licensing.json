@@ -716,6 +716,21 @@
       "rejected": "Deze taak kon niet worden opgeslagen.",
       "saved": "Opgeslagen.",
       "save": "Opslaan"
+    },
+    "portableExport": {
+      "title": "Werkruimte exporteren",
+      "description": "Download een versleuteld, draagbaar archief van de records en bestanden in uw werkruimte.",
+      "recovery": "Bewaar de herstelwachtwoordzin op een veilige plek. Zonder deze kan het archief niet worden geopend.",
+      "connections": "Het archief bevat de records van uw werkruimte en de bestanden die in uw werkruimte zijn opgeslagen. Documentrecords en -koppelingen en de geschiedenis van tijd, planning, vergaderingen en gesprekken zijn nog niet inbegrepen en volgen in een latere release. Facturering, MSP-privégegevens en integratiegeheimen zijn niet inbegrepen.",
+      "passphrase": "Herstelwachtwoordzin",
+      "confirmPassphrase": "Herstelwachtwoordzin bevestigen",
+      "download": "Archief voorbereiden en downloaden",
+      "requested": "Uw verzoek wordt in een nieuw tabblad geopend. Het voorbereiden kan enkele minuten duren; uw browser downloadt het bestand zodra het klaar is.",
+      "loadError": "U kunt deze werkruimte niet exporteren met uw huidige toegang.",
+      "lengthError": "Gebruik een wachtwoordzin van 16 tot 1024 UTF-8-bytes.",
+      "matchError": "De herstelwachtwoordzinnen moeten overeenkomen.",
+      "unavailable": "Werkruimte-export is niet beschikbaar in deze editie.",
+      "loading": "Laden…"
     }
   },
   "common": {

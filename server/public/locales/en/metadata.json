@@ -623,6 +623,9 @@
         "title": "Shared Tasks",
         "taskTitle": "Shared Task",
         "projectTitle": "Shared Project"
+      },
+      "export": {
+        "title": "Export Workspace"
       }
     }
   },

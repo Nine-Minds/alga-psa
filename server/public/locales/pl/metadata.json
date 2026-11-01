@@ -541,6 +541,9 @@
         "title": "Udostępnione zadania",
         "taskTitle": "Udostępnione zadanie",
         "projectTitle": "Udostępniony projekt"
+      },
+      "export": {
+        "title": "Eksportuj obszar roboczy"
       }
     }
   },
