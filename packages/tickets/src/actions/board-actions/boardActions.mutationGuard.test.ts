@@ -83,11 +83,21 @@ function createTrx() {
   }) as any;
 }
 
+let warnSpy: ReturnType<typeof vi.spyOn>;
+/** Which check refused, as logged server-side (the caller only ever sees the generic denial). */
+const refusedBy = () =>
+  warnSpy.mock.calls
+    .filter((c) => c[0] === '[boards] mutation refused')
+    .map((c) => (c[1] as { code: string }).code);
+const PRINCIPAL = 'BOARD_PRINCIPAL_NOT_ALLOWED';
+const PERMISSION = 'BOARD_PERMISSION_MISSING';
+
 const denied = { permissionError: expect.stringContaining('Permission denied') };
 
 describe('board mutation guard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     granted.clear();
     writes.length = 0;
     reads.length = 0;
@@ -106,6 +116,7 @@ describe('board mutation guard', () => {
       const { createBoard } = await import('./boardActions');
       const result = await createBoard({ board_name: 'X', is_default: true } as any);
       expect(result).toMatchObject(denied);
+      expect(refusedBy()).toEqual([PERMISSION]);
       expect(withTransactionMock).not.toHaveBeenCalled();
       expect(reads).toHaveLength(0);
       expect(writes).toHaveLength(0);
@@ -117,7 +128,18 @@ describe('board mutation guard', () => {
       const { createBoard } = await import('./boardActions');
       const result = await createBoard({ board_name: 'X' } as any);
       expect(result).toMatchObject(denied);
+      expect(refusedBy()).toEqual([PRINCIPAL]);
       expect(writes).toHaveLength(0);
+    });
+
+    it('does not leak which check refused: portal and missing-permission callers see identical text', async () => {
+      const { createBoard } = await import('./boardActions');
+      const missing = await createBoard({ board_name: 'X' } as any);
+      currentUser.user_type = 'client';
+      granted.add('ticket_settings:create');
+      const portal = await createBoard({ board_name: 'X' } as any);
+      expect(portal).toEqual(missing);
+      expect(refusedBy()).toEqual([PERMISSION, PRINCIPAL]);
     });
 
     it('allows a permitted MSP user', async () => {
@@ -155,6 +177,7 @@ describe('board mutation guard', () => {
       const { updateBoard } = await import('./boardActions');
       const result = await updateBoard('board-a', { is_default: true, board_name: 'Hijack' } as any);
       expect(result).toMatchObject(denied);
+      expect(refusedBy()).toEqual([PERMISSION]);
       expect(withTransactionMock).not.toHaveBeenCalled();
       expect(reads).toHaveLength(0);
       expect(writes).toHaveLength(0);
@@ -166,6 +189,7 @@ describe('board mutation guard', () => {
       const { updateBoard } = await import('./boardActions');
       const result = await updateBoard('board-a', { board_name: 'Y' } as any);
       expect(result).toMatchObject(denied);
+      expect(refusedBy()).toEqual([PRINCIPAL]);
       expect(writes).toHaveLength(0);
     });
 
@@ -200,6 +224,7 @@ describe('board mutation guard', () => {
       const { deleteBoard } = await import('./boardActions');
       const result = await deleteBoard('board-a');
       expect(result).toMatchObject({ success: false, code: 'PERMISSION_DENIED' });
+      expect(refusedBy()).toEqual([PERMISSION]);
       expect(withTransactionMock).not.toHaveBeenCalled();
       expect(writes).toHaveLength(0);
     });
@@ -210,6 +235,7 @@ describe('board mutation guard', () => {
       const { deleteBoard } = await import('./boardActions');
       const result = await deleteBoard('board-a');
       expect(result).toMatchObject({ success: false, code: 'PERMISSION_DENIED' });
+      expect(refusedBy()).toEqual([PRINCIPAL]);
       expect(withTransactionMock).not.toHaveBeenCalled();
     });
 
@@ -218,6 +244,7 @@ describe('board mutation guard', () => {
       const { deleteBoard } = await import('./boardActions');
       const result = await deleteBoard('board-a').catch((e: Error) => e);
       expect(result).not.toMatchObject({ code: 'PERMISSION_DENIED' });
+      expect(refusedBy()).toEqual([]);
       expect(withTransactionMock).toHaveBeenCalled();
     });
   });

@@ -28,6 +28,12 @@ import {
   type ParsedCreateBoardInput,
   type ParsedUpdateBoardInput,
 } from './boardInputSchema';
+import {
+  BOARD_PERMISSION_DENIED,
+  evaluateBoardMutationPolicy,
+  type BoardDenialCode,
+  type BoardMutationAction,
+} from './boardPolicy';
 
 export interface FindBoardByNameOutput {
   id: string;
@@ -322,17 +328,9 @@ export const getBoardListStats = withAuth(async (_user, { tenant }): Promise<Rec
   }
 });
 
-type BoardMutationAction = 'create' | 'update' | 'delete';
-
-const BOARD_PERMISSION_DENIED: Record<BoardMutationAction, { message: string; i18nKey: string }> = {
-  create: { message: 'Permission denied: Cannot create boards', i18nKey: 'features/tickets:errors.settings.createDenied' },
-  update: { message: 'Permission denied: Cannot update ticket settings', i18nKey: 'features/tickets:errors.settings.updateDenied' },
-  delete: { message: 'Permission denied: Cannot delete boards', i18nKey: 'features/tickets:errors.settings.deleteDenied' },
-};
-
 type BoardGuardResult<Input> =
   | { ok: true; data: Input }
-  | { ok: false; denied: boolean; error: BoardActionError };
+  | { ok: false; denied: boolean; error: BoardActionError; code?: BoardDenialCode };
 
 /**
  * The single authorization + input gate for board mutations.
@@ -371,18 +369,15 @@ async function boardMutationGuard(
   input?: unknown,
   trx?: Knex | Knex.Transaction
 ): Promise<BoardGuardResult<any>> {
-  const denial = BOARD_PERMISSION_DENIED[action];
-  const denied = {
-    ok: false as const,
-    denied: true,
-    error: permissionError(denial.message, denial.i18nKey),
-  };
-
-  if (user.user_type !== 'internal') {
-    return denied;
-  }
-  if (!await hasPermission(user as any, 'ticket_settings', action, trx)) {
-    return denied;
+  const decision = await evaluateBoardMutationPolicy(user, action, hasPermission, trx);
+  if (!decision.allowed) {
+    const denial = BOARD_PERMISSION_DENIED[action];
+    return {
+      ok: false,
+      denied: true,
+      code: decision.code,
+      error: permissionError(denial.message, denial.i18nKey),
+    };
   }
   if (action === 'delete') {
     return { ok: true, data: undefined };
