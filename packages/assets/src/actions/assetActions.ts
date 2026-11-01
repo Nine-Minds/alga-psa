@@ -63,6 +63,7 @@ import {
 import { formatClientLocation, type ClientLocationLike } from '../lib/formatClientLocation';
 import { advanceMaintenanceDate, parseCustomRecurrence } from '../lib/maintenanceRecurrence';
 import { orderEntityAssetIds, type EntityAssociationRow } from '../lib/entityAssetOrder';
+import { applyAssetListFilters, joinAssetListRelations } from '../lib/assetListFilters';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { toCalendarDateString, toISOTimestamp, toPlainDate } from '@alga-psa/core';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -2249,78 +2250,10 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
                 return allowed[sortBy] ?? null;
             };
 
-            const applyFilters = (query: Knex.QueryBuilder) => {
-                if (validatedParams.client_id) {
-                    query.where('assets.client_id', validatedParams.client_id);
-                }
-                if (validatedParams.location_id) {
-                    query.where('assets.location_id', validatedParams.location_id);
-                }
-                if (validatedParams.contact_name_id) {
-                    query.where('assets.contact_name_id', validatedParams.contact_name_id);
-                }
-                if (validatedParams.asset_type) {
-                    query.where('assets.asset_type', validatedParams.asset_type);
-                }
-                if (validatedParams.status) {
-                    query.where('assets.status', validatedParams.status);
-                }
-                if (validatedParams.ownership) {
-                    query.where('assets.ownership', validatedParams.ownership);
-                }
-                if (validatedParams.in_custody !== undefined) {
-                    // Keyed off the open custody episode, never off assets.status.
-                    const openCustody = tenantScopedTable(trx, 'asset_custody', tenant)
-                        .whereNull('closed_at')
-                        .select('asset_id');
-                    if (validatedParams.in_custody) {
-                        query.whereIn('assets.asset_id', openCustody);
-                    } else {
-                        query.whereNotIn('assets.asset_id', openCustody);
-                    }
-                }
-                if (validatedParams.vendor_id) {
-                    query.where('assets.vendor_id', validatedParams.vendor_id);
-                }
-                if (validatedParams.group_id) {
-                    query.whereIn(
-                        'assets.asset_id',
-                        tenantScopedTable(trx, 'asset_group_members', tenant)
-                            .where({ group_id: validatedParams.group_id })
-                            .select('asset_id')
-                    );
-                }
-                if (validatedParams.ungrouped_only) {
-                    query.whereNotIn(
-                        'assets.asset_id',
-                        tenantScopedTable(trx, 'asset_group_members', tenant).select('asset_id')
-                    );
-                }
-                if (validatedParams.search) {
-                    const searchTerm = `%${validatedParams.search}%`;
-                    query.where(function () {
-                        this.whereILike('assets.name', searchTerm)
-                            .orWhereILike('assets.asset_tag', searchTerm)
-                            .orWhereILike('assets.serial_number', searchTerm)
-                            .orWhereILike('assets.location', searchTerm)
-                            .orWhereILike('assets.manufacturer', searchTerm)
-                            .orWhereILike('assets.model', searchTerm)
-                            .orWhereILike('clients.client_name', searchTerm);
-                    });
-                }
-                if (validatedParams.agent_status) {
-                    query.where('assets.agent_status', validatedParams.agent_status);
-                }
-                if (validatedParams.rmm_managed !== undefined) {
-                    if (validatedParams.rmm_managed) {
-                        query.whereNotNull('assets.rmm_provider').whereNotNull('assets.rmm_device_id');
-                    } else {
-                        query.where(function () {
-                            this.whereNull('assets.rmm_provider').orWhereNull('assets.rmm_device_id');
-                        });
-                    }
-                }
-            };
+            // Predicates live in the shared asset-list filter builder so the
+            // grid and the dashboard's by-type counts can never drift apart.
+            const applyFilters = (query: Knex.QueryBuilder) =>
+                applyAssetListFilters(query, { trx, tenant, params: validatedParams });
 
             const applySort = (query: Knex.QueryBuilder) => {
                 const sortColumn = resolveSortColumn(validatedParams.sort_by);
@@ -2339,11 +2272,7 @@ export const listAssets = withAuth(async (user, { tenant }, params: AssetQueryPa
             };
 
             const buildAssetListQuery = () => {
-                const query = tenantScopedTable(trx, 'assets', tenant);
-                tenantDb(trx, tenant).tenantJoin(query, 'clients', 'clients.client_id', 'assets.client_id', { type: 'left' });
-                tenantDb(trx, tenant).tenantJoin(query, 'contacts', 'contacts.contact_name_id', 'assets.contact_name_id', { type: 'left' });
-                tenantDb(trx, tenant).tenantJoin(query, 'vendors', 'vendors.vendor_id', 'assets.vendor_id', { type: 'left' });
-
+                const query = joinAssetListRelations(trx, tenant);
                 applyFilters(query);
                 return query;
             };
