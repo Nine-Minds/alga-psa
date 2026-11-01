@@ -13,6 +13,7 @@ export class ApiPriorityController extends ApiBaseController {
 
     super(priorityService, {
       resource: 'priority',
+      permissionResource: 'ticket',
       querySchema: priorityListQuerySchema,
       permissions: {
         read: 'read',

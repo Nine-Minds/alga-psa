@@ -22,7 +22,9 @@ export const createBoardSchema = z.object({
 });
 
 // Update board schema (all fields optional)
-export const updateBoardSchema = createUpdateSchema(createBoardSchema);
+export const updateBoardSchema = createUpdateSchema(createBoardSchema).extend({
+  default_assigned_team_id: uuidSchema.nullable().optional(),
+});
 
 // Board response schema
 export const boardResponseSchema = z.object({
@@ -37,6 +39,7 @@ export const boardResponseSchema = z.object({
   display_itil_impact: z.boolean().nullable(),
   display_itil_urgency: z.boolean().nullable(),
   default_assigned_to: uuidSchema.nullable(),
+  default_assigned_team_id: uuidSchema.nullable(),
   inbound_reply_reopen_enabled: z.boolean().optional(),
   inbound_reply_reopen_cutoff_hours: z.number().int().optional(),
   inbound_reply_reopen_status_id: uuidSchema.nullable().optional(),

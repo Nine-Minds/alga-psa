@@ -492,22 +492,25 @@ export function handleApiError(error: any): NextResponse {
   }
 
   if (error.code === '42703') { // PostgreSQL undefined column
-    // The raw db detail names the relation and column (e.g. `column "created_by"
-    // of relation "contracts" does not exist`), which is operational diagnostics,
-    // not a safe public message. Log it server-side only.
+    // Keep identifiers in structured logs for operators; never return them in
+    // production where responses may be copied into customer-visible reports.
+    const missingColumn = error.message?.match(/column\s+"([^"]+)"/i)?.[1];
+    const relation = error.message?.match(/relation\s+"([^"]+)"/i)?.[1];
+    const diagnostic = {
+      table: error.table ?? relation,
+      column: error.column ?? missingColumn,
+      timestamp: new Date().toISOString(),
+    };
     console.error('Undefined database column (42703):', {
+      ...diagnostic,
       message: error.message,
-      detail: error.detail,
-      table: error.table,
-      column: error.column,
-      constraint: error.constraint,
-      timestamp: new Date().toISOString()
     });
+    const isProduction = process.env.NODE_ENV === 'production';
     return NextResponse.json({
       error: {
         code: 'INTERNAL_CONFIGURATION',
         message: 'The server is misconfigured for this operation. Please contact support.',
-        details: undefined
+        ...(isProduction ? {} : { details: diagnostic }),
       }
     }, { status: 500 });
   }
