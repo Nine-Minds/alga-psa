@@ -48385,7 +48385,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "project_task",
             "non_billable_category",
             "ad_hoc",
-            "interaction"
+            "interaction",
+            "co_managed"
           ]
         },
         "start_time": {
@@ -48640,7 +48641,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "project_task",
                   "non_billable_category",
                   "ad_hoc",
-                  "interaction"
+                  "interaction",
+                  "co_managed"
                 ]
               },
               "start_time": {
@@ -48764,7 +48766,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "project_task",
                       "non_billable_category",
                       "ad_hoc",
-                      "interaction"
+                      "interaction",
+                      "co_managed"
                     ]
                   },
                   "start_time": {
@@ -49642,7 +49645,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "project_task",
             "non_billable_category",
             "ad_hoc",
-            "interaction"
+            "interaction",
+            "co_managed"
           ]
         },
         "start_time": {
@@ -51051,6 +51055,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                         "non_billable_category",
                         "ad_hoc",
                         "interaction",
+                        "co_managed",
                         null
                       ]
                     },
@@ -51609,6 +51614,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "non_billable_category",
                   "ad_hoc",
                   "interaction",
+                  "co_managed",
                   null
                 ]
               },

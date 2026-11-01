@@ -1,0 +1,25 @@
+{
+  "loading": "Laden…",
+  "reload": "Opnieuw laden",
+  "effort": {
+    "title": "Inspanning",
+    "description": "Tijd geregistreerd door het team van de klant, uw team en beide samen. Elke registratie wordt één keer geteld.",
+    "error": "De inspanning kon niet worden geladen.",
+    "unavailable": "Verborgen",
+    "hours": "{{value}} u",
+    "customerMinutes": "Team van de klant",
+    "mspMinutes": "Uw team",
+    "combinedMinutes": "Gecombineerd",
+    "customerView": {
+      "customerMinutes": "Uw team",
+      "mspMinutes": "MSP"
+    }
+  },
+  "time": {
+    "log": "Tijd registreren",
+    "unavailable": "Tijdregistratie is niet beschikbaar voor dit werk."
+  },
+  "ticket": {
+    "restricted": "Beperkt werkitem"
+  }
+}

@@ -17242,6 +17242,7 @@ components:
             - non_billable_category
             - ad_hoc
             - interaction
+            - co_managed
         start_time:
           type: string
           format: date-time
@@ -17301,6 +17302,7 @@ components:
             - non_billable_category
             - ad_hoc
             - interaction
+            - co_managed
         start_time:
           type: string
           format: date-time
@@ -17359,6 +17361,7 @@ components:
                   - non_billable_category
                   - ad_hoc
                   - interaction
+                  - co_managed
               start_time:
                 type: string
                 format: date-time
@@ -17433,6 +17436,7 @@ components:
                       - non_billable_category
                       - ad_hoc
                       - interaction
+                      - co_managed
                   start_time:
                     type: string
                     format: date-time
@@ -17794,6 +17798,7 @@ components:
                   - non_billable_category
                   - ad_hoc
                   - interaction
+                  - co_managed
                   - null
               approval_status:
                 type:
@@ -18087,6 +18092,7 @@ components:
                         - non_billable_category
                         - ad_hoc
                         - interaction
+                        - co_managed
                         - null
                     approval_status:
                       type:
