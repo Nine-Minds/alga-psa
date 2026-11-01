@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ProductCode } from '@alga-psa/types';
-import { resolveProductRouteBehavior } from '../../../lib/productSurfaceRegistry';
+import { MSP_ROUTE_RULES, matchesStaticPrefix, resolveProductRouteBehavior } from '../../../lib/productSurfaceRegistry';
 
 type Behavior = 'allowed' | 'upgrade_boundary' | 'not_found';
 
@@ -35,6 +35,15 @@ describe('co-managed product surface (L1a)', () => {
     expect(resolveProductRouteBehavior('co_managed', route)).toBe('allowed');
     expect(resolveProductRouteBehavior('algadesk', route)).toBe('not_found');
   });
+
+  // Smoke regression: a co_managed customer admin got "Page not available" on the upgrade screen because no rule
+  // matched it ahead of the sponsor-only /msp/co-management prefix. The first matching rule must be the upgrade rule.
+  it.each(['/msp/co-management/upgrade', '/msp/co-management/upgrade/complete'])(
+    '%s resolves to the msp_co_managed_upgrade rule', (route) => {
+      const first = MSP_ROUTE_RULES.find((rule) => matchesStaticPrefix(route, rule.staticPrefixes ?? []));
+      expect(first?.group).toBe('msp_co_managed_upgrade');
+      expect(resolveProductRouteBehavior('co_managed', route)).toBe('allowed');
+    });
 
   it.each(['/msp/co-management/customer-tickets', '/msp/co-management/customer-tickets/r/t', '/msp/co-management/administrationx', '/msp/co-management/upgradex'])(
     'the administration rule does not open the rest of the sponsor prefix (%s)', (route) => {
