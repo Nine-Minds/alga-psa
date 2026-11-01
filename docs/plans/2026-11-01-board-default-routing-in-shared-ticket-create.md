@@ -40,7 +40,8 @@ load-bearing:
 - **absent (`undefined`)** — the caller expressed no preference → apply the
   board default.
 - **explicit `null`** — the caller asked for "unassigned" → keep null; never
-  overwrite caller intent.
+  overwrite caller intent. This also opts out of a board team default, since a
+  team lead would otherwise become the primary assignee.
 
 This is documented in the helper's JSDoc and asserted by tests. It is also why
 the rule cannot live in a `zod` default (a default erases the distinction) or
@@ -48,8 +49,9 @@ in a "if falsy" branch (null and undefined would collapse).
 
 ### Precedence
 
-1. caller value (non-null) wins;
-2. board `default_assigned_to` / `default_assigned_team_id`;
+1. a supplied caller value, including explicit null, wins;
+2. board `default_assigned_to` / `default_assigned_team_id` only for omitted
+   fields;
 3. unset.
 
 For the team, `assignTeamToTicketCore` resolves the primary assignee as
@@ -79,10 +81,9 @@ agents — the same behaviour as assigning the team by hand, which is the point.
    - reads the board row once (`default_assigned_to`, `default_assigned_team_id`);
    - returns `assignedTo` only when `input.assigned_to === undefined` and the
      board value is non-null;
-   - returns `defaultTeamId` only when `input.assigned_team_id` is absent/null
-     **and** `input.assigned_to` was not explicitly provided by the caller
-     (a caller who names a person is not asking for team defaults to reassign
-     them);
+   - returns `defaultTeamId` only when both assignment fields are omitted. An
+     explicit null team is preserved, and any explicit user choice (including
+     null) opts out of the team default so its lead cannot replace caller intent;
    - **soft-fails**: an inactive/deleted default user, a missing team, or a
      `team_not_found` / `team_lead_missing` from the core is logged and skipped.
      A default must never make ticket creation fail — a ticket with no routing

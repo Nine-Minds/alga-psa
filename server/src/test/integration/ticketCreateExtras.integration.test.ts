@@ -165,6 +165,37 @@ describe('addTicket create extras (integration)', () => {
     expect(links.map((l: any) => l.asset_id)).toEqual([assetA]);
   });
 
+  it('persists board routing when Quick Add leaves the assignment field omitted', async () => {
+    const defaultAssigneeId = await createUser(context.db, tenantId, {
+      username: 'quick-add-default-assignee', first_name: 'Quinn', last_name: 'Default', email: 'quinn@example.com', user_type: 'internal',
+    });
+    const teamId = uuidv4();
+    await tt('teams').insert({ tenant: tenantId, team_id: teamId, team_name: 'Quick Add defaults', manager_id: defaultAssigneeId });
+    await tt('team_members').insert({ tenant: tenantId, team_id: teamId, user_id: defaultAssigneeId });
+    await tt('boards').where({ board_id: boardId }).update({
+      default_assigned_to: defaultAssigneeId,
+      default_assigned_team_id: teamId,
+    });
+
+    // QuickAddTicket omits untouched empty assignment fields. Sending an empty
+    // value would instead be an explicit request to keep the ticket unassigned.
+    const form = createForm();
+    form.delete('assigned_to');
+    const result: any = await ticketActions.addTicket(form);
+    expect(result?.ticket_id).toBeTruthy();
+
+    const row = await tt('tickets').where({ ticket_id: result.ticket_id }).first();
+    expect(row.assigned_to).toBe(defaultAssigneeId);
+    expect(row.assigned_team_id).toBe(teamId);
+
+    const explicitUnassigned: any = await ticketActions.addTicket(createForm());
+    const unassignedRow = await tt('tickets').where({ ticket_id: explicitUnassigned.ticket_id }).first();
+    expect(unassignedRow.assigned_to).toBeNull();
+    expect(unassignedRow.assigned_team_id).toBeNull();
+
+    await tt('boards').where({ board_id: boardId }).update({ default_assigned_to: null, default_assigned_team_id: null });
+  });
+
   it('rolls the whole create back when an asset belongs to another client', async () => {
     const before = await countTickets();
     // TestContext runs everything inside one outer transaction, so addTicket's withTransaction would

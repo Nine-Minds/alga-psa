@@ -126,7 +126,8 @@ export const createTicketFieldsSchema = z.object({
   status_id: uuidSchema,
   category_id: uuidSchema.optional(),
   subcategory_id: uuidSchema.optional(),
-  assigned_to: uuidSchema.optional(),
+  assigned_to: uuidSchema.nullable().optional(),
+  assigned_team_id: uuidSchema.nullable().optional(),
   priority_id: uuidSchema,
   // Optional classification references; stored as nullable same-tenant UUIDs.
   severity_id: uuidSchema.optional(),

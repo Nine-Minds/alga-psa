@@ -1307,18 +1307,9 @@ export async function createTicketFromEmail(
       // Durable inbound processing injects its transactional outbox publisher.
       // Every other path defers event-bus publication until this transaction commits.
       const eventPublisher = executionOptions?.eventPublisher ?? new WorkflowEventPublisher({ transaction: trx });
-      const db = tenantDb(trx, tenant);
-      // Determine assigned_to: use provided value or fall back to board's default
-      let assignedTo = ticketData.assigned_to;
-      if (!assignedTo && ticketData.board_id) {
-        const board = await db.table('boards')
-          .select('default_assigned_to')
-          .where({ board_id: ticketData.board_id })
-          .first();
-        if (board?.default_assigned_to) {
-          assignedTo = board.default_assigned_to;
-        }
-      }
+      // Explicit email routing is passed through; omitted fields inherit board
+      // defaults at TicketModel.createTicket's shared insert seam.
+      const assignedTo = ticketData.assigned_to;
 
       // A matched contact with no user account is the actor of the inbound ticket.
       // Without one, TICKET_CREATED is published as a SYSTEM actor with no userId.
