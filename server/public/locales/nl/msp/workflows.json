@@ -1479,6 +1479,9 @@
         "contains": "bevat",
         "starts_with": "begint met",
         "ends_with": "eindigt op",
+        "not_contains": "bevat niet",
+        "not_starts_with": "begint niet met",
+        "not_ends_with": "eindigt niet op",
         "is_empty": "is leeg",
         "is_not_empty": "is niet leeg"
       },

@@ -138,7 +138,9 @@ async function openCreateForm() {
   fireEvent.change(startField(), { target: { value: START } });
 }
 
-describe('QuickAddInteraction duration/range agreement', () => {
+// Each case mounts the full QuickAddInteraction form and waits on its async option loads; on a
+// loaded CI runner (Nx runs projects in parallel) a case exceeded vitest's 5s default.
+describe('QuickAddInteraction duration/range agreement', { timeout: 30_000 }, () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.permissions.mockResolvedValue([]);

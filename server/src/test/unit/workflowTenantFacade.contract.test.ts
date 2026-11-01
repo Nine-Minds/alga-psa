@@ -197,11 +197,18 @@ describe('workflow tenant facade roots', () => {
       /\btrx\s*(?:<[^>]+>)?\s*\(\s*['`](?:boards|client_inbound_email_domains|clients|contact_additional_email_addresses|contacts|document_associations|documents|email_client_associations|email_providers|email_reply_tokens|inbound_ticket_defaults|statuses|tenant_settings|tickets|users)['`]/;
 
     expect(source).toContain("import { tenantDb } from '@alga-psa/db'");
-    expect(source).toContain("db.subquery('contact_additional_email_addresses as caea')");
+    expect(source).toContain("contactEmailMatch(db, trx, normalizedEmail)");
     expect(source).toContain("db.tenantJoin(query, 'statuses as s'");
     expect(source).not.toMatch(directRootPattern);
     expect(source).not.toMatch(/\.from\(\s*['`](?:contact_additional_email_addresses)['`]/);
     expect(source).not.toMatch(/\.where\(\{\s*tenant\s*:/);
+
+    // The contact address-match rule is shared; its additional-address lookup must stay tenant-scoped.
+    const contactMatchSource = read('shared/lib/email/contactEmailMatch.ts');
+    expect(contactMatchSource).toContain("db.subquery('contact_additional_email_addresses as caea')");
+    expect(contactMatchSource).not.toMatch(directRootPattern);
+    expect(contactMatchSource).not.toMatch(/\.from\(\s*['`](?:contact_additional_email_addresses)['`]/);
+    expect(contactMatchSource).not.toMatch(/\b(?:knex|trx)\s*\(\s*['`]contact_additional_email_addresses/);
 
     const metadataSource = read('packages/db/src/lib/tenantTableMetadata.ts');
     expect(metadataSource).toContain("client_inbound_email_domains: { scope: 'tenant' }");

@@ -2151,6 +2151,7 @@ export const createClientContractFromWizard = withAuth(async (
           await upsertBucketOverlayInTransaction(
             trx,
             tenant,
+            user,
             hourlyPlanId,
             service.service_id,
             service.bucket_overlay,
@@ -2208,6 +2209,7 @@ export const createClientContractFromWizard = withAuth(async (
           await upsertBucketOverlayInTransaction(
             trx,
             tenant,
+            user,
             usagePlanId,
             service.service_id,
             service.bucket_overlay,

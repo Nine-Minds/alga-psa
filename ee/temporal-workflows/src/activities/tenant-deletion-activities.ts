@@ -34,7 +34,7 @@ import type {
   TriggerReactivationPasswordResetInput,
   RecordReactivationPaymentAlertInput,
 } from '../types/tenant-deletion-types.js';
-import { insertStripeSubscriptionForTenant } from '../db/tenant-operations.js';
+import { insertStripeSubscriptionForTenant, bindStripeCustomerToTenant } from '../db/tenant-operations.js';
 import { updateSubscriptionMetadata } from '../services/stripe-service.js';
 
 export {
@@ -345,6 +345,7 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'stripe_subscriptions',
   'stripe_prices',
   'stripe_products',
+  'stripe_customer_bindings',
   'stripe_customers',
   'stripe_accounts',
   'payment_webhook_events',
@@ -480,6 +481,8 @@ export const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_management_ticket_work',
   'co_managed_ticket_references',
   'co_management_command_receipts',
+  // Delivery ledger rows cite tickets/users only by soft id; leaf, before relationships.
+  'co_management_deliveries',
   'co_management_relationships',
 
   // === LEVEL 3: Mid-level entities ===
@@ -2327,6 +2330,7 @@ export async function linkSubscriptionToExistingTenant(
         throw new Error('MASTER_BILLING_TENANT_ID not configured');
       }
 
+      await bindStripeCustomerToTenant(trx, input.tenantId, input.stripeCustomerId);
       [stripeCustomer] = await tenantScopedTrx.table('stripe_customers')
         .insert({
           tenant: input.tenantId,
