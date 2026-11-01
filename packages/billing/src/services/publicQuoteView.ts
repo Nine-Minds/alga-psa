@@ -22,6 +22,7 @@ import Quote from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { QUOTE_ACTIVITY_TYPES } from '../lib/quoteActivityTypes';
+import { resolveQuoteItemTaxesIfIncluded } from './quoteCalculationService';
 
 export const PUBLIC_QUOTE_FIELDS = [
   'quote_id',
@@ -118,7 +119,21 @@ export async function loadPublicQuoteView(
     return null;
   }
 
-  const items = projectPublicQuoteItems(quote.quote_items ?? []);
+  // Server-resolved per-row tax for the live optional-item preview (not a DB column), same as
+  // getClientQuoteById. Runs on the caller's knex/trx, so the submit path computes it inside its
+  // locked transaction. Values are plain numbers (Map<string, number>), safe for canonicalJson.
+  // The item tax is part of the hashed view (see fingerprintPublicQuoteView): the signature binds
+  // to the tax inputs the signer saw, and a tax-rate change between render and submit yields `changed`.
+  let sourceItems: IQuoteItem[] = quote.quote_items ?? [];
+  if (quote.status === 'sent' && sourceItems.length > 0) {
+    const taxByItemId = await resolveQuoteItemTaxesIfIncluded(knex, tenant, quoteId);
+    sourceItems = sourceItems.map((item) =>
+      taxByItemId.has(item.quote_item_id)
+        ? { ...item, tax_amount_if_included: Number(taxByItemId.get(item.quote_item_id)) }
+        : item,
+    );
+  }
+  const items = projectPublicQuoteItems(sourceItems);
 
   const locationIds = Array.from(
     new Set(items.map((i) => i.location_id).filter((id): id is string => Boolean(id && id.trim()))),

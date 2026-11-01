@@ -7,13 +7,14 @@
  */
 
 import React, { useCallback, useMemo, useState } from 'react';
-import { computeQuoteTotals, isOptional, isQuoteItemIncluded } from '@alga-psa/core';
+import { isOptional, isQuoteItemIncluded } from '@alga-psa/core';
 import type { IQuoteItem } from '@alga-psa/types';
 import { CurrencyFormatProvider } from '@alga-psa/ui/lib';
 import { I18nProvider, useTranslation, type PreloadedNamespaceResources } from '@alga-psa/ui/lib/i18n/client';
 import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 import type { ClientPortalLocationSummary } from '@alga-psa/client-portal/actions';
-import { QuoteDocumentView, UNASSIGNED_KEY, type QuoteDocumentQuote } from './QuoteDocumentView';
+import { QuoteDocumentView, type QuoteDocumentQuote } from './QuoteDocumentView';
+import { computePublicQuotePreview } from './publicQuotePreview';
 import QuoteLinkDecisionPanel, { type QuoteLinkAgreement } from './QuoteLinkDecisionPanel';
 
 export type PublicQuoteReviewItem = Pick<
@@ -65,7 +66,16 @@ function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, toke
   );
   const [submitting, setSubmitting] = useState(false);
   const [settled, setSettled] = useState(false);
-  const onSettled = useCallback(() => setSettled(true), []);
+  // Status the server confirmed through the decision route; null until then (or for changed / invalid).
+  const [confirmedStatus, setConfirmedStatus] = useState<'accepted' | 'rejected' | null>(null);
+  const onSettled = useCallback((decision: 'accepted' | 'rejected' | null) => {
+    setSettled(true);
+    if (decision) setConfirmedStatus(decision);
+  }, []);
+  const displayQuote = useMemo(
+    () => (confirmedStatus ? { ...quote, status: confirmedStatus } : quote),
+    [quote, confirmedStatus],
+  );
 
   const canDecide = quote.status === 'sent' && !decidedNotice && !!token && !!agreement && !!quoteFingerprint && !settled;
   const hasOptionalItems = items.some((i) => i.is_optional);
@@ -76,18 +86,10 @@ function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, toke
     [items, selectedIds],
   );
   // Same pure function the server uses; if any base row lacks its tax input, fall back to persisted totals.
-  const preview = useMemo(() => {
-    if (!canEditSelections) return null;
-    if (previewItems.some((i) => !i.is_discount && typeof i.tax_amount_if_included !== 'number')) return null;
-    return computeQuoteTotals(
-      previewItems.map((i) => ({
-        ...i,
-        id: i.quote_item_id,
-        groupKey: i.location_id && i.location_id.trim().length > 0 ? i.location_id : UNASSIGNED_KEY,
-        taxAmountIfIncluded: i.tax_amount_if_included ?? 0,
-      })),
-    );
-  }, [canEditSelections, previewItems]);
+  const preview = useMemo(
+    () => (canEditSelections ? computePublicQuotePreview(previewItems) : null),
+    [canEditSelections, previewItems],
+  );
   const previewUnavailable = canEditSelections && preview === null;
 
   const handleToggle = useCallback((id: string, checked: boolean) => {
@@ -98,8 +100,11 @@ function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, toke
     });
   }, []);
 
-  const noticeText =
-    decidedNotice === 'accepted'
+  // No notice above an active form: "read-only" would contradict the Accept / Decline controls.
+  // After a settled decision the panel itself shows the outcome, so no notice either.
+  const noticeText = canDecide || settled
+    ? null
+    : decidedNotice === 'accepted'
       ? t('quotes.public.notice.accepted', { defaultValue: 'This quote has been accepted. It is shown here for your records.' })
       : decidedNotice === 'declined'
         ? t('quotes.public.notice.declined', { defaultValue: 'This quote has been declined. It is shown here for your records.' })
@@ -129,7 +134,7 @@ function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, toke
         </div>
       )}
       <QuoteDocumentView
-        quote={quote}
+        quote={displayQuote}
         items={previewItems}
         locations={locations}
         totals={totals}
@@ -143,12 +148,14 @@ function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, toke
         pdfHref={pdfHref}
         termsId="public-quote-terms-content"
         topSlot={
-          <div
-            id="public-quote-notice"
-            className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm"
-          >
-            {noticeText}
-          </div>
+          noticeText ? (
+            <div
+              id="public-quote-notice"
+              className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm"
+            >
+              {noticeText}
+            </div>
+          ) : null
         }
         footerSlot={
           // Keep the panel mounted after a result so the confirmation / outcome stays on screen.

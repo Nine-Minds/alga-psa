@@ -37,8 +37,12 @@ export interface QuoteLinkDecisionPanelProps {
   defaultSignerName?: string;
   /** Lets the owner of the document view lock its toggles while a request is in flight. */
   onSubmittingChange?: (submitting: boolean) => void;
-  /** Called once a result replaces the form (decided, already decided, changed, invalid). */
-  onSettled?: () => void;
+  /**
+   * Called once a result replaces the form (decided, already decided, changed, invalid).
+   * `decision` is the outcome the SERVER confirmed ('decided' / 'already_decided'); it is null
+   * for changed / invalid, so the owner never shows a state the server did not confirm.
+   */
+  onSettled?: (decision: 'accepted' | 'rejected' | null) => void;
 }
 
 type PanelState =
@@ -113,7 +117,8 @@ const QuoteLinkDecisionPanel: React.FC<QuoteLinkDecisionPanelProps> = ({
 
   // A settled result replaces the form; tell the owner so it can lock the optional-item toggles.
   const settled = state.kind !== 'form';
-  React.useEffect(() => { if (settled) onSettled?.(); }, [settled, onSettled]);
+  const confirmedDecision = state.kind === 'decided' ? state.decision : null;
+  React.useEffect(() => { if (settled) onSettled?.(confirmedDecision); }, [settled, confirmedDecision, onSettled]);
 
   function inputProblemMessage(problem: string): string {
     switch (problem) {

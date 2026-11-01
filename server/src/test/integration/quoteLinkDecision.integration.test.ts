@@ -54,7 +54,7 @@ const tenantRows = () =>
 async function cleanupTenant(tenantId: string) {
   for (const table of [
     'quote_decisions', 'quote_access_links', 'quote_activities', 'quote_items', 'quotes', 'next_number',
-    'user_roles', 'role_permissions', 'roles', 'permissions', 'users', 'contacts', 'clients', 'tenant_settings',
+    'user_roles', 'role_permissions', 'roles', 'permissions', 'users', 'contacts', 'clients', 'tax_rates', 'tax_regions', 'tenant_settings',
   ]) {
     await tt(tenantId, table).del();
   }
@@ -191,6 +191,71 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
       deselected_optional_quote_item_ids: [s.optional],
     });
     expect(onQuoteAcceptedSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('1c. optional-item live preview: loaded view carries numeric tax, preview total == committed total', async () => {
+    const s = await setup();
+    // A taxable client region so every base row resolves a non-zero tax_amount_if_included.
+    await tt(s.tenantId, 'tax_regions').insert({ tenant: s.tenantId, region_code: 'TST-LINK', region_name: 'Test', is_active: true });
+    await tt(s.tenantId, 'tax_rates').insert({
+      tax_rate_id: uuidv4(), tenant: s.tenantId, region_code: 'TST-LINK', tax_percentage: 8.875,
+      description: 'Test tax', start_date: '2025-01-01T00:00:00.000Z', is_active: true,
+    });
+    await tt(s.tenantId, 'clients').where({ client_id: s.clientId }).update({ region_code: 'TST-LINK', is_tax_exempt: false });
+
+    const { loadPublicQuoteView } = await import('@alga-psa/billing/services');
+    const { computePublicQuotePreview } = await import(
+      '../../../../packages/client-portal/src/components/billing/publicQuotePreview'
+    );
+    const view = await loadPublicQuoteView(db, s.tenantId, s.quoteId);
+    expect(view).not.toBeNull();
+    const base = view!.items.filter((i) => !i.is_discount);
+    expect(base.length).toBe(2);
+    for (const item of base) {
+      expect(typeof item.tax_amount_if_included).toBe('number');
+    }
+    expect(view!.items.find((i) => i.quote_item_id === s.required)!.tax_amount_if_included).toBe(Math.ceil((15000 * 8.875) / 100));
+
+    const previewFor = (selected: string[]) =>
+      computePublicQuotePreview(
+        view!.items.map((i) => (i.is_optional ? { ...i, is_selected: selected.includes(i.quote_item_id) } : i)) as any,
+      );
+    expect(previewFor([s.optional])).not.toBeNull();
+    const withoutOptional = previewFor([])!;
+    expect(withoutOptional).not.toBeNull();
+    expect(withoutOptional.subtotal).toBe(15000);
+
+    // Commit with the optional item toggled off, using the fingerprint of the enriched view.
+    const out: any = await submit(s.token, await acceptInput({ selectedOptionalQuoteItemIds: [] }));
+    expect(out.status).toBe('decided');
+    const q = await quoteRow(s.tenantId, s.quoteId);
+    expect(Number(q.total_amount)).toBe(withoutOptional.totalAmount);
+    expect(Number(q.tax)).toBe(withoutOptional.tax);
+    expect(Number(q.total_amount)).toBeGreaterThan(15000);
+  });
+
+  it('1d. optional kept: previewed total == committed total', async () => {
+    const s = await setup();
+    await tt(s.tenantId, 'tax_regions').insert({ tenant: s.tenantId, region_code: 'TST-LINK', region_name: 'Test', is_active: true });
+    await tt(s.tenantId, 'tax_rates').insert({
+      tax_rate_id: uuidv4(), tenant: s.tenantId, region_code: 'TST-LINK', tax_percentage: 8.875,
+      description: 'Test tax', start_date: '2025-01-01T00:00:00.000Z', is_active: true,
+    });
+    await tt(s.tenantId, 'clients').where({ client_id: s.clientId }).update({ region_code: 'TST-LINK', is_tax_exempt: false });
+    const { loadPublicQuoteView, computePublicQuoteFingerprint } = await import('@alga-psa/billing/services');
+    const { computePublicQuotePreview } = await import(
+      '../../../../packages/client-portal/src/components/billing/publicQuotePreview'
+    );
+    const view = await loadPublicQuoteView(db, s.tenantId, s.quoteId);
+    const preview = computePublicQuotePreview(view!.items as any)!;
+    expect(preview).not.toBeNull();
+    // The fingerprint the page renders (outside a transaction) equals the one the submit recomputes (inside one).
+    const rendered = await computePublicQuoteFingerprint(db, s.tenantId, s.quoteId);
+    const inTrx = await db.transaction((trx) => computePublicQuoteFingerprint(trx, s.tenantId, s.quoteId));
+    expect(inTrx).toBe(rendered);
+    const out: any = await submit(s.token, await acceptInput({ selectedOptionalQuoteItemIds: [s.optional], quoteFingerprint: rendered }));
+    expect(out.status).toBe('decided');
+    expect(Number((await quoteRow(s.tenantId, s.quoteId)).total_amount)).toBe(preview.totalAmount);
   });
 
   it('1b. accept keeping an optional item leaves it selected', async () => {
