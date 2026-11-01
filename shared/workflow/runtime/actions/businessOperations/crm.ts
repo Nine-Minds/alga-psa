@@ -998,6 +998,38 @@ const MAX_AUTHORIZED_ROWS_PER_REQUEST_HARD_CAP = 800;
 type QuoteSortBy = 'quote_date' | 'total_amount' | 'status' | 'created_at';
 type QuoteCursor = { v: 1; sortBy: QuoteSortBy; order: 'asc' | 'desc'; key: string | number | null; id: string };
 
+const POSTGRES_BIGINT_MIN = -9_223_372_036_854_775_808n;
+const POSTGRES_BIGINT_MAX = 9_223_372_036_854_775_807n;
+
+function isPostgresBigintCursorKey(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^-?(?:0|[1-9]\d*)$/.test(value)) return false;
+  const integer = BigInt(value);
+  return integer >= POSTGRES_BIGINT_MIN && integer <= POSTGRES_BIGINT_MAX;
+}
+
+function isPostgresTimestampCursorKey(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,6}))?(?:Z|([+-])(\d{2})(?::?(\d{2}))?)?$/.exec(value);
+  if (!match) return false;
+
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, , , offsetHourText, offsetMinuteText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+  const daysInMonth = month >= 1 && month <= 12
+    ? [31, (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1]
+    : 0;
+  const offsetHour = offsetHourText === undefined ? 0 : Number(offsetHourText);
+  const offsetMinute = offsetMinuteText === undefined ? 0 : Number(offsetMinuteText);
+
+  return year >= 1 && year <= 9999 && day >= 1 && day <= daysInMonth &&
+    hour <= 23 && minute <= 59 && second <= 59 &&
+    offsetHour <= 15 && offsetMinute <= 59;
+}
+
 function decodeQuoteCursor(value: string, sortBy: QuoteSortBy, order: 'asc' | 'desc'): QuoteCursor {
   try {
     if (!/^[A-Za-z0-9_-]+$/.test(value) || value.length % 4 === 1) throw new Error();
@@ -1010,9 +1042,9 @@ function decodeQuoteCursor(value: string, sortBy: QuoteSortBy, order: 'asc' | 'd
     const key = parsed.key;
     if (key !== null) {
       if (sortBy === 'total_amount') {
-        if (typeof key !== 'string' || !/^[+-]?(?:\d+\.?\d*|\.\d+)$/.test(key)) throw new Error();
+        if (!isPostgresBigintCursorKey(key)) throw new Error();
       } else if (sortBy === 'quote_date' || sortBy === 'created_at') {
-        if (typeof key !== 'string' || !/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}(?::?\d{2})?)?$/.test(key) || !Number.isFinite(Date.parse(key))) throw new Error();
+        if (!isPostgresTimestampCursorKey(key)) throw new Error();
       } else if (typeof key !== 'string' || !quoteStatusSchema.safeParse(key).success) throw new Error();
     }
     return parsed as QuoteCursor;

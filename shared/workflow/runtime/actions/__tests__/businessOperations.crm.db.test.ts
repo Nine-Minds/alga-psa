@@ -750,15 +750,20 @@ describe('crm workflow runtime DB-backed action handlers', () => {
     };
     db.on('query-response', invalidCursorListener as any);
     try {
-      for (const cursor of [
-        cursorFor({ id: 'not-a-uuid' }),
-        cursorFor({ v: 2 }),
-        cursorFor({ sortBy: 'quote_date' }),
-        cursorFor({ key: 'not-a-timestamp' }),
-        cursorFor({ key: 123 }),
-        'YWJj=',
-      ]) {
-        await expect(invokeAction('crm.find_quotes', { cursor, sortBy: 'created_at', pageSize: 1 }))
+      const invalidCursors = [
+        { sortBy: 'created_at', cursor: cursorFor({ id: 'not-a-uuid' }) },
+        { sortBy: 'created_at', cursor: cursorFor({ v: 2 }) },
+        { sortBy: 'created_at', cursor: cursorFor({ sortBy: 'quote_date' }) },
+        { sortBy: 'created_at', cursor: cursorFor({ key: 'not-a-timestamp' }) },
+        { sortBy: 'created_at', cursor: cursorFor({ key: 123 }) },
+        { sortBy: 'created_at', cursor: cursorFor({ key: '2026-02-30 12:00:00+00' }) },
+        { sortBy: 'total_amount', cursor: cursorFor({ sortBy: 'total_amount', key: '1.5' }) },
+        { sortBy: 'total_amount', cursor: cursorFor({ sortBy: 'total_amount', key: '9223372036854775808' }) },
+        { sortBy: 'total_amount', cursor: cursorFor({ sortBy: 'total_amount', key: '-9223372036854775809' }) },
+        { sortBy: 'created_at', cursor: 'YWJj=' },
+      ];
+      for (const { sortBy, cursor } of invalidCursors) {
+        await expect(invokeAction('crm.find_quotes', { cursor, sortBy, pageSize: 1 }))
           .rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
       }
       await expect(invokeAction('crm.find_quotes', {
@@ -782,6 +787,51 @@ describe('crm workflow runtime DB-backed action handlers', () => {
     await tenantTable(db, runtimeState.tenantId, 'quotes')
       .where('quote_id', secondQuoteId)
       .update({ quote_date: null });
+
+    const maxBigint = '9223372036854775807';
+    await tenantTable(db, runtimeState.tenantId, 'quotes')
+      .whereIn('quote_id', [createdQuote.quote.quote_id, secondQuoteId])
+      .update({ total_amount: maxBigint });
+    const maxBigintFirst = await invokeAction('crm.find_quotes', {
+      client_id: clientId, pageSize: 1, sortBy: 'total_amount', sortOrder: 'asc',
+    });
+    const maxBigintCursor = JSON.parse(Buffer.from(maxBigintFirst.pagination.next_cursor, 'base64url').toString('utf8'));
+    expect(maxBigintCursor.key).toBe(maxBigint);
+    const maxBigintSecond = await invokeAction('crm.find_quotes', {
+      client_id: clientId, pageSize: 1, sortBy: 'total_amount', sortOrder: 'asc', cursor: maxBigintFirst.pagination.next_cursor,
+    });
+    expect(maxBigintSecond.quotes).toHaveLength(1);
+
+    const minBigint = '-9223372036854775808';
+    await tenantTable(db, runtimeState.tenantId, 'quotes')
+      .whereIn('quote_id', [createdQuote.quote.quote_id, secondQuoteId])
+      .update({ total_amount: minBigint });
+    const minBigintFirst = await invokeAction('crm.find_quotes', {
+      client_id: clientId, pageSize: 1, sortBy: 'total_amount', sortOrder: 'desc',
+    });
+    const minBigintCursor = JSON.parse(Buffer.from(minBigintFirst.pagination.next_cursor, 'base64url').toString('utf8'));
+    expect(minBigintCursor.key).toBe(minBigint);
+    const minBigintSecond = await invokeAction('crm.find_quotes', {
+      client_id: clientId, pageSize: 1, sortBy: 'total_amount', sortOrder: 'desc', cursor: minBigintFirst.pagination.next_cursor,
+    });
+    expect(minBigintSecond.quotes).toHaveLength(1);
+
+    await tenantTable(db, runtimeState.tenantId, 'quotes')
+      .where('quote_id', createdQuote.quote.quote_id)
+      .update({ created_at: '2026-11-01 12:34:56.123456+00' });
+    await tenantTable(db, runtimeState.tenantId, 'quotes')
+      .where('quote_id', secondQuoteId)
+      .update({ created_at: '2026-11-01 12:34:56.123457+00' });
+    const microsecondFirst = await invokeAction('crm.find_quotes', {
+      client_id: clientId, pageSize: 1, sortBy: 'created_at', sortOrder: 'asc',
+    });
+    const microsecondCursor = JSON.parse(Buffer.from(microsecondFirst.pagination.next_cursor, 'base64url').toString('utf8'));
+    expect(microsecondCursor.key).toContain('.123456');
+    const microsecondSecond = await invokeAction('crm.find_quotes', {
+      client_id: clientId, pageSize: 1, sortBy: 'created_at', sortOrder: 'asc', cursor: microsecondFirst.pagination.next_cursor,
+    });
+    expect(microsecondSecond.quotes).toHaveLength(1);
+
     const firstCursorPage = await invokeAction('crm.find_quotes', { client_id: clientId, pageSize: 1, sortBy: 'created_at', sortOrder: 'asc' });
     expect(firstCursorPage.quotes).toHaveLength(1);
     expect(firstCursorPage.pagination.has_more).toBe(true);
