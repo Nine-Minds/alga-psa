@@ -57,6 +57,7 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
         <tr key={`${row.tenant}:${row.ticketId}`}>{props.columns.map((c: any) => <td key={c.dataIndex}>{c.render ? c.render(undefined, row) : null}</td>)}</tr>
       ))}</tbody>
       <tfoot><tr><td>
+        <button id={`${props.id}-size-25`} onClick={() => { props.onItemsPerPageChange(25); props.onPageChange(1); }}>size 25</button>
         <button id={`${props.id}-next`} onClick={() => props.onPageChange(props.currentPage + 1)}>next</button>
       </td></tr></tfoot>
     </table>
@@ -172,6 +173,17 @@ describe('QualifiedTicketList: URL-derived filter and paging', () => {
     fireEvent.click(document.getElementById('customer-tickets-table-next')!);
     expect(new URL(mocks.replace.mock.calls[0][0], 'http://x').searchParams.get('page')).toBe('2');
     expect(mocks.read).toHaveBeenCalledTimes(1);
+  });
+
+  it('changing the page size from page 3 keeps the size when DataTable follows it with onPageChange(1)', async () => {
+    mocks.read.mockResolvedValue(page([item('1', WS_A, false)], { totalCount: 80, pageSize: 10, page: 3 }));
+    render(<QualifiedTicketList scope={scope} presentation={{ ...presentation, page: 3 }} />);
+    await screen.findByText('T-1');
+    fireEvent.click(document.getElementById('customer-tickets-table-size-25')!);
+    expect(mocks.replace).toHaveBeenCalledTimes(2);
+    const url = new URL(mocks.replace.mock.calls.at(-1)![0], 'http://x');
+    expect(url.searchParams.get('pageSize')).toBe('25');
+    expect([null, '1']).toContain(url.searchParams.get('page'));
   });
 
   it('a page past the end lands on the last page', async () => {

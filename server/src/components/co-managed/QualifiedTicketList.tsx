@@ -102,12 +102,18 @@ export default function QualifiedTicketList({ scope, presentation, idPrefix = 'c
   const request = useMemo(() => queueRequestFromUrlState(scope, presentation), [scope, presentation]);
   const requestKey = JSON.stringify(request);
 
+  // DataTable fires onItemsPerPageChange and then onPageChange(1) in one tick, before the router has re-rendered us with the
+  // new URL. Remember what we last asked for (keyed to the presentation it started from) so back-to-back changes stack.
+  const pending = useRef<{ from: TicketListPresentation; value: TicketListPresentation } | null>(null);
   const hrefFor = useCallback((nextScope: QualifiedTicketListScope, next: Partial<TicketListPresentation>) =>
     buildTicketListHref(nextScope, { ...presentation, ...next }, { includeClient: true }), [presentation]);
   /** Apply a change to the URL. Anything but a page move starts again at page 1. */
   const apply = useCallback((next: Partial<TicketListPresentation>, nextScope: QualifiedTicketListScope = scope) => {
-    router.replace(hrefFor(nextScope, { page: 1, ...next }));
-  }, [hrefFor, router, scope]);
+    const base = pending.current?.from === presentation ? pending.current.value : presentation;
+    const value = { ...base, page: 1, ...next };
+    pending.current = { from: presentation, value };
+    router.replace(buildTicketListHref(nextScope, value, { includeClient: true }));
+  }, [presentation, router, scope]);
 
   useEffect(() => {
     const current = ++generation.current;
