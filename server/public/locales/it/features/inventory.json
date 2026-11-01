@@ -1377,7 +1377,9 @@
       "confirmCredit": "Registra che il fornitore ha accreditato questo dispositivo. Il periodo di custodia viene chiuso come smaltito.",
       "confirmShipDeadUnit": "Rispedisci l'unità guasta al fornitore. Il dispositivo in custodia viene registrato come presso il fornitore.",
       "confirmVendorReceipt": "Conferma che il fornitore ha ricevuto l'unità guasta. Il caso viene chiuso come risolto e la custodia come restituita al fornitore.",
-      "deadUnitOverdue": "Unità guasta in ritardo verso il fornitore (scadenza {{date}})",
+      "deadUnitNotShipped": "Unità guasta non ancora spedita, scadenza {{date}}",
+      "deadUnitShippedLate": "Unità guasta spedita in ritardo, scadenza {{date}}",
+      "returnByHint": "La data entro cui il fornitore richiede la spedizione dell'unità guasta, calcolata dalla consegna di questa sostituzione. Lasciala invariata per mantenere la data dell'approvazione.",
       "actions": {
         "approveStandard": "Approva (standard)",
         "approveAdvance": "Approva (sostituzione anticipata)",

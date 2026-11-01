@@ -1377,7 +1377,9 @@
       "confirmCredit": "Indiquez que le fournisseur a crédité cet appareil. La période de garde est clôturée comme mise au rebut.",
       "confirmShipDeadUnit": "Renvoyez l'unité défectueuse au fournisseur. L'appareil en garde est enregistré comme chez le fournisseur.",
       "confirmVendorReceipt": "Confirmez que le fournisseur a reçu l'unité défectueuse. Le dossier est clos comme résolu et la garde comme retournée au fournisseur.",
-      "deadUnitOverdue": "Unité défectueuse en retard chez le fournisseur (échéance : {{date}})",
+      "deadUnitNotShipped": "Unité défectueuse pas encore expédiée, échéance : {{date}}",
+      "deadUnitShippedLate": "Unité défectueuse expédiée en retard, échéance : {{date}}",
+      "returnByHint": "Date limite d'expédition de l'unité défectueuse au fournisseur, comptée à partir de la livraison de ce remplacement. Laissez-la telle quelle pour conserver la date de l'approbation.",
       "actions": {
         "approveStandard": "Approuver (standard)",
         "approveAdvance": "Approuver (remplacement anticipé)",

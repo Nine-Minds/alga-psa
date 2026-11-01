@@ -49,6 +49,14 @@ describe('warranty schemas', () => {
     expect(shipDeadUnitToVendorSchema.parse({ carrier: 'UPS', tracking_number: '1Z', return_by: '2026-11-30' }).return_by).toBe('2026-11-30');
     expect(shipDeadUnitToVendorSchema.safeParse({ carrier: 'UPS', tracking_number: '1Z', return_by: '2026-02-31' }).success).toBe(false);
   });
+  it('receive replacement takes an optional, real return-by date (T013)', () => {
+    const base = { replacement_serial_number: 'N1' };
+    expect(receiveVendorReplacementSchema.parse(base).return_by).toBeUndefined();
+    expect(receiveVendorReplacementSchema.parse({ ...base, return_by: null }).return_by).toBeUndefined();
+    expect(receiveVendorReplacementSchema.parse({ ...base, return_by: '2026-11-30' }).return_by).toBe('2026-11-30');
+    expect(receiveVendorReplacementSchema.safeParse({ ...base, return_by: '2026-02-31' }).success).toBe(false);
+    expect(receiveVendorReplacementSchema.safeParse({ ...base, return_by: '30/11/2026' }).success).toBe(false);
+  });
   it('confirm vendor receipt takes only the common fields', () => {
     expect(confirmVendorReceiptSchema.safeParse({}).success).toBe(true);
   });

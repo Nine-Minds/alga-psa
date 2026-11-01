@@ -1377,7 +1377,9 @@
       "confirmCredit": "Zapisz, że dostawca uznał to urządzenie. Okres przechowania zostanie zamknięty jako zutylizowany.",
       "confirmShipDeadUnit": "Odeślij uszkodzoną jednostkę do dostawcy. Urządzenie w depozycie zostanie zapisane jako u dostawcy.",
       "confirmVendorReceipt": "Potwierdź, że dostawca otrzymał uszkodzoną jednostkę. Zgłoszenie zostanie zamknięte jako rozwiązane, a depozyt jako zwrócony dostawcy.",
-      "deadUnitOverdue": "Uszkodzona jednostka przeterminowana u dostawcy (termin: {{date}})",
+      "deadUnitNotShipped": "Uszkodzona jednostka jeszcze niewysłana, termin: {{date}}",
+      "deadUnitShippedLate": "Uszkodzona jednostka wysłana po terminie, termin: {{date}}",
+      "returnByHint": "Data, do której dostawca wymaga wysłania uszkodzonej jednostki, liczona od dostawy tego zamiennika. Pozostaw bez zmian, aby zachować datę z zatwierdzenia.",
       "actions": {
         "approveStandard": "Zatwierdź (standardowo)",
         "approveAdvance": "Zatwierdź (wymiana z wyprzedzeniem)",

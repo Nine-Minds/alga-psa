@@ -115,6 +115,12 @@ export const receiveVendorReplacementSchema = z.object({
   model: optionalText(RMA_TEXT_MAX),
   manufacturer: optionalText(RMA_TEXT_MAX),
   warranty_end_date: calendarDate.nullish().transform((v) => v ?? null),
+  /**
+   * Advance track only: the vendor's ship-by date for the dead unit, counted from delivery of this replacement.
+   * Optional; omitted keeps the one set at approval. Ignored on the standard track, like the other fields that
+   * track does not use (the dead-unit leg does not exist there).
+   */
+  return_by: calendarDate.nullish().transform((v) => v ?? undefined),
   ...inboundShipping,
   ...common,
 });

@@ -1377,7 +1377,9 @@
       "confirmCredit": "Registre que el proveedor acreditó este dispositivo. El periodo de custodia se cierra como desechado.",
       "confirmShipDeadUnit": "Envíe la unidad averiada de vuelta al proveedor. El equipo en custodia se registra como en poder del proveedor.",
       "confirmVendorReceipt": "Confirme que el proveedor recibió la unidad averiada. El caso se cierra como resuelto y la custodia como devuelta al proveedor.",
-      "deadUnitOverdue": "Unidad averiada vencida con el proveedor (vencía el {{date}})",
+      "deadUnitNotShipped": "Unidad averiada aún sin enviar, vencía el {{date}}",
+      "deadUnitShippedLate": "Unidad averiada enviada tarde, vencía el {{date}}",
+      "returnByHint": "La fecha límite para enviar la unidad averiada al proveedor, contada desde la entrega de este reemplazo. Déjela como está para conservar la fecha de la aprobación.",
       "actions": {
         "approveStandard": "Aprobar (estándar)",
         "approveAdvance": "Aprobar (reemplazo anticipado)",

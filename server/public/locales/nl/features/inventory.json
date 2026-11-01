@@ -1377,7 +1377,9 @@
       "confirmCredit": "Registreer dat de leverancier dit apparaat heeft gecrediteerd. De bewaringsperiode wordt afgesloten als afgevoerd.",
       "confirmShipDeadUnit": "Stuur de defecte unit terug naar de leverancier. Het apparaat in bewaring wordt vastgelegd als bij de leverancier.",
       "confirmVendorReceipt": "Bevestig dat de leverancier de defecte unit heeft ontvangen. De zaak wordt gesloten als opgelost en de bewaring als teruggegeven aan de leverancier.",
-      "deadUnitOverdue": "Defecte unit te laat bij leverancier (uiterlijk {{date}})",
+      "deadUnitNotShipped": "Defecte unit nog niet verzonden, uiterlijk {{date}}",
+      "deadUnitShippedLate": "Defecte unit te laat verzonden, uiterlijk {{date}}",
+      "returnByHint": "De datum waarop de leverancier de defecte unit verzonden wil hebben, geteld vanaf levering van deze vervanging. Laat het ongewijzigd om de datum van de goedkeuring te behouden.",
       "actions": {
         "approveStandard": "Goedkeuren (standaard)",
         "approveAdvance": "Goedkeuren (vervroegde vervanging)",

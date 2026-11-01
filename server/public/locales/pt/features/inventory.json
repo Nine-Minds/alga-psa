@@ -1377,7 +1377,9 @@
       "confirmCredit": "Registre que o fornecedor creditou este dispositivo. O período de custódia é encerrado como descartado.",
       "confirmShipDeadUnit": "Envie a unidade avariada de volta ao fornecedor. O equipamento sob custódia é registrado como com o fornecedor.",
       "confirmVendorReceipt": "Confirme que o fornecedor recebeu a unidade avariada. O caso é encerrado como resolvido e a custódia como devolvida ao fornecedor.",
-      "deadUnitOverdue": "Unidade avariada em atraso com o fornecedor (prazo: {{date}})",
+      "deadUnitNotShipped": "Unidade avariada ainda não enviada, prazo: {{date}}",
+      "deadUnitShippedLate": "Unidade avariada enviada com atraso, prazo: {{date}}",
+      "returnByHint": "A data até à qual o fornecedor precisa que a unidade avariada seja enviada, contada desde a entrega desta substituição. Deixe como está para manter a data da aprovação.",
       "actions": {
         "approveStandard": "Aprovar (padrão)",
         "approveAdvance": "Aprovar (substituição antecipada)",

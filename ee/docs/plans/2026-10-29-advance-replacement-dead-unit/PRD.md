@@ -131,6 +131,14 @@ The overdue warning badge follows the risk, not the status:
 | `dead_unit_owed` (shipped, awaiting vendor receipt) | calendar day of `outbound_shipped_at` > `return_by` ("Dead unit shipped late, was due {date}") |
 | any other state, the standard track, or no `return_by` | never |
 
+`outbound_shipped_at` is also written by the standard track's `ship_to_vendor`,
+but that step needs status `returned`, which only the standard track reaches.
+An advance case therefore cannot carry an earlier outbound ship, and in
+`dead_unit_owed` the value is always the dead unit's ship time (verified in
+review round 2). `receive_replacement` takes `return_by` on the advance track
+only; on the standard track the field is accepted and ignored, so the date set
+at `ship_to_vendor` stays.
+
 An on-time shipment awaiting vendor confirmation never shows a badge. The case
 always remains closeable: an MSP must never be *unable* to close a case
 because a vendor's clock ran out, and Alga must never silently declare a

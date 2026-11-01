@@ -1377,7 +1377,9 @@
       "confirmCredit": "Record that the vendor credited this device. The custody episode is closed as disposed.",
       "confirmShipDeadUnit": "Ship the dead unit back to the vendor. The device in custody is recorded as with the vendor.",
       "confirmVendorReceipt": "Confirm the vendor received the dead unit. The case is closed as resolved and the custody episode as returned to the vendor.",
-      "deadUnitOverdue": "Dead unit overdue to vendor (was due {{date}})",
+      "deadUnitNotShipped": "Dead unit not yet shipped, was due {{date}}",
+      "deadUnitShippedLate": "Dead unit shipped late, was due {{date}}",
+      "returnByHint": "The date the vendor needs the dead unit shipped by, counted from delivery of this replacement. Leave it as is to keep the date from approval.",
       "actions": {
         "approveStandard": "Approve (standard)",
         "approveAdvance": "Approve (advance replacement)",

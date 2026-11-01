@@ -403,9 +403,15 @@ export async function receiveVendorReplacementCore(
     inbound_received_at: at,
     replacement_serial_number: input.replacement_serial_number,
     replacement_received_at: at,
+    // Advance track only; `cleanPatch` drops undefined, so an omitted value leaves the approval's `return_by` untouched.
+    ...(rma.rma_type === 'advance_replacement' ? { return_by: input.return_by } : {}),
   }, {
     occurredAt: at, carrier: input.inbound_carrier, trackingNumber: input.inbound_tracking_number, note: input.note,
-    payload: { before: replaced.before, after: replaced.after },
+    payload: {
+      before: replaced.before,
+      after: replaced.after,
+      ...(rma.rma_type === 'advance_replacement' && input.return_by ? { return_by: input.return_by } : {}),
+    },
   }, {
     custodyEffects,
     assetEffect: { assetId: rma.asset_id, before: replaced.before, after: replaced.after, changedPaths: replaced.changedPaths },

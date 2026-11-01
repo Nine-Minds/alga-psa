@@ -1377,7 +1377,9 @@
       "confirmCredit": "Registrera att leverantören har krediterat den här enheten. Förvarsperioden avslutas som kasserad.",
       "confirmShipDeadUnit": "Skicka tillbaka den defekta enheten till leverantören. Enheten i förvar registreras som hos leverantören.",
       "confirmVendorReceipt": "Bekräfta att leverantören har tagit emot den defekta enheten. Ärendet stängs som löst och förvaret som återlämnat till leverantören.",
-      "deadUnitOverdue": "Defekt enhet försenad till leverantören (förfallodag {{date}})",
+      "deadUnitNotShipped": "Defekt enhet ännu inte skickad, förfallodag {{date}}",
+      "deadUnitShippedLate": "Defekt enhet skickad för sent, förfallodag {{date}}",
+      "returnByHint": "Datumet då leverantören vill ha den defekta enheten skickad, räknat från leverans av denna ersättning. Lämna som det är för att behålla datumet från godkännandet.",
       "actions": {
         "approveStandard": "Godkänn (standard)",
         "approveAdvance": "Godkänn (förskottsersättning)",

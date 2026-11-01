@@ -5,7 +5,7 @@ import React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import { fireEvent } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { RmaWarrantyPanel } from './RmaWarrantyPanel';
+import { RmaWarrantyPanel, deadUnitDeadlineBadge } from './RmaWarrantyPanel';
 import { WARRANTY_ACTIONS, allowedWarrantyActions, nextWarrantyStatus } from '../../lib/rma/stateMachine';
 
 vi.mock('../../actions', () => {
@@ -242,16 +242,26 @@ describe('RmaWarrantyPanel (T029)', () => {
       expect(document.getElementById('rma-warranty-action-confirm_vendor_receipt')!.textContent).toBe('Vendor received dead unit');
     });
 
-    it('shows the overdue badge only when the vendor deadline has passed, and the case stays closeable', () => {
-      render(<RmaWarrantyPanel rma={{ ...advance, status: 'dead_unit_owed', return_by: shift(-1) } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
-      expect(document.getElementById('rma-warranty-dead-unit-overdue')).toBeTruthy();
+    const ids = ['rma-warranty-dead-unit-not-shipped', 'rma-warranty-dead-unit-shipped-late'];
+    const shownIds = () => ids.filter((i) => !!document.getElementById(i));
+    const mount = (over: Record<string, unknown>) => {
+      cleanup();
+      render(<RmaWarrantyPanel rma={{ ...advance, ...over } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
+    };
+
+    it('renders "not yet shipped" for a past-due replaced case, "shipped late" for a late shipment, nothing for an on-time one; close stays available', () => {
+      mount({ status: 'replaced', return_by: shift(-1) });
+      expect(shownIds()).toEqual([ids[0]]);
+      expect(document.getElementById(ids[0])!.textContent).toContain('Dead unit not yet shipped, was due');
       expect(renderedActions()).toContain('close');
-      cleanup();
-      render(<RmaWarrantyPanel rma={{ ...advance, status: 'dead_unit_owed', return_by: todayYmd() } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
-      expect(document.getElementById('rma-warranty-dead-unit-overdue')).toBeNull();
-      cleanup();
-      render(<RmaWarrantyPanel rma={{ ...advance, status: 'replaced', return_by: shift(-5) } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
-      expect(document.getElementById('rma-warranty-dead-unit-overdue')).toBeNull();
+      mount({ status: 'dead_unit_owed', return_by: shift(-3), outbound_shipped_at: new Date(`${shift(-1)}T12:00:00`).toISOString() });
+      expect(shownIds()).toEqual([ids[1]]);
+      expect(document.getElementById(ids[1])!.textContent).toContain('Dead unit shipped late, was due');
+      expect(renderedActions()).toContain('close');
+      mount({ status: 'dead_unit_owed', return_by: shift(-1), outbound_shipped_at: new Date(`${shift(-3)}T12:00:00`).toISOString() });
+      expect(shownIds()).toEqual([]);
+      mount({ status: 'replaced', return_by: todayYmd() });
+      expect(shownIds()).toEqual([]);
     });
 
     // rma_cases.return_by is a Postgres DATE with no type parser: at runtime it is a Date (local midnight) or an ISO timestamp.
@@ -260,15 +270,68 @@ describe('RmaWarrantyPanel (T029)', () => {
     it.each([
       ['Date object', asDate],
       ['ISO timestamp string', asIso],
-    ])('overdue badge works when return_by arrives as a %s (past, today, future)', (_n, wrap) => {
+    ])('badge works when return_by arrives as a %s (past, today, future)', (_n, wrap) => {
       const show = (ymd: string) => {
-        cleanup();
-        render(<RmaWarrantyPanel rma={{ ...advance, status: 'dead_unit_owed', return_by: wrap(ymd) } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
-        return !!document.getElementById('rma-warranty-dead-unit-overdue');
+        mount({ status: 'replaced', return_by: wrap(ymd) });
+        return !!document.getElementById('rma-warranty-dead-unit-not-shipped');
       };
       expect(show(shift(-1))).toBe(true);
       expect(show(todayYmd())).toBe(false);
       expect(show(shift(1))).toBe(false);
     });
+  });
+});
+
+// T012: the full §2.4 truth table against the pure decision function.
+describe('deadUnitDeadlineBadge (PRD §2.4)', () => {
+  const today = new Date(2026, 9, 10, 9, 0, 0); // 2026-10-10 local
+  const at = (y: number, m: number, d: number, h = 12, min = 0) => new Date(y, m - 1, d, h, min);
+  const adv = (over: Record<string, unknown>) => ({ rma_type: 'advance_replacement', status: 'replaced', return_by: '2026-10-05', outbound_shipped_at: null, ...over }) as any;
+  const run = (over: Record<string, unknown>) => deadUnitDeadlineBadge(adv(over), today);
+
+  it.each(['replaced', 'repaired'])('%s past due -> not_shipped', (status) => {
+    expect(run({ status })).toEqual({ kind: 'not_shipped', dueYmd: '2026-10-05' });
+  });
+  it('replaced due today or in the future -> none', () => {
+    expect(run({ return_by: '2026-10-10' })).toBeNull();
+    expect(run({ return_by: '2026-10-11' })).toBeNull();
+    expect(run({ return_by: '2026-12-01' })).toBeNull();
+  });
+  it('dead_unit_owed shipped on time (even with today past due) -> none', () => {
+    expect(run({ status: 'dead_unit_owed', outbound_shipped_at: at(2026, 10, 3) })).toBeNull();
+  });
+  it('dead_unit_owed shipped on the due day -> none, the day after -> shipped_late', () => {
+    expect(run({ status: 'dead_unit_owed', outbound_shipped_at: at(2026, 10, 5, 23, 59) })).toBeNull();
+    expect(run({ status: 'dead_unit_owed', outbound_shipped_at: at(2026, 10, 6, 0, 1) })).toEqual({ kind: 'shipped_late', dueYmd: '2026-10-05' });
+  });
+  it('standard track never shows a badge, in any status', () => {
+    for (const status of ['open', 'warranty_review', 'awaiting_return', 'returned', 'sent_to_vendor', 'replaced', 'repaired', 'credited', 'dead_unit_owed', 'closed']) {
+      expect(run({ rma_type: 'standard', status, outbound_shipped_at: at(2026, 10, 9) })).toBeNull();
+    }
+  });
+  it('other advance statuses show nothing', () => {
+    for (const status of ['open', 'credited', 'closed']) expect(run({ status })).toBeNull();
+  });
+  it('no return_by never shows a badge', () => {
+    expect(run({ return_by: null })).toBeNull();
+    expect(run({ return_by: undefined })).toBeNull();
+    expect(run({ status: 'dead_unit_owed', return_by: null, outbound_shipped_at: at(2026, 10, 9) })).toBeNull();
+  });
+  it('dead_unit_owed without a ship time shows nothing', () => {
+    expect(run({ status: 'dead_unit_owed', outbound_shipped_at: null })).toBeNull();
+  });
+  it('accepts Date and ISO-string inputs for return_by and outbound_shipped_at', () => {
+    const lateShip = at(2026, 10, 7);
+    for (const returnBy of ['2026-10-05', new Date(2026, 9, 5), '2026-10-05T00:00:00.000Z']) {
+      expect(run({ return_by: returnBy })).toMatchObject({ kind: 'not_shipped', dueYmd: '2026-10-05' });
+      for (const shipped of [lateShip, lateShip.toISOString()]) {
+        expect(run({ status: 'dead_unit_owed', return_by: returnBy, outbound_shipped_at: shipped })).toMatchObject({ kind: 'shipped_late' });
+      }
+    }
+  });
+  it('a late-evening ship time stays on its calendar day', () => {
+    const lateEvening = at(2026, 10, 5, 23, 45);
+    expect(run({ status: 'dead_unit_owed', outbound_shipped_at: lateEvening })).toBeNull();
+    expect(run({ status: 'dead_unit_owed', outbound_shipped_at: lateEvening.toISOString() })).toBeNull();
   });
 });

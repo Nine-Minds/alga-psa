@@ -202,6 +202,38 @@ describe('advance-replacement dead-unit leg', () => {
     expect(await custodyRow(custody.custody_id)).toMatchObject({ state: 'closed', close_reason: 'returned_to_vendor' });
   });
 
+  it('receive_replacement persists return_by on the advance track; omitted, the approval value survives (T013)', async () => {
+    const mk = async (approvalReturnBy: string) => {
+      const assetId = await newAsset();
+      await inCustody(assetId);
+      const c = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'x', rma_type: 'advance_replacement' }));
+      ok(await approveWarrantyClaim(c.rma_id, { track: 'advance_replacement', vendor_id: VENDOR, return_by: approvalReturnBy }));
+      return c.rma_id as string;
+    };
+    const ymd = async (id: string) => { const d = (await rmaRow(id)).return_by; return d instanceof Date ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : String(d).slice(0, 10); };
+    const withNew = await mk('2026-11-10');
+    ok(await receiveVendorReplacement(withNew, { replacement_serial_number: 'R1', location_id: LOCATION, return_by: '2026-11-20' }));
+    expect(await ymd(withNew)).toBe('2026-11-20');
+    const recv = (await events(withNew)).find((e: any) => e.event_type === 'replacement_received');
+    expect(recv.payload.return_by).toBe('2026-11-20');
+    const without = await mk('2026-11-10');
+    ok(await receiveVendorReplacement(without, { replacement_serial_number: 'R2', location_id: LOCATION }));
+    expect(await ymd(without)).toBe('2026-11-10');
+  });
+
+  it('receive_replacement ignores return_by on the standard track', async () => {
+    const assetId = await newAsset();
+    await inCustody(assetId);
+    const c = ok(await openWarrantyClaim({ asset_id: assetId, reason: 'x', rma_type: 'standard' }));
+    ok(await approveWarrantyClaim(c.rma_id, { track: 'standard', vendor_id: VENDOR }));
+    ok(await markDeviceReceived(c.rma_id, {}));
+    ok(await shipToVendor(c.rma_id, { carrier: 'UPS', tracking_number: 'S9', return_by: '2026-12-01' }));
+    ok(await receiveVendorReplacement(c.rma_id, { replacement_serial_number: 'S-N2', location_id: LOCATION, return_by: '2026-12-25' }));
+    const d = (await rmaRow(c.rma_id)).return_by;
+    expect(String(d instanceof Date ? d.getMonth() + 1 : d)).toMatch(/12/);
+    expect(d instanceof Date ? d.getDate() : Number(String(d).slice(8, 10))).toBe(1);
+  });
+
   it('a standard-track case is refused, even when it reaches replaced', async () => {
     const assetId = await newAsset();
     await inCustody(assetId);
