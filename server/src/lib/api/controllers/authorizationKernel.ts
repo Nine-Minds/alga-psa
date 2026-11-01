@@ -5,6 +5,7 @@ import {
   PROJECT_RECORD_SOURCE,
   QUOTE_RECORD_SOURCE,
   TICKET_RECORD_SOURCE,
+  isRecordFieldReadable,
   projectRecordByRedactions,
   type RedactableRecordSource,
 } from '@alga-psa/co-managed/recordProjection';
@@ -207,4 +208,83 @@ export async function projectApiResourceReads<T extends Record<string, any>>(
     if (row !== null) rows.push(row);
   }
   return rows;
+}
+
+/**
+ * The caller's field redactions for a resource kind, independent of any one row. Rows the kernel lets through are
+ * never partially scoped: a bundle rule whose relationship template does not match DENIES the row (it is dropped by
+ * the projector), and the rules that do match contribute their `redactedFields` unconditionally. So every row a
+ * caller can see carries the union of all applicable redactions, and evaluating the decision without a record yields
+ * exactly that union. This is approach (b): a column is unsearchable whenever any applicable rule redacts it.
+ */
+export async function resolveApiReadRedactions(input: {
+  knex: Knex; tenant: string; user: any; apiKeyId?: string; kind: ApiReadKind;
+}): Promise<readonly string[]> {
+  const kernel = await getAuthorizationKernel();
+  const subject = buildAuthorizationPrincipalSubject(input.user, input.apiKeyId);
+  subject.tenant = input.tenant;
+  const decision = await kernel.authorizeResource({
+    knex: input.knex as any,
+    subject,
+    resource: { type: API_READ_KINDS[input.kind].resource, action: 'read' },
+  });
+  return decision.redactedFields ?? [];
+}
+
+export type PredicateColumn = string | { column: string; field: string };
+
+/**
+ * Policy-aware predicate builder for one request: which columns may a search/filter touch for this caller.
+ * Every REST search or filter site composes with this instead of listing columns, so the exclusions are derived from
+ * the same redactions and descriptors that shape the response.
+ */
+export interface PredicateGuard {
+  /** True when the column's response field is readable for the caller. */
+  readable(column: PredicateColumn): boolean;
+  /** The readable subset of `columns` (as physical column strings). */
+  columns(columns: readonly PredicateColumn[]): string[];
+  /** `AND (c1 ILIKE term OR c2 ILIKE term ...)` over readable columns only; no readable column matches nothing. */
+  search(query: Knex.QueryBuilder, columns: readonly PredicateColumn[], term: string): Knex.QueryBuilder;
+  /**
+   * Applies a filter on one column when it is readable; otherwise the filter matches nothing (a constant, so it
+   * reveals nothing about the hidden value).
+   */
+  filter(query: Knex.QueryBuilder, column: PredicateColumn, apply: (q: Knex.QueryBuilder, column: string) => void): Knex.QueryBuilder;
+}
+
+const columnName = (c: PredicateColumn) => (typeof c === 'string' ? c : c.column);
+const fieldName = (c: PredicateColumn) => (typeof c === 'string' ? c.slice(c.lastIndexOf('.') + 1) : c.field);
+
+export function buildPredicateGuard(kind: ApiReadKind, redactions: readonly string[]): PredicateGuard {
+  const source = API_READ_KINDS[kind].source;
+  const readable = (c: PredicateColumn) => isRecordFieldReadable(redactions, source, fieldName(c));
+  const guard: PredicateGuard = {
+    readable,
+    columns: (columns) => columns.filter(readable).map(columnName),
+    search(query, columns, term) {
+      const allowed = guard.columns(columns);
+      if (allowed.length === 0) return query.whereRaw('1 = 0');
+      return query.where(function (this: Knex.QueryBuilder) {
+        for (const column of allowed) this.orWhere(column, 'ilike', `%${term}%`);
+      });
+    },
+    filter(query, column, apply) {
+      if (!readable(column)) return query.whereRaw('1 = 0');
+      apply(query, columnName(column));
+      return query;
+    },
+  };
+  return guard;
+}
+
+/** Resolves the caller's redactions once and returns the guard for `kind`. `context` is a REST `ServiceContext`. */
+export async function createPredicateGuard(
+  knex: Knex,
+  context: { tenant: string; user?: any; apiKeyId?: string },
+  kind: ApiReadKind,
+): Promise<PredicateGuard> {
+  const redactions = await resolveApiReadRedactions({
+    knex, tenant: context.tenant, user: context.user, apiKeyId: context.apiKeyId, kind,
+  });
+  return buildPredicateGuard(kind, redactions);
 }

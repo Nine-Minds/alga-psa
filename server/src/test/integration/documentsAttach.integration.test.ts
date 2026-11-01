@@ -193,7 +193,7 @@ describe('POST /api/v1/documents', () => {
     state.product = 'psa';
   });
 
-  it('returns 403 (parity with GET /tickets/:id) when the read-authorization kernel denies the ticket', async () => {
+  it('returns 404 (parity with GET /tickets/:id) when the read-authorization kernel denies the ticket', async () => {
     state.kernelAllow = false;
     const { status, json } = await post({
       entity_type: 'ticket',
@@ -201,8 +201,8 @@ describe('POST /api/v1/documents', () => {
       source: { type: 'base64', content: Buffer.from('x').toString('base64') },
       file_name: 'x.txt',
     });
-    expect(status).toBe(403);
-    expect(json.error.message).toMatch(/Cannot read ticket/);
+    expect(status).toBe(404);
+    expect(json.error.code).toBe('NOT_FOUND');
   }, HOOK_TIMEOUT);
 
   it('returns 404 for a missing ticket', async () => {

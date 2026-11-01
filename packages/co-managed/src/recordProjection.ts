@@ -157,3 +157,22 @@ export const ASSET_RECORD_SOURCE: RedactableRecordSource = {
     warranty_status: ids('warranty_end_date'),
   },
 };
+
+/**
+ * Predicate-side counterpart of `projectRecordByRedactions`: true when `field` (a response key such as `description`
+ * or the derived `client_name`) may take part in a search or filter for a reader with `redactions`. It resolves
+ * through the very same aliases the projector uses (`recordFieldAliases`), so canonical aliases and derived fields
+ * that depend on a hidden source are excluded exactly when the projector would omit or null them.
+ *
+ * Fails closed: a suppressed record kind, or any redaction entry that cannot be interpreted, makes the field
+ * unreadable. Without this, `?search=` over a hidden column returns the row and confirms the substring exists.
+ */
+export function isRecordFieldReadable(
+  redactions: readonly string[], source: RedactableRecordSource, field: string): boolean {
+  try {
+    if (isRecordSuppressed(redactions, source)) return false;
+    return !isCoManagedReadFieldHidden(redactions, recordFieldAliases(source, field));
+  } catch {
+    return false;
+  }
+}

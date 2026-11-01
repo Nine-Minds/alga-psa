@@ -34,6 +34,7 @@ import type {
 } from '../schemas/quoteSchemas';
 import { onQuoteAccepted, onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 import { QUOTE_ACTIVITY_TYPES, buildApprovalChangesRequestedActivity } from '@alga-psa/billing/lib/quoteActivityTypes';
+import { createPredicateGuard } from '../controllers/authorizationKernel';
 import { SELF_APPROVAL_AUDIT_METADATA } from '@alga-psa/authorization/quoteSelfApproval';
 
 export interface QuoteListOptions extends ListOptions {
@@ -141,20 +142,21 @@ export class QuoteService extends BaseService<IQuote> {
       const baseQuery = tenantDb(trx, context.tenant).table('quotes as q')
         .andWhere('q.is_template', isTemplate);
 
-      if (options.status || filters?.status) {
-        baseQuery.andWhere('q.status', options.status || filters?.status);
+      // Predicates go through the policy guard (quotes are read under the `billing` resource's redactions).
+      const guard = await createPredicateGuard(knex, context, 'quote');
+      const status = options.status || filters?.status;
+      if (status) {
+        guard.filter(baseQuery, 'q.status', (qb, c) => { qb.andWhere(c, status); });
       }
 
-      if (options.client_id || filters?.client_id) {
-        baseQuery.andWhere('q.client_id', options.client_id || filters?.client_id);
+      const clientId = options.client_id || filters?.client_id;
+      if (clientId) {
+        guard.filter(baseQuery, 'q.client_id', (qb, c) => { qb.andWhere(c, clientId); });
       }
 
-      if (options.search || filters?.search) {
-        const term = `%${options.search || filters?.search}%`;
-        baseQuery.andWhere(function (this: Knex.QueryBuilder) {
-          this.whereILike('q.title', term)
-            .orWhereILike('q.quote_number', term);
-        });
+      const searchTerm = options.search || filters?.search;
+      if (searchTerm) {
+        guard.search(baseQuery, ['q.title', 'q.quote_number'], String(searchTerm));
       }
 
       if (options.include_client !== false) {
