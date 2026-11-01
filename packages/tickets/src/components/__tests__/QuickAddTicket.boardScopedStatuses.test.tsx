@@ -6,9 +6,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { QuickAddTicket } from '../QuickAddTicket';
+import { addTicket } from '../../actions/ticketActions';
 
 const getTicketFormDataMock = vi.fn();
 const getTicketStatusesMock = vi.fn();
+const getTeamsMock = vi.hoisted(() => vi.fn());
 
 vi.mock('next/server', () => ({
   NextRequest: class NextRequest {},
@@ -109,12 +111,12 @@ vi.mock('@alga-psa/user-composition/actions/searchUsersForMentions', () => ({
 }));
 
 vi.mock('@alga-psa/teams/actions', () => ({
-  getTeams: vi.fn().mockResolvedValue([]),
+  getTeams: (...args: unknown[]) => getTeamsMock(...args),
   getTeamAvatarUrlsBatchAction: vi.fn(),
 }));
 
 vi.mock('@alga-psa/teams/actions/team-actions/teamActions', () => ({
-  getTeams: vi.fn().mockResolvedValue([]),
+  getTeams: (...args: unknown[]) => getTeamsMock(...args),
 }));
 
 vi.mock('@alga-psa/teams/actions/team-actions/avatarActions', () => ({
@@ -182,7 +184,9 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
-  ClientPicker: () => <div data-testid="client-picker" />,
+  ClientPicker: ({ onSelect }: { onSelect: (clientId: string) => void }) => (
+    <button type="button" data-testid="client-picker" onClick={() => onSelect('client-1')}>Choose client</button>
+  ),
 }));
 
 vi.mock('@alga-psa/ui/components/ContactPicker', () => ({
@@ -258,7 +262,12 @@ vi.mock('@alga-psa/ui/components/UserPicker', () => ({
 
 vi.mock('@alga-psa/ui/components/UserAndTeamPicker', () => ({
   __esModule: true,
-  default: () => <div data-testid="user-team-picker" />,
+  default: ({ value, onValueChange }: { value: string; onValueChange: (value: string) => void }) => (
+    <div data-testid="user-team-picker">
+      {value}
+      <button type="button" data-testid="clear-assignee" onClick={() => onValueChange('')}>Clear assignee</button>
+    </div>
+  ),
 }));
 
 vi.mock('@alga-psa/ui/editor', () => ({
@@ -343,15 +352,23 @@ describe('QuickAddTicket board-scoped statuses', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getTicketFormDataMock.mockResolvedValue({
-      users: [],
+      users: [{ user_id: 'default-user', first_name: 'Default', last_name: 'User' }],
       boards: [
-        { board_id: 'board-a', board_name: 'Board A', priority_type: 'custom' },
+        {
+          board_id: 'board-a', board_name: 'Board A', priority_type: 'custom',
+          default_assigned_to: 'default-user', default_assigned_team_id: 'default-team',
+        },
         { board_id: 'board-b', board_name: 'Board B', priority_type: 'custom' },
       ],
       statuses: [],
       priorities: [{ priority_id: 'priority-1', priority_name: 'Priority 1', item_type: 'ticket' }],
-      clients: [],
+      clients: [{ client_id: 'client-1', client_name: 'Client 1', client_type: 'company' }],
     });
+    getTeamsMock.mockResolvedValue([
+      {
+        team_id: 'default-team', team_name: 'Default Team', manager_id: 'team-lead', tenant: 'tenant-a', members: [],
+      },
+    ]);
     getTicketStatusesMock.mockImplementation(async (boardId: string) => {
       if (boardId === 'board-a') {
         return [
@@ -405,5 +422,48 @@ describe('QuickAddTicket board-scoped statuses', () => {
     expect(optionLabels).toContain('Board A Default');
     expect(optionLabels).toContain('Board A Closed');
     expect(optionLabels).not.toContain('Board B Default');
+  });
+
+  it('leaves board routing defaults to the shared server creation path', async () => {
+    vi.mocked(addTicket).mockResolvedValue({ ticket_id: 'created-ticket', assigned_to: 'default-user' } as any);
+    render(<QuickAddTicket open={true} onOpenChange={vi.fn()} onTicketAdded={vi.fn()} />);
+    await screen.findByTestId('ticket-quick-add');
+
+    fireEvent.click(screen.getByText('Select Board A'));
+    fireEvent.change(screen.getByPlaceholderText('Ticket Title *'), { target: { value: 'Created from Quick Add' } });
+    await waitFor(() => expect(screen.getByTestId('ticket-quick-add')).toHaveValue('status-a-default'));
+    fireEvent.change(screen.getByTestId('ticket-quick-add'), { target: { value: 'status-a-default' } });
+    fireEvent.change(screen.getByTestId('ticket-quick-add-priority'), { target: { value: 'priority-1' } });
+    fireEvent.click(screen.getByTestId('client-picker'));
+
+    await waitFor(() => expect(screen.getByTestId('board-picker-selected')).toHaveTextContent('board-a'));
+    expect(screen.getByTestId('user-team-picker')).not.toHaveTextContent('Default User');
+    expect(screen.queryByText('Default Team')).not.toBeInTheDocument();
+
+    fireEvent.submit(screen.getByTestId('ticket-quick-add').closest('form')!);
+    await waitFor(() => expect(addTicket).toHaveBeenCalledTimes(1));
+    const submitted = vi.mocked(addTicket).mock.calls[0][0] as FormData;
+    expect(submitted.get('board_id')).toBe('board-a');
+    expect(submitted.has('assigned_to')).toBe(false);
+  });
+
+  it('submits an explicit clear as an empty assignment value', async () => {
+    vi.mocked(addTicket).mockResolvedValue({ ticket_id: 'created-ticket', assigned_to: null } as any);
+    render(<QuickAddTicket open={true} onOpenChange={vi.fn()} onTicketAdded={vi.fn()} />);
+    await screen.findByTestId('ticket-quick-add');
+
+    fireEvent.click(screen.getByText('Select Board A'));
+    fireEvent.change(screen.getByPlaceholderText('Ticket Title *'), { target: { value: 'Unassigned from Quick Add' } });
+    await waitFor(() => expect(screen.getByTestId('ticket-quick-add')).toHaveValue('status-a-default'));
+    fireEvent.change(screen.getByTestId('ticket-quick-add'), { target: { value: 'status-a-default' } });
+    fireEvent.change(screen.getByTestId('ticket-quick-add-priority'), { target: { value: 'priority-1' } });
+    fireEvent.click(screen.getByTestId('client-picker'));
+    fireEvent.click(screen.getByTestId('clear-assignee'));
+    fireEvent.submit(screen.getByTestId('ticket-quick-add').closest('form')!);
+
+    await waitFor(() => expect(addTicket).toHaveBeenCalledTimes(1));
+    const submitted = vi.mocked(addTicket).mock.calls[0][0] as FormData;
+    expect(submitted.has('assigned_to')).toBe(true);
+    expect(submitted.get('assigned_to')).toBe('');
   });
 });

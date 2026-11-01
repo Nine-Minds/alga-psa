@@ -1699,6 +1699,7 @@ export class TicketService extends BaseService<ITicket> {
           subcategory_id: data.subcategory_id,
           entered_by: context.userId,
           assigned_to: data.assigned_to,
+          assigned_team_id: data.assigned_team_id,
           priority_id: data.priority_id,
           severity_id: data.severity_id,
           urgency_id: data.urgency_id,

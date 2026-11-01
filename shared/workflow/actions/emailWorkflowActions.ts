@@ -1280,7 +1280,7 @@ export async function createTicketFromEmail(
     subcategory_id?: string;
     location_id?: string;
     entered_by?: string | null;
-    assigned_to?: string;
+    assigned_to?: string | null;
     email_metadata?: any;
     attributes?: Record<string, unknown> | null;
   },
@@ -1299,18 +1299,9 @@ export async function createTicketFromEmail(
       // Durable inbound processing injects its transactional outbox publisher.
       // Every other path defers event-bus publication until this transaction commits.
       const eventPublisher = executionOptions?.eventPublisher ?? new WorkflowEventPublisher({ transaction: trx });
-      const db = tenantDb(trx, tenant);
-      // Determine assigned_to: use provided value or fall back to board's default
-      let assignedTo = ticketData.assigned_to;
-      if (!assignedTo && ticketData.board_id) {
-        const board = await db.table('boards')
-          .select('default_assigned_to')
-          .where({ board_id: ticketData.board_id })
-          .first();
-        if (board?.default_assigned_to) {
-          assignedTo = board.default_assigned_to;
-        }
-      }
+      // Explicit email routing is passed through; omitted fields inherit board
+      // defaults at TicketModel.createTicket's shared insert seam.
+      const assignedTo = ticketData.assigned_to;
 
       // A matched contact with no user account is the actor of the inbound ticket.
       // Without one, TICKET_CREATED is published as a SYSTEM actor with no userId.
@@ -1360,14 +1351,23 @@ export async function createTicketFromEmail(
         ticket_origin: TICKET_ORIGINS.INBOUND_EMAIL,
       }, tenant, trx, {}, creationEvents, analyticsTracker, userId, 3);
 
-      // Publish TICKET_ASSIGNED event if an agent was assigned
+      // Shared creation may apply a board user or team lead. Use the persisted
+      // assignment while retaining the publisher's transaction/outbox semantics.
+      const createdTicket = await tenantDb(trx, tenant).table('tickets')
+        .where({ ticket_id: result.ticket_id })
+        .first('assigned_to');
+      if (!createdTicket) {
+        throw new Error('Created ticket could not be reloaded after insert.');
+      }
+      const finalAssignedTo = createdTicket.assigned_to;
+
       // Note: Event publishing failure should not prevent ticket creation
-      if (assignedTo) {
+      if (finalAssignedTo) {
         try {
           await eventPublisher.publishTicketAssigned({
             tenantId: tenant,
             ticketId: result.ticket_id,
-            userId: assignedTo,
+            userId: finalAssignedTo,
             assignedByUserId: userId || ticketData.entered_by || undefined
           });
         } catch (eventError) {

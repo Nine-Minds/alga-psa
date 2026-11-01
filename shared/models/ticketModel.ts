@@ -25,6 +25,7 @@ import { prepareCommentEmailRecipients } from '../lib/tickets/commentEmailRecipi
 import { loadTicketRequesterIdentity, resolveTicketRequesterLabel } from '../lib/ticketRequesterDisplay';
 import { SharedNumberingService } from '../services/numberingService';
 import { applyBoardDefaultWatchers } from '../lib/tickets/boardDefaultWatchers';
+import { applyBoardDefaultTeam, resolveBoardDefaultRouting } from '../lib/tickets/boardDefaultRouting';
 import { TicketWatcherService } from '../services/tickets/ticketWatcherService';
 import { parseTicketWatchListAttributes } from '../lib/tickets/watchList';
 import { resolveAssetBillingProfileId } from './assetBillingProfileModel';
@@ -182,8 +183,8 @@ export interface CreateTicketInput {
    */
   billing_profile_id?: string | null;
   status_id?: string;
-  assigned_to?: string;
-  assigned_team_id?: string;
+  assigned_to?: string | null;
+  assigned_team_id?: string | null;
   priority_id?: string;
   category_id?: string;
   subcategory_id?: string;
@@ -1001,6 +1002,10 @@ export class TicketModel {
     // (e.g. inbound To/Cc watchers) win over the defaults.
     const attributes: Record<string, unknown> =
       (await applyBoardDefaultWatchers(trx, tenant, cleanedInput.board_id, baseAttributes)) ?? {};
+    const boardDefaults = await resolveBoardDefaultRouting(trx, tenant, cleanedInput);
+    if (boardDefaults.assignedTo !== undefined) {
+      cleanedInput.assigned_to = boardDefaults.assignedTo;
+    }
 
     // Assemble the insert row through the exhaustive field-handling map so
     // every CreateTicketInput key is either persisted, transformed, or
@@ -1043,6 +1048,15 @@ export class TicketModel {
 
     // Insert the ticket
     await tenantDb(trx, tenant).table('tickets').insert(dbData);
+
+    // Apply the team through the same core used by explicit team assignment.
+    // This stays in the creation transaction and precedes TICKET_CREATED so
+    // subscribers observe the final routing. Stale defaults are soft failures.
+    if (boardDefaults.defaultTeamId) {
+      await applyBoardDefaultTeam(
+        trx, tenant, userId ?? null, ticketId, boardDefaults.defaultTeamId, cleanedInput.board_id!,
+      );
+    }
 
     // Bring ticket_watchers in line with the initial attributes.watch_list (inbound To/Cc,
     // board defaults); the mirror is then rewritten from the table.

@@ -8,7 +8,7 @@ import { ExternalLinkValidationError } from '@alga-psa/tickets/actions/externalL
  * errors (not 500 INTERNAL_ERROR), preserving the machine-readable code.
  */
 
-const throwState = vi.hoisted(() => ({ error: null as unknown }));
+const throwState = vi.hoisted(() => ({ error: null as unknown, createInput: null as unknown }));
 
 const authorizeReadMock = vi.hoisted(() => vi.fn(async () => true));
 
@@ -82,7 +82,11 @@ vi.mock('@/lib/api/controllers/authorizationKernel', () => ({
 // The service is the seam that raises the inline-link validation failure.
 vi.mock('../../../lib/api/services/TicketService', () => ({
   TicketService: class {
-    async create() {
+    async create(data: unknown) {
+      throwState.createInput = data;
+      if (throwState.error == null) {
+        return { ticket_id: '22222222-2222-2222-2222-222222222222', assigned_to: null, assigned_team_id: null };
+      }
       throw throwState.error;
     }
     async addComment() {
@@ -120,9 +124,49 @@ function apiHeaders() {
 describe('external-link validation failures map to structured API errors', () => {
   beforeEach(() => {
     throwState.error = null;
+    throwState.createInput = null;
     authorizeReadMock.mockReset();
     authorizeReadMock.mockResolvedValue(true);
     linkActionState.findResult = null;
+  });
+
+  it('accepts explicit assignment nulls through POST validation and forwards them to the service', async () => {
+    const request = new NextRequest('http://localhost/api/v1/tickets', {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({
+        title: 'Explicitly unassigned',
+        client_id: CLIENT,
+        board_id: BOARD,
+        status_id: STATUS,
+        priority_id: PRIORITY,
+        assigned_to: null,
+        assigned_team_id: null,
+      }),
+    });
+
+    const response = await createTicketPOST(request);
+    expect(response.status).toBe(201);
+    expect(throwState.createInput).toMatchObject({ assigned_to: null, assigned_team_id: null });
+  });
+
+  it('keeps omitted assignment fields omitted through POST validation', async () => {
+    const request = new NextRequest('http://localhost/api/v1/tickets', {
+      method: 'POST',
+      headers: apiHeaders(),
+      body: JSON.stringify({
+        title: 'Use board defaults',
+        client_id: CLIENT,
+        board_id: BOARD,
+        status_id: STATUS,
+        priority_id: PRIORITY,
+      }),
+    });
+
+    const response = await createTicketPOST(request);
+    expect(response.status).toBe(201);
+    expect(throwState.createInput).not.toHaveProperty('assigned_to');
+    expect(throwState.createInput).not.toHaveProperty('assigned_team_id');
   });
 
   it('maps every external-link failure code to a 4xx status preserving the code', () => {

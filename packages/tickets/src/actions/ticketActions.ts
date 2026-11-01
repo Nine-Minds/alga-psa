@@ -680,7 +680,11 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
           : (billing_profile_id as string),
         contact_id: contact_name_id === '' ? undefined : (contact_name_id as string), // Note: maps to contact_name_id
         status_id: data.get('status_id') as string,
-        assigned_to: data.get('assigned_to') as string,
+        // Missing means omitted (board defaults may apply); an empty submitted
+        // value means the caller explicitly cleared assignment.
+        assigned_to: data.has('assigned_to')
+          ? ((data.get('assigned_to') as string) || null)
+          : undefined,
         description: description as string,
         category_id: category_id === '' ? undefined : (category_id as string),
         subcategory_id: subcategory_id === '' ? undefined : (subcategory_id as string),
@@ -813,14 +817,25 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         });
       }
 
-      // Server-specific: Handle assigned ticket event
-      if (createTicketInput.assigned_to) {
+      // Server-specific: Get full ticket data for return
+      const fullTicket = await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: ticketResult.ticket_id })
+        .first();
+
+      if (!fullTicket) {
+        throw new Error('Created ticket could not be reloaded after insert.');
+      }
+
+      // Shared creation may apply a board user or team lead. Publish the final
+      // assignment once, after commit, for explicit and default routing alike.
+      const assignedTo = fullTicket.assigned_to;
+      if (assignedTo) {
         registerAfterCommit(trx, () =>
           publishWorkflowEvent({
             eventType: 'TICKET_ASSIGNED',
             payload: buildTicketAssignedPayload({
               ticketId: ticketResult.ticket_id,
-              userId: createTicketInput.assigned_to,  // The user being assigned to the ticket
+              userId: assignedTo,  // The user being assigned to the ticket
               assignedByUserId: user.user_id  // The user who created and assigned the ticket
             }),
             ctx: {
@@ -830,15 +845,6 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
           }),
           `TICKET_ASSIGNED ticket=${ticketResult.ticket_id}`
         );
-      }
-
-      // Server-specific: Get full ticket data for return
-      const fullTicket = await tenantScopedTable(trx, 'tickets', tenant)
-        .where({ ticket_id: ticketResult.ticket_id })
-        .first();
-
-      if (!fullTicket) {
-        throw new Error('Created ticket could not be reloaded after insert.');
       }
 
       // Write activity-timeline entry for ticket creation. The details
