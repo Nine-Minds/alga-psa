@@ -19,7 +19,7 @@ vi.mock('@alga-psa/licensing', async () => ({
   ...tierStub(),
 }));
 vi.mock('@alga-psa/core/features', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
+  ...((await importOriginal()) as Record<string, unknown>),
   isEnterprise: true,
 }));
 vi.mock('server/src/lib/features', () => ({ isEnterprise: true }));
