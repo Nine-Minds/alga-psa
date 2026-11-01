@@ -203,7 +203,10 @@ export default function McpServerSettings() {
         setEditionGate(e.response);
         return;
       }
-      setError(t('mcpServer.errors.update', { defaultValue: 'Failed to update MCP settings.' }));
+      setError(
+        (e instanceof Error && e.message) ||
+          t('mcpServer.errors.update', { defaultValue: 'Failed to update MCP settings.' }),
+      );
     } finally {
       setBusy(false);
     }
@@ -319,9 +322,16 @@ export default function McpServerSettings() {
 
   const setAgentActive = (a: Agent, active: boolean) =>
     run(async () => {
+      const previous = a.active;
       setAgents((list) => list.map((x) => (x.agent_id === a.agent_id ? { ...x, active } : x)));
       if (!demoMode) {
-        await api('/api/v1/mcp/agents', { method: 'PATCH', body: JSON.stringify({ agentId: a.agent_id, active }) });
+        try {
+          await api('/api/v1/mcp/agents', { method: 'PATCH', body: JSON.stringify({ agentId: a.agent_id, active }) });
+        } catch (e) {
+          // Server rejected the change: never leave the row showing the optimistic state.
+          setAgents((list) => list.map((x) => (x.agent_id === a.agent_id ? { ...x, active: previous } : x)));
+          throw e;
+        }
       }
     });
 
