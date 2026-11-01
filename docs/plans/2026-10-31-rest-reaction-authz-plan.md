@@ -34,13 +34,12 @@ unfixed counterpart.
    `server/src/app/api/tickets/[id]/email-html/route.ts:38-43`. The action is `update` because a reaction
    writes to the ticket's thread, matching `toggleCommentReaction`.
 4. **Share the resolver** with the server action, per the finding's suggested fix. Add
-   `packages/tickets/src/lib/commentReactionResolver.ts`:
-   - `findReactionComment(trx, tenant, commentId, ticketId?)` — tenant-scoped lookup, optional ticket
-     binding;
-   - `assertReactionWriteAccess(trx, tenant, user, ticketId)` — client principals go through
-     `authorizeTicketRecordAccessConcealed` (identical denial text for missing/invisible).
-   Use it in both `commentReactionActions.ts` (pass no ticketId, authorize `comment.ticket_id`) and the REST
-   route (pass the path ticketId). No behaviour change for the server action.
+   `packages/tickets/src/lib/commentReactionResolver.ts`, which exports only
+   `findReactionComment(trx, tenant, commentId, ticketId?)`: a tenant-scoped lookup with an optional ticket
+   binding. Access checks stay with each caller. The REST route passes the path ticketId and runs
+   `authorizeTicketRecordAccess`. `commentReactionActions.ts` uses the resolver with no ticketId and keeps its
+   existing client-portal check on `comment.ticket_id`. No behaviour change for the server action; no MSP
+   policy check is added there.
 5. **Mutate only after both checks**: the existing toggle insert/delete stays as-is, now unreachable for a
    mismatched or invisible comment. Publish the same `ticket_update` live event as today.
 
@@ -80,3 +79,8 @@ two tickets, two contacts; contact A's session gets 404 for contact B's comment 
 - The comment read/create fixes — already on main and covered by card `c18be408`.
 - Making the route accept a comment id without a ticket id (the path is the contract; both must agree).
 - Reaction aggregation/read endpoints (no mutation, already tenant-scoped).
+- The in-app reaction server action is still not policy-checked for MSP users. `toggleCommentReaction` enforces
+  record access only for client-portal users
+  ([`commentReactionActions.ts#L33`](../../packages/tickets/src/actions/comment-actions/commentReactionActions.ts#L33),
+  the `if (isClientUserType(user.user_type))` branch). This PR fixes only the REST route the finding names. A
+  sibling card on the board, **Security: authz in toggleCommentReaction**, tracks the server-action gap.
