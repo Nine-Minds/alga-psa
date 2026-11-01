@@ -2,6 +2,7 @@
 
 import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import { isClientUserType, isMspPrincipalUserType } from '@alga-psa/types';
+import { projectResponseUsers, sanitizeResponseUser, sanitizeResponseUsers } from '../lib/responseUsers';
 import { resolveTicketMutationCollaborator, type TicketMutationCollaborationContext } from '../lib/ticketMutationActor';
 import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaboration';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
@@ -576,12 +577,11 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       
       // Users - removed document joins that were causing duplicates
       // Avatar URLs are fetched later using getUserAvatarUrl()
-      // LEVERAGE: pattern users-star-projection — unprojected users rows (credential columns included)
-      // flow into `availableAgents`/`userMap` here; see getTicketById in ticketActions.ts. Follow-up sweep.
-      tenantScopedTable(trx, 'users', tenant)
+      projectResponseUsers(tenantScopedTable(trx, 'users', tenant))
         .where('user_type', 'internal')
         .where('is_inactive', false)
-        .orderBy('first_name', 'asc'),
+        .orderBy('first_name', 'asc')
+        .then(sanitizeResponseUsers),
       
       // Statuses
       tenantScopedTable(trx, 'statuses', tenant)
@@ -776,19 +776,19 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     // Fetch created by user
     const createdByUser = ticket.entered_by ? 
-      await tenantScopedTable(trx, 'users', tenant)
+      sanitizeResponseUser(await projectResponseUsers(tenantScopedTable(trx, 'users', tenant))
         .where({
           user_id: ticket.entered_by
         })
-        .first() : null;
+        .first()) : null;
 
     // Fetch last updated by user
     const updatedByUser = ticket.updated_by ?
-      await tenantScopedTable(trx, 'users', tenant)
+      sanitizeResponseUser(await projectResponseUsers(tenantScopedTable(trx, 'users', tenant))
         .where({
           user_id: ticket.updated_by
         })
-        .first() : null;
+        .first()) : null;
 
     // Fetch board
     const board = ticket.board_id ?
@@ -817,7 +817,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
 
     const extraCommentAuthors: Array<{ user_id: string; user_type?: string | null; contact_id?: string | null }> =
       extraAuthorIds.length > 0
-        ? await tenantScopedTable(trx, 'users', tenant).whereIn('user_id', extraAuthorIds)
+        ? sanitizeResponseUsers(await projectResponseUsers(tenantScopedTable(trx, 'users', tenant)).whereIn('user_id', extraAuthorIds))
         : [];
 
     // Client-portal authors carry their avatar on the linked contact, not the user
@@ -2444,8 +2444,9 @@ export const getTicketFormOptions = withAuth(async (user, { tenant }) => {
         .select('c.*')
         .orderBy('c.client_name', 'asc'),
 
-      tenantScopedTable(trx, 'users', tenant)
-        .orderBy('first_name', 'asc'),
+      projectResponseUsers(tenantScopedTable(trx, 'users', tenant))
+        .orderBy('first_name', 'asc')
+        .then(sanitizeResponseUsers),
 
       // Fetch all unique tags for tickets (with colors, filtering orphans)
       // Use DISTINCT ON for deduplication by tag_text (PostgreSQL-specific but works with Citus)

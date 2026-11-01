@@ -4,12 +4,11 @@ import { assertHumanWorkAssignee } from '@alga-psa/shared/lib/humanWork/assertHu
 import {
   isClientUserType,
   isMspPrincipalUserType,
-  sanitizeUserForResponse,
-  USER_RESPONSE_FIELD_NAMES,
   type AllowlistedUserField,
 } from '@alga-psa/types';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { ticketUpdateStamp } from '@shared/lib/tickets/ticketUpdateStamp';
+import { projectResponseUsers, sanitizeResponseUsers } from '../lib/responseUsers';
 import type { ContactVisibilityContext } from '../lib/clientPortalVisibility';
 import { type NativeCommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
@@ -2905,18 +2904,13 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
             ticket_id: id
           }),
         includeAgentDirectory
-          // LEVERAGE: pattern users-star-projection — users rows must be projected through the shared
-          // allow-list (USER_RESPONSE_FIELD_NAMES); a bare users.* ships hashed_password/two_factor_secret.
-          // Sweep the other ticket loaders that still select users without a projection.
-          ? tenantScopedTable(trx, 'users', tenant)
-              .select(USER_RESPONSE_FIELD_NAMES)
+          ? projectResponseUsers(tenantScopedTable(trx, 'users', tenant))
               .where({ is_inactive: false })
               .orderBy('first_name', 'asc')
+              .then(sanitizeResponseUsers)
           : Promise.resolve(undefined)
       ]);
-      const availableAgents: TicketAgentOption[] | undefined = agentRows?.map(
-        (row: Record<string, unknown>) => sanitizeUserForResponse(row)
-      );
+      const availableAgents: TicketAgentOption[] | undefined = agentRows;
 
 
     const assigned_to_name = (ticket.assigned_to_first_name || ticket.assigned_to_last_name)

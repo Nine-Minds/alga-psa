@@ -13,7 +13,8 @@ describe('MSP consolidated ticket data comment author map contract', () => {
 
     expect(source).toContain('const extraAuthorIds =');
     expect(source).toContain('.map((comment) => comment.user_id)');
-    expect(source).toContain("await tenantScopedTable(trx, 'users', tenant).whereIn('user_id', extraAuthorIds)");
+    expect(source).toContain(".whereIn('user_id', extraAuthorIds)");
+    expect(source).toContain("projectResponseUsers(tenantScopedTable(trx, 'users', tenant)).whereIn(");
 
     const authorFetch = source.slice(
       source.indexOf('const extraCommentAuthors'),
