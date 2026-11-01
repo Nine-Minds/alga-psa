@@ -66,6 +66,9 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'ticket_attachment', action: 'create', msp: false, client: true, description: 'Upload client ticket attachments', products: ['co_managed'], defaultGrants: { co_managed: ['client:Admin', 'client:User'] } },
   { resource: 'knowledge_base', action: 'read', msp: true, client: false, description: 'Read knowledge base articles', products: ['co_managed'], defaultGrants: { co_managed: ['msp:Admin', 'msp:Technician', 'msp:Project Manager', 'msp:Dispatcher'] } },
   { resource: 'knowledge_base', action: 'read', msp: false, client: true, description: 'Read published client knowledge base articles', products: ['co_managed'], defaultGrants: { co_managed: ['client:Admin', 'client:User'] } },
+  // CM L4c: a customer portal contact replies on a shared task's requester thread. co_managed only: the
+  // psa catalog must never gain it (DO-NOT-PORT #27), so there is deliberately no psa entry.
+  { resource: 'project_task_comment', action: 'create', msp: false, client: true, description: 'Reply on shared project task requester threads in client portal', products: ['co_managed'], defaultGrants: { co_managed: ['client:Admin', 'client:User'] } },
   { resource: 'account_management', action: 'delete', msp: true, client: false, description: 'Delete account and subscription', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'account_management', action: 'read', msp: true, client: false, description: 'Read account and subscription', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'account_management', action: 'update', msp: true, client: false, description: 'Update account and subscription', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
@@ -221,7 +224,7 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'project', action: 'delete', msp: true, client: false, description: 'Delete projects and associated data', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Project Manager'] } },
   { resource: 'project', action: 'delete', msp: false, client: true, description: 'Delete projects in client portal', products: ['psa'], defaultGrants: { psa: ['client:Admin'] } },
   { resource: 'project', action: 'read', msp: true, client: false, description: 'View projects', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Finance', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'] } },
-  { resource: 'project', action: 'read', msp: false, client: true, description: 'View projects in client portal', products: ['psa'], defaultGrants: { psa: ['client:Admin', 'client:Finance', 'client:User'] } },
+  { resource: 'project', action: 'read', msp: false, client: true, description: 'View projects in client portal', products: ['psa', 'co_managed'], defaultGrants: { psa: ['client:Admin', 'client:Finance', 'client:User'], co_managed: ['client:Admin', 'client:User'] } },
   { resource: 'project', action: 'update', msp: true, client: false, description: 'Modify project information and timeline', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Finance', 'msp:Project Manager'] } },
   { resource: 'project', action: 'update', msp: false, client: true, description: 'Update projects in client portal', products: ['psa'], defaultGrants: { psa: ['client:Admin'] } },
 
