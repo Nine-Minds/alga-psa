@@ -13,7 +13,7 @@ import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { registerAfterCommit } from '@alga-psa/db';
 import Comment from '@alga-psa/tickets/models/comment';
 import { reconcileCommentAttachments, filterReadableCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
-import { stripCommentBccFromMetadata } from '@shared/lib/tickets/commentEmailRecipientsCore';
+import { redactCommentForClient, tombstoneCommentForClient } from '@alga-psa/tickets/lib/commentVisibility';
 import { isUuidShaped, validateData } from '@alga-psa/validation';
 import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
 import { isClientUserType } from '@alga-psa/types';
@@ -536,13 +536,6 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
             visibility
           )
         : false;
-      // Tombstones and parent masking, in memory (no SQL): a deleted comment never leaks its body, and a
-      // reply never points at a parent the portal was not served.
-      const servedIds = new Set((conversations as Array<{ comment_id: string }>).map((c) => c.comment_id));
-      for (const c of conversations as Array<Record<string, any>>) {
-        if (c.deleted_at) { c.note = '[deleted]'; c.markdown_content = '[deleted]'; }
-        if (c.parent_comment_id && !servedIds.has(c.parent_comment_id)) c.parent_comment_id = null;
-      }
       return { ticket, canInteract, portalExternalLinks, conversations, documents: await filterReadableCommentAttachments(trx, tenant, userId, documents), users, linkedAssets };
     }) as any;
 
@@ -623,13 +616,22 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
 
     const { entered_by_user_type, ...ticketWithoutCreatorType } = result.ticket as any;
 
-    const conversationsWithProvenance = (result.conversations as Array<Record<string, any>>).map((comment) => {
+    // Every portal comment goes through the shared client projection: deleted rows become an
+    // allowlisted tombstone, all others are redacted (scheduling columns, Bcc, metadata.email).
+    // Parent masking runs on the projected objects: a reply never points at a parent the portal
+    // was not served.
+    const rawConversations = result.conversations as Array<Record<string, any>>;
+    const servedIds = new Set(rawConversations.map((c) => c.comment_id));
+    const conversationsWithProvenance = rawConversations.map((comment) => {
       const { bundle_mirror_source_comment_id, ...commentRow } = comment;
+      const projected: Record<string, any> = commentRow.deleted_at
+        ? tombstoneCommentForClient(commentRow as any)
+        : redactCommentForClient(commentRow as any);
+      if (projected.parent_comment_id && !servedIds.has(projected.parent_comment_id)) {
+        projected.parent_comment_id = null;
+      }
       return {
-        ...commentRow,
-        // Bcc is MSP-only: strip it here so it can never reach a portal
-        // payload. Cc stays, since the requester saw it on the email anyway.
-        metadata: stripCommentBccFromMetadata(commentRow.metadata),
+        ...projected,
         bundle_mirror_source: bundle_mirror_source_comment_id
           ? { source_comment_id: bundle_mirror_source_comment_id }
           : null,
