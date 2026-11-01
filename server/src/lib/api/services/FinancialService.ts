@@ -25,6 +25,7 @@ import {
   resolvePaymentBillingProfileId,
 } from '@alga-psa/shared/billingClients/billingProfilePayments';
 import { auditLog } from '../../logging/auditLog';
+import { InvoiceService } from './InvoiceService';
 import { TaxService, normalizeTaxCapAmount } from '@alga-psa/billing/services/taxService';
 import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
 import { v4 as uuidv4 } from 'uuid';
@@ -174,6 +175,58 @@ interface FinancialAnalytics {
 /**
  * Comprehensive Financial Management Service
  */
+/**
+ * Bulk invoice commands. Exhaustive over the schema enum (Record<...> fails to
+ * compile if an operation is added to bulkInvoiceOperationSchema without an
+ * entry). Each command delegates to the canonical engine and names the
+ * permission the dispatcher checks once up front. `cancel` maps to
+ * InvoiceService.voidInvoice, whose own invoice:update +
+ * accounting_integrations:remote_mutate checks are the authoritative ones.
+ */
+interface BulkInvoiceCommand {
+  permission: string;
+  outcome: 'finalized' | 'sent' | 'voided';
+  run: (
+    invoices: InvoiceService,
+    invoiceId: string,
+    parameters: Record<string, any>,
+    context: ServiceContext
+  ) => Promise<any>;
+}
+
+const BULK_INVOICE_COMMANDS: Record<BulkInvoiceOperation['operation'], BulkInvoiceCommand> = {
+  finalize: {
+    permission: 'finalize',
+    outcome: 'finalized',
+    run: (invoices, invoice_id, _parameters, context) =>
+      invoices.finalizeInvoice({ invoice_id } as any, context),
+  },
+  send: {
+    permission: 'send',
+    outcome: 'sent',
+    // Optional delivery parameters pass straight through to the canonical send
+    // (no addresses = mark sent only, exactly as InvoiceService.sendInvoice does).
+    run: (invoices, invoice_id, parameters, context) =>
+      invoices.sendInvoice({
+        invoice_id,
+        email_addresses: Array.isArray(parameters.email_addresses) ? parameters.email_addresses : undefined,
+        subject: typeof parameters.subject === 'string' ? parameters.subject : undefined,
+        message: typeof parameters.message === 'string' ? parameters.message : undefined,
+        include_pdf: typeof parameters.include_pdf === 'boolean' ? parameters.include_pdf : true,
+      } as any, context),
+  },
+  cancel: {
+    permission: 'update',
+    outcome: 'voided',
+    run: (invoices, invoiceId, parameters, context) =>
+      invoices.voidInvoice(
+        invoiceId,
+        context,
+        typeof parameters.reason === 'string' ? { reason: parameters.reason } : {}
+      ),
+  },
+};
+
 export class FinancialService extends BaseService<ITransaction> {
   private taxService: TaxService;
 
@@ -1578,114 +1631,103 @@ export class FinancialService extends BaseService<ITransaction> {
   // ============================================================================
 
   /**
-   * Perform bulk operations on invoices
+   * Perform bulk lifecycle operations on invoices.
+   *
+   * This is a dispatcher, not an engine: each id is one independent canonical
+   * command (BULK_INVOICE_COMMANDS) that owns its invariants, locking and audit
+   * row. The per-operation permission is checked once, before any id is touched.
+   * There is deliberately no outer transaction — the canonical engines own theirs,
+   * so one failing id cannot roll back (or be committed by) another.
    */
   async bulkInvoiceOperation(
     operation: BulkInvoiceOperation,
     context: ServiceContext
   ): Promise<FinancialResponse<BulkOperationResult>> {
-    await this.validatePermissions('update', 'invoice', context);
-    
-    const { knex } = await this.getKnex();
-    
-    return withTransaction(knex, async (trx) => {
-      const results: Array<{
-        id: string;
-        success: boolean;
-        error?: string;
-        result?: any;
-      }> = [];
+    const command = BULK_INVOICE_COMMANDS[operation.operation];
+    if (!command) {
+      throw new BadRequestError(`Unsupported operation: ${String(operation.operation)}`);
+    }
 
-      for (const invoiceId of operation.invoice_ids) {
-        try {
-          let result: any;
-          
-          switch (operation.operation) {
-            case 'finalize':
-              result = await tenantDb(trx, context.tenant).table('invoices')
-                .where('invoice_id', invoiceId)
-                .update({
-                  status: 'sent',
-                  finalized_at: new Date().toISOString()
-                })
-                .returning('*');
-              break;
-              
-            case 'cancel':
-              result = await tenantDb(trx, context.tenant).table('invoices')
-                .where('invoice_id', invoiceId)
-                .update({
-                  status: 'cancelled'
-                })
-                .returning('*');
-              break;
-              
-            case 'apply_credit':
-              // This would need additional parameters in the operation
-              const creditAmount = operation.parameters?.credit_amount || 0;
-              const invoice = await tenantDb(trx, context.tenant).table('invoices')
-                .where('invoice_id', invoiceId)
-                .first();
-              
-              if (invoice && creditAmount > 0) {
-                // Apply credit logic here
-                result = { applied_amount: creditAmount };
-              }
-              break;
-              
-            default:
-              throw new BadRequestError(`Unsupported operation: ${operation.operation}`);
-          }
-          
-          results.push({
-            id: invoiceId,
-            success: true,
-            result
-          });
-          
-        } catch (error) {
-          results.push({
-            id: invoiceId,
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
-          });
+    // Coarse gate first, then the command's own lifecycle authority.
+    await this.validatePermissions('update', 'invoice', context);
+    await this.validatePermissions(command.permission, 'invoice', context);
+
+    const { knex } = await this.getKnex();
+    const invoices = new InvoiceService();
+
+    const results: BulkOperationResult['results'] = [];
+
+    for (const invoiceId of operation.invoice_ids) {
+      try {
+        const invoice = await command.run(invoices, invoiceId, operation.parameters ?? {}, context);
+        results.push({
+          id: invoiceId,
+          success: true,
+          outcome: command.outcome,
+          result: {
+            invoice_id: invoiceId,
+            status: invoice?.status,
+            finalized_at: invoice?.finalized_at ?? null,
+          },
+        });
+      } catch (error) {
+        if (
+          error instanceof NotFoundError ||
+          error instanceof ConflictError ||
+          error instanceof ForbiddenError ||
+          error instanceof BadRequestError
+        ) {
+          results.push({ id: invoiceId, success: false, error: error.message });
+        } else {
+          console.error(`[FinancialService.bulkInvoiceOperation] ${operation.operation} failed for ${invoiceId}`, error);
+          results.push({ id: invoiceId, success: false, error: 'Unexpected error processing invoice' });
         }
       }
+    }
 
-      // Audit log for bulk operation
-      await auditLog(trx, {
-        userId: context.userId,
-        operation: 'bulk_invoice_operation',
-        tableName: 'invoices',
-        recordId: 'bulk',
-        changedData: operation,
-        details: {
-          action: `Bulk ${operation.operation} operation`,
-          total_requested: operation.invoice_ids.length,
-          successful: results.filter(r => r.success).length,
-          failed: results.filter(r => !r.success).length
-        }
-      });
+    const successful = results.filter(r => r.success).length;
+    const failed = results.length - successful;
 
-      const bulkResult: BulkOperationResult = {
+    // One summary audit row recording the canonical per-id outcomes. The
+    // canonical engines wrote their own per-invoice rows already.
+    await withTransaction(knex, (trx) => auditLog(trx, {
+      userId: context.userId,
+      operation: 'bulk_invoice_operation',
+      tableName: 'invoices',
+      recordId: 'bulk',
+      changedData: { operation: operation.operation, invoice_ids: operation.invoice_ids },
+      details: {
+        action: `Bulk ${operation.operation} operation`,
         total_requested: operation.invoice_ids.length,
-        successful: results.filter(r => r.success).length,
-        failed: results.filter(r => !r.success).length,
-        results
-      };
+        successful,
+        failed,
+        results: results.map(r => ({
+          id: r.id,
+          success: r.success,
+          ...(r.outcome ? { outcome: r.outcome } : {}),
+          ...(r.error ? { error: r.error } : {}),
+        })),
+      }
+    }));
 
-      return {
-        data: bulkResult,
-        links: [
-          {
-            rel: 'invoices',
-            href: `/api/v1/financial/invoices`,
-            method: 'GET',
-            description: 'List invoices'
-          }
-        ]
-      };
-    });
+    const bulkResult: BulkOperationResult = {
+      total_requested: operation.invoice_ids.length,
+      successful,
+      failed,
+      results
+    };
+
+    return {
+      data: bulkResult,
+      links: [
+        {
+          rel: 'invoices',
+          href: `/api/v1/financial/invoices`,
+          method: 'GET',
+          description: 'List invoices'
+        }
+      ]
+    };
   }
 
   /**
