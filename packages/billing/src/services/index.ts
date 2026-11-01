@@ -193,6 +193,7 @@ export {
   QUOTE_LINK_DECISION_LIMITS,
   type QuoteAgreementDescriptor,
   type QuoteLinkDecisionInput,
+  type QuoteLinkCommittedSnapshot,
   type QuoteLinkDecisionOutcome,
   type QuoteLinkInputProblem,
   type QuoteLinkRequestContext,

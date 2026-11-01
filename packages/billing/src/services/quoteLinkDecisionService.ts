@@ -71,10 +71,21 @@ export type QuoteLinkInputProblem =
   | 'comment_required'
   | 'invalid_selection'
   | 'too_long'
-  | 'invalid_action';
+  | 'invalid_action'
+  | 'fingerprint_required';
+
+/** The quote as persisted by the decision transaction (minor units, as on the quotes row). */
+export interface QuoteLinkCommittedSnapshot {
+  subtotal: number;
+  discount_total: number;
+  tax: number;
+  total_amount: number;
+  /** Optional items that are selected after the decision. */
+  selectedOptionalQuoteItemIds: string[];
+}
 
 export type QuoteLinkDecisionOutcome =
-  | { status: 'decided'; decision: 'accepted' | 'rejected'; decidedAt: string }
+  | { status: 'decided'; decision: 'accepted' | 'rejected'; decidedAt: string; committed: QuoteLinkCommittedSnapshot }
   | { status: 'already_decided'; decision: 'accepted' | 'rejected'; decidedAt: string }
   /** The MSP changed the quote after the page was rendered. */
   | { status: 'changed' }
@@ -120,16 +131,14 @@ function iso(value: Date | string): string {
   return new Date(value).toISOString();
 }
 
-function validate(
-  input: QuoteLinkDecisionInput,
-  optionalItemIds: Set<string>,
-): QuoteLinkInputProblem | null {
+/** Input shape only; needs no quote data. Optional-item membership is checked separately, after the fingerprint. */
+function validateShape(input: QuoteLinkDecisionInput): QuoteLinkInputProblem | null {
   const L = QUOTE_LINK_DECISION_LIMITS;
   if (input.action === 'reject') {
     const comment = typeof input.comment === 'string' ? input.comment.trim() : '';
     if (!comment) return 'comment_required';
     if (comment.length > L.comment) return 'too_long';
-    return null;
+    return typeof input.quoteFingerprint === 'string' ? null : 'fingerprint_required';
   }
   if (input.action !== 'accept') return 'invalid_action';
 
@@ -146,10 +155,41 @@ function validate(
 
   const selected = input.selectedOptionalQuoteItemIds ?? [];
   if (!Array.isArray(selected) || selected.length > L.selections) return 'invalid_selection';
-  for (const id of selected) {
+  return typeof input.quoteFingerprint === 'string' ? null : 'fingerprint_required';
+}
+
+function validateSelectionMembership(input: QuoteLinkDecisionInput, optionalItemIds: Set<string>): QuoteLinkInputProblem | null {
+  if (input.action !== 'accept') return null;
+  for (const id of input.selectedOptionalQuoteItemIds ?? []) {
     if (typeof id !== 'string' || !optionalItemIds.has(id)) return 'invalid_selection';
   }
   return null;
+}
+
+/** Re-read the quote as persisted (same transaction) so the caller renders what was committed, not what it sent. */
+async function readCommittedSnapshot(
+  trx: Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+): Promise<QuoteLinkCommittedSnapshot> {
+  const row = await tenantDb(trx, tenant)
+    .table('quotes')
+    .where({ quote_id: quoteId })
+    .first<{ subtotal: unknown; discount_total: unknown; tax: unknown; total_amount: unknown }>(
+      'subtotal', 'discount_total', 'tax', 'total_amount',
+    );
+  const selected = await tenantDb(trx, tenant)
+    .table('quote_items')
+    .where({ quote_id: quoteId, is_optional: true, is_selected: true })
+    .orderBy('display_order')
+    .select<Array<{ quote_item_id: string }>>('quote_item_id');
+  return {
+    subtotal: Number(row?.subtotal ?? 0),
+    discount_total: Number(row?.discount_total ?? 0),
+    tax: Number(row?.tax ?? 0),
+    total_amount: Number(row?.total_amount ?? 0),
+    selectedOptionalQuoteItemIds: selected.map((r) => r.quote_item_id),
+  };
 }
 
 async function submitInTransaction(
@@ -191,8 +231,10 @@ async function submitInTransaction(
   if (!locked || locked.status !== 'sent') {
     return settledOutcome(trx, tenant, quote.quote_id);
   }
+  const shapeProblem = validateShape(input);
+  if (shapeProblem) return { status: 'invalid_input', problem: shapeProblem };
   const fingerprint = await computePublicQuoteFingerprint(trx, tenant, quote.quote_id);
-  if (!fingerprint || typeof input.quoteFingerprint !== 'string' || input.quoteFingerprint !== fingerprint) {
+  if (!fingerprint || input.quoteFingerprint !== fingerprint) {
     return { status: 'changed' };
   }
 
@@ -200,7 +242,7 @@ async function submitInTransaction(
     .table('quote_items')
     .where({ quote_id: quote.quote_id, is_optional: true })
     .select<Array<{ quote_item_id: string }>>('quote_item_id');
-  const problem = validate(input, new Set(optionalRows.map((r) => r.quote_item_id)));
+  const problem = validateSelectionMembership(input, new Set(optionalRows.map((r) => r.quote_item_id)));
   if (problem) return { status: 'invalid_input', problem };
 
   const accepting = input.action === 'accept';
@@ -240,6 +282,7 @@ async function submitInTransaction(
         status: 'decided',
         decision: accepting ? 'accepted' : 'rejected',
         decidedAt: row ? iso(row.decided_at) : new Date().toISOString(),
+        committed: await readCommittedSnapshot(trx, tenant, quote.quote_id),
       };
     }
     case 'already_decided':

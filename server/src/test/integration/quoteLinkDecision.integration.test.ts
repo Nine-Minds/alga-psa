@@ -265,6 +265,35 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
     expect(Number((await quoteRow(s.tenantId, s.quoteId)).subtotal)).toBe(20000);
   });
 
+  it('1e. decided outcome carries the committed snapshot equal to the persisted quote row (accept with optional change, and reject)', async () => {
+    const s = await setup();
+    const out: any = await submit(s.token, await acceptInput({ selectedOptionalQuoteItemIds: [] }));
+    expect(out.status).toBe('decided');
+    const row = await quoteRow(s.tenantId, s.quoteId);
+    expect(out.committed).toEqual({
+      subtotal: Number(row.subtotal),
+      discount_total: Number(row.discount_total),
+      tax: Number(row.tax),
+      total_amount: Number(row.total_amount),
+      selectedOptionalQuoteItemIds: [],
+    });
+    expect(out.committed.subtotal).toBe(15000);
+
+    const s2 = await setup();
+    const kept: any = await submit(s2.token, await acceptInput({ selectedOptionalQuoteItemIds: [s2.optional] }));
+    const row2 = await quoteRow(s2.tenantId, s2.quoteId);
+    expect(kept.committed.total_amount).toBe(Number(row2.total_amount));
+    expect(kept.committed.subtotal).toBe(20000);
+    expect(kept.committed.selectedOptionalQuoteItemIds).toEqual([s2.optional]);
+
+    const s3 = await setup();
+    const rej: any = await submit(s3.token, { action: 'reject', comment: 'no' });
+    const row3 = await quoteRow(s3.tenantId, s3.quoteId);
+    expect(rej.status).toBe('decided');
+    expect(rej.committed.total_amount).toBe(Number(row3.total_amount));
+    expect(rej.committed.selectedOptionalQuoteItemIds).toEqual([s3.optional]);
+  });
+
   it('1c. signer email comes from the link, not the form', async () => {
     const s = await setup();
     await submit(s.token, await acceptInput({ signer: { name: 'Jane', title: '', email: 'attacker@evil.example' } }));
@@ -415,11 +444,17 @@ describe('submitQuoteLinkDecision (alga-2026-0002820 4/6)', () => {
 
   it('5d. a missing, null or wrong fingerprint is "changed" and writes nothing', async () => {
     const s = await setup();
-    for (const quoteFingerprint of [undefined, null, '', 'f'.repeat(64)]) {
+    for (const quoteFingerprint of ['', 'f'.repeat(64)]) {
       const out: any = await submit(s.token, await acceptInput({ quoteFingerprint }));
       expect(out).toEqual({ status: 'changed' });
     }
-    expect(await submit(s.token, { action: 'reject', comment: 'x', quoteFingerprint: undefined })).toEqual({ status: 'changed' });
+    // A request with no fingerprint at all is malformed input, not a changed quote.
+    for (const quoteFingerprint of [undefined, null]) {
+      expect(await submit(s.token, await acceptInput({ quoteFingerprint }))).toEqual({ status: 'invalid_input', problem: 'fingerprint_required' });
+    }
+    expect(await submit(s.token, { action: 'reject', comment: 'x', quoteFingerprint: undefined })).toEqual({ status: 'invalid_input', problem: 'fingerprint_required' });
+    // Membership is checked after the fingerprint: a stale page with a bogus id is "changed".
+    expect(await submit(s.token, await acceptInput({ quoteFingerprint: 'f'.repeat(64), selectedOptionalQuoteItemIds: [uuidv4()] }))).toEqual({ status: 'changed' });
     expect((await quoteRow(s.tenantId, s.quoteId)).status).toBe('sent');
     expect(await decisionRows(s.tenantId, s.quoteId)).toHaveLength(0);
     expect(onQuoteAcceptedSpy).not.toHaveBeenCalled();
