@@ -89,7 +89,9 @@ describe('StripeCustomerImportService executor (DB integration)', () => {
       expect(mapping.external_customer_id).toBe('cus_import1');
       expect(mapping.metadata).toMatchObject({ stripe_account_id: 'acct_test' });
       expect(customers.cus_import1.metadata).toMatchObject({ stripe_account_id: 'acct_test' });
-      expect(customers.cus_import1.paymentMethods.every((method) => method.metadata.stripe_account_id === 'acct_test')).toBe(true);
+      const importedPaymentMethods = customers.cus_import1.paymentMethods.filter((method) => method.id !== 'pm_bank');
+      expect(importedPaymentMethods.every((method) => method.metadata.stripe_account_id === 'acct_test')).toBe(true);
+      expect(customers.cus_import1.paymentMethods.find((method) => method.id === 'pm_bank')?.metadata).toEqual({});
       const methods = await trx('payment_methods').where({ tenant }).orderBy('external_payment_method_id');
       expect(methods).toHaveLength(2);
       expect(methods[0]).toMatchObject({
@@ -144,10 +146,14 @@ describe('StripeCustomerImportService executor (DB integration)', () => {
       const { tenant, clientId, profileId } = await seed(trx);
       connection.current = trx;
       const customers: Record<string, StripeCustomerSnapshot> = {
-        cus_import3: { id: 'cus_import3', email: 'a@x.test', name: 'A', currency: null, defaultPaymentMethodId: null, metadata: {}, paymentMethods: [card('pm_dddd4444', 1)] },
+        cus_import3: { id: 'cus_import3', email: 'a@x.test', name: 'A', currency: null, defaultPaymentMethodId: null,
+          metadata: { tenant_id: tenant, stripe_account_id: 'acct_test' }, paymentMethods: [card('pm_dddd4444', 1)] },
       };
       const svc = new StripeCustomerImportService(tenant, trx as unknown as Knex, fakeStripe(customers, []), 'acct_test');
-      await svc.execute(await svc.preview([{ rowId: 'r1', clientId, billingProfileId: profileId, customerId: 'cus_import3' }]));
+      const plan = await svc.preview([{ rowId: 'r1', clientId, billingProfileId: profileId, customerId: 'cus_import3' }]);
+      expect(plan.rows[0].needsCustomerStamp).toBe(true);
+      await svc.execute(plan);
+      expect(customers.cus_import3.metadata).toMatchObject({ tenant_id: tenant, client_id: clientId, billing_profile_id: profileId, stripe_account_id: 'acct_test' });
 
       const stripe = {
         customers: {
@@ -157,6 +163,7 @@ describe('StripeCustomerImportService executor (DB integration)', () => {
       };
       const provider = new StripePaymentProvider(tenant);
       (provider as any).stripe = stripe;
+      (provider as any).config = { secretKey: 'sk_test_tenant', webhookSecret: '', publishableKey: 'pk_test', accountId: 'acct_test' };
       await expect(provider.getOrCreateCustomer(clientId, 'a@x.test', 'A', profileId)).resolves.toBe('cus_import3');
       expect(stripe.customers.create).not.toHaveBeenCalled();
       expect(stripe.customers.list).not.toHaveBeenCalled();

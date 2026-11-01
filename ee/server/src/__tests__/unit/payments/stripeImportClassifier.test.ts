@@ -44,6 +44,15 @@ describe('classifyImport', () => {
     const plan = classifyImport({ rows: [row('r', 'c1', 'p1', 'cus_1')], customers: [cust], alga: alga({ accountId: 'acct_tenant' }) });
     expect(plan.rows[0]).toMatchObject({ action: 'conflict', reason: 'customer-metadata-owned-by-other' });
   });
+
+  it('completes a partial same-account customer stamp before mapping it', () => {
+    const cust = customer('cus_1', { metadata: { tenant_id: T, stripe_account_id: 'acct_tenant' } });
+    const plan = classifyImport({ rows: [row('r', 'c1', 'p1', 'cus_1')], customers: [cust], alga: alga({ accountId: 'acct_tenant' }) });
+    expect(plan.rows[0]).toMatchObject({ action: 'adopt', needsCustomerStamp: true, needsMapping: true });
+    expect(importMetadata(T, 'c1', 'p1', 'acct_tenant')).toMatchObject({
+      tenant_id: T, client_id: 'c1', billing_profile_id: 'p1', stripe_account_id: 'acct_tenant',
+    });
+  });
   it('adopts a customer with cards and no subscriptions, stamping and defaulting', () => {
     const { rows } = classifyImport({ rows: [row('r', 'c1', 'p1', 'cus_1')], customers: [customer('cus_1')], alga: alga() });
     expect(rows[0]).toMatchObject({ action: 'adopt', needsCustomerStamp: true, needsMapping: true, enrollable: true, enrollmentExternalPaymentMethodId: 'pm_1' });

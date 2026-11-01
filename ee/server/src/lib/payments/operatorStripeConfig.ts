@@ -16,8 +16,9 @@ export async function getOperatorStripeSecretKey(): Promise<string | null> {
 export async function getOperatorStripeConfig(): Promise<OperatorStripeConfig | null> {
   const secretProvider = await getSecretProviderInstance();
   const secretKey = await secretProvider.getAppSecret('stripe_secret_key') || process.env.STRIPE_SECRET_KEY;
-  const webhookSecret = await secretProvider.getAppSecret('stripe_payment_webhook_secret') ||
-    await secretProvider.getAppSecret('stripe_webhook_secret') || process.env.STRIPE_WEBHOOK_SECRET;
+  const webhookSecret = await secretProvider.getAppSecret('stripe_webhook_secret') ||
+    process.env.STRIPE_WEBHOOK_SECRET ||
+    await secretProvider.getAppSecret('stripe_payment_webhook_secret');
   const publishableKey = await secretProvider.getAppSecret('stripe_publishable_key') || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
   if (!secretKey || !webhookSecret || !publishableKey) return null;
   return { secretKey, webhookSecret, publishableKey };

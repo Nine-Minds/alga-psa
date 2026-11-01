@@ -339,13 +339,15 @@ export class StripePaymentProvider implements PaymentProvider {
       // Verify the customer still exists in Stripe
       try {
         const customer = await stripe.customers.retrieve(existingMapping.external_customer_id);
-        if (!('deleted' in customer) && customer.metadata?.tenant_id === this.tenantId && customer.metadata?.client_id === clientId &&
+        if (!('deleted' in customer) && customer.metadata?.tenant_id === this.tenantId &&
+            (customer.metadata?.stripe_account_id === undefined || customer.metadata.stripe_account_id === this.config?.accountId) &&
+            customer.metadata?.client_id === clientId &&
             (customer.metadata?.billing_profile_id === billingProfileId || (!customer.metadata?.billing_profile_id && existingMapping.billing_profile_id === billingProfileId))) {
-          // Legacy default-profile customer mappings predate the profile metadata key.
-          // The migrated local mapping is the authority for that one backfilled profile.
-          if (!customer.metadata?.billing_profile_id) {
+          // Legacy mappings may omit account/profile stamps; this provider is already confined to its verified account.
+          if (!customer.metadata?.billing_profile_id || customer.metadata?.stripe_account_id === undefined) {
             await stripe.customers.update(existingMapping.external_customer_id, { metadata: {
               ...customer.metadata, tenant_id: this.tenantId, client_id: clientId, billing_profile_id: billingProfileId,
+              stripe_account_id: this.config?.accountId ?? '',
             } });
           }
           return existingMapping.external_customer_id;
@@ -366,7 +368,8 @@ export class StripePaymentProvider implements PaymentProvider {
     });
     const matchedCustomer = existingCustomers.data.find((customer) =>
       (customer as any).deleted !== true && customer.metadata?.tenant_id === this.tenantId &&
-      customer.metadata?.client_id === clientId && customer.metadata?.billing_profile_id === billingProfileId
+      customer.metadata?.stripe_account_id === this.config?.accountId && customer.metadata?.client_id === clientId &&
+      customer.metadata?.billing_profile_id === billingProfileId
     );
 
     let customerId: string;
@@ -388,6 +391,7 @@ export class StripePaymentProvider implements PaymentProvider {
           tenant_id: this.tenantId,
           client_id: clientId,
           billing_profile_id: billingProfileId,
+          stripe_account_id: this.config?.accountId ?? '',
           source: 'alga_psa_invoice_payment',
         },
       });
@@ -409,7 +413,7 @@ export class StripePaymentProvider implements PaymentProvider {
         provider_type: 'stripe',
         external_customer_id: customerId,
         email,
-        metadata: { name },
+        metadata: { name, stripe_account_id: this.config?.accountId ?? '' },
         updated_at: knex.fn.now(),
       } as any)
       .onConflict(['tenant', 'client_id', 'billing_profile_id', 'provider_type'])

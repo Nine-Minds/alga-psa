@@ -313,7 +313,8 @@ export function classifyImport(input: {
     if (customer.paymentMethods.length === 0) warnings.push('no-cards');
     else if (cards.every((card) => card.action === 'skip' || card.action === 'conflict')) warnings.push('no-importable-card');
 
-    const needsCustomerStamp = ownership !== 'owned';
+    const needsCustomerStamp = !metadataMatches(customer.metadata, alga.tenantId, row.clientId, row.billingProfileId) ||
+      customer.metadata.stripe_account_id !== alga.accountId;
     const needsMapping = !profileMapping;
     const pendingCards = cards.some((card) => card.action === 'import' || (card.action === 'already-imported' && card.needsMetadataStamp));
     const pending = needsCustomerStamp || needsMapping || pendingCards || defaultExternalId !== null;
