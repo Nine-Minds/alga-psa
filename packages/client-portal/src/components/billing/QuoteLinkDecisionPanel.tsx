@@ -24,6 +24,22 @@ export interface QuoteLinkAgreement {
   hash: string;
 }
 
+/** Quote as the server persisted it (minor units); mirrors QuoteLinkCommittedSnapshot in @alga-psa/billing. */
+export interface QuoteLinkCommittedSnapshot {
+  subtotal: number;
+  discount_total: number;
+  tax: number;
+  total_amount: number;
+  selectedOptionalQuoteItemIds: string[];
+}
+
+/** What the server said when the form was replaced by a result. */
+export type QuoteLinkSettledOutcome =
+  | { kind: 'decided'; decision: 'accepted' | 'rejected'; committed?: QuoteLinkCommittedSnapshot }
+  | { kind: 'already_decided'; decision: 'accepted' | 'rejected' }
+  | { kind: 'changed' }
+  | { kind: 'invalid' };
+
 export interface QuoteLinkDecisionPanelProps {
   /** The raw access token from the URL; only used to address the decision route. */
   token: string;
@@ -38,16 +54,15 @@ export interface QuoteLinkDecisionPanelProps {
   /** Lets the owner of the document view lock its toggles while a request is in flight. */
   onSubmittingChange?: (submitting: boolean) => void;
   /**
-   * Called once a result replaces the form (decided, already decided, changed, invalid).
-   * `decision` is the outcome the SERVER confirmed ('decided' / 'already_decided'); it is null
-   * for changed / invalid, so the owner never shows a state the server did not confirm.
+   * Called once a result replaces the form (decided, already decided, changed, invalid) with
+   * the outcome the SERVER confirmed. Only a fresh `decided` carries the committed snapshot.
    */
-  onSettled?: (decision: 'accepted' | 'rejected' | null) => void;
+  onSettled?: (outcome: QuoteLinkSettledOutcome) => void;
 }
 
 type PanelState =
   | { kind: 'form' }
-  | { kind: 'decided'; decision: 'accepted' | 'rejected'; decidedAt?: string; already: boolean }
+  | { kind: 'decided'; decision: 'accepted' | 'rejected'; decidedAt?: string; already: boolean; committed?: QuoteLinkCommittedSnapshot }
   | { kind: 'changed' }
   | { kind: 'invalid' };
 
@@ -92,7 +107,7 @@ const QuoteLinkDecisionPanel: React.FC<QuoteLinkDecisionPanelProps> = ({
       });
       const body = await response.json().catch(() => ({}));
       if (body.status === 'decided') {
-        setState({ kind: 'decided', decision: body.decision, decidedAt: body.decidedAt, already: false });
+        setState({ kind: 'decided', decision: body.decision, decidedAt: body.decidedAt, already: false, committed: body.committed });
       } else if (body.status === 'already_decided') {
         setState({ kind: 'decided', decision: body.decision, decidedAt: body.decidedAt, already: true });
       } else if (body.status === 'changed') {
@@ -116,9 +131,16 @@ const QuoteLinkDecisionPanel: React.FC<QuoteLinkDecisionPanelProps> = ({
   }, [token, name, title, agreed, agreement, quoteFingerprint, selectedOptionalIds, comment, t, onSubmittingChange]);
 
   // A settled result replaces the form; tell the owner so it can lock the optional-item toggles.
-  const settled = state.kind !== 'form';
-  const confirmedDecision = state.kind === 'decided' ? state.decision : null;
-  React.useEffect(() => { if (settled) onSettled?.(confirmedDecision); }, [settled, confirmedDecision, onSettled]);
+  React.useEffect(() => {
+    if (state.kind === 'form') return;
+    if (state.kind === 'decided') {
+      onSettled?.(state.already
+        ? { kind: 'already_decided', decision: state.decision }
+        : { kind: 'decided', decision: state.decision, committed: state.committed });
+    } else {
+      onSettled?.({ kind: state.kind });
+    }
+  }, [state, onSettled]);
 
   function inputProblemMessage(problem: string): string {
     switch (problem) {
@@ -130,6 +152,8 @@ const QuoteLinkDecisionPanel: React.FC<QuoteLinkDecisionPanelProps> = ({
         return t('quotes.publicDecision.errors.agreementOutdated', { defaultValue: 'The agreement wording has been updated. Please reload this page and try again.' });
       case 'comment_required':
         return t('quotes.publicDecision.errors.commentRequired', { defaultValue: 'Please add a short comment before rejecting this quote.' });
+      case 'fingerprint_required':
+        return t('quotes.publicDecision.errors.reload', { defaultValue: 'Please reload this page and try again.' });
       case 'too_long':
         return t('quotes.publicDecision.errors.tooLong', { defaultValue: 'One of your entries is too long.' });
       default:

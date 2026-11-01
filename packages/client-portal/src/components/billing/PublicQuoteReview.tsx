@@ -15,7 +15,7 @@ import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 import type { ClientPortalLocationSummary } from '@alga-psa/client-portal/actions';
 import { QuoteDocumentView, type QuoteDocumentQuote } from './QuoteDocumentView';
 import { computePublicQuotePreview } from './publicQuotePreview';
-import QuoteLinkDecisionPanel, { type QuoteLinkAgreement } from './QuoteLinkDecisionPanel';
+import QuoteLinkDecisionPanel, { type QuoteLinkAgreement, type QuoteLinkCommittedSnapshot, type QuoteLinkSettledOutcome } from './QuoteLinkDecisionPanel';
 
 export type PublicQuoteReviewItem = Pick<
   IQuoteItem,
@@ -61,17 +61,30 @@ function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, toke
   const { t } = useTranslation('features/billing');
 
   // Optional-item selection is local until Accept commits it (same model as the portal).
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+  const initialSelectedIds = useMemo(
     () => new Set(items.filter((i) => isOptional(i as IQuoteItem) && isQuoteItemIncluded(i as IQuoteItem)).map((i) => i.quote_item_id)),
+    [items],
   );
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set(initialSelectedIds));
   const [submitting, setSubmitting] = useState(false);
   const [settled, setSettled] = useState(false);
   // Status the server confirmed through the decision route; null until then (or for changed / invalid).
   const [confirmedStatus, setConfirmedStatus] = useState<'accepted' | 'rejected' | null>(null);
-  const onSettled = useCallback((decision: 'accepted' | 'rejected' | null) => {
+  // Set only by a fresh `decided` outcome: the quote exactly as the server persisted it.
+  const [committed, setCommitted] = useState<QuoteLinkCommittedSnapshot | null>(null);
+  const onSettled = useCallback((outcome: QuoteLinkSettledOutcome) => {
     setSettled(true);
-    if (decision) setConfirmedStatus(decision);
-  }, []);
+    if (outcome.kind === 'decided' || outcome.kind === 'already_decided') setConfirmedStatus(outcome.decision);
+    if (outcome.kind === 'decided' && outcome.decision === 'accepted' && outcome.committed) {
+      setCommitted(outcome.committed);
+      setSelectedIds(new Set(outcome.committed.selectedOptionalQuoteItemIds));
+    } else {
+      // Rejected, already decided, changed, invalid: the local toggles were never committed.
+      // Show the server-rendered selection and totals so rows and totals agree.
+      setCommitted(null);
+      setSelectedIds(new Set(initialSelectedIds));
+    }
+  }, [initialSelectedIds]);
   const displayQuote = useMemo(
     () => (confirmedStatus ? { ...quote, status: confirmedStatus } : quote),
     [quote, confirmedStatus],
@@ -114,12 +127,12 @@ function Inner({ quote, items, locations, branding, pdfHref, decidedNotice, toke
 
   const totals = useMemo(
     () => ({
-      subtotal: preview ? preview.subtotal : quote.subtotal || 0,
-      discountTotal: preview ? preview.discountTotal : quote.discount_total || 0,
-      tax: preview ? preview.tax : quote.tax || 0,
-      totalAmount: preview ? preview.totalAmount : quote.total_amount || 0,
+      subtotal: committed ? committed.subtotal : preview ? preview.subtotal : quote.subtotal || 0,
+      discountTotal: committed ? committed.discount_total : preview ? preview.discountTotal : quote.discount_total || 0,
+      tax: committed ? committed.tax : preview ? preview.tax : quote.tax || 0,
+      totalAmount: committed ? committed.total_amount : preview ? preview.totalAmount : quote.total_amount || 0,
     }),
-    [quote, preview],
+    [quote, preview, committed],
   );
 
   return (
