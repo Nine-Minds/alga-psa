@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { zodToJsonSchema } from 'zod-to-json-schema';
 import { normalizeWorkflowPayloadZodIssues } from '@alga-psa/workflows/authoring';
 
 import {
@@ -17,14 +16,14 @@ const translate = (_key: string, options: Record<string, unknown>) =>
 
 // Shaped like TICKET_CUSTOMER_REPLIED.
 const customerReplied = z.object({
-  ticketId: z.string().uuid(),
-  messageId: z.string().uuid().describe('Message ID'),
-  contactId: z.string().uuid().optional(),
+  ticketId: z.string().guid(),
+  messageId: z.string().guid().describe('Message ID'),
+  contactId: z.string().guid().optional(),
   channel: z.enum(['email', 'portal', 'ui', 'api']),
   receivedAt: z.string().datetime().optional(),
   attachmentsCount: z.number().int().nonnegative().optional(),
 });
-const jsonSchema = zodToJsonSchema(customerReplied) as RunPayloadJsonSchema;
+const jsonSchema = z.toJSONSchema(customerReplied, { target: 'draft-7' }) as RunPayloadJsonSchema;
 
 describe('Run dialog payload issues', () => {
   it('finds the same problems in the form as the server does', () => {

@@ -27,14 +27,14 @@ import { webhookModel, type WebhookDeliveryRecord, type WebhookRecord } from '@/
 import { payloadFieldsByEntitySchema } from '@/lib/webhooks/payloadFields';
 
 const webhookInputSchema = z.object({
-  webhookId: z.string().uuid().optional(),
+  webhookId: z.string().guid().optional(),
   name: z.string().trim().min(1).max(255),
   url: z.string().url(),
   // Shape only: legacy names already stored on the webhook must round-trip. Registry membership is
   // enforced in saveWebhook against what the row already holds.
   eventTypes: z.array(z.string().trim().min(1)).min(1),
   customHeaders: z.record(z.string(), z.string()).default({}),
-  entityIds: z.array(z.string().uuid()).default([]),
+  entityIds: z.array(z.string().guid()).default([]),
   payloadFields: payloadFieldsByEntitySchema.optional(),
   retryConfig: z.record(z.string(), z.unknown()).nullable().optional(),
   verifySsl: z.boolean().default(true),

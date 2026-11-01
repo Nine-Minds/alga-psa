@@ -51,7 +51,9 @@
       "replaced": "Sostituito",
       "credited": "Accreditato",
       "charged": "Addebitato",
-      "closed": "Chiuso"
+      "closed": "Chiuso",
+      "warranty_review": "Verifica garanzia",
+      "repaired": "Riparato"
     }
   },
   "assetAlertsSection": {
@@ -2124,6 +2126,25 @@
     "photos": {
       "limit": "Fino a 20 foto, 10 MB in totale. Le foto non sono visibili ai clienti.",
       "tooLarge": "Seleziona al massimo 20 foto per un totale non superiore a 10 MB."
+    }
+  },
+  "warranty": {
+    "card": {
+      "title": "Garanzia",
+      "warrantyEnd": "La garanzia scade",
+      "expired": "Scaduta",
+      "expiringSoon": "In scadenza",
+      "vendor": "Fornitore",
+      "ownership": "Proprietà",
+      "ownershipMsp": "Di proprietà dell'MSP",
+      "ownershipClient": "Di proprietà del cliente",
+      "claims": "Richieste di garanzia",
+      "noClaims": "Nessuna richiesta di garanzia al momento.",
+      "openRma": "Apri RMA",
+      "startClaim": "Avvia richiesta di garanzia"
+    },
+    "badge": {
+      "label": "RMA {{number}} · {{status}}"
     }
   }
 }

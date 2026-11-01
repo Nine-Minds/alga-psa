@@ -35,11 +35,11 @@ async function connectedClient(client: InstanceClient) {
 }
 
 describe('MCP stdio-protocol conformance (T011)', () => {
-  it('lists exactly the 3 meta-tools', async () => {
+  it('lists exactly the 4 meta-tools', async () => {
     const client = await connectedClient(fakeClient({ status: 200, ok: true, data: {} }));
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
-    expect(names).toEqual(['call_api_endpoint', 'search_api_registry', 'search_business_data']);
+    expect(names).toEqual(['attach_file', 'call_api_endpoint', 'search_api_registry', 'search_business_data']);
   });
 
   it('invokes search_api_registry over the protocol and returns results', async () => {
