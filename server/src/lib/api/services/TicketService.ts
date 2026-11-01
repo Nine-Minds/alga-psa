@@ -1396,7 +1396,7 @@ export class TicketService extends BaseService<ITicket> {
     documentId: string,
     variant: TicketDocumentVariant,
     context: ServiceContext
-  ): Promise<{ buffer: Buffer; fileId: string; mimeType: string }> {
+  ): Promise<{ buffer: Buffer; fileId: string; mimeType: string | null }> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
@@ -1439,7 +1439,7 @@ export class TicketService extends BaseService<ITicket> {
     return {
       buffer: result.buffer,
       fileId,
-      mimeType: result.metadata.mime_type || 'image/jpeg',
+      mimeType: result.metadata.mime_type ?? null,
     };
   }
 
