@@ -60,6 +60,14 @@ function normalizeSendUserInvitationError(
   if (error instanceof UserInvitationError) {
     return { message: error.message.trim() || undefined, errorCode: error.errorCode };
   }
+  // Seat-limit refusal from UserService.createFromInvitation (same codes the
+  // invite-send limit check reports).
+  if (error instanceof Error && error.name === 'LicenseLimitError') {
+    const code = (error as Error & { code?: unknown }).code;
+    if (code === 'SOLO_PLAN_LIMIT' || code === 'LICENSE_LIMIT_REACHED') {
+      return { message: error.message, errorCode: code };
+    }
+  }
 
   if (error instanceof Error) {
     const message = error.message.trim();
@@ -364,11 +372,11 @@ export async function completeUserInvitationSetup(
       try {
         outcome = await runAsSystem('user-invitation-account-creation', async () =>
           knex.transaction(async (trx): Promise<AcceptOutcome> => {
-            const licenseCheck = await checkInternalUserLicenseLimit(trx, tenant, { deferCoManaged: true });
-            if (isInternalUserLicenseLimitRejected(licenseCheck)) {
-              return { rejected: { success: false, error: licenseCheck.error, errorCode: licenseCheck.code } };
-            }
-            if (licenseCheck.coManaged && !await isCoManagedInvitationServed(tenant)) {
+            // Co-managed tenants are admitted by their sponsor-backed allocation
+            // inside UserService.createFromInvitation; the capability is gated here.
+            const tenantRow = await tenantDb(trx, tenant).table('tenants').first('product_code');
+            const coManagedTenant = tenantRow?.product_code === 'co_managed';
+            if (coManagedTenant && !await isCoManagedInvitationServed(tenant)) {
               return { rejected: { success: false, error: 'This feature is not available.', errorCode: 'CAPABILITY_UNAVAILABLE' } };
             }
 
@@ -413,12 +421,11 @@ export async function completeUserInvitationSetup(
               role_ids: [invitationRole.role_id]
             };
 
-            let user;
-            if (licenseCheck.coManaged) {
-              // Consumes the invitation token itself.
-              user = await userService.createFromCoManagedInvitation(userData, systemContext, trx, token);
-            } else {
-              user = await userService.createInTransaction(userData, systemContext, trx);
+            // Admission (co-managed gate or ordinary seat limit), the account and
+            // its role run under the per-tenant seat lock in this transaction.
+            // Co-managed admission consumes the invitation token itself.
+            const { user, coManaged } = await userService.createFromInvitation(userData, systemContext, trx, token);
+            if (!coManaged) {
               const consumed = await tenantDb(trx, tenant).table('user_invitations')
                 .where({ token, used_at: null })
                 .update({ used_at: trx.fn.now() });
