@@ -13358,9 +13358,6 @@
               "prepayment",
               "partially_applied"
             ]
-          },
-          "finalized_at": {
-            "type": "string"
           }
         },
         "required": [
@@ -56884,7 +56881,7 @@
     "/api/v1/invoices/bulk": {
       "post": {
         "summary": "Bulk update invoice status",
-        "description": "Bulk status transition route using bulkInvoiceStatusUpdateSchema.",
+        "description": "Bulk status transition route using bulkInvoiceStatusUpdateSchema. Only metadata transitions are applied; paid, cancelled and finalize transitions are reported as per-invoice errors naming the dedicated command. finalized_at is not accepted.",
         "tags": [
           "Invoices"
         ],
