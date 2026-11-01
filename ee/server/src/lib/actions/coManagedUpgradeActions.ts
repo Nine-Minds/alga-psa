@@ -2,15 +2,17 @@
 
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
-import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
-import { getCoManagedIndependentUpgradeScreen, getCoManagedUpgradeAudience, prepareCoManagedIndependentUpgrade,
+import { requireCapabilityForAction, CapabilityUnavailableError } from '@alga-psa/core/capability/server';
+import { getCoManagedIndependentUpgradeScreen, resolveCoManagedUpgradeAccess, prepareCoManagedIndependentUpgrade,
   type CoManagedIndependentUpgradeRequest } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from 'server/src/lib/co-managed/browserActor';
 import { startTenantProductUpgradeWorkflow, getTenantProductUpgradeStatus } from '../tenant-management/workflowClient';
 
 export const getCoManagedUpgradeScreenAction = withAuth(async (user, { tenant }) => {
-  await requireCapabilityForAction('co-managed', tenant, 'serves');
+  // Read-only screen: the shared upgrade gate (kill switch, flag, customer or former customer), not `serves`,
+  // so a former customer that no longer participates still gets its completed state. Mutations stay serves-gated.
   const { knex } = await createTenantKnex(tenant);
+  if (await resolveCoManagedUpgradeAccess(knex, tenant) === 'closed') throw new CapabilityUnavailableError();
   const actor = await coManagedBrowserActor(user, tenant);
   const prices = [process.env.STRIPE_ALGAPSA_USER_PRICE_ID || process.env.STRIPE_PRO_PRICE_ID,
     process.env.STRIPE_ALGAPSA_USER_ANNUAL_PRICE_ID || process.env.STRIPE_PRO_ANNUAL_PRICE_ID].filter((id): id is string => Boolean(id));
@@ -58,11 +60,8 @@ export const manageCoManagedUpgradeBillingAction = withAuth(async (user, { tenan
   return openCoManagedIndependentBilling(knex, actor, input);
 });
 
-/** Page-level audience check (own tenant only, from the session): the customer side of a co-managed
- * relationship, or a tenant with a completed independent upgrade. Pass `includeCustomer: false` when
- * the capability gate is closed so only the completed-upgrade row is consulted. */
-export const getCoManagedUpgradeAudienceAction = withAuth(async (_user, { tenant }, includeCustomer: boolean = true) => {
+/** Page-level gate (page and generateMetadata): 'customer' | 'former' | 'closed', from the one shared function. */
+export const getCoManagedUpgradeAccessAction = withAuth(async (_user, { tenant }) => {
   const { knex } = await createTenantKnex(tenant);
-  const audience = await getCoManagedUpgradeAudience(knex, tenant, includeCustomer);
-  return { audience: audience.customer || audience.completed };
+  return { access: await resolveCoManagedUpgradeAccess(knex, tenant) };
 });

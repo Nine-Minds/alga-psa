@@ -6,7 +6,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  product: 'co_managed', gate: vi.fn(async () => undefined), screen: vi.fn(), audience: vi.fn(),
+  product: 'co_managed', gate: vi.fn(async () => undefined), screen: vi.fn(), access: vi.fn(),
 }));
 vi.mock('next/navigation', () => ({ notFound: () => { throw new Error('NEXT_NOT_FOUND'); }, useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
 vi.mock('next/link', () => ({ default: ({ children, href }: any) => <a href={href}>{children}</a> }));
@@ -22,7 +22,7 @@ vi.mock('@alga-psa/ui/components/Card', () => ({ Card: (p: any) => <div>{p.child
   CardTitle: (p: any) => <h1>{p.children}</h1>, CardDescription: (p: any) => <p>{p.children}</p>, CardContent: (p: any) => <div>{p.children}</div> }));
 vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({ ConfirmationDialog: () => null }));
 vi.mock('@ee/lib/actions/coManagedUpgradeActions', () => ({
-  getCoManagedUpgradeScreenAction: mocks.screen, getCoManagedUpgradeAudienceAction: mocks.audience, startCoManagedUpgradeAction: vi.fn(),
+  getCoManagedUpgradeScreenAction: mocks.screen, getCoManagedUpgradeAccessAction: mocks.access, startCoManagedUpgradeAction: vi.fn(),
   purchaseCoManagedUpgradeAction: vi.fn(), retryCoManagedUpgradePaymentAction: vi.fn(), manageCoManagedUpgradeBillingAction: vi.fn(),
 }));
 vi.mock('../../../components/co-managed/CoManagedUpgradePurchase', () => ({ default: () => <div data-testid="purchase" /> }));
@@ -35,7 +35,7 @@ const eligible = (over: Record<string, unknown> = {}) => ({ state: 'eligible', r
   purchaseConfigured: true, seatsRequired: 3, entitlementReady: false, pendingPurchase: null, hasOwnBilling: false, paidSeats: null, progress: 'idle', ...over });
 
 beforeEach(() => { mocks.product = 'co_managed'; mocks.gate.mockReset(); mocks.gate.mockResolvedValue(undefined); mocks.screen.mockReset();
-  mocks.audience.mockReset(); mocks.audience.mockImplementation(async () => ({ audience: true })); });
+  mocks.access.mockReset(); mocks.access.mockImplementation(async () => ({ access: 'customer' })); });
 
 describe('co-managed independent upgrade UI', () => {
   it('the entry point exists for a co_managed workspace only', () => {
@@ -46,39 +46,38 @@ describe('co-managed independent upgrade UI', () => {
     expect(container.querySelector('a')).toBeNull();
   });
 
-  it('the route is gated by the capability gate: a closed gate makes the page unreachable', async () => {
+  it('the route is gated by the shared upgrade gate: a closed gate makes the page unreachable', async () => {
     await expect(CoManagedUpgradePage()).resolves.toBeTruthy();
-    expect(mocks.gate).toHaveBeenCalledWith('co-managed', 'tenant-1', 'serves');
-    mocks.gate.mockRejectedValue(new Error('NEXT_NOT_FOUND'));
-    mocks.audience.mockResolvedValue({ audience: false });
+    expect(mocks.access).toHaveBeenCalled();
+    mocks.access.mockResolvedValue({ access: 'closed' });
     await expect(CoManagedUpgradePage()).rejects.toThrow('NEXT_NOT_FOUND');
   });
 
-  describe('audience: the page exists only for customers and former customers', () => {
-    it('a sponsor (serves, not a customer, no upgrade row) gets a 404 and neutral metadata', async () => {
-      mocks.audience.mockResolvedValue({ audience: false });
+  describe('access: the page exists only for customers and former customers', () => {
+    // The gate itself (kill switch, malformed value, release flag, serves, relationship, upgrade row) is
+    // resolveCoManagedUpgradeAccess, covered in packages/co-managed upgradeAccess.test.ts; the page maps its answer.
+    const closed = (why: string) => it(`${why}: 404 and neutral metadata`, async () => {
+      mocks.access.mockResolvedValue({ access: 'closed' });
       await expect(CoManagedUpgradePage()).rejects.toThrow('NEXT_NOT_FOUND');
       expect(await generateMetadata()).toEqual({});
-      expect(mocks.audience).toHaveBeenCalledWith(true);
     });
+    closed('a sponsor (serves, not a customer, no upgrade row)');
+    closed('kill switch on, former customer with an upgrade row');
+    closed('malformed FORCE_CAPABILITIES');
+    closed('release flag off, former customer');
+    closed('flag off');
     it('a customer renders and gets the real title', async () => {
       await expect(CoManagedUpgradePage()).resolves.toBeTruthy();
       expect(await generateMetadata()).toEqual({ title: 'Upgrade to AlgaPSA' });
     });
-    it('a former customer with an upgrade row renders even when the serves gate fails, without a relationship query', async () => {
-      mocks.gate.mockRejectedValue(new Error('NEXT_NOT_FOUND'));
-      await expect(CoManagedUpgradePage()).resolves.toBeTruthy();
+    it('a former customer renders the completed screen outside the serves-mode boundary, with the real title', async () => {
+      mocks.access.mockResolvedValue({ access: 'former' });
+      const page: any = await CoManagedUpgradePage();
+      expect(page.type).toBe(CoManagedUpgrade);
       expect(await generateMetadata()).toEqual({ title: 'Upgrade to AlgaPSA' });
-      expect(mocks.audience).toHaveBeenCalledWith(false);
     });
-    it('flag off (gate fails, no upgrade row) is a 404 with neutral metadata', async () => {
-      mocks.gate.mockRejectedValue(new Error('NEXT_NOT_FOUND'));
-      mocks.audience.mockResolvedValue({ audience: false });
-      await expect(CoManagedUpgradePage()).rejects.toThrow('NEXT_NOT_FOUND');
-      expect(await generateMetadata()).toEqual({});
-    });
-    it('an audience lookup failure is a 404, not a leak', async () => {
-      mocks.audience.mockRejectedValue(new Error('boom'));
+    it('an access lookup failure is a 404, not a leak', async () => {
+      mocks.access.mockRejectedValue(new Error('boom'));
       await expect(CoManagedUpgradePage()).rejects.toThrow('NEXT_NOT_FOUND');
       expect(await generateMetadata()).toEqual({});
     });

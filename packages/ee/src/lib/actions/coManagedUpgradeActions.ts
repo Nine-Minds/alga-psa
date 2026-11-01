@@ -28,6 +28,6 @@ export async function manageCoManagedUpgradeBillingAction(_input: { kind: 'payme
   throw new Error('Independent billing requires hosted billing.');
 }
 
-export async function getCoManagedUpgradeAudienceAction(_includeCustomer: boolean = true): Promise<{ audience: boolean }> {
+export async function getCoManagedUpgradeAccessAction(): Promise<{ access: 'customer' | 'former' | 'closed' }> {
   throw new Error('Independent upgrades require the licensed tenant workflow worker.');
 }

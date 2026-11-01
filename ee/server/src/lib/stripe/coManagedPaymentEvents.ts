@@ -130,8 +130,8 @@ export function createCoManagedPaymentHandlers(deps: CoManagedPaymentDeps): Paym
     {
       // Independent upgrade (L8b). Claimed only by our metadata marker. The paying tenant is the
       // co-managed CUSTOMER, which only ever `serves` (participates) and never `admits` (release flag +
-      // sponsor entitlement), so the gate is `serves`: flag-first, cached, no co-managed query for a
-      // non-participating tenant. An upgrade-marked event is CONSUMED when the gate is closed (kill
+      // sponsor entitlement), so the gate is `serves` (participation; cached). Only the claims() marker check keeps
+      // ordinary events away from it, so a non-upgrade event never consults the gate. An upgrade-marked event is CONSUMED when the gate is closed (kill
       // switch, not participating): it must never reach the MSP licence handlers in StripeService,
       // which would fail on it. The customer's in-app "Resume purchase" reconcile recovers from Stripe.
       name: 'co-managed-independent-upgrade',
