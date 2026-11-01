@@ -13,6 +13,12 @@ import type { CoManagedPolicyTarget } from './policy';
  */
 export interface CoManagedUpgradeClosure {
   /**
+   * False until L7a is wired. While false, nothing that leads to an upgrade may start: the upgrade
+   * gate is closed (no page, no screen, no mutation) and no purchase is prepared, so a customer can
+   * never be charged for an independence that the closure step would then refuse.
+   */
+  readonly available: boolean;
+  /**
    * Close an ACTIVE relationship with reason `independent_upgrade`, finalise its archive (with
    * manifest hash) and release the MSP's allocation, all inside `trx`. Idempotent per `operationId`.
    */

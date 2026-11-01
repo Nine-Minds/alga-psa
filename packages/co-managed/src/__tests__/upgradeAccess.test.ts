@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createFake } from './fakeCoManagedDb';
 
-const gate = vi.hoisted(() => ({ served: true, flag: true as boolean | 'throw', flagCalls: 0 }));
+const gate = vi.hoisted(() => ({ served: true, flag: true as boolean | 'throw', flagCalls: 0, closureWired: true }));
 vi.mock('@alga-psa/db', async () => {
   const fake = await import('./fakeCoManagedDb');
   return { tenantDb: (db: any, tenant: string) => fake.fakeTenantDb(db, tenant), tenantTableMetadata: {},
@@ -14,6 +14,8 @@ vi.mock('@alga-psa/core/capability', async importOriginal => ({
   ...(await importOriginal<Record<string, unknown>>()),
   serves: async () => ({ served: gate.served }),
 }));
+
+vi.mock('../upgradeClosureWiring', () => ({ coManagedUpgradeClosure: { get available() { return gate.closureWired; } } }));
 
 import { resolveCoManagedUpgradeAccess } from '../independentUpgradeScreen';
 
@@ -28,12 +30,20 @@ function world(opts: { relationship?: boolean; upgradeRow?: boolean } = {}) {
   return db;
 }
 
-beforeEach(() => { delete process.env.FORCE_CAPABILITIES; gate.served = true; gate.flag = true; gate.flagCalls = 0; });
+beforeEach(() => { delete process.env.FORCE_CAPABILITIES; gate.served = true; gate.flag = true; gate.flagCalls = 0; gate.closureWired = true; });
 afterEach(() => { delete process.env.FORCE_CAPABILITIES; });
 
 describe('resolveCoManagedUpgradeAccess', () => {
   it('customer: flag on, serves, customer-side relationship', async () => {
     expect(await resolveCoManagedUpgradeAccess(world({ relationship: true }), CUSTOMER)).toBe('customer');
+  });
+  it('a serving customer is closed while the L7a closure is not wired (nothing can start, nothing is charged)', async () => {
+    gate.closureWired = false;
+    expect(await resolveCoManagedUpgradeAccess(world({ relationship: true }), CUSTOMER)).toBe('closed');
+  });
+  it('a former customer still reaches its completed screen regardless of the closure wiring', async () => {
+    gate.closureWired = false; gate.served = false;
+    expect(await resolveCoManagedUpgradeAccess(world({ relationship: true, upgradeRow: true }), CUSTOMER)).toBe('former');
   });
   it('sponsor (serves, no relationship on its own tenant, no upgrade row) is closed', async () => {
     expect(await resolveCoManagedUpgradeAccess(world(), SPONSOR)).toBe('closed');

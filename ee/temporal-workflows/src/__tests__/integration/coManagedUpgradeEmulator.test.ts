@@ -8,7 +8,7 @@
  * Real here: the Stripe SDK talking HTTP to `@alga-psa/emulator-stripe` (routed through
  * `stripeApiOverride`), the emulator's signed webhook deliveries, `createCoManagedPaymentHandlers` +
  * `dispatchPaymentEvent`, every table, CHECK and index, and the whole purchase/upgrade domain.
- * Faked (and why): the L7a closure (not on main) — a recording `CoManagedUpgradeClosure`; PSA seed
+ * Faked (and why): the L7a closure (not on main) — a recording `CoManagedUpgradeClosure`, marked `available`; PSA seed
  * initialisation (`initializeIndependentPsa`, needs the full seed catalogue); the `co-managed`
  * capability gate (`serves` open, `admits` closed: a customer has no sponsor entitlement). `sessionShape` below adapts three
  * response-shape gaps in the emulator, listed on that function.
@@ -98,7 +98,10 @@ describe.skipIf(!url)('independent upgrade against the Stripe emulator and a rea
   };
   const newEvents = (from: number) => events.slice(from);
 
+  // The L7a closure is faked below, so the build counts as having it wired (purchase and the gate need that).
+  let closureWired: ReturnType<typeof vi.spyOn> | undefined;
   beforeAll(async () => {
+    closureWired = vi.spyOn(coManagedUpgradeClosure, 'available', 'get').mockReturnValue(true);
     db = knexFactory({ client: 'pg', connection: url });
     if (!await db.schema.hasTable('stripe_customers')) {
       for (const f of ['ee/server/migrations/20251014120000_create_stripe_integration_tables.cjs', 'ee/server/migrations/20260305200000_add_base_item_to_stripe_subscriptions.cjs',
@@ -147,6 +150,7 @@ describe.skipIf(!url)('independent upgrade against the Stripe emulator and a rea
   };
   afterEach(reset);
   afterAll(async () => {
+    closureWired?.mockRestore();
     process.env.STRIPE_API_BASE_URL = previousBase; if (previousBase === undefined) delete process.env.STRIPE_API_BASE_URL;
     await db('sessions').where('session_id', sessionId).delete();
     await db('co_management_relationships').where({ tenant, relationship_id: relationship.relationship_id })
