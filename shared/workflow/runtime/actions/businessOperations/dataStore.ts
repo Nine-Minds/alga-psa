@@ -73,10 +73,10 @@ const valueTypeSchema = z.enum(['string', 'number', 'boolean', 'json']).default(
 const cursorSchema = z.union([z.number().int().nonnegative(), z.string().trim().min(1)]).optional();
 
 const storeRecordOutputSchema = z.object({
-  store_id: z.string().uuid(),
+  store_id: z.string().guid(),
   namespace: z.string(),
   key: z.string(),
-  value: z.any(),
+  value: z.any().optional(),
   value_type: z.string(),
   revision: z.number(),
   expires_at: z.string().datetime().nullable(),
@@ -91,7 +91,7 @@ const getInputSchema = z.object({
 
 const getOutputSchema = z.object({
   found: z.boolean(),
-  value: z.any().nullable(),
+  value: z.any().optional().nullable(),
   value_type: z.string().nullable(),
   revision: z.number().nullable(),
   expires_at: z.string().datetime().nullable(),

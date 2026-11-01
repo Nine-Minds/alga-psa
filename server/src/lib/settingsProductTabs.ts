@@ -5,6 +5,7 @@ const ALGA_DESK_ALLOWED_SETTINGS_TABS = [
   'users',
   'teams',
   'ticketing',
+  'tags',
   'email',
   'appearance',
   'client-portal',

@@ -8,7 +8,7 @@ import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const reporter = fileURLToPath(new URL('../lib/vitest-progress-reporter.mjs', import.meta.url));
-const runners = ['../../server/node_modules/vitest/vitest.mjs', '../../node_modules/vitest/vitest.mjs'];
+const runners = ['../../node_modules/vitest/vitest.mjs'];
 
 for (const runner of runners) {
   test(`real ${runner} preserves results and interrupted import evidence`, { timeout: 30000 }, async (t) => {

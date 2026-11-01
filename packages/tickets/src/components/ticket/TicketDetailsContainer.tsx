@@ -17,6 +17,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import TicketDetails from './TicketDetails';
 import type { TicketNotificationSuppressionValue } from './TicketNotificationSuppressionControl';
 import type { CommentEmailRecipientsPayload } from './CommentEmailRecipientsControl';
+import type { ComposerAudience } from './CommentAudienceControl';
 import { TicketDetailsSkeleton } from './TicketDetailsSkeleton';
 import { UnsavedChangesProvider } from '@alga-psa/ui/context';
 import { persistTicketDescriptionUpdate } from './ticketDescriptionUpdate';
@@ -44,6 +45,7 @@ interface TicketDetailsContainerProps {
     client: any;
     contacts: any[];
     contactInfo: any;
+    displayTags?: { contact: any[]; client: any[] };
     createdByUser: any;
     updatedByUser?: any;
     board: any;
@@ -265,6 +267,7 @@ export default function TicketDetailsContainer({
     closesTicket: boolean = false,
     schedule?: { publishAt: string; timeZone: string } | null,
     emailRecipients?: CommentEmailRecipientsPayload,
+    audienceId?: ComposerAudience | null,
   ): Promise<boolean> => {
     if (!session?.user) {
       toast.error(t('errors.authRequiredComment', 'You must be logged in to add comments'));
@@ -282,6 +285,8 @@ export default function TicketDetailsContainer({
         undefined,
         schedule,
         emailRecipients,
+        // LEVERAGE: friction comment-audience-seam — the seam types this param as the native audience, but a shared-ticket source accepts `shared_it` too.
+        (audienceId ?? undefined) as Parameters<typeof addTicketCommentWithCacheForCurrentUser>[8],
       );
       if (isReturnedActionError(newComment)) {
         throw newComment;
@@ -342,6 +347,7 @@ export default function TicketDetailsContainer({
       initialClient={ticketData.client}
       initialContacts={ticketData.contacts}
       initialContactInfo={ticketData.contactInfo}
+      initialDisplayTags={ticketData.displayTags}
       initialCreatedByUser={ticketData.createdByUser}
       initialUpdatedByUser={ticketData.updatedByUser ?? null}
       initialBoard={ticketData.board}

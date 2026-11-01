@@ -1,6 +1,6 @@
 /**
- * buildSimulatedPeriod maps Prepaid Block supplemental charges to the
- * "Prepaid block issued" and "Block draw" presentation lines. DB-free.
+ * buildSimulatedPeriod maps the prepaidBlock and hourBlockDraw charge families
+ * to the prepaid-block fee ("<service> — prepaid block, <h> h") and "Block draw" presentation lines. DB-free.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -9,25 +9,54 @@ import { buildSimulatedPeriod } from '@ee/lib/billing/simulator/loadSimulationCa
 
 const window = { index: 0, startDate: '2026-01-01', endDateExclusive: '2026-02-01' };
 
-const charges: any[] = [
+const taxPolicy: any = {
+  getTaxInfoFromService: () => ({ taxRegion: null, isTaxable: false }),
+  getLocationTaxRegionCode: () => null,
+  getClientDefaultTaxRegionCode: () => null,
+  isTaxExemptForProfile: () => false,
+  calculateTax: () => ({ taxAmount: 0, taxRate: 0 }),
+};
+
+const line: any = {
+  tenantId: 't', clientId: 'c', clientContractId: 'k', clientContractLineId: 'L',
+  contractLineId: 'L', currencyCode: 'EUR',
+};
+const client = { clientId: 'c', isTaxExempt: false };
+
+const obligations: any[] = [
   {
-    type: 'prepaid_block', tenant: 't', issuance_id: 'i', contract_line_id: 'L', client_contract_line_id: 'L',
-    serviceId: 'svc', serviceName: 'Support - prepaid block (10 h, contract start)', block_minutes: 600,
-    block_price: 150000, currency_code: 'EUR', expiry_months: 12, scope_service_ids: ['svc'],
-    quantity: 10, rate: 15000, total: 150000, tax_amount: 0, tax_rate: 0, is_taxable: false,
-    servicePeriodStart: '2026-01-01', servicePeriodEnd: '2026-02-01', billingTiming: 'advance',
+    obligationId: 'prepaidBlock:L:i', tenantId: 't', contractLineId: 'L',
+    chargeFamily: 'prepaidBlock', taxContextKey: 'tax',
+    facts: {
+      kind: 'prepaidBlock', line, client, dueDate: '2026-01-01',
+      issuance: {
+        issuanceId: 'i', contractLineId: 'L', clientContractLineId: 'L', tenant: 't',
+        blockMinutes: 600, blockPrice: 150000, expiryMonths: 12, scopeServiceIds: ['svc'],
+        soldAsServiceId: 'svc', serviceName: 'Support',
+        soldAsTaxRateId: null, currencyCode: 'EUR', taxDate: '2026-01-01',
+        servicePeriodStart: '2026-01-01', servicePeriodEnd: '2026-02-01',
+      },
+    },
   },
   {
-    type: 'hour_block', tenant: 't', block_id: 'b', client_contract_line_id: 'L', serviceId: 'svc',
-    serviceName: 'Support - block draw (block 1)', hoursUsed: 4, hoursRemaining: 6, coveredEntryIds: [],
-    quantity: 4, rate: 0, total: 0, tax_amount: 0, tax_rate: 0,
-    servicePeriodStart: '2026-01-01', servicePeriodEnd: '2026-02-01', billingTiming: 'arrears',
+    obligationId: 'hourBlockDraw:L:2026-01-01', tenantId: 't', contractLineId: 'L',
+    chargeFamily: 'hourBlockDraw', taxContextKey: 'tax',
+    facts: {
+      kind: 'hourBlockDraw', line, client,
+      period: { startDate: '2026-01-01', endDate: '2026-02-01' },
+      allocations: [
+        {
+          block_id: 'b', service_id: 'svc', service_name: 'Support - block draw (block 1)',
+          remaining_minutes: 360, time_entry_id: null, minutes: 240, billable_duration: 0,
+        },
+      ],
+    },
   },
 ];
 
 describe('buildSimulatedPeriod prepaid block lines', () => {
   it('labels issuance and draw lines and keeps the draw at $0', () => {
-    const accumulator: any = { window, obligations: [], taxContexts: {}, supplementalCharges: charges };
+    const accumulator: any = { window, obligations, taxContexts: { tax: taxPolicy } };
     const calculation = calculateContractBilling({
       schemaVersion: 1,
       execution: { mode: 'simulate', tenantId: 't', calculationId: 'x', asOf: '2026-01-01T00:00:00Z' },
@@ -35,9 +64,8 @@ describe('buildSimulatedPeriod prepaid block lines', () => {
         clientId: 'c', currencyCode: 'EUR',
         invoiceWindow: { start: window.startDate, endExclusive: window.endDateExclusive },
       },
-      obligations: [],
-      taxContexts: {},
-      supplementalCharges: charges,
+      obligations,
+      taxContexts: { tax: taxPolicy },
     } as any);
     const period = buildSimulatedPeriod(
       accumulator,
@@ -48,7 +76,8 @@ describe('buildSimulatedPeriod prepaid block lines', () => {
     );
     const [issued, draw] = period.lines;
     expect(issued.charge_type).toBe('prepaid_block');
-    expect(issued.service_name).toMatch(/^Prepaid block issued/);
+    // Same wording the engine persists (prepaidBlockDescriptions), so past-invoice comparison pairs the lines.
+    expect(issued.service_name).toBe('Support — prepaid block, 10 h');
     expect(issued.net_amount).toBe(150000);
     expect(draw.charge_type).toBe('block_draw');
     expect(draw.service_name).toMatch(/^Block draw/);

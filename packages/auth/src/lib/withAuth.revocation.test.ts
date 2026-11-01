@@ -33,6 +33,7 @@ vi.mock('@alga-psa/db/models/UserSession', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
+  noteTenantProductCode: vi.fn(),
   getUserWithRoles: mocks.getUserWithRoles,
   getUserWithRolesByEmail: vi.fn(),
   runWithTenant: mocks.runWithTenant,

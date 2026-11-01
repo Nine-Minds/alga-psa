@@ -85,6 +85,16 @@ vi.mock('@/components/product/ProductRouteBoundary', () => ({
   ProductRouteBoundary: () => <div data-testid="product-route-boundary" />,
 }));
 
+vi.mock('@/components/co-managed/CoManagedFeatureBoundary', () => ({
+  CoManagedWorkspaceBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+vi.mock('@/components/co-managed/CoManagedWorkspaceNotice', () => ({
+  default: ({ notice }: { notice: unknown }) => (notice ? <div data-testid="workspace-notice" /> : null),
+}));
+vi.mock('@/components/co-managed/CoManagedCustomerShell', () => ({
+  default: ({ children }: { children: React.ReactNode }) => <div data-testid="customer-shell">{children}</div>,
+}));
+
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
@@ -95,6 +105,50 @@ afterEach(() => {
 const mockGetTenantSettings = vi.mocked(getTenantSettings);
 
 describe('MspLayoutClient product shell behavior', () => {
+  it('keeps a co-managed customer out of PSA setup when tenant setup is incomplete', async () => {
+    render(
+      <MspLayoutClient
+        session={{ user: { tenant: 'customer', user_type: 'internal', product_code: 'co_managed' } } as any}
+        productCode="co_managed"
+        needsOnboarding
+        canRunOnboarding
+        initialSidebarCollapsed={false}
+      >
+        <div>customer tickets</div>
+      </MspLayoutClient>,
+    );
+
+    expect(await screen.findByText('customer tickets')).toBeInTheDocument();
+    expect(screen.getByTestId('customer-shell')).toBeInTheDocument();
+    expect(screen.queryByText('Taking you to setup')).not.toBeInTheDocument();
+    expect(mockReplace).not.toHaveBeenCalledWith('/msp/onboarding');
+    expect(mockGetTenantSettings).not.toHaveBeenCalled();
+  });
+
+  it.each(['/msp/dashboard', '/msp/onboarding'])('sends co-managed %s visits to tickets without rendering the wizard', async path => {
+    mockUsePathname.mockReturnValue(path);
+    render(<MspLayoutClient session={{ user: { tenant: 'customer', user_type: 'internal' } } as any}
+      productCode="co_managed" needsOnboarding={false} canRunOnboarding initialSidebarCollapsed={false}>
+      <div>old route</div>
+    </MspLayoutClient>);
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/msp/tickets'));
+    expect(screen.queryByText('old route')).not.toBeInTheDocument();
+    expect(mockGetTenantSettings).not.toHaveBeenCalled();
+  });
+
+  it('ignores an in-flight PSA settings response after the product resolves to co-managed', async () => {
+    let resolveSettings!: (settings: Awaited<ReturnType<typeof getTenantSettings>>) => void;
+    mockGetTenantSettings.mockReturnValue(new Promise(resolve => { resolveSettings = resolve; }));
+    const layout = (product: 'psa' | 'co_managed') => <MspLayoutClient
+      session={{ user: { tenant: 'customer', user_type: 'internal' } } as any} productCode={product}
+      needsOnboarding={false} canRunOnboarding initialSidebarCollapsed={false}><div>Ticket queue</div></MspLayoutClient>;
+    const { rerender } = render(layout('psa'));
+    rerender(layout('co_managed'));
+    await act(async () => resolveSettings({ tenant: 'customer', onboarding_completed: false,
+      onboarding_skipped: false, created_at: new Date(), updated_at: new Date() }));
+    expect(screen.getByText('Ticket queue')).toBeInTheDocument();
+    expect(mockReplace).not.toHaveBeenCalledWith('/msp/onboarding');
+  });
   it('RT006: renders AlgaDesk shell for allowed AlgaDesk MSP routes', () => {
     render(
       <MspLayoutClient
@@ -128,6 +182,30 @@ describe('MspLayoutClient product shell behavior', () => {
 
     expect(screen.getByTestId('psa-default-layout')).toBeInTheDocument();
     expect(screen.queryByTestId('algadesk-shell')).not.toBeInTheDocument();
+  });
+
+  it('co_managed: renders the ended notice inside the customer shell and the boundary on a denied route', () => {
+    mockUsePathname.mockReturnValue('/msp/billing');
+    render(<MspLayoutClient session={null} productCode="co_managed" needsOnboarding={false} initialSidebarCollapsed={false}
+      workspaceNotice={{ kind: 'ended', endedAt: '2026-10-01T00:00:00.000Z', sponsorName: 'Northwind' }}>
+      <div>billing page</div>
+    </MspLayoutClient>);
+    expect(screen.getByTestId('customer-shell')).toBeInTheDocument();
+    expect(screen.getByTestId('workspace-notice')).toBeInTheDocument();
+    expect(screen.getByTestId('product-route-boundary')).toBeInTheDocument();
+    expect(screen.queryByText('billing page')).not.toBeInTheDocument();
+  });
+
+  it('psa and algadesk never mount the customer shell or the notice, even if one were passed', () => {
+    for (const product of ['psa', 'algadesk'] as const) {
+      const { unmount } = render(<MspLayoutClient session={null} productCode={product} needsOnboarding={false} initialSidebarCollapsed={false}
+        workspaceNotice={{ kind: 'ended', endedAt: '2026-10-01T00:00:00.000Z', sponsorName: 'x' }}>
+        <div>content</div>
+      </MspLayoutClient>);
+      expect(screen.queryByTestId('customer-shell')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('workspace-notice')).not.toBeInTheDocument();
+      unmount();
+    }
   });
 
   it('RT006: renders an onboarding redirect fallback instead of a blank screen', () => {

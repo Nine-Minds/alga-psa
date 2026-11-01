@@ -204,6 +204,10 @@
     "passwordMismatch": "Passwords do not match"
   },
   "errors": {
+    "coManaged": {
+      "readOnly": "This co-managed workspace is read-only. Sign-in, reading, export, and license recovery remain available.",
+      "acceptancePending": "The customer administrator must accept co-management before this workspace can be used."
+    },
     "validation": {
       "required": "{{field}} is required.",
       "invalidType": "{{field}} has the wrong type.",
@@ -2207,5 +2211,8 @@
   },
   "viewSwitcher": {
     "ariaLabel": "Switch view"
+  },
+  "entityChip": {
+    "moreTags": "{{count}} more tags: {{names}}"
   }
 }

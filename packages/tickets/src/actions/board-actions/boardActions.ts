@@ -1,5 +1,11 @@
 'use server'
 
+import {
+  countBoardChecklistApplyRules,
+  countCoManagedBoardScopes,
+  countLiveCoManagedEscalationsForBoard,
+} from '@alga-psa/core/config/deletion';
+
 import { IBoard } from '@alga-psa/types';
 import Board from '../../models/board';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
@@ -10,7 +16,7 @@ import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { v4 as uuidv4 } from 'uuid';
 import { BoardTicketStatusInput, saveBoardTicketStatusesForBoard } from './boardTicketStatusActions';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
-import { boardActionErrorFrom, type BoardActionError } from './boardActionErrors';
+import { boardActionErrorFrom, CO_MANAGED_ESCALATION_QUEUE_MESSAGE, CO_MANAGED_SHARED_BOARD_MESSAGE, type BoardActionError } from './boardActionErrors';
 import { parseTicketViewSettings } from './boardViewSettingsSchema';
 import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../../lib/ticketSlaSql';
 import { normalizeBoardStopwatchSetting, resolveBoardStopwatchEnabled } from '../../lib/boardLiveTicketTimer';
@@ -688,7 +694,7 @@ export const deleteBoard = withAuth(async (
     // 3c. Settings that point at the board cannot be cleaned up safely:
     // ticket_templates/recurring_ticket_definitions have no FK on board_id at
     // all, so the rows would silently dangle instead of erroring, nulling a
-    // checklist apply rule's board_id widens it to every board, and a
+    // checklist apply rule's board predicate changes its meaning, and a
     // board-scoped canned response cannot drop its board_id at all (the
     // scope_target_check requires it) — it would survive as a library entry
     // that silently never applies again. Block, so the admin retargets or
@@ -709,7 +715,7 @@ export const deleteBoard = withAuth(async (
         .whereNull('archived_at')
         .count('* as count')
         .first(),
-      tenantScopedTable('checklist_template_apply_rules').where({ board_id: boardId }).count('* as count').first(),
+      countBoardChecklistApplyRules(trx, { tenant, entityId: boardId }).then((count) => ({ count })),
       // Inactive responses count too: they can be switched back on later, and a
       // reactivated one pointing at a dead board would never match again.
       tenantScopedTable('canned_responses').where({ board_id: boardId }).count('* as count').first(),
@@ -734,6 +740,31 @@ export const deleteBoard = withAuth(async (
         message: 'Cannot delete board: other settings still target it. Point them at another board (or remove them) first.',
         dependencies: Object.keys(automationCounts),
         counts: automationCounts
+      };
+    }
+
+    // 3d. Co-management depends on this board while its relationship is live: the
+    // MSP's escalation queue for a customer workspace, or a customer board the MSP
+    // oversees. Deleting it (even with force) would orphan that access. The counters
+    // issue no co-managed query for a tenant that does not participate.
+    const coManagedEscalations = await countLiveCoManagedEscalationsForBoard(trx, { tenant, entityId: boardId });
+    if (coManagedEscalations > 0) {
+      return {
+        success: false,
+        code: 'BOARD_IN_CO_MANAGEMENT',
+        message: 'Cannot delete board: it receives escalated tickets from a co-managed IT workspace that is being set up or is active.',
+        dependencies: ['co_managed_relationship'],
+        counts: { co_managed_relationship: coManagedEscalations }
+      };
+    }
+    const coManagedScopes = await countCoManagedBoardScopes(trx, { tenant, entityId: boardId });
+    if (coManagedScopes > 0) {
+      return {
+        success: false,
+        code: 'BOARD_IN_CO_MANAGEMENT',
+        message: 'Cannot delete board: it is shared with your MSP under co-managed IT while the relationship is active.',
+        dependencies: ['co_managed_relationship'],
+        counts: { co_managed_relationship: coManagedScopes }
       };
     }
 
@@ -1025,6 +1056,17 @@ export const updateBoard = withAuth(async (user, { tenant }, boardId: string, bo
 
       if (!currentBoard) {
         throw new Error('Board not found');
+      }
+
+      // Deactivation hides the board from every co-management read just as
+      // deletion would; refuse it while a live relationship depends on it.
+      if (boardData.is_inactive === true && !currentBoard.is_inactive) {
+        if (await countLiveCoManagedEscalationsForBoard(trx, { tenant, entityId: boardId }) > 0) {
+          throw new Error(CO_MANAGED_ESCALATION_QUEUE_MESSAGE);
+        }
+        if (await countCoManagedBoardScopes(trx, { tenant, entityId: boardId }) > 0) {
+          throw new Error(CO_MANAGED_SHARED_BOARD_MESSAGE);
+        }
       }
 
       // updateBoard is a second write path to the same two columns that

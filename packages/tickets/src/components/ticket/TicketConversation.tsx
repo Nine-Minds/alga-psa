@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
+import { CommentAudienceSelect, audienceIsInternal, nativeComposerAudiences, useComposerAudiences, type ComposerAudience } from './CommentAudienceControl';
 import { ArrowUpDown } from 'lucide-react';
 import { IComment, ITicket } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
@@ -14,6 +15,7 @@ import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEd
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import CommentThreadDrawer from '@alga-psa/ui/components/CommentThreadDrawer';
 import InlineReplyComposer from '@alga-psa/ui/components/InlineReplyComposer';
+import { COMPOSER_MAX_HEIGHT } from '@alga-psa/ui/components/composerSizing';
 import StickyComposerDock from '@alga-psa/ui/components/StickyComposerDock';
 import { CommentThreadList, HybridThreadNode, buildCommentThreadGroups } from '@alga-psa/ui/components';
 
@@ -50,7 +52,7 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { useTicketDataSource } from './TicketDataSourceContext';
-import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
+import { hasCommentCollaborationAttribution, type CommentContactAuthor, type CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useRegisterDismissGuard } from '@alga-psa/ui/components/DismissGuard';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context/UnsavedChangesContext';
@@ -94,6 +96,7 @@ interface TicketConversationProps {
     options?: TicketNotificationSuppressionValue,
     schedule?: { publishAt: string; timeZone: string } | null,
     emailRecipients?: CommentEmailRecipientsPayload,
+    audienceId?: ComposerAudience | null,
   ) => Promise<boolean>;
   onAddReplyComment?: (
     content: PartialBlock[],
@@ -108,6 +111,7 @@ interface TicketConversationProps {
   onDelete: (comment: IComment) => void;
   onContentChange: (content: PartialBlock[]) => void;
   hideInternalTab?: boolean; // Optional prop to hide the Internal tab
+  defaultReplyInternal?: boolean;
   /**
    * Read-only: the thread is shown without any way to add to it. The client
    * portal uses this for a ticket a shared-workspace colleague can see but
@@ -174,6 +178,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   onDelete,
   onContentChange,
   hideInternalTab = false,
+  defaultReplyInternal = false,
   isSubmitting: isSubmittingFromParent = false,
   overrides = {},
   externalComments = [],
@@ -208,7 +213,21 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [editorPlacement, setEditorPlacement] = useState<'top' | 'bottom'>('top');
   const [reverseOrder, setReverseOrder] = useState(defaultNewestFirst);
   const [isInternalToggle, setIsInternalToggle] = useState(false);
+  // Shared tickets and co_managed workspaces replace the Internal toggle with a required audience
+  // choice, driven by the data source's conversation config (never by a tenant-wide capability).
+  // There is deliberately no default: submit stays blocked until the author picks one.
+  const configuredAudiences = useComposerAudiences();
+  const useAudienceComposer = configuredAudiences != null && !hideInternalTab;
+  const [composerAudience, setComposerAudience] = useState<ComposerAudience | null>(null);
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
+  // A resolution closes the ticket through the native path, so it never offers `shared_it`.
+  const offeredAudiences = configuredAudiences == null ? [] : isResolutionToggle ? nativeComposerAudiences(configuredAudiences) : configuredAudiences;
+  const chosenAudience = composerAudience != null && offeredAudiences.includes(composerAudience) ? composerAudience : null;
+  const audienceMissing = useAudienceComposer && chosenAudience == null;
+  const handleAudienceChange = (next: ComposerAudience) => {
+    setComposerAudience(next);
+    setIsInternalToggle(audienceIsInternal(next));
+  };
   // One-off Cc/Bcc for the comment being composed. Separate drafts for the main
   // composer and the reply composer so one never leaks into the other.
   const emailRecipients = useCommentEmailRecipientsDraft();
@@ -330,8 +349,11 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
 
   const handleAddCommentClick = (placement: 'top' | 'bottom' = 'top') => {
     // Auto-check toggles based on which tab is active
-    if (!hideInternalTab) {
-      setIsInternalToggle(activeTab === INTERNAL_TAB_ID);
+    if (useAudienceComposer) {
+      // Opening a fresh composer never carries a previous audience; an open draft keeps its choice.
+      if (!showEditor) { setComposerAudience(null); setIsInternalToggle(false); }
+    } else if (!hideInternalTab) {
+      setIsInternalToggle(activeTab === INTERNAL_TAB_ID || (activeTab === ALL_COMMENTS_TAB_ID && defaultReplyInternal));
     }
     setIsResolutionToggle(activeTab === RESOLUTION_TAB_ID);
     setEditorPlacement(placement);
@@ -339,6 +361,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   };
   const handleSubmitComment = async () => {
     if (composeUploadSession.isUploading || isSubmittingFromParent || submitInFlightRef.current) return;
+    // Fail closed: a co-managed comment with no audience is never sent.
+    if (audienceMissing) return;
     submitInFlightRef.current = true;
     setIsSubmittingComment(true);
     let success = false;
@@ -369,10 +393,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             : null,
           // Never sent with an internal note, even though the draft is kept.
           showEmailRecipients && !isInternalToggle ? emailRecipients.payload : undefined,
+          ...(useAudienceComposer ? [chosenAudience] as const : []),
         );
         if (success) {
           emailRecipients.reset();
           setIsInternalToggle(false);
+          setComposerAudience(null);
           setIsResolutionToggle(false);
           setResolutionCloseStatusId(NO_STATUS_CHANGE);
           setNotificationSuppression(defaultNotificationSuppression());
@@ -429,20 +455,25 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         closeStatusId,
         closeStatusId && notificationSuppression.suppressContactNotifications
           ? notificationSuppression
-          : undefined
+          : undefined,
+        undefined,
+        undefined,
+        useAudienceComposer ? composerAudience : undefined,
       );
     }
   };
 
-  // Sync toggles when active tab changes while editor is open
+  const previousComposerTab = useRef(activeTab);
+  // Explicit tab changes override visibility; loading settings must not change an open draft.
   useEffect(() => {
-    if (showEditor) {
-      if (!hideInternalTab) {
-        setIsInternalToggle(activeTab === INTERNAL_TAB_ID);
+    if (showEditor && previousComposerTab.current !== activeTab) {
+      if (!hideInternalTab && !useAudienceComposer) {
+        setIsInternalToggle(activeTab === INTERNAL_TAB_ID || (activeTab === ALL_COMMENTS_TAB_ID && defaultReplyInternal));
       }
       setIsResolutionToggle(activeTab === RESOLUTION_TAB_ID);
     }
-  }, [activeTab, showEditor, hideInternalTab]);
+    previousComposerTab.current = activeTab;
+  }, [activeTab, showEditor, hideInternalTab, defaultReplyInternal, useAudienceComposer]);
 
   // Reset close-status selection when leaving resolution mode or closing the editor.
   useEffect(() => {
@@ -466,7 +497,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       
       // Find all client users in the conversations
       for (const conversation of conversations) {
-        if (conversation.user_id && userMap[conversation.user_id]?.user_type === 'client') {
+        if (!hasCommentCollaborationAttribution(conversation) && conversation.user_id && userMap[conversation.user_id]?.user_type === 'client') {
           try {
             const contactId = await getUserContactId(conversation.user_id);
             
@@ -832,7 +863,16 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       <div className='flex-grow min-w-0 max-w-full'>
         {/* Toggle switches above the editor */}
         <div className="flex flex-wrap items-center gap-4 mb-2 ml-2">
-          {!hideInternalTab && (
+          {useAudienceComposer && (
+            <CommentAudienceSelect
+              id={`${compId}-audience-select`}
+              audiences={offeredAudiences}
+              value={chosenAudience}
+              onChange={handleAudienceChange}
+              disabled={isSubmitting}
+            />
+          )}
+          {!hideInternalTab && !useAudienceComposer && (
             <div className="flex items-center space-x-2">
               <Switch
                 id={`${compId}-internal-toggle`}
@@ -943,6 +983,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             searchMentions={searchUsersForMentions}
             uploadFile={composeUploadSession.uploadFile}
             snippets={cannedResponseSnippets}
+            maxHeight={COMPOSER_MAX_HEIGHT}
             footerActions={showEmailRecipients ? (
               <CommentEmailRecipientsControl
                 idPrefix={compId}
@@ -966,6 +1007,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
               isSubmitting
               || composeUploadSession.isUploading
               || !scheduleIsValid
+              || audienceMissing
               || (showEmailRecipients && !isInternalToggle && emailRecipients.hasErrors)
             }
           >

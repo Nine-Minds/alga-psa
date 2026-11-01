@@ -621,7 +621,9 @@
       "bulkPdfFailed": "No se pudieron generar archivos PDF. Por favor inténtelo de nuevo.",
       "unfinalizeFailed": "No se pudo anular la finalización de la factura. Por favor inténtelo de nuevo.",
       "bulkUnfinalizeFailed": "No se pudieron anular la finalización de las facturas. Por favor inténtelo de nuevo.",
-      "bulkUnfinalizeInvoiceFailed": "No se pudo reabrir {{invoiceNumber}}: {{reason}}"
+      "bulkUnfinalizeInvoiceFailed": "No se pudo reabrir {{invoiceNumber}}: {{reason}}",
+      "explainThis": "Ver explicación",
+      "usedHourBlockExplanation": "Al finalizar esta factura, sus horas prepagadas quedaron disponibles para los registros de tiempo. Desde entonces se ha asignado tiempo al bloque. Reabrir la factura anularía el bloque, aunque esas asignaciones y los cargos posteriores aún podrían depender de él. Para mantener la coherencia de la facturación, no se puede revertir la finalización de las facturas de bloques que se hayan utilizado, aunque el tiempo se haya revertido después. Considere un ajuste separado o una nota de crédito para corregir la factura."
     },
     "bulk": {
       "actionBar": {
@@ -854,6 +856,7 @@
       "syncNow": "Sincronizar con QuickBooks",
       "viewInQbo": "Ver en QuickBooks",
       "voidInvoice": "Anular factura",
+      "delegateTax": "Usar el impuesto del sistema contable",
       "viewInXero": "Ver en Xero"
     },
     "loading": "Cargando vista previa...",
@@ -875,6 +878,13 @@
     },
     "applyCreditDialog": {
       "title": "Aplicar crédito"
+    },
+    "delegateTaxDialog": {
+      "title": "Usar el impuesto del sistema contable",
+      "description": "El sistema contable calculará el impuesto de esta factura en la próxima exportación y AlgaPSA sustituirá después el impuesto y el total por ese resultado. Los números, las líneas, los precios y los pagos registrados no cambian.",
+      "cancel": "Cancelar",
+      "confirm": "Cambiar al impuesto del sistema contable",
+      "switching": "Cambiando..."
     },
     "voidDialog": {
       "title": "Anular factura",
@@ -2550,7 +2560,8 @@
       "packingSlip": "Nota de entrega",
       "pickList": "Lista de preparación de pedidos",
       "workTag": "Etiqueta de trabajo / Etiqueta",
-      "stagingManifest": "Manifiesto de embalaje"
+      "stagingManifest": "Manifiesto de embalaje",
+      "rmaReturnSlip": "Albarán de devolución RMA"
     }
   },
   "errors": {
@@ -2573,6 +2584,7 @@
       "onlyDraftEditable": "Solo se pueden editar las facturas en borrador",
       "numberExists": "El número de factura ya existe. Elija un número diferente.",
       "notFinalized": "La factura no está finalizada",
+      "usedHourBlockUnfinalize": "No se puede revertir la finalización de esta factura: su bloque de horas {{blockId}} ya se ha utilizado ({{usedHours}} de {{totalHours}} h). Considere un ajuste separado o una nota de crédito para corregir la factura.",
       "unfinalizeFailed": "No se pudo revertir la finalización de la factura debido a un error de datos inesperado. Actualice la página e inténtelo de nuevo.",
       "paidOrCancelled": "No se puede modificar una factura pagada o cancelada",
       "syncedVoidInstead": "Esta factura está sincronizada con un sistema contable: anúlela en lugar de eliminarla.",

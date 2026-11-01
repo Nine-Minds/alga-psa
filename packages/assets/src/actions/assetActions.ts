@@ -61,7 +61,8 @@ import {
     createAssetRelationshipSchema
 } from '../lib/schemas/asset.schema';
 import { formatClientLocation, type ClientLocationLike } from '../lib/formatClientLocation';
-import { advanceMaintenanceDate } from '../lib/maintenanceRecurrence';
+import { advanceMaintenanceDate, parseCustomRecurrence } from '../lib/maintenanceRecurrence';
+import { orderEntityAssetIds, type EntityAssociationRow } from '../lib/entityAssetOrder';
 import { localizeActionError, withAuth, hasPermission } from '@alga-psa/auth';
 import { toCalendarDateString, toISOTimestamp, toPlainDate } from '@alga-psa/core';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -183,7 +184,7 @@ function normalizeBulkAssetIds(assetIds: string[]): string[] {
     if (ids.length > BULK_ASSET_ACTION_LIMIT) {
         throw new Error(`Bulk actions are limited to ${BULK_ASSET_ACTION_LIMIT} assets at a time`);
     }
-    z.array(z.string().uuid()).parse(ids);
+    z.array(z.string().guid()).parse(ids);
     return ids;
 }
 
@@ -526,6 +527,7 @@ function createAssetReadAuthorizationKernel(trx: Knex.Transaction) {
             resolveRules: async (input) => {
                 try {
                     return await resolveBundleNarrowingRulesForEvaluation(trx, input);
+                // write-admission: exempt — authorization-rule read, never a write
                 } catch {
                     return [];
                 }
@@ -2547,6 +2549,10 @@ export const updateMaintenanceSchedule = withAuth(async (
 
             await createAuthorizedAssetReadContextForUser(trx, tenant, user as AssetAuthUser, existingSchedule.asset_id);
 
+            if ((validatedData.frequency ?? existingSchedule.frequency) === 'custom') {
+                parseCustomRecurrence(validatedData.schedule_config ?? existingSchedule.schedule_config);
+            }
+
             // Update the schedule
             const [updatedSchedule] = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant)
                 .where({ schedule_id })
@@ -2867,7 +2873,7 @@ export const completeOccurrence = withAuth(async (user, { tenant }, input: { occ
             const performedDate = toCalendarDateString(input.performed_at || new Date());
             if (!performedDate) throw new Error('A performed date is required');
             const performedAt = toISOTimestamp(toPlainDate(performedDate));
-            const nextDue = advanceMaintenanceDate(performedAt, schedule.frequency, schedule.frequency_interval);
+            const nextDue = advanceMaintenanceDate(performedAt, schedule.frequency, schedule.frequency_interval, schedule.schedule_config);
             const [history] = await tenantScopedTable(trx, 'asset_maintenance_history', tenant).insert({ tenant, schedule_id: schedule.schedule_id, asset_id: schedule.asset_id, maintenance_type: schedule.maintenance_type, description: input.notes || `${schedule.maintenance_type} maintenance completed`, maintenance_data: input.maintenance_data || {}, performed_at: performedAt, performed_by: user.user_id }).returning('*');
             await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ occurrence_id: occurrence.occurrence_id, status: 'open' }).update({ status: 'completed', history_id: history.history_id, closed_at: trx.fn.now(), closed_by: user.user_id, updated_at: trx.fn.now() });
             await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id: schedule.schedule_id }).update({ last_maintenance: performedAt, next_maintenance: nextDue, updated_at: trx.fn.now() });
@@ -2889,7 +2895,7 @@ export const skipOccurrence = withAuth(async (user, { tenant }, occurrence_id: s
             if (occurrence.status !== 'open') throw new Error('Maintenance occurrence has already been closed');
             const schedule = await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id: occurrence.schedule_id, asset_id: occurrence.asset_id, is_active: true }).forUpdate().first();
             if (!schedule || schedule.archived_at) throw new Error('Maintenance schedule is inactive');
-            const nextDue = advanceMaintenanceDate(new Date(), schedule.frequency, schedule.frequency_interval);
+            const nextDue = advanceMaintenanceDate(new Date(), schedule.frequency, schedule.frequency_interval, schedule.schedule_config);
             await tenantScopedTable(trx, 'asset_maintenance_occurrences', tenant).where({ occurrence_id }).update({ status: 'skipped', skip_reason: reason.trim(), closed_at: trx.fn.now(), closed_by: user.user_id, updated_at: trx.fn.now() });
             await tenantScopedTable(trx, 'asset_maintenance_schedules', tenant).where({ schedule_id: schedule.schedule_id }).update({ next_maintenance: nextDue, updated_at: trx.fn.now() });
             return openNextOccurrence(trx, tenant, schedule, nextDue);
@@ -2958,7 +2964,7 @@ export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: 
                 .where({
                     schedule_id: validatedData.schedule_id
                 })
-                .select('schedule_id', 'asset_id', 'frequency', 'frequency_interval', 'schedule_name', 'maintenance_type')
+                .select('schedule_id', 'asset_id', 'frequency', 'frequency_interval', 'schedule_config', 'schedule_name', 'maintenance_type')
                 .first();
 
             if (!schedule) {
@@ -2987,16 +2993,9 @@ export const recordMaintenanceHistory = withAuth(async (user, { tenant }, data: 
                 })
                 .update({
                     last_maintenance: validatedData.performed_at,
-                    next_maintenance: trx.raw(`
-                        CASE frequency
-                            WHEN 'daily' THEN ? + INTERVAL '1 day' * frequency_interval
-                            WHEN 'weekly' THEN ? + INTERVAL '1 week' * frequency_interval
-                            WHEN 'monthly' THEN ? + INTERVAL '1 month' * frequency_interval
-                            WHEN 'quarterly' THEN ? + INTERVAL '3 months' * frequency_interval
-                            WHEN 'yearly' THEN ? + INTERVAL '1 year' * frequency_interval
-                            ELSE ? + INTERVAL '1 day' * frequency_interval
-                        END
-                    `, Array(6).fill(validatedData.performed_at))
+                    next_maintenance: advanceMaintenanceDate(
+                        validatedData.performed_at, schedule.frequency, schedule.frequency_interval, schedule.schedule_config
+                    )
                 })
                 .returning('*');
 
@@ -3658,7 +3657,8 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
                     entity_id,
                     entity_type
                 })
-                .select('asset_id');
+                .select('asset_id', 'created_at')
+                .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'asset_id', order: 'asc' }]);
 
             const candidateAssetIds = associations.map((association: { asset_id: string }) => association.asset_id);
             const uniqueAssetIds: string[] = Array.from(new Set<string>(candidateAssetIds));
@@ -3674,9 +3674,13 @@ export const listEntityAssets = withAuth(async (user, { tenant }, entity_id: str
                 candidateAssets.map((asset) => authorizeAssetReadDecision(trx, tenant, context, asset))
             );
 
-            const authorizedAssetIds = candidateAssets
-                .filter((_, index) => decisions[index]?.allowed)
-                .map((asset) => asset.asset_id);
+            // Newest association first, so the panel's collapsed rows include a just-received item.
+            const authorizedAssetIds = orderEntityAssetIds(
+                associations as EntityAssociationRow[],
+                candidateAssets
+                    .filter((_, index) => decisions[index]?.allowed)
+                    .map((asset) => asset.asset_id)
+            );
 
             if (authorizedAssetIds.length === 0) {
                 return [];

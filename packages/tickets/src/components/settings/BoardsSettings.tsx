@@ -1060,6 +1060,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
         case 'BOARD_HAS_TICKETS':
         case 'BOARD_IS_DEFAULT':
         case 'BOARD_USED_IN_EMAIL_ROUTING':
+        case 'BOARD_IN_CO_MANAGEMENT':
         case 'BOARD_HAS_EMAIL_SENDER_ROUTE':
         case 'BOARD_REFERENCED_BY_AUTOMATIONS':
           // Blocking errors - show in dialog, not toast

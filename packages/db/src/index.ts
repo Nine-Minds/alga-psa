@@ -48,6 +48,22 @@ export type {
 export { registerAfterCommit, registerAfterCommitWithConnection } from './lib/afterCommit';
 export { admitWrite, registerWriteAdmissionProvider, resetWriteAdmissionProvider } from './lib/writeAdmission';
 export type { WriteAdmissionContext, WriteAdmissionProvider } from './lib/writeAdmission';
+export {
+  CO_MANAGED_PRODUCT_CODE,
+  WRITE_ADMISSION_TTL_MS,
+  admitOperationalWrite,
+  admitTenantWrite,
+  noteTenantProductCode,
+  hasWriteAdmissionResolver,
+  invalidateWriteAdmission,
+  isTenantWriteGuarded,
+  isCoManagedWorkspace,
+  registerWriteAdmissionResolver,
+  resetWriteAdmissionResolver,
+} from './lib/writeAdmission';
+export type { TenantWriteContext, WriteAdmissionDecision, WriteAdmissionResolver } from './lib/writeAdmission';
+export { OPERATIONAL_WRITE_TABLES, RETAINED_COMMAND_TABLES, isOperationalWriteTable } from './lib/operationalWriteTables';
+export type { OperationalWriteTable } from './lib/operationalWriteTables';
 export type { AfterCommitHook } from './lib/afterCommit';
 
 // Read-only error helpers (for callers building their own retry strategies)
@@ -72,7 +88,7 @@ export {
 } from './lib/invoiceExternalSyncLock';
 
 // Tenant Slug utilities
-export { getTenantIdBySlug, getTenantSlugForTenant, buildTenantPortalSlug, isValidTenantSlug, getSlugParts } from './lib/tenantSlug';
+export { getTenantIdBySlug, getTenantDisplayNameBySlug, getTenantSlugForTenant, buildTenantPortalSlug, isValidTenantSlug, getSlugParts } from './lib/tenantSlug';
 
 // Tenant suspension (reversible gate on background activity)
 export { isTenantSuspended, suspendTenant, resumeTenant } from './lib/tenantSuspension';

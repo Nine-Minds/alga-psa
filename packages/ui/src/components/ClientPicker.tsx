@@ -12,6 +12,7 @@ import { Input } from './Input';
 import CustomSelect from './CustomSelect';
 import { Button, buttonVariants } from './Button';
 import ClientAvatar from './ClientAvatar';
+import { EntityTagBadges } from './EntityChip';
 import { TagFilter } from './tags/TagFilter';
 import { useClientTags } from '../context/ClientTagsContext';
 import type { EntityAvatarProps } from './EntityAvatar';
@@ -556,7 +557,10 @@ const InMemoryClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
                 >
                   <ClientAvatar clientId={client.client_id} clientName={client.client_name} logoUrl={(client as any).logoUrl} size="sm" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-gray-900 truncate">{client.client_name}</div>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-sm font-medium text-gray-900 truncate">{client.client_name}</span>
+                      <EntityTagBadges tags={client.displayTags} maxBadges={2} />
+                    </div>
                     <div className="text-xs text-gray-500 truncate">
                       {client.client_type ? client.client_type : '—'}
                       {client.is_inactive ? ' • Inactive' : ''}
@@ -629,6 +633,7 @@ const InMemoryClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
                     size={size === 'xs' ? 'xs' : 'sm'}
                   />
                   <span className="truncate">{selectedClient.client_name}</span>
+                  <EntityTagBadges tags={selectedClient.displayTags} maxBadges={2} />
                 </>
               ) : (
                 <span className="text-gray-500">{placeholder}</span>

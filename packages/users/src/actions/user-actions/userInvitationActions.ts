@@ -8,7 +8,9 @@ import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
 import { validatePassword } from '@alga-psa/validation';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { checkInternalUserLicenseLimit, countPendingInvitationSeats, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
+import { checkInternalUserLicenseLimit, countPendingInvitationSeats, isInternalUserLicenseLimitRejected, lockInternalUserSeats } from '../../lib/internalUserLicenseGuard';
+import { assertCoManagedSeatAdmission, CoManagedAdmissionError } from '@alga-psa/licensing';
+import { isCoManagedInvitationServed } from '../../lib/coManagedInvitationCapability';
 
 export type UserInvitationErrorCode =
   | 'PERMISSION_DENIED_INVITE'
@@ -30,7 +32,10 @@ export type UserInvitationErrorCode =
   | 'INVITATION_NOT_FOUND'
   | 'REVOKE_FAILED'
   | 'SOLO_PLAN_LIMIT'
-  | 'LICENSE_LIMIT_REACHED';
+  | 'LICENSE_LIMIT_REACHED'
+  | 'CAPABILITY_UNAVAILABLE'
+  | 'CO_MANAGED_SEAT_LIMIT' | 'CO_MANAGED_NOT_ACTIVE' | 'CO_MANAGED_LICENSE_LAPSED'
+  | 'CO_MANAGED_INVITATION_INVALID' | 'CO_MANAGED_ALLOCATION_CONFLICT' | 'CO_MANAGED_POOL_LIMIT';
 
 interface SendUserInvitationParams {
   email: string;
@@ -49,6 +54,9 @@ class UserInvitationError extends Error {
 function normalizeSendUserInvitationError(
   error: unknown
 ): { message?: string; errorCode: UserInvitationErrorCode } {
+  if (error instanceof CoManagedAdmissionError) {
+    return { message: error.message, errorCode: error.code };
+  }
   if (error instanceof UserInvitationError) {
     return { message: error.message.trim() || undefined, errorCode: error.errorCode };
   }
@@ -116,24 +124,8 @@ export const sendUserInvitation = withAuth(async (
       return { success: false, error: 'A user with this email address already exists', errorCode: 'EMAIL_ALREADY_EXISTS' };
     }
 
-    // Same seat-limit enforcement addUser applies to a direct password-based
-    // creation — an accepted invitation creates an internal user account just
-    // the same, so it must be held to the same limit. Re-checked again at
-    // acceptance time in completeUserInvitationSetup, since seats can fill up
-    // (or shrink) between the invite being sent and accepted.
-    //
-    // Other pending invitations reserve seats here: without that, an admin
-    // with one seat left could send any number of invites and every invitee
-    // past the first would only find out at acceptance, after choosing a
-    // password. This invitee's own pending invitation is excluded so a
-    // resend never blocks itself.
-    const reservedSeats = await countPendingInvitationSeats(knex, tenant, { excludeEmail: normalizedEmail });
-
-    const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant, { reservedSeats });
-    if (isInternalUserLicenseLimitRejected(licenseCheck)) {
-      return { success: false, error: licenseCheck.error, errorCode: licenseCheck.code };
-    }
-
+    // Config prerequisites first (no DB seat state involved): never reserve a
+    // seat for an invitation that cannot be delivered.
     const tenantEmailService = TenantEmailService.getInstance(tenant);
     let emailConfigured = await tenantEmailService.isConfigured();
     if (!emailConfigured) {
@@ -149,8 +141,52 @@ export const sendUserInvitation = withAuth(async (
       }
     }
 
-    const result = await knex.transaction(async (trx) => {
-      const scopedDb = tenantDb(trx, tenant);
+    // LEVERAGE: pattern tenant-link-context — hand-built tenant-facing base URL for an MSP-recipient link (/auth/team/setup is not surface-routable by path, left canonical).
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL ||
+      process.env.NEXTAUTH_URL ||
+      (process.env.HOST ? `https://${process.env.HOST}` : '');
+    if (!baseUrl) {
+      return { success: false, error: 'Base URL is not configured for team invitations', errorCode: 'BASE_URL_NOT_CONFIGURED' };
+    }
+
+    // Same seat-limit enforcement addUser applies to a direct password-based
+    // creation — an accepted invitation creates an internal user account just
+    // the same, so it must be held to the same limit. Re-checked again at
+    // acceptance time in completeUserInvitationSetup, since seats can fill up
+    // (or shrink) between the invite being sent and accepted.
+    //
+    // Other pending invitations reserve seats here: without that, an admin
+    // with one seat left could send any number of invites and every invitee
+    // past the first would only find out at acceptance, after choosing a
+    // password. This invitee's own pending invitation is excluded so a
+    // resend never blocks itself.
+    //
+    // The reservation (pending-invitation count, seat check, invitation row) is
+    // ONE transaction under the per-tenant seat lock, so concurrent sends cannot
+    // each see a free seat. It commits BEFORE the outbound email: the lock must
+    // never be held across a network call. If the send then fails, the
+    // reservation is released by deleting the invitation we created.
+    type SendRejection = { success: false; error?: string; errorCode: UserInvitationErrorCode };
+    type Reservation = { rejected: SendRejection } | { invitationId?: string; token: string; created: boolean };
+    const reservation: Reservation = await knex.transaction(async (trx): Promise<Reservation> => {
+      // Lock before counting reserved seats: the count is part of the decision.
+      await lockInternalUserSeats(trx, tenant);
+      const reservedSeats = await countPendingInvitationSeats(trx, tenant, { excludeEmail: normalizedEmail });
+
+      const licenseCheck = await checkInternalUserLicenseLimit(trx, tenant, { reservedSeats, deferCoManaged: true });
+      if (isInternalUserLicenseLimitRejected(licenseCheck)) {
+        return { rejected: { success: false as const, error: licenseCheck.error, errorCode: licenseCheck.code } };
+      }
+      if (licenseCheck.coManaged && !await isCoManagedInvitationServed(tenant)) {
+        return { rejected: { success: false as const, error: 'This feature is not available.', errorCode: 'CAPABILITY_UNAVAILABLE' as const } };
+      }
+      if (licenseCheck.coManaged) await assertCoManagedSeatAdmission(trx, tenant, { email: normalizedEmail, kind: 'invitation' });
+
+      const refreshedExisting = await tenantDb(trx, tenant).table('user_invitations')
+        .where({ email: normalizedEmail, used_at: null })
+        .where('expires_at', '>', trx.fn.now())
+        .first('invitation_id');
 
       const invitationResult = await UserInvitationService.createInvitationWithTransaction(
         { email: normalizedEmail, firstName: params.firstName, lastName: params.lastName, roleId: params.roleId },
@@ -162,8 +198,22 @@ export const sendUserInvitation = withAuth(async (
           'INVITATION_FAILED'
         );
       }
+      return {
+        invitationId: invitationResult.invitationId,
+        token: invitationResult.token || '',
+        created: !refreshedExisting,
+      };
+    }).catch((error) => {
+      console.error('Team invitation transaction failed:', error);
+      const normalized = normalizeSendUserInvitationError(error);
+      return { rejected: { success: false as const, error: normalized.message, errorCode: normalized.errorCode } };
+    });
 
+    if ('rejected' in reservation) return reservation.rejected;
+
+    try {
       // MSP's own name — same "default client" lookup used for portal invitations.
+      const scopedDb = tenantDb(knex, tenant);
       const tenantDefaultClientQuery = scopedDb.table('tenant_companies')
         .where({ 'tenant_companies.is_default': true })
         .select('clients.client_name')
@@ -171,18 +221,8 @@ export const sendUserInvitation = withAuth(async (
       scopedDb.tenantJoin(tenantDefaultClientQuery, 'clients', 'clients.client_id', 'tenant_companies.client_id');
       const tenantDefaultClient = await tenantDefaultClientQuery as { client_name: string } | undefined;
 
-      // LEVERAGE: pattern tenant-link-context — hand-built tenant-facing base URL for an MSP-recipient link (/auth/team/setup is not surface-routable by path, left canonical).
-      const baseUrl =
-        process.env.NEXT_PUBLIC_BASE_URL ||
-        process.env.NEXTAUTH_URL ||
-        (process.env.HOST ? `https://${process.env.HOST}` : '');
-
-      if (!baseUrl) {
-        throw new UserInvitationError('Base URL is not configured for team invitations', 'BASE_URL_NOT_CONFIGURED');
-      }
-
       const setupUrl = new URL('/auth/team/setup', baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`);
-      setupUrl.searchParams.set('token', invitationResult.token || '');
+      setupUrl.searchParams.set('token', reservation.token);
       const inviteLink = setupUrl.toString();
 
       const invitedByName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
@@ -197,17 +237,24 @@ export const sendUserInvitation = withAuth(async (
         expirationTime: '24 hours',
         tenant
       });
-
-      return {
-        success: true,
-        invitationId: invitationResult.invitationId,
-        message: `Invitation sent successfully to ${normalizedEmail}`
-      };
-    }).catch((error) => {
-      console.error('Team invitation transaction failed:', error);
+    } catch (error) {
+      console.error('Team invitation delivery failed:', error);
+      if (reservation.created && reservation.invitationId) {
+        // Release the seat reservation made for an invitation nobody received.
+        await tenantDb(knex, tenant).table('user_invitations')
+          .where({ invitation_id: reservation.invitationId, used_at: null })
+          .delete()
+          .catch((cleanupError: unknown) => console.error('Failed to release team invitation reservation:', cleanupError));
+      }
       const normalized = normalizeSendUserInvitationError(error);
       return { success: false, error: normalized.message, errorCode: normalized.errorCode };
-    });
+    }
+
+    const result = {
+      success: true,
+      invitationId: reservation.invitationId,
+      message: `Invitation sent successfully to ${normalizedEmail}`
+    };
 
     return result;
   } catch (error) {
@@ -276,6 +323,9 @@ export async function completeUserInvitationSetup(
 
     const verificationResult = await UserInvitationService.verifyToken(token);
     if (!verificationResult.valid || !verificationResult.invitee || !verificationResult.tenant) {
+      if (verificationResult.errorCode === 'CAPABILITY_UNAVAILABLE') {
+        return { success: false, error: verificationResult.error, errorCode: verificationResult.errorCode };
+      }
       return { success: false, error: 'Invalid or expired invitation token', errorCode: 'INVALID_OR_EXPIRED_TOKEN' };
     }
 
@@ -297,68 +347,97 @@ export async function completeUserInvitationSetup(
         return { success: false, error: 'A user account already exists for this email address', errorCode: 'CREATE_USER_FAILED' } as const;
       }
 
-      // Re-check the seat limit here, not just at invite time: this is where
-      // the account row actually gets created (via runAsSystem, bypassing the
+      // The account row is created via runAsSystem (bypassing the
       // permission-gated path addUser uses), and seats can have filled up
-      // between the invite being sent and this acceptance.
-      const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant);
-      if (isInternalUserLicenseLimitRejected(licenseCheck)) {
-        return { success: false, error: licenseCheck.error, errorCode: licenseCheck.code } as const;
-      }
-
-      // The invitation's role must still exist — creating the account without
-      // it would hand the invitee a working login that can't see anything,
-      // while reporting success. Fail instead so the admin re-invites with a
-      // current role.
-      const invitationRoleId = verificationResult.invitation?.role_id;
-      const invitationRole = invitationRoleId
-        ? await scopedDb.table('roles').where({ role_id: invitationRoleId }).first()
-        : undefined;
-      if (!invitationRole) {
-        return {
-          success: false,
-          error: 'The role for this invitation no longer exists. Please ask your administrator to send a new invitation.',
-          errorCode: 'INVALID_ROLE'
-        } as const;
-      }
-
-      let newUser;
+      // between the invite being sent and this acceptance, so the limit is
+      // re-checked here, not just at invite time.
+      //
+      // The seat check, the account (+ role) and the invitation consumption
+      // (`used_at`) are ONE transaction: the guard takes the per-tenant seat
+      // lock and holds it until commit, so no other seat consumer can slip in
+      // between the check and the insert, and the token cannot be spent
+      // without the account (or the account created without spending it).
+      type AcceptOutcome =
+        | { rejected: { success: false; error?: string; errorCode: UserInvitationErrorCode } }
+        | { user: { user_id: string } };
+      let outcome: AcceptOutcome;
       try {
-        newUser = await runAsSystem('user-invitation-account-creation', async () => {
-          // Deferred: loading UserService (and its @alga-psa/db BaseService
-          // base class) eagerly would pull it into every consumer of this
-          // barrel-exported action file, e.g. read-only routes that only
-          // need findUserByIdForApi.
-          const { UserService } = await import('../../services/UserService');
-          const userService = new UserService();
-          const systemContext = createSystemContext(tenant);
+        outcome = await runAsSystem('user-invitation-account-creation', async () =>
+          knex.transaction(async (trx): Promise<AcceptOutcome> => {
+            const licenseCheck = await checkInternalUserLicenseLimit(trx, tenant, { deferCoManaged: true });
+            if (isInternalUserLicenseLimitRejected(licenseCheck)) {
+              return { rejected: { success: false, error: licenseCheck.error, errorCode: licenseCheck.code } };
+            }
+            if (licenseCheck.coManaged && !await isCoManagedInvitationServed(tenant)) {
+              return { rejected: { success: false, error: 'This feature is not available.', errorCode: 'CAPABILITY_UNAVAILABLE' } };
+            }
 
-          const user = await userService.create({
-            username: invitee.email,
-            email: invitee.email,
-            password,
-            first_name: invitee.first_name,
-            last_name: invitee.last_name,
-            user_type: 'internal',
-            is_inactive: false,
-            two_factor_enabled: false,
-            is_google_user: false,
-            // Assigned inside UserService.create's own transaction, so the
-            // account and its role land (or fail) together.
-            role_ids: [invitationRole.role_id]
-          }, systemContext);
+            // The invitation's role must still exist — creating the account
+            // without it would hand the invitee a working login that can't see
+            // anything, while reporting success. Fail instead so the admin
+            // re-invites with a current role.
+            const invitationRoleId = verificationResult.invitation?.role_id;
+            const invitationRole = invitationRoleId
+              ? await tenantDb(trx, tenant).table('roles').where({ role_id: invitationRoleId }).first()
+              : undefined;
+            if (!invitationRole) {
+              return {
+                rejected: {
+                  success: false,
+                  error: 'The role for this invitation no longer exists. Please ask your administrator to send a new invitation.',
+                  errorCode: 'INVALID_ROLE'
+                }
+              };
+            }
 
-          if (!user || !user.user_id) {
-            throw new UserInvitationError('Team member account could not be created. Please try again.', 'CREATE_USER_FAILED');
-          }
+            // Deferred: loading UserService (and its @alga-psa/db BaseService
+            // base class) eagerly would pull it into every consumer of this
+            // barrel-exported action file, e.g. read-only routes that only
+            // need findUserByIdForApi.
+            const { UserService } = await import('../../services/UserService');
+            const userService = new UserService();
+            const systemContext = createSystemContext(tenant);
 
-          return user;
-        });
+            const userData = {
+              username: invitee.email,
+              email: invitee.email,
+              password,
+              first_name: invitee.first_name,
+              last_name: invitee.last_name,
+              user_type: 'internal',
+              is_inactive: false,
+              two_factor_enabled: false,
+              is_google_user: false,
+              // Assigned in this same transaction, so the account and its role
+              // land (or fail) together.
+              role_ids: [invitationRole.role_id]
+            };
+
+            let user;
+            if (licenseCheck.coManaged) {
+              // Consumes the invitation token itself.
+              user = await userService.createFromCoManagedInvitation(userData, systemContext, trx, token);
+            } else {
+              user = await userService.createInTransaction(userData, systemContext, trx);
+              const consumed = await tenantDb(trx, tenant).table('user_invitations')
+                .where({ token, used_at: null })
+                .update({ used_at: trx.fn.now() });
+              if (consumed !== 1) throw new UserInvitationError('Invitation already used', 'INVALID_OR_EXPIRED_TOKEN');
+            }
+
+            if (!user || !user.user_id) {
+              throw new UserInvitationError('Team member account could not be created. Please try again.', 'CREATE_USER_FAILED');
+            }
+            return { user: { user_id: user.user_id } };
+          })
+        );
       } catch (error) {
         console.error('Error creating team member account:', error);
         const normalized = normalizeSendUserInvitationError(error);
         return { success: false, error: normalized.message, errorCode: normalized.errorCode || 'CREATE_USER_FAILED' } as const;
       }
+      if ('rejected' in outcome) return outcome.rejected;
+      const newUser = outcome.user;
 
       try {
         const UserPreferences = await import('@alga-psa/db').then(m => m.UserPreferences);
@@ -370,11 +449,6 @@ export async function completeUserInvitationSetup(
         });
       } catch (prefError) {
         console.warn('Failed to set password reset preference:', prefError);
-      }
-
-      const tokenMarked = await UserInvitationService.markTokenAsUsed(token);
-      if (!tokenMarked) {
-        console.warn('Failed to mark team invitation token as used');
       }
 
       await UserInvitationService.cleanupExpiredTokens();

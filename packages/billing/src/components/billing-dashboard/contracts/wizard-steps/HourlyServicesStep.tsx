@@ -1,5 +1,6 @@
 'use client';
 
+import { BillingTimingField } from '../BillingTimingField';
 import React, { useState, useEffect } from 'react';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -140,6 +141,13 @@ export function HourlyServicesStep({ data, updateData }: HourlyServicesStepProps
             defaultValue: 'Configure services that are billed based on time tracked. Perfect for T&M (Time & Materials) work.',
           })}
         </p>
+      </div>
+
+      <div className="mb-6 space-y-1">
+        <Label className="text-sm font-medium">
+          {t('wizardHourly.billingTimingLabel', { defaultValue: 'Billing Timing' })}
+        </Label>
+        <BillingTimingField id="hourly-billing-timing" lineType="Hourly" value="arrears" onChange={() => undefined} />
       </div>
 
       <div className="p-4 bg-[rgb(var(--color-accent-50))] border border-[rgb(var(--color-accent-200))] rounded-md mb-6">

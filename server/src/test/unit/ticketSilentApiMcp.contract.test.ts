@@ -10,6 +10,7 @@ import { chatApiRegistry as eeMcpRegistry } from '../../../../ee/server/src/chat
 const repoRoot = path.resolve(__dirname, '../../../..');
 
 const silentTicketOperations = [
+  ['post', '/api/v1/tickets'],
   ['put', '/api/v1/tickets/{id}'],
   ['put', '/api/v1/tickets/{id}/status'],
   ['put', '/api/v1/tickets/{id}/assignment'],

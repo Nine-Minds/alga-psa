@@ -50,6 +50,8 @@ export const MAINTENANCE_FANOUT_SCHEDULES: ReadonlyArray<{ jobName: string; cron
   // cannot load the billing domain graph.
   { jobName: CONTRACT_CADENCE_REPLENISHMENT_JOB_NAME, cron: '0 4 * * *' },
 
+  { jobName: 'recover-file-uploads', cron: '*/5 * * * *' },
+
   // Server-registered jobs (registerServerMaintenanceJobs.ts).
   { jobName: 'create-client-contract-line-cycles', cron: '0 0 * * *' },
   { jobName: 'project-date-readiness', cron: '15 0 * * *' },

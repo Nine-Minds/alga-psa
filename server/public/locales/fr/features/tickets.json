@@ -111,7 +111,12 @@
     "allResponseStatuses": "Tous les statuts de réponse",
     "responseStatus": "Statut de réponse",
     "board": "Filtrer par tableau",
-    "searchSmart": "Rechercher des tickets et commentaires… Entrée pour la recherche intelligente"
+    "searchSmart": "Rechercher des tickets et commentaires… Entrée pour la recherche intelligente",
+    "requesterTags": "Étiquettes du demandeur",
+    "clientTags": "Étiquettes du client",
+    "tagModeAny": "Au moins une parmi",
+    "tagModeNone": "Aucune parmi",
+    "droppedFromLink": "Certains filtres de ce lien ne sont pas valides et ont été ignorés."
   },
   "create": {
     "title": "Créer un ticket d'assistance",
@@ -250,7 +255,8 @@
     "moreActions": "Plus d'actions",
     "createTemplate": "Créer un modèle à partir du ticket",
     "createWorkflowFromTicket": "Créer un workflow à partir du ticket",
-    "printWorkTag": "Imprimer l'étiquette de travail"
+    "printWorkTag": "Imprimer l'étiquette de travail",
+    "retry": "Réessayer"
   },
   "messages": {
     "noTickets": "Aucun ticket trouvé",
@@ -360,7 +366,8 @@
     "pastedImagesDeleteFailed_many": "Impossible de supprimer {{count}} images collées.",
     "pastedImagesDeleted_few": "{{count}} images collées supprimées.",
     "pastedImagesDeleted_many": "{{count}} images collées supprimées.",
-    "sharedWorkspaceReadOnly": "Vous voyez ce ticket parce qu'il concerne un appareil d'un espace partagé. Seule la personne qui l'a créé peut y ajouter quelque chose."
+    "sharedWorkspaceReadOnly": "Vous voyez ce ticket parce qu'il concerne un appareil d'un espace partagé. Seule la personne qui l'a créé peut y ajouter quelque chose.",
+    "loadPartyTagsFailed": "Échec du chargement des étiquettes du demandeur et du client"
   },
   "conversation": {
     "comments": "Commentaires",
@@ -432,7 +439,27 @@
     "bcc": "Cci",
     "ccBccInvalid": "Corrigez les adresses signalées avant d’envoyer.",
     "ccBccTooMany": "Au maximum {{max}} destinataires Cc et Cci peuvent être copiés sur un commentaire.",
-    "ccBccNotSentOnInternal": "Cc et Cci ne sont pas envoyés avec une note interne. Désactivez Interne pour les utiliser."
+    "ccBccNotSentOnInternal": "Cc et Cci ne sont pas envoyés avec une note interne. Désactivez Interne pour les utiliser.",
+    "audience": {
+      "requester": "Demandeur",
+      "sharedIt": "Informatique partagée",
+      "organizationPrivate": "Privé à l'organisation",
+      "placeholder": "Qui peut voir ceci ?",
+      "required": "Choisissez qui peut voir ce commentaire avant de le publier."
+    },
+    "shared": {
+      "loading": "Chargement de la conversation partagée...",
+      "loadError": "La conversation partagée n'a pas pu être chargée.",
+      "reload": "Recharger",
+      "errors": {
+        "forbidden": "Vous n'êtes pas autorisé à publier pour cette audience.",
+        "invalid": "Ce commentaire ne peut pas être publié.",
+        "readOnly": "Cet espace de travail est actuellement en lecture seule.",
+        "operationConflict": "Ce commentaire entre en conflit avec une tentative précédente. Rechargez et réessayez.",
+        "audienceUnresolved": "Choisissez qui peut voir ce commentaire avant de le publier.",
+        "unknownOutcome": "Nous n'avons pas pu confirmer la publication du commentaire. Vérifiez la conversation avant de le renvoyer."
+      }
+    }
   },
   "responseState": {
     "awaitingYourResponse": "En attente de votre réponse",
@@ -512,6 +539,7 @@
     },
     "filters": {
       "allAssignees": "Tous les cessionnaires",
+      "allContacts": "Tous les contacts",
       "selectStatus": "Sélectionnez le statut",
       "responseState": "État de réponse",
       "allResponseStates": "Tous les états de réponse",
@@ -980,7 +1008,22 @@
     "tagCreatePartialFailure_few": "Impossible de créer {{count}} balises",
     "tagCreatePartialFailure_many": "Impossible de créer {{count}} balises",
     "tagCreationFailed_few": "{{count}} tags n'ont pas pu être créés",
-    "tagCreationFailed_many": "{{count}} tags n'ont pas pu être créés"
+    "tagCreationFailed_many": "{{count}} tags n'ont pas pu être créés",
+    "assets": {
+      "heading": "Actifs",
+      "selectClientFirst": "Sélectionnez un client pour lier des actifs.",
+      "unavailable": "Les actifs peuvent être liés depuis le ticket après sa création."
+    },
+    "attachments": {
+      "heading": "Pièces jointes",
+      "add": "Ajouter des fichiers",
+      "remove": "Supprimer {{name}}"
+    },
+    "watchers": {
+      "heading": "Observateurs",
+      "placeholder": "Ajouter des observateurs..."
+    },
+    "attachmentsPartialFailure": "Ticket créé, mais ces fichiers n’ont pas pu être joints : {{files}}. Ajoutez-les depuis le ticket."
   },
   "itil": {
     "calculatedPriority": "Priorité (calculée)",
@@ -1275,6 +1318,9 @@
     },
     "display": {
       "responseStateTrackingTitle": "Suivi de l'état de réponse",
+      "defaultReplyInternalTitle": "Visibilité par défaut des réponses",
+      "defaultReplyInternalDescription": "Commencer les nouvelles réponses aux tickets en mode Interne pour tous les membres de l'équipe. Les utilisateurs peuvent toujours passer une réponse en mode Client. Les réponses du portail client et des fils existants restent inchangées.",
+      "defaultReplyInternalLabel": "Utiliser le mode Interne par défaut pour les réponses",
       "responseStateTrackingDescription": "Lorsqu'ils sont activés, les tickets suivent automatiquement qui doit répondre ensuite (en attente du client ou en attente de réponse interne). La désactivation de cette option masque les badges d’état de réponse, les filtres et les options de pause SLA associées.",
       "responseStateTrackingEnabled": "Suivi de l'état de réponse activé",
       "responseStateTrackingDisabled": "Suivi de l'état de réponse désactivé",
@@ -1694,7 +1740,12 @@
       "templateClientMismatch": "Ce modèle de liste de contrôle est limité à un autre client que celui du ticket.",
       "templateClientInvalid": "Le client sélectionné est introuvable.",
       "ruleClientOutsideTemplateScope": "Ce modèle appartient à un client : ses règles ne peuvent pas cibler d'autres clients.",
-      "templateRulesTargetOtherClients": "Certaines règles d'application automatique de ce modèle ciblent d'autres clients. Retirez ces clients des règles avant d'attribuer le modèle à un client."
+      "templateRulesTargetOtherClients": "Certaines règles d'application automatique de ce modèle ciblent d'autres clients. Retirez ces clients des règles avant d'attribuer le modèle à un client.",
+      "predicateClientOutsideScope": "Le client {{client}} est hors du périmètre de ce modèle.",
+      "predicateInvalid": "Règle de liste de contrôle non valide : {{detail}}"
+    },
+    "comment": {
+      "audienceRequired": "Choisissez qui peut voir ce commentaire avant de le publier."
     }
   },
   "ticketSection": {

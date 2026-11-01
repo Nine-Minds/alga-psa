@@ -588,7 +588,8 @@
       "failedToResetRate": "Impossibile ripristinare la tariffa della riga",
       "protectedStartDate": "La data di inizio deve essere il {{boundary}} o precedente per includere la cronologia protetta.",
       "protectedEndDate": "La data di fine deve essere il {{boundary}} o successiva per includere la cronologia protetta.",
-      "cannotEditWithInvoices": "Impossibile modificare la linea contrattuale: questo contratto ha fatture associate. Le linee contrattuali non possono essere modificate una volta generate le fatture."
+      "cannotEditWithInvoices": "Impossibile modificare la linea contrattuale: questo contratto ha fatture associate. Le linee contrattuali non possono essere modificate una volta generate le fatture.",
+      "reloadLatest": "Ricarica l'ultima versione"
     },
     "loading": {
       "contractLines": "Caricamento linee contrattuali",
@@ -698,6 +699,13 @@
       "statusSuperseded": "Sostituito",
       "supersededHistory": "Modifiche in sospeso sostituite ({{count}})",
       "supersededBy": "Sostituito da"
+    },
+    "pricing": {
+      "catalog": "listino",
+      "override": "personalizzato",
+      "cost": "Costo: {{cost}}",
+      "costInCurrency": "Costo in {{currency}}: {{cost}}",
+      "margin": "Margine: {{margin}} per unità"
     }
   },
   "contractLineEdit": {
@@ -1695,6 +1703,9 @@
       "label": "Profilo di fatturazione",
       "none": "Usa il profilo predefinito del cliente",
       "hint": "Gli addebiti di questo contratto vengono fatturati a questo profilo, salvo override di una riga."
+    },
+    "billingTiming": {
+      "label": "Tempistica di fatturazione"
     }
   },
   "wizardFixed": {
@@ -1744,7 +1755,8 @@
       "recurringQuantityLabel": "Quantità ricorrente",
       "allocationQuantityLabel": "Quantità di allocazione",
       "noCurrencyPrice": "Nessun prezzo in {{currency}} nel catalogo. Inserisci una tariffa unitaria."
-    }
+    },
+    "billingTimingLabel": "Tempistica di fatturazione"
   },
   "wizardProducts": {
     "actions": {
@@ -1767,7 +1779,8 @@
       "productMissingPrice": "Questo prodotto non ha un prezzo predefinito né un override. Non può essere fatturato finché non inserisci un prezzo unitario.",
       "noCurrencyPriceEnterUnitPrice": "Nessun prezzo in {{currency}} nel catalogo. Inserisci un prezzo unitario.",
       "noCurrencyPriceWithLegacyHint": "Nessun prezzo in {{currency}} nel catalogo. Tariffa predefinita precedente: {{rate}}. Inserisci un prezzo unitario in {{currency}}."
-    }
+    },
+    "billingTimingLabel": "Tempistica di fatturazione"
   },
   "wizardHourly": {
     "actions": {
@@ -1825,7 +1838,8 @@
         "rolloverDisabled": "Disabilitato",
         "rolloverEnabled": "Abilitato"
       }
-    }
+    },
+    "billingTimingLabel": "Tempistica di fatturazione"
   },
   "wizardUsage": {
     "actions": {
@@ -1863,7 +1877,8 @@
     },
     "values": {
       "defaultUnit": "unità"
-    }
+    },
+    "billingTimingLabel": "Tempistica di fatturazione"
   },
   "wizardReview": {
     "heading": "Rivedi contratto",
@@ -1972,7 +1987,10 @@
         "one": "{{count}} prodotto",
         "other": "{{count}} prodotti"
       },
-      "overrideRate": "– sovrascrivi {{rate}}/{{currencyCode}}"
+      "overrideRate": "– sovrascrivi {{rate}}/{{currencyCode}}",
+      "cost": "Costo: {{cost}}",
+      "costInCurrency": "Costo in {{currency}}: {{cost}}",
+      "margin": "Margine: {{margin}} per unità"
     },
     "hourly": {
       "badgeCount": {
@@ -1995,8 +2013,12 @@
     "total": {
       "title": "Totale mensile stimato",
       "description": "Prodotti e addebiti fissi sono inclusi in questo totale. I servizi orari e a consumo vengono fatturati a consuntivo.",
-      "perMonth": "al mese",
-      "savedDraftValue": "Valore della bozza salvata: {{amount}}"
+      "savedDraftValue": "Valore della bozza salvata: {{amount}}",
+      "titleCadence": "Totale stimato",
+      "mixedFrequencyTitle": "Totale stimato per frequenza di fatturazione",
+      "perFrequency": "{{amount}} {{period}}",
+      "perMonthEquivalent": "circa {{amount}} al mese",
+      "savedDraftValueMonthly": "Valore della bozza salvata: {{amount}} al mese"
     },
     "finalChecklist": {
       "title": "Prima di terminare:",
@@ -2011,7 +2033,16 @@
       "blockSummary": "{{hours}} ore per {{price}}",
       "expiresAfter_one": "scade dopo {{count}} mese",
       "expiresAfter_other": "scade dopo {{count}} mesi",
-      "neverExpires": "non scade mai"
+      "neverExpires": "non scade mai",
+      "cadenceSummary": "{{hours}} h per ogni periodo di fatturazione a {{price}}",
+      "overageRate": "eccedenza {{rate}}/h"
+    },
+    "billingTiming": {
+      "label": "Tempistica di fatturazione:",
+      "advance": "Anticipata",
+      "arrears": "Posticipata",
+      "advanceInherited": "Anticipata (predefinito del contratto)",
+      "arrearsInherited": "Posticipata (predefinito del contratto)"
     }
   },
   "wizardTemplateLines": {
@@ -2313,7 +2344,8 @@
       "period": "Periodo: {{period}}"
     },
     "prepaid": {
-      "blockSummaryNeutral": "{{hours}} ore per {{price}} (nella valuta del cliente)"
+      "blockSummaryNeutral": "{{hours}} ore per {{price}} (nella valuta del cliente)",
+      "cadenceSummaryNeutral": "{{hours}} h per ogni periodo di fatturazione a {{price}} (nella valuta del cliente)"
     }
   },
   "templatePreview": {
@@ -2756,6 +2788,7 @@
   "wizardFirstInvoice": {
     "loading": "Verifica del calendario di fatturazione del cliente…",
     "arrearsPreviewNote": "Fino ad allora, un'anteprima delle fatture per questo cliente non ha nulla da fatturare per questa riga.",
+    "arrearsPreviewNoteMany": "Fino ad allora, un'anteprima delle fatture per questo cliente non ha nulla da fatturare per queste righe.",
     "unavailable": {
       "missingStartDate": "Scegli una data di inizio per vedere quando questo contratto viene fatturato per la prima volta.",
       "unsupportedFrequency": "Non viene mostrata la data della prima fattura perché la fatturazione con cadenza del contratto non supporta questa frequenza. Scegli una frequenza supportata oppure fattura secondo il calendario del cliente.",
@@ -2778,7 +2811,7 @@
     "done": "Fine"
   },
   "sellHourBlockNote": {
-    "text": "Un plafond di ore del contratto fattura solo l'eccedenza. Per addebitare in anticipo un blocco di ore, aggiungi a questo contratto una linea Blocco prepagato."
+    "text": "Un monte ore del contratto fattura solo l'eccedenza. Per addebitare un blocco di ore in anticipo, aggiungi al contratto una riga Blocco prepagato ed emettila a ogni periodo di fatturazione."
   },
   "review": {
     "saveTemplateRates": "Salva queste tariffe in {{currency}} nel modello",
@@ -2792,7 +2825,11 @@
     "options": {
       "advance": "Anticipata (fattura a inizio periodo)",
       "arrears": "Posticipata (fattura a fine periodo)"
-    }
+    },
+    "inheritWithValue": "Usa il valore predefinito del contratto — {{timing}}",
+    "inheritedAdvance": "anticipata",
+    "inheritedArrears": "posticipata",
+    "contractDefaultHelp": "Valore predefinito per le righe a canone fisso, che possono essere fatturate in anticipo. Le righe a ore e a consumo sono sempre fatturate in posticipo, qualunque cosa scegli qui."
   },
   "contractDiscounts": {
     "title": "Sconti",
@@ -2960,7 +2997,17 @@
       "tier": "Fattura successiva",
       "tierDraft": "Crea una bozza da rivedere",
       "tierAutoIssue": "Finalizza e invia automaticamente",
-      "blockPriceNeutral": "Prezzo del blocco (nella valuta del cliente)"
+      "blockPriceNeutral": "Prezzo del blocco (nella valuta del cliente)",
+      "ratePerHour": "Equivale a {{rate}} per ora del blocco.",
+      "issueMode": "Emetti blocchi",
+      "issueModeCadence": "Ogni periodo di fatturazione",
+      "blockFeeInAdvance": "La riga è fatturata in posticipo; il costo del blocco è fatturato in anticipo.",
+      "issueModeConsumption": "Quando il blocco corrente si esaurisce o scade",
+      "rolloverPeriods": "Ore non utilizzate",
+      "rolloverNone": "Scadono alla fine del periodo",
+      "cadenceNote": "Fatturato in anticipo a ogni periodo. Le ore oltre il blocco sono fatturate alla tariffa oraria della riga nella fattura successiva.",
+      "rolloverCarry_one": "Riporta {{count}} periodo",
+      "rolloverCarry_other": "Riporta {{count}} periodi"
     },
     "status": {
       "pending": "In sospeso",
