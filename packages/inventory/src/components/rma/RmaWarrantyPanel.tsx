@@ -474,10 +474,12 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
             <Input id="rma-warranty-manufacturer" label={t('rma.warranty.fields.manufacturer', 'Manufacturer')} value={form.manufacturer} onChange={(e) => set('manufacturer', e.target.value)} />
             {dateField('rma-warranty-warranty-end', t('rma.warranty.fields.warrantyEnd', 'Warranty end date'), 'warranty_end_date')}
             {rma.rma_type === 'advance_replacement' && (
-              <>
+              <div className="space-y-1">
+                {/* DatePicker's `label` is accessibility-only, so name the field visibly. */}
+                <div className="text-sm font-medium text-gray-700">{t('rma.warranty.fields.returnBy', 'Return by')}</div>
                 {dateField('rma-warranty-return-by', t('rma.warranty.fields.returnBy', 'Return by'), 'return_by')}
-                <p className="-mt-2 text-xs text-gray-500">{t('rma.warranty.returnByHint', 'The date the vendor needs the dead unit shipped by, counted from delivery of this replacement. Leave it as is to keep the date from approval.')}</p>
-              </>
+                <p className="text-xs text-gray-500">{t('rma.warranty.returnByHint', 'The date the vendor needs the dead unit shipped by, counted from delivery of this replacement. Leave it as is to keep the date from approval.')}</p>
+              </div>
             )}
             {inboundFields}
             {locationField}
