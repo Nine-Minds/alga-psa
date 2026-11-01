@@ -328,11 +328,6 @@ const findQuotesInputSchema = z
       return;
     }
 
-    if (value.cursor && value.page !== 1) {
-      refinementCtx.addIssue({ code: z.ZodIssueCode.custom, message: 'page must be 1 when cursor is supplied' });
-      return;
-    }
-
     const hasFilter = Boolean(
       value.quote_id ||
       value.quote_number ||
@@ -1005,14 +1000,29 @@ type QuoteCursor = { v: 1; sortBy: QuoteSortBy; order: 'asc' | 'desc'; key: stri
 
 function decodeQuoteCursor(value: string, sortBy: QuoteSortBy, order: 'asc' | 'desc'): QuoteCursor {
   try {
-    const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
-    const parsed = JSON.parse(Buffer.from(normalized, 'base64').toString('utf8')) as Partial<QuoteCursor>;
-    if (parsed.v !== 1 || parsed.sortBy !== sortBy || parsed.order !== order || typeof parsed.id !== 'string' ||
-      !(parsed.key === null || typeof parsed.key === 'string' || (typeof parsed.key === 'number' && Number.isFinite(parsed.key)))) throw new Error();
+    if (!/^[A-Za-z0-9_-]+$/.test(value) || value.length % 4 === 1) throw new Error();
+    const bytes = Buffer.from(value, 'base64url');
+    if (bytes.toString('base64url') !== value) throw new Error();
+    const parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) as Partial<QuoteCursor>;
+    if (!parsed || Array.isArray(parsed) || Object.keys(parsed).sort().join(',') !== 'id,key,order,sortBy,v' ||
+      parsed.v !== 1 || parsed.sortBy !== sortBy || parsed.order !== order ||
+      typeof parsed.id !== 'string' || !uuidSchema.safeParse(parsed.id).success) throw new Error();
+    const key = parsed.key;
+    if (key !== null) {
+      if (sortBy === 'total_amount') {
+        if (typeof key !== 'string' || !/^[+-]?(?:\d+\.?\d*|\.\d+)$/.test(key)) throw new Error();
+      } else if (sortBy === 'quote_date' || sortBy === 'created_at') {
+        if (typeof key !== 'string' || !/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}(?::?\d{2})?)?$/.test(key) || !Number.isFinite(Date.parse(key))) throw new Error();
+      } else if (typeof key !== 'string' || !quoteStatusSchema.safeParse(key).success) throw new Error();
+    }
     return parsed as QuoteCursor;
   } catch {
     throw { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Invalid or incompatible quote cursor', details: null };
   }
+}
+
+function throwInvalidQuoteCursor(): never {
+  throw { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Invalid or incompatible quote cursor', details: null };
 }
 
 function encodeQuoteCursor(sortBy: QuoteSortBy, order: 'asc' | 'desc', row: Record<string, unknown>): string {
@@ -1744,7 +1754,8 @@ export function registerCrmActions(): void {
         const pageSize = input.pageSize ?? 25;
         const sortBy = input.sortBy ?? 'quote_date';
         const sortOrder = input.sortOrder ?? 'desc';
-        const cursor = input.cursor ? decodeQuoteCursor(input.cursor, sortBy, sortOrder) : null;
+        if (input.cursor !== undefined && page !== 1) throwInvalidQuoteCursor();
+        const cursor = input.cursor !== undefined ? decodeQuoteCursor(input.cursor, sortBy, sortOrder) : null;
         const MAX_AUTHORIZED_ROWS_PER_REQUEST = Math.min(pageSize * 4, MAX_AUTHORIZED_ROWS_PER_REQUEST_HARD_CAP);
         const authorize = await createQuoteReadAuthorizer(tx.trx, tx.tenantId, tx.actorUserId);
 
