@@ -398,6 +398,15 @@ export class TenantEmailService extends BaseEmailService {
           this.tenantSettings = settings;
         }
 
+        // A changed credential scope is a security rejection, not an
+        // initialization outage. Never route it through the Enterprise
+        // system-provider fallback, which would hide the rejected tenant config.
+        if (error instanceof EmailProviderError && error.errorCode === 'SECRET_IDENTITY_MISMATCH') {
+          this.providerManager = null;
+          this.providerInitError = error.message;
+          throw error;
+        }
+
         // Preserve the real cause (e.g. "SMTP initialization failed: ...") so it
         // can surface to the admin if no working provider is available.
         const realError = error instanceof Error ? error.message : String(error);
