@@ -28,6 +28,8 @@ import {
 import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { resolveCommentAuthor } from '../../lib/commentAuthorResolution';
 import ResponseSourceBadge from '../ResponseSourceBadge';
+import { useCapability } from '@alga-psa/ui/hooks/useCapability';
+import { CommentAudienceBadge } from './CommentAudienceControl';
 import type { ITicketExternalLinkView } from '../../actions/externalLinks/externalLinkActions';
 import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
 import { readCommentEmailRecipients } from '@shared/lib/tickets/commentEmailRecipientsCore';
@@ -189,6 +191,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const isCompact = variant === 'compact';
   const { t } = useTranslation('features/tickets');
   const { t: tCommon } = useTranslation('common');
+  const { enabled: coManagedEnabled } = useCapability('co-managed');
   const dataSource = useTicketDataSource();
   const { cancelScheduledComment, rescheduleScheduledComment } = dataSource.comments;
   const { searchUsersForMentions } = dataSource.viewer;
@@ -598,6 +601,11 @@ const CommentItem: React.FC<CommentItemProps> = ({
                         : t('conversation.bundledUpdate')}
                     </span>
                   )
+                )}
+                {coManagedEnabled && conversation.audience && (
+                  <span {...withDataAutomationId({ id: `${commentId}-audience-badge` })}>
+                    <CommentAudienceBadge audience={conversation.audience} />
+                  </span>
                 )}
                 {conversation.is_internal && (
                   <Tooltip content={t('conversation.internalCommentTooltip')}>

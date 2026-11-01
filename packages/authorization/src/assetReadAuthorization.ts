@@ -148,22 +148,39 @@ export async function createAssetReadContext(
   };
 }
 
-/** True when the caller's per-record kernel decision allows reading the asset. */
-export async function isAssetReadAllowed(
+export type AssetAuthorizationAction = 'read' | 'update' | 'delete';
+
+/**
+ * True when the caller's per-record kernel decision allows `action` on the asset. The action selects which
+ * bundle rules narrow the decision (a bundle's `asset:update` rule is not its `asset:read` rule), so mutations
+ * must ask for the action they perform. Coarse RBAC is not evaluated here; callers pre-filter with it.
+ */
+export async function isAssetActionAllowed(
   trx: Knex | Knex.Transaction,
   tenant: string,
   context: AssetReadAuthorizationContext,
-  asset: AssetAuthorizationInput
+  asset: AssetAuthorizationInput,
+  action: AssetAuthorizationAction
 ): Promise<boolean> {
   const records = await resolveAssetAuthorizationRecords(trx, tenant, [asset]);
   const decision = await context.authorizationKernel.authorizeResource({
     subject: context.subject,
-    resource: { type: 'asset', action: 'read', id: asset.asset_id },
+    resource: { type: 'asset', action, id: asset.asset_id },
     record: records.get(asset.asset_id),
     requestCache: context.requestCache,
     knex: trx as Knex,
   });
   return decision.allowed;
+}
+
+/** True when the caller's per-record kernel decision allows reading the asset. */
+export function isAssetReadAllowed(
+  trx: Knex | Knex.Transaction,
+  tenant: string,
+  context: AssetReadAuthorizationContext,
+  asset: AssetAuthorizationInput
+): Promise<boolean> {
+  return isAssetActionAllowed(trx, tenant, context, asset, 'read');
 }
 
 /**

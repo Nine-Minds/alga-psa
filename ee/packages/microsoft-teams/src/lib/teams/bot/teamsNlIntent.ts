@@ -109,7 +109,7 @@ const rawIntentSchema = z
       })
       .optional()
       .nullable(),
-    input: z.record(z.unknown()).optional().nullable(),
+    input: z.record(z.string(), z.unknown()).optional().nullable(),
     confirmationRequired: z.boolean().optional().nullable(),
     candidates: z
       .array(

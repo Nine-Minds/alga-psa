@@ -38,7 +38,7 @@ export const updateSequenceApiSchema = sequenceUpdateSchema;
 export const enrollContactApiSchema = enrollContactSchema;
 
 export const contentListQuerySchema = z.object({
-  campaign_id: z.string().uuid().optional(),
+  campaign_id: z.string().guid().optional(),
 });
 
 export const channelListQuerySchema = z.object({
@@ -50,8 +50,8 @@ export const channelListQuerySchema = z.object({
 
 export const postQueueQuerySchema = z.object({
   status: socialPostTargetStatusSchema.optional(),
-  channel_id: z.string().uuid().optional(),
-  campaign_id: z.string().uuid().optional(),
+  channel_id: z.string().guid().optional(),
+  campaign_id: z.string().guid().optional(),
   date_from: z.string().optional(),
   date_to: z.string().optional(),
 });

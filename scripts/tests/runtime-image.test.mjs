@@ -30,6 +30,21 @@ test('the browser lane tests the production Dockerfiles, compiled on the runner'
   }
 });
 
+test('server candidates are labelled and tagged with their source tree for reuse after merge', () => {
+  const workflow = yaml.load(read('.github/workflows/e2e-fresh-install-tests.yaml'));
+  const steps = workflow.jobs['build-images'].steps;
+  const tree = steps.find(step => step.id === 'tree');
+  assert.match(tree.run, /git rev-parse 'HEAD\^\{tree\}'/);
+  const build = steps.find(step => step.id === 'export_image');
+  assert.match(build.with.labels, /com\.nineminds\.source-tree=\$\{\{ steps\.tree\.outputs\.tree \}\}/);
+  assert.match(build.with.labels, /org\.opencontainers\.image\.revision=\$\{\{ github\.sha \}\}/);
+  const tag = steps.find(step => step.name === 'Tag the candidate with its source tree');
+  assert.equal(tag.if, "env.IMAGE_TRANSPORT == 'registry' && matrix.prebuild");
+  assert.match(tag.run, /imagetools create --tag "\$REGISTRY_REFERENCE:tree-\$TREE" "\$REGISTRY_REFERENCE@\$BUILD_REPORTED_DIGEST"/);
+  // After the identity record, so the record binds the run's own tag.
+  assert.ok(steps.indexOf(tag) > steps.findIndex(step => step.name === 'Record actual published candidate image identity'));
+});
+
 test('the artifact builders build and export, and never run', () => {
   for (const file of ['Dockerfile.build', 'ee/server/Dockerfile.build']) {
     const text = read(file);

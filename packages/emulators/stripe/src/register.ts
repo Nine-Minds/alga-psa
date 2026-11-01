@@ -79,7 +79,7 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
       id: z.string().optional(),
       name: z.string().optional(),
       description: z.string().optional(),
-      metadata: z.record(z.string()).optional(),
+      metadata: z.record(z.string(), z.string()).optional(),
     }),
     run: ({ id, name, description, metadata }) => core.createProduct({ id, name, description, metadata }),
   });
@@ -104,7 +104,7 @@ export function register(reg: ControlRegistry, core: StripeEmulatorCore): void {
       customer: z.string(),
       priceId: z.string(),
       quantity: z.number().int().positive().default(1),
-      metadata: z.record(z.string()).optional(),
+      metadata: z.record(z.string(), z.string()).optional(),
       status: z.enum(['active', 'trialing', 'past_due', 'canceled', 'incomplete', 'incomplete_expired']).optional(),
       cancelAtPeriodEnd: z.boolean().optional(),
     }),

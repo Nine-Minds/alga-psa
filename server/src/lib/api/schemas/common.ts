@@ -4,9 +4,14 @@
  */
 
 import { z } from 'zod';
+import { extendZodWithOpenApi } from '@asteasolutions/zod-to-openapi';
+
+// Zod 4 instances only carry .openapi() if the extension ran before they were created.
+extendZodWithOpenApi(z);
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 
 // Common field types
-export const uuidSchema = z.string().uuid();
+export const uuidSchema = z.string().guid();
 export const emailSchema = z.string().email();
 export const urlSchema = z.string().url().optional();
 export const phoneSchema = z.string().optional();
@@ -15,8 +20,8 @@ export const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 // Pagination schemas
 export const paginationQuerySchema = z.object({
-  page: z.string().transform(val => parseInt(val)).pipe(z.number().min(1)).optional().default('1'),
-  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25'),
+  page: z.string().transform(val => parseInt(val)).pipe(z.number().min(1)).prefault('1'),
+  limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).prefault('25'),
   // LEVERAGE: friction list-default-sort-created-at — hard-codes a column not every table has (time_sheets has none); each resource should declare its own sortable keys/default.
   sort: z.string().optional().default('created_at'),
   order: z.enum(['asc', 'desc']).optional().default('desc')
@@ -34,7 +39,7 @@ export const baseFilterSchema = z.object({
 
 // Response schemas
 export const successResponseSchema = z.object({
-  data: z.any(),
+  data: z.any().optional(),
   meta: z.object({}).optional()
 });
 
@@ -62,7 +67,7 @@ export const errorResponseSchema = z.object({
 // Metadata schemas
 export const metadataSchema = z.object({
   tags: z.array(z.string()).optional(),
-  properties: z.record(z.any()).optional(),
+  properties: z.record(z.string(), z.any()).optional(),
   notes: z.string().optional()
 });
 
@@ -103,7 +108,7 @@ export const bulkDeleteSchema = z.object({
 
 export const bulkUpdateSchema = z.object({
   ids: z.array(uuidSchema).min(1).max(100),
-  data: z.record(z.any())
+  data: z.record(z.string(), z.any())
 });
 
 // Search and filter utilities
@@ -122,14 +127,14 @@ export const createDateRangeFilter = (field: string) => {
 };
 
 // Validation helpers
-export function createListQuerySchema(additionalFilters?: z.ZodObject<any>) {
+export function createListQuerySchema<T extends z.ZodRawShape>(additionalFilters?: z.ZodObject<T>) {
   const base = paginationQuerySchema.merge(baseFilterSchema);
   return additionalFilters ? base.merge(additionalFilters) : base;
 }
 
 export function createUpdateSchema(createSchema: z.ZodObject<any>) {
   // Make all fields optional for updates
-  return createSchema.partial();
+  return partialWithoutDefaults(createSchema);
 }
 
 // Common validation functions

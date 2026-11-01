@@ -270,7 +270,7 @@ function RecurringTicketEditorBody({ definitionId }: RecurringTicketEditorProps)
 
   const patch = (changes: Partial<FormState>) => setForm((current) => ({ ...current, ...changes }));
 
-  const issueMessages = (error: { issues: Array<{ message: string; path: (string | number)[]; params?: Record<string, unknown> }> }) =>
+  const issueMessages = (error: { issues: Array<{ message: string; path: ReadonlyArray<PropertyKey>; params?: Record<string, unknown> }> }) =>
     error.issues.map((issue) => {
       const params = (issue as { params?: { messageKey?: string; messageParams?: Record<string, unknown> } }).params;
       if (params?.messageKey) {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
+import { partialWithoutDefaults } from '@alga-psa/validation/lib/partialWithoutDefaults';
 import {
   updatePlanServiceSchema,
   createPlanServiceFixedConfigSchema,
@@ -8,15 +9,16 @@ import {
   createPlanServiceBucketConfigSchema,
 } from '../../../lib/api/schemas/contractLineSchemas';
 
-// The schema as it was before base_rate_basis validation was added (3bca4d09).
+// The schema as it was before base_rate_basis validation was added (3bca4d09); the
+// default-free partial keeps the Zod 3 behaviour the comparison was written against.
 const legacyUpdatePlanServiceSchema = z.object({
   quantity: z.number().min(0).optional(),
   custom_rate: z.number().min(0).optional(),
   type_config: z.union([
-    createPlanServiceFixedConfigSchema.partial(),
-    createPlanServiceHourlyConfigSchema.partial(),
-    createPlanServiceUsageConfigSchema.partial(),
-    createPlanServiceBucketConfigSchema.partial(),
+    partialWithoutDefaults(createPlanServiceFixedConfigSchema),
+    partialWithoutDefaults(createPlanServiceHourlyConfigSchema),
+    partialWithoutDefaults(createPlanServiceUsageConfigSchema),
+    partialWithoutDefaults(createPlanServiceBucketConfigSchema),
   ]).optional(),
 });
 

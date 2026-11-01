@@ -4,6 +4,7 @@ import { createTenantScopedIndexerQuery, tenantJoinIndexerTable } from '../tenan
 import { flattenBlockNote, flattenMarkdown } from '../normalize';
 import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 import { recordPath } from '@alga-psa/types';
+import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
 
 interface TicketCommentSearchRow {
   comment_id: string;
@@ -12,6 +13,8 @@ interface TicketCommentSearchRow {
   markdown_content: string | null;
   is_internal: boolean | null;
   author_type: string | null;
+  /** 'requester' | 'shared_it' | 'organization_private' from commentAudienceSql (inconsistent rows resolve private). */
+  audience?: string | null;
   created_at?: Date | string | null;
   updated_at?: Date | string | null;
   ticket_title: string | null;
@@ -76,7 +79,9 @@ function toSearchDoc(tenant: string, row: TicketCommentSearchRow): SearchDoc {
     metadata: { author_kind: toCommentAuthorKind(row.author_type) },
     acl: {
       requiredPermission: 'ticket:read',
-      isInternalOnly: row.is_internal ?? false,
+      // Only a requester-audience comment is searchable by non-staff. A missing audience (legacy
+      // fixtures) falls back to the flag; an inconsistent row resolves private and is internal-only.
+      isInternalOnly: row.audience ? row.audience !== 'requester' : (row.is_internal ?? false),
     },
     sourceUpdatedAt: toSourceUpdatedAt(row),
   };
@@ -85,6 +90,8 @@ function toSearchDoc(tenant: string, row: TicketCommentSearchRow): SearchDoc {
 function baseTicketCommentQuery(knex: Knex, tenant: string) {
   const query = createTenantScopedIndexerQuery<TicketCommentSearchRow>(knex, 'comments as c', 'c', tenant);
   tenantJoinIndexerTable(knex, tenant, query, 'tickets as t', 't.ticket_id', 'c.ticket_id');
+  tenantJoinIndexerTable(knex, tenant, query, 'comment_threads as ct', 'ct.thread_id', 'c.thread_id', { type: 'left' });
+  tenantJoinIndexerTable(knex, tenant, query, 'comments as rc', 'rc.comment_id', 'ct.root_comment_id', { type: 'left' });
 
   return query
     .whereNull('c.deleted_at')
@@ -100,6 +107,8 @@ function baseTicketCommentQuery(knex: Knex, tenant: string) {
       'c.updated_at',
       't.title as ticket_title',
       't.ticket_number',
+      // LEVERAGE: pattern comment-audience-sql — the one audience predicate, shared with portal reads and the search ACL.
+      knex.raw('(?) as audience', [commentAudienceSql(knex, 'ct', 'rc', 'c')]) as unknown as string,
     );
 }
 

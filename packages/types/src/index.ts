@@ -26,6 +26,7 @@ export * from './lib/invoice-print-settings';
 export * from './lib/recordLinks';
 export * from './lib/labels';
 export * from './lib/stagingManifest';
+export * from './lib/rmaReturnSlip';
 export * from './lib/xeroCsvTaxImport';
 export * from './lib/companySync';
 export * from './lib/telemetry';
