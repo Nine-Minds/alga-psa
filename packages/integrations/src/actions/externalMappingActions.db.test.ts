@@ -1185,10 +1185,10 @@ describe('an unlinked mapping stops owning its target', () => {
       .whereNull('deleted_at');
     expect(live).toHaveLength(3);
 
-    // Items stay one-to-one: sharing is a property of QuickBooks Online tax codes only.
-    const other = await seedService(tenantA);
-    await seedMapping({ alga_entity_id: serviceA, external_entity_id: 'item-163' });
-    const clash = await create({ alga_entity_id: other, external_entity_id: 'item-163' });
+    // Customers stay one-to-one: AST sharing does not loosen non-shareable QBO targets.
+    const other = await seedClient(tenantA);
+    await seedMapping({ alga_entity_type: 'client', alga_entity_id: clientA, external_entity_id: 'cust-163' });
+    const clash = await create({ alga_entity_type: 'client', alga_entity_id: other, external_entity_id: 'cust-163' });
     expect(clash.actionError).toMatch(/target is already mapped to another entity/);
   });
 
