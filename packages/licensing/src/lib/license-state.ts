@@ -40,7 +40,7 @@ export interface LicenseStateRow {
   subscription_resubscribe_url?: string | null;
   subscription_context_updated_at?: Date | null;
   /**
-   * Failing-renewal-payment context (migration 20261031000000). Optional end to
+   * Failing-renewal-payment context (migration 20261031230000). Optional end to
    * end: absent/null on legacy rows, older alga-license servers and any state
    * other than payment_failed (next_retry_at, update_payment_url) / cancelled
    * (end_reason).

@@ -167,6 +167,29 @@ describe('refreshLicenseNow', () => {
     expect(db.row!.license_token).toBe(VALID_PRO_TOKEN);
   });
 
+  it('payment recovered: active after payment_failed clears the stored failure and the banner status', async () => {
+    db.row = baseRow({
+      subscription_state: 'payment_failed',
+      subscription_next_retry_at: new Date('2030-01-05T00:00:00Z'),
+      subscription_update_payment_url: 'https://pay.example/i/1',
+      subscription_context_updated_at: new Date(),
+    });
+    // Precondition: the failing payment is what the banner sees before the check-in.
+    mockFetch(200, { status: 'no_change', subscription: { state: 'payment_failed', nextRetryAt: '2030-01-05T00:00:00Z', updatePaymentUrl: 'https://pay.example/i/1' } });
+    expect((await refreshLicenseNow()).status?.subscription).toMatchObject({ phase: 'payment_failed', nextRetryAt: '2030-01-05T00:00:00.000Z' });
+
+    mockFetch(200, { status: 'ok', jwt: VALID_PRO_TOKEN, exp: 1815359153, subscription: { state: 'active' } });
+    const result = await refreshLicenseNow();
+    expect(result.success).toBe(true);
+    expect(result.status).toMatchObject({ state: 'licensed', tier: 'pro', subscription: null });
+    expect(db.row).toMatchObject({
+      subscription_state: null,
+      subscription_next_retry_at: null,
+      subscription_update_payment_url: null,
+      subscription_end_reason: null,
+    });
+  });
+
   it('legacy ok without a subscription field also clears stale context', async () => {
     db.row = baseRow({ subscription_state: 'cancelled' });
     mockFetch(200, { status: 'ok', jwt: VALID_PRO_TOKEN, exp: 1815359153 });

@@ -244,6 +244,25 @@ describe('LicenseBanner', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it('drops a payment-failed banner once the license status reports the payment recovered', async () => {
+    mockGetLicenseStatus.mockResolvedValue({
+      ...baseStatus, state: 'licensed', tier: 'pro', daysRemaining: 25,
+      subscription: {
+        phase: 'payment_failed', cause: 'payment_failed', endsAt: null, resubscribeUrl: null,
+        nextRetryAt: '2030-01-05T00:00:00.000Z', updatePaymentUrl: 'https://pay.example/i/1',
+      },
+    });
+    const { container } = render(<LicenseBanner />);
+    expect(await screen.findByText(/^Payment failed — we'll retry on Jan 5, 2030\./)).toBeInTheDocument();
+
+    // Check-in came back active (e.g. "Refresh license now"): the status no longer carries the failure.
+    mockGetLicenseStatus.mockResolvedValue({ ...baseStatus, state: 'licensed', tier: 'pro', daysRemaining: 25, subscription: null });
+    await act(async () => {
+      notifyLicenseStatusChanged();
+    });
+    await vi.waitFor(() => expect(container).toBeEmptyDOMElement());
+  });
+
   it('shows nothing for an active subscription', async () => {
     mockGetLicenseStatus.mockResolvedValue({
       ...baseStatus, state: 'licensed', tier: 'pro', daysRemaining: 25,
