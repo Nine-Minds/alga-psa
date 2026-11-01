@@ -310,28 +310,11 @@ export class ApiTagController extends ApiBaseController {
             throw error;
           }
 
-          // First remove all existing tags
-          const existingTags = await this.tagService.getTagsByEntity(
-            validatedData.entity_id,
-            validatedData.entity_type,
-            apiRequest.context!
-          );
-          
-          if (existingTags.length > 0) {
-            await this.tagService.untagEntity(
-              validatedData.entity_id,
-              validatedData.entity_type,
-              existingTags.map(t => t.tag_id),
-              apiRequest.context!
-            );
-          }
-
-          // Then add new tags
           const tagTexts = validatedData.tags.map((tag: any) => 
             typeof tag === 'string' ? tag : tag.tag_text
           );
           
-          const tags = await this.tagService.tagEntity(
+          const tags = await this.tagService.replaceEntityTags(
             validatedData.entity_id,
             validatedData.entity_type,
             tagTexts,

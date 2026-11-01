@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { handleApiError } from '../../../lib/api/middleware/apiMiddleware';
 
@@ -39,7 +39,8 @@ describe('api middleware product access error mapping', () => {
 });
 
 describe('api middleware undefined-column (42703) mapping', () => {
-  it('maps a PostgreSQL 42703 to a sanitized public error, not INTERNAL_ERROR', async () => {
+  it('maps a PostgreSQL 42703 to INTERNAL_CONFIGURATION and logs table/column details', async () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     const response = handleApiError({
       name: 'error',
       message: 'column "created_by" of relation "contracts" does not exist',
@@ -58,5 +59,11 @@ describe('api middleware undefined-column (42703) mapping', () => {
     // Never leak relation/column identifiers into the public response.
     expect(JSON.stringify(payload)).not.toMatch(/created_by|contracts/);
     expect(payload.error.details).toBeUndefined();
+    expect(log).toHaveBeenCalledWith('Undefined database column (42703):', expect.objectContaining({
+      table: 'contracts',
+      column: 'created_by',
+      message: 'column "created_by" of relation "contracts" does not exist',
+    }));
+    log.mockRestore();
   });
 });

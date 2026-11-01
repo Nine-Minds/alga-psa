@@ -1,11 +1,15 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { randomUUID } from 'node:crypto';
 import type { ServiceContext } from '@alga-psa/db';
 
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../../test-utils/dbConfig';
 import { createTestApiKey } from '../../e2e/utils/apiTestHelpers';
+import { createTestTicket } from '../../e2e/utils/ticketTestData';
+import { createClient } from '../../../../test-utils/testDataFactory';
+import TagMapping from '@alga-psa/tags/models/tagMapping';
+import { withRolledBackSchemaContract } from './helpers/withRolledBackSchemaContract';
 
 const connection = vi.hoisted(() => ({ db: null as Knex | null, tenant: '' }));
 
@@ -56,6 +60,8 @@ let tenant: string;
 let userId: string;
 let apiKey: string;
 let trx: Knex.Transaction;
+let ticketId: string;
+let ticketBoardId: string;
 
 beforeAll(async () => {
   wireLocalTestDbEnv();
@@ -83,6 +89,20 @@ beforeEach(async () => {
     is_inactive: false,
   });
   apiKey = (await createTestApiKey(trx, userId, tenant)).api_key;
+
+  const board = await trx('boards').where({ tenant }).first<{ board_id: string }>('board_id');
+  const status = await trx('statuses').where({ tenant }).first<{ status_id: string }>('status_id');
+  if (!board || !status) throw new Error('The migrated tag route test database requires a board and status fixture');
+  ticketBoardId = board.board_id;
+  const clientId = await createClient(trx, tenant, `Tag route client ${userId}`);
+  const ticket = await createTestTicket(trx, tenant, {
+    client_id: clientId,
+    status_id: status.status_id,
+    board_id: ticketBoardId,
+    entered_by: userId,
+    assigned_to: userId,
+  });
+  ticketId = ticket.ticket_id;
 });
 
 afterEach(async () => {
@@ -109,14 +129,8 @@ function service() {
   return instance;
 }
 
-function databaseErrorDescription(error: unknown): string {
-  const dbError = error as { code?: string; column?: string; table?: string; message?: string; detail?: string };
-  return `database error code=${dbError.code ?? 'unknown'} table=${dbError.table ?? 'unknown'} column=${dbError.column ?? 'unknown'}: ${dbError.message ?? String(error)} ${dbError.detail ?? ''}`;
-}
-
 describe('REST tag entity route against the migrated database schema', () => {
   it('authenticates with an API key, tags a ticket, and reads the tag back through REST', async () => {
-    const ticketId = randomUUID();
     const postResponse = await tagTicket(routeRequest('POST', ticketId, {
       entity_id: ticketId,
       entity_type: 'ticket',
@@ -133,6 +147,8 @@ describe('REST tag entity route against the migrated database schema', () => {
       background_color: expect.any(String),
       text_color: expect.any(String),
       tenant,
+      created_by: userId,
+      board_id: null,
     });
 
     const getResponse = await readTicketTags(routeRequest('GET', ticketId));
@@ -144,36 +160,45 @@ describe('REST tag entity route against the migrated database schema', () => {
       tagged_id: ticketId,
       tagged_type: 'ticket',
       tenant,
+      created_by: userId,
+      board_id: null,
+      background_color: postBody.data.tags[0].background_color,
+      text_color: postBody.data.tags[0].text_color,
     });
-    expect(getBody.data.tags[0].board_id === null || typeof getBody.data.tags[0].board_id === 'string').toBe(true);
+    const [mapping] = await trx('tag_mappings').where({ tenant, mapping_id: postBody.data.tags[0].tag_id });
+    const definition = await trx('tag_definitions').where({ tenant, tag_id: mapping.tag_id }).first();
+    expect(mapping).toMatchObject({ tagged_id: ticketId, tagged_type: 'ticket', created_by: userId });
+    expect(definition).toMatchObject({ board_id: null, background_color: postBody.data.tags[0].background_color, text_color: postBody.data.tags[0].text_color });
+    const ticket = await trx('tickets').where({ tenant, ticket_id: ticketId }).first();
+    expect(ticket.board_id).toBe(ticketBoardId);
   });
 
-  it('runs tag, untag, and replacement read-backs in one rolled-back schema contract', async () => {
-    const ticketId = randomUUID();
+  it('runs tag, untag, and replacement in a reusable rolled-back schema contract', async () => {
     const tagService = service();
     const context: ServiceContext = { tenant, userId };
+    await withRolledBackSchemaContract(trx, async (contractTrx) => {
+      const getKnexSpy = vi.spyOn(tagService as unknown as KnexProvidingService, 'getKnex').mockResolvedValue({ knex: contractTrx, tenant });
+      try {
+        const [created] = await tagService.tagEntity(ticketId, 'ticket', ['contract-first'], {}, context);
+        expect(created.tag_text).toBe('contract-first');
 
-    try {
-      const [created] = await tagService.tagEntity(ticketId, 'ticket', ['contract-first'], {}, context);
-      expect(created.tag_text).toBe('contract-first');
+        await tagService.untagEntity(ticketId, 'ticket', [created.tag_id], context);
 
-      await tagService.untagEntity(ticketId, 'ticket', [created.tag_id], context);
-
-      const replaced = await tagService.replaceEntityTags(
-        ticketId,
-        'ticket',
-        ['contract-replacement'],
-        {},
-        context,
-      );
-      expect(replaced.map((tag) => tag.tag_text)).toEqual(['contract-replacement']);
-    } catch (error) {
-      throw new Error(`Tag entity schema contract failed: ${databaseErrorDescription(error)}`, { cause: error });
-    }
+        const replaced = await tagService.replaceEntityTags(
+          ticketId,
+          'ticket',
+          ['contract-replacement'],
+          {},
+          context,
+        );
+        expect(replaced.map((tag) => tag.tag_text)).toEqual(['contract-replacement']);
+      } finally {
+        getKnexSpy.mockRestore();
+      }
+    });
   });
 
   it('untags a mapping through the API-key route and leaves no mapping behind', async () => {
-    const ticketId = randomUUID();
     const created = await tagTicket(routeRequest('POST', ticketId, {
       entity_id: ticketId,
       entity_type: 'ticket',
@@ -189,30 +214,100 @@ describe('REST tag entity route against the migrated database schema', () => {
     expect(response.status).toBe(200);
     const readBack = await readTicketTags(routeRequest('GET', ticketId));
     expect((await readBack.json()).data.tags).toEqual([]);
+    expect(await trx('tag_mappings').where({ tenant, mapping_id: tagId })).toHaveLength(0);
   });
 
   it('replaces a ticket tag set through the API-key route', async () => {
-    const ticketId = randomUUID();
     const initial = await tagTicket(routeRequest('POST', ticketId, {
       entity_id: ticketId,
       entity_type: 'ticket',
-      tags: ['replace-old'],
+      tags: ['replace-old', 'replace-shared'],
     }));
     expect(initial.status).toBe(201);
 
     const response = await replaceTicketTags(routeRequest('PUT', ticketId, {
       entity_id: ticketId,
       entity_type: 'ticket',
-      tags: ['replace-new'],
+      tags: ['replace-shared', 'replace-new'],
     }));
     expect(response.status).toBe(200);
 
     const readBack = await readTicketTags(routeRequest('GET', ticketId));
-    expect((await readBack.json()).data.tags.map((tag: { tag_text: string }) => tag.tag_text)).toEqual(['replace-new']);
+    const readTags = (await readBack.json()).data.tags as Array<{ tag_id: string; tag_text: string }>;
+    expect(readTags.map((tag) => tag.tag_text).sort()).toEqual(['replace-new', 'replace-shared']);
+    const oldTagIds = (await initial.json()).data.tags.map((tag: { tag_id: string }) => tag.tag_id);
+    for (const oldTagId of oldTagIds) {
+      expect(await trx('tag_mappings').where({ tenant, mapping_id: oldTagId })).toHaveLength(0);
+    }
+    const persisted = await trx('tag_mappings').where({ tenant, tagged_id: ticketId, tagged_type: 'ticket' });
+    expect(persisted.map((mapping: { mapping_id: string }) => mapping.mapping_id).sort())
+      .toEqual(readTags.map((tag) => tag.tag_id).sort());
+  });
+
+  it('preserves existing mappings when PUT replacement fails during insertion', async () => {
+    const initial = await tagTicket(routeRequest('POST', ticketId, {
+      entity_id: ticketId,
+      entity_type: 'ticket',
+      tags: ['preserve-on-failure'],
+    }));
+    const originalMapping = (await initial.json()).data.tags[0];
+    const insert = vi.spyOn(TagMapping, 'insert').mockRejectedValueOnce(new Error('Injected mapping insertion failure'));
+
+    let response: NextResponse;
+    try {
+      response = await replaceTicketTags(routeRequest('PUT', ticketId, {
+        entity_id: ticketId,
+        entity_type: 'ticket',
+        tags: ['replacement-failure'],
+      }));
+    } finally {
+      insert.mockRestore();
+    }
+
+    expect(response.status).toBe(500);
+    const persisted = await trx('tag_mappings').where({ tenant, tagged_id: ticketId, tagged_type: 'ticket' });
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0].mapping_id).toBe(originalMapping.tag_id);
+    const readBack = await readTicketTags(routeRequest('GET', ticketId));
+    expect((await readBack.json()).data.tags.map((tag: { tag_text: string }) => tag.tag_text)).toEqual(['preserve-on-failure']);
+  });
+
+  it('preserves existing mappings when PUT replacement read-back raises PostgreSQL 42703', async () => {
+    const initial = await tagTicket(routeRequest('POST', ticketId, {
+      entity_id: ticketId,
+      entity_type: 'ticket',
+      tags: ['preserve-on-readback-failure'],
+    }));
+    const originalMapping = (await initial.json()).data.tags[0];
+    const readBackMapping = vi.spyOn(TagMapping, 'getByMappingId').mockRejectedValueOnce({
+      message: 'column "missing_column" of relation "tag_mappings" does not exist',
+      code: '42703',
+      table: 'tag_mappings',
+      column: 'missing_column',
+    });
+
+    let response: NextResponse;
+    try {
+      response = await replaceTicketTags(routeRequest('PUT', ticketId, {
+        entity_id: ticketId,
+        entity_type: 'ticket',
+        tags: ['replacement-readback-failure'],
+      }));
+    } finally {
+      readBackMapping.mockRestore();
+    }
+
+    expect(response.status).toBe(500);
+    expect((await response.json()).error.code).toBe('INTERNAL_CONFIGURATION');
+    const persisted = await trx('tag_mappings').where({ tenant, tagged_id: ticketId, tagged_type: 'ticket' });
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0].mapping_id).toBe(originalMapping.tag_id);
+    const readBack = await readTicketTags(routeRequest('GET', ticketId));
+    expect((await readBack.json()).data.tags.map((tag: { tag_text: string }) => tag.tag_text))
+      .toEqual(['preserve-on-readback-failure']);
   });
 
   it('uses the same schema-safe tagging path for bulk/tag', async () => {
-    const ticketId = randomUUID();
     const response = await bulkTagEntities(new NextRequest('http://localhost/api/v1/tags/bulk/tag', {
       method: 'POST',
       headers: { 'x-api-key': apiKey, 'content-type': 'application/json' },

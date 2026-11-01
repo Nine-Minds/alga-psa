@@ -5,8 +5,7 @@
  */
 
 import { Knex } from 'knex';
-import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
-import { withTransaction } from '@alga-psa/db';
+import { BaseService, ServiceContext, ListResult, tenantDb, withSavepoint, withTransaction } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { buildTagDefinitionCreatedPayload, buildTagDefinitionUpdatedPayload } from '@alga-psa/workflow-streams';
@@ -485,21 +484,20 @@ export class TagService extends BaseService {
           tagged_id: tagData.tagged_id,
           tagged_type: tagData.tagged_type
         }, context.userId);
-        const created = await tenantDb(trx, tenant).table('tag_mappings as tm')
-          .modify((query) => joinTagDefinitions(query, trx, tenant))
-          .where('tm.mapping_id', mapping.mapping_id)
-          .select(
-            'tm.mapping_id as tag_id',
-            'td.board_id',
-            'td.tag_text',
-            'tm.tagged_id',
-            'tm.tagged_type',
-            'td.background_color',
-            'td.text_color',
-            'tm.tenant',
-            'tm.created_by'
-          )
-          .first();
+        // Keep the REST read-back join and projection in the shared mapping
+        // model so its schema contract has one authoritative description.
+        const mappingWithDefinition = await TagMapping.getByMappingId(trx, tenant, mapping.mapping_id);
+        const created = mappingWithDefinition && {
+          tag_id: mappingWithDefinition.mapping_id,
+          tenant,
+          board_id: mappingWithDefinition.board_id,
+          tag_text: mappingWithDefinition.tag_text,
+          tagged_id: mappingWithDefinition.tagged_id,
+          tagged_type: mappingWithDefinition.tagged_type,
+          background_color: mappingWithDefinition.background_color,
+          text_color: mappingWithDefinition.text_color,
+          created_by: mappingWithDefinition.created_by,
+        };
         
         if (created) {
           createdTags.push(created as TagResponse);
@@ -546,18 +544,18 @@ export class TagService extends BaseService {
   ): Promise<TagResponse[]> {
     const { knex, tenant } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
+    return withTransaction(knex, async (trx) => withSavepoint(trx, async (replacementTrx) => {
       // Get existing tags
-      const existingTags = await TagMapping.getByEntity(trx, tenant, entityId, entityType);
+      const existingTags = await TagMapping.getByEntity(replacementTrx, tenant, entityId, entityType);
       // Remove existing tags
       for (const tag of existingTags) {
-        await TagMapping.delete(trx, tenant, tag.mapping_id); // Use mapping_id instead of tag_id
+        await TagMapping.delete(replacementTrx, tenant, tag.mapping_id); // Use mapping_id instead of tag_id
       }
 
       // Add new tags in this same transaction: a second connection would wait
       // on the mapping rows this one has just deleted and never return.
-      return await this.tagEntityInTransaction(trx, tenant, entityId, entityType, tagTexts, options, context);
-    });
+      return await this.tagEntityInTransaction(replacementTrx, tenant, entityId, entityType, tagTexts, options, context);
+    }));
   }
 
   // ========================================================================
