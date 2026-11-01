@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const dbMocks = vi.hoisted(() => ({
   tenantDb: vi.fn(),
+  tenantJoin: vi.fn((builder: unknown) => builder),
 }));
 
 const modelMocks = vi.hoisted(() => ({
@@ -61,6 +62,7 @@ describe('getOpportunityDetail', () => {
     };
     dbMocks.tenantDb.mockReturnValue({
       table: vi.fn((name: string) => tables[String(name).split(' ')[0]]),
+      tenantJoin: dbMocks.tenantJoin,
     });
     modelMocks.getById.mockResolvedValue({ ...OPPORTUNITY });
   });
@@ -97,5 +99,53 @@ describe('getOpportunityDetail', () => {
 
     expect(detail?.contact_name).toBe('Jane Doe');
     expect(detail?.contact_phone).toBeNull();
+  });
+
+  describe('cited evidence on the ladder', () => {
+    const row = (overrides: Record<string, unknown>) => ({
+      evidence_id: 'ev-1',
+      opportunity_id: 'opp-1',
+      checkpoint: 'qualified',
+      source: 'user_declared',
+      ref_type: null,
+      ref_id: null,
+      recorded_at: '2026-10-01T00:00:00.000Z',
+      corrected_at: null,
+      interaction_title: null,
+      document_name: null,
+      resolved_interaction_id: null,
+      resolved_document_id: null,
+      ...overrides,
+    });
+    const rungFor = (detail: any) => detail.ladder.find((step: any) => step.checkpoint === 'qualified').evidence;
+
+    it('resolves a cited interaction and document to display labels', async () => {
+      tables.opportunity_evidence = makeQuery([
+        row({ ref_type: 'interaction', ref_id: 'int-1', interaction_title: 'Discovery call', resolved_interaction_id: 'int-1' }),
+      ]);
+      let detail = await getOpportunityDetail({} as any, 'tenant-1', 'opp-1');
+      expect(rungFor(detail)).toMatchObject({ ref_label: 'Discovery call', ref_missing: false });
+
+      tables.opportunity_evidence = makeQuery([
+        row({ ref_type: 'document', ref_id: 'doc-1', document_name: 'Scope.pdf', resolved_document_id: 'doc-1' }),
+      ]);
+      detail = await getOpportunityDetail({} as any, 'tenant-1', 'opp-1');
+      expect(rungFor(detail)).toMatchObject({ ref_label: 'Scope.pdf', ref_missing: false });
+      // Every join is tenant-constrained through tenantDb.tenantJoin.
+      expect(dbMocks.tenantJoin).toHaveBeenCalledWith(expect.anything(), 'documents as cd', 'cd.document_id', 'cda.document_id', expect.objectContaining({ type: 'left' }));
+    });
+
+    it('flags a deleted target as missing without throwing', async () => {
+      tables.opportunity_evidence = makeQuery([row({ ref_type: 'document', ref_id: 'gone' })]);
+      const detail = await getOpportunityDetail({} as any, 'tenant-1', 'opp-1');
+      expect(rungFor(detail)).toMatchObject({ ref_label: null, ref_missing: true });
+      expect(detail?.ladder.find((step) => step.checkpoint === 'qualified')?.state).toBe('reached');
+    });
+
+    it('leaves uncited evidence unflagged', async () => {
+      tables.opportunity_evidence = makeQuery([row({})]);
+      const detail = await getOpportunityDetail({} as any, 'tenant-1', 'opp-1');
+      expect(rungFor(detail)).toMatchObject({ ref_label: null, ref_missing: false });
+    });
   });
 });
