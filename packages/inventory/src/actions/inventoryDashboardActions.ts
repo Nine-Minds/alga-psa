@@ -425,7 +425,9 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
       .leftJoin('service_catalog as sc', function () {
         this.on('r.service_id', '=', 'sc.service_id').andOn('r.tenant', '=', 'sc.tenant');
       })
+      // Stock-unit track only; advance-track warranty cases owed to the vendor are listed on the RMA list instead.
       .where({ 'r.tenant': tenant, 'r.status': 'dead_unit_owed' })
+      .whereNotNull('r.returned_unit_id')
       .select<any[]>(
         'r.rma_id as rma_id',
         'r.rma_reference as rma_reference',

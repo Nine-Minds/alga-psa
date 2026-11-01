@@ -598,6 +598,7 @@
       "warrantyLocationRequired": "Välj var enheten befinner sig nu så att den kan tas emot i retur.",
       "warrantyInvalidTransition": "Det steget är inte tillgängligt i RMA:ns nuvarande status. Uppdatera och försök igen.",
       "warrantyReviewClose": "Godkänn eller avslå ärendet innan du stänger det.",
+      "warrantyWrongTrack": "Det här steget gäller endast krav med förhandsersättning.",
       "duplicateReference": "Den RMA-referensen eller det numret används redan.",
       "checkViolation": "Det värdet är inte tillåtet för den här RMA:n.",
       "ticketNotFound": "Ärendet hittades inte.",
@@ -1324,6 +1325,7 @@
       "replacementReceived": "Ersättningsenhet mottagen",
       "replacementDeployed": "Ersättningsenhet driftsatt",
       "deadUnitOwed": "Trasig enhet ska återlämnas",
+      "deadUnitToVendor": "Defekt enhet till leverantör",
       "deadUnitReturned": "Trasig enhet återlämnad",
       "replaced": "Ersatt",
       "credited": "Krediterat",
@@ -1373,6 +1375,11 @@
       "noEvents": "Ingen historik ännu.",
       "confirmReceived": "Bekräfta att enheten finns på kontoret. Dess förvar måste vara på kontoret.",
       "confirmCredit": "Registrera att leverantören har krediterat den här enheten. Förvarsperioden avslutas som kasserad.",
+      "confirmShipDeadUnit": "Skicka tillbaka den defekta enheten till leverantören. Enheten i förvar registreras som hos leverantören.",
+      "confirmVendorReceipt": "Bekräfta att leverantören har tagit emot den defekta enheten. Ärendet stängs som löst och förvaret som återlämnat till leverantören.",
+      "deadUnitNotShipped": "Defekt enhet ännu inte skickad, förfallodag {{date}}",
+      "deadUnitShippedLate": "Defekt enhet skickad för sent, förfallodag {{date}}",
+      "returnByHint": "Datumet då leverantören vill ha den defekta enheten skickad, räknat från leverans av denna ersättning. Lämna som det är för att behålla datumet från godkännandet.",
       "actions": {
         "approveStandard": "Godkänn (standard)",
         "approveAdvance": "Godkänn (förskottsersättning)",
@@ -1384,6 +1391,8 @@
         "recordRepair": "Registrera reparation",
         "recordCredit": "Registrera leverantörskredit",
         "returnToClient": "Returnera till kund",
+        "shipDeadUnitToVendor": "Skicka defekt enhet till leverantören",
+        "confirmVendorReceipt": "Leverantören har tagit emot den defekta enheten",
         "close": "Stäng RMA"
       },
       "events": {
@@ -1397,6 +1406,8 @@
         "repairReceived": "Reparation mottagen",
         "vendorCredited": "Krediterad av leverantör",
         "returnedToClient": "Returnerad till kund",
+        "deadUnitShipped": "Defekt enhet skickad till leverantören",
+        "vendorReceiptConfirmed": "Leverantören har tagit emot den defekta enheten",
         "closed": "Stängt",
         "note": "Anteckning"
       },

@@ -598,6 +598,7 @@
       "warrantyLocationRequired": "Choisissez où se trouve l'appareil actuellement afin de pouvoir le réceptionner.",
       "warrantyInvalidTransition": "Cette étape n'est pas disponible dans le statut actuel du RMA. Actualisez et réessayez.",
       "warrantyReviewClose": "Approuvez ou refusez la demande avant de la clôturer.",
+      "warrantyWrongTrack": "Cette étape ne concerne que les demandes avec remplacement anticipé.",
       "duplicateReference": "Cette référence ou ce numéro de RMA est déjà utilisé.",
       "checkViolation": "Cette valeur n'est pas autorisée pour ce RMA.",
       "ticketNotFound": "Ticket introuvable.",
@@ -1324,6 +1325,7 @@
       "replacementReceived": "Remplacement reçu",
       "replacementDeployed": "Remplacement déployé",
       "deadUnitOwed": "Unité défectueuse due",
+      "deadUnitToVendor": "Unité défectueuse au fournisseur",
       "deadUnitReturned": "Unité défectueuse retournée",
       "replaced": "Remplacé",
       "credited": "Crédité",
@@ -1373,6 +1375,11 @@
       "noEvents": "Aucun historique pour le moment.",
       "confirmReceived": "Confirmez que l'appareil est au bureau. Sa garde doit être au bureau.",
       "confirmCredit": "Indiquez que le fournisseur a crédité cet appareil. La période de garde est clôturée comme mise au rebut.",
+      "confirmShipDeadUnit": "Renvoyez l'unité défectueuse au fournisseur. L'appareil en garde est enregistré comme chez le fournisseur.",
+      "confirmVendorReceipt": "Confirmez que le fournisseur a reçu l'unité défectueuse. Le dossier est clos comme résolu et la garde comme retournée au fournisseur.",
+      "deadUnitNotShipped": "Unité défectueuse pas encore expédiée, échéance : {{date}}",
+      "deadUnitShippedLate": "Unité défectueuse expédiée en retard, échéance : {{date}}",
+      "returnByHint": "Date limite d'expédition de l'unité défectueuse au fournisseur, comptée à partir de la livraison de ce remplacement. Laissez-la telle quelle pour conserver la date de l'approbation.",
       "actions": {
         "approveStandard": "Approuver (standard)",
         "approveAdvance": "Approuver (remplacement anticipé)",
@@ -1384,6 +1391,8 @@
         "recordRepair": "Enregistrer la réparation",
         "recordCredit": "Enregistrer l'avoir fournisseur",
         "returnToClient": "Retourner au client",
+        "shipDeadUnitToVendor": "Expédier l'unité défectueuse au fournisseur",
+        "confirmVendorReceipt": "Le fournisseur a reçu l'unité défectueuse",
         "close": "Clôturer le RMA"
       },
       "events": {
@@ -1397,6 +1406,8 @@
         "repairReceived": "Réparation reçue",
         "vendorCredited": "Crédité par le fournisseur",
         "returnedToClient": "Retourné au client",
+        "deadUnitShipped": "Unité défectueuse expédiée au fournisseur",
+        "vendorReceiptConfirmed": "Le fournisseur a reçu l'unité défectueuse",
         "closed": "Fermé",
         "note": "Note"
       },

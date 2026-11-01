@@ -1,4 +1,4 @@
-import type { RmaClosedReason, RmaEventType, RmaStatus } from '@alga-psa/types';
+import type { RmaClosedReason, RmaEventType, RmaStatus, RmaType } from '@alga-psa/types';
 
 /**
  * The warranty-claim state machine, pure (C5 PRD "State machine", transitions 2–13).
@@ -15,6 +15,14 @@ import type { RmaClosedReason, RmaEventType, RmaStatus } from '@alga-psa/types';
  *   replaced | repaired --return to client--> closed
  *   replaced | repaired | credited | returned --close--> closed
  *
+ * Advance-replacement dead-unit leg (follow-up, alga-2026-0002683): the MSP holds the dead unit when the
+ * replacement arrives, so it must go back to the vendor.
+ *   replaced | repaired --ship dead unit--> dead_unit_owed --vendor receipt--> closed (resolved)
+ *   dead_unit_owed --close--> closed   (generic; does not touch custody)
+ * `dead_unit_owed` is shared with the stock-unit track. The two are told apart by `isAssetTracked`
+ * (`returned_unit_id IS NULL`): every stock-track writer refuses warranty cases and every warranty core refuses
+ * stock cases (see `lockWarrantyRma`).
+ *
  * `warranty_review` can only be left through approve, deny or cancel; the generic `close` is refused there
  * so the decision step cannot be bypassed.
  */
@@ -29,6 +37,8 @@ export type WarrantyAction =
   | 'record_repair'
   | 'record_credit'
   | 'return_to_client'
+  | 'ship_dead_unit_to_vendor'
+  | 'confirm_vendor_receipt'
   | 'close';
 
 export interface WarrantyTransition {
@@ -40,6 +50,8 @@ export interface WarrantyTransition {
   fixedClosedReason?: RmaClosedReason;
   /** Needs `asset:update` (and the record check) in addition to `warranty:update`. */
   writesAsset: boolean;
+  /** When set, the transition exists on that track only (`rma_type`); other tracks are refused. */
+  onlyTrack?: RmaType;
 }
 
 export const WARRANTY_TRANSITIONS: Readonly<Record<WarrantyAction, WarrantyTransition>> = {
@@ -53,7 +65,10 @@ export const WARRANTY_TRANSITIONS: Readonly<Record<WarrantyAction, WarrantyTrans
   record_repair: { from: ['sent_to_vendor'], to: 'repaired', eventType: 'repair_received', closes: false, writesAsset: true },
   record_credit: { from: ['sent_to_vendor', 'open'], to: 'credited', eventType: 'vendor_credited', closes: false, writesAsset: false },
   return_to_client: { from: ['replaced', 'repaired'], to: 'closed', eventType: 'returned_to_client', closes: true, fixedClosedReason: 'resolved', writesAsset: true },
-  close: { from: ['replaced', 'repaired', 'credited', 'returned'], to: 'closed', eventType: 'closed', closes: true, writesAsset: false },
+  // `repaired` is listed because the card asks for it; today only the standard track reaches it, which `onlyTrack` refuses.
+  ship_dead_unit_to_vendor: { from: ['replaced', 'repaired'], to: 'dead_unit_owed', eventType: 'dead_unit_shipped', closes: false, writesAsset: true, onlyTrack: 'advance_replacement' },
+  confirm_vendor_receipt: { from: ['dead_unit_owed'], to: 'closed', eventType: 'vendor_receipt_confirmed', closes: true, fixedClosedReason: 'resolved', writesAsset: true, onlyTrack: 'advance_replacement' },
+  close: { from: ['replaced', 'repaired', 'credited', 'returned', 'dead_unit_owed'], to: 'closed', eventType: 'closed', closes: true, writesAsset: false },
 };
 
 export const WARRANTY_ACTIONS = Object.keys(WARRANTY_TRANSITIONS) as WarrantyAction[];
@@ -62,7 +77,7 @@ export const WARRANTY_ACTIONS = Object.keys(WARRANTY_TRANSITIONS) as WarrantyAct
 export const CALLER_CLOSE_REASONS = ['resolved', 'cancelled', 'duplicate', 'vendor_credited'] as const satisfies readonly RmaClosedReason[];
 export const CANCEL_REASONS = ['cancelled', 'duplicate'] as const satisfies readonly RmaClosedReason[];
 
-export type RmaTransitionErrorCode = 'invalid_transition' | 'warranty_review_close';
+export type RmaTransitionErrorCode = 'invalid_transition' | 'warranty_review_close' | 'wrong_track';
 
 export class RmaTransitionError extends Error {
   constructor(
@@ -76,14 +91,22 @@ export class RmaTransitionError extends Error {
   }
 }
 
-export function nextWarrantyStatus(from: RmaStatus, action: WarrantyAction): RmaStatus | null {
+export function nextWarrantyStatus(from: RmaStatus, action: WarrantyAction, track?: RmaType): RmaStatus | null {
   const t = WARRANTY_TRANSITIONS[action];
-  return t.from.includes(from) ? t.to : null;
+  return t.from.includes(from) && trackAllows(t, track) ? t.to : null;
 }
 
-export function assertWarrantyTransition(from: RmaStatus, action: WarrantyAction): WarrantyTransition {
+const trackAllows = (t: WarrantyTransition, track?: RmaType): boolean => !t.onlyTrack || track === undefined || t.onlyTrack === track;
+
+/** `track` is the case's `rma_type`; omit it to check the status alone. */
+export function assertWarrantyTransition(from: RmaStatus, action: WarrantyAction, track?: RmaType): WarrantyTransition {
   const t = WARRANTY_TRANSITIONS[action];
-  if (t.from.includes(from)) return t;
+  if (t.from.includes(from)) {
+    if (!trackAllows(t, track)) {
+      throw new RmaTransitionError('wrong_track', from, action, 'This step belongs to the advance-replacement track only.');
+    }
+    return t;
+  }
   if (action === 'close' && from === 'warranty_review') {
     throw new RmaTransitionError(
       'warranty_review_close',
@@ -100,8 +123,8 @@ export function assertWarrantyTransition(from: RmaStatus, action: WarrantyAction
   );
 }
 
-export function allowedWarrantyActions(from: RmaStatus): WarrantyAction[] {
-  return WARRANTY_ACTIONS.filter((a) => WARRANTY_TRANSITIONS[a].from.includes(from));
+export function allowedWarrantyActions(from: RmaStatus, track?: RmaType): WarrantyAction[] {
+  return WARRANTY_ACTIONS.filter((a) => WARRANTY_TRANSITIONS[a].from.includes(from) && trackAllows(WARRANTY_TRANSITIONS[a], track));
 }
 
 /**

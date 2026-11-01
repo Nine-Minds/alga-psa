@@ -5,7 +5,7 @@ import React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
 import { fireEvent } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { RmaWarrantyPanel } from './RmaWarrantyPanel';
+import { RmaWarrantyPanel, deadUnitDeadlineBadge } from './RmaWarrantyPanel';
 import { WARRANTY_ACTIONS, allowedWarrantyActions, nextWarrantyStatus } from '../../lib/rma/stateMachine';
 
 vi.mock('../../actions', () => {
@@ -13,7 +13,7 @@ vi.mock('../../actions', () => {
   return {
     approveWarrantyClaim: fn(), cancelWarrantyClaim: fn(), closeWarrantyRma: fn(), denyWarrantyClaim: fn(),
     markDeviceReceived: fn(), receiveVendorReplacement: fn(), recordVendorCredit: fn(), recordVendorRepair: fn(),
-    returnDeviceToClient: fn(), shipToVendor: fn(),
+    returnDeviceToClient: fn(), shipToVendor: fn(), shipDeadUnitToVendor: fn(), confirmVendorReceipt: fn(),
     listRmaCaseEvents: vi.fn(async () => []),
   };
 });
@@ -82,9 +82,9 @@ const renderedActions = () =>
 describe('RmaWarrantyPanel (T029)', () => {
   it.each(STATUSES)('status %s offers exactly the state-machine actions', (status) => {
     render(<RmaWarrantyPanel rma={{ ...base, status } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
-    const expected = [...allowedWarrantyActions(status as any)].sort();
+    const expected = [...allowedWarrantyActions(status as any, base.rma_type as any)].sort();
     expect(renderedActions()).toEqual(expected);
-    for (const a of expected) expect(nextWarrantyStatus(status as any, a)).not.toBeNull();
+    for (const a of expected) expect(nextWarrantyStatus(status as any, a, base.rma_type as any)).not.toBeNull();
     for (const a of WARRANTY_ACTIONS.filter((x) => !expected.includes(x))) {
       expect(document.getElementById(`rma-warranty-action-${a}`)).toBeNull();
     }
@@ -210,5 +210,128 @@ describe('RmaWarrantyPanel (T029)', () => {
     // Exactly one "Generic link" row (the placeholder), not a second one duplicated into `options`.
     expect(labels.filter((l) => l === 'Generic link')).toHaveLength(1);
     expect(labels).toEqual(['Generic link', 'Dell portal']);
+  });
+
+  describe('advance-replacement dead-unit leg', () => {
+    const advance = { ...base, rma_type: 'advance_replacement' };
+    const todayYmd = () => {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+    const shift = (days: number) => {
+      const d = new Date();
+      d.setDate(d.getDate() + days);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    it.each(['replaced', 'repaired'])('offers "Ship dead unit to vendor" on an advance-track %s case', (status) => {
+      render(<RmaWarrantyPanel rma={{ ...advance, status } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
+      expect(renderedActions()).toContain('ship_dead_unit_to_vendor');
+      expect(document.getElementById('rma-warranty-action-ship_dead_unit_to_vendor')!.textContent).toBe('Ship dead unit to vendor');
+      expect(renderedActions()).toContain('return_to_client');
+    });
+
+    it('does not offer the dead-unit steps on the standard track', () => {
+      render(<RmaWarrantyPanel rma={{ ...base, status: 'replaced' } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
+      expect(renderedActions()).not.toContain('ship_dead_unit_to_vendor');
+    });
+
+    it('offers "Vendor received dead unit" and close (never return to client) once the dead unit is shipped', () => {
+      render(<RmaWarrantyPanel rma={{ ...advance, status: 'dead_unit_owed' } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
+      expect(renderedActions()).toEqual(['close', 'confirm_vendor_receipt']);
+      expect(document.getElementById('rma-warranty-action-confirm_vendor_receipt')!.textContent).toBe('Vendor received dead unit');
+    });
+
+    const ids = ['rma-warranty-dead-unit-not-shipped', 'rma-warranty-dead-unit-shipped-late'];
+    const shownIds = () => ids.filter((i) => !!document.getElementById(i));
+    const mount = (over: Record<string, unknown>) => {
+      cleanup();
+      render(<RmaWarrantyPanel rma={{ ...advance, ...over } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
+    };
+
+    it('renders "not yet shipped" for a past-due replaced case, "shipped late" for a late shipment, nothing for an on-time one; close stays available', () => {
+      mount({ status: 'replaced', return_by: shift(-1) });
+      expect(shownIds()).toEqual([ids[0]]);
+      expect(document.getElementById(ids[0])!.textContent).toContain('Dead unit not yet shipped, was due');
+      expect(renderedActions()).toContain('close');
+      mount({ status: 'dead_unit_owed', return_by: shift(-3), outbound_shipped_at: new Date(`${shift(-1)}T12:00:00`).toISOString() });
+      expect(shownIds()).toEqual([ids[1]]);
+      expect(document.getElementById(ids[1])!.textContent).toContain('Dead unit shipped late, was due');
+      expect(renderedActions()).toContain('close');
+      mount({ status: 'dead_unit_owed', return_by: shift(-1), outbound_shipped_at: new Date(`${shift(-3)}T12:00:00`).toISOString() });
+      expect(shownIds()).toEqual([]);
+      mount({ status: 'replaced', return_by: todayYmd() });
+      expect(shownIds()).toEqual([]);
+    });
+
+    // rma_cases.return_by is a Postgres DATE with no type parser: at runtime it is a Date (local midnight) or an ISO timestamp.
+    const asDate = (ymd: string) => { const [y, m, d] = ymd.split('-').map(Number); return new Date(y, m - 1, d); };
+    const asIso = (ymd: string) => `${ymd}T00:00:00.000Z`;
+    it.each([
+      ['Date object', asDate],
+      ['ISO timestamp string', asIso],
+    ])('badge works when return_by arrives as a %s (past, today, future)', (_n, wrap) => {
+      const show = (ymd: string) => {
+        mount({ status: 'replaced', return_by: wrap(ymd) });
+        return !!document.getElementById('rma-warranty-dead-unit-not-shipped');
+      };
+      expect(show(shift(-1))).toBe(true);
+      expect(show(todayYmd())).toBe(false);
+      expect(show(shift(1))).toBe(false);
+    });
+  });
+});
+
+// T012: the full §2.4 truth table against the pure decision function.
+describe('deadUnitDeadlineBadge (PRD §2.4)', () => {
+  const today = new Date(2026, 9, 10, 9, 0, 0); // 2026-10-10 local
+  const at = (y: number, m: number, d: number, h = 12, min = 0) => new Date(y, m - 1, d, h, min);
+  const adv = (over: Record<string, unknown>) => ({ rma_type: 'advance_replacement', status: 'replaced', return_by: '2026-10-05', outbound_shipped_at: null, ...over }) as any;
+  const run = (over: Record<string, unknown>) => deadUnitDeadlineBadge(adv(over), today);
+
+  it.each(['replaced', 'repaired'])('%s past due -> not_shipped', (status) => {
+    expect(run({ status })).toEqual({ kind: 'not_shipped', dueYmd: '2026-10-05' });
+  });
+  it('replaced due today or in the future -> none', () => {
+    expect(run({ return_by: '2026-10-10' })).toBeNull();
+    expect(run({ return_by: '2026-10-11' })).toBeNull();
+    expect(run({ return_by: '2026-12-01' })).toBeNull();
+  });
+  it('dead_unit_owed shipped on time (even with today past due) -> none', () => {
+    expect(run({ status: 'dead_unit_owed', outbound_shipped_at: at(2026, 10, 3) })).toBeNull();
+  });
+  it('dead_unit_owed shipped on the due day -> none, the day after -> shipped_late', () => {
+    expect(run({ status: 'dead_unit_owed', outbound_shipped_at: at(2026, 10, 5, 23, 59) })).toBeNull();
+    expect(run({ status: 'dead_unit_owed', outbound_shipped_at: at(2026, 10, 6, 0, 1) })).toEqual({ kind: 'shipped_late', dueYmd: '2026-10-05' });
+  });
+  it('standard track never shows a badge, in any status', () => {
+    for (const status of ['open', 'warranty_review', 'awaiting_return', 'returned', 'sent_to_vendor', 'replaced', 'repaired', 'credited', 'dead_unit_owed', 'closed']) {
+      expect(run({ rma_type: 'standard', status, outbound_shipped_at: at(2026, 10, 9) })).toBeNull();
+    }
+  });
+  it('other advance statuses show nothing', () => {
+    for (const status of ['open', 'credited', 'closed']) expect(run({ status })).toBeNull();
+  });
+  it('no return_by never shows a badge', () => {
+    expect(run({ return_by: null })).toBeNull();
+    expect(run({ return_by: undefined })).toBeNull();
+    expect(run({ status: 'dead_unit_owed', return_by: null, outbound_shipped_at: at(2026, 10, 9) })).toBeNull();
+  });
+  it('dead_unit_owed without a ship time shows nothing', () => {
+    expect(run({ status: 'dead_unit_owed', outbound_shipped_at: null })).toBeNull();
+  });
+  it('accepts Date and ISO-string inputs for return_by and outbound_shipped_at', () => {
+    const lateShip = at(2026, 10, 7);
+    for (const returnBy of ['2026-10-05', new Date(2026, 9, 5), '2026-10-05T00:00:00.000Z']) {
+      expect(run({ return_by: returnBy })).toMatchObject({ kind: 'not_shipped', dueYmd: '2026-10-05' });
+      for (const shipped of [lateShip, lateShip.toISOString()]) {
+        expect(run({ status: 'dead_unit_owed', return_by: returnBy, outbound_shipped_at: shipped })).toMatchObject({ kind: 'shipped_late' });
+      }
+    }
+  });
+  it('a late-evening ship time stays on its calendar day', () => {
+    const lateEvening = at(2026, 10, 5, 23, 45);
+    expect(run({ status: 'dead_unit_owed', outbound_shipped_at: lateEvening })).toBeNull();
+    expect(run({ status: 'dead_unit_owed', outbound_shipped_at: lateEvening.toISOString() })).toBeNull();
   });
 });

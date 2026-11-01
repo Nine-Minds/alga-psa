@@ -598,6 +598,7 @@
       "warrantyLocationRequired": "Kies waar het apparaat nu is, zodat het terug ontvangen kan worden.",
       "warrantyInvalidTransition": "Die stap is niet beschikbaar in de huidige status van de RMA. Vernieuw de pagina en probeer het opnieuw.",
       "warrantyReviewClose": "Keur de claim goed of wijs hem af voordat u hem sluit.",
+      "warrantyWrongTrack": "Deze stap geldt alleen voor claims met voorafgaande vervanging.",
       "duplicateReference": "Die RMA-referentie of dat nummer is al in gebruik.",
       "checkViolation": "Die waarde is niet toegestaan voor deze RMA.",
       "ticketNotFound": "Ticket niet gevonden.",
@@ -1324,6 +1325,7 @@
       "replacementReceived": "Vervanging ontvangen",
       "replacementDeployed": "Vervanging uitgerold",
       "deadUnitOwed": "Defecte eenheid verschuldigd",
+      "deadUnitToVendor": "Defecte unit naar leverancier",
       "deadUnitReturned": "Defecte eenheid geretourneerd",
       "replaced": "Vervangen",
       "credited": "Gecrediteerd",
@@ -1373,6 +1375,11 @@
       "noEvents": "Nog geen geschiedenis.",
       "confirmReceived": "Bevestig dat het apparaat op kantoor is. De bewaring moet op kantoor zijn.",
       "confirmCredit": "Registreer dat de leverancier dit apparaat heeft gecrediteerd. De bewaringsperiode wordt afgesloten als afgevoerd.",
+      "confirmShipDeadUnit": "Stuur de defecte unit terug naar de leverancier. Het apparaat in bewaring wordt vastgelegd als bij de leverancier.",
+      "confirmVendorReceipt": "Bevestig dat de leverancier de defecte unit heeft ontvangen. De zaak wordt gesloten als opgelost en de bewaring als teruggegeven aan de leverancier.",
+      "deadUnitNotShipped": "Defecte unit nog niet verzonden, uiterlijk {{date}}",
+      "deadUnitShippedLate": "Defecte unit te laat verzonden, uiterlijk {{date}}",
+      "returnByHint": "De datum waarop de leverancier de defecte unit verzonden wil hebben, geteld vanaf levering van deze vervanging. Laat het ongewijzigd om de datum van de goedkeuring te behouden.",
       "actions": {
         "approveStandard": "Goedkeuren (standaard)",
         "approveAdvance": "Goedkeuren (vervroegde vervanging)",
@@ -1384,6 +1391,8 @@
         "recordRepair": "Reparatie registreren",
         "recordCredit": "Leverancierscredit registreren",
         "returnToClient": "Terug naar klant",
+        "shipDeadUnitToVendor": "Defecte unit naar leverancier verzenden",
+        "confirmVendorReceipt": "Leverancier heeft defecte unit ontvangen",
         "close": "RMA sluiten"
       },
       "events": {
@@ -1397,6 +1406,8 @@
         "repairReceived": "Reparatie ontvangen",
         "vendorCredited": "Door leverancier gecrediteerd",
         "returnedToClient": "Teruggestuurd naar klant",
+        "deadUnitShipped": "Defecte unit naar leverancier verzonden",
+        "vendorReceiptConfirmed": "Leverancier heeft defecte unit ontvangen",
         "closed": "Gesloten",
         "note": "Notitie"
       },
