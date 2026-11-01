@@ -10,7 +10,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
     t: (key: string, opts?: string | { defaultValue?: string }) =>
       typeof opts === 'string' ? opts : (opts?.defaultValue ?? key),
   }),
-  useFormatters: () => ({ formatDate: (d: string) => d }),
+  useFormatters: () => ({ formatDate: (d: string | Date, o?: any) => formatDateValue(d, 'en', o) }),
   useOptionalI18n: () => null,
 }));
 vi.mock('@alga-psa/ui/hooks/useQuoteEnumOptions', () => ({
@@ -21,6 +21,7 @@ vi.mock('@alga-psa/ui/editor', () => ({
   hasQuoteTermsContent: () => false,
 }));
 
+import { formatDateValue } from '../../../../ui/src/lib/i18n/formatDateValue';
 import { CurrencyFormatProvider } from '@alga-psa/ui/lib';
 import { QuoteDocumentView } from './QuoteDocumentView';
 
@@ -79,5 +80,25 @@ describe('QuoteDocumentView', () => {
     expect(container.querySelector('#top')).toBeTruthy();
     expect(container.querySelector('#foot')).toBeTruthy();
     expect(container.textContent).toContain('¥');
+  });
+
+  it('renders date-only fields as the calendar day in UTC-negative browsers', () => {
+    const prev = process.env.TZ;
+    process.env.TZ = 'America/Los_Angeles';
+    try {
+      const { container } = render(
+        <CurrencyFormatProvider currencyCode="EUR" locale="en">
+          <QuoteDocumentView
+            quote={{ ...quote, quote_date: '2026-12-01T00:00:00.000Z', valid_until: '2026-12-31T00:00:00.000Z' }}
+            items={items} locations={[]} totals={totals}
+          />
+        </CurrencyFormatProvider>,
+      );
+      expect(container.textContent).toContain('12/31/2026');
+      expect(container.textContent).toContain('12/01/2026');
+      expect(container.textContent).not.toContain('12/30/2026');
+    } finally {
+      if (prev === undefined) delete process.env.TZ; else process.env.TZ = prev;
+    }
   });
 });

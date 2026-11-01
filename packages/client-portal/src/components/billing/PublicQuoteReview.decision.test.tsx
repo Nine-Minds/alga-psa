@@ -97,4 +97,45 @@ describe('PublicQuoteReview decision panel', () => {
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).selectedOptionalQuoteItemIds).toEqual(['i2']);
   });
+
+  it('renders no read-only notice while the decision form is active', () => {
+    render(<PublicQuoteReview {...props} />);
+    expect(document.getElementById('quote-link-decision-panel')).toBeTruthy();
+    expect(document.body.textContent).not.toContain('read-only');
+    expect(document.getElementById('public-quote-notice')).toBeNull();
+  });
+
+  it('keeps the read-only notice when no decision is possible', () => {
+    render(<PublicQuoteReview {...props} token={undefined} />);
+    expect(document.body.textContent).toContain('read-only view');
+  });
+
+  it('the status badge follows the server-confirmed outcome, not the clicked button', async () => {
+    // Server says it was already rejected although the signer clicked Accept.
+    fetchMock.mockResolvedValue({ json: async () => ({ status: 'already_decided', decision: 'rejected', decidedAt: '2026-10-30' }) });
+    render(<PublicQuoteReview {...props} />);
+    expect(document.body.textContent).toContain('sent');
+    fill();
+    fireEvent.click(document.getElementById('quote-link-accept')!);
+    await waitFor(() => expect(document.getElementById('quote-link-decided')).toBeTruthy());
+    expect(document.querySelector('h1')!.parentElement!.parentElement!.textContent).toContain('rejected');
+    expect(document.querySelector('h1')!.parentElement!.parentElement!.textContent).not.toContain('sent');
+  });
+
+  it('badge becomes accepted after a decided accept; a changed result leaves it as sent', async () => {
+    fetchMock.mockResolvedValue({ json: async () => ({ status: 'decided', decision: 'accepted', decidedAt: 'x' }) });
+    render(<PublicQuoteReview {...props} />);
+    fill();
+    fireEvent.click(document.getElementById('quote-link-accept')!);
+    await waitFor(() => expect(document.getElementById('quote-link-decided')).toBeTruthy());
+    expect(document.querySelector('h1')!.parentElement!.parentElement!.textContent).toContain('accepted');
+
+    cleanup();
+    fetchMock.mockResolvedValue({ json: async () => ({ status: 'changed' }) });
+    render(<PublicQuoteReview {...props} />);
+    fill();
+    fireEvent.click(document.getElementById('quote-link-accept')!);
+    await waitFor(() => expect(document.getElementById('quote-link-changed')).toBeTruthy());
+    expect(document.querySelector('h1')!.parentElement!.parentElement!.textContent).toContain('sent');
+  });
 });
