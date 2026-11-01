@@ -1185,6 +1185,9 @@
           "contains": "Innehåller",
           "starts_with": "Börjar med",
           "ends_with": "Slutar med",
+          "not_contains": "Innehåller inte",
+          "not_starts_with": "Börjar inte med",
+          "not_ends_with": "Slutar inte med",
           "is_empty": "Är tomt",
           "is_not_empty": "Är inte tomt"
         },
