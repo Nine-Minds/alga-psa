@@ -37,3 +37,46 @@ export { retainCoManagedWorkSnapshot } from './workSnapshotEvidence';
 export { retainCoManagedHistoricalWorkEvidence } from './historicalWorkEvidence';
 export { hasCoManagedLocalPermission } from './localPermission';
 export { loadCoManagedLifecycleFacts, loadCoManagedStaffRoles, loadCoManagedGrantFacts, loadCoManagedHomeFacts } from './sharedWork';
+export { CO_MANAGED_TASK_RESOURCE_ALIASES, isCoManagedTaskResourceHidden } from './sharedWorkProjection';
+export { listCoManagedSharedProjects, listCoManagedSharedProjectTasks } from './projectTaskQueue';
+export type { CoManagedSharedProjectRow, CoManagedSharedProjectPage, CoManagedSharedTaskRow, CoManagedSharedTaskPage } from './projectTaskQueue';
+export { editCoManagedProjectTask, getCoManagedProjectTaskSnapshot, CoManagedTaskEditError, CO_MANAGED_TASK_EDIT_FIELDS } from './projectTaskEditing';
+export type { CoManagedTaskEditRequest, CoManagedTaskEditReceipt, CoManagedTaskSnapshot, CoManagedTaskWriter, CoManagedTaskEditPatch } from './projectTaskEditing';
+export { assignCoManagedProjectTask } from './projectTaskAssignments';
+export type { CoManagedTaskAssignmentRequest, CoManagedTaskAssignmentReceipt } from './projectTaskAssignments';
+export { admitCoManagedNativeTaskCommentAccess, CO_MANAGED_TASK_LOCATOR_PAGE } from './nativeTaskCommentAccess';
+export type { CoManagedNativeTaskCommentAccess, CoManagedTaskLocator } from './nativeTaskCommentAccess';
+export { listCoManagedAssignedTasks } from './projectTaskQueue';
+export type { CoManagedAssignedTaskRow, CoManagedAssignedTaskPage } from './projectTaskQueue';
+export { listCoManagedProjectTaskHistory } from './projectTaskAudit';
+export type { CoManagedTaskHistoryEntry } from './projectTaskAudit';
+export { countCoManagedNativeTaskComments } from './nativeTaskCommentAccess';
+export { listCoManagedProjectTaskStatusOptions } from './projectTaskEditing';
+export type { CoManagedProjectTaskStatusOption } from './projectTaskEditing';
+// L3b1: shared ticket handoff engine, Working queue and shared-ticket write path.
+export * from './ticketHandoffs';
+export * from './ticketQueue';
+export * from './ticketEditing';
+export * from './ticketAssignments';
+export * from './ticketBulkHandback';
+export * from './ticketCollaboration';
+export * from './sharedTicketDetails';
+
+// Conversation audiences, private threads and shared-ticket comment commands (L4a).
+export { createCoManagedTicketComment, CoManagedCommentCreateError } from './ticketCommentCreation';
+export type { CoManagedCommentReference, CoManagedCommentCreateRequest, CoManagedCommentCreateReceipt, CoManagedCommentCreateContext, CoManagedCommentInsert } from './ticketCommentCreation';
+export { mutateCoManagedTicketComment, CoManagedCommentMutationError } from './ticketCommentMutation';
+export type { CoManagedCommentMutationRequest, CoManagedCommentMutationReceipt, CoManagedCommentMutationContext, CoManagedCommentMutation } from './ticketCommentMutation';
+export { mutateCoManagedPrivateTicketComment, mutateCoManagedPrivateTaskComment, CoManagedPrivateCommentError } from './privateTicketConversation';
+export type { CoManagedPrivateCommentReference, CoManagedPrivateCommentCommand, CoManagedPrivateCommentReceipt } from './privateTicketConversation';
+export { getCoManagedTicketConversation, getCoManagedConversationContributionHints, getCoManagedConversationWriteAudiences } from './ticketConversation';
+export { localAuthorReference, LOCAL_AUTHOR_REFERENCE_NAMESPACE } from './conversationAuthorReference';
+export type { CoManagedConversationCursor, CoManagedConversationItem, CoManagedConversationAuthor, CoManagedTicketConversation } from './ticketConversation';
+export { retainCoManagedConversationParticipation, retainCoManagedSharedConversationBeforeReduction } from './conversationParticipationEvidence';
+export type { CoManagedCaptureIntent, CoManagedConversationCapture } from './conversationParticipationEvidence';
+export { retainCoManagedPrivateParticipation, retainCoManagedPrivateHistoryAtClosure } from './privateParticipationEvidence';
+// Importing this module registers the conversation access-reduction retainer.
+export { retainCoManagedConversationBeforeSourceChange } from './sourceChangeRetention';
+export { snapshotConversationContent, encodeConversationContent, plainTextContent } from './conversationContent';
+export type { CoManagedConversationContent } from './conversationContent';
+export { projectTaskAudience, projectTaskAudienceSql } from './projectTaskAudience';

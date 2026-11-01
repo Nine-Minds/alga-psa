@@ -184,7 +184,7 @@ function normalizeBulkAssetIds(assetIds: string[]): string[] {
     if (ids.length > BULK_ASSET_ACTION_LIMIT) {
         throw new Error(`Bulk actions are limited to ${BULK_ASSET_ACTION_LIMIT} assets at a time`);
     }
-    z.array(z.string().uuid()).parse(ids);
+    z.array(z.string().guid()).parse(ids);
     return ids;
 }
 

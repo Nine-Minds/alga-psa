@@ -61,7 +61,7 @@ export class ApiStopwatchController extends ApiBaseController {
     try {
       return schema.parse(body ?? {});
     } catch (error) {
-      if (error instanceof ZodError) throw new ValidationError('Validation failed', error.errors);
+      if (error instanceof ZodError) throw new ValidationError('Validation failed', error.issues);
       throw error;
     }
   }

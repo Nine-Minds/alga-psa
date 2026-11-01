@@ -6,6 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { ContractSimulationBoundsError, MAX_SIMULATION_PERIODS } from '@alga-psa/types';
 import type {
   ContractSimulationResult,
   ScenarioLine,
@@ -111,6 +112,16 @@ describe('buildInvoicePeriods', () => {
       .toThrow(/positive integer period_count/);
   });
 
+  it('rejects, never clamps, a period count over MAX_SIMULATION_PERIODS', () => {
+    for (const period_count of [MAX_SIMULATION_PERIODS + 1, 100000]) {
+      expect(() => buildInvoicePeriods({ ...HORIZON, period_count }, MONTHLY_FIRST))
+        .toThrow(ContractSimulationBoundsError);
+    }
+    expect(
+      buildInvoicePeriods({ ...HORIZON, period_count: MAX_SIMULATION_PERIODS }, MONTHLY_FIRST),
+    ).toHaveLength(MAX_SIMULATION_PERIODS);
+  });
+
   it('aligns the first window to the client billing anchor containing the horizon start', () => {
     const periods = buildInvoicePeriods(
       { start_date: '2026-08-12T00:00:00Z', period_count: 2 },
@@ -197,6 +208,38 @@ describe('generateLineServicePeriods + assignServicePeriodsToInvoicePeriods', ()
       expect.objectContaining({ start: '2026-10-01', end: '2026-11-01' }),
     );
     expect(assignments).toHaveLength(3);
+  });
+
+  it.each([
+    ['equal cadence', ['monthly', 'monthly']],
+    ['mixed cadence', ['monthly', 'quarterly', 'annually']],
+  ] as const)('matches a linear-scan reference assignment for %s', (_name, frequencies) => {
+    const horizon = { ...HORIZON, period_count: 14 };
+    const records = frequencies.flatMap((billing_frequency, i) =>
+      (['advance', 'arrears'] as const).flatMap((billing_timing) =>
+        generateLineServicePeriods({
+          line: buildLine({ key: `l${i}`, billing_frequency, billing_timing }),
+          horizon,
+          invoiceSchedule: MONTHLY_FIRST,
+          contractStartDate: '2026-08-01T00:00:00Z',
+          scenarioId: 'scenario-1',
+        }).flatMap((streamPeriods) => streamPeriods.records),
+      ),
+    );
+    const invoicePeriods = buildInvoicePeriods(horizon, MONTHLY_FIRST);
+    const expected = records.flatMap((record) => {
+      const boundary = (
+        record.duePosition === 'advance' ? record.servicePeriod.start : record.servicePeriod.end
+      ).slice(0, 10);
+      const period = invoicePeriods.find(
+        (c) => c.startDate <= boundary && boundary < c.endDateExclusive,
+      );
+      return period ? [{ periodIndex: period.index, record }] : [];
+    });
+
+    const actual = assignServicePeriodsToInvoicePeriods(records, invoicePeriods);
+    expect(expected.length).toBeGreaterThan(0);
+    expect(actual).toEqual(expected);
   });
 
   it('drops a cadence that never lands a due boundary inside the horizon', () => {

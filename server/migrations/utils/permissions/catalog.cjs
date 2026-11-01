@@ -149,6 +149,8 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'document', action: 'create', msp: true, client: false, description: 'Create documents', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin', 'msp:Agent'], psa: ['msp:Admin', 'msp:Finance', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'] } },
   { resource: 'document', action: 'create', msp: false, client: true, description: 'Create documents', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['client:Admin', 'client:User'], psa: ['client:Admin', 'client:Finance', 'client:User'] } },
   { resource: 'document', action: 'delete', msp: true, client: false, description: 'Delete documents from the system', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin', 'msp:Finance'] } },
+  // Governs the tenant's allowed download hosts for URL document sources. `document:create` does NOT imply it.
+  { resource: 'document', action: 'manage_fetch_hosts', msp: true, client: false, description: 'Manage allowed download hosts for document URL downloads', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'document', action: 'read', msp: true, client: false, description: 'Read documents', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin', 'msp:Agent'], psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Finance', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'] } },
   { resource: 'document', action: 'read', msp: false, client: true, description: 'Read documents', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['client:Admin', 'client:User'], psa: ['client:Admin', 'client:Finance', 'client:User'] } },
   { resource: 'document', action: 'update', msp: true, client: false, description: 'Update documents', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin', 'msp:Agent'], psa: ['msp:Admin', 'msp:Finance', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'] } },
@@ -388,6 +390,10 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'vendor_bill', action: 'create', msp: true, client: false, description: 'Create vendor bills', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'vendor_bill', action: 'read', msp: true, client: false, description: 'View vendor bills', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'vendor_bill', action: 'update', msp: true, client: false, description: 'Update vendor bills', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
+
+  { resource: 'warranty', action: 'create', msp: true, client: false, description: 'Open warranty claims on client equipment', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
+  { resource: 'warranty', action: 'read', msp: true, client: false, description: 'View warranty claims and RMA cases', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
+  { resource: 'warranty', action: 'update', msp: true, client: false, description: 'Decide, ship, receive and close warranty claims', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
 
   { resource: 'workflow', action: 'admin', msp: true, client: false, description: 'Administer workflows', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
   { resource: 'workflow', action: 'manage', msp: true, client: false, description: 'Manage workflows', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },

@@ -188,8 +188,8 @@ export type TicketComputedAttributeName = keyof typeof COMPUTED_RESOLVERS;
 
 /** Static facts about each computed attribute; the test asserts this is the complete set. */
 const COMPUTED_META: Record<TicketComputedAttributeName, Pick<ComputedAttribute, 'type' | 'operators'>> = {
-  title_folded: { type: 'string', operators: ['equals', 'not_equals', 'contains', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty'] },
-  description_folded: { type: 'string', operators: ['equals', 'not_equals', 'contains', 'starts_with', 'ends_with', 'is_empty', 'is_not_empty'] },
+  title_folded: { type: 'string', operators: ['equals', 'not_equals', 'contains', 'starts_with', 'ends_with', 'not_contains', 'not_starts_with', 'not_ends_with', 'is_empty', 'is_not_empty'] },
+  description_folded: { type: 'string', operators: ['equals', 'not_equals', 'contains', 'starts_with', 'ends_with', 'not_contains', 'not_starts_with', 'not_ends_with', 'is_empty', 'is_not_empty'] },
   from_service_request: { type: 'boolean', operators: ['equals'] },
   service_request_definition_id: { type: 'uuid', operators: ['equals', 'in', 'is_empty', 'is_not_empty'] },
   board_inactive: { type: 'boolean', operators: ['equals'] },

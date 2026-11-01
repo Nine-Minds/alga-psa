@@ -27,7 +27,7 @@ import { getUserRoles } from '@alga-psa/user-composition/actions/userQueryAction
 import logger from '@alga-psa/core/logger';
 import { validateStorableTimeZone } from '@alga-psa/core/timeZones';
 import { CoManagedAdmissionError } from '@alga-psa/licensing';
-import { admitInternalUserSeat, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
+import { admitInternalUserSeat, assertInternalUserSeatsWithinLimit, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
 import { withAuth, withOptionalAuth } from '@alga-psa/auth';
 import type { ActionResultMessageKey } from '@alga-psa/ui/lib/errorHandling';
 import { publishNonCatalogWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -619,6 +619,10 @@ export const addUser = withAuth(async (
           reports_to: userData.reportsTo || undefined
         }).returning(USER_RESPONSE_FIELD_NAMES);
 
+      if (isLicensedUserType(newUserType)) {
+        await assertInternalUserSeatsWithinLimit(trx, tenant);
+      }
+
       await tenantDb(trx, tenant).table('user_roles').insert({
         user_id: newUser.user_id,
         role_id: userData.roleId,
@@ -1172,6 +1176,13 @@ export const updateUser = withAuth(async (
       }
 
       await User.update(trx, userId, normalizedUserData);
+      if (
+        existing?.user_type === 'internal'
+        && existing.is_inactive === true
+        && userData.is_inactive === false
+      ) {
+        await assertInternalUserSeatsWithinLimit(trx, tenant);
+      }
       const updatedUser = await getSafeUserWithRoles(trx, userId, tenant);
       return { success: true, user: updatedUser };
     });

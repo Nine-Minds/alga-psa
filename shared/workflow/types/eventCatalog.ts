@@ -153,7 +153,7 @@ export const EventCatalogEntrySchema = z.object({
   name: z.string(),
   description: z.string().optional(),
   category: z.string().optional(),
-  payload_schema: z.record(z.any()),
+  payload_schema: z.record(z.string(), z.any()),
   payload_schema_ref: z.string().optional(),
   tenant: z.string(),
   created_at: z.string(),

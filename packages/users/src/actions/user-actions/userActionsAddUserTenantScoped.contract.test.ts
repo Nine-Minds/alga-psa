@@ -25,6 +25,7 @@ describe('user actions add-user tenant-scoped query contract', () => {
     expect(addUserSection).toContain('tenantDb(trx, ');
     // Seat admission is the single shared primitive, run on the insert transaction.
     expect(addUserSection).toContain('admitInternalUserSeat(trx, tenant');
+    expect(addUserSection).not.toContain(".table('tenants");
     expect(addUserSection).toContain(".table('roles");
     expect(addUserSection).toContain(".table('users");
     expect(addUserSection).toContain("const [newUser] = await tenantDb(trx, tenant).table('users')");

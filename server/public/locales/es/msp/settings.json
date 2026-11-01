@@ -1185,6 +1185,9 @@
           "contains": "Contiene",
           "starts_with": "Empieza por",
           "ends_with": "Termina en",
+          "not_contains": "No contiene",
+          "not_starts_with": "No empieza por",
+          "not_ends_with": "No termina en",
           "is_empty": "Está vacío",
           "is_not_empty": "No está vacío"
         },
@@ -3534,7 +3537,7 @@
       "platformManaged": "Administrado por AlgaPSA; no requiere configuración. Conecte un agente a uno de estos proveedores en el paso 2.",
       "addAnother": "Agregar otro proveedor",
       "advancedOptions": "Opciones avanzadas",
-      "googleNoSetup": "Google no requiere configuración. Los agentes inician sesión con el ID de su cuenta de servicio de Google.",
+      "googleSetup": "Los agentes inician sesión con un token de ID de cuenta de servicio de Google. Solo la audiencia de abajo debe coincidir con la forma en que lo solicitan.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3548,9 +3551,14 @@
       "fields": {
         "provider": "Proveedor",
         "entraTenantId": "ID de inquilino de Entra",
-        "audienceOptional": "Audiencia (opcional)",
         "audience": "Audiencia",
         "subjectClaim": "Identificar agentes por",
+        "audienceHelp": {
+          "microsoft": "El ID de aplicación (cliente) del registro de aplicación de Entra para el que sus agentes solicitan tokens. Los agentes solicitan el ámbito api://<ese ID>/.default.",
+          "google": "Los agentes deben solicitar su token de ID de Google exactamente con esta audiencia. Hemos rellenado la URL de MCP de este servidor, que es la opción habitual.",
+          "custom": "El identificador de API o recurso configurado en su proveedor (por ejemplo, un identificador de API de Auth0). Debe coincidir exactamente con la notificación aud de los tokens de los agentes. La URL de MCP de este servidor es una buena opción."
+        },
+        "audienceWhy": "Los tokens que su proveedor emitió para otras aplicaciones no se aceptarán aquí.",
         "subjectClaimHelp": "Déjelo en blanco a menos que su proveedor indique lo contrario.",
         "issuer": "Emisor",
         "jwksUri": "URL de claves de firma"
@@ -3663,6 +3671,36 @@
         "message": "¿Desconectar \"{{name}}\"? Perderá el acceso de inmediato y deberá volver a autorizarse para reconectarse.",
         "confirm": "Desconectar",
         "cancel": "Cancelar"
+      }
+    },
+    "loading": "Cargando…",
+    "downloadHosts": {
+      "title": "Hosts de descarga permitidos",
+      "intro": "Cuando se adjunta un documento mediante una URL, AlgaPSA solo lo descarga desde los hosts indicados aquí. Esto se aplica a todos los que adjuntan documentos, incluidos los agentes de IA, los clientes de API y la API REST. Prefiera hosts específicos de un bucket, como acme-uploads.s3.us-east-1.amazonaws.com, en lugar de hosts genéricos.",
+      "readOnly": "Puede ver esta lista. Para modificarla necesita el permiso «Administrar hosts de descarga».",
+      "builtIn": "Integrado",
+      "empty": "Aún no hay hosts personalizados.",
+      "add": "Añadir host",
+      "addTitle": "Añadir host de descarga permitido",
+      "remove": "Eliminar",
+      "removeTitle": "¿Eliminar host?",
+      "removeMessage": "Las descargas desde {{host}} dejarán de funcionar hasta que se vuelva a añadir.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "Un nombre de host, o *.example.com para permitir todos los subdominios.",
+        "note": "Nota (opcional)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Se usa para",
+        "allowed": "Permitido",
+        "note": "Nota",
+        "addedBy": "Añadido por",
+        "addedOn": "Añadido el"
+      },
+      "errors": {
+        "load": "No se pudieron cargar los hosts de descarga permitidos.",
+        "save": "No se pudo guardar el cambio."
       }
     }
   },
@@ -3843,7 +3881,8 @@
     }
   },
   "common": {
-    "saving": "Guardando…"
+    "saving": "Guardando…",
+    "cancel": "Cancelar"
   },
   "featureFlags": {
     "categories": {
