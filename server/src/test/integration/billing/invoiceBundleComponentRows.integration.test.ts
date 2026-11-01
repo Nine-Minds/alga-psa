@@ -438,6 +438,9 @@ describe('invoice bundle component rows (DB)', () => {
       const charge = dialogPayload.invoice_charges.find((ch: any) => ch.bundle_presentation);
       expect(charge, 'bundle_presentation must reach the client').toBeTruthy();
       expect(JSON.stringify(dialogPayload)).not.toMatch(/bundle_component_amounts|allocated_amount/);
+      // The dialog draws component rows from the client's template, so its layout rides along.
+      expect(dialogPayload.bundle_rows_layout?.childRows?.itemBinding).toBe('component');
+      expect(dialogPayload.bundle_rows_layout?.columnIds).toEqual(expect.objectContaining({ description: expect.any(String), quantity: expect.any(String) }));
     }, HOOK_TIMEOUT);
 
     it('client on a price-binding template gets component prices; MSP always does', async () => {
