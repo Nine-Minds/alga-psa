@@ -1123,6 +1123,7 @@
       "mailboxReconnect": "Reconnect the selected Microsoft 365 mailbox before using it for outbound email",
       "ticketIdentityMustMatchMailbox": "Ticket email identity must use the selected Microsoft 365 mailbox ({{mailbox}}). Update the Ticket emails address before saving.",
       "providerFromAddressInvalid": "The {{provider}} From address must be a valid email address",
+      "secretRequiredAfterConnectionChange": "Re-enter the password for {{provider}}: the server address or sign-in details changed.",
       "ticketingFromInvalid": "Ticketing From address must be a valid email address",
       "outboundDomainInvalid": "Outbound sending domain must be a valid domain (e.g. example.com)",
       "outboundDomainRequired": "Configure an outbound domain before choosing a ticketing From address",

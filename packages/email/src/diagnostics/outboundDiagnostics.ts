@@ -33,6 +33,7 @@ import type { EmailProviderConfig as InboundEmailProviderConfig } from '@alga-ps
 import { TenantEmailService } from '../TenantEmailService';
 import { resolveDefaultFromAddress, resolveTenantCompanyName } from '../senderIdentity';
 import { EmailProviderManager } from '../providers/EmailProviderManager';
+import { verifyProviderSecretFingerprint } from '../../../integrations/src/lib/providerConnectionIdentity';
 import { buildMicrosoftOutboundSteps, microsoftOutboundRecommendations } from './microsoftOutboundSteps';
 import { buildSmtpOutboundSteps } from './smtpOutboundSteps';
 import { buildResendOutboundSteps } from './resendOutboundSteps';
@@ -544,12 +545,17 @@ export async function runOutboundEmailDiagnosticsWithSettings(
   if (!settings) {
     resolution = { error: 'No outbound email settings are configured.' };
   } else {
-    try {
-      resolution = await resolveProvider({ tenant, knex, settings });
-    } catch (error) {
-      resolution = {
-        error: error instanceof Error ? error.message : 'Failed to resolve the outbound provider.',
-      };
+    const secretBindingError = verifyProviderSecretFingerprint(settings);
+    if (secretBindingError) {
+      resolution = { error: secretBindingError };
+    } else {
+      try {
+        resolution = await resolveProvider({ tenant, knex, settings });
+      } catch (error) {
+        resolution = {
+          error: error instanceof Error ? error.message : 'Failed to resolve the outbound provider.',
+        };
+      }
     }
   }
   const resolved = 'error' in resolution ? null : resolution;

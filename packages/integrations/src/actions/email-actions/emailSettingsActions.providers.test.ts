@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EmailProviderConfig, TenantEmailSettings } from '@alga-psa/types';
+import { connectionFingerprint } from '../../lib/providerConnectionIdentity';
 
 const { createTenantKnexMock, getTenantEmailSettingsMock, invalidateTenantSettingsMock } = vi.hoisted(() => ({
   createTenantKnexMock: vi.fn(),
@@ -115,7 +116,7 @@ describe('email settings provider invariants', () => {
       providerId: 'custom-resend',
       providerType: 'resend',
       isEnabled: true,
-      config: { apiKey: 'secret-key', from: 'support@acme.test' },
+      config: { apiKey: 'secret-key', from: 'support@acme.test', __secretFingerprint: connectionFingerprint({ providerId: 'custom-resend' }, 'resend') },
       rateLimits: { perDay: 500 },
     };
     getTenantEmailSettingsMock.mockResolvedValue(buildSettings('resend', [resendConfig]));
@@ -145,6 +146,9 @@ describe('email settings provider invariants', () => {
         },
       ],
     });
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain('secret-key');
+    expect(serialized).not.toContain('__secretFingerprint');
   });
 
   it('normalizes enablement and preserves masked secrets when changing provider', async () => {
@@ -159,13 +163,14 @@ describe('email settings provider invariants', () => {
           username: 'mailer',
           password: 'stored-password',
           from: 'support@acme.test',
+          __secretFingerprint: connectionFingerprint({ host: 'relay.acme.test', port: 587, username: 'mailer', password: 'stored-password', from: 'support@acme.test' }, 'smtp'),
         },
       },
       {
         providerId: 'resend-provider',
         providerType: 'resend',
         isEnabled: true,
-        config: { apiKey: 'stored-api-key', from: 'support@acme.test' },
+        config: { apiKey: 'stored-api-key', from: 'support@acme.test', __secretFingerprint: connectionFingerprint({ providerId: 'resend-provider' }, 'resend') },
       },
     ]);
     const updateMock = vi.fn(async (_value: Record<string, unknown>) => 1);
@@ -189,6 +194,7 @@ describe('email settings provider invariants', () => {
     const { updateEmailSettings } = await import('./emailSettingsActions');
     await updateEmailSettings({
       emailProvider: 'smtp',
+      maxDailyEmails: 250,
       providerConfigs: existingSettings.providerConfigs.map(config => ({
         ...config,
         config: {
@@ -201,6 +207,7 @@ describe('email settings provider invariants', () => {
     });
 
     expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ provider_configs: expect.any(String) }));
+    expect(updateMock).toHaveBeenCalledWith(expect.objectContaining({ max_daily_emails: 250 }));
     expect(invalidateTenantSettingsMock).toHaveBeenCalledWith('tenant-123');
     const persistedPayload = updateMock.mock.calls[0]?.[0];
     expect(persistedPayload).toBeDefined();
@@ -209,14 +216,39 @@ describe('email settings provider invariants', () => {
       expect.objectContaining({
         providerType: 'smtp',
         isEnabled: true,
-        config: expect.objectContaining({ password: 'stored-password' }),
+        config: expect.objectContaining({
+          password: 'stored-password',
+          __secretFingerprint: connectionFingerprint(existingSettings.providerConfigs[0].config, 'smtp'),
+        }),
       }),
       expect.objectContaining({
         providerType: 'resend',
         isEnabled: false,
-        config: expect.objectContaining({ apiKey: 'stored-api-key' }),
+        config: expect.objectContaining({
+          apiKey: 'stored-api-key',
+          __secretFingerprint: connectionFingerprint(existingSettings.providerConfigs[1].config, 'resend'),
+        }),
       }),
     ]);
+  });
+
+  it('never returns stored passwords, API keys, or internal fingerprints to clients', async () => {
+    const smtp: any = { providerId: 'smtp-main', providerType: 'smtp', isEnabled: true, config: { host: 'smtp.test', port: 587, username: 'mailer', password: 'password-value', from: 'support@example.test' } };
+    smtp.config.__secretFingerprint = connectionFingerprint(smtp.config, 'smtp');
+    const resend: any = { providerId: 'resend-main', providerType: 'resend', isEnabled: false, config: { apiKey: 'api-key-value', from: 'support@example.test' } };
+    resend.config.__secretFingerprint = connectionFingerprint(resend.config, 'resend');
+    getTenantEmailSettingsMock.mockResolvedValue(buildSettings('smtp', [smtp, resend]));
+
+    const { getEmailSettings } = await import('./emailSettingsActions');
+    const result = await getEmailSettings();
+    const serialized = JSON.stringify(result);
+    expect(serialized).not.toContain('password-value');
+    expect(serialized).not.toContain('api-key-value');
+    expect(serialized).not.toContain('__secretFingerprint');
+    expect(result).toMatchObject({ providerConfigs: expect.arrayContaining([
+      expect.objectContaining({ providerType: 'smtp', config: expect.objectContaining({ password: '***' }) }),
+      expect.objectContaining({ providerType: 'resend', config: expect.objectContaining({ apiKey: '***' }) }),
+    ]) });
   });
 
   it('rejects a transport change that would invalidate a saved sender identity', async () => {
@@ -244,6 +276,85 @@ describe('email settings provider invariants', () => {
 
     expect(JSON.stringify(result)).toMatch(/Cannot change transport/);
     expect(invalidateTenantSettingsMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a changed SMTP host with a masked password before writing settings', async () => {
+    const smtp = { providerId: 'smtp-main', providerType: 'smtp' as const, isEnabled: true, config: { host: 'smtp.old.test', port: 587, username: 'mailer', password: 'credential-value', secure: false, requireTLS: true, rejectUnauthorized: true, from: 'support@example.test' } as Record<string, any> };
+    smtp.config.__secretFingerprint = connectionFingerprint(smtp.config, 'smtp');
+    const existing = buildSettings('smtp', [smtp]);
+    const rowBefore = JSON.stringify(existing.providerConfigs);
+    const updateMock = vi.fn(async () => 1);
+    const transactionMock = vi.fn();
+    const knexMock = vi.fn(() => ({ first: vi.fn(async () => ({ provider_configs: rowBefore })), update: updateMock })) as any;
+    knexMock.transaction = transactionMock;
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+    getTenantEmailSettingsMock.mockResolvedValue(existing);
+
+    const { updateEmailSettings } = await import('./emailSettingsActions');
+    const result = await updateEmailSettings({ providerConfigs: [{ ...smtp, config: { ...smtp.config, host: 'smtp.new.test', password: '***' } }] });
+
+    expect(JSON.stringify(result)).toContain('secretRequiredAfterConnectionChange');
+    expect(JSON.stringify(existing.providerConfigs)).toBe(rowBefore);
+    expect(updateMock).not.toHaveBeenCalled();
+    expect(transactionMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['port', 2525], ['secure', true], ['username', 'different-user'], ['requireTLS', false], ['rejectUnauthorized', false],
+  ])('rejects masked-secret reuse when SMTP %s changes', async (field, value) => {
+    const config: Record<string, any> = { host: 'smtp.example.test', port: 587, username: 'mailer', password: 'credential-value', secure: false, requireTLS: true, rejectUnauthorized: true, from: 'support@example.test' };
+    config.__secretFingerprint = connectionFingerprint(config, 'smtp');
+    const existing = buildSettings('smtp', [{ providerId: 'smtp-main', providerType: 'smtp', isEnabled: true, config }]);
+    getTenantEmailSettingsMock.mockResolvedValue(existing);
+    const { updateEmailSettings } = await import('./emailSettingsActions');
+    const result = await updateEmailSettings({ providerConfigs: [{ ...existing.providerConfigs[0], config: { ...config, [field]: value, password: '***' } }] });
+    expect(JSON.stringify(result)).toContain('secretRequiredAfterConnectionChange');
+  });
+
+  it('requires an existing secret before honoring a mask', async () => {
+    const existing = buildSettings('smtp', [{ providerId: 'smtp-main', providerType: 'smtp', isEnabled: true, config: { host: 'smtp.example.test', port: 587, username: '', from: 'support@example.test' } }]);
+    getTenantEmailSettingsMock.mockResolvedValue(existing);
+    const { updateEmailSettings } = await import('./emailSettingsActions');
+    const result = await updateEmailSettings({ providerConfigs: [{ ...existing.providerConfigs[0], config: { ...existing.providerConfigs[0].config, password: '***' } }] });
+    expect(JSON.stringify(result)).toContain('secretRequiredAfterConnectionChange');
+  });
+
+  it('does not let a provider id reused under a different type inherit the prior secret', async () => {
+    const config: Record<string, any> = { host: 'smtp.example.test', port: 587, username: 'mailer', password: 'credential-value' };
+    config.__secretFingerprint = connectionFingerprint(config, 'smtp');
+    const existing = buildSettings('smtp', [{ providerId: 'shared-id', providerType: 'smtp', isEnabled: true, config }]);
+    getTenantEmailSettingsMock.mockResolvedValue(existing);
+    const { updateEmailSettings } = await import('./emailSettingsActions');
+    const result = await updateEmailSettings({ providerConfigs: [{ providerId: 'shared-id', providerType: 'resend', isEnabled: true, config: { apiKey: '***' } }] });
+    expect(JSON.stringify(result)).toContain('secretRequiredAfterConnectionChange');
+  });
+
+  it('accepts a changed host with a replacement password and stores its new fingerprint', async () => {
+    const oldConfig: Record<string, any> = { host: 'smtp.old.test', port: 587, username: 'mailer', password: 'old-secret', secure: false, requireTLS: false, rejectUnauthorized: true, from: 'support@example.test' };
+    oldConfig.__secretFingerprint = connectionFingerprint(oldConfig, 'smtp');
+    const existing = buildSettings('smtp', [{ providerId: 'smtp-main', providerType: 'smtp', isEnabled: true, config: oldConfig }]);
+    const updateMock = vi.fn(async (_value: Record<string, unknown>) => 1);
+    const makeQuery = (table: string) => {
+      const query: any = {
+        where: vi.fn(() => query), whereNotNull: vi.fn(() => query),
+        first: vi.fn(async () => table === 'tenant_email_settings' ? { tenant: 'tenant-123' } : null),
+        select: vi.fn(async () => []), update: updateMock, insert: vi.fn(async () => 1),
+      };
+      return query;
+    };
+    const knexMock: any = vi.fn((table: string) => makeQuery(table));
+    knexMock.transaction = async (callback: (trx: any) => Promise<unknown>) => callback(knexMock);
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+    getTenantEmailSettingsMock.mockResolvedValue(existing);
+
+    const { updateEmailSettings } = await import('./emailSettingsActions');
+    await updateEmailSettings({ providerConfigs: [{ ...existing.providerConfigs[0], config: { ...oldConfig, host: 'smtp.new.test', password: 'new-secret' } }] });
+
+    const persisted = JSON.parse(String(updateMock.mock.calls[0]?.[0]?.provider_configs));
+    const savedConfig = persisted[0].config;
+    expect(savedConfig.password).toBe('new-secret');
+    expect(savedConfig.__secretFingerprint).toBe(connectionFingerprint(savedConfig, 'smtp'));
+    expect(savedConfig.__secretFingerprint).not.toBe(oldConfig.__secretFingerprint);
   });
 
   it('pins Microsoft outbound settings to a connected tenant mailbox without changing ticket identity', async () => {

@@ -19,6 +19,7 @@ import type {
   OutboundEmailDiagnosticsReport,
 } from '@alga-psa/email';
 import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
+import { connectionFingerprint } from '../../lib/providerConnectionIdentity';
 import {
   actionError,
   isActionMessageError,
@@ -36,6 +37,7 @@ type EmailSettingsUpdateInput = Omit<Partial<TenantEmailSettings>, 'defaultFromD
 const SECRET_MASK = '***';
 const SECRET_FIELDS = ['password', 'apiKey'] as const;
 const EDITABLE_PROVIDER_TYPES = ['smtp', 'resend', 'microsoft'] as const;
+const SECRET_FINGERPRINT = '__secretFingerprint';
 
 export interface MicrosoftOutboundMailboxOption {
   providerId: string;
@@ -67,26 +69,39 @@ function withEditableProviderConfigs(settings: TenantEmailSettings): TenantEmail
 function mergeProviderSecrets(
   incoming: EmailProviderConfig[],
   existing: EmailProviderConfig[] | undefined
-): EmailProviderConfig[] {
-  const existingById = new Map((existing ?? []).map(config => [config.providerId, config]));
+): { configs?: EmailProviderConfig[]; error?: { providerName: string } } {
+  const existingById = new Map((existing ?? []).map(config => [`${config.providerType}:${config.providerId}`, config]));
 
-  return incoming.map(config => {
-    const prior = existingById.get(config.providerId);
+  const configs: EmailProviderConfig[] = [];
+  for (const config of incoming) {
+    const prior = existingById.get(`${config.providerType}:${config.providerId}`);
     const nextConfig: Record<string, any> = { ...(config.config ?? {}) };
+    const sameIdentity = Boolean(prior && connectionFingerprint(nextConfig, config.providerType) === connectionFingerprint(prior.config ?? {}, prior.providerType));
 
     for (const field of SECRET_FIELDS) {
       if (nextConfig[field] !== SECRET_MASK) continue;
-      // The client only ever held the mask, so this is not a real change.
       const priorValue = prior?.config?.[field];
-      if (priorValue) {
-        nextConfig[field] = priorValue;
-      } else {
-        delete nextConfig[field];
+      const priorFingerprint = prior?.config?.__secretFingerprint;
+      if (!priorValue || !sameIdentity || priorFingerprint !== connectionFingerprint(prior?.config ?? {}, prior?.providerType)) {
+        return { error: { providerName: config.providerType } };
       }
+      nextConfig[field] = priorValue;
     }
 
-    return { ...config, config: nextConfig };
-  });
+    const hasSecret = SECRET_FIELDS.some(field => Boolean(nextConfig[field]));
+    if (hasSecret) nextConfig[SECRET_FINGERPRINT] = connectionFingerprint(nextConfig, config.providerType);
+    else delete nextConfig[SECRET_FINGERPRINT];
+    configs.push({ ...config, config: nextConfig });
+  }
+  return { configs };
+}
+
+function sanitizeProviderConfig(config: EmailProviderConfig): EmailProviderConfig {
+  const safeConfig = { ...config.config };
+  delete safeConfig[SECRET_FINGERPRINT];
+  safeConfig.password = safeConfig.password ? SECRET_MASK : '';
+  safeConfig.apiKey = safeConfig.apiKey ? SECRET_MASK : '';
+  return { ...config, config: safeConfig };
 }
 
 function extractDomain(address?: string | null): string | null {
@@ -162,14 +177,7 @@ export const getEmailSettings = withAuth(async (
     // Don't expose sensitive data like passwords and API keys in full
     const sanitizedSettings = {
       ...settings,
-      providerConfigs: settings.providerConfigs.map(config => ({
-        ...config,
-        config: {
-          ...config.config,
-          password: config.config.password ? '***' : '',
-          apiKey: config.config.apiKey ? '***' : ''
-        }
-      }))
+      providerConfigs: settings.providerConfigs.map(sanitizeProviderConfig)
     };
 
     return toEmailSettingsView(sanitizedSettings, knex, tenant || '');
@@ -197,9 +205,18 @@ export const updateEmailSettings = withAuth(async (
       ? updates.defaultFromDomain?.trim() || undefined
       : existingSettings?.defaultFromDomain;
 
-    let mergedProviderConfigs = updates.providerConfigs
-      ? mergeProviderSecrets(updates.providerConfigs, existingSettings?.providerConfigs)
-      : existingSettings?.providerConfigs ?? [];
+    let mergedProviderConfigs = existingSettings?.providerConfigs ?? [];
+    if (updates.providerConfigs) {
+      const mergeResult = mergeProviderSecrets(updates.providerConfigs, existingSettings?.providerConfigs);
+      if (mergeResult.error) {
+        return actionError(
+          `Re-enter the password for ${mergeResult.error.providerName}: the server address or sign-in details changed.`,
+          'msp/email-providers:errors.settings.secretRequiredAfterConnectionChange',
+          { provider: mergeResult.error.providerName },
+        );
+      }
+      mergedProviderConfigs = mergeResult.configs ?? [];
+    }
     const selectedProviderType = updates.emailProvider ?? existingSettings?.emailProvider ?? 'smtp';
 
     if (selectedProviderType === 'microsoft') {

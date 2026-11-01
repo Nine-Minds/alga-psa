@@ -3,6 +3,7 @@ import axios from 'axios';
 import { liveSendResultFromEmailSendResult, runOutboundEmailDiagnosticsWithSettings } from '../outboundDiagnostics';
 import type { ResolvedOutboundProvider, OutboundLiveSend } from '../outboundTypes';
 import { SMTPEmailProvider } from '../../providers/SMTPEmailProvider';
+import { connectionFingerprint } from '../../../../integrations/src/lib/providerConnectionIdentity';
 
 const smtpCreateTransport = vi.hoisted(() => vi.fn());
 vi.mock('nodemailer', () => ({
@@ -144,6 +145,28 @@ beforeEach(() => {
 });
 
 describe('runOutboundEmailDiagnosticsWithSettings', () => {
+  it('refuses a database-mutated SMTP endpoint before verification or diagnostic live send', async () => {
+    const original = { host: 'smtp.original.test', port: 587, username: 'mailer', password: 'credential-value', secure: false, requireTLS: true, rejectUnauthorized: true, from: 'sender@example.com' };
+    const settings = makeSettings({
+      emailProvider: 'smtp',
+      providerConfigs: [{ providerId: 'smtp-1', providerType: 'smtp', isEnabled: true, config: {
+        ...original,
+        __secretFingerprint: connectionFingerprint(original, 'smtp'),
+        host: 'smtp.mutated-in-database.test',
+      } }],
+    });
+    const liveSend = vi.fn();
+    const report = await runWith({
+      providerId: 'smtp-1', providerType: 'smtp', rawConfig: settings.providerConfigs[0].config,
+    }, { liveSendTest: true, recipient: 'admin@example.com' }, liveSend as any, settings);
+
+    expect(report.steps.find((step) => step.id === 'outbound_provider_selected')).toMatchObject({
+      status: 'fail', error: { message: expect.stringContaining('Credentials no longer match this server') },
+    });
+    expect(smtpCreateTransport).not.toHaveBeenCalled();
+    expect(liveSend).not.toHaveBeenCalled();
+  });
+
   it('fails the selection step and skips dependent work when no provider is enabled', async () => {
     const sendLive = vi.fn();
     const report = await runWith({ error: 'No outbound email provider is enabled.' }, {}, sendLive as any);
