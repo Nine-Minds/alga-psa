@@ -26,9 +26,17 @@ const schema: QuerySchema = {
     s: { kind: 'column', column: 's', type: 'string' },
     n: { kind: 'column', column: 'n', type: 'number' },
     b: { kind: 'column', column: 'b', type: 'boolean' },
+    details: { kind: 'column', column: 'details', type: 'string' },
     tags: { kind: 'set', table: 'conf_tag', local: 'row_id', foreign: 'row_id', valueColumn: 'tag', valueType: 'string' },
   },
   relations: {
+    lines: {
+      kind: 'many',
+      table: 'conf_line',
+      local: 'row_id',
+      foreign: 'row_id',
+      attributes: { label: { kind: 'column', column: 'label', type: 'string' } },
+    },
     owner: {
       kind: 'one',
       table: 'conf_owner',
@@ -61,7 +69,8 @@ describeDb('predicates SQL compiler', () => {
       pool: { min: 1, max: 1 },
     });
     trx = await db.transaction();
-    await trx.raw(`CREATE TEMP TABLE conf_item (tenant uuid, row_id text, s text, n numeric, b boolean, owner_id text, parent_id text)`);
+    await trx.raw(`CREATE TEMP TABLE conf_item (tenant uuid, row_id text, s text, n numeric, b boolean, details text, owner_id text, parent_id text)`);
+    await trx.raw(`CREATE TEMP TABLE conf_line (tenant uuid, row_id text, label text)`);
     await trx.raw(`CREATE TEMP TABLE conf_tag (tenant uuid, row_id text, tag text)`);
     await trx.raw(`CREATE TEMP TABLE conf_owner (tenant uuid, owner_id text, label text)`);
     await trx.raw(`CREATE TEMP TABLE conf_owner_tag (tenant uuid, owner_id text, tag text)`);
@@ -84,17 +93,29 @@ describeDb('predicates SQL compiler', () => {
   for (const testCase of conformance.cases) {
     if (testCase.skip?.sql) continue;
     it(`conformance: ${testCase.id}`, async () => {
-      await trx.raw('TRUNCATE conf_item, conf_tag');
+      await trx.raw('TRUNCATE conf_item, conf_tag, conf_line');
       for (const row of testCase.rows) {
-        const record = row.record as { s?: string; n?: number; b?: boolean; tags?: string[] };
+        const record = row.record as {
+          s?: unknown;
+          n?: number;
+          b?: boolean;
+          details?: string;
+          tags?: string[];
+          lines?: Array<{ label?: string }>;
+        };
         await trx('conf_item').insert({
           tenant: TENANT,
           row_id: row.id,
           s: record.s ?? null,
           n: record.n ?? null,
           b: record.b ?? null,
+          details: record.details ?? null,
         });
-                const tags = record.tags ?? [];
+        // Related rows of a many-relation hop. Another tenant's row with the same id always holds a line that
+        // matches every text needle used in the table ('hello'); it must never be seen.
+        const lines = (record.lines ?? []).map((line) => ({ tenant: TENANT, row_id: row.id, label: line.label ?? null }));
+        await trx('conf_line').insert([...lines, { tenant: OTHER_TENANT, row_id: row.id, label: 'hello' }]);
+        const tags = record.tags ?? [];
         if (tags.length > 0) {
           await trx('conf_tag').insert(tags.map((tag) => ({ tenant: TENANT, row_id: row.id, tag })));
           // Same tags under another tenant's row id must never be seen.

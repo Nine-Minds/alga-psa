@@ -3,7 +3,7 @@ import type { ZodError } from 'zod';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { actionError, permissionError, type ActionMessageError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { createAssetReadContext, isAssetReadAllowed } from '@alga-psa/assets/lib/assetReadAuthorization';
+import { createAssetReadContext, isAssetActionAllowed, type AssetAuthorizationAction } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { publishCustodyChanged } from '@alga-psa/assets/lib/custody/publishCustodyChanged';
 import { isCustodyError } from '@alga-psa/assets/lib/custody/errors';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
@@ -95,24 +95,27 @@ export async function withWarrantyErrors<T>(operation: () => Promise<T>): Promis
   }
 }
 
-/** Builds the core option that applies the asset's record-level read check; a miss reads as "not found". */
-export async function assetGate(trx: Knex.Transaction, tenant: string, user: { user_id: string } & Record<string, any>) {
+/**
+ * Builds the core option that applies the asset's record-level check for `action`; a miss reads as "not found".
+ * Mutations pass 'update' so a bundle that lets a user read an asset but not update it cannot change it.
+ */
+export async function assetGate(trx: Knex.Transaction, tenant: string, user: { user_id: string } & Record<string, any>, action: AssetAuthorizationAction) {
   const ctx = await createAssetReadContext(trx, tenant, user as any);
   return async (assetId: string, clientId: string | null) => {
-    if (!(await isAssetReadAllowed(trx, tenant, ctx, { asset_id: assetId, client_id: clientId }))) {
+    if (!(await isAssetActionAllowed(trx, tenant, ctx, { asset_id: assetId, client_id: clientId }, action))) {
       throw new WarrantyError('not_found', 'RMA case not found');
     }
   };
 }
 
-/** Run one transition core inside a transaction, then publish its post-commit events. */
+/** Run one transition core inside a transaction, then publish its post-commit events. Authorizes assets for 'update'. */
 export async function runWarrantyTransition(
   user: { user_id: string } & Record<string, any>,
   tenant: string,
   core: (trx: Knex.Transaction, authorizeAsset: (assetId: string, clientId: string | null) => Promise<void>) => Promise<WarrantyTransitionResult>
 ): Promise<WarrantyTransitionResult> {
   const { knex: db } = await createTenantKnex();
-  const result = await withTransaction(db, async (trx: Knex.Transaction) => core(trx, await assetGate(trx, tenant, user)));
+  const result = await withTransaction(db, async (trx: Knex.Transaction) => core(trx, await assetGate(trx, tenant, user, 'update')));
   await publishAfterCommit(tenant, user.user_id, result);
   return result;
 }
