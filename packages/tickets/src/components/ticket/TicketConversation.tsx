@@ -423,6 +423,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   };
 
   const handleCancelComment = () => {
+    dataSource.screen.onComposerCancel?.();
     composeUploadSession.requestDiscard();
   };
 

@@ -76,4 +76,16 @@ describe('CoManagedDraftRestore', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('coManaged.conversation.drafts.missing');
     expect(m.begin).not.toHaveBeenCalled();
   });
+  it('lists the drafts again when the refresh key changes, and not otherwise', async () => {
+    m.list.mockResolvedValue({ ok: true, drafts: [] });
+    const { rerender } = render(<CoManagedDraftRestore resource={resource} version={0} refreshKey={null} onPublished={() => {}} />);
+    await waitFor(() => expect(m.list).toHaveBeenCalledTimes(1));
+    rerender(<CoManagedDraftRestore resource={resource} version={0} refreshKey={null} onPublished={() => {}} />);
+    expect(m.list).toHaveBeenCalledTimes(1);
+    const unsent = { code: 'unknownOutcome' };
+    m.list.mockResolvedValue({ ok: true, drafts: [draft()] });
+    rerender(<CoManagedDraftRestore resource={resource} version={0} refreshKey={unsent} onPublished={() => {}} />);
+    await waitFor(() => expect(m.list).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText('hello draft')).toBeInTheDocument();
+  });
 });

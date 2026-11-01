@@ -60,7 +60,7 @@ export function CoManagedLocalTicketDataSourceProvider({ ticketId, children }: {
       try { return await session!.write({ content, audience: 'shared_it' }); } catch (error) { return failure(error); }
     };
     return composeTicketDataSource(nativeTicketDataSource, {
-      screen: { subscribeCommentsChanged: commentsChanged.subscribe },
+      screen: { subscribeCommentsChanged: commentsChanged.subscribe, onComposerCancel: staging.clear },
       conversation: { audiences, editor: { disallowImages: true, disallowFiles: true, disallowMentions: true } },
       comments: {
         findCommentsByTicketId: async (id: string, ...rest: unknown[]) => {

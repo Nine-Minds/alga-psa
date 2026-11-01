@@ -22,8 +22,10 @@ const ERROR_KEYS: Record<string, string> = { abandoned: 'coManaged.conversation.
  */
 // LEVERAGE: friction base-composer-prefill — the base ticket composer has no initial-content seam for a host, so restored text is shown
 // and re-sent from this panel rather than placed back in the editor.
-export default function CoManagedDraftRestore({ resource, version, onPublished }: {
+export default function CoManagedDraftRestore({ resource, version, refreshKey, onPublished }: {
   resource: CoManagedSharedResource; version: number; onPublished: () => void;
+  /** Any change re-lists the drafts (e.g. a send just failed and left one on the server). Not a load and not a comments change. */
+  refreshKey?: unknown;
 }) {
   const { t } = useTranslation('msp/licensing');
   const [drafts, setDrafts] = useState<CoManagedOpenConversationDraft[]>([]);
@@ -36,7 +38,7 @@ export default function CoManagedDraftRestore({ resource, version, onPublished }
     const result = await listCoManagedConversationDraftsAction(resource).catch(() => null);
     if (mounted.current && result?.ok) setDrafts(result.drafts);
   }, [resource]);
-  useEffect(() => { void refresh(); }, [refresh, version]);
+  useEffect(() => { void refresh(); }, [refresh, version, refreshKey]);
   if (!drafts.length) return null;
   const fail = (id: string, code: string) => setErrors(value => ({ ...value, [id]: ERROR_KEYS[code] ?? (['forbidden', 'readOnly', 'invalid', 'operationConflict'].includes(code) ? `coManaged.editor.errors.${code}` : 'coManaged.editor.errors.unknownOutcome') }));
   const send = async (draft: CoManagedOpenConversationDraft) => {

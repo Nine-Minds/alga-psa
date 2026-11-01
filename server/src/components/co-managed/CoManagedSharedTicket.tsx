@@ -36,8 +36,8 @@ export default function CoManagedSharedTicket({ summary, backHref }: { summary: 
 
   // Until the conversation is admitted (or when it cannot be loaded) the screen stays fully read-only.
   const dataSource = useMemo(
-    () => createCoManagedSharedTicketDataSource(summary, backHref, { conversation: state === 'ready' ? session : undefined, commentsChanged: commentsChanged.subscribe }),
-    [summary, backHref, session, state, commentsChanged],
+    () => createCoManagedSharedTicketDataSource(summary, backHref, { conversation: state === 'ready' ? session : undefined, commentsChanged: commentsChanged.subscribe, composerCancelled: staging.clear }),
+    [summary, backHref, session, state, commentsChanged, staging],
   );
   const ticketData = useMemo(() => {
     const snapshot = state === 'ready' ? session.snapshot() : null;

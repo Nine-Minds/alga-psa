@@ -11,12 +11,13 @@ export interface PreparedConversationDraft {
 }
 export interface ConversationDraftProgress { phase: 'preparing' | 'uploading' | 'publishing'; completed: number; total: number }
 export async function prepareConversationDraft(input: { resource: CoManagedSharedResource; actorTenant: string; operationId: string;
-  document: CoManagedRichTextDocument; audience: Audience; parent?: CoManagedCommentReference; files: File[] }): Promise<PreparedConversationDraft> {
+  document: CoManagedRichTextDocument; audience: Audience; parent?: CoManagedCommentReference; files: File[];
+  /** Ids already minted for these files (aligned with `files`), so a retry sends the identical manifest. */ attachmentIds?: readonly string[] }): Promise<PreparedConversationDraft> {
   // Capture intent before asynchronous file hashing. Native File objects are immutable.
   const resource = { ...input.resource }, operationId = input.operationId, audience = input.audience;
   const content = { document: snapshotConversationDocument(input.document) }, parent = input.parent ? { ...input.parent } : undefined;
   const storeTenant = parent?.storeTenant ?? (audience === 'organization_private' && input.actorTenant !== resource.tenant ? input.actorTenant : resource.tenant);
-  const files = input.files.map(file => ({ file, attachmentId: newCoManagedOperationId() }));
+  const files = input.files.map((file, index) => ({ file, attachmentId: input.attachmentIds?.[index] ?? newCoManagedOperationId() }));
   const manifest: CoManagedConversationDraftRequest['files'] = [];
   for (const { file, attachmentId } of files) {
     const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());

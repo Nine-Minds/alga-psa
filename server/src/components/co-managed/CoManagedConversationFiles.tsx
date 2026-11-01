@@ -59,7 +59,7 @@ export default function CoManagedConversationFiles({ session, resource, staging,
   const maxBytes = coManagedAttachmentUploadLimit();
   void staged;
   return <section id="co-managed-conversation-files" className="space-y-4 p-4">
-    {writeAudiences.length > 0 && <CoManagedDraftRestore resource={resource} version={version}
+    {writeAudiences.length > 0 && <CoManagedDraftRestore resource={resource} version={version} refreshKey={unsent}
       onPublished={() => { void session.load().catch(() => undefined).then(() => onCommentsChanged?.()); }} />}
     {unsent && <Alert variant="destructive" role="alert"><AlertDescription>{t(['forbidden', 'readOnly', 'invalid', 'operationConflict'].includes(unsent.code)
       ? `coManaged.editor.errors.${unsent.code}` : 'coManaged.conversation.drafts.unsent')}</AlertDescription></Alert>}

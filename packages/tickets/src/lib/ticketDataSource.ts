@@ -285,6 +285,8 @@ export interface TicketScreenBehavior {
    * An implementation must fire ONLY on an explicit event, never from a signal the re-read itself causes.
    */
   subscribeCommentsChanged?: (listener: () => void) => () => void;
+  /** Called when the user presses Cancel on the new-comment composer, so a host can drop state it staged beside it (e.g. files). Native default: absent. */
+  onComposerCancel?: () => void;
   /**
    * The viewer may look but not write: every field is frozen, the comment
    * composer, reply and edit affordances, the description editor, the
