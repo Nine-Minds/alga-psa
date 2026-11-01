@@ -1185,6 +1185,9 @@
           "contains": "Zawiera",
           "starts_with": "Zaczyna się od",
           "ends_with": "Kończy się na",
+          "not_contains": "Nie zawiera",
+          "not_starts_with": "Nie zaczyna się od",
+          "not_ends_with": "Nie kończy się na",
           "is_empty": "Jest puste",
           "is_not_empty": "Nie jest puste"
         },
@@ -3534,7 +3537,7 @@
       "platformManaged": "Zarządzany przez AlgaPSA — nie wymaga konfiguracji. Połącz z nim agenta w kroku 2.",
       "addAnother": "Dodaj kolejnego dostawcę",
       "advancedOptions": "Opcje zaawansowane",
-      "googleNoSetup": "Google nie wymaga konfiguracji. Agenci logują się za pomocą identyfikatora konta usługi Google.",
+      "googleSetup": "Agenci logują się tokenem ID konta usługi Google. Tylko poniższy odbiorca musi odpowiadać temu, jak go żądają.",
       "kinds": {
         "microsoft": "Microsoft Entra",
         "google": "Google",
@@ -3548,9 +3551,14 @@
       "fields": {
         "provider": "Dostawca",
         "entraTenantId": "Identyfikator organizacji Entra",
-        "audienceOptional": "Odbiorca (opcjonalnie)",
         "audience": "Odbiorca",
         "subjectClaim": "Identyfikuj agentów według",
+        "audienceHelp": {
+          "microsoft": "Identyfikator aplikacji (klienta) rejestracji aplikacji Entra, dla której Twoi agenci żądają tokenów. Agenci żądają zakresu api://<ten identyfikator>/.default.",
+          "google": "Agenci muszą żądać tokenu ID Google dokładnie z tym odbiorcą. Wpisaliśmy adres URL MCP tego serwera, który jest typowym wyborem.",
+          "custom": "Identyfikator API lub zasobu skonfigurowany u dostawcy (na przykład identyfikator API Auth0). Musi dokładnie odpowiadać oświadczeniu aud w tokenach agentów. Adres URL MCP tego serwera to dobry wybór."
+        },
+        "audienceWhy": "Tokeny wystawione przez dostawcę dla innych aplikacji nie będą tu akceptowane.",
         "subjectClaimHelp": "Pozostaw puste, chyba że dostawca zaleca inaczej.",
         "issuer": "Wystawca",
         "jwksUri": "Adres URL kluczy podpisujących"

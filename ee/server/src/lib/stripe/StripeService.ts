@@ -16,6 +16,7 @@ import Stripe from 'stripe';
 import { Knex } from 'knex';
 import { getConnection } from '@/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
+import { auditLog } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowClient';
@@ -24,6 +25,12 @@ import { tierFromStripeProduct } from './stripeTierMapping';
 import { stripeApiOverride } from './stripeApiOverride';
 import { reconcileHostedCoManagedEntitlement, runCoManagedPurchase, type CoManagedPurchaseResult } from '@alga-psa/licensing';
 import { coManagedSnapshotFromStripe, isCoManagedSubscription, assertCoManagedPrice, currentProSubscriptionExpiry } from './coManagedSubscription';
+import {
+  StripeOwnershipError,
+  selectOwnedCustomer,
+  stripeMetadataClaimsOtherTenant,
+  stripeMetadataTenant,
+} from './stripeCustomerOwnership';
 import { dispatchPaymentEvent } from './paymentEventRegistry';
 import { createCoManagedPaymentHandlers } from './coManagedPaymentEvents';
 import {
@@ -456,11 +463,17 @@ export class StripeService {
   /**
    * Get or import a Stripe customer for a tenant
    *
-   * Strategy:
+   * Strategy (fail-closed, alga-2026-0002926):
    * 1. Check if customer exists in our database
-   * 2. If not, query Stripe API by tenant email
-   * 3. Import customer and subscription data
-   * 4. Return customer record
+   * 2. If not, search Stripe by tenant email to find CANDIDATES only (email is
+   *    not unique across tenants and is never proof of ownership)
+   * 3. Keep only candidates whose metadata names this tenant; import iff exactly
+   *    one. Zero candidates, zero owned, or several owned => refuse, write nothing.
+   * 4. Import customer and (ownership-gated) subscription data
+   *
+   * Refusals throw StripeOwnershipError: the message is generic and safe for a
+   * tenant user; candidate ids are logged server-side only. Operators recover via
+   * linkStripeCustomerToTenant().
    */
   async getOrImportCustomer(tenantId: string): Promise<StripeCustomer> {
     await this.ensureInitialized();
@@ -485,33 +498,45 @@ export class StripeService {
       throw new Error(`Tenant ${tenantId} not found`);
     }
 
-    // 3. Search Stripe by email
-    const stripeCustomers = await this.stripe.customers.list({
-      email: tenant.email,
-      limit: 1,
-    });
-
-    if (stripeCustomers.data.length === 0) {
-      throw new Error(
-        `No Stripe customer found for tenant ${tenantId} with email ${tenant.email}. ` +
-        'This tenant may need to be created via nm-store first.'
-      );
+    // A missing email would make Stripe list *every* customer; refuse instead.
+    if (!tenant.email || !String(tenant.email).trim()) {
+      const err = new StripeOwnershipError('no_candidates', tenantId, [], 'tenant has no email to search Stripe with.');
+      logger.warn(`[StripeService] Refusing Stripe customer import: ${err.detail}`);
+      throw err;
     }
 
-    const stripeCustomer = stripeCustomers.data[0];
+    // 3. Search Stripe by email for candidates only
+    const stripeCustomers = await this.stripe.customers.list({
+      email: tenant.email,
+      limit: 10,
+    });
+    if (stripeCustomers.has_more) {
+      logger.warn(`[StripeService] More than ${stripeCustomers.data.length} Stripe customers share the email for tenant ${tenantId}; only the first page is considered`);
+    }
 
-    // 4. Import customer data
-    logger.info(`[StripeService] Importing Stripe customer ${stripeCustomer.id} for tenant ${tenantId}`);
-    customer = await this.importStripeCustomer(tenantId, stripeCustomer.id, knex);
+    const selection = selectOwnedCustomer(tenantId, stripeCustomers.data);
+    if (selection.error) {
+      logger.warn(`[StripeService] Refusing Stripe customer import: ${selection.error.detail}`);
+      throw selection.error;
+    }
 
-    // 5. Also import their active subscriptions
-    await this.importCustomerSubscriptions(tenantId, stripeCustomer.id, knex);
+    // 4. Import customer data (importStripeCustomer re-verifies ownership)
+    logger.info(`[StripeService] Importing Stripe customer ${selection.customerId} for tenant ${tenantId}`);
+    customer = await this.importStripeCustomer(tenantId, selection.customerId!, knex);
+
+    // 5. Also import their active subscriptions (each one ownership-gated)
+    await this.importCustomerSubscriptions(tenantId, selection.customerId!, knex);
 
     return customer;
   }
 
   /**
-   * Import a Stripe customer into our database
+   * Import a Stripe customer into our database.
+   *
+   * Every import path is gated here: the freshly retrieved customer must name
+   * `tenantId` in its metadata, and the external id is claimed in the global
+   * stripe_customer_bindings table in the same transaction as the mapping row,
+   * so one Stripe customer can never be bound to two tenants.
    */
   private async importStripeCustomer(
     tenantId: string,
@@ -530,27 +555,167 @@ export class StripeService {
     // Type assertion - we've confirmed it's not deleted
     const stripeCustomer = stripeCustomerResponse as Stripe.Customer;
 
-    // Insert into database
-    const [customer] = await tenantDb(db, tenantId).table<StripeCustomer>('stripe_customers')
-      .insert({
-        tenant: tenantId,
-        stripe_customer_external_id: stripeCustomer.id,
-        billing_tenant: this.config.masterTenantId,
-        email: stripeCustomer.email || '',
-        name: stripeCustomer.name,
-        metadata: {
-          imported_at: new Date().toISOString(),
-          source: 'stripe_import',
-        },
-      })
-      .returning('*');
+    // Re-verify ownership on the retrieved object (not on a search result)
+    if (stripeMetadataTenant(stripeCustomer) !== tenantId) {
+      const err = new StripeOwnershipError(
+        'not_owned',
+        tenantId,
+        [stripeCustomer.id],
+        'Stripe customer metadata does not name this tenant.',
+      );
+      logger.warn(`[StripeService] Refusing Stripe customer import: ${err.detail}`);
+      throw err;
+    }
+
+    // Claim the id and insert the mapping atomically
+    const customer = await db.transaction(async (trx) => {
+      await this.bindStripeCustomerId(trx, tenantId, stripeCustomer.id);
+      const [row] = await tenantDb(trx, tenantId).table<StripeCustomer>('stripe_customers')
+        .insert({
+          tenant: tenantId,
+          stripe_customer_external_id: stripeCustomer.id,
+          billing_tenant: this.config.masterTenantId,
+          email: stripeCustomer.email || '',
+          name: stripeCustomer.name,
+          metadata: {
+            imported_at: new Date().toISOString(),
+            source: 'stripe_import',
+          },
+        })
+        .returning('*');
+      return row;
+    });
 
     logger.info(`[StripeService] Imported Stripe customer ${stripeCustomerId} for tenant ${tenantId}`);
     return customer;
   }
 
   /**
-   * Import active subscriptions for a customer
+   * Claim a Stripe customer id for a tenant in the global binding table.
+   * Idempotent for the same tenant; throws StripeOwnershipError('already_bound')
+   * when another tenant holds it. Must run in the same transaction as the
+   * stripe_customers write.
+   */
+  private async bindStripeCustomerId(trx: Knex | Knex.Transaction, tenantId: string, stripeCustomerId: string): Promise<void> {
+    const claimed = await tenantDb(trx, tenantId).table('stripe_customer_bindings')
+      .insert({ stripe_customer_external_id: stripeCustomerId, tenant: tenantId })
+      .onConflict('stripe_customer_external_id')
+      .ignore()
+      .returning('stripe_customer_external_id');
+    if (claimed.length > 0) return;
+
+    const existing = await tenantDb(trx, tenantId)
+      .unscoped('stripe_customer_bindings', 'Global uniqueness check: which tenant already holds this Stripe customer id')
+      .where({ stripe_customer_external_id: stripeCustomerId })
+      .first();
+    if (existing?.tenant === tenantId) return;
+
+    const err = new StripeOwnershipError(
+      'already_bound',
+      tenantId,
+      [stripeCustomerId],
+      `Stripe customer is already bound to tenant ${existing?.tenant ?? 'unknown'}.`,
+    );
+    logger.warn(`[StripeService] Refusing Stripe customer import: ${err.detail}`);
+    throw err;
+  }
+
+  /**
+   * Operator-only recovery: bind a specific Stripe customer to a tenant when
+   * automatic recovery fails closed (e.g. nm-store has not stamped tenant
+   * metadata yet).
+   *
+   * AUTHORIZATION IS THE CALLER'S JOB: this method trusts `actor`; only call it
+   * from an authenticated operator surface. It requires a non-empty actor and
+   * reason and writes an audit_logs record in the same transaction as the mapping.
+   *
+   * Design choice: the operator IS the ownership proof, so a customer with NO
+   * tenant metadata is STAMPED (tenant_id) before import; a customer whose
+   * metadata names a different tenant, a deleted customer, or one already bound
+   * to another tenant is refused. Subscriptions are imported through the same
+   * per-subscription gate as the automatic path.
+   */
+  async linkStripeCustomerToTenant(
+    tenantId: string,
+    stripeCustomerId: string,
+    options: { actor: string; reason: string },
+  ): Promise<StripeCustomer> {
+    const actor = options?.actor?.trim();
+    const reason = options?.reason?.trim();
+    if (!actor || !reason) {
+      throw new Error('linkStripeCustomerToTenant requires a non-empty actor and reason');
+    }
+    await this.ensureInitialized();
+    const knex = await getConnection(tenantId);
+
+    const tenant = await tenantScopedTable(knex, 'tenants', tenantId).first();
+    if (!tenant) {
+      throw new Error(`Tenant ${tenantId} not found`);
+    }
+    const existingForTenant = await tenantScopedTable(knex, 'stripe_customers', tenantId).first();
+    if (existingForTenant) {
+      throw new Error(`Tenant ${tenantId} already has a Stripe customer mapping`);
+    }
+
+    const response = await this.stripe.customers.retrieve(stripeCustomerId);
+    if (response.deleted) {
+      throw new StripeOwnershipError('customer_deleted', tenantId, [stripeCustomerId], 'Stripe customer is deleted.');
+    }
+    const stripeCustomer = response as Stripe.Customer;
+
+    const boundTo = await tenantDb(knex, tenantId)
+      .unscoped('stripe_customer_bindings', 'Operator link: refuse customers already bound to another tenant')
+      .where({ stripe_customer_external_id: stripeCustomerId })
+      .first();
+    if (boundTo && boundTo.tenant !== tenantId) {
+      throw new StripeOwnershipError('already_bound', tenantId, [stripeCustomerId], `Stripe customer is already bound to tenant ${boundTo.tenant}.`);
+    }
+
+    if (stripeMetadataClaimsOtherTenant(stripeCustomer, tenantId)) {
+      throw new StripeOwnershipError('not_owned', tenantId, [stripeCustomerId], 'Stripe customer metadata names a different tenant; the operator path never overwrites it.');
+    }
+    if (stripeMetadataTenant(stripeCustomer) !== tenantId) {
+      await this.stripe.customers.update(stripeCustomerId, {
+        metadata: { tenant_id: tenantId, linked_by_operator: actor },
+      });
+    }
+
+    return knex.transaction(async (trx) => {
+      const customer = await this.importStripeCustomer(tenantId, stripeCustomerId, trx);
+      await this.importCustomerSubscriptions(tenantId, stripeCustomerId, trx);
+
+      // audit_logs stamps tenant from the GUC; auditLog skips when it is unset.
+      await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', tenantId]);
+      const uuidLike = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      await auditLog(trx, {
+        userId: uuidLike.test(actor) ? actor : undefined,
+        operation: 'stripe_customer_link',
+        tableName: 'stripe_customers',
+        recordId: customer.stripe_customer_id,
+        changedData: {},
+        details: {
+          tenant: tenantId,
+          actor,
+          reason,
+          stripe_customer_external_id: stripeCustomerId,
+          stamped_metadata: stripeMetadataTenant(stripeCustomer) !== tenantId,
+          linked_at: new Date().toISOString(),
+        },
+      });
+      return customer;
+    });
+  }
+
+  /**
+   * Import active subscriptions for a customer.
+   *
+   * Each subscription is gated: one whose metadata names a DIFFERENT tenant
+   * (either accepted key, including conflicting claims) is skipped with a warning
+   * and its siblings still import. A subscription with NO tenant metadata is
+   * imported: this method is only reached for a customer whose ownership was
+   * already proven (metadata check + binding), and Stripe subscriptions belong to
+   * their customer, so legacy/unstamped subscriptions on an owned customer are
+   * legitimately that tenant's. A foreign stamp is never acceptable.
    */
   private async importCustomerSubscriptions(
     tenantId: string,
@@ -583,6 +748,13 @@ export class StripeService {
 
     // Import each subscription
     for (const subscription of subscriptions.data) {
+      if (stripeMetadataClaimsOtherTenant(subscription, tenantId)) {
+        logger.warn(
+          `[StripeService] Skipping subscription ${subscription.id} on customer ${stripeCustomerId}: ` +
+          `its metadata names a different tenant than ${tenantId}`
+        );
+        continue;
+      }
       await this.importSubscription(tenantId, customer.stripe_customer_id, subscription, db);
     }
   }

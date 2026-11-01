@@ -154,9 +154,6 @@ export const saveContractLineEdit = withAuth(async (
       if (!await hasPermission(user, 'billing', 'update', trx)) {
         return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
       }
-      if (draft.added_service_ids.length > 0 && !await hasPermission(user, 'billing', 'create', trx)) {
-        return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
-      }
       if ((draft.removed_service_ids.length > 0 || draft.removed_config_ids.length > 0) && !await hasPermission(user, 'billing', 'delete', trx)) {
         return permissionError('Permission denied: billing delete required', 'msp/billing:errors.permissions.billingDelete');
       }
@@ -343,7 +340,7 @@ export const saveContractLineEdit = withAuth(async (
       // 4. Membership additions and removals.
       const membershipChanged = additions.length > 0 || removedIds.length > 0;
       if (membershipChanged) {
-        await applyContractLineServiceMembershipChangesInTransaction(trx, tenant, contractLineId, {
+        await applyContractLineServiceMembershipChangesInTransaction(trx, tenant, user, contractLineId, {
           additions,
           removals: removedIds,
         });
@@ -354,7 +351,7 @@ export const saveContractLineEdit = withAuth(async (
         if (removedIds.includes(entry.service_id)) continue;
         if (entry.overlay) {
           if (!await hasPermission(user, 'billing', 'update', trx)) throw new Error('Permission denied: Cannot update bucket overlays');
-          await upsertBucketOverlayInTransaction(trx, tenant, contractLineId, entry.service_id, {
+          await upsertBucketOverlayInTransaction(trx, tenant, user, contractLineId, entry.service_id, {
             total_minutes: entry.overlay.total_minutes,
             overage_rate: entry.overlay.overage_rate,
             allow_rollover: entry.overlay.allow_rollover ?? false,
