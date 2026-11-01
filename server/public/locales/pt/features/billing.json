@@ -270,7 +270,8 @@
         "agreementRequired": "Confirme o acordo para aceitar este orçamento.",
         "agreementOutdated": "O texto do acordo foi atualizado. Recarregue a página e tente novamente.",
         "commentRequired": "Adicione um breve comentário antes de rejeitar este orçamento.",
-        "tooLong": "Um dos seus campos é longo demais."
+        "tooLong": "Um dos seus campos é longo demais.",
+        "reload": "Recarregue esta página e tente novamente."
       }
     },
     "public": {

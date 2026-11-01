@@ -270,7 +270,8 @@
         "agreementRequired": "Bekräfta avtalet för att godkänna den här offerten.",
         "agreementOutdated": "Avtalstexten har uppdaterats. Ladda om sidan och försök igen.",
         "commentRequired": "Lägg till en kort kommentar innan du avvisar den här offerten.",
-        "tooLong": "En av dina uppgifter är för lång."
+        "tooLong": "En av dina uppgifter är för lång.",
+        "reload": "Ladda om den här sidan och försök igen."
       }
     },
     "public": {

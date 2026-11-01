@@ -270,7 +270,8 @@
         "agreementRequired": "Confermi l'accordo per accettare questo preventivo.",
         "agreementOutdated": "Il testo dell'accordo è stato aggiornato. Ricarichi la pagina e riprovi.",
         "commentRequired": "Aggiunga un breve commento prima di rifiutare questo preventivo.",
-        "tooLong": "Uno dei suoi inserimenti è troppo lungo."
+        "tooLong": "Uno dei suoi inserimenti è troppo lungo.",
+        "reload": "Ricarichi questa pagina e riprovi."
       }
     },
     "public": {

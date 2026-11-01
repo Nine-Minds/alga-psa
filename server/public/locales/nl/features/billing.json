@@ -270,7 +270,8 @@
         "agreementRequired": "Bevestig de overeenkomst om deze offerte te accepteren.",
         "agreementOutdated": "De tekst van de overeenkomst is bijgewerkt. Laad de pagina opnieuw en probeer het nogmaals.",
         "commentRequired": "Voeg een korte opmerking toe voordat u deze offerte afwijst.",
-        "tooLong": "Een van uw invoeren is te lang."
+        "tooLong": "Een van uw invoeren is te lang.",
+        "reload": "Laad deze pagina opnieuw en probeer het nog eens."
       }
     },
     "public": {

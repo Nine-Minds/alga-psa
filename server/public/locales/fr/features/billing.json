@@ -270,7 +270,8 @@
         "agreementRequired": "Veuillez confirmer l'accord pour accepter ce devis.",
         "agreementOutdated": "Le texte de l'accord a été mis à jour. Veuillez recharger la page et réessayer.",
         "commentRequired": "Veuillez ajouter un bref commentaire avant de refuser ce devis.",
-        "tooLong": "Une de vos saisies est trop longue."
+        "tooLong": "Une de vos saisies est trop longue.",
+        "reload": "Veuillez recharger cette page et réessayer."
       }
     },
     "public": {

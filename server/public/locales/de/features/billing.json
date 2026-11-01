@@ -270,7 +270,8 @@
         "agreementRequired": "Bitte bestätigen Sie die Vereinbarung, um dieses Angebot anzunehmen.",
         "agreementOutdated": "Der Wortlaut der Vereinbarung wurde aktualisiert. Bitte laden Sie die Seite neu und versuchen Sie es erneut.",
         "commentRequired": "Bitte fügen Sie einen kurzen Kommentar hinzu, bevor Sie dieses Angebot ablehnen.",
-        "tooLong": "Eine Ihrer Eingaben ist zu lang."
+        "tooLong": "Eine Ihrer Eingaben ist zu lang.",
+        "reload": "Bitte laden Sie diese Seite neu und versuchen Sie es erneut."
       }
     },
     "public": {

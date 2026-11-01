@@ -270,7 +270,8 @@
         "agreementRequired": "Potwierdź zgodę, aby zaakceptować tę ofertę.",
         "agreementOutdated": "Treść zgody została zaktualizowana. Odśwież stronę i spróbuj ponownie.",
         "commentRequired": "Dodaj krótki komentarz przed odrzuceniem tej oferty.",
-        "tooLong": "Jedno z wpisanych pól jest zbyt długie."
+        "tooLong": "Jedno z wpisanych pól jest zbyt długie.",
+        "reload": "Odśwież tę stronę i spróbuj ponownie."
       }
     },
     "public": {

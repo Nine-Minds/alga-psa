@@ -270,7 +270,8 @@
         "agreementRequired": "Please confirm the agreement to accept this quote.",
         "agreementOutdated": "The agreement wording has been updated. Please reload this page and try again.",
         "commentRequired": "Please add a short comment before rejecting this quote.",
-        "tooLong": "One of your entries is too long."
+        "tooLong": "One of your entries is too long.",
+        "reload": "Please reload this page and try again."
       }
     },
     "public": {
