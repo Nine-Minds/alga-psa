@@ -7,7 +7,7 @@
   "scripts": {
     "build": "npm run build:ts && npm run verify:email-build",
     "build:ts": "NODE_OPTIONS=--max-old-space-size=8192 tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json -f",
-    "verify:email-build": "node scripts/verify-email-build.mjs && node scripts/verify-email-build-placeholder.mjs",
+    "verify:email-build": "node --import ./scripts/worker-email-build-loader.mjs ./scripts/verify-email-build.mjs && node ./scripts/verify-email-build-placeholder.mjs",
     "dev": "tsx watch src/worker.ts",
     "start": "node dist/ee/temporal-workflows/src/worker.js",
     "start:worker": "node dist/ee/temporal-workflows/src/worker.js",

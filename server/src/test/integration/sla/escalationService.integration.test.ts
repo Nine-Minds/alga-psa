@@ -283,23 +283,26 @@ describe('SLA Escalation Service Integration Tests', () => {
     }
   });
 
-  it('backfills legacy true only with provider evidence and preserves unrelated JSONB data', async () => {
+  it('normalizes legacy booleans using provider evidence and preserves provenance and unrelated JSONB data', async () => {
     const ticketId = await newTicket();
     const provenId = uuidv4();
     const unknownId = uuidv4();
-    const falseId = uuidv4();
+    const failedId = uuidv4();
+    const existingStringId = uuidv4();
     await tenantTable(db, tenantId, 'sla_audit_log').insert([
       { log_id: provenId, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated', event_data: JSON.stringify({ notifications: { email: true, emailMessageId: 'smtp-proven-77' }, custom: { keep: 'yes' } }) },
       { log_id: unknownId, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated', event_data: JSON.stringify({ notifications: { email: true }, custom: { keep: 'also' } }) },
-      { log_id: falseId, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated', event_data: JSON.stringify({ notifications: { email: false }, custom: { keep: 'false' } }) },
+      { log_id: failedId, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated', event_data: JSON.stringify({ notifications: { email: false, emailMessageId: 'smtp-failed-88' }, custom: { keep: 'failed' } }) },
+      { log_id: existingStringId, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated', event_data: JSON.stringify({ notifications: { email: 'failed', emailReason: 'existing outcome' }, custom: { keep: 'string' } }) },
     ]);
 
     await legacyEmailAuditBackfill.up(db);
-    const rows = await tenantTable(db, tenantId, 'sla_audit_log').whereIn('log_id', [provenId, unknownId, falseId]);
+    const rows = await tenantTable(db, tenantId, 'sla_audit_log').whereIn('log_id', [provenId, unknownId, failedId, existingStringId]);
     const byId = new Map(rows.map((row: any) => [row.log_id, typeof row.event_data === 'string' ? JSON.parse(row.event_data) : row.event_data]));
-    expect(byId.get(provenId)).toMatchObject({ notifications: { email: true, emailOutcome: 'sent', emailMessageId: 'smtp-proven-77' }, custom: { keep: 'yes' } });
-    expect(byId.get(unknownId)).toMatchObject({ notifications: { email: true, emailOutcome: 'queued', emailReason: expect.stringContaining('no provider message id') }, custom: { keep: 'also' } });
-    expect(byId.get(falseId)).toMatchObject({ notifications: { email: false }, custom: { keep: 'false' } });
+    expect(byId.get(provenId)).toMatchObject({ notifications: { email: 'sent', emailLegacyValue: true, emailMessageId: 'smtp-proven-77' }, custom: { keep: 'yes' } });
+    expect(byId.get(unknownId)).toMatchObject({ notifications: { email: 'queued', emailLegacyValue: true, emailReason: expect.stringContaining('no provider message id') }, custom: { keep: 'also' } });
+    expect(byId.get(failedId)).toMatchObject({ notifications: { email: 'failed', emailLegacyValue: false, emailMessageId: 'smtp-failed-88' }, custom: { keep: 'failed' } });
+    expect(byId.get(existingStringId)).toMatchObject({ notifications: { email: 'failed', emailReason: 'existing outcome' }, custom: { keep: 'string' } });
   });
 
   it('does not create duplicates when escalating to the same level again', async () => {

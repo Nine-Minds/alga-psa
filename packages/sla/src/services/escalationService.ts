@@ -17,6 +17,11 @@ import { getEmailNotificationService } from '@alga-psa/notifications/notificatio
 import type { EmailNotificationResult } from '@alga-psa/notifications/notifications/email';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions';
 
+/** Resolve the email consumer through this module's configured worker import. */
+export function getEscalationEmailNotificationService() {
+  return getEmailNotificationService();
+}
+
 /**
  * Result of escalating a ticket
  */
@@ -399,7 +404,7 @@ async function sendEscalationEmailNotification(
   ticketTitle: string,
   level: number
 ): Promise<(() => Promise<EmailNotificationResult>) | null> {
-  const emailService = getEmailNotificationService();
+  const emailService = getEscalationEmailNotificationService();
 
   // Get the SLA Escalation notification subtype ID
   const subtype = await tenantDb(trx, tenant)

@@ -28,7 +28,10 @@ export type EmailNotificationResult =
   | { status: 'skipped'; reason: string };
 
 export class EmailNotificationService implements NotificationService {
-  constructor(private readonly outboundMail: OutboundMailPort = new TenantEmailOutboundAdapter()) {}
+  constructor(
+    private readonly outboundMail: OutboundMailPort = new TenantEmailOutboundAdapter(),
+    private readonly resolveLocale: typeof resolveEmailLocale = resolveEmailLocale,
+  ) {}
   private tenantScopedTable(
     knex: Knex,
     table: string,
@@ -407,7 +410,7 @@ export class EmailNotificationService implements NotificationService {
     }
 
     try {
-      const recipientLocale = await resolveEmailLocale(params.tenant, {
+      const recipientLocale = await this.resolveLocale(params.tenant, {
         email: params.emailAddress,
         userId: params.userId
       });
