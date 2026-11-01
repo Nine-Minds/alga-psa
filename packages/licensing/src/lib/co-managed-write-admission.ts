@@ -31,8 +31,14 @@ const INDEPENDENT: CoManagedOperationalState = { state: 'independent', canWrite:
 
 /** L7a's reader: licence lapse and relationship closure, read without locks. */
 const lifecycleReader: CoManagedLifecycleReader = async (db, tenant) => {
-  const { readCoManagedLifecycleLockFree } = await import('./co-managed-lifecycle');
-  return readCoManagedLifecycleLockFree(db as Knex, tenant);
+  let lifecycle: typeof import('./co-managed-lifecycle');
+  try {
+    lifecycle = await import('./co-managed-lifecycle');
+  } catch {
+    // The lifecycle module pulls in the DB barrel; a worker image where it does not load fails open.
+    return INDEPENDENT;
+  }
+  return lifecycle.readCoManagedLifecycleLockFree(db as Knex, tenant);
 };
 
 /** Process composition supplied before server bootstrap by an isolated review launcher. */
