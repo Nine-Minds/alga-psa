@@ -3,7 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
 import { requireCapabilityForAction } from '@alga-psa/core/capability/server';
-import { getCoManagedIndependentUpgradeScreen, prepareCoManagedIndependentUpgrade,
+import { getCoManagedIndependentUpgradeScreen, getCoManagedUpgradeAudience, prepareCoManagedIndependentUpgrade,
   type CoManagedIndependentUpgradeRequest } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from 'server/src/lib/co-managed/browserActor';
 import { startTenantProductUpgradeWorkflow, getTenantProductUpgradeStatus } from '../tenant-management/workflowClient';
@@ -56,4 +56,13 @@ export const manageCoManagedUpgradeBillingAction = withAuth(async (user, { tenan
   const actor = await coManagedBrowserActor(user, tenant);
   const { openCoManagedIndependentBilling } = await import('../stripe/coManagedUpgradeCheckout');
   return openCoManagedIndependentBilling(knex, actor, input);
+});
+
+/** Page-level audience check (own tenant only, from the session): the customer side of a co-managed
+ * relationship, or a tenant with a completed independent upgrade. Pass `includeCustomer: false` when
+ * the capability gate is closed so only the completed-upgrade row is consulted. */
+export const getCoManagedUpgradeAudienceAction = withAuth(async (_user, { tenant }, includeCustomer: boolean = true) => {
+  const { knex } = await createTenantKnex(tenant);
+  const audience = await getCoManagedUpgradeAudience(knex, tenant, includeCustomer);
+  return { audience: audience.customer || audience.completed };
 });

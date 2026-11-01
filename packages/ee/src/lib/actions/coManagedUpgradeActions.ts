@@ -27,3 +27,7 @@ export async function retryCoManagedUpgradePaymentAction(_operationId: string): 
 export async function manageCoManagedUpgradeBillingAction(_input: { kind: 'payment_method' | 'seats'; quantity?: number }): Promise<{ url: string }> {
   throw new Error('Independent billing requires hosted billing.');
 }
+
+export async function getCoManagedUpgradeAudienceAction(_includeCustomer: boolean = true): Promise<{ audience: boolean }> {
+  throw new Error('Independent upgrades require the licensed tenant workflow worker.');
+}
