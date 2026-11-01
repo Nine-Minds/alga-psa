@@ -5,7 +5,8 @@ import { readCoManagedLifecycleLockFree } from '@alga-psa/licensing';
 
 /**
  * Whether the signed-in workspace is a co-managed one that may no longer write (lapsed past grace,
- * relationship ended, or awaiting acceptance). Pages use it to withdraw write controls; the L0c choke
+ * relationship ended). A workspace still provisioning or awaiting acceptance is NOT read-only: the lock-free
+ * reader admits those states so bootstrap and acceptance can write. Pages use it to withdraw write controls; the L0c choke
  * point still refuses the writes themselves, so this is presentation, never the gate.
  *
  * Cost: React `cache` makes it at most one evaluation per request. A PSA tenant (and any tenant the

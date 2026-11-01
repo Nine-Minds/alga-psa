@@ -12,6 +12,7 @@ import {
   patched,
 } from '@temporalio/workflow';
 import type * as activities from '../activities/tenant-deletion-activities';
+import type * as coManagedDeletionActivities from '../activities/co-managed-tenant-deletion-activities';
 import type {
   TenantDeletionInput,
   TenantDeletionResult,
@@ -46,7 +47,6 @@ const {
   recordPendingDeletion,
   updateDeletionStatus,
   deleteTenantData,
-  endTenantCoManagedSponsorships,
   deleteTenantSchedules,
   cancelTenantStripeSubscription,
   sendCancellationConfirmationEmail,
@@ -55,6 +55,17 @@ const {
   triggerReactivationPasswordReset,
   recordReactivationPaymentAlert,
 } = proxyActivities<typeof activities>({
+  startToCloseTimeout: '10 minutes',
+  retry: {
+    maximumAttempts: 3,
+    backoffCoefficient: 2.0,
+    initialInterval: '1 second',
+    maximumInterval: '30 seconds',
+    nonRetryableErrorTypes: ['ValidationError'],
+  },
+});
+
+const { endTenantCoManagedSponsorships } = proxyActivities<typeof coManagedDeletionActivities>({
   startToCloseTimeout: '10 minutes',
   retry: {
     maximumAttempts: 3,
