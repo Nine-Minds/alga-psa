@@ -1,8 +1,10 @@
 'use server'
 
+import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
 import { buildTicketCommentAddedPayload } from '@alga-psa/shared/lib/tickets/ticketWorkflowEventPayloads';
 import { publishTicketTransitionsAfterCommit } from '@alga-psa/shared/lib/tickets/ticketLifecycleEvents';
 import { loadPortalTicketExternalLinks } from '../../lib/portalTicketExternalLinks';
+import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
 import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 
@@ -11,9 +13,10 @@ import { ticketStatusClockPatch } from '@alga-psa/shared/lib/ticketStatusClock';
 import { registerAfterCommit } from '@alga-psa/db';
 import Comment from '@alga-psa/tickets/models/comment';
 import { reconcileCommentAttachments, filterReadableCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
-import { stripCommentBccFromMetadata } from '@shared/lib/tickets/commentEmailRecipientsCore';
+import { redactCommentForClient, tombstoneCommentForClient } from '@alga-psa/tickets/lib/commentVisibility';
 import { isUuidShaped, validateData } from '@alga-psa/validation';
 import { COMMENT_RESPONSE_SOURCES, IComment, IStatus, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
+import { isClientUserType } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { z } from 'zod';
@@ -55,13 +58,14 @@ import {
 import { resolveAssetBillingProfileId } from '@shared/models/assetBillingProfileModel';
 import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
 import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions/avatarActions';
+import { coManagedRefusalMessageKey, isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 
 const clientTicketSchema = z.object({
   title: z.string().min(1),
   description: z.string().min(1),
   priority_id: z.string(),
   board_id: z.string().optional(),
-  asset_id: z.string().uuid().optional(),
+  asset_id: z.string().guid().optional(),
 });
 
 const VISIBILITY_NOT_FOUND_ERROR =
@@ -120,6 +124,11 @@ function toClientTicketActionError(error: unknown): ClientTicketActionError | nu
       : actionError(error.message, error.messageKey, error.messageParams);
   }
 
+  // Write admission refused a co-managed workspace's write: an expected outcome, not a server fault.
+  if (isCoManagedLifecycleError(error)) {
+    return actionError(error.message, coManagedRefusalMessageKey(error));
+  }
+
   return null;
 }
 
@@ -142,7 +151,7 @@ function clientPortalUserIdOrError(user: { user_id?: string | null; user_type?: 
     return permissionError('User ID not found in session', 'common:errors.auth.userIdNotFound');
   }
 
-  if (user.user_type !== 'client') {
+  if (!isClientUserType(user.user_type)) {
     return permissionError('Access denied: Client portal actions are restricted to client users', 'common:errors.auth.clientPortalOnly');
   }
 
@@ -396,10 +405,15 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       // see — internal-only commenters must not be enumerated here. Comment
       // visibility mirrors the thread root (Comment model enforces replies
       // match thread visibility), so the comment flag alone is sufficient.
-      const commentUserIdsSubquery = scopedDb.table('comments as c')
+      const commentUserIdsSubquery = scopedDb.table('comments as c');
+      scopedDb.tenantJoin(commentUserIdsSubquery, 'comment_threads as cut', 'c.thread_id', 'cut.thread_id', { type: 'left' });
+      scopedDb.tenantJoin(commentUserIdsSubquery, 'comments as cur', 'cur.comment_id', 'cut.root_comment_id', { type: 'left' });
+      commentUserIdsSubquery
         .select('c.user_id')
         .where('c.ticket_id', ticketId)
         .where('c.is_internal', false)
+        // Same audience predicate as the conversation read below: only requester-audience authors.
+        .whereRaw("(?) = 'requester'", [commentAudienceSql(trx, 'cut', 'cur', 'c')])
         // Do not enumerate authors of scheduled/canceled comments before
         // publication — mirror the conversations query's publish_state gate.
         .where('c.publish_state', 'published');
@@ -461,6 +475,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
       // in buildTicketThreadTabState).
       const conversationsQuery = scopedDb.table('comments');
       scopedDb.tenantJoin(conversationsQuery, 'comment_threads as ct', 'comments.thread_id', 'ct.thread_id', { type: 'left' });
+      scopedDb.tenantJoin(conversationsQuery, 'comments as rc', 'rc.comment_id', 'ct.root_comment_id', { type: 'left' });
       // Read-time bundle provenance. Only the source comment id is selected:
       // a bundle can span clients, so the portal must never learn (or be able
       // to follow a link to) the master ticket.
@@ -478,6 +493,9 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           this.whereNull('ct.is_internal')
             .orWhere('ct.is_internal', false);
         })
+        // Audience is an additional restriction (never a grant): thread, root and comment flags must
+        // agree on `requester`, so a damaged or relabelled row can only narrow what the portal sees.
+        .whereRaw("(?) = 'requester'", [commentAudienceSql(trx, 'ct', 'rc', 'comments')])
         .orderBy('comments.created_at', 'asc');
 
       const [ticket, conversations, documents, users, linkedAssets] = await Promise.all([
@@ -598,13 +616,22 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
 
     const { entered_by_user_type, ...ticketWithoutCreatorType } = result.ticket as any;
 
-    const conversationsWithProvenance = (result.conversations as Array<Record<string, any>>).map((comment) => {
+    // Every portal comment goes through the shared client projection: deleted rows become an
+    // allowlisted tombstone, all others are redacted (scheduling columns, Bcc, metadata.email).
+    // Parent masking runs on the projected objects: a reply never points at a parent the portal
+    // was not served.
+    const rawConversations = result.conversations as Array<Record<string, any>>;
+    const servedIds = new Set(rawConversations.map((c) => c.comment_id));
+    const conversationsWithProvenance = rawConversations.map((comment) => {
       const { bundle_mirror_source_comment_id, ...commentRow } = comment;
+      const projected: Record<string, any> = commentRow.deleted_at
+        ? tombstoneCommentForClient(commentRow as any)
+        : redactCommentForClient(commentRow as any);
+      if (projected.parent_comment_id && !servedIds.has(projected.parent_comment_id)) {
+        projected.parent_comment_id = null;
+      }
       return {
-        ...commentRow,
-        // Bcc is MSP-only: strip it here so it can never reach a portal
-        // payload. Cc stays, since the requester saw it on the email anyway.
-        metadata: stripCommentBccFromMetadata(commentRow.metadata),
+        ...projected,
         bundle_mirror_source: bundle_mirror_source_comment_id
           ? { source_comment_id: bundle_mirror_source_comment_id }
           : null,
@@ -727,21 +754,29 @@ export const addClientTicketComment = withAuth(async (
       }
 
       // Publish comment added event
-      await persistCommentPublication(trx, {
+      await publishCommentEvent(trx, 'ticket', {
+        tenantId: tenant,
+        ticketId,
+        commentId: newComment.comment_id,
+        userId,
         eventType: 'TICKET_COMMENT_ADDED',
-        payload: buildTicketCommentAddedPayload({
-          tenantId: tenant,
-          occurredAt: newComment.created_at ?? new Date().toISOString(),
-          ticketId: ticketId,
-          commentId: newComment.comment_id,
-          userId,
-          comment: {
-            content: content,
-            author: `${userRecord.first_name} ${userRecord.last_name}`,
-            isInternal
-          }
-        })
-      }, publishStoredWorkflowEvent);
+      }, async () => {
+        await persistCommentPublication(trx, {
+          eventType: 'TICKET_COMMENT_ADDED',
+          payload: buildTicketCommentAddedPayload({
+            tenantId: tenant,
+            occurredAt: newComment.created_at ?? new Date().toISOString(),
+            ticketId: ticketId,
+            commentId: newComment.comment_id,
+            userId,
+            comment: {
+              content: content,
+              author: `${userRecord.first_name} ${userRecord.last_name}`,
+              isInternal
+            }
+          })
+        }, publishStoredWorkflowEvent);
+      });
 
       await publishTicketUpdate({
         tenantId: tenant,

@@ -30,7 +30,8 @@
     "status": "Status",
     "expiration": "Utgångsdatum",
     "source": "Källa",
-    "actions": "Åtgärder"
+    "actions": "Åtgärder",
+    "validFrom": "Giltig från {{date}}"
   },
   "status": {
     "pending": "Väntande",
@@ -53,8 +54,10 @@
     "rateRequired": "Ange en giltig taxa.",
     "scopeLabel": "Omfattning – tjänster som timblocket täcker (tomt = allt arbete)",
     "serviceLabel": "Tjänst",
+    "serviceNoResults": "Inga tjänster hittades",
     "servicePlaceholder": "Välj en tjänst",
     "serviceRequired": "Välj en tjänst.",
+    "serviceSearchPlaceholder": "Sök tjänster…",
     "submit": "Skapa fakturautkast",
     "submitted": "Fakturautkast {{invoiceNumber}} har skapats. Fastställ fakturan för att aktivera timblocket.",
     "title": "Sälj timblock",
@@ -127,7 +130,9 @@
     "voidedLabel": "Makulerat",
     "purchaseReversed": "Köp återfört (fakturans fastställande har hävts)",
     "unknownUser": "System",
-    "sourceContract": "Avtal: {{contract}}"
+    "sourceContract": "Avtal: {{contract}}",
+    "remainingValue": "Värde på återstående timmar: {{value}}",
+    "validFrom": "Giltig från {{date}}"
   },
   "expire": {
     "error": "Det gick inte att låta timblocket löpa ut.",

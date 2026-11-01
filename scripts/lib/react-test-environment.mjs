@@ -15,7 +15,8 @@ const REACT_MODULES = String.raw`react|react-dom(?:/[\w./-]+)?|@testing-library/
 const REACT_IMPORT = new RegExp(
   String.raw`(?:^|\n)\s*import\s+(?!type\b)[^;'"]*?from\s*['"](?:${REACT_MODULES})['"]`
   + String.raw`|(?:^|\n)\s*import\s*['"](?:${REACT_MODULES})['"]`
-  + String.raw`|(?:require|import)\s*\(\s*['"](?:${REACT_MODULES})['"]\s*\)`,
+  // `typeof import('react')` is a type query, not a load, so it is excluded.
+  + String.raw`|(?:require|(?<!\btypeof\s+)import)\s*\(\s*['"](?:${REACT_MODULES})['"]\s*\)`,
 );
 
 const DOCBLOCK = /@vitest-environment\s+(\S+)/;

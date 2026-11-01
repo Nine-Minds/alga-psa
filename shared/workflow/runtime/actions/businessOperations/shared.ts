@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import type { Knex } from 'knex';
-import { tenantDb, withTransaction } from '@alga-psa/db';
+import { admitWrite, tenantDb, withTransaction } from '@alga-psa/db';
+import { isCoManagedLifecycleError } from '@alga-psa/licensing/lifecycle-error';
 import { v4 as uuidv4 } from 'uuid';
 import type { ActionContext } from '../../registries/actionRegistry';
+import { coManagedWorkflowTicketSeam } from '../../../../lib/coManagedDelivery';
 
 export type TenantTxContext = {
   tenantId: string;
@@ -32,11 +34,53 @@ export function throwActionError(
   };
 }
 
+/** A lifecycle refusal keeps its own code, so a run fails as "read-only" or
+ * "awaiting acceptance" rather than as an internal error. */
+function throwIfLifecycleRefusal(ctx: ActionContext, error: unknown): void {
+  if (isCoManagedLifecycleError(error)) {
+    throwActionError(ctx, {
+      category: 'ActionError',
+      code: error.code,
+      message: error.message,
+      details: { lifecycle_state: error.lifecycle.state },
+    });
+  }
+}
+
+/**
+ * Write admission for a workflow action whose transaction will change
+ * tag_definitions or tag_mappings. Call it before the action writes any row,
+ * in the action's own transaction. It dispatches through the write-admission
+ * primitive: with no provider registered it resolves without touching `tx.trx`.
+ * A lifecycle refusal from a provider surfaces as an ActionError.
+ */
+// LEVERAGE: friction workflow-lifecycle-admission — withTenantTransaction admits nothing, so tag writes admit per action and the same actions' non-tag writes (ticket, contact and client rows) stay unadmitted for a read-only workspace; admission belongs in the runtime's write transaction
+export async function admitWorkflowTagWrite(ctx: ActionContext, tx: TenantTxContext): Promise<void> {
+  try {
+    await admitWrite(tx.trx, { tenant: tx.tenantId, operation: 'workflow-tag-write' });
+  } catch (error) {
+    throwIfLifecycleRefusal(ctx, error);
+    throw error;
+  }
+}
+
 export function rethrowAsStandardError(ctx: ActionContext, error: unknown): never {
   const message = error instanceof Error ? error.message : String(error);
 
+  throwIfLifecycleRefusal(ctx, error);
   if (error instanceof z.ZodError) {
     throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message });
+  }
+  // Human-work guard (R5.3): keep the guard's stable codes instead of collapsing to INTERNAL_ERROR.
+  const guardCode = (error as { code?: unknown } | null)?.code;
+  if (guardCode === 'HUMAN_WORK_ASSIGNEE_INVALID' || guardCode === 'HUMAN_WORK_OWNER_REQUIRED') {
+    const guardError = error as { userIds?: string[]; field?: string };
+    throwActionError(ctx, {
+      category: 'ValidationError',
+      code: guardCode,
+      message,
+      details: guardCode === 'HUMAN_WORK_ASSIGNEE_INVALID' ? { userIds: guardError.userIds ?? [] } : { field: guardError.field ?? null },
+    });
   }
   if (/VALIDATION_ERROR:|validation failed|input validation failed/i.test(message)) {
     throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message });
@@ -140,7 +184,7 @@ export type RunContext = {
 
 /**
  * Resolves who a run acts as and where it sits in a workflow-triggered chain.
- * The actor is the publisher (else the creator) of the run's workflow; the
+ * The actor is the publisher (else the creator) of the workflow version the run executed; the
  * lineage is `trigger_metadata_json.workflowLineage`, stamped by the event-stream
  * worker when an event published by another workflow launched this run.
  */
@@ -149,7 +193,10 @@ export async function resolveRunContext(trx: Knex.Transaction, tenantId: string,
   const query = db.table('workflow_runs as wr');
   db.tenantJoin(query, 'workflow_definition_versions as wdv', 'wr.workflow_id', 'wdv.workflow_id', {
     type: 'left',
-    rootTenantColumn: 'wr.tenant'
+    rootTenantColumn: 'wr.tenant',
+    // Pin to the version this run actually executed; without it every published
+    // version of the workflow matches and .first() picks an arbitrary publisher.
+    on: join => join.andOn('wr.workflow_version', '=', 'wdv.version')
   });
   db.tenantJoin(query, 'workflow_definitions as wd', 'wr.workflow_id', 'wd.workflow_id', {
     type: 'left',
@@ -286,7 +333,7 @@ export async function withTenantTransaction<T>(
   });
 }
 
-export const uuidSchema = z.string().uuid();
+export const uuidSchema = z.string().guid();
 export const isoDateTimeSchema = z.string().datetime();
 
 export const attachmentSourceSchema = z.object({
@@ -512,4 +559,40 @@ export async function attachDocumentToTicket(
 export function actionProvidedKey(input: { idempotency_key?: string | null }, ctx: ActionContext): string {
   if (input.idempotency_key && String(input.idempotency_key).trim()) return String(input.idempotency_key).trim();
   return `run:${ctx.runId}:${ctx.stepPath}`;
+}
+
+/** Thrown when co-managed serves (or may serve) the tenant but no workflow-ticket authority could be resolved (provider missing, or the verdict is unknown/errored). */
+export class WorkflowTicketAuthorityUnavailableError extends Error {
+  readonly code = 'WORKFLOW_TICKET_AUTHORITY_UNAVAILABLE';
+  constructor(readonly reason: string, readonly providerRegistered: boolean) {
+    super(`Co-managed workflow ticket authority is unavailable (provider ${providerRegistered ? 'registered' : 'not registered'}; capability verdict: ${reason}); refusing the ticket mutation`);
+    this.name = 'WorkflowTicketAuthorityUnavailableError';
+  }
+}
+
+/** The only serves() reasons that are a definite "co-managed does not serve this tenant". Anything else is unknown. */
+const DEFINITE_NOT_SERVED_REASONS = new Set(['forced-off', 'not-participating']);
+
+/**
+ * Ticket-mutation adapter (CM L4a): for a tenant the co-managed capability serves, retain the executing
+ * run / published-version / author authority before a workflow action mutates a ticket. A tenant that is
+ * not served costs one cached `serves()` verdict and runs the action unchanged. Workflow actions never
+ * publish TICKET_COMMENT_ADDED (DO-NOT-PORT #2); this adapter publishes nothing either.
+ *
+ * Fails closed: whenever no authority resolves (no provider, or a registered provider whose serves() verdict is unknown, e.g. participation-error), anything but a definite not-served throws,
+ * so a worker that missed the co-managed registration can never fall back to the coarse role check.
+ */
+export async function retainWorkflowTicketAuthority(ctx: ActionContext, tx: TenantTxContext, ticketId: string, fields: string[], readFields: string[] = []): Promise<void> {
+  const authority = await coManagedWorkflowTicketSeam.resolve(tx.tenantId);
+  if (!authority) {
+    // resolve() is null for "not served" AND for no provider / unknown verdict; only a definite not-served may proceed.
+    // serves() hits the cache resolve() just filled (or answers from the forced value), so this is no extra SQL.
+    const { serves } = await import('@alga-psa/core/capability');
+    const verdict = await serves('co-managed', tx.tenantId);
+    if (verdict.served || !DEFINITE_NOT_SERVED_REASONS.has(verdict.reasons.served)) {
+      throw new WorkflowTicketAuthorityUnavailableError(verdict.served ? 'served' : verdict.reasons.served, coManagedWorkflowTicketSeam.hasProvider());
+    }
+    return;
+  }
+  await authority.retain(tx.trx, { tenant: tx.tenantId, ticketId, workflowRunId: ctx.runId, actorUserId: tx.actorUserId, fields, readFields });
 }

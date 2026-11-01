@@ -1085,3 +1085,89 @@ describe('Microsoft integration actions', () => {
     });
   });
 });
+
+/**
+ * CM L9 config isolation. A co-managed customer workspace uses the very same
+ * provider actions as the MSP, so isolation is the actions' own tenant scoping:
+ * neither tenant can read, change, or reach the other's profile rows or secrets.
+ */
+describe('provider configuration isolation: MSP tenant vs co-managed customer tenant', () => {
+  const MSP = 'msp-tenant';
+  const CUSTOMER = 'customer-tenant';
+  const as = (tenant: string) => { hoisted.state.mockCtx = { tenant }; };
+
+  beforeEach(() => {
+    hoisted.state.mockUser = { user_id: 'user-1', user_type: 'internal' };
+    for (const rows of [microsoftProfiles, microsoftConsumerBindings, teamsIntegrations, emailProviders,
+      microsoftEmailProviderConfigs, calendarProviders, mspSsoLoginDomains, resetUpdates]) rows.length = 0;
+    tenantSecrets.clear();
+    appSecrets.clear();
+    hasPermissionMock.mockResolvedValue(true);
+  });
+
+  async function seedBoth() {
+    as(MSP);
+    const msp = await createMicrosoftProfile({ displayName: 'MSP App', clientId: 'msp-client', clientSecret: 'msp-secret', tenantId: 'msp-guid' });
+    as(CUSTOMER);
+    const customer = await createMicrosoftProfile({ displayName: 'Customer App', clientId: 'customer-client', clientSecret: 'customer-secret', tenantId: 'customer-guid' });
+    expect(msp.success && customer.success).toBe(true);
+    return { mspProfileId: msp.profile!.profileId, customerProfileId: customer.profile!.profileId };
+  }
+
+  it('saving customer credentials writes only customer-tenant rows and secrets, MSP rows are byte-identical', async () => {
+    as(MSP);
+    await createMicrosoftProfile({ displayName: 'MSP App', clientId: 'msp-client', clientSecret: 'msp-secret', tenantId: 'msp-guid' });
+    const mspRowsBefore = JSON.stringify(microsoftProfiles.filter((row) => row.tenant === MSP));
+    const mspSecretsBefore = JSON.stringify([...tenantSecrets].filter(([key]) => key.startsWith(`${MSP}:`)));
+
+    setTenantSecretMock.mockClear();
+    as(CUSTOMER);
+    expect((await saveMicrosoftIntegrationSettings({ clientId: 'customer-client', clientSecret: 'customer-secret', tenantId: 'customer-guid' })).success).toBe(true);
+
+    expect(microsoftProfiles.filter((row) => row.tenant === CUSTOMER)).toHaveLength(1);
+    expect(JSON.stringify(microsoftProfiles.filter((row) => row.tenant === MSP))).toBe(mspRowsBefore);
+    expect(JSON.stringify([...tenantSecrets].filter(([key]) => key.startsWith(`${MSP}:`)))).toBe(mspSecretsBefore);
+    // Every secret write the customer save made was addressed to the customer tenant.
+    expect(setTenantSecretMock.mock.calls.filter(([tenant]) => tenant === MSP)).toHaveLength(0);
+    expect(setTenantSecretMock.mock.calls.filter(([tenant]) => tenant === CUSTOMER).length).toBeGreaterThan(0);
+    expect(microsoftProfiles.find((row) => row.tenant === CUSTOMER)!.client_id).toBe('customer-client');
+  });
+
+  it('saving MSP settings never touches the customer tenant (the reverse direction)', async () => {
+    as(CUSTOMER);
+    await saveMicrosoftIntegrationSettings({ clientId: 'customer-client', clientSecret: 'customer-secret' });
+    const customerRowsBefore = JSON.stringify(microsoftProfiles.filter((row) => row.tenant === CUSTOMER));
+    setTenantSecretMock.mockClear();
+
+    as(MSP);
+    await saveMicrosoftIntegrationSettings({ clientId: 'msp-client', clientSecret: 'msp-secret' });
+
+    expect(JSON.stringify(microsoftProfiles.filter((row) => row.tenant === CUSTOMER))).toBe(customerRowsBefore);
+    expect(setTenantSecretMock.mock.calls.every(([tenant]) => tenant === MSP)).toBe(true);
+    expect(tenantSecrets.get(`${CUSTOMER}:microsoft_client_secret`)).toBe('customer-secret');
+  });
+
+  it('each tenant lists and reports status for its own profiles only', async () => {
+    await seedBoth();
+    as(CUSTOMER);
+    expect((await listMicrosoftProfiles()).profiles?.map((p) => p.displayName)).toEqual(['Customer App']);
+    expect((await getMicrosoftIntegrationStatus()).profiles?.map((p) => p.clientId)).toEqual(['customer-client']);
+    as(MSP);
+    expect((await listMicrosoftProfiles()).profiles?.map((p) => p.displayName)).toEqual(['MSP App']);
+  });
+
+  it("a tenant cannot update, archive, default or delete the other tenant's profile by id", async () => {
+    const { mspProfileId, customerProfileId } = await seedBoth();
+    const snapshot = () => JSON.stringify({ rows: microsoftProfiles, secrets: [...tenantSecrets] });
+
+    for (const [actor, foreignId] of [[CUSTOMER, mspProfileId], [MSP, customerProfileId]] as const) {
+      as(actor);
+      const before = snapshot();
+      await updateMicrosoftProfile({ profileId: foreignId, displayName: 'Hijacked', clientSecret: 'stolen' });
+      await archiveMicrosoftProfile(foreignId);
+      await setDefaultMicrosoftProfile(foreignId);
+      await deleteMicrosoftProfile(foreignId);
+      expect(snapshot(), `${actor} acting on the other tenant's profile`).toBe(before);
+    }
+  });
+});

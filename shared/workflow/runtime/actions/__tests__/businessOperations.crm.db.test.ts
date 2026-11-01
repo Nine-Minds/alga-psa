@@ -3,9 +3,10 @@ import { knex, type Knex } from 'knex';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
+import { readFileSync, existsSync } from 'node:fs';
 import { getSecret } from '@alga-psa/core/secrets';
 import { v4 as uuidv4 } from 'uuid';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { registerCrmActions } from '../businessOperations/crm';
@@ -17,7 +18,7 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '../../../../..');
-const TEST_DB_NAME = 'test_database';
+const TEST_DB_NAME = process.env.TEST_DB_NAME || 'test_database';
 const PRODUCTION_DB_NAMES = new Set(['sebastian_prod', 'production', 'prod', 'server']);
 const GLOBAL_FIXTURE_TENANT = '__workflow_crm_db_test_global__';
 
@@ -101,15 +102,19 @@ async function recreateDatabase(
 }
 
 async function createTestDbConnection(): Promise<Knex> {
-  const databaseName = process.env.DB_NAME_SERVER || TEST_DB_NAME;
+  const databaseName = process.env.TEST_DB_NAME || process.env.DB_NAME_SERVER || TEST_DB_NAME;
   verifyTestDatabase(databaseName);
 
   const dbHost = process.env.DB_HOST || 'localhost';
   const dbPort = Number.parseInt(process.env.DB_PORT || '5432', 10);
   const adminUser = process.env.DB_USER_ADMIN || 'postgres';
-  const adminPassword = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'postpass123');
+  const adminSecret = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'postpass123');
+  const adminPath = path.join(repoRoot, 'secrets', path.basename(adminSecret));
+  const adminPassword = existsSync(adminPath) ? readFileSync(adminPath, 'utf8').trim() : adminSecret;
   const appUser = process.env.DB_USER_SERVER || 'app_user';
-  const appPassword = await getSecret('db_password_server', 'DB_PASSWORD_SERVER', 'postpass123');
+  const appSecret = await getSecret('db_password_server', 'DB_PASSWORD_SERVER', 'postpass123');
+  const appPath = path.join(repoRoot, 'secrets', path.basename(appSecret));
+  const appPassword = existsSync(appPath) ? readFileSync(appPath, 'utf8').trim() : appSecret;
 
   await recreateDatabase(databaseName, dbHost, dbPort, adminUser, adminPassword, appUser, appPassword);
 
@@ -473,11 +478,12 @@ vi.mock('../businessOperations/shared', async (importOriginal) => {
         throw new Error('DB unavailable for test runtime state');
       }
 
-      return runtimeState.db.transaction(async (trx) => {
+      return withTransaction(runtimeState.db, async (trx) => {
         await trx.raw('select set_config(\'app.current_tenant\', ?, true)', [runtimeState.tenantId]);
         return fn({
           tenantId: runtimeState.tenantId,
           actorUserId: runtimeState.actorUserId,
+          workflowId: '55555555-5555-4555-8555-555555555555', lineage: [],
           trx,
         });
       });
@@ -1328,6 +1334,11 @@ describe('crm workflow runtime DB-backed action handlers', () => {
     expect(sent.email_sent).toBe(true);
     expect(sent.recipients).toEqual(expect.arrayContaining(['custom@example.com']));
     expect(sent.message_id).toBe('msg-test-1');
+    const quoteEvents = publishWorkflowEventMock.mock.calls.map(([event]) => event).filter((event) => event.eventType === 'QUOTE_SENT');
+    expect(quoteEvents).toHaveLength(1);
+    expect(quoteEvents[0]).toMatchObject({ payload: { quoteId, workflowLineage: ['55555555-5555-4555-8555-555555555555'] } });
+    await invokeAction('crm.send_quote', { quote_id: quoteId, no_op_if_already_sent: true });
+    expect(publishWorkflowEventMock.mock.calls.filter(([event]) => event.eventType === 'QUOTE_SENT')).toHaveLength(1);
 
     const updated = await tenantTable(db, runtimeState.tenantId, 'quotes')
       .where({ tenant: runtimeState.tenantId, quote_id: quoteId })

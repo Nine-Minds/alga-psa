@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { assertHumanWorkOwner } from '@alga-psa/shared/lib/humanWork/assertHumanWorkAssignee';
 import {
   BaseService,
   type ListOptions,
@@ -198,7 +199,11 @@ export class InteractionService extends BaseService<InteractionApiRow> {
     let publishSideEffects: (() => Promise<void>) | undefined;
     let publishScheduleEntryCreated: (() => Promise<void>) | undefined;
     const input = data as CreateInteractionApi;
-    const assignedUserIds = resolveScheduleAssignees(context.userId, input.schedule_assigned_user_ids);
+    // Human-work guard: ownership defaults to the caller, who must be a licensed user.
+    await assertHumanWorkOwner(knex, context.tenant, context.userId, 'user_id');
+    const assignedUserIds = input.create_schedule_entry
+      ? resolveScheduleAssignees(context.userId, input.schedule_assigned_user_ids, context.user?.user_type)
+      : [];
     if (input.create_schedule_entry) {
       if (!input.start_time || !Number.isFinite(new Date(input.start_time).getTime())) {
         throw new ValidationError('start_time is required when creating a schedule entry');

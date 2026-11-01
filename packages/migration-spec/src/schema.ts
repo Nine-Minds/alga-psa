@@ -2,6 +2,12 @@ import { AMP_TABLE_COLUMNS, AMP_ALLOWLISTED_TABLES, type AmpTable } from './tabl
 
 const COLUMN_TYPES: Record<string, string> = {
   is_internal: 'INTEGER',
+  is_active: 'INTEGER',
+  is_preferred: 'INTEGER',
+  price_minor: 'INTEGER',
+  cost_minor: 'INTEGER',
+  unit_cost_minor: 'INTEGER',
+  lead_time_days: 'INTEGER',
 };
 
 const NOT_NULL_COLUMNS: Record<AmpTable, readonly string[]> = {
@@ -32,6 +38,13 @@ const NOT_NULL_COLUMNS: Record<AmpTable, readonly string[]> = {
     'body',
   ],
   assets: ['package_record_id', 'source_record_id', 'external_identifier_namespace', 'name'],
+  products: ['package_record_id', 'source_record_id', 'external_identifier_namespace', 'name'],
+  vendor_products: [
+    'package_record_id',
+    'source_record_id',
+    'external_identifier_namespace',
+    'vendor_name',
+  ],
   external_identifiers: [
     'package_record_id',
     'entity_type',

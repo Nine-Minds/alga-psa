@@ -9,8 +9,10 @@ import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
  * calculateTax provisions default client tax settings); all tax/region
  * lookups flow through the read-only ports in ./readOnlyTaxPorts.
  *
- * Fixed, Hourly, Usage, and Bucket service families are priced through shared
- * compute. Bucket allowance state is threaded in memory across the horizon.
+ * Which charges a line produces is decided by the shared resolver
+ * (billing/chargeResolution) that the billing engine also calls; the scenario
+ * source (./scenarioChargeSource) only supplies data. Pool allowance state is
+ * simulated and threaded in memory across the horizon.
  */
 
 import type { Knex } from "knex";
@@ -20,12 +22,14 @@ import type {
   ContractScenario,
   IBillingCharge,
   IBillingPeriod,
+  IBucketCharge,
   IHourBlockCharge,
   IPrepaidBlockCharge,
   IRecurringActivityWindow,
   IRecurringServicePeriod,
   IRecurringServicePeriodRecord,
   ISO8601String,
+  ITimeBasedCharge,
   ScenarioBucketConfig,
   ScenarioLine,
   ScenarioLineService,
@@ -38,9 +42,6 @@ import type {
 import { RECURRING_RANGE_SEMANTICS } from "@alga-psa/types";
 import { toISODate, toPlainDate } from "@alga-psa/core";
 import { tenantDb } from "@alga-psa/db";
-// The pricing-schedule selection now lives in one shared place, so the
-// simulator cannot drift from what the engine actually bills (plan §0.5).
-import { selectActivePricingSchedule } from "@alga-psa/billing/lib/billing/pricing/resolveFixedLineRate";
 import {
   calculateServicePeriodCoverage,
   intersectActivityWindow,
@@ -55,17 +56,21 @@ import {
   type SimulatedInvoicePeriodWindow,
 } from "./hypotheticalPeriods";
 import {
-  buildHourlyServiceConfigMap,
-  buildSyntheticTimeEntry,
-  buildSyntheticUsageRecord,
-  buildUsageServiceConfigMap,
-  hasResolvableHourlyRate,
-  hasResolvableUsageRate,
-  resolveAssumedQuantity,
-  syntheticConfigId,
-} from "./syntheticActivity";
+  orderChargesForInvoice,
+  resolveContractLineCharges,
+  TIMED_CHARGE_FAMILIES,
+  WINDOW_DRIVEN_CHARGE_FAMILIES,
+  type ResolvedLineCharge,
+  type StreamTimings,
+} from "@alga-psa/billing/lib/billing/chargeResolution";
+import {
+  ScenarioChargeSource,
+  createScenarioRunState,
+  hasRecurringQuantityPrice,
+  uniqueProductServices,
+} from "./scenarioChargeSource";
 import { createReadOnlyTaxPorts } from "./readOnlyTaxPorts";
-import { simulatePrepaidBlockTimeline } from "./prepaidBlockTimeline";
+import { buildCadencePrepaidBlockLedger, buildPrepaidBlockLedger } from "./prepaidBlockLedger";
 import { validateScenarioTenantScope } from "./validateScenarioTenantScope";
 import {
   loadSimulatorInvoiceParties,
@@ -81,6 +86,11 @@ import {
   type ResolvedChargeTaxPolicy,
   calculateContractBucketPeriodState,
 } from "@alga-psa/billing/lib/billing/domain";
+import {
+  overPrepaidBlockDescription,
+  prepaidBlockFeeDescription,
+} from "@alga-psa/billing/lib/billing/compute/prepaidBlockDescriptions";
+import { simulationRefusal } from "./simulationRefusal";
 
 interface SimulationBillingClient {
   client_id: string;
@@ -91,12 +101,6 @@ export interface SimulationCalculationPeriodInput {
   window: SimulatedInvoicePeriodWindow;
   obligations: UnpricedContractBillingObligation[];
   taxContexts: Record<string, ResolvedChargeTaxPolicy>;
-  /**
-   * Dated one-off charges that are not recurring-service-period obligations:
-   * the Prepaid Block issuance (`prepaid_block`) and its $0 consumption lines
-   * (`hour_block`). Passed to the domain as its supplemental carve-out.
-   */
-  supplementalCharges: IBillingCharge[];
 }
 
 export interface SimulationCalculationInput {
@@ -107,25 +111,6 @@ export interface SimulationCalculationInput {
   invoiceParties: SimulatorInvoiceParties;
   diagnostics: SimulationDiagnostic[];
   periods: SimulationCalculationPeriodInput[];
-}
-
-function addSimulationFacts(
-  accumulator: SimulationCalculationPeriodInput,
-  obligationId: string,
-  facts: ResolvedContractBillingChargeFacts,
-  taxContext: ResolvedChargeTaxPolicy,
-  metadata?: UnpricedContractBillingObligation["metadata"],
-): void {
-  accumulator.obligations.push({
-    obligationId,
-    tenantId: facts.line.tenantId,
-    contractLineId: facts.line.clientContractLineId,
-    chargeFamily: facts.kind,
-    taxContextKey: obligationId,
-    facts,
-    metadata,
-  });
-  accumulator.taxContexts[obligationId] = taxContext;
 }
 
 /**
@@ -143,18 +128,28 @@ export async function loadSimulationCalculationInput(
     );
   }
   if (!scenario) {
-    throw new Error("A contract scenario is required to run a simulation");
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_SCENARIO_INVALID",
+      "There is no scenario to simulate. Reload the page and try again.",
+    );
   }
   if (!Array.isArray(scenario.lines)) {
-    throw new Error(
-      `Scenario ${scenario.scenario_id ?? "(unknown)"} has no lines array`,
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_SCENARIO_INVALID",
+      "This scenario has no contract lines to simulate. Reload the page and try again.",
     );
   }
 
   const db = tenantDb(knex, tenant);
   await validateScenarioTenantScope(knex, tenant, scenario);
   const diagnostics: SimulationDiagnostic[] = [];
-  const currencyCode = scenario.currency_code || "USD";
+  const currencyCode = scenario.currency_code;
+  if (!currencyCode) {
+    throw simulationRefusal(
+      "CONTRACT_SIMULATION_SCENARIO_INVALID",
+      "This scenario has no currency. Set the contract's currency, then simulate again.",
+    );
+  }
 
   // --- Client context (read-only) ---
   let client: SimulationBillingClient;
@@ -168,9 +163,9 @@ export async function loadSimulationCalculationInput(
       .where({ client_id: scenario.client_binding.client_id })
       .first("client_id", "is_tax_exempt");
     if (!clientRow) {
-      throw new Error(
-        `Client ${scenario.client_binding.client_id} bound to scenario ` +
-          `${scenario.scenario_id} not found in tenant ${tenant}`,
+      throw simulationRefusal(
+        "CONTRACT_SIMULATION_CLIENT_NOT_AVAILABLE",
+        "The client this simulation uses is not available. It may have been deleted; choose another client.",
       );
     }
     client = {
@@ -208,12 +203,15 @@ export async function loadSimulationCalculationInput(
       window,
       obligations: [],
       taxContexts: {},
-      supplementalCharges: [],
     }));
-  const bucketStateByService = new Map<
-    string,
-    ReturnType<typeof calculateContractBucketPeriodState>
-  >();
+  const run = createScenarioRunState();
+  // Resolved charges collected per invoice period, ordered once at the end.
+  const resolvedByPeriod = new Map<number, ResolvedLineCharge[]>();
+  const collect = (periodIndex: number, charges: ResolvedLineCharge[]) => {
+    const bucket = resolvedByPeriod.get(periodIndex) ?? [];
+    bucket.push(...charges);
+    resolvedByPeriod.set(periodIndex, bucket);
+  };
 
   const contractStartDate = scenario.contract_start_date
     ? toISODate(toPlainDate(scenario.contract_start_date))
@@ -235,82 +233,6 @@ export async function loadSimulationCalculationInput(
 
     const lineCycle = normalizeBillingCycle(line.billing_frequency);
 
-    // Prepaid Block lines: issuance and consumption are dated one-offs, not
-    // service periods, so they are simulated on the invoice timeline before
-    // (and independently of) the line's own arrears assignments. The hourly
-    // charge below then prices only the demand no block absorbed.
-    const blockResult = line.prepaid_block
-      ? simulatePrepaidBlockLine({
-          tenant,
-          scenario,
-          line,
-          client,
-          taxPorts,
-          currencyCode,
-          invoicePeriods,
-          periodAccumulators,
-          contractStartDate,
-          contractEndDate,
-          diagnostics,
-        })
-      : null;
-
-    const records = generateLineServicePeriods({
-      line,
-      horizon: scenario.horizon,
-      invoiceSchedule: scenario.invoice_schedule,
-      contractStartDate: scenario.contract_start_date,
-      scenarioId: scenario.scenario_id,
-    });
-    const assignments = assignServicePeriodsToInvoicePeriods(
-      records,
-      invoicePeriods,
-    );
-
-    if (assignments.length === 0) {
-      diagnostics.push({
-        severity: "warning",
-        line_key: line.key,
-        message: `Does not appear in the next ${scenario.horizon.period_count} invoices because it uses a ${lineCycle} schedule and bills in ${line.billing_timing}.`,
-      });
-      continue;
-    }
-
-    const fixedServices = line.services.filter(
-      (service) =>
-        service.item_kind !== "product" &&
-        service.configuration.configuration_type === "Fixed",
-    );
-    // A bucket overlay prices the service's assumed hours through included
-    // consumption and overage. BillingEngine excludes the same attributed
-    // work from hourly charges; charging both here inflates the preview.
-    const hourlyBucketServiceIds = new Set(line.services
-      .filter((service) => service.item_kind !== "product" &&
-        service.configuration.configuration_type === "Bucket")
-      .map((service) => service.service_id));
-    const hourlyServices = line.services.filter(
-      (service) =>
-        service.item_kind !== "product" &&
-        service.configuration.configuration_type === "Hourly" &&
-        !hourlyBucketServiceIds.has(service.service_id),
-    );
-    const usageServices = line.services.filter(
-      (service) =>
-        service.item_kind !== "product" &&
-        service.configuration.configuration_type === "Usage",
-    );
-    const bucketServices = line.services.filter(
-      (service) =>
-        service.item_kind !== "product" &&
-        service.configuration.configuration_type === "Bucket",
-    );
-    const productServices = uniqueProductServices(line.services).filter(
-      (service) => !service.is_license,
-    );
-    const licenseServices = uniqueProductServices(line.services).filter(
-      (service) => service.is_license,
-    );
-
     const lineFacts = buildResolvedContractLineFacts(
       tenant,
       scenario,
@@ -319,122 +241,140 @@ export async function loadSimulationCalculationInput(
       contractEndDate,
     );
 
-    for (const { periodIndex, record } of assignments) {
-      const accumulator = periodAccumulators[periodIndex];
-      const timing = buildChargeTiming(record, activityWindow);
-      if (!timing) {
-        // Service period falls entirely outside the contract's active window;
-        // production settlement drops it the same way.
-        continue;
+    const streamPeriods = generateLineServicePeriods({
+      line,
+      horizon: scenario.horizon,
+      invoiceSchedule: scenario.invoice_schedule,
+      contractStartDate: scenario.contract_start_date,
+      scenarioId: scenario.scenario_id,
+    });
+
+    // Per invoice window, the line's due timing per stream. A window normally
+    // holds one period per stream; when a finer line cadence lands several in
+    // one window they become further "rounds" (the engine refuses that case, the
+    // projection has always priced each period).
+    const roundsByWindow = new Map<number, StreamTimings[]>();
+    let assignedPeriods = 0;
+    for (const { stream, records } of streamPeriods) {
+      const countByWindow = new Map<number, number>();
+      for (const { periodIndex, record } of assignServicePeriodsToInvoicePeriods(
+        records,
+        invoicePeriods,
+      )) {
+        assignedPeriods += 1;
+        const timing = buildChargeTiming(record, activityWindow);
+        if (!timing) {
+          // Service period falls entirely outside the contract's active window;
+          // production settlement drops it the same way.
+          continue;
+        }
+        const round = countByWindow.get(periodIndex) ?? 0;
+        countByWindow.set(periodIndex, round + 1);
+        const rounds = roundsByWindow.get(periodIndex) ?? [];
+        rounds[round] = { ...rounds[round], [stream]: timing };
+        roundsByWindow.set(periodIndex, rounds);
       }
+    }
+
+    // Prepaid Block lines. Consumption blocks: issuance and draws are dated
+    // one-offs, not service periods, so the scenario source answers for each
+    // invoice window itself (window-driven families). Cadence blocks: one block
+    // per due block period, so the ledger is built from the periods above. The
+    // hourly charge then prices only the demand no block absorbed.
+    const dueTimings = (stream: "line" | "prepaid_block") =>
+      Array.from(roundsByWindow, ([periodIndex, rounds]) =>
+        rounds.flatMap((round) =>
+          round[stream] ? [{ periodIndex, timing: round[stream]! }] : [],
+        ),
+      ).flat();
+    const ledger =
+      line.prepaid_block?.issue_mode === "cadence"
+        ? buildCadencePrepaidBlockLedger({
+            scenario,
+            line,
+            blockTimings: dueTimings("prepaid_block"),
+            hourlyTimings: dueTimings("line"),
+            diagnostics,
+          })
+        : buildPrepaidBlockLedger({
+            scenario,
+            line,
+            invoicePeriods,
+            contractStartDate,
+            contractEndDate,
+            diagnostics,
+          });
+    if (ledger) {
+      run.prepaidLedgers.set(line.key, ledger);
+    }
+
+    if (assignedPeriods === 0) {
+      diagnostics.push({
+        severity: "warning",
+        line_key: line.key,
+        message: `Does not appear in the next ${scenario.horizon.period_count} invoices because it uses a ${lineCycle} schedule and bills in ${line.billing_timing}.`,
+      });
+    }
+
+    // One source per (line, invoice window), carrying the stream -> timing map.
+    for (const accumulator of periodAccumulators) {
+      const index = accumulator.window.index;
+      const windowDriven =
+        Boolean(ledger) &&
+        (ledger!.issuesByPeriod.has(index) || ledger.drawsByPeriod.has(index));
+      const rounds = roundsByWindow.get(index) ?? [];
+      if (!windowDriven && rounds.length === 0) continue;
 
       const billingPeriod: IBillingPeriod = {
         tenant,
         startDate: accumulator.window.startDate,
         endDate: accumulator.window.endDateExclusive,
       };
-
-      if (fixedServices.length > 0 || line.contract_line_type === "Fixed") {
-        await simulateFixedCharges({
+      const sourceFor = (timings: StreamTimings) =>
+        new ScenarioChargeSource({
           scenario,
           line,
-          fixedServices,
-          client,
           lineFacts,
+          client,
           billingPeriod,
-          timing,
+          timings,
+          periodIndex: index,
           taxPorts,
           currencyCode,
           lineCycle,
-          accumulator,
-        });
-      }
-
-      if (hourlyServices.length > 0) {
-        await simulateHourlyCharges({
-          scenario,
-          line,
-          hourlyServices,
-          client,
-          lineFacts,
-          billingPeriod,
-          timing,
-          taxPorts,
-          currencyCode,
-          lineCycle,
-          accumulator,
           diagnostics,
-          coveredByBlock: blockResult?.demandCoverage.get(periodIndex) ?? null,
+          run,
         });
-      }
 
-      if (usageServices.length > 0) {
-        await simulateUsageCharges({
-          scenario,
-          line,
-          usageServices,
-          client,
-          lineFacts,
-          billingPeriod,
-          timing,
-          taxPorts,
-          currencyCode,
-          lineCycle,
-          accumulator,
-          diagnostics,
-        });
+      if (windowDriven) {
+        collect(
+          index,
+          await resolveContractLineCharges(sourceFor(rounds[0] ?? {}), {
+            families: WINDOW_DRIVEN_CHARGE_FAMILIES,
+            pools: "ignore",
+          }),
+        );
       }
+      // Which charges the line produces is decided by the shared resolver, the
+      // same one the billing engine calls; this loop only supplies scenario data.
+      for (const timings of rounds) {
+        collect(
+          index,
+          await resolveContractLineCharges(sourceFor(timings), {
+            families: TIMED_CHARGE_FAMILIES,
+          }),
+        );
+      }
+    }
+  }
 
-      if (bucketServices.length > 0) {
-        await simulateBucketCharges({
-          scenario,
-          line,
-          bucketServices,
-          client,
-          lineFacts,
-          billingPeriod,
-          timing,
-          taxPorts,
-          currencyCode,
-          lineCycle,
-          accumulator,
-          bucketStateByService,
-        });
-      }
-
-      if (productServices.length > 0) {
-        await simulateRecurringQuantityCharges({
-          scenario,
-          line,
-          quantityServices: productServices,
-          chargeType: "product",
-          client,
-          lineFacts,
-          billingPeriod,
-          timing,
-          taxPorts,
-          currencyCode,
-          lineCycle,
-          accumulator,
-        });
-      }
-
-      if (licenseServices.length > 0) {
-        await simulateRecurringQuantityCharges({
-          scenario,
-          line,
-          quantityServices: licenseServices,
-          chargeType: "license",
-          client,
-          lineFacts,
-          billingPeriod,
-          timing,
-          taxPorts,
-          currencyCode,
-          lineCycle,
-          accumulator,
-        });
-      }
+  for (const accumulator of periodAccumulators) {
+    for (const charge of orderChargesForInvoice(
+      resolvedByPeriod.get(accumulator.window.index) ?? [],
+    )) {
+      accumulator.obligations.push(charge.obligation);
+      accumulator.taxContexts[charge.obligation.taxContextKey] =
+        charge.taxContext;
     }
   }
 
@@ -483,493 +423,6 @@ function simulateLineDiagnostics(
       message: `${service.service_name} has no ${currencyCode} ${chargeType} price. Add a catalog or service rate to include it.`,
     });
   }
-}
-
-/* ------------------------------------------------------------------ */
-/* Recurring product and license charges                              */
-/* ------------------------------------------------------------------ */
-
-function uniqueProductServices(
-  services: ScenarioLineService[],
-): ScenarioLineService[] {
-  const byServiceId = new Map<string, ScenarioLineService>();
-  for (const service of services) {
-    if (service.item_kind !== "product") continue;
-    const current = byServiceId.get(service.service_id);
-    if (
-      !current ||
-      (current.configuration.configuration_type === "Bucket" &&
-        service.configuration.configuration_type !== "Bucket")
-    ) {
-      byServiceId.set(service.service_id, service);
-    }
-  }
-  return Array.from(byServiceId.values());
-}
-
-function hasRecurringQuantityPrice(service: ScenarioLineService): boolean {
-  return service.custom_rate != null || service.default_rate != null;
-}
-
-async function simulateRecurringQuantityCharges(
-  input: SimulateFamilyInput & {
-    quantityServices: ScenarioLineService[];
-    chargeType: "product" | "license";
-  },
-): Promise<void> {
-  const {
-    line,
-    quantityServices,
-    chargeType,
-    client,
-    lineFacts,
-    timing,
-    taxPorts,
-    currencyCode,
-    lineCycle,
-    accumulator,
-  } = input;
-  const priceableServices = quantityServices.filter(hasRecurringQuantityPrice);
-  if (priceableServices.length === 0) return;
-
-  const obligationId = `${chargeType}:${line.key}:${timing.servicePeriodStart}`;
-  addSimulationFacts(
-    accumulator,
-    obligationId,
-    {
-      kind: chargeType,
-      line: lineFacts,
-      client: { clientId: client.client_id, isTaxExempt: client.is_tax_exempt },
-      timing,
-      services: priceableServices.map((service) => ({
-        serviceId: service.service_id,
-        serviceName: service.service_name,
-        defaultRate: service.legacy_default_rate,
-        taxRateId: service.tax_rate_id,
-        configurationId:
-          service.configuration_id ??
-          syntheticConfigId(line.key, service.service_id),
-        serviceQuantity: service.service_quantity,
-        serviceCustomRate: service.service_custom_rate,
-        configurationQuantity:
-          service.configuration_quantity ?? service.quantity,
-        configurationCustomRate:
-          service.configuration_custom_rate ?? service.custom_rate,
-        priceRate: service.default_rate,
-      })),
-    },
-    taxPorts,
-    { lineCycle, quantityLabel: "units" },
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Bucket charges                                                     */
-/* ------------------------------------------------------------------ */
-
-async function simulateBucketCharges(
-  input: SimulateFamilyInput & {
-    bucketServices: ScenarioLineService[];
-    bucketStateByService: Map<
-      string,
-      ReturnType<typeof calculateContractBucketPeriodState>
-    >;
-  },
-): Promise<void> {
-  const {
-    scenario,
-    line,
-    bucketServices,
-    client,
-    lineFacts,
-    billingPeriod,
-    timing,
-    taxPorts,
-    currencyCode,
-    lineCycle,
-    accumulator,
-    bucketStateByService,
-  } = input;
-  const periodIndex = accumulator.window.index;
-
-  for (const service of bucketServices) {
-    const config = service.configuration as ScenarioBucketConfig;
-    const assumedConsumption = Math.max(
-      0,
-      resolveAssumedQuantity(
-        scenario.assumptions,
-        line.key,
-        service.service_id,
-        periodIndex,
-      ),
-    );
-    const isUsageBucket = line.contract_line_type === "Usage";
-    const consumedQuantity = isUsageBucket
-      ? assumedConsumption
-      : assumedConsumption * 60;
-    const stateKey = `${line.key}:${service.service_id}`;
-    const state = calculateContractBucketPeriodState({
-      includedQuantity: config.total_minutes,
-      consumedQuantity,
-      allowRollover: config.allow_rollover,
-      previousState: bucketStateByService.get(stateKey) ?? null,
-    });
-    bucketStateByService.set(stateKey, state);
-
-    const obligationId = `bucket:${line.key}:${service.service_id}:${timing.servicePeriodStart}`;
-    addSimulationFacts(
-      accumulator,
-      obligationId,
-      {
-        kind: "bucket",
-        line: lineFacts,
-        client: {
-          clientId: client.client_id,
-          isTaxExempt: client.is_tax_exempt,
-        },
-        billingPeriod,
-        configuration: {
-          configurationId: syntheticConfigId(line.key, service.service_id),
-          serviceId: service.service_id,
-          serviceName: service.service_name,
-          taxRateId: service.tax_rate_id,
-          unitOfMeasure: isUsageBucket
-            ? usageUnitForBucket(line, service.service_id)
-            : "hours",
-          billingMethod: isUsageBucket ? "usage" : "hourly",
-          includedMinutes: config.total_minutes,
-          overageRate: config.overage_rate,
-          allowRollover: config.allow_rollover,
-        },
-        periods: [
-          {
-            start: timing.servicePeriodStart,
-            end: timing.servicePeriodEnd,
-            minutesUsed: consumedQuantity,
-            overageMinutes: state.overageQuantity,
-            rolledOverMinutes: state.rolledOverQuantity,
-          },
-        ],
-      },
-      taxPorts,
-      {
-        lineCycle,
-        serviceId: service.service_id,
-        quantityLabel: isUsageBucket
-          ? `${config.overage_rate} ${usageUnitForBucket(line, service.service_id)} overage`
-          : "hrs overage",
-      },
-    );
-  }
-}
-
-function usageUnitForBucket(line: ScenarioLine, serviceId: string): string {
-  const usageConfig = line.services.find(
-    (service) =>
-      service.service_id === serviceId &&
-      service.configuration.configuration_type === "Usage",
-  )?.configuration;
-  return usageConfig?.configuration_type === "Usage"
-    ? usageConfig.unit_of_measure
-    : "units";
-}
-
-/* ------------------------------------------------------------------ */
-/* Usage charges                                                      */
-/* ------------------------------------------------------------------ */
-
-async function simulateUsageCharges(
-  input: SimulateFamilyInput & {
-    usageServices: ScenarioLineService[];
-    diagnostics: SimulationDiagnostic[];
-  },
-): Promise<void> {
-  const {
-    scenario,
-    line,
-    usageServices,
-    client,
-    lineFacts,
-    billingPeriod,
-    timing,
-    taxPorts,
-    currencyCode,
-    lineCycle,
-    accumulator,
-    diagnostics,
-  } = input;
-  const periodIndex = accumulator.window.index;
-  const usageRecords = [] as Array<
-    ReturnType<typeof buildSyntheticUsageRecord>
-  >;
-
-  for (const service of usageServices) {
-    const assumedQuantity = resolveAssumedQuantity(
-      scenario.assumptions,
-      line.key,
-      service.service_id,
-      periodIndex,
-    );
-    if (!(assumedQuantity > 0)) continue;
-    if (!hasResolvableUsageRate(service)) {
-      if (!diagnostics.some((diagnostic) => diagnostic.line_key === line.key && diagnostic.message.startsWith(`${service.service_name} has no ${currencyCode} usage rate`))) {
-        diagnostics.push({
-          severity: "warning",
-          line_key: line.key,
-          message: `${service.service_name} has no ${currencyCode} usage rate, so its activity is omitted. Add a catalog or service rate to include it.`,
-        });
-      }
-      continue;
-    }
-    usageRecords.push(
-      buildSyntheticUsageRecord({
-        line,
-        service,
-        periodIndex,
-        assumedQuantity,
-      }),
-    );
-  }
-
-  if (usageRecords.length === 0) return;
-  const obligationId = `usage:${line.key}:${timing.servicePeriodStart}`;
-  const configs = buildUsageServiceConfigMap(line);
-  addSimulationFacts(
-    accumulator,
-    obligationId,
-    {
-      kind: "usage",
-      line: lineFacts,
-      client: { clientId: client.client_id, isTaxExempt: client.is_tax_exempt },
-      billingPeriod,
-      timing,
-      serviceConfigurations: Array.from(configs, ([serviceId, value]) => ({
-        serviceId,
-        configurationId: value.config.config_id,
-        customRate: value.config.custom_rate,
-        minimumUsage: value.config.minimum_usage,
-        tieredPricing: value.config.enable_tiered_pricing,
-        tiers: value.rateTiers.map((tier) => ({
-          minimum: tier.min_quantity,
-          maximum: tier.max_quantity,
-          rate: tier.rate,
-        })),
-      })),
-      activity: usageRecords.map((record) => ({
-        sourceId: record.usage_id,
-        serviceId: record.service_id,
-        serviceName: record.service_name,
-        quantity: record.quantity,
-        taxRateId: record.tax_rate_id,
-        currencyRate: record.currency_rate,
-      })),
-    },
-    taxPorts,
-    { lineCycle, quantityLabel: "units" },
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Prepaid Block lines                                                */
-/* ------------------------------------------------------------------ */
-
-/**
- * Simulates one Prepaid Block line over the horizon and appends the dated
- * `prepaid_block` issuance charges and $0 `hour_block` consumption lines to the
- * owning invoice periods. Returns, per period index, the share of assumed
- * hourly demand that blocks absorbed so the line's hourly charge can bill only
- * the remainder at the overage (hourly) rate.
- */
-function simulatePrepaidBlockLine(input: {
-  tenant: string;
-  scenario: ContractScenario;
-  line: ScenarioLine;
-  client: SimulationBillingClient;
-  taxPorts: ResolvedChargeTaxPolicy;
-  currencyCode: string;
-  invoicePeriods: SimulatedInvoicePeriodWindow[];
-  periodAccumulators: SimulationCalculationPeriodInput[];
-  contractStartDate: string | null;
-  contractEndDate: string | null;
-  diagnostics: SimulationDiagnostic[];
-}): { demandCoverage: Map<number, number> } {
-  const {
-    tenant,
-    scenario,
-    line,
-    client,
-    taxPorts,
-    currencyCode,
-    invoicePeriods,
-    periodAccumulators,
-    contractStartDate,
-    contractEndDate,
-    diagnostics,
-  } = input;
-  const config = line.prepaid_block!;
-  const demandCoverage = new Map<number, number>();
-
-  const hourlyServices = line.services.filter(
-    (service) =>
-      service.item_kind !== "product" &&
-      service.configuration.configuration_type === "Hourly",
-  );
-  const soldAs =
-    line.services.find(
-      (service) => service.service_id === config.sold_as_service_id,
-    ) ?? hourlyServices[0];
-
-  if (!(config.block_minutes > 0)) {
-    diagnostics.push({
-      severity: "warning",
-      line_key: line.key,
-      message: "Prepaid block has no block size, so no blocks are simulated.",
-    });
-    return { demandCoverage };
-  }
-  if (!soldAs) {
-    diagnostics.push({
-      severity: "warning",
-      line_key: line.key,
-      message:
-        "Prepaid block has no service to sell the block as, so no blocks are simulated.",
-    });
-    return { demandCoverage };
-  }
-  if (config.trigger_on_renewal) {
-    diagnostics.push({
-      severity: "info",
-      line_key: line.key,
-      message:
-        "Renewal-triggered blocks are not simulated; only the start, usage and expiry triggers are.",
-    });
-  }
-
-  const demandMinutesByPeriod = new Map<number, number>();
-  for (const window of invoicePeriods) {
-    let minutes = 0;
-    for (const service of hourlyServices) {
-      minutes +=
-        Math.max(
-          0,
-          resolveAssumedQuantity(
-            scenario.assumptions,
-            line.key,
-            service.service_id,
-            window.index,
-          ),
-        ) * 60;
-    }
-    demandMinutesByPeriod.set(window.index, Math.round(minutes));
-  }
-
-  const timeline = simulatePrepaidBlockTimeline({
-    config,
-    periods: invoicePeriods.map((window) => ({
-      index: window.index,
-      startDate: window.startDate,
-      endDateExclusive: window.endDateExclusive,
-    })),
-    contractStartDate,
-    contractEndDate,
-    demandMinutesByPeriod,
-  });
-
-  for (const [periodIndex, demand] of demandMinutesByPeriod) {
-    const overage = timeline.overageMinutesByPeriod.get(periodIndex) ?? 0;
-    demandCoverage.set(
-      periodIndex,
-      demand > 0 ? Math.max(0, Math.min(1, (demand - overage) / demand)) : 0,
-    );
-  }
-
-  const hours = config.block_minutes / 60;
-  const rate = Math.round(config.block_price / hours);
-  const taxInfo = taxPorts.getTaxInfoFromService({
-    service_id: soldAs.service_id,
-    tax_rate_id: soldAs.tax_rate_id,
-  });
-  const taxRegion =
-    taxInfo.taxRegion ?? taxPorts.getClientDefaultTaxRegionCode(client.client_id);
-
-  for (const issue of timeline.issues) {
-    const accumulator = periodAccumulators[issue.periodIndex];
-    let taxAmount = 0;
-    let taxRate = 0;
-    if (!client.is_tax_exempt && taxInfo.isTaxable && taxRegion) {
-      const result = taxPorts.calculateTax(
-        client.client_id,
-        config.block_price,
-        issue.issueDate,
-        taxRegion,
-        true,
-        currencyCode,
-      );
-      taxAmount = result.taxAmount;
-      taxRate = result.taxRate;
-    }
-    const blockCharge: IPrepaidBlockCharge = {
-      type: "prepaid_block",
-      tenant,
-      issuance_id: `sim-issuance:${line.key}:${issue.blockOrdinal}`,
-      contract_line_id: line.key,
-      client_contract_line_id: line.key,
-      client_contract_id: scenario.contract_id,
-      contract_name: scenario.name,
-      serviceId: soldAs.service_id,
-      serviceName: `${soldAs.service_name} - prepaid block (${formatHours(hours)} h, ${issue.trigger.replace("_", " ")})`,
-      block_minutes: config.block_minutes,
-      block_price: config.block_price,
-      currency_code: currencyCode,
-      expiry_months: config.expiry_months,
-      scope_service_ids: line.services.map((service) => service.service_id),
-      quantity: hours,
-      rate,
-      total: config.block_price,
-      tax_amount: taxAmount,
-      tax_rate: taxRate,
-      tax_region: taxRegion ?? undefined,
-      is_taxable: taxInfo.isTaxable,
-      servicePeriodStart: issue.issueDate,
-      servicePeriodEnd: accumulator.window.endDateExclusive,
-      billingTiming: "advance",
-    };
-    accumulator.supplementalCharges.push(blockCharge);
-  }
-
-  for (const draw of timeline.draws) {
-    const accumulator = periodAccumulators[draw.periodIndex];
-    const drawCharge: IHourBlockCharge = {
-      type: "hour_block",
-      tenant,
-      block_id: `sim-block:${line.key}:${draw.blockOrdinal}`,
-      client_contract_line_id: line.key,
-      serviceId: soldAs.service_id,
-      serviceName: `${soldAs.service_name} - block draw (block ${draw.blockOrdinal})`,
-      hoursUsed: draw.minutes / 60,
-      hoursRemaining: draw.remainingMinutes / 60,
-      coveredEntryIds: [],
-      quantity: draw.minutes / 60,
-      rate: 0,
-      total: 0,
-      tax_amount: 0,
-      tax_rate: 0,
-      servicePeriodStart: accumulator.window.startDate,
-      servicePeriodEnd: accumulator.window.endDateExclusive,
-      billingTiming: "arrears",
-    };
-    accumulator.supplementalCharges.push(drawCharge);
-  }
-
-  for (const forfeiture of timeline.forfeitures) {
-    diagnostics.push({
-      severity: "info",
-      line_key: line.key,
-      message: `Block ${forfeiture.blockOrdinal} expires on ${forfeiture.date} with ${formatHours(forfeiture.minutes / 60)} h unused, which are forfeited.`,
-    });
-  }
-
-  return { demandCoverage };
 }
 
 /* ------------------------------------------------------------------ */
@@ -1056,282 +509,58 @@ function buildResolvedContractLineFacts(
 }
 
 /* ------------------------------------------------------------------ */
-/* Pricing schedules                                                  */
+/* Result assembly                                                    */
 /* ------------------------------------------------------------------ */
 
 /**
- * Mirrors the engine's load-phase pricing-schedule selection: among schedules
- * overlapping the due service period (effective_date < servicePeriodEndExclusive
- * AND (end_date null OR end_date > servicePeriodStartExclusive)) the latest
- * effective_date wins; its custom_rate applies only when non-null (a null-rate
- * latest schedule does NOT fall back to earlier schedules, matching the
- * engine's `.first()` + null check). Otherwise the assignment custom rate.
+ * The quantity an invoice line shows. Bucket charges leave `quantity`
+ * undefined for hour pools (canonical quantity 1), so the displayed quantity
+ * comes from the bucket facts with the rule invoices use
+ * (invoiceGeneration getChargeQuantity). Presentation only: the canonical
+ * line and the engine's output are untouched.
  */
-function resolveEffectiveCustomRate(
-  schedules: ScenarioPricingSchedule[],
-  line: ScenarioLine,
-  timing: ResolvedBillingTiming,
-): {
-  effectiveCustomRate: number | null;
-  customRateSource: "pricing_schedule" | "assignment" | null;
-} {
-  const periodStart = toPlainDate(timing.servicePeriodStartExclusive);
-  const periodEndExclusive = toPlainDate(timing.servicePeriodEndExclusive);
-
-  const latest = selectActivePricingSchedule(
-    schedules.map((schedule) => ({
-      schedule_id: null,
-      contract_line_id: null,
-      effective_date: schedule.effective_date,
-      end_date: schedule.end_date,
-      custom_rate: schedule.custom_rate,
-    })),
-    line.key,
-    { start: periodStart.toString(), end: periodEndExclusive.toString() },
-  );
-
-  if (latest && latest.custom_rate != null) {
-    return {
-      effectiveCustomRate: Number(latest.custom_rate),
-      customRateSource: "pricing_schedule",
-    };
+/**
+ * The wording the engine persists for the prepaid-block family (block fee and
+ * the time billed over a cadence block), from the one shared helper, so
+ * "Compare with past invoices" pairs simulated lines with issued ones.
+ */
+function presentedBlockDescription(
+  description: string,
+  sourceCharge: IBillingCharge | undefined,
+): string {
+  if (sourceCharge?.type === "prepaid_block") {
+    return prepaidBlockFeeDescription({
+      name: sourceCharge.serviceName,
+      hours: (sourceCharge as IPrepaidBlockCharge).quantity,
+    });
   }
-
-  if (line.custom_rate != null) {
-    return {
-      effectiveCustomRate: line.custom_rate,
-      customRateSource: "assignment",
-    };
+  if (
+    sourceCharge?.type === "time" &&
+    (sourceCharge as ITimeBasedCharge).overPrepaidBlock
+  ) {
+    return overPrepaidBlockDescription(sourceCharge.serviceName);
   }
-
-  return { effectiveCustomRate: null, customRateSource: null };
+  return description;
 }
 
-/* ------------------------------------------------------------------ */
-/* Fixed charges                                                      */
-/* ------------------------------------------------------------------ */
-
-interface SimulateFamilyInput {
-  scenario: ContractScenario;
-  line: ScenarioLine;
-  client: SimulationBillingClient;
-  lineFacts: ResolvedContractLineFacts;
-  billingPeriod: IBillingPeriod;
-  timing: ResolvedBillingTiming;
-  taxPorts: ResolvedChargeTaxPolicy;
-  currencyCode: string;
-  lineCycle: string;
-  accumulator: SimulationCalculationPeriodInput;
-}
-
-const isUnit = (service: ScenarioLineService): boolean =>
-  service.configuration.configuration_type === "Fixed" &&
-  service.configuration.pricing_basis === "unit";
-
-async function simulateFixedCharges(
-  input: SimulateFamilyInput & { fixedServices: ScenarioLineService[] },
-): Promise<void> {
-  const {
-    scenario,
-    line,
-    fixedServices,
-    client,
-    lineFacts,
-    billingPeriod,
-    timing,
-    taxPorts,
-    currencyCode,
-    lineCycle,
-    accumulator,
-  } = input;
-
-  const planServices = fixedServices.map((service) => {
-    if (service.configuration.configuration_type !== "Fixed") {
-      throw new Error(
-        `Service ${service.service_id} passed to fixed simulation is not Fixed`,
-      );
-    }
-    return {
-      service_id: service.service_id,
-      service_name: service.service_name,
-      default_rate: service.default_rate,
-      tax_rate_id: service.tax_rate_id,
-      config_id: syntheticConfigId(line.key, service.service_id),
-      // Per-unit members keep their raw quantity (0 is an explicit zero);
-      // every other fixed member keeps the >= 1 clamped quantity.
-      configuration_quantity: isUnit(service)
-        ? (service.configuration_quantity ?? service.quantity)
-        : service.quantity,
-      service_base_rate: service.configuration.base_rate,
-      base_rate_basis: service.configuration.base_rate_basis ?? null,
-      pricing_basis: isUnit(service) ? "unit" : null,
-    };
-  });
-
-  const { effectiveCustomRate, customRateSource } = resolveEffectiveCustomRate(
-    scenario.pricing_schedules,
-    line,
-    timing,
-  );
-
-  const obligationId = `fixed:${line.key}:${timing.servicePeriodStart}`;
-  addSimulationFacts(
-    accumulator,
-    obligationId,
-    {
-      kind: "fixed",
-      line: lineFacts,
-      client: { clientId: client.client_id, isTaxExempt: client.is_tax_exempt },
-      billingPeriod,
-      timing,
-      contractLine: {
-        type: line.contract_line_type,
-        customRate: line.custom_rate,
-        enableProration: line.enable_proration,
-      },
-      effectiveCustomRate,
-      customRateSource,
-      services: planServices.map((service) => ({
-        serviceId: service.service_id,
-        serviceName: service.service_name,
-        defaultRate: service.default_rate,
-        taxRateId: service.tax_rate_id,
-        configurationId: service.config_id,
-        configurationQuantity: service.configuration_quantity,
-        baseRate: service.service_base_rate,
-        baseRateBasis: service.base_rate_basis,
-        pricingBasis: service.pricing_basis,
-      })),
-      // The scenario carries the full service list; there is no separate
-      // catalog fallback row to load for a hypothetical line.
-      fallbackService: null,
-    },
-    taxPorts,
-    { lineCycle, quantityLabel: cadenceQuantityLabel(lineCycle) },
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Hourly charges                                                     */
-/* ------------------------------------------------------------------ */
-
-async function simulateHourlyCharges(
-  input: SimulateFamilyInput & {
-    hourlyServices: ScenarioLineService[];
-    diagnostics: SimulationDiagnostic[];
-    /**
-     * Prepaid Block lines: share of this period's assumed hours that blocks
-     * absorb (0-1). Only the remainder bills at the hourly (overage) rate.
-     */
-    coveredByBlock?: number | null;
-  },
-): Promise<void> {
-  const {
-    scenario,
-    line,
-    hourlyServices,
-    client,
-    lineFacts,
-    billingPeriod,
-    timing,
-    taxPorts,
-    currencyCode,
-    lineCycle,
-    accumulator,
-    diagnostics,
-  } = input;
-
-  const periodIndex = accumulator.window.index;
-  const timeEntries = [] as Array<ReturnType<typeof buildSyntheticTimeEntry>>;
-
-  for (const service of hourlyServices) {
-    const assumedHours =
-      resolveAssumedQuantity(
-        scenario.assumptions,
-        line.key,
-        service.service_id,
-        periodIndex,
-      ) *
-      (1 - Math.min(1, Math.max(0, input.coveredByBlock ?? 0)));
-    if (!(assumedHours > 0)) {
-      continue;
-    }
-
-    if (!hasResolvableHourlyRate(service)) {
-      if (!diagnostics.some((diagnostic) => diagnostic.line_key === line.key && diagnostic.message.startsWith(`${service.service_name} has no ${currencyCode} hourly rate`))) {
-        diagnostics.push({
-          severity: "warning",
-          line_key: line.key,
-          message: `${service.service_name} has no ${currencyCode} hourly rate, so its hours are omitted. Add a catalog or service rate to include it.`,
-        });
-      }
-      continue;
-    }
-
-    timeEntries.push(
-      buildSyntheticTimeEntry({
-        line,
-        service,
-        periodIndex,
-        assumedHours,
-        servicePeriodStart: timing.servicePeriodStart,
-      }),
-    );
+function presentedQuantity(
+  canonicalLine: { chargeFamily: string; quantity: number },
+  sourceCharge: IBillingCharge | undefined,
+): number {
+  if (
+    canonicalLine.chargeFamily === "hourBlockDraw" &&
+    sourceCharge?.type === "hour_block"
+  ) {
+    return (sourceCharge as IHourBlockCharge).hoursUsed;
   }
-
-  if (timeEntries.length === 0) {
-    return;
+  if (canonicalLine.chargeFamily !== "bucket" || sourceCharge?.type !== "bucket") {
+    return canonicalLine.quantity;
   }
-
-  const obligationId = `hourly:${line.key}:${timing.servicePeriodStart}`;
-  const configs = buildHourlyServiceConfigMap(line);
-  addSimulationFacts(
-    accumulator,
-    obligationId,
-    {
-      kind: "hourly",
-      line: lineFacts,
-      client: { clientId: client.client_id, isTaxExempt: client.is_tax_exempt },
-      billingPeriod,
-      timing,
-      overtime: {
-        enabled: line.enable_overtime,
-        threshold: line.overtime_threshold,
-        rate: line.overtime_rate,
-      },
-      serviceConfigurations: Array.from(configs, ([serviceId, value]) => ({
-        serviceId,
-        configurationId: value.config.config_id,
-        hourlyRate: value.config.hourly_rate,
-        minimumBillableTime: value.config.minimum_billable_time,
-        roundUpToNearest: value.config.round_up_to_nearest,
-        userTypeRates: Array.from(value.userTypeRates, ([userType, rate]) => ({
-          userType,
-          rate,
-        })),
-      })),
-      activity: timeEntries.map((entry) => ({
-        sourceId: entry.entry_id,
-        userId: entry.user_id,
-        userType: entry.user_type,
-        start: entry.start_time.toISOString(),
-        end: entry.end_time.toISOString(),
-        serviceId: entry.service_id,
-        serviceName: entry.service_name,
-        taxRateId: entry.tax_rate_id,
-        customRate: entry.custom_rate,
-        currencyRate: entry.currency_rate,
-        billableMinutes: entry.billable_duration,
-      })),
-    },
-    taxPorts,
-    { lineCycle, quantityLabel: "hrs" },
-  );
+  const bucket = sourceCharge as IBucketCharge;
+  return bucket.isUsageBucket
+    ? (bucket.overageUnits ?? bucket.quantity ?? 0)
+    : bucket.overageHours;
 }
-
-/* ------------------------------------------------------------------ */
-/* Result assembly                                                    */
-/* ------------------------------------------------------------------ */
 
 export function buildSimulatedPeriod(
   accumulator: SimulationCalculationPeriodInput,
@@ -1344,30 +573,39 @@ export function buildSimulatedPeriod(
   const obligationById = new Map(
     obligations.map((obligation) => [obligation.obligationId, obligation]),
   );
+  // The resolver's canonical line carries the scenario line (contractLineId);
+  // comparison pairs on the saved contract line that scenario line came from.
+  const originByScenarioLine = new Map(
+    (scenario.lines ?? []).map((scenarioLine) => [
+      scenarioLine.key,
+      scenarioLine.origin_contract_line_id ?? null,
+    ]),
+  );
   const presentationLines: SimulatedInvoiceLine[] = calculation.lines.map(
-    (canonicalLine) => {
+    (canonicalLine, lineIndex) => {
       const obligation = obligationById.get(canonicalLine.obligationId);
       const unit = obligation?.metadata?.quantityLabel;
-      const supplemental = canonicalLine.obligationId.startsWith("supplemental:")
-        ? accumulator.supplementalCharges[
-            Number(canonicalLine.obligationId.split(":")[1])
-          ]
-        : undefined;
+      const displayQuantity = presentedQuantity(
+        canonicalLine,
+        // sourceCharges and lines keep the same order (calculateContractBilling).
+        calculation.sourceCharges[lineIndex],
+      );
       const blockLine =
-        supplemental?.type === "prepaid_block"
+        canonicalLine.chargeFamily === "prepaidBlock" ||
+        canonicalLine.chargeFamily === "cadencePrepaidBlock"
           ? ("prepaid_block" as const)
-          : supplemental?.type === "hour_block"
+          : canonicalLine.chargeFamily === "hourBlockDraw"
             ? ("block_draw" as const)
             : null;
       const quantityLabel = blockLine
-        ? `${formatHours(canonicalLine.quantity)} hrs`
+        ? `${formatHours(displayQuantity)} hrs`
         : canonicalLine.chargeFamily === "discount"
           ? "discount"
           : canonicalLine.chargeFamily === "adjustment"
             ? "adjustment"
             : unit?.includes("month")
               ? unit
-              : `${formatHours(canonicalLine.quantity)} ${unit ?? resolveUnitOfMeasure({ fallback: 'C62' }).pluralLabel}`;
+              : `${formatHours(displayQuantity)} ${unit ?? resolveUnitOfMeasure({ fallback: 'C62' }).pluralLabel}`;
       const adjustmentIndex =
         canonicalLine.chargeFamily === "adjustment" && !blockLine
           ? Number(canonicalLine.lineKey.split(":")[1])
@@ -1386,16 +624,21 @@ export function buildSimulatedPeriod(
             : canonicalLine.chargeFamily);
       return {
         line_key: canonicalLine.lineKey,
+        origin_contract_line_id: canonicalLine.contractLineId
+          ? (originByScenarioLine.get(canonicalLine.contractLineId) ?? null)
+          : null,
         service_id: canonicalLine.serviceId ?? null,
-        service_name: blockLine
-          ? blockLine === "prepaid_block"
-            ? `Prepaid block issued - ${canonicalLine.description}`
-            : `Block draw - ${canonicalLine.description}`
-          : canonicalLine.description,
+        service_name:
+          blockLine === "block_draw"
+            ? `Block draw - ${canonicalLine.description}`
+            : presentedBlockDescription(
+                canonicalLine.description,
+                calculation.sourceCharges[lineIndex],
+              ),
         charge_type: chargeType,
         quantity_label: quantityLabel,
         rate_label: formatCents(canonicalLine.unitRate, scenario.currency_code),
-        quantity: canonicalLine.quantity,
+        quantity: displayQuantity,
         unit_price: canonicalLine.unitRate,
         net_amount: canonicalLine.netAmount,
         tax_amount: canonicalLine.taxAmount,
@@ -1465,7 +708,7 @@ export function buildSimulatedPeriod(
       invoiceNumber: `SIM-${scenario.scenario_id}-${window.index + 1}`,
       issueDate: window.startDate,
       dueDate: endInclusive,
-      currencyCode: scenario.currency_code || "USD",
+      currencyCode: scenario.currency_code,
       poNumber: null,
       tenantClient: invoiceParties.tenantClient,
       customer: invoiceParties.customer,
@@ -1497,28 +740,18 @@ export function buildSimulatedPeriod(
 /* Formatting                                                         */
 /* ------------------------------------------------------------------ */
 
-function formatCents(cents: number, currencyCode: string): string {
-  return new Intl.NumberFormat("en-US", {
+/** Minor units in the currency's own digits (JPY has none, KWD has three). */
+function formatCents(minorUnits: number, currencyCode: string): string {
+  const formatter = new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: currencyCode || "USD",
-  }).format(cents / 100);
+    currency: currencyCode,
+  });
+  const digits = formatter.resolvedOptions().maximumFractionDigits ?? 2;
+  return formatter.format(minorUnits / 10 ** digits);
 }
 
 function formatHours(hours: number): string {
   return Number.isInteger(hours) ? String(hours) : hours.toFixed(2);
-}
-
-function cadenceQuantityLabel(lineCycle: string): string {
-  switch (lineCycle) {
-    case "quarterly":
-      return "3 months";
-    case "semi-annually":
-      return "6 months";
-    case "annually":
-      return "12 months";
-    default:
-      return "1 month";
-  }
 }
 
 function formatPeriodLabel(

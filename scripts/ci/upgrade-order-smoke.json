@@ -1,0 +1,10 @@
+{
+  "comment": "Baseline-release vitest suites (paths at the baseline commit) run against the PR schema. A path missing at the baseline is a config error, never a silent skip. Suites that call db.migrate.latest() themselves (e.g. contractAssignmentLookup.postDrop) are unsuitable: they migrate with the CE-only default directory.",
+  "tests": [
+    "server/src/test/integration/commentModelThreading.integration.test.ts",
+    "server/src/test/integration/clientOpenTicketCounts.integration.test.ts",
+    "server/src/test/integration/autoCloseTickets.integration.test.ts",
+    "server/src/test/integration/T043b.timeSheetApprove.integration.test.ts",
+    "server/src/test/integration/invoiceTicketImmutable.integration.test.ts"
+  ]
+}

@@ -31,6 +31,10 @@ vi.mock('@alga-psa/billing/actions/contractLineSemanticsActions', () => ({
   setUsageMeasurementMode: vi.fn(),
   getNextContractServiceBoundary: vi.fn(async () => null),
 }));
+vi.mock('@alga-psa/billing/actions/contractLineSaveAction', () => ({
+  saveContractLineEdit: vi.fn(async () => ({ status: 'saved', version: 'v2', rematerialized: false })),
+  getContractLineEditVersion: vi.fn(async () => 'v1'),
+}));
 vi.mock('@alga-psa/billing/actions/contractLineAction', () => ({
   hasContractLineProtectedHistory: vi.fn(async () => false),
   updateContractLine: vi.fn(),
@@ -135,6 +139,7 @@ const translate = (key: string, options?: Record<string, unknown>) => {
 };
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: translate }),
+  useOptionalI18n: () => null,
   useFormatters: () => ({
     formatCurrency: (amount: number, currencyCode: string) => `${currencyCode} ${amount.toFixed(2)}`,
     formatDate: (v: unknown) => String(v),

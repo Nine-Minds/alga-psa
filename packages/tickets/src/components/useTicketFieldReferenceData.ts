@@ -10,6 +10,7 @@ import { getTicketStatuses } from '@alga-psa/reference-data/actions/status-actio
 import { getAllBoards } from '../actions/board-actions';
 import { getTicketCategoriesByBoard } from '../actions/ticketCategoryActions';
 import { getChecklistTemplates } from '../actions/checklists/checklistTemplateActions';
+import { isChecklistTemplateInScopeForClient } from '@alga-psa/shared/lib/ticketChecklists/scope';
 import { unwrapRecurring } from './recurring/recurringUi';
 
 /** What depends on the selected board: its statuses, its priority set and its categories. */
@@ -19,13 +20,34 @@ export interface TicketBoardReference {
   categories: ITicketCategory[];
 }
 
+export interface TicketReferenceChecklistTemplate {
+  template_id: string;
+  name: string;
+  client_id: string | null;
+  client_name: string | null;
+}
+
+/**
+ * Templates offerable for a ticket of `clientId`: tenant-wide ones plus that client's own.
+ * When no single client is known (ticket templates, multi-client recurring defaults) pass
+ * null/undefined: client-scoped templates are EXCLUDED, since applying one to a ticket of another
+ * client is refused at apply time and the picker must not offer what cannot be applied.
+ */
+export function checklistTemplatesForClient(
+  templates: TicketReferenceChecklistTemplate[],
+  clientId: string | null | undefined
+): TicketReferenceChecklistTemplate[] {
+  return templates.filter((template) => isChecklistTemplateInScopeForClient(template.client_id, clientId));
+}
+
 export interface TicketFieldReferenceData {
   loading: boolean;
   error: string | null;
   users: IUser[];
   teams: ITeam[];
   boards: IBoard[];
-  checklistTemplates: Array<{ template_id: string; name: string }>;
+  /** Active templates with their scope: `client_id` null = tenant-wide. Use `checklistTemplatesForClient` to filter. */
+  checklistTemplates: TicketReferenceChecklistTemplate[];
   /** Per-board data, keyed by board id; filled by `ensureBoard`. */
   boardData: Record<string, TicketBoardReference>;
   /** Load (once) the statuses/priorities/categories of a board. */
@@ -70,6 +92,8 @@ export function useTicketFieldReferenceData(): TicketFieldReferenceData {
           checklistTemplates: unwrapRecurring(templates).map((template) => ({
             template_id: template.template_id,
             name: template.name,
+            client_id: template.client_id ?? null,
+            client_name: template.client_name ?? null,
           })),
         });
       } catch (error) {

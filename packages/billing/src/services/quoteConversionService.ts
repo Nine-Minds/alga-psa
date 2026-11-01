@@ -1,3 +1,4 @@
+import { transitionQuoteStatus } from '@alga-psa/shared/lib/quotes/quoteLifecycleEvents';
 import type { Knex } from 'knex';
 import type {
   IContract,
@@ -7,16 +8,28 @@ import type {
   ISalesOrder,
   ISalesOrderLine,
   QuoteConversionPreview,
+  QuoteConversionPreviewDiscount,
   QuoteConversionPreviewItem,
 } from '@alga-psa/types';
 import { Temporal } from '@js-temporal/polyfill';
-import { tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
+import { tenantDb, withTransaction, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { resolveUnitOfMeasure } from '@alga-psa/core/unitOfMeasure';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { isPendingOptional, isQuoteItemIncluded } from '../lib/quoteItemInclusion';
-import { allocateIncludedQuoteDiscounts } from '../lib/quoteTotals';
-import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
+import { resolveFixedMemberRatePair } from '@alga-psa/shared/billingClients/fixedMemberRate';
+import { resolveInvoiceBillingTerms } from '../lib/billing/invoiceDueDate';
+import {
+  allocatedOneTimeAmountFor,
+  allocatedReductionForBase,
+  getSelectedOneTimeItems,
+  getSelectedRecurringItems,
+  insertContractLineDiscounts,
+  planContractLineDiscounts,
+  resolveQuoteDiscountConversionShares,
+  summarizeContractSide,
+  type QuoteDiscountConversionShare,
+} from '@alga-psa/shared/billingClients/quoteConversionDiscounts';
 import Contract from '../models/contract';
 import Quote from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
@@ -208,43 +221,6 @@ function toIntegerCents(value: unknown): number | null {
   return Math.round(numberValue);
 }
 
-export interface QuoteDiscountConversionShare {
-  recurringAmount: number;
-  onetimeAmount: number;
-  /** Allocations landing on one-time base rows (baseItemId -> amount). */
-  onetimeByBase: Map<string, number>;
-}
-
-/**
- * Resolve every quote discount to the share of its reduction that lands on
- * recurring versus one-time base rows, using the same shared allocation the
- * quote document adapter, the editor and the persisted recalculation use
- * (`quoteTotals`): included rows only — required rows and optional rows the
- * customer selected — so what converts is exactly what was quoted and
- * accepted. Conversion must never apply a whole persisted discount to a
- * one-time invoice when part of that discount reduces a recurring service.
- */
-function resolveQuoteDiscountConversionShares(items: IQuoteItem[]): Map<string, QuoteDiscountConversionShare> {
-  const allocation = allocateIncludedQuoteDiscounts(items, (item) => item.quote_item_id);
-  const shares = new Map<string, QuoteDiscountConversionShare>();
-  for (const result of allocation.discounts) {
-    const onetimeByBase = new Map<string, number>();
-    let onetimeAmount = 0;
-    for (const itemAllocation of result.allocations) {
-      if (itemAllocation.isRecurring) continue;
-      onetimeByBase.set(itemAllocation.baseItemId, itemAllocation.amount);
-      onetimeAmount += itemAllocation.amount;
-    }
-    shares.set(result.discountId, {
-      recurringAmount: result.recurringAmount,
-      onetimeAmount,
-      onetimeByBase,
-    });
-  }
-
-  return shares;
-}
-
 /**
  * A recurring item with no catalog service becomes a Fixed line with a recurring amount and
  * nothing to bill it on; the billing engine refuses such a line (FIXED_LINE_NO_SERVICES), and
@@ -252,70 +228,6 @@ function resolveQuoteDiscountConversionShares(items: IQuoteItem[]): Map<string, 
  */
 function serviceLessRecurringMessage(item: IQuoteItem): string {
   return `Recurring item "${item.description}" must reference a catalog service before contract conversion`;
-}
-
-function getSelectedRecurringItems(items: IQuoteItem[] = []): IQuoteItem[] {
-  return items.filter((item) => {
-    if (!item.is_recurring || item.is_discount) {
-      return false;
-    }
-
-    return isQuoteItemIncluded(item);
-  });
-}
-
-function getSelectedOneTimeItems(items: IQuoteItem[] = []): IQuoteItem[] {
-  const shares = resolveQuoteDiscountConversionShares(items);
-  const includedItems = items.filter((item) => {
-    if (item.is_recurring) {
-      return false;
-    }
-
-    return isQuoteItemIncluded(item);
-  });
-
-  return includedItems.filter((item) => {
-    if (!item.is_discount) {
-      return true;
-    }
-
-    return (shares.get(item.quote_item_id)?.onetimeAmount ?? 0) > 0;
-  });
-}
-
-/**
- * Sum a discount's allocated one-time reduction over the given base rows.
- * Used to size invoice/sales-order discount entries from allocation shares
- * instead of whole persisted amounts.
- */
-function allocatedOneTimeAmountFor(
-  shares: Map<string, QuoteDiscountConversionShare>,
-  discountItemId: string,
-  baseItemIds: Set<string>
-): number {
-  const share = shares.get(discountItemId);
-  if (!share) return 0;
-  let total = 0;
-  for (const [baseItemId, amount] of share.onetimeByBase) {
-    if (baseItemIds.has(baseItemId)) {
-      total += amount;
-    }
-  }
-  return total;
-}
-
-/**
- * Total discount reduction allocated to one base row across every discount.
- */
-function allocatedReductionForBase(
-  shares: Map<string, QuoteDiscountConversionShare>,
-  baseItemId: string
-): number {
-  let total = 0;
-  for (const share of shares.values()) {
-    total += share.onetimeByBase.get(baseItemId) ?? 0;
-  }
-  return total;
 }
 
 type ProductPriceRow = { quantity: number; unit_price: number };
@@ -575,6 +487,28 @@ export async function buildQuoteConversionPreview(
     : [];
   const excludedItems: QuoteConversionPreviewItem[] = [];
 
+  // The recurring share of every discount lands on the converted contract as a
+  // visible line discount (see shared quoteConversionDiscounts), so those
+  // discounts belong on the contract side, never in `excluded_items`.
+  const plannedDiscounts = planContractLineDiscounts(quoteItems);
+  const carriedDiscountIds = new Set(plannedDiscounts.map((entry) => entry.quoteDiscountItemId));
+  const recurringById = new Map(recurringItems.map((item) => [item.quote_item_id, item] as const));
+  const contractDiscounts: QuoteConversionPreviewDiscount[] = plannedDiscounts.map((entry) => {
+    const source = quoteItems.find((item) => item.quote_item_id === entry.quoteDiscountItemId);
+    const line = recurringById.get(entry.baseQuoteItemId);
+    return {
+      quote_item_id: entry.quoteDiscountItemId,
+      line_quote_item_id: entry.baseQuoteItemId,
+      description: source?.description ?? entry.discountName,
+      line_description: line?.description ?? '',
+      discount_type: entry.discountType,
+      percentage: entry.percentage,
+      amount: entry.reductionCents,
+      billing_frequency: entry.billingFrequency,
+    };
+  });
+  const contractSide = summarizeContractSide(quoteItems, plannedDiscounts);
+
   for (const item of quoteItems) {
     if (recurringIds.has(item.quote_item_id)) {
       if (!item.service_id) {
@@ -601,11 +535,15 @@ export async function buildQuoteConversionPreview(
       if (salesOrder && allocatedOneTimeAmountFor(shares, item.quote_item_id, productBaseIds) > 0) {
         continue;
       }
+      if (carriedDiscountIds.has(item.quote_item_id)) {
+        // Listed in `contract_discounts`; nothing remains for the invoice.
+        continue;
+      }
       excludedItems.push(
         previewItem(
           item,
           'excluded',
-          'Discount reduces recurring items only and is excluded from one-time conversion',
+          'Discount does not reduce any converted item',
         )
       );
       continue;
@@ -631,11 +569,11 @@ export async function buildQuoteConversionPreview(
     if (isPendingOptional(item)) {
       reason = 'Optional item was not selected by the client';
     } else if (item.is_discount && item.is_recurring) {
-      reason = 'Recurring discount lines are excluded from contract conversion';
+      reason = 'Recurring discount rows are not converted as their own line; the discount is applied through the items it targets';
     } else if (item.is_recurring && !item.service_id) {
       reason = 'Recurring items must reference a catalog service before contract conversion';
     } else if (item.is_discount) {
-      reason = 'Discount line does not apply to any converted one-time item';
+      reason = 'Discount does not reduce any converted item';
     }
 
     excludedItems.push(toPreviewItem(item, 'excluded', reason, lookupName(item)));
@@ -659,6 +597,9 @@ export async function buildQuoteConversionPreview(
     contract_blocked_reason: contractBlockedReason,
     contract_blocked_item_description: contractBlockedItemDescription,
     contract_items: contractItems,
+    contract_discounts: contractBlockedReason ? [] : contractDiscounts,
+    contract_monthly_before_discounts: contractSide.monthlyBeforeDiscountsCents,
+    contract_monthly_total: contractSide.monthlyTotalCents,
     invoice_items: invoiceItems,
     sales_order_items: salesOrderItems,
     excluded_items: excludedItems,
@@ -668,7 +609,7 @@ export async function buildQuoteConversionPreview(
   };
 }
 
-export async function convertQuoteToDraftContract(
+async function convertQuoteToDraftContractRecords(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quoteId: string,
@@ -684,7 +625,7 @@ export async function convertQuoteToDraftContract(
     throw new Error('Quote templates cannot be converted to contracts');
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted to contracts');
   }
 
@@ -818,12 +759,15 @@ export async function convertQuoteToDraftContract(
       fixedConfigRows.map(({ configId, item, isUnitPriced }) => ({
         tenant,
         config_id: configId,
-        // Unit rows: base_rate is the rate per unit; the quantity is on the configuration row.
-        // Bundle rows: the member's share of the line total (the whole of it, one member per line).
-        base_rate: isUnitPriced ? item.unit_price : bundleLineTotal(item, productServiceIds),
-        // Unit rows and products are per unit; a bundle row is the whole line total (its share).
-        base_rate_basis:
-          isUnitPriced || isProductQuoteItem(item, productServiceIds) ? 'per_unit' : 'share',
+        ...resolveFixedMemberRatePair({
+          // Unit rows: base_rate is the rate per unit; the quantity is on the configuration row.
+          // Bundle rows: the member's share of the line total (the whole of it, one member per line).
+          base_rate: isUnitPriced ? item.unit_price : bundleLineTotal(item, productServiceIds),
+          // Unit rows and products are per unit; a bundle row is the whole line total (its share).
+          base_rate_basis:
+            isUnitPriced || isProductQuoteItem(item, productServiceIds) ? 'per_unit' : 'share',
+          pricing_basis: isUnitPriced ? 'unit' : 'bundle',
+        }),
         // Bundle rows are written exactly as before (column defaults).
         ...(isUnitPriced ? { pricing_basis: 'unit', rate_provenance: 'custom' } : {}),
         created_at: nowIso,
@@ -882,18 +826,29 @@ export async function convertQuoteToDraftContract(
 
   const clientContractId = uuidv4();
   const effectiveTimeZone = await resolveEffectiveTimeZone(knexOrTrx, tenant);
+  const clientContractStartDate = toDateOnlyInTimeZone(quote.accepted_at || quote.quote_date || nowIso, effectiveTimeZone);
   await db.table('client_contracts').insert({
     tenant,
     client_contract_id: clientContractId,
     client_id: quote.client_id,
     contract_id: contract.contract_id,
-    start_date: toDateOnlyInTimeZone(quote.accepted_at || quote.quote_date || nowIso, effectiveTimeZone),
+    start_date: clientContractStartDate,
     end_date: null,
     // Draft contracts keep an inactive assignment until Set to Active; lines are always enabled.
-    // LEVERAGE: pattern quote-to-contract-conversion — workflow runtime duplicates packages/billing quoteConversionService; this bug had to be fixed twice
     is_active: false,
     created_at: nowIso,
     updated_at: nowIso,
+  });
+
+  // The accepted discounts' recurring share, as visible per-line discounts.
+  await insertContractLineDiscounts(knexOrTrx, tenant, {
+    clientContractId,
+    startDate: clientContractStartDate,
+    contractLineIdByBaseQuoteItemId: new Map(
+      contractLineMappings.map(({ item, contractLineId }) => [item.quote_item_id, contractLineId] as const),
+    ),
+    planned: planContractLineDiscounts(quote.quote_items ?? [], billingFrequency),
+    nowIso,
   });
 
   await db.table('quotes')
@@ -925,7 +880,7 @@ export async function convertQuoteToDraftContract(
   };
 }
 
-export async function convertQuoteToDraftSalesOrder(
+async function convertQuoteToDraftSalesOrderRecords(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quoteId: string,
@@ -941,7 +896,7 @@ export async function convertQuoteToDraftSalesOrder(
     throw new Error('Quote templates cannot be converted to sales orders');
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted to sales orders');
   }
 
@@ -1071,7 +1026,12 @@ export async function convertQuoteToDraftSalesOrder(
   };
 }
 
-export async function convertQuoteToDraftInvoice(
+/** timestamptz columns come back from pg as Date at runtime despite the string typing. */
+function toIsoString(value: string | Date): string {
+  return value instanceof Date ? value.toISOString() : value;
+}
+
+async function convertQuoteToDraftInvoiceRecords(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quoteId: string,
@@ -1087,7 +1047,7 @@ export async function convertQuoteToDraftInvoice(
     throw new Error('Quote templates cannot be converted to invoices');
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted to invoices');
   }
 
@@ -1160,13 +1120,28 @@ export async function convertQuoteToDraftInvoice(
 
   const invoiceId = uuidv4();
   const db = tenantDb(knexOrTrx, tenant);
+  // Header and charges bill the same profile, so resolve it once, before the
+  // insert. A quote-converted charge has no contract line and no work item, so
+  // the chain terminates immediately at the client default (F032). Terms
+  // resolve profile first, then client. invoice_date is a full timestamp;
+  // the due date is computed from its UTC calendar date.
+  const invoiceDate = toIsoString(quote.accepted_at || quote.quote_date || nowIso);
+  const billingTerms = await resolveInvoiceBillingTerms(
+    knexOrTrx,
+    tenant,
+    quote.client_id,
+    invoiceDate,
+  );
+  const quoteBillingProfileId = billingTerms.billingProfileId;
   await db.table('invoices').insert({
     tenant,
     invoice_id: invoiceId,
     client_id: quote.client_id,
     po_number: quote.po_number ?? null,
-    invoice_date: quote.accepted_at || quote.quote_date || nowIso,
-    due_date: quote.accepted_at || quote.quote_date || nowIso,
+    invoice_date: invoiceDate,
+    due_date: billingTerms.dueDate,
+    payment_method: billingTerms.paymentMethod,
+    billing_profile_id: billingTerms.billingProfileId,
     subtotal: 0,
     tax: 0,
     total_amount: 0,
@@ -1179,13 +1154,6 @@ export async function convertQuoteToDraftInvoice(
   });
 
   const invoiceItemIdsByQuoteItemId = new Map<string, string>();
-  // A quote-converted charge has no contract line and no work item, so the
-  // chain terminates immediately at the client default (F032).
-  const quoteBillingProfileId = await getClientDefaultBillingProfileId(
-    knexOrTrx,
-    tenant,
-    quote.client_id,
-  );
 
   /**
    * Converts a quote row into an invoice charge. Discount rows are always
@@ -1331,7 +1299,7 @@ export async function convertQuoteToDraftInvoice(
   };
 }
 
-export async function convertQuoteToDraftContractAndInvoice(
+async function convertQuoteToDraftContractAndInvoiceRecords(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   quoteId: string,
@@ -1343,7 +1311,7 @@ export async function convertQuoteToDraftContractAndInvoice(
     throw new Error(`Quote ${quoteId} not found in tenant ${tenant}`);
   }
 
-  if (quote.status !== 'accepted') {
+  if (quote.status !== 'accepted' && quote.status !== 'converted') {
     throw new Error('Only accepted quotes can be converted');
   }
 
@@ -1358,30 +1326,8 @@ export async function convertQuoteToDraftContractAndInvoice(
     throw new Error('Quote must contain both recurring and one-time items to convert to both records');
   }
 
-  const contractResult = await convertQuoteToDraftContract(knexOrTrx, tenant, quoteId, performedBy);
-  const invoiceResult = await convertQuoteToDraftInvoice(knexOrTrx, tenant, quoteId, performedBy);
-  const nowIso = new Date().toISOString();
-
-  await tenantDb(knexOrTrx, tenant).table('quotes')
-    .where({ quote_id: quoteId })
-    .update({
-      status: 'converted',
-      converted_at: nowIso,
-      updated_by: performedBy ?? quote.updated_by ?? quote.created_by ?? null,
-      updated_at: nowIso,
-    });
-
-  await QuoteActivity.create(knexOrTrx, tenant, {
-    quote_id: quoteId,
-    activity_type: 'converted',
-    description: 'Quote converted to both a draft contract and a draft invoice',
-    performed_by: performedBy ?? null,
-    metadata: {
-      contract_id: contractResult.contract.contract_id,
-      invoice_id: invoiceResult.invoice.invoice_id,
-    },
-  });
-
+  const contractResult = await convertQuoteToDraftContractRecords(knexOrTrx, tenant, quoteId, performedBy);
+  const invoiceResult = await convertQuoteToDraftInvoiceRecords(knexOrTrx, tenant, quoteId, performedBy);
   const refreshedQuote = await Quote.getById(knexOrTrx, tenant, quoteId);
 
   return {
@@ -1390,4 +1336,85 @@ export async function convertQuoteToDraftContractAndInvoice(
     invoice: invoiceResult.invoice,
     clientContractId: contractResult.clientContractId,
   };
+}
+
+/** Create the destination records and complete one atomic quote conversion. */
+export async function convertQuoteToDraftContract(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  performedBy?: string | null,
+): Promise<QuoteToContractConversionResult> {
+  return withTransaction(knexOrTrx, async (trx) => {
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first();
+    const result = await convertQuoteToDraftContractRecords(trx, tenant, quoteId, performedBy);
+    const quote = await transitionQuoteStatus(trx, tenant, quoteId, 'converted', {
+      reason: 'Quote converted to draft destination records',
+      activity: { activity_type: 'converted', metadata: {} },
+      actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
+    });
+    return { ...result, quote: { ...result.quote, ...quote } };
+  });
+}
+
+/** Create the destination records and complete one atomic quote conversion. */
+export async function convertQuoteToDraftInvoice(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  performedBy?: string | null,
+): Promise<QuoteToInvoiceConversionResult> {
+  return withTransaction(knexOrTrx, async (trx) => {
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first();
+    const result = await convertQuoteToDraftInvoiceRecords(trx, tenant, quoteId, performedBy);
+    const quote = await transitionQuoteStatus(trx, tenant, quoteId, 'converted', {
+      reason: 'Quote converted to draft destination records',
+      activity: { activity_type: 'converted', metadata: {} },
+      actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
+    });
+    return { ...result, quote: { ...result.quote, ...quote } };
+  });
+}
+
+/** Create the destination records and complete one atomic quote conversion. */
+export async function convertQuoteToDraftContractAndInvoice(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  performedBy?: string | null,
+): Promise<QuoteToBothConversionResult> {
+  return withTransaction(knexOrTrx, async (trx) => {
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first();
+    const result = await convertQuoteToDraftContractAndInvoiceRecords(trx, tenant, quoteId, performedBy);
+    const quote = await transitionQuoteStatus(trx, tenant, quoteId, 'converted', {
+      reason: 'Quote converted to draft destination records',
+      activity: { activity_type: 'converted', metadata: {} },
+      actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
+    });
+    return { ...result, quote: { ...result.quote, ...quote } };
+  });
+}
+
+/** Create the destination records and complete one atomic quote conversion. */
+export async function convertQuoteToDraftSalesOrder(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  performedBy?: string | null,
+): Promise<QuoteToSalesOrderConversionResult> {
+  return withTransaction(knexOrTrx, async (trx) => {
+    await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first();
+    const result = await convertQuoteToDraftSalesOrderRecords(trx, tenant, quoteId, performedBy);
+    const quote = await transitionQuoteStatus(trx, tenant, quoteId, 'converted', {
+      reason: 'Quote converted to draft destination records',
+      activity: { activity_type: 'converted', metadata: {} },
+      actor: performedBy ? { actorType: 'USER', actorUserId: performedBy } : { actorType: 'SYSTEM' },
+      patch: { converted_at: result.quote.converted_at ?? new Date().toISOString(), updated_by: performedBy ?? null },
+      details: { salesOrderId: result.salesOrder.so_id },
+    });
+    return { ...result, quote: { ...result.quote, ...quote } };
+  });
 }

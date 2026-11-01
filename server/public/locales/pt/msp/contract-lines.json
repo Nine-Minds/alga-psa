@@ -135,7 +135,6 @@
         "overtime": {
           "enableLabel": "Habilitar taxas de horas extras",
           "rateHelp": "Taxa aplicada após o limite.",
-          "rateLabel": "Taxa de horas extras ($/hora)",
           "thresholdHelp": "Horas antes da aplicação do OT.",
           "thresholdLabel": "Limite de horas extras (horas/período)",
           "thresholdPlaceholder": "40",
@@ -375,7 +374,6 @@
     },
     "hourlyConfig": {
       "labels": {
-        "hourlyRate": "Taxa horária ($)",
         "minimumBillableTime": "Tempo mínimo faturável (minutos)",
         "roundUpToNearest": "Arredondar para o mais próximo (minutos)"
       },
@@ -398,7 +396,6 @@
           "technician": "Técnico"
         },
         "perHourSuffix": "/hora",
-        "rateSrLabel": "Taxa ($/hora)",
         "selectTypePlaceholder": "Selecione o tipo",
         "tooltip": "Defina diferentes taxas horárias para tipos específicos de usuários que trabalham neste serviço. Eles substituem a taxa horária padrão do serviço.",
         "userTypeSrLabel": "Tipo de usuário",
@@ -822,7 +819,8 @@
       "notAllowed": "Um dos valores da linha de contrato não é permitido. Revise o formulário e tente novamente.",
       "missingField": "Falta um campo obrigatório da linha de contrato.",
       "missingFieldNamed": "Falta um campo obrigatório da linha de contrato: {{field}}.",
-      "advanceTimingNotAllowed": "A faturação antecipada só está disponível para linhas de contrato fixas. As linhas por hora e por utilização são sempre faturadas após o período, depois de o trabalho ser realizado."
+      "advanceTimingNotAllowed": "A faturação antecipada só está disponível para linhas de contrato fixas. As linhas por hora e por utilização são sempre faturadas após o período, depois de o trabalho ser realizado.",
+      "versionConflict": "Esta linha de contrato foi alterada por outra pessoa desde que você começou a editar. Recarregue-a e aplique sua edição novamente."
     },
     "templateLine": {
       "unavailable": "A linha de modelo selecionada não está mais disponível. Atualize a página e tente novamente."

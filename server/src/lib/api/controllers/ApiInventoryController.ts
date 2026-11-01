@@ -3,6 +3,10 @@ import { ZodError } from 'zod';
 import { ApiBaseController } from './ApiBaseController';
 import { InventoryService } from '../services/InventoryService';
 import { runWithTenant } from '../../db';
+import { hasPermission } from '../../auth/rbac';
+import { resolveAssetAuthorizationRecords } from '@alga-psa/assets/lib/assetReadAuthorization';
+import { authorizeApiResourceRead } from './authorizationKernel';
+import type { InventoryLookupAssetAuthorizer } from '../services/InventoryService';
 import {
   createPaginatedResponse,
   createSuccessResponse,
@@ -73,15 +77,44 @@ export class ApiInventoryController extends ApiBaseController {
       if (!id) throw new ValidationError(`${key} is required`);
       return id;
     } catch (error) {
-      if (error instanceof ZodError) throw new ValidationError('Invalid route parameter', error.errors);
+      if (error instanceof ZodError) throw new ValidationError('Invalid route parameter', error.issues);
       throw error;
     }
+  }
+
+  /**
+   * Scanned assets are only visible to callers with `asset:read` that also pass
+   * the asset record-level authorization. The permission check short-circuits so
+   * callers without it never trigger per-row work.
+   */
+  private buildAssetLookupAuthorizer(request: AuthenticatedApiRequest): InventoryLookupAssetAuthorizer {
+    const { user, tenant, apiKeyId } = request.context;
+    return async (trx, assets) => {
+      if (assets.length === 0 || !(await hasPermission(user, 'asset', 'read', trx))) {
+        return [];
+      }
+      const records = await resolveAssetAuthorizationRecords(trx, tenant, assets as any);
+      const readable: typeof assets = [];
+      // LEVERAGE: pattern authorize-records-one-by-one — per-row kernel calls; a batch authorizeResources would remove N kernel round trips.
+      for (const asset of assets) {
+        const recordContext = records.get(asset.asset_id);
+        if (!recordContext) continue;
+        if (await authorizeApiResourceRead({ knex: trx, tenant, user, apiKeyId, resource: 'asset', recordContext })) {
+          readable.push(asset);
+        }
+      }
+      return readable;
+    };
   }
 
   lookup() {
     return this.execute('read', async (request) => {
       const query = this.validateQuery(request, inventoryLookupQuerySchema);
-      const result = await this.inventoryService.lookup(query.code, request.context);
+      const result = await this.inventoryService.lookup(
+        query.code,
+        request.context,
+        this.buildAssetLookupAuthorizer(request),
+      );
       return createSuccessResponse(result, 200, undefined, request);
     });
   }

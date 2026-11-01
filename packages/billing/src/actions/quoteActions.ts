@@ -1,6 +1,7 @@
 'use server';
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Quote lifecycle spans opportunities/documents in server action context */
 
+import { isMspPrincipalUserType } from '@alga-psa/types';
 import Handlebars from 'handlebars';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
@@ -20,6 +21,7 @@ import { decideQuote } from '../services/quoteDecisionService';
 import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate, formatQuoteDate } from '../lib/quote-email-templates';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { mapLoadedQuoteToViewModel } from '../lib/adapters/quoteAdapters';
+import { buildTenantPortalUrl } from '@alga-psa/tenancy/server';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, type QuoteApprovalWorkflowSettings } from '../lib/quoteApprovalSettings';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
@@ -538,6 +540,18 @@ const resolveQuoteRecipientLocale = async (
   } catch {
     // A locale lookup must never block sending the quote itself.
     return 'en';
+  }
+};
+
+// Deep link to the quote in the client portal, on the tenant's portal origin
+// (active custom domain, else the configured public base URL). Undefined when
+// no public origin exists, so the email goes out without a link.
+const buildQuotePortalLink = async (tenant: string, quoteId: string): Promise<string | undefined> => {
+  try {
+    return (await buildTenantPortalUrl(tenant, `/client-portal/billing/quotes/${encodeURIComponent(quoteId)}`)) ?? undefined;
+  } catch {
+    // A link lookup must never block sending the quote itself.
+    return undefined;
   }
 };
 
@@ -1125,7 +1139,7 @@ export const createQuoteFromTemplate = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     const template = await assertQuoteReadAllowedForMutation(
       trx,
       tenant,
@@ -1213,7 +1227,7 @@ export const duplicateQuote = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     const sourceQuote = await assertQuoteReadAllowedForMutation(
       trx,
       tenant,
@@ -1288,7 +1302,7 @@ export const saveQuoteAsTemplate = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     const sourceQuote = await assertQuoteReadAllowedForMutation(
       trx,
       tenant,
@@ -1366,7 +1380,7 @@ export const createQuoteRevision = withAuth(async (
     quoteId,
     'Permission denied: Cannot update quote'
   );
-  return await knex.transaction((trx) => Quote.createRevision(trx, tenant, quoteId, getActorUserId(user)));
+  return await withTransaction(knex, (trx) => Quote.createRevision(trx, tenant, quoteId, getActorUserId(user)));
   });
 });
 
@@ -1452,7 +1466,7 @@ export const getQuoteApprovalSettings = withAuth(async (
 
   const currentUserIsSoleApprover =
     settings.approvalRequired &&
-    (user as any).user_type !== 'client' &&
+    isMspPrincipalUserType((user as any).user_type) &&
     await hasPermission(user as any, 'quotes', 'approve') &&
     await allowSelfQuoteApproval(knex, tenant, (user as any).user_id);
 
@@ -1731,8 +1745,7 @@ export const sendQuote = withAuth(async (
     if (recipients.length > 0) {
       emailRecipients = recipients;
       const companyName = tenantParty?.name || 'Your Company';
-      const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
+      const portalLink = await buildQuotePortalLink(tenant, quote.quote_id);
       const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
       const renderedEmail = await renderQuoteEmail({
         knex,
@@ -1832,8 +1845,7 @@ export const resendQuote = withAuth(async (
     if (recipients.length > 0) {
       emailRecipients = recipients;
       const companyName = tenantParty?.name || 'Your Company';
-      const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
+      const portalLink = await buildQuotePortalLink(tenant, quote.quote_id);
       const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
       const renderedEmail = await renderQuoteEmail({
         knex,
@@ -1929,8 +1941,7 @@ export const sendQuoteReminder = withAuth(async (
     if (recipients.length > 0) {
       emailRecipients = recipients;
       const companyName = tenantParty?.name || 'Your Company';
-      const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-      const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
+      const portalLink = await buildQuotePortalLink(tenant, quote.quote_id);
       const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
       const renderedEmail = await renderQuoteEmail({
         knex,
@@ -2049,7 +2060,7 @@ export const convertQuoteToContract = withAuth(async (
     'Permission denied: Cannot convert quote'
   );
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     return convertQuoteToDraftContract(trx, tenant, quoteId, getActorUserId(user));
   });
   });
@@ -2090,7 +2101,7 @@ export const convertQuoteToSalesOrder = withAuth(async (
     'Permission denied: Cannot convert quote'
   );
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     const result = await convertQuoteToDraftSalesOrder(trx, tenant, quoteId, getActorUserId(user));
     return {
       quote: result.quote,
@@ -2130,7 +2141,7 @@ export const convertQuoteToInvoice = withAuth(async (
     'Permission denied: Cannot convert quote'
   );
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     return convertQuoteToDraftInvoice(trx, tenant, quoteId, getActorUserId(user));
   });
   });
@@ -2165,7 +2176,7 @@ export const convertQuoteToBoth = withAuth(async (
     'Permission denied: Cannot convert quote'
   );
 
-  return await knex.transaction(async (trx) => {
+  return await withTransaction(knex, async (trx) => {
     const result = await convertQuoteToDraftContractAndInvoice(trx, tenant, quoteId, getActorUserId(user));
     return {
       quote: result.quote,

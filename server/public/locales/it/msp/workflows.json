@@ -881,6 +881,7 @@
       "add": "Aggiungi",
       "remove": "Rimuovi",
       "empty": "Nessuna mappatura.",
+      "nameRequired": "Inserisci un nome per questa mappatura.",
       "expressionLabel": "Espressione"
     },
     "schemaForm": {
@@ -1478,6 +1479,9 @@
         "contains": "contiene",
         "starts_with": "inizia con",
         "ends_with": "termina con",
+        "not_contains": "non contiene",
+        "not_starts_with": "non inizia con",
+        "not_ends_with": "non termina con",
         "is_empty": "è vuoto",
         "is_not_empty": "non è vuoto"
       },

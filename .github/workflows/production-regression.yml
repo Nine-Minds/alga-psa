@@ -30,8 +30,6 @@ jobs:
       should_run: ${{ steps.select.outputs.should_run }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -62,6 +60,13 @@ jobs:
 
   browser:
     uses: ./.github/workflows/e2e-fresh-install-tests.yaml
+    # The browser lane hands candidate images between its jobs through the
+    # GitHub Container Registry; a fork's read-only token silently keeps it on
+    # archive artifacts. Granted here, not workflow-wide, so the other lanes
+    # never hold a package-writing token.
+    permissions:
+      contents: read
+      packages: write
     secrets: inherit
 
   temporal:

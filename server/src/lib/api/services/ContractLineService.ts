@@ -95,6 +95,8 @@ function normalizeContractLineCompatibility<T extends { service_category?: unkno
 }
 
 const PREPAID_BLOCK_API_COLUMNS = [
+  'issue_mode',
+  'rollover_periods',
   'block_minutes',
   'block_price',
   'sold_as_service_id',
@@ -227,6 +229,36 @@ export interface PlanTemplate {
   created_at: string;
   updated_at: string;
   tenant: string;
+}
+
+/**
+ * Select expressions for a contract's top-level `start_date` / `end_date`.
+ *
+ * Dates are an assignment property: UI-created contracts store them on
+ * `client_contracts`, not `contracts`. The contract resource reports the envelope
+ * over its assignments (earliest start, latest end; MIN/MAX ignore NULLs) and
+ * falls back to the contract's own stored dates only when it has no assignments
+ * (REST-created, unassigned contracts). The query must GROUP BY the contract key
+ * and left-join `client_contracts` under `clientContractAlias`.
+ *
+ * Any single-contract read (e.g. a future GET /contracts/{id}) must reuse this
+ * helper so list and detail cannot disagree.
+ */
+export function contractAssignmentPeriodSelects(
+  knex: Knex,
+  contractAlias = 'c',
+  clientContractAlias = 'cc'
+): Knex.Raw[] {
+  return [
+    knex.raw(
+      `CASE WHEN COUNT(??.contract_id) = 0 THEN ??.start_date ELSE MIN(??.start_date) END as start_date`,
+      [clientContractAlias, contractAlias, clientContractAlias]
+    ),
+    knex.raw(
+      `CASE WHEN COUNT(??.contract_id) = 0 THEN ??.end_date ELSE MAX(??.end_date) END as end_date`,
+      [clientContractAlias, contractAlias, clientContractAlias]
+    ),
+  ];
 }
 
 export class ContractLineService extends BaseService<IContractLine> {
@@ -1024,8 +1056,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         'c.status',
         'c.is_active',
         'c.is_template',
-        'c.start_date',
-        'c.end_date',
+        ...contractAssignmentPeriodSelects(knex),
         'c.created_at',
         'c.updated_at',
         'c.tenant',

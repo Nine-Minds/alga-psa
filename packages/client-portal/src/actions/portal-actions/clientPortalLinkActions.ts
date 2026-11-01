@@ -1,8 +1,7 @@
 'use server';
 
 import logger from '@alga-psa/core/logger';
-import { createTenantKnex } from '@alga-psa/db';
-import { getPortalDomain } from '@alga-psa/client-portal/models/PortalDomainModel';
+import { resolveTenantAppBase } from '@alga-psa/tenancy/server';
 import { getTenantSlugForTenant } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 
@@ -20,17 +19,15 @@ export const getTenantPortalLoginLink = withAuth(async (
   _user,
   { tenant }
 ): Promise<TenantPortalLinkActionResult> => {
-  const { knex } = await createTenantKnex();
-
   const tenantSlug = await getTenantSlugForTenant(tenant);
   try {
-    const portalDomain = await getPortalDomain(knex, tenant);
+    const resolved = await resolveTenantAppBase(tenant, 'client_portal');
 
-    if (portalDomain && portalDomain.status === 'active' && portalDomain.domain) {
+    if (resolved.source === 'vanity') {
       return {
         success: true,
         data: {
-          url: `https://${portalDomain.domain}/auth/client-portal/signin`,
+          url: `${resolved.baseUrl}/auth/client-portal/signin`,
           source: 'vanity',
           tenantSlug,
         },

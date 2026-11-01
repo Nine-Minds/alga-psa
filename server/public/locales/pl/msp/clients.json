@@ -346,7 +346,20 @@
     "inboundDomainAutoCreateHelp": "Przypisane domeny mogą tworzyć kontakt dla zaufanego nowego nadawcy.",
     "inboundDomainAutoCreateUpdated": "Zaktualizowano ustawienie kontaktów nadawców.",
     "inboundDomainAutoCreateUpdateFailed": "Nie udało się zaktualizować ustawienia kontaktów nadawców.",
-    "recurringTickets": "Zgłoszenia cykliczne"
+    "recurringTickets": "Zgłoszenia cykliczne",
+    "software": "Oprogramowanie",
+    "checklistsTab": "Listy kontrolne",
+    "checklists": {
+      "name": "Nazwa",
+      "items": "Pozycje",
+      "status": "Status",
+      "active": "Aktywny",
+      "inactive": "Nieaktywny",
+      "description": "Szablony list kontrolnych oferowane tylko w zgłoszeniach tego klienta. Edytuj je w Ustawienia > Zgłoszenia > Szablony list kontrolnych.",
+      "empty": "Brak szablonów list kontrolnych specyficznych dla klienta.",
+      "loadFailed": "Nie udało się wczytać szablonów list kontrolnych",
+      "retry": "Ponów"
+    }
   },
   "clientCommandCenter": {
     "cards": {
@@ -359,7 +372,8 @@
       "people": "Osoby",
       "record": "Karta klienta",
       "service": "Serwis",
-      "timeline": "Wszystko po kolei"
+      "timeline": "Wszystko po kolei",
+      "software": "Oprogramowanie"
     },
     "csatEmpty": "Brak odpowiedzi w ankietach.",
     "discardCancel": "Edytuj dalej",
@@ -456,6 +470,12 @@
       "primary": "Główny"
     },
     "pulseError": "Nie udało się załadować podsumowania klienta.",
+    "quickLinks": {
+      "assets": "Zasoby",
+      "contacts": "Kontakty",
+      "label": "Szybkie linki",
+      "software": "Oprogramowanie"
+    },
     "rail": {
       "close": "Zamknij",
       "installBase": "Baza instalacji",
@@ -491,6 +511,15 @@
       "onTrackLeft": "SLA: pozostało {{left}}",
       "paused": "SLA wstrzymane"
     },
+    "software": {
+      "assetsMeta_few": "{{count}} zasoby",
+      "assetsMeta_many": "{{count}} zasobów",
+      "assetsMeta_one": "1 zasób",
+      "assetsMeta_other": "{{count}} zasobów",
+      "loadError": "Nie udało się wczytać inwentarza oprogramowania.",
+      "titles": "tytułów",
+      "viewAll": "Całe oprogramowanie"
+    },
     "timeline": {
       "daysAgo": "{{count}} dni temu",
       "empty": "Dla tego klienta nie zarejestrowano jeszcze niczego.",
@@ -515,7 +544,8 @@
       "ticketClosed": "Zamknięto zgłoszenie",
       "ticketOpened": "Otwarto zgłoszenie",
       "unitDelivered": "Dostarczono sprzęt"
-    }
+    },
+    "discardFeatureMessage": "W tym widoku są niezapisane zmiany. Zamknąć i odrzucić je?"
   },
   "quickAddClient": {
     "lifecycleStatus": "Cykl życia",
@@ -622,11 +652,6 @@
     "invoiceDeliveryMethod": "Sposób dostarczenia faktury",
     "invoiceTemplate": "Szablon faktury",
     "invoiceTemplateHelp": "Wybierz szablon lub użyj domyślnego",
-    "paymentTerms": {
-      "dueOnReceipt": "Termin płatności po otrzymaniu",
-      "net15": "Netto 15",
-      "net30": "Netto 30"
-    },
     "preferredPaymentMethod": "Preferowana metoda płatności",
     "defaultCurrency": "Domyślna waluta",
     "selectTaxRegion": "Wybierz region podatkowy (opcjonalnie)",
@@ -638,11 +663,6 @@
       "both": "Obydwa",
       "email": "E-mail",
       "mail": "Poczta"
-    },
-    "paymentMethods": {
-      "bankTransfer": "Przelew bankowy",
-      "check": "Sprawdzać",
-      "creditCard": "Karta kredytowa"
     },
     "paymentTermsLabel": "Warunki płatności",
     "standardTemplateLabel": "(Standardowy)",
@@ -1816,7 +1836,8 @@
     },
     "cardExpiry": ", ważna do {{month}}/{{year}}",
     "legacyPaymentTerms": "„{{value}}” nie jest rozpoznawanym warunkiem płatności i nigdy nie został zastosowany. Zapisanie spowoduje jego usunięcie.",
-    "cardOnFile": "{{type}} z końcówką {{last4}}{{expiry}}"
+    "cardOnFile": "{{type}} z końcówką {{last4}}{{expiry}}",
+    "tenantDefaultValue": "Domyślne dla organizacji: {{value}}"
   },
   "clientPrepaidBalanceAlertSettings": {
     "title": "Alerty salda przedpłaconego",
@@ -1982,6 +2003,7 @@
       "sourceAlreadyMerged": "Ten klient został już scalony z innym klientem.",
       "targetAlreadyMerged": "Klient docelowy sam został scalony z innym klientem. Scal z tamtym klientem.",
       "sourceIsTenantDefault": "Rekordu własnej organizacji nie można scalić z klientem.",
+      "sourceHasCoManagement": "Ten klient ma obszar roboczy współzarządzanego IT. Anuluj jego konfigurację lub zakończ współzarządzanie przed scaleniem.",
       "parentLinkCycle": "Ten klient jest zapisany jako podrzędny wobec scalanego, więc scalenie odwróciłoby hierarchię.",
       "invalidContractCutover": "Jedna z dat granicznych wykracza poza okres obowiązywania swojej umowy."
     },
@@ -2083,5 +2105,21 @@
     "manager": "Kierownik",
     "seesTickets": "Widzi zgłoszenia profilu",
     "editHint": "Edytuje się je przy profilu rozliczeniowym, w ustawieniach rozliczeń klienta."
+  },
+  "clientSoftware": {
+    "columns": {
+      "assets": "Zasoby",
+      "lastSeen": "Ostatnio widziano",
+      "title": "Tytuł",
+      "versions": "Wersje"
+    },
+    "empty": "Brak inwentarza oprogramowania — inwentarz jest zbierany dla każdego urządzenia",
+    "emptyAssetsLink": "Zobacz zasoby",
+    "exportCsv": "Eksportuj CSV",
+    "exportError": "Nie udało się wyeksportować inwentarza oprogramowania.",
+    "installedOn": "Zainstalowano na",
+    "loadError": "Nie udało się wczytać inwentarza oprogramowania.",
+    "moreAssets": "i {{count}} więcej (pierwsze {{limit}} według nazwy)",
+    "searchPlaceholder": "Szukaj oprogramowania..."
   }
 }

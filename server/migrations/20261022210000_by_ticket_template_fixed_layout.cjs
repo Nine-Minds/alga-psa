@@ -81,6 +81,7 @@ exports.up = async function up(knex) {
     console.log(`[by-ticket-layout] ${CODE} already has the fixed layout (0 updated)`);
     return;
   }
+  // migration-lint: allow 5 - retroactive: single-row UPDATE keyed by standard_invoice_template_code; merged before the lint existed
   await knex('standard_invoice_templates')
     .where({ standard_invoice_template_code: CODE })
     .update({ templateAst: JSON.stringify(ast) });

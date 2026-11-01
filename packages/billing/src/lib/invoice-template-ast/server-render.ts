@@ -4,9 +4,11 @@ import type { TemplateAst } from '@alga-psa/types';
 import type { TemplateEvaluationResult } from './evaluator';
 import { renderEvaluatedTemplateAst } from './react-renderer';
 import { localizeTemplateAstForLocale } from './i18nLabels';
+import { tenantDb } from '@alga-psa/db';
 import { resolveCustomPageCssFromAst, type TemplatePreviewSheet } from './printSettings';
 import { buildPreviewSheetCss, wrapInPreviewSheet } from './previewSheet';
 import { StorageProviderFactory, FileStoreModel } from '@alga-psa/storage';
+import type { FileStore } from '@alga-psa/storage';
 
 const escapeHtml = (value: string): string =>
   value
@@ -52,26 +54,65 @@ export interface TemplateHtmlDocumentOptions {
 // Image inlining
 // ---------------------------------------------------------------------------
 
-const DOC_VIEW_URL_RE = /\/api\/documents\/view\/([a-f0-9-]+)/gi;
+/**
+ * Largest single file inlined as a `data:` URI. Inlined images ride along in the
+ * HTML (and, for the portal preview, in a server-action response), and base64
+ * adds ~33%, so this stays well below typical request limits. A logo or
+ * designer image is a few hundred KB at most; 5 MiB leaves ample headroom for
+ * high-resolution letterhead art. Larger files stay as URLs.
+ */
+export const MAX_INLINED_IMAGE_BYTES = 5 * 1024 * 1024;
+
+const DOC_VIEW_ID_RE = /\/api\/documents\/view\/([a-f0-9-]+)/gi;
+// Matches the URL plus an optional query string such as `?t=...`.
+const DOC_VIEW_URL_RE = /\/api\/documents\/view\/([a-f0-9-]+)(\?[^"'\s)]*)?/gi;
+
+export interface InlineDocumentImagesOptions {
+  knex: Knex | Knex.Transaction;
+  /**
+   * When set, files are looked up with this tenant applied explicitly and a row
+   * belonging to any other tenant is ignored. `FileStoreModel.findById` scopes
+   * by the ambient tenant context rather than by the connection, so callers
+   * that run for an untrusted viewer (client portal) must pass this.
+   */
+  tenant?: string;
+  /**
+   * What the single-value helpers (inlineDocumentImageUrl,
+   * inlineTemplateImageSources) do with a document URL they could not inline.
+   * 'keep' (default) leaves the URL. 'drop' blanks it so the renderer omits the
+   * image: for a viewer the documents route would refuse (client portal), a
+   * kept URL only renders as a broken image after a 403.
+   */
+  unresolved?: 'keep' | 'drop';
+}
 
 /**
- * Find every `/api/documents/view/{fileId}` occurrence in `html`, read the
- * file directly from storage, and replace the URL with a `data:` URI.
+ * Find every `/api/documents/view/{fileId}` occurrence in `text` (HTML or any
+ * serialized value), read the file directly from storage, and replace the URL
+ * with a `data:` URI. Only `image/*` files up to MAX_INLINED_IMAGE_BYTES are
+ * inlined; anything else, and any file that cannot be resolved, stays a URL.
  */
-async function inlineDocumentImages(
-  html: string,
-  knex: Knex | Knex.Transaction,
+export async function inlineDocumentImageUrls(
+  text: string,
+  options: InlineDocumentImagesOptions,
 ): Promise<string> {
-  // Collect unique file IDs referenced in the HTML.
+  const { knex, tenant } = options;
+
+  // Collect unique file IDs referenced in the text.
   const fileIds = new Set<string>();
-  let match: RegExpExecArray | null;
-  while ((match = DOC_VIEW_URL_RE.exec(html)) !== null) {
+  for (const match of text.matchAll(DOC_VIEW_ID_RE)) {
     fileIds.add(match[1]);
   }
 
-  if (fileIds.size === 0) return html;
+  if (fileIds.size === 0) return text;
 
-  const provider = await StorageProviderFactory.createProvider();
+  let provider: Awaited<ReturnType<typeof StorageProviderFactory.createProvider>>;
+  try {
+    provider = await StorageProviderFactory.createProvider();
+  } catch {
+    // No storage available: nothing can be inlined, so every URL stays as is.
+    return text;
+  }
 
   // Resolve each file to a data URI in parallel.
   const replacements = new Map<string, string>();
@@ -79,10 +120,25 @@ async function inlineDocumentImages(
   await Promise.all(
     Array.from(fileIds).map(async (fileId) => {
       try {
-        const file = await FileStoreModel.findById(knex, fileId);
+        // LEVERAGE: friction file-store-ambient-tenant — FileStoreModel.findById scopes by ambient
+        // tenant context (AsyncLocalStorage), not by the connection/caller's tenant, so untrusted-viewer
+        // paths must bypass it and query tenantDb(knex, tenant) directly. A tenant-explicit variant belongs in the model.
+        const file = tenant
+          ? await tenantDb(knex, tenant)
+              .table<FileStore>('external_files')
+              .where({ file_id: fileId, is_deleted: false })
+              .first()
+          : await FileStoreModel.findById(knex, fileId);
         if (!file?.storage_path) return;
+        if (tenant && file.tenant !== tenant) return;
+
+        const mime = (file.mime_type || '').toLowerCase();
+        if (!mime.startsWith('image/')) return;
+        if (Number(file.file_size) > MAX_INLINED_IMAGE_BYTES) return;
+
         const buffer = await provider.download(file.storage_path);
-        const mime = file.mime_type || 'application/octet-stream';
+        // file_size is metadata; re-check the bytes actually read.
+        if (buffer.length > MAX_INLINED_IMAGE_BYTES) return;
         replacements.set(fileId, `data:${mime};base64,${buffer.toString('base64')}`);
       } catch {
         // Skip files that can't be resolved — the image will remain a URL
@@ -91,13 +147,76 @@ async function inlineDocumentImages(
     }),
   );
 
-  if (replacements.size === 0) return html;
+  if (replacements.size === 0) return text;
 
   // Replace all occurrences (including query-string variants like `?t=...`).
-  return html.replace(
-    /\/api\/documents\/view\/([a-f0-9-]+)(\?[^"'\s)]*)?/gi,
+  return text.replace(
+    DOC_VIEW_URL_RE,
     (fullMatch, id: string) => replacements.get(id) ?? fullMatch,
   );
+}
+
+// A value that is, in its entirety, a document view URL (optionally `?t=...`).
+const WHOLE_DOC_VIEW_URL_RE = /^\/api\/documents\/view\/[a-f0-9-]+(\?[^"'\s)]*)?$/i;
+
+/**
+ * Inline a single image URL field. Only a value that is *entirely* a
+ * `/api/documents/view/{id}` URL is touched; anything else is returned as is.
+ *
+ * Use this (not inlineDocumentImageUrls) for data a viewer can influence:
+ * callers pick the specific MSP-authored fields to inline, so text such as a
+ * client name or address containing a document URL is never resolved.
+ */
+export async function inlineDocumentImageUrl<T>(
+  url: T,
+  options: InlineDocumentImagesOptions,
+): Promise<T | string | null> {
+  if (typeof url !== 'string' || !WHOLE_DOC_VIEW_URL_RE.test(url)) return url;
+  let inlined: string = url;
+  try {
+    inlined = await inlineDocumentImageUrls(url, options);
+  } catch {
+    // Treated as unresolved below.
+  }
+  if (inlined === url && options.unresolved === 'drop') return null;
+  return inlined;
+}
+
+/**
+ * Inline the `src` of every image node in a template AST whose `src` is a
+ * literal document URL (what DocumentImagePickerWidget writes). No other
+ * string in the AST is touched. Returns a copy; the input is not mutated.
+ */
+export async function inlineTemplateImageSources<T>(
+  ast: T,
+  options: InlineDocumentImagesOptions,
+): Promise<T> {
+  const pending: Array<() => Promise<void>> = [];
+
+  const walk = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(walk);
+    if (value === null || typeof value !== 'object') return value;
+    const copy: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      copy[key] = walk(child);
+    }
+    if (copy.type === 'image') {
+      const src = copy.src as { type?: string; value?: unknown } | undefined;
+      if (src && src.type === 'literal' && typeof src.value === 'string' && WHOLE_DOC_VIEW_URL_RE.test(src.value)) {
+        const literal = { ...src };
+        copy.src = literal;
+        pending.push(async () => {
+          // A dropped image becomes an empty src, which the renderer omits.
+          literal.value = (await inlineDocumentImageUrl(src.value, options)) ?? '';
+        });
+      }
+    }
+    return copy;
+  };
+
+  const result = walk(ast) as T;
+  await Promise.all(pending.map((run) => run()));
+  return result;
 }
 
 // ---------------------------------------------------------------------------
@@ -167,7 +286,7 @@ ${bodyHtml}
 
   // Inline document images as base64 so Puppeteer can render them without auth.
   if (options.knex) {
-    renderedHtml = await inlineDocumentImages(renderedHtml, options.knex);
+    renderedHtml = await inlineDocumentImageUrls(renderedHtml, { knex: options.knex });
   }
 
   return renderedHtml;

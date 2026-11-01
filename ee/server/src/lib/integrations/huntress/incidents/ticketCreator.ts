@@ -11,6 +11,7 @@ import { tenantDb } from '@alga-psa/db';
 import { resolveRmmTicketContactId } from '@alga-psa/shared/rmm/alerts';
 import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 import { applyBoardDefaultWatchers } from '@alga-psa/shared/lib/tickets/boardDefaultWatchers';
+import { TicketWatcherService } from '@alga-psa/shared/services/tickets/ticketWatcherService';
 
 export interface CreateHuntressTicketParams {
   clientId: string;
@@ -88,6 +89,8 @@ export async function createHuntressTicket(
       updated_at: now,
     })
     .returning(['ticket_id', 'ticket_number']);
+
+  await TicketWatcherService.seedFromAttributes(trx, tenantId, ticket.ticket_id);
 
   if (params.assetId) {
     // asset_associations.created_by is NOT NULL with an FK to users, so a

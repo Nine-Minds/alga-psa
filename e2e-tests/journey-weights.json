@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "unit": "seconds",
+  "description": "Measured wall time per journey file, used only to balance the browser shards. Refresh with: node scripts/update-browser-journey-weights.mjs <results.json>. A stale or missing entry costs balance, never coverage.",
+  "source": "production-regression run 40827367482 (2026-10-29)",
+  "editions": {
+    "community": {
+      "e2e-tests/tests/inbound-email.spec.ts": 45,
+      "e2e-tests/tests/invoice-designer-persistence.spec.ts": 99,
+      "e2e-tests/tests/invoice-generation.spec.ts": 26,
+      "e2e-tests/tests/invoice-ticket-ownership.spec.ts": 6,
+      "e2e-tests/tests/login.spec.ts": 12,
+      "e2e-tests/tests/microsoft-calendar.spec.ts": 4,
+      "e2e-tests/tests/microsoft-mailbox.spec.ts": 18,
+      "e2e-tests/tests/microsoft-oauth-rejection.spec.ts": 5,
+      "e2e-tests/tests/microsoft-webhook-validation.spec.ts": 0,
+      "e2e-tests/tests/msp-access-redirects.spec.ts": 6,
+      "e2e-tests/tests/portal-discovery.spec.ts": 8,
+      "e2e-tests/tests/portal-identity.spec.ts": 19,
+      "e2e-tests/tests/portal-ticket-roundtrip.spec.ts": 45,
+      "e2e-tests/tests/qbo-export.spec.ts": 0,
+      "e2e-tests/tests/server-rendered-locale.spec.ts": 4,
+      "e2e-tests/tests/stripe-payment.spec.ts": 0,
+      "e2e-tests/tests/tenant-identity.spec.ts": 22,
+      "e2e-tests/tests/time-approval-invoice.spec.ts": 26,
+      "e2e-tests/tests/usage-invoice-preview.spec.ts": 15,
+      "e2e-tests/tests/xero-export.spec.ts": 0
+    },
+    "enterprise": {
+      "e2e-tests/tests/inbound-email.spec.ts": 46,
+      "e2e-tests/tests/invoice-designer-persistence.spec.ts": 103,
+      "e2e-tests/tests/invoice-generation.spec.ts": 28,
+      "e2e-tests/tests/invoice-ticket-ownership.spec.ts": 6,
+      "e2e-tests/tests/login.spec.ts": 12,
+      "e2e-tests/tests/microsoft-calendar.spec.ts": 116,
+      "e2e-tests/tests/microsoft-mailbox.spec.ts": 19,
+      "e2e-tests/tests/microsoft-oauth-rejection.spec.ts": 5,
+      "e2e-tests/tests/microsoft-webhook-validation.spec.ts": 0,
+      "e2e-tests/tests/msp-access-redirects.spec.ts": 6,
+      "e2e-tests/tests/portal-discovery.spec.ts": 8,
+      "e2e-tests/tests/portal-identity.spec.ts": 20,
+      "e2e-tests/tests/portal-ticket-roundtrip.spec.ts": 47,
+      "e2e-tests/tests/qbo-export.spec.ts": 29,
+      "e2e-tests/tests/server-rendered-locale.spec.ts": 4,
+      "e2e-tests/tests/stripe-payment.spec.ts": 15,
+      "e2e-tests/tests/tenant-identity.spec.ts": 22,
+      "e2e-tests/tests/time-approval-invoice.spec.ts": 26,
+      "e2e-tests/tests/usage-invoice-preview.spec.ts": 17,
+      "e2e-tests/tests/xero-export.spec.ts": 21
+    }
+  }
+}

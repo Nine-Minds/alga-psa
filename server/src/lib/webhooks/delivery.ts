@@ -1,5 +1,5 @@
-import { Agent, fetch } from 'undici';
-import { assertSafeWebhookTarget } from './ssrf';
+import { isGlobalUnicastAddress, type AddressPolicy } from './ssrf';
+import { sendWithValidatedRedirects } from './transport';
 
 const REQUEST_TIMEOUT_MS = 10_000;
 const MAX_CAPTURED_BODY_CHARS = 8 * 1024;
@@ -112,6 +112,15 @@ function classifyDeliveryError(error: unknown): WebhookDeliveryErrorType {
 export async function performWebhookDeliveryRequest(
   request: WebhookDeliveryRequest,
 ): Promise<WebhookDeliveryResult> {
+  return performWebhookDeliveryRequestWithPolicy(request, isGlobalUnicastAddress);
+}
+
+// Internal seam: tests inject the address policy so real loopback listeners can
+// stand in for "allowed" hops. Production always uses isGlobalUnicastAddress.
+export async function performWebhookDeliveryRequestWithPolicy(
+  request: WebhookDeliveryRequest,
+  isAddressAllowed: AddressPolicy,
+): Promise<WebhookDeliveryResult> {
   const startedAt = Date.now();
   const method = request.method.toUpperCase();
   const body =
@@ -119,32 +128,24 @@ export async function performWebhookDeliveryRequest(
       ? undefined
       : JSON.stringify(request.payload ?? {});
 
-  const dispatcher = request.verify_ssl
-    ? undefined
-    : new Agent({
-        connect: {
-          rejectUnauthorized: false,
-        },
-      });
-
   try {
-    await assertSafeWebhookTarget(request.url);
-
-    const response = await fetch(request.url, {
-      method,
-      headers: normalizeHeaders(request.headers),
-      body,
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      dispatcher,
-    });
-
-    const responseBody = truncateBody(await response.text());
+    const response = await sendWithValidatedRedirects(
+      {
+        url: request.url,
+        method,
+        headers: normalizeHeaders(request.headers),
+        body,
+        verifySsl: request.verify_ssl,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      },
+      isAddressAllowed,
+    );
 
     return {
       success: response.ok,
       status_code: response.status,
-      response_headers: Object.fromEntries(response.headers.entries()),
-      response_body: responseBody,
+      response_headers: response.headers,
+      response_body: truncateBody(response.text),
       duration_ms: Date.now() - startedAt,
     };
   } catch (error) {
@@ -159,7 +160,5 @@ export async function performWebhookDeliveryRequest(
       error_type: errorType,
       duration_ms: Date.now() - startedAt,
     };
-  } finally {
-    await dispatcher?.close();
   }
 }

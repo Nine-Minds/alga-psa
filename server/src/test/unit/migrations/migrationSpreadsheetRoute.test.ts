@@ -27,6 +27,12 @@ vi.mock('@alga-psa/db', () => ({
   })),
 }));
 
+// The route resolves the tenant's configured currency (never hardcodes USD);
+// the knex mock is `{}`, so supply a configured currency here.
+vi.mock('@alga-psa/inventory/lib/tenantCurrency', () => ({
+  resolveConfiguredTenantCurrency: vi.fn(async () => 'USD'),
+}));
+
 vi.mock('@alga-psa/storage/StorageProviderFactory', () => ({
   StorageProviderFactory: {
     createProvider: vi.fn(async () => ({

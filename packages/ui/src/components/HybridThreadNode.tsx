@@ -36,6 +36,12 @@ export interface HybridThreadNodeProps<TComment> {
    * Applies to the root level only; omit to always render every reply.
    */
   autoCollapseAfter?: number;
+  /**
+   * Deepest indent level. Replies below it render flat, in order, at that
+   * level (no further indentation or thread bar), so narrow columns keep
+   * their reading width.
+   */
+  maxIndentDepth?: number;
 }
 
 const MAX_VISUAL_DEPTH = 4;
@@ -119,6 +125,7 @@ export function HybridThreadNode<TComment>({
   onOpenPanel,
   depth = 0,
   autoCollapseAfter,
+  maxIndentDepth,
 }: HybridThreadNodeProps<TComment>): React.ReactElement | null {
   const { t } = useTranslation('common');
   const [isExpanded, setIsExpanded] = React.useState(true);
@@ -150,6 +157,31 @@ export function HybridThreadNode<TComment>({
     children.length > autoCollapseAfter;
   const visibleChildren = collapseTail ? children.slice(children.length - autoCollapseAfter) : children;
   const hiddenCount = children.length - visibleChildren.length;
+
+  if (hasChildren && typeof maxIndentDepth === 'number' && depth >= maxIndentDepth) {
+    return (
+      <div className={['hybrid-thread-node', `depth-${visualDepth}`].join(' ')}>
+        {renderComment(comment, { depth, visualDepth, hasChildren, isSubThread })}
+        {children.map((child) => {
+          const childId = getCommentId(child);
+          return (
+            <div key={childId ?? `${commentId}-${group.comments.indexOf(child)}`} className="mt-2">
+              <HybridThreadNode
+                group={group}
+                comment={child}
+                getCommentId={getCommentId}
+                renderComment={renderComment}
+                renderThreadBar={renderThreadBar}
+                onOpenPanel={onOpenPanel}
+                depth={depth}
+                maxIndentDepth={maxIndentDepth}
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     <div className={['hybrid-thread-node', `depth-${visualDepth}`].join(' ')}>
@@ -208,6 +240,7 @@ export function HybridThreadNode<TComment>({
                     onOpenPanel={onOpenPanel}
                     depth={depth + 1}
                     autoCollapseAfter={autoCollapseAfter}
+                    maxIndentDepth={maxIndentDepth}
                   />
                 );
               })}

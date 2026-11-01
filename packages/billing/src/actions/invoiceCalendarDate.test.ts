@@ -4,6 +4,7 @@ import { EmulatorHost } from '@alga-psa/emulator-host';
 import smtpSink from '../../../emulators/smtp-sink/src/index';
 
 const mocks = vi.hoisted(() => ({
+  recipientLocale: { current: 'en-US' },
   invoiceById: new Map<string, any>(),
   sender: {
     sender_id: 'sender-billing', tenant: 'tenant-test', email_address: 'accounts@billing-profile.test',
@@ -60,7 +61,9 @@ vi.mock('@alga-psa/db', () => ({
 vi.mock('@alga-psa/core/logger', () => ({ default: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('@alga-psa/storage/StorageService', () => ({ StorageService: { downloadFile: mocks.downloadFile } }));
 vi.mock('@alga-psa/notifications/notifications/emailLocaleResolver', () => ({
-  resolveEmailLocale: vi.fn(async () => 'en-US'),
+  resolveEmailLocale: vi.fn(async () => mocks.recipientLocale.current),
+  // The tenant default stays English so these tests prove the recipient's
+  // locale, not the tenant's, drives dates and amounts.
   getTenantDefaultLocale: vi.fn(async () => 'en-US'),
 }));
 vi.mock('@alga-psa/shared/billingClients/clients', () => ({
@@ -83,9 +86,11 @@ vi.mock('../services/pdfGenerationService', () => ({
 vi.mock('./invoiceQueries', () => ({
   getInvoiceForRendering: vi.fn(async (invoiceId: string) => mocks.invoiceById.get(invoiceId)),
 }));
-vi.mock('@alga-psa/tenancy/server', () => ({
+vi.mock('../../../tenancy/src/lib/portalDomainStatus', () => ({
   getPortalDomainStatusForTenant: vi.fn(async () => ({ status: 'none' })),
 }));
+// Use the real portal URL helper (its only dependency, the domain status lookup, is mocked above).
+vi.mock('@alga-psa/tenancy/server', async () => import('../../../tenancy/src/lib/tenantPortalUrl'));
 vi.mock('./paymentActions', () => ({
   getPaymentService: mocks.getPaymentService,
   expireInvoicePaymentLinksForTerminalStatus: vi.fn(),
@@ -168,6 +173,7 @@ afterAll(async () => {
 });
 
 beforeEach(async () => {
+  mocks.recipientLocale.current = 'en-US';
   mocks.invoiceById.clear();
   mocks.invoiceById.set('invoice-check', invoice('invoice-check', 'check'));
   mocks.invoiceById.set('invoice-bank', invoice('invoice-bank', 'bank_transfer'));
@@ -175,7 +181,7 @@ beforeEach(async () => {
 });
 
 describe('invoice email calendar dates and real SMTP delivery', () => {
-  it.each(['UTC', 'America/New_York', 'Asia/Tokyo'])('%s preserves dates in recipient output and delivered emails', async (timezone) => {
+  it.each(['UTC', 'America/New_York', 'America/Los_Angeles', 'Asia/Tokyo'])('%s preserves dates in recipient output and delivered emails', async (timezone) => {
     process.env.TZ = timezone;
     mocks.invoiceById.set('invoice-check', invoice('invoice-check', 'check'));
     mocks.invoiceById.set('invoice-bank', invoice('invoice-bank', 'bank_transfer'));
@@ -230,5 +236,34 @@ describe('invoice email calendar dates and real SMTP delivery', () => {
         dueDate: 'October 10, 2026',
       });
     });
+  });
+
+  it('formats the preview dates and amount in the recipient locale, not the tenant default', async () => {
+    mocks.recipientLocale.current = 'es';
+    process.env.TZ = 'America/Los_Angeles';
+    mocks.invoiceById.set('invoice-es', { ...invoice('invoice-es', 'check'), invoice_date: new Date(2026, 9, 29), due_date: '2026-10-29' });
+
+    const result = await getInvoiceEmailRecipientAction(['invoice-es']) as any;
+
+    expect(result.recipients[0]).toMatchObject({
+      invoiceDate: '29 de octubre de 2026',
+      dueDate: '29 de octubre de 2026',
+      currencyCode: 'USD',
+    });
+    // Recipient separators, invoice currency (125,00 not 125.00).
+    expect(result.recipients[0].totalAmount).toContain('125,00');
+  });
+
+  it('sends the invoice email with Spanish dates for a Spanish recipient', async () => {
+    mocks.recipientLocale.current = 'es';
+    process.env.TZ = 'America/Los_Angeles';
+    mocks.invoiceById.set('invoice-es', { ...invoice('invoice-es', 'check'), invoice_date: new Date(2026, 9, 29), due_date: new Date(2026, 9, 29) });
+
+    const sent = await sendInvoiceEmailAction(['invoice-es']) as any;
+    expect(sent).toMatchObject({ successCount: 1, failureCount: 0 });
+
+    const [email] = await capturedEmails();
+    expect(email.html).toContain('29 de octubre de 2026 / 29 de octubre de 2026');
+    expect(email.text).toContain('29 de octubre de 2026 / 29 de octubre de 2026');
   });
 });

@@ -6,12 +6,16 @@
  * optional-item selection persistence, the state transition, the `quote_decisions`
  * audit row, the QuoteActivity entry and the `onQuoteAccepted` hook.
  *
- * The transition is a single conditional UPDATE (`WHERE status = 'sent'`). A caller
- * that loses a race, or repeats a decision, gets `already_decided` and nothing is
- * written - which is what makes `onQuoteAccepted` fire exactly once.
+ * The quote row is locked (`FOR UPDATE`) before anything is read, so concurrent
+ * deciders serialise: the first one transitions `sent -> accepted|rejected`, every
+ * later one re-reads a decided quote and gets `not_pending` (or `already_decided` if
+ * the guarded transition finds it moved) with nothing written - which is what makes
+ * `onQuoteAccepted` and the QUOTE_ACCEPTED/QUOTE_REJECTED lifecycle event fire exactly
+ * once per decision.
  */
 import type { Knex } from 'knex';
 import type { IQuote, IQuoteItem, IUserWithRoles } from '@alga-psa/types';
+import type { QuoteActor, QuoteLifecycleOptions } from '@alga-psa/shared/lib/quotes/quoteLifecycleEvents';
 import { getConnection, tenantDb, withTransaction } from '@alga-psa/db';
 import { onQuoteAccepted } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 import Quote from '../models/quote';
@@ -140,7 +144,7 @@ async function persistOptionalQuoteSelections(
 }
 
 type Authorized =
-  | { ok: true; quote: IQuote }
+  | { ok: true; quote: IQuote; lifecycleActor: QuoteActor }
   | { ok: false; result: QuoteDecisionResult };
 
 async function authorizeActor(
@@ -174,7 +178,14 @@ async function authorizeActor(
           return { ok: false, result: { status: 'not_found' } };
       }
     }
-    return { ok: true, quote: access.quote };
+    return {
+      ok: true,
+      quote: access.quote,
+      // The portal user acts as their contact (same as the pre-service portal actions).
+      lifecycleActor: userRow?.contact_id
+        ? { actorType: 'CONTACT', actorContactId: userRow.contact_id }
+        : { actorType: 'USER', actorUserId: actor.userId },
+    };
   }
 
   // access_link / msp_user: the caller has authorised the actor; the service still
@@ -202,7 +213,17 @@ async function authorizeActor(
     return { ok: false, result: { status: 'not_pending', currentStatus: quote.status ?? null } };
   }
 
-  return { ok: true, quote };
+  return { ok: true, quote, lifecycleActor: lifecycleActorFor(actor) };
+}
+
+function lifecycleActorFor(actor: Exclude<QuoteDecisionActor, { kind: 'portal_user' }>): QuoteActor {
+  if (actor.kind === 'access_link') {
+    // A link without a contact (a recipient address only) has no actor id to carry.
+    return actor.contactId
+      ? { actorType: 'CONTACT', actorContactId: actor.contactId }
+      : { actorType: 'SYSTEM' };
+  }
+  return actor.userId ? { actorType: 'USER', actorUserId: actor.userId } : { actorType: 'SYSTEM' };
 }
 
 function methodFor(actor: QuoteDecisionActor): QuoteDecisionMethod {
@@ -300,6 +321,12 @@ async function decideInTransaction(
     return { status: 'forbidden', reason: 'unsupported_action' };
   }
 
+  // Serialise every decider on the quote row before reading its state.
+  await tenantDb(trx, tenantId).table('quotes')
+    .where({ quote_id: quoteId })
+    .forUpdate()
+    .first('quote_id');
+
   const authorized = await authorizeActor(trx, input);
   if ('result' in authorized) {
     return authorized.result;
@@ -309,26 +336,8 @@ async function decideInTransaction(
   const comment = trimmedOrNull(input.comment);
   const decidedAt = new Date().toISOString();
 
-  // 1. The transition. Zero rows means somebody else decided first: write nothing.
-  const transitioned = action === 'accept'
-    ? await Quote.updateIfStatus(trx, tenantId, quoteId, 'sent', {
-        status: 'accepted',
-        accepted_at: decidedAt,
-        accepted_by: userId,
-        updated_by: userId,
-      })
-    : await Quote.updateIfStatus(trx, tenantId, quoteId, 'sent', {
-        status: 'rejected',
-        rejected_at: decidedAt,
-        rejection_reason: comment,
-        updated_by: userId,
-      });
-  if (!transitioned) {
-    return { status: 'already_decided' };
-  }
-
-  // 2. Selections - only after we own the transition, so a losing caller cannot
-  // overwrite the winner's choices.
+  // 1. Selections, under the row lock and before the transition: the QUOTE_ACCEPTED
+  // event recorded by the transition reports the selected optional items.
   const selection = action === 'accept' && input.selections
     ? await persistOptionalQuoteSelections(
         trx,
@@ -338,6 +347,32 @@ async function decideInTransaction(
         input.selections.selectedOptionalQuoteItemIds,
       )
     : null;
+
+  // 2. The transition (with its lifecycle event). Null means the quote left `sent`:
+  // throw so the selection writes above roll back with it.
+  const lifecycle: QuoteLifecycleOptions = {
+    actor: authorized.lifecycleActor,
+    acceptedOnBehalf: actor.kind === 'msp_user',
+  };
+  const transitioned = action === 'accept'
+    ? await Quote.updateIfStatus(trx, tenantId, quoteId, 'sent', {
+        status: 'accepted',
+        accepted_at: decidedAt,
+        accepted_by: userId,
+        updated_by: userId,
+      }, lifecycle)
+    : await Quote.updateIfStatus(trx, tenantId, quoteId, 'sent', {
+        status: 'rejected',
+        rejected_at: decidedAt,
+        rejection_reason: comment,
+        updated_by: userId,
+      }, lifecycle);
+  if (!transitioned) {
+    if (selection) {
+      throw new QuoteAlreadyDecidedError();
+    }
+    return { status: 'already_decided' };
+  }
 
   // 3. Audit row.
   const [decision] = await tenantDb(trx, tenantId).table('quote_decisions')
@@ -404,5 +439,23 @@ export async function decideQuote(
     return decideInTransaction(trx, input);
   }
   const knex = await getConnection(input.tenantId);
-  return withTransaction(knex, (ownTrx: Knex.Transaction) => decideInTransaction(ownTrx, input));
+  try {
+    return await withTransaction(knex, (ownTrx: Knex.Transaction) => decideInTransaction(ownTrx, input));
+  } catch (error) {
+    if (error instanceof QuoteAlreadyDecidedError) {
+      return { status: 'already_decided' };
+    }
+    throw error;
+  }
+}
+
+/**
+ * The guarded transition found the quote already decided after selections were written.
+ * Unreachable while the row lock is held; thrown (not returned) so those writes roll back.
+ */
+export class QuoteAlreadyDecidedError extends Error {
+  constructor() {
+    super('Quote is not in a valid state for this action');
+    this.name = 'QuoteAlreadyDecidedError';
+  }
 }

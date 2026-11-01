@@ -35,7 +35,7 @@ export interface LayoutPresetNodeDefinition {
 }
 
 export interface LayoutPresetDefinition {
-  documentKind?: 'invoice' | 'quote' | 'sales-order' | 'work-tag';
+  documentKind?: 'invoice' | 'quote' | 'sales-order' | 'work-tag' | 'staging-manifest' | 'rma-return-slip';
   id: string;
   label: string;
   description: string;

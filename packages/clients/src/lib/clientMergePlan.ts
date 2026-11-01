@@ -17,7 +17,8 @@ export type MergeBlockerCode =
   | 'TARGET_ALREADY_MERGED'
   | 'SOURCE_IS_TENANT_DEFAULT'
   | 'PARENT_LINK_CYCLE'
-  | 'INVALID_CONTRACT_CUTOVER';
+  | 'INVALID_CONTRACT_CUTOVER'
+  | 'SOURCE_HAS_CO_MANAGEMENT';
 
 export interface MergeBlocker {
   code: MergeBlockerCode;
@@ -32,6 +33,8 @@ export interface MergeClientFacts {
   mergedIntoClientId: string | null;
   /** The tenant's own client record cannot be absorbed into a customer. */
   isTenantDefault: boolean;
+  /** A co-managed workspace provisioned for this client still holds seats. */
+  hasLiveCoManagement?: boolean;
 }
 
 export interface MergeGuardInput {
@@ -98,6 +101,15 @@ export function evaluateMergeGuards(input: MergeGuardInput): MergeBlocker[] {
       'SOURCE_IS_TENANT_DEFAULT',
       'Your own organisation record cannot be merged into a client.',
       'msp/clients:errors.clientMerge.sourceIsTenantDefault',
+    ));
+  }
+  // The co-managed setup records its client by id; merging the client away
+  // would orphan the workspace and the seats it holds.
+  if (input.source.hasLiveCoManagement) {
+    blockers.push(blocker(
+      'SOURCE_HAS_CO_MANAGEMENT',
+      'This client has a co-managed IT workspace. Cancel its setup or end co-management before merging it.',
+      'msp/clients:errors.clientMerge.sourceHasCoManagement',
     ));
   }
   // Absorbing a client into one of its own recorded children would leave the
@@ -359,9 +371,15 @@ export const CLIENT_OWNED_MOVE_TABLES: ClientOwnedMoveTable[] = [
   // members and people, which are keyed by group). This is also why a merge is
   // exempt from FR-E5's "a client change removes the asset from its group".
   { table: 'asset_groups', label: 'asset group' },
+  // Equipment custody records the owning client of the held asset. The asset
+  // moves, so its custody (open or closed) follows; one open record per asset,
+  // not per client, so a move cannot collide.
+  { table: 'asset_custody', label: 'equipment custody record' },
   { table: 'client_locations', label: 'location' },
   { table: 'client_inbound_email_domains', label: 'inbound email domain' },
   { table: 'client_name_aliases', label: 'name alias' },
+  // Client-scoped checklist templates keep applying to the surviving client's tickets.
+  { table: 'checklist_templates', label: 'checklist template' },
   { table: 'ticket_materials', label: 'ticket material' },
   { table: 'project_materials', label: 'project material' },
   { table: 'survey_invitations', label: 'survey invitation' },
@@ -489,6 +507,29 @@ export const CLIENT_KEYED_TABLES_LEFT_BEHIND: Array<{ table: string; reason: str
       + 'was discarded for this specific client. It has no live write path, and re-stamping it would '
       + 'misattribute the record (and collide with the target\'s own row on the per-client unique key).',
   },
+  {
+    table: 'co_managed_participation_evidence',
+    reason:
+      'Append-only audit of who touched shared work for this client, kept so access reduction cannot '
+      + 'erase history. participationEvidenceStore exports no update or delete and refuses a replay whose '
+      + 'content hash differs, so re-pointing client_id would break its immutability; it stays pinned to the original client.',
+  },
+  {
+    table: 'co_managed_project_task_references',
+    reason:
+      "A copy of the customer relationship's sponsor_client_id, which lives in the customer's workspace and "
+      + 'a merge here cannot re-stamp. Participation and queue lookups match the reference on that pair, so '
+      + 'moving the row would detach it from its relationship. A live relationship already refuses the merge '
+      + '(SOURCE_HAS_CO_MANAGEMENT); what remains afterwards is retained history pinned to the original client.',
+  },
+  {
+    table: 'co_managed_ticket_references',
+    reason:
+      'MSP-side routing row for a customer\'s shared ticket. Its client_id mirrors the co-management '
+      + 'relationship\'s sponsor_client_id, which the handoff engine and Working queue match it against; '
+      + 'the merge does not re-point relationships, so moving the reference alone would orphan it from '
+      + 'its relationship and drop the ticket from the queue.',
+  },
   // These columns are OAuth application identifiers (varchar/text, no foreign
   // key to `clients`). Re-stamping one would break the integration outright.
   { table: 'google_calendar_provider_config', reason: 'OAuth client id, not an Alga client.' },
@@ -535,6 +576,8 @@ export const PROFILE_HISTORY_TABLES: Array<{
   table: string;
   label: string;
   nullableBillingProfile?: boolean;
+  /** Table exists only in some editions; skipped (count 0) where it is not installed. */
+  editionOptional?: boolean;
 }> = [
   { table: 'invoices', label: 'invoice', nullableBillingProfile: true },
   { table: 'client_billing_cycles', label: 'billing cycle' },
@@ -542,4 +585,8 @@ export const PROFILE_HISTORY_TABLES: Array<{
   { table: 'transactions', label: 'transaction', nullableBillingProfile: true },
   { table: 'credit_tracking', label: 'credit', nullableBillingProfile: true },
   { table: 'client_tax_settings', label: 'tax setting' },
+  // Enterprise autopay consent hangs off the profile (PK tenant + billing_profile_id)
+  // and repeats the profile's client_id. The profile moves to the target, so the
+  // row's client_id must follow it. One row per profile, so no key collision.
+  { table: 'billing_profile_autopay', label: 'autopay authorization', editionOptional: true },
 ];

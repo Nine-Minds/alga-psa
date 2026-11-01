@@ -1,7 +1,7 @@
 'use client'
 
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, HelpCircle, ChevronDown, ArrowLeft, AlertTriangle, CheckCircle2, Settings2, Users, ListChecks, Mail, Zap, Clock, Search, Inbox, Star, LayoutGrid, EyeOff, Bell, Trash2 } from "lucide-react";
 import { IBoard, ITeam, CategoryType, PriorityType, IPriority, IUser, DeletionValidationResult, DeletionDependency, isSenderActionFailure, type SenderActionFailure } from '@alga-psa/types';
@@ -468,6 +468,28 @@ interface BoardEmailSenderRouteInput {
   displayName?: string | null;
 }
 
+// deleteBoard returns raw `counts` keyed by what it touched. These map those
+// keys onto translated, count-aware labels; anything unmapped keeps the
+// previous de-underscored fallback.
+const BOARD_DELETE_COUNT_LABEL_KEYS: Record<string, string> = {
+  categories: 'ticketing.boards.deleteDependencies.categories',
+  statuses: 'ticketing.boards.deleteDependencies.statuses',
+  auto_close_rules: 'ticketing.boards.deleteDependencies.autoCloseRules',
+  notification_rules: 'ticketing.boards.deleteDependencies.notificationRules',
+  portal_visibility_assignments: 'ticketing.boards.deleteDependencies.portalVisibility',
+  email_sender_routes: 'ticketing.boards.deleteDependencies.emailSenderRoutes',
+  ticket_templates: 'ticketing.boards.deleteDependencies.ticketTemplates',
+  recurring_ticket_definitions: 'ticketing.boards.deleteDependencies.recurringTickets',
+  checklist_template_apply_rules: 'ticketing.boards.deleteDependencies.checklistRules',
+  canned_responses: 'ticketing.boards.deleteDependencies.cannedResponses',
+};
+
+// Blocking codes whose server message has a translated counterpart.
+const BOARD_DELETE_BLOCKING_MESSAGE_KEYS: Record<string, string> = {
+  BOARD_HAS_EMAIL_SENDER_ROUTE: 'ticketing.boards.messages.error.hasEmailSenderRoute',
+  BOARD_REFERENCED_BY_AUTOMATIONS: 'ticketing.boards.messages.error.referencedByAutomations',
+};
+
 interface BoardsSettingsProps {
   /** Hide SLA configuration in AlgaDesk edition. Passed by the host page from useProduct(). */
   isAlgaDesk?: boolean;
@@ -539,6 +561,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     confirmForce?: boolean;
     confirmCleanupItil?: boolean;
     message?: string;
+    /** What the confirmed delete will remove, as returned by deleteBoard. */
+    counts?: Record<string, number>;
     blockingError?: {
       code: string;
       message: string;
@@ -550,6 +574,16 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     boardName: ''
   });
 
+  // "3 ticket statuses" / "1 auto-close rule" — the count is rendered by the
+  // caller, so the label itself is only pluralized, never interpolated.
+  const countLabel = useCallback((key: string, count: number): string => {
+    const labelKey = BOARD_DELETE_COUNT_LABEL_KEYS[key];
+    if (labelKey) {
+      return t(labelKey, { count });
+    }
+    return count === 1 ? key.replace(/_/g, ' ') : `${key.replace(/_/g, ' ')}s`;
+  }, [t]);
+
   const deleteValidation = useMemo<DeletionValidationResult | null>(() => {
     if (!deleteDialog.isOpen) {
       return null;
@@ -560,7 +594,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
         ? Object.entries(deleteDialog.blockingError.counts).map(([key, count]) => ({
             type: key,
             count,
-            label: count === 1 ? key.replace(/_/g, ' ') : `${key.replace(/_/g, ' ')}s`
+            label: countLabel(key, count)
           }))
         : [];
 
@@ -578,7 +612,16 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       dependencies: [],
       alternatives: []
     };
-  }, [deleteDialog]);
+  }, [deleteDialog, countLabel]);
+
+  // Everything the confirmed delete takes down with the board, in the order
+  // deleteBoard reported it.
+  const deleteRemovalItems = useMemo(() => (
+    Object.entries(deleteDialog.counts ?? {}).map(([key, count]) => ({
+      key,
+      text: `${count} ${countLabel(key, count)}`
+    }))
+  ), [deleteDialog.counts, countLabel]);
 
   // State for Add/Edit Dialog
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
@@ -994,12 +1037,13 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       switch (result.code) {
         case 'BOARD_HAS_CATEGORIES':
         case 'BOARD_HAS_STATUSES':
-          // Show confirmation dialog to force delete categories/statuses
+          // Show confirmation dialog to force delete everything listed in counts
           setDeleteDialog({
             ...deleteDialog,
             confirmForce: true,
             confirmCleanupItil: false,
             message: result.message,
+            counts: result.counts,
             blockingError: undefined
           });
           break;
@@ -1016,12 +1060,17 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
         case 'BOARD_HAS_TICKETS':
         case 'BOARD_IS_DEFAULT':
         case 'BOARD_USED_IN_EMAIL_ROUTING':
+        case 'BOARD_IN_CO_MANAGEMENT':
+        case 'BOARD_HAS_EMAIL_SENDER_ROUTE':
+        case 'BOARD_REFERENCED_BY_AUTOMATIONS':
           // Blocking errors - show in dialog, not toast
           setDeleteDialog({
             ...deleteDialog,
             blockingError: {
               code: result.code || 'UNKNOWN',
-              message: result.message || 'Cannot delete board',
+              message: BOARD_DELETE_BLOCKING_MESSAGE_KEYS[result.code]
+                ? t(BOARD_DELETE_BLOCKING_MESSAGE_KEYS[result.code])
+                : (result.message || 'Cannot delete board'),
               counts: result.counts
             }
           });
@@ -1816,7 +1865,19 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
         message={
           deleteDialog.confirmCleanupItil
             ? `${deleteDialog.message}\n\n${t('ticketing.boards.dialog.cleanupItilMessage')}`
-            : `${deleteDialog.message} ${t('ticketing.boards.dialog.deleteBoardMessage')}`
+            : deleteRemovalItems.length > 0
+              ? (
+                <div className="space-y-2">
+                  <p>{t('ticketing.boards.dialog.removesIntro')}</p>
+                  <ul className="list-disc pl-5">
+                    {deleteRemovalItems.map((item) => (
+                      <li key={item.key}>{item.text}</li>
+                    ))}
+                  </ul>
+                  <p>{t('ticketing.boards.dialog.deleteBoardMessage')}</p>
+                </div>
+              )
+              : `${deleteDialog.message} ${t('ticketing.boards.dialog.deleteBoardMessage')}`
         }
         confirmLabel={
           deleteDialog.confirmCleanupItil
