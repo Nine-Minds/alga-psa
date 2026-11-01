@@ -173,3 +173,24 @@ together is a validation error (`page must be 1 when cursor is supplied`).
   twice across pages. Accepted: documented in the action's `ui.description`.
 - **Callers reading `pagination.page`** — unchanged for the legacy path; cursor pages
   report `page: 1` and rely on `next_cursor`.
+
+## Draft implementation outcome
+
+- PSA spec outcome: `linked` (`alga-2026-0003026`; the workflow card already records
+  `state.psaSpecOutcome=linked`).
+- Draft status: keyset pagination, request scan/authorization budgets, and per-call
+  authorization context reuse are implemented in `crm.ts`; behavioral regression
+  coverage is in `businessOperations.crm.db.test.ts`.
+- Verification: the isolated CRM DB test file passed 14/14; ESLint completed with
+  no errors (existing warnings remain); a scoped TypeScript check covering the
+  changed implementation and DB test passed. A full server typecheck was attempted
+  but exceeded Node's 4 GB heap limit.
+- Verification note: `psa-spec-outcome-recorded` previously exited 1 without output.
+  The workflow card records that its command checks a literal `{{state.psaSpecOutcome}}`
+  case expression without substituting state, so rerunning it cannot verify the
+  existing `linked` record. The recorded outcome was rerun with the state explicitly
+  substituted (`case linked in linked|skipped-no-ticket|skipped-no-spec`) and passed;
+  the workflow verification attempt is recorded on the Draft Implementation run.
+  The underlying template interpolation defect remains for the workflow maintainer.
+- First review: cursor boundary behavior for nullable sort keys and authorization
+  exhaustion cursors; confirm the workflow verifier fix separately.

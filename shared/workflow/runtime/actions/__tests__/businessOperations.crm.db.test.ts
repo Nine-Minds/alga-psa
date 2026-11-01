@@ -735,6 +735,58 @@ describe('crm workflow runtime DB-backed action handlers', () => {
     });
     expect(foundQuotes.count).toBe(1);
     expect(foundQuotes.first_quote?.quote_id).toBe(createdQuote.quote.quote_id);
+    expect(foundQuotes.pagination).toMatchObject({ page: 1, page_size: 25, has_more: false, next_cursor: null });
+
+    await expect(invokeAction('crm.find_quotes', { page: 10_001, pageSize: 25 })).rejects.toThrow();
+    await expect(invokeAction('crm.find_quotes', { page: 2, cursor: 'not-a-cursor', pageSize: 25 })).rejects.toThrow();
+    await expect(invokeAction('crm.find_quotes', { cursor: 'not-a-cursor', pageSize: 25 })).rejects.toMatchObject({ code: 'VALIDATION_ERROR' });
+
+    const secondQuoteId = await createQuote(db, {
+      tenantId: runtimeState.tenantId,
+      actorUserId: runtimeState.actorUserId,
+      clientId,
+      title: 'Workflow Created Quote 2',
+    });
+    const sharedSortTimestamp = new Date().toISOString();
+    await tenantTable(db, runtimeState.tenantId, 'quotes')
+      .whereIn('quote_id', [createdQuote.quote.quote_id, secondQuoteId])
+      .update({ created_at: sharedSortTimestamp });
+    await tenantTable(db, runtimeState.tenantId, 'quotes')
+      .where('quote_id', secondQuoteId)
+      .update({ quote_date: null });
+    const firstCursorPage = await invokeAction('crm.find_quotes', { client_id: clientId, pageSize: 1, sortBy: 'created_at', sortOrder: 'asc' });
+    expect(firstCursorPage.quotes).toHaveLength(1);
+    expect(firstCursorPage.pagination.has_more).toBe(true);
+    expect(firstCursorPage.pagination.next_cursor).toBeTruthy();
+    const secondCursorPage = await invokeAction('crm.find_quotes', {
+      client_id: clientId,
+      pageSize: 1,
+      sortBy: 'created_at',
+      sortOrder: 'asc',
+      cursor: firstCursorPage.pagination.next_cursor,
+    });
+    expect(secondCursorPage.quotes[0].quote_id).not.toBe(firstCursorPage.quotes[0].quote_id);
+    expect([createdQuote.quote.quote_id, secondQuoteId]).toContain(secondCursorPage.quotes[0].quote_id);
+
+    const firstDescendingPage = await invokeAction('crm.find_quotes', { client_id: clientId, pageSize: 1, sortBy: 'created_at', sortOrder: 'desc' });
+    const secondDescendingPage = await invokeAction('crm.find_quotes', {
+      client_id: clientId,
+      pageSize: 1,
+      sortBy: 'created_at',
+      sortOrder: 'desc',
+      cursor: firstDescendingPage.pagination.next_cursor,
+    });
+    expect(secondDescendingPage.quotes[0].quote_id).not.toBe(firstDescendingPage.quotes[0].quote_id);
+
+    const beforeNullPage = await invokeAction('crm.find_quotes', { client_id: clientId, pageSize: 1, sortBy: 'quote_date', sortOrder: 'desc' });
+    const nullSortValuePage = await invokeAction('crm.find_quotes', {
+      client_id: clientId,
+      pageSize: 1,
+      sortBy: 'quote_date',
+      sortOrder: 'desc',
+      cursor: beforeNullPage.pagination.next_cursor,
+    });
+    expect(nullSortValuePage.quotes[0].quote_id).toBe(secondQuoteId);
 
     const submitted = await invokeAction('crm.submit_quote_for_approval', {
       quote_id: createdQuote.quote.quote_id,
@@ -781,6 +833,54 @@ describe('crm workflow runtime DB-backed action handlers', () => {
       .where({ tenant: runtimeState.tenantId, operation: 'workflow_action:crm.create_quote' })
       .first();
     expect(quoteAudit).toBeTruthy();
+  });
+
+  it('bounds legacy deep-page authorization and returns a resumable depth error', async () => {
+    const clientId = await createClient(db, runtimeState.tenantId, 'Deep Page Client');
+    const now = new Date().toISOString();
+    const rows = Array.from({ length: 130 }, (_, index) => ({
+      tenant: runtimeState.tenantId,
+      quote_id: uuidv4(),
+      quote_number: `Q-DEPTH-${index}`,
+      client_id: clientId,
+      title: `Deep page quote ${index}`,
+      description: 'Depth budget fixture',
+      quote_date: now,
+      status: 'draft',
+      version: 1,
+      subtotal: 100,
+      discount_total: 0,
+      tax: 0,
+      total_amount: 100,
+      currency_code: 'USD',
+      is_template: false,
+      created_by: runtimeState.actorUserId,
+      updated_by: runtimeState.actorUserId,
+      created_at: now,
+      updated_at: now,
+    }));
+    await tenantTable(db, runtimeState.tenantId, 'quotes').insert(rows);
+
+    let selectedQuoteRows = 0;
+    let teamMembershipLookups = 0;
+    const queryListener = (response: unknown, query: { sql?: string }) => {
+      if (/from\s+"?quotes"?/i.test(query.sql ?? '') && Array.isArray(response)) selectedQuoteRows += response.length;
+      if (/from\s+"?team_members"?/i.test(query.sql ?? '')) teamMembershipLookups += 1;
+    };
+    db.on('query-response', queryListener as any);
+    try {
+      await expect(invokeAction('crm.find_quotes', { page: 1000, pageSize: 25, client_id: clientId })).rejects.toMatchObject({
+        code: 'PAGINATION_DEPTH_EXCEEDED',
+        retryable: false,
+        details: { next_cursor: expect.any(String) },
+      });
+    } finally {
+      db.removeListener('query-response', queryListener as any);
+    }
+    expect(selectedQuoteRows).toBeLessThanOrEqual(1000);
+    // The subject resolver performs this lookup once; bundle authorization also
+    // performs one per-record lookup, so 100 checks means 101 total here.
+    expect(teamMembershipLookups).toBe(101);
   });
 
   it('T010: crm.create_quote_from_template carries authored rich terms onto the new quote', async () => {
