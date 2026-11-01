@@ -98,10 +98,14 @@ describe.skipIf(process.env.RUN_SLA_GREENMAIL_SMOKE !== '1')('live SMTP SLA esca
     expect(messageB).toBeTruthy();
     expect(JSON.stringify(messageA)).toContain('board-a-route@example.test');
     expect(JSON.stringify(messageB)).toContain('board-b-route@example.test');
+    expect(JSON.stringify(messageA)).toContain(managerAEmail);
+    expect(JSON.stringify(messageB)).toContain(managerBEmail);
     expect(escalations.map((item) => item.audit.notifications.email)).toEqual(['sent', 'sent']);
-    console.log('GreenMail SLA escalation proof', escalations.map(({ ticketId, auditLogId, audit }) => ({
+    console.log('GreenMail SLA escalation proof', escalations.map(({ ticketId, auditLogId, audit }, index) => ({
       ticketId,
       auditLogId,
+      recipient: index === 0 ? managerAEmail : managerBEmail,
+      boardFromHeader: index === 0 ? 'board-a-route@example.test' : 'board-b-route@example.test',
       status: audit.notifications.email,
       messageId: audit.notifications.emailMessageId,
     })));

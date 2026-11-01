@@ -9,6 +9,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { createRequire } from 'node:module';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../../test-utils/dbConfig';
@@ -71,6 +72,8 @@ vi.mock('server/src/lib/eventBus', () => ({
 }));
 
 const sendNotification = vi.fn(async (_params: Record<string, unknown>) => ({ status: 'sent' as const, messageId: 'smtp-message-1' }));
+const require = createRequire(import.meta.url);
+const legacyEmailAuditBackfill = require('../../../../migrations/20261101170000_backfill_legacy_sla_escalation_email_outcomes.cjs');
 
 vi.mock('@alga-psa/notifications/notifications/email', () => ({
   getEmailNotificationService: vi.fn(() => ({
@@ -232,6 +235,71 @@ describe('SLA Escalation Service Integration Tests', () => {
       auditLogId: audit.log_id,
     }));
     errorSpy.mockRestore();
+  });
+
+  it('persists a skipped result returned by the after-commit email hook', async () => {
+    const ticketId = await newTicket();
+    sendNotification.mockImplementationOnce(async () => ({ status: 'skipped', reason: 'manager email preference disabled' } as never));
+
+    await runCommitted((trx) => escalateTicket(trx, tenantId, ticketId, 1));
+    const audit = await tenantTable(db, tenantId, 'sla_audit_log')
+      .where({ ticket_id: ticketId, event_type: 'ticket_escalated' }).first();
+    const eventData = typeof audit.event_data === 'string' ? JSON.parse(audit.event_data) : audit.event_data;
+    expect(eventData.notifications).toMatchObject({
+      email: 'skipped',
+      emailReason: 'manager email preference disabled',
+    });
+  });
+
+  it('leaves the committed audit outcome queued when persisting the send result fails', async () => {
+    const ticketId = await newTicket();
+    const auditErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const suffix = uuidv4().replace(/-/g, '');
+    const functionName = `fail_sla_audit_${suffix}`;
+    const triggerName = `fail_sla_audit_trigger_${suffix}`;
+    await db.raw(`CREATE FUNCTION ${functionName}() RETURNS trigger LANGUAGE plpgsql AS $$
+      BEGIN
+        IF NEW.ticket_id = '${ticketId}' AND NEW.event_data #>> '{notifications,email}' = 'sent' THEN
+          RAISE EXCEPTION 'forced audit outcome persistence failure';
+        END IF;
+        RETURN NEW;
+      END;
+    $$`);
+    await db.raw(`CREATE TRIGGER ${triggerName} BEFORE UPDATE ON sla_audit_log FOR EACH ROW EXECUTE FUNCTION ${functionName}()`);
+    try {
+      await runCommitted((trx) => escalateTicket(trx, tenantId, ticketId, 1));
+      const audit = await tenantTable(db, tenantId, 'sla_audit_log')
+        .where({ ticket_id: ticketId, event_type: 'ticket_escalated' }).first();
+      const eventData = typeof audit.event_data === 'string' ? JSON.parse(audit.event_data) : audit.event_data;
+      expect(eventData.notifications.email).toBe('queued');
+      expect(auditErrorSpy).toHaveBeenCalledWith('Failed to persist SLA escalation email outcome', expect.objectContaining({
+        ticketId,
+        auditLogId: audit.log_id,
+      }));
+    } finally {
+      await db.raw(`DROP TRIGGER IF EXISTS ${triggerName} ON sla_audit_log`);
+      await db.raw(`DROP FUNCTION IF EXISTS ${functionName}()`);
+      auditErrorSpy.mockRestore();
+    }
+  });
+
+  it('backfills legacy true only with provider evidence and preserves unrelated JSONB data', async () => {
+    const ticketId = await newTicket();
+    const provenId = uuidv4();
+    const unknownId = uuidv4();
+    const falseId = uuidv4();
+    await tenantTable(db, tenantId, 'sla_audit_log').insert([
+      { log_id: provenId, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated', event_data: JSON.stringify({ notifications: { email: true, emailMessageId: 'smtp-proven-77' }, custom: { keep: 'yes' } }) },
+      { log_id: unknownId, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated', event_data: JSON.stringify({ notifications: { email: true }, custom: { keep: 'also' } }) },
+      { log_id: falseId, tenant: tenantId, ticket_id: ticketId, event_type: 'ticket_escalated', event_data: JSON.stringify({ notifications: { email: false }, custom: { keep: 'false' } }) },
+    ]);
+
+    await legacyEmailAuditBackfill.up(db);
+    const rows = await tenantTable(db, tenantId, 'sla_audit_log').whereIn('log_id', [provenId, unknownId, falseId]);
+    const byId = new Map(rows.map((row: any) => [row.log_id, typeof row.event_data === 'string' ? JSON.parse(row.event_data) : row.event_data]));
+    expect(byId.get(provenId)).toMatchObject({ notifications: { email: true, emailOutcome: 'sent', emailMessageId: 'smtp-proven-77' }, custom: { keep: 'yes' } });
+    expect(byId.get(unknownId)).toMatchObject({ notifications: { email: true, emailOutcome: 'queued', emailReason: expect.stringContaining('no provider message id') }, custom: { keep: 'also' } });
+    expect(byId.get(falseId)).toMatchObject({ notifications: { email: false }, custom: { keep: 'false' } });
   });
 
   it('does not create duplicates when escalating to the same level again', async () => {
