@@ -44,7 +44,7 @@ describe('McpServerSettings agent write errors', () => {
       const method = init?.method ?? 'GET';
       if (url.endsWith('/api/v1/mcp/agents') && method === 'PATCH') {
         patches.push(JSON.parse(String(init?.body)));
-        return json({ error: LIMIT_MSG, code: 'SERVICE_PRINCIPAL_LIMIT_REACHED' }, 409);
+        return json({ error: LIMIT_MSG, code: 'LIMIT_REACHED' }, 409);
       }
       if (url.endsWith('/api/v1/mcp/agents')) return json({ data: [agent] });
       if (url.endsWith('/api/v1/mcp/idp-providers')) return json({ data: [idp] });

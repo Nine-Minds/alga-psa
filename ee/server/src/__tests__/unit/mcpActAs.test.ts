@@ -62,6 +62,16 @@ describe('MCP act_as_user_id (T024)', () => {
     vi.stubGlobal('fetch', mocks.fetch);
   });
 
+  it('answers 403 (not 500) when minting is refused for an inactive agent', async () => {
+    mocks.mintAgentSessionKey.mockRejectedValue(
+      Object.assign(new Error('This agent is inactive'), { name: 'AgentInactiveError', code: 'AGENT_INACTIVE', statusCode: 403 }),
+    );
+    const res = await handleMcpJsonRpc(rpc({}));
+    expect(res.status).toBe(403);
+    expect(await res.json()).toEqual({ error: 'This agent is inactive' });
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
   it('forwards the act-as header and audits the acted-as user', async () => {
     await handleMcpJsonRpc(rpc({ act_as_user_id: HUMAN }));
     const [, init] = mocks.fetch.mock.calls[0];
