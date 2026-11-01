@@ -847,7 +847,7 @@ async function resolveBundleLoadOptions(
   /** Client readers only: how their template draws component rows, for non-template surfaces. */
   bundleRowsLayout?: InvoiceBundleRowsLayout | null;
 }> {
-  if (user.user_type !== 'client') return decideBundleLoad('msp', null);
+  if (!isClientUserType(user.user_type)) return decideBundleLoad('msp', null);
   const invoice = await tenantDb(knex, tenant).table('invoices').where({ invoice_id: invoiceId }).first('client_id');
   const { templateId, templates } = await resolveClientInvoiceTemplate(knex, tenant, invoice?.client_id);
   const template = templates.find((entry) => entry.template_id === templateId);
