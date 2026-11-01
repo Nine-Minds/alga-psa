@@ -93,22 +93,40 @@ function request(url: string, method: string, body?: unknown) {
 }
 
 describe('REST routes with real API-key authentication and authorization', () => {
-  it('reconciles team:create for existing tenants and gives only the assigned admin role that grant', async () => {
+  it('restores team:create for an existing tenant idempotently without changing custom-role assignments', async () => {
     const migration = await import('../../../../migrations/20261101120000_backfill_rest_api_permissions.cjs');
-    await migration.up(connection.db!);
-
-    const permission = await connection.db!('permissions').where({ tenant, resource: 'team', action: 'create', msp: true, client: false }).first();
-    expect(permission).toBeDefined();
-    const adminGrant = await connection.db!('role_permissions').where({ 'role_permissions.tenant': tenant, permission_id: permission.permission_id })
-      .join('roles', function joinAdmin() {
-        this.on('roles.tenant', '=', 'role_permissions.tenant').andOn('roles.role_id', '=', 'role_permissions.role_id');
-      }).where('roles.role_name', 'Admin').first();
-    expect(adminGrant).toBeDefined();
-    const technician = await connection.db!('roles').where({ tenant, role_name: 'Technician', msp: true }).first<{ role_id: string }>();
-    if (technician) {
-      expect(await connection.db!('role_permissions').where({ tenant, role_id: technician.role_id, permission_id: permission.permission_id }).first())
-        .toBeUndefined();
+    const trx = connection.db!;
+    const existingCreate = await trx('permissions').where({ tenant, resource: 'team', action: 'create', msp: true, client: false }).first<{ permission_id: string }>();
+    if (existingCreate) {
+      await trx('role_permissions').where({ tenant, permission_id: existingCreate.permission_id }).delete();
+      await trx('permissions').where({ tenant, permission_id: existingCreate.permission_id }).delete();
     }
+
+    const retainedPermission = await trx('permissions').where({ tenant, resource: 'team', action: 'read', msp: true, client: false }).first<{ permission_id: string }>();
+    if (!retainedPermission) throw new Error('The integration database has no team:read permission fixture');
+    const customRoleId = randomUUID();
+    await trx('roles').insert({ tenant, role_id: customRoleId, role_name: `Custom fixture ${customRoleId}`, description: 'Migration preservation fixture', msp: true, client: false });
+    await trx('role_permissions').insert({ tenant, role_id: customRoleId, permission_id: retainedPermission.permission_id });
+
+    await migration.up(trx);
+    await migration.up(trx);
+
+    const permissions = await trx('permissions').where({ tenant, resource: 'team', action: 'create', msp: true, client: false });
+    expect(permissions).toHaveLength(1);
+    const permission = permissions[0];
+    const grants = await trx('role_permissions')
+      .select('roles.role_name', 'roles.msp', 'roles.client', 'roles.role_id')
+      .join('roles', function joinTenantRole() {
+        this.on('roles.tenant', '=', 'role_permissions.tenant').andOn('roles.role_id', '=', 'role_permissions.role_id');
+      })
+      .where({ 'role_permissions.tenant': tenant, permission_id: permission.permission_id });
+    expect(grants.length).toBeGreaterThan(0);
+    expect(grants.every((grant: any) => grant.role_name === 'Admin' && grant.msp && !grant.client)).toBe(true);
+    expect(await trx('role_permissions').where({ tenant, role_id: customRoleId, permission_id: retainedPermission.permission_id }).first())
+      .toBeDefined();
+    expect(await trx('role_permissions').where({ tenant, role_id: customRoleId, permission_id: permission.permission_id }).first())
+      .toBeUndefined();
+
     const catalog = await import('../../../../migrations/utils/permissions/catalog.cjs');
     expect(catalog.ACTIVE_PERMISSIONS.find((entry: any) => entry.resource === 'team' && entry.action === 'create')?.defaultGrants.psa)
       .toEqual(['msp:Admin']);

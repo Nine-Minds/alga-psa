@@ -1,8 +1,25 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { withMigratedSchemaContract } from '../utils/schemaContract';
+
+const connection = vi.hoisted(() => ({ db: undefined as Knex | undefined, tenant: undefined as string | undefined }));
+
+vi.mock('@alga-psa/db', async (original) => ({
+  ...await original<typeof import('@alga-psa/db')>(),
+  getConnection: async () => connection.db!,
+  createTenantKnex: async (tenant?: string) => ({ knex: connection.db!, tenant: tenant ?? connection.tenant ?? null }),
+}));
+vi.mock('../../../../../packages/db/src/lib/tenant', async (original) => ({
+  ...await original<typeof import('../../../../../packages/db/src/lib/tenant')>(),
+  getConnection: async () => connection.db!,
+  createTenantKnex: async (tenant?: string) => ({ knex: connection.db!, tenant: tenant ?? connection.tenant ?? null }),
+}));
+vi.mock('server/src/lib/eventBus/publishers', () => ({ publishEvent: async () => undefined }));
+
+import { BoardService } from '../../../lib/api/services/BoardService';
+import { CategoryService } from '../../../lib/api/services/CategoryService';
 
 describe('REST query contracts against the migrated schema', () => {
   let db: Knex;
@@ -18,20 +35,38 @@ describe('REST query contracts against the migrated schema', () => {
   afterAll(async () => { await db?.destroy(); });
 
   it('executes the board update and both category tree scopes inside rollback transactions', async () => {
-    await withMigratedSchemaContract(db, 'board update', async (trx) => {
-      await trx('boards').where({ tenant }).update({
-        board_name: trx.ref('board_name'),
-        default_assigned_team_id: null,
-      });
-      await trx('boards').where({ tenant }).select('*').limit(1);
+    const board = await db('boards').where({ tenant }).first<{ board_id: string }>('board_id');
+    if (!board) throw new Error('The integration database has no board fixture');
+
+    const withServiceContract = (name: string, exercise: (context: { tenant: string; userId: string }) => Promise<void>) =>
+      withMigratedSchemaContract(db, name, async (trx) => {
+      connection.db = trx;
+      connection.tenant = tenant;
+      const context = { tenant, userId: randomUUID() };
+      try {
+        await exercise(context);
+      } finally {
+        connection.db = undefined;
+        connection.tenant = undefined;
+      }
     });
 
-    await withMigratedSchemaContract(db, 'unscoped category tree', async (trx) => {
-      await trx('categories').where({ tenant }).whereNull('board_id').select('*').orderBy('category_name');
+    await withServiceContract('board read/update', async (context) => {
+      const boardService = new BoardService();
+      expect(await boardService.getById(board.board_id, context)).toBeDefined();
+      const updatedBoard = await boardService.update(board.board_id, {
+          board_name: `Schema contract ${randomUUID()}`,
+          default_assigned_team_id: null,
+        }, context);
+      expect(updatedBoard.default_assigned_team_id).toBeNull();
     });
 
-    await withMigratedSchemaContract(db, 'board category tree', async (trx) => {
-      await trx('categories').where({ tenant, board_id: randomUUID() }).select('*').orderBy('category_name');
+    await withServiceContract('unscoped category tree', async (context) => {
+      expect(await new CategoryService().getCategoryTree(null, context)).toBeDefined();
+    });
+
+    await withServiceContract('board-scoped category tree', async (context) => {
+      expect(await new CategoryService().getCategoryTree(board.board_id, context)).toBeDefined();
     });
   });
 

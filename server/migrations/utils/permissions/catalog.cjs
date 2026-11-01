@@ -232,6 +232,10 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'project', action: 'update', msp: true, client: false, description: 'Modify project information and timeline', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Finance', 'msp:Project Manager'] } },
   { resource: 'project', action: 'update', msp: false, client: true, description: 'Update projects in client portal', products: ['psa'], defaultGrants: { psa: ['client:Admin'] } },
 
+  { resource: 'quickbooks', action: 'admin', msp: true, client: false, description: 'Administer QuickBooks integration settings', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
+  { resource: 'quickbooks', action: 'read', msp: true, client: false, description: 'View QuickBooks integration data and sync status', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
+  { resource: 'quickbooks', action: 'write', msp: true, client: false, description: 'Write and synchronize QuickBooks integration data', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
+
   { resource: 'project_task', action: 'create', msp: true, client: false, description: 'Create new project tasks', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'] } },
   { resource: 'project_task', action: 'delete', msp: true, client: false, description: 'Delete project tasks', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Project Manager'] } },
   { resource: 'project_task', action: 'read', msp: true, client: false, description: 'View project tasks', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Dispatcher', 'msp:Finance', 'msp:Manager', 'msp:Project Manager', 'msp:Technician'] } },
@@ -407,6 +411,21 @@ const ACTIVE_PERMISSIONS = [
   { resource: 'warranty', action: 'create', msp: true, client: false, description: 'Open warranty claims on client equipment', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
   { resource: 'warranty', action: 'read', msp: true, client: false, description: 'View warranty claims and RMA cases', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
   { resource: 'warranty', action: 'update', msp: true, client: false, description: 'Decide, ship, receive and close warranty claims', products: ['psa'], defaultGrants: { psa: ['msp:Admin', 'msp:Manager', 'msp:Technician'] } },
+
+  { resource: 'webhook', action: 'analytics', msp: true, client: false, description: 'View webhook delivery analytics', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'bulk_update', msp: true, client: false, description: 'Bulk update webhook configurations', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'create', msp: true, client: false, description: 'Create webhook configurations', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'delete', msp: true, client: false, description: 'Delete webhook configurations', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'export', msp: true, client: false, description: 'Export webhook event and delivery data', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'manage_security', msp: true, client: false, description: 'Manage webhook signing secrets and security settings', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'manage_subscriptions', msp: true, client: false, description: 'Manage webhook event subscriptions', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'read', msp: true, client: false, description: 'View webhook configurations and deliveries', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'retry', msp: true, client: false, description: 'Retry failed webhook deliveries', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'system_settings', msp: true, client: false, description: 'Manage system webhook settings and templates', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'test', msp: true, client: false, description: 'Test webhook configuration and delivery', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'trigger', msp: true, client: false, description: 'Manually trigger webhook deliveries', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'update', msp: true, client: false, description: 'Update webhook configurations', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'webhook', action: 'verify', msp: true, client: false, description: 'Verify webhook signatures and endpoint configuration', products: ['algadesk', 'psa', 'co_managed'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
 
   { resource: 'workflow', action: 'admin', msp: true, client: false, description: 'Administer workflows', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },
   { resource: 'workflow', action: 'manage', msp: true, client: false, description: 'Manage workflows', products: ['psa'], defaultGrants: { psa: ['msp:Admin'] } },

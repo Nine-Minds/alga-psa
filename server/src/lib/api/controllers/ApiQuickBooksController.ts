@@ -92,6 +92,8 @@ import { ZodError } from 'zod';
 import { getTenantProduct, ProductAccessError } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 
+const QUICKBOOKS_PERMISSION_ACTIONS = ['read', 'write', 'admin'] as const;
+
 export class ApiQuickBooksController {
   private qbService: QuickBooksService;
 
@@ -101,6 +103,10 @@ export class ApiQuickBooksController {
       undefined as any, // EventBusService - would be injected  
       undefined as any  // AuditLogService - would be injected
     );
+  }
+
+  getPermissionRequirements(): Array<{ resource: string; action: string }> {
+    return QUICKBOOKS_PERMISSION_ACTIONS.map((action) => ({ resource: 'quickbooks', action }));
   }
 
   /**
@@ -158,6 +164,9 @@ export class ApiQuickBooksController {
    * Check permissions
    */
   private async checkPermission(req: ApiRequest, action: string): Promise<void> {
+    if (!(QUICKBOOKS_PERMISSION_ACTIONS as readonly string[]).includes(action)) {
+      throw new Error(`Undeclared QuickBooks permission action: ${action}`);
+    }
     if (!req.context?.user) {
       throw new UnauthorizedError('User context required');
     }
