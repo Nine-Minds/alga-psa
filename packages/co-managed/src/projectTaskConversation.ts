@@ -122,6 +122,7 @@ export async function mutateCoManagedProjectTaskComment(db: Knex, inputActor: Co
       ...(request.kind === 'create' && target ? { reply_count: write.trx.raw('reply_count + 1') } : {}) });
     // LEVERAGE: friction task-comment-outbox — L4a's outbox/event-source registry is absent on main, so a co-managed task comment mutation emits no retained delivery intent yet.
     await current(write, true);
+    // write-admission: exempt — append-only receipt of the admitted task-comment mutation (admitted by boundary/current under the owner's locks)
     const [saved] = await owner.table('co_management_command_receipts').insert({ tenant: resource.tenant, operation_id: request.operationId,
       relationship_id: resource.relationshipId, resource_type: 'project_task', resource_id: resource.id, actor_tenant: actor.tenant, actor_user_id: actor.userId,
       command_type: `task_comment_${request.kind}`, request_hash: hash, applied_at: write.trx.raw('clock_timestamp()') }).returning('applied_at');
