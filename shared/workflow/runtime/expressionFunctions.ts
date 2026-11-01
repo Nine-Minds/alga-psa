@@ -36,6 +36,16 @@ const asText = (value: unknown): string | null => {
   return typeof value === 'string' ? value : String(value);
 };
 
+/**
+ * Complement of a text test, `NOT <test>` over every value the path yields: true for a missing or non-string
+ * value, and for a list (several related rows) when no element passes. Mirrors `COMPLEMENTS` in @alga-psa/predicates.
+ */
+const noElementPasses = (text: unknown, part: unknown, test: (value: string, search: string) => boolean): boolean => {
+  const search = asText(part);
+  if (search === null) return true;
+  return !(Array.isArray(text) ? text : [text]).some((value) => typeof value === 'string' && test(value, search));
+};
+
 /** A whole-number argument, clamped to [min, WORKFLOW_EXPRESSION_MAX_TEXT_LENGTH]. */
 const asCount = (fn: string, argument: string, value: unknown, min: number): number => {
   const number = typeof value === 'number' ? value : typeof value === 'string' && value.trim() ? Number(value) : NaN;
@@ -236,6 +246,48 @@ export const WORKFLOW_EXPRESSION_FUNCTIONS: readonly WorkflowExpressionFunctionD
       const search = asText(suffix);
       return value !== null && search !== null && value.endsWith(search);
     },
+  },
+  {
+    name: 'notContains',
+    signature: 'notContains(text, part) -> boolean',
+    description:
+      'True unless text includes part (case-sensitive). True when text is missing or is not a string. Given a list, true when no element includes part.',
+    example: '{ "$expr": "notContains(payload.details, \\"Sentinel Agent\\")" }',
+    parameters: [
+      { name: 'text', type: 'string', description: 'Text to check' },
+      { name: 'part', type: 'string', description: 'Text that must not appear' },
+    ],
+    category: 'String',
+    returns: 'boolean',
+    implementation: (text: unknown, part: unknown) => noElementPasses(text, part, (value, search) => value.includes(search)),
+  },
+  {
+    name: 'notStartsWith',
+    signature: 'notStartsWith(text, prefix) -> boolean',
+    description:
+      'True unless text begins with prefix (case-sensitive). True when text is missing or is not a string. Given a list, true when no element begins with prefix.',
+    example: '{ "$expr": "notStartsWith(payload.subject, \\"RE:\\")" }',
+    parameters: [
+      { name: 'text', type: 'string', description: 'Text to check' },
+      { name: 'prefix', type: 'string', description: 'Beginning that must not appear' },
+    ],
+    category: 'String',
+    returns: 'boolean',
+    implementation: (text: unknown, prefix: unknown) => noElementPasses(text, prefix, (value, search) => value.startsWith(search)),
+  },
+  {
+    name: 'notEndsWith',
+    signature: 'notEndsWith(text, suffix) -> boolean',
+    description:
+      'True unless text ends with suffix (case-sensitive). True when text is missing or is not a string. Given a list, true when no element ends with suffix.',
+    example: '{ "$expr": "notEndsWith(payload.email, \\"@example.com\\")" }',
+    parameters: [
+      { name: 'text', type: 'string', description: 'Text to check' },
+      { name: 'suffix', type: 'string', description: 'Ending that must not appear' },
+    ],
+    category: 'String',
+    returns: 'boolean',
+    implementation: (text: unknown, suffix: unknown) => noElementPasses(text, suffix, (value, search) => value.endsWith(search)),
   },
   {
     name: 'lower',

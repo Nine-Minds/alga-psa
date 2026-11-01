@@ -694,6 +694,7 @@
       "noTasks": "Dieses Projekt enthält keine Aufgaben, die Sie sehen können.",
       "assignment": "Zuweisung",
       "assignedTo": "Zugewiesen an {{name}}",
+      "assignedHidden": "Zugewiesen (Name ausgeblendet)",
       "assignConflict": "Diese Aufgabe wurde von jemand anderem zugewiesen oder geändert. Sie wurde neu geladen; versuchen Sie es erneut, falls nötig.",
       "assignFailed": "Diese Aufgabe konnte nicht zugewiesen werden.",
       "assignMe": "Mir zuweisen",
