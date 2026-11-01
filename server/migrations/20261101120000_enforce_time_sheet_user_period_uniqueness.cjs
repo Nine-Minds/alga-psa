@@ -6,6 +6,8 @@
  *  - A member is DISCARDABLE only when it is DRAFT, has no submission/approval metadata and
  *    nothing references it: no time_entries, time_sheet_comments or time_entry_change_requests
  *    rows. time_entry_change_requests has no FK to time_sheets, so it is checked explicitly.
+ *    References are read with single-table queries, so the check holds whatever the Citus
+ *    distribution of each table (see PRISTINE_SHEET_SQL).
  *  - A group keeps its sole non-discardable sheet. If every member is discardable, the lowest id
  *    is kept (UUID order says nothing about creation order; it is only a deterministic tie-break).
  *  - A group with two or more non-discardable sheets is ambiguous. The PREFLIGHT fails with
@@ -23,30 +25,46 @@ const INDEX_NAME = 'time_sheets_tenant_user_period_unique';
 const KEY_COLUMNS = ['tenant', 'user_id', 'period_id'];
 const DELETE_BATCH_SIZE = 500;
 
-const DISCARDABLE_SQL = (referenceTables) => `
-  s.approval_status = 'DRAFT'
-  AND s.submitted_at IS NULL
-  AND s.approved_at IS NULL
-  AND s.approved_by IS NULL
-  AND NOT EXISTS (SELECT 1 FROM time_entries r WHERE r.tenant = s.tenant AND r.time_sheet_id = s.id)
-  AND NOT EXISTS (SELECT 1 FROM time_sheet_comments r WHERE r.tenant = s.tenant AND r.time_sheet_id = s.id)
-  ${referenceTables.includes('time_entry_change_requests')
-    ? 'AND NOT EXISTS (SELECT 1 FROM time_entry_change_requests r WHERE r.tenant = s.tenant AND r.time_sheet_id = s.id)'
-    : ''}
+// Sheet-local half of discardability. The reference half (no rows pointing at the sheet) is
+// resolved by referencedSheetIds() with one single-table query per reference table, never by a
+// join or NOT EXISTS against time_sheets: on Citus the tables need not share a distribution
+// (fresh installs distribute time_entry_change_requests in its own migration while time_sheets
+// stays local), and Citus refuses joins and modifications that mix local and distributed tables.
+const PRISTINE_SHEET_SQL = (s) => `
+  ${s}.approval_status = 'DRAFT'
+  AND ${s}.submitted_at IS NULL
+  AND ${s}.approved_at IS NULL
+  AND ${s}.approved_by IS NULL
 `;
+
+const REFERENCE_TABLES = ['time_entries', 'time_sheet_comments', 'time_entry_change_requests'];
 
 async function referenceTablesPresent(knex) {
   const present = [];
-  for (const table of ['time_entries', 'time_sheet_comments', 'time_entry_change_requests']) {
+  for (const table of REFERENCE_TABLES) {
     if (await knex.schema.hasTable(table)) present.push(table);
   }
   return present;
 }
 
+/** The subset of `sheetIds` (all in `tenant`) that any reference table points at. */
+async function referencedSheetIds(knex, referenceTables, tenant, sheetIds) {
+  const referenced = new Set();
+  if (sheetIds.length === 0) return referenced;
+  for (const table of referenceTables) {
+    const { rows } = await knex.raw(
+      `SELECT DISTINCT time_sheet_id FROM ?? WHERE tenant = ? AND time_sheet_id = ANY(?::uuid[])`,
+      [table, tenant, sheetIds],
+    );
+    for (const row of rows) referenced.add(row.time_sheet_id);
+  }
+  return referenced;
+}
+
 async function loadDuplicateMembers(knex, referenceTables) {
   const { rows } = await knex.raw(`
     SELECT s.tenant, s.user_id, s.period_id, s.id, s.approval_status,
-           (${DISCARDABLE_SQL(referenceTables)}) AS discardable
+           (${PRISTINE_SHEET_SQL('s')}) AS pristine
     FROM time_sheets s
     JOIN (
       SELECT tenant, user_id, period_id
@@ -56,11 +74,23 @@ async function loadDuplicateMembers(knex, referenceTables) {
     ) d ON d.tenant = s.tenant AND d.user_id = s.user_id AND d.period_id = s.period_id
     ORDER BY s.tenant, s.user_id, s.period_id, s.id
   `);
+
+  const idsByTenant = new Map();
+  for (const row of rows) {
+    if (!idsByTenant.has(row.tenant)) idsByTenant.set(row.tenant, []);
+    idsByTenant.get(row.tenant).push(row.id);
+  }
+  const referencedByTenant = new Map();
+  for (const [tenant, ids] of idsByTenant) {
+    referencedByTenant.set(tenant, await referencedSheetIds(knex, referenceTables, tenant, ids));
+  }
+
   const groups = new Map();
   for (const row of rows) {
     const key = `${row.tenant}|${row.user_id}|${row.period_id}`;
     if (!groups.has(key)) groups.set(key, { tenant: row.tenant, userId: row.user_id, periodId: row.period_id, members: [] });
-    groups.get(key).members.push({ id: row.id, status: row.approval_status, discardable: row.discardable });
+    const discardable = Boolean(row.pristine) && !referencedByTenant.get(row.tenant).has(row.id);
+    groups.get(key).members.push({ id: row.id, status: row.approval_status, discardable });
   }
   return [...groups.values()];
 }
@@ -125,10 +155,11 @@ exports.up = async function up(knex, { batchSize = DELETE_BATCH_SIZE } = {}) {
     throw new Error(ambiguityMessage(ambiguous));
   }
 
-  // Cleanup: planned ids are deleted per tenant in bounded batches (loop + LIMIT), each batch one
-  // autocommit statement. Every DELETE stays tenant-scoped and re-checks discardability at delete
-  // time, so a sheet that gained history since the preflight is left alone (and then fails index
-  // creation loudly instead of losing data). Re-running after a partial run just re-plans.
+  // Cleanup: planned ids are deleted per tenant in bounded batches, each batch one autocommit
+  // statement. Immediately before each DELETE the batch's references are re-read, and the DELETE
+  // itself re-checks the sheet-local conditions, so a sheet that gained history since the
+  // preflight is left alone (and then fails index creation loudly instead of losing data).
+  // Re-running after a partial run just re-plans.
   const idsByTenant = new Map();
   for (const { tenant, id } of deletions) {
     if (!idsByTenant.has(tenant)) idsByTenant.set(tenant, []);
@@ -136,12 +167,15 @@ exports.up = async function up(knex, { batchSize = DELETE_BATCH_SIZE } = {}) {
   }
   for (const [tenant, ids] of idsByTenant) {
     for (let start = 0; start < ids.length; start += batchSize) {
-      const batch = ids.slice(start, start + batchSize);
+      const planned = ids.slice(start, start + batchSize);
+      const referenced = await referencedSheetIds(knex, referenceTables, tenant, planned);
+      const batch = planned.filter((id) => !referenced.has(id));
+      if (batch.length === 0) continue;
       await knex.raw(
         `DELETE FROM time_sheets s
          WHERE s.tenant = ?
            AND s.id IN (SELECT t.id FROM time_sheets t WHERE t.tenant = ? AND t.id = ANY(?::uuid[]) LIMIT ?)
-           AND ${DISCARDABLE_SQL(referenceTables)}`,
+           AND ${PRISTINE_SHEET_SQL('s')}`,
         [tenant, tenant, batch, batchSize],
       );
     }

@@ -9,14 +9,14 @@ import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 
 /**
- * Executes migrations/20261028120000_enforce_time_sheet_user_period_uniqueness.cjs against a real
+ * Executes migrations/20261101120000_enforce_time_sheet_user_period_uniqueness.cjs against a real
  * migrated database (plain PostgreSQL). The harness's own migrate run has already built the
  * index, so each case drops it, seeds duplicates the schema would otherwise forbid, and runs `up`.
  * The migration needs DDL/DELETE rights, so it runs on an admin connection to the same database.
  */
 
 const require = createRequire(import.meta.url);
-const migration = require('../../../../migrations/20261028120000_enforce_time_sheet_user_period_uniqueness.cjs');
+const migration = require('../../../../migrations/20261101120000_enforce_time_sheet_user_period_uniqueness.cjs');
 const INDEX = 'time_sheets_tenant_user_period_unique';
 
 let appDb: Knex;
