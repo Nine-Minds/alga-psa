@@ -110,3 +110,8 @@
 - T013: `bundleRows.pdf.test.ts` drives headless Chrome + pdftotext; opt-in via `RUN_PDF_TESTS=1` (skipped otherwise).
 - T018 left unflipped: wizard/template/live-editor tests exist but there is no combined REST round trip evidence. F005/F006 left unflipped for the same reason.
 - Incident: an earlier `ALTER ROLE app_user PASSWORD` was run in another person's container `discount-tax-test-pg` (port 15888). Original password unknown, not restored. I switched to my own scratch container.
+
+## Repair round (smoke defects, 2026-10-31)
+- Fix 1: `detectBundleChildRowsPreset` now compares structurally (key order ignored, `undefined` key == missing key, `parentBlankColumns` compared as a set, everything else strict). jsonb reorders keys, which made stored ASTs read as Custom. Widget uses `bundleChildRowsShowChange`. Tests: `bundleChildRows.test.ts` (added to vitest include), including the seeded migration 20261015090100 AST.
+- Fix 2: `formatChildValue` returns '' for undefined/null/'' so unbound component cells (e.g. bundle-basis unitPrice) are blank, not `$0.00`. `formatValue` untouched. PDF shares the React renderer (`renderTemplateAstHtmlDocument` -> `renderEvaluatedTemplateAst`), so no separate fix.
+- features.json/tests.json: no dedicated entries for these; implemented flags unchanged.

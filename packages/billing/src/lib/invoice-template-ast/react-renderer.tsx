@@ -398,6 +398,8 @@ const resolveSignedChange = (
 
 /** Child-row numbers follow the document locale (quantities may be fractional). */
 const formatChildValue = (value: unknown, format: TemplateValueFormat | undefined, ctx: RenderContext): string => {
+  // An unbound value is blank whatever the format (currency would otherwise render $0.00).
+  if (value === undefined || value === null || value === '') return '';
   if (format === 'number' && value !== null && value !== undefined && value !== '') {
     const numeric = typeof value === 'number' ? value : Number(String(value));
     if (Number.isFinite(numeric)) {
