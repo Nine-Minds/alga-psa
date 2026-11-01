@@ -129,9 +129,21 @@ describe('IMAP OAuth authorization routes', () => {
     // A provider with this id exists, but belongs to tenant B. The mocked
     // tenantDb applies tenant filtering just like the production wrapper.
     mocks.provider = { tenant: 'tenant-b', id: 'provider-a', provider_type: 'imap', status: 'connected' };
-    const response = await callback(callbackRequest(encodeImapOAuthState({ ...baseState(), providerId: 'other-tenant-provider' }, mocks.secret!)));
+    mocks.config.access_token = 'existing-access';
+    mocks.config.refresh_token = 'existing-refresh';
+    mocks.config.token_expires_at = 'existing-expiry';
+    mocks.grant = {
+      tenant: 'tenant-a', id: 'grant-a', provider_id: 'provider-a', initiated_by_user_id: 'user-a',
+      purpose: 'reconnect', redirect_uri: baseState().redirectUri,
+      expires_at: new Date(Date.now() + 60_000), consumed_at: null,
+    };
+    const response = await callback(callbackRequest(encodeImapOAuthState(baseState(), mocks.secret!)));
     expect(response.status).toBe(404);
     expect(mocks.tokenExchange).not.toHaveBeenCalled();
+    expect(mocks.provider).toMatchObject({ tenant: 'tenant-b', id: 'provider-a', status: 'connected' });
+    expect(mocks.config).toMatchObject({
+      access_token: 'existing-access', refresh_token: 'existing-refresh', token_expires_at: 'existing-expiry',
+    });
   });
 
   it('does not treat a same-id user in another tenant as the grant initiator', async () => {
