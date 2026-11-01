@@ -1288,7 +1288,7 @@ export async function createTicketFromEmail(
     subcategory_id?: string;
     location_id?: string;
     entered_by?: string | null;
-    assigned_to?: string;
+    assigned_to?: string | null;
     email_metadata?: any;
     attributes?: Record<string, unknown> | null;
   },
@@ -1359,14 +1359,23 @@ export async function createTicketFromEmail(
         ticket_origin: TICKET_ORIGINS.INBOUND_EMAIL,
       }, tenant, trx, {}, creationEvents, analyticsTracker, userId, 3);
 
-      // Publish TICKET_ASSIGNED event if an agent was assigned
+      // Shared creation may apply a board user or team lead. Use the persisted
+      // assignment while retaining the publisher's transaction/outbox semantics.
+      const createdTicket = await tenantDb(trx, tenant).table('tickets')
+        .where({ ticket_id: result.ticket_id })
+        .first('assigned_to');
+      if (!createdTicket) {
+        throw new Error('Created ticket could not be reloaded after insert.');
+      }
+      const finalAssignedTo = createdTicket.assigned_to;
+
       // Note: Event publishing failure should not prevent ticket creation
-      if (assignedTo) {
+      if (finalAssignedTo) {
         try {
           await eventPublisher.publishTicketAssigned({
             tenantId: tenant,
             ticketId: result.ticket_id,
-            userId: assignedTo,
+            userId: finalAssignedTo,
             assignedByUserId: userId || ticketData.entered_by || undefined
           });
         } catch (eventError) {

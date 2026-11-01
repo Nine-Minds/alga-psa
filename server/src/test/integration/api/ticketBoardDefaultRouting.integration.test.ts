@@ -167,38 +167,61 @@ describe('REST ticket creation applies board-default routing', () => {
     }
   });
 
-  it('keeps inbound email creation on the same shared default-routing path', async () => {
-    let emailTrx: Knex.Transaction;
-    let observedCreatedEventRouting: { assigned_to: string | null; assigned_team_id: string | null } | undefined;
-    const publisher = {
-      publishTicketCreated: vi.fn(async ({ ticketId }: { ticketId: string }) => {
-        const row = await tenantDb(emailTrx, tenant).table('tickets').where({ ticket_id: ticketId }).first();
-        observedCreatedEventRouting = { assigned_to: row.assigned_to, assigned_team_id: row.assigned_team_id };
-      }),
-      publishTicketAssigned: vi.fn(async () => undefined),
-    };
-    const emailTicket = await db.transaction(async (trx) => {
-      emailTrx = trx;
-      return createTicketFromEmail({
-        title: `Email routing ${uuidv4().slice(0, 8)}`,
-        description: 'Inbound email body',
-        client_id: clientId,
-        source: 'email',
-        board_id: boardId,
-        status_id: statusId,
-        priority_id: priorityId,
-        email_metadata: { messageId: `routing-${uuidv4()}@example.test` },
-      }, tenant, actorId, {
-        existingConnection: trx,
-        eventPublisher: publisher as any,
-        analyticsTracker: { trackTicketCreated: vi.fn(), trackFeatureUsage: vi.fn() } as any,
+  it.each(['board-user', 'team-lead', 'explicit-user', 'explicit-null'] as const)(
+    'publishes email assignment once from persisted routing: %s', async (routing) => {
+      const expectedAssignee = routing === 'explicit-null' ? null
+        : routing === 'explicit-user' ? actorId
+        : routing === 'team-lead' ? otherUserId : defaultUserId;
+      let emailTrx: Knex.Transaction;
+      let observedCreatedEventRouting: { assigned_to: string | null; assigned_team_id: string | null } | undefined;
+      const publisher = {
+        publishTicketCreated: vi.fn(async ({ ticketId }: { ticketId: string }) => {
+          const row = await tenantDb(emailTrx, tenant).table('tickets').where({ ticket_id: ticketId }).first();
+          observedCreatedEventRouting = { assigned_to: row.assigned_to, assigned_team_id: row.assigned_team_id };
+        }),
+        publishTicketAssigned: vi.fn(async () => undefined),
+      };
+      const emailTicket = await db.transaction(async (trx) => {
+        emailTrx = trx;
+        if (routing === 'team-lead') {
+          await tenantDb(trx, tenant).table('boards').where({ board_id: boardId })
+            .update({ default_assigned_to: null });
+        }
+        return createTicketFromEmail({
+          ...(routing === 'explicit-null' ? { assigned_to: null }
+            : routing === 'explicit-user' ? { assigned_to: actorId } : {}),
+          title: `Email routing ${uuidv4().slice(0, 8)}`,
+          description: 'Inbound email body',
+          client_id: clientId,
+          source: 'email',
+          board_id: boardId,
+          status_id: statusId,
+          priority_id: priorityId,
+          email_metadata: { messageId: `routing-${uuidv4()}@example.test` },
+        }, tenant, actorId, {
+          existingConnection: trx,
+          eventPublisher: publisher as any,
+          analyticsTracker: { trackTicketCreated: vi.fn(), trackFeatureUsage: vi.fn() } as any,
+        }).finally(async () => {
+          if (routing === 'team-lead') {
+            await tenantDb(trx, tenant).table('boards').where({ board_id: boardId })
+              .update({ default_assigned_to: defaultUserId });
+          }
+        });
       });
-    });
 
-    const created = await table('tickets').where({ ticket_id: emailTicket.ticket_id }).first();
-    expect(created.assigned_to).toBe(defaultUserId);
-    expect(created.assigned_team_id).toBe(defaultTeamId);
-    expect(publisher.publishTicketCreated).toHaveBeenCalledTimes(1);
-    expect(observedCreatedEventRouting).toEqual({ assigned_to: defaultUserId, assigned_team_id: defaultTeamId });
-  });
+      const created = await table('tickets').where({ ticket_id: emailTicket.ticket_id }).first();
+      const expectedTeam = routing === 'explicit-user' || routing === 'explicit-null' ? null : defaultTeamId;
+      expect(created.assigned_to).toBe(expectedAssignee);
+      expect(created.assigned_team_id).toBe(expectedTeam);
+      expect(publisher.publishTicketAssigned).toHaveBeenCalledTimes(expectedAssignee ? 1 : 0);
+      if (expectedAssignee) {
+        expect(publisher.publishTicketAssigned).toHaveBeenCalledWith(expect.objectContaining({
+          ticketId: emailTicket.ticket_id, userId: expectedAssignee, tenantId: tenant,
+        }));
+      }
+      expect(publisher.publishTicketCreated).toHaveBeenCalledTimes(1);
+      expect(observedCreatedEventRouting).toEqual({ assigned_to: expectedAssignee, assigned_team_id: expectedTeam });
+    },
+  );
 });

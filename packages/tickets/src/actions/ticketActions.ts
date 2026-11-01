@@ -817,8 +817,18 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         });
       }
 
-      // Server-specific: Handle assigned ticket event
-      const assignedTo = createTicketInput.assigned_to;
+      // Server-specific: Get full ticket data for return
+      const fullTicket = await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: ticketResult.ticket_id })
+        .first();
+
+      if (!fullTicket) {
+        throw new Error('Created ticket could not be reloaded after insert.');
+      }
+
+      // Shared creation may apply a board user or team lead. Publish the final
+      // assignment once, after commit, for explicit and default routing alike.
+      const assignedTo = fullTicket.assigned_to;
       if (assignedTo) {
         registerAfterCommit(trx, () =>
           publishWorkflowEvent({
@@ -835,15 +845,6 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
           }),
           `TICKET_ASSIGNED ticket=${ticketResult.ticket_id}`
         );
-      }
-
-      // Server-specific: Get full ticket data for return
-      const fullTicket = await tenantScopedTable(trx, 'tickets', tenant)
-        .where({ ticket_id: ticketResult.ticket_id })
-        .first();
-
-      if (!fullTicket) {
-        throw new Error('Created ticket could not be reloaded after insert.');
       }
 
       // Write activity-timeline entry for ticket creation. The details
