@@ -65,6 +65,10 @@ export interface TicketBillableMaterialItem {
   description: string | null;
 }
 
+export interface TicketBillableFixedFeeItem extends Omit<TicketBillableMaterialItem, 'kind'> {
+  kind: 'ticket_fixed_fee';
+}
+
 export interface TicketBillableItems {
   ticketId: string;
   clientId: string;
@@ -73,6 +77,8 @@ export interface TicketBillableItems {
   ticketTitle: string | null;
   timeItems: TicketBillableTimeItem[];
   materialItems: TicketBillableMaterialItem[];
+  fixedFeeItems: TicketBillableFixedFeeItem[];
+  excludedFixedFeeCount: number;
   excludedMaterialCount: number;
 }
 
@@ -89,6 +95,7 @@ export interface GenerateTicketInvoiceInput {
   ticketId: string;
   timeEntryIds: string[];
   materialIds: string[];
+  fixedFeeIds?: string[];
 }
 
 export type GenerateTicketInvoiceResult = ManualInvoiceResult;
@@ -211,6 +218,19 @@ export const getTicketBillableItems = withAuth(async (
     });
 
     const currencyCode = await resolveClientCurrency(knex, tenant, ticket.client_id);
+    const fixedFeeQuery = db.table('ticket_fixed_fee_services as f');
+    db.tenantJoin(fixedFeeQuery, 'service_catalog as sc', 'sc.service_id', 'f.service_id');
+    const fixedFeeRows = await fixedFeeQuery
+      .where({ 'f.ticket_id': ticketId, 'f.is_billed': false })
+      .orderBy('f.created_at', 'asc')
+      .select('f.entry_id', 'f.service_id', 'f.quantity', 'f.rate', 'f.description', 'f.currency_code', 'sc.service_name');
+    const fixedFeeItems: TicketBillableFixedFeeItem[] = fixedFeeRows
+      .filter((row) => row.currency_code === currencyCode)
+      .map((row) => ({
+        kind: 'ticket_fixed_fee', id: row.entry_id, serviceId: row.service_id,
+        serviceName: row.service_name, quantity: Number(row.quantity), rate: Number(row.rate),
+        amount: Number(row.quantity) * Number(row.rate), description: row.description,
+      }));
     const eligibleMaterials = materialRows.filter((row: any) => row.currency_code === currencyCode);
     const materialItems: TicketBillableMaterialItem[] = eligibleMaterials.map((row: any) => {
       const quantity = Number(row.quantity) || 0;
@@ -236,6 +256,8 @@ export const getTicketBillableItems = withAuth(async (
       ticketTitle: ticket.title ?? null,
       timeItems,
       materialItems,
+      fixedFeeItems,
+      excludedFixedFeeCount: fixedFeeRows.length - fixedFeeItems.length,
     };
   } catch (error) {
     if (error instanceof Error && error.message.includes('Permission denied')) {
@@ -281,7 +303,8 @@ export const generateTicketInvoice = withAuth(async (
 
   const timeEntryIds = dedupe(input.timeEntryIds);
   const materialIds = dedupe(input.materialIds);
-  if (timeEntryIds.length === 0 && materialIds.length === 0) {
+  const fixedFeeIds = dedupe(input.fixedFeeIds);
+  if (timeEntryIds.length === 0 && materialIds.length === 0 && fixedFeeIds.length === 0) {
     return {
       success: false,
       code: 'INVALID_QUANTITY',
@@ -321,14 +344,23 @@ export const generateTicketInvoice = withAuth(async (
         .table('ticket_materials as tm')
         .whereIn('tm.ticket_material_id', materialIds)
         .where({ 'tm.ticket_id': input.ticketId, 'tm.is_billed': false })
-        .select('tm.ticket_material_id', 'tm.service_id', 'tm.quantity', 'tm.rate', 'tm.description', 'tm.currency_code');
+        .select('tm.ticket_material_id', 'tm.service_id', 'tm.quantity', 'tm.rate', 'tm.description', 'tm.currency_code',
+          knex.raw('tm.updated_at::text as source_updated_at'));
 
-  if (timeRows.length !== timeEntryIds.length || materialRows.length !== materialIds.length) {
+  const fixedFeeQuery = db.table('ticket_fixed_fee_services as f');
+  db.tenantJoin(fixedFeeQuery, 'service_catalog as sc', 'sc.service_id', 'f.service_id');
+  const fixedFeeRows = fixedFeeIds.length === 0 ? [] : await fixedFeeQuery
+    .whereIn('f.entry_id', fixedFeeIds)
+    .where({ 'f.ticket_id': input.ticketId, 'f.client_id': ticket.client_id, 'f.is_billed': false })
+    .select('f.entry_id', 'f.service_id', 'f.quantity', 'f.rate', 'f.description', 'f.currency_code', 'sc.service_name',
+      knex.raw('f.updated_at::text as source_updated_at'));
+
+  if (timeRows.length !== timeEntryIds.length || materialRows.length !== materialIds.length || fixedFeeRows.length !== fixedFeeIds.length) {
     return {
       success: false,
       code: 'SOURCE_ALREADY_BILLED',
       params: {
-        recordId: `${timeEntryIds.length - timeRows.length} time item(s), ${materialIds.length - materialRows.length} product item(s)`,
+        recordId: `${timeEntryIds.length - timeRows.length} time item(s), ${materialIds.length - materialRows.length} product item(s), ${fixedFeeIds.length - fixedFeeRows.length} fixed-fee item(s)`,
       },
       message:
         'Some selected items are no longer billable (already invoiced, not approved, or removed). Refresh and try again.',
@@ -343,6 +375,13 @@ export const generateTicketInvoice = withAuth(async (
       success: false, code: 'SOURCE_CURRENCY_MISMATCH',
       message: 'The selected product currency does not match the invoice.',
       error: 'The selected product currency does not match the invoice.',
+    };
+  }
+  if (fixedFeeRows.some(row => row.currency_code !== currencyCode)) {
+    return {
+      success: false, code: 'SOURCE_CURRENCY_MISMATCH',
+      message: 'The selected fixed-fee service currency does not match the invoice.',
+      error: 'The selected fixed-fee service currency does not match the invoice.',
     };
   }
 
@@ -368,6 +407,7 @@ export const generateTicketInvoice = withAuth(async (
     const sourceLink: ManualInvoiceSourceLink = {
       kind: 'ticket_material',
       materialId: row.ticket_material_id,
+      updatedAt: row.source_updated_at,
     };
     items.push({
       service_id: row.service_id,
@@ -375,6 +415,14 @@ export const generateTicketInvoice = withAuth(async (
       rate: Math.max(0, Math.round(Number(row.rate) || 0)),
       description: row.description || 'Product',
       source_link: sourceLink,
+    });
+  }
+
+  for (const row of fixedFeeRows) {
+    items.push({
+      service_id: row.service_id, quantity: Number(row.quantity), rate: Number(row.rate),
+      description: row.description || row.service_name,
+      source_link: { kind: 'ticket_fixed_fee', entryId: row.entry_id, updatedAt: row.source_updated_at },
     });
   }
 

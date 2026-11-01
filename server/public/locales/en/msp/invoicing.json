@@ -493,6 +493,8 @@
     }
   },
   "quickInvoice": {
+    "fixedFeeServices": "Services",
+    "excludedFixedFees": "service entries excluded due to a different invoice currency: {{count}}.",
     "currencyExcluded": "{{count}} product(s) excluded because their currency differs from {{currency}}.",
     "action": "Quick invoice",
     "title": "Quick invoice this ticket",

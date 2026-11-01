@@ -1,4 +1,49 @@
 {
+  "fixedFeeServices": {
+    "title": "Servicios",
+    "add": "Añadir servicio",
+    "service": "Servicio",
+    "selectService": "Buscar servicios",
+    "currency": "Moneda",
+    "quantity": "Cantidad",
+    "decreaseQuantity": "Disminuir cantidad",
+    "increaseQuantity": "Aumentar cantidad",
+    "rate": "Precio unitario",
+    "total": "Total",
+    "description": "Descripción",
+    "loading": "Cargando servicios…",
+    "empty": "No se han añadido servicios.",
+    "billed": "Facturado",
+    "unbilled": "Sin facturar",
+    "remove": "Eliminar servicio",
+    "confirmRemove": "¿Eliminar del ticket este servicio sin facturar?",
+    "errors": {
+      "load": "No se pudieron cargar los servicios. Inténtelo de nuevo.",
+      "prices": "No se pudieron cargar los precios del catálogo. Inténtelo de nuevo.",
+      "add": "No se pudo añadir este servicio. Inténtelo de nuevo.",
+      "remove": "No se pudo eliminar este servicio. Inténtelo de nuevo.",
+      "invalidInput": "Seleccione un servicio, una moneda y una cantidad entera positiva.",
+      "ticketMissing": "El ticket ya no existe. Actualice la página e inténtelo de nuevo.",
+      "serviceInvalid": "Seleccione un servicio de tarifa fija activo.",
+      "priceInvalid": "Se requiere un precio de catálogo válido para esta moneda y cantidad.",
+      "cannotDelete": "Esta entrada de servicio ya se ha facturado o eliminado. Actualice la página e inténtelo de nuevo."
+    }
+  },
+  "chargeEdit": {
+    "title": "Editar cargo del ticket",
+    "save": "Guardar cambios",
+    "edit": "Editar cargo",
+    "errors": {
+      "save": "No se pudo guardar este cargo. Inténtelo de nuevo.",
+      "invalidInput": "Introduzca una cantidad entera positiva y una descripción de hasta 2.000 caracteres.",
+      "notEditable": "No se pueden editar entradas facturadas o eliminadas. Actualice la página e inténtelo de nuevo.",
+      "amountTooLarge": "Esta cantidad superaría el importe total admitido.",
+      "serialized": "Los materiales con número de serie deben mantener una cantidad de 1. Añada o elimine unidades individuales.",
+      "trackingChanged": "El seguimiento del inventario cambió después de añadir este material. Concilie sus existencias antes de cambiar la cantidad.",
+      "locationInvalid": "La ubicación de almacén original no existe o es incoherente. Concilie este material antes de cambiar la cantidad.",
+      "costCurrency": "Los costes de existencias utilizan monedas distintas. Concilie este material antes de reducir la cantidad."
+    }
+  },
   "importDialog": {
     "errorCount_one": "{{count}} error:",
     "errorCount_other": "{{count}} errores:",
@@ -2832,5 +2877,12 @@
       "notAvailable": "Esta respuesta predefinida no está disponible para este ticket.",
       "notATeamMember": "Solo puede administrar respuestas de equipo de los equipos a los que pertenece."
     }
+  },
+  "catalogFilter": {
+    "category": "Categoría",
+    "allCategories": "Todas las categorías",
+    "loading": "Cargando categorías...",
+    "loadError": "No se pudieron cargar las categorías. Inténtelo de nuevo.",
+    "retry": "Reintentar"
   }
 }

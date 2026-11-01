@@ -513,6 +513,8 @@
     }
   },
   "quickInvoice": {
+    "fixedFeeServices": "Usługi",
+    "excludedFixedFees": "Liczba pozycji usług wykluczonych z powodu waluty innej niż waluta faktury: {{count}}.",
     "currencyExcluded": "Wykluczono {{count}} produkt(y), ponieważ ich waluta różni się od {{currency}}.",
     "action": "Szybka faktura",
     "title": "Szybka faktura dla tego zgłoszenia",
