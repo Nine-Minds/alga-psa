@@ -4,7 +4,6 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { aggregateReactions, validateEmoji } from '@alga-psa/types';
 import type { IReactionsBatchResult } from '@alga-psa/types';
-import { isClientUserType } from '@alga-psa/types';
 import { authorizeTicketRecordAccessConcealed } from '../../lib/ticketRecordAuthorization';
 import { publishTicketUpdate } from '../../lib/liveUpdates';
 
@@ -31,15 +30,15 @@ export const toggleCommentReaction = withAuth(async (
       .where({ comment_id: commentId })
       .first();
 
-    if (isClientUserType(user.user_type)) {
-      // Reacting writes to the ticket's thread: a client must be able to see that ticket.
-      // Missing comment and invisible ticket look the same to the caller.
-      if (!comment) throw new Error('Permission denied: Cannot access ticket');
-      if (comment.ticket_id) {
-        await authorizeTicketRecordAccessConcealed({
-          trx, tenant, user: user as any, ticketId: comment.ticket_id, action: 'update',
-        });
-      }
+    // Reacting writes to the ticket's thread: every principal (MSP or client) must be able to access that
+    // ticket for update, matching createComment/updateComment/deleteComment. Missing comment and
+    // inaccessible ticket look the same to the caller.
+    // LEVERAGE: pattern ticket-comment-record-authz — same guard as createComment / assertMayChangeComment.
+    if (!comment) throw new Error('Permission denied: Cannot access ticket');
+    if (comment.ticket_id) {
+      await authorizeTicketRecordAccessConcealed({
+        trx, tenant, user: user as any, ticketId: comment.ticket_id, action: 'update',
+      });
     }
 
     if (!comment) {
