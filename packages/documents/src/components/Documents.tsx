@@ -936,8 +936,7 @@ const Documents = ({
 
       // Update document name
       const updateResult = await updateDocument(selectedDocument.document_id, {
-        document_name: documentName,
-        edited_by: userId
+        document_name: documentName
       });
       if (isDocumentActionError(updateResult)) {
         setDrawerError(getErrorMessage(updateResult));
@@ -990,8 +989,7 @@ const Documents = ({
 
       if (finalName !== selectedDocument.document_name) {
         const updateResult = await updateDocument(selectedDocument.document_id, {
-          document_name: finalName,
-          edited_by: userId
+          document_name: finalName
         });
         if (isDocumentActionError(updateResult)) {
           setDrawerError(getErrorMessage(updateResult));
@@ -1056,8 +1054,7 @@ const Documents = ({
 
       if (finalName !== selectedDocument.document_name) {
         const updateResult = await updateDocument(selectedDocument.document_id, {
-          document_name: finalName,
-          edited_by: userId
+          document_name: finalName
         });
         if (isDocumentActionError(updateResult)) {
           setDrawerError(getErrorMessage(updateResult));

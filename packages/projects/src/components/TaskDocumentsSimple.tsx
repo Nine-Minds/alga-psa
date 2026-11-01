@@ -358,8 +358,7 @@ export default function TaskDocumentsSimple({
 
       // Update document name
       await updateDocument(selectedDocument.document_id, {
-        document_name: documentName,
-        edited_by: user.user_id
+        document_name: documentName
       });
 
       // Update content if changed
