@@ -9,6 +9,7 @@ export default defineConfig({
   resolve: {
     alias: [
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../packages/db/src/index.ts') },
+      { find: /^@alga-psa\/db\/writeAdmission$/, replacement: path.resolve(__dirname, '../packages/db/src/writeAdmission.ts') },
       { find: /^@alga-psa\/db\/commentEventRegistry$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/commentEventRegistry.ts') },
       { find: /^@alga-psa\/storage$/, replacement: path.resolve(__dirname, '../packages/storage/src/index.ts') },
       { find: /^@alga-psa\/storage\/(.*)$/, replacement: path.resolve(__dirname, '../packages/storage/src/$1') },
@@ -34,6 +35,8 @@ export default defineConfig({
       { find: /^@alga-psa\/email\/(.*)$/, replacement: path.resolve(__dirname, '../packages/email/src/$1') },
       { find: /^@alga-psa\/workflows$/, replacement: path.resolve(__dirname, '../ee/packages/workflows/src/index.ts') },
       { find: /^@alga-psa\/workflows\/(.*)$/, replacement: path.resolve(__dirname, '../ee/packages/workflows/src/$1') },
+      // services/email-service tsconfig maps @alga-psa/tickets/* to src/*; the co-managed inbound writer deep-imports models/* and lib/* (not all in the package exports map).
+      { find: /^@alga-psa\/tickets\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tickets/src/$1') },
       { find: /^@alga-psa\/shared$/, replacement: path.resolve(__dirname, './index.ts') },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: path.resolve(__dirname, './$1') },
       {

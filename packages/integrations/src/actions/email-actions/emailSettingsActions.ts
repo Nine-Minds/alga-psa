@@ -25,6 +25,7 @@ import {
   type ActionMessageError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { isValidEmail } from '@alga-psa/validation';
+import { isClientUser, requireOutboundEmailAdmin } from './mspOutboundEmailAccess';
 
 type EmailSettingsUpdateInput = Omit<Partial<TenantEmailSettings>, 'defaultFromDomain' | 'ticketingFromEmail' | 'ticketingFromName'> & {
   defaultFromDomain?: string | null;
@@ -184,7 +185,8 @@ export const updateEmailSettings = withAuth(async (
   updates: EmailSettingsUpdateInput
 ): Promise<EmailSettingsView | ActionMessageError> => {
   const { knex } = await createTenantKnex();
-  if (!await hasPermission(user, 'settings', 'update', knex)) return actionError('You do not have permission to update email settings', 'errors.permissionDenied');
+  const access = await requireOutboundEmailAdmin(user, knex);
+  if (!access.allowed) return actionError('You do not have permission to update email settings', 'errors.permissionDenied');
 
   try {
     const now = new Date();
@@ -403,13 +405,42 @@ export const getMicrosoftOutboundMailboxes = withAuth(async (
  * problems from the Outbound Email tab without reading server logs.
  */
 export const testOutboundEmail = withAuth(async (
-  _user,
+  user,
   { tenant },
   toAddress?: string
 ): Promise<{ success: boolean; message?: string; error?: string }> => {
   try {
+    const { knex } = await createTenantKnex();
+    const access = await requireOutboundEmailAdmin(user, knex);
+    if (!access.allowed) return { success: false, error: access.message };
+
     const recipient = toAddress?.trim() || undefined;
-    return await TenantEmailService.testConnection(tenant || '', recipient);
+    if (!recipient) {
+      // Verify configuration only; no mail is sent.
+      return await TenantEmailService.testConnection(tenant || '');
+    }
+
+    if (!isValidEmail(recipient)) {
+      return { success: false, error: 'Enter a valid recipient email address.' };
+    }
+
+    // The diagnostics live-send is the single guarded test-send path.
+    const report = await runOutboundEmailDiagnosticsImpl({
+      tenant: tenant || '',
+      knex,
+      options: { liveSendTest: true, recipient, actingUserId: user.user_id },
+    });
+    const liveStep = report.steps.find(step => step.id === 'live_send_test');
+    if (liveStep?.status === 'pass') {
+      return { success: true, message: `Test email sent to ${recipient}.` };
+    }
+    const failedStep = liveStep?.status === 'fail'
+      ? liveStep
+      : report.steps.find(step => step.status === 'fail');
+    return {
+      success: false,
+      error: failedStep?.error?.message || 'The test email could not be sent.',
+    };
   } catch (error: any) {
     console.error('Error testing outbound email:', error);
     return { success: false, error: 'Failed to test outbound email' };
@@ -428,15 +459,11 @@ export const runOutboundEmailDiagnostics = withAuth(async (
   options: OutboundEmailDiagnosticsOptions = {}
 ): Promise<{ success: boolean; report?: OutboundEmailDiagnosticsReport; error?: string }> => {
   try {
-    if ((user as any)?.user_type === 'client') {
-      return { success: false, error: 'Permission denied' };
-    }
-
+    // Reject client users before opening any tenant connection.
+    if (isClientUser(user)) return { success: false, error: 'Permission denied' };
     const { knex } = await createTenantKnex();
-    const permitted = await hasPermission(user, 'ticket_settings', 'update', knex);
-    if (!permitted) {
-      return { success: false, error: 'Permission denied: Cannot run outbound email diagnostics' };
-    }
+    const access = await requireOutboundEmailAdmin(user, knex);
+    if (!access.allowed) return { success: false, error: access.message };
 
     const liveSendTest = options?.liveSendTest === true;
     const recipient = options?.recipient?.trim();
@@ -454,6 +481,7 @@ export const runOutboundEmailDiagnostics = withAuth(async (
         liveSendTest,
         recipient,
         includeIdentifiers: options?.includeIdentifiers === true,
+        actingUserId: user.user_id,
       },
     });
 

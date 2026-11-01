@@ -1185,6 +1185,9 @@
           "contains": "Contains",
           "starts_with": "Starts with",
           "ends_with": "Ends with",
+          "not_contains": "Does not contain",
+          "not_starts_with": "Does not start with",
+          "not_ends_with": "Does not end with",
           "is_empty": "Is empty",
           "is_not_empty": "Is not empty"
         },
@@ -3664,6 +3667,36 @@
         "confirm": "Disconnect",
         "cancel": "Cancel"
       }
+    },
+    "loading": "Loading…",
+    "downloadHosts": {
+      "title": "Allowed download hosts",
+      "intro": "When a document is attached by URL, AlgaPSA downloads it only from the hosts listed here. This applies to every caller that attaches documents, including AI agents, API clients and the REST API. Prefer bucket-specific hosts such as acme-uploads.s3.us-east-1.amazonaws.com over broad ones.",
+      "readOnly": "You can view this list. Changing it needs the \"Manage download hosts\" permission.",
+      "builtIn": "Built-in",
+      "empty": "No custom hosts yet.",
+      "add": "Add host",
+      "addTitle": "Add allowed download host",
+      "remove": "Remove",
+      "removeTitle": "Remove host?",
+      "removeMessage": "Downloads from {{host}} will stop working until it is added again.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "A hostname, or *.example.com to allow every subdomain.",
+        "note": "Note (optional)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Used for",
+        "allowed": "Allowed",
+        "note": "Note",
+        "addedBy": "Added by",
+        "addedOn": "Added on"
+      },
+      "errors": {
+        "load": "Failed to load allowed download hosts.",
+        "save": "Could not save the change."
+      }
     }
   },
   "errors": {
@@ -3843,7 +3876,8 @@
     }
   },
   "common": {
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "cancel": "Cancel"
   },
   "featureFlags": {
     "categories": {

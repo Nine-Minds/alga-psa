@@ -536,6 +536,11 @@
       },
       "providers": {
         "title": "Provider di email e identità"
+      },
+      "sharedTasks": {
+        "title": "Attività condivise",
+        "taskTitle": "Attività condivisa",
+        "projectTitle": "Progetto condiviso"
       }
     }
   },

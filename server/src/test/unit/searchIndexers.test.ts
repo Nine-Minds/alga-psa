@@ -321,6 +321,18 @@ describe('search entity indexers', () => {
     });
   });
 
+  it('L4a ticket-comment indexer is internal-only unless the resolved audience is requester', async () => {
+    const run = async (row: Record<string, unknown>) => {
+      const { knex } = createFirstRowKnex({ comment_id: 'c', ticket_id: 't', note: 'x', ticket_title: 'T', ticket_number: '1', ...row });
+      return (await ticketCommentIndexer.loadOne(knex as never, '11111111-1111-4111-8111-111111111111', 'c'))!.acl;
+    };
+    expect((await run({ is_internal: false, audience: 'requester' })).isInternalOnly).toBe(false);
+    expect((await run({ is_internal: true, audience: 'shared_it' })).isInternalOnly).toBe(true);
+    expect((await run({ is_internal: true, audience: 'organization_private' })).isInternalOnly).toBe(true);
+    // A public-flagged comment on a private/inconsistent thread resolves private in SQL and must not be searchable.
+    expect((await run({ is_internal: false, audience: 'organization_private' })).isInternalOnly).toBe(true);
+  });
+
   it('C7 ticket-comment indexer excludes soft-deleted and unpublished comments at the source', async () => {
     const tenant = '11111111-1111-4111-8111-111111111111';
     // loadOne: a soft-deleted/scheduled/canceled row is filtered out by the query, so no row comes back -> null.

@@ -1185,6 +1185,9 @@
           "contains": "Innehåller",
           "starts_with": "Börjar med",
           "ends_with": "Slutar med",
+          "not_contains": "Innehåller inte",
+          "not_starts_with": "Börjar inte med",
+          "not_ends_with": "Slutar inte med",
           "is_empty": "Är tomt",
           "is_not_empty": "Är inte tomt"
         },
@@ -3664,6 +3667,36 @@
         "confirm": "Koppla från",
         "cancel": "Avbryt"
       }
+    },
+    "loading": "Läser in…",
+    "downloadHosts": {
+      "title": "Tillåtna nedladdningsvärdar",
+      "intro": "När ett dokument bifogas via URL hämtar AlgaPSA det bara från värdarna som listas här. Det gäller alla som bifogar dokument, inklusive AI-agenter, API-klienter och REST-API:t. Föredra bucket-specifika värdar som acme-uploads.s3.us-east-1.amazonaws.com framför breda.",
+      "readOnly": "Du kan visa listan. För att ändra den krävs behörigheten ”Hantera nedladdningsvärdar”.",
+      "builtIn": "Inbyggd",
+      "empty": "Inga anpassade värdar ännu.",
+      "add": "Lägg till värd",
+      "addTitle": "Lägg till tillåten nedladdningsvärd",
+      "remove": "Ta bort",
+      "removeTitle": "Ta bort värd?",
+      "removeMessage": "Nedladdningar från {{host}} slutar fungera tills värden läggs till igen.",
+      "fields": {
+        "host": "Värd",
+        "hostHelp": "Ett värdnamn, eller *.example.com för att tillåta alla underdomäner.",
+        "note": "Anteckning (valfritt)"
+      },
+      "table": {
+        "host": "Värd",
+        "used": "Används för",
+        "allowed": "Tillåten",
+        "note": "Anteckning",
+        "addedBy": "Tillagd av",
+        "addedOn": "Tillagd"
+      },
+      "errors": {
+        "load": "Det gick inte att läsa in tillåtna nedladdningsvärdar.",
+        "save": "Det gick inte att spara ändringen."
+      }
     }
   },
   "errors": {
@@ -3843,7 +3876,8 @@
     }
   },
   "common": {
-    "saving": "Sparar…"
+    "saving": "Sparar…",
+    "cancel": "Avbryt"
   },
   "featureFlags": {
     "categories": {

@@ -10,6 +10,14 @@ import { processUnifiedInboundEmailQueueJob } from '../services/email/unifiedInb
 import { registerInboundAuthPauseNotifications } from '../services/email/inboundAuthPauseNotificationService';
 
 async function main(): Promise<void> {
+  // CM L5: this process runs processInboundEmailInApp, so it needs the same delivery + inbound
+  // writer seams as the server. Best-effort: without them a cm token is retried, never dropped.
+  try {
+    await import('@alga-psa/co-managed/deliveryRegistration');
+  } catch (error) {
+    console.error('[UnifiedInboundEmailQueueConsumer] Failed to register the co-managed delivery provider:', error);
+  }
+
   // This process can perform the atomic auth-failure auto-pause; without a
   // registered notifier those pauses would be silent to tenant admins.
   registerInboundAuthPauseNotifications();

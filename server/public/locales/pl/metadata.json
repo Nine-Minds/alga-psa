@@ -536,6 +536,11 @@
       },
       "providers": {
         "title": "Dostawcy poczty e-mail i tożsamości"
+      },
+      "sharedTasks": {
+        "title": "Udostępnione zadania",
+        "taskTitle": "Udostępnione zadanie",
+        "projectTitle": "Udostępniony projekt"
       }
     }
   },

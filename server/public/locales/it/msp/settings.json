@@ -1185,6 +1185,9 @@
           "contains": "Contiene",
           "starts_with": "Inizia con",
           "ends_with": "Termina con",
+          "not_contains": "Non contiene",
+          "not_starts_with": "Non inizia con",
+          "not_ends_with": "Non termina con",
           "is_empty": "È vuoto",
           "is_not_empty": "Non è vuoto"
         },
@@ -3664,6 +3667,36 @@
         "confirm": "Disconnetti",
         "cancel": "Annulla"
       }
+    },
+    "loading": "Caricamento…",
+    "downloadHosts": {
+      "title": "Host di download consentiti",
+      "intro": "Quando un documento viene allegato tramite URL, AlgaPSA lo scarica solo dagli host elencati qui. Questo vale per chiunque alleghi documenti, inclusi agenti IA, client API e l'API REST. Preferisci host specifici di un bucket, come acme-uploads.s3.us-east-1.amazonaws.com, a quelli generici.",
+      "readOnly": "Puoi visualizzare questo elenco. Per modificarlo serve l'autorizzazione \"Gestisci host di download\".",
+      "builtIn": "Predefinito",
+      "empty": "Nessun host personalizzato.",
+      "add": "Aggiungi host",
+      "addTitle": "Aggiungi host di download consentito",
+      "remove": "Rimuovi",
+      "removeTitle": "Rimuovere l'host?",
+      "removeMessage": "I download da {{host}} non funzioneranno finché non verrà aggiunto di nuovo.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "Un nome host, oppure *.example.com per consentire tutti i sottodomini.",
+        "note": "Nota (facoltativa)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Usato per",
+        "allowed": "Consentito",
+        "note": "Nota",
+        "addedBy": "Aggiunto da",
+        "addedOn": "Aggiunto il"
+      },
+      "errors": {
+        "load": "Impossibile caricare gli host di download consentiti.",
+        "save": "Impossibile salvare la modifica."
+      }
     }
   },
   "errors": {
@@ -3843,7 +3876,8 @@
     }
   },
   "common": {
-    "saving": "Salvataggio…"
+    "saving": "Salvataggio…",
+    "cancel": "Annulla"
   },
   "featureFlags": {
     "categories": {

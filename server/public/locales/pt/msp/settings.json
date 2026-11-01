@@ -1185,6 +1185,9 @@
           "contains": "Contém",
           "starts_with": "Começa com",
           "ends_with": "Termina com",
+          "not_contains": "Não contém",
+          "not_starts_with": "Não começa com",
+          "not_ends_with": "Não termina com",
           "is_empty": "Está vazio",
           "is_not_empty": "Não está vazio"
         },
@@ -3664,6 +3667,36 @@
         "confirm": "Desconectar",
         "cancel": "Cancelar"
       }
+    },
+    "loading": "Carregando…",
+    "downloadHosts": {
+      "title": "Hosts de download permitidos",
+      "intro": "Quando um documento é anexado por URL, o AlgaPSA só o baixa dos hosts listados aqui. Isso vale para qualquer um que anexe documentos, incluindo agentes de IA, clientes de API e a API REST. Prefira hosts específicos de um bucket, como acme-uploads.s3.us-east-1.amazonaws.com, a hosts genéricos.",
+      "readOnly": "Você pode visualizar esta lista. Para alterá-la, é necessária a permissão \"Gerenciar hosts de download\".",
+      "builtIn": "Integrado",
+      "empty": "Nenhum host personalizado ainda.",
+      "add": "Adicionar host",
+      "addTitle": "Adicionar host de download permitido",
+      "remove": "Remover",
+      "removeTitle": "Remover host?",
+      "removeMessage": "Os downloads de {{host}} deixarão de funcionar até que ele seja adicionado novamente.",
+      "fields": {
+        "host": "Host",
+        "hostHelp": "Um nome de host, ou *.example.com para permitir todos os subdomínios.",
+        "note": "Observação (opcional)"
+      },
+      "table": {
+        "host": "Host",
+        "used": "Usado para",
+        "allowed": "Permitido",
+        "note": "Observação",
+        "addedBy": "Adicionado por",
+        "addedOn": "Adicionado em"
+      },
+      "errors": {
+        "load": "Não foi possível carregar os hosts de download permitidos.",
+        "save": "Não foi possível salvar a alteração."
+      }
     }
   },
   "errors": {
@@ -3843,7 +3876,8 @@
     }
   },
   "common": {
-    "saving": "A guardar…"
+    "saving": "A guardar…",
+    "cancel": "Cancelar"
   },
   "featureFlags": {
     "categories": {
