@@ -7,11 +7,13 @@ import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSh
 import { withCoManagedCustomerTicket } from './customerWork';
 import { snapshotCoManagedSessionActor, isCoManagedUuid, assertCoManagedSessionUnexpired, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+import { localAuthorReference } from './conversationAuthorReference';
 
 export interface CoManagedConversationCursor { createdAt: string; storeTenant: string; commentId: string }
 export interface CoManagedConversationAuthor {
   tenant: string;
   kind: 'user' | 'contact' | 'system' | 'unknown';
+  /** Non-null only for the viewer's own tenant; `referenceId` is the only handle across tenants. */
   id: string | null;
   displayName: string | null;
   organizationName: string | null;
@@ -47,6 +49,14 @@ function snapshotCursor(input?: CoManagedConversationCursor): CoManagedConversat
 function timestamp(trx: Knex.Transaction, column: string) {
   // Preserve microseconds so a cursor cannot skip comments created in the same millisecond.
   return trx.raw(`to_char(?? AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`, [column]);
+}
+/** Shapes the author on the server: a raw user/contact id of another tenant never crosses the action boundary. */
+export function shapeConversationAuthor(row: Record<string, any>, viewerTenant: string): CoManagedConversationAuthor {
+  const base = { tenant: row.actor_tenant, kind: row.actor_kind, displayName: row.actor_display_name, organizationName: row.actor_organization_name };
+  if (row.actor_tenant === viewerTenant) return { ...base, id: row.actor_id, referenceId: row.actor_reference_id };
+  const storeLocal = (row.actor_kind === 'user' || row.actor_kind === 'contact') && row.actor_id != null;
+  return { ...base, id: null,
+    referenceId: row.actor_reference_id ?? (storeLocal ? localAuthorReference(row.store_tenant, row.actor_kind, row.actor_id) : null) };
 }
 async function readConversation(context: CoManagedSharedWorkContext, cursor?: CoManagedConversationCursor): Promise<CoManagedTicketConversation> {
   const { trx, actor, resource, redactedFields } = context;
@@ -105,8 +115,7 @@ async function readConversation(context: CoManagedSharedWorkContext, cursor?: Co
     audience: row.audience, createdAt: row.created_at_exact, updatedAt: row.updated_at_exact, deleted: row.deleted_at != null,
     revision: isCoManagedReadFieldHidden(redactedFields, ['revision']) ? null : row.revision,
     note: row.deleted_at == null ? row.note : null, markdown: row.deleted_at == null ? row.markdown : null,
-    ...(hideAuthor ? {} : { author: { tenant: row.actor_tenant, kind: row.actor_kind, id: row.actor_id, displayName: row.actor_display_name,
-      organizationName: row.actor_organization_name, referenceId: row.actor_reference_id } }),
+    ...(hideAuthor ? {} : { author: shapeConversationAuthor(row, actor.tenant) }),
   }));
   const last = items.at(-1);
   return { resource, items, nextBefore: rows.length > 25 && last ? { createdAt: last.createdAt, storeTenant: last.storeTenant, commentId: last.commentId } : null };
