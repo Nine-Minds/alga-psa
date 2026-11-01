@@ -165,3 +165,21 @@ provider.
   in-process dispatch is a later optimization.
 - **Not yet in MVP** (Phase 3): agent-specific ABAC policy, approval gates (human-in-the-loop),
   and quotas/rate-limits.
+
+## Security note: audit redaction of returned secrets (alga-2026-0003021, f2)
+
+`mcp_agent_audit` (and so `GET /api/v1/mcp/audit`) no longer stores secrets that tools return,
+e.g. the `signing_secret` from `POST /api/v1/webhooks/{id}/secret/rotate`. Redaction happens in
+`writeAgentAudit` (`redactToolResult` / `redactToolArguments` in `@alga-psa/agent-tooling`); the tool
+response to the agent is unchanged. Keys named `signing_secret`, `client_secret`, `secret`, `password`,
+`private_key`, `api_key`, `webhook_secret`, or ending in `_secret` / `_password` / `_token` are replaced
+with `[redacted]` (deliberately broad).
+
+**Release note:** secrets returned before this fix may still be in existing audit rows. Run the
+remediation (idempotent, per tenant) and **rotate any webhook signing secrets that were rotated via
+MCP before the fix** — removing the stored copy does not un-leak it:
+
+```
+npx tsx ee/server/scripts/redact-mcp-audit-secrets.ts --tenant=<tenant-id> --dry-run
+npx tsx ee/server/scripts/redact-mcp-audit-secrets.ts --tenant=<tenant-id>     # or --all-tenants
+```

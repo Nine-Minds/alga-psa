@@ -113,3 +113,11 @@ base64). That walk is the mechanism; today it is only applied to the input side.
 - The key-suffix rule catching a field a support engineer needs. Bounded: the
   summary keeps every non-secret key; the unredacted value is still visible to
   the agent in the response.
+
+## Implementation notes
+
+- Remediation: `ee/server/scripts/redact-mcp-audit-secrets.ts` (pure logic in
+  `redactMcpAuditSecretsLogic.ts`); run as documented in `docs/mcp-server.md`. It re-redacts parseable
+  summaries/arguments (keeps status/ok) and nulls truncated, unparseable summaries that still show a
+  secret-shaped key. Queries filter by tenant + id only (tenant-distributed table).
+- Redacted JSON results are re-serialized with 2-space indent (as the dispatcher does); unchanged results are stored byte-for-byte.
