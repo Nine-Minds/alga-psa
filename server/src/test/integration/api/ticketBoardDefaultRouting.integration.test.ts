@@ -1,13 +1,27 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
+import { NextRequest } from 'next/server';
 import { tenantDb } from '@alga-psa/db';
+import { BaseService } from '@alga-psa/db';
 import { TicketService } from '@/lib/api/services/TicketService';
+import { ApiBaseController } from '@/lib/api/controllers/ApiBaseController';
+import { POST } from '@/app/api/v1/tickets/route';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { createClient, createTenant, createUser } from '../../../../test-utils/testDataFactory';
 import { createTicketFromEmail } from '@alga-psa/shared/workflow/actions/emailWorkflowActions';
 
 const HOOK_TIMEOUT = 300_000;
+
+vi.mock('server/src/lib/eventBus/publishers', () => ({
+  publishEvent: vi.fn(async () => undefined),
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishNonCatalogWorkflowEvent: vi.fn(async () => undefined),
+  publishStoredWorkflowEvent: vi.fn(async () => undefined),
+  publishBuiltWorkflowPayload: vi.fn(async () => undefined),
+  publishNonCatalogEventByName: vi.fn(async () => undefined),
+  publishUnregisteredEventType: vi.fn(async () => undefined),
+}));
 
 describe('REST ticket creation applies board-default routing', () => {
   let db: Knex;
@@ -66,9 +80,26 @@ describe('REST ticket creation applies board-default routing', () => {
     service = new TicketService();
     vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant });
     vi.spyOn(service as any, 'safePublishEvent').mockResolvedValue(undefined);
+
+    // Exercise the actual route, schema validation, TicketService and database.
+    // Only API authentication/context and event transport are replaced here.
+    vi.spyOn(BaseService.prototype as any, 'getKnex').mockResolvedValue({ knex: db, tenant });
+    vi.spyOn(ApiBaseController.prototype as any, 'authenticate').mockImplementation(async (request: any) => {
+      request.context = {
+        tenant,
+        userId: actorId,
+        user: { user_id: actorId, tenant, user_type: 'internal' },
+        apiKeyId: uuidv4(),
+      };
+      return request;
+    });
+    vi.spyOn(ApiBaseController.prototype as any, 'runWithApiKeyContext')
+      .mockImplementation(async (_request: unknown, callback: () => Promise<unknown>) => callback());
+    vi.spyOn(ApiBaseController.prototype as any, 'checkPermission').mockResolvedValue(undefined);
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
+    vi.restoreAllMocks();
     if (db) await db.destroy();
   });
 
@@ -92,6 +123,46 @@ describe('REST ticket creation applies board-default routing', () => {
       .where({ ticket_id: created.ticket_id, role: 'team_member' })
       .pluck('additional_user_id');
     expect(members).toContain(defaultTeamMemberId);
+  });
+
+  it.each([
+    { name: 'omitted routing', input: {}, assignedTo: 'default-user', team: 'default-team' },
+    { name: 'explicit assignments', input: { assigned_to: 'actor', assigned_team_id: 'explicit-team' }, assignedTo: 'actor', team: 'explicit-team' },
+    { name: 'explicit nulls', input: { assigned_to: null, assigned_team_id: null }, assignedTo: null, team: null },
+    { name: 'explicit user suppresses team default', input: { assigned_to: 'actor' }, assignedTo: 'actor', team: null },
+    { name: 'explicit team keeps omitted user default', input: { assigned_team_id: 'explicit-team' }, assignedTo: 'default-user', team: 'explicit-team' },
+  ] as const)('POST route validates and persists $name', async ({ input, assignedTo, team }) => {
+    const resolvedInput = {
+      ...input,
+      ...(input.assigned_to === 'actor' ? { assigned_to: actorId } : {}),
+      ...(input.assigned_team_id === 'explicit-team' ? { assigned_team_id: explicitTeamId } : {}),
+    };
+    const response = await POST(new NextRequest('http://localhost/api/v1/tickets', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': 'test-api-key' },
+      body: JSON.stringify({
+        title: `POST routing ${uuidv4().slice(0, 8)}`,
+        client_id: clientId,
+        board_id: boardId,
+        status_id: statusId,
+        priority_id: priorityId,
+        ...resolvedInput,
+      }),
+    }) as any);
+
+    expect(response.status).toBe(201);
+    const body = await response.json();
+    const ticket = body.data;
+    const expectedAssignee = assignedTo === 'default-user' ? defaultUserId
+      : assignedTo === 'actor' ? actorId : assignedTo;
+    const expectedTeam = team === 'default-team' ? defaultTeamId
+      : team === 'explicit-team' ? explicitTeamId : team;
+    expect(ticket.assigned_to).toBe(expectedAssignee);
+    expect(ticket.assigned_team_id).toBe(expectedTeam);
+
+    const persisted = await table('tickets').where({ ticket_id: ticket.ticket_id }).first();
+    expect(persisted.assigned_to).toBe(ticket.assigned_to);
+    expect(persisted.assigned_team_id).toBe(ticket.assigned_team_id);
   });
 
   it('preserves explicit user and team values', async () => {
