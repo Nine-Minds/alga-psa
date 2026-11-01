@@ -34,7 +34,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
 vi.mock('axios', () => ({ default: { post: (...args: any[]) => (mocks.tokenExchange as any)(...args) } }));
 vi.mock('@/lib/db', () => ({ createTenantKnex: async (tenant?: string) => ({ knex: { fn: { now: () => new Date() } }, tenant: tenant || 'tenant-a' }) }));
 vi.mock('@alga-psa/db', () => ({
-  tenantDb: () => ({
+  tenantDb: (_knex: unknown, tenant = 'tenant-a') => ({
     table: (table: string) => {
       const predicates: Array<(row: any) => boolean> = [];
       const query: any = {
@@ -48,12 +48,12 @@ vi.mock('@alga-psa/db', () => ({
           const rows = table === 'email_providers' ? [mocks.provider]
             : table === 'imap_email_provider_config' ? [mocks.config]
             : table === 'users' ? [mocks.userRow] : [];
-          return rows.find((row) => row && predicates.every((predicate) => predicate(row))) || null;
+          return rows.find((row) => row && row.tenant === tenant && predicates.every((predicate) => predicate(row))) || null;
         },
         insert: async (row: any) => { mocks.grantsInserted.push(row); mocks.grant = { ...row }; },
         update: (values: any) => {
           const row = table === 'email_oauth_grants' ? mocks.grant : table === 'imap_email_provider_config' ? mocks.config : mocks.provider;
-          const matched = Boolean(row && predicates.every((predicate) => predicate(row)));
+          const matched = Boolean(row && row.tenant === tenant && predicates.every((predicate) => predicate(row)));
           if (matched) Object.assign(row, values);
           return { returning: async () => matched ? [row] : [] };
         },
@@ -65,6 +65,8 @@ vi.mock('@alga-psa/db', () => ({
 
 import { POST as initiate } from '../../../app/api/email/oauth/imap/initiate/route';
 import { GET as callback } from '../../../app/api/email/oauth/imap/callback/route';
+import { POST as reconnect } from '../../../app/api/email/imap/reconnect/route';
+import { POST as googleInitiate } from '../../../app/api/email/oauth/initiate/route';
 
 const baseState = (): ImapOAuthState => ({
   tenant: 'tenant-a', userId: 'user-a', providerId: 'provider-a',
@@ -83,11 +85,11 @@ describe('IMAP OAuth authorization routes', () => {
     mocks.hasPermission.mockImplementation(async () => mocks.permissionCheck);
     mocks.permissionCheck = true;
     mocks.secret = 'test-signing-key';
-    mocks.provider = { id: 'provider-a', provider_type: 'imap', status: 'disconnected' };
-    mocks.config = { email_provider_id: 'provider-a', oauth_authorize_url: 'https://oauth.example.test/authorize', oauth_token_url: 'https://oauth.example.test/token', oauth_client_id: 'client-id', oauth_scopes: 'mail.read' };
+    mocks.provider = { tenant: 'tenant-a', id: 'provider-a', provider_type: 'imap', status: 'disconnected' };
+    mocks.config = { tenant: 'tenant-a', email_provider_id: 'provider-a', oauth_authorize_url: 'https://oauth.example.test/authorize', oauth_token_url: 'https://oauth.example.test/token', oauth_client_id: 'client-id', oauth_scopes: 'mail.read' };
     mocks.grant = null;
     mocks.grantsInserted.length = 0;
-    mocks.userRow = { user_id: 'user-a', user_type: 'internal', is_inactive: false };
+    mocks.userRow = { tenant: 'tenant-a', user_id: 'user-a', user_type: 'internal', is_inactive: false };
     mocks.tokenExchange.mockClear();
     mocks.setTenantSecret.mockClear();
   });
@@ -109,10 +111,39 @@ describe('IMAP OAuth authorization routes', () => {
     expect(mocks.grantsInserted).toHaveLength(0);
   });
 
+  it('denies readers and client users from generic OAuth initiate and IMAP reconnect', async () => {
+    const request = (path: string) => new NextRequest(`https://psa.example.test${path}`, {
+      method: 'POST', body: JSON.stringify({ providerId: 'provider-a', provider: 'google' }),
+      headers: { 'content-type': 'application/json' },
+    });
+    mocks.permissionCheck = false;
+    expect((await googleInitiate(request('/api/email/oauth/initiate'))).status).toBe(403);
+    expect((await reconnect(request('/api/email/imap/reconnect'))).status).toBe(403);
+    mocks.permissionCheck = true;
+    mocks.user = { tenant: 'tenant-a', user_id: 'client-user', user_type: 'client' };
+    expect((await googleInitiate(request('/api/email/oauth/initiate'))).status).toBe(403);
+    expect((await reconnect(request('/api/email/imap/reconnect'))).status).toBe(403);
+  });
+
   it('rejects cross-tenant provider references before OAuth exchange', async () => {
-    mocks.provider = null;
+    // A provider with this id exists, but belongs to tenant B. The mocked
+    // tenantDb applies tenant filtering just like the production wrapper.
+    mocks.provider = { tenant: 'tenant-b', id: 'provider-a', provider_type: 'imap', status: 'connected' };
     const response = await callback(callbackRequest(encodeImapOAuthState({ ...baseState(), providerId: 'other-tenant-provider' }, mocks.secret!)));
     expect(response.status).toBe(404);
+    expect(mocks.tokenExchange).not.toHaveBeenCalled();
+  });
+
+  it('does not treat a same-id user in another tenant as the grant initiator', async () => {
+    const token = encodeImapOAuthState(baseState(), mocks.secret!);
+    mocks.userRow = { tenant: 'tenant-b', user_id: 'user-a', user_type: 'internal', is_inactive: false };
+    mocks.grant = {
+      tenant: 'tenant-a', id: 'grant-a', provider_id: 'provider-a', initiated_by_user_id: 'user-a',
+      purpose: 'reconnect', redirect_uri: baseState().redirectUri,
+      expires_at: new Date(Date.now() + 60_000), consumed_at: null,
+    };
+    const response = await callback(callbackRequest(token));
+    expect(response.status).toBe(403);
     expect(mocks.tokenExchange).not.toHaveBeenCalled();
   });
 

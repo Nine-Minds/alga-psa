@@ -7,6 +7,8 @@ import {
   OAuthState
 } from '@/utils/email/oauthHelpers';
 import { assertTenantProductAccess, isProductAccessError, toProductAccessDeniedResponse } from '@/lib/productAccess';
+import { createTenantKnex } from '@/lib/db';
+import { assertProviderMutationAuthority, ProviderMutationForbiddenError } from '@/lib/email/providerMutationAuthority';
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,6 +21,12 @@ export async function POST(request: NextRequest) {
       capability: 'email_to_ticket',
       allowedProducts: ['psa', 'algadesk'],
     });
+
+    const { knex, tenant } = await createTenantKnex(user.tenant);
+    if (!tenant || tenant !== user.tenant) {
+      return NextResponse.json({ error: 'Tenant mismatch' }, { status: 403 });
+    }
+    await assertProviderMutationAuthority(user, knex);
 
     const body = await request.json();
     const { provider, redirectUri } = body;
@@ -91,6 +99,9 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error: any) {
+    if (error instanceof ProviderMutationForbiddenError) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
     if (isProductAccessError(error)) {
       return toProductAccessDeniedResponse(error);
     }

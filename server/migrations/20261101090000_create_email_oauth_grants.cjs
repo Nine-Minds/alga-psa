@@ -1,3 +1,5 @@
+const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+
 exports.up = async function up(knex) {
   const hasTable = await knex.schema.hasTable('email_oauth_grants');
   if (!hasTable) {
@@ -18,10 +20,7 @@ exports.up = async function up(knex) {
     });
   }
 
-  const available = await knex.raw("SELECT EXISTS (SELECT 1 FROM pg_proc WHERE proname = 'create_distributed_table') AS exists");
-  if (available.rows?.[0]?.exists) {
-    await knex.raw("SELECT create_distributed_table('email_oauth_grants', 'tenant', colocate_with => 'tenants')");
-  }
+  await ensureTenantDistribution(knex, 'email_oauth_grants');
 };
 
 exports.down = async function down(knex) {
