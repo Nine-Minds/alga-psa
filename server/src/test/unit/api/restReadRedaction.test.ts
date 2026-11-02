@@ -3193,3 +3193,95 @@ describe('project ticket response preserves the complete ticket source', () => {
     expect(body.pagination.total).toBe(0);
   });
 });
+
+describe('asset-ticket association reads retain both resource and association provenance', () => {
+  const assetId = 'a-association-provenance';
+  const ticketId = 't-association-provenance';
+  const asset = { asset_id: assetId, name: 'Visible Asset', client_id: 'c-1' };
+  const ticket = { ticket_id: ticketId, title: 'Visible Ticket', client_id: 'c-1' };
+  const association = {
+    relationship_type: 'affected',
+    association_notes: 'PRIVATE-ASSOCIATION-NOTE',
+    linked_at: '2026-10-15T12:00:00Z',
+  };
+
+  beforeEach(() => {
+    state.assets = [asset];
+    state.tickets = [ticket];
+    state.assetTickets = [{ ...ticket, ...association }];
+  });
+
+  const read = async (direction: 'asset-to-tickets' | 'ticket-to-assets') => {
+    if (direction === 'asset-to-tickets') {
+      return new ApiAssetController().listTickets(
+        request(`/api/v1/assets/${assetId}/tickets`), { id: assetId },
+      );
+    }
+    const controller = new ApiTicketController();
+    (controller as any).ticketService.getTicketAssets = vi.fn(async () => [{ ...asset, ...association }]);
+    return controller.getAssets()(request(`/api/v1/tickets/${ticketId}/assets`, { id: ticketId }));
+  };
+
+  for (const direction of ['asset-to-tickets', 'ticket-to-assets'] as const) {
+    const parentId = direction === 'asset-to-tickets' ? assetId : ticketId;
+    const relatedId = direction === 'asset-to-tickets' ? ticketId : assetId;
+
+    it(`${direction} preserves visible association metadata`, async () => {
+      const response = await read(direction);
+      expect(response.status).toBe(200);
+      expect((await response.json()).data).toMatchObject([association]);
+    });
+
+    for (const owner of ['parent', 'related'] as const) {
+      const ownerId = owner === 'parent' ? parentId : relatedId;
+
+      it.each(['asset_associations.notes', 'fields.asset_associations.notes'])(
+        `${direction} honors ${owner} notes redaction %s`, async (alias) => {
+          state.decisions.set(ownerId, { allowed: true, redactedFields: [alias] });
+          const response = await read(direction);
+          expect(response.status).toBe(200);
+          const { data } = await response.json();
+          expect(data).toHaveLength(1);
+          expect(data[0]).not.toHaveProperty('association_notes');
+          expect(data[0].relationship_type).toBe(association.relationship_type);
+        },
+      );
+
+      it(`${direction} honors ${owner} creation timestamp redaction`, async () => {
+        state.decisions.set(ownerId, {
+          allowed: true,
+          redactedFields: ['asset_associations.created_at'],
+        });
+        const response = await read(direction);
+        expect(response.status).toBe(200);
+        const { data } = await response.json();
+        expect(data).toHaveLength(1);
+        expect(data[0]).not.toHaveProperty('linked_at');
+      });
+
+      it.each([
+        'asset_associations',
+        'asset_associations.asset_id',
+        'asset_associations.entity_id',
+      ])(`${direction} suppresses association rows hidden by ${owner} %s`, async (alias) => {
+        state.decisions.set(ownerId, { allowed: true, redactedFields: [alias] });
+        const response = await read(direction);
+        expect(response.status).toBe(200);
+        expect((await response.json()).data).toEqual([]);
+      });
+    }
+
+    it(`${direction} composes independent parent and related association decisions`, async () => {
+      state.decisions.set(parentId, { allowed: true, redactedFields: ['asset_associations.notes'] });
+      state.decisions.set(relatedId, { allowed: true, redactedFields: ['asset_associations.created_at'] });
+
+      const response = await read(direction);
+      expect(response.status).toBe(200);
+      const { data } = await response.json();
+      expect(data).toHaveLength(1);
+      expect(data[0]).not.toHaveProperty('association_notes');
+      expect(data[0]).not.toHaveProperty('linked_at');
+      expect(data[0].relationship_type).toBe(association.relationship_type);
+    });
+  }
+});

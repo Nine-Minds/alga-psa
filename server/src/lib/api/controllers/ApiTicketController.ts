@@ -30,6 +30,7 @@ import {
   projectApiResourceRead,
   projectApiResourceReads,
   reprojectUnderDecision,
+  reprojectUnderDecisions,
   type AuthorizedProjection,
 } from './authorizationKernel';
 import {
@@ -45,6 +46,7 @@ import {
   TICKET_RECORD_SOURCE,
   TICKET_WATCHER_SOURCE,
   TICKET_TIME_ENTRIES_RESPONSE_SOURCE,
+  TICKET_ASSETS_RESPONSE_SOURCE,
   type RedactableRecordSource,
 } from '@alga-psa/co-managed/recordProjection';
 import { createProjectedFileResponse, createProjectedPreviewResponse } from '../utils/projectedFileResponse';
@@ -1104,14 +1106,14 @@ export class ApiTicketController extends ApiBaseController {
 
           const ticketId = await this.extractIdFromPath(apiRequest);
           const knex = await getConnection(apiRequest.context!.tenant);
-          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const ticketGate = await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
           // Response exposes asset records, so also require asset:read.
           if (!(await hasPermission(apiRequest.context!.user!, 'asset', 'read', knex))) {
             throw new ForbiddenError('Permission denied: Cannot read asset');
           }
           const assets = await this.ticketService.getTicketAssets(ticketId, apiRequest.context!);
           const recordContexts = await resolveAssetAuthorizationRecords(knex, apiRequest.context!.tenant, assets as any);
-          const projections = await projectApiResourceReads({
+          const assetProjections = await projectApiResourceReads({
             knex,
             tenant: apiRequest.context!.tenant,
             user: apiRequest.context!.user,
@@ -1119,6 +1121,15 @@ export class ApiTicketController extends ApiBaseController {
             kind: 'asset',
             records: assets,
             recordContextForRecord: (asset) => recordContexts.get(asset.asset_id),
+          });
+          const projectionsByAssetId = new Map(assetProjections.map((projection) => [projection.asset_id, projection]));
+          const projections = assets.flatMap((asset) => {
+            const assetProjection = projectionsByAssetId.get(asset.asset_id);
+            if (!assetProjection) return [];
+            const projection = reprojectUnderDecisions(
+              [ticketGate, assetProjection], asset, TICKET_ASSETS_RESPONSE_SOURCE,
+            );
+            return projection ? [projection] : [];
           });
 
           return createSuccessResponse(projections, 200, undefined, apiRequest);

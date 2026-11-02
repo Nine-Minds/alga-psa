@@ -113,11 +113,26 @@ export async function guardAssetRead(
   loader: AssetAuthorizationLoader,
   extraReadResources: Array<'ticket'> = [],
 ): Promise<NextResponse | null> {
+  return (await readAssetGateProjection(context, assetId, loader, extraReadResources)).denied;
+}
+
+/** Gate-only asset read that retains its projection for responses combining related resources. */
+export async function readAssetGateProjection(
+  context: ApiContext,
+  assetId: string,
+  loader: AssetAuthorizationLoader,
+  extraReadResources: Array<'ticket'> = [],
+): Promise<
+  | { projection: AuthorizedProjection<Record<string, any>>; denied: null }
+  | { projection: null; denied: NextResponse }
+> {
   try {
-    await assertAssetRecordAccess(context, assetId, loader, extraReadResources);
-    return null;
+    return {
+      projection: await assertAssetRecordAccess(context, assetId, loader, extraReadResources),
+      denied: null,
+    };
   } catch (error) {
-    return errorToResponse(error);
+    return { projection: null, denied: errorToResponse(error) };
   }
 }
 

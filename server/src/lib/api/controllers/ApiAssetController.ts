@@ -28,11 +28,12 @@ import { ProductAccessError, getTenantProduct } from '@/lib/productAccess';
 import { resolveProductApiBehavior } from '@/lib/productSurfaceRegistry';
 import { hasPermission } from '../../auth/rbac';
 import { getConnection } from '../../db/db';
-import { guardAssetRead, readAssetProjection } from './assetReadGuard';
+import { guardAssetRead, readAssetGateProjection, readAssetProjection } from './assetReadGuard';
 import {
   projectApiResourceRead,
   projectApiResourceReads,
   reprojectUnderDecision,
+  reprojectUnderDecisions,
   type AuthorizedProjection,
 } from './authorizationKernel';
 import {
@@ -41,6 +42,7 @@ import {
   ASSET_MAINTENANCE_SCHEDULE_SOURCE,
   ASSET_RECORD_SOURCE,
   ASSET_RELATIONSHIP_SOURCE,
+  ASSET_TICKETS_RESPONSE_SOURCE,
 } from '@alga-psa/co-managed/recordProjection';
 import { resolveAssetAuthorizationRecords } from '@alga-psa/assets/lib/assetReadAuthorization';
 import { buildProjectedPage } from '@alga-psa/authorization/pagination';
@@ -407,19 +409,30 @@ export class ApiAssetController {
     const context = await this.requireAllowedContext(req);
 
     // Response joins ticket data onto an asset — require read on both resources.
-    const denied = await guardAssetRead(context, params.id, this.assetService, ['ticket']);
+    const { projection: assetGate, denied } = await readAssetGateProjection(
+      context, params.id, this.assetService, ['ticket'],
+    );
     if (denied) return denied;
 
     // Ticket-owned fields: each ticket is redacted under the caller's ticket policy; hidden tickets are dropped.
     const tickets = await this.assetService.getAssetTickets(params.id, context);
     const knex = await getConnection(context.tenant);
-    const visible = await projectApiResourceReads({
+    const ticketProjections = await projectApiResourceReads({
       knex,
       tenant: context.tenant,
       user: context.user,
       apiKeyId: (context as any).apiKeyId,
       kind: 'ticket',
       records: tickets,
+    });
+    const projectionsByTicketId = new Map(ticketProjections.map((projection) => [projection.ticket_id, projection]));
+    const visible = tickets.flatMap((ticket) => {
+      const ticketProjection = projectionsByTicketId.get(ticket.ticket_id);
+      if (!ticketProjection) return [];
+      const projection = reprojectUnderDecisions(
+        [assetGate, ticketProjection], ticket, ASSET_TICKETS_RESPONSE_SOURCE,
+      );
+      return projection ? [projection] : [];
     });
 
     return createApiResponse(visible);

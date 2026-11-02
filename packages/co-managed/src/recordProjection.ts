@@ -1042,6 +1042,42 @@ export const ASSET_RECORD_SOURCE: RedactableRecordSource = {
   },
 };
 
+/** The shared asset-ticket edge owns the copied association metadata and both foreign identifiers. */
+export const ASSET_TICKET_ASSOCIATION_SOURCE: RedactableRecordSource = {
+  resource: ['asset_associations'],
+  identifier: ids(
+    'association_id', 'asset_associations.association_id',
+    'asset_id', 'assets.asset_id', 'asset_associations.asset_id',
+    'entity_id', 'tickets.ticket_id', 'asset_associations.entity_id',
+  ),
+  fields: {
+    relationship_type: ids('relationship_type', 'asset_associations.relationship_type'),
+    association_notes: ids('notes', 'asset_associations.notes'),
+    linked_at: ids('created_at', 'asset_associations.created_at'),
+  },
+  derived: {},
+};
+
+/** Asset-to-ticket rows retain the canonical ticket descriptor and add association-owned aliases. */
+export const ASSET_TICKETS_RESPONSE_SOURCE: RedactableRecordSource = {
+  ...TICKET_RECORD_SOURCE,
+  policySource: TICKET_RECORD_SOURCE,
+  resource: [...TICKET_RECORD_SOURCE.resource, ...ASSET_TICKET_ASSOCIATION_SOURCE.resource],
+  identifier: [...TICKET_RECORD_SOURCE.identifier, ...ASSET_TICKET_ASSOCIATION_SOURCE.identifier],
+  fields: { ...TICKET_RECORD_SOURCE.fields, ...ASSET_TICKET_ASSOCIATION_SOURCE.fields },
+  derived: { ...TICKET_RECORD_SOURCE.derived, ...ASSET_TICKET_ASSOCIATION_SOURCE.derived },
+};
+
+/** Ticket-to-asset rows retain the canonical asset descriptor and add association-owned aliases. */
+export const TICKET_ASSETS_RESPONSE_SOURCE: RedactableRecordSource = {
+  ...ASSET_RECORD_SOURCE,
+  policySource: ASSET_RECORD_SOURCE,
+  resource: [...ASSET_RECORD_SOURCE.resource, ...ASSET_TICKET_ASSOCIATION_SOURCE.resource],
+  identifier: [...ASSET_RECORD_SOURCE.identifier, ...ASSET_TICKET_ASSOCIATION_SOURCE.identifier],
+  fields: { ...ASSET_RECORD_SOURCE.fields, ...ASSET_TICKET_ASSOCIATION_SOURCE.fields },
+  derived: { ...ASSET_RECORD_SOURCE.derived, ...ASSET_TICKET_ASSOCIATION_SOURCE.derived },
+};
+
 /**
  * Predicate-side counterpart of `projectRecordByRedactions`: true when `field` (a response key such as `description`
  * or the derived `client_name`) may take part in a search or filter for a reader with `redactions`. It resolves
