@@ -2,7 +2,7 @@
 // T029: the warranty panel offers exactly the actions the state machine allows for each status.
 
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { fireEvent } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { RmaWarrantyPanel, deadUnitDeadlineBadge } from './RmaWarrantyPanel';
@@ -12,11 +12,12 @@ vi.mock('../../actions', () => {
   const fn = () => vi.fn(async () => ({}));
   return {
     approveWarrantyClaim: fn(), cancelWarrantyClaim: fn(), closeWarrantyRma: fn(), denyWarrantyClaim: fn(),
-    markDeviceReceived: fn(), receiveVendorReplacement: fn(), recordVendorCredit: fn(), recordVendorRepair: fn(),
+    markDeviceReceived: fn(), receiveVendorReplacement: fn(), recordVendorCredit: fn(), recordVendorNonReturnCharge: fn(), recordVendorRepair: fn(),
     returnDeviceToClient: fn(), shipToVendor: fn(), shipDeadUnitToVendor: fn(), confirmVendorReceipt: fn(),
-    listRmaCaseEvents: vi.fn(async () => []),
+    listRmaCaseEvents: vi.fn(async () => eventFixture.rows),
   };
 });
+const eventFixture = vi.hoisted(() => ({ rows: [] as any[] }));
 vi.mock('react-hot-toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   const t = (key: string, fallback?: string, values?: Record<string, unknown>) =>
@@ -44,9 +45,10 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   ),
 }));
 vi.mock('@alga-psa/ui/components/DatePicker', () => ({ DatePicker: () => null }));
+vi.mock('@alga-psa/ui/components/CurrencyPicker', () => ({ default: () => null }));
 vi.mock('@alga-psa/ui/components/Badge', () => ({ Badge: ({ children }: any) => <span>{children}</span> }));
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); eventFixture.rows = []; });
 
 const STATUSES = [
   'warranty_review', 'open', 'awaiting_return', 'returned', 'sent_to_vendor', 'replacement_received',
@@ -104,6 +106,18 @@ describe('RmaWarrantyPanel (T029)', () => {
     expect(document.getElementById('rma-warranty-asset-link')!.getAttribute('href')).toContain(base.asset_id);
     expect(document.getElementById('rma-warranty-ticket-link')!.getAttribute('href')).toContain(base.ticket_id);
     expect(screen.getByText(/Ticket: T-100/)).toBeTruthy();
+  });
+
+  it('renders a persisted vendor non-return charge as an identified history event with amount and currency', async () => {
+    eventFixture.rows = [{
+      event_id: 'event-charge-1', event_type: 'closed', occurred_at: '2026-11-01T12:00:00Z', actor_user_id: 'operator',
+      actor_name: 'Inventory Operator', from_status: 'replaced', to_status: 'closed', note: 'Vendor declined return',
+      payload: { resolution: 'vendor_non_return_charge', amount: '125.50', currency_code: 'USD' },
+    }];
+    render(<RmaWarrantyPanel rma={{ ...base, rma_type: 'advance_replacement', status: 'closed' } as any} vendors={[]} locations={[]} onChanged={vi.fn()} />);
+    await waitFor(() => expect(document.getElementById('rma-event-event-charge-1')?.textContent).toContain('Vendor non-return charge recorded'));
+    expect(document.getElementById('rma-event-event-charge-1')?.textContent).toContain('125.50 USD');
+    expect(document.getElementById('rma-event-event-charge-1')?.textContent).toContain('Vendor declined return');
   });
 
   it('exposes print actions, and the mirror action only with a ticket, a composition callback and a reference', () => {
@@ -252,6 +266,7 @@ describe('RmaWarrantyPanel (T029)', () => {
     it('renders "not yet shipped" for a past-due replaced case, "shipped late" for a late shipment, nothing for an on-time one; close stays available', () => {
       mount({ status: 'replaced', return_by: shift(-1) });
       expect(shownIds()).toEqual([ids[0]]);
+      expect(renderedActions()).toContain('charge_vendor_non_return');
       expect(document.getElementById(ids[0])!.textContent).toContain('Dead unit not yet shipped, was due');
       expect(renderedActions()).toContain('close');
       mount({ status: 'dead_unit_owed', return_by: shift(-3), outbound_shipped_at: new Date(`${shift(-1)}T12:00:00`).toISOString() });
@@ -262,6 +277,7 @@ describe('RmaWarrantyPanel (T029)', () => {
       expect(shownIds()).toEqual([]);
       mount({ status: 'replaced', return_by: todayYmd() });
       expect(shownIds()).toEqual([]);
+      expect(renderedActions()).not.toContain('charge_vendor_non_return');
     });
 
     // rma_cases.return_by is a Postgres DATE with no type parser: at runtime it is a Date (local midnight) or an ISO timestamp.

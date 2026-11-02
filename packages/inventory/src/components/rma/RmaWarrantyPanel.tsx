@@ -7,6 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import CurrencyPicker from '@alga-psa/ui/components/CurrencyPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -24,6 +25,7 @@ import {
   markDeviceReceived,
   receiveVendorReplacement,
   recordVendorCredit,
+  recordVendorNonReturnCharge,
   recordVendorRepair,
   returnDeviceToClient,
   shipDeadUnitToVendor,
@@ -102,6 +104,8 @@ interface ActionForm {
   location_id: string;
   counterparty: string;
   note: string;
+  chargeAmount: string;
+  chargeCurrency: string;
 }
 
 const emptyForm = (rma: IRmaCase, locations: IStockLocation[]): ActionForm => ({
@@ -121,6 +125,8 @@ const emptyForm = (rma: IRmaCase, locations: IStockLocation[]): ActionForm => ({
   location_id: locations.find((l) => l.is_default)?.location_id ?? '',
   counterparty: '',
   note: '',
+  chargeAmount: '',
+  chargeCurrency: '',
 });
 
 export interface RmaWarrantyPanelProps {
@@ -186,6 +192,7 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
     ship_dead_unit_to_vendor: t('rma.warranty.actions.shipDeadUnitToVendor', 'Ship dead unit to vendor'),
     confirm_vendor_receipt: t('rma.warranty.actions.confirmVendorReceipt', 'Vendor received dead unit'),
     close: t('rma.warranty.actions.close', 'Close RMA'),
+    charge_vendor_non_return: t('rma.warranty.actions.chargeVendorNonReturn', 'Record vendor non-return charge'),
   };
 
   const EVENT_LABELS: Record<string, string> = {
@@ -220,6 +227,10 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
   };
 
   const allowed = useMemo(() => allowedWarrantyActions(rma.status, rma.rma_type), [rma.status, rma.rma_type]);
+  const returnBy = calendarYmd(rma.return_by as string | Date | null);
+  const visibleActions = returnBy && returnBy < toYmd(new Date())
+    ? allowed
+    : allowed.filter((candidate) => candidate !== 'charge_vendor_non_return');
   const deadlineBadge = deadUnitDeadlineBadge(rma);
   const fmtDate = (v?: string | Date | null): string => {
     if (!v) return dash;
@@ -307,6 +318,13 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
           break;
         case 'record_credit':
           result = await recordVendorCredit(id, { note });
+          break;
+        case 'charge_vendor_non_return':
+          result = await recordVendorNonReturnCharge(id, {
+            amount: form.chargeAmount,
+            currency_code: form.chargeCurrency,
+            note,
+          });
           break;
         case 'return_to_client':
           result = await returnDeviceToClient(id, { counterparty: form.counterparty, note });
@@ -494,6 +512,14 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
         );
       case 'record_credit':
         return <p className="text-sm text-gray-600">{t('rma.warranty.confirmCredit', 'Record that the vendor credited this device. The custody episode is closed as disposed.')}</p>;
+      case 'charge_vendor_non_return':
+        return (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input id="rma-warranty-vendor-charge-amount" label={t('rma.warranty.fields.vendorChargeAmount', 'Charge amount')} type="number" min="0.01" step="0.01" value={form.chargeAmount} onChange={(e) => set('chargeAmount', e.target.value)} />
+            <CurrencyPicker id="rma-warranty-vendor-charge-currency" label={t('rma.warranty.fields.vendorChargeCurrency', 'Currency')} value={form.chargeCurrency} onValueChange={(value) => set('chargeCurrency', value)} placeholder={t('rma.warranty.fields.selectCurrency', 'Select currency')} />
+            <p className="text-xs text-gray-500 sm:col-span-2">{t('rma.warranty.vendorChargeHint', 'Recording this charge closes the overdue vendor return obligation. It does not record shipment or receipt.')}</p>
+          </div>
+        );
       case 'return_to_client':
         return <Input id="rma-warranty-counterparty" label={t('rma.warranty.fields.counterparty', 'Returned to')} value={form.counterparty} onChange={(e) => set('counterparty', e.target.value)} />;
       case 'close':
@@ -544,7 +570,7 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
       )}
 
       <div className="flex flex-wrap gap-2" id="rma-warranty-actions">
-        {allowed.map((a) => (
+        {visibleActions.map((a) => (
           <Button key={a} id={`rma-warranty-action-${a}`} size="sm" variant={a === 'deny' || a === 'cancel' ? 'outline' : 'default'} onClick={() => openAction(a)}>
             {ACTION_LABELS[a]}
           </Button>
@@ -589,9 +615,14 @@ export function RmaWarrantyPanel({ rma, vendors, locations, onChanged, onMirrorT
           <ul className="space-y-2 text-sm">
             {events.map((e) => (
               <li key={e.event_id} className="flex flex-wrap items-baseline gap-2" id={`rma-event-${e.event_id}`}>
-                <Badge variant="secondary" size="sm">{EVENT_LABELS[e.event_type] ?? e.event_type.replace(/_/g, ' ')}</Badge>
+                <Badge variant="secondary" size="sm">{e.payload?.resolution === 'vendor_non_return_charge'
+                  ? t('rma.warranty.events.vendorNonReturnCharge', 'Vendor non-return charge recorded')
+                  : EVENT_LABELS[e.event_type] ?? e.event_type.replace(/_/g, ' ')}</Badge>
                 <span className="text-gray-600">{new Date(e.occurred_at).toLocaleString()}</span>
                 {e.actor_name && <span className="text-gray-600">{e.actor_name}</span>}
+                {e.payload?.resolution === 'vendor_non_return_charge' && (
+                  <span>{String(e.payload.amount)} {String(e.payload.currency_code)}</span>
+                )}
                 {(e.carrier || e.tracking_number) && <span>{shipping(e.carrier, e.tracking_number)}</span>}
                 {e.note && <span className="text-gray-800">{e.note}</span>}
               </li>

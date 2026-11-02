@@ -17,6 +17,7 @@ import type {
   OpenWarrantyClaimInput,
   ReceiveVendorReplacementInput,
   RecordVendorCreditInput,
+  RecordVendorNonReturnChargeInput,
   RecordVendorRepairInput,
   ConfirmVendorReceiptInput,
   ReturnDeviceToClientInput,
@@ -451,6 +452,32 @@ export async function recordVendorCreditCore(
   return conclude(trx, tenant, actor, rma, 'record_credit', {}, {
     occurredAt: input.occurred_at, note: input.note, payload: { custody_closed: Boolean(custody) },
   }, { custodyEffects });
+}
+
+// A late non-return charge resolves the vendor return obligation. The locked case and its append-only event
+// commit together; no shipment, receipt, custody, inventory, or client-billing event is fabricated.
+export async function recordVendorNonReturnChargeCore(
+  trx: Knex.Transaction, tenant: string, actor: string, rmaId: string, input: RecordVendorNonReturnChargeInput, options: WarrantyCoreOptions = {}
+): Promise<WarrantyTransitionResult> {
+  const rma = await lockWarrantyRma(trx, tenant, rmaId, options);
+  guard(rma, 'charge_vendor_non_return');
+  // LEVERAGE: pattern local-calendar-date — dashboard and RMA transition compare DATE values using the app's local calendar day.
+  const today = new Date();
+  const todayYmd = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const overdue = await trx('rma_cases')
+    .where({ tenant, rma_id: rmaId })
+    .where('return_by', '<', todayYmd)
+    .first('rma_id');
+  if (!rma.return_by || !overdue) {
+    throw new WarrantyError('invalid_transition', 'A vendor non-return charge can only be recorded after the return deadline.');
+  }
+  const digits = new Intl.NumberFormat('en', { style: 'currency', currency: input.currency_code }).resolvedOptions().maximumFractionDigits ?? 2;
+  const amount = Number(input.amount).toFixed(digits);
+  return conclude(trx, tenant, actor, rma, 'charge_vendor_non_return', { closed_reason: 'resolved' }, {
+    occurredAt: input.occurred_at,
+    note: input.note,
+    payload: { resolution: 'vendor_non_return_charge', amount, currency_code: input.currency_code },
+  });
 }
 
 // --- 12. return to client ---------------------------------------------------------------------------------

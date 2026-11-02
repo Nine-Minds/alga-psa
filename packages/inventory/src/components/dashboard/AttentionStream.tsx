@@ -90,6 +90,7 @@ function kindLabel(item: AttentionItem, t: ReturnType<typeof useTranslation>['t'
     ghost_tech: t('dashboard.attention.kind.ghost', 'ghost usage'),
     rma_vendor: t('dashboard.attention.kind.rmaAging', 'rma aging'),
     rma_client: t('dashboard.attention.kind.rmaClient', 'replacement'),
+    rma_vendor_return: t('dashboard.attention.kind.rmaVendorReturn', 'overdue vendor return'),
     price_creep_so: t('dashboard.attention.kind.priceCreep', 'price creep'),
     price_creep_quotes: t('dashboard.attention.kind.priceCreep', 'price creep'),
     price_creep_bill: t('dashboard.attention.kind.billCreep', 'bill creep'),
@@ -144,6 +145,11 @@ function rowFact(item: AttentionItem, t: ReturnType<typeof useTranslation>['t'])
       });
     case 'rma_client':
       return t('dashboard.attention.fact.rmaClient', 'replacement unit still owed');
+    case 'rma_vendor_return':
+      return t('dashboard.attention.fact.rmaVendorReturn', 'vendor return due {{date}} — {{days}}d overdue', {
+        date: formatMaybeDate(param(item, 'return_by')),
+        days: paramNumber(item, 'overdue_days'),
+      });
     case 'price_creep_so':
       return t('dashboard.attention.fact.priceCreepSo', 'still priced at old cost');
     case 'price_creep_quotes':
@@ -222,6 +228,10 @@ function rowMeta(item: AttentionItem, t: ReturnType<typeof useTranslation>['t'])
         ref: param(item, 'rma_reference') || t('dashboard.attention.refFallback', 'RMA'),
         service: param(item, 'service_name'),
         days: paramNumber(item, 'days_remaining'),
+      });
+    case 'rma_vendor_return':
+      return t('dashboard.attention.meta.rmaVendorReturn', '{{ref}} · vendor return deadline', {
+        ref: param(item, 'rma_reference') || item.name || t('dashboard.attention.refFallback', 'RMA'),
       });
     case 'price_creep_so':
       return t('dashboard.attention.meta.priceCreepSo', '{{so}} · margin exposure if fulfilled as-is', {
@@ -320,6 +330,7 @@ function RowIcon({ item }: { item: AttentionItem }) {
       return <Truck className={cls} />;
     case 'rma_vendor':
     case 'rma_client':
+    case 'rma_vendor_return':
       return <RotateCcw className={cls} />;
     case 'count_approval':
       return <ListChecks className={cls} />;

@@ -11,6 +11,7 @@ import {
   closeWarrantyRmaCore, closeWarrantyRmaSchema, confirmVendorReceiptCore, confirmVendorReceiptSchema, shipDeadUnitToVendorCore, shipDeadUnitToVendorSchema, denyWarrantyClaimCore, denyWarrantyClaimSchema, markDeviceReceivedCore,
   markDeviceReceivedSchema, openWarrantyClaimCore, openWarrantyClaimSchema, publishWarrantyClaimOpened, publishRmaUpdated,
   receiveVendorReplacementCore, receiveVendorReplacementSchema, recordVendorCreditCore, recordVendorCreditSchema,
+  recordVendorNonReturnChargeCore, recordVendorNonReturnChargeSchema,
   recordVendorRepairCore, recordVendorRepairSchema, requireWarrantyPerm, returnDeviceToClientCore, returnDeviceToClientSchema,
   runWarrantyTransition, shipToVendorCore, resolveRmaReadScope, filterReadableRmaCases, listRmaEvents as listRmaEventRows, shipToVendorSchema, validationActionError, withWarrantyErrors, type WarrantyActionError,
   WarrantyError,
@@ -93,6 +94,7 @@ export const confirmVendorReceipt = transition(confirmVendorReceiptSchema, confi
 export const receiveVendorReplacement = transition(receiveVendorReplacementSchema, receiveVendorReplacementCore);
 export const recordVendorRepair = transition(recordVendorRepairSchema, recordVendorRepairCore);
 export const recordVendorCredit = transition(recordVendorCreditSchema, recordVendorCreditCore);
+export const recordVendorNonReturnCharge = transition(recordVendorNonReturnChargeSchema, recordVendorNonReturnChargeCore);
 export const returnDeviceToClient = transition(returnDeviceToClientSchema, returnDeviceToClientCore);
 export const closeWarrantyRma = transition(closeWarrantyRmaSchema, closeWarrantyRmaCore);
 

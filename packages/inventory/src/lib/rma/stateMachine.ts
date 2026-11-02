@@ -39,6 +39,7 @@ export type WarrantyAction =
   | 'return_to_client'
   | 'ship_dead_unit_to_vendor'
   | 'confirm_vendor_receipt'
+  | 'charge_vendor_non_return'
   | 'close';
 
 export interface WarrantyTransition {
@@ -68,6 +69,8 @@ export const WARRANTY_TRANSITIONS: Readonly<Record<WarrantyAction, WarrantyTrans
   // `repaired` is listed because the card asks for it; today only the standard track reaches it, which `onlyTrack` refuses.
   ship_dead_unit_to_vendor: { from: ['replaced', 'repaired'], to: 'dead_unit_owed', eventType: 'dead_unit_shipped', closes: false, writesAsset: true, onlyTrack: 'advance_replacement' },
   confirm_vendor_receipt: { from: ['dead_unit_owed'], to: 'closed', eventType: 'vendor_receipt_confirmed', closes: true, fixedClosedReason: 'resolved', writesAsset: true, onlyTrack: 'advance_replacement' },
+  // A recorded non-return charge resolves the vendor return obligation without claiming the unit shipped or arrived.
+  charge_vendor_non_return: { from: ['replaced', 'repaired'], to: 'closed', eventType: 'closed', closes: true, fixedClosedReason: 'resolved', writesAsset: false, onlyTrack: 'advance_replacement' },
   close: { from: ['replaced', 'repaired', 'credited', 'returned', 'dead_unit_owed'], to: 'closed', eventType: 'closed', closes: true, writesAsset: false },
 };
 

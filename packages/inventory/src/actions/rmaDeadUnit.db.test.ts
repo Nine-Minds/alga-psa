@@ -45,12 +45,14 @@ vi.mock('@alga-psa/assets/lib/assetReadAuthorization', async (orig) => {
 
 import {
   approveWarrantyClaim, closeWarrantyRma, confirmVendorReceipt, openWarrantyClaim, receiveVendorReplacement,
-  returnDeviceToClient, shipDeadUnitToVendor, shipToVendor, markDeviceReceived,
+  returnDeviceToClient, shipDeadUnitToVendor, shipToVendor, markDeviceReceived, recordVendorNonReturnCharge, listRmaCaseEvents,
 } from './rmaWarrantyActions';
 import {
   chargeForUnreturned, closeRma, deadUnitsOwedReport, markDeadUnitOwed, openRma, recordDeadUnitReturned, receiveReturn,
 } from './rmaActions';
 import { openCustody } from '@alga-psa/assets/lib/custody/openCustody';
+import { queryOverdueAdvanceVendorReturns } from '../lib/dashboardQueries';
+import { filterReadableRmaCases, resolveRmaReadScope } from '../lib/rma/rmaReadAccess';
 import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 let knex: Knex;
@@ -327,6 +329,91 @@ describe('advance-replacement dead-unit leg', () => {
 });
 
 describe('shared dead_unit_owed status: stock track vs warranty track', () => {
+  it('dashboard query returns only overdue, unshipped advance returns and applies the existing asset read gate', async () => {
+    const overdue = await replacedAdvanceCase();
+    const dueToday = await replacedAdvanceCase();
+    const onTime = await replacedAdvanceCase();
+    const resolved = await replacedAdvanceCase();
+    const localToday = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    const yesterday = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: overdue.rmaId }).update({ return_by: yesterday });
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: dueToday.rmaId }).update({ return_by: localToday });
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: onTime.rmaId }).update({ return_by: tomorrow });
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: resolved.rmaId }).update({ return_by: yesterday, status: 'closed', closed_at: knex.fn.now() });
+
+    const rows = await queryOverdueAdvanceVendorReturns(knex, holder.tenant, localToday);
+    expect(rows.map((row) => row.rma_id)).toEqual([overdue.rmaId]);
+    expect(rows[0]).toMatchObject({ rma_number: expect.stringMatching(/^RMA-/), return_by: yesterday, overdue_days: 1 });
+    const otherTenant = await createInventoryTestTenant(knex);
+    expect(await queryOverdueAdvanceVendorReturns(knex, otherTenant, localToday)).toEqual([]);
+    denied.assetIds.add(overdue.assetId);
+    const scope = await resolveRmaReadScope({ user_id: holder.userId });
+    expect(await filterReadableRmaCases(knex as any, holder.tenant, { user_id: holder.userId }, rows, scope)).toEqual([]);
+  });
+
+  it('vendor non-return charge persists amount, currency, actor history and resolves the deadline once', async () => {
+    const c = await replacedAdvanceCase();
+    const past = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: c.rmaId }).update({ return_by: past });
+    const before = await counts();
+
+    const attempts = await Promise.all([
+      recordVendorNonReturnCharge(c.rmaId, { amount: '125.50', currency_code: 'USD', note: 'Vendor declined late return' }),
+      recordVendorNonReturnCharge(c.rmaId, { amount: '125.50', currency_code: 'USD', note: 'Vendor declined late return' }),
+    ]);
+    expect(attempts.filter((attempt: any) => !attempt?.actionError && !attempt?.permissionError)).toHaveLength(1);
+    expect(attempts.filter((attempt: any) => attempt?.actionError || attempt?.permissionError)).toHaveLength(1);
+    const charged = attempts.find((attempt: any) => !attempt?.actionError && !attempt?.permissionError)!;
+    ok(charged);
+    expect(charged).toMatchObject({ status: 'closed', closed_reason: 'resolved' });
+    const history = await events(c.rmaId);
+    expect(history).toHaveLength(4);
+    expect(history.at(-1)).toMatchObject({ event_type: 'closed', actor_user_id: holder.userId, note: 'Vendor declined late return', payload: { resolution: 'vendor_non_return_charge', amount: '125.50', currency_code: 'USD' } });
+    expect(history.map((event: any) => event.event_type)).not.toContain('dead_unit_shipped');
+    expect(history.map((event: any) => event.event_type)).not.toContain('vendor_receipt_confirmed');
+    const reloadedHistory = ok(await listRmaCaseEvents(c.rmaId));
+    expect(reloadedHistory.at(-1)).toMatchObject({ event_type: 'closed', actor_name: 'Inventory Operator', payload: { resolution: 'vendor_non_return_charge', amount: '125.50', currency_code: 'USD' } });
+    expect(await counts()).toEqual(before);
+    expect(await recordVendorNonReturnCharge(c.rmaId, { amount: '125.50', currency_code: 'USD' })).toHaveProperty('actionError');
+    expect(await events(c.rmaId)).toHaveLength(4);
+  });
+
+  it('refuses charges for non-overdue, wrong-track, unit-tracked and assetless cases', async () => {
+    const future = await replacedAdvanceCase();
+    const standard = await replacedAdvanceCase();
+    const stock = await stockCaseInDeadUnitOwed();
+    const past = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    const tomorrow = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: future.rmaId }).update({ return_by: tomorrow });
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: standard.rmaId }).update({ return_by: past, rma_type: 'standard' });
+    for (const rmaId of [future.rmaId, standard.rmaId, stock.rmaId]) {
+      expect(await recordVendorNonReturnCharge(rmaId, { amount: '10', currency_code: 'USD' })).toHaveProperty('actionError');
+    }
+    const assetlessId = randomUUID();
+    await knex('rma_cases').insert({ tenant: holder.tenant, rma_id: assetlessId, rma_number: `RMA-${assetlessId.slice(0, 8)}`, rma_type: 'advance_replacement', status: 'replaced', returned_unit_id: null, asset_id: null, return_by: past });
+    expect(await recordVendorNonReturnCharge(assetlessId, { amount: '10', currency_code: 'USD' })).toHaveProperty('actionError');
+    expect((await rmaRow(assetlessId)).status).toBe('replaced');
+    expect(await events(assetlessId)).toHaveLength(0);
+  });
+
+  it('rejects malformed money, due-today and inaccessible records without changing lifecycle or history', async () => {
+    const c = await replacedAdvanceCase();
+    const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    const past = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: c.rmaId }).update({ return_by: today });
+    expect(await recordVendorNonReturnCharge(c.rmaId, { amount: '10', currency_code: 'USD' })).toHaveProperty('actionError');
+    await knex('rma_cases').where({ tenant: holder.tenant, rma_id: c.rmaId }).update({ return_by: past });
+    for (const input of [
+      { amount: '0', currency_code: 'USD' }, { amount: '1.001', currency_code: 'USD' },
+      { amount: 'Infinity', currency_code: 'USD' }, { amount: '1', currency_code: 'XXX' },
+    ]) expect(await recordVendorNonReturnCharge(c.rmaId, input)).toHaveProperty('actionError');
+    denied.assetIds.add(c.assetId);
+    expect(await recordVendorNonReturnCharge(c.rmaId, { amount: '10', currency_code: 'USD' })).toHaveProperty('actionError');
+    expect((await rmaRow(c.rmaId)).status).toBe('replaced');
+    expect(await events(c.rmaId)).toHaveLength(3);
+  });
+
   it('every stock-track entry point refuses a warranty case in dead_unit_owed and changes nothing', async () => {
     const { rmaId } = await replacedAdvanceCase();
     ok(await shipDeadUnitToVendor(rmaId, { carrier: 'UPS', tracking_number: 'SH-1' }));

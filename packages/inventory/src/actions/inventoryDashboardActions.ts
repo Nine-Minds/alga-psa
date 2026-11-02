@@ -15,6 +15,7 @@ import {
   queryDeployments,
   queryGhostWeek,
   queryOverdueLoaners,
+  queryOverdueAdvanceVendorReturns,
   queryPipeline,
   queryPriceCreep,
   queryRmaReceivables,
@@ -31,6 +32,8 @@ import {
   totalMoneyByCurrency,
 } from '../lib/dashboardQueries';
 import { resolveTenantCurrency } from '../lib/tenantCurrency';
+import { filterReadableRmaCases, resolveRmaReadScope } from '../lib/rma/rmaReadAccess';
+import { overdueVendorReturnAttention } from '../lib/overdueVendorReturnAttention';
 
 /**
  * Consolidated data feed for the Inventory dashboard ("money before lunch").
@@ -55,6 +58,7 @@ export type AttentionKind =
   | 'ghost_tech'
   | 'rma_vendor'
   | 'rma_client'
+  | 'rma_vendor_return'
   | 'price_creep_so'
   | 'price_creep_quotes'
   | 'price_creep_bill'
@@ -222,6 +226,11 @@ function sameLocalDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 
+// LEVERAGE: pattern local-calendar-date — dashboard and RMA transition compare DATE values using the app's local calendar day.
+function localCalendarDate(date = new Date()): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 export const getInventoryDashboardData = withAuth(async (user, { tenant }): Promise<InventoryDashboardData | InventoryDashboardActionError> => {
   if (!(await hasPermission(user, 'inventory', 'read'))) {
     return permissionError('Permission denied: inventory read required', 'features/inventory:errors.permissions.inventoryRead');
@@ -375,6 +384,11 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
     const unbilled = await queryUnbilled(trx, tenant, ghost_week);
     const priceCreep = await queryPriceCreep(trx, tenant);
     const rma_receivables = await queryRmaReceivables(trx, tenant);
+    const rmaReadScope = await resolveRmaReadScope(user);
+    const overdueVendorReturnRows = rmaReadScope.allowed
+      ? await queryOverdueAdvanceVendorReturns(trx, tenant, localCalendarDate())
+      : [];
+    const readableOverdueVendorReturns = await filterReadableRmaCases(trx, tenant, user, overdueVendorReturnRows, rmaReadScope);
     const deployments = await queryDeployments(trx, tenant);
     const pipeline = await queryPipeline(trx, tenant);
     const deadStock = await queryDeadStock(trx, tenant, currency_code);
@@ -425,7 +439,7 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
       .leftJoin('service_catalog as sc', function () {
         this.on('r.service_id', '=', 'sc.service_id').andOn('r.tenant', '=', 'sc.tenant');
       })
-      // Stock-unit track only; advance-track warranty cases owed to the vendor are listed on the RMA list instead.
+      // Stock-unit track only; advance-track vendor return deadlines have their own attention signal above.
       .where({ 'r.tenant': tenant, 'r.status': 'dead_unit_owed' })
       .whereNotNull('r.returned_unit_id')
       .select<any[]>(
@@ -615,6 +629,9 @@ export const getInventoryDashboardData = withAuth(async (user, { tenant }): Prom
         action: { key: 'chase', href: ROUTES.rmaVendorCredits },
       });
     }
+
+    // Advance-track warranty returns are obligations to the vendor, separate from stock/client dead-unit debts.
+    attention.push(...overdueVendorReturnAttention(readableOverdueVendorReturns));
 
     // Dead units owed to clients (advance replacement clock).
     for (const r of deadOwedRows) {

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import { CANCEL_REASONS, CALLER_CLOSE_REASONS } from './stateMachine';
 
 /** Zod input schemas for the warranty actions (C5). Free text is trimmed; empty becomes null. */
@@ -131,6 +132,26 @@ export type RecordVendorRepairInput = z.infer<typeof recordVendorRepairSchema>;
 
 export const recordVendorCreditSchema = z.object({ ...common });
 export type RecordVendorCreditInput = z.infer<typeof recordVendorCreditSchema>;
+
+export const recordVendorNonReturnChargeSchema = z.object({
+  amount: z.string().trim().regex(/^\d+(?:\.\d+)?$/, 'Enter a valid amount'),
+  currency_code: z.string().trim().length(3).toUpperCase(),
+  ...common,
+}).superRefine((value, ctx) => {
+  const amount = Number(value.amount);
+  if (!Number.isFinite(amount) || amount <= 0 || amount > 1_000_000_000_000) {
+    ctx.addIssue({ code: 'custom', path: ['amount'], message: 'Amount must be greater than zero and no more than 1,000,000,000,000' });
+  }
+  const currency = CURRENCY_OPTIONS.find((option) => option.value === value.currency_code);
+  if (!currency) {
+    ctx.addIssue({ code: 'custom', path: ['currency_code'], message: 'Unsupported currency' });
+    return;
+  }
+  const digits = new Intl.NumberFormat('en', { style: 'currency', currency: value.currency_code }).resolvedOptions().maximumFractionDigits ?? 2;
+  const fraction = value.amount.split('.')[1] ?? '';
+  if (fraction.length > digits) ctx.addIssue({ code: 'custom', path: ['amount'], message: `Amount supports at most ${digits} decimal places for ${value.currency_code}` });
+});
+export type RecordVendorNonReturnChargeInput = z.infer<typeof recordVendorNonReturnChargeSchema>;
 
 export const returnDeviceToClientSchema = z.object({
   /** Who took it / how it went back, shown in custody history. */
