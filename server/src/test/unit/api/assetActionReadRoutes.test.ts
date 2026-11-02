@@ -73,7 +73,7 @@ vi.mock('@alga-psa/assets/actions/assetNoteActions', () => ({
       lastUpdated: '2026-10-15',
     };
   }),
-  saveAssetNote: vi.fn(),
+  saveAssetNote: vi.fn(async () => ({ document_id: 'PRIVATE-LINKED-DOCUMENT' })),
   deleteAssetNote: vi.fn(),
 }));
 vi.mock('@alga-psa/assets/actions/softwareActions', () => ({
@@ -101,6 +101,18 @@ const call = (route: typeof notes | typeof software, query = '') => route.GET(
   }),
   { params: Promise.resolve({ id: 'review-asset' }) },
 );
+
+const putNotes = async () => {
+  const { saveAssetNote } = await import('@alga-psa/assets/actions/assetNoteActions');
+  vi.mocked(saveAssetNote).mockClear();
+  return notes.PUT(new Request('http://localhost/api/v1/assets/review-asset/notes', {
+    method: 'PUT',
+    headers: { 'x-api-key': 'key-secret', 'content-type': 'application/json' },
+    body: JSON.stringify({ blockData: [{ type: 'paragraph', text: 'updated' }] }),
+  }),
+  { params: Promise.resolve({ id: 'review-asset' }) },
+  );
+};
 
 describe('action-backed asset REST reads retain key-scoped projections', () => {
   it('applies a key-scoped whole-asset rule before reading the resource', async () => {
@@ -317,6 +329,31 @@ describe('asset note source provenance', () => {
     const response = await call(notes);
     expect((await response.json()).data).toEqual({ document: null, blockData: null, lastUpdated: null });
     expect(content).toEqual(original);
+  });
+});
+
+describe('asset note mutation response uses the retained document source graph', () => {
+  it('retains the linked document identity as a visible control and performs the write', async () => {
+    const response = await putNotes();
+    expect(response.status).toBe(200);
+    expect((await response.json()).data.document_id).toBe('PRIVATE-LINKED-DOCUMENT');
+    const { saveAssetNote } = await import('@alga-psa/assets/actions/assetNoteActions');
+    expect(saveAssetNote).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    'assets.documents.document_id',
+    'values.documents.document_id',
+    'fields.assets.documents.document_id',
+    'values.documents',
+  ])('does not disclose the linked document under %s while preserving the write', async (alias) => {
+    state.keyOnly = true;
+    state.redactions = [alias];
+    const response = await putNotes();
+    expect(response.status).toBe(200);
+    expect(JSON.stringify(await response.json())).not.toContain('PRIVATE-LINKED-DOCUMENT');
+    const { saveAssetNote } = await import('@alga-psa/assets/actions/assetNoteActions');
+    expect(saveAssetNote).toHaveBeenCalledTimes(1);
   });
 });
 

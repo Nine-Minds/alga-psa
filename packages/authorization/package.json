@@ -58,6 +58,10 @@
       "import": "./dist/assetReadAuthorization.js",
       "types": "./src/assetReadAuthorization.ts"
     },
+    "./recordProjection": {
+      "import": "./dist/recordProjection.js",
+      "types": "./src/recordProjection.ts"
+    },
     "./rbac": {
       "import": "./dist/rbac.js",
       "types": "./src/rbac.ts"

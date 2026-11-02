@@ -13,6 +13,7 @@ const candidates = vi.hoisted(() => [
     opened_at: '2026-10-15T12:00:00Z', closed_at: null as string | null, created_at: '2026-10-15T12:00:00Z', updated_at: '2026-10-15T12:00:00Z',
     asset_name: 'PRIVATE-ASSET-NAME', asset_tag: 'Visible Tag', holder_user_id: 'private-holder', holder_name: 'PRIVATE-HOLDER',
     follow_up_on: '2026-11-03', location_id: 'review-location', location_name: 'Visible Location', ticket_id: null,
+    client_name: 'PRIVATE-CLIENT',
   },
 ]);
 
@@ -115,5 +116,11 @@ describe('custody queue projects candidates before filters and totals', () => {
     } finally {
       candidates.pop();
     }
+  });
+
+  it('hides the joined client label when the custody-side join key is hidden', async () => {
+    const page = await query(['asset_custody.client_id']);
+    expect(page.total).toBe(1);
+    expect(page.rows[0].client_name ?? null).toBeNull();
   });
 });

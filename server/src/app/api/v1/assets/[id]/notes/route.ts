@@ -11,7 +11,6 @@ import { NextResponse } from 'next/server';
 import { readAssetGateForRequest } from 'server/src/lib/api/controllers/assetReadGuard';
 import { reprojectUnderDecision } from 'server/src/lib/api/controllers/authorizationKernel';
 import {
-  ASSET_NOTE_MUTATION_RESPONSE_SOURCE,
   ASSET_NOTE_RESPONSE_SOURCE,
 } from '@alga-psa/co-managed/recordProjection';
 import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
@@ -116,15 +115,15 @@ export async function PUT(
 
     const projectedResult = reprojectUnderDecision(
       assetGate,
-      result as Record<string, any>,
-      ASSET_NOTE_MUTATION_RESPONSE_SOURCE,
+      { document: result as Record<string, any> },
+      ASSET_NOTE_RESPONSE_SOURCE,
     );
     if (!projectedResult) {
       return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
     }
 
     return NextResponse.json({
-      data: projectedResult,
+      data: projectedResult.document ?? {},
       message: 'Notes saved successfully',
       _links: {
         self: { href: `/api/v1/assets/${id}/notes` },

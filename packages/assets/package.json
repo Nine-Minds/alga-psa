@@ -50,7 +50,6 @@
     "@alga-psa/block-content": "*",
     "@alga-psa/auth": "*",
     "@alga-psa/authorization": "*",
-    "@alga-psa/co-managed": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
     "@alga-psa/event-bus": "*",

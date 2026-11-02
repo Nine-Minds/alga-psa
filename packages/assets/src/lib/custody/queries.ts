@@ -10,7 +10,7 @@ import type {
 import { CUSTODY_QUEUE_TABS } from '@alga-psa/types';
 import type { AssetReadAuthorizationContext } from '../assetReadAuthorization';
 import { projectReadableAssetRecords } from '../assetReadProjection';
-import { ASSET_CUSTODY_QUEUE_SOURCE } from '@alga-psa/co-managed/recordProjection';
+import { ASSET_CUSTODY_QUEUE_SOURCE } from '@alga-psa/authorization/recordProjection';
 import { CUSTODY_COLUMNS, FOLLOW_UP_SELECT, mapCustodyRow } from './shared';
 
 /**

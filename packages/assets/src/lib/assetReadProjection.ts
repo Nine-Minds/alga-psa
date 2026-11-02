@@ -9,7 +9,7 @@ import {
   createRecordProjectionPolicy,
   type RecordProjectionPolicy,
   type RedactableRecordSource,
-} from '@alga-psa/co-managed/recordProjection';
+} from '@alga-psa/authorization/recordProjection';
 
 export interface AssetRecordProjection<T extends Record<string, any>> {
   record: Partial<T>;

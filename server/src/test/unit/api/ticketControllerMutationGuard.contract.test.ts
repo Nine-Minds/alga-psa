@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest';
  * Handlers are classified by name; read handlers must be listed explicitly.
  */
 const READ_HANDLERS = new Set([
-  'getById', 'getComments', 'getChecklist', 'getExternalLinks', 'findByExternalLink',
+  'getById', 'getBundle', 'getComments', 'getChecklist', 'getExternalLinks', 'findByExternalLink',
   'getDocuments', 'getAssets', 'getAgents', 'getWatchers', 'downloadDocument',
   'downloadDocumentVariant', 'getTimeEntries', 'getMaterials',
 ]);
