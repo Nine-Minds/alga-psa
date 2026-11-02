@@ -93,7 +93,7 @@ async function seedWorld() {
   return { tenant, clientId, contactId, portalUserId, techId, ticketId };
 }
 
-const sharedWith = async (trx: any, actor: any, resource: any, request: any) => (await import('../../lib/co-managed/createTicketComment')).createSharedTicketComment(trx, actor, resource, request);
+const sharedWith = async (trx: any, actor: any, resource: any, request: any) => (await import('@alga-psa/co-managed/sharedTicketCommentWriter')).createSharedTicketComment(trx, actor, resource, request);
 const shared = (p: Persona, request: any) => sharedWith(db, p.actor, p.resource, request);
 const drafts = () => import('../../../../packages/co-managed/src/conversationDrafts');
 const attachments = () => import('../../../../packages/co-managed/src/conversationAttachments');

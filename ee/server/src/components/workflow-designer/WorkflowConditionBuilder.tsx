@@ -55,6 +55,9 @@ const OPERATOR_LABEL_DEFAULTS: Record<WorkflowConditionOperator, string> = {
   contains: 'contains',
   starts_with: 'starts with',
   ends_with: 'ends with',
+  not_contains: 'does not contain',
+  not_starts_with: 'does not start with',
+  not_ends_with: 'does not end with',
   is_empty: 'is empty',
   is_not_empty: 'is not empty',
 };
@@ -78,9 +81,9 @@ export const getConditionOperatorsForField = (
     case 'number':
       return ['equals', 'not_equals', 'gt', 'gte', 'lt', 'lte', 'is_empty', 'is_not_empty'];
     case 'string':
-      return ['equals', 'not_equals', 'contains', 'starts_with', 'ends_with', 'in', 'not_in', 'is_empty', 'is_not_empty'];
+      return ['equals', 'not_equals', 'contains', 'not_contains', 'starts_with', 'not_starts_with', 'ends_with', 'not_ends_with', 'in', 'not_in', 'is_empty', 'is_not_empty'];
     default:
-      return ['equals', 'not_equals', 'gt', 'gte', 'lt', 'lte', 'contains', 'starts_with', 'ends_with', 'in', 'not_in', 'is_empty', 'is_not_empty'];
+      return ['equals', 'not_equals', 'gt', 'gte', 'lt', 'lte', 'contains', 'not_contains', 'starts_with', 'not_starts_with', 'ends_with', 'not_ends_with', 'in', 'not_in', 'is_empty', 'is_not_empty'];
   }
 };
 

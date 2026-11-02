@@ -694,6 +694,7 @@
       "noTasks": "Este proyecto no tiene tareas que pueda ver.",
       "assignment": "Asignación",
       "assignedTo": "Asignada a {{name}}",
+      "assignedHidden": "Asignada (nombre oculto)",
       "assignConflict": "Esta tarea fue asignada o modificada por otra persona. Se ha recargado; inténtelo de nuevo si aún lo necesita.",
       "assignFailed": "No se pudo asignar esta tarea.",
       "assignMe": "Asignarme",

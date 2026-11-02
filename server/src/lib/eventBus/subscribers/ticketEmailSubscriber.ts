@@ -11,6 +11,7 @@ import {
   TicketCommentAddedEvent
 } from '@alga-psa/event-schemas';
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
+import { resolveCoManagedCommentStep, audienceRecipients, coManagedSendFields } from '../../notifications/coManagedCommentDelivery';
 import { EventEmailRetryQueue } from '../../notifications/EventEmailRetryQueue';
 import logger from '@alga-psa/core/logger';
 import { displayAddressField, displayCountry } from '@alga-psa/core';
@@ -3016,6 +3017,47 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     const commentThreadHeaderParams = Object.keys(commentThreadHeaders).length > 0
       ? { headers: commentThreadHeaders }
       : {};
+
+    // CM L5: a comment on a shared ticket is delivered by the audience-aware co-managed step INSTEAD of
+    // the native recipient step below (one send per recipient). The served decision is made once, here,
+    // before any co_management_* SQL; an unserved tenant gets null at zero SQL and falls through untouched.
+    const coManagedStep = await resolveCoManagedCommentStep(tenantId, payload.ticketId, payload.comment?.id);
+    if (coManagedStep) {
+      const toRecipient = (kind: 'customer_user' | 'requester_contact', principalId: string | null | undefined, email: string | null | undefined) =>
+        email && isValidEmail(email) ? { kind, principalId: principalId || email, email } : null;
+      const customerUsers = [
+        toRecipient('customer_user', ticket.assigned_to, assignedEmail),
+        ...additionalResources.map((r) => toRecipient('customer_user', r.user_id, r.email)),
+      ].filter((r): r is NonNullable<typeof r> => r !== null);
+      const requester = toRecipient('requester_contact', primaryContactId, primaryEmail);
+      const recipients = audienceRecipients(coManagedStep, { customerUsers, requester });
+      const sourceId = payload.comment!.id!;
+      for (const recipient of recipients) {
+        const internal = recipient.kind !== 'requester_contact';
+        if (!shouldSendTicketCommentNotification(suppression, internal ? 'internal' : 'contact')) continue;
+        const fields = coManagedSendFields(coManagedStep, 'ticket_comment_email', sourceId, recipient);
+        await sendIfUnique({
+          tenantId,
+          ...emailEntityContext,
+          ...(recipient.kind === 'requester_contact' && primaryContactId ? { contactId: primaryContactId } : {}),
+          to: recipient.email!,
+          subject: `New Comment on Ticket: ${ticket.title}`,
+          template: 'ticket-comment-added',
+          context: buildContext(internal ? internalUrl : portalUrl),
+          replyContext: {
+            ticketId: ticket.ticket_id || payload.ticketId,
+            commentId: payload.comment?.id,
+            threadId: coManagedStep.plan.threadId ?? ticket.email_metadata?.threadId,
+            conversationToken: fields.conversationToken,
+            tokenMetadata: fields.tokenMetadata,
+          },
+          delivery: fields.delivery,
+          attachments: inlineCommentImageAttachments,
+          ...commentThreadHeaderParams,
+        }, 'Ticket Comment Added', recipient.kind === 'customer_user' ? recipient.principalId : undefined);
+      }
+      return;
+    }
 
     // Send to primary email if available - external user, no userId
     let requesterEmailSent = false;

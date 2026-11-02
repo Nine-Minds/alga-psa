@@ -1,7 +1,9 @@
 import type { Knex } from 'knex';
 import { registerAfterCommit, tenantDb } from '@alga-psa/db';
 import { publishCommentEvent } from '@alga-psa/db/commentEventRegistry';
-import { createCoManagedTicketComment, CoManagedSharedWorkError, type CoManagedCommentCreateRequest, type CoManagedSharedResource, type CoManagedSessionActor } from '@alga-psa/co-managed';
+import { createCoManagedTicketComment, type CoManagedCommentCreateRequest } from './ticketCommentCreation';
+import { CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
+import type { CoManagedSharedResource } from './sharedWork';
 import Comment from '@alga-psa/tickets/models/comment';
 import { buildTicketCommunicationWorkflowEvents, publishTicketCommunicationWorkflowEvent } from '@alga-psa/tickets/lib/workflowTicketCommunicationEvents';
 import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';

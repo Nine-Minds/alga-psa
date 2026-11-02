@@ -156,10 +156,12 @@ export interface CoManagedSharedTicketWrites {
   commentsChanged?: (listener: () => void) => () => void;
   /** Becomes `screen.onComposerCancel`: the host drops what it staged beside the composer. */
   composerCancelled?: () => void;
+  /** Time capability (L6a2): the work item time books against, plus an optional effort slot beside the time summary. */
+  time?: { config: TicketDataSource['time']; slots?: TicketDataSource['slots'] };
 }
 
 export function createCoManagedSharedTicketDataSource(summary: CoManagedSharedWorkSummary, backHref: string,
-  { edit, conversation, commentsChanged, composerCancelled }: CoManagedSharedTicketWrites = {}): TicketDataSource {
+  { edit, conversation, commentsChanged, composerCancelled, time: timeCapability }: CoManagedSharedTicketWrites = {}): TicketDataSource {
   const record = sharedTicketRecord(summary);
   const update = edit ? sharedUpdate(edit, record.ticket_id) : undefined;
   const audiences = conversation?.writeAudiences() ?? [];
@@ -225,7 +227,9 @@ export function createCoManagedSharedTicketDataSource(summary: CoManagedSharedWo
     tags: group('tags', { findTagsByEntityId: none, getTicketPartyDisplayTags: async () => ({ contact: [], client: [] }) }),
     // The owning tenant is foreign: no avatar is ever resolved for it.
     avatars: group('avatars', { getUserAvatarUrlsBatchAction: async () => ({}), getTeamAvatarUrlsBatchAction: async () => ({}), getContactAvatarUrlAction: nothing }),
-    time: { fetchTimeEntries: async () => ({ entries: [], ownTotalMinutes: 0, ownEntryCount: 0, othersTotalMinutes: 0, othersEntryCount: 0,
+    ...(timeCapability?.slots ? { slots: timeCapability.slots } : {}),
+    time: timeCapability?.config ? { fetchTimeEntries: async () => ({ entries: [], ownTotalMinutes: 0, othersTotalMinutes: 0, othersEntryCount: 0, ownEntryCount: 0,
+      othersVisibleMinutes: 0, othersVisibleCount: 0, othersHiddenMinutes: 0, othersHiddenCount: 0, totalMinutes: 0 }), ...timeCapability.config } : { fetchTimeEntries: async () => ({ entries: [], ownTotalMinutes: 0, ownEntryCount: 0, othersTotalMinutes: 0, othersEntryCount: 0,
       othersVisibleMinutes: 0, othersVisibleCount: 0, othersHiddenMinutes: 0, othersHiddenCount: 0, totalMinutes: 0 }) },
   };
   return composeTicketDataSource(nativeTicketDataSource, overrides as unknown as TicketDataSourceOverrides);

@@ -1,3 +1,5 @@
+import { resolveCoManagedTaskCommentStep, taskCommentDelivery } from '../../notifications/coManagedCommentDelivery';
+import { recipientsForAudience } from '@shared/lib/coManagedDelivery';
 import { getEventBus } from '../index';
 import {
   EventType,
@@ -1561,11 +1563,25 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
       }
     }
 
+    // CM L5: served tenants get the audience-aware step (one recipient list from the comment thread's
+    // audience, each send claimed in co_management_deliveries). The served decision is made once; an
+    // unserved tenant gets null at zero SQL and keeps the exact native loop below. No new event is
+    // published and there is no fan-out to other tenants (DO-NOT-PORT #20).
+    const coManagedTask = await resolveCoManagedTaskCommentStep(tenantId, payload.taskCommentId);
+    const recipients = coManagedTask
+      ? recipientsForAudience(coManagedTask.audience, {
+          sponsorUsers: [], sponsorTeams: [], requester: null,
+          customerUsers: assignees.map((a) => ({ kind: 'customer_user' as const, principalId: a.user_id, email: a.email })),
+        })
+      : null;
+
     // Send email to each assignee (excluding the comment author)
     for (const assignee of assignees) {
       if (assignee.user_id === userId) {
         continue;
       }
+      const planned = recipients?.find((r) => r.principalId === assignee.user_id);
+      if (recipients && !planned) continue;
 
       await sendNotificationIfEnabled({
         tenantId,
@@ -1573,7 +1589,8 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
         subject: `New Comment on Task: ${task.task_name}`,
         template: 'task-comment-added',
         context: emailContext,
-        replyContext
+        replyContext,
+        ...(planned ? { delivery: taskCommentDelivery(payload.taskCommentId, planned) } : {}),
       }, 'Task Comment Added', assignee.user_id);
     }
 

@@ -21493,7 +21493,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/invoices/bulk",
     "displayName": "Bulk update invoice status",
     "summary": "Bulk update invoice status",
-    "description": "Bulk status transition route using bulkInvoiceStatusUpdateSchema.",
+    "description": "Bulk status transition route using bulkInvoiceStatusUpdateSchema. Only metadata transitions are applied; paid, cancelled and finalize transitions are reported as per-invoice errors naming the dedicated command. finalized_at is not accepted.",
     "tags": [
       "Invoices"
     ],
@@ -21523,9 +21523,6 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "prepayment",
             "partially_applied"
           ]
-        },
-        "finalized_at": {
-          "type": "string"
         }
       },
       "required": [
@@ -22842,7 +22839,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/invoices/{id}",
     "displayName": "Update invoice",
     "summary": "Update invoice",
-    "description": "Updates an invoice using ApiBaseController.update().",
+    "description": "Updates editable billing terms only (payment_method, billing_profile_id, due_date, invoice_date, items, tax_source). Status, client, totals, credits and other lifecycle fields are rejected with 400; use the finalize, send and payment endpoints (or the bulk status operation for void) instead.",
     "tags": [
       "Invoices"
     ],
@@ -22863,60 +22860,107 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "requestBodySchema": {
       "type": "object",
       "properties": {
-        "client_id": {
-          "type": "string",
-          "format": "uuid"
-        },
-        "invoice_date": {
-          "type": "string"
-        },
-        "due_date": {
-          "type": "string"
-        },
-        "subtotal": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "tax": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "total_amount": {
-          "type": "integer",
-          "minimum": 0
-        },
-        "status": {
-          "type": "string",
+        "payment_method": {
+          "type": [
+            "string",
+            "null"
+          ],
           "enum": [
-            "draft",
-            "sent",
-            "paid",
-            "overdue",
-            "cancelled",
-            "pending",
-            "prepayment",
-            "partially_applied"
+            "credit_card",
+            "bank_transfer",
+            "check",
+            null
           ]
         },
-        "credit_applied": {
-          "type": "integer",
-          "minimum": 0
+        "billing_profile_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
         },
-        "is_manual": {
-          "type": "boolean"
+        "due_date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "YYYY-MM-DD. Draft invoices only."
         },
-        "is_prepayment": {
-          "type": "boolean"
+        "invoice_date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "description": "YYYY-MM-DD. Draft invoices only."
         },
         "items": {
           "type": "array",
           "items": {
             "type": "object",
-            "additionalProperties": {}
-          }
+            "properties": {
+              "service_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "contract_line_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "description": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "quantity": {
+                "type": "number",
+                "minimum": 0
+              },
+              "unit_price": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "total_price": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "tax_amount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "net_amount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "rate": {
+                "type": "number",
+                "minimum": 0
+              },
+              "is_manual": {
+                "type": "boolean"
+              },
+              "is_taxable": {
+                "type": "boolean"
+              },
+              "is_discount": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "description",
+              "quantity",
+              "unit_price",
+              "tax_amount",
+              "rate"
+            ]
+          },
+          "description": "Replaces items on draft, non-recurring invoices only."
+        },
+        "tax_source": {
+          "type": "string",
+          "enum": [
+            "internal",
+            "external",
+            "pending_external"
+          ]
         }
       },
-      "additionalProperties": {}
+      "additionalProperties": false
     },
     "responseBodySchema": {
       "type": "object",
@@ -48338,7 +48382,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "project_task",
             "non_billable_category",
             "ad_hoc",
-            "interaction"
+            "interaction",
+            "co_managed"
           ]
         },
         "start_time": {
@@ -48593,7 +48638,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "project_task",
                   "non_billable_category",
                   "ad_hoc",
-                  "interaction"
+                  "interaction",
+                  "co_managed"
                 ]
               },
               "start_time": {
@@ -48717,7 +48763,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                       "project_task",
                       "non_billable_category",
                       "ad_hoc",
-                      "interaction"
+                      "interaction",
+                      "co_managed"
                     ]
                   },
                   "start_time": {
@@ -49595,7 +49642,8 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
             "project_task",
             "non_billable_category",
             "ad_hoc",
-            "interaction"
+            "interaction",
+            "co_managed"
           ]
         },
         "start_time": {
@@ -50552,7 +50600,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
     "path": "/api/v1/time-sheets",
     "displayName": "Create time sheet",
     "summary": "Create time sheet",
-    "description": "Creates time sheet via create() path.",
+    "description": "Creates a time sheet. A time sheet is unique per tenant, effective owner (`user_id`, defaulting to the caller) and `period_id`, in every approval status. The first request returns 201 with a DRAFT sheet; a request for a user and period that already has a sheet returns 409 CONFLICT (\"A time sheet already exists for this user and period\") and changes nothing. To recover, GET /api/v1/time-sheets filtered by `user_id` and `period_id`.",
     "tags": [
       "Work Management v1"
     ],
@@ -51004,6 +51052,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                         "non_billable_category",
                         "ad_hoc",
                         "interaction",
+                        "co_managed",
                         null
                       ]
                     },
@@ -51562,6 +51611,7 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
                   "non_billable_category",
                   "ad_hoc",
                   "interaction",
+                  "co_managed",
                   null
                 ]
               },

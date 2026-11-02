@@ -10,7 +10,7 @@ vi.mock('@alga-psa/licensing/lifecycle-error', () => ({ CoManagedLifecycleError:
 vi.mock('@alga-psa/co-managed', () => ({ beginCoManagedConversationDraft: mocks.begin, listCoManagedOpenConversationDrafts: mocks.list, abandonCoManagedConversationDraft: mocks.abandon, uploadCoManagedDraftAttachment: mocks.upload, publishCoManagedConversationDraft: mocks.publish,
   CoManagedSharedWorkError: mocks.Forbidden, CoManagedConversationDraftError: mocks.Draft, CoManagedAttachmentError: mocks.Attachment, CoManagedCommentCreateError: mocks.Comment, CoManagedPrivateCommentError: mocks.Private }));
 vi.mock('../../../lib/co-managed/conversationAttachments', () => ({ uploadConversationAttachmentObject: mocks.object }));
-vi.mock('../../../lib/co-managed/createTicketComment', () => ({ createSharedTicketComment: mocks.customer }));
+vi.mock('@alga-psa/co-managed/sharedTicketCommentWriter', () => ({ createSharedTicketComment: mocks.customer }));
 import { listCoManagedConversationDraftsAction, abandonCoManagedConversationDraftAction, beginCoManagedConversationDraftAction, uploadCoManagedDraftAttachmentAction, publishCoManagedConversationDraftAction } from '../../../lib/actions/coManagedConversationDraftActions';
 const resource = { kind: 'ticket' as const, tenant: 'customer', relationshipId: 'relationship', id: 'ticket' };
 const reference = { storeTenant: 'customer', operationId: 'operation' };

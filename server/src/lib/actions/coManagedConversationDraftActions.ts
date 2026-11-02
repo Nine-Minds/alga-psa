@@ -10,7 +10,7 @@ import { beginCoManagedConversationDraft, listCoManagedOpenConversationDrafts, a
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { coManagedAttachmentUploadLimit } from '../co-managed/attachmentUploadLimit';
 import { uploadConversationAttachmentObject } from '../co-managed/conversationAttachments';
-import { createSharedTicketComment } from '../co-managed/createTicketComment';
+import { createSharedTicketComment } from '@alga-psa/co-managed/sharedTicketCommentWriter';
 
 function failure(error: unknown) {
   if (error instanceof CoManagedSharedWorkError) return { ok: false as const, code: 'forbidden' as const };

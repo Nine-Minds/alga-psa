@@ -694,6 +694,7 @@
       "noTasks": "Dit project heeft geen taken die u kunt zien.",
       "assignment": "Toewijzing",
       "assignedTo": "Toegewezen aan {{name}}",
+      "assignedHidden": "Toegewezen (naam verborgen)",
       "assignConflict": "Deze taak is door iemand anders toegewezen of gewijzigd. Hij is opnieuw geladen; probeer het opnieuw als dat nog nodig is.",
       "assignFailed": "Deze taak kon niet worden toegewezen.",
       "assignMe": "Aan mij toewijzen",

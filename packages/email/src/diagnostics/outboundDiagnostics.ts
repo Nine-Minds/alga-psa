@@ -8,6 +8,7 @@
  */
 
 import type { Knex } from 'knex';
+import { getConnection, isTenantSuspended } from '@alga-psa/db';
 import type {
   EmailMessage,
   EmailSendResult,
@@ -63,6 +64,7 @@ function normalizeOptions(options?: OutboundEmailDiagnosticsOptions): Normalized
     liveSendTest: options?.liveSendTest === true,
     includeIdentifiers: options?.includeIdentifiers === true,
     recipient,
+    actingUserId: options?.actingUserId?.trim() || undefined,
   };
 }
 
@@ -179,7 +181,33 @@ export function liveSendResultFromEmailSendResult(result: EmailSendResult): Outb
   };
 }
 
-async function defaultSendLive(input: OutboundLiveSendInput): Promise<OutboundLiveSendResult> {
+export async function defaultSendLive(input: OutboundLiveSendInput): Promise<OutboundLiveSendResult> {
+  // Same gates as TenantEmailService.sendEmail, applied before any provider is
+  // initialized so a refused test send never touches the provider.
+  // isTenantSuspended fails open.
+  const suspended = await isTenantSuspended(await getConnection(input.tenant), input.tenant);
+  if (suspended) {
+    return {
+      success: false,
+      error: 'Tenant is suspended; outbound email is disabled',
+      errorCode: 'TENANT_SUSPENDED',
+      definitelyNotSent: true,
+      retryable: false,
+    };
+  }
+
+  const rateLimit = await TenantEmailService.checkEmailRateLimit(input.tenant, input.userId);
+  if (!rateLimit.allowed) {
+    return {
+      success: false,
+      error: 'Too many emails have been sent recently. Wait a moment and try again.',
+      errorCode: 'RATE_LIMITED',
+      definitelyNotSent: true,
+      retryable: true,
+      metadata: { retryAfterMs: rateLimit.retryAfterMs, rateLimitReason: rateLimit.reason },
+    };
+  }
+
   const manager = new EmailProviderManager();
   try {
     await manager.initialize(input.settings);
@@ -398,6 +426,7 @@ function buildLiveSendStep(): OutboundStepDefinition {
           from: ctx.effectiveSender,
           fromName: ctx.effectiveSenderName ?? ctx.settings.ticketingFromName ?? undefined,
           recipient: ctx.options.recipient,
+          userId: ctx.options.actingUserId,
         });
       } catch (error) {
         result = toLiveSendFailure(error, 'The email service did not confirm the test result.');

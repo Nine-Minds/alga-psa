@@ -133,6 +133,7 @@ export default defineConfig({
       // Shared pure balance formula used by REST invoice reads and the client portal.
       'src/lib/balanceDue.test.ts',
       'src/lib/creditBalance.test.ts',
+      'src/actions/contractSimulationActions.refusals.test.ts',
     ],
     // Above vitest.setup.ts's 20s asyncUtilTimeout, so a stalled waitFor fails
     // as itself rather than as a test timeout.
